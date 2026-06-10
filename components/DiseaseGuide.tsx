@@ -264,7 +264,7 @@ export const DiseaseGuide: React.FC = () => {
       <div className="animate-fade-in flex flex-col h-full bg-gray-50">
         {/* Modal Personalidade */}
         {isPersonalityModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm animate-fade-in">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
               <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-navy text-white">
                 <h3 className="font-heading font-bold text-lg flex items-center">
@@ -295,7 +295,7 @@ export const DiseaseGuide: React.FC = () => {
 
         {/* Modal Pragmatismo */}
         {isPragmatismModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm animate-fade-in">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
               <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-navy text-white">
                 <h3 className="font-heading font-bold text-lg flex items-center">

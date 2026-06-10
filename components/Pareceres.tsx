@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Header } from "./Header";
 import { NavItem } from "../types";
+import { initAuth, googleSignIn, getAccessToken } from "../services/firebaseAuth";
 
 export const Pareceres: React.FC = () => {
   const [peritoSelecionado, setPeritoSelecionado] = useState("");
@@ -39,7 +40,20 @@ export const Pareceres: React.FC = () => {
   const [isCarregandoMilitares, setIsCarregandoMilitares] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showDriveModal, setShowDriveModal] = useState(false);
+  const [driveFiles, setDriveFiles] = useState<any[]>([]);
+  const [driveSearchTerm, setDriveSearchTerm] = useState("");
+  const [isLoadingDrive, setIsLoadingDrive] = useState(false);
+  const [needsAuth, setNeedsAuth] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+
+  useEffect(() => {
+    const unsubscribe = initAuth(
+      () => setNeedsAuth(false),
+      () => setNeedsAuth(true)
+    );
+    return () => unsubscribe();
+  }, []);
 
   const PERITOS = {
     CT_MAURISTON: {
@@ -363,6 +377,63 @@ export const Pareceres: React.FC = () => {
     return pg;
   };
 
+  const filteredDriveFiles = driveFiles.filter((file) => 
+    file.name.toUpperCase().includes(driveSearchTerm.toUpperCase()) && 
+    file.mimeType.includes("pdf")
+  );
+
+  const FOLDER_ID = "176YQTOOWXuE78Xul49XYpJsVNyu-eZFi";
+
+  const fetchDriveFiles = async () => {
+    setIsLoadingDrive(true);
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        setNeedsAuth(true);
+        setIsLoadingDrive(false);
+        return;
+      }
+      
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID}'+in+parents&fields=files(id,name,mimeType,webViewLink)&orderBy=modifiedTime+desc`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) setNeedsAuth(true);
+        throw new Error('Falha ao carregar arquivos do Drive');
+      }
+      
+      const data = await res.json();
+      setDriveFiles(data.files || []);
+    } catch (err: any) {
+      console.error(err);
+      setAlertMessage("Erro ao carregar do Google Drive.");
+    } finally {
+      setIsLoadingDrive(false);
+    }
+  };
+
+  const handleOpenDriveModal = () => {
+    setShowDriveModal(true);
+    fetchDriveFiles();
+  };
+
+  const handleLogin = async () => {
+    setIsLoadingDrive(true);
+    try {
+      const result = await googleSignIn();
+      if (result) {
+        setNeedsAuth(false);
+        fetchDriveFiles();
+      }
+    } catch (err) {
+      console.error('Login failed:', err);
+      setAlertMessage("Falha ao autenticar com o Google.");
+    } finally {
+      setIsLoadingDrive(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!peritoSelecionado || !finalidade || !especialidade || !nip) {
@@ -453,22 +524,152 @@ export const Pareceres: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-gray-50 relative pb-20">
       <Header 
-        title="PARECERES PERICIAIS" 
+        title="PARECERES" 
         rightAction={
-          <button 
-            type="button" 
-            onClick={() => setShowHelpModal(true)} 
-            className="text-white hover:text-gold transition-colors flex items-center justify-center p-1"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>help</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button 
+              type="button" 
+              onClick={handleOpenDriveModal} 
+              className="text-white hover:text-gold transition-colors flex items-center justify-center p-1"
+              title="Acessar Pareceres Salvos"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>folder</span>
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setShowHelpModal(true)} 
+              className="text-white hover:text-gold transition-colors flex items-center justify-center p-1"
+              title="Ajuda"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>help</span>
+            </button>
+          </div>
         }
       />
 
       <div className="flex-1 overflow-y-auto px-4 py-6 w-full max-w-2xl mx-auto space-y-6">
+        {/* GOOGLE DRIVE MODAL */}
+        {showDriveModal && (
+          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-3xl flex flex-col items-center max-h-[90vh]">
+              <div className="flex items-center justify-between w-full mb-4 shrink-0">
+                <h2 className="font-heading text-lg font-bold text-navy flex items-center">
+                  <span className="material-symbols-outlined text-gold mr-2">folder</span>
+                  Pareceres Salvos
+                </h2>
+                <button
+                  onClick={() => setShowDriveModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              {!needsAuth && (
+                <div className="w-full mb-4 shrink-0 relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+                  <input
+                    type="text"
+                    placeholder="Pesquisar por nome ou NIP..."
+                    value={driveSearchTerm}
+                    onChange={(e) => setDriveSearchTerm(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-10 p-2.5 transition-colors"
+                  />
+                </div>
+              )}
+
+              {needsAuth ? (
+                <div className="flex flex-col items-center justify-center w-full py-8 text-center shrink-0">
+                  <p className="text-sm text-gray-600 mb-6">
+                    É necessário fazer login com o Google para visualizar os pareceres salvos no Drive.
+                  </p>
+                  <button onClick={handleLogin} disabled={isLoadingDrive} className="gsi-material-button w-full max-w-md">
+                    <div className="gsi-material-button-state"></div>
+                    <div className="gsi-material-button-content-wrapper justify-center flex items-center py-2 px-3 border border-gray-300 rounded hover:bg-gray-50 transition-colors bg-white">
+                      <div className="gsi-material-button-icon mr-3">
+                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style={{display: 'block', width: '20px', height: '20px'}}>
+                          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                          <path fill="none" d="M0 0h48v48H0z"></path>
+                        </svg>
+                      </div>
+                      <span className="gsi-material-button-contents text-sm font-medium text-gray-700">Sign in with Google</span>
+                    </div>
+                  </button>
+                </div>
+              ) : (
+                <div className="w-full flex-1 overflow-y-auto mb-1 rounded-lg min-h-[300px]">
+                  {isLoadingDrive ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                      <span className="material-symbols-outlined animate-spin mb-2" style={{fontSize: '32px'}}>sync</span>
+                      <p className="text-sm">Carregando...</p>
+                    </div>
+                  ) : driveFiles.length > 0 ? (
+                    filteredDriveFiles.length > 0 ? (
+                      <div className="space-y-4 pr-1">
+                        {Object.entries(
+                          filteredDriveFiles.reduce((acc, file) => {
+                            const espMatch = ESPECIALIDADES.find(esp => file.name.toUpperCase().includes(esp.toUpperCase()));
+                            const category = espMatch || "OUTROS";
+                            if (!acc[category]) acc[category] = [];
+                            acc[category].push(file);
+                            return acc;
+                          }, {} as Record<string, any[]>)
+                        )
+                        .sort(([a], [b]) => a === "OUTROS" ? 1 : b === "OUTROS" ? -1 : a.localeCompare(b))
+                        .map(([category, files]: [string, any[]]) => (
+                          <div key={category} className="mb-4">
+                            <h3 className="font-heading font-bold text-navy text-sm mb-2 px-2 border-b border-gray-100 pb-1 flex items-center">
+                              <span className="material-symbols-outlined text-gold mr-2" style={{ fontSize: '18px' }}>
+                                {category === "OUTROS" ? "folder_open" : "medical_services"}
+                              </span>
+                              {category}
+                            </h3>
+                            <ul className="space-y-1">
+                              {files.map(file => (
+                                <li key={file.id}>
+                                  <a 
+                                    href={file.webViewLink} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="flex items-center w-full p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-100 group"
+                                  >
+                                    <span className="material-symbols-outlined text-navy mr-3 shrink-0 group-hover:text-gold transition-colors">
+                                      {file.mimeType.includes("pdf") ? "picture_as_pdf" : "description"}
+                                    </span>
+                                    <span className="truncate text-sm font-medium text-gray-800 flex-1 min-w-0 text-left" title={file.name}>
+                                      {file.name}
+                                    </span>
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                        <span className="material-symbols-outlined text-4xl mb-2">search_off</span>
+                        <p className="text-sm">Nenhum arquivo encontrado na pesquisa.</p>
+                      </div>
+                    )
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                      <span className="material-symbols-outlined text-4xl mb-2">folder_open</span>
+                      <p className="text-sm">Nenhum parecer encontrado.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* HELP MODAL */}
         {showHelpModal && (
-          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
             <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-md flex flex-col items-center text-center max-h-[90vh]">
               <span className="material-symbols-outlined text-4xl text-navy mb-4 shrink-0">
                 info
@@ -508,7 +709,7 @@ export const Pareceres: React.FC = () => {
 
         {/* ALERT MODAL */}
         {alertMessage && (
-          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
             <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-sm flex flex-col items-center justify-center text-center">
               <span className="material-symbols-outlined text-4xl text-red-500 mb-4">
                 error
@@ -526,7 +727,7 @@ export const Pareceres: React.FC = () => {
 
         {/* CONFIRMATION MODAL */}
         {showConfirmModal && (
-          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
             <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-sm flex flex-col items-center justify-center text-center">
               <span className="material-symbols-outlined text-4xl text-gold mb-4">
                 help_center
@@ -555,7 +756,7 @@ export const Pareceres: React.FC = () => {
 
         {/* SUCCESS MODAL */}
         {successPdfUrl && (
-          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
             <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-sm flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-4xl">
@@ -613,7 +814,7 @@ export const Pareceres: React.FC = () => {
 
         {/* LOADING SHADOW */}
         {isLoading && (
-          <div className="fixed inset-0 bg-white/70 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+          <div className="fixed inset-0 bg-white/70 backdrop-blur-sm z-[100] flex flex-col items-center justify-center">
             <div className="w-10 h-10 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
             <p className="mt-4 text-navy font-medium animate-pulse">
               Gerando Parecer...
@@ -905,7 +1106,7 @@ export const Pareceres: React.FC = () => {
       </div>
 
       {showPesquisarNomeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
           <div
             className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}

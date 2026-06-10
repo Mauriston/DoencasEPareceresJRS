@@ -100,7 +100,7 @@ export const Resumos: React.FC = () => {
 
       {isMenuOpen && (
         <div
-          className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[80] transition-opacity duration-300"
+          className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] transition-opacity duration-300"
           onClick={() => setIsMenuOpen(false)}
         ></div>
       )}

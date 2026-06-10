@@ -12,6 +12,7 @@ import { Aulas } from './components/Aulas';
 import { Infograficos } from './components/Infograficos';
 import { Resumos } from './components/Resumos';
 import { Pareceres } from './components/Pareceres';
+import { TemplatesGuide } from './components/TemplatesGuide';
 import { NavItem } from './types';
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<NavItem>('splash');
@@ -49,6 +50,8 @@ const App: React.FC = () => {
         return <Resumos />;
       case 'pareceres':
         return <Pareceres />;
+      case 'templates':
+        return <TemplatesGuide />;
       default:
         return <DiseaseGuide />;
     }
@@ -180,13 +183,13 @@ const App: React.FC = () => {
               className="group flex flex-col items-center justify-center w-full h-full focus:outline-none"
             >
               <div className={`mb-1 px-5 py-1 rounded-full transition-colors duration-200 flex items-center justify-center ${
-                currentView === 'pareceres'
+                (currentView === 'pareceres' || currentView === 'templates')
                   ? 'bg-blue-100 text-navy group-hover:bg-blue-200/80' 
                   : 'text-gray-600 group-hover:bg-gray-100'
               }`}>
-                <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: currentView === 'pareceres' ? "'FILL' 1, 'wght' 400" : "'FILL' 0, 'wght' 400" }}>description</span>
+                <span className="material-symbols-outlined" style={{ fontSize: '24px', fontVariationSettings: (currentView === 'pareceres' || currentView === 'templates') ? "'FILL' 1, 'wght' 400" : "'FILL' 0, 'wght' 400" }}>description</span>
               </div>
-              <span className={`text-[10px] sm:text-[12px] font-medium font-body transition-colors ${currentView === 'pareceres' ? 'text-navy font-bold' : 'text-gray-600'}`}>Documentos</span>
+              <span className={`text-[10px] sm:text-[12px] font-medium font-body transition-colors ${(currentView === 'pareceres' || currentView === 'templates') ? 'text-navy font-bold' : 'text-gray-600'}`}>Documentos</span>
             </button>
             
             {isGerarDocFabOpen && (
@@ -206,8 +209,8 @@ const App: React.FC = () => {
                   Perícia Menor
                 </button>
                 <button 
-                  onClick={() => { setIsGerarDocFabOpen(false); }}
-                  className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-50`}
+                  onClick={() => { setCurrentView('templates'); setIsGerarDocFabOpen(false); }}
+                  className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors ${currentView === 'templates' ? 'bg-navy/5 text-navy font-bold' : 'text-gray-700 hover:bg-gray-50'}`}
                 >
                   <span className="material-symbols-outlined mr-2" style={{ fontSize: '20px' }}>edit_document</span>
                   Templates

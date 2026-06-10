@@ -1,4 +1,4 @@
-export type NavItem = 'splash' | 'guide' | 'laws' | 'videos' | 'dgpm406' | 'dgpm406-anexos' | 'concursos' | 'portaria' | 'finalidades' | 'exames' | 'aulas' | 'infograficos' | 'resumos' | 'pareceres';
+export type NavItem = 'splash' | 'guide' | 'laws' | 'videos' | 'dgpm406' | 'dgpm406-anexos' | 'concursos' | 'portaria' | 'finalidades' | 'exames' | 'aulas' | 'infograficos' | 'resumos' | 'pareceres' | 'templates';
 
 export interface Diagnosis {
   name: string;
