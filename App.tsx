@@ -66,20 +66,21 @@ const App: React.FC = () => {
       >         
         <img            
           src="https://i.imgur.com/5JjsbwG.png"            
-          alt="Junta Regular de Saude - Hospital Naval de Recife"            
+          alt="Junta Regular de Saúde - Hospital Naval de Recife"            
           className="w-full h-full object-contain"          
-        />       </div>     
+        />       
+      </div>     
     );   
   }
 
   return (     
-    <div className="flex flex-col min-h-screen bg-gray-light">       
-      {/* Ajustado pb-24 para compensar a barra de navegação ligeiramente maior */}
-      <main className="flex-grow pb-24 w-full h-full max-w-4xl mx-auto flex flex-col">         
+    <div className="fixed inset-0 flex flex-col bg-gray-light overflow-hidden pt-safe">       
+      {/* Área de conteúdo principal com rolagem isolada independente */}
+      <main className="flex-1 w-full h-full max-w-4xl mx-auto flex flex-col overflow-y-auto pb-24">         
         {renderView()}       
       </main>       
 
-      {/* Barra de Navegação Inferior - Corrigida com as áreas de segurança do iOS */}
+      {/* Barra de Navegação Inferior - Com áreas de segurança do iOS */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] pb-[env(safe-area-inset-bottom)] px-4 z-50">         
         <div className="flex justify-around items-stretch h-16 max-w-4xl mx-auto">           
           
