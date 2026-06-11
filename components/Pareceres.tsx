@@ -1,3 +1,4 @@
+// Ficheiro: components/Pareceres.tsx
 import React, { useState, useEffect } from "react";
 import { Header } from "./Header";
 import { NavItem } from "../types";
@@ -14,11 +15,9 @@ export const Pareceres: React.FC = () => {
     "" | "loading" | "found" | "not_found"
   >("");
 
-  // Retrieved fields if found
   const [inspecionado, setInspecionado] = useState("");
   const [omLeitura, setOmLeitura] = useState("");
 
-  // Fields if not found
   const [om, setOm] = useState("");
   const [pg, setPg] = useState("");
   const [circulo, setCirculo] = useState("");
@@ -28,7 +27,6 @@ export const Pareceres: React.FC = () => {
   const [situacao, setSituacao] = useState("");
 
   const [omsOptions, setOmsOptions] = useState<string[]>([]);
-
   const [isLoading, setIsLoading] = useState(false);
   const [successPdfUrl, setSuccessPdfUrl] = useState<string | null>(null);
   const [successPdfId, setSuccessPdfId] = useState<string | null>(null);
@@ -93,111 +91,20 @@ export const Pareceres: React.FC = () => {
   ];
 
   const PG_OPTIONS = [
-    "CMG",
-    "CF",
-    "CC",
-    "CT",
-    "1T",
-    "2T",
-    "GM",
-    "SO",
-    "1SG",
-    "2SG",
-    "3SG",
-    "CB",
-    "MN",
-    "MN-RC",
-    "SD",
-    "GR",
-    "ALUNO",
-    "SCNS",
+    "CMG", "CF", "CC", "CT", "1T", "2T", "GM", "SO", "1SG", "2SG", "3SG", "CB", "MN", "MN-RC", "SD", "GR", "ALUNO", "SCNS",
   ];
 
-  const QUADROS = [
-    "AA",
-    "AFN",
-    "CA",
-    "CD",
-    "CN",
-    "EN",
-    "FN",
-    "IM",
-    "Md",
-    "QC-CA",
-    "QC-FN",
-    "QC-IM",
-    "S",
-    "T",
-  ];
+  const QUADROS = ["AA", "AFN", "CA", "CD", "CN", "EN", "FN", "IM", "Md", "QC-CA", "QC-FN", "QC-IM", "S", "T"];
   const ESP_PRACAS = [
-    "AD",
-    "AH",
-    "AM",
-    "AR",
-    "MC",
-    "MT",
-    "AT",
-    "AV",
-    "BA",
-    "CA",
-    "CP",
-    "CI",
-    "CN",
-    "CL",
-    "CT",
-    "CO",
-    "DA",
-    "DM",
-    "DT",
-    "ED",
-    "EP",
-    "EL",
-    "ET",
-    "TE",
-    "EF",
-    "EG",
-    "ES",
-    "AE",
-    "EN",
-    "FR",
-    "GC",
-    "GR",
-    "HN",
-    "HD",
-    "IF",
-    "MR",
-    "MA",
-    "NA",
-    "MI",
-    "MG",
-    "ML",
-    "ME",
-    "MO",
-    "MS",
-    "MU",
-    "ND",
-    "OR",
-    "OS",
-    "PL",
-    "PC",
-    "PD",
-    "PT",
-    "QI",
-    "RM",
-    "RB",
-    "SC",
-    "SI",
-    "TC",
+    "AD", "AH", "AM", "AR", "MC", "MT", "AT", "AV", "BA", "CA", "CP", "CI", "CN", "CL", "CT", "CO", "DA", "DM", "DT", "ED", "EP", "EL", "ET", "TE", "EF", "EG", "ES", "AE", "EN", "FR", "GC", "GR", "HN", "HD", "IF", "MR", "MA", "NA", "MI", "MG", "ML", "ME", "MO", "MS", "MU", "ND", "OR", "OS", "PL", "PC", "PD", "PT", "QI", "RM", "RB", "SC", "SI", "TC",
   ];
 
   const GAS_URL =
     "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
 
-  // NIP mask handler
   const handleNipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 8) value = value.slice(0, 8);
-    // Format to 00.0000.00
     if (value.length > 6) {
       value = `${value.slice(0, 2)}.${value.slice(2, 6)}.${value.slice(6)}`;
     } else if (value.length > 2) {
@@ -205,7 +112,6 @@ export const Pareceres: React.FC = () => {
     }
     setNip(value);
 
-    // If fully typed, search
     if (value.length === 10) {
       searchNip(value);
     } else {
@@ -256,20 +162,17 @@ export const Pareceres: React.FC = () => {
     searchNip(selectedNip);
   };
 
-  // Fetch lookups (OMs) on mount
   useEffect(() => {
     fetch(`${GAS_URL}?action=getLookups`)
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.data && data.data.OM) {
-          // Filter out empty rows
           setOmsOptions(data.data.OM.filter((o: string) => o.trim() !== ""));
         }
       })
       .catch((err) => console.error("Erro ao carregar OMs", err));
   }, []);
 
-  // Logic for Situação and Circulo auto-selection based on PG
   useEffect(() => {
     if (militarStatus !== "not_found" || !pg) return;
 
@@ -280,22 +183,11 @@ export const Pareceres: React.FC = () => {
     } else if (["MN-RC", "SD", "GR", "ALUNO", "SCNS"].includes(pg)) {
       setSituacao("");
     } else {
-      // keep whatever they choose for CC, CT, 1T, MN, CB, 3SG
       setSituacao("");
     }
 
     const oficialPg = ["CMG", "CF", "CC", "CT", "1T", "2T", "GM"];
-    const pracaPg = [
-      "SO",
-      "1SG",
-      "2SG",
-      "3SG",
-      "CB",
-      "MN",
-      "MN-RC",
-      "SD",
-      "GR",
-    ];
+    const pracaPg = ["SO", "1SG", "2SG", "3SG", "CB", "MN", "MN-RC", "SD", "GR"];
 
     if (oficialPg.includes(pg)) {
       setCirculo("Oficial");
@@ -306,7 +198,6 @@ export const Pareceres: React.FC = () => {
     }
   }, [pg, militarStatus]);
 
-  // Generate the inspecionado string when not found
   const generateInspecionado = () => {
     if (militarStatus === "found") return inspecionado;
 
@@ -317,26 +208,19 @@ export const Pareceres: React.FC = () => {
       result = `CC (RM3-${quadro}) ${nip} ${upperNome}`;
     } else if (pg === "CC" && situacao === "Carreira") {
       result = `CC (${quadro}) ${nip} ${upperNome}`;
-    } else if (
-      ["CT", "1T", "2T", "GM"].includes(pg) &&
-      situacao === "Temporário"
-    ) {
+    } else if (["CT", "1T", "2T", "GM"].includes(pg) && situacao === "Temporário") {
       result = `${pg} (RM2-${quadro}) ${nip} ${upperNome}`;
-    } else if (
-      ["CT", "1T", "CMG", "CF"].includes(pg) &&
-      situacao === "Carreira"
-    ) {
+    } else if (["CT", "1T", "CMG", "CF"].includes(pg) && situacao === "Carreira") {
       result = `${pg} (${quadro}) ${nip} ${upperNome}`;
     } else if (["SO", "1SG", "2SG"].includes(pg) && situacao === "Carreira") {
       result = `${pg}-${espPraca} ${nip} ${upperNome}`;
     } else if (["3SG", "CB", "MN"].includes(pg) && situacao === "Temporário") {
       result = `${pg}-RM2-${espPraca} ${nip} ${upperNome}`;
     } else if (["3SG", "CB", "MN"].includes(pg) && situacao === "Carreira") {
-      result = `${pg}-${espPraca} ${nip} ${upperNome}`; // Extrapolating career pracas
+      result = `${pg}-${espPraca} ${nip} ${upperNome}`;
     } else if (["MN-RC", "SD", "GR", "ALUNO", "SCNS"].includes(pg)) {
       result = `${pg} ${nip} ${upperNome}`;
     }
-
     return result;
   };
 
@@ -362,10 +246,7 @@ export const Pareceres: React.FC = () => {
   const getPgq = () => {
     if (pg === "CC" && situacao === "Temporário") {
       return `CC (RM3-${quadro})`;
-    } else if (
-      ["CT", "1T", "2T", "GM"].includes(pg) &&
-      situacao === "Temporário"
-    ) {
+    } else if (["CT", "1T", "2T", "GM"].includes(pg) && situacao === "Temporário") {
       return `${pg} (RM2-${quadro})`;
     } else if (["3SG", "CB", "MN"].includes(pg) && situacao === "Temporário") {
       return `${pg}-RM2-${espPraca}`;
@@ -393,16 +274,13 @@ export const Pareceres: React.FC = () => {
         setIsLoadingDrive(false);
         return;
       }
-      
       const res = await fetch(`https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID}'+in+parents&fields=files(id,name,mimeType,webViewLink)&orderBy=modifiedTime+desc`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) setNeedsAuth(true);
         throw new Error('Falha ao carregar arquivos do Drive');
       }
-      
       const data = await res.json();
       setDriveFiles(data.files || []);
     } catch (err: any) {
@@ -521,7 +399,8 @@ export const Pareceres: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 relative pb-20">
+    // Note a remoção da classe pb-20 no contêiner raiz, movida para a div scrollável
+    <div className="flex flex-col h-full bg-gray-50 relative">
       <Header 
         title="PARECERES" 
         rightAction={
@@ -534,19 +413,22 @@ export const Pareceres: React.FC = () => {
             >
               <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>folder</span>
             </button>
-            <button 
-              type="button" 
-              onClick={() => setShowHelpModal(true)} 
-              className="text-white hover:text-gold transition-colors flex items-center justify-center p-1"
-              title="Ajuda"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>help</span>
-            </button>
           </div>
         }
       />
 
-      <div className="flex-1 overflow-y-auto px-4 py-6 w-full max-w-2xl mx-auto space-y-6">
+      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-32 w-full max-w-2xl mx-auto space-y-6">
+        
+        {/* FAB de Ajuda */}
+        <button
+          type="button"
+          onClick={() => setShowHelpModal(true)}
+          className="fixed bottom-24 right-6 w-14 h-14 bg-[#050F41] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 border border-slate-700"
+          title="Ajuda"
+        >
+          <span className="material-symbols-outlined text-[28px]">help</span>
+        </button>
+
         {/* GOOGLE DRIVE MODAL */}
         {showDriveModal && (
           <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
@@ -753,7 +635,7 @@ export const Pareceres: React.FC = () => {
           </div>
         )}
 
-        {/* SUCCESS MODAL */}
+        {/* SUCCESS MODAL (Botões transformados em Icon Buttons alinhados na horizontal) */}
         {successPdfUrl && (
           <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
             <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-sm flex flex-col items-center text-center">
@@ -769,43 +651,38 @@ export const Pareceres: React.FC = () => {
                 Parecer gerado e enviado para o seu e-mail.
               </p>
 
-              <div className="flex flex-col w-full gap-3">
+              <div className="flex justify-center items-center gap-6 w-full mt-2">
+                <button
+                  onClick={resetForm}
+                  className="w-12 h-12 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 transition-colors shadow-sm"
+                  title="Fechar"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+                
                 <button
                   onClick={handleImprimir}
                   disabled={isPrinting}
-                  className="w-full px-4 py-2 border-2 border-navy text-navy font-medium rounded-lg hover:bg-navy/5 transition-colors disabled:opacity-50 flex items-center justify-center"
+                  className="w-16 h-16 rounded-full bg-navy text-white flex items-center justify-center hover:bg-navy/90 disabled:opacity-50 shadow-md transition-all active:scale-95"
+                  title="Imprimir Colorido na Secretaria"
                 >
                   {isPrinting ? (
-                    "Enviando..."
+                    <span className="material-symbols-outlined animate-spin text-[28px]">sync</span>
                   ) : (
-                    <>
-                      Imprimir{" "}
-                      <span className="material-symbols-outlined ml-2 text-lg">
-                        print
-                      </span>
-                    </>
+                    <span className="material-symbols-outlined text-[28px]">print</span>
                   )}
                 </button>
-                <div className="flex w-full gap-3">
-                  <button
-                    onClick={resetForm}
-                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    Fechar
-                  </button>
-                  <a
-                    href={successPdfUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={resetForm}
-                    className="flex-1 px-4 py-2 bg-navy text-white font-medium rounded-lg hover:bg-navy/90 transition-colors flex items-center justify-center"
-                  >
-                    Abrir PDF{" "}
-                    <span className="material-symbols-outlined ml-1 text-lg">
-                      open_in_new
-                    </span>
-                  </a>
-                </div>
+                
+                <a
+                  href={successPdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={resetForm}
+                  className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center hover:bg-blue-200 transition-colors shadow-sm"
+                  title="Abrir PDF no Drive"
+                >
+                  <span className="material-symbols-outlined">open_in_new</span>
+                </a>
               </div>
             </div>
           </div>
@@ -1094,13 +971,24 @@ export const Pareceres: React.FC = () => {
             )}
           </div>
 
-          <button
-            type="submit"
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl py-3.5 shadow-md flex items-center justify-center transition-all active:scale-95 border-b-4 border-green-800"
-          >
-            <span className="material-symbols-outlined mr-2">send</span>
-            GERAR PARECER PERICIAL
-          </button>
+          {/* ÁREA DE BOTÕES DO FORMULÁRIO */}
+          <div className="flex justify-end items-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={resetForm}
+              className="w-12 h-12 bg-gray-100 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full flex items-center justify-center transition-all shadow-sm border border-gray-200"
+              title="Limpar Formulário"
+            >
+              <span className="material-symbols-outlined">delete</span>
+            </button>
+            <button
+              type="submit"
+              className="w-14 h-14 bg-[#079551] text-white rounded-full flex items-center justify-center transition-all hover:bg-green-700 shadow-md active:scale-95"
+              title="Gerar Parecer Pericial"
+            >
+              <span className="material-symbols-outlined">send</span>
+            </button>
+          </div>
         </form>
       </div>
 
@@ -1150,7 +1038,7 @@ export const Pareceres: React.FC = () => {
                       .filter((m) =>
                         pesquisarNomeTerm && m.nome.toLowerCase().includes(pesquisarNomeTerm.toLowerCase())
                       )
-                      .slice(0, 50) // limit performance
+                      .slice(0, 50)
                       .map((m, idx) => (
                         <div
                           key={idx}
@@ -1169,11 +1057,7 @@ export const Pareceres: React.FC = () => {
                           Nenhum militar encontrado com esse nome.
                         </div>
                       )}
-                    {!pesquisarNomeTerm && (
-                      <div className="p-8 text-center text-gray-400 text-sm italic">
-                        Digite um nome para buscar
-                      </div>
-                    )}
+                    {/* A frase "Digite para buscar" foi removida daqui! */}
                   </div>
                 )}
               </div>

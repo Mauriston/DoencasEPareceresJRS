@@ -1,6 +1,6 @@
 // Ficheiro: components/Aulas.tsx
 import React, { useState, useEffect } from 'react';
-import { Loader2, RefreshCw, AlertCircle, ExternalLink, X, ArrowLeft } from 'lucide-react';
+import { Loader2, RefreshCw, AlertCircle, ExternalLink } from 'lucide-react';
 import { Header } from './Header';
 import { fetchExtras, ExtraItem } from '../services/extrasService';
 
@@ -8,9 +8,6 @@ export const Aulas: React.FC = () => {
   const [aulas, setAulas] = useState<ExtraItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // 1. Documentação: Estado para gerir qual a aula que está a ser visualizada no momento
-  const [selectedAula, setSelectedAula] = useState<ExtraItem | null>(null);
 
   const fallbackAulas: ExtraItem[] = [
     {
@@ -55,76 +52,25 @@ export const Aulas: React.FC = () => {
     loadData();
   }, []);
 
-  // 2. Documentação: Função inteligente que decide se incorpora ou abre link externo
-  const handleAulaClick = (aula: ExtraItem) => {
-    if (aula.canvaEmbedUrl) {
-      // Se tiver código de incorporação/Canva, abre no player do app
-      setSelectedAula(aula);
-    } else {
-      // Se for a última aula (ou link comum), abre em nova aba tradicional
-      window.open(aula.link, '_blank', 'noopener,noreferrer');
+  const getClickableLink = (item: ExtraItem): string => {
+    if (item.canvaViewUrl && !item.canvaViewUrl.trim().startsWith('<iframe')) {
+      return item.canvaViewUrl.trim();
     }
+    const trimmed = (item.link || '').trim();
+    if (trimmed.startsWith('<iframe')) {
+      const srcMatch = trimmed.match(/src="([^"]+)"/);
+      if (srcMatch && srcMatch[1]) {
+        return srcMatch[1].replace(/&amp;/g, '&');
+      }
+    }
+    return trimmed;
   };
 
-  // =========================================================
-  // MODAL / VISUALIZADOR INTEGRADO DE SLIDES (ECRÃ INTEIRO)
-  // =========================================================
-  if (selectedAula) {
-    return (
-      <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-fade-in pb-env-safe">
-        {/* Barra Superior do Leitor */}
-        <div className="flex-shrink-0 w-full sticky top-0 z-50 shadow-sm bg-[#050F41] text-white h-[56px] flex items-center justify-between px-4">
-          <div className="flex-1 text-left font-heading text-[16px] font-semibold truncate pr-4 text-white uppercase tracking-wide">
-            {selectedAula.title}
-          </div>
-          <button 
-            onClick={() => setSelectedAula(null)}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center justify-center"
-            title="Fechar Visualizador"
-          >
-            <X size={20} />
-          </button>
-        </div>
-        
-        {/* Área de Visualização do Slide Incorporado */}
-        <div className="flex-grow overflow-y-auto w-full bg-gray-900 flex flex-col items-center justify-center p-4 relative">
-          <div className="w-full max-w-4xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative">
-            <iframe 
-              src={selectedAula.canvaEmbedUrl}
-              className="absolute inset-0 w-full h-full border-0"
-              allowFullScreen
-              allow="fullscreen"
-              title={selectedAula.title}
-            ></iframe>
-          </div>
-          
-          {/* Informações de apoio abaixo dos slides */}
-          <div className="w-full max-w-4xl text-left mt-4 p-4 bg-white/5 rounded-xl border border-white/10">
-            <h4 className="text-white font-heading font-bold text-sm uppercase tracking-wide mb-1">Descrição da Instrução</h4>
-            <p className="text-gray-300 font-body text-sm leading-relaxed">{selectedAula.description || 'Instrução do curso de saúde'}</p>
-          </div>
-
-          {/* Botão Flutuante (FAB) para retornar de forma prática */}
-          <button 
-            onClick={() => setSelectedAula(null)}
-            className="absolute bottom-6 right-6 bg-[#FAB932] text-[#050F41] shadow-2xl rounded-2xl p-4 hover:scale-105 active:scale-95 transition-all border border-amber-400 flex items-center justify-center z-50"
-            title="Voltar para a lista"
-          >
-            <ArrowLeft size={22} />
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // =========================================================
-  // INTERFACE PRINCIPAL: LISTAGEM DE AULAS
-  // =========================================================
   return (
     <div className="flex flex-col h-full bg-gray-50 animate-fade-in">
       <Header title="Aulas e Slides" />
       
-      <div className="p-4 space-y-6 overflow-y-auto w-full max-w-full flex-1">
+      <div className="p-4 space-y-6 overflow-y-auto w-full max-w-full flex-1 pb-24">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
             <Loader2 className="animate-spin text-navy" size={40} />
@@ -159,17 +105,17 @@ export const Aulas: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5" id="aulas-grid">
                 {aulas.map((aula, idx) => {
-                  const isEmbeddable = !!aula.canvaEmbedUrl;
+                  const clickUrl = getClickableLink(aula);
                   
                   return (
-                    // 3. Documentação: Trocámos a tag <a> por um <button type="button"> para gerir a ação via script
-                    <button 
+                    <a 
                       key={aula.id} 
-                      onClick={() => handleAulaClick(aula)}
-                      className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col sm:flex-row items-stretch p-0 w-full animate-fade-in hover:shadow-md hover:border-[#079551] transition-all duration-300 cursor-pointer text-left focus:outline-none"
+                      href={clickUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col sm:flex-row items-stretch p-0 w-full animate-fade-in hover:shadow-md hover:border-[#079551] transition-all duration-300 cursor-pointer text-left"
                       id={`aula-card-${idx}`}
                     >
-                      {/* Bloco da Imagem da Aula */}
                       <div className="w-full sm:w-44 h-48 sm:h-auto bg-gray-50 relative flex-shrink-0 overflow-hidden border-b sm:border-b-0 sm:border-r border-gray-100">
                         {aula.imageUrl ? (
                           <img 
@@ -186,7 +132,6 @@ export const Aulas: React.FC = () => {
                         )}
                       </div>
 
-                      {/* Painel de Conteúdo e Metadados */}
                       <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
                         <div className="space-y-2">
                           <h3 className="text-base font-bold text-navy font-heading leading-snug group-hover:text-[#079551] transition-colors">
@@ -197,26 +142,17 @@ export const Aulas: React.FC = () => {
                           </p>
                         </div>
 
-                        {/* Indicador Visual Dinâmico no Canto Inferior Direito */}
-                        <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-end gap-2">
-                          {/* Tag informativa pequena */}
-                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${isEmbeddable ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-blue-50 text-navy border border-blue-100'}`}>
-                            {isEmbeddable ? 'Slide Interativo' : 'Link Externo'}
-                          </span>
+                        <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-end">
                           <span 
                             className="w-10 h-10 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center transition-all shadow-sm group-hover:bg-[#079551] group-hover:text-white"
-                            title={isEmbeddable ? "Abrir Apresentação" : "Acessar Link Externo"}
+                            title="Abrir Link"
                             id={`action-icon-trigger-${idx}`}
                           >
-                            {isEmbeddable ? (
-                              <span className="material-symbols-outlined text-sm">play_circle</span>
-                            ) : (
-                              <ExternalLink size={16} />
-                            )}
+                            <ExternalLink size={18} />
                           </span>
                         </div>
                       </div>
-                    </button>
+                    </a>
                   );
                 })}
               </div>
