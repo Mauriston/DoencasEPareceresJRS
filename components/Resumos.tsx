@@ -48,14 +48,17 @@ export const Resumos: React.FC = () => {
             setIsMenuOpen(false);
             window.scrollTo(0,0);
           }}
-          className={`flex items-center w-full text-left p-3 my-1 rounded-md text-base transition-colors duration-200 ${
+          className={`flex items-center w-full text-left px-4 py-3 my-1 rounded-lg text-sm font-medium transition-colors duration-200 ${
             activePage === chapter.id
-              ? 'bg-gold text-navy font-bold'
-              : 'text-gray-200 hover:bg-navy/80 hover:text-white'
+              ? 'bg-navy/5 text-navy font-bold border-l-4 border-navy'
+              : 'text-gray-700 hover:bg-gray-50'
           }`}
         >
-          <Icon name={chapter.icon} className="mr-4 text-2xl" />
-          <span className="flex-1 text-sm">{chapter.title}</span>
+          <Icon 
+            name={chapter.icon} 
+            className={`mr-3 text-[22px] ${activePage === chapter.id ? 'text-navy' : 'text-gray-400'}`} 
+          />
+          <span className="flex-1">{chapter.title}</span>
         </button>
       ))}
     </>
@@ -76,34 +79,36 @@ export const Resumos: React.FC = () => {
         }
       />
 
+      {/* Fundo Desfocado (Backdrop) - Ajustado Z-index para 100 */}
+      {isMenuOpen && (
+        <div
+          className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] transition-opacity duration-300 animate-fade-in"
+          onClick={() => setIsMenuOpen(false)}
+        ></div>
+      )}
+
+      {/* Menu Lateral - Ajustado Z-index para 110 e estilo modernizado */}
       <aside
-        className={`fixed top-0 left-0 h-full bg-navy w-80 p-4 z-[90] transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl border-r border-gold/30 ${
+        className={`fixed top-0 left-0 h-full bg-white w-80 p-4 z-[110] transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl rounded-r-2xl border-r border-gray-100 ${
           isMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between mb-8 h-16 flex-shrink-0 border-b border-white/10 mt-safe">
-            <h1 className="font-heading text-lg font-bold text-white flex items-center">
-              <Icon name="local_hospital" className="text-gold text-2xl mr-2"/>
+        <div className="flex items-center justify-between mb-4 h-12 flex-shrink-0 border-b border-gray-100 mt-safe">
+            <h1 className="font-heading text-lg font-bold text-navy flex items-center">
+              <Icon name="local_hospital" className="text-gold text-[26px] mr-2"/>
               Capítulos
             </h1>
             <button
                onClick={() => setIsMenuOpen(false)}
-               className="p-2 text-white/70 hover:text-white transition-colors"
+               className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-50"
             >
                <Icon name="close" className="text-2xl" />
             </button>
         </div>
-        <nav className="flex-grow overflow-y-auto pb-20 scrollbar-hide">
+        <nav className="flex-grow overflow-y-auto pb-20 custom-scrollbar pr-1">
           <NavLinks />
         </nav>
       </aside>
-
-      {isMenuOpen && (
-        <div
-          className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] transition-opacity duration-300"
-          onClick={() => setIsMenuOpen(false)}
-        ></div>
-      )}
 
       <div 
         className={`flex-1 w-full transition-all duration-300 overflow-y-auto ${
@@ -124,7 +129,7 @@ export const Resumos: React.FC = () => {
             <div className="w-full max-w-5xl mx-auto flex justify-end px-4 sm:px-8 mt-6 mb-10 pb-8">
               <button 
                 onClick={() => { setActivePage(nextChapter.id); window.scrollTo(0,0); }}
-                className="flex items-center space-x-2 bg-navy text-white px-5 py-3 rounded-lg hover:bg-navy/90 active:scale-95 transition-all shadow-sm border border-gold/50"
+                className="flex items-center space-x-2 bg-navy text-white px-5 py-3 rounded-xl hover:bg-navy/90 active:scale-95 transition-all shadow-md border-b-4 border-navy-light"
               >
                 <span className="text-sm font-semibold">Ir para o {nextChapterTitle.split(':')[0]}</span>
                 <span className="material-symbols-outlined text-lg">arrow_forward_ios</span>
