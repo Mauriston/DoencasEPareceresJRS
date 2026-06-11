@@ -1,19 +1,26 @@
 // Ficheiro: components/Pareceres.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Header } from "./Header";
 import { NavItem } from "../types";
-import { initAuth, googleSignIn, getAccessToken } from "../services/firebaseAuth";
+
+// Helper para extrair apenas o nome da string gerada pelo sistema (Tirando Patente e NIP)
+const extractNameFromInspecionado = (text: string) => {
+  const match = text.split(/\d{2}\.\d{4}\.\d{2}/);
+  return match.length > 1 ? match[1].trim() : text.trim();
+};
 
 export const Pareceres: React.FC = () => {
+  // Navigation States
+  const [viewMode, setViewMode] = useState<'form' | 'history'>('form');
+
+  // Form States
   const [peritoSelecionado, setPeritoSelecionado] = useState("");
   const [finalidade, setFinalidade] = useState("");
   const [especialidade, setEspecialidade] = useState("");
   const [historico, setHistorico] = useState("");
 
   const [nip, setNip] = useState("");
-  const [militarStatus, setMilitarStatus] = useState<
-    "" | "loading" | "found" | "not_found"
-  >("");
+  const [militarStatus, setMilitarStatus] = useState<"" | "loading" | "found" | "not_found">("");
 
   const [inspecionado, setInspecionado] = useState("");
   const [omLeitura, setOmLeitura] = useState("");
@@ -32,26 +39,22 @@ export const Pareceres: React.FC = () => {
   const [successPdfId, setSuccessPdfId] = useState<string | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
 
+  // Search & History States
   const [showPesquisarNomeModal, setShowPesquisarNomeModal] = useState(false);
   const [pesquisarNomeTerm, setPesquisarNomeTerm] = useState("");
   const [militaresInfoList, setMilitaresInfoList] = useState<{nome: string, nip: string}[]>([]);
   const [isCarregandoMilitares, setIsCarregandoMilitares] = useState(false);
+  
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showDriveModal, setShowDriveModal] = useState(false);
-  const [driveFiles, setDriveFiles] = useState<any[]>([]);
-  const [driveSearchTerm, setDriveSearchTerm] = useState("");
-  const [isLoadingDrive, setIsLoadingDrive] = useState(false);
-  const [needsAuth, setNeedsAuth] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
 
-  useEffect(() => {
-    const unsubscribe = initAuth(
-      () => setNeedsAuth(false),
-      () => setNeedsAuth(true)
-    );
-    return () => unsubscribe();
-  }, []);
+  // History Dropdown Logic
+  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+  const [pareceresHistory, setPareceresHistory] = useState<any[]>([]);
+  const [isFetchingHistory, setIsFetchingHistory] = useState(false);
+  const [selectedHistoryName, setSelectedHistoryName] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const PERITOS = {
     CT_MAURISTON: {
@@ -90,17 +93,46 @@ export const Pareceres: React.FC = () => {
     "PSIQUIATRIA",
   ];
 
-  const PG_OPTIONS = [
-    "CMG", "CF", "CC", "CT", "1T", "2T", "GM", "SO", "1SG", "2SG", "3SG", "CB", "MN", "MN-RC", "SD", "GR", "ALUNO", "SCNS",
-  ];
-
+  const PG_OPTIONS = ["CMG", "CF", "CC", "CT", "1T", "2T", "GM", "SO", "1SG", "2SG", "3SG", "CB", "MN", "MN-RC", "SD", "GR", "ALUNO", "SCNS"];
   const QUADROS = ["AA", "AFN", "CA", "CD", "CN", "EN", "FN", "IM", "Md", "QC-CA", "QC-FN", "QC-IM", "S", "T"];
-  const ESP_PRACAS = [
-    "AD", "AH", "AM", "AR", "MC", "MT", "AT", "AV", "BA", "CA", "CP", "CI", "CN", "CL", "CT", "CO", "DA", "DM", "DT", "ED", "EP", "EL", "ET", "TE", "EF", "EG", "ES", "AE", "EN", "FR", "GC", "GR", "HN", "HD", "IF", "MR", "MA", "NA", "MI", "MG", "ML", "ME", "MO", "MS", "MU", "ND", "OR", "OS", "PL", "PC", "PD", "PT", "QI", "RM", "RB", "SC", "SI", "TC",
-  ];
+  const ESP_PRACAS = ["AD", "AH", "AM", "AR", "MC", "MT", "AT", "AV", "BA", "CA", "CP", "CI", "CN", "CL", "CT", "CO", "DA", "DM", "DT", "ED", "EP", "EL", "ET", "TE", "EF", "EG", "ES", "AE", "EN", "FR", "GC", "GR", "HN", "HD", "IF", "MR", "MA", "NA", "MI", "MG", "ML", "ME", "MO", "MS", "MU", "ND", "OR", "OS", "PL", "PC", "PD", "PT", "QI", "RM", "RB", "SC", "SI", "TC"];
 
-  const GAS_URL =
-    "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
+
+  // Handle outside click for dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowHistoryDropdown(false);
+      }
+    }
+    if (showHistoryDropdown) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showHistoryDropdown]);
+
+  const fetchHistory = async () => {
+    if (pareceresHistory.length > 0) return;
+    setIsFetchingHistory(true);
+    try {
+      const resp = await fetch(`${GAS_URL}?action=getPareceresList`);
+      const json = await resp.json();
+      if (json.success && json.data) {
+        setPareceresHistory(json.data);
+      }
+    } catch (err) {
+      console.error(err);
+      setAlertMessage("Erro ao buscar histórico.");
+    } finally {
+      setIsFetchingHistory(false);
+    }
+  };
+
+  const handleFolderClick = () => {
+    if (!showHistoryDropdown) fetchHistory();
+    setShowHistoryDropdown(!showHistoryDropdown);
+  };
+
+  const uniqueHistoryNames = Array.from(new Set(pareceresHistory.map(p => extractNameFromInspecionado(p.inspecionado)))).filter(Boolean).sort();
 
   const handleNipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
@@ -258,60 +290,6 @@ export const Pareceres: React.FC = () => {
     return pg;
   };
 
-  const filteredDriveFiles = driveFiles.filter((file) => 
-    file.name.toUpperCase().includes(driveSearchTerm.toUpperCase()) && 
-    file.mimeType.includes("pdf")
-  );
-
-  const FOLDER_ID = "176YQTOOWXuE78Xul49XYpJsVNyu-eZFi";
-
-  const fetchDriveFiles = async () => {
-    setIsLoadingDrive(true);
-    try {
-      const token = await getAccessToken();
-      if (!token) {
-        setNeedsAuth(true);
-        setIsLoadingDrive(false);
-        return;
-      }
-      const res = await fetch(`https://www.googleapis.com/drive/v3/files?q='${FOLDER_ID}'+in+parents&fields=files(id,name,mimeType,webViewLink)&orderBy=modifiedTime+desc`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403) setNeedsAuth(true);
-        throw new Error('Falha ao carregar arquivos do Drive');
-      }
-      const data = await res.json();
-      setDriveFiles(data.files || []);
-    } catch (err: any) {
-      console.error(err);
-      setAlertMessage("Erro ao carregar do Google Drive.");
-    } finally {
-      setIsLoadingDrive(false);
-    }
-  };
-
-  const handleOpenDriveModal = () => {
-    setShowDriveModal(true);
-    fetchDriveFiles();
-  };
-
-  const handleLogin = async () => {
-    setIsLoadingDrive(true);
-    try {
-      const result = await googleSignIn();
-      if (result) {
-        setNeedsAuth(false);
-        fetchDriveFiles();
-      }
-    } catch (err) {
-      console.error('Login failed:', err);
-      setAlertMessage("Falha ao autenticar com o Google.");
-    } finally {
-      setIsLoadingDrive(false);
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!peritoSelecionado || !finalidade || !especialidade || !nip) {
@@ -398,28 +376,108 @@ export const Pareceres: React.FC = () => {
     }
   };
 
+  // ==========================================
+  // RENDERIZAÇÃO: PÁGINA DE HISTÓRICO
+  // ==========================================
+  if (viewMode === 'history') {
+    const filteredHistory = pareceresHistory.filter(p => extractNameFromInspecionado(p.inspecionado) === selectedHistoryName);
+    
+    return (
+      <div className="flex flex-col h-full bg-gray-50 relative pb-20">
+        <Header
+          title="HISTÓRICO"
+          leftAction={
+            <button onClick={() => setViewMode('form')} className="text-white p-2 rounded-full hover:bg-white/10" title="Voltar">
+              <span className="material-symbols-outlined">arrow_back</span>
+            </button>
+          }
+        />
+        <div className="flex-1 overflow-y-auto px-4 py-8 w-full max-w-2xl mx-auto space-y-6">
+          <h2 className="font-heading font-bold text-navy text-[16px] text-center mb-6 px-4">{selectedHistoryName}</h2>
+          
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-gray-50 text-navy font-heading text-xs uppercase border-b border-gray-200">
+                <tr>
+                  <th className="px-5 py-4">Data do Parecer</th>
+                  <th className="px-5 py-4">Especialidade</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredHistory.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-4">
+                      <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline font-semibold flex items-center gap-1.5" title="Abrir Documento">
+                        {item.data}
+                        <span className="material-symbols-outlined text-[15px]">open_in_new</span>
+                      </a>
+                    </td>
+                    <td className="px-5 py-4 text-gray-700 font-medium">{item.especialidade}</td>
+                  </tr>
+                ))}
+                {filteredHistory.length === 0 && (
+                   <tr><td colSpan={2} className="px-5 py-6 text-center text-gray-500">Nenhum parecer encontrado.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // RENDERIZAÇÃO: PÁGINA PRINCIPAL (FORMULÁRIO)
+  // ==========================================
   return (
-    // Note a remoção da classe pb-20 no contêiner raiz, movida para a div scrollável
     <div className="flex flex-col h-full bg-gray-50 relative">
       <Header 
         title="PARECERES" 
         rightAction={
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 relative" ref={dropdownRef}>
             <button 
               type="button" 
-              onClick={handleOpenDriveModal} 
+              onClick={handleFolderClick} 
               className="text-white hover:text-gold transition-colors flex items-center justify-center p-1"
               title="Acessar Pareceres Salvos"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>folder</span>
+              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>folder</span>
             </button>
+
+            {/* Menu Dropdown Nativo do Histórico */}
+            {showHistoryDropdown && (
+              <div className="absolute top-full right-0 mt-3 w-72 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-[100] max-h-80 overflow-y-auto animate-fade-in">
+                 <div className="px-4 py-2 border-b border-gray-50 bg-gray-50/50 mb-1 sticky top-0">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Histórico Recente</span>
+                 </div>
+                 {isFetchingHistory ? (
+                    <div className="p-6 flex justify-center text-navy"><span className="material-symbols-outlined animate-spin text-2xl">sync</span></div>
+                 ) : uniqueHistoryNames.length > 0 ? (
+                    uniqueHistoryNames.map(name => (
+                      <button
+                        key={name}
+                        className="w-full text-left px-4 py-3 hover:bg-blue-50 text-[13px] font-medium text-gray-700 truncate transition-colors border-l-2 border-transparent hover:border-navy"
+                        onClick={() => {
+                           setSelectedHistoryName(name);
+                           setViewMode('history');
+                           setShowHistoryDropdown(false);
+                        }}
+                      >
+                        {name}
+                      </button>
+                    ))
+                 ) : (
+                    <div className="p-4 text-center text-gray-500 text-sm">Nenhum registro.</div>
+                 )}
+              </div>
+            )}
           </div>
         }
       />
 
-      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-32 w-full max-w-2xl mx-auto space-y-6">
+      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-28 w-full max-w-2xl mx-auto space-y-6">
         
-        {/* FAB de Ajuda */}
+        {/* FAB de Ajuda - Movido para o canto inferior direito */}
         <button
           type="button"
           onClick={() => setShowHelpModal(true)}
@@ -428,125 +486,6 @@ export const Pareceres: React.FC = () => {
         >
           <span className="material-symbols-outlined text-[28px]">help</span>
         </button>
-
-        {/* GOOGLE DRIVE MODAL */}
-        {showDriveModal && (
-          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-3xl flex flex-col items-center max-h-[90vh]">
-              <div className="flex items-center justify-between w-full mb-4 shrink-0">
-                <h2 className="font-heading text-lg font-bold text-navy flex items-center">
-                  <span className="material-symbols-outlined text-gold mr-2">folder</span>
-                  Pareceres Salvos
-                </h2>
-                <button
-                  onClick={() => setShowDriveModal(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-                >
-                  <span className="material-symbols-outlined">close</span>
-                </button>
-              </div>
-
-              {!needsAuth && (
-                <div className="w-full mb-4 shrink-0 relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
-                  <input
-                    type="text"
-                    placeholder="Pesquisar por nome ou NIP..."
-                    value={driveSearchTerm}
-                    onChange={(e) => setDriveSearchTerm(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-10 p-2.5 transition-colors"
-                  />
-                </div>
-              )}
-
-              {needsAuth ? (
-                <div className="flex flex-col items-center justify-center w-full py-8 text-center shrink-0">
-                  <p className="text-sm text-gray-600 mb-6">
-                    É necessário fazer login com o Google para visualizar os pareceres salvos no Drive.
-                  </p>
-                  <button onClick={handleLogin} disabled={isLoadingDrive} className="gsi-material-button w-full max-w-md">
-                    <div className="gsi-material-button-state"></div>
-                    <div className="gsi-material-button-content-wrapper justify-center flex items-center py-2 px-3 border border-gray-300 rounded hover:bg-gray-50 transition-colors bg-white">
-                      <div className="gsi-material-button-icon mr-3">
-                        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style={{display: 'block', width: '20px', height: '20px'}}>
-                          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-                          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-                          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
-                          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-                          <path fill="none" d="M0 0h48v48H0z"></path>
-                        </svg>
-                      </div>
-                      <span className="gsi-material-button-contents text-sm font-medium text-gray-700">Sign in with Google</span>
-                    </div>
-                  </button>
-                </div>
-              ) : (
-                <div className="w-full flex-1 overflow-y-auto mb-1 rounded-lg min-h-[300px]">
-                  {isLoadingDrive ? (
-                    <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-                      <span className="material-symbols-outlined animate-spin mb-2" style={{fontSize: '32px'}}>sync</span>
-                      <p className="text-sm">Carregando...</p>
-                    </div>
-                  ) : driveFiles.length > 0 ? (
-                    filteredDriveFiles.length > 0 ? (
-                      <div className="space-y-4 pr-1">
-                        {Object.entries(
-                          filteredDriveFiles.reduce((acc, file) => {
-                            const espMatch = ESPECIALIDADES.find(esp => file.name.toUpperCase().includes(esp.toUpperCase()));
-                            const category = espMatch || "OUTROS";
-                            if (!acc[category]) acc[category] = [];
-                            acc[category].push(file);
-                            return acc;
-                          }, {} as Record<string, any[]>)
-                        )
-                        .sort(([a], [b]) => a === "OUTROS" ? 1 : b === "OUTROS" ? -1 : a.localeCompare(b))
-                        .map(([category, files]: [string, any[]]) => (
-                          <div key={category} className="mb-4">
-                            <h3 className="font-heading font-bold text-navy text-sm mb-2 px-2 border-b border-gray-100 pb-1 flex items-center">
-                              <span className="material-symbols-outlined text-gold mr-2" style={{ fontSize: '18px' }}>
-                                {category === "OUTROS" ? "folder_open" : "medical_services"}
-                              </span>
-                              {category}
-                            </h3>
-                            <ul className="space-y-1">
-                              {files.map(file => (
-                                <li key={file.id}>
-                                  <a 
-                                    href={file.webViewLink} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="flex items-center w-full p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-100 group"
-                                  >
-                                    <span className="material-symbols-outlined text-navy mr-3 shrink-0 group-hover:text-gold transition-colors">
-                                      {file.mimeType.includes("pdf") ? "picture_as_pdf" : "description"}
-                                    </span>
-                                    <span className="truncate text-sm font-medium text-gray-800 flex-1 min-w-0 text-left" title={file.name}>
-                                      {file.name}
-                                    </span>
-                                  </a>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-                        <span className="material-symbols-outlined text-4xl mb-2">search_off</span>
-                        <p className="text-sm">Nenhum arquivo encontrado na pesquisa.</p>
-                      </div>
-                    )
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-                      <span className="material-symbols-outlined text-4xl mb-2">folder_open</span>
-                      <p className="text-sm">Nenhum parecer encontrado.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* HELP MODAL */}
         {showHelpModal && (
@@ -635,19 +574,19 @@ export const Pareceres: React.FC = () => {
           </div>
         )}
 
-        {/* SUCCESS MODAL (Botões transformados em Icon Buttons alinhados na horizontal) */}
+        {/* SUCCESS MODAL */}
         {successPdfUrl && (
           <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-sm flex flex-col items-center text-center">
+            <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-8 w-full max-w-sm flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-4xl">
                   check_circle
                 </span>
               </div>
               <h2 className="font-heading text-xl font-bold text-navy mb-2">
-                Sucesso!
+                SUCESSO!
               </h2>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-gray-600 mb-8 font-medium">
                 Parecer gerado e enviado para o seu e-mail.
               </p>
 
@@ -657,19 +596,19 @@ export const Pareceres: React.FC = () => {
                   className="w-12 h-12 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 transition-colors shadow-sm"
                   title="Fechar"
                 >
-                  <span className="material-symbols-outlined">close</span>
+                  <span className="material-symbols-outlined text-[20px]">close</span>
                 </button>
                 
                 <button
                   onClick={handleImprimir}
                   disabled={isPrinting}
-                  className="w-16 h-16 rounded-full bg-navy text-white flex items-center justify-center hover:bg-navy/90 disabled:opacity-50 shadow-md transition-all active:scale-95"
+                  className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center hover:bg-blue-200 disabled:opacity-50 shadow-sm transition-all active:scale-95"
                   title="Imprimir Colorido na Secretaria"
                 >
                   {isPrinting ? (
-                    <span className="material-symbols-outlined animate-spin text-[28px]">sync</span>
+                    <span className="material-symbols-outlined animate-spin text-[24px]">sync</span>
                   ) : (
-                    <span className="material-symbols-outlined text-[28px]">print</span>
+                    <span className="material-symbols-outlined text-[24px]">print</span>
                   )}
                 </button>
                 
@@ -678,10 +617,10 @@ export const Pareceres: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={resetForm}
-                  className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center hover:bg-blue-200 transition-colors shadow-sm"
+                  className="w-16 h-16 rounded-full bg-navy text-white flex items-center justify-center hover:bg-navy/90 transition-colors shadow-xl active:scale-95"
                   title="Abrir PDF no Drive"
                 >
-                  <span className="material-symbols-outlined">open_in_new</span>
+                  <span className="material-symbols-outlined text-[28px]">open_in_new</span>
                 </a>
               </div>
             </div>
@@ -971,19 +910,19 @@ export const Pareceres: React.FC = () => {
             )}
           </div>
 
-          {/* ÁREA DE BOTÕES DO FORMULÁRIO */}
-          <div className="flex justify-end items-center gap-3 pt-2">
+          {/* ÁREA DE BOTÕES DO FORMULÁRIO (Icon Buttons alinhados à direita) */}
+          <div className="flex justify-end items-center gap-4 pt-2">
             <button
               type="button"
               onClick={resetForm}
-              className="w-12 h-12 bg-gray-100 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full flex items-center justify-center transition-all shadow-sm border border-gray-200"
+              className="w-14 h-14 bg-gray-100 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full flex items-center justify-center transition-all shadow-sm border border-gray-200 focus:outline-none"
               title="Limpar Formulário"
             >
               <span className="material-symbols-outlined">delete</span>
             </button>
             <button
               type="submit"
-              className="w-14 h-14 bg-[#079551] text-white rounded-full flex items-center justify-center transition-all hover:bg-green-700 shadow-md active:scale-95"
+              className="w-14 h-14 bg-[#079551] text-white rounded-full flex items-center justify-center transition-all hover:bg-green-700 shadow-md active:scale-95 focus:outline-none"
               title="Gerar Parecer Pericial"
             >
               <span className="material-symbols-outlined">send</span>
@@ -1057,7 +996,6 @@ export const Pareceres: React.FC = () => {
                           Nenhum militar encontrado com esse nome.
                         </div>
                       )}
-                    {/* A frase "Digite para buscar" foi removida daqui! */}
                   </div>
                 )}
               </div>
