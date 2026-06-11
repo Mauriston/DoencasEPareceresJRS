@@ -1,3 +1,5 @@
+// Ficheiro: components/DiseaseGuide.tsx
+
 import React, { useState, useRef, useEffect } from 'react';
 import { DISEASES } from '../constants';
 import { Disease, Diagnosis } from '../types';
@@ -5,6 +7,7 @@ import { ChevronRight, ChevronDown, Info, FileText, CheckCircle2, Share2, Brain,
 import { jsPDF } from 'jspdf';
 import { Header } from './Header';
 
+// Função auxiliar para definir os ícones de cada doença
 const getDiseaseIcon = (name: string) => {
   switch(name) {
     case "Alienação Mental": return <Brain className="text-[#050F41]" size={22} />;
@@ -26,8 +29,9 @@ const getDiseaseIcon = (name: string) => {
     case "Tuberculose Ativa": return <span className="material-symbols-outlined text-[#050F41]" style={{ fontSize: '22px', fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>pulmonology</span>;
     default: return <Stethoscope className="text-[#050F41]" size={22} />;
   }
-};
+}
 
+// Função auxiliar para nomes curtos no cabeçalho
 const getShortDiseaseName = (name: string) => {
   switch (name) {
     case "Alienação Mental": return "ALIENAÇÃO";
@@ -50,7 +54,7 @@ const getShortDiseaseName = (name: string) => {
     case "Tuberculose Ativa": return "TUBERCULOSE";
     default: return name.toUpperCase();
   }
-};
+}
 
 export const DiseaseGuide: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,6 +65,7 @@ export const DiseaseGuide: React.FC = () => {
   const [isPragmatismModalOpen, setIsPragmatismModalOpen] = useState(false);
   const [isPersonalityModalOpen, setIsPersonalityModalOpen] = useState(false);
 
+  // Lida com o clique nas doenças para abrir expansões ou ir direto ao diagnóstico
   const handleDiseaseClick = (disease: Disease) => {
     if (disease.diagnoses.length === 1) {
       setSelectedDisease(disease);
@@ -70,6 +75,7 @@ export const DiseaseGuide: React.FC = () => {
     }
   };
 
+  // Botão de voltar na navegação interna
   const handleBackClick = () => {
     if (selectedDisease && selectedDiagnosis && selectedDisease.diagnoses.length > 1) {
       setSelectedDiagnosis(null);
@@ -79,6 +85,7 @@ export const DiseaseGuide: React.FC = () => {
     }
   };
 
+  // Lógica de partilha Nativa ou Clipboard
   const handleShare = async () => {
     if (!selectedDisease || !selectedDiagnosis) return;
     const shareTitle = `${selectedDisease.name} - ${selectedDiagnosis.name}`;
@@ -100,6 +107,7 @@ export const DiseaseGuide: React.FC = () => {
     }
   };
 
+  // Geração do ficheiro PDF via jsPDF
   const handleDownloadPDF = () => {
     if (!selectedDisease || !selectedDiagnosis) return;
     const doc = new jsPDF();
@@ -177,6 +185,7 @@ export const DiseaseGuide: React.FC = () => {
     doc.save(`guia-${safeName}.pdf`);
   };
 
+  // Filtragem e Pesquisa de dados
   const filteredDiseases = DISEASES.filter(disease => {
     const query = searchQuery.toLowerCase();
     return disease.name.toLowerCase().includes(query) || disease.diagnoses.some(diag => 
@@ -192,8 +201,8 @@ export const DiseaseGuide: React.FC = () => {
         searchResults.push({ type: 'disease', id: `dz-${disease.id}`, name: disease.name, disease });
       }
       disease.diagnoses.forEach((diag, idx) => {
-        if (diag.name.toLowerCase().includes(query)) {
-           searchResults.push({ type: 'diagnosis', id: `dg-${disease.id}-${idx}`, name: diag.name, sub: `em ${disease.name}`, disease, diagnosis: diag });
+        if (diag.name.toLowerCase().includes(query)) { 
+          searchResults.push({ type: 'diagnosis', id: `dg-${disease.id}-${idx}`, name: diag.name, sub: `em ${disease.name}`, disease, diagnosis: diag });
         }
         diag.criteria.forEach((crit, critIdx) => {
           if (crit.toLowerCase().includes(query)) {
@@ -204,9 +213,24 @@ export const DiseaseGuide: React.FC = () => {
     });
   }
 
+  // Função auxiliar para lidar com os resultados de pesquisa
+  const handleSearchResultClick = (result: any) => {
+    if(result.diagnosis) {
+        setSelectedDisease(result.disease);
+        setSelectedDiagnosis(result.diagnosis);
+    } else {
+        setExpandedDiseaseId(result.disease.id);
+        setSearchQuery("");
+    }
+  }
+
+  // ==========================================
+  // RENDERIZAÇÃO: PÁGINA DE DETALHE DA DOENÇA
+  // ==========================================
   if (selectedDisease && selectedDiagnosis) {
     return (
       <div className="animate-fade-in flex flex-col h-full bg-[#F3F5F7]">
+        
         {/* Modais de Termos Clínicos */}
         {isPersonalityModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#050F41]/80 backdrop-blur-sm animate-fade-in">
@@ -222,7 +246,6 @@ export const DiseaseGuide: React.FC = () => {
             </div>
           </div>
         )}
-
         {isPragmatismModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#050F41]/80 backdrop-blur-sm animate-fade-in">
             <div className="bg-white rounded-[28px] shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] border border-gray-100">
@@ -243,7 +266,7 @@ export const DiseaseGuide: React.FC = () => {
             </div>
           </div>
         )}
-
+        
         <Header 
           title={getShortDiseaseName(selectedDisease.name)} 
           leftAction={<button onClick={handleBackClick} className="text-white p-2 rounded-full hover:bg-white/10"><ArrowLeft size={20} /></button>}
@@ -261,13 +284,17 @@ export const DiseaseGuide: React.FC = () => {
             {selectedDisease.diagnoses.length > 1 && <p className="text-xs font-semibold text-gray-500 font-body mt-1">Diagnóstico Pericial: {selectedDiagnosis.name}</p>}
           </div>
           
+          {/* SECÇÃO 1: DEFINIÇÃO (Atualizada e com mais destaque) */}
           <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm">
-            <h3 className="font-heading font-bold text-xs text-gray-400 tracking-wider mb-2 uppercase">Conceituação Oficial</h3>
+            <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
+               <span className="material-symbols-outlined mr-2 text-[#FAB932]">menu_book</span>DEFINIÇÃO
+            </h3>
             <p className="font-body text-gray-800 text-sm leading-relaxed text-justify font-medium">{selectedDisease.definition}</p>
           </div>
 
+          {/* SECÇÃO 2: CRITÉRIOS DE GRAVIDADE (Atualizada para text-base para padronizar destaques) */}
           <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm">
-            <h3 className="font-heading font-bold text-sm text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center">
+            <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
               <span className="material-symbols-outlined mr-2 text-[#FAB932]">verified</span>CRITÉRIOS DE GRAVIDADE
             </h3>
             <ul className="space-y-3.5">
@@ -277,8 +304,8 @@ export const DiseaseGuide: React.FC = () => {
                   <span className="leading-relaxed text-justify flex-1">
                     {item.includes('autodeterminação e do pragmatismo') ? (
                       <>
-                        {item.split(/(destruiç[ãa]o da autodeterminação e do pragmatismo|destruction da autodeterminação e do pragmatismo)/i).map((part, i) => {
-                          if (part.match(/destruiç[ãa]o da autodeterminação e do pragmatismo|destruction da autodeterminação e do pragmatismo/i)) {
+                        {item.split(/(destruição da autodeterminação e do pragmatismo|destruction da autodeterminação e do pragmatismo)/i).map((part, i) => {
+                          if (part.match(/destruição da autodeterminação e do pragmatismo|destruction da autodeterminação e do pragmatismo/i)) {
                             return (
                               <button key={i} onClick={() => setIsPragmatismModalOpen(true)} className="inline text-blue-600 hover:text-blue-800 text-left font-semibold">
                                 <span className="underline align-middle">{part}</span><Info size={14} className="inline ml-1 align-baseline -mt-0.5" />
@@ -308,9 +335,10 @@ export const DiseaseGuide: React.FC = () => {
             </ul>
           </div>
 
+          {/* SECÇÃO 3: DOCUMENTOS NECESSÁRIOS (Atualizada e com mais destaque) */}
           <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm">
-            <h3 className="font-heading font-bold text-sm text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center">
-              <span className="material-symbols-outlined mr-2 text-[#FAB932]">folder_open</span>DOCUMENTOS COMPROBATÓRIOS EXIGIDOS
+            <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
+              <span className="material-symbols-outlined mr-2 text-[#FAB932]">folder_open</span>DOCUMENTOS NECESSÁRIOS
             </h3>
             <ul className="space-y-3">
               {selectedDisease.documents.map((item, idx) => (
@@ -326,11 +354,15 @@ export const DiseaseGuide: React.FC = () => {
     );
   }
 
+  // ==========================================
+  // RENDERIZAÇÃO: PÁGINA INICIAL DA LISTA DE DOENÇAS
+  // ==========================================
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7]">
       <Header title="Doenças de Lei" />
       
       <div className="p-4 space-y-4 max-w-2xl mx-auto w-full flex-1 pb-36">
+        {/* Barra de Pesquisa */}
         <div className="relative w-full z-20">
           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
           <input
@@ -347,7 +379,6 @@ export const DiseaseGuide: React.FC = () => {
               <X size={18} />
             </button>
           )}
-
           {searchQuery.trim().length > 0 && isSearchFocused && searchResults.length > 0 && (
             <ul className="absolute z-50 top-full mt-2 w-full bg-white border border-gray-200 rounded-2xl shadow-xl max-h-60 overflow-y-auto divide-y divide-gray-50">
               {searchResults.map(result => (
@@ -363,6 +394,7 @@ export const DiseaseGuide: React.FC = () => {
           )}
         </div>
         
+        {/* Lista de Doenças */}
         <div className="grid gap-2.5">
           {filteredDiseases.map((disease) => (
             <div key={disease.id} className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden transition-all duration-200">
