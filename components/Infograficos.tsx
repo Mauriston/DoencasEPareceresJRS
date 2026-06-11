@@ -19,7 +19,7 @@ export const Infograficos: React.FC = () => {
       setInfograficos(sorted);
     } catch (err) {
       console.error('Erro ao buscar infográficos:', err);
-      setError('Não foi possível sincronizar com o Google Sheets.');
+      setError('Não foi possível sincronizar os dados com o Google Sheets. Carregando dados locais.');
     } finally {
       setLoading(false);
     }
@@ -33,11 +33,9 @@ export const Infograficos: React.FC = () => {
     if (!item.imageUrl) return;
     
     try {
-      // Tentar converter para blob para forçar o download em vez de abrir nova aba
       const response = await fetch(item.imageUrl);
       const blob = await response.blob();
       
-      // Tentar usar a API de Compartilhamento Nativa (iOS) para abrir a opção "Salvar Imagem" no Rolo da Câmera
       const filename = `${item.title.replace(/[^a-zA-Z0-9 -]/g, '').trim()}.jpg`;
       const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
       
@@ -49,7 +47,6 @@ export const Infograficos: React.FC = () => {
         return;
       }
 
-      // Fallback: download tradicional (vai para o app Arquivos no iOS / Downloads no Android/PC)
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -61,7 +58,6 @@ export const Infograficos: React.FC = () => {
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         console.error('Erro ao baixar:', err);
-        // Fallback para abrir nova aba se houver bloqueio de CORS ou falha inesperada
         window.open(item.imageUrl, '_blank');
       }
     }
@@ -82,7 +78,6 @@ export const Infograficos: React.FC = () => {
         }
       }
     } else {
-      // Fallback
       navigator.clipboard.writeText(item.imageUrl);
       alert('Link copiado para a área de transferência!');
     }
@@ -91,63 +86,68 @@ export const Infograficos: React.FC = () => {
   if (selectedItem) {
     return (
       <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-fade-in pb-env-safe">
-        {/* Custom Header for Detail View */}
-        <div className="flex-shrink-0 w-full sticky top-0 z-50 shadow-md bg-navy text-white h-[38px] flex items-center justify-between px-4 border-b border-gold mb-1">
-          <div className="flex items-center min-w-[50px]">
-            <button 
-              onClick={() => setSelectedItem(null)}
-              className="p-1 -ml-2 rounded-full hover:bg-white/10 transition-colors"
-            >
-              <ArrowLeft size={20} />
-            </button>
-          </div>
-          
-          <div className="flex-1 text-center font-heading text-[12px] font-bold truncate px-2 text-white uppercase tracking-wide">
+        {/* M3 Small App Bar Spec: Título Alinhado à Esquerda, Sem botão de voltar aqui */}
+        <div className="flex-shrink-0 w-full sticky top-0 z-50 shadow-sm bg-[#050F41] text-white h-[56px] flex items-center justify-between px-4 border-b border-transparent">
+          <div className="flex-1 text-left font-heading text-[16px] font-semibold truncate pr-4 text-white uppercase tracking-wide">
             {selectedItem.title}
           </div>
           
-          <div className="flex items-center justify-end min-w-[50px] gap-1">
+          <div className="flex items-center justify-end gap-1.5">
             <button 
               onClick={() => handleDownload(selectedItem)}
-              className="p-1 -mr-2 rounded-full hover:bg-white/10 transition-colors"
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
               title="Baixar"
             >
-              <Download size={20} />
+              <Download size={18} />
+            </button>
+            <button 
+              onClick={() => handleShare(selectedItem)}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+              title="Compartilhar"
+            >
+              <Share2 size={18} />
             </button>
           </div>
         </div>
         
-        {/* Scrollable Image Area */}
-        <div className="flex-1 overflow-auto w-full bg-gray-50 flex flex-col items-center">
+        {/* Área de Visualização do Infográfico */}
+        <div className="flex-1 overflow-auto w-full bg-gray-900 flex flex-col items-center justify-center relative p-4">
           {selectedItem.imageUrl ? (
             <img 
               src={selectedItem.imageUrl} 
               alt={selectedItem.title}
-              className="w-full h-auto object-contain max-w-4xl mx-auto block"
+              className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl block"
               referrerPolicy="no-referrer"
             />
           ) : (
-            <div className="flex flex-col items-center justify-center p-10 text-gray-500 h-full">
+            <div className="flex flex-col items-center justify-center p-10 text-gray-400 h-full">
               <span className="material-symbols-outlined text-4xl mb-4 opacity-50">broken_image</span>
               <p>Imagem não disponível</p>
             </div>
           )}
+
+          {/* M3 FLOATING BACK ACTION BUTTON (FAB) NO CANTO INFERIOR DIREITO */}
+          <button 
+            onClick={() => setSelectedItem(null)}
+            className="absolute bottom-6 right-6 bg-[#FAB932] text-[#050F41] shadow-2xl rounded-2xl p-4 hover:scale-105 active:scale-95 transition-all border border-amber-400 flex items-center justify-center z-50"
+            title="Voltar para a lista"
+          >
+            <ArrowLeft size={22} />
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 animate-fade-in">
+    <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
       <Header title="Infográficos" />
       
-      <div className="p-4 space-y-6 overflow-y-auto w-full max-w-full flex-1">
+      <div className="p-4 space-y-4 max-w-2xl mx-auto w-full flex-1">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
-            <Loader2 className="animate-spin text-navy" size={40} />
-            <p className="text-sm font-semibold text-gray-500 font-body">
-              Carregando infográficos...
-            </p>
+            <Loader2 className="animate-spin text-[#050F41]" size={40} />
+            <p className="text-sm font-semibold text-gray-500 font-body">Carregando infográficos...</p>
           </div>
         ) : (
           <>
@@ -172,26 +172,24 @@ export const Infograficos: React.FC = () => {
                 Nenhum infográfico disponível no momento.
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-3">
-                {infograficos.map((item, idx) => (
+              <div className="grid grid-cols-1 gap-2.5">
+                {infograficos.map((item) => (
                   <button 
                     key={item.id} 
                     onClick={() => setSelectedItem(item)}
-                    className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col w-full animate-fade-in hover:shadow-md hover:border-[#079551] transition-all duration-300 text-left"
+                    className="group bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col w-full hover:shadow-md hover:border-[#079551] transition-all duration-300 text-left p-4"
                   >
-                    <div className="flex-1 flex flex-col w-full p-5">
-                      <div className="flex justify-between items-start gap-4">
-                        <h3 className="text-base font-bold text-navy font-heading leading-snug group-hover:text-[#079551] transition-colors">
-                          {item.title}
-                        </h3>
-                        <ChevronRight className="text-navy group-hover:text-[#079551] transform group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" size={20} />
-                      </div>
-                      {item.description && (
-                        <p className="text-sm text-gray-600 font-body leading-relaxed line-clamp-3 mt-2">
-                          {item.description}
-                        </p>
-                      )}
+                    <div className="flex justify-between items-start gap-4 w-full">
+                      <h3 className="text-sm font-bold text-[#050F41] font-heading leading-snug group-hover:text-[#079551] transition-colors">
+                        {item.title}
+                      </h3>
+                      <ChevronRight className="text-gray-400 group-hover:text-[#079551] transform group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" size={18} />
                     </div>
+                    {item.description && (
+                      <p className="text-xs text-gray-500 font-body leading-relaxed line-clamp-2 mt-2">
+                        {item.description}
+                      </p>
+                    )}
                   </button>
                 ))}
               </div>
