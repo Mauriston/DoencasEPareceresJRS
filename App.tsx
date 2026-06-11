@@ -25,36 +25,21 @@ const App: React.FC = () => {
 
   const renderView = () => {
     switch (currentView) {
-      case 'guide':
-        return <DiseaseGuide />;
-      case 'laws':
-        return <LawReference />;
-      case 'videos':
-        return <Videos />;
-      case 'dgpm406':
-        return <DGPM406Guide />;
-      case 'dgpm406-anexos':
-        return <DGPM406AnexosGuide />;
-      case 'concursos':
-        return <ConcursosGuide />;
-      case 'portaria':
-        return <PortariaGuide />;
-      case 'finalidades':
-        return <FinalidadesGuide />;
-      case 'exames':
-        return <ExamesGuide />;
-      case 'aulas':
-        return <Aulas />;
-      case 'infograficos':
-        return <Infograficos />;
-      case 'resumos':
-        return <Resumos />;
-      case 'pareceres':
-        return <Pareceres />;
-      case 'templates':
-        return <TemplatesGuide />;
-      default:
-        return <DiseaseGuide />;
+      case 'guide': return <DiseaseGuide />;
+      case 'laws': return <LawReference />;
+      case 'videos': return <Videos />;
+      case 'dgpm406': return <DGPM406Guide />;
+      case 'dgpm406-anexos': return <DGPM406AnexosGuide />;
+      case 'concursos': return <ConcursosGuide />;
+      case 'portaria': return <PortariaGuide />;
+      case 'finalidades': return <FinalidadesGuide />;
+      case 'exames': return <ExamesGuide />;
+      case 'aulas': return <Aulas />;
+      case 'infograficos': return <Infograficos />;
+      case 'resumos': return <Resumos />;
+      case 'pareceres': return <Pareceres />;
+      case 'templates': return <TemplatesGuide />;
+      default: return <DiseaseGuide />;
     }
   };
 
@@ -76,14 +61,14 @@ const App: React.FC = () => {
   return (
     <div className="fixed inset-0 flex flex-col bg-[#F3F5F7] text-[#1F2937] overflow-hidden antialiased select-none">
       
-      {/* M3 Surface Background - Área útil ajustada sem barras cinzas duplas */}
-      <main className="flex-1 w-full max-w-4xl mx-auto flex flex-col pb-28 [text-align:justify]">         
-        {renderView()}       
+      {/* Área Útil Isolada e Controlada */}
+      <main className="flex-grow w-full max-w-4xl mx-auto flex flex-col overflow-y-auto pb-20 [text-align:justify]">
+        {renderView()}
       </main>
 
       {/* M3 Navigation Bar Fixa com Tratamento de Safe Area para iPhone */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200/70 shadow-[0_-4px_16px_rgba(0,0,0,0.03)] pb-[env(safe-area-inset-bottom)] px-4 z-50">
-        <div className="flex justify-around items-center h-16 max-w-4xl mx-auto relative">
+      <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200/70 shadow-[0_-4px_16px_rgba(0,0,0,0.03)] pb-[env(safe-area-inset-bottom)] px-4 z-50">
+        <div className="flex justify-around items-center h-[64px] max-w-4xl mx-auto relative">
           
           {/* MENU CONTEXTUAL FLUTUANTE: BENEFÍCIOS */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
@@ -302,11 +287,10 @@ const App: React.FC = () => {
               </div>
             )}
           </div>
-
         </div>
       </nav>
 
-      {/* Backdrop global invisível para fechar os submenus ao clicar em qualquer canto livre da tela */}
+      {/* Backdrop global invisível para fechar os submenus */}
       {(isBeneficiosFabOpen || isAvaliacoesFabOpen || isGerarDocFabOpen || isFabOpen || isExtrasFabOpen) && (
         <div 
           className="fixed inset-0 z-40 bg-transparent" 

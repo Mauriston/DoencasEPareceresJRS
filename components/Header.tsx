@@ -11,42 +11,46 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction }
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+      const offset = window.scrollY;
+      if (offset > 10) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <header
-      className={`w-full sticky top-0 z-50 h-[64px] flex items-center px-2 sm:px-4 transition-all duration-300 ${
-        isScrolled
-          ? 'bg-white/95 backdrop-blur-md text-[#050F41] shadow-[0_2px_10px_rgba(0,0,0,0.08)]'
-          : 'bg-[#050F41] text-white shadow-none'
+    <header 
+      className={`w-full sticky top-0 z-50 h-[56px] flex items-center justify-between px-1 transition-all duration-300 ${
+        isScrolled 
+          ? 'bg-[#050F41] shadow-md' 
+          : 'bg-[#050F41] shadow-sm'
       }`}
     >
-      {/* Botão Leading (Menu/Voltar) */}
-      {leftAction && (
-        <div className="flex items-center justify-center min-w-[48px] min-h-[48px] mr-2">
-          {leftAction}
-        </div>
-      )}
-      
-      {/* Título - M3 Title Large alinhado à esquerda */}
-      <div className="flex-1 text-left font-heading text-[20px] sm:text-[22px] font-medium tracking-wide truncate">
+      {/* Botão de Ação Esquerdo (M3: 48x48) */}
+      <div className="flex items-center justify-center min-w-[48px] min-h-[48px]">
+        {leftAction}
+      </div>
+
+      {/* M3 Small App Bar Spec: Título Alinhado à Esquerda */}
+      <div className="flex-1 text-left px-1 font-heading text-[16px] font-bold tracking-wide truncate text-white uppercase">
         {title}
       </div>
-      
-      {/* Ícones Trailing e Logo */}
-      <div className="flex items-center justify-end gap-1 ml-2">
-        {rightAction}
-        
-        <div className={`w-[36px] h-[36px] flex items-center justify-center rounded-xl p-0.5 ml-2 transition-colors ${
-          isScrolled ? 'bg-[#F3F5F7] border border-gray-200' : 'bg-white/10 border border-white/20'
-        }`}>
-          <img
-            src="https://i.imgur.com/KUbQz08.png"
-            alt="HNRe Logo"
+
+      {/* Botões de Ação Direitos e Logo */}
+      <div className="flex items-center justify-end space-x-0.5 pr-2">
+        {rightAction && (
+          <div className="flex items-center justify-center min-w-[48px] min-h-[48px]">
+            {rightAction}
+          </div>
+        )}
+        <div className="w-[32px] h-[32px] flex items-center justify-center bg-white rounded-md p-1 shadow-sm ml-1">
+          <img 
+            src="https://i.imgur.com/KUbQz08.png" 
+            alt="HNRe Logo" 
             className="h-full w-full object-contain"
           />
         </div>
