@@ -76,9 +76,9 @@ const App: React.FC = () => {
   return (
     <div className="fixed inset-0 flex flex-col bg-[#F3F5F7] text-[#1F2937] overflow-hidden antialiased select-none">
       
-      {/* Área Útil Isolada e Controlada - Sem Conflito de Barras de Rolagem */}
-      <main className="flex-grow w-full max-w-4xl mx-auto flex flex-col overflow-y-auto pb-24 [text-align:justify]">
-        {renderView()}
+      {/* M3 Surface Background - Área útil ajustada sem barras cinzas duplas */}
+      <main className="flex-1 w-full max-w-4xl mx-auto flex flex-col pb-28 [text-align:justify]">         
+        {renderView()}       
       </main>
 
       {/* M3 Navigation Bar Fixa com Tratamento de Safe Area para iPhone */}

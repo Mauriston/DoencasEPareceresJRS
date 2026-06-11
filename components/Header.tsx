@@ -11,46 +11,42 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction }
 
   useEffect(() => {
     const handleScroll = () => {
-      const offset = window.scrollY;
-      if (offset > 10) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 10);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <header 
-      className={`w-full sticky top-0 z-50 h-[56px] flex items-center justify-between px-2 transition-all duration-300 border-b ${
-        isScrolled 
-          ? 'bg-white/80 backdrop-blur-md border-gray-200/50 shadow-sm' 
-          : 'bg-[#050F41] text-white border-transparent'
+    <header
+      className={`w-full sticky top-0 z-50 h-[64px] flex items-center px-2 sm:px-4 transition-all duration-300 ${
+        isScrolled
+          ? 'bg-white/95 backdrop-blur-md text-[#050F41] shadow-[0_2px_10px_rgba(0,0,0,0.08)]'
+          : 'bg-[#050F41] text-white shadow-none'
       }`}
     >
-      {/* Botão de Ação Esquerdo (M3: 48x48 com margem de 4px) */}
-      <div className="flex items-center justify-center min-w-[48px] min-h-[48px] mx-1">
-        {leftAction}
-      </div>
-
-      {/* M3 Small App Bar Spec: Título Alinhado à Esquerda */}
-      <div className="flex-1 text-left pl-2 font-heading text-[18px] font-semibold tracking-wide truncate">
+      {/* Botão Leading (Menu/Voltar) */}
+      {leftAction && (
+        <div className="flex items-center justify-center min-w-[48px] min-h-[48px] mr-2">
+          {leftAction}
+        </div>
+      )}
+      
+      {/* Título - M3 Title Large alinhado à esquerda */}
+      <div className="flex-1 text-left font-heading text-[20px] sm:text-[22px] font-medium tracking-wide truncate">
         {title}
       </div>
-
-      {/* Botões de Ação Direitos e Logo */}
-      <div className="flex items-center justify-end space-x-1 pr-2">
-        {rightAction && (
-          <div className="flex items-center justify-center min-w-[48px] min-h-[48px]">
-            {rightAction}
-          </div>
-        )}
-        <div className="w-[32px] h-[32px] flex items-center justify-center bg-white rounded-lg p-1 shadow-sm border border-gray-100/50 ml-1">
-          <img 
-            src="https://i.imgur.com/KUbQz08.png" 
-            alt="HNRe Logo" 
+      
+      {/* Ícones Trailing e Logo */}
+      <div className="flex items-center justify-end gap-1 ml-2">
+        {rightAction}
+        
+        <div className={`w-[36px] h-[36px] flex items-center justify-center rounded-xl p-0.5 ml-2 transition-colors ${
+          isScrolled ? 'bg-[#F3F5F7] border border-gray-200' : 'bg-white/10 border border-white/20'
+        }`}>
+          <img
+            src="https://i.imgur.com/KUbQz08.png"
+            alt="HNRe Logo"
             className="h-full w-full object-contain"
           />
         </div>
