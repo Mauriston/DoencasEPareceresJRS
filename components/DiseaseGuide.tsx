@@ -1,5 +1,4 @@
 // Ficheiro: components/DiseaseGuide.tsx
-
 import React, { useState, useRef, useEffect } from 'react';
 import { DISEASES } from '../constants';
 import { Disease, Diagnosis } from '../types';
@@ -64,6 +63,12 @@ export const DiseaseGuide: React.FC = () => {
   const [expandedDiseaseId, setExpandedDiseaseId] = useState<string | null>(null);
   const [isPragmatismModalOpen, setIsPragmatismModalOpen] = useState(false);
   const [isPersonalityModalOpen, setIsPersonalityModalOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+
+  // Reseta o estado do botão de cópia ao mudar de página
+  useEffect(() => {
+    setIsCopied(false);
+  }, [selectedDiagnosis]);
 
   // Lida com o clique nas doenças para abrir expansões ou ir direto ao diagnóstico
   const handleDiseaseClick = (disease: Disease) => {
@@ -85,25 +90,16 @@ export const DiseaseGuide: React.FC = () => {
     }
   };
 
-  // Lógica de partilha Nativa ou Clipboard
-  const handleShare = async () => {
+  // Lógica de cópia
+  const handleCopy = async () => {
     if (!selectedDisease || !selectedDiagnosis) return;
-    const shareTitle = `${selectedDisease.name} - ${selectedDiagnosis.name}`;
-    const shareText = `Doença: ${selectedDisease.name}\nDiagnóstico: ${selectedDiagnosis.name}\n\nDefinição:\n${selectedDisease.definition}\n\nCritérios de Gravidade:\n${selectedDiagnosis.criteria.map(c => `- ${c}`).join('\n')}\n\nDocumentos Necessários:\n${selectedDisease.documents.map(d => `- ${d}`).join('\n')}`;
+    const copyText = `Doença: ${selectedDisease.name}\nDiagnóstico: ${selectedDiagnosis.name}\n\nDefinição:\n${selectedDisease.definition}\n\nCritérios de Gravidade:\n${selectedDiagnosis.criteria.map(c => `- ${c}`).join('\n')}\n\nDocumentos Necessários:\n${selectedDisease.documents.map(d => `- ${d}`).join('\n')}`;
 
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: shareTitle, text: shareText });
-      } catch (error) {
-        if ((error as Error).name !== 'AbortError') console.error('Erro ao compartilhar:', error);
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareText);
-        alert('Resumo copiado para a área de transferência!');
-      } catch (error) {
-        console.error('Erro ao copiar:', error);
-      }
+    try {
+      await navigator.clipboard.writeText(copyText);
+      setIsCopied(true);
+    } catch (error) {
+      console.error('Erro ao copiar:', error);
     }
   };
 
@@ -229,7 +225,7 @@ export const DiseaseGuide: React.FC = () => {
   // ==========================================
   if (selectedDisease && selectedDiagnosis) {
     return (
-      <div className="animate-fade-in flex flex-col h-full bg-[#F3F5F7]">
+      <div className="animate-fade-in flex flex-col h-full bg-[#F3F5F7] relative">
         
         {/* Modais de Termos Clínicos */}
         {isPersonalityModalOpen && (
@@ -239,13 +235,21 @@ export const DiseaseGuide: React.FC = () => {
                 <h3 className="font-heading font-bold text-base flex items-center"><Brain className="mr-2 text-[#FAB932]" size={18} /> Entendendo a Gravidade</h3>
                 <button onClick={() => setIsPersonalityModalOpen(false)} className="text-white hover:text-gray-300 p-1"><X size={20} /></button>
               </div>
-              <div className="p-5 overflow-y-auto font-body text-gray-800 text-sm space-y-3 text-justify">
-                <p>A <strong>"alteração completa ou considerável da personalidade"</strong> descreve uma ruptura profunda e duradoura na forma como um indivíduo pensa, sente e se relaciona.</p>
-                <p>Trata-se de uma transformação estrutural: a pessoa perde a sua essência prévia e passa a agir de uma maneira que se torna irreconhecível para os pares e familiares.</p>
+              <div className="p-5 overflow-y-auto font-body text-gray-800 text-sm space-y-4 text-justify custom-scrollbar">
+                <p>Na psiquiatria e na neurologia, a <strong>"alteração completa ou considerável da personalidade"</strong> descreve uma ruptura profunda e duradoura na forma como um indivíduo pensa, sente, age e se relaciona com o mundo.</p>
+                <p>A personalidade é, por definição, o nosso conjunto mais estável de traços e comportamentos. Quando ocorre essa alteração, não estamos falando de uma simples mudança de humor, de amadurecimento ou de uma resposta temporária ao estresse. Trata-se de uma transformação estrutural: a pessoa perde a sua essência prévia e passa a agir de uma maneira que se torna irreconhecível para os amigos e familiares.</p>
+                
+                <h4 className="font-bold text-[#050F41] text-base mt-4 mb-2 border-b border-gray-100 pb-1">Como essa alteração se manifesta na prática?</h4>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li><strong>Inversão de traços fundamentais:</strong> Alguém que sempre foi cauteloso, contido e educado pode se tornar impulsivo, agressivo e desinibido. Por outro lado, alguém extrovertido e empático pode se tornar frio, apático e isolado.</li>
+                  <li><strong>Perda de filtros sociais e éticos:</strong> O paciente pode começar a apresentar comportamentos antissociais, falas inapropriadas, desrespeito por regras ou hipersexualidade — atitudes que jamais teria no passado.</li>
+                  <li><strong>Cronicidade:</strong> A mudança não oscila de um dia para o outro como em um episódio de raiva; ela se instala de forma rígida e se torna o "novo normal" do indivíduo.</li>
+                </ul>
               </div>
             </div>
           </div>
         )}
+        
         {isPragmatismModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#050F41]/80 backdrop-blur-sm animate-fade-in">
             <div className="bg-white rounded-[28px] shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] border border-gray-100">
@@ -253,38 +257,42 @@ export const DiseaseGuide: React.FC = () => {
                 <h3 className="font-heading font-bold text-base flex items-center"><Brain className="mr-2 text-[#FAB932]" size={18} /> Entendendo a Gravidade</h3>
                 <button onClick={() => setIsPragmatismModalOpen(false)} className="text-white hover:text-gray-300 p-1"><X size={20} /></button>
               </div>
-              <div className="p-5 overflow-y-auto font-body text-gray-800 text-sm space-y-4 text-justify">
+              <div className="p-5 overflow-y-auto font-body text-gray-800 text-sm space-y-6 text-justify custom-scrollbar">
                 <div>
-                  <h4 className="font-bold text-[#050F41] text-sm mb-1 uppercase tracking-wide">Destruição da Autodeterminação</h4>
-                  <p>Perda total da agência (abulia ou avolição severa). O indivíduo torna-se passivo em relação à própria vida.</p>
+                  <h4 className="font-bold text-[#050F41] text-base mb-2 border-b border-gray-100 pb-1">Destruição da Autodeterminação (A Esfera da Vontade)</h4>
+                  <p className="mb-2">A autodeterminação é a capacidade humana de ter desejos, estabelecer propósitos, fazer escolhas e iniciar ações com base em motivações internas. A sua "destruição" significa a perda da agência — o paciente perde o próprio "motor" interno.</p>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li><strong>Termos técnicos associados:</strong> Na psiquiatria, isso é chamado de <strong>abulia</strong> (perda total da vontade), <strong>hipobulia</strong> (diminuição grave da vontade), <strong>avolição</strong> (falta de iniciativa) e <strong>apatia</strong> (indiferença afetiva).</li>
+                    <li><strong>Como se manifesta:</strong> O indivíduo torna-se passivo em relação à própria vida. Ele não consegue tomar decisões simples (como o que comer ou vestir) e perde o interesse por hobbies, relacionamentos ou planos para o futuro.</li>
+                    <li><strong>O que o paciente vivencia:</strong> Não é necessariamente uma angústia ativa, mas muitas vezes um "vazio". O paciente pode passar o dia inteiro deitado ou sentado, olhando para o nada, sem sentir o impulso interno necessário para se levantar e fazer algo.</li>
+                  </ul>
                 </div>
                 <div>
-                  <h4 className="font-bold text-[#050F41] text-sm mb-1 uppercase tracking-wide">Destruição do Pragmatismo</h4>
-                  <p>A perda da capacidade de planejar, organizar e executar as tarefas simples do quotidiano de forma lógica e eficiente.</p>
+                  <h4 className="font-bold text-[#050F41] text-base mb-2 border-b border-gray-100 pb-1">Destruição do Pragmatismo (A Esfera da Execução)</h4>
+                  <p className="mb-2">O pragmatismo refere-se à utilidade prática das nossas ações — a capacidade de planejar, organizar e executar tarefas do dia a dia de forma lógica e eficiente. A sua destruição é a perda da capacidade de traduzir o pensamento em ações úteis e direcionadas a um objetivo.</p>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li><strong>Termos técnicos associados:</strong> <strong>Disfunção executiva</strong>, <strong>desorganização do comportamento</strong> e perda global de <strong>funcionalidade</strong>.</li>
+                    <li><strong>Como se manifesta:</strong> Mesmo que o paciente tenha um desejo (uma fagulha de autodeterminação), ele não consegue estruturar os passos para realizá-lo. As ações tornam-se caóticas, incompletas ou bizarras.</li>
+                    <li><strong>O que o paciente vivencia:</strong> Incapacidade de manter o autocuidado básico (como tomar banho e escovar os dentes), de administrar dinheiro, de manter um emprego ou de seguir uma receita médica. O comportamento perde o propósito prático; o paciente pode, por exemplo, vestir várias camadas de roupa no calor extremo ou acumular lixo no quarto sem um motivo lógico.</li>
+                  </ul>
                 </div>
               </div>
             </div>
           </div>
         )}
         
+        {/* Header modificado sem botões de download e share */}
         <Header 
           title={getShortDiseaseName(selectedDisease.name)} 
           leftAction={<button onClick={handleBackClick} className="text-white p-2 rounded-full hover:bg-white/10"><ArrowLeft size={20} /></button>}
-          rightAction={
-            <div className="flex items-center space-x-1">
-              <button onClick={handleDownloadPDF} className="text-white p-2 rounded-full hover:bg-white/10" title="Baixar PDF"><Download size={20} /></button>
-              <button onClick={handleShare} className="text-white p-2 rounded-full hover:bg-white/10" title="Compartilhar"><Share2 size={20} /></button>
-            </div>
-          }
         />
         
-        <div className="p-4 space-y-4 max-w-2xl mx-auto w-full pb-36">
+        <div className="p-4 space-y-4 max-w-2xl mx-auto w-full pb-40">
           <div className="px-1">
             <h2 className="text-xl font-heading font-bold text-[#050F41] uppercase">{selectedDisease.name}</h2>
             {selectedDisease.diagnoses.length > 1 && <p className="text-xs font-semibold text-gray-500 font-body mt-1">Diagnóstico Pericial: {selectedDiagnosis.name}</p>}
           </div>
           
-          {/* SECÇÃO 1: DEFINIÇÃO (Atualizada e com mais destaque) */}
           <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm">
             <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
                <span className="material-symbols-outlined mr-2 text-[#FAB932]">menu_book</span>DEFINIÇÃO
@@ -292,7 +300,6 @@ export const DiseaseGuide: React.FC = () => {
             <p className="font-body text-gray-800 text-sm leading-relaxed text-justify font-medium">{selectedDisease.definition}</p>
           </div>
 
-          {/* SECÇÃO 2: CRITÉRIOS DE GRAVIDADE (Atualizada para text-base para padronizar destaques) */}
           <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm">
             <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
               <span className="material-symbols-outlined mr-2 text-[#FAB932]">verified</span>CRITÉRIOS DE GRAVIDADE
@@ -335,7 +342,6 @@ export const DiseaseGuide: React.FC = () => {
             </ul>
           </div>
 
-          {/* SECÇÃO 3: DOCUMENTOS NECESSÁRIOS (Atualizada e com mais destaque) */}
           <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm">
             <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
               <span className="material-symbols-outlined mr-2 text-[#FAB932]">folder_open</span>DOCUMENTOS NECESSÁRIOS
@@ -349,6 +355,34 @@ export const DiseaseGuide: React.FC = () => {
               ))}
             </ul>
           </div>
+        </div>
+
+        {/* ========================================================
+            FABs FLUTUANTES (COPIAR E BAIXAR) - Canto inferior direito 
+            ======================================================== */}
+        <div className="fixed bottom-24 right-6 flex flex-col gap-3 z-40">
+          <button
+            onClick={handleCopy}
+            disabled={isCopied}
+            className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all border ${
+              isCopied 
+                ? 'bg-gray-300 text-gray-100 border-gray-300 cursor-not-allowed' 
+                : 'bg-blue-100 text-[#050F41] border-blue-200 hover:scale-105 active:scale-95'
+            }`}
+            title="Copiar texto"
+          >
+             <span className="material-symbols-outlined text-[26px]">
+               {isCopied ? 'done_all' : 'content_copy'}
+             </span>
+          </button>
+          
+          <button
+            onClick={handleDownloadPDF}
+            className="w-14 h-14 bg-[#050F41] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all border border-slate-700"
+            title="Baixar PDF"
+          >
+            <Download size={24} />
+          </button>
         </div>
       </div>
     );

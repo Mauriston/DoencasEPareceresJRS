@@ -435,10 +435,11 @@ export const Pareceres: React.FC = () => {
         title="PARECERES" 
         rightAction={
           <div className="flex items-center space-x-2 relative" ref={dropdownRef}>
+            {/* ÍCONE DE PASTA DE ARQUIVO DESTACADO */}
             <button 
               type="button" 
               onClick={handleFolderClick} 
-              className="text-white hover:text-gold transition-colors flex items-center justify-center p-1"
+              className="bg-white/20 text-white hover:bg-white/30 transition-all flex items-center justify-center p-2 rounded-full border border-white/10 shadow-sm"
               title="Acessar Pareceres Salvos"
             >
               <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>folder</span>
@@ -477,7 +478,7 @@ export const Pareceres: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto px-4 pt-6 pb-28 w-full max-w-2xl mx-auto space-y-6">
         
-        {/* FAB de Ajuda - Movido para o canto inferior direito */}
+        {/* FAB de Ajuda */}
         <button
           type="button"
           onClick={() => setShowHelpModal(true)}
@@ -602,7 +603,7 @@ export const Pareceres: React.FC = () => {
                 <button
                   onClick={handleImprimir}
                   disabled={isPrinting}
-                  className="w-12 h-12 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center hover:bg-blue-200 disabled:opacity-50 shadow-sm transition-all active:scale-95"
+                  className="w-12 h-12 rounded-full bg-navy text-white flex items-center justify-center hover:bg-navy/90 disabled:opacity-50 shadow-sm transition-all active:scale-95"
                   title="Imprimir Colorido na Secretaria"
                 >
                   {isPrinting ? (
@@ -617,7 +618,7 @@ export const Pareceres: React.FC = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={resetForm}
-                  className="w-16 h-16 rounded-full bg-navy text-white flex items-center justify-center hover:bg-navy/90 transition-colors shadow-xl active:scale-95"
+                  className="w-16 h-16 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center hover:bg-blue-200 transition-colors shadow-xl active:scale-95"
                   title="Abrir PDF no Drive"
                 >
                   <span className="material-symbols-outlined text-[28px]">open_in_new</span>
