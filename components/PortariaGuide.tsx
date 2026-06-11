@@ -41,20 +41,35 @@ export const PortariaGuide: React.FC = () => {
       subsections: [
         { id: 'doenca-cardiopatia', name: 'Conceituação Geral' },
         { id: 'cardio-isquemica-aguda-ssst', name: 'Isquémica - Aguda S/ SST' },
-        { id: 'cardio-isquemica-aguda-csst', name: 'Isquémica - Aguda C/ SST' }
+        { id: 'cardio-isquemica-aguda-csst', name: 'Isquémica - Aguda C/ SST' },
+        { id: 'cardio-isquemica-cronica', name: 'Isquémica - Crónica' },
+        { id: 'cardio-hipertensiva', name: 'Cardiopatia Hipertensiva' },
+        { id: 'cardio-miocardio-hyper', name: 'Miocardiopatias - Hipertróficas' },
+        { id: 'cardio-miocardio-dilatada', name: 'Miocardiopatias - Dilatadas' },
+        { id: 'cardio-miocardio-restritiva', name: 'Miocardiopatias - Restritivas' },
+        { id: 'cardio-miocardio-chagas', name: 'Miocardiopatias - Chagásica' },
+        { id: 'cardio-arritmias', name: 'Arritmias Cardíacas' },
+        { id: 'cardio-cor-pulmonale', name: 'Cor Pulmonale Crónico' },
+        { id: 'cardio-congenitas', name: 'Cardiopatias Congénitas' },
+        { id: 'cardio-valvopatias', name: 'Valvopatias' },
+        { id: 'cardio-pericardiopatias', name: 'Pericardiopatias/Aortopatias' }
       ]
     },
     { id: 'doenca-cegueira', name: 'Cegueira / Visão Monocular', icon: <EyeOff size={14} /> },
     { id: 'doenca-espondilite', name: 'Espondilite Anquilosante', icon: <Bone size={14} /> },
-    { id: 'doenca-paget', name: 'Mal de Paget', icon: <Bone size={14} /> },
+    { id: 'doenca-paget', name: 'Mal de Paget (Osteíte Deformante)', icon: <Bone size={14} /> },
     { id: 'doenca-hanseniase', name: 'Hanseníase', icon: <Activity size={14} /> },
     { id: 'doenca-parkinson', name: 'Doença de Parkinson', icon: <Activity size={14} /> },
     { id: 'doenca-nefropatia', name: 'Nefropatia Grave', icon: <Stethoscope size={14} /> },
     { id: 'doenca-neoplasia', name: 'Neoplasia Maligna', icon: <Ribbon size={14} /> },
-    { id: 'doenca-paralisia', name: 'Paralisia Irreversível', icon: <Activity size={14} /> },
+    { id: 'doenca-paralisia', name: 'Paralisia Irreversível e Incapacitante', icon: <Activity size={14} /> },
+    { id: 'doenca-penfigo', name: 'Pênfigos', icon: <AlertTriangle size={14} /> },
     { id: 'doenca-aids', name: 'SIDA/Aids', icon: <Shield size={14} /> },
     { id: 'doenca-tuberculose', name: 'Tuberculose Ativa', icon: <Wind size={14} /> },
     { id: 'doenca-hepatopatia', name: 'Hepatopatia Grave', icon: <Heart size={14} /> },
+    { id: 'doenca-radiacao', name: 'Contaminação por Radiação', icon: <Radiation size={14} /> },
+    { id: 'doenca-esclerose', name: 'Esclerose Múltipla', icon: <Activity size={14} /> },
+    { id: 'doenca-fibrose', name: 'Fibrose Cística', icon: <FileText size={14} /> },
   ];
 
   const handleScrollTo = (id: string) => {
@@ -73,7 +88,7 @@ export const PortariaGuide: React.FC = () => {
       
       <div className="p-4 space-y-4 max-w-2xl mx-auto w-full flex-1">
         <div className="text-center bg-white p-5 rounded-2xl border border-gray-200/60 shadow-sm">
-          <h2 className="text-sm font-heading font-bold text-[#050F41]">PORTARIA GM-MD Nº 3.551/2021</h2>
+          <h2 className="text-sm font-heading font-bold text-[#050F41]">PORTARIA GM-MD Nº 3.551, DE 26 DE AGOSTO DE 2021</h2>
           <p className="text-xs text-gray-500 font-body mt-1">Diretrizes e Normas Técnicas Periciais Oficiais das Forças Armadas.</p>
         </div>
 
@@ -84,14 +99,30 @@ export const PortariaGuide: React.FC = () => {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredDiseases.map(disease => (
-              <button 
-                key={disease.id}
-                onClick={() => handleScrollTo(disease.id)}
-                className="text-left p-2.5 bg-gray-50 hover:bg-[#050F41]/5 rounded-xl border border-gray-100 flex items-center justify-between text-xs text-gray-700 font-medium transition-all"
-              >
-                <span className="flex items-center gap-2 truncate">{disease.icon}{disease.name}</span>
-                <ChevronRight size={14} className="text-gray-400" />
-              </button>
+              <div key={disease.id} className="space-y-1">
+                <button 
+                  onClick={() => handleScrollTo(disease.id)}
+                  className="w-full text-left p-2.5 bg-gray-50 hover:bg-[#050F41]/5 rounded-xl border border-gray-100 flex items-center justify-between text-xs text-gray-700 font-medium transition-all"
+                >
+                  <span className="flex items-center gap-2 truncate">{disease.icon}{disease.name}</span>
+                  {disease.subsections ? (
+                    <span onClick={(e) => { e.stopPropagation(); setCardioExpanded(!cardioExpanded); }} className="p-1 hover:bg-gray-200/60 rounded text-gray-400">
+                      {cardioExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </span>
+                  ) : (
+                    <ChevronRight size={14} className="text-gray-400" />
+                  )}
+                </button>
+                {disease.subsections && cardioExpanded && (
+                  <div className="pl-4 space-y-1 bg-gray-50/50 p-1.5 rounded-xl border border-gray-100/50">
+                    {disease.subsections.map(sub => (
+                      <button key={sub.id} onClick={() => handleScrollTo(sub.id)} className="w-full text-left py-1.5 px-2 text-[11px] text-gray-500 hover:text-[#050F41] rounded flex justify-between font-body font-medium">
+                        <span>• {sub.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>

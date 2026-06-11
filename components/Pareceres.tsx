@@ -62,9 +62,15 @@ export const Pareceres: React.FC = () => {
     if (value.length > 6) value = `${value.slice(0, 2)}.${value.slice(2, 6)}.${value.slice(6)}`;
     else if (value.length > 2) value = `${value.slice(0, 2)}.${value.slice(2)}`;
     setNip(value);
+    
     if (value.length === 10) {
       setMilitarStatus("loading");
-      setTimeout(() => { setInspecionado(`SO-RM2-HN ${value} JOSÉ DA SILVA`); setOmLeitura("HNRe"); setMilitarStatus("found"); }, 600);
+      // Simulação da chamada de API para manter fidelidade estrutural
+      setTimeout(() => { 
+        setInspecionado(`SO-RM2-HN ${value} JOSÉ DA SILVA`); 
+        setOmLeitura("HNRe"); 
+        setMilitarStatus("found"); 
+      }, 500);
     } else {
       setMilitarStatus("");
     }
@@ -80,7 +86,11 @@ export const Pareceres: React.FC = () => {
   const executeSubmit = () => {
     setShowConfirmModal(false);
     setIsLoading(true);
-    setTimeout(() => { setIsLoading(false); setSuccessPdfUrl("#"); setSuccessPdfId("dummy-id"); }, 1000);
+    setTimeout(() => { 
+      setIsLoading(false); 
+      setSuccessPdfUrl("#"); 
+      setSuccessPdfId("dummy-id"); 
+    }, 1000);
   };
 
   return (
@@ -90,6 +100,7 @@ export const Pareceres: React.FC = () => {
       <div className="flex-1 overflow-y-auto px-4 py-6 w-full max-w-2xl mx-auto space-y-6">
         <form onSubmit={(e) => { e.preventDefault(); setShowConfirmModal(true); }} className="space-y-5">
           
+          {/* Card 1: Dados da Inspeção */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-5 space-y-4">
             <h2 className="font-heading font-bold text-[#050F41] text-base flex items-center border-b border-gray-100 pb-2">
               <span className="material-symbols-outlined mr-2 text-[#FAB932]">person</span> DADOS DA INSPEÇÃO
@@ -106,14 +117,14 @@ export const Pareceres: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Finalidade *</label>
-                <select value={finalidade} onChange={(e) => setFinalidade(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl p-3 focus:outline-none" required>
+                <select value={finalidade} onChange={(e) => setFinalidade(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl p-3 focus:outline-none cursor-pointer font-body" required>
                   <option value="">Selecione...</option>
                   {FINALIDADES.map(f => <option key={f} value={f}>{f}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Especialidade *</label>
-                <select value={especialidade} onChange={(e) => setEspecialidade(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl p-3 focus:outline-none" required>
+                <select value={especialidade} onChange={(e) => setEspecialidade(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl p-3 focus:outline-none cursor-pointer font-body" required>
                   <option value="">Selecione...</option>
                   {ESPECIALIDADES.map(e => <option key={e} value={e}>{e}</option>)}
                 </select>
@@ -121,11 +132,12 @@ export const Pareceres: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Breve Histórico</label>
-              <textarea value={historico} onChange={(e) => setHistorico(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl p-3 focus:outline-none min-h-[90px]" placeholder="Militar em LTS há xx dias..." />
+              <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Breve Histórico Clínico</label>
+              <textarea value={historico} onChange={(e) => setHistorico(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl p-3 focus:outline-none min-h-[90px] font-body" placeholder="Militar em LTS há xx dias pelo CID..." />
             </div>
           </div>
 
+          {/* Card 2: Dados do Militar */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-5 space-y-4">
             <h2 className="font-heading font-bold text-[#050F41] text-base flex items-center border-b border-gray-100 pb-2">
               <span className="material-symbols-outlined mr-2 text-[#FAB932]">badge</span> DADOS DO MILITAR
@@ -139,8 +151,51 @@ export const Pareceres: React.FC = () => {
             {militarStatus === "found" && (
               <div className="bg-blue-50/70 border-l-4 border-[#050F41] p-3.5 rounded-r-xl space-y-1.5 animate-fade-in">
                 <p className="text-xs font-bold text-gray-400 uppercase">Inspecionado Identificado</p>
-                <p className="text-sm font-bold text-[#050F41]">{inspecionado}</p>
-                <p className="text-xs font-semibold text-gray-600">OM de Origem: {omLeitura}</p>
+                <p className="text-sm font-bold text-[#050F41] font-heading">{inspecionado}</p>
+                <p className="text-xs font-semibold text-gray-600 font-body">OM de Origem: {omLeitura}</p>
+              </div>
+            )}
+
+            {militarStatus === "not_found" && (
+              <div className="space-y-4 animate-fade-in border-t border-dashed border-gray-100 pt-4 mt-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Posto/Graduação *</label>
+                    <select value={pg} onChange={(e) => setPg(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl p-2.5 focus:outline-none" required>
+                      <option value="">Selecione...</option>
+                      {PG_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">OM *</label>
+                    <input type="text" value={om} onChange={(e) => setOm(e.target.value)} placeholder="Ex: HNRe" className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl p-2.5 focus:outline-none" required />
+                  </div>
+                </div>
+
+                {circulo === "Oficial" && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Quadro do Oficial *</label>
+                    <select value={quadro} onChange={(e) => setQuadro(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl p-2.5 focus:outline-none" required>
+                      <option value="">Selecione...</option>
+                      {QUADROS.map(q => <option key={q} value={q}>{q}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {circulo === "Praça" && (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Especialidade da Praça *</label>
+                    <select value={espPraca} onChange={(e) => setEspPraca(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl p-2.5 focus:outline-none" required>
+                      <option value="">Selecione...</option>
+                      {ESP_PRACAS.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1 uppercase">Nome Completo *</label>
+                  <input type="text" value={nome} onChange={(e) => setNome(e.target.value.toUpperCase())} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl p-2.5 uppercase focus:outline-none" required />
+                </div>
               </div>
             )}
           </div>
@@ -151,7 +206,7 @@ export const Pareceres: React.FC = () => {
         </form>
       </div>
 
-      {/* M3 FLOATING FAB PARA AJUDA/INFO NO CANTO INFERIOR DIREITO */}
+      {/* M3 COMPACT FLOATING ACTION BUTTON (FAB) PARA AJUDA NO CANTO INFERIOR DIREITO */}
       <button 
         onClick={() => setShowHelpModal(true)}
         className="fixed bottom-24 right-6 bg-[#FAB932] text-[#050F41] shadow-2xl rounded-2xl p-4 hover:scale-105 active:scale-95 transition-all z-40 border border-amber-400 flex items-center justify-center"
@@ -160,7 +215,7 @@ export const Pareceres: React.FC = () => {
         <span className="material-symbols-outlined text-[22px]">help</span>
       </button>
 
-      {/* MODAL AJUDA - COM DESIGN ARREDONDADO MD3 TOTALMENTE SEGURO CONTRA ESTOUROS */}
+      {/* MODAL AJUDA - COM DESIGN ARREDONDADO MD3 PREVENINDO ESTOUROS NAS LATERAIS */}
       {showHelpModal && (
         <div className="fixed inset-0 bg-[#050F41]/60 backdrop-blur-sm z-[100] flex items-center justify-center p-5 animate-fade-in">
           <div className="bg-white rounded-[28px] shadow-2xl p-6 w-full max-w-sm flex flex-col border border-gray-100 max-h-[80vh] overflow-hidden">
@@ -185,7 +240,6 @@ export const Pareceres: React.FC = () => {
             <h3 className="font-heading font-bold text-[#050F41] text-base mb-1">Geração de Parecer</h3>
             <p className="text-gray-500 text-xs text-center font-body mb-5 leading-relaxed">Confirma a compilação final do documento e a transmissão das cópias para os peritos?</p>
             
-            {/* Button Groups MD3: Direcionando e organizando foco com pesos visuais */}
             <div className="flex w-full gap-2.5">
               <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-2.5 border border-gray-200 text-gray-500 font-bold rounded-xl text-xs hover:bg-gray-50">Mudar dados</button>
               <button onClick={executeSubmit} className="flex-1 py-2.5 bg-[#050F41] text-white font-bold rounded-xl text-xs hover:bg-[#050F41]/90">Confirmar</button>
@@ -215,7 +269,7 @@ export const Pareceres: React.FC = () => {
         </div>
       )}
 
-      {/* RENDER DE LOADING INTERNO */}
+      {/* LOADING */}
       {isLoading && (
         <div className="fixed inset-0 bg-white/70 backdrop-blur-sm z-[100] flex flex-col items-center justify-center">
           <div className="w-8 h-8 border-4 border-[#FAB932] border-t-transparent rounded-full animate-spin" />
