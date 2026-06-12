@@ -687,43 +687,74 @@ export const DiseaseGuide: React.FC = () => {
           {/* NOVO CARTÃO: CLASSIFICAÇÃO SIDA/AIDS */}
           {selectedDisease.name === "SIDA/AIDS" && (
             <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm">
-              <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
+              <h3 className="font-heading font-bold text-base text-[#050F41] mb-5 border-b border-gray-100 pb-2 flex items-center uppercase">
                 <span className="material-symbols-outlined mr-2 text-[#FAB932]">grid_on</span>CLASSIFICAÇÃO
               </h3>
-              <p className="font-body text-gray-700 text-sm mb-4 text-center font-bold">
-                Cruzamento Clínico/Laboratorial. Classes A3, B3, C1, C2, C3 são considerados SIDA/AIDS:
-              </p>
-              <div className="overflow-x-auto">
-                <table className="w-full max-w-md mx-auto text-center border-collapse border border-gray-200 rounded-lg overflow-hidden">
-                  <thead className="bg-gray-50 text-gray-700 font-bold text-sm">
-                    <tr>
-                      <th className="border border-gray-200 p-2 font-heading">CD4</th>
-                      <th className="border border-gray-200 p-2 font-heading">Assint./LPG (A)</th>
-                      <th className="border border-gray-200 p-2 font-heading">Sintom. não C (B)</th>
-                      <th className="border border-gray-200 p-2 font-heading">Oportunistas (C)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-sm font-body">
-                    <tr>
-                      <td className="border border-gray-200 p-2 font-bold text-gray-700">&gt;=500 (1)</td>
-                      <td className="border border-gray-200 p-2 text-gray-600">A1</td>
-                      <td className="border border-gray-200 p-2 text-gray-600">B1</td>
-                      <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">C1</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-200 p-2 font-bold text-gray-700">200-499 (2)</td>
-                      <td className="border border-gray-200 p-2 text-gray-600">A2</td>
-                      <td className="border border-gray-200 p-2 text-gray-600">B2</td>
-                      <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">C2</td>
-                    </tr>
-                    <tr>
-                      <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">&lt;200 (3)</td>
-                      <td className="border border-gray-200 p-2 bg-red-50 text-red-700 font-bold">A3</td>
-                      <td className="border border-gray-200 p-2 bg-red-50 text-red-700 font-bold">B3</td>
-                      <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">C3</td>
-                    </tr>
-                  </tbody>
-                </table>
+              
+              {/* Tabela de Grupos */}
+              <div className="mb-6">
+                <h4 className="font-heading font-bold text-sm text-[#050F41] mb-2 uppercase text-center">Grupos</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full max-w-sm mx-auto text-center border-collapse border border-gray-200 rounded-lg overflow-hidden">
+                    <thead className="bg-gray-50 text-gray-700 font-bold text-sm">
+                      <tr>
+                        <th className="border border-gray-200 p-2 font-heading">Grupo</th>
+                        <th className="border border-gray-200 p-2 font-heading"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-sm font-body">
+                      <tr>
+                        <td className="border border-gray-200 p-2 font-bold text-gray-700">I</td>
+                        <td className="border border-gray-200 p-2 text-gray-600">&gt;=500/mm³</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-gray-200 p-2 font-bold text-gray-700">II</td>
+                        <td className="border border-gray-200 p-2 text-gray-600">200 - 499/mm³</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">III</td>
+                        <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">&lt; 200/mm³</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Tabela de Classes */}
+              <div>
+                <h4 className="font-heading font-bold text-sm text-[#050F41] mb-2 uppercase text-center">Classes</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full max-w-md mx-auto text-center border-collapse border border-gray-200 rounded-lg overflow-hidden">
+                    <thead className="bg-gray-50 text-gray-700 font-bold text-sm">
+                      <tr>
+                        <th className="border border-gray-200 p-2 font-heading">CD4</th>
+                        <th className="border border-gray-200 p-2 font-heading">(A)</th>
+                        <th className="border border-gray-200 p-2 font-heading">(B)</th>
+                        <th className="border border-gray-200 p-2 font-heading">(C)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-sm font-body">
+                      <tr>
+                        <td className="border border-gray-200 p-2 font-bold text-gray-700">&gt;=500 (1)</td>
+                        <td className="border border-gray-200 p-2 text-gray-600">A1</td>
+                        <td className="border border-gray-200 p-2 text-gray-600">B1</td>
+                        <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">C1</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-gray-200 p-2 font-bold text-gray-700">200-499 (2)</td>
+                        <td className="border border-gray-200 p-2 text-gray-600">A2</td>
+                        <td className="border border-gray-200 p-2 text-gray-600">B2</td>
+                        <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">C2</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">&lt;200 (3)</td>
+                        <td className="border border-gray-200 p-2 bg-red-50 text-red-700 font-bold">A3</td>
+                        <td className="border border-gray-200 p-2 bg-red-50 text-red-700 font-bold">B3</td>
+                        <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">C3</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
