@@ -120,11 +120,24 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   const handleCopy = async () => {
     const text = `CLINICAL DEMENTIA RATING:\n\n- M = ${scores.M}\n- O = ${scores.O}\n- JSP = ${scores.JSP}\n- RC = ${scores.RC}\n- LP = ${scores.LP}\n- CP = ${scores.CP}\n-------------------------------\n- Global CDR = ${globalScore}\n- CDR-SB = ${sbScore}\n\n- RESULTADO: ${stage.titulo} (${stage.sub})`;
+    
     try {
+      // 1. Copia o texto silenciosamente para a área de transferência
       await navigator.clipboard.writeText(text);
       setIsCopied(true);
+
+      // 2. Aciona o menu de partilha nativo do sistema operativo
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Avaliação CDR Score',
+          text: text
+        });
+      }
     } catch (err) {
-      console.error(err);
+      // Ignoramos o erro se o utilizador simplesmente fechar o menu de partilha sem selecionar nenhuma app
+      if ((err as Error).name !== 'AbortError') {
+        console.error("Erro ao partilhar/copiar:", err);
+      }
     }
   };
 
