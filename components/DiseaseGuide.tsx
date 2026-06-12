@@ -338,6 +338,11 @@ export const DiseaseGuide: React.FC = () => {
   const [isRettModalOpen, setIsRettModalOpen] = useState(false);
   const [isAutismModalOpen, setIsAutismModalOpen] = useState(false);
   
+  // Modais SIDA/AIDS
+  const [isCatAModalOpen, setIsCatAModalOpen] = useState(false);
+  const [isCatBModalOpen, setIsCatBModalOpen] = useState(false);
+  const [isCatCModalOpen, setIsCatCModalOpen] = useState(false);
+
   // Novos Estados para o BAV II Mobitz II
   const [isBavModalOpen, setIsBavModalOpen] = useState(false);
   const [isBavImageExpanded, setIsBavImageExpanded] = useState(false);
@@ -666,6 +671,80 @@ export const DiseaseGuide: React.FC = () => {
           </div>
         )}
 
+        {/* Modais de SIDA/AIDS (Categorias A, B, C) */}
+        {isCatAModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#050F41]/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-[28px] shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] border border-gray-100">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-[#050F41] text-white">
+                <h3 className="font-heading font-bold text-base flex items-center"><Ribbon className="mr-2 text-[#FAB932]" size={18} /> Categoria "A"</h3>
+                <button onClick={() => setIsCatAModalOpen(false)} className="text-white hover:text-gray-300 p-1"><X size={20} /></button>
+              </div>
+              <div className="p-5 overflow-y-auto font-body text-gray-800 text-sm space-y-4 text-justify custom-scrollbar">
+                <ul className="list-disc pl-5 space-y-2">
+                  <li>Infecção Assintomática</li>
+                  <li>Linfoadenopatia Generalizada Persistente</li>
+                  <li>Infecção Aguda (Mononucleose com sorologia inicial negativa)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isCatBModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#050F41]/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-[28px] shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] border border-gray-100">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-[#050F41] text-white">
+                <h3 className="font-heading font-bold text-base flex items-center"><Ribbon className="mr-2 text-[#FAB932]" size={18} /> Categoria "B" - Sorologia + em sintomáticos</h3>
+                <button onClick={() => setIsCatBModalOpen(false)} className="text-white hover:text-gray-300 p-1"><X size={20} /></button>
+              </div>
+              <div className="p-5 overflow-y-auto font-body text-gray-800 text-sm space-y-4 text-justify custom-scrollbar">
+                <ul className="list-disc pl-5 space-y-2">
+                  <li>Angiomatose Bacilar</li>
+                  <li>Candidíase Orofaringeana</li>
+                  <li>Candidíase vaginal persisnte</li>
+                  <li>Sintomas constitucionais</li>
+                  <li>Diarreia Crônica</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isCatCModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#050F41]/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-[28px] shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] border border-gray-100">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-[#050F41] text-white">
+                <h3 className="font-heading font-bold text-base flex items-center"><Ribbon className="mr-2 text-[#FAB932]" size={18} /> Categoria "C" - SIDA/AIDS</h3>
+                <button onClick={() => setIsCatCModalOpen(false)} className="text-white hover:text-gray-300 p-1"><X size={20} /></button>
+              </div>
+              <div className="p-5 overflow-y-auto font-body text-gray-800 text-sm space-y-4 text-justify custom-scrollbar">
+                <ul className="list-disc pl-5 space-y-2">
+                  <li>Candidíase Esofagiana / Traqueal</li>
+                  <li>Criptococose Extrapulmonar</li>
+                  <li>Câncer Cervical Uterino</li>
+                  <li>Retinite ou hepatite por citomegalovírus</li>
+                  <li>Herpes Simples &gt; 1 mês</li>
+                  <li>Histoplasmose Disseminada</li>
+                  <li>Isosporíase Crônica</li>
+                  <li>Micobacteriose Atípica</li>
+                  <li>Tuberculose Pulmonar / Extrapulmonar</li>
+                  <li>Pneumonia por P. carinii</li>
+                  <li>Pneumonia Recorrente</li>
+                  <li>Bacteremia Recorrente por Salmonella</li>
+                  <li>Toxoplasmose SNC</li>
+                  <li>Leucoencefalopatia Multifocal Progressiva</li>
+                  <li>Criptosporidíase intestinal</li>
+                  <li>Sarcoma de Kaposi</li>
+                  <li>Linfoma de Burkitt</li>
+                  <li>Encefalopatia</li>
+                  <li>Síndrome Respiratória Consumptiva</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Header modificado sem botões de download e share */}
         <Header 
           title={getShortDiseaseName(selectedDisease.name)} 
           leftAction={<button onClick={handleBackClick} className="text-white p-2 rounded-full hover:bg-white/10"><ArrowLeft size={20} /></button>}
@@ -699,7 +778,7 @@ export const DiseaseGuide: React.FC = () => {
                     <thead className="bg-gray-50 text-gray-700 font-bold text-sm">
                       <tr>
                         <th className="border border-gray-200 p-2 font-heading">Grupo</th>
-                        <th className="border border-gray-200 p-2 font-heading"></th>
+                        <th className="border border-gray-200 p-2 font-heading">CD4</th>
                       </tr>
                     </thead>
                     <tbody className="text-sm font-body">
@@ -728,9 +807,15 @@ export const DiseaseGuide: React.FC = () => {
                     <thead className="bg-gray-50 text-gray-700 font-bold text-sm">
                       <tr>
                         <th className="border border-gray-200 p-2 font-heading">CD4</th>
-                        <th className="border border-gray-200 p-2 font-heading">(A)</th>
-                        <th className="border border-gray-200 p-2 font-heading">(B)</th>
-                        <th className="border border-gray-200 p-2 font-heading">(C)</th>
+                        <th className="border border-gray-200 p-2 font-heading">
+                          <button onClick={() => setIsCatAModalOpen(true)} className="text-blue-600 underline hover:text-blue-800 focus:outline-none">(A)</button>
+                        </th>
+                        <th className="border border-gray-200 p-2 font-heading">
+                          <button onClick={() => setIsCatBModalOpen(true)} className="text-blue-600 underline hover:text-blue-800 focus:outline-none">(B)</button>
+                        </th>
+                        <th className="border border-gray-200 p-2 font-heading">
+                          <button onClick={() => setIsCatCModalOpen(true)} className="text-blue-600 underline hover:text-blue-800 focus:outline-none">(C)</button>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="text-sm font-body">
