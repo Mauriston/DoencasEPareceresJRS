@@ -1,3 +1,4 @@
+// Ficheiro: App.tsx
 import React, { useState } from 'react';
 import { DiseaseGuide } from './components/DiseaseGuide';
 import { LawReference } from './components/LawReference';
@@ -13,10 +14,12 @@ import { Infograficos } from './components/Infograficos';
 import { Resumos } from './components/Resumos';
 import { Pareceres } from './components/Pareceres';
 import { TemplatesGuide } from './components/TemplatesGuide';
+import { Artigos } from './components/Artigos'; // 1. Nova Importação
 import { NavItem } from './types';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<NavItem>('splash');
+  
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [isBeneficiosFabOpen, setIsBeneficiosFabOpen] = useState(false);
   const [isExtrasFabOpen, setIsExtrasFabOpen] = useState(false);
@@ -39,6 +42,7 @@ const App: React.FC = () => {
       case 'resumos': return <Resumos />;
       case 'pareceres': return <Pareceres />;
       case 'templates': return <TemplatesGuide />;
+      case 'artigos': return <Artigos />; // 2. Adicionado ao Switch Case
       default: return <DiseaseGuide />;
     }
   };
@@ -66,7 +70,7 @@ const App: React.FC = () => {
         {renderView()}
       </main>
 
-      {/* M3 Navigation Bar Fixa com Tratamento de Safe Area para iPhone */}
+      {/* M3 Navigation Bar Fixa */}
       <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200/70 shadow-[0_-4px_16px_rgba(0,0,0,0.03)] pb-[env(safe-area-inset-bottom)] px-4 z-50">
         <div className="flex justify-around items-center h-[64px] max-w-4xl mx-auto relative">
           
@@ -244,18 +248,27 @@ const App: React.FC = () => {
               onClick={() => { setIsExtrasFabOpen(!isExtrasFabOpen); setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsGerarDocFabOpen(false); setIsFabOpen(false); }}
               className="flex flex-col items-center justify-center w-full h-full focus:outline-none"
             >
+              {/* 3. Adicionada a nova rota 'artigos' à condição de estilo ativo */}
               <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${
-                ['videos', 'aulas', 'laws', 'infograficos'].includes(currentView)
+                ['videos', 'aulas', 'laws', 'infograficos', 'artigos'].includes(currentView)
                   ? 'bg-blue-100 text-[#050F41] font-semibold' 
                   : 'text-gray-500 hover:bg-gray-100/60'
               }`}>
-                <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['videos', 'aulas', 'laws', 'infograficos'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>widgets</span>
+                <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['videos', 'aulas', 'laws', 'infograficos', 'artigos'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>widgets</span>
               </div>
-              <span className={`text-[11px] font-medium font-body transition-colors ${['videos', 'aulas', 'laws', 'infograficos'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Extras</span>
+              <span className={`text-[11px] font-medium font-body transition-colors ${['videos', 'aulas', 'laws', 'infograficos', 'artigos'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Extras</span>
             </button>
             
             {isExtrasFabOpen && (
               <div className="absolute bottom-20 right-0 mb-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(5,15,65,0.08)] border border-gray-100 p-1.5 flex flex-col gap-0.5 min-w-[160px] animate-fade-in z-50">
+                {/* 4. Novo botão Artigos */}
+                <button 
+                  onClick={() => { setCurrentView('artigos'); setIsExtrasFabOpen(false); }}
+                  className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'artigos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}
+                >
+                  <span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">article</span>
+                  Artigos
+                </button>
                 <button 
                   onClick={() => { setCurrentView('aulas'); setIsExtrasFabOpen(false); }}
                   className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'aulas' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}
@@ -293,8 +306,8 @@ const App: React.FC = () => {
       {/* Backdrop global invisível para fechar os submenus */}
       {(isBeneficiosFabOpen || isAvaliacoesFabOpen || isGerarDocFabOpen || isFabOpen || isExtrasFabOpen) && (
         <div 
-          className="fixed inset-0 z-40 bg-transparent" 
-          onClick={() => { setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsGerarDocFabOpen(false); setIsFabOpen(false); setIsExtrasFabOpen(false); }} 
+          className="fixed inset-0 z-40 bg-transparent"
+          onClick={() => { setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsGerarDocFabOpen(false); setIsFabOpen(false); setIsExtrasFabOpen(false); }}
         />
       )}
     </div>
