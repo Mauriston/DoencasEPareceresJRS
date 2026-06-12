@@ -6,7 +6,266 @@ import { ChevronRight, Info, Brain, HeartPulse, EyeOff, Radiation, Accessibility
 import { jsPDF } from 'jspdf';
 import { Header } from './Header';
 
-// Função auxiliar para definir os ícones de cada doença
+// ==========================================
+// DADOS E LÓGICA DA CALCULADORA CDR
+// ==========================================
+const cdrData = [
+  { id: 'M', nome: 'Memória', sigla: '(M)', opcoes: [
+      { pt: 0, desc: "Sem perda de memória ou perda leve e inconstante." },
+      { pt: 0.5, desc: "Esquecimento constante, recordação parcial de eventos." },
+      { pt: 1, desc: "Perda de memória moderada, mais para eventos recentes, atrapalha as atividades de vida diária." },
+      { pt: 2, desc: "Perda grave de memória, apenas assunto altamente aprendido é recordado." },
+      { pt: 3, desc: "Perda de memória grave. Apenas fragmentos são recordados." }
+  ]},
+  { id: 'O', nome: 'Orientação', sigla: '(O)', opcoes: [
+      { pt: 0, desc: "Completa orientação." },
+      { pt: 0.5, desc: "Completamente orientado com dificuldade leve em relação ao tempo." },
+      { pt: 1, desc: "Dificuldade moderada com relação ao tempo, orientado em áreas familiares." },
+      { pt: 2, desc: "Dificuldade grave com relação ao tempo, desorientado quase sempre no espaço." },
+      { pt: 3, desc: "Apenas orientado em relação a pessoas." }
+  ]},
+  { id: 'JSP', nome: 'Julgamento e solução de problemas', sigla: '(JSP)', opcoes: [
+      { pt: 0, desc: "Resolve problemas diários, como problemas financeiros; julgamento preservado." },
+      { pt: 0.5, desc: "Dificuldade leve para solucionar problemas, similaridades e diferenças." },
+      { pt: 1, desc: "Dificuldade moderada em lidar com problemas, similaridades e diferenças, julgamento social mantido." },
+      { pt: 2, desc: "Dificuldade séria em lidar com problemas, similaridades e diferenças, julgamento social danificado." },
+      { pt: 3, desc: "Incapaz de fazer julgamento ou resolver problemas." }
+  ]},
+  { id: 'RC', nome: 'Relações comunitárias', sigla: '(RC)', opcoes: [
+      { pt: 0, desc: "Função independente no trabalho, compras, grupos sociais." },
+      { pt: 0.5, desc: "Leve dificuldade nestas tarefas." },
+      { pt: 1, desc: "Não é independente nestas atividades, parece normal em uma inspeção casual." },
+      { pt: 2, desc: "Não há independência fora de casa, parece bem o bastante para ser levado fora de casa." },
+      { pt: 3, desc: "Não há independência fora de casa, parece doente o bastante para ser levado fora de casa." }
+  ]},
+  { id: 'LP', nome: 'Lar e passatempos', sigla: '(LP)', opcoes: [
+      { pt: 0, desc: "Vida em casa, passatempos e interesses intelectuais bem mantidos." },
+      { pt: 0.5, desc: "Vida em casa, passatempos, interesses intelectuais levemente prejudicados." },
+      { pt: 1, desc: "Prejuízo suave em tarefas em casa, tarefas mais difíceis, passatempo e interesses abandonados." },
+      { pt: 2, desc: "Apenas tarefas simples são preservadas, interesses muito restritos e pouco mantidos." },
+      { pt: 3, desc: "Sem função significativa em casa." }
+  ]},
+  { id: 'CP', nome: 'Cuidados pessoais', sigla: '(CP)', opcoes: [
+      { pt: 0, desc: "Completamente capaz de cuidar-se." },
+      { pt: 0.5, desc: "Completamente capaz de cuidar-se." },
+      { pt: 1, desc: "Necessita de ajuda." },
+      { pt: 2, desc: "Requer assistência ao vestir-se, para higiene." },
+      { pt: 3, desc: "Muita ajuda para cuidados pessoais, incontinências freqüentes." }
+  ]}
+];
+
+function calcularGlobalCDR(M: number, secScores: number[]) {
+  const count = (conditionFn: (s: number) => boolean) => secScores.filter(conditionFn).length;
+  if (M === 0) {
+      if (count(s => s >= 0.5) >= 2) return 0.5;
+      return 0;
+  }
+  if (M === 0.5) {
+      if (count(s => s >= 1) >= 3) return 1;
+      return 0.5;
+  }
+  const greater = count(s => s > M);
+  const less = count(s => s < M);
+  const equal = count(s => s === M);
+
+  if (equal >= 3) return M;
+  if (count(s => s === 0) >= 3) return 0.5;
+
+  if (greater >= 3 || less >= 3) {
+      if ((greater === 3 && less === 2) || (less === 3 && greater === 2)) return M;
+      const maioriaArray = greater >= 3 ? secScores.filter(s => s > M) : secScores.filter(s => s < M);
+      let freqs: Record<number, number> = {};
+      maioriaArray.forEach(s => freqs[s] = (freqs[s] || 0) + 1);
+      let maxFreq = 0;
+      for (let k in freqs) if (freqs[k] > maxFreq) maxFreq = freqs[k];
+      const modas = Object.keys(freqs).filter(k => freqs[Number(k)] === maxFreq).map(Number);
+      if (modas.length === 1) return modas[0];
+      let closest = modas[0];
+      let minDiff = Math.abs(modas[0] - M);
+      for (let i = 1; i < modas.length; i++) {
+          const diff = Math.abs(modas[i] - M);
+          if (diff < minDiff) {
+              closest = modas[i];
+              minDiff = diff;
+          }
+      }
+      return closest;
+  }
+  return M;
+}
+
+function getStageText(globalScore: number) {
+  switch(globalScore) {
+      case 0: return { titulo: "Normal", sub: "sem demência" };
+      case 0.5: return { titulo: "Questionável", sub: "a muito leve" };
+      case 1: return { titulo: "Leve", sub: "demência" };
+      case 2: return { titulo: "MODERADA", sub: "demência" };
+      case 3: return { titulo: "GRAVE", sub: "demência" };
+      default: return { titulo: "", sub: "" };
+  }
+}
+
+// ==========================================
+// COMPONENTE: CALCULADORA CDR (TELA CHEIA)
+// ==========================================
+const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [scores, setScores] = useState({ M: 0, O: 0, JSP: 0, RC: 0, LP: 0, CP: 0 });
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const secScores = [scores.O, scores.JSP, scores.RC, scores.LP, scores.CP];
+  const globalScore = calcularGlobalCDR(scores.M, secScores);
+  const sbScore = scores.M + secScores.reduce((acc, val) => acc + val, 0);
+  const stage = getStageText(globalScore);
+
+  const handleCopy = async () => {
+    const text = `CLINICAL DEMENTIA RATING:\n\n- M = ${scores.M}\n- O = ${scores.O}\n- JSP = ${scores.JSP}\n- RC = ${scores.RC}\n- LP = ${scores.LP}\n- CP = ${scores.CP}\n-------------------------------\n- Global CDR = ${globalScore}\n- CDR-SB = ${sbScore}\n\n- RESULTADO: ${stage.titulo} (${stage.sub})`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setIsCopied(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const isGrave = globalScore === 3;
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-gray-50 flex flex-col animate-fade-in font-body pb-28">
+      {/* Cabeçalho */}
+      <header className="bg-white shadow-sm sticky top-0 z-40 flex items-center px-4 py-4 md:py-6">
+        <button onClick={onClose} className="mr-4 text-gray-500 hover:text-[#050F41] transition-colors p-1">
+          <ArrowLeft size={24} />
+        </button>
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-[#050F41] font-heading leading-none">CDR Score</h1>
+          <p className="text-xs text-gray-500 mt-1">Calculadora validada em português</p>
+        </div>
+      </header>
+
+      {/* Conteúdo Principal */}
+      <main className="flex-1 overflow-y-auto max-w-3xl mx-auto p-4 w-full custom-scrollbar">
+        {cdrData.map(cat => (
+          <div key={cat.id} className="mb-8">
+            <h2 className="text-base md:text-lg font-bold text-[#050F41] mb-3">{cat.nome} <span className="text-gray-500 font-normal">{cat.sigla}</span></h2>
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+              {cat.opcoes.map(opt => {
+                const isSelected = scores[cat.id as keyof typeof scores] === opt.pt;
+                const ptText = opt.pt === 0 ? '0' : '+' + opt.pt;
+                return (
+                  <div 
+                    key={opt.pt} 
+                    onClick={() => { setScores({...scores, [cat.id]: opt.pt}); setIsCopied(false); }}
+                    className={`flex items-center p-3 md:p-4 cursor-pointer select-none transition-colors border-b border-gray-100 last:border-0 ${isSelected ? 'bg-[#050F41] text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                  >
+                    <div className="flex-1 pr-4 text-sm md:text-base leading-snug">{opt.desc}</div>
+                    <div className={`font-bold text-sm md:text-base whitespace-nowrap px-2 py-1 rounded bg-black/5 ${isSelected ? 'text-white' : 'text-gray-500'}`}>
+                        {ptText}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </main>
+
+      {/* Rodapé Fixo */}
+      <div className={`fixed bottom-0 left-0 w-full text-white shadow-[0_-4px_20px_rgba(0,0,0,0.15)] z-50 transition-colors duration-300 ${isGrave ? 'bg-red-900' : 'bg-[#050F41]'}`}>
+        <div className="max-w-3xl mx-auto flex flex-row items-center justify-between p-4 md:p-6">
+            
+            {/* Pontuações */}
+            <div className="flex flex-col justify-center">
+                <div className="flex items-baseline gap-1 md:gap-2">
+                    <span className="text-4xl md:text-5xl font-bold tracking-tight">{globalScore}</span>
+                    <span className="text-sm md:text-lg text-gray-200">pontos</span>
+                    <button onClick={() => setIsModalOpen(true)} className="ml-1 text-white hover:text-gray-300 focus:outline-none transition-colors" title="Informações sobre a pontuação">
+                        <span className="material-symbols-outlined text-[20px] md:text-[24px]">info</span>
+                    </button>
+                </div>
+                <div className="text-xs md:text-sm text-gray-300 mt-1 font-medium">Escore Global CDR</div>
+                <div className="text-xs md:text-sm text-gray-400 mt-0.5">Escore CDR-SB: <span className="text-white font-semibold">{sbScore}</span> pontos</div>
+            </div>
+
+            {/* Estágio & Copiar */}
+            <div className="flex items-center">
+                <button 
+                  onClick={handleCopy} 
+                  disabled={isCopied}
+                  className={`mr-4 transition-colors flex items-center justify-center p-2 rounded-full ${isCopied ? 'text-white/40 cursor-not-allowed bg-black/10' : 'text-white hover:bg-white/10 active:scale-95'}`}
+                  title="Copiar Resultado"
+                >
+                   <span className="material-symbols-outlined text-[24px]">
+                     {isCopied ? 'done_all' : 'content_copy'}
+                   </span>
+                </button>
+                <div className={`border-l-2 ${isGrave ? 'border-red-400' : 'border-blue-400'} pl-4 md:pl-6 flex flex-col justify-center h-full`}>
+                    <div className="text-xl md:text-3xl font-bold leading-tight uppercase">{stage.titulo}</div>
+                    <div className="text-sm md:text-base text-gray-300">({stage.sub})</div>
+                </div>
+            </div>
+
+        </div>
+      </div>
+
+      {/* Modal de Interpretação */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[110] bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={() => setIsModalOpen(false)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-center p-4 md:p-5 border-b border-gray-100">
+                  <h3 className="text-lg font-bold text-[#050F41] font-heading">Interpretação dos Resultados</h3>
+                  <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
+                      <X size={20} />
+                  </button>
+              </div>
+              <div className="p-4 md:p-5 overflow-x-auto font-body">
+                  <table className="w-full text-left text-sm text-gray-600 border-collapse">
+                      <thead className="bg-gray-50 text-gray-700 text-xs uppercase">
+                          <tr>
+                              <th className="px-4 py-3 border-b border-gray-200">Global CDR</th>
+                              <th className="px-4 py-3 border-b border-gray-200">CDR-SB</th>
+                              <th className="px-4 py-3 border-b border-gray-200">Demência</th>
+                          </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                          <tr className="hover:bg-gray-50 transition-colors">
+                              <td className="px-4 py-3 font-medium text-gray-900">0</td>
+                              <td className="px-4 py-3">0</td>
+                              <td className="px-4 py-3">Normal (sem demência)</td>
+                          </tr>
+                          <tr className="hover:bg-gray-50 transition-colors">
+                              <td className="px-4 py-3 font-medium text-gray-900">0.5</td>
+                              <td className="px-4 py-3">0.5-4.0</td>
+                              <td className="px-4 py-3">Questionável a muito leve</td>
+                          </tr>
+                          <tr className="hover:bg-gray-50 transition-colors">
+                              <td className="px-4 py-3 font-medium text-gray-900">1</td>
+                              <td className="px-4 py-3">4.5-9.0</td>
+                              <td className="px-4 py-3">Leve</td>
+                          </tr>
+                          <tr className="bg-red-50 hover:bg-red-100 transition-colors">
+                              <td className="px-4 py-3 font-medium text-gray-900">2</td>
+                              <td className="px-4 py-3 text-gray-700">9.5-15.5</td>
+                              <td className="px-4 py-3 font-medium text-[#050F41]">MODERADA</td>
+                          </tr>
+                          <tr className="bg-red-100 hover:bg-red-200 transition-colors">
+                              <td className="px-4 py-3 font-bold text-red-800">3</td>
+                              <td className="px-4 py-3 text-gray-800">16.0-18.0</td>
+                              <td className="px-4 py-3 font-bold text-red-800">GRAVE</td>
+                          </tr>
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ==========================================
+// FUNÇÕES AUXILIARES DO GUIA DE DOENÇAS
+// ==========================================
 const getDiseaseIcon = (name: string) => {
   switch(name) {
     case "Alienação Mental": return <Brain className="text-[#050F41]" size={22} />;
@@ -30,7 +289,6 @@ const getDiseaseIcon = (name: string) => {
   }
 }
 
-// Função auxiliar para nomes curtos no cabeçalho
 const getShortDiseaseName = (name: string) => {
   switch (name) {
     case "Alienação Mental": return "ALIENAÇÃO";
@@ -55,6 +313,9 @@ const getShortDiseaseName = (name: string) => {
   }
 }
 
+// ==========================================
+// COMPONENTE PRINCIPAL
+// ==========================================
 export const DiseaseGuide: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -69,15 +330,16 @@ export const DiseaseGuide: React.FC = () => {
   const [isRettModalOpen, setIsRettModalOpen] = useState(false);
   const [isAutismModalOpen, setIsAutismModalOpen] = useState(false);
   
+  // Calculadora
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+
   // Estado para botão de copiar
   const [isCopied, setIsCopied] = useState(false);
 
-  // Reseta o estado do botão de cópia ao mudar de página
   useEffect(() => {
     setIsCopied(false);
   }, [selectedDiagnosis]);
 
-  // Lida com o clique nas doenças para abrir expansões ou ir direto ao diagnóstico
   const handleDiseaseClick = (disease: Disease) => {
     if (disease.diagnoses.length === 1) {
       setSelectedDisease(disease);
@@ -87,7 +349,6 @@ export const DiseaseGuide: React.FC = () => {
     }
   };
 
-  // Botão de voltar na navegação interna
   const handleBackClick = () => {
     if (selectedDisease && selectedDiagnosis && selectedDisease.diagnoses.length > 1) {
       setSelectedDiagnosis(null);
@@ -97,7 +358,6 @@ export const DiseaseGuide: React.FC = () => {
     }
   };
 
-  // Lógica de cópia para a área de transferência
   const handleCopy = async () => {
     if (!selectedDisease || !selectedDiagnosis) return;
     const copyText = `Doença: ${selectedDisease.name}\nDiagnóstico: ${selectedDiagnosis.name}\n\nDefinição:\n${selectedDisease.definition}\n\nCritérios de Gravidade:\n${selectedDiagnosis.criteria.map(c => `- ${c}`).join('\n')}\n\nDocumentos Necessários:\n${selectedDisease.documents.map(d => `- ${d}`).join('\n')}`;
@@ -110,7 +370,6 @@ export const DiseaseGuide: React.FC = () => {
     }
   };
 
-  // Geração do ficheiro PDF via jsPDF
   const handleDownloadPDF = () => {
     if (!selectedDisease || !selectedDiagnosis) return;
     const doc = new jsPDF();
@@ -188,7 +447,6 @@ export const DiseaseGuide: React.FC = () => {
     doc.save(`guia-${safeName}.pdf`);
   };
 
-  // Filtragem e Pesquisa de dados
   const filteredDiseases = DISEASES.filter(disease => {
     const query = searchQuery.toLowerCase();
     return disease.name.toLowerCase().includes(query) || disease.diagnoses.some(diag => 
@@ -216,7 +474,6 @@ export const DiseaseGuide: React.FC = () => {
     });
   }
 
-  // Função auxiliar para lidar com os resultados de pesquisa
   const handleSearchResultClick = (result: any) => {
     if(result.diagnosis) {
         setSelectedDisease(result.disease);
@@ -227,10 +484,17 @@ export const DiseaseGuide: React.FC = () => {
     }
   }
 
+  // Se a calculadora foi ativada, retorna apenas ela
+  if (isCalculatorOpen) {
+    return <CdrCalculator onClose={() => setIsCalculatorOpen(false)} />;
+  }
+
   // ==========================================
   // RENDERIZAÇÃO: PÁGINA DE DETALHE DA DOENÇA
   // ==========================================
   if (selectedDisease && selectedDiagnosis) {
+    const isDemencia = selectedDisease.name === "Alienação Mental" && selectedDiagnosis.name === "Demência";
+
     return (
       <div className="animate-fade-in flex flex-col h-full bg-[#F3F5F7] relative">
         
@@ -435,23 +699,38 @@ export const DiseaseGuide: React.FC = () => {
                   <span className="w-1.5 h-1.5 rounded-full bg-[#050F41] shrink-0 mt-2" />
                   <span className="leading-relaxed text-justify flex-1 font-medium">
                     {item.includes('CDR Score') ? (
-                      <>
-                        {item.split(/(CDR Score)/i).map((part, i) => {
-                          if (part.toLowerCase() === 'cdr score') {
-                            return (
-                              <button key={i} onClick={() => setIsCdrImageOpen(true)} className="inline text-blue-600 hover:text-blue-800 text-left font-semibold">
-                                <span className="underline align-middle">CDR Score</span><Info size={14} className="inline ml-1 align-baseline -mt-0.5" />
-                              </button>
-                            );
-                          }
-                          return part;
-                        })}
-                      </>
+                      isDemencia ? (
+                        <span className="font-bold text-red-800">CDR Score</span>
+                      ) : (
+                        <>
+                          {item.split(/(CDR Score)/i).map((part, i) => {
+                            if (part.toLowerCase() === 'cdr score') {
+                              return (
+                                <button key={i} onClick={() => setIsCdrImageOpen(true)} className="inline text-blue-600 hover:text-blue-800 text-left font-semibold">
+                                  <span className="underline align-middle">CDR Score</span><Info size={14} className="inline ml-1 align-baseline -mt-0.5" />
+                                </button>
+                              );
+                            }
+                            return part;
+                          })}
+                        </>
+                      )
                     ) : item}
                   </span>
                 </li>
               ))}
             </ul>
+            
+            {/* Botão Extra para abrir a Calculadora de CDR (Demência) */}
+            {isDemencia && (
+              <button
+                onClick={() => setIsCalculatorOpen(true)}
+                className="mt-5 w-full py-3 bg-red-800 text-white rounded-xl font-bold flex items-center justify-center hover:bg-red-900 transition-colors shadow-sm"
+              >
+                <span className="material-symbols-outlined mr-2">calculate</span>
+                CDR Score
+              </button>
+            )}
           </div>
         </div>
 
