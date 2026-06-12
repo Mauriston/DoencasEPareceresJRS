@@ -120,13 +120,9 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   const handleCopy = async () => {
     const text = `CLINICAL DEMENTIA RATING:\n\n- M = ${scores.M}\n- O = ${scores.O}\n- JSP = ${scores.JSP}\n- RC = ${scores.RC}\n- LP = ${scores.LP}\n- CP = ${scores.CP}\n-------------------------------\n- Global CDR = ${globalScore}\n- CDR-SB = ${sbScore}\n\n- RESULTADO: ${stage.titulo} (${stage.sub})`;
-    
     try {
-      // 1. Copia o texto silenciosamente para a área de transferência
       await navigator.clipboard.writeText(text);
       setIsCopied(true);
-
-      // 2. Aciona o menu de partilha nativo do sistema operativo
       if (navigator.share) {
         await navigator.share({
           title: 'Avaliação CDR Score',
@@ -134,7 +130,6 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         });
       }
     } catch (err) {
-      // Ignoramos o erro se o utilizador simplesmente fechar o menu de partilha sem selecionar nenhuma app
       if ((err as Error).name !== 'AbortError') {
         console.error("Erro ao partilhar/copiar:", err);
       }
@@ -343,6 +338,10 @@ export const DiseaseGuide: React.FC = () => {
   const [isRettModalOpen, setIsRettModalOpen] = useState(false);
   const [isAutismModalOpen, setIsAutismModalOpen] = useState(false);
   
+  // Novos Estados para o BAV II Mobitz II
+  const [isBavModalOpen, setIsBavModalOpen] = useState(false);
+  const [isBavImageExpanded, setIsBavImageExpanded] = useState(false);
+
   // Calculadora
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
 
@@ -497,7 +496,6 @@ export const DiseaseGuide: React.FC = () => {
     }
   }
 
-  // Se a calculadora foi ativada, retorna apenas ela
   if (isCalculatorOpen) {
     return <CdrCalculator onClose={() => setIsCalculatorOpen(false)} />;
   }
@@ -622,7 +620,52 @@ export const DiseaseGuide: React.FC = () => {
           </div>
         )}
 
-        {/* Header modificado sem botões de download e share */}
+        {/* Modal: BAV II grau Mobitz II */}
+        {isBavModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#050F41]/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-[28px] shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] border border-gray-100">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-[#050F41] text-white">
+                <h3 className="font-heading font-bold text-base flex items-center"><HeartPulse className="mr-2 text-[#FAB932]" size={18} /> BAV de II Grau Mobitz II</h3>
+                <button onClick={() => setIsBavModalOpen(false)} className="text-white hover:text-gray-300 p-1"><X size={20} /></button>
+              </div>
+              <div className="p-5 overflow-y-auto font-body text-gray-800 text-sm space-y-4 text-justify custom-scrollbar">
+                <p>O <strong>BAV de II Grau Mobitz II</strong> é um distúrbio de condução infra-nodal caracterizado pelo bloqueio intermitente e súbito da onda P, com <strong>intervalo PR rigorosamente constante</strong> nos batimentos conduzidos.</p>
+                <p>Ao contrário do tipo I (Wenckebach), decorre de uma <strong>lesão estrutural grave e permanente no sistema His-Purkinje, apresentando alto risco de progressão para BAV total e assistolia</strong>.</p>
+                <p>Devido à instabilidade clínica e ao prognóstico desfavorável, a conduta padrão é a indicação de marcapasso definitivo, frequentemente recomendada mesmo em pacientes assintomáticos.</p>
+                
+                <div className="mt-4 border border-gray-200 rounded-xl overflow-hidden shadow-sm relative">
+                  <img 
+                    src="https://jaleko-blog-files.s3.amazonaws.com/wp-content/uploads/2021/07/05152854/Imagem4-e1625509757200.png" 
+                    alt="ECG - BAV II grau Mobitz II" 
+                    className="w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setIsBavImageExpanded(true)}
+                  />
+                  <div className="absolute top-2 right-2 bg-black/60 text-white rounded p-1 pointer-events-none">
+                    <span className="material-symbols-outlined text-[16px]">zoom_in</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: BAV Image Expanded */}
+        {isBavImageExpanded && (
+          <div className="fixed inset-0 z-[110] bg-gray-900/95 flex flex-col items-center justify-center p-4 backdrop-blur-md animate-fade-in" onClick={() => setIsBavImageExpanded(false)}>
+            <div className="relative max-w-full max-h-full">
+              <button onClick={() => setIsBavImageExpanded(false)} className="absolute -top-12 right-0 text-white hover:text-gray-300 p-2 bg-white/10 rounded-full transition-colors">
+                <X size={24} />
+              </button>
+              <img 
+                src="https://upload.wikimedia.org/wikipedia/commons/8/89/Heart_block.png?1625509332613" 
+                alt="ECG Detalhado" 
+                className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          </div>
+        )}
+
         <Header 
           title={getShortDiseaseName(selectedDisease.name)} 
           leftAction={<button onClick={handleBackClick} className="text-white p-2 rounded-full hover:bg-white/10"><ArrowLeft size={20} /></button>}
@@ -640,6 +683,50 @@ export const DiseaseGuide: React.FC = () => {
             </h3>
             <p className="font-body text-gray-800 text-sm leading-relaxed text-justify font-medium">{selectedDisease.definition}</p>
           </div>
+
+          {/* NOVO CARTÃO: CLASSIFICAÇÃO SIDA/AIDS */}
+          {selectedDisease.name === "SIDA/AIDS" && (
+            <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm">
+              <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
+                <span className="material-symbols-outlined mr-2 text-[#FAB932]">grid_on</span>CLASSIFICAÇÃO
+              </h3>
+              <p className="font-body text-gray-700 text-sm mb-4 text-center font-bold">
+                Cruzamento Clínico/Laboratorial. Classes A3, B3, C1, C2, C3 são considerados SIDA/AIDS:
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full max-w-md mx-auto text-center border-collapse border border-gray-200 rounded-lg overflow-hidden">
+                  <thead className="bg-gray-50 text-gray-700 font-bold text-sm">
+                    <tr>
+                      <th className="border border-gray-200 p-2 font-heading">CD4</th>
+                      <th className="border border-gray-200 p-2 font-heading">Assint./LPG (A)</th>
+                      <th className="border border-gray-200 p-2 font-heading">Sintom. não C (B)</th>
+                      <th className="border border-gray-200 p-2 font-heading">Oportunistas (C)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm font-body">
+                    <tr>
+                      <td className="border border-gray-200 p-2 font-bold text-gray-700">&gt;=500 (1)</td>
+                      <td className="border border-gray-200 p-2 text-gray-600">A1</td>
+                      <td className="border border-gray-200 p-2 text-gray-600">B1</td>
+                      <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">C1</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-gray-200 p-2 font-bold text-gray-700">200-499 (2)</td>
+                      <td className="border border-gray-200 p-2 text-gray-600">A2</td>
+                      <td className="border border-gray-200 p-2 text-gray-600">B2</td>
+                      <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">C2</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">&lt;200 (3)</td>
+                      <td className="border border-gray-200 p-2 bg-red-50 text-red-700 font-bold">A3</td>
+                      <td className="border border-gray-200 p-2 bg-red-50 text-red-700 font-bold">B3</td>
+                      <td className="border border-gray-200 p-2 bg-red-100 text-red-700 font-bold">C3</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm">
             <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
@@ -689,6 +776,19 @@ export const DiseaseGuide: React.FC = () => {
                                 }
                               }} className="inline text-blue-600 hover:text-blue-800 text-left font-semibold">
                                 <span className="underline align-middle">Próprio diagnóstico</span><Info size={14} className="inline ml-1 align-baseline -mt-0.5" />
+                              </button>
+                            );
+                          }
+                          return part;
+                        })}
+                      </>
+                    ) : item.toLowerCase().includes('bav ii grau mobitz ii') ? (
+                      <>
+                        {item.split(/(BAV II grau Mobitz II)/i).map((part, i) => {
+                          if (part.toLowerCase() === 'bav ii grau mobitz ii') {
+                            return (
+                              <button key={i} onClick={() => setIsBavModalOpen(true)} className="inline text-blue-600 hover:text-blue-800 text-left font-semibold">
+                                <span className="underline align-middle">{part}</span><Info size={14} className="inline ml-1 align-baseline -mt-0.5" />
                               </button>
                             );
                           }

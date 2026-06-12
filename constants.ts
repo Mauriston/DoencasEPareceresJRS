@@ -174,7 +174,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
         "Fibrilação atrial com baixa resposta",
         "Taquicardias ventriculares com comprometimento hemodinâmico",
         "Síndrome de preexcitação com alto risco de morte súbita",
-        "Portadores de marcapasso definitivo com capacidade funcional limitada"
+        "Portadores de marcapasso definitivo COM CAPACIDADE FUNCIONAL LIMITADA"
       ],
       "Cor Pulmonale Crônico": [
         "Hipóxia cerebral e periférica (baqueteamento digital)",
