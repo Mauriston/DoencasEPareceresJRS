@@ -1,3 +1,4 @@
+// Ficheiro: constants.ts
 import { Disease, Law } from './types';
 
 const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], diagnosticos: Record<string, string[]> }> = {
@@ -9,7 +10,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
       "Exame clínico da primeira consulta",
       "Relato da evolução e tratamento da doença",
       "Exames de imagem originais ou autenticados (TC, RM) para demência",
-      "Escala de Avaliação Clínica de Demência (CDR)",
+      "CDR Score",
       "Certidão de Curatela (se o paciente for curatelado)"
     ],
     "diagnosticos": {
@@ -60,7 +61,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
         "Comprometimento grave e irreversível de personalidade"
       ],
       "Casos graves de epilepsia": [
-        "Predominância de sintomas de demenciação",
+        "Predominância de sintomas de demencia",
         "Resistência terapêutica ou elevada frequência de surtos psicóticos"
       ],
       "Autismo infantil e atípico": [
@@ -72,7 +73,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
     }
   },
   "Cardiopatia Grave": {
-    "definicao": "São consideradas cardiopatias graves, as doenças cardiovasculares agudas ou crônicas que acarretam, de modo irreversível, em maior ou menor período de tempo, a perda da capacidade física e funcional do coração, determinando incapacidade permanente para todo e qualquer trabalho ou o risco de morte prematura.",
+    "definicao": "São consideradas cardiopatias graves, as doenças cardiovasculares agudas ou crónicas que acarretam, de modo irreversível, em maior ou menor período de tempo, a perda da capacidade física e funcional do coração, determinando incapacidade permanente para todo e qualquer trabalho ou o risco de morte prematura.",
     "documentos": [
       "Relatório médico com data do início do acompanhamento e terapêutica",
       "Eletrocardiograma (ECG)",
@@ -96,7 +97,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
         "Baixo débito cardíaco",
         "Insuficiência cardíaca aguda",
         "Arritmia ventricular maligna",
-        "Disfunção ventricular mecânica em paciente já revascularizado ou sem condições"
+        "Disfunção ventricular mecânica em paciente já revascularizado ou sem condi"
       ],
       "Cardiopatia Isquêmica - Forma Aguda - SCA C/ SST ou BRE novo": [
         "Choque cardiogênico (Killip IV)",
@@ -106,8 +107,8 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
         "IAM anterior extenso (V1-V6, D1, AVL)",
         "BAV II grau Mobitz II",
         "BAVT ou distúrbio de condução interventricular",
-        "Infarto perioperatório de cirurgia de revascularização",
-        "Infarto agudo em indivíduo com infarto prévio de grande extensão"
+        "Infarto perioperatório de cirurgia de revasculariza",
+        "Infarto agudo em indivíduo com infarto prévio de grande extens"
       ],
       "Cardiopatia Isquêmica - Forma Crônica (Angina Estável)": [
         "Angina classes III e IV da CCS",
@@ -145,7 +146,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
         "Cardiomegalia importante",
         "Ritmo de galope (B3)",
         "Insuficiência cardíaca classes III e IV",
-        "Fração de ejeção ≤ 0,40",
+        "Fração de ejeção < 0,40",
         "Fibrilação atrial ou arritmias",
         "Distúrbios da condução intraventricular"
       ],
@@ -198,13 +199,13 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
       ],
       "Pericardiopatias e Aortopatias": [
         "Restrição de enchimento ventricular (Pericardite)",
-        "Aneurisma de Aorta Torácica > 5,5cm ou compressão",
+        "Aneurisma de Aorta Torácica > 5,5cm ou compress",
         "Dissecção aguda e hematoma de aorta"
       ]
     }
   },
   "Cegueira": {
-    "definicao": "A Cegueira ou amaurose é um estado patológico no qual a acuidade visual de um olho (monocular) ou de ambos os olhos é igual a zero, sem percepção luminosa, após esgotados os recursos de correção óptica.",
+    "definicao": "A Cegueira ou amaurose é um estado patológico no qual a acuidade visual de um olho (monocular) ou de ambos os olhos é igual a zero, sem percepção luminosa, após esgotados os recursos de corre ptica.",
     "documentos": [
       "Laudo oftalmológico completo atual e da época do diagnóstico",
       "Acuidade visual da época do diagnóstico",
@@ -234,11 +235,11 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
     "diagnosticos": {
       "Síndrome aguda da radiação": [
         "Quadro hematopoiético: alterações hematológicas provenientes de exposição (0,8 a 1,0 Gy)",
-        "Quadro gastrointestinal: alterações da mucosa levando à síndrome disabsortiva (> 7,0 Gy)",
+        "Quadro gastrointestinal: alterações da mucosa levando ndrome disabsortiva (> 7,0 Gy)",
         "Quadro neurovascular: manifestações que conduzem à morte (superiores a 20 Gy)"
       ],
       "Síndrome cutânea da radiação": [
-        "Grau I ou Leve (8,0 a 10,0 Gy): pele seca e pigmentação",
+        "Grau I ou Leve (8,0 a 10,0 Gy): pele seca e pigmenta",
         "Grau II ou Moderada (12,0 a 30,0 Gy): atrofia de pele e úlcera tardia",
         "Grau III ou Grave (30,0 a 50,0 Gy): cicatrizes, fibrose, alterações escleróticas e necrose",
         "Grau IV ou Muito Grave (acima de 50,0 Gy): deformidade e recidiva de úlceras"
@@ -250,14 +251,14 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
     "documentos": [
       "Relatório médico de especialista em neurologia e/ou geriatria",
       "Diagnóstico e data de início do acompanhamento",
-      "Exame clínico à época e tratamento instituído",
+      "Exame clínico época e tratamento instituído",
       "Evolução e data de observação de maior gravidade"
     ],
     "diagnosticos": {
       "Geral": [
         "Tremor: hipercinesia, predominantemente postural",
         "Rigidez muscular: acompanhada do sinal da roda dentada",
-        "Oligocinesia: diminuição da atividade motora espontânea e lentidão"
+        "Oligocinesia: diminuição da atividade motora espontânea e lentid"
       ]
     }
   },
@@ -297,7 +298,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
     }
   },
   "Estados Avançados de Doença de Paget": {
-    "definicao": "A doença de Paget é uma afecção óssea crônica, caracterizada por deformações ósseas de evolução lenta e progressiva.",
+    "definicao": "A doença de Paget é uma afec ssea crônica, caracterizada por deforma sseas de evolução lenta e progressiva.",
     "documentos": [
       "Relatório médico completo informando a data do diagnóstico",
       "Resultados dos exames elucidatórios",
@@ -306,14 +307,14 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
     ],
     "diagnosticos": {
       "Osteíte Deformante": [
-        "Lesões ósseas generalizadas, deformidades, fraturas espontâneas e degeneração maligna",
+        "Les sseas generalizadas, deformidades, fraturas espontâneas e degeneração maligna",
         "Complicações neurológicas e sensoriais: surdez, perturbações olfativas e neuralgias",
         "Complicações cardiovasculares: insuficiência cardíaca e hipertensão ligadas à patologia"
       ]
     }
   },
   "Fibrose Cística": {
-    "definicao": "Informação não especificada nas definições, mas enquadrada nas normativas legais aplicáveis.",
+    "definicao": "Informação especificada nas definições, mas enquadrada nas normativas legais aplicáveis.",
     "documentos": [
       "Relatórios e laudos médicos atualizados (Padrão Geral)"
     ],
@@ -329,7 +330,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
   "Hanseníase": {
     "definicao": "Doença infecto-contagiosa crônica causada pelo Mycobacterium leprae. O diagnóstico é essencialmente clínico e epidemiológico, identificando lesões com alteração de sensibilidade e comprometimento de nervos.",
     "documentos": [
-      "Exame original confirmatório da doença",
+      "Exame original confirmatório da doen",
       "Relatório do serviço de saúde com evolução e tempo de tratamento",
       "Descrição da data de início e término da poliquimioterapia",
       "Informação sobre atividade da doença, recidiva ou alta por cura",
@@ -421,7 +422,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
   "Paralisia Irreversível e Incapacitante": {
     "definicao": "Incapacidade de contração voluntária de um músculo ou grupo de músculos, resultante de uma lesão orgânica destrutiva ou degenerativa nas vias motoras.",
     "documentos": [
-      "Relatório médico completo com diagnóstico e data da manifestação",
+      "Relatório médico completo com diagnóstico e data da manifesta",
       "Segmentos corporais acometidos",
       "Tratamento instituído e sequelas definitivas",
       "Exames de imagem"
@@ -487,7 +488,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
     ],
     "diagnosticos": {
       "Geral": [
-        "Diagnóstico clínico, laboratorial ou por imagem atestando a atividade da doença"
+        "Diagnóstico clínico, laboratorial ou por imagem atestando a atividade da doen"
       ]
     }
   }

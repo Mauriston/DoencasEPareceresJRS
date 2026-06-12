@@ -1,8 +1,8 @@
 // Ficheiro: components/DiseaseGuide.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DISEASES } from '../constants';
 import { Disease, Diagnosis } from '../types';
-import { ChevronRight, ChevronDown, Info, FileText, CheckCircle2, Share2, Brain, HeartPulse, EyeOff, Radiation, Accessibility, Stethoscope, Ribbon, X, Download, ArrowLeft } from 'lucide-react';
+import { ChevronRight, Info, Brain, HeartPulse, EyeOff, Radiation, Accessibility, Stethoscope, Ribbon, X, Download, ArrowLeft } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { Header } from './Header';
 
@@ -61,8 +61,15 @@ export const DiseaseGuide: React.FC = () => {
   const [selectedDisease, setSelectedDisease] = useState<Disease | null>(null);
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<Diagnosis | null>(null);
   const [expandedDiseaseId, setExpandedDiseaseId] = useState<string | null>(null);
+  
+  // Modais de Conteúdo Clínico
   const [isPragmatismModalOpen, setIsPragmatismModalOpen] = useState(false);
   const [isPersonalityModalOpen, setIsPersonalityModalOpen] = useState(false);
+  const [isCdrImageOpen, setIsCdrImageOpen] = useState(false);
+  const [isRettModalOpen, setIsRettModalOpen] = useState(false);
+  const [isAutismModalOpen, setIsAutismModalOpen] = useState(false);
+  
+  // Estado para botão de copiar
   const [isCopied, setIsCopied] = useState(false);
 
   // Reseta o estado do botão de cópia ao mudar de página
@@ -90,7 +97,7 @@ export const DiseaseGuide: React.FC = () => {
     }
   };
 
-  // Lógica de cópia
+  // Lógica de cópia para a área de transferência
   const handleCopy = async () => {
     if (!selectedDisease || !selectedDiagnosis) return;
     const copyText = `Doença: ${selectedDisease.name}\nDiagnóstico: ${selectedDiagnosis.name}\n\nDefinição:\n${selectedDisease.definition}\n\nCritérios de Gravidade:\n${selectedDiagnosis.criteria.map(c => `- ${c}`).join('\n')}\n\nDocumentos Necessários:\n${selectedDisease.documents.map(d => `- ${d}`).join('\n')}`;
@@ -280,7 +287,64 @@ export const DiseaseGuide: React.FC = () => {
             </div>
           </div>
         )}
-        
+
+        {/* Modal: CDR Score Image Viewer */}
+        {isCdrImageOpen && (
+          <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-fade-in pb-env-safe">
+            <div className="flex-shrink-0 w-full sticky top-0 z-50 shadow-sm bg-[#050F41] text-white h-[56px] flex items-center justify-between px-4 border-b border-transparent">
+              <div className="flex-1 text-left font-heading text-[16px] font-semibold truncate pr-4 text-white uppercase tracking-wide">
+                CDR Score
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto w-full bg-gray-900 flex flex-col items-center justify-center relative p-4">
+              <img
+                src="https://i.imgur.com/XWLygzr.jpeg"
+                alt="Escala de Avaliação Clínica de Demência (CDR)"
+                className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl block"
+              />
+              <button
+                onClick={() => setIsCdrImageOpen(false)}
+                className="absolute bottom-6 right-6 bg-[#FAB932] text-[#050F41] shadow-2xl rounded-2xl p-4 hover:scale-105 active:scale-95 transition-all border border-amber-400 flex items-center justify-center z-50"
+                title="Voltar"
+              >
+                <ArrowLeft size={22} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Síndrome de Rett */}
+        {isRettModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#050F41]/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-[28px] shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] border border-gray-100">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-[#050F41] text-white">
+                <h3 className="font-heading font-bold text-base flex items-center"><Brain className="mr-2 text-[#FAB932]" size={18} /> Síndrome de Rett</h3>
+                <button onClick={() => setIsRettModalOpen(false)} className="text-white hover:text-gray-300 p-1"><X size={20} /></button>
+              </div>
+              <div className="p-5 overflow-y-auto font-body text-gray-800 text-sm space-y-4 text-justify custom-scrollbar">
+                <p>A síndrome de Rett é um distúrbio neurológico e do desenvolvimento de origem genética, que afeta quase exclusivamente indivíduos do sexo feminino devido a mutações no gene MECP2, localizado no cromossomo X. A condição é caracterizada pela perda de habilidades motoras, de linguagem e sociais que a criança já havia adquirido.</p>
+                <p>Os sintomas cardinais incluem a perda do uso funcional das mãos — frequentemente substituído por movimentos estereotipados e repetitivos, como o ato de "lavar as mãos" —, além de desaceleração do crescimento cefálico, distúrbios respiratórios, convulsões, dificuldades na marcha e deficiência intelectual severa. Não há cura para a síndrome, e o tratamento é multidisciplinar para otimizar a qualidade de vida.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Autismo Infantil e Atípico */}
+        {isAutismModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#050F41]/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-[28px] shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh] border border-gray-100">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-[#050F41] text-white">
+                <h3 className="font-heading font-bold text-base flex items-center"><Brain className="mr-2 text-[#FAB932]" size={18} /> Autismo</h3>
+                <button onClick={() => setIsAutismModalOpen(false)} className="text-white hover:text-gray-300 p-1"><X size={20} /></button>
+              </div>
+              <div className="p-5 overflow-y-auto font-body text-gray-800 text-sm space-y-4 text-justify custom-scrollbar">
+                <p>O <strong>Autismo Infantil</strong> é diagnosticado historicamente pela presença de desenvolvimento anormal ou prejudicado que se manifesta <strong>obrigatoriamente antes dos três anos de idade</strong>. Os critérios fundamentam-se em uma tríade de prejuízos qualitativos: isolamento ou <strong>dificuldade severa na interação social</strong> recíproca; atrasos ou desvios na comunicação verbal e não verbal; e a presença de padrões de comportamento, interesses e atividades estritamente restritos, repetitivos e estereotipados.</p>
+                <p>O <strong>Autismo Atípico</strong> difere do infantil por não atender completamente aos critérios de idade de início ou de sintomatologia da tríade clássica. O diagnóstico é aplicado quando o comportamento característico surge apenas <strong>após os três anos de idade</strong>, ou quando o indivíduo apresenta prejuízos evidentes em apenas uma ou duas das três áreas psicopatológicas necessárias para o autismo infantil (por exemplo, exibindo alterações sociais e comportamentais, mas sem o comprometimento típico da comunicação), sendo uma classificação frequente em pessoas com deficiência intelectual profunda ou atrasos graves de linguagem.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header modificado sem botões de download e share */}
         <Header 
           title={getShortDiseaseName(selectedDisease.name)} 
@@ -335,6 +399,25 @@ export const DiseaseGuide: React.FC = () => {
                           return part;
                         })}
                       </>
+                    ) : item.toLowerCase().includes('próprio diagnóstico') ? (
+                      <>
+                        {item.split(/(próprio diagnóstico)/i).map((part, i) => {
+                          if (part.toLowerCase() === 'próprio diagnóstico') {
+                            return (
+                              <button key={i} onClick={() => {
+                                if (selectedDiagnosis.name === "Síndrome de Rett") {
+                                  setIsRettModalOpen(true);
+                                } else if (selectedDiagnosis.name === "Autismo infantil e atípico") {
+                                  setIsAutismModalOpen(true);
+                                }
+                              }} className="inline text-blue-600 hover:text-blue-800 text-left font-semibold">
+                                <span className="underline align-middle">Próprio diagnóstico</span><Info size={14} className="inline ml-1 align-baseline -mt-0.5" />
+                              </button>
+                            );
+                          }
+                          return part;
+                        })}
+                      </>
                     ) : item}
                   </span>
                 </li>
@@ -350,7 +433,22 @@ export const DiseaseGuide: React.FC = () => {
               {selectedDisease.documents.map((item, idx) => (
                 <li key={idx} className="flex items-start gap-3 text-sm text-gray-700 font-body">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#050F41] shrink-0 mt-2" />
-                  <span className="leading-relaxed text-justify flex-1 font-medium">{item}</span>
+                  <span className="leading-relaxed text-justify flex-1 font-medium">
+                    {item.includes('CDR Score') ? (
+                      <>
+                        {item.split(/(CDR Score)/i).map((part, i) => {
+                          if (part.toLowerCase() === 'cdr score') {
+                            return (
+                              <button key={i} onClick={() => setIsCdrImageOpen(true)} className="inline text-blue-600 hover:text-blue-800 text-left font-semibold">
+                                <span className="underline align-middle">CDR Score</span><Info size={14} className="inline ml-1 align-baseline -mt-0.5" />
+                              </button>
+                            );
+                          }
+                          return part;
+                        })}
+                      </>
+                    ) : item}
+                  </span>
                 </li>
               ))}
             </ul>
