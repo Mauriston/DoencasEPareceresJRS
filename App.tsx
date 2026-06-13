@@ -19,7 +19,7 @@ import { ArtigoPericiaMedica } from './components/ArtigoPericiaMedica';
 import { ArtigoPerfilPerito } from './components/ArtigoPerfilPerito';
 import { ArtigoPericiaAdministrativa } from './components/ArtigoPericiaAdministrativa';
 import { ArtigoPericiaPsiquiatria } from './components/ArtigoPericiaPsiquiatria';
-import { CasosPericiais } from './components/CasosPericiais'; // <-- IMPORTAÇÃO NOVA
+import { CasosPericiais } from './components/CasosPericiais';
 import { NavItem } from './types';
 
 const App: React.FC = () => {
@@ -52,7 +52,6 @@ const App: React.FC = () => {
       case 'artigo-perfil': return <ArtigoPerfilPerito onBack={() => setCurrentView('artigos')} />;
       case 'artigo-administrativa': return <ArtigoPericiaAdministrativa onBack={() => setCurrentView('artigos')} />;
       case 'artigo-psiquiatria': return <ArtigoPericiaPsiquiatria onBack={() => setCurrentView('artigos')} />;
-      // Documentação: O botão de volta dos Casos redireciona para a página principal (guide) ou a que preferires
       case 'casos': return <CasosPericiais onBack={() => setCurrentView('guide')} />; 
       default: return <DiseaseGuide />;
     }
@@ -157,7 +156,8 @@ const App: React.FC = () => {
               <div className="absolute bottom-20 right-0 mb-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(5,15,65,0.08)] border border-gray-100 p-1.5 flex flex-col gap-0.5 min-w-[160px] animate-fade-in z-50">
                 <button onClick={() => { setCurrentView('artigos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${['artigos', 'artigo-pericia', 'artigo-perfil', 'artigo-administrativa', 'artigo-psiquiatria'].includes(currentView) ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">article</span>Artigos</button>
                 <button onClick={() => { setCurrentView('aulas'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'aulas' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">co_present</span>Aulas</button>
-                <button onClick={() => { setCurrentView('casos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'casos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">cases</span>Casos</button>
+                {/* Documentação: Botão de Casos modificado com ícone "quiz" */}
+                <button onClick={() => { setCurrentView('casos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'casos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">quiz</span>Casos</button>
                 <button onClick={() => { setCurrentView('infograficos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'infograficos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">image</span>Infográficos</button>
                 <button onClick={() => { setCurrentView('videos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'videos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">smart_display</span>Vídeos</button>
               </div>
