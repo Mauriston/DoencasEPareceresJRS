@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { DiseaseGuide } from './components/DiseaseGuide';
 import { LawReference } from './components/LawReference';
 import { DGPM406Guide } from './components/DGPM406Guide';
-import { DGPM406AnexosGuide } from './components/DGPM406AnexosGuide';
 import { ConcursosGuide } from './components/ConcursosGuide';
 import { PortariaGuide } from './components/PortariaGuide';
 import { FinalidadesGuide } from './components/FinalidadesGuide';
@@ -23,7 +22,6 @@ import { NavItem } from './types';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<NavItem>('splash');
-  
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [isBeneficiosFabOpen, setIsBeneficiosFabOpen] = useState(false);
   const [isExtrasFabOpen, setIsExtrasFabOpen] = useState(false);
@@ -35,7 +33,6 @@ const App: React.FC = () => {
       case 'guide': return <DiseaseGuide />;
       case 'laws': return <LawReference />;
       case 'dgpm406': return <DGPM406Guide />;
-      case 'dgpm406-anexos': return <DGPM406AnexosGuide />;
       case 'concursos': return <ConcursosGuide />;
       case 'portaria': return <PortariaGuide />;
       case 'finalidades': return <FinalidadesGuide />;
@@ -79,7 +76,7 @@ const App: React.FC = () => {
       <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200/70 shadow-[0_-4px_16px_rgba(0,0,0,0.03)] pb-[env(safe-area-inset-bottom)] px-4 z-50">
         <div className="flex justify-around items-center h-[64px] max-w-4xl mx-auto relative">
           
-          {/* Item 1: Benefícios */}
+          {/* 1. Benefícios */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
             <button onClick={() => { setIsBeneficiosFabOpen(!isBeneficiosFabOpen); setIsAvaliacoesFabOpen(false); setIsGerarDocFabOpen(false); setIsFabOpen(false); setIsExtrasFabOpen(false); }} className="flex flex-col items-center justify-center w-full h-full focus:outline-none">
               <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['guide', 'portaria', 'finalidades'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
@@ -96,7 +93,7 @@ const App: React.FC = () => {
             )}
           </div>
 
-          {/* Item 2: Avaliações */}
+          {/* 2. Avaliações */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
             <button id="nav-btn-avaliacoes" onClick={() => { setIsAvaliacoesFabOpen(!isAvaliacoesFabOpen); setIsBeneficiosFabOpen(false); setIsGerarDocFabOpen(false); setIsFabOpen(false); setIsExtrasFabOpen(false); }} className="group flex flex-col items-center justify-center w-full h-full focus:outline-none">
               <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['concursos', 'exames'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
@@ -112,7 +109,7 @@ const App: React.FC = () => {
             )}
           </div>
 
-          {/* Item 3: Documentos */}
+          {/* 3. Documentos */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
             <button id="nav-btn-gerar-doc" onClick={() => { setIsGerarDocFabOpen(!isGerarDocFabOpen); setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsFabOpen(false); setIsExtrasFabOpen(false); }} className="group flex flex-col items-center justify-center w-full h-full focus:outline-none">
               <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['pareceres', 'templates'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
@@ -129,27 +126,25 @@ const App: React.FC = () => {
             )}
           </div>
 
-          {/* Item 4: Refatorado de DGPM-406 para Normas */}
+          {/* 4. Normas - Menu Atualizado com o item unificado DGPM-406 */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
             <button onClick={() => { setIsFabOpen(!isFabOpen); setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsGerarDocFabOpen(false); setIsExtrasFabOpen(false); }} className="flex flex-col items-center justify-center w-full h-full focus:outline-none">
-              <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['dgpm406', 'dgpm406-anexos', 'resumos', 'laws'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
-                {/* Documentação: Ícone alterado de 'anchor' para 'gavel' (Martelo da Lei/Norma) */}
-                <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['dgpm406', 'dgpm406-anexos', 'resumos', 'laws'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>gavel</span>
+              <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['dgpm406', 'resumos', 'laws'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
+                <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['dgpm406', 'resumos', 'laws'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>gavel</span>
               </div>
-              {/* Documentação: Texto alterado de DGPM-406 para Normas */}
-              <span className={`text-[11px] font-medium font-body transition-colors ${['dgpm406', 'dgpm406-anexos', 'resumos', 'laws'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Normas</span>
+              <span className={`text-[11px] font-medium font-body transition-colors ${['dgpm406', 'resumos', 'laws'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Normas</span>
             </button>
             {isFabOpen && (
               <div className="absolute bottom-20 left-1/2 -translate-x-1/2 mb-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(5,15,65,0.08)] border border-gray-100 p-1.5 flex flex-col gap-0.5 min-w-[155px] animate-fade-in z-50">
-                <button onClick={() => { setCurrentView('dgpm406-anexos'); setIsFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'dgpm406-anexos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">attachment</span>Anexos</button>
-                <button onClick={() => { setCurrentView('dgpm406'); setIsFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'dgpm406' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">library_books</span>Capítulos</button>
+                {/* Documentação: Removidos Capítulos e Anexos separados. Inserido o DGPM-406 unificado com ícone anchor */}
+                <button onClick={() => { setCurrentView('dgpm406'); setIsFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'dgpm406' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">anchor</span>DGPM-406</button>
                 <button onClick={() => { setCurrentView('laws'); setIsFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'laws' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">balance</span>Legislação</button>
                 <button onClick={() => { setCurrentView('resumos'); setIsFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'resumos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">menu_book</span>Resumos</button>
               </div>
             )}
           </div>
 
-          {/* Item 5: Extras */}
+          {/* 5. Extras */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
             <button onClick={() => { setIsExtrasFabOpen(!isExtrasFabOpen); setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsGerarDocFabOpen(false); setIsFabOpen(false); }} className="flex flex-col items-center justify-center w-full h-full focus:outline-none">
               <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['estudo', 'casos', 'infograficos', 'artigos', 'artigo-pericia', 'artigo-perfil', 'artigo-administrativa', 'artigo-psiquiatria'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
