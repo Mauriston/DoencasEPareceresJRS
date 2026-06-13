@@ -20,6 +20,7 @@ import { CasosPericiais } from './components/CasosPericiais';
 import { Estudo } from './components/Estudo'; 
 import { HNReGuide } from './components/HNReGuide';
 import { RegimentoHNRe } from './components/RegimentoHNRe';
+import { OrdemInternaJRS } from './components/OrdemInternaJRS';
 import { NavItem } from './types';
 
 const App: React.FC = () => {
@@ -54,6 +55,7 @@ const App: React.FC = () => {
       // Documentação: Garantindo que a prop onNavigate está a passar a função setCurrentView para HNReGuide
       case 'hnre': return <HNReGuide onNavigate={setCurrentView} />; 
       case 'regimento-hnre': return <RegimentoHNRe onBack={() => setCurrentView('hnre')} />;
+      case 'ordem-interna-jrs': return <OrdemInternaJRS onBack={() => setCurrentView('hnre')} />;
       default: return <DiseaseGuide />;
     }
   };
