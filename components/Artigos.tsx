@@ -4,7 +4,7 @@ import { Header } from './Header';
 import { ChevronRight } from 'lucide-react';
 import { NavItem } from '../types';
 
-// Documentação: Array com os dados estáticos dos 4 artigos
+// Documentação: Array estático com os dados dos artigos
 const ARTIGOS_DATA = [
   {
     id: '1',
@@ -20,14 +20,10 @@ const ARTIGOS_DATA = [
     id: '3',
     title: 'DIREITOS E DEVERES DO MÉDICO PERITO',
     author: 'Prof. Daniel Muñoz | FCMUSP'
-  },
-  {
-    id: '4',
-    title: 'O PERFIL DO MÉDICO PERITO',
-    author: 'Dra. Tereza Chedid | CREMEGO'
   }
 ];
 
+// Documentação: Interface que garante que a função de navegação é recebida do App.tsx
 interface ArtigosProps {
   onNavigate: (view: NavItem) => void;
 }
@@ -40,21 +36,23 @@ export const Artigos: React.FC<ArtigosProps> = ({ onNavigate }) => {
       <div className="p-4 space-y-4 max-w-2xl mx-auto w-full flex-1 pb-24">
         <div className="grid grid-cols-1 gap-2.5">
           {ARTIGOS_DATA.map((item) => {
-            // Documentação: Habilita o clique apenas nos artigos 2 e 4
-            const isClickable = item.id === '2' || item.id === '4';
+            // Verifica se é o card 2 (o único clicável no momento)
+            const isClickable = item.id === '2';
 
             return (
               <button 
                 key={item.id} 
+                // Documentação: Se for o card correto, chama a função para mudar a tela
                 onClick={() => { 
-                  if (item.id === '2') onNavigate('artigo-pericia');
-                  if (item.id === '4') onNavigate('artigo-perfil');
+                  if (isClickable) {
+                    onNavigate('artigo-pericia');
+                  }
                 }}
-                disabled={!isClickable}
+                disabled={!isClickable} // Desabilita o clique nos outros cards
                 className={`bg-white rounded-2xl border shadow-sm overflow-hidden flex flex-col w-full text-left p-4 transition-all duration-300 focus:outline-none ${
                   isClickable 
                     ? 'cursor-pointer border-gray-200/60 hover:border-[#079551] hover:shadow-md active:scale-[0.98]' 
-                    : 'cursor-default border-gray-200/60 opacity-80'
+                    : 'cursor-default border-gray-200/60'
                 }`}
               >
                 <div className="flex justify-between items-start gap-4 w-full">
