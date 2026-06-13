@@ -1,7 +1,6 @@
 // Ficheiro: components/Videos.tsx
 import React, { useState, useEffect } from 'react';
 import { Loader2, RefreshCw, AlertCircle, Play, X } from 'lucide-react';
-import { Header } from './Header';
 import { fetchExtras, ExtraItem } from '../services/extrasService';
 
 export const Videos: React.FC = () => {
@@ -9,7 +8,6 @@ export const Videos: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Estado para o Modal de Vídeo
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
   const fallbackVideos: ExtraItem[] = [
@@ -17,7 +15,7 @@ export const Videos: React.FC = () => {
       id: 'extra-fb1',
       format: 'Vídeos',
       title: 'Guia de Inspeções de Saúde para concessão de Benefícios para Agentes Médico-Periciais',
-      description: 'Orientações detalhadas sobre as Inspeções de Saúde para a concessão de benefícios previstos na Marinha do Brasil, focado em normativas e procedimentos.',
+      description: '',
       link: '<iframe width="560" height="315" src="https://www.youtube.com/embed/VIjKagjinSA?si=2fkYfnCz3OCVZE0i" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>',
       youtubeId: 'VIjKagjinSA'
     },
@@ -25,7 +23,7 @@ export const Videos: React.FC = () => {
       id: 'extra-fb2',
       format: 'Vídeos',
       title: 'Aspectos Normativos e Técnicos das Inspeções de Saúde para Concessão de Benefícios',
-      description: 'Vídeo complementar detalhando procedimentos legais, médicos e normativas vigentes sobre doenças previstas em lei aplicáveis ao contexto da Marinha.',
+      description: '',
       link: '<iframe width="560" height="315" src="https://www.youtube.com/embed/ZMv3oXBOVa4?si=vBPXGQN5ohsSSI_u" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>',
       youtubeId: 'ZMv3oXBOVa4'
     }
@@ -52,9 +50,7 @@ export const Videos: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      <Header title="Vídeos de Instrução" />
-      
+    <div className="flex flex-col h-full bg-gray-50 animate-fade-in relative">
       <div className="p-4 space-y-6 overflow-y-auto w-full max-w-full flex-1 pb-24">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
@@ -101,7 +97,6 @@ export const Videos: React.FC = () => {
                         }
                       }}
                     >
-                      {/* Área da Imagem/Thumbnail */}
                       <div className="w-full aspect-video bg-black relative flex-shrink-0">
                         {hasYoutube ? (
                           <img 
@@ -123,7 +118,6 @@ export const Videos: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Área do Título (Sem subtítulo e expansão) */}
                       <div className="flex-1 p-3 flex flex-col items-center justify-center min-w-0 bg-white">
                         <h3 className="text-[11px] font-heading font-bold text-[#050F41] leading-snug line-clamp-3 text-center group-hover:text-[#079551] transition-colors">
                           {video.title}
@@ -138,7 +132,6 @@ export const Videos: React.FC = () => {
         )}
       </div>
 
-      {/* Modal de Reprodução de Vídeo */}
       {selectedVideo && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fade-in">
           <button 

@@ -1,7 +1,6 @@
 // Ficheiro: components/Aulas.tsx
 import React, { useState, useEffect } from 'react';
 import { Loader2, RefreshCw, AlertCircle } from 'lucide-react';
-import { Header } from './Header';
 import { fetchExtras, ExtraItem } from '../services/extrasService';
 
 export const Aulas: React.FC = () => {
@@ -67,9 +66,7 @@ export const Aulas: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 animate-fade-in">
-      <Header title="Aulas e Slides" />
-      
+    <div className="flex flex-col h-full bg-gray-50 animate-fade-in relative">
       <div className="p-4 space-y-6 overflow-y-auto w-full max-w-full flex-1 pb-24">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
@@ -103,7 +100,7 @@ export const Aulas: React.FC = () => {
                 Nenhuma aula disponível no momento.
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3" id="aulas-grid">
+              <div className="grid grid-cols-2 gap-3 max-w-4xl mx-auto">
                 {aulas.map((aula, idx) => {
                   const clickUrl = getClickableLink(aula);
                   
@@ -114,7 +111,6 @@ export const Aulas: React.FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col items-stretch p-0 w-full animate-fade-in hover:shadow-md hover:border-[#079551] transition-all duration-300 cursor-pointer text-center focus:outline-none active:scale-[0.98]"
-                      id={`aula-card-${idx}`}
                     >
                       <div className="w-full aspect-video bg-gray-50 relative flex-shrink-0 overflow-hidden border-b border-gray-100">
                         {aula.imageUrl ? (
@@ -131,7 +127,6 @@ export const Aulas: React.FC = () => {
                         )}
                       </div>
 
-                      {/* Título centralizado vertical e horizontalmente, sem subtítulo */}
                       <div className="flex-1 p-3 flex flex-col items-center justify-center min-w-0">
                         <h3 className="text-[12px] font-bold text-[#050F41] font-heading leading-snug group-hover:text-[#079551] transition-colors line-clamp-2">
                           {aula.title}

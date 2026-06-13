@@ -2,14 +2,12 @@
 import React, { useState } from 'react';
 import { DiseaseGuide } from './components/DiseaseGuide';
 import { LawReference } from './components/LawReference';
-import { Videos } from './components/Videos';
 import { DGPM406Guide } from './components/DGPM406Guide';
 import { DGPM406AnexosGuide } from './components/DGPM406AnexosGuide';
 import { ConcursosGuide } from './components/ConcursosGuide';
 import { PortariaGuide } from './components/PortariaGuide';
 import { FinalidadesGuide } from './components/FinalidadesGuide';
 import { ExamesGuide } from './components/ExamesGuide';
-import { Aulas } from './components/Aulas';
 import { Infograficos } from './components/Infograficos';
 import { Resumos } from './components/Resumos';
 import { Pareceres } from './components/Pareceres';
@@ -20,6 +18,7 @@ import { ArtigoPerfilPerito } from './components/ArtigoPerfilPerito';
 import { ArtigoPericiaAdministrativa } from './components/ArtigoPericiaAdministrativa';
 import { ArtigoPericiaPsiquiatria } from './components/ArtigoPericiaPsiquiatria';
 import { CasosPericiais } from './components/CasosPericiais';
+import { Estudo } from './components/Estudo'; // <-- IMPORTAÇÃO DA NOVA PÁGINA
 import { NavItem } from './types';
 
 const App: React.FC = () => {
@@ -35,14 +34,12 @@ const App: React.FC = () => {
     switch (currentView) {
       case 'guide': return <DiseaseGuide />;
       case 'laws': return <LawReference />;
-      case 'videos': return <Videos />;
       case 'dgpm406': return <DGPM406Guide />;
       case 'dgpm406-anexos': return <DGPM406AnexosGuide />;
       case 'concursos': return <ConcursosGuide />;
       case 'portaria': return <PortariaGuide />;
       case 'finalidades': return <FinalidadesGuide />;
       case 'exames': return <ExamesGuide />;
-      case 'aulas': return <Aulas />;
       case 'infograficos': return <Infograficos />;
       case 'resumos': return <Resumos />;
       case 'pareceres': return <Pareceres />;
@@ -53,6 +50,7 @@ const App: React.FC = () => {
       case 'artigo-administrativa': return <ArtigoPericiaAdministrativa onBack={() => setCurrentView('artigos')} />;
       case 'artigo-psiquiatria': return <ArtigoPericiaPsiquiatria onBack={() => setCurrentView('artigos')} />;
       case 'casos': return <CasosPericiais onBack={() => setCurrentView('guide')} />; 
+      case 'estudo': return <Estudo onBack={() => setCurrentView('guide')} />; // <-- NOVA ROTA DO COMPONENTE ESTUDO
       default: return <DiseaseGuide />;
     }
   };
@@ -147,19 +145,17 @@ const App: React.FC = () => {
 
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
             <button onClick={() => { setIsExtrasFabOpen(!isExtrasFabOpen); setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsGerarDocFabOpen(false); setIsFabOpen(false); }} className="flex flex-col items-center justify-center w-full h-full focus:outline-none">
-              <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['videos', 'aulas', 'casos', 'infograficos', 'artigos', 'artigo-pericia', 'artigo-perfil', 'artigo-administrativa', 'artigo-psiquiatria'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
-                <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['videos', 'aulas', 'casos', 'infograficos', 'artigos', 'artigo-pericia', 'artigo-perfil', 'artigo-administrativa', 'artigo-psiquiatria'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>widgets</span>
+              <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['estudo', 'casos', 'infograficos', 'artigos', 'artigo-pericia', 'artigo-perfil', 'artigo-administrativa', 'artigo-psiquiatria'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
+                <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['estudo', 'casos', 'infograficos', 'artigos', 'artigo-pericia', 'artigo-perfil', 'artigo-administrativa', 'artigo-psiquiatria'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>widgets</span>
               </div>
-              <span className={`text-[11px] font-medium font-body transition-colors ${['videos', 'aulas', 'casos', 'infograficos', 'artigos', 'artigo-pericia', 'artigo-perfil', 'artigo-administrativa', 'artigo-psiquiatria'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Extras</span>
+              <span className={`text-[11px] font-medium font-body transition-colors ${['estudo', 'casos', 'infograficos', 'artigos', 'artigo-pericia', 'artigo-perfil', 'artigo-administrativa', 'artigo-psiquiatria'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Extras</span>
             </button>
             {isExtrasFabOpen && (
               <div className="absolute bottom-20 right-0 mb-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(5,15,65,0.08)] border border-gray-100 p-1.5 flex flex-col gap-0.5 min-w-[160px] animate-fade-in z-50">
                 <button onClick={() => { setCurrentView('artigos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${['artigos', 'artigo-pericia', 'artigo-perfil', 'artigo-administrativa', 'artigo-psiquiatria'].includes(currentView) ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">article</span>Artigos</button>
-                <button onClick={() => { setCurrentView('aulas'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'aulas' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">co_present</span>Aulas</button>
-                {/* Documentação: Botão de Casos modificado com ícone "quiz" */}
                 <button onClick={() => { setCurrentView('casos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'casos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">quiz</span>Casos</button>
+                <button onClick={() => { setCurrentView('estudo'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'estudo' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">school</span>Estudo</button>
                 <button onClick={() => { setCurrentView('infograficos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'infograficos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">image</span>Infográficos</button>
-                <button onClick={() => { setCurrentView('videos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'videos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">smart_display</span>Vídeos</button>
               </div>
             )}
           </div>
