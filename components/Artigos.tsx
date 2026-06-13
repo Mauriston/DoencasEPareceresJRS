@@ -4,7 +4,7 @@ import { Header } from './Header';
 import { ChevronRight } from 'lucide-react';
 import { NavItem } from '../types';
 
-// Documentação: Array com os dados estáticos dos 4 artigos
+// Documentação: Array estático com os dados dos 5 artigos
 const ARTIGOS_DATA = [
   {
     id: '1',
@@ -25,6 +25,11 @@ const ARTIGOS_DATA = [
     id: '4',
     title: 'O PERFIL DO MÉDICO PERITO',
     author: 'Dra. Tereza Chedid | CREMEGO'
+  },
+  {
+    id: '5',
+    title: 'PERÍCIA MÉDICA ADMINISTRATIVA',
+    author: 'Profª Sonia Maria Rodrigues de Andrade | UERJ'
   }
 ];
 
@@ -40,8 +45,8 @@ export const Artigos: React.FC<ArtigosProps> = ({ onNavigate }) => {
       <div className="p-4 space-y-4 max-w-2xl mx-auto w-full flex-1 pb-24">
         <div className="grid grid-cols-1 gap-2.5">
           {ARTIGOS_DATA.map((item) => {
-            // Documentação: Habilita o clique apenas nos artigos 2 e 4
-            const isClickable = item.id === '2' || item.id === '4';
+            // Documentação: Habilita o clique para os artigos 2, 4 e 5
+            const isClickable = item.id === '2' || item.id === '4' || item.id === '5';
 
             return (
               <button 
@@ -49,6 +54,7 @@ export const Artigos: React.FC<ArtigosProps> = ({ onNavigate }) => {
                 onClick={() => { 
                   if (item.id === '2') onNavigate('artigo-pericia');
                   if (item.id === '4') onNavigate('artigo-perfil');
+                  if (item.id === '5') onNavigate('artigo-administrativa');
                 }}
                 disabled={!isClickable}
                 className={`bg-white rounded-2xl border shadow-sm overflow-hidden flex flex-col w-full text-left p-4 transition-all duration-300 focus:outline-none ${
