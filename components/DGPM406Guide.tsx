@@ -1,6 +1,7 @@
 // Ficheiro: components/DGPM406Guide.tsx
 import React from 'react';
 import { Header } from './Header';
+import { MoreVertical } from 'lucide-react'; // Ícone dos 3 pontinhos
 
 interface Chapter {
   id: string;
@@ -119,24 +120,34 @@ export const DGPM406Guide: React.FC = () => {
     <div className="flex flex-col h-full bg-gray-50">
       <Header title="CAPÍTULOS DGPM-406 REV 9" />
       
-      {/* Documentação: Grelha configurada para 2 colunas */}
-      <div className="p-4 grid grid-cols-2 gap-3 animate-fade-in overflow-auto pb-24 max-w-4xl mx-auto w-full">
-        {CHAPTERS.map((item) => (
-          <a 
-            key={item.id} 
-            href={item.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex flex-col items-center justify-center text-center bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden hover:shadow-md hover:border-[#079551] transition-all duration-300 p-4 active:scale-[0.98] min-h-[110px]"
-          >
-            <h3 className="text-[#050F41] font-heading font-bold text-[13px] leading-snug mb-1.5 group-hover:text-[#079551] transition-colors">
-              {item.chapter}
-            </h3>
-            <p className="text-gray-500 font-body text-[10px] font-semibold uppercase leading-tight line-clamp-3">
-              {item.title}
-            </p>
-          </a>
-        ))}
+      <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-4xl mx-auto w-full">
+        {/* Documentação: Contentor único da lista com separadores internos (divide-y) */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden divide-y divide-gray-100">
+          {CHAPTERS.map((item) => (
+            <a 
+              key={item.id} 
+              href={item.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors focus:outline-none cursor-pointer"
+            >
+              {/* Documentação: Lado esquerdo com os textos alinhados numa coluna */}
+              <div className="flex flex-col pr-4 flex-1">
+                <h3 className="text-[#050F41] font-heading font-bold text-[14px] leading-snug mb-1 group-hover:text-[#079551] transition-colors">
+                  {item.chapter}
+                </h3>
+                <p className="text-gray-500 font-body text-[11px] font-medium leading-relaxed line-clamp-2">
+                  {item.title}
+                </p>
+              </div>
+              
+              {/* Documentação: Lado direito com o ícone de 3 pontinhos alinhado */}
+              <div className="text-gray-400 group-hover:text-[#050F41] transition-colors flex-shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
+                <MoreVertical size={18} />
+              </div>
+            </a>
+          ))}
+        </div>
       </div>
     </div>
   );
