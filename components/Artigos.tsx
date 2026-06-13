@@ -4,6 +4,7 @@ import { Header } from './Header';
 import { ChevronRight } from 'lucide-react';
 import { NavItem } from '../types';
 
+// Documentação: Array com os dados estáticos dos 4 artigos
 const ARTIGOS_DATA = [
   {
     id: '1',
@@ -39,7 +40,7 @@ export const Artigos: React.FC<ArtigosProps> = ({ onNavigate }) => {
       <div className="p-4 space-y-4 max-w-2xl mx-auto w-full flex-1 pb-24">
         <div className="grid grid-cols-1 gap-2.5">
           {ARTIGOS_DATA.map((item) => {
-            // Documentação: Agora os cards 2 e 4 são clicáveis
+            // Documentação: Habilita o clique apenas nos artigos 2 e 4
             const isClickable = item.id === '2' || item.id === '4';
 
             return (

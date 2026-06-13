@@ -153,3 +153,5 @@ export const ArtigoPerfilPerito: React.FC<Props> = ({ onBack }) => {
     </div>
   );
 };
+
+>>>>>>> e1fe826aefc56e8df48ef682c7896f7325ac74c1
