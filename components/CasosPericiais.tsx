@@ -306,7 +306,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
 
   const currentCase = CASOS_DATA[currentIndex];
   const totalCases = CASOS_DATA.length;
-  // Calcula o progresso para a barra
+  // Documentação: Calcula o progresso para a barra
   const progressPercentage = ((currentIndex + 1) / totalCases) * 100;
 
   // Documentação: Lida com a seleção da alternativa do utilizador
@@ -332,7 +332,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   // Documentação: Função de styling dinâmica das alternativas com base no estado de resposta
   const getOptionStyle = (key: string) => {
     if (selectedAnswer === null) {
-      return "bg-white border-gray-200 hover:border-[#050F41] hover:shadow-md cursor-pointer";
+      return "bg-white border-gray-200 hover:border-[#050F41] hover:shadow-md cursor-pointer font-normal text-gray-700";
     }
 
     // Normalização para evitar erros com letras maiúsculas/minúsculas vindas do JSON
@@ -340,13 +340,16 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
     const isSelected = key.toUpperCase() === selectedAnswer.toUpperCase();
 
     if (isCorrect) {
-      return "bg-green-100 border-green-500 text-green-900 font-medium shadow-sm";
+      // Documentação: Alternativa correta destacada a verde e em negrito
+      return "bg-green-100 border-green-500 text-green-900 font-bold shadow-sm";
     }
     if (isSelected && !isCorrect) {
-      return "bg-red-50 border-red-400 text-red-800 shadow-sm";
+      // Documentação: Alternativa errada selecionada destacada a vermelho e em negrito
+      return "bg-red-50 border-red-400 text-red-900 font-bold shadow-sm";
     }
 
-    return "bg-gray-50 border-gray-100 opacity-60 cursor-default"; // As não selecionadas/não corretas perdem opacidade
+    // Documentação: Alternativas não selecionadas perdem destaque
+    return "bg-gray-50 border-gray-100 opacity-60 cursor-default font-normal text-gray-500";
   };
 
   return (
@@ -360,7 +363,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
         } 
       />
 
-      {/* Barra de Progresso Discreta */}
+      {/* Documentação: Barra de Progresso Discreta */}
       <div className="w-full h-1.5 bg-gray-200">
         <div 
           className="h-full bg-[#079551] transition-all duration-500 ease-out"
@@ -369,24 +372,21 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
       </div>
 
       <div className="p-4 space-y-6 max-w-3xl mx-auto w-full flex-1 pb-32">
-        {/* Contador de Casos */}
+        {/* Documentação: Contador de Casos (Removido o box Desafio X) */}
         <div className="flex items-center justify-between mt-2">
           <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
             Caso {currentIndex + 1} de {totalCases}
           </span>
-          <span className="bg-[#050F41]/10 text-[#050F41] text-[10px] font-bold px-2 py-1 rounded-md">
-            Desafio {currentCase.caso}
-          </span>
         </div>
 
-        {/* Enunciado */}
+        {/* Documentação: Enunciado com destaque visual discreto */}
         <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm">
-          <p className="text-gray-800 font-body text-[15px] leading-relaxed font-medium">
+          <p className="text-[#050F41] font-heading text-[16px] leading-relaxed font-semibold">
             {currentCase.enunciado}
           </p>
         </div>
 
-        {/* Alternativas */}
+        {/* Documentação: Alternativas */}
         <div className="space-y-3">
           {Object.entries(currentCase.alternativas).map(([key, text]) => (
             <button
@@ -407,22 +407,22 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
           ))}
         </div>
 
-        {/* Explicação (Aparece apenas após selecionar uma resposta) */}
+        {/* Documentação: Explicação com contraste melhorado */}
         {selectedAnswer !== null && (
-          <div className="animate-fade-in bg-blue-50/50 border border-blue-100 p-5 rounded-2xl mt-6 relative overflow-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-400"></div>
+          <div className="animate-fade-in bg-yellow-50/80 border border-yellow-200 p-5 rounded-2xl mt-6 relative overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
             <h3 className="text-sm font-bold font-heading text-[#050F41] mb-2 uppercase flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">lightbulb</span>
+              <span className="material-symbols-outlined text-[18px] text-yellow-600">lightbulb</span>
               Análise Pericial
             </h3>
-            <p className="text-sm text-gray-700 font-body leading-relaxed text-justify">
+            <p className="text-sm text-gray-800 font-body leading-relaxed text-justify">
               {currentCase.explicacao}
             </p>
           </div>
         )}
       </div>
 
-      {/* FAB: Botão de Avançar (Surge apenas após responder) */}
+      {/* Documentação: FAB: Botão de Avançar */}
       {selectedAnswer !== null && (
         <button 
           onClick={currentIndex < totalCases - 1 ? handleNext : handleRestart}
