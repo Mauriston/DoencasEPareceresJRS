@@ -6,53 +6,30 @@ import { NavItem } from '../types';
 
 // Documentação: Array estático com os dados dos 6 artigos
 const ARTIGOS_DATA = [
-  {
-    id: '1',
-    title: 'MEDICINA LEGAL E PERÍCIA MÉDICA',
-    author: 'Prof. Daniel Muñoz | FCMUSP'
-  },
-  {
-    id: '2',
-    title: 'PERÍCIA MÉDICA',
-    author: 'Dra. Simone Nakahara | CREMEGO'
-  },
-  {
-    id: '3',
-    title: 'DIREITOS E DEVERES DO MÉDICO PERITO',
-    author: 'Prof. Daniel Muñoz | FCMUSP'
-  },
-  {
-    id: '4',
-    title: 'O PERFIL DO MÉDICO PERITO',
-    author: 'Dra. Tereza Chedid | CREMEGO'
-  },
-  {
-    id: '5',
-    title: 'PERÍCIA MÉDICA ADMINISTRATIVA',
-    author: 'Profª Sonia Maria Rodrigues de Andrade | UERJ'
-  },
-  {
-    id: '6',
-    title: 'PERÍCIA MÉDICA EM PSIQUIATRIA',
-    author: 'Dra. Tereza Chedid | CREMEGO'
-  }
+  { id: '1', title: 'MEDICINA LEGAL E PERÍCIA MÉDICA', author: 'Prof. Daniel Muñoz | FCMUSP' },
+  { id: '2', title: 'PERÍCIA MÉDICA', author: 'Dra. Simone Nakahara | CREMEGO' },
+  { id: '3', title: 'DIREITOS E DEVERES DO MÉDICO PERITO', author: 'Prof. Daniel Muñoz | FCMUSP' },
+  { id: '4', title: 'O PERFIL DO MÉDICO PERITO', author: 'Dra. Tereza Chedid | CREMEGO' },
+  { id: '5', title: 'PERÍCIA MÉDICA ADMINISTRATIVA', author: 'Profª Sonia Maria Rodrigues de Andrade | UERJ' },
+  { id: '6', title: 'PERÍCIA MÉDICA EM PSIQUIATRIA', author: 'Dra. Tereza Chedid | CREMEGO' }
 ];
 
 interface ArtigosProps {
   onNavigate: (view: NavItem) => void;
+  hideHeader?: boolean; // Documentação: Nova Prop opcional para esconder o cabeçalho duplicado
 }
 
-export const Artigos: React.FC<ArtigosProps> = ({ onNavigate }) => {
+export const Artigos: React.FC<ArtigosProps> = ({ onNavigate, hideHeader = false }) => {
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
-      <Header title="Artigos" />
-      
+      {/* Documentação: O cabeçalho só é renderizado se hideHeader for falso */}
+      {!hideHeader && <Header title="Artigos" />}
+             
       <div className="p-4 space-y-4 max-w-2xl mx-auto w-full flex-1 pb-24">
         <div className="grid grid-cols-1 gap-2.5">
           {ARTIGOS_DATA.map((item) => {
             // Documentação: Habilita o clique para os artigos 2, 4, 5 e 6
             const isClickable = item.id === '2' || item.id === '4' || item.id === '5' || item.id === '6';
-
             return (
               <button 
                 key={item.id} 
