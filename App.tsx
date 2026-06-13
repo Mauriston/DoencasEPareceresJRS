@@ -42,12 +42,12 @@ const App: React.FC = () => {
       case 'pareceres': return <Pareceres />;
       case 'templates': return <TemplatesGuide />;
       case 'artigos': return <Artigos onNavigate={setCurrentView} />;
-      case 'artigo-pericia': return <ArtigoPericiaMedica onBack={() => setCurrentView('estudo')} />; // Volta para a tab de Estudo
-      case 'artigo-perfil': return <ArtigoPerfilPerito onBack={() => setCurrentView('estudo')} />;   // Volta para a tab de Estudo
-      case 'artigo-administrativa': return <ArtigoPericiaAdministrativa onBack={() => setCurrentView('estudo')} />; // Volta para a tab de Estudo
-      case 'artigo-psiquiatria': return <ArtigoPericiaPsiquiatria onBack={() => setCurrentView('estudo')} />; // Volta para a tab de Estudo
+      case 'artigo-pericia': return <ArtigoPericiaMedica onBack={() => setCurrentView('estudo')} />;
+      case 'artigo-perfil': return <ArtigoPerfilPerito onBack={() => setCurrentView('estudo')} />;
+      case 'artigo-administrativa': return <ArtigoPericiaAdministrativa onBack={() => setCurrentView('estudo')} />;
+      case 'artigo-psiquiatria': return <ArtigoPericiaPsiquiatria onBack={() => setCurrentView('estudo')} />;
       case 'casos': return <CasosPericiais onBack={() => setCurrentView('guide')} />; 
-      case 'estudo': return <Estudo onBack={() => setCurrentView('guide')} onNavigate={setCurrentView} />; // <-- ENVIADA PROP ONNAVIGATE
+      case 'estudo': return <Estudo onBack={() => setCurrentView('guide')} onNavigate={setCurrentView} />; 
       default: return <DiseaseGuide />;
     }
   };
@@ -126,37 +126,37 @@ const App: React.FC = () => {
             )}
           </div>
 
-          {/* 4. Normas */}
+          {/* 4. Normas - Removido o item "Resumos" */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
             <button onClick={() => { setIsFabOpen(!isFabOpen); setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsGerarDocFabOpen(false); setIsExtrasFabOpen(false); }} className="flex flex-col items-center justify-center w-full h-full focus:outline-none">
-              <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['dgpm406', 'resumos', 'laws'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
-                <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['dgpm406', 'resumos', 'laws'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>gavel</span>
+              <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['dgpm406', 'laws'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
+                <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['dgpm406', 'laws'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>gavel</span>
               </div>
-              <span className={`text-[11px] font-medium font-body transition-colors ${['dgpm406', 'resumos', 'laws'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Normas</span>
+              <span className={`text-[11px] font-medium font-body transition-colors ${['dgpm406', 'laws'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Normas</span>
             </button>
             {isFabOpen && (
               <div className="absolute bottom-20 left-1/2 -translate-x-1/2 mb-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(5,15,65,0.08)] border border-gray-100 p-1.5 flex flex-col gap-0.5 min-w-[155px] animate-fade-in z-50">
                 <button onClick={() => { setCurrentView('dgpm406'); setIsFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'dgpm406' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">anchor</span>DGPM-406</button>
                 <button onClick={() => { setCurrentView('laws'); setIsFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'laws' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">balance</span>Legislação</button>
-                <button onClick={() => { setCurrentView('resumos'); setIsFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'resumos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">menu_book</span>Resumos</button>
               </div>
             )}
           </div>
 
-          {/* 5. Extras - Refatorado para remover o botão Artigos */}
+          {/* 5. Extras - Adicionado o item "Resumos" */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
             <button onClick={() => { setIsExtrasFabOpen(!isExtrasFabOpen); setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsGerarDocFabOpen(false); setIsFabOpen(false); }} className="flex flex-col items-center justify-center w-full h-full focus:outline-none">
-              <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['estudo', 'casos', 'infograficos'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
-                <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['estudo', 'casos', 'infograficos'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>widgets</span>
+              <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['estudo', 'casos', 'infograficos', 'resumos'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
+                <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['estudo', 'casos', 'infograficos', 'resumos'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>widgets</span>
               </div>
-              <span className={`text-[11px] font-medium font-body transition-colors ${['estudo', 'casos', 'infograficos'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Extras</span>
+              <span className={`text-[11px] font-medium font-body transition-colors ${['estudo', 'casos', 'infograficos', 'resumos'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Extras</span>
             </button>
             {isExtrasFabOpen && (
               <div className="absolute bottom-20 right-0 mb-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(5,15,65,0.08)] border border-gray-100 p-1.5 flex flex-col gap-0.5 min-w-[160px] animate-fade-in z-50">
-                {/* Documentação: Botão Artigos removido com sucesso deste menu expansível */}
                 <button onClick={() => { setCurrentView('casos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'casos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">quiz</span>Casos</button>
                 <button onClick={() => { setCurrentView('estudo'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'estudo' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">school</span>Estudo</button>
                 <button onClick={() => { setCurrentView('infograficos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'infograficos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">image</span>Infográficos</button>
+                {/* Documentação: Item adicionado vindo do menu Normas */}
+                <button onClick={() => { setCurrentView('resumos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'resumos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">menu_book</span>Resumos</button>
               </div>
             )}
           </div>
