@@ -1,7 +1,7 @@
 // Ficheiro: components/CasosPericiais.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Header } from './Header';
-import { ArrowLeft, ChevronRight, RotateCcw, X, Eye, Download, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, ChevronRight, RotateCcw, X, Eye, Download, CheckCircle, XCircle, ArrowUp } from 'lucide-react';
 
 const CASOS_DATA = [
   {
@@ -306,6 +306,9 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   const [userAnswers, setUserAnswers] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [viewMode, setViewMode] = useState<'quiz' | 'results'>('quiz');
+  
+  // Documentação: Estado para exibir o botão de Scroll to Top
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   const currentCase = CASOS_DATA[currentIndex];
   const totalCases = CASOS_DATA.length;
@@ -316,10 +319,30 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
     return ans?.toUpperCase() === CASOS_DATA[idx].gabarito.toUpperCase() ? acc + 1 : acc;
   }, 0);
   
-  // Formatamos a nota para usar vírgula em vez de ponto
   const gradeStr = ((correctCount / totalCases) * 10).toFixed(1);
   const gradeNum = Number(gradeStr);
   const displayGrade = gradeStr.replace('.', ',');
+
+  // Documentação: Interceta a rolagem da tag <main> para mostrar o FAB de Scroll to Top
+  useEffect(() => {
+    const scrollContainer = document.querySelector('main');
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      setShowScrollTop(scrollContainer.scrollTop > 250);
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll);
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, [viewMode]);
+
+  // Documentação: Função de scroll para o topo do <main>
+  const scrollToTop = () => {
+    const scrollContainer = document.querySelector('main');
+    if (scrollContainer) {
+      scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const handleSelect = (key: string) => {
     if (selectedAnswer !== null) return;
@@ -446,7 +469,6 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
           } 
         />
         <div className="p-4 space-y-6 max-w-3xl mx-auto w-full flex-1 pb-32">
-          {/* Resumo da Nota */}
           <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm text-center flex flex-col items-center">
             <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Nota Final</h2>
             <div className={`text-6xl font-black ${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>
@@ -463,7 +485,6 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
             </button>
           </div>
 
-          {/* Lista de Questões Resolvidas */}
           {CASOS_DATA.map((caso, index) => {
             const uAns = userAnswers[index];
             const isUserCorrect = uAns?.toUpperCase() === caso.gabarito.toUpperCase();
@@ -512,6 +533,17 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
             );
           })}
         </div>
+
+        {/* Documentação: FAB de Scroll to Top exclusivo para a visualização de Resultados */}
+        {showScrollTop && (
+          <button 
+            onClick={scrollToTop}
+            className="fixed bottom-24 right-6 bg-[#050F41] text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center border border-slate-700 animate-fade-in"
+            title="Voltar ao topo"
+          >
+            <ArrowUp size={20} />
+          </button>
+        )}
       </div>
     );
   }
@@ -597,7 +629,6 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050F41]/70 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white rounded-[32px] shadow-2xl p-8 w-full max-w-sm flex flex-col items-center text-center relative overflow-hidden">
             
-            {/* Decoração de fundo */}
             <div className={`absolute -top-16 -right-16 w-32 h-32 rounded-full opacity-20 blur-2xl ${gradeNum >= 7 ? 'bg-green-500' : 'bg-red-500'}`}></div>
 
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-[#050F41] shadow-inner">
@@ -621,7 +652,6 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
               Você acertou <strong>{correctCount}</strong> de <strong>{totalCases}</strong> questões.
             </p>
 
-            {/* Os 3 Ícones de Ação */}
             <div className="flex items-center justify-center gap-6 w-full px-4">
               <button onClick={handleRestart} className="group flex flex-col items-center gap-2 focus:outline-none">
                 <div className="w-12 h-12 rounded-2xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-gray-200 group-hover:text-gray-800 transition-all shadow-sm">
