@@ -1,5 +1,5 @@
+// Ficheiro: components/DGPM406AnexosGuide.tsx
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
 import { Header } from './Header';
 
 interface Anexo {
@@ -35,28 +35,23 @@ export const DGPM406AnexosGuide: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-gray-50">
       <Header title="ANEXOS DGPM-406 REV 9" />
-      <div className="p-4 space-y-3 animate-fade-in overflow-auto pb-24">
+      
+      {/* Documentação: Grelha configurada para 2 colunas */}
+      <div className="p-4 grid grid-cols-2 gap-3 animate-fade-in overflow-auto pb-24 max-w-4xl mx-auto w-full">
         {ANEXOS.map((item) => (
           <a 
             key={item.id} 
             href={item.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="group block bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden hover:shadow-md hover:border-[#079551] transition-all duration-300"
+            className="group flex flex-col items-center justify-center text-center bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden hover:shadow-md hover:border-[#079551] transition-all duration-300 p-4 active:scale-[0.98] min-h-[110px]"
           >
-            <div className="p-4 flex items-center justify-between">
-              <div className="flex-1 pr-4">
-                <h3 className="text-navy font-heading font-bold text-base mb-1 group-hover:text-[#079551] transition-colors">{item.anexo}</h3>
-                <p className="text-gray-500 font-body text-xs font-semibold uppercase">{item.title}</p>
-              </div>
-              <div 
-                className="flex items-center justify-center p-3 bg-navy/5 group-hover:bg-[#079551] group-hover:text-white rounded-full flex-shrink-0 transition-all text-navy"
-                title="Acessar Documento"
-                aria-label={`Acessar ${item.anexo}`}
-              >
-                <ExternalLink size={20} className="currentColor" />
-              </div>
-            </div>
+            <h3 className="text-[#050F41] font-heading font-bold text-[13px] leading-snug mb-1.5 group-hover:text-[#079551] transition-colors">
+              {item.anexo}
+            </h3>
+            <p className="text-gray-500 font-body text-[10px] font-semibold uppercase leading-tight line-clamp-3">
+              {item.title}
+            </p>
           </a>
         ))}
       </div>
