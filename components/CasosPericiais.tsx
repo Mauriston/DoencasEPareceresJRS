@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Header } from './Header';
 import { ArrowLeft, ChevronRight, RotateCcw, X, Eye, Download, CheckCircle, XCircle } from 'lucide-react';
 
-// Documentação: Dados extraídos do JSON fornecido, contendo os 24 casos periciais
 const CASOS_DATA = [
   {
     "caso": "01",
@@ -304,7 +303,6 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   
-  // Documentação: Novos estados para o Modal e Visualização de Resultados
   const [userAnswers, setUserAnswers] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [viewMode, setViewMode] = useState<'quiz' | 'results'>('quiz');
@@ -312,26 +310,25 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   const currentCase = CASOS_DATA[currentIndex];
   const totalCases = CASOS_DATA.length;
   
-  // Calcula o progresso para a barra
   const progressPercentage = ((currentIndex + 1) / totalCases) * 100;
 
-  // Calcula estatísticas
   const correctCount = userAnswers.reduce((acc, ans, idx) => {
     return ans?.toUpperCase() === CASOS_DATA[idx].gabarito.toUpperCase() ? acc + 1 : acc;
   }, 0);
-  const grade = ((correctCount / totalCases) * 10).toFixed(1);
+  
+  // Formatamos a nota para usar vírgula em vez de ponto
+  const gradeStr = ((correctCount / totalCases) * 10).toFixed(1);
+  const gradeNum = Number(gradeStr);
+  const displayGrade = gradeStr.replace('.', ',');
 
-  // Lida com a seleção da alternativa do utilizador
   const handleSelect = (key: string) => {
-    if (selectedAnswer !== null) return; // Previne múltiplos cliques
+    if (selectedAnswer !== null) return;
     setSelectedAnswer(key);
   };
 
-  // Avança para a próxima questão ou abre modal
   const handleNext = () => {
     if (selectedAnswer === null) return;
 
-    // Guarda a resposta atual
     const newAnswers = [...userAnswers];
     newAnswers[currentIndex] = selectedAnswer;
     setUserAnswers(newAnswers);
@@ -340,12 +337,10 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
       setCurrentIndex(prev => prev + 1);
       setSelectedAnswer(null);
     } else {
-      // É a última questão, abre o modal de resultados
       setShowModal(true);
     }
   };
 
-  // Reinicia o Quiz
   const handleRestart = () => {
     setCurrentIndex(0);
     setSelectedAnswer(null);
@@ -354,7 +349,6 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
     setViewMode('quiz');
   };
 
-  // Documentação: Função nativa do navegador para gerar PDF via impressão
   const handleDownloadPDF = () => {
     const printWindow = window.open('', '', 'height=800,width=800');
     if (!printWindow) return;
@@ -380,7 +374,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
         <body>
           <h1>Casos Periciais - Desempenho</h1>
           <div class="summary">
-            Nota Final: <span class="grade">${grade}</span> / 10.0<br/>
+            Nota Final: <span class="grade">${displayGrade}</span><br/>
             Acertos: <strong>${correctCount}</strong> de ${totalCases} questões
           </div>
           ${CASOS_DATA.map((caso, index) => {
@@ -408,7 +402,10 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
             `;
           }).join('')}
           <script>
-            window.onload = function() { window.print(); }
+            window.onload = function() { 
+              window.print();
+              window.onafterprint = function() { window.close(); }
+            }
           </script>
         </body>
       </html>
@@ -452,8 +449,8 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
           {/* Resumo da Nota */}
           <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm text-center flex flex-col items-center">
             <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Nota Final</h2>
-            <div className={`text-5xl font-black ${Number(grade) >= 7 ? 'text-[#079551]' : Number(grade) >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>
-              {grade}
+            <div className={`text-6xl font-black ${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>
+              {displayGrade}
             </div>
             <p className="text-gray-500 mt-3 font-medium font-body">Você acertou <strong className="text-gray-800">{correctCount}</strong> de {totalCases} questões.</p>
             
@@ -486,7 +483,6 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
                 
                 <div className="space-y-2">
                   {Object.entries(caso.alternativas).map(([key, text]) => {
-                    // Reutiliza a lógica de cores para o modo results
                     const isGab = key.toUpperCase() === caso.gabarito.toUpperCase();
                     const isUser = uAns?.toUpperCase() === key.toUpperCase();
                     
@@ -596,13 +592,13 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
         </button>
       )}
 
-      {/* Documentação: MODAL DE RESULTADOS FINAIS */}
+      {/* MODAL DE RESULTADOS FINAIS */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050F41]/70 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white rounded-[32px] shadow-2xl p-8 w-full max-w-sm flex flex-col items-center text-center relative overflow-hidden">
             
             {/* Decoração de fundo */}
-            <div className={`absolute -top-16 -right-16 w-32 h-32 rounded-full opacity-20 blur-2xl ${Number(grade) >= 7 ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <div className={`absolute -top-16 -right-16 w-32 h-32 rounded-full opacity-20 blur-2xl ${gradeNum >= 7 ? 'bg-green-500' : 'bg-red-500'}`}></div>
 
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-[#050F41] shadow-inner">
               <span className="material-symbols-outlined text-3xl">workspace_premium</span>
@@ -614,11 +610,10 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
             <div className="relative mb-8">
               <svg className="w-32 h-32 transform -rotate-90">
                 <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
-                <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="377" strokeDashoffset={377 - (377 * Number(grade)) / 10} className={`${Number(grade) >= 7 ? 'text-[#079551]' : Number(grade) >= 5 ? 'text-yellow-500' : 'text-red-500'} transition-all duration-1000 ease-out`} strokeLinecap="round" />
+                <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="377" strokeDashoffset={377 - (377 * gradeNum) / 10} className={`${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'} transition-all duration-1000 ease-out`} strokeLinecap="round" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={`text-3xl font-black ${Number(grade) >= 7 ? 'text-[#079551]' : Number(grade) >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>{grade}</span>
-                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">de 10.0</span>
+                <span className={`text-5xl font-black ${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>{displayGrade}</span>
               </div>
             </div>
 
@@ -642,7 +637,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
                 <span className="text-[10px] font-bold uppercase text-[#050F41] transition-colors">Ver</span>
               </button>
 
-              <button onClick={handleDownloadPDF} className="group flex flex-col items-center gap-2 focus:outline-none">
+              <button onClick={() => { handleDownloadPDF(); setShowModal(false); setViewMode('results'); }} className="group flex flex-col items-center gap-2 focus:outline-none">
                 <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-green-100 group-hover:text-green-800 transition-all shadow-sm">
                   <Download size={22} />
                 </div>
