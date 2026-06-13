@@ -16,8 +16,8 @@ const LEGISLATIONS: Legislation[] = [
   {
     id: 'l1',
     legislation: 'LEI n  4.375/1964',
-    title: 'Lei do Servi o Militar',
-    provisions: 'Estabelece a natureza, a obrigatoriedade e a dura o do servi o militar para todos os brasileiros, abrangendo o Ex rcito, a Marinha e a Aeron utica.',
+    title: 'Lei do Serviço Militar',
+    provisions: 'Estabelece a natureza, a obrigatoriedade e a duração do serviço militar para todos os brasileiros, abrangendo o Exército, a Marinha e a Aeronáutica.',
     link: 'https://drive.google.com/open?id=1luWEIf0Lqd-UsvZUqZV6jcfFGn5ielNS',
     imageUrl: 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/biblioteca-da-pr/simbolos-nacionais/brasao-da-republica/brasaooficialcolorido.png'
   },
@@ -25,39 +25,39 @@ const LEGISLATIONS: Legislation[] = [
     id: 'l2',
     legislation: 'LEI n  6.880/1980',
     title: 'Estatuto dos Militares',
-    provisions: 'Regula a situa o jur dica, obriga es, deveres, direitos e prerrogativas dos membros da Marinha, Ex rcito e Aeron utica. Suas provid ncias abrangem desde as condi es de ingresso e a estrutura o da hierarquia e disciplina at  a defini o de cargos, fun es e os preceitos  ticos que devem nortear a conduta militar.',
+    provisions: 'Regula a situação jurídica, obrigações, deveres, direitos e prerrogativas dos membros da Marinha, Exército e Aeronáutica. Suas providências abrangem desde as condições de ingresso e a estruturação da hierarquia e disciplina até a definição de cargos, funções e os preceitos éticos que devem nortear a conduct militar.',
     link: 'https://drive.google.com/open?id=1Rg207oonhofRRX2fBDUrBcx0FQ5yIGT6',
     imageUrl: 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/biblioteca-da-pr/simbolos-nacionais/brasao-da-republica/brasaooficialcolorido.png'
   },
   {
     id: 'l3',
     legislation: 'LEI n  6.782/1980',
-    title: 'Equipara o do Acidente de Servi  Doen a Profissional',
-    provisions: 'Equipara ao acidente em servi o a doen a profissional e as especificadas em lei para efeito de pens o especial e d  outras provid ncias.',
+    title: 'Equiparação do Acidente de Serviço Ó Doença Profissional',
+    provisions: 'Equipara ao acidente em serviço a doença profissional e as específicas em lei para efeito de pensão especial e dá outras providências.',
     link: 'https://drive.google.com/open?id=12zgDnVuXb4MWTQJv-dZSgqIu1gH61UDp',
     imageUrl: 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/biblioteca-da-pr/simbolos-nacionais/brasao-da-republica/brasaooficialcolorido.png'
   },
   {
     id: 'l4',
     legislation: 'MP n  2.215/2001.',
-    title: 'Reestrutura o da Remunera o das For as Armadas',
-    provisions: 'Disp e sobre a reestrutura o da remunera o dos militares das For as Armadas, altera as Leis n 3.765, de 4 de maio de 1960, e 6.880, de 9 de dezembro de 1980, e d  outras provid ncias.',
+    title: 'Reestruturação da Remuneração das Forças Armadas',
+    provisions: 'Dispõe sobre a reestruturação da remuneração dos militares das Forças Armadas, altera as Leis nº 3.765, de 4 de maio de 1960, e 6.880, de 9 de dezembro de 1980, e dá outras providências.',
     link: 'https://drive.google.com/open?id=1CnNQjfuAJiyslZ7Te821ui_MM8NAMzxO',
     imageUrl: 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/biblioteca-da-pr/simbolos-nacionais/brasao-da-republica/brasaooficialcolorido.png'
   },
   {
     id: 'l5',
     legislation: 'DP n  7.003/2009',
-    title: 'Regulamenta o da Licen a para Tratamento de Sa de',
-    provisions: 'Regulamenta a licenã para tratamento de saúde, de que tratam os arts. 202 a 205 da Lei no 8.112, de 11 de dezembro de 1990, e d  outras provid ncias.',
+    title: 'Regulamentação da Licença para Tratamento de Saúde',
+    provisions: 'Regulamenta a licença para tratamento de saúde, de que tratam os arts. 202 a 205 da Lei no 8.112, de 11 de dezembro de 1990, e dá outras providências.',
     link: 'https://drive.google.com/open?id=1EZ1y8Kl-ADWCGfZb0QH7TihaEVTnMB-z',
     imageUrl: 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/biblioteca-da-pr/simbolos-nacionais/brasao-da-republica/brasaooficialcolorido.png'
   },
   {
     id: 'l6',
     legislation: 'LEI n  13.954/2019',
-    title: 'Sistema de Prote o Social dos Militares',
-    provisions: 'Altera a Lei no 6.880, de 9 de dezembro de 1980 (Estatuto dos Militares), a Lei no 3.765, de 4 de maio de 1960, a Lei no 4.375, de 17 de agosto de 1964 (Lei do Servi o Militar), a Lei no 5.821, de 10 de novembro de 1972, a Lei no 12.705, de 8 de agosto de 2012, e o Decreto- Lei no 667, de 2 de julho de 1969, para reestruturar a carreira militar e dispor sobre o Sistema de Prote o Social dos Militares; revoga dispositivos e anexos da Medida Provis ria no 2.215-10, de 31 de agosto de 2001, e da Lei no 11.784, de 22 de setembro de 2008; e d  outras provid ncias.',
+    title: 'Sistema de Proteção Social dos Militares',
+    provisions: 'Altera a Lei no 6.880, de 9 de dezembro de 1980 (Estatuto dos Militares), a Lei no 3.765, de 4 de maio de 1960, a Lei no 4.375, de 17 de agosto de 1964 (Lei do Serviço Militar), a Lei no 5.821, de 10 de novembro de 1972, a Lei no 12.705, de 8 de agosto de 2012, e o Decreto- Lei no 667, de 2 de julho de 1969, para reestruturar a carreira militar e dispor sobre o Sistema de Proteção Social dos Militares; revoga dispositivos e anexos da Medida Provisória no 2.215-10, de 31 de agosto de 2001, e da Lei no 11.784, de 22 de setembro de 2008; e dá outras providências.',
     link: 'https://drive.google.com/open?id=1JiLQ54Zy6QEnwiuWab2ZvHBF2ul1T17c',
     imageUrl: 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/biblioteca-da-pr/simbolos-nacionais/brasao-da-republica/brasaooficialcolorido.png'
   },
@@ -65,39 +65,39 @@ const LEGISLATIONS: Legislation[] = [
     id: 'l7',
     legislation: 'PORTARIA GM-MD n  3551/2021',
     title: 'Portaria Normativa MD',
-    provisions: 'Aprova as normas para a avalia o pericial dos portadores de doen as especificadas em lei pelas Juntas de Inspe o de Sa de e pelos Agentes M dico-Periciais da Marinha, do Ex rcito, da Aeron utica e do Hospital das For as Armadas, bem como os padr es e crit rios para a concess o de benef cios aos seus pensionistas, dependentes ou benefici rios.',
+    provisions: 'Aprova as normas para a avaliação pericial dos portadores de doenças especificadas em lei pelas Juntas de Inspeção de Saúde e pelos Agentes Médico-Periciais da Marinha, do Exército, da Aeronáutica e do Hospital das Forças Armadas, bem como os padrões e critérios para a concessão de benefícios aos seus pensionistas, dependentes ou beneficiários.',
     link: 'https://drive.google.com/open?id=1Rf2al57vzBQqb8uniy3m9ME_3xnOZFH4',
     imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/f/ff/Emblema_do_Minist%C3%A9rio_da_Defesa_do_Brasil_%282%29.jpg'
   },
   {
     id: 'l8',
     legislation: 'DGPM-310 REV 5',
-    title: 'Norma de Nomea es e Afastamentos na MB',
-    provisions: 'NORMAS PARA DESIGNA O, NOMEA O E AFASTAMENTOS TEMPOR RIOS DO SERVI O PARA O PESSOAL MILITAR DA MB',
+    title: 'Norma de Nomeações e Afastamentos na MB',
+    provisions: 'NORMAS PARA DESIGNAÇÃO, NOMEAÇÃO E AFASTAMENTOS TEMPORÁRIOS DO SERVIÇO PARA O PESSOAL MILITAR DA MB',
     link: 'https://drive.google.com/open?id=1jdnBqUzMklCf1bOHXuwWWVA71zf_gHMa',
     imageUrl: 'https://i.imgur.com/99GKrPB.png'
   },
   {
     id: 'l9',
     legislation: 'RES CFM N  2.381/2024',
-    title: 'Resolu o do CFM que normatiza a emiss o de Documentos M dicos',
-    provisions: 'Normatiza a emiss o de documentos m dicos e d  outras provid ncias.',
+    title: 'Resolução do CFM que normatiza a emissão de Documentos Médicos',
+    provisions: 'Normatiza a emissão de documentos médicos e dá outras providências.',
     link: 'https://drive.google.com/open?id=12I9nEHYewc43L-Z26kTr5B1LJtjEg26j',
     imageUrl: 'https://portal.cfm.org.br/wp-content/themes/portalcfm/assets/images/cfm_logo_bola.png'
   },
   {
     id: 'l10',
     legislation: 'RES CFM N  2.430/2025',
-    title: 'Resolu o do CFM que normatiza o Acto M dico-Pericial',
-    provisions: 'Disp e sobre o ato m dico pericial, a produ o da prova t cnica m dica, estabelece crit rios m nimos de seguran a na constru o da prova pericial, atualiza o uso de tecnologias de comunica o na avalia dico pericial',
+    title: 'Resolução do CFM que normatiza o Acto Médico-Pericial',
+    provisions: 'Dispõe sobre o ato médico pericial, a produção da prova técnica médica, estabelece critérios mínimos de segurança na construção da prova pericial, atualização o uso de tecnologias de comunicação na avaliação médico pericial',
     link: 'https://drive.google.com/open?id=1Kr8kPQEzDHZPkWiJwtePht-X-7eNsfDu',
     imageUrl: 'https://portal.cfm.org.br/wp-content/themes/portalcfm/assets/images/cfm_logo_bola.png'
   },
   {
     id: 'l11',
     legislation: 'RES CFM N  1.658/2002',
-    title: 'Resolu o do CFM que normatiza a emiss o de Atestados M dicos',
-    provisions: 'Normatiza a emiss o de atestados m dicos e d  outras provid ncias.',
+    title: 'Resolução do CFM que normatiza a emissão de Atestados Médicos',
+    provisions: 'Normatiza a emissão de atestados médicos e dá outras providências.',
     link: 'https://drive.google.com/open?id=12zOFmT5exRbO6whqQasPqL_iMY1SfKB5',
     imageUrl: 'https://portal.cfm.org.br/wp-content/themes/portalcfm/assets/images/cfm_logo_bola.png'
   }
@@ -109,25 +109,17 @@ export const LawReference: React.FC = () => {
       <Header title="Legislação" />
       
       <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-4xl mx-auto w-full">
-        {/* Descrição Superior contextualizada */}
-        <div className="mb-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-200/60">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-heading font-bold text-[#050F41]">LEGISLAÇÃO MÉDICO-PERICIAL</h2>
-              <p className="text-sm text-gray-600 font-body mt-2 text-justify leading-relaxed">
-                Acesso direto às leis, decretos, portarias e resoluções do CFM que regulamentam a atividade pericial. Toque em qualquer item para abrir o documento original.
-              </p>
-            </div>
-            <div className="text-[#050F41] p-1 flex-shrink-0">
-              <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>gavel</span>
-            </div>
-          </div>
+        
+        {/* Documentação: NOVO Card de Título de Página com destaque e texto simplificado */}
+        <div className="mb-4 bg-white p-6 rounded-2xl shadow-md border border-gray-200/80 text-center">
+          <h2 className="text-xl font-heading font-black text-[#050F41] tracking-wide uppercase">
+            LEGISLAÇÃO MÉDICO-PERICIAL
+          </h2>
         </div>
 
         {/* Contentor Único da Lista com Divisores (divide-y) */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden divide-y divide-gray-100">
           {LEGISLATIONS.map((law) => {
-            // Documentação: Verifica se a imagem atual é o Brasão da República para aplicar o aumento de 50%
             const isBrasao = law.imageUrl.includes('brasao-da-republica');
 
             return (
@@ -165,7 +157,8 @@ export const LawReference: React.FC = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      alert(`Disposições da norma:\n\n${law.provisions}`);
+                      // Documentação: Exibe puramente a string com as provisions da lei atual
+                      alert(law.provisions);
                     }}
                     title={law.provisions}
                     className="text-gray-400 hover:text-[#050F41] transition-colors flex-shrink-0 focus:outline-none p-1.5"
