@@ -1,6 +1,6 @@
 // Ficheiro: components/Videos.tsx
 import React, { useState, useEffect } from 'react';
-import { Share2, Copy, ChevronDown, ChevronUp, Loader2, RefreshCw, AlertCircle, Play, X } from 'lucide-react';
+import { Loader2, RefreshCw, AlertCircle, Play, X } from 'lucide-react';
 import { Header } from './Header';
 import { fetchExtras, ExtraItem } from '../services/extrasService';
 
@@ -9,9 +9,8 @@ export const Videos: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Novo estado para o Modal de Vídeo e estado mantido para a descrição
+  // Estado para o Modal de Vídeo
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
-  const [expandedVideoIdx, setExpandedVideoIdx] = useState<number | null>(null);
 
   const fallbackVideos: ExtraItem[] = [
     {
@@ -52,36 +51,6 @@ export const Videos: React.FC = () => {
     loadData();
   }, []);
 
-  const toggleExpand = (idx: number) => {
-    setExpandedVideoIdx(expandedVideoIdx === idx ? null : idx);
-  };
-
-  const shareVideo = async (youtubeId: string) => {
-    try {
-      const shareUrl = `https://youtube.com/watch?v=${youtubeId}`;
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Vídeo HNRe',
-          url: shareUrl
-        });
-      } else {
-        await navigator.clipboard.writeText(shareUrl);
-        alert('Link do vídeo copiado para a área de transferência!');
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const copyLink = async (youtubeId: string) => {
-    try {
-      await navigator.clipboard.writeText(`https://youtube.com/watch?v=${youtubeId}`);
-      alert('Link do vídeo copiado para a área de transferência!');
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   return (
     <div className="flex flex-col h-full bg-gray-50">
       <Header title="Vídeos de Instrução" />
@@ -117,23 +86,23 @@ export const Videos: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3 max-w-4xl mx-auto">
-                {videos.map((video, idx) => {
+                {videos.map((video) => {
                   const hasYoutube = !!video.youtubeId;
                   
                   return (
-                    <div key={video.id} className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden flex flex-col w-full animate-fade-in hover:shadow-md hover:border-[#079551] transition-all">
-                      
-                      {/* Clique na imagem abre o Modal */}
-                      <div 
-                        className="w-full aspect-video bg-black relative cursor-pointer group"
-                        onClick={() => {
-                          if (hasYoutube) {
-                            setSelectedVideo(video.youtubeId!);
-                          } else {
-                            alert("Este vídeo não possui link do YouTube compatível.");
-                          }
-                        }}
-                      >
+                    <button 
+                      key={video.id} 
+                      className="group bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden flex flex-col w-full text-left focus:outline-none hover:shadow-md hover:border-[#079551] active:scale-[0.98] transition-all animate-fade-in"
+                      onClick={() => {
+                        if (hasYoutube) {
+                          setSelectedVideo(video.youtubeId!);
+                        } else {
+                          alert("Este vídeo não possui link do YouTube compatível.");
+                        }
+                      }}
+                    >
+                      {/* Área da Imagem/Thumbnail */}
+                      <div className="w-full aspect-video bg-black relative flex-shrink-0">
                         {hasYoutube ? (
                           <img 
                             src={`https://img.youtube.com/vi/${video.youtubeId}/hqdefault.jpg`} 
@@ -154,51 +123,13 @@ export const Videos: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Clique no texto expande a descrição */}
-                      <div 
-                        className="p-3 flex flex-col cursor-pointer transition-colors"
-                        onClick={() => toggleExpand(idx)}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1 pr-1">
-                            <h3 className={`text-[11px] font-heading font-bold text-[#050F41] leading-snug ${expandedVideoIdx === idx ? '' : 'line-clamp-3'}`}>
-                              {video.title}
-                            </h3>
-                          </div>
-                          <div className="pt-0.5 text-gray-400 flex-shrink-0">
-                            {expandedVideoIdx === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                          </div>
-                        </div>
-                        
-                        {/* Área Expansível (Descrição e Botões) */}
-                        {expandedVideoIdx === idx && (
-                          <div className="mt-3 animate-fade-in cursor-default" onClick={(e) => e.stopPropagation()}>
-                            <p className="text-[10px] font-body text-gray-600 leading-relaxed bg-blue-50/50 p-2 rounded-lg border border-blue-100">
-                              {video.description || 'Sem descrição cadastrada.'}
-                            </p>
-                            
-                            {video.youtubeId && (
-                              <div className="flex justify-end items-center gap-1 mt-2">
-                                <button 
-                                  onClick={() => copyLink(video.youtubeId!)}
-                                  className="p-2 rounded-full hover:bg-[#050F41]/10 text-[#050F41] transition-colors focus:outline-none flex items-center justify-center w-8 h-8"
-                                  title="Copiar link"
-                                >
-                                  <Copy size={16} />
-                                </button>
-                                <button 
-                                  onClick={() => shareVideo(video.youtubeId!)}
-                                  className="p-2 rounded-full hover:bg-[#050F41]/10 text-[#050F41] transition-colors focus:outline-none flex items-center justify-center w-8 h-8"
-                                  title="Compartilhar"
-                                >
-                                  <Share2 size={16} />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                      {/* Área do Título (Sem subtítulo e expansão) */}
+                      <div className="flex-1 p-3 flex flex-col items-center justify-center min-w-0 bg-white">
+                        <h3 className="text-[11px] font-heading font-bold text-[#050F41] leading-snug line-clamp-3 text-center group-hover:text-[#079551] transition-colors">
+                          {video.title}
+                        </h3>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
