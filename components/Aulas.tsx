@@ -113,7 +113,7 @@ export const Aulas: React.FC = () => {
                       href={clickUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col items-stretch p-0 w-full animate-fade-in hover:shadow-md hover:border-[#079551] transition-all duration-300 cursor-pointer text-left focus:outline-none active:scale-[0.98]"
+                      className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col items-stretch p-0 w-full animate-fade-in hover:shadow-md hover:border-[#079551] transition-all duration-300 cursor-pointer text-center focus:outline-none active:scale-[0.98]"
                       id={`aula-card-${idx}`}
                     >
                       <div className="w-full aspect-video bg-gray-50 relative flex-shrink-0 overflow-hidden border-b border-gray-100">
@@ -131,13 +131,11 @@ export const Aulas: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="flex-1 p-3 flex flex-col justify-start min-w-0">
-                        <h3 className="text-[12px] font-bold text-[#050F41] font-heading leading-snug group-hover:text-[#079551] transition-colors line-clamp-2 mb-1">
+                      {/* Título centralizado vertical e horizontalmente, sem subtítulo */}
+                      <div className="flex-1 p-3 flex flex-col items-center justify-center min-w-0">
+                        <h3 className="text-[12px] font-bold text-[#050F41] font-heading leading-snug group-hover:text-[#079551] transition-colors line-clamp-2">
                           {aula.title}
                         </h3>
-                        <p className="text-[10px] text-gray-500 font-body leading-relaxed line-clamp-3">
-                          {aula.description || 'Instrução do curso de saúde'}
-                        </p>
                       </div>
                     </a>
                   );
