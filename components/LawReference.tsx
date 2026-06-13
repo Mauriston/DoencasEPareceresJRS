@@ -173,7 +173,6 @@ export const LawReference: React.FC = () => {
                     className="text-gray-400 hover:text-[#050F41] transition-colors flex-shrink-0 p-2 focus:outline-none"
                   >
                     <Info size={18} />
-                  </header>
                 </a>
               </div>
             );
