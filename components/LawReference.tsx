@@ -1,7 +1,7 @@
 // Ficheiro: components/LawReference.tsx
-import React, { useState } from 'react';
-import { Info, ExternalLink } from 'lucide-react'; // Importação do ícone de Info
-import { Header } from './Header';
+import React from 'react';
+import { Info } from 'lucide-react'; // Importação do ícone de Info[cite: 4]
+import { Header } from './Header'; //[cite: 4]
 
 interface Legislation {
   id: string;
@@ -25,7 +25,7 @@ const LEGISLATIONS: Legislation[] = [
     id: 'l2',
     legislation: 'LEI n 6.880/1980',
     title: 'Estatuto dos Militares',
-    provisions: 'Regula a situação jurídica, obrigações, deveres, direitos e prerrogativas dos membros da Marinha, Exército e Aeronáutica. Suas providências abrangem desde as condições de ingresso e a estruturação da hierarquia e disciplina até a definição de cargos, funções e os preceitos éticos que devem nortear a conduta militar.',
+    provisions: 'Regula a situação jurídica, obrigações, deveres, direitos e prerrogativas dos membros da Marinha, Exército e Aeronáutica. Suas providências abrangem desde as condições de ingresso e a estruturação da hierarquia e disciplina até a definição de cargos, funções e os preceitos éticos que devem nortear a conductana militar.',
     link: 'https://drive.google.com/open?id=1Rg207oonhofRRX2fBDUrBcx0FQ5yIGT6',
     imageUrl: 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/biblioteca-da-pr/simbolos-nacionais/brasao-da-republica/brasaooficialcolorido.png'
   },
@@ -41,7 +41,7 @@ const LEGISLATIONS: Legislation[] = [
     id: 'l4',
     legislation: 'MP n 2.215/2001.',
     title: 'Reestruturação da Remuneração das Forças Armadas',
-    provisions: 'Dispõe sobre a reestruturação da remuneração dos militares das Forças Armadas, altera as Leis nº 3.765, de 4 de maio de 1960, e 6.880, de 9 de dezembro de 1980, e dá outras providências.',
+    provisions: 'Dispõe sobre a reestruturação da remuneração dos militares das Forças Armadas, altera as Leis nº 3.765, de 4 de maio de 2010, e 6.880, de 9 de dezembro de 1980, e dá outras providências.',
     link: 'https://drive.google.com/open?id=1CnNQjfuAJiyslZ7Te821ui_MM8NAMzxO',
     imageUrl: 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/biblioteca-da-pr/simbolos-nacionais/brasao-da-republica/brasaooficialcolorido.png'
   },
@@ -49,7 +49,7 @@ const LEGISLATIONS: Legislation[] = [
     id: 'l5',
     legislation: 'DP n 7.003/2009',
     title: 'Regulamentação da Licença para Tratamento de Saúde',
-    provisions: 'Regulamenta a licenã para tratamento de saúde, de que tratam os arts. 202 a 205 da Lei no 8.112, de 11 de dezembro de 1990, e dá outras providências.',
+    provisions: 'Regulamenta a licença para tratamento de saúde, de que tratam os arts. 202 a 205 da Lei no 8.112, de 11 de dezembro de 1990, e dá outras providências.',
     link: 'https://drive.google.com/open?id=1EZ1y8Kl-ADWCGfZb0QH7TihaEVTnMB-z',
     imageUrl: 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/biblioteca-da-pr/simbolos-nacionais/brasao-da-republica/brasaooficialcolorido.png'
   },
@@ -106,16 +106,16 @@ const LEGISLATIONS: Legislation[] = [
 export const LawReference: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      <Header title="Legislação" />
+      <Header title="Legislação" /> {/*[cite: 4] */}
       
       <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-4xl mx-auto w-full">
-        {/* Descrição Superior contextualizada */}
+        {/* Descrição Superior[cite: 4] */}
         <div className="mb-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-200/60">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-heading font-bold text-[#050F41]">LEGISLAÇÃO MÉDICO-PERICIAL</h2>
+              <h2 className="text-xl font-heading font-bold text-[#050F41]">LEGISLAÇÃO MÉDICO-PERICIAL</h2> {/*[cite: 4] */}
               <p className="text-sm text-gray-600 font-body mt-2 text-justify leading-relaxed">
-                Acesso direto às leis, decretos, portarias e resoluções do CFM que regulamentam a atividade pericial. Toque em qualquer item para abrir o documento original.
+                Acesso direto às leis, decretos, portarias e resoluções do CFM que regulamentam a atividade pericial[cite: 4]. Toque em qualquer item para abrir o documento original[cite: 4].
               </p>
             </div>
             <div className="text-[#050F41] p-1 flex-shrink-0">
@@ -124,53 +124,60 @@ export const LawReference: React.FC = () => {
           </div>
         </div>
 
-        {/* Contentor Único da Lista com Divisores (divide-y) */}
+        {/* Contentor Único da Lista com Divisores (divide-y)[cite: 4] */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden divide-y divide-gray-100">
-          {LEGISLATIONS.map((law) => (
-            <div key={law.id} className="relative group">
-              {/* O item inteiro funciona como link para abrir o documento */}
-              <a 
-                href={law.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between p-4 hover:bg-gray-50/80 active:bg-gray-100 transition-colors focus:outline-none cursor-pointer gap-3"
-              >
-                {/* Imagem Institucional à esquerda */}
-                <div className="w-10 h-10 flex-shrink-0 bg-gray-50 rounded-full overflow-hidden border border-gray-100 flex items-center justify-center p-0.5">
-                  <img 
-                    src={law.imageUrl} 
-                    alt={law.legislation} 
-                    className="w-full h-full object-contain"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
+          {LEGISLATIONS.map((law, index) => {
+            const hasYoutube = false;
+            // Documentação: Identifica se o item atual está entre o 1º e o 6º da lista (índices 0 a 5)
+            const isFirstToSixth = index >= 0 && index <= 5;
 
-                {/* Bloco de Texto centralizado à esquerda */}
-                <div className="flex flex-col flex-1 min-w-0">
-                  <h3 className="text-[#050F41] font-heading font-bold text-[14px] leading-snug mb-0.5 group-hover:text-[#079551] transition-colors">
-                    {law.legislation}
-                  </h3>
-                  <p className="text-gray-500 font-body text-[11px] font-medium leading-relaxed line-clamp-2">
-                    {law.title}
-                  </p>
-                </div>
-                
-                {/* Botão de Info à direita com Tooltip Nativo (atributo title) */}
-                <button 
-                  onClick={(e) => {
-                    // Impede que o clique no ícone ative o redirecionamento do link pai
-                    e.preventDefault();
-                    e.stopPropagation();
-                    alert(`Disposições da norma:\n\n${law.provisions}`);
-                  }}
-                  title={law.provisions} // Tooltip nativo ao passar o rato (desktop)
-                  className="text-gray-400 hover:text-[#050F41] transition-colors flex-shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full focus:outline-none"
+            return (
+              <div key={law.id} className="relative group">
+                {/* O item inteiro funciona como link para abrir o documento[cite: 4] */}
+                <a 
+                  href={law.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-4 hover:bg-gray-50/80 active:bg-gray-100 transition-colors focus:outline-none cursor-pointer gap-3"
                 >
-                  <Info size={18} />
-                </button>
-              </a>
-            </div>
-          ))}
+                  {/* Imagem Institucional à esquerda[cite: 4] */}
+                  <div className="w-10 h-10 flex-shrink-0 bg-gray-50 rounded-full overflow-hidden border border-gray-100 flex items-center justify-center p-0.5">
+                    <img 
+                      src={law.imageUrl} 
+                      alt={law.legislation} 
+                      // Documentação: Aplica um aumento de escala de 50% (scale-150) apenas nas primeiras 6 imagens
+                      className={`w-full h-full object-contain ${isFirstToSixth ? 'scale-150' : ''}`}
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+
+                  {/* Bloco de Texto[cite: 4] */}
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <h3 className="text-[#050F41] font-heading font-bold text-[14px] leading-snug mb-0.5 group-hover:text-[#079551] transition-colors">
+                      {law.legislation} {/*[cite: 4] */}
+                    </h3>
+                    <p className="text-gray-500 font-body text-[11px] font-medium leading-relaxed line-clamp-2">
+                      {law.title} {/*[cite: 4] */}
+                    </p>
+                  </div>
+                  
+                  {/* Botão de Info à direita (Sem o círculo e sem texto explicativo no alert) */}
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation(); //[cite: 4]
+                      // Documentação: Removeu-se o trecho "Disposições da norma:" para exibir diretamente o texto
+                      alert(law.provisions);
+                    }}
+                    title={law.provisions} //[cite: 4]
+                    className="text-gray-400 hover:text-[#050F41] transition-colors flex-shrink-0 p-2 focus:outline-none"
+                  >
+                    <Info size={18} />
+                  </header>
+                </a>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
