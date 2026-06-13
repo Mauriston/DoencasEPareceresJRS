@@ -1,6 +1,6 @@
 // Ficheiro: components/Aulas.tsx
 import React, { useState, useEffect } from 'react';
-import { Loader2, RefreshCw, AlertCircle, ExternalLink } from 'lucide-react';
+import { Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { Header } from './Header';
 import { fetchExtras, ExtraItem } from '../services/extrasService';
 
@@ -73,7 +73,7 @@ export const Aulas: React.FC = () => {
       <div className="p-4 space-y-6 overflow-y-auto w-full max-w-full flex-1 pb-24">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
-            <Loader2 className="animate-spin text-navy" size={40} />
+            <Loader2 className="animate-spin text-[#050F41]" size={40} />
             <p className="text-sm font-semibold text-gray-500 font-body">
               Carregando as aulas da planilha do Google...
             </p>
@@ -103,7 +103,7 @@ export const Aulas: React.FC = () => {
                 Nenhuma aula disponível no momento.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5" id="aulas-grid">
+              <div className="grid grid-cols-2 gap-3" id="aulas-grid">
                 {aulas.map((aula, idx) => {
                   const clickUrl = getClickableLink(aula);
                   
@@ -113,10 +113,10 @@ export const Aulas: React.FC = () => {
                       href={clickUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col sm:flex-row items-stretch p-0 w-full animate-fade-in hover:shadow-md hover:border-[#079551] transition-all duration-300 cursor-pointer text-left"
+                      className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col items-stretch p-0 w-full animate-fade-in hover:shadow-md hover:border-[#079551] transition-all duration-300 cursor-pointer text-left focus:outline-none active:scale-[0.98]"
                       id={`aula-card-${idx}`}
                     >
-                      <div className="w-full sm:w-44 h-48 sm:h-auto bg-gray-50 relative flex-shrink-0 overflow-hidden border-b sm:border-b-0 sm:border-r border-gray-100">
+                      <div className="w-full aspect-video bg-gray-50 relative flex-shrink-0 overflow-hidden border-b border-gray-100">
                         {aula.imageUrl ? (
                           <img 
                             src={aula.imageUrl} 
@@ -125,32 +125,19 @@ export const Aulas: React.FC = () => {
                             referrerPolicy="no-referrer"
                           />
                         ) : (
-                          <div className="w-full h-full bg-blue-50/50 text-navy flex flex-col items-center justify-center p-4">
-                            <span className="material-symbols-outlined text-navy/30 mb-1" style={{ fontSize: '36px' }}>co_present</span>
-                            <span className="text-[10px] font-bold tracking-wider text-navy/40 uppercase">Aula / Slides</span>
+                          <div className="w-full h-full bg-blue-50/50 text-[#050F41] flex flex-col items-center justify-center p-4">
+                            <span className="material-symbols-outlined text-[#050F41]/30 mb-1" style={{ fontSize: '36px' }}>co_present</span>
                           </div>
                         )}
                       </div>
 
-                      <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
-                        <div className="space-y-2">
-                          <h3 className="text-base font-bold text-navy font-heading leading-snug group-hover:text-[#079551] transition-colors">
-                            {aula.title}
-                          </h3>
-                          <p className="text-sm text-gray-600 font-body leading-relaxed line-clamp-3">
-                            {aula.description || 'Instrução do curso de saúde'}
-                          </p>
-                        </div>
-
-                        <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-end">
-                          <span 
-                            className="w-10 h-10 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center transition-all shadow-sm group-hover:bg-[#079551] group-hover:text-white"
-                            title="Abrir Link"
-                            id={`action-icon-trigger-${idx}`}
-                          >
-                            <ExternalLink size={18} />
-                          </span>
-                        </div>
+                      <div className="flex-1 p-3 flex flex-col justify-start min-w-0">
+                        <h3 className="text-[12px] font-bold text-[#050F41] font-heading leading-snug group-hover:text-[#079551] transition-colors line-clamp-2 mb-1">
+                          {aula.title}
+                        </h3>
+                        <p className="text-[10px] text-gray-500 font-body leading-relaxed line-clamp-3">
+                          {aula.description || 'Instrução do curso de saúde'}
+                        </p>
                       </div>
                     </a>
                   );
