@@ -6,7 +6,6 @@ import {
   GraduationCap, BookOpen, Book, Gavel, Scale, ChevronDown, X 
 } from 'lucide-react';
 
-// Documentação: Dados embutidos conforme o JSON fornecido
 const ROTEIRO_DATA = {
   "curso": "ROTEIRO JRS",
   "modulos": [
@@ -168,7 +167,7 @@ const ROTEIRO_DATA = {
   ]
 };
 
-// Documentação: Função utilitária para extrair apenas o URL (link) limpo caso venha rodeado de tags iframe/a no JSON
+// Extrator de Links puros
 const extractLink = (htmlString: string) => {
   const srcMatch = htmlString.match(/src="([^"]+)"/);
   if (srcMatch) return srcMatch[1];
@@ -177,7 +176,7 @@ const extractLink = (htmlString: string) => {
   return htmlString;
 };
 
-// Documentação: Escolha de ícones com base na propriedade "formato"
+// Ícones visuais
 const getIconForFormat = (formato: string) => {
   const fmt = formato.toLowerCase();
   if (fmt.includes('apresentação')) return <MonitorPlay size={18} />;
@@ -192,10 +191,7 @@ const getIconForFormat = (formato: string) => {
 };
 
 export const RoteiroJRS: React.FC = () => {
-  // Documentação: Estado para o Accordion (Lista Expansível)
   const [expandedModule, setExpandedModule] = useState<number | null>(null);
-  
-  // Documentação: Estados para os Modais de Visualização Rica
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
 
@@ -205,8 +201,6 @@ export const RoteiroJRS: React.FC = () => {
 
   const handleMaterialClick = (rawUrl: string) => {
     const link = extractLink(rawUrl);
-    
-    // Documentação: Abertura Condicional do Modal baseada na Origem do Link
     if (link.includes('youtube.com') || link.includes('youtu.be')) {
       setActiveVideoUrl(link);
     } else if (link.includes('imgur.com')) {
@@ -221,7 +215,7 @@ export const RoteiroJRS: React.FC = () => {
       <Header title="Roteiro JRS" />
       
       <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-4xl mx-auto w-full">
-        {/* Descrição Superior contextualizada */}
+        {/* Banner Descritivo Superior */}
         <div className="mb-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-200/60">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -236,18 +230,18 @@ export const RoteiroJRS: React.FC = () => {
           </div>
         </div>
 
-        {/* Documentação: Accordion (Lista Expansível) */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden divide-y divide-gray-100">
+        {/* Lista de Módulos Separados (gap-3) */}
+        <div className="flex flex-col gap-3">
           {ROTEIRO_DATA.modulos.map((mod) => {
             const isExpanded = expandedModule === mod.modulo_id;
 
             return (
-              <div key={mod.modulo_id} className="flex flex-col">
+              <div key={mod.modulo_id} className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden transition-all duration-300">
                 
-                {/* Headline do Módulo (Botão de Expandir) */}
+                {/* Botão Principal do Cartão (Expande/Retrai) */}
                 <button 
                   onClick={() => toggleModule(mod.modulo_id)}
-                  className={`group flex items-center justify-between p-4 transition-colors focus:outline-none cursor-pointer ${isExpanded ? 'bg-gray-50' : 'hover:bg-gray-50/80'}`}
+                  className={`w-full group flex items-center justify-between p-4 transition-colors focus:outline-none cursor-pointer ${isExpanded ? 'bg-gray-50/50' : 'hover:bg-gray-50/80'}`}
                 >
                   <div className="flex flex-col pr-4 flex-1 text-left">
                     <h3 className={`font-heading font-bold text-[14px] leading-snug mb-1 transition-colors ${isExpanded ? 'text-[#079551]' : 'text-[#050F41] group-hover:text-[#079551]'}`}>
@@ -262,24 +256,25 @@ export const RoteiroJRS: React.FC = () => {
                   </div>
                 </button>
 
-                {/* Subitens (Materiais) renderizados apenas se expandido */}
+                {/* Sub-itens de Materiais renderizados caso Expandido */}
                 {isExpanded && (
-                  <div className="bg-gray-50/80 border-t border-gray-100 divide-y divide-gray-200/60 flex flex-col pl-4">
+                  <div className="bg-white border-t border-gray-100 divide-y divide-gray-100 flex flex-col">
                     {mod.materiais.map((mat, idx) => (
                       <button 
                         key={idx}
                         onClick={() => handleMaterialClick(mat.url)}
-                        className="group flex items-center justify-between py-3 pr-4 hover:bg-white transition-colors focus:outline-none cursor-pointer text-left"
+                        className="group flex items-center justify-between py-3 px-4 hover:bg-gray-50 transition-colors focus:outline-none cursor-pointer text-left"
                       >
                         <div className="flex flex-col pr-3 flex-1 min-w-0">
                           <h4 className="text-[#050F41] font-heading font-bold text-[13px] leading-tight mb-0.5 group-hover:text-blue-600 transition-colors">
                             {mat.titulo}
                           </h4>
-                          <p className="text-gray-500 font-body text-[11px] leading-relaxed line-clamp-2">
-                            {mat.descricao}
+                          {/* Substituído: Exibindo Formato com estilo de Badge no subtítulo */}
+                          <p className="text-gray-500 font-body text-[11px] leading-relaxed line-clamp-1 uppercase tracking-wider font-semibold">
+                            {mat.formato}
                           </p>
                         </div>
-                        <div className="flex-shrink-0 text-gray-400 group-hover:text-blue-600 p-2 rounded-full bg-white group-hover:bg-blue-50 border border-gray-100 shadow-sm transition-all">
+                        <div className="flex-shrink-0 text-gray-400 group-hover:text-blue-600 p-2 rounded-full bg-gray-50 group-hover:bg-blue-50 border border-gray-100 shadow-sm transition-all">
                           {getIconForFormat(mat.formato)}
                         </div>
                       </button>
@@ -292,7 +287,7 @@ export const RoteiroJRS: React.FC = () => {
         </div>
       </div>
 
-      {/* Documentação: MODAL DE VÍDEO (Youtube) */}
+      {/* MODAL DE VÍDEO (Youtube) */}
       {activeVideoUrl && (
         <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col items-center justify-center p-4 animate-fade-in backdrop-blur-sm">
           <div className="w-full max-w-4xl relative">
@@ -314,7 +309,7 @@ export const RoteiroJRS: React.FC = () => {
         </div>
       )}
 
-      {/* Documentação: MODAL DE IMAGEM (Imgur) */}
+      {/* MODAL DE IMAGEM (Imgur) */}
       {activeImageUrl && (
         <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col items-center justify-center p-4 animate-fade-in backdrop-blur-sm">
           <div className="relative w-full h-full max-w-5xl flex items-center justify-center">
