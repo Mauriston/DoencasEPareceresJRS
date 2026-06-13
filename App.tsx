@@ -18,7 +18,8 @@ import { ArtigoPericiaAdministrativa } from './components/ArtigoPericiaAdministr
 import { ArtigoPericiaPsiquiatria } from './components/ArtigoPericiaPsiquiatria';
 import { CasosPericiais } from './components/CasosPericiais';
 import { Estudo } from './components/Estudo'; 
-import { HNReGuide } from './components/HNReGuide'; // <-- NOVA IMPORTAÇÃO
+import { HNReGuide } from './components/HNReGuide';
+import { RegimentoHNRe } from './components/RegimentoHNRe'; // <-- NOVA IMPORTAÇÃO // <-- NOVA IMPORTAÇÃO
 import { NavItem } from './types';
 
 const App: React.FC = () => {
@@ -49,7 +50,8 @@ const App: React.FC = () => {
       case 'artigo-psiquiatria': return <ArtigoPericiaPsiquiatria onBack={() => setCurrentView('estudo')} />;
       case 'casos': return <CasosPericiais onBack={() => setCurrentView('guide')} />; 
       case 'estudo': return <Estudo onBack={() => setCurrentView('guide')} onNavigate={setCurrentView} />; 
-      case 'hnre': return <HNReGuide />; // <-- NOVA ROTA ADICIONADA
+      case 'hnre': return <HNReGuide />; 
+      case 'regimento-hnre': return <RegimentoHNRe onBack={() => setCurrentView('hnre')} />; // <-- NOVA ROTA ADICIONAD// <-- NOVA ROTA ADICIONADA
       default: return <DiseaseGuide />;
     }
   };
