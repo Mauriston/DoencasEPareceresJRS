@@ -126,50 +126,56 @@ export const LawReference: React.FC = () => {
 
         {/* Contentor Único da Lista com Divisores (divide-y) */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden divide-y divide-gray-100">
-          {LEGISLATIONS.map((law) => (
-            <div key={law.id} className="relative group">
-              {/* O item inteiro funciona como link para abrir o documento */}
-              <a 
-                href={law.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between p-4 hover:bg-gray-50/80 active:bg-gray-100 transition-colors focus:outline-none cursor-pointer gap-3"
-              >
-                {/* Imagem Institucional à esquerda */}
-                <div className="w-10 h-10 flex-shrink-0 bg-gray-50 rounded-full overflow-hidden border border-gray-100 flex items-center justify-center p-0.5">
-                  <img 
-                    src={law.imageUrl} 
-                    alt={law.legislation} 
-                    className="w-full h-full object-contain"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
+          {LEGISLATIONS.map((law) => {
+            // Documentação: Verifica se a imagem atual é o Brasão da República para aplicar o aumento de 50%
+            const isBrasao = law.imageUrl.includes('brasao-da-republica');
 
-                {/* Bloco de Texto centralizado à esquerda */}
-                <div className="flex flex-col flex-1 min-w-0">
-                  <h3 className="text-[#050F41] font-heading font-bold text-[14px] leading-snug mb-0.5 group-hover:text-[#079551] transition-colors">
-                    {law.legislation}
-                  </h3>
-                  <p className="text-gray-500 font-body text-[11px] font-medium leading-relaxed line-clamp-2">
-                    {law.title}
-                  </p>
-                </div>
-                
-                {/* Documentação: Botão de Info limpo, apenas com o ícone purificado (sem fundo ou bordas de círculo) */}
-                <button 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    alert(`Disposições da norma:\n\n${law.provisions}`);
-                  }}
-                  title={law.provisions}
-                  className="text-gray-400 hover:text-[#050F41] transition-colors flex-shrink-0 focus:outline-none p-1.5"
+            return (
+              <div key={law.id} className="relative group">
+                <a 
+                  href={law.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-4 hover:bg-gray-50/80 active:bg-gray-100 transition-colors focus:outline-none cursor-pointer gap-3"
                 >
-                  <Info size={18} />
-                </button>
-              </a>
-            </div>
-          ))}
+                  {/* Imagem Institucional à esquerda com máscara redonda */}
+                  <div className="w-10 h-10 flex-shrink-0 bg-gray-50 rounded-full overflow-hidden border border-gray-100 flex items-center justify-center p-0.5">
+                    <img 
+                      src={law.imageUrl} 
+                      alt={law.legislation} 
+                      className={`w-full h-full object-contain transition-transform duration-300 ${
+                        isBrasao ? 'scale-[1.5]' : ''
+                      }`}
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+
+                  {/* Bloco de Texto centralizado à esquerda */}
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <h3 className="text-[#050F41] font-heading font-bold text-[14px] leading-snug mb-0.5 group-hover:text-[#079551] transition-colors">
+                      {law.legislation}
+                    </h3>
+                    <p className="text-gray-500 font-body text-[11px] font-medium leading-relaxed line-clamp-2">
+                      {law.title}
+                    </p>
+                  </div>
+                  
+                  {/* Botão de Info limpo e purificado à direita */}
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      alert(`Disposições da norma:\n\n${law.provisions}`);
+                    }}
+                    title={law.provisions}
+                    className="text-gray-400 hover:text-[#050F41] transition-colors flex-shrink-0 focus:outline-none p-1.5"
+                  >
+                    <Info size={18} />
+                  </button>
+                </a>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
