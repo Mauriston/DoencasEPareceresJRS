@@ -19,6 +19,7 @@ import { ArtigoPericiaMedica } from './components/ArtigoPericiaMedica';
 import { ArtigoPerfilPerito } from './components/ArtigoPerfilPerito';
 import { ArtigoPericiaAdministrativa } from './components/ArtigoPericiaAdministrativa';
 import { ArtigoPericiaPsiquiatria } from './components/ArtigoPericiaPsiquiatria';
+import { CasosPericiais } from './components/CasosPericiais'; // <-- IMPORTAÇÃO NOVA
 import { NavItem } from './types';
 
 const App: React.FC = () => {
@@ -30,7 +31,6 @@ const App: React.FC = () => {
   const [isAvaliacoesFabOpen, setIsAvaliacoesFabOpen] = useState(false);
   const [isGerarDocFabOpen, setIsGerarDocFabOpen] = useState(false);
 
-  // Documentação: Adicionada a rota 'casos' com um ecrã provisório em construção
   const renderView = () => {
     switch (currentView) {
       case 'guide': return <DiseaseGuide />;
@@ -52,7 +52,8 @@ const App: React.FC = () => {
       case 'artigo-perfil': return <ArtigoPerfilPerito onBack={() => setCurrentView('artigos')} />;
       case 'artigo-administrativa': return <ArtigoPericiaAdministrativa onBack={() => setCurrentView('artigos')} />;
       case 'artigo-psiquiatria': return <ArtigoPericiaPsiquiatria onBack={() => setCurrentView('artigos')} />;
-      case 'casos': return <div className="p-8 text-center text-gray-500 font-bold mt-20">Página de Casos (Em construção...)</div>;
+      // Documentação: O botão de volta dos Casos redireciona para a página principal (guide) ou a que preferires
+      case 'casos': return <CasosPericiais onBack={() => setCurrentView('guide')} />; 
       default: return <DiseaseGuide />;
     }
   };
@@ -81,7 +82,6 @@ const App: React.FC = () => {
       <nav className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200/70 shadow-[0_-4px_16px_rgba(0,0,0,0.03)] pb-[env(safe-area-inset-bottom)] px-4 z-50">
         <div className="flex justify-around items-center h-[64px] max-w-4xl mx-auto relative">
           
-          {/* Menu Benefícios */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
             <button onClick={() => { setIsBeneficiosFabOpen(!isBeneficiosFabOpen); setIsAvaliacoesFabOpen(false); setIsGerarDocFabOpen(false); setIsFabOpen(false); setIsExtrasFabOpen(false); }} className="flex flex-col items-center justify-center w-full h-full focus:outline-none">
               <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['guide', 'portaria', 'finalidades'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
@@ -98,7 +98,6 @@ const App: React.FC = () => {
             )}
           </div>
 
-          {/* Menu Avaliações */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
             <button id="nav-btn-avaliacoes" onClick={() => { setIsAvaliacoesFabOpen(!isAvaliacoesFabOpen); setIsBeneficiosFabOpen(false); setIsGerarDocFabOpen(false); setIsFabOpen(false); setIsExtrasFabOpen(false); }} className="group flex flex-col items-center justify-center w-full h-full focus:outline-none">
               <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['concursos', 'exames'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
@@ -114,7 +113,6 @@ const App: React.FC = () => {
             )}
           </div>
 
-          {/* Menu Documentos */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
             <button id="nav-btn-gerar-doc" onClick={() => { setIsGerarDocFabOpen(!isGerarDocFabOpen); setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsFabOpen(false); setIsExtrasFabOpen(false); }} className="group flex flex-col items-center justify-center w-full h-full focus:outline-none">
               <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['pareceres', 'templates'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
@@ -131,7 +129,6 @@ const App: React.FC = () => {
             )}
           </div>
 
-          {/* Menu DGPM-406 - Documentação: Rota 'laws' incluída na lógica de cor azul */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
             <button onClick={() => { setIsFabOpen(!isFabOpen); setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsGerarDocFabOpen(false); setIsExtrasFabOpen(false); }} className="flex flex-col items-center justify-center w-full h-full focus:outline-none">
               <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['dgpm406', 'dgpm406-anexos', 'resumos', 'laws'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
@@ -143,14 +140,12 @@ const App: React.FC = () => {
               <div className="absolute bottom-20 left-1/2 -translate-x-1/2 mb-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(5,15,65,0.08)] border border-gray-100 p-1.5 flex flex-col gap-0.5 min-w-[155px] animate-fade-in z-50">
                 <button onClick={() => { setCurrentView('dgpm406-anexos'); setIsFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'dgpm406-anexos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">attachment</span>Anexos</button>
                 <button onClick={() => { setCurrentView('dgpm406'); setIsFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'dgpm406' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">library_books</span>Capítulos</button>
-                {/* Documentação: Botão de Legislação transferido para aqui */}
                 <button onClick={() => { setCurrentView('laws'); setIsFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'laws' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">balance</span>Legislação</button>
                 <button onClick={() => { setCurrentView('resumos'); setIsFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'resumos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">menu_book</span>Resumos</button>
               </div>
             )}
           </div>
 
-          {/* Menu Extras - Documentação: Rota 'casos' incluída; 'laws' removida */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
             <button onClick={() => { setIsExtrasFabOpen(!isExtrasFabOpen); setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsGerarDocFabOpen(false); setIsFabOpen(false); }} className="flex flex-col items-center justify-center w-full h-full focus:outline-none">
               <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['videos', 'aulas', 'casos', 'infograficos', 'artigos', 'artigo-pericia', 'artigo-perfil', 'artigo-administrativa', 'artigo-psiquiatria'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
@@ -162,7 +157,6 @@ const App: React.FC = () => {
               <div className="absolute bottom-20 right-0 mb-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(5,15,65,0.08)] border border-gray-100 p-1.5 flex flex-col gap-0.5 min-w-[160px] animate-fade-in z-50">
                 <button onClick={() => { setCurrentView('artigos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${['artigos', 'artigo-pericia', 'artigo-perfil', 'artigo-administrativa', 'artigo-psiquiatria'].includes(currentView) ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">article</span>Artigos</button>
                 <button onClick={() => { setCurrentView('aulas'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'aulas' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">co_present</span>Aulas</button>
-                {/* Documentação: Botão de Casos adicionado */}
                 <button onClick={() => { setCurrentView('casos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'casos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">cases</span>Casos</button>
                 <button onClick={() => { setCurrentView('infograficos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'infograficos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">image</span>Infográficos</button>
                 <button onClick={() => { setCurrentView('videos'); setIsExtrasFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'videos' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">smart_display</span>Vídeos</button>
