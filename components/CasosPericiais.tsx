@@ -1,7 +1,7 @@
 // Ficheiro: components/CasosPericiais.tsx
 import React, { useState } from 'react';
 import { Header } from './Header';
-import { ArrowLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ChevronRight, RotateCcw, X, Eye, Download, CheckCircle, XCircle } from 'lucide-react';
 
 // Documentação: Dados extraídos do JSON fornecido, contendo os 24 casos periciais
 const CASOS_DATA = [
@@ -303,55 +303,224 @@ interface Props {
 export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  
+  // Documentação: Novos estados para o Modal e Visualização de Resultados
+  const [userAnswers, setUserAnswers] = useState<string[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [viewMode, setViewMode] = useState<'quiz' | 'results'>('quiz');
 
   const currentCase = CASOS_DATA[currentIndex];
   const totalCases = CASOS_DATA.length;
-  // Documentação: Calcula o progresso para a barra
+  
+  // Calcula o progresso para a barra
   const progressPercentage = ((currentIndex + 1) / totalCases) * 100;
 
-  // Documentação: Lida com a seleção da alternativa do utilizador
+  // Calcula estatísticas
+  const correctCount = userAnswers.reduce((acc, ans, idx) => {
+    return ans?.toUpperCase() === CASOS_DATA[idx].gabarito.toUpperCase() ? acc + 1 : acc;
+  }, 0);
+  const grade = ((correctCount / totalCases) * 10).toFixed(1);
+
+  // Lida com a seleção da alternativa do utilizador
   const handleSelect = (key: string) => {
     if (selectedAnswer !== null) return; // Previne múltiplos cliques
     setSelectedAnswer(key);
   };
 
-  // Documentação: Avança para a próxima questão
+  // Avança para a próxima questão ou abre modal
   const handleNext = () => {
+    if (selectedAnswer === null) return;
+
+    // Guarda a resposta atual
+    const newAnswers = [...userAnswers];
+    newAnswers[currentIndex] = selectedAnswer;
+    setUserAnswers(newAnswers);
+
     if (currentIndex < totalCases - 1) {
       setCurrentIndex(prev => prev + 1);
       setSelectedAnswer(null);
+    } else {
+      // É a última questão, abre o modal de resultados
+      setShowModal(true);
     }
   };
 
-  // Documentação: Reinicia o Quiz ao chegar ao fim
+  // Reinicia o Quiz
   const handleRestart = () => {
     setCurrentIndex(0);
     setSelectedAnswer(null);
+    setUserAnswers([]);
+    setShowModal(false);
+    setViewMode('quiz');
   };
 
-  // Documentação: Função de styling dinâmica das alternativas com base no estado de resposta
-  const getOptionStyle = (key: string) => {
-    if (selectedAnswer === null) {
+  // Documentação: Função nativa do navegador para gerar PDF via impressão
+  const handleDownloadPDF = () => {
+    const printWindow = window.open('', '', 'height=800,width=800');
+    if (!printWindow) return;
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Casos Periciais - Resultados</title>
+          <style>
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #333; line-height: 1.6; }
+            h1 { color: #050F41; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 30px; }
+            .summary { text-align: center; font-size: 18px; margin-bottom: 40px; background: #f8fafc; padding: 15px; border-radius: 8px; }
+            .grade { font-size: 24px; color: #079551; font-weight: bold; }
+            .caso { margin-bottom: 30px; page-break-inside: avoid; }
+            .caso-title { color: #050F41; font-size: 16px; margin-bottom: 10px; }
+            .enunciado { font-weight: 600; margin-bottom: 15px; color: #1e293b; }
+            .alternativa { margin-bottom: 8px; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 14px; }
+            .correta { background-color: #dcfce7; border-color: #22c55e; font-weight: bold; color: #14532d; }
+            .errada { background-color: #fee2e2; border-color: #ef4444; font-weight: bold; color: #7f1d1d; }
+            .explicacao { margin-top: 15px; padding: 15px; background-color: #fefce8; border-left: 4px solid #eab308; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <h1>Casos Periciais - Desempenho</h1>
+          <div class="summary">
+            Nota Final: <span class="grade">${grade}</span> / 10.0<br/>
+            Acertos: <strong>${correctCount}</strong> de ${totalCases} questões
+          </div>
+          ${CASOS_DATA.map((caso, index) => {
+            const uAns = userAnswers[index];
+            return `
+              <div class="caso">
+                <div class="caso-title"><strong>Caso ${caso.caso}</strong></div>
+                <p class="enunciado">${caso.enunciado}</p>
+                <div>
+                  ${Object.entries(caso.alternativas).map(([key, text]) => {
+                    const isGab = key.toUpperCase() === caso.gabarito.toUpperCase();
+                    const isUser = uAns?.toUpperCase() === key.toUpperCase();
+                    let className = "alternativa";
+                    if (isGab) className += " correta";
+                    else if (isUser) className += " errada";
+
+                    return `<div class="${className}"><strong>${key.toUpperCase()}</strong>: ${text}</div>`;
+                  }).join('')}
+                </div>
+                <div class="explicacao">
+                  <strong>Análise Pericial:</strong><br/>
+                  ${caso.explicacao}
+                </div>
+              </div>
+            `;
+          }).join('')}
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
+  const getOptionStyle = (key: string, savedAnswer: string | null = selectedAnswer) => {
+    if (savedAnswer === null) {
       return "bg-white border-gray-200 hover:border-[#050F41] hover:shadow-md cursor-pointer font-normal text-gray-700";
     }
 
-    // Normalização para evitar erros com letras maiúsculas/minúsculas vindas do JSON
     const isCorrect = key.toUpperCase() === currentCase.gabarito.toUpperCase();
-    const isSelected = key.toUpperCase() === selectedAnswer.toUpperCase();
+    const isSelected = key.toUpperCase() === savedAnswer.toUpperCase();
 
     if (isCorrect) {
-      // Documentação: Alternativa correta destacada a verde e em negrito
       return "bg-green-100 border-green-500 text-green-900 font-bold shadow-sm";
     }
     if (isSelected && !isCorrect) {
-      // Documentação: Alternativa errada selecionada destacada a vermelho e em negrito
       return "bg-red-50 border-red-400 text-red-900 font-bold shadow-sm";
     }
 
-    // Documentação: Alternativas não selecionadas perdem destaque
     return "bg-gray-50 border-gray-100 opacity-60 cursor-default font-normal text-gray-500";
   };
 
+  // === VISUALIZAÇÃO DE RESULTADOS COMPLETOS ===
+  if (viewMode === 'results') {
+    return (
+      <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
+        <Header 
+          title="REVISÃO DOS CASOS" 
+          leftAction={
+            <button onClick={handleRestart} className="text-white p-2 rounded-full hover:bg-white/10 transition-colors">
+              <ArrowLeft size={20} />
+            </button>
+          } 
+        />
+        <div className="p-4 space-y-6 max-w-3xl mx-auto w-full flex-1 pb-32">
+          {/* Resumo da Nota */}
+          <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm text-center flex flex-col items-center">
+            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Nota Final</h2>
+            <div className={`text-5xl font-black ${Number(grade) >= 7 ? 'text-[#079551]' : Number(grade) >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>
+              {grade}
+            </div>
+            <p className="text-gray-500 mt-3 font-medium font-body">Você acertou <strong className="text-gray-800">{correctCount}</strong> de {totalCases} questões.</p>
+            
+            <button 
+              onClick={handleDownloadPDF} 
+              className="mt-6 flex items-center gap-2 bg-[#050F41] text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md hover:scale-105 transition-transform"
+            >
+              <Download size={18} />
+              Baixar PDF
+            </button>
+          </div>
+
+          {/* Lista de Questões Resolvidas */}
+          {CASOS_DATA.map((caso, index) => {
+            const uAns = userAnswers[index];
+            const isUserCorrect = uAns?.toUpperCase() === caso.gabarito.toUpperCase();
+
+            return (
+              <div key={index} className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-[#050F41] font-heading">Caso {caso.caso}</h3>
+                  {isUserCorrect 
+                    ? <div className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-md text-xs font-bold"><CheckCircle size={14} /> Acertou</div>
+                    : <div className="flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-md text-xs font-bold"><XCircle size={14} /> Errou</div>
+                  }
+                </div>
+                <p className="text-[#050F41] font-heading text-[15px] leading-relaxed font-semibold mb-4">
+                  {caso.enunciado}
+                </p>
+                
+                <div className="space-y-2">
+                  {Object.entries(caso.alternativas).map(([key, text]) => {
+                    // Reutiliza a lógica de cores para o modo results
+                    const isGab = key.toUpperCase() === caso.gabarito.toUpperCase();
+                    const isUser = uAns?.toUpperCase() === key.toUpperCase();
+                    
+                    let style = "bg-gray-50 border-gray-100 text-gray-500 opacity-60";
+                    if (isGab) style = "bg-green-100 border-green-500 text-green-900 font-bold shadow-sm";
+                    else if (isUser && !isGab) style = "bg-red-50 border-red-400 text-red-900 font-bold shadow-sm";
+
+                    return (
+                      <div key={key} className={`w-full text-left p-3 rounded-xl border text-sm font-body leading-relaxed flex items-start gap-3 ${style}`}>
+                        <div className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5 ${isGab ? 'bg-green-500 text-white border-green-500' : isUser ? 'bg-red-500 text-white border-red-500' : 'border-gray-200'}`}>
+                          {key.toUpperCase()}
+                        </div>
+                        <span className="flex-1 mt-0.5">{text}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="bg-yellow-50/80 border border-yellow-200 p-4 rounded-xl mt-5 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
+                  <h4 className="text-xs font-bold font-heading text-yellow-800 mb-1 uppercase">Análise Pericial</h4>
+                  <p className="text-sm text-gray-800 font-body leading-relaxed text-justify">
+                    {caso.explicacao}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // === VISUALIZAÇÃO DO QUIZ (PADRÃO) ===
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
       <Header 
@@ -363,7 +532,6 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
         } 
       />
 
-      {/* Documentação: Barra de Progresso Discreta */}
       <div className="w-full h-1.5 bg-gray-200">
         <div 
           className="h-full bg-[#079551] transition-all duration-500 ease-out"
@@ -372,21 +540,18 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
       </div>
 
       <div className="p-4 space-y-6 max-w-3xl mx-auto w-full flex-1 pb-32">
-        {/* Documentação: Contador de Casos (Removido o box Desafio X) */}
         <div className="flex items-center justify-between mt-2">
           <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
             Caso {currentIndex + 1} de {totalCases}
           </span>
         </div>
 
-        {/* Documentação: Enunciado com destaque visual discreto */}
         <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm">
           <p className="text-[#050F41] font-heading text-[16px] leading-relaxed font-semibold">
             {currentCase.enunciado}
           </p>
         </div>
 
-        {/* Documentação: Alternativas */}
         <div className="space-y-3">
           {Object.entries(currentCase.alternativas).map(([key, text]) => (
             <button
@@ -407,7 +572,6 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
           ))}
         </div>
 
-        {/* Documentação: Explicação com contraste melhorado */}
         {selectedAnswer !== null && (
           <div className="animate-fade-in bg-yellow-50/80 border border-yellow-200 p-5 rounded-2xl mt-6 relative overflow-hidden">
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
@@ -422,15 +586,71 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
         )}
       </div>
 
-      {/* Documentação: FAB: Botão de Avançar */}
       {selectedAnswer !== null && (
         <button 
-          onClick={currentIndex < totalCases - 1 ? handleNext : handleRestart}
+          onClick={handleNext}
           className="fixed bottom-24 right-6 bg-[#050F41] text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center border border-slate-700 animate-fade-in"
-          title={currentIndex < totalCases - 1 ? "Próximo Caso" : "Reiniciar Casos"}
+          title={currentIndex < totalCases - 1 ? "Próximo Caso" : "Finalizar Casos"}
         >
-          {currentIndex < totalCases - 1 ? <ChevronRight size={24} /> : <RotateCcw size={24} />}
+          {currentIndex < totalCases - 1 ? <ChevronRight size={24} /> : <CheckCircle size={24} />}
         </button>
+      )}
+
+      {/* Documentação: MODAL DE RESULTADOS FINAIS */}
+      {showModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050F41]/70 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white rounded-[32px] shadow-2xl p-8 w-full max-w-sm flex flex-col items-center text-center relative overflow-hidden">
+            
+            {/* Decoração de fundo */}
+            <div className={`absolute -top-16 -right-16 w-32 h-32 rounded-full opacity-20 blur-2xl ${Number(grade) >= 7 ? 'bg-green-500' : 'bg-red-500'}`}></div>
+
+            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-[#050F41] shadow-inner">
+              <span className="material-symbols-outlined text-3xl">workspace_premium</span>
+            </div>
+            
+            <h2 className="text-2xl font-heading font-black text-[#050F41] mb-1">Desempenho</h2>
+            <p className="text-gray-500 font-medium font-body text-sm mb-6">Você completou todos os casos!</p>
+            
+            <div className="relative mb-8">
+              <svg className="w-32 h-32 transform -rotate-90">
+                <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
+                <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="377" strokeDashoffset={377 - (377 * Number(grade)) / 10} className={`${Number(grade) >= 7 ? 'text-[#079551]' : Number(grade) >= 5 ? 'text-yellow-500' : 'text-red-500'} transition-all duration-1000 ease-out`} strokeLinecap="round" />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={`text-3xl font-black ${Number(grade) >= 7 ? 'text-[#079551]' : Number(grade) >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>{grade}</span>
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">de 10.0</span>
+              </div>
+            </div>
+
+            <p className="text-gray-600 font-body mb-8">
+              Você acertou <strong>{correctCount}</strong> de <strong>{totalCases}</strong> questões.
+            </p>
+
+            {/* Os 3 Ícones de Ação */}
+            <div className="flex items-center justify-center gap-6 w-full px-4">
+              <button onClick={handleRestart} className="group flex flex-col items-center gap-2 focus:outline-none">
+                <div className="w-12 h-12 rounded-2xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-gray-200 group-hover:text-gray-800 transition-all shadow-sm">
+                  <X size={22} />
+                </div>
+                <span className="text-[10px] font-bold uppercase text-gray-500 group-hover:text-gray-800 transition-colors">Fechar</span>
+              </button>
+              
+              <button onClick={() => { setShowModal(false); setViewMode('results'); }} className="group flex flex-col items-center gap-2 focus:outline-none">
+                <div className="w-14 h-14 rounded-2xl bg-[#050F41] text-white flex items-center justify-center group-hover:scale-105 group-hover:shadow-lg transition-all shadow-md transform -translate-y-2">
+                  <Eye size={24} />
+                </div>
+                <span className="text-[10px] font-bold uppercase text-[#050F41] transition-colors">Ver</span>
+              </button>
+
+              <button onClick={handleDownloadPDF} className="group flex flex-col items-center gap-2 focus:outline-none">
+                <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-green-100 group-hover:text-green-800 transition-all shadow-sm">
+                  <Download size={22} />
+                </div>
+                <span className="text-[10px] font-bold uppercase text-green-600 group-hover:text-green-800 transition-colors">Baixar</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
