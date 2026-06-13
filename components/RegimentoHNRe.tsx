@@ -29,7 +29,6 @@ export const RegimentoHNRe: React.FC<Props> = ({ onBack }) => {
     }
   };
 
-  // Documentação: Transcrição integral do ficheiro .md
   const rawMarkdown = `
 ## REGIMENTO INTERNO DO HOSPITAL NAVAL DE RECIFE
 ## CAPÍTULO I
@@ -212,7 +211,7 @@ VIII – manter atualizado o arquivo histórico e o acervo fotográfico do HNRe.
 Art. 48 - Ao Serviço de Ouvidoria (HNRe-01.5) compete:
 I - receber e analisar todas as manifestações (reclamações, sugestões e elogios) referentes ao atendimento no HNRe, encaminhá-las aos setores competentes para apuração, propor soluções possíveis e informar aos interessados as providências tomadas;
 II - exercer a função de elemento de ligação (E-Lig) entre a Direção e o público/usuários (clientes internos e externos) do hospital;
-III - conhecer e avaliar, por meio de pesquisa, a satisfação dos usuários com os serviços ofertados pelo HNRe e Organizações de Saúde Extra-Marinha (OSE) credenciadas; e
+III - conhecer e avaliar, por meio de pesquisa, a satisfaction dos usuários com os serviços ofertados pelo HNRe e Organizações de Saúde Extra-Marinha (OSE) credenciadas; e
 IV - enviar relatórios estatísticos para a DSM e Com3ºDN, conforme previsto nas normas em vigor relativas ao funcionamento dos serviços de ouvidoria das Organizações Militares Hospitalares (OMH).
 Art. 49 - Ao Conselho Técnico (HNRe-03) compete:
 I - assessorar o Diretor nos assuntos e questões técnicas pertinentes às atividades de saúde; e
@@ -473,7 +472,7 @@ I - realizar, no Sistema Integrado de Administração Financeira do Governo Fede
 II - emitir as notas de empenho e ordens de pagamento autorizadas pelo ordenador de despesa ou seu substituto; e
 III - assessorar o Ordenador de Despesa ou seu substituto em todos os assuntos de natureza financeira e contábil relacionados às correspondentes contas de gestão.
 Art. 103 - À Seção de Municiamento (HNRe-22.2) compete:
-I - executar os processos inerentes à gestoria de municiamento, de acordo com as normas e legislação em vigor;
+I - executar os processes inerentes à gestoria de municiamento, de acordo com as normas e legislação em vigor;
 II - executar os serviços inerentes à administração dos ranchos;
 III - prover e abastecer a OM com os itens necessários ao fornecimento da alimentação da Tripulação e dos pacientes internados, bem como adquirir, receber e armazenar os gêneros e materiais necessários aos ranchos;
 IV – elaborar, sob a supervisão do Serviço de Nutrição, os cardápios para os ranchos e pacientes internados;
@@ -657,8 +656,8 @@ Art. 125 - O presente RI será complementado por Ordens Internas, emanadas pelo 
               );
             }
             
-            // Documentação: Negrito para 'Art. X -' e 'Parágrafo único'
-            const articleMatch = line.match(/^(Art\.\s*\d+\s*[-–]?\s*|§\s*\d+º\s*[-–]?\s*|Parágrafo [uú]nico\s*[-–]?\s*)(.*)/i);
+            // Documentação: Negrito para 'Art. X -' e 'Parágrafo único' (Aceita Art. com ou sem o ponto)
+            const articleMatch = line.match(/^(Art\.?\s*\d+\s*[-–]?\s*|§\s*\d+º\s*[-–]?\s*|Parágrafo [uú]nico\s*[-–]?\s*)(.*)/i);
             
             if (articleMatch) {
                return (
@@ -669,7 +668,7 @@ Art. 125 - O presente RI será complementado por Ordens Internas, emanadas pelo 
                );
             }
 
-            // Documentação: Negrito para Inicisos ('I - ', 'II - ', etc.)
+            // Documentação: Negrito para Incisos ('I - ', 'II - ', etc.)
             const itemMatch = line.match(/^([IVXLCDM]+\s*[-–]\s*)(.*)/);
             if (itemMatch) {
                 return (
