@@ -15,7 +15,8 @@ import { Resumos } from './components/Resumos';
 import { Pareceres } from './components/Pareceres';
 import { TemplatesGuide } from './components/TemplatesGuide';
 import { Artigos } from './components/Artigos';
-import { ArtigoPericiaMedica } from './components/ArtigoPericiaMedica'; // Nova importação
+import { ArtigoPericiaMedica } from './components/ArtigoPericiaMedica';
+import { ArtigoPerfilPerito } from './components/ArtigoPerfilPerito'; // Nova importação
 import { NavItem } from './types';
 
 const App: React.FC = () => {
@@ -45,6 +46,7 @@ const App: React.FC = () => {
       case 'templates': return <TemplatesGuide />;
       case 'artigos': return <Artigos onNavigate={setCurrentView} />;
       case 'artigo-pericia': return <ArtigoPericiaMedica onBack={() => setCurrentView('artigos')} />;
+      case 'artigo-perfil': return <ArtigoPerfilPerito onBack={() => setCurrentView('artigos')} />;
       default: return <DiseaseGuide />;
     }
   };
