@@ -24,6 +24,7 @@ const NORMAS_HNRE: NormaHNRe[] = [
 ];
 
 interface Props {
+  // Documentação: Propriedade necessária para mudar de ecrã
   onNavigate: (view: NavItem) => void;
 }
 
@@ -35,13 +36,16 @@ export const HNReGuide: React.FC<Props> = ({ onNavigate }) => {
       <div className="p-4 overflow-auto pb-24 max-w-4xl mx-auto w-full">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden divide-y divide-gray-100">
           {NORMAS_HNRE.map((item) => (
-            <a 
+            // Documentação: Trocado de <a> para <button> para garantir o funcionamento do onClick no React
+            <button 
               key={item.id} 
-              // Documentação: Direciona apenas o primeiro item para a página do Regimento
               onClick={() => {
-                if (item.id === 'hnre-1') onNavigate('regimento-hnre');
+                // Documentação: Se o ID for 'hnre-1', navega para a página do Regimento
+                if (item.id === 'hnre-1') {
+                  onNavigate('regimento-hnre');
+                }
               }}
-              className="group flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors focus:outline-none cursor-pointer"
+              className="w-full text-left group flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors focus:outline-none cursor-pointer"
             >
               <div className="flex flex-col pr-4 flex-1">
                 <h3 className="text-[#050F41] font-heading font-bold text-[14px] leading-snug mb-1 group-hover:text-[#079551] transition-colors">
@@ -55,7 +59,7 @@ export const HNReGuide: React.FC<Props> = ({ onNavigate }) => {
               <div className="text-gray-400 group-hover:text-[#050F41] transition-colors flex-shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
                 <MoreVertical size={18} />
               </div>
-            </a>
+            </button>
           ))}
         </div>
       </div>
