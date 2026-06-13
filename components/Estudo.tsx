@@ -66,10 +66,11 @@ export const Estudo: React.FC<Props> = ({ onBack, onNavigate }) => {
 
       {/* Conteúdo Dinâmico gerido pelas 3 Tabs */}
       <div className="flex-1 overflow-hidden relative">
-        {activeTab === 'aulas' && <Aulas />}
-        {activeTab === 'videos' && <Videos />}
-        {activeTab === 'livros' && <Artigos onNavigate={onNavigate} />}
-      </div>
+  {activeTab === 'aulas' && <Aulas />}
+  {activeTab === 'videos' && <Videos />}
+  {/* Documentação: Passando a prop hideHeader como true para limpar o visual */}
+  {activeTab === 'livros' && <Artigos onNavigate={onNavigate} hideHeader={true} />}
+</div>
     </div>
   );
 };
