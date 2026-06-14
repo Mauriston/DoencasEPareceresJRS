@@ -1,583 +1,302 @@
-{
-  "total_registros": 50,
-  "estrutura_hierarquica": {
-    "Diretor (HNRe-01)": [
-      {
-        "servico_id": "HNRe-01.1",
-        "servico": "Assessoria de Inteligência",
-        "servico_label": "Assessoria de Inteligência (HNRe-01.1)"
-      },
-      {
-        "servico_id": "HNRe-01.2",
-        "servico": "Assessoria Jurídica",
-        "servico_label": "Assessoria Jurídica (HNRe-01.2)"
-      },
-      {
-        "servico_id": "HNRe-01.3",
-        "servico": "Assessoria de Gestão e Controle",
-        "servico_label": "Assessoria de Gestão e Controle (HNRe-01.3)"
-      },
-      {
-        "servico_id": "HNRe-01.4",
-        "servico": "Assessoria de Comunicação Social",
-        "servico_label": "Assessoria de Comunicação Social (HNRe-01.4)"
-      },
-      {
-        "servico_id": "HNRe-01.5",
-        "servico": "Serviço de Ouvidoria",
-        "servico_label": "Serviço de Ouvidoria (HNRe-01.5)"
-      }
-    ],
-    "Vice-Diretor (HNRe-02)": [
-      {
-        "servico_id": "HNRe-02.1",
-        "servico": "Centro de Estudos",
-        "servico_label": "Centro de Estudos (HNRe-02.1)"
-      },
-      {
-        "servico_id": "HNRe-02.2",
-        "servico": "Junta Regular de Saúde",
-        "servico_label": "Junta Regular de Saúde (HNRe-02.2)"
-      },
-      {
-        "servico_id": "HNRe-02.3",
-        "servico": "SECOM",
-        "servico_label": "SECOM (HNRe-02.3)"
-      },
-      {
-        "servico_id": "HNRe-02.4",
-        "servico": "Serviço de Auditoria em Saúde",
-        "servico_label": "Serviço de Auditoria em Saúde (HNRe-02.4)"
-      },
-      {
-        "servico_id": "HNRe-02-5",
-        "servico": "Assessoria de Segurança Orgânica",
-        "servico_label": "Assessoria de Segurança Orgânica (HNRe-02-5)"
-      },
-      {
-        "servico_id": "HNRe-02.6",
-        "servico": "NAC",
-        "servico_label": "NAC (HNRe-02.6)"
-      }
-    ],
-    "Departamento de Saúde (HNRe-10)": [
-      {
-        "servico_id": "HNRe-10",
-        "servico": "Departamento de Saúde",
-        "servico_label": "Departamento de Saúde (HNRe-10)"
-      },
-      {
-        "servico_id": "HNRe-10.1",
-        "servico": "NAIM",
-        "servico_label": "NAIM (HNRe-10.1)"
-      },
-      {
-        "servico_id": "HNRe-10.3",
-        "servico": "SAME",
-        "servico_label": "SAME (HNRe-10.3)"
-      },
-      {
-        "servico_id": "HNRe-10.5",
-        "servico": "Ambulatório",
-        "servico_label": "Ambulatório (HNRe-10.5)"
-      },
-      {
-        "servico_id": "HNRe-10.7",
-        "servico": "SIAD",
-        "servico_label": "SIAD (HNRe-10.7)"
-      },
-      {
-        "servico_id": "HNRe-10.8",
-        "servico": "Serviço de Credenciamento",
-        "servico_label": "Serviço de Credenciamento (HNRe-10.8)"
-      }
-    ],
-    "Divisão de Medicina (HNRe-11)": [
-      {
-        "servico_id": "HNRe-11",
-        "servico": "Divisão de Medicina",
-        "servico_label": "Divisão de Medicina (HNRe-11)"
-      },
-      {
-        "servico_id": "HNRe-11.3",
-        "servico": "Serviço de Diagnóstico por Imagem",
-        "servico_label": "Serviço de Diagnóstico por Imagem (HNRe-11.3)"
-      },
-      {
-        "servico_id": "HNRe-11.4",
-        "servico": "SMI",
-        "servico_label": "SMI (HNRe-11.4)"
-      }
-    ],
-    "Divisão de Odontologia (HNRe-12)": [
-      {
-        "servico_id": "HNRe-12",
-        "servico": "Divisão de Odontologia",
-        "servico_label": "Divisão de Odontologia (HNRe-12)"
-      }
-    ],
-    "Divisão de Enfermagem (HNRe-13)": [
-      {
-        "servico_id": "HNRe-13",
-        "servico": "Divisão de Enfermagem",
-        "servico_label": "Divisão de Enfermagem (HNRe-13)"
-      }
-    ],
-    "Divisão de Serviços Complementares (HNRe-14)": [
-      {
-        "servico_id": "HNRe-14",
-        "servico": "Divisão de Serviços Complementares",
-        "servico_label": "Divisão de Serviços Complementares (HNRe-14)"
-      },
-      {
-        "servico_id": "HNRe-14.1",
-        "servico": "Serviço de Fisioterapia e Reabilitação",
-        "servico_label": "Serviço de Fisioterapia e Reabilitação (HNRe-14.1)"
-      },
-      {
-        "servico_id": "HNRe-14.2",
-        "servico": "Serviço de Nutrição",
-        "servico_label": "Serviço de Nutrição (HNRe-14.2)"
-      },
-      {
-        "servico_id": "HNRe-14.3",
-        "servico": "Serviço de Psicologia",
-        "servico_label": "Serviço de Psicologia (HNRe-14.3)"
-      },
-      {
-        "servico_id": "HNRe-14.4",
-        "servico": "Serviço de Fonoaudiologia",
-        "servico_label": "Serviço de Fonoaudiologia (HNRe-14.4)"
-      },
-      {
-        "servico_id": "HNRe-14.5",
-        "servico": "Serviço de Assistência Social",
-        "servico_label": "Serviço de Assistência Social (HNRe-14.5)"
-      }
-    ],
-    "Divisão de Regulação em Saúde (HNRe-15)": [
-      {
-        "servico_id": "HNRe-15",
-        "servico": "Divisão de Regulação em Saúde",
-        "servico_label": "Divisão de Regulação em Saúde (HNRe-15)"
-      },
-      {
-        "servico_id": "HNRe-15.1",
-        "servico": "Seção de Orçamentos Saúde",
-        "servico_label": "Seção de Orçamentos Saúde (HNRe-15.1)"
-      },
-      {
-        "servico_id": "HNRe-15.2",
-        "servico": "Seção de Emissão de Guias",
-        "servico_label": "Seção de Emissão de Guias (HNRe-15.2)"
-      }
-    ],
-    "Divisão de Farmácia e Laboratório (HNRe-16)": [
-      {
-        "servico_id": "HNRe-16",
-        "servico": "Divisão de Farmácia e Laboratório",
-        "servico_label": "Divisão de Farmácia e Laboratório (HNRe-16)"
-      }
-    ],
-    "Departamento de Administração (HNRe-20)": [
-      {
-        "servico_id": "HNRe-20",
-        "servico": "Departamento de Administração",
-        "servico_label": "Departamento de Administração (HNRe-20)"
-      },
-      {
-        "servico_id": "HNRe-20.1",
-        "servico": "Serviço de Tecnologia da Informação",
-        "servico_label": "Serviço de Tecnologia da Informação (HNRe-20.1)"
-      },
-      {
-        "servico_id": "HNRe-20.2",
-        "servico": "Comissão de Gestão Ambiental",
-        "servico_label": "Comissão de Gestão Ambiental (HNRe-20.2)"
-      }
-    ],
-    "Divisão de Pessoal (HNRe-21)": [
-      {
-        "servico_id": "HNRe-21",
-        "servico": "Divisão de Pessoal",
-        "servico_label": "Divisão de Pessoal (HNRe-21)"
-      },
-      {
-        "servico_id": "HNRe-21.1",
-        "servico": "Seção de Pessoal Militar",
-        "servico_label": "Seção de Pessoal Militar (HNRe-21.1)"
-      },
-      {
-        "servico_id": "HNRe-21.2",
-        "servico": "Seção de Pessoal Civil",
-        "servico_label": "Seção de Pessoal Civil (HNRe-21.2)"
-      }
-    ],
-    "Divisão de Intendência (HNRe-22)": [
-      {
-        "servico_id": "HNRe-22",
-        "servico": "Divisão de Intendência",
-        "servico_label": "Divisão de Intendência (HNRe-22)"
-      },
-      {
-        "servico_id": "HNRe-22.1",
-        "servico": "Seção de Execução Financeira",
-        "servico_label": "Seção de Execução Financeira (HNRe-22.1)"
-      },
-      {
-        "servico_id": "HNRe-22.2",
-        "servico": "Seção de Municiamento",
-        "servico_label": "Seção de Municiamento (HNRe-22.2)"
-      },
-      {
-        "servico_id": "HNRe-22.3",
-        "servico": "Seção de Indenização Médico-Hospitalar",
-        "servico_label": "Seção de Indenização Médico-Hospitalar (HNRe-22.3)"
-      },
-      {
-        "servico_id": "HNRe-22.4",
-        "servico": "Seção de Material",
-        "servico_label": "Seção de Material (HNRe-22.4)"
-      },
-      {
-        "servico_id": "HNRe-22.5",
-        "servico": "Seção de Obtenção, Licitação e Acordos Administrativos",
-        "servico_label": "Seção de Obtenção, Licitação e Acordos Administrativos (HNRe-22.5)"
-      },
-      {
-        "servico_id": "HNRe-22.6",
-        "servico": "Seção Operações Créditos e Finanças",
-        "servico_label": "Seção Operações Créditos e Finanças (HNRe-22.6)"
-      },
-      {
-        "servico_id": "HNRe-22.7",
-        "servico": "Seção de Conforto",
-        "servico_label": "Seção de Conforto (HNRe-22.7)"
-      }
-    ],
-    "Divisão de Serviços Gerais (HNRe-23)": [
-      {
-        "servico_id": "HNRe-23",
-        "servico": "Divisão de Serviços Gerais",
-        "servico_label": "Divisão de Serviços Gerais (HNRe-23)"
-      },
-      {
-        "servico_id": "HNRe-23.1",
-        "servico": "Seção de Manutenção",
-        "servico_label": "Seção de Manutenção (HNRe-23.1)"
-      },
-      {
-        "servico_id": "HNRe-23.2",
-        "servico": "Seção de Transportes",
-        "servico_label": "Seção de Transportes (HNRe-23.2)"
-      },
-      {
-        "servico_id": "HNRe-23.3",
-        "servico": "Seção de Conservação e Limpeza",
-        "servico_label": "Seção de Conservação e Limpeza (HNRe-23.3)"
-      }
-    ]
+[
+  {
+    "superior_direto": "Diretor (HNRe-01)",
+    "servico_id": "HNRe-01.1",
+    "servico": "Assessoria de Inteligência",
+    "servico_label": "Assessoria de Inteligência (HNRe-01.1)"
   },
-  "dados_lineares": [
-    {
-      "superior_direto": "Diretor (HNRe-01)",
-      "servico_id": "HNRe-01.1",
-      "servico": "Assessoria de Inteligência",
-      "servico_label": "Assessoria de Inteligência (HNRe-01.1)"
-    },
-    {
-      "superior_direto": "Diretor (HNRe-01)",
-      "servico_id": "HNRe-01.2",
-      "servico": "Assessoria Jurídica",
-      "servico_label": "Assessoria Jurídica (HNRe-01.2)"
-    },
-    {
-      "superior_direto": "Diretor (HNRe-01)",
-      "servico_id": "HNRe-01.3",
-      "servico": "Assessoria de Gestão e Controle",
-      "servico_label": "Assessoria de Gestão e Controle (HNRe-01.3)"
-    },
-    {
-      "superior_direto": "Diretor (HNRe-01)",
-      "servico_id": "HNRe-01.4",
-      "servico": "Assessoria de Comunicação Social",
-      "servico_label": "Assessoria de Comunicação Social (HNRe-01.4)"
-    },
-    {
-      "superior_direto": "Diretor (HNRe-01)",
-      "servico_id": "HNRe-01.5",
-      "servico": "Serviço de Ouvidoria",
-      "servico_label": "Serviço de Ouvidoria (HNRe-01.5)"
-    },
-    {
-      "superior_direto": "Vice-Diretor (HNRe-02)",
-      "servico_id": "HNRe-02.1",
-      "servico": "Centro de Estudos",
-      "servico_label": "Centro de Estudos (HNRe-02.1)"
-    },
-    {
-      "superior_direto": "Vice-Diretor (HNRe-02)",
-      "servico_id": "HNRe-02.2",
-      "servico": "Junta Regular de Saúde",
-      "servico_label": "Junta Regular de Saúde (HNRe-02.2)"
-    },
-    {
-      "superior_direto": "Vice-Diretor (HNRe-02)",
-      "servico_id": "HNRe-02.3",
-      "servico": "SECOM",
-      "servico_label": "SECOM (HNRe-02.3)"
-    },
-    {
-      "superior_direto": "Vice-Diretor (HNRe-02)",
-      "servico_id": "HNRe-02.4",
-      "servico": "Serviço de Auditoria em Saúde",
-      "servico_label": "Serviço de Auditoria em Saúde (HNRe-02.4)"
-    },
-    {
-      "superior_direto": "Vice-Diretor (HNRe-02)",
-      "servico_id": "HNRe-02-5",
-      "servico": "Assessoria de Segurança Orgânica",
-      "servico_label": "Assessoria de Segurança Orgânica (HNRe-02-5)"
-    },
-    {
-      "superior_direto": "Vice-Diretor (HNRe-02)",
-      "servico_id": "HNRe-02.6",
-      "servico": "NAC",
-      "servico_label": "NAC (HNRe-02.6)"
-    },
-    {
-      "superior_direto": "Departamento de Saúde (HNRe-10)",
-      "servico_id": "HNRe-10",
-      "servico": "Departamento de Saúde",
-      "servico_label": "Departamento de Saúde (HNRe-10)"
-    },
-    {
-      "superior_direto": "Departamento de Saúde (HNRe-10)",
-      "servico_id": "HNRe-10.1",
-      "servico": "NAIM",
-      "servico_label": "NAIM (HNRe-10.1)"
-    },
-    {
-      "superior_direto": "Departamento de Saúde (HNRe-10)",
-      "servico_id": "HNRe-10.3",
-      "servico": "SAME",
-      "servico_label": "SAME (HNRe-10.3)"
-    },
-    {
-      "superior_direto": "Departamento de Saúde (HNRe-10)",
-      "servico_id": "HNRe-10.5",
-      "servico": "Ambulatório",
-      "servico_label": "Ambulatório (HNRe-10.5)"
-    },
-    {
-      "superior_direto": "Departamento de Saúde (HNRe-10)",
-      "servico_id": "HNRe-10.7",
-      "servico": "SIAD",
-      "servico_label": "SIAD (HNRe-10.7)"
-    },
-    {
-      "superior_direto": "Departamento de Saúde (HNRe-10)",
-      "servico_id": "HNRe-10.8",
-      "servico": "Serviço de Credenciamento",
-      "servico_label": "Serviço de Credenciamento (HNRe-10.8)"
-    },
-    {
-      "superior_direto": "Divisão de Medicina (HNRe-11)",
-      "servico_id": "HNRe-11",
-      "servico": "Divisão de Medicina",
-      "servico_label": "Divisão de Medicina (HNRe-11)"
-    },
-    {
-      "superior_direto": "Divisão de Medicina (HNRe-11)",
-      "servico_id": "HNRe-11.3",
-      "servico": "Serviço de Diagnóstico por Imagem",
-      "servico_label": "Serviço de Diagnóstico por Imagem (HNRe-11.3)"
-    },
-    {
-      "superior_direto": "Divisão de Medicina (HNRe-11)",
-      "servico_id": "HNRe-11.4",
-      "servico": "SMI",
-      "servico_label": "SMI (HNRe-11.4)"
-    },
-    {
-      "superior_direto": "Divisão de Odontologia (HNRe-12)",
-      "servico_id": "HNRe-12",
-      "servico": "Divisão de Odontologia",
-      "servico_label": "Divisão de Odontologia (HNRe-12)"
-    },
-    {
-      "superior_direto": "Divisão de Enfermagem (HNRe-13)",
-      "servico_id": "HNRe-13",
-      "servico": "Divisão de Enfermagem",
-      "servico_label": "Divisão de Enfermagem (HNRe-13)"
-    },
-    {
-      "superior_direto": "Divisão de Serviços Complementares (HNRe-14)",
-      "servico_id": "HNRe-14",
-      "servico": "Divisão de Serviços Complementares",
-      "servico_label": "Divisão de Serviços Complementares (HNRe-14)"
-    },
-    {
-      "superior_direto": "Divisão de Serviços Complementares (HNRe-14)",
-      "servico_id": "HNRe-14.1",
-      "servico": "Serviço de Fisioterapia e Reabilitação",
-      "servico_label": "Serviço de Fisioterapia e Reabilitação (HNRe-14.1)"
-    },
-    {
-      "superior_direto": "Divisão de Serviços Complementares (HNRe-14)",
-      "servico_id": "HNRe-14.2",
-      "servico": "Serviço de Nutrição",
-      "servico_label": "Serviço de Nutrição (HNRe-14.2)"
-    },
-    {
-      "superior_direto": "Divisão de Serviços Complementares (HNRe-14)",
-      "servico_id": "HNRe-14.3",
-      "servico": "Serviço de Psicologia",
-      "servico_label": "Serviço de Psicologia (HNRe-14.3)"
-    },
-    {
-      "superior_direto": "Divisão de Serviços Complementares (HNRe-14)",
-      "servico_id": "HNRe-14.4",
-      "servico": "Serviço de Fonoaudiologia",
-      "servico_label": "Serviço de Fonoaudiologia (HNRe-14.4)"
-    },
-    {
-      "superior_direto": "Divisão de Serviços Complementares (HNRe-14)",
-      "servico_id": "HNRe-14.5",
-      "servico": "Serviço de Assistência Social",
-      "servico_label": "Serviço de Assistência Social (HNRe-14.5)"
-    },
-    {
-      "superior_direto": "Divisão de Regulação em Saúde (HNRe-15)",
-      "servico_id": "HNRe-15",
-      "servico": "Divisão de Regulação em Saúde",
-      "servico_label": "Divisão de Regulação em Saúde (HNRe-15)"
-    },
-    {
-      "superior_direto": "Divisão de Regulação em Saúde (HNRe-15)",
-      "servico_id": "HNRe-15.1",
-      "servico": "Seção de Orçamentos Saúde",
-      "servico_label": "Seção de Orçamentos Saúde (HNRe-15.1)"
-    },
-    {
-      "superior_direto": "Divisão de Regulação em Saúde (HNRe-15)",
-      "servico_id": "HNRe-15.2",
-      "servico": "Seção de Emissão de Guias",
-      "servico_label": "Seção de Emissão de Guias (HNRe-15.2)"
-    },
-    {
-      "superior_direto": "Divisão de Farmácia e Laboratório (HNRe-16)",
-      "servico_id": "HNRe-16",
-      "servico": "Divisão de Farmácia e Laboratório",
-      "servico_label": "Divisão de Farmácia e Laboratório (HNRe-16)"
-    },
-    {
-      "superior_direto": "Departamento de Administração (HNRe-20)",
-      "servico_id": "HNRe-20",
-      "servico": "Departamento de Administração",
-      "servico_label": "Departamento de Administração (HNRe-20)"
-    },
-    {
-      "superior_direto": "Departamento de Administração (HNRe-20)",
-      "servico_id": "HNRe-20.1",
-      "servico": "Serviço de Tecnologia da Informação",
-      "servico_label": "Serviço de Tecnologia da Informação (HNRe-20.1)"
-    },
-    {
-      "superior_direto": "Departamento de Administração (HNRe-20)",
-      "servico_id": "HNRe-20.2",
-      "servico": "Comissão de Gestão Ambiental",
-      "servico_label": "Comissão de Gestão Ambiental (HNRe-20.2)"
-    },
-    {
-      "superior_direto": "Divisão de Pessoal (HNRe-21)",
-      "servico_id": "HNRe-21",
-      "servico": "Divisão de Pessoal",
-      "servico_label": "Divisão de Pessoal (HNRe-21)"
-    },
-    {
-      "superior_direto": "Divisão de Pessoal (HNRe-21)",
-      "servico_id": "HNRe-21.1",
-      "servico": "Seção de Pessoal Militar",
-      "servico_label": "Seção de Pessoal Militar (HNRe-21.1)"
-    },
-    {
-      "superior_direto": "Divisão de Pessoal (HNRe-21)",
-      "servico_id": "HNRe-21.2",
-      "servico": "Seção de Pessoal Civil",
-      "servico_label": "Seção de Pessoal Civil (HNRe-21.2)"
-    },
-    {
-      "superior_direto": "Divisão de Intendência (HNRe-22)",
-      "servico_id": "HNRe-22",
-      "servico": "Divisão de Intendência",
-      "servico_label": "Divisão de Intendência (HNRe-22)"
-    },
-    {
-      "superior_direto": "Divisão de Intendência (HNRe-22)",
-      "servico_id": "HNRe-22.1",
-      "servico": "Seção de Execução Financeira",
-      "servico_label": "Seção de Execução Financeira (HNRe-22.1)"
-    },
-    {
-      "superior_direto": "Divisão de Intendência (HNRe-22)",
-      "servico_id": "HNRe-22.2",
-      "servico": "Seção de Municiamento",
-      "servico_label": "Seção de Municiamento (HNRe-22.2)"
-    },
-    {
-      "superior_direto": "Divisão de Intendência (HNRe-22)",
-      "servico_id": "HNRe-22.3",
-      "servico": "Seção de Indenização Médico-Hospitalar",
-      "servico_label": "Seção de Indenização Médico-Hospitalar (HNRe-22.3)"
-    },
-    {
-      "superior_direto": "Divisão de Intendência (HNRe-22)",
-      "servico_id": "HNRe-22.4",
-      "servico": "Seção de Material",
-      "servico_label": "Seção de Material (HNRe-22.4)"
-    },
-    {
-      "superior_direto": "Divisão de Intendência (HNRe-22)",
-      "servico_id": "HNRe-22.5",
-      "servico": "Seção de Obtenção, Licitação e Acordos Administrativos",
-      "servico_label": "Seção de Obtenção, Licitação e Acordos Administrativos (HNRe-22.5)"
-    },
-    {
-      "superior_direto": "Divisão de Intendência (HNRe-22)",
-      "servico_id": "HNRe-22.6",
-      "servico": "Seção Operações Créditos e Finanças",
-      "servico_label": "Seção Operações Créditos e Finanças (HNRe-22.6)"
-    },
-    {
-      "superior_direto": "Divisão de Intendência (HNRe-22)",
-      "servico_id": "HNRe-22.7",
-      "servico": "Seção de Conforto",
-      "servico_label": "Seção de Conforto (HNRe-22.7)"
-    },
-    {
-      "superior_direto": "Divisão de Serviços Gerais (HNRe-23)",
-      "servico_id": "HNRe-23",
-      "servico": "Divisão de Serviços Gerais",
-      "servico_label": "Divisão de Serviços Gerais (HNRe-23)"
-    },
-    {
-      "superior_direto": "Divisão de Serviços Gerais (HNRe-23)",
-      "servico_id": "HNRe-23.1",
-      "servico": "Seção de Manutenção",
-      "servico_label": "Seção de Manutenção (HNRe-23.1)"
-    },
-    {
-      "superior_direto": "Divisão de Serviços Gerais (HNRe-23)",
-      "servico_id": "HNRe-23.2",
-      "servico": "Seção de Transportes",
-      "servico_label": "Seção de Transportes (HNRe-23.2)"
-    },
-    {
-      "superior_direto": "Divisão de Serviços Gerais (HNRe-23)",
-      "servico_id": "HNRe-23.3",
-      "servico": "Seção de Conservação e Limpeza",
-      "servico_label": "Seção de Conservação e Limpeza (HNRe-23.3)"
-    }
-  ]
-}
+  {
+    "superior_direto": "Diretor (HNRe-01)",
+    "servico_id": "HNRe-01.2",
+    "servico": "Assessoria Jurídica",
+    "servico_label": "Assessoria Jurídica (HNRe-01.2)"
+  },
+  {
+    "superior_direto": "Diretor (HNRe-01)",
+    "servico_id": "HNRe-01.3",
+    "servico": "Assessoria de Gestão e Controle",
+    "servico_label": "Assessoria de Gestão e Controle (HNRe-01.3)"
+  },
+  {
+    "superior_direto": "Diretor (HNRe-01)",
+    "servico_id": "HNRe-01.4",
+    "servico": "Assessoria de Comunicação Social",
+    "servico_label": "ComSoc (HNRe-01.4)"
+  },
+  {
+    "superior_direto": "Diretor (HNRe-01)",
+    "servico_id": "HNRe-01.5",
+    "servico": "Serviço de Ouvidoria",
+    "servico_label": "Serviço de Ouvidoria (HNRe-01.5)"
+  },
+  {
+    "superior_direto": "Vice-Diretor (HNRe-02)",
+    "servico_id": "HNRe-02.1",
+    "servico": "Centro de Estudos",
+    "servico_label": "Centro de Estudos (HNRe-02.1)"
+  },
+  {
+    "superior_direto": "Vice-Diretor (HNRe-02)",
+    "servico_id": "HNRe-02.2",
+    "servico": "Junta Regular de Saúde",
+    "servico_label": "JRS (HNRe-02.2)"
+  },
+  {
+    "superior_direto": "Vice-Diretor (HNRe-02)",
+    "servico_id": "HNRe-02.3",
+    "servico": "SECOM",
+    "servico_label": "SECOM (HNRe-02.3)"
+  },
+  {
+    "superior_direto": "Vice-Diretor (HNRe-02)",
+    "servico_id": "HNRe-02.4",
+    "servico": "Serviço de Auditoria em Saúde",
+    "servico_label": "Serviço de Auditoria em Saúde (HNRe-02.4)"
+  },
+  {
+    "superior_direto": "Vice-Diretor (HNRe-02)",
+    "servico_id": "HNRe-02-5",
+    "servico": "Assessoria de Segurança Orgânica",
+    "servico_label": "Assessoria de Segurança Orgânica (HNRe-02-5)"
+  },
+  {
+    "superior_direto": "Vice-Diretor (HNRe-02)",
+    "servico_id": "HNRe-02.6",
+    "servico": "NAC",
+    "servico_label": "NAC (HNRe-02.6)"
+  },
+  {
+    "superior_direto": "Departamento de Saúde (HNRe-10)",
+    "servico_id": "HNRe-10",
+    "servico": "Departamento de Saúde",
+    "servico_label": "Departamento de Saúde (HNRe-10)"
+  },
+  {
+    "superior_direto": "Departamento de Saúde (HNRe-10)",
+    "servico_id": "HNRe-10.1",
+    "servico": "NAIM",
+    "servico_label": "NAIM (HNRe-10.1)"
+  },
+  {
+    "superior_direto": "Departamento de Saúde (HNRe-10)",
+    "servico_id": "HNRe-10.3",
+    "servico": "SAME",
+    "servico_label": "SAME (HNRe-10.3)"
+  },
+  {
+    "superior_direto": "Departamento de Saúde (HNRe-10)",
+    "servico_id": "HNRe-10.5",
+    "servico": "Ambulatório",
+    "servico_label": "Ambulatório (HNRe-10.5)"
+  },
+  {
+    "superior_direto": "Departamento de Saúde (HNRe-10)",
+    "servico_id": "HNRe-10.7",
+    "servico": "SIAD",
+    "servico_label": "SIAD (HNRe-10.7)"
+  },
+  {
+    "superior_direto": "Departamento de Saúde (HNRe-10)",
+    "servico_id": "HNRe-10.8",
+    "servico": "Serviço de Credenciamento",
+    "servico_label": "Serviço de Credenciamento (HNRe-10.8)"
+  },
+  {
+    "superior_direto": "Divisão de Medicina (HNRe-11)",
+    "servico_id": "HNRe-11",
+    "servico": "Divisão de Medicina",
+    "servico_label": "Divisão de Medicina (HNRe-11)"
+  },
+  {
+    "superior_direto": "Divisão de Medicina (HNRe-11)",
+    "servico_id": "HNRe-11.3",
+    "servico": "Serviço de Diagnóstico por Imagem",
+    "servico_label": "Serviço de Diagnóstico por Imagem (HNRe-11.3)"
+  },
+  {
+    "superior_direto": "Divisão de Medicina (HNRe-11)",
+    "servico_id": "HNRe-11.4",
+    "servico": "SMI",
+    "servico_label": "SMI (HNRe-11.4)"
+  },
+  {
+    "superior_direto": "Divisão de Odontologia (HNRe-12)",
+    "servico_id": "HNRe-12",
+    "servico": "Divisão de Odontologia",
+    "servico_label": "Divisão de Odontologia (HNRe-12)"
+  },
+  {
+    "superior_direto": "Divisão de Enfermagem (HNRe-13)",
+    "servico_id": "HNRe-13",
+    "servico": "Divisão de Enfermagem",
+    "servico_label": "Divisão de Enfermagem (HNRe-13)"
+  },
+  {
+    "superior_direto": "Divisão de Serviços Complementares (HNRe-14)",
+    "servico_id": "HNRe-14",
+    "servico": "Divisão de Serviços Complementares",
+    "servico_label": "Divisão de Serviços Complementares (HNRe-14)"
+  },
+  {
+    "superior_direto": "Divisão de Serviços Complementares (HNRe-14)",
+    "servico_id": "HNRe-14.1",
+    "servico": "Serviço de Fisioterapia e Reabilitação",
+    "servico_label": "Serviço de Fisioterapia e Reabilitação (HNRe-14.1)"
+  },
+  {
+    "superior_direto": "Divisão de Serviços Complementares (HNRe-14)",
+    "servico_id": "HNRe-14.2",
+    "servico": "Serviço de Nutrição",
+    "servico_label": "Serviço de Nutrição (HNRe-14.2)"
+  },
+  {
+    "superior_direto": "Divisão de Serviços Complementares (HNRe-14)",
+    "servico_id": "HNRe-14.3",
+    "servico": "Serviço de Psicologia",
+    "servico_label": "Serviço de Psicologia (HNRe-14.3)"
+  },
+  {
+    "superior_direto": "Divisão de Serviços Complementares (HNRe-14)",
+    "servico_id": "HNRe-14.4",
+    "servico": "Serviço de Fonoaudiologia",
+    "servico_label": "Serviço de Fonoaudiologia (HNRe-14.4)"
+  },
+  {
+    "superior_direto": "Divisão de Serviços Complementares (HNRe-14)",
+    "servico_id": "HNRe-14.5",
+    "servico": "Serviço de Assistência Social",
+    "servico_label": "Serviço de Assistência Social (HNRe-14.5)"
+  },
+  {
+    "superior_direto": "Divisão de Regulação em Saúde (HNRe-15)",
+    "servico_id": "HNRe-15",
+    "servico": "Divisão de Regulação em Saúde",
+    "servico_label": "Divisão de Regulação em Saúde (HNRe-15)"
+  },
+  {
+    "superior_direto": "Divisão de Regulação em Saúde (HNRe-15)",
+    "servico_id": "HNRe-15.1",
+    "servico": "Seção de Orçamentos Saúde",
+    "servico_label": "Seção de Orçamentos (HNRe-15.1)"
+  },
+  {
+    "superior_direto": "Divisão de Regulação em Saúde (HNRe-15)",
+    "servico_id": "HNRe-15.2",
+    "servico": "Seção de Emissão de Guias",
+    "servico_label": "Seção de Guias (HNRe-15.2)"
+  },
+  {
+    "superior_direto": "Divisão de Farmácia e Laboratório (HNRe-16)",
+    "servico_id": "HNRe-16",
+    "servico": "Divisão de Farmácia e Laboratório",
+    "servico_label": "Divisão de Farmácia e Laboratório (HNRe-16)"
+  },
+  {
+    "superior_direto": "Departamento de Administração (HNRe-20)",
+    "servico_id": "HNRe-20",
+    "servico": "Departamento de Administração",
+    "servico_label": "Departamento de Administração (HNRe-20)"
+  },
+  {
+    "superior_direto": "Departamento de Administração (HNRe-20)",
+    "servico_id": "HNRe-20.1",
+    "servico": "Serviço de Tecnologia da Informação",
+    "servico_label": "Serviço de Tecnologia da Informação (HNRe-20.1)"
+  },
+  {
+    "superior_direto": "Departamento de Administração (HNRe-20)",
+    "servico_id": "HNRe-20.2",
+    "servico": "Comissão de Gestão Ambiental",
+    "servico_label": "Comissão de Gestão Ambiental (HNRe-20.2)"
+  },
+  {
+    "superior_direto": "Divisão de Pessoal (HNRe-21)",
+    "servico_id": "HNRe-21",
+    "servico": "Divisão de Pessoal",
+    "servico_label": "Divisão de Pessoal (HNRe-21)"
+  },
+  {
+    "superior_direto": "Divisão de Pessoal (HNRe-21)",
+    "servico_id": "HNRe-21.1",
+    "servico": "Seção de Pessoal Militar",
+    "servico_label": "Seção de Pessoal Militar (HNRe-21.1)"
+  },
+  {
+    "superior_direto": "Divisão de Pessoal (HNRe-21)",
+    "servico_id": "HNRe-21.2",
+    "servico": "Seção de Pessoal Civil",
+    "servico_label": "Seção de Pessoal Civil (HNRe-21.2)"
+  },
+  {
+    "superior_direto": "Divisão de Intendência (HNRe-22)",
+    "servico_id": "HNRe-22",
+    "servico": "Divisão de Intendência",
+    "servico_label": "Divisão de Intendência (HNRe-22)"
+  },
+  {
+    "superior_direto": "Divisão de Intendência (HNRe-22)",
+    "servico_id": "HNRe-22.1",
+    "servico": "Seção de Execução Financeira",
+    "servico_label": "Seção de Execução Financeira (HNRe-22.1)"
+  },
+  {
+    "superior_direto": "Divisão de Intendência (HNRe-22)",
+    "servico_id": "HNRe-22.2",
+    "servico": "Seção de Municiamento",
+    "servico_label": "Seção de Municiamento (HNRe-22.2)"
+  },
+  {
+    "superior_direto": "Divisão de Intendência (HNRe-22)",
+    "servico_id": "HNRe-22.3",
+    "servico": "Seção de Indenização Médico-Hospitalar",
+    "servico_label": "Seção de IMH (HNRe-22.3)"
+  },
+  {
+    "superior_direto": "Divisão de Intendência (HNRe-22)",
+    "servico_id": "HNRe-22.4",
+    "servico": "Seção de Material",
+    "servico_label": "Seção de Material (HNRe-22.4)"
+  },
+  {
+    "superior_direto": "Divisão de Intendência (HNRe-22)",
+    "servico_id": "HNRe-22.5",
+    "servico": "Seção de Obtenção, Licitação e Acordos Administrativos",
+    "servico_label": "Seção de Obtenção (HNRe-22.5)"
+  },
+  {
+    "superior_direto": "Divisão de Intendência (HNRe-22)",
+    "servico_id": "HNRe-22.6",
+    "servico": "Seção Operações Créditos e Finanças",
+    "servico_label": "Seção Operações Créditos e Finanças (HNRe-22.6)"
+  },
+  {
+    "superior_direto": "Divisão de Intendência (HNRe-22)",
+    "servico_id": "HNRe-22.7",
+    "servico": "Seção de Conforto",
+    "servico_label": "Seção de Conforto (HNRe-22.7)"
+  },
+  {
+    "superior_direto": "Divisão de Serviços Gerais (HNRe-23)",
+    "servico_id": "HNRe-23",
+    "servico": "Divisão de Serviços Gerais",
+    "servico_label": "Divisão de Serviços Gerais (HNRe-23)"
+  },
+  {
+    "superior_direto": "Divisão de Serviços Gerais (HNRe-23)",
+    "servico_id": "HNRe-23.1",
+    "servico": "Seção de Manutenção",
+    "servico_label": "Seção de Manutenção (HNRe-23.1)"
+  },
+  {
+    "superior_direto": "Divisão de Serviços Gerais (HNRe-23)",
+    "servico_id": "HNRe-23.2",
+    "servico": "Seção de Transportes",
+    "servico_label": "Seção de Transportes (HNRe-23.2)"
+  },
+  {
+    "superior_direto": "Divisão de Serviços Gerais (HNRe-23)",
+    "servico_id": "HNRe-23.3",
+    "servico": "Seção de Conservação e Limpeza",
+    "servico_label": "Seção de Conservação e Limpeza (HNRe-23.3)"
+  }
+]
