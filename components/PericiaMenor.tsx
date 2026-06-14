@@ -32,7 +32,6 @@ const removeAcentos = (str: string) => {
 };
 
 export const PericiaMenor: React.FC = () => {
-  // === ESTADOS ===
   const [nip, setNip] = useState('');
   const [militarStatus, setMilitarStatus] = useState<"" | "loading" | "found" | "not_found">("");
   const [inspecionado, setInspecionado] = useState("");
@@ -88,7 +87,6 @@ export const PericiaMenor: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successPdfUrl, setSuccessPdfUrl] = useState<string | null>(null);
 
-  // === CARREGAMENTO INICIAL ===
   useEffect(() => {
     const fetchLookups = async () => {
       try {
@@ -137,7 +135,6 @@ export const PericiaMenor: React.FC = () => {
     fetchServicos();
   }, []);
 
-  // === LÓGICAS: DADOS DO MILITAR ===
   const handleNipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 8) value = value.slice(0, 8);
@@ -177,22 +174,44 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
-  const abrirModalPesquisaNome = async (initialTerm: string = "") => {
-    setShowPesquisarNomeModal(true);
+  // Documentação: Lógica 100% atualizada para auto-selecionar caso apenas 1 registo seja encontrado
+  const abrirModalPesquisaNome = async (initialTerm: string = "", autoSelect: boolean = false) => {
+    let currentList = militaresInfoList;
     setPesquisarNomeTerm(initialTerm);
-    if (militaresInfoList.length === 0) {
+
+    if (currentList.length === 0) {
+      if (!autoSelect) setShowPesquisarNomeModal(true);
       setIsCarregandoMilitares(true);
       try {
         const resp = await fetch(`${process.env.VITE_APPSCRIPT_URL || 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec'}?action=getMilitaresList`);
         const data = await resp.json();
         if (data.success && data.data) {
           setMilitaresInfoList(data.data);
+          currentList = data.data;
         }
       } catch (err) {
         console.error("Erro ao carregar lista", err);
       } finally {
         setIsCarregandoMilitares(false);
       }
+    } else {
+      if (!autoSelect) setShowPesquisarNomeModal(true);
+    }
+
+    if (autoSelect && initialTerm) {
+      const terms = removeAcentos(initialTerm.toLowerCase()).split(/\s+/).filter(Boolean);
+      const filtered = currentList.filter(m => {
+        const name = removeAcentos(m.nome.toLowerCase());
+        return terms.every(t => name.includes(t));
+      });
+
+      if (filtered.length === 1) {
+        selecionarNomeNip(filtered[0].nip);
+      } else {
+        setShowPesquisarNomeModal(true);
+      }
+    } else if (!autoSelect) {
+      setShowPesquisarNomeModal(true);
     }
   };
 
@@ -369,8 +388,9 @@ export const PericiaMenor: React.FC = () => {
            }
         }
 
+        // Documentação: Chama a função com o "autoSelect = true"
         if (result.data.nomeMilitar) {
-            abrirModalPesquisaNome(result.data.nomeMilitar);
+            await abrirModalPesquisaNome(result.data.nomeMilitar, true);
         }
 
       } else {
@@ -384,6 +404,7 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
+  // Documentação: Erro do botão de Limpar Resolvido (variáveis atualizadas)
   const handleReset = () => {
     setSuccessPdfUrl(null);
     setNip('');
@@ -399,16 +420,13 @@ export const PericiaMenor: React.FC = () => {
     setSelectedDispensas([]);
     setVdf(null);
     setSelectedPerito('');
-    setNomeMilitar('');
-    setPosto('');
+    setNome(''); 
+    setPg(''); 
     setQuadro('');
-    setEspecialidade('');
+    setEspPraca(''); 
     setOm('');
     setSituacao('');
-    setNome('');
-    setPg('');
     setCirculo('');
-    setEspPraca('');
     setOmLeitura('');
     setCroppedImageUrl('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -564,6 +582,7 @@ export const PericiaMenor: React.FC = () => {
 
           <div className="space-y-4 font-body">
             
+            {/* Campo Serviço */}
             <div className="relative z-[100] mb-4">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Serviço *</label>
               <input
@@ -899,7 +918,7 @@ export const PericiaMenor: React.FC = () => {
 
       </div>
 
-      {/* MODAL DE PESQUISA POR NOME (COMPORTAMENTO INTELIGENTE) */}
+      {/* MODAL DE PESQUISA POR NOME */}
       {showPesquisarNomeModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
@@ -915,16 +934,15 @@ export const PericiaMenor: React.FC = () => {
                   <div className="p-8 text-center text-gray-500 flex flex-col items-center"><div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mb-2"></div><p className="text-sm">Carregando base de dados...</p></div>
                 ) : (
                   <div className="flex flex-col">
-                    {/* Documentação: Filtro Inteligente (Procura por palavras separadas ignorando a ordem e os acentos) */}
                     {militaresInfoList.filter((m) => {
-                      if (!pesquisarNomeTerm.trim()) return false;
+                      if (!pesquisarNomeTerm) return false;
                       const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean);
                       const name = removeAcentos(m.nome.toLowerCase());
                       return terms.every(t => name.includes(t));
                     }).slice(0, 50).map((m, idx) => (
                         <div key={idx} onClick={() => selecionarNomeNip(m.nip)} className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"><div className="font-bold text-[#050F41] text-sm">{m.nome}</div><div className="text-xs text-gray-500 font-mono mt-0.5">{m.nip}</div></div>
                       ))}
-                    {pesquisarNomeTerm.trim() &&
+                    {pesquisarNomeTerm &&
                       militaresInfoList.filter((m) => {
                         const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean);
                         const name = removeAcentos(m.nome.toLowerCase());
