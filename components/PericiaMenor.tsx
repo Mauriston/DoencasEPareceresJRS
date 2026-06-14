@@ -73,19 +73,14 @@ export const PericiaMenor: React.FC = () => {
       }
     };
 
-    // Documentação: Fetch robusto para garantir a localização do ficheiro cid.json
     const fetchCid = async () => {
       try {
-        // Usa a base de URL do Vite para que não quebre no Github Pages
         const baseUrl = import.meta.env.BASE_URL || '/';
         const res = await fetch(`${baseUrl}cid.json`); 
         
         if (res.ok) {
           const data = await res.json();
           setCidOptions(data);
-          console.log(`Carregados ${data.length} CIDs com sucesso!`);
-        } else {
-          console.error(`Erro ao carregar cid.json: HTTP ${res.status}`);
         }
       } catch (err) {
         console.error('Erro grave de rede ao tentar carregar cid.json', err);
@@ -183,7 +178,6 @@ export const PericiaMenor: React.FC = () => {
     setSelectedCid(null);
     if (text.length > 1) {
       const lower = text.toLowerCase();
-      // Documentação: O filtro considera o SUBCAT (Ex: A009) e a DESCRICAO (Ex: Cólera)
       const filtered = cidOptions.filter(c => 
         (c.SUBCAT && c.SUBCAT.toLowerCase().includes(lower)) || 
         (c.DESCRICAO && c.DESCRICAO.toLowerCase().includes(lower))
@@ -365,7 +359,8 @@ export const PericiaMenor: React.FC = () => {
           </h2>
 
           <div className="space-y-4 font-body">
-            <div className="grid grid-cols-2 gap-4">
+            {/* Documentação: Alterado para grid-cols-1 em mobile (sm:grid-cols-2) para evitar sobreposição */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Data Atestado *</label>
                 <input
@@ -406,14 +401,12 @@ export const PericiaMenor: React.FC = () => {
                       onClick={() => { setSelectedCid(cid); setShowCidDropdown(false); setCidQuery(''); }}
                       className="px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer"
                     >
-                      {/* Documentação: Retorna a descrição abreviada no titulo principal e a longa como detalhe */}
                       <span className="font-bold text-[#050F41] block">{cid.DESCRABREV}</span>
                       <span className="text-xs text-gray-500">{cid.DESCRICAO}</span>
                     </li>
                   ))}
                 </ul>
               )}
-              {/* Fallback caso digite e não encontre */}
               {showCidDropdown && filteredCids.length === 0 && cidQuery.length > 1 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-4 text-center text-sm text-gray-500">
                   Nenhum CID encontrado.
