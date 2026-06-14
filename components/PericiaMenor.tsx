@@ -119,9 +119,6 @@ export const PericiaMenor: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           setServicoOptions(data);
-          console.log(`Carregados ${data.length} Serviços com sucesso!`);
-        } else {
-          console.error(`Erro ao carregar servicosHNRe.json. HTTP Status: ${res.status}`);
         }
       } catch (err) {
         console.error('Erro de rede ao carregar servicosHNRe.json', err);
@@ -209,7 +206,6 @@ export const PericiaMenor: React.FC = () => {
     else setCirculo("");
   }, [pg, militarStatus]);
 
-  // === LÓGICA DO SERVIÇO (MELHORADA) ===
   const handleServicoSearch = (text: string) => {
     setServicoQuery(text);
     setSelectedServico(null);
@@ -255,7 +251,6 @@ export const PericiaMenor: React.FC = () => {
     if (numbersOnly !== '') {
       let num = parseInt(numbersOnly, 10);
       if (maxLimit && num > maxLimit) num = maxLimit; 
-      if (num < 1) num = 1; // Protege do 0
       setter(num.toString());
     } else {
       setter('');
@@ -404,7 +399,7 @@ export const PericiaMenor: React.FC = () => {
 
           <div className="space-y-4 font-body">
             
-            {/* Campo Serviço (Dropdown com Search e Z-Index elevado) */}
+            {/* Campo Serviço */}
             <div className="relative z-[100] mb-4">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Serviço *</label>
               <input
@@ -415,14 +410,12 @@ export const PericiaMenor: React.FC = () => {
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41] focus:ring-1 focus:ring-[#050F41] transition-all"
               />
               
-              {/* Fallback de Carregamento para Feedback Visual */}
               {showServicoDropdown && servicoOptions.length === 0 && servicoQuery.length > 1 && (
                 <div className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-4 text-center text-sm text-gray-500">
                   A carregar a base de serviços ou ocorreu um erro na rede...
                 </div>
               )}
 
-              {/* Resultados do Serviço */}
               {showServicoDropdown && filteredServicos.length > 0 && (
                 <ul className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
                   {filteredServicos.map((s, idx) => (
@@ -595,11 +588,6 @@ export const PericiaMenor: React.FC = () => {
                   ))}
                 </ul>
               )}
-              {showCidDropdown && filteredCids.length === 0 && cidQuery.length > 1 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-4 text-center text-sm text-gray-500">
-                  Nenhum CID encontrado.
-                </div>
-              )}
             </div>
           </div>
         </section>
@@ -751,7 +739,7 @@ export const PericiaMenor: React.FC = () => {
 
       </div>
 
-      {/* MODAL DE PESQUISA POR NOME (COMPORTAMENTO SEM ACENTOS) */}
+      {/* MODAL DE PESQUISA POR NOME */}
       {showPesquisarNomeModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
