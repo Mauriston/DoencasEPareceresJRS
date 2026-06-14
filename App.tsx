@@ -21,6 +21,7 @@ import { Estudo } from './components/Estudo';
 import { HNReGuide } from './components/HNReGuide';
 import { RegimentoHNRe } from './components/RegimentoHNRe';
 import { OrdemInternaJRS } from './components/OrdemInternaJRS';
+import { PericiaMenor } from './components/PericiaMenor';
 import { RoteiroJRS } from './components/RoteiroJRS'; // <-- IMPORTAÇÃO DO ROTEIRO AQUI
 import { NavItem } from './types';
 
@@ -44,6 +45,7 @@ const App: React.FC = () => {
       case 'infograficos': return <Infograficos />;
       case 'resumos': return <Resumos />;
       case 'pareceres': return <Pareceres />;
+      case 'pericia-menor': return <PericiaMenor />;
       case 'templates': return <TemplatesGuide />;
       case 'artigos': return <Artigos onNavigate={setCurrentView} />;
       case 'artigo-pericia': return <ArtigoPericiaMedica onBack={() => setCurrentView('estudo')} />;
@@ -121,21 +123,24 @@ const App: React.FC = () => {
           </div>
 
           {/* 3. Documentos */}
-          <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
-            <button id="nav-btn-gerar-doc" onClick={() => { setIsGerarDocFabOpen(!isGerarDocFabOpen); setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsFabOpen(false); setIsExtrasFabOpen(false); }} className="group flex flex-col items-center justify-center w-full h-full focus:outline-none">
-              <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['pareceres', 'templates'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
-                <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['pareceres', 'templates'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>description</span>
-              </div>
-              <span className={`text-[11px] font-medium font-body transition-colors ${['pareceres', 'templates'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Documentos</span>
-            </button>
-            {isGerarDocFabOpen && (
-              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 mb-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(5,15,65,0.08)] border border-gray-100 p-1.5 flex flex-col gap-0.5 min-w-[170px] animate-fade-in z-50">
-                <button onClick={() => { setCurrentView('pareceres'); setIsGerarDocFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'pareceres' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">assignment</span>Pareceres</button>
-                <button onClick={() => { setIsGerarDocFabOpen(false); }} className="flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-400 cursor-not-allowed bg-gray-50/50" disabled><span className="material-symbols-outlined mr-3 text-gray-300 text-[18px]">personal_injury</span>Perícia Menor</button>
-                <button onClick={() => { setCurrentView('templates'); setIsGerarDocFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'templates' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">edit_document</span>Templates</button>
-              </div>
-            )}
-          </div>
+<div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
+  <button id="nav-btn-gerar-doc" onClick={() => { setIsGerarDocFabOpen(!isGerarDocFabOpen); setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsFabOpen(false); setIsExtrasFabOpen(false); }} className="group flex flex-col items-center justify-center w-full h-full focus:outline-none">
+    <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['pareceres', 'templates', 'pericia-menor'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
+      <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['pareceres', 'templates', 'pericia-menor'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>description</span>
+    </div>
+    <span className={`text-[11px] font-medium font-body transition-colors ${['pareceres', 'templates', 'pericia-menor'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Documentos</span>
+  </button>
+  {isGerarDocFabOpen && (
+    <div className="absolute bottom-20 left-1/2 -translate-x-1/2 mb-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(5,15,65,0.08)] border border-gray-100 p-1.5 flex flex-col gap-0.5 min-w-[170px] animate-fade-in z-50">
+      <button onClick={() => { setCurrentView('pareceres'); setIsGerarDocFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'pareceres' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">assignment</span>Pareceres</button>
+      
+      {/* Documentação: Botão de Perícia Menor Ativado e Redirecionado */}
+      <button onClick={() => { setCurrentView('pericia-menor'); setIsGerarDocFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'pericia-menor' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">personal_injury</span>Perícia Menor</button>
+      
+      <button onClick={() => { setCurrentView('templates'); setIsGerarDocFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'templates' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">edit_document</span>Templates</button>
+    </div>
+  )}
+</div>
 
           {/* 4. Normas */}
           <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
