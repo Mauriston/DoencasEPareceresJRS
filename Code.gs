@@ -8,7 +8,6 @@ function doGet(e) {
   try {
     if (action === "getLookups") {
       const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-      // Get ListasRef
       const listasRefSheet = ss.getSheetByName("ListasRef");
       const listasRefData = listasRefSheet.getDataRange().getValues();
       const headers = listasRefData[0];
@@ -20,13 +19,11 @@ function doGet(e) {
       const especialidades = getColumnValues(listasRefData, headers.indexOf("ESPECIALIDADE"));
       const dispensas = getColumnValues(listasRefData, headers.indexOf("DISPENSAS"));
 
-      // Get OMs
       const omSheet = ss.getSheetByName("OM");
       const omData = omSheet.getDataRange().getValues();
       const omHeaders = omData[0];
       const oms = getColumnValues(omData, omHeaders.indexOf("OM"));
 
-      // Get Peritos
       const peritosSheet = ss.getSheetByName("Perito");
       const peritosData = peritosSheet.getDataRange().getValues();
       let peritos = [];
@@ -330,20 +327,21 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
       const body = newDoc.getBody();
 
       body.replaceText("{{INSPECIONADO}}", payload.inspecionado);
-      body.replaceText("{{SERVICO}}", payload.servico); // Substitui a nova placeholder
+      body.replaceText("{{SERVICO}}", payload.servico);
       body.replaceText("{{DISPENSAS}}", payload.dispensas);
       body.replaceText("{{TEMPO_EXTENSO}}", payload.tempoExtenso);
       body.replaceText("{{TEMPO_HOMOLOG}}", payload.tempoHomolog.toString());
       body.replaceText("{{DATA_ATESTADO}}", dataAtestadoBr);
       body.replaceText("{{DATA_HOJE}}", dataHojeBr);
       
-      // Lógica Condicional do VDF com formatação nativa
+      // Lógica Condicional do VDF - FORMATAÇÃO NATIVA NO DOCS
       let vdfText = payload.vdf ?
         "Encaminhar para VDF:    ( X ) Sim \t (   ) Não" :
         "Encaminhar para VDF:    (   ) Sim \t ( X ) Não";
         
       body.replaceText("{{VDF}}", vdfText);
 
+      // Aplica Negrito e Fundo Amarelo se VDF for Sim
       if (payload.vdf) {
         let searchResult = body.findText("Encaminhar para VDF.*Sim");
         if (searchResult) {
@@ -367,12 +365,12 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
       const periciaSheet = ss.getSheetByName("Pericia_Menor");
       if (!periciaSheet) throw new Error("Aba 'Pericia_Menor' não encontrada no Sheets.");
 
-      // Documentação: Array de 13 colunas com a Coluna D (SERVICO) adicionada.
+      // Salvamento na Aba (13 Colunas)
       periciaSheet.appendRow([
         shortDate,              // A: DATA
         payload.inspecionado,   // B: INSPECIONADO
         payload.om,             // C: OM
-        payload.servico,        // D: SERVICO (NOVO)
+        payload.servico,        // D: SERVICO
         payload.cid,            // E: CID
         payload.dispensas,      // F: DISPENSAS
         payload.dataAtestado,   // G: DATA_ATESTADO
@@ -480,7 +478,7 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
 <tbody>
 <tr>
 <td style="padding: 0px; text-align: center; background-color: #050f41; width: 100%;"><img width="100%" style="width: 100%; 
-max-width: 960px; height: auto; display: block; border: 0px;" alt="Cabe&ccedil;alho Hospital Naval de Recife - Junta Regular de Sa&uacute;de" dfsrc="https://i.imgur.com/Btu1CAG.png" src="https://i.imgur.com/Btu1CAG.png" /></td>
+max-width: 960px; height: auto; display: block; border: 0px;" alt="Cabeçalho Hospital Naval de Recife - Junta Regular de Saúde" dfsrc="https://i.imgur.com/Btu1CAG.png" src="https://i.imgur.com/Btu1CAG.png" /></td>
 </tr>
 <tr>
 <td style="background-color: #ffffff;
@@ -488,11 +486,11 @@ padding: 40px 50px 30px; text-align: left; font-family: 'carlito' , 'calibri' , 
 width: 100%;">
 <p style="margin: 0px 0px 20px; font-size: 18px; color: #333333;"><strong>{{PERITO}},</strong></p>
 <p style="margin: 0px 0px 20px; font-size: 15px; text-align: justify;
-color: #333333;"><span style="font-size: 12pt;">Seguem em anexo os pedido de parecer gerado em PDF e edit&aacute;vel em .odt.</span></p>
+color: #333333;"><span style="font-size: 12pt;">Seguem em anexo os pedido de parecer gerado em PDF e editável em .odt.</span></p>
 <div style="background-color: #f4f6f9;
 border-left: 4px solid #050f41; padding: 20px; margin-bottom: 30px; border-radius: 4px;">
 <p style="margin: 0px 0px 10px; font-size: 18px; color: #050f41; font-weight: bold;
-text-transform: uppercase;">SOLICITA&Ccedil;&Atilde;O DE PARECER ESPECIALIZADO PERICIAL</p>
+text-transform: uppercase;">SOLICITAÇÃO DE PARECER ESPECIALIZADO PERICIAL</p>
 <ul style="margin: 0px; padding-left: 20px; list-style-type: disc;
 line-height: 1.6;">
 <li style="margin-bottom: 6px;"><span style="font-size: 12pt;">Inspecionado: <span style="color: #050f41; font-weight: bold;">{{INSPECIONADO}}</span></span></li>
@@ -506,7 +504,7 @@ color: #050f41;">{{ESPECIALIDADE}}</span></span></li>
 <div style="background-color: #fff5f5; border: 1px solid #f8d7da;
 padding: 20px; margin-bottom: 35px; border-radius: 4px;">
 <p style="margin: 0px; font-size: 15px; color: #333333; line-height: 1.6;
-text-align: justify;"><span style="color: #ff0000;"><strong><span style="color: #993300;">LEMBRETE:</span> <span style="color: #993300;">Uma vez iniciada a entrevista, a JRS tem <span style="color: #ff0000;">20 dias corridos para concluir a IS.</span> Caso o parecer solicitado n&atilde;o seja prontificado, deveremos concluir a IS utilizando os dados dispon&iacute;veis at&eacute; o momento.</span></strong></span></p>
+text-align: justify;"><span style="color: #ff0000;"><strong><span style="color: #993300;">LEMBRETE:</span> <span style="color: #993300;">Uma vez iniciada a entrevista, a JRS tem <span style="color: #ff0000;">20 dias corridos para concluir a IS.</span> Caso o parecer solicitado não seja prontificado, deveremos concluir a IS utilizando os dados disponíveis até o momento.</span></strong></span></p>
 </div>
 <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-top: 1px solid #eeeeee;
 padding-top: 20px;">
@@ -517,7 +515,7 @@ padding-top: 20px;">
 color: #333333;">Atenciosamente,</p>
 <div style="font-size: 18px; font-weight: bold; color: #050f41; margin: 0px 0px 2px;">Mauriston Renan Martins Silva</div>
 <div style="font-size: 14px; line-height: 1.3;
-color: #666666; font-weight: normal;"><strong>Capit&atilde;o-Tenente (Md)</strong><br />Presidente</div>
+color: #666666; font-weight: normal;"><strong>Capitão-Tenente (Md)</strong><br />Presidente</div>
 <div style="height: 35px;"></div>
 </td>
 </tr>
@@ -536,8 +534,8 @@ height: 102px; display: inline-block; border: 0px;" alt="Logo Marinha do Brasil"
 <td width="1" style="border-left: 1px solid #cccccc; font-size: 1px;
 line-height: 1px; width: 6.63044%;">&nbsp;</td>
 <td width="65%" align="left" valign="middle" style="padding-left: 20px; font-family: 'carlito' , 'calibri' , 'arial' , sans-serif; font-size: 14px;
-line-height: 1.6; color: #555555; width: 64%;"><strong style="color: #333333;">Hospital Naval de Recife - Junta Regular de Sa&uacute;de</strong><br />(81) 3036 - 9073 <span style="margin: 0px 8px;">/</span> <a href="mailto:hnre.jrs@marinha.mil.br" style="color: #050f41;
-text-decoration: none;" rel="noopener nofollow noopener noreferrer nofollow noopener noreferrer nofollow noopener noreferrer" target="_blank">hnre.jrs@marinha.mil.br</a><br />📍 Avenida Cruz Cabug&aacute; 1200, Santo Amaro, Recife/PE</td>
+line-height: 1.6; color: #555555; width: 64%;"><strong style="color: #333333;">Hospital Naval de Recife - Junta Regular de Saúde</strong><br />(81) 3036 - 9073 <span style="margin: 0px 8px;">/</span> <a href="mailto:hnre.jrs@marinha.mil.br" style="color: #050f41;
+text-decoration: none;" rel="noopener nofollow noopener noreferrer nofollow noopener noreferrer nofollow noopener noreferrer" target="_blank">hnre.jrs@marinha.mil.br</a><br />📍 Avenida Cruz Cabugá 1200, Santo Amaro, Recife/PE</td>
 </tr>
 </tbody>
 </table>
