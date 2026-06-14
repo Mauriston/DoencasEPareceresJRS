@@ -18,6 +18,11 @@ const PG_OPTIONS = ["CMG", "CF", "CC", "CT", "1T", "2T", "GM", "SO", "1SG", "2SG
 const QUADROS = ["AA", "AFN", "CA", "CD", "CN", "EN", "FN", "IM", "Md", "QC-CA", "QC-FN", "QC-IM", "S", "T"];
 const ESP_PRACAS = ["AD", "AH", "AM", "AR", "MC", "MT", "AT", "AV", "BA", "CA", "CP", "CI", "CN", "CL", "CT", "CO", "DA", "DM", "DT", "ED", "EP", "EL", "ET", "TE", "EF", "EG", "ES", "AE", "EN", "FR", "GC", "GR", "HN", "HD", "IF", "MR", "MA", "NA", "MI", "MG", "ML", "ME", "MO", "MS", "MU", "ND", "OR", "OS", "PL", "PC", "PD", "PT", "QI", "RM", "RB", "SC", "SI", "TC"];
 
+// Documentação: Função utilitária para remover acentuação de strings
+const removeAcentos = (str: string) => {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+};
+
 export const PericiaMenor: React.FC = () => {
   // === ESTADOS: DADOS DO MILITAR ===
   const [nip, setNip] = useState('');
@@ -179,11 +184,17 @@ export const PericiaMenor: React.FC = () => {
     setCidQuery(text);
     setSelectedCid(null);
     if (text.length > 1) {
-      const lower = text.toLowerCase();
-      const filtered = cidOptions.filter(c => 
-        (c.SUBCAT && c.SUBCAT.toLowerCase().includes(lower)) || 
-        (c.DESCRICAO && c.DESCRICAO.toLowerCase().includes(lower))
-      ).slice(0, 15);
+      // Documentação: Remove os acentos da query digitada pelo utilizador
+      const querySemAcentos = removeAcentos(text.toLowerCase());
+      
+      const filtered = cidOptions.filter(c => {
+        // Documentação: Remove os acentos das opções vindas do json
+        const subcat = c.SUBCAT ? removeAcentos(c.SUBCAT.toLowerCase()) : '';
+        const desc = c.DESCRICAO ? removeAcentos(c.DESCRICAO.toLowerCase()) : '';
+        
+        return subcat.includes(querySemAcentos) || desc.includes(querySemAcentos);
+      }).slice(0, 15);
+      
       setFilteredCids(filtered);
       setShowCidDropdown(true);
     } else {
@@ -255,7 +266,17 @@ export const PericiaMenor: React.FC = () => {
 
   // === LÓGICA DE SUBMISSÃO (Integração com AppScript) ===
   const handleSubmit = async () => {
-    if (!nip || !dataAtestado || !tempoAtestado || !selectedCid || !tempoHomologacao || selectedDispensas.length === 0 || vdf === null || !selectedPerito) {
+    // 1. Validação de Campos Obrigatórios
+    if (
+      !nip || 
+      !dataAtestado || 
+      !tempoAtestado || 
+      !selectedCid || 
+      !tempoHomologacao || 
+      selectedDispensas.length === 0 || 
+      vdf === null || 
+      !selectedPerito
+    ) {
       alert("Por favor, preencha todos os campos obrigatórios (*).");
       return;
     }
@@ -267,6 +288,7 @@ export const PericiaMenor: React.FC = () => {
 
     setIsSubmitting(true);
 
+    // 2. Concatenação do Inspecionado
     let militarIdentifier = "";
     if (militarStatus === "found") {
       militarIdentifier = inspecionado;
@@ -274,9 +296,11 @@ export const PericiaMenor: React.FC = () => {
       militarIdentifier = `${pg} ${quadro ? quadro + ' ' : ''}${espPraca ? espPraca + ' ' : ''}${nip} ${nome}`.trim().replace(/\s+/g, ' ');
     }
 
+    // 3. Extrator do tempo em dias
     const tempoHomologNumerico = parseInt(tempoHomologacao.replace(/\D/g, ''), 10);
     const tempoExtenso = EXTENSOS[tempoHomologNumerico] || tempoHomologNumerico.toString();
 
+    // 4. Estruturação do Payload
     const payload = {
       action: 'gerar_pericia_menor',
       inspecionado: militarIdentifier,
@@ -296,6 +320,7 @@ export const PericiaMenor: React.FC = () => {
       situacao: situacao
     };
 
+    // 5. Envio ao AppScript
     try {
       const response = await fetch(`${process.env.VITE_APPSCRIPT_URL || 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec'}`, {
         method: 'POST',
@@ -317,10 +342,9 @@ export const PericiaMenor: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 relative">
+    <div className="flex flex-col h-full bg-gray-50 pb-32 relative">
       <Header title="Perícia Menor" />
       
-      {/* Documentação: Container scrollable com padding-bottom de 32 para garantir que o botão não é escondido */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 w-full max-w-2xl mx-auto space-y-6">
         
         {/* SECÇÃO 1: DADOS DO MILITAR */}
@@ -421,6 +445,16 @@ export const PericiaMenor: React.FC = () => {
                   <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Nome Completo *</label>
                   <input type="text" value={nome} onChange={(e) => setNome(e.target.value.toUpperCase())} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-navy focus:border-navy p-3 uppercase" />
                 </div>
+
+                {["CC", "CT", "1T", "MN", "CB", "3SG"].includes(pg) && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Situação *</label>
+                    <div className="flex space-x-2">
+                      <button type="button" onClick={() => setSituacao("Carreira")} className={`flex-1 py-2 px-3 rounded-xl border text-sm font-bold transition-colors ${situacao === "Carreira" ? "bg-navy/10 text-navy border-navy" : "bg-white text-gray-600 border-gray-300"}`}>Carreira</button>
+                      <button type="button" onClick={() => setSituacao("Temporário")} className={`flex-1 py-2 px-3 rounded-xl border text-sm font-bold transition-colors ${situacao === "Temporário" ? "bg-navy/10 text-navy border-navy" : "bg-white text-gray-600 border-gray-300"}`}>Temporário</button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -434,7 +468,6 @@ export const PericiaMenor: React.FC = () => {
           </h2>
 
           <div className="space-y-4 font-body">
-            {/* Documentação: Alterado para flex flex-col md:flex-row para não sobrepor em telas muito finas */}
             <div className="flex flex-col md:flex-row gap-4">
               <div className="w-full">
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Data Atestado *</label>
@@ -469,7 +502,7 @@ export const PericiaMenor: React.FC = () => {
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]"
               />
               {showCidDropdown && filteredCids.length > 0 && (
-                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
+                <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
                   {filteredCids.map((cid, idx) => (
                     <li 
                       key={idx} 
@@ -481,6 +514,11 @@ export const PericiaMenor: React.FC = () => {
                     </li>
                   ))}
                 </ul>
+              )}
+              {showCidDropdown && filteredCids.length === 0 && cidQuery.length > 1 && (
+                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-4 text-center text-sm text-gray-500">
+                  Nenhum CID encontrado.
+                </div>
               )}
             </div>
           </div>
@@ -509,6 +547,7 @@ export const PericiaMenor: React.FC = () => {
 
             <div className="relative">
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Dispensas *</label>
+              
               <button 
                 type="button"
                 onClick={() => setShowDispensasDropdown(!showDispensasDropdown)}
@@ -633,7 +672,7 @@ export const PericiaMenor: React.FC = () => {
 
       </div>
 
-      {/* MODAL DE PESQUISA POR NOME */}
+      {/* MODAL DE PESQUISA POR NOME (COMPORTAMENTO SEM ACENTOS) */}
       {showPesquisarNomeModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
@@ -649,9 +688,24 @@ export const PericiaMenor: React.FC = () => {
                   <div className="p-8 text-center text-gray-500 flex flex-col items-center"><div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mb-2"></div><p className="text-sm">Carregando base de dados...</p></div>
                 ) : (
                   <div className="flex flex-col">
-                    {militaresInfoList.filter((m) => pesquisarNomeTerm && m.nome.toLowerCase().includes(pesquisarNomeTerm.toLowerCase())).slice(0, 50).map((m, idx) => (
+                    {militaresInfoList.filter((m) => {
+                      if (!pesquisarNomeTerm) return false;
+                      const term = removeAcentos(pesquisarNomeTerm.toLowerCase());
+                      const name = removeAcentos(m.nome.toLowerCase());
+                      return name.includes(term);
+                    }).slice(0, 50).map((m, idx) => (
                         <div key={idx} onClick={() => selecionarNomeNip(m.nip)} className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"><div className="font-bold text-[#050F41] text-sm">{m.nome}</div><div className="text-xs text-gray-500 font-mono mt-0.5">{m.nip}</div></div>
                       ))}
+                    {pesquisarNomeTerm &&
+                      militaresInfoList.filter((m) => {
+                        const term = removeAcentos(pesquisarNomeTerm.toLowerCase());
+                        const name = removeAcentos(m.nome.toLowerCase());
+                        return name.includes(term);
+                      }).length === 0 && (
+                        <div className="p-8 text-center text-gray-500 text-sm">
+                          Nenhum militar encontrado.
+                        </div>
+                      )}
                   </div>
                 )}
               </div>
