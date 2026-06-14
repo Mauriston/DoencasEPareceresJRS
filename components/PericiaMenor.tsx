@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './Header';
 import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown, CheckCircle, Camera, Crop as CropIcon, Sparkles, X } from 'lucide-react';
-// Documentação: Importação da biblioteca de recorte e do seu estilo CSS
 import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
@@ -118,7 +117,8 @@ export const PericiaMenor: React.FC = () => {
         const res = await fetch(`${baseUrl}cid.json`); 
         if (res.ok) {
           const text = await res.text();
-          const cleanText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+          const cleanText = text.replace(/```json/gi, '').replace(/
+```/g, '').trim();
           const data = JSON.parse(cleanText);
           setCidOptions(data);
         }
@@ -339,7 +339,7 @@ export const PericiaMenor: React.FC = () => {
       completedCrop.height
     );
     
-    const base64Image = canvas.toDataURL('image/jpeg', 0.6); // Comprime a qualidade para acelerar o envio
+    const base64Image = canvas.toDataURL('image/jpeg', 0.6); 
     setCroppedImageUrl(base64Image);
     setShowCropModal(false);
     setImgSrc('');
@@ -364,7 +364,6 @@ export const PericiaMenor: React.FC = () => {
       const result = await response.json();
       
       if (result.success && result.data) {
-        // Preenche os campos retornados
         if (result.data.dataAtestado) setDataAtestado(result.data.dataAtestado);
         if (result.data.tempoAtestado) handleTempoInput(result.data.tempoAtestado.toString(), setTempoAtestado);
         
@@ -420,7 +419,7 @@ export const PericiaMenor: React.FC = () => {
     setCirculo('');
     setEspPraca('');
     setOmLeitura('');
-    setCroppedImageUrl(''); // Limpa a imagem também
+    setCroppedImageUrl('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -476,7 +475,7 @@ export const PericiaMenor: React.FC = () => {
       pgq: `${pg} ${quadro ? quadro : ''}${espPraca ? espPraca : ''}`.trim(),
       nomeMilitar: nome,
       situacao: situacao,
-      base64Image: croppedImageUrl ? croppedImageUrl.split(',')[1] : null // Envia a imagem para anexar no PDF
+      base64Image: croppedImageUrl ? croppedImageUrl.split(',')[1] : null 
     };
 
     try {
@@ -499,10 +498,12 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
+  // Documentação: Removido o "pb-32" duplo daqui (agora está apenas no contentor de rolagem logo abaixo)
   return (
-    <div className="flex flex-col h-full bg-gray-50 relative pb-32">
+    <div className="flex flex-col h-full bg-gray-50 relative">
       <Header title="Perícia Menor" />
       
+      {/* Documentação: Este é o contentor onde o pb-32 deve ficar (permite o scroll até baixo) */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 w-full max-w-2xl mx-auto space-y-6">
         
         {/* SECÇÃO 1: DADOS DO MILITAR */}
@@ -525,6 +526,12 @@ export const PericiaMenor: React.FC = () => {
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41] focus:ring-1 focus:ring-[#050F41] transition-all"
               />
               
+              {showServicoDropdown && servicoOptions.length === 0 && servicoQuery.length > 1 && (
+                <div className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-4 text-center text-sm text-gray-500">
+                  A carregar a base de serviços ou ocorreu um erro na rede...
+                </div>
+              )}
+
               {showServicoDropdown && filteredServicos.length > 0 && (
                 <ul className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
                   {filteredServicos.map((s, idx) => (
@@ -645,7 +652,7 @@ export const PericiaMenor: React.FC = () => {
 
           <div className="space-y-4 font-body">
 
-            {/* Documentação: NOVO BLOCO DA CÂMERA E IA DO GEMINI */}
+            {/* Documentação: BLOCO DA CÂMERA E IA DO GEMINI */}
             <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 animate-fade-in shadow-inner">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2">
