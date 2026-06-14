@@ -197,12 +197,11 @@ function doPost(e) {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
     // ==========================================
-    // NOVA LÓGICA: EXTRAIR DADOS COM O GEMINI
+    // LÓGICA: EXTRAIR DADOS COM O GEMINI
     // ==========================================
     if (payload.action === "extrair_dados_atestado") {
-      // Vai buscar a chave do Gemini nas Propriedades do Script
       const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
-      if (!apiKey) throw new Error("GEMINI_API_KEY não configurada nas propriedades do script.");
+      if (!apiKey) throw new Error("Aviso: GEMINI_API_KEY não configurada nas propriedades do Google Apps Script.");
 
       const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
       
@@ -210,16 +209,20 @@ function doPost(e) {
         "contents": [{
           "parts": [
             {
-              "text": "Age como um assistente médico pericial. Analisa esta imagem de um atestado médico e extrai exatamente 3 dados:\n1) Data do Atestado (no formato YYYY-MM-DD)\n2) Tempo de Afastamento (apenas o número de dias)\n3) Código CID (apenas o código alfanumérico principal com ponto, ex: A00.0).\nResponde ESTRITAMENTE num formato JSON válido, sem formatação markdown, com as chaves exatas: 'dataAtestado', 'tempoAtestado', 'cid'."
+              "text": "Extraia os seguintes 3 dados da imagem do atestado médico:\n1) dataAtestado (no formato YYYY-MM-DD)\n2) tempoAtestado (apenas o número de dias)\n3) cid (apenas o código principal, ex: M54.5)."
             },
             {
               "inline_data": {
                 "mime_type": "image/jpeg",
-                "data": payload.base64Image // Recebe a imagem já em Base64 puro
+                "data": payload.base64Image
               }
             }
           ]
-        }]
+        }],
+        // Documentação: Força o Gemini a devolver estritamente um JSON limpo, evitando erros de parse!
+        "generationConfig": {
+          "responseMimeType": "application/json"
+        }
       };
 
       const options = {
@@ -236,20 +239,21 @@ function doPost(e) {
          throw new Error("Erro na API Gemini: " + jsonResponse.error.message);
       }
 
-      const geminiText = jsonResponse.candidates[0].content.parts[0].text;
-      
-      // Limpeza anti-markdown
-      const cleanJsonStr = geminiText.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const extractedData = JSON.parse(cleanJsonStr);
-
-      return ContentService.createTextOutput(JSON.stringify({
-        success: true,
-        data: extractedData
-      })).setMimeType(ContentService.MimeType.JSON);
+      try {
+        const geminiText = jsonResponse.candidates[0].content.parts[0].text;
+        const extractedData = JSON.parse(geminiText); // Agora é 100% seguro fazer Parse
+        
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          data: extractedData
+        })).setMimeType(ContentService.MimeType.JSON);
+      } catch (parseError) {
+        throw new Error("O Gemini não conseguiu estruturar os dados. Resposta bruta: " + jsonResponse.candidates[0].content.parts[0].text);
+      }
     }
 
     // ==========================================
-    // LÓGICA 1: IMPRESSÃO
+    // LÓGICA: IMPRESSÃO
     // ==========================================
     if (payload.action === "imprimir") {
       const pdfFile = DriveApp.getFileById(payload.pdfId);
@@ -386,14 +390,12 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
       body.replaceText("{{DATA_ATESTADO}}", dataAtestadoBr);
       body.replaceText("{{DATA_HOJE}}", dataHojeBr);
       
-      // Lógica Condicional do VDF - FORMATAÇÃO NATIVA NO DOCS
       let vdfText = payload.vdf ?
         "Encaminhar para VDF:    ( X ) Sim \t (   ) Não" :
         "Encaminhar para VDF:    (   ) Sim \t ( X ) Não";
         
       body.replaceText("{{VDF}}", vdfText);
 
-      // Aplica Negrito e Fundo Amarelo se VDF for Sim
       if (payload.vdf) {
         let searchResult = body.findText("Encaminhar para VDF.*Sim");
         if (searchResult) {
@@ -406,20 +408,12 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
         }
       }
 
-      // ============================================================
-      // NOVO: INSERIR A IMAGEM DO ATESTADO NA ÚLTIMA PÁGINA
-      // ============================================================
       if (payload.base64Image) {
-        body.appendPageBreak(); // Quebra de página
-        
-        // Descodifica a imagem base64
+        body.appendPageBreak(); 
         const decodedImg = Utilities.base64Decode(payload.base64Image);
         const blobImg = Utilities.newBlob(decodedImg, 'image/jpeg', 'atestado.jpg');
         
-        // Insere a imagem no documento
         const imgElement = body.appendImage(blobImg);
-        
-        // Ajusta a largura da imagem às margens da folha A4
         const pageWidth = newDoc.getBody().getPageWidth() - newDoc.getBody().getMarginLeft() - newDoc.getBody().getMarginRight();
         const imgWidth = imgElement.getWidth();
         const imgHeight = imgElement.getHeight();
@@ -440,21 +434,20 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
       const periciaSheet = ss.getSheetByName("Pericia_Menor");
       if (!periciaSheet) throw new Error("Aba 'Pericia_Menor' não encontrada no Sheets.");
 
-      // Salvamento na Aba
       periciaSheet.appendRow([
-        shortDate,              // A: DATA
-        payload.inspecionado,   // B: INSPECIONADO
-        payload.om,             // C: OM
-        payload.servico,        // D: SERVICO
-        payload.cid,            // E: CID
-        payload.dispensas,      // F: DISPENSAS
-        payload.dataAtestado,   // G: DATA_ATESTADO
-        payload.tempoAtestado,  // H: TEMPO_ATESTADO
-        payload.tempoHomolog,   // I: TEMPO_HOMOL0G
-        "",                     // J: DATA_TERMINO
-        payload.vdf,            // K: VDF (Boolean)
-        payload.perito,         // L: PERITO
-        pdfFile.getUrl()        // M: ARQUIVO
+        shortDate,
+        payload.inspecionado,
+        payload.om,
+        payload.servico,
+        payload.cid,
+        payload.dispensas,
+        payload.dataAtestado,
+        payload.tempoAtestado,
+        payload.tempoHomolog,
+        "",
+        payload.vdf,
+        payload.perito,
+        pdfFile.getUrl()
       ]);
 
       return ContentService.createTextOutput(JSON.stringify({
