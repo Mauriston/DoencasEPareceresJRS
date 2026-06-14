@@ -9,6 +9,13 @@ interface CidItem {
   DESCRABREV: string;
 }
 
+interface ServicoItem {
+  superior_direto: string;
+  servico_id: string;
+  servico: string;
+  servico_label: string;
+}
+
 const EXTENSOS: Record<number, string> = {
   1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis", 7: "sete", 8: "oito", 9: "nove", 10: "dez",
   11: "onze", 12: "doze", 13: "treze", 14: "catorze", 15: "quinze", 16: "dezesseis", 17: "dezessete", 18: "dezoito", 19: "dezenove", 20: "vinte"
@@ -18,7 +25,6 @@ const PG_OPTIONS = ["CMG", "CF", "CC", "CT", "1T", "2T", "GM", "SO", "1SG", "2SG
 const QUADROS = ["AA", "AFN", "CA", "CD", "CN", "EN", "FN", "IM", "Md", "QC-CA", "QC-FN", "QC-IM", "S", "T"];
 const ESP_PRACAS = ["AD", "AH", "AM", "AR", "MC", "MT", "AT", "AV", "BA", "CA", "CP", "CI", "CN", "CL", "CT", "CO", "DA", "DM", "DT", "ED", "EP", "EL", "ET", "TE", "EF", "EG", "ES", "AE", "EN", "FR", "GC", "GR", "HN", "HD", "IF", "MR", "MA", "NA", "MI", "MG", "ML", "ME", "MO", "MS", "MU", "ND", "OR", "OS", "PL", "PC", "PD", "PT", "QI", "RM", "RB", "SC", "SI", "TC"];
 
-// Documentação: Função utilitária para remover acentuação de strings
 const removeAcentos = (str: string) => {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 };
@@ -42,6 +48,13 @@ export const PericiaMenor: React.FC = () => {
   const [militaresInfoList, setMilitaresInfoList] = useState<{nome: string, nip: string}[]>([]);
   const [isCarregandoMilitares, setIsCarregandoMilitares] = useState(false);
   const [searchError, setSearchError] = useState('');
+
+  // === ESTADO NOVO: SERVIÇO ===
+  const [servicoQuery, setServicoQuery] = useState('');
+  const [servicoOptions, setServicoOptions] = useState<ServicoItem[]>([]);
+  const [filteredServicos, setFilteredServicos] = useState<ServicoItem[]>([]);
+  const [selectedServico, setSelectedServico] = useState<ServicoItem | null>(null);
+  const [showServicoDropdown, setShowServicoDropdown] = useState(false);
 
   // === ESTADOS: DADOS DO ATESTADO ===
   const [dataAtestado, setDataAtestado] = useState('');
@@ -99,11 +112,25 @@ export const PericiaMenor: React.FC = () => {
       }
     };
 
+    const fetchServicos = async () => {
+      try {
+        const baseUrl = import.meta.env.BASE_URL || '/';
+        const res = await fetch(`${baseUrl}servicosHNRe.json`); 
+        if (res.ok) {
+          const data = await res.json();
+          setServicoOptions(data);
+        }
+      } catch (err) {
+        console.error('Erro de rede ao carregar servicosHNRe.json', err);
+      }
+    };
+
     fetchLookups();
     fetchCid();
+    fetchServicos();
   }, []);
 
-  // === LÓGICAS: DADOS DO MILITAR ===
+  // === LÓGICAS: DADOS DO MILITAR E SERVIÇO ===
   const handleNipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 8) value = value.slice(0, 8);
@@ -179,19 +206,33 @@ export const PericiaMenor: React.FC = () => {
     else setCirculo("");
   }, [pg, militarStatus]);
 
-  // === LÓGICAS: INTERAÇÕES ===
+  const handleServicoSearch = (text: string) => {
+    setServicoQuery(text);
+    setSelectedServico(null);
+    if (text.length > 1) {
+      const querySemAcentos = removeAcentos(text.toLowerCase());
+      const filtered = servicoOptions.filter(s => {
+        const superior = s.superior_direto ? removeAcentos(s.superior_direto.toLowerCase()) : '';
+        const servicoName = s.servico ? removeAcentos(s.servico.toLowerCase()) : '';
+        return superior.includes(querySemAcentos) || servicoName.includes(querySemAcentos);
+      }).slice(0, 15);
+      
+      setFilteredServicos(filtered);
+      setShowServicoDropdown(true);
+    } else {
+      setShowServicoDropdown(false);
+    }
+  };
+
+  // === LÓGICAS: INTERAÇÕES (CID E TEMPO) ===
   const handleCidSearch = (text: string) => {
     setCidQuery(text);
     setSelectedCid(null);
     if (text.length > 1) {
-      // Documentação: Remove os acentos da query digitada pelo utilizador
       const querySemAcentos = removeAcentos(text.toLowerCase());
-      
       const filtered = cidOptions.filter(c => {
-        // Documentação: Remove os acentos das opções vindas do json
         const subcat = c.SUBCAT ? removeAcentos(c.SUBCAT.toLowerCase()) : '';
         const desc = c.DESCRICAO ? removeAcentos(c.DESCRICAO.toLowerCase()) : '';
-        
         return subcat.includes(querySemAcentos) || desc.includes(querySemAcentos);
       }).slice(0, 15);
       
@@ -202,11 +243,12 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
-  const handleTempoInput = (val: string, setter: (v: string) => void) => {
+  const handleTempoInput = (val: string, setter: (v: string) => void, maxLimit?: number) => {
     let numbersOnly = val.replace(/\D/g, ''); 
     if (numbersOnly !== '') {
       let num = parseInt(numbersOnly, 10);
-      if (num > 20) num = 20; 
+      if (maxLimit && num > maxLimit) num = maxLimit; 
+      if (num < 1) num = 1; // Protege do 0
       setter(num.toString());
     } else {
       setter('');
@@ -243,6 +285,8 @@ export const PericiaMenor: React.FC = () => {
     setNip('');
     setMilitarStatus("");
     setSearchError('');
+    setServicoQuery('');
+    setSelectedServico(null);
     setDataAtestado('');
     setTempoAtestado('');
     setCidQuery('');
@@ -266,9 +310,9 @@ export const PericiaMenor: React.FC = () => {
 
   // === LÓGICA DE SUBMISSÃO (Integração com AppScript) ===
   const handleSubmit = async () => {
-    // 1. Validação de Campos Obrigatórios
     if (
       !nip || 
+      !selectedServico ||
       !dataAtestado || 
       !tempoAtestado || 
       !selectedCid || 
@@ -288,7 +332,6 @@ export const PericiaMenor: React.FC = () => {
 
     setIsSubmitting(true);
 
-    // 2. Concatenação do Inspecionado
     let militarIdentifier = "";
     if (militarStatus === "found") {
       militarIdentifier = inspecionado;
@@ -296,15 +339,14 @@ export const PericiaMenor: React.FC = () => {
       militarIdentifier = `${pg} ${quadro ? quadro + ' ' : ''}${espPraca ? espPraca + ' ' : ''}${nip} ${nome}`.trim().replace(/\s+/g, ' ');
     }
 
-    // 3. Extrator do tempo em dias
     const tempoHomologNumerico = parseInt(tempoHomologacao.replace(/\D/g, ''), 10);
     const tempoExtenso = EXTENSOS[tempoHomologNumerico] || tempoHomologNumerico.toString();
 
-    // 4. Estruturação do Payload
     const payload = {
       action: 'gerar_pericia_menor',
       inspecionado: militarIdentifier,
       om: militarStatus === "found" ? omLeitura : om,
+      servico: selectedServico.servico_label,
       cid: `${selectedCid.SUBCAT} - ${selectedCid.DESCRICAO}`,
       dispensas: selectedDispensas.join(', '),
       dataAtestado: dataAtestado,
@@ -320,7 +362,6 @@ export const PericiaMenor: React.FC = () => {
       situacao: situacao
     };
 
-    // 5. Envio ao AppScript
     try {
       const response = await fetch(`${process.env.VITE_APPSCRIPT_URL || 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec'}`, {
         method: 'POST',
@@ -342,7 +383,7 @@ export const PericiaMenor: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 pb-32 relative">
+    <div className="flex flex-col h-full bg-gray-50 relative pb-32">
       <Header title="Perícia Menor" />
       
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 w-full max-w-2xl mx-auto space-y-6">
@@ -355,6 +396,38 @@ export const PericiaMenor: React.FC = () => {
           </h2>
 
           <div className="space-y-4 font-body">
+            
+            {/* Campo Serviço (Dropdown com Search) */}
+            <div className="relative z-30">
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Serviço *</label>
+              <input
+                type="text"
+                value={selectedServico ? selectedServico.servico_label : servicoQuery}
+                onChange={(e) => handleServicoSearch(e.target.value)}
+                placeholder="Busque pelo nome do serviço..."
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41] focus:ring-1 focus:ring-[#050F41] transition-all"
+              />
+              {showServicoDropdown && filteredServicos.length > 0 && (
+                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
+                  {filteredServicos.map((s, idx) => (
+                    <li 
+                      key={idx} 
+                      onClick={() => { setSelectedServico(s); setShowServicoDropdown(false); setServicoQuery(''); }}
+                      className="px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer"
+                    >
+                      <span className="font-bold text-[#050F41] block">{s.servico_label}</span>
+                      <span className="text-xs text-gray-500">{s.superior_direto}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {showServicoDropdown && filteredServicos.length === 0 && servicoQuery.length > 1 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-4 text-center text-sm text-gray-500">
+                  Nenhum serviço encontrado.
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">NIP *</label>
               <div className="relative">
@@ -445,16 +518,6 @@ export const PericiaMenor: React.FC = () => {
                   <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Nome Completo *</label>
                   <input type="text" value={nome} onChange={(e) => setNome(e.target.value.toUpperCase())} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-navy focus:border-navy p-3 uppercase" />
                 </div>
-
-                {["CC", "CT", "1T", "MN", "CB", "3SG"].includes(pg) && (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Situação *</label>
-                    <div className="flex space-x-2">
-                      <button type="button" onClick={() => setSituacao("Carreira")} className={`flex-1 py-2 px-3 rounded-xl border text-sm font-bold transition-colors ${situacao === "Carreira" ? "bg-navy/10 text-navy border-navy" : "bg-white text-gray-600 border-gray-300"}`}>Carreira</button>
-                      <button type="button" onClick={() => setSituacao("Temporário")} className={`flex-1 py-2 px-3 rounded-xl border text-sm font-bold transition-colors ${situacao === "Temporário" ? "bg-navy/10 text-navy border-navy" : "bg-white text-gray-600 border-gray-300"}`}>Temporário</button>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -483,26 +546,26 @@ export const PericiaMenor: React.FC = () => {
                 <input
                   type="text"
                   value={tempoAtestado}
-                  onChange={(e) => handleTempoInput(e.target.value, setTempoAtestado)}
+                  onChange={(e) => handleTempoInput(e.target.value, setTempoAtestado)} // Sem maxLimit
                   onBlur={() => formatTempoBlur(tempoAtestado, setTempoAtestado)}
                   onFocus={() => formatTempoFocus(tempoAtestado, setTempoAtestado)}
-                  placeholder="Máx: 20 dias"
+                  placeholder="Ex.: 5 dias"
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]"
                 />
               </div>
             </div>
 
-            <div className="relative">
+            <div className="relative z-20">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">CID *</label>
               <input
                 type="text"
                 value={selectedCid ? selectedCid.DESCRABREV : cidQuery}
                 onChange={(e) => handleCidSearch(e.target.value)}
-                placeholder="Busque por código (Ex: A00) ou doença..."
+                placeholder="Busque por código ou doença..."
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]"
               />
               {showCidDropdown && filteredCids.length > 0 && (
-                <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
+                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
                   {filteredCids.map((cid, idx) => (
                     <li 
                       key={idx} 
@@ -516,7 +579,7 @@ export const PericiaMenor: React.FC = () => {
                 </ul>
               )}
               {showCidDropdown && filteredCids.length === 0 && cidQuery.length > 1 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-4 text-center text-sm text-gray-500">
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-4 text-center text-sm text-gray-500">
                   Nenhum CID encontrado.
                 </div>
               )}
@@ -537,17 +600,16 @@ export const PericiaMenor: React.FC = () => {
               <input
                 type="text"
                 value={tempoHomologacao}
-                onChange={(e) => handleTempoInput(e.target.value, setTempoHomologacao)}
+                onChange={(e) => handleTempoInput(e.target.value, setTempoHomologacao, 20)} // maxLimit = 20
                 onBlur={() => formatTempoBlur(tempoHomologacao, setTempoHomologacao)}
                 onFocus={() => formatTempoFocus(tempoHomologacao, setTempoHomologacao)}
-                placeholder="Ex: 5 dias"
+                placeholder="Máx: 20 dias"
                 className="w-full sm:w-1/2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]"
               />
             </div>
 
             <div className="relative">
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Dispensas *</label>
-              
               <button 
                 type="button"
                 onClick={() => setShowDispensasDropdown(!showDispensasDropdown)}
@@ -564,7 +626,7 @@ export const PericiaMenor: React.FC = () => {
               </button>
 
               {showDispensasDropdown && (
-                <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] max-h-64 overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in custom-scrollbar">
+                <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] max-h-64 overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in custom-scrollbar">
                   {isLoadingLookups ? (
                     <p className="text-xs text-gray-400 col-span-2 text-center py-4 flex items-center justify-center gap-2">
                       <Loader2 size={16} className="animate-spin" /> A carregar dispensas...
