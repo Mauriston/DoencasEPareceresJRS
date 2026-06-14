@@ -197,19 +197,20 @@ function doPost(e) {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
     // ==========================================
-    // LÓGICA: EXTRAIR DADOS COM O GEMINI
+    // LÓGICA: EXTRAIR DADOS COM O GEMINI 2.5
     // ==========================================
     if (payload.action === "extrair_dados_atestado") {
       const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
       if (!apiKey) throw new Error("Aviso: GEMINI_API_KEY não configurada nas propriedades do Google Apps Script.");
 
-      const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+      // CORREÇÃO MÁXIMA: Utilizando a tag exata "gemini-2.5-flash" conforme o teu outro app que está a funcionar!
+      const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
       
       const requestBody = {
         "contents": [{
           "parts": [
             {
-              "text": "Extraia os seguintes 3 dados da imagem do atestado médico:\n1) dataAtestado (no formato YYYY-MM-DD)\n2) tempoAtestado (apenas o número de dias)\n3) cid (apenas o código principal, ex: M54.5)."
+              "text": "Extraia os seguintes 3 dados da imagem do atestado médico:\n1) dataAtestado (no formato YYYY-MM-DD)\n2) tempoAtestado (apenas o número de dias)\n3) cid (apenas o código principal, ex: M54.5).\nResponda estritamente num formato JSON válido."
             },
             {
               "inline_data": {
@@ -219,7 +220,7 @@ function doPost(e) {
             }
           ]
         }],
-        // Documentação: Força o Gemini a devolver estritamente um JSON limpo, evitando erros de parse!
+        // Força a IA a devolver apenas JSON
         "generationConfig": {
           "responseMimeType": "application/json"
         }
@@ -235,20 +236,21 @@ function doPost(e) {
       const response = UrlFetchApp.fetch(url, options);
       const jsonResponse = JSON.parse(response.getContentText());
 
+      // Lida com erros devolvidos pela API do Google
       if (jsonResponse.error) {
          throw new Error("Erro na API Gemini: " + jsonResponse.error.message);
       }
 
       try {
         const geminiText = jsonResponse.candidates[0].content.parts[0].text;
-        const extractedData = JSON.parse(geminiText); // Agora é 100% seguro fazer Parse
+        const extractedData = JSON.parse(geminiText); 
         
         return ContentService.createTextOutput(JSON.stringify({
           success: true,
           data: extractedData
         })).setMimeType(ContentService.MimeType.JSON);
       } catch (parseError) {
-        throw new Error("O Gemini não conseguiu estruturar os dados. Resposta bruta: " + jsonResponse.candidates[0].content.parts[0].text);
+        throw new Error("O Gemini não conseguiu estruturar os dados. Tente uma foto mais clara.");
       }
     }
 
