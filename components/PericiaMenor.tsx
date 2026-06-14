@@ -32,7 +32,6 @@ const removeAcentos = (str: string) => {
 };
 
 export const PericiaMenor: React.FC = () => {
-  // === ESTADOS: DADOS DO MILITAR ===
   const [nip, setNip] = useState('');
   const [militarStatus, setMilitarStatus] = useState<"" | "loading" | "found" | "not_found">("");
   const [inspecionado, setInspecionado] = useState("");
@@ -51,14 +50,12 @@ export const PericiaMenor: React.FC = () => {
   const [isCarregandoMilitares, setIsCarregandoMilitares] = useState(false);
   const [searchError, setSearchError] = useState('');
 
-  // === ESTADO: SERVIÇO ===
   const [servicoQuery, setServicoQuery] = useState('');
   const [servicoOptions, setServicoOptions] = useState<ServicoItem[]>([]);
   const [filteredServicos, setFilteredServicos] = useState<ServicoItem[]>([]);
   const [selectedServico, setSelectedServico] = useState<ServicoItem | null>(null);
   const [showServicoDropdown, setShowServicoDropdown] = useState(false);
 
-  // === ESTADOS: DADOS DO ATESTADO ===
   const [dataAtestado, setDataAtestado] = useState('');
   const [tempoAtestado, setTempoAtestado] = useState('');
   const [cidQuery, setCidQuery] = useState('');
@@ -67,7 +64,6 @@ export const PericiaMenor: React.FC = () => {
   const [selectedCid, setSelectedCid] = useState<CidItem | null>(null);
   const [showCidDropdown, setShowCidDropdown] = useState(false);
 
-  // === ESTADOS: INTELIGÊNCIA ARTIFICIAL E RECORTE (NOVO) ===
   const [imgSrc, setImgSrc] = useState('');
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
@@ -77,14 +73,12 @@ export const PericiaMenor: React.FC = () => {
   const imgRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // === ESTADOS: HOMOLOGAÇÃO ===
   const [tempoHomologacao, setTempoHomologacao] = useState('');
   const [selectedDispensas, setSelectedDispensas] = useState<string[]>([]);
   const [showDispensasDropdown, setShowDispensasDropdown] = useState(false);
   const [vdf, setVdf] = useState<boolean | null>(null);
   const [selectedPerito, setSelectedPerito] = useState('');
 
-  // === ESTADOS: LOOKUPS E SUBMISSÃO ===
   const [isLoadingLookups, setIsLoadingLookups] = useState(true);
   const [omsOptions, setOmsOptions] = useState<string[]>([]);
   const [dispensasDisponiveis, setDispensasDisponiveis] = useState<string[]>([]);
@@ -93,7 +87,6 @@ export const PericiaMenor: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successPdfUrl, setSuccessPdfUrl] = useState<string | null>(null);
 
-  // === CARREGAMENTO INICIAL ===
   useEffect(() => {
     const fetchLookups = async () => {
       try {
@@ -147,7 +140,6 @@ export const PericiaMenor: React.FC = () => {
     fetchServicos();
   }, []);
 
-  // === LÓGICAS: DADOS DO MILITAR ===
   const handleNipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 8) value = value.slice(0, 8);
@@ -244,7 +236,6 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
-  // === LÓGICAS: INTERAÇÕES (CID E TEMPO) ===
   const handleCidSearch = (text: string) => {
     setCidQuery(text);
     setSelectedCid(null);
@@ -268,7 +259,7 @@ export const PericiaMenor: React.FC = () => {
     if (numbersOnly !== '') {
       let num = parseInt(numbersOnly, 10);
       if (maxLimit && num > maxLimit) num = maxLimit; 
-      if (num < 1) num = 1; // Protege do 0
+      if (num < 1) num = 1; 
       setter(num.toString());
     } else {
       setter('');
@@ -299,7 +290,6 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
-  // === LÓGICA DE RECORTE DE IMAGEM ===
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setCrop(undefined); 
@@ -345,7 +335,6 @@ export const PericiaMenor: React.FC = () => {
     setImgSrc('');
   };
 
-  // === LÓGICA DO GEMINI ===
   const extractDataWithGemini = async () => {
     if (!croppedImageUrl) return;
     setIsExtracting(true);
@@ -382,7 +371,8 @@ export const PericiaMenor: React.FC = () => {
            }
         }
       } else {
-         alert("O Gemini não conseguiu processar a imagem. Tente uma foto mais clara.");
+         // Documentação: Alerta detalhado para saber o que falhou na resposta do Google Apps Script
+         alert(`Aviso da Inteligência Artificial: ${result.message || "Não foi possível ler o documento."}`);
       }
     } catch (err) {
        console.error(err);
@@ -392,7 +382,6 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
-  // === LÓGICA DE LIMPEZA DO FORMULÁRIO ===
   const handleReset = () => {
     setSuccessPdfUrl(null);
     setNip('');
@@ -423,7 +412,6 @@ export const PericiaMenor: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // === LÓGICA DE SUBMISSÃO FINAL ===
   const handleSubmit = async () => {
     if (
       !nip || 
@@ -498,12 +486,10 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
-  // Documentação: Removido o "pb-32" duplo daqui (agora está apenas no contentor de rolagem logo abaixo)
   return (
     <div className="flex flex-col h-full bg-gray-50 relative">
       <Header title="Perícia Menor" />
       
-      {/* Documentação: Este é o contentor onde o pb-32 deve ficar (permite o scroll até baixo) */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 w-full max-w-2xl mx-auto space-y-6">
         
         {/* SECÇÃO 1: DADOS DO MILITAR */}
@@ -683,17 +669,21 @@ export const PericiaMenor: React.FC = () => {
                   <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-gray-200 bg-gray-100 relative">
                     <img src={croppedImageUrl} alt="Atestado Recortado" className="w-full h-full object-cover" />
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 overflow-hidden">
                      <p className="text-[11px] font-bold text-green-600 mb-2 flex items-center gap-1 uppercase tracking-wider"><CheckCircle2 size={14}/> Imagem Capturada</p>
                      <div className="flex gap-2">
+                       {/* Documentação: Adicionado whitespace-nowrap para não quebrar o texto do botão */}
                        <button 
                          type="button" 
                          onClick={extractDataWithGemini}
                          disabled={isExtracting}
-                         className="flex-1 py-2 bg-gradient-to-r from-[#050F41] to-blue-800 text-white text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-md"
+                         className="flex-1 py-2 bg-gradient-to-r from-[#050F41] to-blue-800 text-white text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-md whitespace-nowrap"
                        >
-                         {isExtracting ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14} className="text-yellow-400"/>} 
-                         {isExtracting ? 'A analisar...' : 'Extrair Dados'}
+                         {isExtracting ? (
+                           <span className="flex items-center gap-1.5"><Loader2 size={14} className="animate-spin"/> A analisar...</span>
+                         ) : (
+                           <span className="flex items-center gap-1.5"><Sparkles size={14} className="text-yellow-400"/> Extrair Dados</span>
+                         )}
                        </button>
                        <button 
                          type="button" 
