@@ -1,7 +1,10 @@
 // Ficheiro: components/PericiaMenor.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './Header';
-import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown, CheckCircle } from 'lucide-react';
+import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown, CheckCircle, Camera, Crop as CropIcon, Sparkles, X } from 'lucide-react';
+// Documentação: Importação da biblioteca de recorte e do seu estilo CSS
+import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 interface CidItem {
   SUBCAT: string;
@@ -49,7 +52,7 @@ export const PericiaMenor: React.FC = () => {
   const [isCarregandoMilitares, setIsCarregandoMilitares] = useState(false);
   const [searchError, setSearchError] = useState('');
 
-  // === ESTADO NOVO: SERVIÇO ===
+  // === ESTADO: SERVIÇO ===
   const [servicoQuery, setServicoQuery] = useState('');
   const [servicoOptions, setServicoOptions] = useState<ServicoItem[]>([]);
   const [filteredServicos, setFilteredServicos] = useState<ServicoItem[]>([]);
@@ -64,6 +67,16 @@ export const PericiaMenor: React.FC = () => {
   const [filteredCids, setFilteredCids] = useState<CidItem[]>([]);
   const [selectedCid, setSelectedCid] = useState<CidItem | null>(null);
   const [showCidDropdown, setShowCidDropdown] = useState(false);
+
+  // === ESTADOS: INTELIGÊNCIA ARTIFICIAL E RECORTE (NOVO) ===
+  const [imgSrc, setImgSrc] = useState('');
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [croppedImageUrl, setCroppedImageUrl] = useState('');
+  const [isExtracting, setIsExtracting] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // === ESTADOS: HOMOLOGAÇÃO ===
   const [tempoHomologacao, setTempoHomologacao] = useState('');
@@ -210,7 +223,6 @@ export const PericiaMenor: React.FC = () => {
     else setCirculo("");
   }, [pg, militarStatus]);
 
-  // === LÓGICA DO SERVIÇO ===
   const handleServicoSearch = (text: string) => {
     setServicoQuery(text);
     setSelectedServico(null);
@@ -287,6 +299,100 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
+  // === LÓGICA DE RECORTE DE IMAGEM ===
+  const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setCrop(undefined); 
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setImgSrc(reader.result?.toString() || '');
+        setShowCropModal(true);
+      });
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+
+  const handleCropComplete = () => {
+    if (!imgRef.current || !completedCrop || completedCrop.width <= 0 || completedCrop.height <= 0) {
+      setShowCropModal(false);
+      return;
+    }
+    const image = imgRef.current;
+    const canvas = document.createElement('canvas');
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    
+    canvas.width = completedCrop.width;
+    canvas.height = completedCrop.height;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return;
+    
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0, 0,
+      completedCrop.width,
+      completedCrop.height
+    );
+    
+    const base64Image = canvas.toDataURL('image/jpeg', 0.6); // Comprime a qualidade para acelerar o envio
+    setCroppedImageUrl(base64Image);
+    setShowCropModal(false);
+    setImgSrc('');
+  };
+
+  // === LÓGICA DO GEMINI ===
+  const extractDataWithGemini = async () => {
+    if (!croppedImageUrl) return;
+    setIsExtracting(true);
+    
+    try {
+      const base64Data = croppedImageUrl.split(',')[1];
+      const payload = {
+        action: 'extrair_dados_atestado',
+        base64Image: base64Data
+      };
+      
+      const response = await fetch(`${process.env.VITE_APPSCRIPT_URL || 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec'}`, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        // Preenche os campos retornados
+        if (result.data.dataAtestado) setDataAtestado(result.data.dataAtestado);
+        if (result.data.tempoAtestado) handleTempoInput(result.data.tempoAtestado.toString(), setTempoAtestado);
+        
+        if (result.data.cid) {
+           const cidCode = result.data.cid.toLowerCase().replace(/[^a-z0-9]/g, '');
+           const foundCid = cidOptions.find(c => {
+             const subcat = c.SUBCAT ? c.SUBCAT.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+             return subcat === cidCode || subcat.includes(cidCode);
+           });
+           
+           if (foundCid) {
+               setSelectedCid(foundCid);
+               setCidQuery('');
+           } else {
+               setCidQuery(result.data.cid); 
+           }
+        }
+      } else {
+         alert("O Gemini não conseguiu processar a imagem. Tente uma foto mais clara.");
+      }
+    } catch (err) {
+       console.error(err);
+       alert("Erro de comunicação com o servidor ao invocar a IA.");
+    } finally {
+       setIsExtracting(false);
+    }
+  };
+
   // === LÓGICA DE LIMPEZA DO FORMULÁRIO ===
   const handleReset = () => {
     setSuccessPdfUrl(null);
@@ -314,10 +420,11 @@ export const PericiaMenor: React.FC = () => {
     setCirculo('');
     setEspPraca('');
     setOmLeitura('');
+    setCroppedImageUrl(''); // Limpa a imagem também
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // === LÓGICA DE SUBMISSÃO (Integração com AppScript) ===
+  // === LÓGICA DE SUBMISSÃO FINAL ===
   const handleSubmit = async () => {
     if (
       !nip || 
@@ -368,7 +475,8 @@ export const PericiaMenor: React.FC = () => {
       nip: nip,
       pgq: `${pg} ${quadro ? quadro : ''}${espPraca ? espPraca : ''}`.trim(),
       nomeMilitar: nome,
-      situacao: situacao
+      situacao: situacao,
+      base64Image: croppedImageUrl ? croppedImageUrl.split(',')[1] : null // Envia a imagem para anexar no PDF
     };
 
     try {
@@ -391,13 +499,11 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
-  // Documentação: O Wrapper Principal perdeu o "pb-32" duplo, corrigindo o erro da barra cinzenta!
   return (
-    <div className="flex flex-col h-full bg-gray-50 relative animate-fade-in">
+    <div className="flex flex-col h-full bg-gray-50 relative pb-32">
       <Header title="Perícia Menor" />
       
-      {/* Aqui mantemos o pb-32 para que os botões finais subam acima da barra de navegação */}
-      <div className="flex-1 px-4 pt-4 pb-32 w-full max-w-2xl mx-auto space-y-6">
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 w-full max-w-2xl mx-auto space-y-6">
         
         {/* SECÇÃO 1: DADOS DO MILITAR */}
         <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
@@ -538,6 +644,64 @@ export const PericiaMenor: React.FC = () => {
           </h2>
 
           <div className="space-y-4 font-body">
+
+            {/* Documentação: NOVO BLOCO DA CÂMERA E IA DO GEMINI */}
+            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 animate-fade-in shadow-inner">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2">
+                  <Camera size={16} className="text-blue-600" /> Leitura Inteligente (IA)
+                </h3>
+              </div>
+              
+              {!croppedImageUrl ? (
+                <div className="flex justify-center">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    capture="environment" 
+                    ref={fileInputRef} 
+                    onChange={onSelectFile} 
+                    className="hidden" 
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-3.5 bg-white border border-blue-300 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <Camera size={18} /> Fotografar Atestado
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-blue-200 shadow-sm">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-gray-200 bg-gray-100 relative">
+                    <img src={croppedImageUrl} alt="Atestado Recortado" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1">
+                     <p className="text-[11px] font-bold text-green-600 mb-2 flex items-center gap-1 uppercase tracking-wider"><CheckCircle2 size={14}/> Imagem Capturada</p>
+                     <div className="flex gap-2">
+                       <button 
+                         type="button" 
+                         onClick={extractDataWithGemini}
+                         disabled={isExtracting}
+                         className="flex-1 py-2 bg-gradient-to-r from-[#050F41] to-blue-800 text-white text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-md"
+                       >
+                         {isExtracting ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14} className="text-yellow-400"/>} 
+                         {isExtracting ? 'A analisar...' : 'Extrair Dados'}
+                       </button>
+                       <button 
+                         type="button" 
+                         onClick={() => setCroppedImageUrl('')}
+                         disabled={isExtracting}
+                         className="px-3 py-2 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                       >
+                         Refazer
+                       </button>
+                     </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="flex flex-col md:flex-row gap-4">
               <div className="w-full">
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Data Atestado *</label>
@@ -776,6 +940,29 @@ export const PericiaMenor: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* MODAL DE RECORTE DA IMAGEM */}
+      {showCropModal && (
+        <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col animate-fade-in backdrop-blur-sm">
+           <div className="p-4 bg-black flex justify-between items-center text-white shrink-0 border-b border-gray-800">
+              <h3 className="font-bold flex items-center gap-2"><CropIcon size={20} className="text-[#FAB932]" /> Recortar Atestado</h3>
+              <button onClick={() => { setShowCropModal(false); setImgSrc(''); }} className="p-2 text-gray-400 hover:text-white transition-colors"><X size={24} /></button>
+           </div>
+           <div className="flex-1 overflow-auto flex items-center justify-center p-4">
+               {imgSrc && (
+                 <ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)}>
+                   <img ref={imgRef} src={imgSrc} alt="Crop" style={{ maxHeight: '70vh', objectFit: 'contain' }} />
+                 </ReactCrop>
+               )}
+           </div>
+           <div className="p-4 bg-black shrink-0 pb-10">
+              <p className="text-gray-400 text-xs text-center mb-4">Arraste os cantos para selecionar apenas as datas e o CID.</p>
+              <button onClick={handleCropComplete} className="w-full py-4 bg-[#079551] hover:bg-green-600 transition-colors text-white font-bold rounded-xl flex justify-center items-center gap-2">
+                 <CheckCircle2 size={20} /> Confirmar Recorte
+              </button>
+           </div>
         </div>
       )}
 
