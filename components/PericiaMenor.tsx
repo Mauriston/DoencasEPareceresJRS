@@ -104,11 +104,13 @@ export const PericiaMenor: React.FC = () => {
         const baseUrl = import.meta.env.BASE_URL || '/';
         const res = await fetch(`${baseUrl}cid.json`); 
         if (res.ok) {
-          const data = await res.json();
+          const text = await res.text();
+          const cleanText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+          const data = JSON.parse(cleanText);
           setCidOptions(data);
         }
       } catch (err) {
-        console.error('Erro de rede ao carregar cid.json', err);
+        console.error('Erro ao carregar cid.json', err);
       }
     };
 
@@ -117,11 +119,13 @@ export const PericiaMenor: React.FC = () => {
         const baseUrl = import.meta.env.BASE_URL || '/';
         const res = await fetch(`${baseUrl}servicosHNRe.json`); 
         if (res.ok) {
-          const data = await res.json();
+          const text = await res.text();
+          const cleanText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+          const data = JSON.parse(cleanText);
           setServicoOptions(data);
         }
       } catch (err) {
-        console.error('Erro de rede ao carregar servicosHNRe.json', err);
+        console.error('Erro ao carregar servicosHNRe.json', err);
       }
     };
 
@@ -206,6 +210,7 @@ export const PericiaMenor: React.FC = () => {
     else setCirculo("");
   }, [pg, militarStatus]);
 
+  // === LÓGICA DO SERVIÇO ===
   const handleServicoSearch = (text: string) => {
     setServicoQuery(text);
     setSelectedServico(null);
@@ -251,6 +256,7 @@ export const PericiaMenor: React.FC = () => {
     if (numbersOnly !== '') {
       let num = parseInt(numbersOnly, 10);
       if (maxLimit && num > maxLimit) num = maxLimit; 
+      if (num < 1) num = 1; // Protege do 0
       setter(num.toString());
     } else {
       setter('');
@@ -308,6 +314,7 @@ export const PericiaMenor: React.FC = () => {
     setCirculo('');
     setEspPraca('');
     setOmLeitura('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // === LÓGICA DE SUBMISSÃO (Integração com AppScript) ===
@@ -384,11 +391,13 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
+  // Documentação: O Wrapper Principal perdeu o "pb-32" duplo, corrigindo o erro da barra cinzenta!
   return (
-    <div className="flex flex-col h-full bg-gray-50 relative pb-32">
+    <div className="flex flex-col h-full bg-gray-50 relative animate-fade-in">
       <Header title="Perícia Menor" />
       
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 w-full max-w-2xl mx-auto space-y-6">
+      {/* Aqui mantemos o pb-32 para que os botões finais subam acima da barra de navegação */}
+      <div className="flex-1 px-4 pt-4 pb-32 w-full max-w-2xl mx-auto space-y-6">
         
         {/* SECÇÃO 1: DADOS DO MILITAR */}
         <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
@@ -410,12 +419,6 @@ export const PericiaMenor: React.FC = () => {
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41] focus:ring-1 focus:ring-[#050F41] transition-all"
               />
               
-              {showServicoDropdown && servicoOptions.length === 0 && servicoQuery.length > 1 && (
-                <div className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-4 text-center text-sm text-gray-500">
-                  A carregar a base de serviços ou ocorreu um erro na rede...
-                </div>
-              )}
-
               {showServicoDropdown && filteredServicos.length > 0 && (
                 <ul className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
                   {filteredServicos.map((s, idx) => (
@@ -429,12 +432,6 @@ export const PericiaMenor: React.FC = () => {
                     </li>
                   ))}
                 </ul>
-              )}
-
-              {showServicoDropdown && filteredServicos.length === 0 && servicoOptions.length > 0 && servicoQuery.length > 1 && (
-                <div className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-4 text-center text-sm text-gray-500">
-                  Nenhum serviço encontrado.
-                </div>
               )}
             </div>
 
@@ -613,8 +610,9 @@ export const PericiaMenor: React.FC = () => {
               />
             </div>
 
-            <div className="relative">
+            <div className="relative z-[80]">
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Dispensas *</label>
+              
               <button 
                 type="button"
                 onClick={() => setShowDispensasDropdown(!showDispensasDropdown)}
@@ -631,7 +629,7 @@ export const PericiaMenor: React.FC = () => {
               </button>
 
               {showDispensasDropdown && (
-                <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] max-h-64 overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in custom-scrollbar">
+                <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] max-h-64 overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in custom-scrollbar">
                   {isLoadingLookups ? (
                     <p className="text-xs text-gray-400 col-span-2 text-center py-4 flex items-center justify-center gap-2">
                       <Loader2 size={16} className="animate-spin" /> A carregar dispensas...
@@ -715,7 +713,7 @@ export const PericiaMenor: React.FC = () => {
           </div>
         </section>
 
-        {/* ÁREA DE BOTÕES DO FORMULÁRIO (Submissão) */}
+        {/* ÁREA DE BOTÕES DO FORMULÁRIO (Submissão e Limpar) */}
         <div className="flex justify-end items-center gap-4 pt-4 pb-8">
           <button
             type="button"
