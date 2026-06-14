@@ -32,6 +32,7 @@ const removeAcentos = (str: string) => {
 };
 
 export const PericiaMenor: React.FC = () => {
+  // === ESTADOS ===
   const [nip, setNip] = useState('');
   const [militarStatus, setMilitarStatus] = useState<"" | "loading" | "found" | "not_found">("");
   const [inspecionado, setInspecionado] = useState("");
@@ -87,6 +88,7 @@ export const PericiaMenor: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successPdfUrl, setSuccessPdfUrl] = useState<string | null>(null);
 
+  // === CARREGAMENTO INICIAL ===
   useEffect(() => {
     const fetchLookups = async () => {
       try {
@@ -109,10 +111,8 @@ export const PericiaMenor: React.FC = () => {
         const baseUrl = import.meta.env.BASE_URL || '/';
         const res = await fetch(`${baseUrl}cid.json`); 
         if (res.ok) {
-          const text = await res.text();
-          const cleanText = text.replace(/```json/gi, '').replace(/
-```/g, '').trim();
-          const data = JSON.parse(cleanText);
+          // Documentação: Voltou a usar apenas o res.json() (sem erros de regex)
+          const data = await res.json();
           setCidOptions(data);
         }
       } catch (err) {
@@ -125,9 +125,8 @@ export const PericiaMenor: React.FC = () => {
         const baseUrl = import.meta.env.BASE_URL || '/';
         const res = await fetch(`${baseUrl}servicosHNRe.json`); 
         if (res.ok) {
-          const text = await res.text();
-          const cleanText = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-          const data = JSON.parse(cleanText);
+          // Documentação: Voltou a usar apenas o res.json() (sem erros de regex)
+          const data = await res.json();
           setServicoOptions(data);
         }
       } catch (err) {
@@ -140,6 +139,7 @@ export const PericiaMenor: React.FC = () => {
     fetchServicos();
   }, []);
 
+  // === LÓGICAS: DADOS DO MILITAR ===
   const handleNipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 8) value = value.slice(0, 8);
@@ -236,6 +236,7 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
+  // === LÓGICAS: INTERAÇÕES (CID E TEMPO) ===
   const handleCidSearch = (text: string) => {
     setCidQuery(text);
     setSelectedCid(null);
@@ -290,6 +291,7 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
+  // === LÓGICA DE RECORTE DE IMAGEM ===
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setCrop(undefined); 
@@ -335,6 +337,7 @@ export const PericiaMenor: React.FC = () => {
     setImgSrc('');
   };
 
+  // === LÓGICA DO GEMINI ===
   const extractDataWithGemini = async () => {
     if (!croppedImageUrl) return;
     setIsExtracting(true);
@@ -371,7 +374,6 @@ export const PericiaMenor: React.FC = () => {
            }
         }
       } else {
-         // Documentação: Alerta detalhado para saber o que falhou na resposta do Google Apps Script
          alert(`Aviso da Inteligência Artificial: ${result.message || "Não foi possível ler o documento."}`);
       }
     } catch (err) {
@@ -382,6 +384,7 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
+  // === LÓGICA DE LIMPEZA DO FORMULÁRIO ===
   const handleReset = () => {
     setSuccessPdfUrl(null);
     setNip('');
@@ -412,6 +415,7 @@ export const PericiaMenor: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // === LÓGICA DE SUBMISSÃO FINAL ===
   const handleSubmit = async () => {
     if (
       !nip || 
@@ -672,7 +676,6 @@ export const PericiaMenor: React.FC = () => {
                   <div className="flex-1 overflow-hidden">
                      <p className="text-[11px] font-bold text-green-600 mb-2 flex items-center gap-1 uppercase tracking-wider"><CheckCircle2 size={14}/> Imagem Capturada</p>
                      <div className="flex gap-2">
-                       {/* Documentação: Adicionado whitespace-nowrap para não quebrar o texto do botão */}
                        <button 
                          type="button" 
                          onClick={extractDataWithGemini}
