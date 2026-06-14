@@ -32,6 +32,7 @@ const removeAcentos = (str: string) => {
 };
 
 export const PericiaMenor: React.FC = () => {
+  // === ESTADOS ===
   const [nip, setNip] = useState('');
   const [militarStatus, setMilitarStatus] = useState<"" | "loading" | "found" | "not_found">("");
   const [inspecionado, setInspecionado] = useState("");
@@ -87,6 +88,7 @@ export const PericiaMenor: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successPdfUrl, setSuccessPdfUrl] = useState<string | null>(null);
 
+  // === CARREGAMENTO INICIAL ===
   useEffect(() => {
     const fetchLookups = async () => {
       try {
@@ -135,6 +137,7 @@ export const PericiaMenor: React.FC = () => {
     fetchServicos();
   }, []);
 
+  // === LÓGICAS: DADOS DO MILITAR ===
   const handleNipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 8) value = value.slice(0, 8);
@@ -174,7 +177,6 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
-  // Documentação: Modificado para aceitar o "initialTerm" vindo do Gemini!
   const abrirModalPesquisaNome = async (initialTerm: string = "") => {
     setShowPesquisarNomeModal(true);
     setPesquisarNomeTerm(initialTerm);
@@ -367,7 +369,6 @@ export const PericiaMenor: React.FC = () => {
            }
         }
 
-        // Documentação: Nova Lógica! Se houver nomeMilitar, salta direto para o modal de pesquisa
         if (result.data.nomeMilitar) {
             abrirModalPesquisaNome(result.data.nomeMilitar);
         }
@@ -493,9 +494,7 @@ export const PericiaMenor: React.FC = () => {
       
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 w-full max-w-2xl mx-auto space-y-6">
         
-        {/* ======================================================== */}
-        {/* NOVA POSIÇÃO: SECÇÃO 0: INTELIGÊNCIA ARTIFICIAL E CÂMARA */}
-        {/* ======================================================== */}
+        {/* SECÇÃO 0: INTELIGÊNCIA ARTIFICIAL E CÂMARA */}
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 animate-fade-in shadow-inner">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2">
@@ -564,6 +563,7 @@ export const PericiaMenor: React.FC = () => {
           </h2>
 
           <div className="space-y-4 font-body">
+            
             <div className="relative z-[100] mb-4">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Serviço *</label>
               <input
@@ -899,7 +899,7 @@ export const PericiaMenor: React.FC = () => {
 
       </div>
 
-      {/* MODAL DE PESQUISA POR NOME */}
+      {/* MODAL DE PESQUISA POR NOME (COMPORTAMENTO INTELIGENTE) */}
       {showPesquisarNomeModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
@@ -915,19 +915,20 @@ export const PericiaMenor: React.FC = () => {
                   <div className="p-8 text-center text-gray-500 flex flex-col items-center"><div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mb-2"></div><p className="text-sm">Carregando base de dados...</p></div>
                 ) : (
                   <div className="flex flex-col">
+                    {/* Documentação: Filtro Inteligente (Procura por palavras separadas ignorando a ordem e os acentos) */}
                     {militaresInfoList.filter((m) => {
-                      if (!pesquisarNomeTerm) return false;
-                      const term = removeAcentos(pesquisarNomeTerm.toLowerCase());
+                      if (!pesquisarNomeTerm.trim()) return false;
+                      const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean);
                       const name = removeAcentos(m.nome.toLowerCase());
-                      return name.includes(term);
+                      return terms.every(t => name.includes(t));
                     }).slice(0, 50).map((m, idx) => (
                         <div key={idx} onClick={() => selecionarNomeNip(m.nip)} className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"><div className="font-bold text-[#050F41] text-sm">{m.nome}</div><div className="text-xs text-gray-500 font-mono mt-0.5">{m.nip}</div></div>
                       ))}
-                    {pesquisarNomeTerm &&
+                    {pesquisarNomeTerm.trim() &&
                       militaresInfoList.filter((m) => {
-                        const term = removeAcentos(pesquisarNomeTerm.toLowerCase());
+                        const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean);
                         const name = removeAcentos(m.nome.toLowerCase());
-                        return name.includes(term);
+                        return terms.every(t => name.includes(t));
                       }).length === 0 && (
                         <div className="p-8 text-center text-gray-500 text-sm">
                           Nenhum militar encontrado.
