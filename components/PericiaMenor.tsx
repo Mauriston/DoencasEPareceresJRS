@@ -1,9 +1,9 @@
 // Ficheiro: components/PericiaMenor.tsx
 import React, { useState, useEffect } from 'react';
 import { Header } from './Header';
-import { Search, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+// Documentação: Adicionado o ícone ChevronDown para o menu suspenso
+import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react';
 
-// Documentação: Tipagem adaptada para o formato do teu JSON
 interface CidItem {
   SUBCAT: string;
   DESCRICAO: string;
@@ -15,7 +15,7 @@ const QUADROS = ["AA", "AFN", "CA", "CD", "CN", "EN", "FN", "IM", "Md", "QC-CA",
 const ESP_PRACAS = ["AD", "AH", "AM", "AR", "MC", "MT", "AT", "AV", "BA", "CA", "CP", "CI", "CN", "CL", "CT", "CO", "DA", "DM", "DT", "ED", "EP", "EL", "ET", "TE", "EF", "EG", "ES", "AE", "EN", "FR", "GC", "GR", "HN", "HD", "IF", "MR", "MA", "NA", "MI", "MG", "ML", "ME", "MO", "MS", "MU", "ND", "OR", "OS", "PL", "PC", "PD", "PT", "QI", "RM", "RB", "SC", "SI", "TC"];
 
 export const PericiaMenor: React.FC = () => {
-  // === ESTADOS: DADOS DO MILITAR (IDÊNTICO A PARECERES) ===
+  // === ESTADOS: DADOS DO MILITAR ===
   const [nip, setNip] = useState('');
   const [militarStatus, setMilitarStatus] = useState<"" | "loading" | "found" | "not_found">("");
   const [inspecionado, setInspecionado] = useState("");
@@ -45,6 +45,9 @@ export const PericiaMenor: React.FC = () => {
   // === ESTADOS: HOMOLOGAÇÃO ===
   const [tempoHomologacao, setTempoHomologacao] = useState('');
   const [selectedDispensas, setSelectedDispensas] = useState<string[]>([]);
+  // Documentação: Estado para controlar a abertura do Menu Suspenso de Dispensas
+  const [showDispensasDropdown, setShowDispensasDropdown] = useState(false);
+  
   const [vdf, setVdf] = useState<boolean | null>(null);
   const [selectedPerito, setSelectedPerito] = useState('');
 
@@ -74,7 +77,7 @@ export const PericiaMenor: React.FC = () => {
 
     const fetchCid = async () => {
       try {
-        const res = await fetch('./cid.json'); // Documentação: Acesso direto à pasta public
+        const res = await fetch('./cid.json'); 
         if (res.ok) {
           const data = await res.json();
           setCidOptions(data);
@@ -88,7 +91,7 @@ export const PericiaMenor: React.FC = () => {
     fetchCid();
   }, []);
 
-  // === LÓGICAS: DADOS DO MILITAR (IDÊNTICO A PARECERES) ===
+  // === LÓGICAS: DADOS DO MILITAR ===
   const handleNipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 8) value = value.slice(0, 8);
@@ -169,13 +172,12 @@ export const PericiaMenor: React.FC = () => {
   }, [pg, militarStatus]);
 
 
-  // === LÓGICAS DE MÁSCARA E INTERAÇÃO (ATESTADO E HOMOLOGAÇÃO) ===
+  // === LÓGICAS DE MÁSCARA E INTERAÇÃO ===
   const handleCidSearch = (text: string) => {
     setCidQuery(text);
     setSelectedCid(null);
     if (text.length > 1) {
       const lower = text.toLowerCase();
-      // Documentação: Adaptado para pesquisar SUBCAT e DESCRICAO
       const filtered = cidOptions.filter(c => 
         (c.SUBCAT && c.SUBCAT.toLowerCase().includes(lower)) || 
         (c.DESCRICAO && c.DESCRICAO.toLowerCase().includes(lower))
@@ -428,39 +430,63 @@ export const PericiaMenor: React.FC = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-3 uppercase tracking-wider">Dispensas *</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {isLoadingLookups ? (
-                  <p className="text-xs text-gray-400 col-span-2">A carregar dispensas...</p>
-                ) : (
-                  dispensasDisponiveis.map((disp, idx) => {
-                    const isTodas = disp === 'TODAS AS ATIVIDADES';
-                    const isSelected = selectedDispensas.includes(disp);
-                    const isDisabled = 
-                      (isTodas && selectedDispensas.length > 0 && !isSelected) || 
-                      (!isTodas && selectedDispensas.includes('TODAS AS ATIVIDADES'));
+            {/* Documentação: Menu Suspenso de Dispensas */}
+            <div className="relative">
+              <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Dispensas *</label>
+              
+              {/* Botão Principal do Dropdown */}
+              <button 
+                type="button"
+                onClick={() => setShowDispensasDropdown(!showDispensasDropdown)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm flex justify-between items-center focus:outline-none focus:border-[#050F41] focus:ring-1 focus:ring-[#050F41] transition-all"
+              >
+                <span className={`truncate font-medium ${selectedDispensas.length > 0 ? 'text-[#050F41]' : 'text-gray-400'}`}>
+                  {selectedDispensas.length === 0 
+                    ? 'Selecione as dispensas...' 
+                    : selectedDispensas.includes('TODAS AS ATIVIDADES') 
+                      ? 'TODAS AS ATIVIDADES' 
+                      : `${selectedDispensas.length} dispensa(s) selecionada(s)`}
+                </span>
+                <ChevronDown size={18} className={`text-gray-400 transition-transform duration-200 ${showDispensasDropdown ? 'rotate-180 text-[#050F41]' : ''}`} />
+              </button>
 
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => handleDispensaToggle(disp)}
-                        disabled={isDisabled}
-                        className={`flex items-center justify-start text-left p-3 rounded-xl border text-sm transition-all ${
-                          isSelected ? 'bg-blue-50 border-blue-200 text-[#050F41] font-bold shadow-sm' : 
-                          isDisabled ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed opacity-60' : 
-                          'bg-white border-gray-200 text-gray-700 hover:border-blue-200'
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded shrink-0 mr-3 flex items-center justify-center border ${isSelected ? 'bg-[#050F41] border-[#050F41]' : 'border-gray-300'}`}>
-                          {isSelected && <CheckCircle2 size={14} className="text-white" />}
-                        </div>
-                        <span className="leading-snug">{disp}</span>
-                      </button>
-                    )
-                  })
-                )}
-              </div>
+              {/* Caixa de Seleção do Dropdown */}
+              {showDispensasDropdown && (
+                <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] max-h-64 overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in custom-scrollbar">
+                  {isLoadingLookups ? (
+                    <p className="text-xs text-gray-400 col-span-2 text-center py-4 flex items-center justify-center gap-2">
+                      <Loader2 size={16} className="animate-spin" /> A carregar dispensas...
+                    </p>
+                  ) : (
+                    dispensasDisponiveis.map((disp, idx) => {
+                      const isTodas = disp === 'TODAS AS ATIVIDADES';
+                      const isSelected = selectedDispensas.includes(disp);
+                      const isDisabled = 
+                        (isTodas && selectedDispensas.length > 0 && !isSelected) || 
+                        (!isTodas && selectedDispensas.includes('TODAS AS ATIVIDADES'));
+
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => handleDispensaToggle(disp)}
+                          disabled={isDisabled}
+                          type="button"
+                          className={`flex items-center justify-start text-left p-3 rounded-xl border text-xs sm:text-[13px] transition-all focus:outline-none ${
+                            isSelected ? 'bg-blue-50 border-blue-200 text-[#050F41] font-bold shadow-sm' : 
+                            isDisabled ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed opacity-60' : 
+                            'bg-white border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded-md shrink-0 mr-3 flex items-center justify-center border transition-colors ${isSelected ? 'bg-[#050F41] border-[#050F41]' : 'border-gray-300 bg-white'}`}>
+                            {isSelected && <CheckCircle2 size={12} strokeWidth={3} className="text-white" />}
+                          </div>
+                          <span className="leading-snug">{disp}</span>
+                        </button>
+                      )
+                    })
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
@@ -485,7 +511,7 @@ export const PericiaMenor: React.FC = () => {
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Perito *</label>
               <div className="flex flex-wrap gap-2">
                 {isLoadingLookups ? (
-                  <p className="text-xs text-gray-400">A carregar peritos...</p>
+                  <p className="text-xs text-gray-400 flex items-center gap-2"><Loader2 size={14} className="animate-spin"/> A carregar peritos...</p>
                 ) : (
                   peritosDisponiveis.map((p, idx) => (
                     <button
@@ -520,7 +546,7 @@ export const PericiaMenor: React.FC = () => {
 
       </div>
 
-      {/* MODAL DE PESQUISA POR NOME (CÓPIA DE PARECERES) */}
+      {/* MODAL DE PESQUISA POR NOME */}
       {showPesquisarNomeModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
           <div
