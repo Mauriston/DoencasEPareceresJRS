@@ -1,13 +1,19 @@
 // Ficheiro: components/PericiaMenor.tsx
 import React, { useState, useEffect } from 'react';
 import { Header } from './Header';
-import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react';
+import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown, CheckCircle } from 'lucide-react';
 
 interface CidItem {
   SUBCAT: string;
   DESCRICAO: string;
   DESCRABREV: string;
 }
+
+// Documentação: Dicionário para transformar de 1 a 20 por extenso
+const EXTENSOS: Record<number, string> = {
+  1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis", 7: "sete", 8: "oito", 9: "nove", 10: "dez",
+  11: "onze", 12: "doze", 13: "treze", 14: "catorze", 15: "quinze", 16: "dezesseis", 17: "dezessete", 18: "dezoito", 19: "dezenove", 20: "vinte"
+};
 
 const PG_OPTIONS = ["CMG", "CF", "CC", "CT", "1T", "2T", "GM", "SO", "1SG", "2SG", "3SG", "CB", "MN", "MN-RC", "SD", "GR", "ALUNO", "SCNS"];
 const QUADROS = ["AA", "AFN", "CA", "CD", "CN", "EN", "FN", "IM", "Md", "QC-CA", "QC-FN", "QC-IM", "S", "T"];
@@ -45,15 +51,17 @@ export const PericiaMenor: React.FC = () => {
   const [tempoHomologacao, setTempoHomologacao] = useState('');
   const [selectedDispensas, setSelectedDispensas] = useState<string[]>([]);
   const [showDispensasDropdown, setShowDispensasDropdown] = useState(false);
-  
   const [vdf, setVdf] = useState<boolean | null>(null);
   const [selectedPerito, setSelectedPerito] = useState('');
 
-  // === ESTADOS: LOOKUPS (Google Sheets) ===
+  // === ESTADOS: LOOKUPS E SUBMISSÃO ===
   const [isLoadingLookups, setIsLoadingLookups] = useState(true);
   const [omsOptions, setOmsOptions] = useState<string[]>([]);
   const [dispensasDisponiveis, setDispensasDisponiveis] = useState<string[]>([]);
   const [peritosDisponiveis, setPeritosDisponiveis] = useState<any[]>([]);
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successPdfUrl, setSuccessPdfUrl] = useState<string | null>(null);
 
   // === CARREGAMENTO INICIAL ===
   useEffect(() => {
@@ -67,7 +75,7 @@ export const PericiaMenor: React.FC = () => {
           setOmsOptions(json.data.OM.filter(Boolean) || []);
         }
       } catch (err) {
-        console.error('Erro ao carregar lookups do Google Sheets', err);
+        console.error('Erro ao carregar lookups', err);
       } finally {
         setIsLoadingLookups(false);
       }
@@ -77,13 +85,9 @@ export const PericiaMenor: React.FC = () => {
       try {
         const baseUrl = import.meta.env.BASE_URL || '/';
         const res = await fetch(`${baseUrl}cid.json`); 
-        
         if (res.ok) {
           const data = await res.json();
           setCidOptions(data);
-          console.log(`Carregados ${data.length} CIDs com sucesso!`);
-        } else {
-          console.error(`Erro ao carregar cid.json: HTTP ${res.status}`);
         }
       } catch (err) {
         console.error('Erro grave de rede ao tentar carregar cid.json', err);
@@ -142,7 +146,7 @@ export const PericiaMenor: React.FC = () => {
           setMilitaresInfoList(data.data);
         }
       } catch (err) {
-        console.error("Erro ao carregar lista de militares", err);
+        console.error("Erro ao carregar lista", err);
       } finally {
         setIsCarregandoMilitares(false);
       }
@@ -157,25 +161,16 @@ export const PericiaMenor: React.FC = () => {
 
   useEffect(() => {
     if (militarStatus !== "not_found" || !pg) return;
-    if (["CMG", "CF", "SO", "1SG", "2SG"].includes(pg)) {
-      setSituacao("Carreira");
-    } else if (["2T", "GM"].includes(pg)) {
-      setSituacao("Temporário");
-    } else if (["MN-RC", "SD", "GR", "ALUNO", "SCNS"].includes(pg)) {
-      setSituacao("");
-    } else {
-      setSituacao("");
-    }
+    if (["CMG", "CF", "SO", "1SG", "2SG"].includes(pg)) setSituacao("Carreira");
+    else if (["2T", "GM"].includes(pg)) setSituacao("Temporário");
+    else setSituacao("");
 
-    const oficialPg = ["CMG", "CF", "CC", "CT", "1T", "2T", "GM"];
-    const pracaPg = ["SO", "1SG", "2SG", "3SG", "CB", "MN", "MN-RC", "SD", "GR"];
-    if (oficialPg.includes(pg)) setCirculo("Oficial");
-    else if (pracaPg.includes(pg)) setCirculo("Praça");
+    if (["CMG", "CF", "CC", "CT", "1T", "2T", "GM"].includes(pg)) setCirculo("Oficial");
+    else if (["SO", "1SG", "2SG", "3SG", "CB", "MN", "MN-RC", "SD", "GR"].includes(pg)) setCirculo("Praça");
     else setCirculo("");
   }, [pg, militarStatus]);
 
-
-  // === LÓGICAS DE MÁSCARA E INTERAÇÃO ===
+  // === LÓGICAS: INTERAÇÕES ===
   const handleCidSearch = (text: string) => {
     setCidQuery(text);
     setSelectedCid(null);
@@ -185,7 +180,6 @@ export const PericiaMenor: React.FC = () => {
         (c.SUBCAT && c.SUBCAT.toLowerCase().includes(lower)) || 
         (c.DESCRICAO && c.DESCRICAO.toLowerCase().includes(lower))
       ).slice(0, 15);
-      
       setFilteredCids(filtered);
       setShowCidDropdown(true);
     } else {
@@ -213,31 +207,109 @@ export const PericiaMenor: React.FC = () => {
   };
 
   const formatTempoFocus = (val: string, setter: (v: string) => void) => {
-    if (val) {
-      setter(val.replace(/\D/g, ''));
-    }
+    if (val) setter(val.replace(/\D/g, ''));
   };
 
   const handleDispensaToggle = (dispensa: string) => {
     if (dispensa === 'TODAS AS ATIVIDADES') {
-      if (selectedDispensas.includes('TODAS AS ATIVIDADES')) {
-        setSelectedDispensas([]);
-      } else {
-        setSelectedDispensas(['TODAS AS ATIVIDADES']);
-      }
+      if (selectedDispensas.includes('TODAS AS ATIVIDADES')) setSelectedDispensas([]);
+      else setSelectedDispensas(['TODAS AS ATIVIDADES']);
     } else {
       let newSelection = selectedDispensas.filter(d => d !== 'TODAS AS ATIVIDADES');
-      if (newSelection.includes(dispensa)) {
-        newSelection = newSelection.filter(d => d !== dispensa);
-      } else {
-        newSelection.push(dispensa);
-      }
+      if (newSelection.includes(dispensa)) newSelection = newSelection.filter(d => d !== dispensa);
+      else newSelection.push(dispensa);
       setSelectedDispensas(newSelection);
     }
   };
 
+  // === LÓGICA DE SUBMISSÃO (Integração com AppScript) ===
+  const handleSubmit = async () => {
+    // 1. Validação de Campos Obrigatórios
+    if (
+      !nip || 
+      !dataAtestado || 
+      !tempoAtestado || 
+      !selectedCid || 
+      !tempoHomologacao || 
+      selectedDispensas.length === 0 || 
+      vdf === null || 
+      !selectedPerito
+    ) {
+      alert("Por favor, preencha todos os campos obrigatórios (*).");
+      return;
+    }
+
+    if (militarStatus === "not_found" && (!pg || !om || !nome)) {
+      alert("Por favor, preencha os dados manuais do militar (Posto/Graduação, OM e Nome).");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    // 2. Concatenação do Inspecionado (igual à lógica de Pareceres)
+    let militarIdentifier = "";
+    if (militarStatus === "found") {
+      militarIdentifier = inspecionado;
+    } else {
+      militarIdentifier = `${pg} ${quadro ? quadro + ' ' : ''}${espPraca ? espPraca + ' ' : ''}${nip} ${nome}`.trim().replace(/\s+/g, ' ');
+    }
+
+    // 3. Extrator do tempo em dias (Ex: "5 dias" -> "5")
+    const tempoHomologNumerico = parseInt(tempoHomologacao.replace(/\D/g, ''), 10);
+    const tempoExtenso = EXTENSOS[tempoHomologNumerico] || tempoHomologNumerico.toString();
+
+    // 4. Estruturação do Payload
+    const payload = {
+      action: 'gerar_pericia_menor',
+      inspecionado: militarIdentifier,
+      om: militarStatus === "found" ? omLeitura : om,
+      cid: `${selectedCid.SUBCAT} - ${selectedCid.DESCRICAO}`,
+      dispensas: selectedDispensas.join(', '),
+      dataAtestado: dataAtestado,
+      tempoAtestado: tempoAtestado.replace(/\D/g, ''),
+      tempoHomolog: tempoHomologNumerico,
+      tempoExtenso: tempoExtenso,
+      vdf: vdf,
+      perito: selectedPerito
+    };
+
+    // 5. Envio ao AppScript
+    try {
+      const response = await fetch(`${process.env.VITE_APPSCRIPT_URL || 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec'}`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setSuccessPdfUrl(data.pdfUrl);
+      } else {
+        alert("Erro ao gerar Perícia Menor: " + data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Falha na comunicação com o servidor. Verifique a sua conexão à internet.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReset = () => {
+    setSuccessPdfUrl(null);
+    setNip('');
+    setMilitarStatus("");
+    setDataAtestado('');
+    setTempoAtestado('');
+    setCidQuery('');
+    setSelectedCid(null);
+    setTempoHomologacao('');
+    setSelectedDispensas([]);
+    setVdf(null);
+    setSelectedPerito('');
+  };
+
   return (
-    <div className="flex flex-col h-full bg-gray-50 pb-32">
+    <div className="flex flex-col h-full bg-gray-50 pb-32 relative">
       <Header title="Perícia Menor" />
       
       <div className="p-4 max-w-2xl mx-auto w-full space-y-6">
@@ -339,16 +411,6 @@ export const PericiaMenor: React.FC = () => {
                   <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Nome Completo *</label>
                   <input type="text" value={nome} onChange={(e) => setNome(e.target.value.toUpperCase())} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-navy focus:border-navy p-3 uppercase" />
                 </div>
-
-                {["CC", "CT", "1T", "MN", "CB", "3SG"].includes(pg) && (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Situação *</label>
-                    <div className="flex space-x-2">
-                      <button type="button" onClick={() => setSituacao("Carreira")} className={`flex-1 py-2 px-3 rounded-xl border text-sm font-bold transition-colors ${situacao === "Carreira" ? "bg-navy/10 text-navy border-navy" : "bg-white text-gray-600 border-gray-300"}`}>Carreira</button>
-                      <button type="button" onClick={() => setSituacao("Temporário")} className={`flex-1 py-2 px-3 rounded-xl border text-sm font-bold transition-colors ${situacao === "Temporário" ? "bg-navy/10 text-navy border-navy" : "bg-white text-gray-600 border-gray-300"}`}>Temporário</button>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -396,7 +458,7 @@ export const PericiaMenor: React.FC = () => {
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]"
               />
               {showCidDropdown && filteredCids.length > 0 && (
-                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
+                <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
                   {filteredCids.map((cid, idx) => (
                     <li 
                       key={idx} 
@@ -408,11 +470,6 @@ export const PericiaMenor: React.FC = () => {
                     </li>
                   ))}
                 </ul>
-              )}
-              {showCidDropdown && filteredCids.length === 0 && cidQuery.length > 1 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-4 text-center text-sm text-gray-500">
-                  Nenhum CID encontrado.
-                </div>
               )}
             </div>
           </div>
@@ -441,7 +498,6 @@ export const PericiaMenor: React.FC = () => {
 
             <div className="relative">
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Dispensas *</label>
-              
               <button 
                 type="button"
                 onClick={() => setShowDispensasDropdown(!showDispensasDropdown)}
@@ -495,7 +551,6 @@ export const PericiaMenor: React.FC = () => {
               )}
             </div>
 
-            {/* Ajustado: Campos VDF e Peritos agora utilizam "flex-1" num contentor de "space-x-2" */}
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">VDF *</label>
               <div className="flex space-x-2">
@@ -540,14 +595,16 @@ export const PericiaMenor: React.FC = () => {
           </div>
         </section>
 
-        {/* ÁREA DE BOTÕES DO FORMULÁRIO */}
+        {/* ÁREA DE BOTÕES DO FORMULÁRIO (Submissão) */}
         <div className="flex justify-end items-center gap-4 pt-4">
           <button
-            type="submit"
-            className="w-14 h-14 bg-[#079551] text-white rounded-full flex items-center justify-center transition-all hover:bg-green-700 shadow-md active:scale-95 focus:outline-none"
-            title="Gerar Documento (Em breve)"
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="w-14 h-14 bg-[#079551] text-white rounded-full flex items-center justify-center transition-all hover:bg-green-700 shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-50 focus:outline-none"
+            title="Gerar e Salvar Perícia Menor"
           >
-            <span className="material-symbols-outlined">send</span>
+            {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : <span className="material-symbols-outlined text-[26px]">send</span>}
           </button>
         </div>
 
@@ -556,72 +613,56 @@ export const PericiaMenor: React.FC = () => {
       {/* MODAL DE PESQUISA POR NOME */}
       {showPesquisarNomeModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
-          <div
-            className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowPesquisarNomeModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"
-            >
-              <span className="material-symbols-outlined">close</span>
-            </button>
-            <div className="p-6 bg-[#050F41] text-white shrink-0">
-              <h2 className="text-xl font-bold tracking-tight">Pesquisar Militar</h2>
-              <p className="text-blue-100 text-sm mt-1">Busque pelo nome completo</p>
-            </div>
-            
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setShowPesquisarNomeModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"><span className="material-symbols-outlined">close</span></button>
+            <div className="p-6 bg-[#050F41] text-white shrink-0"><h2 className="text-xl font-bold tracking-tight">Pesquisar Militar</h2><p className="text-blue-100 text-sm mt-1">Busque pelo nome completo</p></div>
             <div className="p-6 flex-1 flex flex-col min-h-0">
               <div className="relative shrink-0 mb-4">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
-                  <span className="material-symbols-outlined">search</span>
-                </div>
-                <input
-                  type="text"
-                  value={pesquisarNomeTerm}
-                  onChange={(e) => setPesquisarNomeTerm(e.target.value)}
-                  placeholder="Ex: João da Silva..."
-                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-10 p-2.5 transition-colors"
-                  autoFocus
-                />
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400"><span className="material-symbols-outlined">search</span></div>
+                <input type="text" value={pesquisarNomeTerm} onChange={(e) => setPesquisarNomeTerm(e.target.value)} placeholder="Ex: João da Silva..." className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-10 p-2.5 transition-colors" autoFocus />
               </div>
-
               <div className="flex-1 overflow-y-auto min-h-[50px] border border-gray-100 rounded-lg bg-gray-50/50">
                 {isCarregandoMilitares ? (
-                  <div className="p-8 text-center text-gray-500 flex flex-col items-center">
-                    <div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mb-2"></div>
-                    <p className="text-sm">Carregando base de dados...</p>
-                  </div>
+                  <div className="p-8 text-center text-gray-500 flex flex-col items-center"><div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mb-2"></div><p className="text-sm">Carregando base de dados...</p></div>
                 ) : (
                   <div className="flex flex-col">
-                    {militaresInfoList
-                      .filter((m) =>
-                        pesquisarNomeTerm && m.nome.toLowerCase().includes(pesquisarNomeTerm.toLowerCase())
-                      )
-                      .slice(0, 50)
-                      .map((m, idx) => (
-                        <div
-                          key={idx}
-                          onClick={() => selecionarNomeNip(m.nip)}
-                          className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"
-                        >
-                          <div className="font-bold text-[#050F41] text-sm">{m.nome}</div>
-                          <div className="text-xs text-gray-500 font-mono mt-0.5">{m.nip}</div>
-                        </div>
+                    {militaresInfoList.filter((m) => pesquisarNomeTerm && m.nome.toLowerCase().includes(pesquisarNomeTerm.toLowerCase())).slice(0, 50).map((m, idx) => (
+                        <div key={idx} onClick={() => selecionarNomeNip(m.nip)} className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"><div className="font-bold text-[#050F41] text-sm">{m.nome}</div><div className="text-xs text-gray-500 font-mono mt-0.5">{m.nip}</div></div>
                       ))}
-                    {pesquisarNomeTerm &&
-                      militaresInfoList.filter((m) =>
-                        m.nome.toLowerCase().includes(pesquisarNomeTerm.toLowerCase())
-                      ).length === 0 && (
-                        <div className="p-8 text-center text-gray-500 text-sm">
-                          Nenhum militar encontrado.
-                        </div>
-                      )}
                   </div>
                 )}
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* OVERLAY DE LOADING / SUCESSO DURANTE A SUBMISSÃO */}
+      {(isSubmitting || successPdfUrl) && (
+        <div className="fixed inset-0 z-[200] bg-white/95 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in p-6">
+          {!successPdfUrl ? (
+            <div className="flex flex-col items-center text-center space-y-4">
+              <Loader2 className="animate-spin text-[#050F41]" size={48} />
+              <h2 className="text-xl font-bold font-heading text-[#050F41]">A gerar Perícia Menor...</h2>
+              <p className="text-sm font-body text-gray-500 max-w-xs leading-relaxed">Isto pode demorar alguns segundos. O documento está a ser processado e salvo no Google Drive.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center text-center space-y-5 animate-scale-up max-w-sm">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-2 shadow-inner">
+                <CheckCircle className="text-green-600" size={40} />
+              </div>
+              <h2 className="text-2xl font-black font-heading text-[#050F41]">Sucesso!</h2>
+              <p className="text-sm font-body text-gray-600">A perícia foi gerada e a planilha atualizada.</p>
+              <div className="flex flex-col w-full gap-3 mt-4">
+                <a href={successPdfUrl} target="_blank" rel="noopener noreferrer" className="w-full py-3.5 bg-[#050F41] text-white rounded-xl font-bold hover:bg-blue-900 transition-colors flex items-center justify-center gap-2 shadow-md">
+                  <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span> Ver PDF Gerado
+                </a>
+                <button onClick={handleReset} className="w-full py-3.5 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined text-[20px]">add_circle</span> Nova Perícia Menor
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

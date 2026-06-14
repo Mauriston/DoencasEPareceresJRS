@@ -12,23 +12,16 @@ function doGet(e) {
       const listasRefSheet = ss.getSheetByName("ListasRef");
       const listasRefData = listasRefSheet.getDataRange().getValues();
       const headers = listasRefData[0];
-      const finalidades = getColumnValues(
-        listasRefData,
-        headers.indexOf("FINALIDADE"),
-      );
+      
+      const finalidades = getColumnValues(listasRefData, headers.indexOf("FINALIDADE"));
       const pg = getColumnValues(listasRefData, headers.indexOf("P/G"));
-      const quadroOficiais = getColumnValues(
-        listasRefData,
-        headers.indexOf("QUADRO_OFICIAIS"),
-      );
-      const especialidadePracas = getColumnValues(
-        listasRefData,
-        headers.indexOf("ESPECIALIDADE_PRACAS"),
-      );
-      const especialidades = getColumnValues(
-        listasRefData,
-        headers.indexOf("ESPECIALIDADE"),
-      );
+      const quadroOficiais = getColumnValues(listasRefData, headers.indexOf("QUADRO_OFICIAIS"));
+      const especialidadePracas = getColumnValues(listasRefData, headers.indexOf("ESPECIALIDADE_PRACAS"));
+      const especialidades = getColumnValues(listasRefData, headers.indexOf("ESPECIALIDADE"));
+      
+      // Documentação: Busca a nova coluna DISPENSAS
+      const dispensas = getColumnValues(listasRefData, headers.indexOf("DISPENSAS"));
+
       // Get OMs
       const omSheet = ss.getSheetByName("OM");
       const omData = omSheet.getDataRange().getValues();
@@ -60,11 +53,13 @@ function doGet(e) {
             QUADRO_OFICIAIS: quadroOficiais,
             ESPECIALIDADE_PRACAS: especialidadePracas,
             ESPECIALIDADES: especialidades,
+            DISPENSAS: dispensas, // Documentação: Retorna a lista de dispensas
             OM: oms,
             PERITOS: peritos,
           },
         }),
       ).setMimeType(ContentService.MimeType.JSON);
+
     } else if (action === "getMilitaresList") {
       const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
       const militaresSheet = ss.getSheetByName("Militares");
@@ -92,6 +87,7 @@ function doGet(e) {
           data: militares,
         }),
       ).setMimeType(ContentService.MimeType.JSON);
+
     } else if (action === "getTemplatesDocumentos") {
       const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
       const sheet = ss.getSheetByName("Templates_Documentos");
@@ -119,7 +115,6 @@ function doGet(e) {
         }),
       ).setMimeType(ContentService.MimeType.JSON);
 
-    // NOVO ENDPOINT: Buscar Pareceres Gerados
     } else if (action === "getPareceresList") {
       const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
       const sheet = ss.getSheetByName("Pareceres");
@@ -128,11 +123,9 @@ function doGet(e) {
       }
       const data = sheet.getDataRange().getValues();
       const records = [];
-      // Colunas: [0]Data, [1]Perito, [2]Finalidade, [3]Especialidade, [4]Inspecionado, [5]OM, [6]Link
       for (let i = 1; i < data.length; i++) {
         if (data[i][4]) { 
           let dataVal = data[i][0];
-          // Tratamento para data
           if (dataVal instanceof Date) {
             const day = String(dataVal.getDate()).padStart(2, '0');
             const month = String(dataVal.getMonth() + 1).padStart(2, '0');
@@ -148,7 +141,7 @@ function doGet(e) {
         }
       }
       return ContentService.createTextOutput(
-        JSON.stringify({success: true, data: records.reverse()}) // Reverse para listar os mais recentes primeiro
+        JSON.stringify({success: true, data: records.reverse()}) 
       ).setMimeType(ContentService.MimeType.JSON);
 
     } else if (action === "getMilitar") {
@@ -203,9 +196,14 @@ function getColumnValues(data, colIndex) {
 
 function doPost(e) {
   if (!e) e = { postData: { contents: "{}" } };
+  
   try {
     const payload = JSON.parse(e.postData.contents);
-    
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+    // ==========================================
+    // LÓGICA 1: IMPRESSÃO
+    // ==========================================
     if (payload.action === "imprimir") {
       const pdfFile = DriveApp.getFileById(payload.pdfId);
       const pdfBlob = pdfFile.getBlob();
@@ -269,14 +267,13 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
       return ContentService.createTextOutput(JSON.stringify({success: true})).setMimeType(ContentService.MimeType.JSON);
     }
     
-    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-
-    // 1. If we have to register a new militar
-    if (payload.isNewMilitar) {
+    // ==========================================
+    // LÓGICA COMUM: REGISTRO DE NOVO MILITAR
+    // ==========================================
+    // Aplicável tanto para Pareceres quanto para Perícia Menor
+    if (payload.action !== "imprimir" && payload.isNewMilitar) {
       const militaresSheet = ss.getSheetByName("Militares");
-      const headers = militaresSheet
-        .getRange(1, 1, 1, militaresSheet.getLastColumn())
-        .getValues()[0];
+      const headers = militaresSheet.getRange(1, 1, 1, militaresSheet.getLastColumn()).getValues()[0];
       const newRow = new Array(headers.length).fill("");
 
       const setVal = (colName, value) => {
@@ -293,117 +290,181 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
       militaresSheet.appendRow(newRow);
     }
 
-    // 2. Generate PDF
-    // Find Template ID
-    const templatesSheet = ss.getSheetByName("Templates");
-    const templatesData = templatesSheet.getDataRange().getValues();
-    let templateId = null;
-    for (let i = 1; i < templatesData.length; i++) {
-      if (templatesData[i][0] === payload.especialidade) {
-        templateId = templatesData[i][1];
-        break;
+    // ==========================================
+    // LÓGICA 2: GERAÇÃO DA PERÍCIA MENOR
+    // ==========================================
+    if (payload.action === "gerar_pericia_menor") {
+      
+      // 1. Identificação do Template com base no Perito
+      let templateId = "";
+      if (payload.perito && payload.perito.includes("MAURISTON")) {
+        templateId = "130zzSeDRw2nso-QgfwIjOzbyet67Uvy1FQzL-V5X6do";
+      } else if (payload.perito && (payload.perito.includes("JÚLIO") || payload.perito.includes("JULIO"))) {
+        templateId = "1qLXEBSNV1DpeChqKm-i_4uVFlvClZ6YmpE2W3KxyRRI";
+      } else {
+        throw new Error("Template não encontrado para o perito selecionado: " + payload.perito);
       }
+
+      const templateDoc = DriveApp.getFileById(templateId);
+
+      // 2. Gerenciamento de Pastas no Drive
+      const pmenorFolderId = "18_322EHraGIhfWXzh8ZgOFpnIw884Ox6";
+      const parentFolder = DriveApp.getFolderById(pmenorFolderId);
+      let subfolder = null;
+      
+      const folders = parentFolder.searchFolders('title = "' + payload.inspecionado + '"');
+      if (folders.hasNext()) {
+        subfolder = folders.next();
+      } else {
+        subfolder = parentFolder.createFolder(payload.inspecionado);
+      }
+
+      // 3. Formatação de Datas
+      const dateObj = new Date();
+      const shortDate = Utilities.formatDate(dateObj, Session.getScriptTimeZone(), "yyyy-MM-dd");
+      const dataHojeBr = Utilities.formatDate(dateObj, Session.getScriptTimeZone(), "dd/MM/yyyy");
+      
+      let dataAtestadoBr = payload.dataAtestado;
+      if (dataAtestadoBr && dataAtestadoBr.includes("-")) {
+        const parts = dataAtestadoBr.split("-");
+        dataAtestadoBr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+
+      // 4. Duplicação do Template
+      const newFileName = "Perícia Menor - " + payload.inspecionado + " - " + dataHojeBr.replace(/\//g, ".");
+      const newFile = templateDoc.makeCopy(newFileName, subfolder);
+      const newDoc = DocumentApp.openById(newFile.getId());
+      const body = newDoc.getBody();
+
+      // 5. Substituição de Placeholders
+      body.replaceText("{{INSPECIONADO}}", payload.inspecionado);
+      body.replaceText("{{DISPENSAS}}", payload.dispensas);
+      body.replaceText("{{TEMPO_EXTENSO}}", payload.tempoExtenso);
+      body.replaceText("{{TEMPO_HOMOLOG}}", payload.tempoHomolog.toString());
+      body.replaceText("{{DATA_ATESTADO}}", dataAtestadoBr);
+      body.replaceText("{{DATA_HOJE}}", dataHojeBr);
+      
+      // Lógica Condicional do VDF
+      let vdfText = payload.vdf ?
+        "<mark>**Encaminhar para VDF:    ( X  ) Sim**</mark> \t (   ) Não" :
+        "Encaminhar para VDF:    (   ) Sim \t ( X ) Não";
+      body.replaceText("{{VDF}}", vdfText);
+
+      newDoc.saveAndClose();
+
+      // 6. Geração do PDF
+      const pdfBlob = newFile.getAs("application/pdf");
+      const pdfFile = subfolder.createFile(pdfBlob);
+      pdfFile.setName(newFileName + ".pdf");
+
+      newFile.setTrashed(true); // Remove Doc temporário
+
+      // 7. Salvamento na Aba Pericia_Menor
+      const periciaSheet = ss.getSheetByName("Pericia_Menor");
+      if (!periciaSheet) throw new Error("Aba 'Pericia_Menor' não encontrada no Sheets.");
+
+      // Array de 12 colunas conforme a tua estrutura
+      periciaSheet.appendRow([
+        shortDate,              // A: DATA
+        payload.inspecionado,   // B: INSPECIONADO
+        payload.om,             // C: OM
+        payload.cid,            // D: CID
+        payload.dispensas,      // E: DISPENSAS
+        payload.dataAtestado,   // F: DATA_ATESTADO
+        payload.tempoAtestado,  // G: TEMPO_ATESTADO
+        payload.tempoHomolog,   // H: TEMPO_HOMOL0G
+        "",                     // I: DATA_TERMINO (Fórmula do Sheets atua aqui)
+        payload.vdf,            // J: VDF (Boolean)
+        payload.perito,         // K: PERITO
+        pdfFile.getUrl()        // L: ARQUIVO
+      ]);
+
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        pdfUrl: pdfFile.getUrl()
+      })).setMimeType(ContentService.MimeType.JSON);
     }
-    if (!templateId)
-      throw new Error(
-        "Template não encontrado para a especialidade: " +
-          payload.especialidade,
-      );
-    const templateDoc = DriveApp.getFileById(templateId);
-    if (!templateDoc) throw new Error("Arquivo de template não encontrado.");
     
-    // Check/create Inspecionado subfolder
-    const parentFolder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
-    let subfolder = null;
-    const folders = parentFolder.searchFolders(
-      'title = "' + payload.inspecionado + '"',
-    );
-    if (folders.hasNext()) {
-      subfolder = folders.next();
-    } else {
-      subfolder = parentFolder.createFolder(payload.inspecionado);
-    }
+    // ==========================================
+    // LÓGICA 3: PARECERES REGULARES
+    // ==========================================
+    if (payload.action === undefined && payload.especialidade) {
+      
+      const templatesSheet = ss.getSheetByName("Templates");
+      const templatesData = templatesSheet.getDataRange().getValues();
+      let templateId = null;
+      for (let i = 1; i < templatesData.length; i++) {
+        if (templatesData[i][0] === payload.especialidade) {
+          templateId = templatesData[i][1];
+          break;
+        }
+      }
+      if (!templateId)
+        throw new Error("Template não encontrado para a especialidade: " + payload.especialidade);
+        
+      const templateDoc = DriveApp.getFileById(templateId);
+      if (!templateDoc) throw new Error("Arquivo de template não encontrado.");
+      
+      const parentFolder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+      let subfolder = null;
+      const folders = parentFolder.searchFolders('title = "' + payload.inspecionado + '"');
+      if (folders.hasNext()) {
+        subfolder = folders.next();
+      } else {
+        subfolder = parentFolder.createFolder(payload.inspecionado);
+      }
 
-    // Date formatting (ex: "1 de abril de 2026")
-    const dateObj = new Date();
-    const months = [
-      "janeiro",
-      "fevereiro",
-      "março",
-      "abril",
-      "maio",
-      "junho",
-      "julho",
-      "agosto",
-      "setembro",
-      "outubro",
-      "novembro",
-      "dezembro",
-    ];
-    const formattedDate =
-      dateObj.getDate() +
-      " de " +
-      months[dateObj.getMonth()] +
-      " de " +
-      dateObj.getFullYear();
-    const shortDate = Utilities.formatDate(
-      dateObj,
-      Session.getScriptTimeZone(),
-      "dd/MM/yyyy",
-    );
-    // Duplicate doc
-    const newFileName =
-      "Parecer - " + payload.inspecionado + " - " + payload.especialidade;
-    const newFile = templateDoc.makeCopy(newFileName, subfolder);
-    const newDoc = DocumentApp.openById(newFile.getId());
-    const body = newDoc.getBody();
-    // Replace Placeholders
-    body.replaceText("{{DATA_HOJE}}", formattedDate);
-    body.replaceText("{{INSPECIONADO}}", payload.inspecionado);
-    body.replaceText("{{FINALIDADE}}", payload.finalidade);
-    body.replaceText("{{HISTORICO}}", payload.historico || "");
-    body.replaceText("{{NOME_PERITO}}", payload.nomePerito);
-    body.replaceText("{{POSTO}}", payload.postoPerito);
-    body.replaceText("{{CARGO}}", payload.cargoPerito);
+      const dateObj = new Date();
+      const months = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+      const formattedDate = dateObj.getDate() + " de " + months[dateObj.getMonth()] + " de " + dateObj.getFullYear();
+      const shortDate = Utilities.formatDate(dateObj, Session.getScriptTimeZone(), "dd/MM/yyyy");
+      
+      const newFileName = "Parecer - " + payload.inspecionado + " - " + payload.especialidade;
+      const newFile = templateDoc.makeCopy(newFileName, subfolder);
+      const newDoc = DocumentApp.openById(newFile.getId());
+      const body = newDoc.getBody();
+      
+      body.replaceText("{{DATA_HOJE}}", formattedDate);
+      body.replaceText("{{INSPECIONADO}}", payload.inspecionado);
+      body.replaceText("{{FINALIDADE}}", payload.finalidade);
+      body.replaceText("{{HISTORICO}}", payload.historico || "");
+      body.replaceText("{{NOME_PERITO}}", payload.nomePerito);
+      body.replaceText("{{POSTO}}", payload.postoPerito);
+      body.replaceText("{{CARGO}}", payload.cargoPerito);
 
-    newDoc.saveAndClose();
+      newDoc.saveAndClose();
 
-    // Save as PDF
-    const pdfBlob = newFile.getAs("application/pdf");
-    const pdfFile = subfolder.createFile(pdfBlob);
-    pdfFile.setName(newFileName + ".pdf");
-    pdfFile.setDescription(payload.especialidade);
+      const pdfBlob = newFile.getAs("application/pdf");
+      const pdfFile = subfolder.createFile(pdfBlob);
+      pdfFile.setName(newFileName + ".pdf");
+      pdfFile.setDescription(payload.especialidade);
 
-    // We already have the newFile (Google Doc) which can be downloaded as odt
-    const odtUrl =
-      "https://docs.google.com/document/d/" +
-      newFile.getId() +
-      "/export?format=odt";
-    const odtBlob = UrlFetchApp.fetch(odtUrl, {
-      headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() },
-    }).getBlob();
-    odtBlob.setName(newFileName + ".odt");
+      const odtUrl = "https://docs.google.com/document/d/" + newFile.getId() + "/export?format=odt";
+      const odtBlob = UrlFetchApp.fetch(odtUrl, {
+        headers: { Authorization: "Bearer " + ScriptApp.getOAuthToken() },
+      }).getBlob();
+      odtBlob.setName(newFileName + ".odt");
 
-    // Clean up temporary doc
-    newFile.setTrashed(true);
-    
-    // Register Parecer
-    const pareceresSheet = ss.getSheetByName("Pareceres");
-    pareceresSheet.appendRow([
-      shortDate,
-      payload.peritoIdentifier,
-      payload.finalidade,
-      payload.especialidade,
-      payload.inspecionado,
-      payload.om,
-      pdfFile.getUrl(),
-    ]);
-    const monthNames = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
-    const dayStr = String(dateObj.getDate()).padStart(2, '0');
-    const monthStr = monthNames[dateObj.getMonth()];
-    const yearStr = String(dateObj.getFullYear());
-    const dataHojeBr = dayStr + monthStr + yearStr;
-    let htmlTemplate = `<div data-marker="__QUOTED_TEXT__">
+      newFile.setTrashed(true);
+      
+      const pareceresSheet = ss.getSheetByName("Pareceres");
+      pareceresSheet.appendRow([
+        shortDate,
+        payload.peritoIdentifier,
+        payload.finalidade,
+        payload.especialidade,
+        payload.inspecionado,
+        payload.om,
+        pdfFile.getUrl(),
+      ]);
+      
+      const monthNames = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+      const dayStr = String(dateObj.getDate()).padStart(2, '0');
+      const monthStr = monthNames[dateObj.getMonth()];
+      const yearStr = String(dateObj.getFullYear());
+      const dataHojeBr = dayStr + monthStr + yearStr;
+      
+      let htmlTemplate = `<div data-marker="__QUOTED_TEXT__">
 <div style="font-family: 'tahoma' , 'new york' , 'times' , serif; font-size: 14pt; color: #000000;">
 <div style="font-family: 'tahoma' , 'new york' , 'times' , serif; font-size: 14pt; color: #000000;">
 <div style="font-family: 'tahoma' , 'new york' , 'times' , serif; font-size: 14pt; color: #000000;">
@@ -494,33 +555,35 @@ text-decoration: none;" rel="noopener nofollow noopener noreferrer nofollow noop
 </div>
 </div>`;
 
-    htmlTemplate = htmlTemplate.replace("{{PERITO}}", payload.peritoIdentifier || "Perito");
-    htmlTemplate = htmlTemplate.replace("{{INSPECIONADO}}", payload.inspecionado || "");
-    htmlTemplate = htmlTemplate.replace("{{FINALIDADE}}", payload.finalidade || "");
-    htmlTemplate = htmlTemplate.replace("{{ESPECIALIDADE}}", payload.especialidade || "");
-    htmlTemplate = htmlTemplate.replace("{{DATA_HOJE}}", dataHojeBr);
+      htmlTemplate = htmlTemplate.replace("{{PERITO}}", payload.peritoIdentifier || "Perito");
+      htmlTemplate = htmlTemplate.replace("{{INSPECIONADO}}", payload.inspecionado || "");
+      htmlTemplate = htmlTemplate.replace("{{FINALIDADE}}", payload.finalidade || "");
+      htmlTemplate = htmlTemplate.replace("{{ESPECIALIDADE}}", payload.especialidade || "");
+      htmlTemplate = htmlTemplate.replace("{{DATA_HOJE}}", dataHojeBr);
 
-    const subject = "Parecer " + payload.especialidade + " " + payload.inspecionado;
-    const fallbackBody = "Em anexo o parecer gerado (" + payload.especialidade + ").";
-    
-    // Send Email
-    MailApp.sendEmail({
-      to: payload.emailPerito,
-      subject: subject,
-      body: fallbackBody,
-      htmlBody: htmlTemplate,
-      name: "JRS/HNRe AI",
-      attachments: [pdfBlob, odtBlob]
-    });
-    
-    return ContentService.createTextOutput(
-      JSON.stringify({
-        success: true,
-        pdfUrl: pdfFile.getUrl(),
-        pdfFileId: pdfFile.getId(),
-      }),
-    ).setMimeType(ContentService.MimeType.JSON);
-    
+      const subject = "Parecer " + payload.especialidade + " " + payload.inspecionado;
+      const fallbackBody = "Em anexo o parecer gerado (" + payload.especialidade + ").";
+      
+      MailApp.sendEmail({
+        to: payload.emailPerito,
+        subject: subject,
+        body: fallbackBody,
+        htmlBody: htmlTemplate,
+        name: "JRS/HNRe AI",
+        attachments: [pdfBlob, odtBlob]
+      });
+      
+      return ContentService.createTextOutput(
+        JSON.stringify({
+          success: true,
+          pdfUrl: pdfFile.getUrl(),
+          pdfFileId: pdfFile.getId(),
+        }),
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    throw new Error("Ação não reconhecida.");
+
   } catch (err) {
     return ContentService.createTextOutput(
       JSON.stringify({
