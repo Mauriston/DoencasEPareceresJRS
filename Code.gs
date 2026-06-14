@@ -197,6 +197,58 @@ function doPost(e) {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
     // ==========================================
+    // NOVA LÓGICA: EXTRAIR DADOS COM O GEMINI
+    // ==========================================
+    if (payload.action === "extrair_dados_atestado") {
+      // Vai buscar a chave do Gemini nas Propriedades do Script
+      const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
+      if (!apiKey) throw new Error("GEMINI_API_KEY não configurada nas propriedades do script.");
+
+      const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+      
+      const requestBody = {
+        "contents": [{
+          "parts": [
+            {
+              "text": "Age como um assistente médico pericial. Analisa esta imagem de um atestado médico e extrai exatamente 3 dados:\n1) Data do Atestado (no formato YYYY-MM-DD)\n2) Tempo de Afastamento (apenas o número de dias)\n3) Código CID (apenas o código alfanumérico principal com ponto, ex: A00.0).\nResponde ESTRITAMENTE num formato JSON válido, sem formatação markdown, com as chaves exatas: 'dataAtestado', 'tempoAtestado', 'cid'."
+            },
+            {
+              "inline_data": {
+                "mime_type": "image/jpeg",
+                "data": payload.base64Image // Recebe a imagem já em Base64 puro
+              }
+            }
+          ]
+        }]
+      };
+
+      const options = {
+        "method": "post",
+        "contentType": "application/json",
+        "payload": JSON.stringify(requestBody),
+        "muteHttpExceptions": true
+      };
+
+      const response = UrlFetchApp.fetch(url, options);
+      const jsonResponse = JSON.parse(response.getContentText());
+
+      if (jsonResponse.error) {
+         throw new Error("Erro na API Gemini: " + jsonResponse.error.message);
+      }
+
+      const geminiText = jsonResponse.candidates[0].content.parts[0].text;
+      
+      // Limpeza anti-markdown
+      const cleanJsonStr = geminiText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const extractedData = JSON.parse(cleanJsonStr);
+
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        data: extractedData
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ==========================================
     // LÓGICA 1: IMPRESSÃO
     // ==========================================
     if (payload.action === "imprimir") {
@@ -354,6 +406,29 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
         }
       }
 
+      // ============================================================
+      // NOVO: INSERIR A IMAGEM DO ATESTADO NA ÚLTIMA PÁGINA
+      // ============================================================
+      if (payload.base64Image) {
+        body.appendPageBreak(); // Quebra de página
+        
+        // Descodifica a imagem base64
+        const decodedImg = Utilities.base64Decode(payload.base64Image);
+        const blobImg = Utilities.newBlob(decodedImg, 'image/jpeg', 'atestado.jpg');
+        
+        // Insere a imagem no documento
+        const imgElement = body.appendImage(blobImg);
+        
+        // Ajusta a largura da imagem às margens da folha A4
+        const pageWidth = newDoc.getBody().getPageWidth() - newDoc.getBody().getMarginLeft() - newDoc.getBody().getMarginRight();
+        const imgWidth = imgElement.getWidth();
+        const imgHeight = imgElement.getHeight();
+        const ratio = pageWidth / imgWidth;
+        
+        imgElement.setWidth(pageWidth);
+        imgElement.setHeight(imgHeight * ratio);
+      }
+
       newDoc.saveAndClose();
 
       const pdfBlob = newFile.getAs("application/pdf");
@@ -365,7 +440,7 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
       const periciaSheet = ss.getSheetByName("Pericia_Menor");
       if (!periciaSheet) throw new Error("Aba 'Pericia_Menor' não encontrada no Sheets.");
 
-      // Salvamento na Aba (13 Colunas)
+      // Salvamento na Aba
       periciaSheet.appendRow([
         shortDate,              // A: DATA
         payload.inspecionado,   // B: INSPECIONADO
