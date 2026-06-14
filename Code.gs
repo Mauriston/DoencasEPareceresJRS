@@ -18,8 +18,6 @@ function doGet(e) {
       const quadroOficiais = getColumnValues(listasRefData, headers.indexOf("QUADRO_OFICIAIS"));
       const especialidadePracas = getColumnValues(listasRefData, headers.indexOf("ESPECIALIDADE_PRACAS"));
       const especialidades = getColumnValues(listasRefData, headers.indexOf("ESPECIALIDADE"));
-      
-      // Documentação: Busca a nova coluna DISPENSAS
       const dispensas = getColumnValues(listasRefData, headers.indexOf("DISPENSAS"));
 
       // Get OMs
@@ -53,7 +51,7 @@ function doGet(e) {
             QUADRO_OFICIAIS: quadroOficiais,
             ESPECIALIDADE_PRACAS: especialidadePracas,
             ESPECIALIDADES: especialidades,
-            DISPENSAS: dispensas, // Documentação: Retorna a lista de dispensas
+            DISPENSAS: dispensas,
             OM: oms,
             PERITOS: peritos,
           },
@@ -270,7 +268,6 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
     // ==========================================
     // LÓGICA COMUM: REGISTRO DE NOVO MILITAR
     // ==========================================
-    // Aplicável tanto para Pareceres quanto para Perícia Menor
     if (payload.action !== "imprimir" && payload.isNewMilitar) {
       const militaresSheet = ss.getSheetByName("Militares");
       const headers = militaresSheet.getRange(1, 1, 1, militaresSheet.getLastColumn()).getValues()[0];
@@ -295,7 +292,6 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
     // ==========================================
     if (payload.action === "gerar_pericia_menor") {
       
-      // 1. Identificação do Template com base no Perito
       let templateId = "";
       if (payload.perito && payload.perito.includes("MAURISTON")) {
         templateId = "130zzSeDRw2nso-QgfwIjOzbyet67Uvy1FQzL-V5X6do";
@@ -307,7 +303,6 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
 
       const templateDoc = DriveApp.getFileById(templateId);
 
-      // 2. Gerenciamento de Pastas no Drive
       const pmenorFolderId = "18_322EHraGIhfWXzh8ZgOFpnIw884Ox6";
       const parentFolder = DriveApp.getFolderById(pmenorFolderId);
       let subfolder = null;
@@ -319,7 +314,6 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
         subfolder = parentFolder.createFolder(payload.inspecionado);
       }
 
-      // 3. Formatação de Datas
       const dateObj = new Date();
       const shortDate = Utilities.formatDate(dateObj, Session.getScriptTimeZone(), "yyyy-MM-dd");
       const dataHojeBr = Utilities.formatDate(dateObj, Session.getScriptTimeZone(), "dd/MM/yyyy");
@@ -330,72 +324,64 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
         dataAtestadoBr = `${parts[2]}/${parts[1]}/${parts[0]}`;
       }
 
-      // 4. Duplicação do Template
       const newFileName = "Perícia Menor - " + payload.inspecionado + " - " + dataHojeBr.replace(/\//g, ".");
       const newFile = templateDoc.makeCopy(newFileName, subfolder);
       const newDoc = DocumentApp.openById(newFile.getId());
       const body = newDoc.getBody();
 
-      // 5. Substituição de Placeholders
       body.replaceText("{{INSPECIONADO}}", payload.inspecionado);
+      body.replaceText("{{SERVICO}}", payload.servico); // Substitui a nova placeholder
       body.replaceText("{{DISPENSAS}}", payload.dispensas);
       body.replaceText("{{TEMPO_EXTENSO}}", payload.tempoExtenso);
       body.replaceText("{{TEMPO_HOMOLOG}}", payload.tempoHomolog.toString());
       body.replaceText("{{DATA_ATESTADO}}", dataAtestadoBr);
       body.replaceText("{{DATA_HOJE}}", dataHojeBr);
       
-      // ============================================================
-      // LÓGICA CONDICIONAL DO VDF (COM FORMATAÇÃO NATIVA NO DOCS)
-      // ============================================================
+      // Lógica Condicional do VDF com formatação nativa
       let vdfText = payload.vdf ?
         "Encaminhar para VDF:    ( X ) Sim \t (   ) Não" :
         "Encaminhar para VDF:    (   ) Sim \t ( X ) Não";
         
       body.replaceText("{{VDF}}", vdfText);
 
-      // Se for SIM, o script procura a frase no documento e aplica o Negrito e o Fundo Amarelo
       if (payload.vdf) {
-        // Procura tudo desde "Encaminhar para VDF" até à palavra "Sim"
         let searchResult = body.findText("Encaminhar para VDF.*Sim");
-        
         if (searchResult) {
           let textElement = searchResult.getElement().asText();
           let start = searchResult.getStartOffset();
           let end = searchResult.getEndOffsetInclusive();
           
           textElement.setBold(start, end, true);
-          textElement.setBackgroundColor(start, end, "#FFFF00"); // Código da cor Amarela
+          textElement.setBackgroundColor(start, end, "#FFFF00");
         }
       }
-      // ============================================================
 
       newDoc.saveAndClose();
 
-      // 6. Geração do PDF
       const pdfBlob = newFile.getAs("application/pdf");
       const pdfFile = subfolder.createFile(pdfBlob);
       pdfFile.setName(newFileName + ".pdf");
 
-      newFile.setTrashed(true); // Remove Doc temporário
+      newFile.setTrashed(true);
 
-      // 7. Salvamento na Aba Pericia_Menor
       const periciaSheet = ss.getSheetByName("Pericia_Menor");
       if (!periciaSheet) throw new Error("Aba 'Pericia_Menor' não encontrada no Sheets.");
 
-      // Array de 12 colunas conforme a tua estrutura
+      // Documentação: Array de 13 colunas com a Coluna D (SERVICO) adicionada.
       periciaSheet.appendRow([
         shortDate,              // A: DATA
         payload.inspecionado,   // B: INSPECIONADO
         payload.om,             // C: OM
-        payload.cid,            // D: CID
-        payload.dispensas,      // E: DISPENSAS
-        payload.dataAtestado,   // F: DATA_ATESTADO
-        payload.tempoAtestado,  // G: TEMPO_ATESTADO
-        payload.tempoHomolog,   // H: TEMPO_HOMOL0G
-        "",                     // I: DATA_TERMINO (Fórmula do Sheets atua aqui)
-        payload.vdf,            // J: VDF (Boolean)
-        payload.perito,         // K: PERITO
-        pdfFile.getUrl()        // L: ARQUIVO
+        payload.servico,        // D: SERVICO (NOVO)
+        payload.cid,            // E: CID
+        payload.dispensas,      // F: DISPENSAS
+        payload.dataAtestado,   // G: DATA_ATESTADO
+        payload.tempoAtestado,  // H: TEMPO_ATESTADO
+        payload.tempoHomolog,   // I: TEMPO_HOMOL0G
+        "",                     // J: DATA_TERMINO
+        payload.vdf,            // K: VDF (Boolean)
+        payload.perito,         // L: PERITO
+        pdfFile.getUrl()        // M: ARQUIVO
       ]);
 
       return ContentService.createTextOutput(JSON.stringify({
