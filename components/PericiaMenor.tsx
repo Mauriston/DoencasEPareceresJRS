@@ -9,7 +9,6 @@ interface CidItem {
   DESCRABREV: string;
 }
 
-// Documentação: Dicionário para transformar de 1 a 20 por extenso
 const EXTENSOS: Record<number, string> = {
   1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis", 7: "sete", 8: "oito", 9: "nove", 10: "dez",
   11: "onze", 12: "doze", 13: "treze", 14: "catorze", 15: "quinze", 16: "dezesseis", 17: "dezessete", 18: "dezoito", 19: "dezenove", 20: "vinte"
@@ -37,6 +36,7 @@ export const PericiaMenor: React.FC = () => {
   const [pesquisarNomeTerm, setPesquisarNomeTerm] = useState("");
   const [militaresInfoList, setMilitaresInfoList] = useState<{nome: string, nip: string}[]>([]);
   const [isCarregandoMilitares, setIsCarregandoMilitares] = useState(false);
+  const [searchError, setSearchError] = useState('');
 
   // === ESTADOS: DADOS DO ATESTADO ===
   const [dataAtestado, setDataAtestado] = useState('');
@@ -90,7 +90,7 @@ export const PericiaMenor: React.FC = () => {
           setCidOptions(data);
         }
       } catch (err) {
-        console.error('Erro grave de rede ao tentar carregar cid.json', err);
+        console.error('Erro de rede ao carregar cid.json', err);
       }
     };
 
@@ -113,11 +113,13 @@ export const PericiaMenor: React.FC = () => {
       searchNip(value);
     } else {
       setMilitarStatus("");
+      setSearchError('');
     }
   };
 
   const searchNip = async (searchNip: string) => {
     setMilitarStatus("loading");
+    setSearchError('');
     try {
       const res = await fetch(`${process.env.VITE_APPSCRIPT_URL || 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec'}?action=getMilitar&nip=${searchNip}`);
       const data = await res.json();
@@ -127,10 +129,12 @@ export const PericiaMenor: React.FC = () => {
         setMilitarStatus("found");
       } else {
         setMilitarStatus("not_found");
+        setSearchError('Militar não encontrado. Preencha manualmente.');
       }
     } catch (err) {
       console.error(err);
       setMilitarStatus("not_found");
+      setSearchError('Erro ao buscar militar. Verifique a conexão.');
     }
   };
 
@@ -222,19 +226,36 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
+  // === LÓGICA DE LIMPEZA DO FORMULÁRIO ===
+  const handleReset = () => {
+    setSuccessPdfUrl(null);
+    setNip('');
+    setMilitarStatus("");
+    setSearchError('');
+    setDataAtestado('');
+    setTempoAtestado('');
+    setCidQuery('');
+    setSelectedCid(null);
+    setTempoHomologacao('');
+    setSelectedDispensas([]);
+    setVdf(null);
+    setSelectedPerito('');
+    setNomeMilitar('');
+    setPosto('');
+    setQuadro('');
+    setEspecialidade('');
+    setOm('');
+    setSituacao('');
+    setNome('');
+    setPg('');
+    setCirculo('');
+    setEspPraca('');
+    setOmLeitura('');
+  };
+
   // === LÓGICA DE SUBMISSÃO (Integração com AppScript) ===
   const handleSubmit = async () => {
-    // 1. Validação de Campos Obrigatórios
-    if (
-      !nip || 
-      !dataAtestado || 
-      !tempoAtestado || 
-      !selectedCid || 
-      !tempoHomologacao || 
-      selectedDispensas.length === 0 || 
-      vdf === null || 
-      !selectedPerito
-    ) {
+    if (!nip || !dataAtestado || !tempoAtestado || !selectedCid || !tempoHomologacao || selectedDispensas.length === 0 || vdf === null || !selectedPerito) {
       alert("Por favor, preencha todos os campos obrigatórios (*).");
       return;
     }
@@ -246,7 +267,6 @@ export const PericiaMenor: React.FC = () => {
 
     setIsSubmitting(true);
 
-    // 2. Concatenação do Inspecionado (igual à lógica de Pareceres)
     let militarIdentifier = "";
     if (militarStatus === "found") {
       militarIdentifier = inspecionado;
@@ -254,11 +274,9 @@ export const PericiaMenor: React.FC = () => {
       militarIdentifier = `${pg} ${quadro ? quadro + ' ' : ''}${espPraca ? espPraca + ' ' : ''}${nip} ${nome}`.trim().replace(/\s+/g, ' ');
     }
 
-    // 3. Extrator do tempo em dias (Ex: "5 dias" -> "5")
     const tempoHomologNumerico = parseInt(tempoHomologacao.replace(/\D/g, ''), 10);
     const tempoExtenso = EXTENSOS[tempoHomologNumerico] || tempoHomologNumerico.toString();
 
-    // 4. Estruturação do Payload
     const payload = {
       action: 'gerar_pericia_menor',
       inspecionado: militarIdentifier,
@@ -270,10 +288,14 @@ export const PericiaMenor: React.FC = () => {
       tempoHomolog: tempoHomologNumerico,
       tempoExtenso: tempoExtenso,
       vdf: vdf,
-      perito: selectedPerito
+      perito: selectedPerito,
+      isNewMilitar: militarStatus === "not_found",
+      nip: nip,
+      pgq: `${pg} ${quadro ? quadro : ''}${espPraca ? espPraca : ''}`.trim(),
+      nomeMilitar: nome,
+      situacao: situacao
     };
 
-    // 5. Envio ao AppScript
     try {
       const response = await fetch(`${process.env.VITE_APPSCRIPT_URL || 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec'}`, {
         method: 'POST',
@@ -294,25 +316,12 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
-  const handleReset = () => {
-    setSuccessPdfUrl(null);
-    setNip('');
-    setMilitarStatus("");
-    setDataAtestado('');
-    setTempoAtestado('');
-    setCidQuery('');
-    setSelectedCid(null);
-    setTempoHomologacao('');
-    setSelectedDispensas([]);
-    setVdf(null);
-    setSelectedPerito('');
-  };
-
   return (
-    <div className="flex flex-col h-full bg-gray-50 pb-32 relative">
+    <div className="flex flex-col h-full bg-gray-50 relative">
       <Header title="Perícia Menor" />
       
-      <div className="p-4 max-w-2xl mx-auto w-full space-y-6">
+      {/* Documentação: Container scrollable com padding-bottom de 32 para garantir que o botão não é escondido */}
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 w-full max-w-2xl mx-auto space-y-6">
         
         {/* SECÇÃO 1: DADOS DO MILITAR */}
         <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
@@ -344,6 +353,7 @@ export const PericiaMenor: React.FC = () => {
                   </div>
                 )}
               </div>
+              {searchError && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {searchError}</p>}
               <div className="mt-1.5 text-right">
                 <button
                   type="button"
@@ -424,8 +434,9 @@ export const PericiaMenor: React.FC = () => {
           </h2>
 
           <div className="space-y-4 font-body">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
+            {/* Documentação: Alterado para flex flex-col md:flex-row para não sobrepor em telas muito finas */}
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="w-full">
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Data Atestado *</label>
                 <input
                   type="date"
@@ -434,7 +445,7 @@ export const PericiaMenor: React.FC = () => {
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]"
                 />
               </div>
-              <div>
+              <div className="w-full">
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Tempo Atestado *</label>
                 <input
                   type="text"
@@ -454,11 +465,11 @@ export const PericiaMenor: React.FC = () => {
                 type="text"
                 value={selectedCid ? selectedCid.DESCRABREV : cidQuery}
                 onChange={(e) => handleCidSearch(e.target.value)}
-                placeholder="Busque por código ou doença..."
+                placeholder="Busque por código (Ex: A00) ou doença..."
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]"
               />
               {showCidDropdown && filteredCids.length > 0 && (
-                <ul className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
+                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
                   {filteredCids.map((cid, idx) => (
                     <li 
                       key={idx} 
@@ -555,12 +566,14 @@ export const PericiaMenor: React.FC = () => {
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">VDF *</label>
               <div className="flex space-x-2">
                 <button 
+                  type="button"
                   onClick={() => setVdf(true)}
                   className={`flex-1 py-2.5 rounded-xl font-bold border transition-colors ${vdf === true ? 'bg-[#050F41] text-white border-[#050F41] shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                 >
                   SIM
                 </button>
                 <button 
+                  type="button"
                   onClick={() => setVdf(false)}
                   className={`flex-1 py-2.5 rounded-xl font-bold border transition-colors ${vdf === false ? 'bg-[#050F41] text-white border-[#050F41] shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                 >
@@ -577,6 +590,7 @@ export const PericiaMenor: React.FC = () => {
                 ) : (
                   peritosDisponiveis.map((p, idx) => (
                     <button
+                      type="button"
                       key={idx}
                       onClick={() => setSelectedPerito(p.PERITO)}
                       className={`flex-1 px-2 py-2.5 rounded-xl text-sm font-bold transition-colors border ${
@@ -596,12 +610,21 @@ export const PericiaMenor: React.FC = () => {
         </section>
 
         {/* ÁREA DE BOTÕES DO FORMULÁRIO (Submissão) */}
-        <div className="flex justify-end items-center gap-4 pt-4">
+        <div className="flex justify-end items-center gap-4 pt-4 pb-8">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="w-14 h-14 bg-white text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full flex items-center justify-center transition-all shadow-md border border-gray-200 focus:outline-none active:scale-95"
+            title="Limpar Formulário"
+          >
+            <span className="material-symbols-outlined text-[26px]">delete</span>
+          </button>
+          
           <button
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="w-14 h-14 bg-[#079551] text-white rounded-full flex items-center justify-center transition-all hover:bg-green-700 shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-50 focus:outline-none"
+            className="w-14 h-14 bg-[#079551] text-white rounded-full flex items-center justify-center transition-all hover:bg-green-700 shadow-md hover:shadow-xl active:scale-95 disabled:opacity-50 focus:outline-none"
             title="Gerar e Salvar Perícia Menor"
           >
             {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : <span className="material-symbols-outlined text-[26px]">send</span>}
@@ -654,7 +677,7 @@ export const PericiaMenor: React.FC = () => {
               <h2 className="text-2xl font-black font-heading text-[#050F41]">Sucesso!</h2>
               <p className="text-sm font-body text-gray-600">A perícia foi gerada e a planilha atualizada.</p>
               <div className="flex flex-col w-full gap-3 mt-4">
-                <a href={successPdfUrl} target="_blank" rel="noopener noreferrer" className="w-full py-3.5 bg-[#050F41] text-white rounded-xl font-bold hover:bg-blue-900 transition-colors flex items-center justify-center gap-2 shadow-md">
+                <a href={successPdfUrl} target="_blank" rel="noopener noreferrer" onClick={handleReset} className="w-full py-3.5 bg-[#050F41] text-white rounded-xl font-bold hover:bg-blue-900 transition-colors flex items-center justify-center gap-2 shadow-md">
                   <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span> Ver PDF Gerado
                 </a>
                 <button onClick={handleReset} className="w-full py-3.5 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
