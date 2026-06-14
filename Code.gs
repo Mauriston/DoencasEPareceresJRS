@@ -203,14 +203,14 @@ function doPost(e) {
       const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
       if (!apiKey) throw new Error("Aviso: GEMINI_API_KEY não configurada nas propriedades do Google Apps Script.");
 
-      // CORREÇÃO MÁXIMA: Utilizando a tag exata "gemini-2.5-flash" conforme o teu outro app que está a funcionar!
       const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
       
       const requestBody = {
         "contents": [{
           "parts": [
             {
-              "text": "Extraia os seguintes 3 dados da imagem do atestado médico:\n1) dataAtestado (no formato YYYY-MM-DD)\n2) tempoAtestado (apenas o número de dias)\n3) cid (apenas o código principal, ex: M54.5).\nResponda estritamente num formato JSON válido."
+              // Documentação: Atualização no Prompt para buscar também o nome do Militar.
+              "text": "Extraia os seguintes 4 dados da imagem do atestado médico:\n1) nomeMilitar (o nome completo do paciente)\n2) dataAtestado (no formato YYYY-MM-DD)\n3) tempoAtestado (apenas o número de dias)\n4) cid (apenas o código principal, ex: M54.5).\nResponda estritamente num formato JSON válido com as chaves exatas 'nomeMilitar', 'dataAtestado', 'tempoAtestado', 'cid'."
             },
             {
               "inline_data": {
@@ -220,7 +220,6 @@ function doPost(e) {
             }
           ]
         }],
-        // Força a IA a devolver apenas JSON
         "generationConfig": {
           "responseMimeType": "application/json"
         }
@@ -236,7 +235,6 @@ function doPost(e) {
       const response = UrlFetchApp.fetch(url, options);
       const jsonResponse = JSON.parse(response.getContentText());
 
-      // Lida com erros devolvidos pela API do Google
       if (jsonResponse.error) {
          throw new Error("Erro na API Gemini: " + jsonResponse.error.message);
       }
