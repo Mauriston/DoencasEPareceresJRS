@@ -344,11 +344,30 @@ margin: 0;"><span style="font-size: 16pt;">JRS/HNRe AI</span></div>
       body.replaceText("{{DATA_ATESTADO}}", dataAtestadoBr);
       body.replaceText("{{DATA_HOJE}}", dataHojeBr);
       
-      // Lógica Condicional do VDF
+      // ============================================================
+      // LÓGICA CONDICIONAL DO VDF (COM FORMATAÇÃO NATIVA NO DOCS)
+      // ============================================================
       let vdfText = payload.vdf ?
-        "<mark>**Encaminhar para VDF:    ( X  ) Sim**</mark> \t (   ) Não" :
+        "Encaminhar para VDF:    ( X ) Sim \t (   ) Não" :
         "Encaminhar para VDF:    (   ) Sim \t ( X ) Não";
+        
       body.replaceText("{{VDF}}", vdfText);
+
+      // Se for SIM, o script procura a frase no documento e aplica o Negrito e o Fundo Amarelo
+      if (payload.vdf) {
+        // Procura tudo desde "Encaminhar para VDF" até à palavra "Sim"
+        let searchResult = body.findText("Encaminhar para VDF.*Sim");
+        
+        if (searchResult) {
+          let textElement = searchResult.getElement().asText();
+          let start = searchResult.getStartOffset();
+          let end = searchResult.getEndOffsetInclusive();
+          
+          textElement.setBold(start, end, true);
+          textElement.setBackgroundColor(start, end, "#FFFF00"); // Código da cor Amarela
+        }
+      }
+      // ============================================================
 
       newDoc.saveAndClose();
 
