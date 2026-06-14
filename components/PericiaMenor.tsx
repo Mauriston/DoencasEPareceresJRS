@@ -81,6 +81,9 @@ export const PericiaMenor: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           setCidOptions(data);
+          console.log(`Carregados ${data.length} CIDs com sucesso!`);
+        } else {
+          console.error(`Erro ao carregar cid.json: HTTP ${res.status}`);
         }
       } catch (err) {
         console.error('Erro grave de rede ao tentar carregar cid.json', err);
@@ -359,7 +362,6 @@ export const PericiaMenor: React.FC = () => {
           </h2>
 
           <div className="space-y-4 font-body">
-            {/* Documentação: Alterado para grid-cols-1 em mobile (sm:grid-cols-2) para evitar sobreposição */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Data Atestado *</label>
@@ -390,7 +392,7 @@ export const PericiaMenor: React.FC = () => {
                 type="text"
                 value={selectedCid ? selectedCid.DESCRABREV : cidQuery}
                 onChange={(e) => handleCidSearch(e.target.value)}
-                placeholder="Busque por código (Ex: A00) ou doença..."
+                placeholder="Busque por código ou doença..."
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]"
               />
               {showCidDropdown && filteredCids.length > 0 && (
@@ -493,18 +495,19 @@ export const PericiaMenor: React.FC = () => {
               )}
             </div>
 
+            {/* Ajustado: Campos VDF e Peritos agora utilizam "flex-1" num contentor de "space-x-2" */}
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">VDF *</label>
-              <div className="flex gap-4">
+              <div className="flex space-x-2">
                 <button 
                   onClick={() => setVdf(true)}
-                  className={`flex-1 py-3 rounded-xl font-bold border transition-colors ${vdf === true ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                  className={`flex-1 py-2.5 rounded-xl font-bold border transition-colors ${vdf === true ? 'bg-[#050F41] text-white border-[#050F41] shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                 >
                   SIM
                 </button>
                 <button 
                   onClick={() => setVdf(false)}
-                  className={`flex-1 py-3 rounded-xl font-bold border transition-colors ${vdf === false ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                  className={`flex-1 py-2.5 rounded-xl font-bold border transition-colors ${vdf === false ? 'bg-[#050F41] text-white border-[#050F41] shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                 >
                   NÃO
                 </button>
@@ -513,7 +516,7 @@ export const PericiaMenor: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Perito *</label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex space-x-2">
                 {isLoadingLookups ? (
                   <p className="text-xs text-gray-400 flex items-center gap-2"><Loader2 size={14} className="animate-spin"/> A carregar peritos...</p>
                 ) : (
@@ -521,7 +524,7 @@ export const PericiaMenor: React.FC = () => {
                     <button
                       key={idx}
                       onClick={() => setSelectedPerito(p.PERITO)}
-                      className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-colors border ${
+                      className={`flex-1 px-2 py-2.5 rounded-xl text-sm font-bold transition-colors border ${
                         selectedPerito === p.PERITO
                           ? 'bg-[#050F41] text-white border-[#050F41] shadow-sm'
                           : 'bg-white text-gray-600 border-gray-200 hover:border-[#050F41]/30'
