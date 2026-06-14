@@ -32,7 +32,6 @@ const removeAcentos = (str: string) => {
 };
 
 export const PericiaMenor: React.FC = () => {
-  // === ESTADOS ===
   const [nip, setNip] = useState('');
   const [militarStatus, setMilitarStatus] = useState<"" | "loading" | "found" | "not_found">("");
   const [inspecionado, setInspecionado] = useState("");
@@ -88,7 +87,6 @@ export const PericiaMenor: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successPdfUrl, setSuccessPdfUrl] = useState<string | null>(null);
 
-  // === CARREGAMENTO INICIAL ===
   useEffect(() => {
     const fetchLookups = async () => {
       try {
@@ -111,7 +109,6 @@ export const PericiaMenor: React.FC = () => {
         const baseUrl = import.meta.env.BASE_URL || '/';
         const res = await fetch(`${baseUrl}cid.json`); 
         if (res.ok) {
-          // Documentação: Voltou a usar apenas o res.json() (sem erros de regex)
           const data = await res.json();
           setCidOptions(data);
         }
@@ -125,7 +122,6 @@ export const PericiaMenor: React.FC = () => {
         const baseUrl = import.meta.env.BASE_URL || '/';
         const res = await fetch(`${baseUrl}servicosHNRe.json`); 
         if (res.ok) {
-          // Documentação: Voltou a usar apenas o res.json() (sem erros de regex)
           const data = await res.json();
           setServicoOptions(data);
         }
@@ -139,7 +135,6 @@ export const PericiaMenor: React.FC = () => {
     fetchServicos();
   }, []);
 
-  // === LÓGICAS: DADOS DO MILITAR ===
   const handleNipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 8) value = value.slice(0, 8);
@@ -179,9 +174,10 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
-  const abrirModalPesquisaNome = async () => {
+  // Documentação: Modificado para aceitar o "initialTerm" vindo do Gemini!
+  const abrirModalPesquisaNome = async (initialTerm: string = "") => {
     setShowPesquisarNomeModal(true);
-    setPesquisarNomeTerm("");
+    setPesquisarNomeTerm(initialTerm);
     if (militaresInfoList.length === 0) {
       setIsCarregandoMilitares(true);
       try {
@@ -236,7 +232,6 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
-  // === LÓGICAS: INTERAÇÕES (CID E TEMPO) ===
   const handleCidSearch = (text: string) => {
     setCidQuery(text);
     setSelectedCid(null);
@@ -291,7 +286,6 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
-  // === LÓGICA DE RECORTE DE IMAGEM ===
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setCrop(undefined); 
@@ -337,7 +331,6 @@ export const PericiaMenor: React.FC = () => {
     setImgSrc('');
   };
 
-  // === LÓGICA DO GEMINI ===
   const extractDataWithGemini = async () => {
     if (!croppedImageUrl) return;
     setIsExtracting(true);
@@ -373,6 +366,12 @@ export const PericiaMenor: React.FC = () => {
                setCidQuery(result.data.cid); 
            }
         }
+
+        // Documentação: Nova Lógica! Se houver nomeMilitar, salta direto para o modal de pesquisa
+        if (result.data.nomeMilitar) {
+            abrirModalPesquisaNome(result.data.nomeMilitar);
+        }
+
       } else {
          alert(`Aviso da Inteligência Artificial: ${result.message || "Não foi possível ler o documento."}`);
       }
@@ -384,7 +383,6 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
-  // === LÓGICA DE LIMPEZA DO FORMULÁRIO ===
   const handleReset = () => {
     setSuccessPdfUrl(null);
     setNip('');
@@ -415,7 +413,6 @@ export const PericiaMenor: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // === LÓGICA DE SUBMISSÃO FINAL ===
   const handleSubmit = async () => {
     if (
       !nip || 
@@ -496,505 +493,67 @@ export const PericiaMenor: React.FC = () => {
       
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 w-full max-w-2xl mx-auto space-y-6">
         
-        {/* SECÇÃO 1: DADOS DO MILITAR */}
-        <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-sm font-bold text-[#050F41] uppercase mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#FAB932]">person</span>
-            Dados do Militar
-          </h2>
-
-          <div className="space-y-4 font-body">
-            
-            {/* Campo Serviço */}
-            <div className="relative z-[100] mb-4">
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Serviço *</label>
-              <input
-                type="text"
-                value={selectedServico ? selectedServico.servico_label : servicoQuery}
-                onChange={(e) => handleServicoSearch(e.target.value)}
-                placeholder="Busque pelo nome do serviço..."
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41] focus:ring-1 focus:ring-[#050F41] transition-all"
-              />
-              
-              {showServicoDropdown && servicoOptions.length === 0 && servicoQuery.length > 1 && (
-                <div className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-4 text-center text-sm text-gray-500">
-                  A carregar a base de serviços ou ocorreu um erro na rede...
-                </div>
-              )}
-
-              {showServicoDropdown && filteredServicos.length > 0 && (
-                <ul className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
-                  {filteredServicos.map((s, idx) => (
-                    <li 
-                      key={idx} 
-                      onClick={() => { setSelectedServico(s); setShowServicoDropdown(false); setServicoQuery(''); }}
-                      className="px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer"
-                    >
-                      <span className="font-bold text-[#050F41] block">{s.servico_label}</span>
-                      <span className="text-xs text-gray-500">{s.superior_direto}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">NIP *</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={nip}
-                  onChange={handleNipChange}
-                  placeholder="00.0000.00"
-                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-navy focus:border-navy block p-3 transition-colors font-mono"
-                  required
-                />
-                {militarStatus === "loading" && (
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <div className="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                )}
-                {militarStatus === "found" && (
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-green-500">
-                    <CheckCircle2 size={18} />
-                  </div>
-                )}
-              </div>
-              {searchError && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {searchError}</p>}
-              <div className="mt-1.5 text-right">
-                <button
-                  type="button"
-                  onClick={() => abrirModalPesquisaNome()}
-                  className="text-[10px] text-blue-600 underline hover:text-blue-800 transition-colors bg-transparent border-none p-0 cursor-pointer uppercase font-bold tracking-wider"
-                >
-                  Pesquisar pelo nome
-                </button>
-              </div>
-            </div>
-
-            {militarStatus === "found" && (
-              <div className="bg-blue-50 border-l-4 border-navy p-3 rounded-r-lg space-y-2 animate-fade-in">
-                <div>
-                  <label className="block text-[10px] font-bold text-navy/70 uppercase">Inspecionado</label>
-                  <p className="text-sm font-medium text-navy">{inspecionado}</p>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-navy/70 uppercase">OM</label>
-                  <p className="text-sm font-medium text-navy">{omLeitura}</p>
-                </div>
-              </div>
-            )}
-
-            {militarStatus === "not_found" && (
-              <div className="space-y-4 animate-fade-in border-t border-dashed border-gray-200 pt-4 mt-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Posto/Graduação *</label>
-                    <select value={pg} onChange={(e) => setPg(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-navy focus:border-navy p-3">
-                      <option value="">Sel...</option>
-                      {PG_OPTIONS.map((o) => (<option key={o} value={o}>{o}</option>))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">OM *</label>
-                    <input type="text" list="om-options" value={om} onChange={(e) => setOm(e.target.value)} placeholder="Ex: HNRe" className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-navy focus:border-navy p-3" />
-                    <datalist id="om-options">
-                      {omsOptions.map((opt) => (<option key={opt} value={opt} />))}
-                    </datalist>
-                  </div>
-                </div>
-
-                {circulo === "Oficial" && (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Quadro *</label>
-                    <select value={quadro} onChange={(e) => setQuadro(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-navy focus:border-navy p-3">
-                      <option value="">Sel...</option>
-                      {QUADROS.map((q) => (<option key={q} value={q}>{q}</option>))}
-                    </select>
-                  </div>
-                )}
-
-                {circulo === "Praça" && (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Especialidade *</label>
-                    <select value={espPraca} onChange={(e) => setEspPraca(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-navy focus:border-navy p-3">
-                      <option value="">Sel...</option>
-                      {ESP_PRACAS.map((p) => (<option key={p} value={p}>{p}</option>))}
-                    </select>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Nome Completo *</label>
-                  <input type="text" value={nome} onChange={(e) => setNome(e.target.value.toUpperCase())} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-navy focus:border-navy p-3 uppercase" />
-                </div>
-              </div>
-            )}
+        {/* ======================================================== */}
+        {/* NOVA POSIÇÃO: SECÇÃO 0: INTELIGÊNCIA ARTIFICIAL E CÂMARA */}
+        {/* ======================================================== */}
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 animate-fade-in shadow-inner">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2">
+              <Camera size={16} className="text-blue-600" /> Leitura Inteligente (IA)
+            </h3>
           </div>
-        </section>
-
-        {/* SECÇÃO 2: DADOS DO ATESTADO */}
-        <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-sm font-bold text-[#050F41] uppercase mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#FAB932]">medical_information</span>
-            Dados do Atestado
-          </h2>
-
-          <div className="space-y-4 font-body">
-
-            {/* Documentação: BLOCO DA CÂMERA E IA DO GEMINI */}
-            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 animate-fade-in shadow-inner">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2">
-                  <Camera size={16} className="text-blue-600" /> Leitura Inteligente (IA)
-                </h3>
-              </div>
-              
-              {!croppedImageUrl ? (
-                <div className="flex justify-center">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    capture="environment" 
-                    ref={fileInputRef} 
-                    onChange={onSelectFile} 
-                    className="hidden" 
-                  />
-                  <button 
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full py-3.5 bg-white border border-blue-300 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    <Camera size={18} /> Fotografar Atestado
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-blue-200 shadow-sm">
-                  <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-gray-200 bg-gray-100 relative">
-                    <img src={croppedImageUrl} alt="Atestado Recortado" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                     <p className="text-[11px] font-bold text-green-600 mb-2 flex items-center gap-1 uppercase tracking-wider"><CheckCircle2 size={14}/> Imagem Capturada</p>
-                     <div className="flex gap-2">
-                       <button 
-                         type="button" 
-                         onClick={extractDataWithGemini}
-                         disabled={isExtracting}
-                         className="flex-1 py-2 bg-gradient-to-r from-[#050F41] to-blue-800 text-white text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-md whitespace-nowrap"
-                       >
-                         {isExtracting ? (
-                           <span className="flex items-center gap-1.5"><Loader2 size={14} className="animate-spin"/> A analisar...</span>
-                         ) : (
-                           <span className="flex items-center gap-1.5"><Sparkles size={14} className="text-yellow-400"/> Extrair Dados</span>
-                         )}
-                       </button>
-                       <button 
-                         type="button" 
-                         onClick={() => setCroppedImageUrl('')}
-                         disabled={isExtracting}
-                         className="px-3 py-2 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
-                       >
-                         Refazer
-                       </button>
-                     </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="w-full">
-                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Data Atestado *</label>
-                <input
-                  type="date"
-                  value={dataAtestado}
-                  onChange={(e) => setDataAtestado(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]"
-                />
-              </div>
-              <div className="w-full">
-                <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Tempo Atestado *</label>
-                <input
-                  type="text"
-                  value={tempoAtestado}
-                  onChange={(e) => handleTempoInput(e.target.value, setTempoAtestado)}
-                  onBlur={() => formatTempoBlur(tempoAtestado, setTempoAtestado)}
-                  onFocus={() => formatTempoFocus(tempoAtestado, setTempoAtestado)}
-                  placeholder="Ex.: 5 dias"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]"
-                />
-              </div>
-            </div>
-
-            <div className="relative z-[90]">
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">CID *</label>
-              <input
-                type="text"
-                value={selectedCid ? selectedCid.DESCRABREV : cidQuery}
-                onChange={(e) => handleCidSearch(e.target.value)}
-                placeholder="Busque por código (Ex: A00) ou doença..."
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]"
+          
+          {!croppedImageUrl ? (
+            <div className="flex justify-center">
+              <input 
+                type="file" 
+                accept="image/*" 
+                capture="environment" 
+                ref={fileInputRef} 
+                onChange={onSelectFile} 
+                className="hidden" 
               />
-              {showCidDropdown && filteredCids.length > 0 && (
-                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
-                  {filteredCids.map((cid, idx) => (
-                    <li 
-                      key={idx} 
-                      onClick={() => { setSelectedCid(cid); setShowCidDropdown(false); setCidQuery(''); }}
-                      className="px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer"
-                    >
-                      <span className="font-bold text-[#050F41] block">{cid.DESCRABREV}</span>
-                      <span className="text-xs text-gray-500">{cid.DESCRICAO}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* SECÇÃO 3: HOMOLOGAÇÃO */}
-        <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-sm font-bold text-[#050F41] uppercase mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#FAB932]">verified</span>
-            Homologação
-          </h2>
-
-          <div className="space-y-6 font-body">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Tempo Homologado *</label>
-              <input
-                type="text"
-                value={tempoHomologacao}
-                onChange={(e) => handleTempoInput(e.target.value, setTempoHomologacao, 20)}
-                onBlur={() => formatTempoBlur(tempoHomologacao, setTempoHomologacao)}
-                onFocus={() => formatTempoFocus(tempoHomologacao, setTempoHomologacao)}
-                placeholder="Máx: 20 dias"
-                className="w-full sm:w-1/2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]"
-              />
-            </div>
-
-            <div className="relative z-[80]">
-              <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Dispensas *</label>
-              
               <button 
                 type="button"
-                onClick={() => setShowDispensasDropdown(!showDispensasDropdown)}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm flex justify-between items-center focus:outline-none focus:border-[#050F41] focus:ring-1 focus:ring-[#050F41] transition-all"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-3.5 bg-white border border-blue-300 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 shadow-sm"
               >
-                <span className={`truncate font-medium ${selectedDispensas.length > 0 ? 'text-[#050F41]' : 'text-gray-400'}`}>
-                  {selectedDispensas.length === 0 
-                    ? 'Selecione as dispensas...' 
-                    : selectedDispensas.includes('TODAS AS ATIVIDADES') 
-                      ? 'TODAS AS ATIVIDADES' 
-                      : `${selectedDispensas.length} dispensa(s) selecionada(s)`}
-                </span>
-                <ChevronDown size={18} className={`text-gray-400 transition-transform duration-200 ${showDispensasDropdown ? 'rotate-180 text-[#050F41]' : ''}`} />
+                <Camera size={18} /> Fotografar Atestado
               </button>
-
-              {showDispensasDropdown && (
-                <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] max-h-64 overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in custom-scrollbar">
-                  {isLoadingLookups ? (
-                    <p className="text-xs text-gray-400 col-span-2 text-center py-4 flex items-center justify-center gap-2">
-                      <Loader2 size={16} className="animate-spin" /> A carregar dispensas...
-                    </p>
-                  ) : (
-                    dispensasDisponiveis.map((disp, idx) => {
-                      const isTodas = disp === 'TODAS AS ATIVIDADES';
-                      const isSelected = selectedDispensas.includes(disp);
-                      const isDisabled = 
-                        (isTodas && selectedDispensas.length > 0 && !isSelected) || 
-                        (!isTodas && selectedDispensas.includes('TODAS AS ATIVIDADES'));
-
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => handleDispensaToggle(disp)}
-                          disabled={isDisabled}
-                          type="button"
-                          className={`flex items-center justify-start text-left p-3 rounded-xl border text-xs sm:text-[13px] transition-all focus:outline-none ${
-                            isSelected ? 'bg-blue-50 border-blue-200 text-[#050F41] font-bold shadow-sm' : 
-                            isDisabled ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed opacity-60' : 
-                            'bg-white border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          <div className={`w-4 h-4 rounded-md shrink-0 mr-3 flex items-center justify-center border transition-colors ${isSelected ? 'bg-[#050F41] border-[#050F41]' : 'border-gray-300 bg-white'}`}>
-                            {isSelected && <CheckCircle2 size={12} strokeWidth={3} className="text-white" />}
-                          </div>
-                          <span className="leading-snug">{disp}</span>
-                        </button>
-                      )
-                    })
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">VDF *</label>
-              <div className="flex space-x-2">
-                <button 
-                  type="button"
-                  onClick={() => setVdf(true)}
-                  className={`flex-1 py-2.5 rounded-xl font-bold border transition-colors ${vdf === true ? 'bg-[#050F41] text-white border-[#050F41] shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-                >
-                  SIM
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setVdf(false)}
-                  className={`flex-1 py-2.5 rounded-xl font-bold border transition-colors ${vdf === false ? 'bg-[#050F41] text-white border-[#050F41] shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-                >
-                  NÃO
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Perito *</label>
-              <div className="flex space-x-2">
-                {isLoadingLookups ? (
-                  <p className="text-xs text-gray-400 flex items-center gap-2"><Loader2 size={14} className="animate-spin"/> A carregar peritos...</p>
-                ) : (
-                  peritosDisponiveis.map((p, idx) => (
-                    <button
-                      type="button"
-                      key={idx}
-                      onClick={() => setSelectedPerito(p.PERITO)}
-                      className={`flex-1 px-2 py-2.5 rounded-xl text-sm font-bold transition-colors border ${
-                        selectedPerito === p.PERITO
-                          ? 'bg-[#050F41] text-white border-[#050F41] shadow-sm'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-[#050F41]/30'
-                      }`}
-                    >
-                      {p.PERITO}
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-
-          </div>
-        </section>
-
-        {/* ÁREA DE BOTÕES DO FORMULÁRIO (Submissão e Limpar) */}
-        <div className="flex justify-end items-center gap-4 pt-4 pb-8">
-          <button
-            type="button"
-            onClick={handleReset}
-            className="w-14 h-14 bg-white text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full flex items-center justify-center transition-all shadow-md border border-gray-200 focus:outline-none active:scale-95"
-            title="Limpar Formulário"
-          >
-            <span className="material-symbols-outlined text-[26px]">delete</span>
-          </button>
-          
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="w-14 h-14 bg-[#079551] text-white rounded-full flex items-center justify-center transition-all hover:bg-green-700 shadow-md hover:shadow-xl active:scale-95 disabled:opacity-50 focus:outline-none"
-            title="Gerar e Salvar Perícia Menor"
-          >
-            {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : <span className="material-symbols-outlined text-[26px]">send</span>}
-          </button>
-        </div>
-
-      </div>
-
-      {/* MODAL DE PESQUISA POR NOME */}
-      {showPesquisarNomeModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setShowPesquisarNomeModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10"><span className="material-symbols-outlined">close</span></button>
-            <div className="p-6 bg-[#050F41] text-white shrink-0"><h2 className="text-xl font-bold tracking-tight">Pesquisar Militar</h2><p className="text-blue-100 text-sm mt-1">Busque pelo nome completo</p></div>
-            <div className="p-6 flex-1 flex flex-col min-h-0">
-              <div className="relative shrink-0 mb-4">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400"><span className="material-symbols-outlined">search</span></div>
-                <input type="text" value={pesquisarNomeTerm} onChange={(e) => setPesquisarNomeTerm(e.target.value)} placeholder="Ex: João da Silva..." className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-10 p-2.5 transition-colors" autoFocus />
-              </div>
-              <div className="flex-1 overflow-y-auto min-h-[50px] border border-gray-100 rounded-lg bg-gray-50/50">
-                {isCarregandoMilitares ? (
-                  <div className="p-8 text-center text-gray-500 flex flex-col items-center"><div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mb-2"></div><p className="text-sm">Carregando base de dados...</p></div>
-                ) : (
-                  <div className="flex flex-col">
-                    {militaresInfoList.filter((m) => {
-                      if (!pesquisarNomeTerm) return false;
-                      const term = removeAcentos(pesquisarNomeTerm.toLowerCase());
-                      const name = removeAcentos(m.nome.toLowerCase());
-                      return name.includes(term);
-                    }).slice(0, 50).map((m, idx) => (
-                        <div key={idx} onClick={() => selecionarNomeNip(m.nip)} className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"><div className="font-bold text-[#050F41] text-sm">{m.nome}</div><div className="text-xs text-gray-500 font-mono mt-0.5">{m.nip}</div></div>
-                      ))}
-                    {pesquisarNomeTerm &&
-                      militaresInfoList.filter((m) => {
-                        const term = removeAcentos(pesquisarNomeTerm.toLowerCase());
-                        const name = removeAcentos(m.nome.toLowerCase());
-                        return name.includes(term);
-                      }).length === 0 && (
-                        <div className="p-8 text-center text-gray-500 text-sm">
-                          Nenhum militar encontrado.
-                        </div>
-                      )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DE RECORTE DA IMAGEM */}
-      {showCropModal && (
-        <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col animate-fade-in backdrop-blur-sm">
-           <div className="p-4 bg-black flex justify-between items-center text-white shrink-0 border-b border-gray-800">
-              <h3 className="font-bold flex items-center gap-2"><CropIcon size={20} className="text-[#FAB932]" /> Recortar Atestado</h3>
-              <button onClick={() => { setShowCropModal(false); setImgSrc(''); }} className="p-2 text-gray-400 hover:text-white transition-colors"><X size={24} /></button>
-           </div>
-           <div className="flex-1 overflow-auto flex items-center justify-center p-4">
-               {imgSrc && (
-                 <ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)}>
-                   <img ref={imgRef} src={imgSrc} alt="Crop" style={{ maxHeight: '70vh', objectFit: 'contain' }} />
-                 </ReactCrop>
-               )}
-           </div>
-           <div className="p-4 bg-black shrink-0 pb-10">
-              <p className="text-gray-400 text-xs text-center mb-4">Arraste os cantos para selecionar apenas as datas e o CID.</p>
-              <button onClick={handleCropComplete} className="w-full py-4 bg-[#079551] hover:bg-green-600 transition-colors text-white font-bold rounded-xl flex justify-center items-center gap-2">
-                 <CheckCircle2 size={20} /> Confirmar Recorte
-              </button>
-           </div>
-        </div>
-      )}
-
-      {/* OVERLAY DE LOADING / SUCESSO DURANTE A SUBMISSÃO */}
-      {(isSubmitting || successPdfUrl) && (
-        <div className="fixed inset-0 z-[200] bg-white/95 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in p-6">
-          {!successPdfUrl ? (
-            <div className="flex flex-col items-center text-center space-y-4">
-              <Loader2 className="animate-spin text-[#050F41]" size={48} />
-              <h2 className="text-xl font-bold font-heading text-[#050F41]">A gerar Perícia Menor...</h2>
-              <p className="text-sm font-body text-gray-500 max-w-xs leading-relaxed">Isto pode demorar alguns segundos. O documento está a ser processado e salvo no Google Drive.</p>
             </div>
           ) : (
-            <div className="flex flex-col items-center text-center space-y-5 animate-scale-up max-w-sm">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-2 shadow-inner">
-                <CheckCircle className="text-green-600" size={40} />
+            <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-blue-200 shadow-sm">
+              <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-gray-200 bg-gray-100 relative">
+                <img src={croppedImageUrl} alt="Atestado Recortado" className="w-full h-full object-cover" />
               </div>
-              <h2 className="text-2xl font-black font-heading text-[#050F41]">Sucesso!</h2>
-              <p className="text-sm font-body text-gray-600">A perícia foi gerada e a planilha atualizada.</p>
-              <div className="flex flex-col w-full gap-3 mt-4">
-                <a href={successPdfUrl} target="_blank" rel="noopener noreferrer" onClick={handleReset} className="w-full py-3.5 bg-[#050F41] text-white rounded-xl font-bold hover:bg-blue-900 transition-colors flex items-center justify-center gap-2 shadow-md">
-                  <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span> Ver PDF Gerado
-                </a>
-                <button onClick={handleReset} className="w-full py-3.5 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
-                  <span className="material-symbols-outlined text-[20px]">add_circle</span> Nova Perícia Menor
-                </button>
+              <div className="flex-1 overflow-hidden">
+                  <p className="text-[11px] font-bold text-green-600 mb-2 flex items-center gap-1 uppercase tracking-wider"><CheckCircle2 size={14}/> Imagem Capturada</p>
+                  <div className="flex gap-2">
+                    <button 
+                      type="button" 
+                      onClick={extractDataWithGemini}
+                      disabled={isExtracting}
+                      className="flex-1 py-2 bg-gradient-to-r from-[#050F41] to-blue-800 text-white text-xs font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-md whitespace-nowrap"
+                    >
+                      {isExtracting ? (
+                        <span className="flex items-center gap-1.5"><Loader2 size={14} className="animate-spin"/> A analisar...</span>
+                      ) : (
+                        <span className="flex items-center gap-1.5"><Sparkles size={14} className="text-yellow-400"/> Extrair Dados</span>
+                      )}
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setCroppedImageUrl('')}
+                      disabled={isExtracting}
+                      className="px-3 py-2 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                    >
+                      Refazer
+                    </button>
+                  </div>
               </div>
             </div>
           )}
         </div>
-      )}
 
-    </div>
-  );
-};
+
+        {/* SECÇÃO 1: DADOS DO MIL
