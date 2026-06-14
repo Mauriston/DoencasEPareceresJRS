@@ -1,7 +1,6 @@
 // Ficheiro: components/PericiaMenor.tsx
 import React, { useState, useEffect } from 'react';
 import { Header } from './Header';
-// Documentação: Adicionado o ícone ChevronDown para o menu suspenso
 import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown } from 'lucide-react';
 
 interface CidItem {
@@ -45,7 +44,6 @@ export const PericiaMenor: React.FC = () => {
   // === ESTADOS: HOMOLOGAÇÃO ===
   const [tempoHomologacao, setTempoHomologacao] = useState('');
   const [selectedDispensas, setSelectedDispensas] = useState<string[]>([]);
-  // Documentação: Estado para controlar a abertura do Menu Suspenso de Dispensas
   const [showDispensasDropdown, setShowDispensasDropdown] = useState(false);
   
   const [vdf, setVdf] = useState<boolean | null>(null);
@@ -69,21 +67,28 @@ export const PericiaMenor: React.FC = () => {
           setOmsOptions(json.data.OM.filter(Boolean) || []);
         }
       } catch (err) {
-        console.error('Erro ao carregar lookups', err);
+        console.error('Erro ao carregar lookups do Google Sheets', err);
       } finally {
         setIsLoadingLookups(false);
       }
     };
 
+    // Documentação: Fetch robusto para garantir a localização do ficheiro cid.json
     const fetchCid = async () => {
       try {
-        const res = await fetch('./cid.json'); 
+        // Usa a base de URL do Vite para que não quebre no Github Pages
+        const baseUrl = import.meta.env.BASE_URL || '/';
+        const res = await fetch(`${baseUrl}cid.json`); 
+        
         if (res.ok) {
           const data = await res.json();
           setCidOptions(data);
+          console.log(`Carregados ${data.length} CIDs com sucesso!`);
+        } else {
+          console.error(`Erro ao carregar cid.json: HTTP ${res.status}`);
         }
       } catch (err) {
-        console.error('Erro ao carregar cid.json', err);
+        console.error('Erro grave de rede ao tentar carregar cid.json', err);
       }
     };
 
@@ -178,10 +183,12 @@ export const PericiaMenor: React.FC = () => {
     setSelectedCid(null);
     if (text.length > 1) {
       const lower = text.toLowerCase();
+      // Documentação: O filtro considera o SUBCAT (Ex: A009) e a DESCRICAO (Ex: Cólera)
       const filtered = cidOptions.filter(c => 
         (c.SUBCAT && c.SUBCAT.toLowerCase().includes(lower)) || 
         (c.DESCRICAO && c.DESCRICAO.toLowerCase().includes(lower))
       ).slice(0, 15);
+      
       setFilteredCids(filtered);
       setShowCidDropdown(true);
     } else {
@@ -388,7 +395,7 @@ export const PericiaMenor: React.FC = () => {
                 type="text"
                 value={selectedCid ? selectedCid.DESCRABREV : cidQuery}
                 onChange={(e) => handleCidSearch(e.target.value)}
-                placeholder="Busque por código ou doença..."
+                placeholder="Busque por código (Ex: A00) ou doença..."
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]"
               />
               {showCidDropdown && filteredCids.length > 0 && (
@@ -399,11 +406,18 @@ export const PericiaMenor: React.FC = () => {
                       onClick={() => { setSelectedCid(cid); setShowCidDropdown(false); setCidQuery(''); }}
                       className="px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer"
                     >
+                      {/* Documentação: Retorna a descrição abreviada no titulo principal e a longa como detalhe */}
                       <span className="font-bold text-[#050F41] block">{cid.DESCRABREV}</span>
                       <span className="text-xs text-gray-500">{cid.DESCRICAO}</span>
                     </li>
                   ))}
                 </ul>
+              )}
+              {/* Fallback caso digite e não encontre */}
+              {showCidDropdown && filteredCids.length === 0 && cidQuery.length > 1 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-4 text-center text-sm text-gray-500">
+                  Nenhum CID encontrado.
+                </div>
               )}
             </div>
           </div>
@@ -430,11 +444,9 @@ export const PericiaMenor: React.FC = () => {
               />
             </div>
 
-            {/* Documentação: Menu Suspenso de Dispensas */}
             <div className="relative">
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wider">Dispensas *</label>
               
-              {/* Botão Principal do Dropdown */}
               <button 
                 type="button"
                 onClick={() => setShowDispensasDropdown(!showDispensasDropdown)}
@@ -450,7 +462,6 @@ export const PericiaMenor: React.FC = () => {
                 <ChevronDown size={18} className={`text-gray-400 transition-transform duration-200 ${showDispensasDropdown ? 'rotate-180 text-[#050F41]' : ''}`} />
               </button>
 
-              {/* Caixa de Seleção do Dropdown */}
               {showDispensasDropdown && (
                 <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] max-h-64 overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in custom-scrollbar">
                   {isLoadingLookups ? (
