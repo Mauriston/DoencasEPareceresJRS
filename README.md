@@ -1,12 +1,12 @@
 # Guia Médico Naval - JRS / HNRe
 
-Este projeto é uma aplicação web progressiva (PWA - interface responsiva mobile-first) desenvolvida para auxiliar a Junta Regular de Saúde (JRS) do Hospital Naval de Recife (HNRe) no seu cotidiano pericial, unificando o acesso rápido a normativas, trilhas de estudo e facilitando a geração de documentos.
+Este projeto é uma aplicação web progressiva (PWA - interface responsiva mobile-first) desenvolvida para auxiliar a Junta Regular de Saúde (JRS) do Hospital Naval de Recife (HNRe) no seu cotidiano pericial. A ferramenta unifica o acesso rápido a normativas, trilhas de estudo e automatiza a geração de documentos periciais utilizando **Inteligência Artificial e Visão Computacional**.
 
 ---
 
 ## 🚀 Funcionalidades Principais
 
-A aplicação funciona como um canivete suíço digital para os Peritos Médicos, com menus intuitivos que filtram lógicas periciais, dados normativos e emitem relatórios em nuvem.
+A aplicação funciona como um canivete suíço digital para os Peritos Médicos, com menus intuitivos que filtram lógicas periciais, dados normativos e emitem relatórios na nuvem.
 
 ### 1. Doenças de Lei (`/components/DiseaseGuide.tsx`)
 Esta página serve como um "Livro de Bolso" de acesso instantâneo ao rol de doenças previstas nas legislações que garantem isenções ou amparam reformas.
@@ -15,18 +15,24 @@ Esta página serve como um "Livro de Bolso" de acesso instantâneo ao rol de doe
 
 ### 2. Concursos e Avaliações (`/components/ConcursosGuide.tsx` e `ExamesGuide.tsx`)
 Projetada para os momentos atarefados de inspeção admissional e de rotina.
-* **Funcionalidade:** Filtra, a partir de objetos rígidos, os índices incapacitantes. Detalha ponto-a-ponto todos os quadros médicos, medidas antropométricas e acuidade visual que eliminam um candidato nos certames e concursos da Marinha do Brasil. Adicionalmente, mapeia os exames mandatários exigidos por tipo de finalidade/engajamento.
+* **Funcionalidade:** Filtra, a partir de objetos rígidos, os índices incapacitantes. Detalha ponto-a-ponto todos os quadros médicos, medidas antropométricas e acuidade visual que eliminam um candidato nos certames e concursos da Marinha do Brasil. Adicionalmente, mapeia os exames mandatórios exigidos por tipo de finalidade/engajamento.
 
 ### 3. Geração de Pareceres Periciais (`/components/Pareceres.tsx`)
 Um verdadeiro sistema interativo Fullstack Integrado.
 * **Dinâmica / Lógica:** O front-end React coleta a identificação do perito, a Finalidade e a Especialidade, aplicando autocompletar via NIP. O sistema comunica-se com um serviço Google Apps Script (GAS) implementado como API Rest.
 * **Output:** O macro na web copia o template nativo do Google Docs específico, injeta os dados (data, histórico, tags textuais), converte em PDF, arquiva na nuvem e envia as cópias originais para o e-mail institucional do perito, mantendo um log centralizado.
 
-### 4. Roteiro JRS e Material de Estudo (`/components/RoteiroJRS.tsx` e `Estudo.tsx`)
+### 4. Perícia Menor com Leitura Inteligente IA (`/components/PericiaMenor.tsx`)
+Módulo avançado de emissão de atestados e dispensas de serviço com tecnologia de reconhecimento de imagem e tratamento de imagem estilo *Scanner*.
+* **Visão Computacional:** O perito pode utilizar a câmara do dispositivo para fotografar um atestado médico físico. A imagem é recortada pelo utilizador (`react-image-crop`) e recebe filtros automáticos de preto e branco e alto contraste para otimização da leitura.
+* **Integração com Gemini:** A imagem tratada é enviada via API para o modelo **Google Gemini 2.5 Flash**, que extrai com alta precisão o Nome do Paciente, a Data do Atestado, o Tempo de Afastamento e o código CID.
+* **Automação:** O sistema pré-preenche o formulário automaticamente, executa uma busca inclusiva para identificar o NIP do militar e, ao gerar a perícia final no Google Docs, centraliza e anexa a imagem do atestado original na última página do documento PDF.
+
+### 5. Roteiro JRS e Material de Estudo (`/components/RoteiroJRS.tsx` e `Estudo.tsx`)
 Ambiente de capacitação contínua e trilhas de aprendizagem.
 * **Funcionalidade:** O *Roteiro JRS* apresenta uma trilha em formato *Accordion* (lista expansível) com aulas, normas e infográficos, abrindo vídeos do YouTube e imagens do Imgur em modais de visualização rica sobrepostos à tela. O *Material de Estudo* divide o conhecimento em 3 abas limpas: Aulas, Vídeos e Livros (Artigos).
 
-### 5. Normas do HNRe e Legislação (`/components/HNReGuide.tsx`)
+### 6. Normas do HNRe e Legislação (`/components/HNReGuide.tsx`)
 Leitor nativo de normativas e diretrizes locais.
 * **Funcionalidade:** Renderiza de forma inteligente textos complexos em Markdown (como o Regimento Interno e Ordem Interna da JRS), aplicando negrito automático em Artigos e Incisos, com botões flutuantes (FABs) de atalho para download dos PDFs oficiais.
 
@@ -38,7 +44,7 @@ A navegação ocorre em substituição de rotas através do Hook `currentView` n
 
 1. **Benefícios** (*Ícone Estetoscópio*): Acesso a `Doenças de Lei`, verificação de `Finalidades` da perícia, e à `Portaria` do ministério da defesa (foco em direitos do inativo/ativo).
 2. **Avaliações** (*Ícone Prancheta*): Link direto aos vereditos dos critérios eliminatórios para `Concursos` e `Exames` obrigatórios.
-3. **Documentos** (*Ícone Arquivo*): Módulo de geração de `Pareceres` automatizados e consulta de `Templates`.
+3. **Documentos** (*Ícone Arquivo*): Módulo de geração de `Pareceres` automatizados, formulário inteligente de `Perícia Menor` e consulta de `Templates`.
 4. **Normas** (*Ícone Martelo*): Agrupa o baluarte da MB (`DGPM-406`), a aba de normas internas (`HNRe`) e a `Legislação` pura.
 5. **Extras** (*Ícone Widgets*): Congrega utilidades como `Casos` interativos, ambiente de `Estudo`, `Infográficos`, `Resumos` e a trilha do `Roteiro JRS`.
 
@@ -57,8 +63,10 @@ A interface do usuário foi desenhada com estrita observância à Identidade Vis
 * **Framework Web:** React 19 + TypeScript + Vite.
 * **Estilização:** CSS utilitário com Tailwind CSS.
 * **Ícones:** Lucide React e Google Material Symbols.
+* **Processamento de Imagens:** `react-image-crop` para interações de recorte na web, manipulado com a API Canvas nativa do HTML5.
 * **Exportação Local:** `jspdf` para geração de relatórios instantâneos.
 * **Backend Autônomo (Google Apps Script):** Orquestração no `Code.gs` utilizando Google Sheets como base de dados relacional, Google Docs para manipulação de *templates* e GmailApp para envio seguro de e-mails.
+* **Inteligência Artificial:** Integração via REST API com o modelo **Google Gemini 2.5 Flash** para leitura de documentos via Visão Computacional (OCR) estruturado em JSON.
 
 ---
 
@@ -88,7 +96,7 @@ Abaixo encontra-se a arquitetura atualizada de ficheiros e diretórios no reposi
   - `Header.tsx` / `Footer.tsx`
   - `Infograficos.tsx` / `Resumos.tsx` / `Artigos.tsx`
   - `LawReference.tsx` / `PortariaGuide.tsx`
-  - `Pareceres.tsx` / `TemplatesGuide.tsx`
+  - `Pareceres.tsx` / `TemplatesGuide.tsx` / `PericiaMenor.tsx`
   - `ArtigoPericiaMedica.tsx`, `ArtigoPerfilPerito.tsx`, etc. *(Sub-páginas de artigos)*
 
 - `/components/sections`
