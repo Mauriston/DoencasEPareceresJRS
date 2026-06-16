@@ -35,8 +35,8 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction }
         {leftAction}
       </div>
 
-      {/* M3 Small App Bar Spec: Título Alinhado à Esquerda */}
-      <div className="flex-1 text-left px-1 font-heading text-[16px] font-bold tracking-wide truncate text-white uppercase">
+      {/* Título Centralizado */}
+      <div className="flex-1 text-center px-1 font-heading text-[16px] font-bold tracking-wide truncate text-white uppercase">
         {title}
       </div>
 

@@ -86,9 +86,9 @@ export const Infograficos: React.FC = () => {
   if (selectedItem) {
     return (
       <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-fade-in pb-env-safe">
-        {/* M3 Small App Bar Spec: Título Alinhado à Esquerda, Sem botão de voltar aqui */}
+        {/* M3 Small App Bar Spec: Título Centralizado, Sem botão de voltar aqui */}
         <div className="flex-shrink-0 w-full sticky top-0 z-50 shadow-sm bg-[#050F41] text-white h-[56px] flex items-center justify-between px-4 border-b border-transparent">
-          <div className="flex-1 text-left font-heading text-[16px] font-semibold truncate pr-4 text-white uppercase tracking-wide">
+          <div className="flex-1 text-center font-heading text-[16px] font-semibold truncate pr-4 text-white uppercase tracking-wide">
             {selectedItem.title}
           </div>
           
