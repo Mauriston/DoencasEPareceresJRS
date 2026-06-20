@@ -5,6 +5,15 @@ import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown, CheckCircle, C
 import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
+interface PericiaMenorRecord {
+  inspecionado: string;
+  cid: string;
+  dataAtestado: string;
+  tempoAtestado: string;
+  vigente: boolean;
+  link: string;
+}
+
 interface CidItem {
   SUBCAT: string;
   DESCRICAO: string;
@@ -86,6 +95,14 @@ export const PericiaMenor: React.FC = () => {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successPdfUrl, setSuccessPdfUrl] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'novo' | 'historico'>('novo');
+  const [history, setHistory] = useState<PericiaMenorRecord[]>([]);
+  const [isFetchingHistory, setIsFetchingHistory] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [filterVigente, setFilterVigente] = useState(true);
+  const [vigentesCount, setVigentesCount] = useState(0);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchLookups = async () => {
@@ -506,10 +523,69 @@ export const PericiaMenor: React.FC = () => {
     }
   };
 
+  const GAS_URL_HIST = "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
+
+  const fetchHistory = async () => {
+    if (history.length > 0) return;
+    setIsFetchingHistory(true);
+    try {
+      const res = await fetch(`${GAS_URL_HIST}?action=getPericiaMenorList`);
+      const json = await res.json();
+      if (json.success) {
+        setHistory(json.data);
+        setVigentesCount(json.data.filter((r: PericiaMenorRecord) => r.vigente).length);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsFetchingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSearchDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const filteredHistory = history
+    .filter(r => filterVigente ? r.vigente : true)
+    .filter(r => historySearch === '' || r.inspecionado.toLowerCase().includes(historySearch.toLowerCase()));
+
+  const searchSuggestions = historySearch.length >= 1
+    ? [...new Set(history.map(r => r.inspecionado))].filter(n => n.toLowerCase().includes(historySearch.toLowerCase())).slice(0, 8)
+    : [];
+
   return (
     <div className="flex flex-col h-full bg-gray-50 relative">
       <Header title="Perícia Menor" />
-      
+
+      {/* Tabs */}
+      <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
+        <button
+          onClick={() => setActiveTab('novo')}
+          className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide transition-all rounded-t-2xl mx-0.5 ${activeTab === 'novo' ? 'bg-[#079551] text-white' : 'text-white/50'}`}
+        >
+          Novo
+        </button>
+        <button
+          onClick={() => { setActiveTab('historico'); fetchHistory(); }}
+          className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide transition-all rounded-t-2xl mx-0.5 flex items-center justify-center gap-1.5 ${activeTab === 'historico' ? 'bg-[#079551] text-white' : 'text-white/50'}`}
+        >
+          Histórico
+          {vigentesCount > 0 && (
+            <span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+              {vigentesCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'novo' && (
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 w-full max-w-2xl mx-auto space-y-6">
         
         {/* SECÇÃO 0: INTELIGÊNCIA ARTIFICIAL E CÂMARA */}
@@ -917,6 +993,7 @@ export const PericiaMenor: React.FC = () => {
         </div>
 
       </div>
+      )}
 
       {/* MODAL DE PESQUISA POR NOME */}
       {showPesquisarNomeModal && (
@@ -1012,6 +1089,106 @@ export const PericiaMenor: React.FC = () => {
         </div>
       )}
 
+      {activeTab === 'historico' && (
+        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-28 w-full max-w-2xl mx-auto">
+
+          {/* Search + filter */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-4 space-y-3">
+            <div className="relative" ref={searchRef}>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-[18px]">search</span>
+              <input
+                type="text"
+                placeholder="Buscar por inspecionado..."
+                value={historySearch}
+                onChange={e => { setHistorySearch(e.target.value); setShowSearchDropdown(true); }}
+                onFocus={() => setShowSearchDropdown(true)}
+                className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#050F41] bg-gray-50"
+              />
+              {showSearchDropdown && searchSuggestions.length > 0 && (
+                <div className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg mt-1 overflow-hidden">
+                  {searchSuggestions.map((name, i) => (
+                    <button key={i} type="button" onMouseDown={() => { setHistorySearch(name); setShowSearchDropdown(false); }}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-50 last:border-0">
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Vigente switch */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-600 font-semibold">Somente vigentes</span>
+              <button
+                type="button"
+                onClick={() => setFilterVigente(v => !v)}
+                className={`relative w-10 h-5 rounded-full transition-colors ${filterVigente ? 'bg-[#079551]' : 'bg-gray-300'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${filterVigente ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Badge summary */}
+          {vigentesCount > 0 && (
+            <div className="flex items-center gap-2 mb-3 px-1">
+              <span className="bg-red-100 text-red-700 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-red-500 rounded-full inline-block" />
+                {vigentesCount} vigente{vigentesCount !== 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
+
+          {isFetchingHistory ? (
+            <div className="flex items-center justify-center py-12 gap-3 text-gray-400">
+              <span className="w-5 h-5 border-2 border-gray-300 border-t-[#050F41] rounded-full animate-spin" />
+              <span className="text-sm">Carregando histórico...</span>
+            </div>
+          ) : filteredHistory.length === 0 ? (
+            <div className="text-center py-12 text-gray-400 text-sm">Nenhum registro encontrado.</div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-[#050F41]/5 border-b border-gray-100">
+                    <th className="text-left px-3 py-2.5 font-bold text-[#050F41] w-[30%]">Data</th>
+                    <th className="text-left px-3 py-2.5 font-bold text-[#050F41]">Inspecionado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredHistory.map((rec, i) => (
+                    <tr key={i} className={`border-b border-gray-50 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                      <td className="px-3 py-2.5 align-top">
+                        <span className="font-semibold text-gray-800 block">{rec.dataAtestado}</span>
+                        {rec.tempoAtestado && (
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">{String(rec.tempoAtestado).replace(/^(\d+)$/, '$1 dias')}</span>
+                        )}
+                        {rec.vigente && (
+                          <span className="mt-1 inline-block bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">vigente</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 align-top">
+                        {rec.link ? (
+                          <a href={rec.link} target="_blank" rel="noopener noreferrer"
+                            className="font-semibold text-[#050F41] hover:text-[#079551] transition-colors flex items-start gap-1">
+                            <span className="flex-1">{rec.inspecionado}</span>
+                            <span className="material-symbols-outlined text-[13px] text-gray-400 shrink-0 mt-0.5">open_in_new</span>
+                          </a>
+                        ) : (
+                          <span className="font-semibold text-gray-800">{rec.inspecionado}</span>
+                        )}
+                        {rec.cid && (
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">{rec.cid}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

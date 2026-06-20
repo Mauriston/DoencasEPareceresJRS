@@ -137,7 +137,48 @@ function doGet(e) {
         }
       }
       return ContentService.createTextOutput(
-        JSON.stringify({success: true, data: records.reverse()}) 
+        JSON.stringify({success: true, data: records.reverse()})
+      ).setMimeType(ContentService.MimeType.JSON);
+
+    } else if (action === "getPericiaMenorList") {
+      const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      const sheet = ss.getSheetByName("Pericia_Menor");
+      if (!sheet) {
+        return ContentService.createTextOutput(JSON.stringify({success: false, message: "Aba Pericia_Menor não encontrada"})).setMimeType(ContentService.MimeType.JSON);
+      }
+      const data = sheet.getDataRange().getValues();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const records = [];
+      for (let i = 1; i < data.length; i++) {
+        if (!data[i][1]) continue;
+        let dataAtestado = data[i][6];
+        let dataAtestadoStr = '';
+        if (dataAtestado instanceof Date) {
+          dataAtestadoStr = String(dataAtestado.getDate()).padStart(2, '0') + '/' +
+                            String(dataAtestado.getMonth() + 1).padStart(2, '0') + '/' +
+                            dataAtestado.getFullYear();
+        } else {
+          dataAtestadoStr = String(dataAtestado || '');
+        }
+        let dataTermino = data[i][9];
+        let vigente = false;
+        if (dataTermino instanceof Date) {
+          const dt = new Date(dataTermino);
+          dt.setHours(0, 0, 0, 0);
+          vigente = dt >= today;
+        }
+        records.push({
+          inspecionado: String(data[i][1]),
+          cid: String(data[i][4]),
+          dataAtestado: dataAtestadoStr,
+          tempoAtestado: String(data[i][7] || ''),
+          vigente: vigente,
+          link: String(data[i][12] || '')
+        });
+      }
+      return ContentService.createTextOutput(
+        JSON.stringify({success: true, data: records.reverse()})
       ).setMimeType(ContentService.MimeType.JSON);
 
     } else if (action === "getExtras") {
