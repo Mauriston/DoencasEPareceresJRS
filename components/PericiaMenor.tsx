@@ -11,6 +11,7 @@ interface PericiaMenorRecord {
   dataAtestado: string;
   tempoAtestado: string;
   vigente: boolean;
+  vdf: boolean;
   link: string;
 }
 
@@ -101,6 +102,7 @@ export const PericiaMenor: React.FC = () => {
   const [historySearch, setHistorySearch] = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [filterVigente, setFilterVigente] = useState(true);
+  const [filterVdf, setFilterVdf] = useState(false);
   const [vigentesCount, setVigentesCount] = useState(0);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -554,6 +556,7 @@ export const PericiaMenor: React.FC = () => {
 
   const filteredHistory = history
     .filter(r => filterVigente ? r.vigente : true)
+    .filter(r => filterVdf ? r.vdf : true)
     .filter(r => historySearch === '' || r.inspecionado.toLowerCase().includes(historySearch.toLowerCase()));
 
   const searchSuggestions = historySearch.length >= 1
@@ -1116,15 +1119,23 @@ export const PericiaMenor: React.FC = () => {
               )}
             </div>
 
-            {/* Vigente switch */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-600 font-semibold">Somente vigentes</span>
+            {/* Filter chips */}
+            <div className="flex gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => setFilterVigente(v => !v)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${filterVigente ? 'bg-[#079551]' : 'bg-gray-300'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterVigente ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-300 hover:border-[#050F41]'}`}
               >
-                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${filterVigente ? 'translate-x-5' : 'translate-x-0'}`} />
+                {filterVigente && <span className="material-symbols-outlined text-[13px]">check</span>}
+                Vigentes
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterVdf(v => !v)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterVdf ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-300 hover:border-[#050F41]'}`}
+              >
+                {filterVdf && <span className="material-symbols-outlined text-[13px]">check</span>}
+                VDF
               </button>
             </div>
           </div>
