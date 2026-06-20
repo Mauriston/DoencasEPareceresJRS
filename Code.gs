@@ -1,4 +1,5 @@
 const SPREADSHEET_ID = "18gmc96AQq9h_atzk6_toZY9Nte_E4rnJ-rbsBqqU7x8";
+const EXTRAS_SPREADSHEET_ID = "1vWl2ANgGDYLa5vTtCTUrjitDnuqz8IA3qGhD1Ha9C6Q";
 const DRIVE_FOLDER_ID = "176YQTOOWXuE78Xul49XYpJsVNyu-eZFi";
 
 function doGet(e) {
@@ -137,6 +138,35 @@ function doGet(e) {
       }
       return ContentService.createTextOutput(
         JSON.stringify({success: true, data: records.reverse()}) 
+      ).setMimeType(ContentService.MimeType.JSON);
+
+    } else if (action === "getExtras") {
+      const ss = SpreadsheetApp.openById(EXTRAS_SPREADSHEET_ID);
+      const sheet = ss.getSheets()[0];
+      const data = sheet.getDataRange().getValues();
+      if (data.length <= 1) {
+        return ContentService.createTextOutput(JSON.stringify({ success: true, data: [] })).setMimeType(ContentService.MimeType.JSON);
+      }
+      const headers = data[0];
+      const formatIdx   = headers.indexOf("FORMATO") !== -1 ? headers.indexOf("FORMATO") : 0;
+      const titleIdx    = headers.indexOf("TITULO")  !== -1 ? headers.indexOf("TITULO")  : 1;
+      const descIdx     = headers.indexOf("DESCRICAO") !== -1 ? headers.indexOf("DESCRICAO") : 2;
+      const linkIdx     = headers.indexOf("LINK")    !== -1 ? headers.indexOf("LINK")    : 3;
+      const imageIdx    = headers.indexOf("IMAGEM")  !== -1 ? headers.indexOf("IMAGEM")  : 4;
+      const extras = [];
+      for (let i = 1; i < data.length; i++) {
+        const rawFormat = String(data[i][formatIdx] || "").trim();
+        if (!rawFormat) continue;
+        extras.push({
+          format:      rawFormat,
+          title:       String(data[i][titleIdx]  || "").trim(),
+          description: String(data[i][descIdx]   || "").trim(),
+          link:        String(data[i][linkIdx]    || "").trim(),
+          imageUrl:    String(data[i][imageIdx]   || "").trim() || null,
+        });
+      }
+      return ContentService.createTextOutput(
+        JSON.stringify({ success: true, data: extras })
       ).setMimeType(ContentService.MimeType.JSON);
 
     } else if (action === "getMilitar") {
