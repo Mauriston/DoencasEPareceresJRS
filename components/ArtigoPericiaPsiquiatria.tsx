@@ -11,15 +11,13 @@ export const ArtigoPericiaPsiquiatria: React.FC<Props> = ({ onBack }) => {
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
+    const container = document.querySelector('main');
+    if (!container) return;
     const handleScroll = () => {
-      if (window.scrollY > 250) {
-        setShowScrollTop(true);
-      } else {
-        setShowScrollTop(false);
-      }
+      setShowScrollTop(container.scrollTop > 56);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
@@ -304,7 +302,10 @@ export const ArtigoPericiaPsiquiatria: React.FC<Props> = ({ onBack }) => {
       {/* Botão Flutuante (FAB) para Voltar ao Topo */}
       {showScrollTop && (
         <button 
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onClick={() => {
+              const container = document.querySelector('main');
+              if (container) container.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           className="fixed bottom-24 right-6 bg-[#050F41] text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center border border-slate-700"
           title="Voltar ao topo"
         >
