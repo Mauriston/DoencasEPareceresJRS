@@ -70,10 +70,10 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
   const sorted = [...records].sort((a, b) => b.dataAtestadoTs - a.dataAtestadoTs);
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col bg-gray-50 min-h-full">
       <Header title={person} onBack={onBack} />
 
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-28 w-full max-w-2xl mx-auto space-y-4">
+      <div className="px-4 pt-4 pb-28 w-full max-w-2xl mx-auto space-y-4">
 
         {/* OM */}
         {records[0]?.om && (
