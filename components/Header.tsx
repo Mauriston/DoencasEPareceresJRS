@@ -4,9 +4,10 @@ export interface HeaderProps {
   title?: string;
   leftAction?: React.ReactNode;
   rightAction?: React.ReactNode;
+  onBack?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction }) => {
+export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, onBack }) => {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -32,7 +33,16 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction }
     >
       {/* Botão de Ação Esquerdo (M3: 48x48) */}
       <div className="flex items-center justify-center min-w-[48px] min-h-[48px]">
-        {leftAction}
+        {onBack ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center justify-center w-10 h-10 rounded-full text-white hover:bg-white/10 transition-colors"
+            aria-label="Voltar"
+          >
+            <span className="material-symbols-outlined text-[24px]">chevron_left</span>
+          </button>
+        ) : leftAction}
       </div>
 
       {/* Título Centralizado */}
