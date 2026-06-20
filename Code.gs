@@ -174,7 +174,7 @@ function doGet(e) {
           dataAtestado: dataAtestadoStr,
           tempoAtestado: String(data[i][7] || ''),
           vigente: vigente,
-          vdf: data[i][10] === true || data[i][10] === 'TRUE' || data[i][10] === 'true',
+          vdf: data[i][10] === true || String(data[i][10]).toUpperCase() === 'TRUE' || String(data[i][10]).toUpperCase() === 'VERDADEIRO',
           link: String(data[i][12] || '')
         });
       }

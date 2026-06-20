@@ -554,6 +554,9 @@ export const PericiaMenor: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  const vigentesTotal = history.filter(r => r.vigente).length;
+  const vdfTotal = history.filter(r => r.vdf).length;
+
   const filteredHistory = history
     .filter(r => filterVigente ? r.vigente : true)
     .filter(r => filterVdf ? r.vdf : true)
@@ -1128,6 +1131,11 @@ export const PericiaMenor: React.FC = () => {
               >
                 {filterVigente && <span className="material-symbols-outlined text-[13px]">check</span>}
                 Vigentes
+                {vigentesTotal > 0 && (
+                  <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterVigente ? 'bg-white/20 text-white' : 'bg-red-100 text-red-600'}`}>
+                    {vigentesTotal}
+                  </span>
+                )}
               </button>
               <button
                 type="button"
@@ -1136,6 +1144,11 @@ export const PericiaMenor: React.FC = () => {
               >
                 {filterVdf && <span className="material-symbols-outlined text-[13px]">check</span>}
                 VDF
+                {vdfTotal > 0 && (
+                  <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterVdf ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>
+                    {vdfTotal}
+                  </span>
+                )}
               </button>
             </div>
           </div>
