@@ -22,6 +22,7 @@ import { HNReGuide } from './components/HNReGuide';
 import { RegimentoHNRe } from './components/RegimentoHNRe';
 import { OrdemInternaJRS } from './components/OrdemInternaJRS';
 import { PericiaMenor } from './components/PericiaMenor';
+import { Mensagens } from './components/Mensagens';
 import { RoteiroJRS } from './components/RoteiroJRS'; // <-- IMPORTAÇÃO DO ROTEIRO AQUI
 import { NavItem } from './types';
 
@@ -46,6 +47,7 @@ const App: React.FC = () => {
       case 'resumos': return <Resumos />;
       case 'pareceres': return <Pareceres />;
       case 'pericia-menor': return <PericiaMenor />;
+      case 'mensagens': return <Mensagens />;
       case 'templates': return <TemplatesGuide />;
       case 'artigos': return <Artigos onNavigate={setCurrentView} />;
       case 'artigo-pericia': return <ArtigoPericiaMedica onBack={() => setCurrentView('estudo')} />;
@@ -125,10 +127,10 @@ const App: React.FC = () => {
           {/* 3. Documentos */}
 <div className="relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-1">
   <button id="nav-btn-gerar-doc" onClick={() => { setIsGerarDocFabOpen(!isGerarDocFabOpen); setIsBeneficiosFabOpen(false); setIsAvaliacoesFabOpen(false); setIsFabOpen(false); setIsExtrasFabOpen(false); }} className="group flex flex-col items-center justify-center w-full h-full focus:outline-none">
-    <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['pareceres', 'templates', 'pericia-menor'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
-      <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['pareceres', 'templates', 'pericia-menor'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>description</span>
+    <div className={`mb-1 px-4 py-1 rounded-full transition-all duration-200 flex items-center justify-center ${['pareceres', 'templates', 'pericia-menor', 'mensagens'].includes(currentView) ? 'bg-blue-100 text-[#050F41] font-semibold' : 'text-gray-500 hover:bg-gray-100/60'}`}>
+      <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: ['pareceres', 'templates', 'pericia-menor', 'mensagens'].includes(currentView) ? "'FILL' 1" : "'FILL' 0" }}>description</span>
     </div>
-    <span className={`text-[11px] font-medium font-body transition-colors ${['pareceres', 'templates', 'pericia-menor'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Documentos</span>
+    <span className={`text-[11px] font-medium font-body transition-colors ${['pareceres', 'templates', 'pericia-menor', 'mensagens'].includes(currentView) ? 'text-[#050F41] font-bold' : 'text-gray-500'}`}>Documentos</span>
   </button>
   {isGerarDocFabOpen && (
     <div className="absolute bottom-20 left-1/2 -translate-x-1/2 mb-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_32px_rgba(5,15,65,0.08)] border border-gray-100 p-1.5 flex flex-col gap-0.5 min-w-[170px] animate-fade-in z-50">
@@ -136,6 +138,7 @@ const App: React.FC = () => {
       
       {/* Documentação: Botão de Perícia Menor Ativado e Redirecionado */}
       <button onClick={() => { setCurrentView('pericia-menor'); setIsGerarDocFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'pericia-menor' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">personal_injury</span>Perícia Menor</button>
+      <button onClick={() => { setCurrentView('mensagens'); setIsGerarDocFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'mensagens' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">chat</span>Mensagens</button>
       
       <button onClick={() => { setCurrentView('templates'); setIsGerarDocFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'templates' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">edit_document</span>Templates</button>
     </div>
