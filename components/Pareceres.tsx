@@ -52,6 +52,8 @@ export const Pareceres: React.FC = () => {
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   const [historySearch, setHistorySearch] = useState("");
   const [historyEspFilter, setHistoryEspFilter] = useState("");
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const PERITOS = {
     CT_MAURISTON: {
@@ -187,6 +189,16 @@ export const Pareceres: React.FC = () => {
       })
       .catch((err) => console.error("Erro ao carregar OMs", err));
   }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchDropdown(false);
+      }
+    }
+    if (showSearchDropdown) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showSearchDropdown]);
 
   useEffect(() => {
     if (militarStatus !== "not_found" || !pg) return;
@@ -395,17 +407,52 @@ export const Pareceres: React.FC = () => {
         <div className="flex-1 overflow-y-auto px-4 pt-5 pb-28 w-full max-w-2xl mx-auto space-y-4">
           {/* Barra de Busca e Filtro */}
           <div className="flex gap-2 items-center">
-            <div className="relative flex-1">
+            <div className="relative flex-1" ref={searchRef}>
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
                 <span className="material-symbols-outlined text-[18px]">search</span>
               </div>
               <input
                 type="text"
                 value={historySearch}
-                onChange={(e) => setHistorySearch(e.target.value)}
+                onChange={(e) => { setHistorySearch(e.target.value); setShowSearchDropdown(true); }}
+                onFocus={() => setShowSearchDropdown(true)}
                 placeholder="Buscar por inspecionado..."
-                className="w-full bg-white border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-9 p-2.5 transition-colors shadow-sm"
+                className="w-full bg-white border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-9 pr-8 p-2.5 transition-colors shadow-sm"
+                autoComplete="off"
               />
+              {historySearch && (
+                <button
+                  type="button"
+                  onClick={() => { setHistorySearch(""); setShowSearchDropdown(false); }}
+                  className="absolute inset-y-0 right-2 flex items-center text-gray-400 hover:text-gray-600"
+                >
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              )}
+              {showSearchDropdown && (() => {
+                const term = historySearch.trim().toLowerCase();
+                const uniqueNames = Array.from(new Set(
+                  pareceresHistory.map(p => extractNameFromInspecionado(p.inspecionado)).filter(Boolean)
+                )).sort();
+                const suggestions = term
+                  ? uniqueNames.filter(n => n.toLowerCase().includes(term))
+                  : uniqueNames;
+                return suggestions.length > 0 ? (
+                  <ul className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-56 overflow-y-auto animate-fade-in">
+                    {suggestions.map(name => (
+                      <li key={name}>
+                        <button
+                          type="button"
+                          className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-navy transition-colors truncate border-b border-gray-50 last:border-0"
+                          onClick={() => { setHistorySearch(name); setShowSearchDropdown(false); }}
+                        >
+                          {name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null;
+              })()}
             </div>
             <div className="relative">
               <select
