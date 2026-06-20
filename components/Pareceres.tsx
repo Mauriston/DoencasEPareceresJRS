@@ -435,36 +435,35 @@ export const Pareceres: React.FC = () => {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-navy font-heading text-xs uppercase border-b border-gray-200">
                   <tr>
-                    <th className="px-4 py-3 text-left">Data</th>
+                    <th className="px-4 py-3 text-left whitespace-nowrap">Data</th>
                     <th className="px-4 py-3 text-left">Inspecionado</th>
-                    <th className="px-4 py-3 text-left">Especialidade</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredHistory.length > 0 ? filteredHistory.map((item, idx) => (
                     <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-gray-600 text-xs whitespace-nowrap">{item.data}</td>
+                      <td className="px-4 py-3 text-gray-600 text-xs whitespace-nowrap align-top pt-4">{item.data}</td>
                       <td className="px-4 py-3">
                         <a
                           href={item.link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 hover:underline"
+                          className="text-blue-600 hover:text-blue-800 font-medium flex items-start gap-1 hover:underline"
                           title="Abrir parecer"
                         >
-                          <span className="truncate max-w-[160px] sm:max-w-xs">{extractNameFromInspecionado(item.inspecionado)}</span>
-                          <span className="material-symbols-outlined text-[13px] shrink-0">open_in_new</span>
+                          <span className="break-words">{extractNameFromInspecionado(item.inspecionado)}</span>
+                          <span className="material-symbols-outlined text-[13px] shrink-0 mt-0.5">open_in_new</span>
                         </a>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-block bg-navy/10 text-navy text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
-                          {item.especialidade}
-                        </span>
+                        {item.especialidade && (
+                          <span className="block mt-1 text-[11px] text-gray-400 font-normal uppercase tracking-wide">
+                            {item.especialidade}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={3} className="px-4 py-10 text-center text-gray-400 text-sm">
+                      <td colSpan={2} className="px-4 py-10 text-center text-gray-400 text-sm">
                         {pareceresHistory.length === 0 ? "Nenhum parecer registrado." : "Nenhum resultado para o filtro aplicado."}
                       </td>
                     </tr>
