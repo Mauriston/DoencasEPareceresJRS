@@ -28,39 +28,29 @@ export const Estudo: React.FC<Props> = ({ onBack, onNavigate }) => {
       />
       
       {/* Sistema de Tabs (Separadores) com as 3 opções alinhadas */}
-      <div className="bg-[#050F41] px-2 pt-1 flex justify-around shadow-md z-10 flex-shrink-0">
-        <button 
+      <div className="bg-[#050F41] px-2 pt-1 flex justify-around border-t-2 border-[#079551] z-10 flex-shrink-0">
+        <button
           onClick={() => setActiveTab('aulas')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-xs sm:text-sm font-bold transition-all relative focus:outline-none ${activeTab === 'aulas' ? 'text-white' : 'text-white/50 hover:text-white/80'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-xs sm:text-sm font-bold transition-all focus:outline-none ${activeTab === 'aulas' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
         >
           <BookOpen size={16} />
           <span>Aulas</span>
-          {activeTab === 'aulas' && (
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#079551] rounded-t-md animate-fade-in" />
-          )}
         </button>
-        
-        <button 
+
+        <button
           onClick={() => setActiveTab('videos')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-xs sm:text-sm font-bold transition-all relative focus:outline-none ${activeTab === 'videos' ? 'text-white' : 'text-white/50 hover:text-white/80'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-xs sm:text-sm font-bold transition-all focus:outline-none ${activeTab === 'videos' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
         >
           <PlaySquare size={16} />
           <span>Vídeos</span>
-          {activeTab === 'videos' && (
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#079551] rounded-t-md animate-fade-in" />
-          )}
         </button>
 
-        {/* Documentação: Nova Tab "Livros" que vai renderizar os Artigos */}
-        <button 
+        <button
           onClick={() => setActiveTab('livros')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-xs sm:text-sm font-bold transition-all relative focus:outline-none ${activeTab === 'livros' ? 'text-white' : 'text-white/50 hover:text-white/80'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-xs sm:text-sm font-bold transition-all focus:outline-none ${activeTab === 'livros' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
         >
           <Book size={16} />
           <span>Livros</span>
-          {activeTab === 'livros' && (
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#079551] rounded-t-md animate-fade-in" />
-          )}
         </button>
       </div>
 
