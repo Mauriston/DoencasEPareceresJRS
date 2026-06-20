@@ -53,6 +53,8 @@ export const Pareceres: React.FC = () => {
   const [historySearch, setHistorySearch] = useState("");
   const [historyEspFilter, setHistoryEspFilter] = useState("");
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [sortCol, setSortCol] = useState<'data' | 'inspecionado'>('data');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const searchRef = useRef<HTMLDivElement>(null);
 
   const PERITOS = {
@@ -364,13 +366,38 @@ export const Pareceres: React.FC = () => {
     }
   };
 
-  // Dados filtrados para a aba Histórico
+  // Dados filtrados e ordenados para a aba Histórico
   const espOptions = Array.from(new Set(pareceresHistory.map(p => p.especialidade).filter(Boolean))).sort();
-  const filteredHistory = pareceresHistory.filter(p => {
-    const nameMatch = historySearch.trim() === "" || extractNameFromInspecionado(p.inspecionado).toLowerCase().includes(historySearch.toLowerCase());
-    const espMatch = historyEspFilter === "" || p.especialidade === historyEspFilter;
-    return nameMatch && espMatch;
-  });
+
+  const handleSort = (col: 'data' | 'inspecionado') => {
+    if (sortCol === col) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortCol(col);
+      setSortDir('asc');
+    }
+  };
+
+  const parseDate = (str: string) => {
+    const [d, m, y] = str.split('/');
+    return new Date(`${y}-${m}-${d}`).getTime();
+  };
+
+  const filteredHistory = pareceresHistory
+    .filter(p => {
+      const nameMatch = historySearch.trim() === "" || extractNameFromInspecionado(p.inspecionado).toLowerCase().includes(historySearch.toLowerCase());
+      const espMatch = historyEspFilter === "" || p.especialidade === historyEspFilter;
+      return nameMatch && espMatch;
+    })
+    .sort((a, b) => {
+      let cmp = 0;
+      if (sortCol === 'data') {
+        cmp = parseDate(a.data) - parseDate(b.data);
+      } else {
+        cmp = extractNameFromInspecionado(a.inspecionado).localeCompare(extractNameFromInspecionado(b.inspecionado), 'pt-BR');
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
 
   return (
     <div className="flex flex-col h-full bg-gray-50 relative">
@@ -482,8 +509,22 @@ export const Pareceres: React.FC = () => {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-navy font-heading text-xs uppercase border-b border-gray-200">
                   <tr>
-                    <th className="px-4 py-3 text-left whitespace-nowrap">Data</th>
-                    <th className="px-4 py-3 text-left">Inspecionado</th>
+                    {(['data', 'inspecionado'] as const).map(col => (
+                      <th
+                        key={col}
+                        onClick={() => handleSort(col)}
+                        className="px-4 py-3 text-left whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 transition-colors"
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {col === 'data' ? 'Data' : 'Inspecionado'}
+                          <span className="material-symbols-outlined text-[14px] text-navy/50">
+                            {sortCol === col
+                              ? sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward'
+                              : 'unfold_more'}
+                          </span>
+                        </span>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
