@@ -28,10 +28,10 @@ export const Estudo: React.FC<Props> = ({ onBack, onNavigate }) => {
       />
       
       {/* Sistema de Tabs (Separadores) com as 3 opções alinhadas */}
-      <div className="bg-[#050F41] px-2 pt-1 flex justify-around border-t-2 border-[#079551] z-10 flex-shrink-0">
+      <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
         <button
           onClick={() => setActiveTab('aulas')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-xs sm:text-sm font-bold transition-all focus:outline-none ${activeTab === 'aulas' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-xs sm:text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'aulas' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
         >
           <BookOpen size={16} />
           <span>Aulas</span>
@@ -39,7 +39,7 @@ export const Estudo: React.FC<Props> = ({ onBack, onNavigate }) => {
 
         <button
           onClick={() => setActiveTab('videos')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-xs sm:text-sm font-bold transition-all focus:outline-none ${activeTab === 'videos' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-xs sm:text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'videos' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
         >
           <PlaySquare size={16} />
           <span>Vídeos</span>
@@ -47,7 +47,7 @@ export const Estudo: React.FC<Props> = ({ onBack, onNavigate }) => {
 
         <button
           onClick={() => setActiveTab('livros')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-xs sm:text-sm font-bold transition-all focus:outline-none ${activeTab === 'livros' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-xs sm:text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'livros' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
         >
           <Book size={16} />
           <span>Livros</span>
