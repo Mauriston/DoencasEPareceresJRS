@@ -170,8 +170,11 @@ function doGet(e) {
         }
         records.push({
           inspecionado: String(data[i][1]),
+          om: String(data[i][2] || ''),
           cid: String(data[i][4]),
+          dispensas: String(data[i][5] || ''),
           dataAtestado: dataAtestadoStr,
+          dataAtestadoTs: dataAtestado instanceof Date ? dataAtestado.getTime() : 0,
           tempoAtestado: String(data[i][7] || ''),
           vigente: vigente,
           vdf: data[i][10] === true || String(data[i][10]).toUpperCase() === 'TRUE' || String(data[i][10]).toUpperCase() === 'VERDADEIRO',

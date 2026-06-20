@@ -1,14 +1,18 @@
 // Ficheiro: components/PericiaMenor.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './Header';
+import { PericiaMenorDetalhe } from './PericiaMenorDetalhe';
 import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown, CheckCircle, Camera, Crop as CropIcon, Sparkles, X } from 'lucide-react';
 import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
 interface PericiaMenorRecord {
   inspecionado: string;
+  om: string;
   cid: string;
+  dispensas: string;
   dataAtestado: string;
+  dataAtestadoTs: number;
   tempoAtestado: string;
   vigente: boolean;
   vdf: boolean;
@@ -103,6 +107,9 @@ export const PericiaMenor: React.FC = () => {
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [filterVigente, setFilterVigente] = useState(true);
   const [filterVdf, setFilterVdf] = useState(false);
+  const [sortCol, setSortCol] = useState<'data' | 'inspecionado'>('data');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
   const [vigentesCount, setVigentesCount] = useState(0);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -557,14 +564,35 @@ export const PericiaMenor: React.FC = () => {
   const vigentesTotal = history.filter(r => r.vigente).length;
   const vdfTotal = history.filter(r => r.vdf).length;
 
+  const parseDate = (str: string): number => {
+    const [d, m, y] = str.split('/');
+    return new Date(Number(y), Number(m) - 1, Number(d)).getTime();
+  };
+
+  const handleSort = (col: 'data' | 'inspecionado') => {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  };
+
   const filteredHistory = history
     .filter(r => filterVigente ? r.vigente : true)
     .filter(r => filterVdf ? r.vdf : true)
-    .filter(r => historySearch === '' || r.inspecionado.toLowerCase().includes(historySearch.toLowerCase()));
+    .filter(r => historySearch === '' || r.inspecionado.toLowerCase().includes(historySearch.toLowerCase()))
+    .sort((a, b) => {
+      let cmp = 0;
+      if (sortCol === 'data') cmp = parseDate(a.dataAtestado) - parseDate(b.dataAtestado);
+      else cmp = a.inspecionado.localeCompare(b.inspecionado, 'pt-BR');
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
 
   const searchSuggestions = historySearch.length >= 1
     ? [...new Set(history.map(r => r.inspecionado))].filter(n => n.toLowerCase().includes(historySearch.toLowerCase())).slice(0, 8)
     : [];
+
+  if (selectedPerson !== null) {
+    const personRecords = history.filter(r => r.inspecionado === selectedPerson);
+    return <PericiaMenorDetalhe person={selectedPerson} records={personRecords} onBack={() => setSelectedPerson(null)} />;
+  }
 
   return (
     <div className="flex flex-col h-full bg-gray-50 relative">
@@ -1175,8 +1203,22 @@ export const PericiaMenor: React.FC = () => {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-[#050F41]/5 border-b border-gray-100">
-                    <th className="text-left px-3 py-2.5 font-bold text-[#050F41] w-[30%]">Data</th>
-                    <th className="text-left px-3 py-2.5 font-bold text-[#050F41]">Inspecionado</th>
+                    <th className="text-left px-3 py-2.5 font-bold text-[#050F41] w-[30%] cursor-pointer select-none" onClick={() => handleSort('data')}>
+                      <span className="flex items-center gap-1">
+                        Data
+                        <span className="material-symbols-outlined text-[13px] text-gray-400">
+                          {sortCol === 'data' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
+                        </span>
+                      </span>
+                    </th>
+                    <th className="text-left px-3 py-2.5 font-bold text-[#050F41] cursor-pointer select-none" onClick={() => handleSort('inspecionado')}>
+                      <span className="flex items-center gap-1">
+                        Inspecionado
+                        <span className="material-symbols-outlined text-[13px] text-gray-400">
+                          {sortCol === 'inspecionado' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
+                        </span>
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1192,15 +1234,14 @@ export const PericiaMenor: React.FC = () => {
                         )}
                       </td>
                       <td className="px-3 py-2.5 align-top">
-                        {rec.link ? (
-                          <a href={rec.link} target="_blank" rel="noopener noreferrer"
-                            className="font-semibold text-[#050F41] hover:text-[#079551] transition-colors flex items-start gap-1">
-                            <span className="flex-1">{rec.inspecionado}</span>
-                            <span className="material-symbols-outlined text-[13px] text-gray-400 shrink-0 mt-0.5">open_in_new</span>
-                          </a>
-                        ) : (
-                          <span className="font-semibold text-gray-800">{rec.inspecionado}</span>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPerson(rec.inspecionado)}
+                          className="font-semibold text-[#050F41] hover:text-[#079551] transition-colors flex items-start gap-1 text-left w-full"
+                        >
+                          <span className="flex-1">{rec.inspecionado}</span>
+                          <span className="material-symbols-outlined text-[13px] text-gray-400 shrink-0 mt-0.5">chevron_right</span>
+                        </button>
                         {rec.cid && (
                           <span className="text-[10px] text-gray-400 mt-0.5 block">{rec.cid}</span>
                         )}
