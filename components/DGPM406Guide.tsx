@@ -68,10 +68,10 @@ export const DGPM406Guide: React.FC = () => {
       <Header title="DGPM-406" />
 
       {/* Abas Superiores baseadas no padrão M3/Premium */}
-      <div className="bg-[#050F41] px-2 pt-1 flex justify-around border-t-2 border-[#079551] z-10 flex-shrink-0">
+      <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
         <button
           onClick={() => setActiveTab('capitulos')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-sm font-bold transition-all focus:outline-none ${activeTab === 'capitulos' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'capitulos' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
         >
           <BookOpen size={16} />
           <span>Capítulos</span>
@@ -79,7 +79,7 @@ export const DGPM406Guide: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('anexos')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-sm font-bold transition-all focus:outline-none ${activeTab === 'anexos' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'anexos' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
         >
           <Paperclip size={16} />
           <span>Anexos</span>

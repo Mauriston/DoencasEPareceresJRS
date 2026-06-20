@@ -404,17 +404,17 @@ export const Pareceres: React.FC = () => {
       <Header title="PARECERES" />
 
       {/* Abas Superiores */}
-      <div className="bg-[#050F41] px-2 pt-1 flex justify-around border-t-2 border-[#079551] z-10 flex-shrink-0">
+      <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
         <button
           onClick={() => handleTabChange('novo')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-sm font-bold transition-all focus:outline-none ${activeTab === 'novo' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'novo' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
         >
           <span className="material-symbols-outlined text-[18px]">add_circle</span>
           <span>Novo</span>
         </button>
         <button
           onClick={() => handleTabChange('historico')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-sm font-bold transition-all focus:outline-none ${activeTab === 'historico' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'historico' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
         >
           <span className="material-symbols-outlined text-[18px]">history</span>
           <span>Histórico</span>
