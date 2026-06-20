@@ -1,5 +1,5 @@
 // Ficheiro: App.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DiseaseGuide } from './components/DiseaseGuide';
 import { LawReference } from './components/LawReference';
 import { DGPM406Guide } from './components/DGPM406Guide';
@@ -33,6 +33,18 @@ const App: React.FC = () => {
   const [isExtrasFabOpen, setIsExtrasFabOpen] = useState(false);
   const [isAvaliacoesFabOpen, setIsAvaliacoesFabOpen] = useState(false);
   const [isGerarDocFabOpen, setIsGerarDocFabOpen] = useState(false);
+  const [periciaMenorVigentes, setPericiaMenorVigentes] = useState(0);
+
+  useEffect(() => {
+    fetch('https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec?action=getPericiaMenorList')
+      .then(r => r.json())
+      .then(json => {
+        if (json.success) {
+          setPericiaMenorVigentes(json.data.filter((r: { vigente: boolean }) => r.vigente).length);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const renderView = () => {
     switch (currentView) {
@@ -137,7 +149,11 @@ const App: React.FC = () => {
       <button onClick={() => { setCurrentView('pareceres'); setIsGerarDocFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'pareceres' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">assignment</span>Pareceres</button>
       
       {/* Documentação: Botão de Perícia Menor Ativado e Redirecionado */}
-      <button onClick={() => { setCurrentView('pericia-menor'); setIsGerarDocFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'pericia-menor' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">personal_injury</span>Perícia Menor</button>
+      <button onClick={() => { setCurrentView('pericia-menor'); setIsGerarDocFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'pericia-menor' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">personal_injury</span>Perícia Menor{periciaMenorVigentes > 0 && (
+              <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                {periciaMenorVigentes}
+              </span>
+            )}</button>
       <button onClick={() => { setCurrentView('mensagens'); setIsGerarDocFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'mensagens' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">chat</span>Mensagens</button>
       
       <button onClick={() => { setCurrentView('templates'); setIsGerarDocFabOpen(false); }} className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-colors ${currentView === 'templates' ? 'bg-[#050F41]/5 text-[#050F41] font-bold' : 'text-gray-700 hover:bg-gray-50'}`}><span className="material-symbols-outlined mr-3 text-gray-400 text-[18px]">edit_document</span>Templates</button>
