@@ -1,17 +1,15 @@
 // Ficheiro: components/Pareceres.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { Header } from "./Header";
-import { NavItem } from "../types";
 
-// Helper para extrair apenas o nome da string gerada pelo sistema (Tirando Patente e NIP)
 const extractNameFromInspecionado = (text: string) => {
   const match = text.split(/\d{2}\.\d{4}\.\d{2}/);
   return match.length > 1 ? match[1].trim() : text.trim();
 };
 
 export const Pareceres: React.FC = () => {
-  // Navigation States
-  const [viewMode, setViewMode] = useState<'form' | 'history'>('form');
+  // Tab State
+  const [activeTab, setActiveTab] = useState<'novo' | 'historico'>('novo');
 
   // Form States
   const [peritoSelecionado, setPeritoSelecionado] = useState("");
@@ -39,22 +37,21 @@ export const Pareceres: React.FC = () => {
   const [successPdfId, setSuccessPdfId] = useState<string | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
 
-  // Search & History States
+  // Search & Name Modal States
   const [showPesquisarNomeModal, setShowPesquisarNomeModal] = useState(false);
   const [pesquisarNomeTerm, setPesquisarNomeTerm] = useState("");
   const [militaresInfoList, setMilitaresInfoList] = useState<{nome: string, nip: string}[]>([]);
   const [isCarregandoMilitares, setIsCarregandoMilitares] = useState(false);
-  
+
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
 
-  // History Dropdown Logic
-  const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+  // History States
   const [pareceresHistory, setPareceresHistory] = useState<any[]>([]);
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
-  const [selectedHistoryName, setSelectedHistoryName] = useState("");
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyEspFilter, setHistoryEspFilter] = useState("");
 
   const PERITOS = {
     CT_MAURISTON: {
@@ -99,17 +96,6 @@ export const Pareceres: React.FC = () => {
 
   const GAS_URL = "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
 
-  // Handle outside click for dropdown
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowHistoryDropdown(false);
-      }
-    }
-    if (showHistoryDropdown) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showHistoryDropdown]);
-
   const fetchHistory = async () => {
     if (pareceresHistory.length > 0) return;
     setIsFetchingHistory(true);
@@ -127,12 +113,10 @@ export const Pareceres: React.FC = () => {
     }
   };
 
-  const handleFolderClick = () => {
-    if (!showHistoryDropdown) fetchHistory();
-    setShowHistoryDropdown(!showHistoryDropdown);
+  const handleTabChange = (tab: 'novo' | 'historico') => {
+    setActiveTab(tab);
+    if (tab === 'historico') fetchHistory();
   };
-
-  const uniqueHistoryNames = Array.from(new Set(pareceresHistory.map(p => extractNameFromInspecionado(p.inspecionado)))).filter(Boolean).sort();
 
   const handleNipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
@@ -143,7 +127,6 @@ export const Pareceres: React.FC = () => {
       value = `${value.slice(0, 2)}.${value.slice(2)}`;
     }
     setNip(value);
-
     if (value.length === 10) {
       searchNip(value);
     } else {
@@ -212,8 +195,6 @@ export const Pareceres: React.FC = () => {
       setSituacao("Carreira");
     } else if (["2T", "GM"].includes(pg)) {
       setSituacao("Temporário");
-    } else if (["MN-RC", "SD", "GR", "ALUNO", "SCNS"].includes(pg)) {
-      setSituacao("");
     } else {
       setSituacao("");
     }
@@ -319,11 +300,9 @@ export const Pareceres: React.FC = () => {
       nomeMilitar: nome.toUpperCase(),
       situacao,
       inspecionado: generatedInspecionado,
-
       finalidade,
       especialidade,
       historico,
-
       peritoIdentifier: peritoInfo.perito,
       emailPerito: peritoInfo.email,
       nomePerito: peritoInfo.nomePerito,
@@ -357,10 +336,7 @@ export const Pareceres: React.FC = () => {
     try {
       const response = await fetch(GAS_URL, {
         method: "POST",
-        body: JSON.stringify({
-          action: "imprimir",
-          pdfId: successPdfId,
-        }),
+        body: JSON.stringify({ action: "imprimir", pdfId: successPdfId }),
       });
       const data = await response.json();
       if (data.success) {
@@ -376,562 +352,550 @@ export const Pareceres: React.FC = () => {
     }
   };
 
-  // ==========================================
-  // RENDERIZAÇÃO: PÁGINA DE HISTÓRICO
-  // ==========================================
-  if (viewMode === 'history') {
-    const filteredHistory = pareceresHistory.filter(p => extractNameFromInspecionado(p.inspecionado) === selectedHistoryName);
-    
-    return (
-      <div className="flex flex-col h-full bg-gray-50 relative pb-20">
-        <Header
-          title="HISTÓRICO"
-          leftAction={
-            <button onClick={() => setViewMode('form')} className="text-white p-2 rounded-full hover:bg-white/10" title="Voltar">
-              <span className="material-symbols-outlined">arrow_back</span>
-            </button>
-          }
-        />
-        <div className="flex-1 overflow-y-auto px-4 py-8 w-full max-w-2xl mx-auto space-y-6">
-          <h2 className="font-heading font-bold text-navy text-[16px] text-center mb-6 px-4">{selectedHistoryName}</h2>
-          
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 text-navy font-heading text-xs uppercase border-b border-gray-200">
-                <tr>
-                  <th className="px-5 py-4">Data do Parecer</th>
-                  <th className="px-5 py-4">Especialidade</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredHistory.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-4">
-                      <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline font-semibold flex items-center gap-1.5" title="Abrir Documento">
-                        {item.data}
-                        <span className="material-symbols-outlined text-[15px]">open_in_new</span>
-                      </a>
-                    </td>
-                    <td className="px-5 py-4 text-gray-700 font-medium">{item.especialidade}</td>
-                  </tr>
-                ))}
-                {filteredHistory.length === 0 && (
-                   <tr><td colSpan={2} className="px-5 py-6 text-center text-gray-500">Nenhum parecer encontrado.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Dados filtrados para a aba Histórico
+  const espOptions = Array.from(new Set(pareceresHistory.map(p => p.especialidade).filter(Boolean))).sort();
+  const filteredHistory = pareceresHistory.filter(p => {
+    const nameMatch = historySearch.trim() === "" || extractNameFromInspecionado(p.inspecionado).toLowerCase().includes(historySearch.toLowerCase());
+    const espMatch = historyEspFilter === "" || p.especialidade === historyEspFilter;
+    return nameMatch && espMatch;
+  });
 
-  // ==========================================
-  // RENDERIZAÇÃO: PÁGINA PRINCIPAL (FORMULÁRIO)
-  // ==========================================
   return (
     <div className="flex flex-col h-full bg-gray-50 relative">
-      <Header 
-        title="PARECERES" 
-        rightAction={
-          <div className="flex items-center space-x-2 relative" ref={dropdownRef}>
-            {/* ÍCONE DE PASTA DE ARQUIVO DESTACADO */}
-            <button 
-              type="button" 
-              onClick={handleFolderClick} 
-              className="bg-white/20 text-white hover:bg-white/30 transition-all flex items-center justify-center p-2 rounded-full border border-white/10 shadow-sm"
-              title="Acessar Pareceres Salvos"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>folder</span>
-            </button>
+      <Header title="PARECERES" />
 
-            {/* Menu Dropdown Nativo do Histórico */}
-            {showHistoryDropdown && (
-              <div className="absolute top-full right-0 mt-3 w-72 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-[100] max-h-80 overflow-y-auto animate-fade-in">
-                 <div className="px-4 py-2 border-b border-gray-50 bg-gray-50/50 mb-1 sticky top-0">
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Histórico Recente</span>
-                 </div>
-                 {isFetchingHistory ? (
-                    <div className="p-6 flex justify-center text-navy"><span className="material-symbols-outlined animate-spin text-2xl">sync</span></div>
-                 ) : uniqueHistoryNames.length > 0 ? (
-                    uniqueHistoryNames.map(name => (
-                      <button
-                        key={name}
-                        className="w-full text-left px-4 py-3 hover:bg-blue-50 text-[13px] font-medium text-gray-700 truncate transition-colors border-l-2 border-transparent hover:border-navy"
-                        onClick={() => {
-                           setSelectedHistoryName(name);
-                           setViewMode('history');
-                           setShowHistoryDropdown(false);
-                        }}
-                      >
-                        {name}
-                      </button>
-                    ))
-                 ) : (
-                    <div className="p-4 text-center text-gray-500 text-sm">Nenhum registro.</div>
-                 )}
-              </div>
-            )}
-          </div>
-        }
-      />
-
-      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-28 w-full max-w-2xl mx-auto space-y-6">
-        
-        {/* FAB de Ajuda */}
+      {/* Abas Superiores */}
+      <div className="bg-[#050F41] px-2 pt-1 flex justify-around shadow-md z-10 flex-shrink-0">
         <button
-          type="button"
-          onClick={() => setShowHelpModal(true)}
-          className="fixed bottom-24 right-6 w-14 h-14 bg-[#050F41] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 border border-slate-700"
-          title="Ajuda"
+          onClick={() => handleTabChange('novo')}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-sm font-bold transition-all relative focus:outline-none ${activeTab === 'novo' ? 'text-white' : 'text-white/50 hover:text-white/80'}`}
         >
-          <span className="material-symbols-outlined text-[28px]">help</span>
+          <span className="material-symbols-outlined text-[18px]">add_circle</span>
+          <span>Novo</span>
+          {activeTab === 'novo' && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#079551] rounded-t-md animate-fade-in" />
+          )}
         </button>
+        <button
+          onClick={() => handleTabChange('historico')}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 text-sm font-bold transition-all relative focus:outline-none ${activeTab === 'historico' ? 'text-white' : 'text-white/50 hover:text-white/80'}`}
+        >
+          <span className="material-symbols-outlined text-[18px]">history</span>
+          <span>Histórico</span>
+          {activeTab === 'historico' && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#079551] rounded-t-md animate-fade-in" />
+          )}
+        </button>
+      </div>
 
-        {/* HELP MODAL */}
-        {showHelpModal && (
-          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-md flex flex-col items-center text-center max-h-[90vh]">
-              <span className="material-symbols-outlined text-4xl text-navy mb-4 shrink-0">
-                info
-              </span>
-              <div className="text-gray-600 mb-6 text-sm text-left space-y-4 w-full overflow-y-auto pr-2">
-                <p>
-                  Preencha os dados da inspeção e do militar e gere um pedido de parecer a partir de templates com perguntas padrão para as especialidades:
-                </p>
-                <div className="grid grid-cols-2 gap-2 pl-4">
-                  <ul className="list-disc space-y-1">
-                    <li>CARDIOLOGIA</li>
-                    <li>HEPATOLOGIA</li>
-                    <li>NEUROLOGIA</li>
-                  </ul>
-                  <ul className="list-disc space-y-1">
-                    <li>ONCOLOGIA</li>
-                    <li>PSICOLOGIA</li>
-                    <li>PSIQUIATRIA</li>
-                  </ul>
-                </div>
-                <p>
-                  No final receba o parecer no seu zimbra em PDF e editável no formato .odt
-                </p>
-                <p>
-                  Opcionalmente um zimbra com o PDF gerado é enviado ao SO Giorginis para que ele imprima colorido.
-                </p>
+      {/* ==========================================
+          ABA: HISTÓRICO
+      ========================================== */}
+      {activeTab === 'historico' && (
+        <div className="flex-1 overflow-y-auto px-4 pt-5 pb-28 w-full max-w-2xl mx-auto space-y-4">
+          {/* Barra de Busca e Filtro */}
+          <div className="flex gap-2 items-center">
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                <span className="material-symbols-outlined text-[18px]">search</span>
               </div>
-              <button
-                onClick={() => setShowHelpModal(false)}
-                className="w-full px-4 py-2 bg-navy text-white font-medium rounded-lg hover:bg-navy/90 transition-colors shrink-0"
-              >
-                Entendi
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ALERT MODAL */}
-        {alertMessage && (
-          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-sm flex flex-col items-center justify-center text-center">
-              <span className="material-symbols-outlined text-4xl text-red-500 mb-4">
-                error
-              </span>
-              <p className="text-gray-800 font-medium mb-6">{alertMessage}</p>
-              <button
-                onClick={() => setAlertMessage("")}
-                className="w-full px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Voltar
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* CONFIRMATION MODAL */}
-        {showConfirmModal && (
-          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-sm flex flex-col items-center justify-center text-center">
-              <span className="material-symbols-outlined text-4xl text-gold mb-4">
-                help_center
-              </span>
-              <h2 className="font-heading text-lg font-bold text-navy mb-2">Confirmação</h2>
-              <p className="text-gray-600 mb-6 font-medium">
-                Confirma o envio e a geração do parecer pericial?
-              </p>
-              <div className="flex w-full gap-3">
-                <button
-                  onClick={() => setShowConfirmModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={executeSubmit}
-                  className="flex-1 px-4 py-2 bg-navy text-white font-medium rounded-lg hover:bg-navy/90 transition-colors"
-                >
-                  Confirmar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* SUCCESS MODAL */}
-        {successPdfUrl && (
-          <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-8 w-full max-w-sm flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-4xl">
-                  check_circle
-                </span>
-              </div>
-              <h2 className="font-heading text-xl font-bold text-navy mb-2">
-                SUCESSO!
-              </h2>
-              <p className="text-sm text-gray-600 mb-8 font-medium">
-                Parecer gerado e enviado para o seu e-mail.
-              </p>
-
-              <div className="flex justify-center items-center gap-6 w-full mt-2">
-                <button
-                  onClick={resetForm}
-                  className="w-12 h-12 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 transition-colors shadow-sm"
-                  title="Fechar"
-                >
-                  <span className="material-symbols-outlined text-[20px]">close</span>
-                </button>
-                
-                <button
-                  onClick={handleImprimir}
-                  disabled={isPrinting}
-                  className="w-12 h-12 rounded-full bg-navy text-white flex items-center justify-center hover:bg-navy/90 disabled:opacity-50 shadow-sm transition-all active:scale-95"
-                  title="Imprimir Colorido na Secretaria"
-                >
-                  {isPrinting ? (
-                    <span className="material-symbols-outlined animate-spin text-[24px]">sync</span>
-                  ) : (
-                    <span className="material-symbols-outlined text-[24px]">print</span>
-                  )}
-                </button>
-                
-                <a
-                  href={successPdfUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={resetForm}
-                  className="w-16 h-16 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center hover:bg-blue-200 transition-colors shadow-xl active:scale-95"
-                  title="Abrir PDF no Drive"
-                >
-                  <span className="material-symbols-outlined text-[28px]">open_in_new</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* LOADING SHADOW */}
-        {isLoading && (
-          <div className="fixed inset-0 bg-white/70 backdrop-blur-sm z-[100] flex flex-col items-center justify-center">
-            <div className="w-10 h-10 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-navy font-medium animate-pulse">
-              Gerando Parecer...
-            </p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* SECTION 1 */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-5">
-            <h2 className="font-heading font-bold text-navy text-lg flex items-center border-b border-gray-100 pb-2">
-              <span className="material-symbols-outlined mr-2 text-gold">
-                person
-              </span>
-              DADOS DA INSPEÇÃO
-            </h2>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">
-                Perito <span className="text-red-500">*</span>
-              </label>
-              <div className="flex space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setPeritoSelecionado("MAURISTON")}
-                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${peritoSelecionado === "MAURISTON" ? "bg-navy text-white border-navy shadow-sm" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
-                >
-                  CT Mauriston
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPeritoSelecionado("JULIO")}
-                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${peritoSelecionado === "JULIO" ? "bg-navy text-white border-navy shadow-sm" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
-                >
-                  CT Júlio César
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                Finalidade <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={finalidade}
-                onChange={(e) => setFinalidade(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5 transition-colors"
-                required
-              >
-                <option value="">Selecione...</option>
-                {FINALIDADES.map((f) => (
-                  <option key={f} value={f}>
-                    {f}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                Especialidade <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={especialidade}
-                onChange={(e) => setEspecialidade(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5 transition-colors"
-                required
-              >
-                <option value="">Selecione...</option>
-                {ESPECIALIDADES.map((e) => (
-                  <option key={e} value={e}>
-                    {e}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                Histórico
-              </label>
-              <textarea
-                value={historico}
-                onChange={(e) => setHistorico(e.target.value)}
-                placeholder="Militar em LTS há xx dias pelo CID X00.0..."
-                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5 transition-colors min-h-[100px]"
+              <input
+                type="text"
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                placeholder="Buscar por inspecionado..."
+                className="w-full bg-white border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-9 p-2.5 transition-colors shadow-sm"
               />
             </div>
+            <div className="relative">
+              <select
+                value={historyEspFilter}
+                onChange={(e) => setHistoryEspFilter(e.target.value)}
+                className="appearance-none bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-navy focus:border-navy pl-3 pr-8 py-2.5 shadow-sm transition-colors cursor-pointer"
+              >
+                <option value="">Especialidade</option>
+                {espOptions.map(esp => (
+                  <option key={esp} value={esp}>{esp}</option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none text-gray-400">
+                <span className="material-symbols-outlined text-[16px]">filter_list</span>
+              </div>
+            </div>
           </div>
 
-          {/* SECTION 2 */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-5">
-            <h2 className="font-heading font-bold text-navy text-lg flex items-center border-b border-gray-100 pb-2">
-              <span className="material-symbols-outlined mr-2 text-gold">
-                badge
-              </span>
-              DADOS DO MILITAR
-            </h2>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                NIP <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={nip}
-                  onChange={handleNipChange}
-                  placeholder="00.0000.00"
-                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5 transition-colors font-mono"
-                  required
-                />
-                {militarStatus === "loading" && (
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <div className="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                )}
-                {militarStatus === "found" && (
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-green-500">
-                    <span className="material-symbols-outlined text-lg">
-                      check_circle
-                    </span>
-                  </div>
-                )}
+          {/* Tabela */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {isFetchingHistory ? (
+              <div className="p-10 flex flex-col items-center justify-center text-navy gap-3">
+                <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-sm text-gray-500 animate-pulse">Carregando histórico...</p>
               </div>
-              <div className="mt-1 text-right">
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-navy font-heading text-xs uppercase border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Data</th>
+                    <th className="px-4 py-3 text-left">Inspecionado</th>
+                    <th className="px-4 py-3 text-left">Especialidade</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredHistory.length > 0 ? filteredHistory.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 text-gray-600 text-xs whitespace-nowrap">{item.data}</td>
+                      <td className="px-4 py-3">
+                        <a
+                          href={item.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 hover:underline"
+                          title="Abrir parecer"
+                        >
+                          <span className="truncate max-w-[160px] sm:max-w-xs">{extractNameFromInspecionado(item.inspecionado)}</span>
+                          <span className="material-symbols-outlined text-[13px] shrink-0">open_in_new</span>
+                        </a>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-block bg-navy/10 text-navy text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                          {item.especialidade}
+                        </span>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-10 text-center text-gray-400 text-sm">
+                        {pareceresHistory.length === 0 ? "Nenhum parecer registrado." : "Nenhum resultado para o filtro aplicado."}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {filteredHistory.length > 0 && (
+            <p className="text-center text-xs text-gray-400">{filteredHistory.length} registro{filteredHistory.length !== 1 ? 's' : ''} encontrado{filteredHistory.length !== 1 ? 's' : ''}</p>
+          )}
+        </div>
+      )}
+
+      {/* ==========================================
+          ABA: NOVO (Formulário)
+      ========================================== */}
+      {activeTab === 'novo' && (
+        <div className="flex-1 overflow-y-auto px-4 pt-6 pb-28 w-full max-w-2xl mx-auto space-y-6">
+
+          {/* FAB de Ajuda */}
+          <button
+            type="button"
+            onClick={() => setShowHelpModal(true)}
+            className="fixed bottom-24 right-6 w-14 h-14 bg-[#050F41] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 border border-slate-700"
+            title="Ajuda"
+          >
+            <span className="material-symbols-outlined text-[28px]">help</span>
+          </button>
+
+          {/* HELP MODAL */}
+          {showHelpModal && (
+            <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
+              <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-md flex flex-col items-center text-center max-h-[90vh]">
+                <span className="material-symbols-outlined text-4xl text-navy mb-4 shrink-0">info</span>
+                <div className="text-gray-600 mb-6 text-sm text-left space-y-4 w-full overflow-y-auto pr-2">
+                  <p>
+                    Preencha os dados da inspeção e do militar e gere um pedido de parecer a partir de templates com perguntas padrão para as especialidades:
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 pl-4">
+                    <ul className="list-disc space-y-1">
+                      <li>CARDIOLOGIA</li>
+                      <li>HEPATOLOGIA</li>
+                      <li>NEUROLOGIA</li>
+                    </ul>
+                    <ul className="list-disc space-y-1">
+                      <li>ONCOLOGIA</li>
+                      <li>PSICOLOGIA</li>
+                      <li>PSIQUIATRIA</li>
+                    </ul>
+                  </div>
+                  <p>No final receba o parecer no seu zimbra em PDF e editável no formato .odt</p>
+                  <p>Opcionalmente um zimbra com o PDF gerado é enviado ao SO Giorginis para que ele imprima colorido.</p>
+                </div>
                 <button
-                  type="button"
-                  onClick={() => abrirModalPesquisaNome()}
-                  className="text-[10px] text-blue-600 underline hover:text-blue-800 transition-colors bg-transparent border-none p-0 cursor-pointer"
+                  onClick={() => setShowHelpModal(false)}
+                  className="w-full px-4 py-2 bg-navy text-white font-medium rounded-lg hover:bg-navy/90 transition-colors shrink-0"
                 >
-                  Pesquisar pelo nome
+                  Entendi
                 </button>
               </div>
             </div>
+          )}
 
-            {militarStatus === "found" && (
-              <div className="bg-blue-50 border-l-4 border-navy p-3 rounded-r-lg space-y-2 animate-fade-in mt-4">
-                <div>
-                  <label className="block text-xs font-bold text-navy/70 uppercase">
-                    Inspecionado
-                  </label>
-                  <p className="text-sm font-medium text-navy">
-                    {inspecionado}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-navy/70 uppercase">
-                    OM
-                  </label>
-                  <p className="text-sm font-medium text-navy">{omLeitura}</p>
+          {/* ALERT MODAL */}
+          {alertMessage && (
+            <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
+              <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-sm flex flex-col items-center justify-center text-center">
+                <span className="material-symbols-outlined text-4xl text-red-500 mb-4">error</span>
+                <p className="text-gray-800 font-medium mb-6">{alertMessage}</p>
+                <button
+                  onClick={() => setAlertMessage("")}
+                  className="w-full px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Voltar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* CONFIRMATION MODAL */}
+          {showConfirmModal && (
+            <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
+              <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-sm flex flex-col items-center justify-center text-center">
+                <span className="material-symbols-outlined text-4xl text-gold mb-4">help_center</span>
+                <h2 className="font-heading text-lg font-bold text-navy mb-2">Confirmação</h2>
+                <p className="text-gray-600 mb-6 font-medium">Confirma o envio e a geração do parecer pericial?</p>
+                <div className="flex w-full gap-3">
+                  <button
+                    onClick={() => setShowConfirmModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={executeSubmit}
+                    className="flex-1 px-4 py-2 bg-navy text-white font-medium rounded-lg hover:bg-navy/90 transition-colors"
+                  >
+                    Confirmar
+                  </button>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {militarStatus === "not_found" && (
-              <div className="space-y-4 animate-fade-in border-t border-dashed border-gray-200 pt-4 mt-2">
-                <div className="grid grid-cols-2 gap-4">
+          {/* SUCCESS MODAL */}
+          {successPdfUrl && (
+            <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
+              <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-8 w-full max-w-sm flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
+                  <span className="material-symbols-outlined text-4xl">check_circle</span>
+                </div>
+                <h2 className="font-heading text-xl font-bold text-navy mb-2">SUCESSO!</h2>
+                <p className="text-sm text-gray-600 mb-8 font-medium">Parecer gerado e enviado para o seu e-mail.</p>
+                <div className="flex justify-center items-center gap-6 w-full mt-2">
+                  <button
+                    onClick={resetForm}
+                    className="w-12 h-12 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200 transition-colors shadow-sm"
+                    title="Fechar"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">close</span>
+                  </button>
+                  <button
+                    onClick={handleImprimir}
+                    disabled={isPrinting}
+                    className="w-12 h-12 rounded-full bg-navy text-white flex items-center justify-center hover:bg-navy/90 disabled:opacity-50 shadow-sm transition-all active:scale-95"
+                    title="Imprimir Colorido na Secretaria"
+                  >
+                    {isPrinting ? (
+                      <span className="material-symbols-outlined animate-spin text-[24px]">sync</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-[24px]">print</span>
+                    )}
+                  </button>
+                  <a
+                    href={successPdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={resetForm}
+                    className="w-16 h-16 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center hover:bg-blue-200 transition-colors shadow-xl active:scale-95"
+                    title="Abrir PDF no Drive"
+                  >
+                    <span className="material-symbols-outlined text-[28px]">open_in_new</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* LOADING */}
+          {isLoading && (
+            <div className="fixed inset-0 bg-white/70 backdrop-blur-sm z-[100] flex flex-col items-center justify-center">
+              <div className="w-10 h-10 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
+              <p className="mt-4 text-navy font-medium animate-pulse">Gerando Parecer...</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* SECTION 1 */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-5">
+              <h2 className="font-heading font-bold text-navy text-lg flex items-center border-b border-gray-100 pb-2">
+                <span className="material-symbols-outlined mr-2 text-gold">person</span>
+                DADOS DA INSPEÇÃO
+              </h2>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">
+                  Perito <span className="text-red-500">*</span>
+                </label>
+                <div className="flex space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setPeritoSelecionado("MAURISTON")}
+                    className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${peritoSelecionado === "MAURISTON" ? "bg-navy text-white border-navy shadow-sm" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
+                  >
+                    CT Mauriston
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPeritoSelecionado("JULIO")}
+                    className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${peritoSelecionado === "JULIO" ? "bg-navy text-white border-navy shadow-sm" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}
+                  >
+                    CT Júlio César
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                  Finalidade <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={finalidade}
+                  onChange={(e) => setFinalidade(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5 transition-colors"
+                  required
+                >
+                  <option value="">Selecione...</option>
+                  {FINALIDADES.map((f) => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                  Especialidade <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={especialidade}
+                  onChange={(e) => setEspecialidade(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5 transition-colors"
+                  required
+                >
+                  <option value="">Selecione...</option>
+                  {ESPECIALIDADES.map((e) => (
+                    <option key={e} value={e}>{e}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                  Histórico
+                </label>
+                <textarea
+                  value={historico}
+                  onChange={(e) => setHistorico(e.target.value)}
+                  placeholder="Militar em LTS há xx dias pelo CID X00.0..."
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5 transition-colors min-h-[100px]"
+                />
+              </div>
+            </div>
+
+            {/* SECTION 2 */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-5">
+              <h2 className="font-heading font-bold text-navy text-lg flex items-center border-b border-gray-100 pb-2">
+                <span className="material-symbols-outlined mr-2 text-gold">badge</span>
+                DADOS DO MILITAR
+              </h2>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                  NIP <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={nip}
+                    onChange={handleNipChange}
+                    placeholder="00.0000.00"
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5 transition-colors font-mono"
+                    required
+                  />
+                  {militarStatus === "loading" && (
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <div className="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                  {militarStatus === "found" && (
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-green-500">
+                      <span className="material-symbols-outlined text-lg">check_circle</span>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-1 text-right">
+                  <button
+                    type="button"
+                    onClick={() => abrirModalPesquisaNome()}
+                    className="text-[10px] text-blue-600 underline hover:text-blue-800 transition-colors bg-transparent border-none p-0 cursor-pointer"
+                  >
+                    Pesquisar pelo nome
+                  </button>
+                </div>
+              </div>
+
+              {militarStatus === "found" && (
+                <div className="bg-blue-50 border-l-4 border-navy p-3 rounded-r-lg space-y-2 animate-fade-in mt-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                      Posto/Graduação <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={pg}
-                      onChange={(e) => setPg(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5"
-                      required
-                    >
-                      <option value="">Sel...</option>
-                      {PG_OPTIONS.map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
-                      ))}
-                    </select>
+                    <label className="block text-xs font-bold text-navy/70 uppercase">Inspecionado</label>
+                    <p className="text-sm font-medium text-navy">{inspecionado}</p>
                   </div>
                   <div>
+                    <label className="block text-xs font-bold text-navy/70 uppercase">OM</label>
+                    <p className="text-sm font-medium text-navy">{omLeitura}</p>
+                  </div>
+                </div>
+              )}
+
+              {militarStatus === "not_found" && (
+                <div className="space-y-4 animate-fade-in border-t border-dashed border-gray-200 pt-4 mt-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                        Posto/Graduação <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={pg}
+                        onChange={(e) => setPg(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5"
+                        required
+                      >
+                        <option value="">Sel...</option>
+                        {PG_OPTIONS.map((o) => (
+                          <option key={o} value={o}>{o}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                        OM <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        list="om-options"
+                        value={om}
+                        onChange={(e) => setOm(e.target.value)}
+                        placeholder="Ex: HNRe"
+                        className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5"
+                        required
+                      />
+                      <datalist id="om-options">
+                        {omsOptions.map((opt) => (
+                          <option key={opt} value={opt} />
+                        ))}
+                      </datalist>
+                    </div>
+                  </div>
+
+                  {circulo === "Oficial" && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                        Quadro <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={quadro}
+                        onChange={(e) => setQuadro(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5"
+                        required
+                      >
+                        <option value="">Sel...</option>
+                        {QUADROS.map((q) => (
+                          <option key={q} value={q}>{q}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {circulo === "Praça" && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
+                        Especialidade <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={espPraca}
+                        onChange={(e) => setEspPraca(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5"
+                        required
+                      >
+                        <option value="">Sel...</option>
+                        {ESP_PRACAS.map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                      OM <span className="text-red-500">*</span>
+                      Nome Completo <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      list="om-options"
-                      value={om}
-                      onChange={(e) => setOm(e.target.value)}
-                      placeholder="Ex: HNRe"
-                      className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5"
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value.toUpperCase())}
+                      className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5 uppercase"
                       required
                     />
-                    <datalist id="om-options">
-                      {omsOptions.map((opt) => (
-                        <option key={opt} value={opt} />
-                      ))}
-                    </datalist>
                   </div>
-                </div>
 
-                {circulo === "Oficial" && (
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                      Quadro <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={quadro}
-                      onChange={(e) => setQuadro(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5"
-                      required
-                    >
-                      <option value="">Sel...</option>
-                      {QUADROS.map((q) => (
-                        <option key={q} value={q}>
-                          {q}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {circulo === "Praça" && (
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                      Especialidade <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={espPraca}
-                      onChange={(e) => setEspPraca(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5"
-                      required
-                    >
-                      <option value="">Sel...</option>
-                      {ESP_PRACAS.map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">
-                    Nome Completo <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value.toUpperCase())}
-                    className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5 uppercase"
-                    required
-                  />
-                </div>
-
-                {/* SITUAÇÃO (Condicional) */}
-                {["CC", "CT", "1T", "MN", "CB", "3SG"].includes(pg) && (
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">
-                      Situação <span className="text-red-500">*</span>
-                    </label>
-                    <div className="flex space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => setSituacao("Carreira")}
-                        className={`flex-1 py-1.5 px-3 rounded-lg border text-sm font-medium transition-colors ${situacao === "Carreira" ? "bg-navy/10 text-navy border-navy" : "bg-white text-gray-600 border-gray-300"}`}
-                      >
-                        Carreira
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSituacao("Temporário")}
-                        className={`flex-1 py-1.5 px-3 rounded-lg border text-sm font-medium transition-colors ${situacao === "Temporário" ? "bg-navy/10 text-navy border-navy" : "bg-white text-gray-600 border-gray-300"}`}
-                      >
-                        Temporário
-                      </button>
+                  {["CC", "CT", "1T", "MN", "CB", "3SG"].includes(pg) && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">
+                        Situação <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => setSituacao("Carreira")}
+                          className={`flex-1 py-1.5 px-3 rounded-lg border text-sm font-medium transition-colors ${situacao === "Carreira" ? "bg-navy/10 text-navy border-navy" : "bg-white text-gray-600 border-gray-300"}`}
+                        >
+                          Carreira
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSituacao("Temporário")}
+                          className={`flex-1 py-1.5 px-3 rounded-lg border text-sm font-medium transition-colors ${situacao === "Temporário" ? "bg-navy/10 text-navy border-navy" : "bg-white text-gray-600 border-gray-300"}`}
+                        >
+                          Temporário
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+                  )}
+                </div>
+              )}
+            </div>
 
-          {/* ÁREA DE BOTÕES DO FORMULÁRIO (Icon Buttons alinhados à direita) */}
-          <div className="flex justify-end items-center gap-4 pt-2">
-            <button
-              type="button"
-              onClick={resetForm}
-              className="w-14 h-14 bg-gray-100 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full flex items-center justify-center transition-all shadow-sm border border-gray-200 focus:outline-none"
-              title="Limpar Formulário"
-            >
-              <span className="material-symbols-outlined">delete</span>
-            </button>
-            <button
-              type="submit"
-              className="w-14 h-14 bg-[#079551] text-white rounded-full flex items-center justify-center transition-all hover:bg-green-700 shadow-md active:scale-95 focus:outline-none"
-              title="Gerar Parecer Pericial"
-            >
-              <span className="material-symbols-outlined">send</span>
-            </button>
-          </div>
-        </form>
-      </div>
+            {/* BOTÕES DO FORMULÁRIO */}
+            <div className="flex justify-end items-center gap-4 pt-2">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="w-14 h-14 bg-gray-100 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full flex items-center justify-center transition-all shadow-sm border border-gray-200 focus:outline-none"
+                title="Limpar Formulário"
+              >
+                <span className="material-symbols-outlined">delete</span>
+              </button>
+              <button
+                type="submit"
+                className="w-14 h-14 bg-[#079551] text-white rounded-full flex items-center justify-center transition-all hover:bg-green-700 shadow-md active:scale-95 focus:outline-none"
+                title="Gerar Parecer Pericial"
+              >
+                <span className="material-symbols-outlined">send</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
+      {/* MODAL: PESQUISAR NOME */}
       {showPesquisarNomeModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
           <div
@@ -945,12 +909,9 @@ export const Pareceres: React.FC = () => {
               <span className="material-symbols-outlined">close</span>
             </button>
             <div className="p-6 bg-navy text-white shrink-0">
-              <h2 className="text-xl font-bold tracking-tight">
-                Pesquisar Militar
-              </h2>
+              <h2 className="text-xl font-bold tracking-tight">Pesquisar Militar</h2>
               <p className="text-navy-100 text-sm mt-1">Busque pelo nome completo</p>
             </div>
-            
             <div className="p-6 flex-1 flex flex-col min-h-0">
               <div className="relative shrink-0 mb-4">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
@@ -965,7 +926,6 @@ export const Pareceres: React.FC = () => {
                   autoFocus
                 />
               </div>
-
               <div className="flex-1 overflow-y-auto min-h-[50px] border border-gray-100 rounded-lg bg-gray-50/50">
                 {isCarregandoMilitares ? (
                   <div className="p-8 text-center text-gray-500 flex flex-col items-center">
@@ -975,9 +935,7 @@ export const Pareceres: React.FC = () => {
                 ) : (
                   <div className="flex flex-col">
                     {militaresInfoList
-                      .filter((m) =>
-                        pesquisarNomeTerm && m.nome.toLowerCase().includes(pesquisarNomeTerm.toLowerCase())
-                      )
+                      .filter((m) => pesquisarNomeTerm && m.nome.toLowerCase().includes(pesquisarNomeTerm.toLowerCase()))
                       .slice(0, 50)
                       .map((m, idx) => (
                         <div
@@ -989,14 +947,13 @@ export const Pareceres: React.FC = () => {
                           <div className="text-xs text-gray-500 font-mono mt-0.5">{m.nip}</div>
                         </div>
                       ))}
-                    {pesquisarNomeTerm &&
-                      militaresInfoList.filter((m) =>
-                        m.nome.toLowerCase().includes(pesquisarNomeTerm.toLowerCase())
-                      ).length === 0 && (
-                        <div className="p-8 text-center text-gray-500 text-sm">
-                          Nenhum militar encontrado com esse nome.
-                        </div>
-                      )}
+                    {pesquisarNomeTerm && militaresInfoList.filter((m) =>
+                      m.nome.toLowerCase().includes(pesquisarNomeTerm.toLowerCase())
+                    ).length === 0 && (
+                      <div className="p-8 text-center text-gray-500 text-sm">
+                        Nenhum militar encontrado com esse nome.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
