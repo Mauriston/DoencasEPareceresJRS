@@ -164,11 +164,19 @@ function doGet(e) {
         let dataTermino = data[i][9];
         let vigente = false;
         let concluido = false;
+        let dtTermino = null;
         if (dataTermino instanceof Date) {
-          const dt = new Date(dataTermino);
-          dt.setHours(0, 0, 0, 0);
-          vigente = dt >= today;
-          concluido = dt < today;
+          dtTermino = new Date(dataTermino);
+        } else if (typeof dataTermino === 'number' && dataTermino > 0) {
+          // Número serial do Sheets (dias desde 30/12/1899)
+          dtTermino = new Date(Math.round((dataTermino - 25569) * 86400000));
+        } else if (typeof dataTermino === 'string' && dataTermino.trim()) {
+          dtTermino = new Date(dataTermino);
+        }
+        if (dtTermino && !isNaN(dtTermino.getTime())) {
+          dtTermino.setHours(0, 0, 0, 0);
+          vigente = dtTermino >= today;
+          concluido = dtTermino < today;
         }
         records.push({
           inspecionado: String(data[i][1]),
