@@ -10,6 +10,7 @@ interface PericiaMenorRecord {
   dataAtestado: string;
   dataAtestadoTs: number;
   tempoAtestado: string;
+  tempoHomolog: string;
   vigente: boolean;
   concluido: boolean;
   vdf: boolean;
@@ -42,13 +43,13 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
     const isRestricao = (r: PericiaMenorRecord) =>
       r.dispensas.trim() !== '' && !r.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES');
 
-    const diasAfastadoTotal = records.filter(isAfastado).reduce((s, r) => s + parseDias(r.tempoAtestado), 0);
-    const diasAfastadoAno   = records.filter(r => isAfastado(r) && r.dataAtestadoTs >= startOfYear).reduce((s, r) => s + parseDias(r.tempoAtestado), 0);
-    const diasAfastado30    = records.filter(r => isAfastado(r) && r.dataAtestadoTs >= last30).reduce((s, r) => s + parseDias(r.tempoAtestado), 0);
+    const diasAfastadoTotal = records.filter(isAfastado).reduce((s, r) => s + parseDias(r.tempoHomolog), 0);
+    const diasAfastadoAno   = records.filter(r => isAfastado(r) && r.dataAtestadoTs >= startOfYear).reduce((s, r) => s + parseDias(r.tempoHomolog), 0);
+    const diasAfastado30    = records.filter(r => isAfastado(r) && r.dataAtestadoTs >= last30).reduce((s, r) => s + parseDias(r.tempoHomolog), 0);
 
-    const diasRestricaoTotal = records.filter(isRestricao).reduce((s, r) => s + parseDias(r.tempoAtestado), 0);
-    const diasRestricaoAno   = records.filter(r => isRestricao(r) && r.dataAtestadoTs >= startOfYear).reduce((s, r) => s + parseDias(r.tempoAtestado), 0);
-    const diasRestricao30    = records.filter(r => isRestricao(r) && r.dataAtestadoTs >= last30).reduce((s, r) => s + parseDias(r.tempoAtestado), 0);
+    const diasRestricaoTotal = records.filter(isRestricao).reduce((s, r) => s + parseDias(r.tempoHomolog), 0);
+    const diasRestricaoAno   = records.filter(r => isRestricao(r) && r.dataAtestadoTs >= startOfYear).reduce((s, r) => s + parseDias(r.tempoHomolog), 0);
+    const diasRestricao30    = records.filter(r => isRestricao(r) && r.dataAtestadoTs >= last30).reduce((s, r) => s + parseDias(r.tempoHomolog), 0);
 
     const cidMap: Record<string, number> = {};
     records.forEach(r => { if (r.cid) cidMap[r.cid] = (cidMap[r.cid] || 0) + 1; });
