@@ -602,15 +602,17 @@ export const PericiaMenor: React.FC = () => {
       <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
         <button
           onClick={() => setActiveTab('novo')}
-          className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide transition-all rounded-t-2xl mx-0.5 ${activeTab === 'novo' ? 'bg-[#079551] text-white' : 'text-white/50'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'novo' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
         >
-          Novo
+          <span className="material-symbols-outlined text-[18px]">add_circle</span>
+          <span>Novo</span>
         </button>
         <button
           onClick={() => { setActiveTab('historico'); fetchHistory(); }}
-          className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide transition-all rounded-t-2xl mx-0.5 flex items-center justify-center gap-1.5 ${activeTab === 'historico' ? 'bg-[#079551] text-white' : 'text-white/50'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'historico' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
         >
-          Histórico
+          <span className="material-symbols-outlined text-[18px]">history</span>
+          <span>Histórico</span>
           {vigentesCount > 0 && (
             <span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
               {vigentesCount}
