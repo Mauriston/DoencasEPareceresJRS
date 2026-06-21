@@ -14,6 +14,7 @@ interface PericiaMenorRecord {
   dataAtestado: string;
   dataAtestadoTs: number;
   tempoAtestado: string;
+  tempoHomolog: string;
   vigente: boolean;
   concluido: boolean;
   vdf: boolean;

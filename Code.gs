@@ -181,6 +181,7 @@ function doGet(e) {
           dataAtestado: dataAtestadoStr,
           dataAtestadoTs: dataAtestado instanceof Date ? dataAtestado.getTime() : 0,
           tempoAtestado: String(data[i][7] || ''),
+          tempoHomolog: String(data[i][8] || ''),
           vigente: vigente,
           concluido: concluido,
           vdf: data[i][10] === true || String(data[i][10]).toUpperCase() === 'TRUE' || String(data[i][10]).toUpperCase() === 'VERDADEIRO',
