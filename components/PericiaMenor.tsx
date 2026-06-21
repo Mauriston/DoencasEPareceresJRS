@@ -1270,9 +1270,14 @@ export const PericiaMenor: React.FC = () => {
                         {rec.tempoAtestado && (
                           <span className="text-[10px] text-gray-400 mt-0.5 block">{String(rec.tempoAtestado).replace(/^(\d+)$/, '$1 dias')}</span>
                         )}
-                        {rec.vigente && (
-                          <span className="mt-1 inline-block bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">vigente</span>
-                        )}
+                        <div className="flex gap-1 mt-1 flex-wrap">
+                          {rec.vigente && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">V</span>}
+                          {rec.concluido && !rec.vigente && <span className="bg-green-100 text-green-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">C</span>}
+                          {rec.vdf && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">VDF</span>}
+                          {(rec.dispensas.trim() !== '' && !rec.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES')) && (
+                            <span className="bg-amber-100 text-amber-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">R</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-3 py-2.5 align-top">
                         <button
