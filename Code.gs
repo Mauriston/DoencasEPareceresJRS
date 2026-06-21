@@ -161,19 +161,14 @@ function doGet(e) {
         } else {
           dataAtestadoStr = String(dataAtestado || '');
         }
-        let dataTermino = data[i][9];
+        // Compute DATA_TERMINO = DATA_ATESTADO + TEMPO_HOMOLOGACAO - 1 (D1 counting)
+        let dataAtestadoRaw = data[i][6];
+        let tempoHomolog = parseInt(String(data[i][8] || '0'), 10);
         let vigente = false;
         let concluido = false;
-        let dtTermino = null;
-        if (dataTermino instanceof Date) {
-          dtTermino = new Date(dataTermino);
-        } else if (typeof dataTermino === 'number' && dataTermino > 0) {
-          // Número serial do Sheets (dias desde 30/12/1899)
-          dtTermino = new Date(Math.round((dataTermino - 25569) * 86400000));
-        } else if (typeof dataTermino === 'string' && dataTermino.trim()) {
-          dtTermino = new Date(dataTermino);
-        }
-        if (dtTermino && !isNaN(dtTermino.getTime())) {
+        if (dataAtestadoRaw instanceof Date && tempoHomolog > 0) {
+          const dtTermino = new Date(dataAtestadoRaw);
+          dtTermino.setDate(dtTermino.getDate() + tempoHomolog - 1);
           dtTermino.setHours(0, 0, 0, 0);
           vigente = dtTermino >= today;
           concluido = dtTermino < today;
