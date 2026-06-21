@@ -108,7 +108,7 @@ export const PericiaMenor: React.FC = () => {
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [filterVigente, setFilterVigente] = useState(true);
   const [filterConcluido, setFilterConcluido] = useState(false);
-  const [filterVdf, setFilterVdf] = useState(false);
+  const [filterLts, setFilterLts] = useState(false);
   const [filterRestricoes, setFilterRestricoes] = useState(false);
   const [sortCol, setSortCol] = useState<'data' | 'inspecionado'>('data');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -569,7 +569,7 @@ export const PericiaMenor: React.FC = () => {
 
   const vigentesTotal = history.filter(r => r.vigente).length;
   const concluidosTotal = history.filter(r => r.concluido).length;
-  const vdfTotal = history.filter(r => r.vdf).length;
+  const ltsTotal = history.filter(r => r.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES')).length;
   const restricoesTotal = history.filter(isRestricao).length;
 
   const parseDate = (str: string): number => {
@@ -585,7 +585,7 @@ export const PericiaMenor: React.FC = () => {
   const filteredHistory = history
     .filter(r => filterVigente ? r.vigente : true)
     .filter(r => filterConcluido ? r.concluido : true)
-    .filter(r => filterVdf ? r.vdf : true)
+    .filter(r => filterLts ? r.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES') : true)
     .filter(r => filterRestricoes ? isRestricao(r) : true)
     .filter(r => historySearch === '' || r.inspecionado.toLowerCase().includes(historySearch.toLowerCase()))
     .sort((a, b) => {
@@ -1192,24 +1192,24 @@ export const PericiaMenor: React.FC = () => {
               </button>
             </div>
 
-            {/* Filter chips — row 2: VDF / Restrições */}
+            {/* Filter chips — row 2: LTS / Restrições */}
             <div className="flex gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={() => { setFilterVdf(v => { const next = !v; if (next) setFilterRestricoes(false); return next; }); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterVdf ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
+                onClick={() => { setFilterLts(v => { const next = !v; if (next) setFilterRestricoes(false); return next; }); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterLts ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
               >
-                {filterVdf && <span className="material-symbols-outlined text-[13px]">check</span>}
-                VDF
-                {vdfTotal > 0 && (
-                  <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterVdf ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>
-                    {vdfTotal}
+                {filterLts && <span className="material-symbols-outlined text-[13px]">check</span>}
+                LTS
+                {ltsTotal > 0 && (
+                  <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterLts ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>
+                    {ltsTotal}
                   </span>
                 )}
               </button>
               <button
                 type="button"
-                onClick={() => { setFilterRestricoes(v => { const next = !v; if (next) setFilterVdf(false); return next; }); }}
+                onClick={() => { setFilterRestricoes(v => { const next = !v; if (next) setFilterLts(false); return next; }); }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterRestricoes ? 'bg-amber-400 text-white border-amber-400' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
               >
                 {filterRestricoes && <span className="material-symbols-outlined text-[13px]">check</span>}
@@ -1273,7 +1273,7 @@ export const PericiaMenor: React.FC = () => {
                         <div className="flex gap-1 mt-1 flex-wrap">
                           {rec.vigente && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">V</span>}
                           {rec.concluido && !rec.vigente && <span className="bg-green-100 text-green-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">C</span>}
-                          {rec.vdf && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">VDF</span>}
+                          {rec.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES') && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">LTS</span>}
                           {(rec.dispensas.trim() !== '' && !rec.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES')) && (
                             <span className="bg-amber-100 text-amber-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">R</span>
                           )}
