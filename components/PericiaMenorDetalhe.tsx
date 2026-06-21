@@ -65,7 +65,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
       <Header onBack={onBack} />
 
       {/* Título / subtítulos abaixo da barra de topo */}
-      <div className="bg-[#050F41] px-4 pb-4 pt-1">
+      <div className="bg-[#0A1A5C] border-b border-white/10 px-4 pb-4 pt-1">
         <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Histórico de Perícias Menores</p>
         <h2 className="text-white font-bold text-sm leading-snug mt-1 truncate">{person}</h2>
         {om && <p className="text-white/60 text-xs mt-0.5">OM: {om}</p>}
@@ -74,18 +74,23 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
       <div className="px-4 pt-4 pb-28 w-full max-w-2xl mx-auto space-y-4">
 
         {/* KPI — Perícias Menores Realizadas */}
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Perícias Menores Realizadas</p>
-        <div className="grid grid-cols-3 gap-2 -mt-2">
-          {[
-            { label: 'Total', value: stats.total, color: 'text-[#050F41]' },
-            { label: 'Vigentes', value: stats.vigentes, color: stats.vigentes > 0 ? 'text-red-600' : 'text-gray-400' },
-            { label: 'VDF', value: stats.vdfCount, color: stats.vdfCount > 0 ? 'text-amber-500' : 'text-gray-400' },
-          ].map(k => (
-            <div key={k.label} className="bg-white rounded-2xl border border-gray-200 p-3 text-center shadow-sm">
-              <p className={`text-2xl font-bold ${k.color}`}>{k.value}</p>
-              <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide mt-0.5">{k.label}</p>
-            </div>
-          ))}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
+          <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2">
+            <span className="material-symbols-outlined text-[16px] text-[#050F41]">assignment</span>
+            Perícias Menores Realizadas
+          </h3>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: 'Total', value: stats.total, color: 'text-[#050F41]', bg: 'bg-gray-50 border-gray-200' },
+              { label: 'Vigentes', value: stats.vigentes, color: stats.vigentes > 0 ? 'text-red-600' : 'text-gray-400', bg: 'bg-red-50 border-red-100' },
+              { label: 'VDF', value: stats.vdfCount, color: stats.vdfCount > 0 ? 'text-amber-500' : 'text-gray-400', bg: 'bg-amber-50 border-amber-100' },
+            ].map(k => (
+              <div key={k.label} className={`${k.bg} rounded-xl border p-2.5 text-center`}>
+                <p className={`text-xl font-bold ${k.color}`}>{k.value}</p>
+                <p className="text-[9px] text-gray-500 font-semibold uppercase tracking-wide mt-0.5">{k.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* DIAS AFASTADOS */}
