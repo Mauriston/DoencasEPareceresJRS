@@ -11,6 +11,7 @@ interface PericiaMenorRecord {
   dataAtestadoTs: number;
   tempoAtestado: string;
   vigente: boolean;
+  concluido: boolean;
   vdf: boolean;
   link: string;
 }
@@ -38,54 +39,47 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
 
     const isAfastado = (r: PericiaMenorRecord) =>
       r.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES');
+    const isRestricao = (r: PericiaMenorRecord) =>
+      r.dispensas.trim() !== '' && !r.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES');
 
-    const diasAfastadoTotal = records
-      .filter(isAfastado)
-      .reduce((sum, r) => sum + parseDias(r.tempoAtestado), 0);
+    const diasAfastadoTotal = records.filter(isAfastado).reduce((s, r) => s + parseDias(r.tempoAtestado), 0);
+    const diasAfastadoAno   = records.filter(r => isAfastado(r) && r.dataAtestadoTs >= startOfYear).reduce((s, r) => s + parseDias(r.tempoAtestado), 0);
+    const diasAfastado30    = records.filter(r => isAfastado(r) && r.dataAtestadoTs >= last30).reduce((s, r) => s + parseDias(r.tempoAtestado), 0);
 
-    const diasAfastadoAno = records
-      .filter(r => isAfastado(r) && r.dataAtestadoTs >= startOfYear)
-      .reduce((sum, r) => sum + parseDias(r.tempoAtestado), 0);
+    const diasRestricaoTotal = records.filter(isRestricao).reduce((s, r) => s + parseDias(r.tempoAtestado), 0);
+    const diasRestricaoAno   = records.filter(r => isRestricao(r) && r.dataAtestadoTs >= startOfYear).reduce((s, r) => s + parseDias(r.tempoAtestado), 0);
+    const diasRestricao30    = records.filter(r => isRestricao(r) && r.dataAtestadoTs >= last30).reduce((s, r) => s + parseDias(r.tempoAtestado), 0);
 
-    const diasAfastado30 = records
-      .filter(r => isAfastado(r) && r.dataAtestadoTs >= last30)
-      .reduce((sum, r) => sum + parseDias(r.tempoAtestado), 0);
-
-    const diasRestricaoTotal = records
-      .filter(r => !isAfastado(r) && r.dispensas.trim() !== '')
-      .reduce((sum, r) => sum + parseDias(r.tempoAtestado), 0);
-
-    // Top CIDs
     const cidMap: Record<string, number> = {};
-    records.forEach(r => {
-      if (r.cid) cidMap[r.cid] = (cidMap[r.cid] || 0) + 1;
-    });
-    const topCids = Object.entries(cidMap)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
+    records.forEach(r => { if (r.cid) cidMap[r.cid] = (cidMap[r.cid] || 0) + 1; });
+    const topCids = Object.entries(cidMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-    return { total, vigentes, vdfCount, diasAfastadoTotal, diasAfastadoAno, diasAfastado30, diasRestricaoTotal, topCids };
+    return { total, vigentes, vdfCount, diasAfastadoTotal, diasAfastadoAno, diasAfastado30, diasRestricaoTotal, diasRestricaoAno, diasRestricao30, topCids };
   }, [records]);
 
   const sorted = [...records].sort((a, b) => b.dataAtestadoTs - a.dataAtestadoTs);
+  const om = records[0]?.om || '';
 
   return (
     <div className="flex flex-col bg-gray-50 min-h-full">
-      <Header title={person} onBack={onBack} />
+      <Header onBack={onBack} />
+
+      {/* Título / subtítulos abaixo da barra de topo */}
+      <div className="bg-[#050F41] px-4 pb-4 pt-1">
+        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Histórico de Perícias Menores</p>
+        <h2 className="text-white font-bold text-sm leading-snug mt-1 truncate">{person}</h2>
+        {om && <p className="text-white/60 text-xs mt-0.5">OM: {om}</p>}
+      </div>
 
       <div className="px-4 pt-4 pb-28 w-full max-w-2xl mx-auto space-y-4">
 
-        {/* OM */}
-        {records[0]?.om && (
-          <p className="text-xs text-gray-500 font-medium -mb-2 px-1">{records[0].om}</p>
-        )}
-
-        {/* KPI grid */}
-        <div className="grid grid-cols-3 gap-2">
+        {/* KPI — Perícias Menores Realizadas */}
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Perícias Menores Realizadas</p>
+        <div className="grid grid-cols-3 gap-2 -mt-2">
           {[
-            { label: 'Perícias', value: stats.total, color: 'text-[#050F41]' },
+            { label: 'Total', value: stats.total, color: 'text-[#050F41]' },
             { label: 'Vigentes', value: stats.vigentes, color: stats.vigentes > 0 ? 'text-red-600' : 'text-gray-400' },
-            { label: 'VDF', value: stats.vdfCount, color: stats.vdfCount > 0 ? 'text-amber-600' : 'text-gray-400' },
+            { label: 'VDF', value: stats.vdfCount, color: stats.vdfCount > 0 ? 'text-amber-500' : 'text-gray-400' },
           ].map(k => (
             <div key={k.label} className="bg-white rounded-2xl border border-gray-200 p-3 text-center shadow-sm">
               <p className={`text-2xl font-bold ${k.color}`}>{k.value}</p>
@@ -94,11 +88,11 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
           ))}
         </div>
 
-        {/* Afastamento total card */}
+        {/* DIAS AFASTADOS */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
           <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-red-500">event_busy</span>
-            Afastamentos (todas as atividades)
+            Dias Afastados
           </h3>
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -114,19 +108,25 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
           </div>
         </div>
 
-        {/* Restrições */}
-        {stats.diasRestricaoTotal > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-            <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2 mb-3">
-              <span className="material-symbols-outlined text-[16px] text-amber-500">warning</span>
-              Restrições parciais
-            </h3>
-            <div className="bg-amber-50 rounded-xl p-3 border border-amber-100 text-center">
-              <p className="text-2xl font-bold text-amber-600">{stats.diasRestricaoTotal}</p>
-              <p className="text-[10px] text-amber-500 font-semibold uppercase tracking-wide mt-0.5">dias totais com restrições</p>
-            </div>
+        {/* DIAS EM RESTRIÇÕES */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
+          <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2">
+            <span className="material-symbols-outlined text-[16px] text-amber-500">warning</span>
+            Dias em Restrições
+          </h3>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: 'Histórico', value: stats.diasRestricaoTotal },
+              { label: `Ano ${new Date().getFullYear()}`, value: stats.diasRestricaoAno },
+              { label: 'Últimos 30d', value: stats.diasRestricao30 },
+            ].map(k => (
+              <div key={k.label} className="bg-amber-50 rounded-xl p-2.5 text-center border border-amber-100">
+                <p className="text-xl font-bold text-amber-600">{k.value}</p>
+                <p className="text-[9px] text-amber-400 font-semibold uppercase tracking-wide mt-0.5">{k.label}</p>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* Top CIDs */}
         {stats.topCids.length > 0 && (
@@ -140,10 +140,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
                 <div key={cid} className="flex items-center gap-2">
                   <span className="font-mono text-xs font-bold text-[#050F41] w-20 shrink-0">{cid}</span>
                   <div className="flex-1 bg-gray-100 rounded-full h-1.5">
-                    <div
-                      className="bg-[#079551] h-1.5 rounded-full"
-                      style={{ width: `${(count / stats.topCids[0][1]) * 100}%` }}
-                    />
+                    <div className="bg-[#079551] h-1.5 rounded-full" style={{ width: `${(count / stats.topCids[0][1]) * 100}%` }} />
                   </div>
                   <span className="text-xs text-gray-500 w-6 text-right">{count}x</span>
                 </div>
@@ -152,7 +149,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
           </div>
         )}
 
-        {/* History list */}
+        {/* Histórico de Perícias */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="bg-[#050F41]/5 px-4 py-2.5 border-b border-gray-100">
             <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider">Histórico de Perícias</h3>
@@ -177,13 +174,9 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
                   {rec.dispensas && <p className="text-[10px] text-gray-400 mt-0.5">{rec.dispensas}</p>}
                 </div>
                 {rec.link && (
-                  <a
-                    href={rec.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <a href={rec.link} target="_blank" rel="noopener noreferrer"
                     className="shrink-0 w-8 h-8 bg-gray-100 hover:bg-[#050F41] text-gray-500 hover:text-white rounded-full flex items-center justify-center transition-colors"
-                    title="Abrir documento"
-                  >
+                    title="Abrir documento">
                     <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                   </a>
                 )}

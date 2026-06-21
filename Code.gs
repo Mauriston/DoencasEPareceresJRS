@@ -163,10 +163,12 @@ function doGet(e) {
         }
         let dataTermino = data[i][9];
         let vigente = false;
+        let concluido = false;
         if (dataTermino instanceof Date) {
           const dt = new Date(dataTermino);
           dt.setHours(0, 0, 0, 0);
           vigente = dt >= today;
+          concluido = dt < today;
         }
         records.push({
           inspecionado: String(data[i][1]),
@@ -177,6 +179,7 @@ function doGet(e) {
           dataAtestadoTs: dataAtestado instanceof Date ? dataAtestado.getTime() : 0,
           tempoAtestado: String(data[i][7] || ''),
           vigente: vigente,
+          concluido: concluido,
           vdf: data[i][10] === true || String(data[i][10]).toUpperCase() === 'TRUE' || String(data[i][10]).toUpperCase() === 'VERDADEIRO',
           link: String(data[i][12] || '')
         });
