@@ -15,6 +15,7 @@ interface PericiaMenorRecord {
   dataAtestadoTs: number;
   tempoAtestado: string;
   vigente: boolean;
+  concluido: boolean;
   vdf: boolean;
   link: string;
 }
@@ -106,7 +107,9 @@ export const PericiaMenor: React.FC = () => {
   const [historySearch, setHistorySearch] = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [filterVigente, setFilterVigente] = useState(true);
+  const [filterConcluido, setFilterConcluido] = useState(false);
   const [filterVdf, setFilterVdf] = useState(false);
+  const [filterRestricoes, setFilterRestricoes] = useState(false);
   const [sortCol, setSortCol] = useState<'data' | 'inspecionado'>('data');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
@@ -561,8 +564,13 @@ export const PericiaMenor: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  const isRestricao = (r: PericiaMenorRecord) =>
+    r.dispensas.trim() !== '' && !r.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES');
+
   const vigentesTotal = history.filter(r => r.vigente).length;
+  const concluidosTotal = history.filter(r => r.concluido).length;
   const vdfTotal = history.filter(r => r.vdf).length;
+  const restricoesTotal = history.filter(isRestricao).length;
 
   const parseDate = (str: string): number => {
     const [d, m, y] = str.split('/');
@@ -576,7 +584,9 @@ export const PericiaMenor: React.FC = () => {
 
   const filteredHistory = history
     .filter(r => filterVigente ? r.vigente : true)
+    .filter(r => filterConcluido ? r.concluido : true)
     .filter(r => filterVdf ? r.vdf : true)
+    .filter(r => filterRestricoes ? isRestricao(r) : true)
     .filter(r => historySearch === '' || r.inspecionado.toLowerCase().includes(historySearch.toLowerCase()))
     .sort((a, b) => {
       let cmp = 0;
@@ -1152,43 +1162,72 @@ export const PericiaMenor: React.FC = () => {
               )}
             </div>
 
-            {/* Filter chips */}
+            {/* Filter chips — row 1: Vigentes / Concluídos */}
             <div className="flex gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={() => setFilterVigente(v => !v)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterVigente ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-300 hover:border-[#050F41]'}`}
+                onClick={() => { setFilterVigente(v => { const next = !v; if (next) setFilterConcluido(false); return next; }); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterVigente ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
               >
                 {filterVigente && <span className="material-symbols-outlined text-[13px]">check</span>}
                 Vigentes
                 {vigentesTotal > 0 && (
-                  <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterVigente ? 'bg-white/20 text-white' : 'bg-red-100 text-red-600'}`}>
+                  <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterVigente ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>
                     {vigentesTotal}
                   </span>
                 )}
               </button>
               <button
                 type="button"
-                onClick={() => setFilterVdf(v => !v)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterVdf ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-300 hover:border-[#050F41]'}`}
+                onClick={() => { setFilterConcluido(v => { const next = !v; if (next) setFilterVigente(false); return next; }); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterConcluido ? 'bg-[#079551] text-white border-[#079551]' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
+              >
+                {filterConcluido && <span className="material-symbols-outlined text-[13px]">check</span>}
+                Concluídos
+                {concluidosTotal > 0 && (
+                  <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterConcluido ? 'bg-white/25 text-white' : 'bg-green-100 text-green-700'}`}>
+                    {concluidosTotal}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Filter chips — row 2: VDF / Restrições */}
+            <div className="flex gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => { setFilterVdf(v => { const next = !v; if (next) setFilterRestricoes(false); return next; }); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterVdf ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
               >
                 {filterVdf && <span className="material-symbols-outlined text-[13px]">check</span>}
                 VDF
                 {vdfTotal > 0 && (
-                  <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterVdf ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>
+                  <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterVdf ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>
                     {vdfTotal}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setFilterRestricoes(v => { const next = !v; if (next) setFilterVdf(false); return next; }); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filterRestricoes ? 'bg-amber-400 text-white border-amber-400' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'}`}
+              >
+                {filterRestricoes && <span className="material-symbols-outlined text-[13px]">check</span>}
+                Restrições
+                {restricoesTotal > 0 && (
+                  <span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterRestricoes ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'}`}>
+                    {restricoesTotal}
                   </span>
                 )}
               </button>
             </div>
           </div>
 
-          {/* Badge summary */}
-          {vigentesCount > 0 && (
-            <div className="flex items-center gap-2 mb-3 px-1">
-              <span className="bg-red-100 text-red-700 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5">
-                <span className="w-2 h-2 bg-red-500 rounded-full inline-block" />
-                {vigentesCount} vigente{vigentesCount !== 1 ? 's' : ''}
+          {/* Badge summary — count of filtered results, right-aligned */}
+          {filteredHistory.length > 0 && (
+            <div className="flex justify-end mb-3 px-1">
+              <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2.5 py-1 rounded-full">
+                {filteredHistory.length} registro{filteredHistory.length !== 1 ? 's' : ''}
               </span>
             </div>
           )}
