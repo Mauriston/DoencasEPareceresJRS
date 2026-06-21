@@ -66,10 +66,10 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
       <Header onBack={onBack} />
 
       {/* Título / subtítulos abaixo da barra de topo */}
-      <div className="bg-[#0A1A5C] border-b border-white/10 px-4 pb-4 pt-1">
-        <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Histórico de Perícias Menores</p>
-        <h2 className="text-white font-bold text-sm leading-snug mt-1 truncate">{person}</h2>
-        {om && <p className="text-white/60 text-xs mt-0.5">OM: {om}</p>}
+      <div className="px-4 pb-3 pt-3 border-b border-gray-200 bg-white">
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Histórico de Perícias Menores</p>
+        <h2 className="text-[#050F41] font-bold text-sm leading-snug mt-0.5">{person}</h2>
+        {om && <p className="text-gray-500 text-xs mt-0.5">OM: {om}</p>}
       </div>
 
       <div className="px-4 pt-4 pb-28 w-full max-w-2xl mx-auto space-y-4">

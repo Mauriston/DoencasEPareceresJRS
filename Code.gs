@@ -152,22 +152,31 @@ function doGet(e) {
       const records = [];
       for (let i = 1; i < data.length; i++) {
         if (!data[i][1]) continue;
-        let dataAtestado = data[i][6];
-        let dataAtestadoStr = '';
-        if (dataAtestado instanceof Date) {
-          dataAtestadoStr = String(dataAtestado.getDate()).padStart(2, '0') + '/' +
-                            String(dataAtestado.getMonth() + 1).padStart(2, '0') + '/' +
-                            dataAtestado.getFullYear();
-        } else {
-          dataAtestadoStr = String(dataAtestado || '');
-        }
-        // Compute DATA_TERMINO = DATA_ATESTADO + TEMPO_HOMOLOGACAO - 1 (D1 counting)
+
+        // Parse DATA_ATESTADO — handle Date object, serial number or string
         let dataAtestadoRaw = data[i][6];
+        let dataAtestadoDate = null;
+        if (dataAtestadoRaw instanceof Date) {
+          dataAtestadoDate = dataAtestadoRaw;
+        } else if (typeof dataAtestadoRaw === 'number' && dataAtestadoRaw > 0) {
+          dataAtestadoDate = new Date(Math.round((dataAtestadoRaw - 25569) * 86400000));
+        } else if (typeof dataAtestadoRaw === 'string' && dataAtestadoRaw.trim()) {
+          dataAtestadoDate = new Date(dataAtestadoRaw);
+          if (isNaN(dataAtestadoDate.getTime())) dataAtestadoDate = null;
+        }
+        let dataAtestadoStr = '';
+        if (dataAtestadoDate) {
+          dataAtestadoStr = String(dataAtestadoDate.getDate()).padStart(2, '0') + '/' +
+                            String(dataAtestadoDate.getMonth() + 1).padStart(2, '0') + '/' +
+                            dataAtestadoDate.getFullYear();
+        }
+
+        // Compute DATA_TERMINO = DATA_ATESTADO + TEMPO_HOMOLOGACAO - 1 (D1 counting)
         let tempoHomolog = parseInt(String(data[i][8] || '0'), 10);
         let vigente = false;
         let concluido = false;
-        if (dataAtestadoRaw instanceof Date && tempoHomolog > 0) {
-          const dtTermino = new Date(dataAtestadoRaw);
+        if (dataAtestadoDate && tempoHomolog > 0) {
+          const dtTermino = new Date(dataAtestadoDate);
           dtTermino.setDate(dtTermino.getDate() + tempoHomolog - 1);
           dtTermino.setHours(0, 0, 0, 0);
           vigente = dtTermino >= today;
@@ -179,7 +188,7 @@ function doGet(e) {
           cid: String(data[i][4]),
           dispensas: String(data[i][5] || ''),
           dataAtestado: dataAtestadoStr,
-          dataAtestadoTs: dataAtestado instanceof Date ? dataAtestado.getTime() : 0,
+          dataAtestadoTs: dataAtestadoDate ? dataAtestadoDate.getTime() : 0,
           tempoAtestado: String(data[i][7] || ''),
           tempoHomolog: String(data[i][8] || ''),
           vigente: vigente,
