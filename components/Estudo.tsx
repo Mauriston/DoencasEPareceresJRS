@@ -1,19 +1,18 @@
 // Ficheiro: components/Estudo.tsx
 import React, { useState } from 'react';
 import { Header } from './Header';
-import { ArrowLeft, BookOpen, PlaySquare, Book } from 'lucide-react'; // Importado o ícone Book
+import { ArrowLeft, BookOpen, PlaySquare, Book } from 'lucide-react';
 import { Aulas } from './Aulas';
 import { Videos } from './Videos';
-import { Artigos } from './Artigos'; // Importado o componente Artigos
+import { Artigos } from './Artigos';
 import { NavItem } from '../types';
 
 interface Props {
   onBack: () => void;
-  onNavigate: (view: NavItem) => void; // Adicionada a prop para permitir navegar para o texto dos artigos
+  onNavigate: (view: NavItem) => void;
 }
 
 export const Estudo: React.FC<Props> = ({ onBack, onNavigate }) => {
-  // Documentação: Estado expandido para controlar as 3 abas: aulas, vídeos e livros
   const [activeTab, setActiveTab] = useState<'aulas' | 'videos' | 'livros'>('aulas');
 
   return (
@@ -27,7 +26,6 @@ export const Estudo: React.FC<Props> = ({ onBack, onNavigate }) => {
         } 
       />
       
-      {/* Sistema de Tabs (Separadores) com as 3 opções alinhadas */}
       <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
         <button
           onClick={() => setActiveTab('aulas')}
@@ -54,13 +52,11 @@ export const Estudo: React.FC<Props> = ({ onBack, onNavigate }) => {
         </button>
       </div>
 
-      {/* Conteúdo Dinâmico gerido pelas 3 Tabs */}
       <div className="flex-1 overflow-hidden relative">
-  {activeTab === 'aulas' && <Aulas />}
-  {activeTab === 'videos' && <Videos />}
-  {/* Documentação: Passando a prop hideHeader como true para limpar o visual */}
-  {activeTab === 'livros' && <Artigos onNavigate={onNavigate} hideHeader={true} />}
-</div>
+        {activeTab === 'aulas' && <Aulas />}
+        {activeTab === 'videos' && <Videos />}
+        {activeTab === 'livros' && <Artigos onNavigate={onNavigate} hideHeader={true} />}
+      </div>
     </div>
   );
 };
