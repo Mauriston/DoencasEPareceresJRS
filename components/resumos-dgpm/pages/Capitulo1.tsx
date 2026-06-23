@@ -50,7 +50,7 @@ const Capitulo1: React.FC = () => {
             <InfoCard title="JSAE (Outras)" icon="scuba_diving">
               <p className="text-sm">Compostas por um Presidente (Oficial Sup. Médico) e <strong>dois membros</strong> qualificados na área.</p>
             </InfoCard>
-             <InfoCard title="JRS" icon="group">
+            <InfoCard title="JRS" icon="group">
               <p className="text-sm">Compostas por um Presidente (Oficial Sup. Médico) e <strong>dois membros</strong> médicos.</p>
             </InfoCard>
           </div>
