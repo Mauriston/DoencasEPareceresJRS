@@ -1,8 +1,6 @@
 // Ficheiro: components/PortariaGuide.tsx
-
 import React, { useState, useEffect } from 'react';
 import { Header } from './Header';
-// 1. Correção: Adicionámos o 'ChevronRight' à lista de importações abaixo!
 import { 
   Brain, HeartPulse, EyeOff, Radiation, Activity, Bone, Ribbon, Shield, 
   Wind, Stethoscope, FileText, ChevronDown, ChevronUp, ChevronRight, 
@@ -16,7 +14,6 @@ import { CegueiraSection } from './sections/CegueiraSection';
 import { HepatopatiaRadiacaoSection } from './sections/HepatopatiaRadiacaoSection';
 import { OtherDiseasesSection } from './sections/OtherDiseasesSection';
 
-// 2. Documentação: Interface que define o formato dos dados para o Índice Dinâmico
 interface DiseaseIndexItem {
   id: string;
   name: string;
@@ -29,14 +26,10 @@ export const PortariaGuide: React.FC = () => {
   const [cardioExpanded, setCardioExpanded] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
-  // 3. Documentação: Efeito para controlar a visibilidade do botão "Voltar ao Topo"
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 250) {
-        setShowScrollTop(true);
-      } else {
-        setShowScrollTop(false);
-      }
+      if (window.scrollY > 250) setShowScrollTop(true);
+      else setShowScrollTop(false);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -52,15 +45,15 @@ export const PortariaGuide: React.FC = () => {
         { id: 'doenca-cardiopatia', name: 'Conceituação Geral' },
         { id: 'cardio-isquemica-aguda-ssst', name: 'Isquémica - Aguda S/ SST' },
         { id: 'cardio-isquemica-aguda-csst', name: 'Isquémica - Aguda C/ SST' },
-        { id: 'cardio-isquemica-cronica', name: 'Isquémica - Crónica' },
+        { id: 'cardio-isquemica-cronica', name: 'Isquémica - Crônica' },
         { id: 'cardio-hipertensiva', name: 'Cardiopatia Hipertensiva' },
         { id: 'cardio-miocardio-hyper', name: 'Miocardiopatias - Hipertróficas' },
         { id: 'cardio-miocardio-dilatada', name: 'Miocardiopatias - Dilatadas' },
         { id: 'cardio-miocardio-restritiva', name: 'Miocardiopatias - Restritivas' },
         { id: 'cardio-miocardio-chagas', name: 'Miocardiopatias - Chagásica' },
         { id: 'cardio-arritmias', name: 'Arritmias Cardíacas' },
-        { id: 'cardio-cor-pulmonale', name: 'Cor Pulmonale Crónico' },
-        { id: 'cardio-congenitas', name: 'Cardiopatias Congénitas' },
+        { id: 'cardio-cor-pulmonale', name: 'Cor Pulmonale Crônico' },
+        { id: 'cardio-congenitas', name: 'Cardiopatias Congênitas' },
         { id: 'cardio-valvopatias', name: 'Valvopatias' },
         { id: 'cardio-pericardiopatias', name: 'Pericardiopatias/Aortopatias' }
       ]
@@ -82,7 +75,6 @@ export const PortariaGuide: React.FC = () => {
     { id: 'doenca-fibrose', name: 'Fibrose Cística', icon: <FileText size={14} /> },
   ];
 
-  // 4. Documentação: Função que faz o scroll suave até à secção desejada
   const handleScrollTo = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
@@ -103,7 +95,6 @@ export const PortariaGuide: React.FC = () => {
           <p className="text-xs text-gray-500 font-body mt-1">Diretrizes e Normas Técnicas Periciais Oficiais das Forças Armadas.</p>
         </div>
 
-        {/* Índice Dinâmico */}
         <div className="bg-white p-4 rounded-2xl border border-gray-200/60 shadow-sm">
           <h3 className="font-heading font-bold text-xs text-[#050F41] mb-2.5 flex items-center gap-2 tracking-wider">
             <FileText size={16} /> ÍNDICE DINÂMICO DE LEITURA
@@ -121,7 +112,6 @@ export const PortariaGuide: React.FC = () => {
                       {cardioExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                     </span>
                   ) : (
-                    // 5. Documentação: Aqui estava o erro! ChevronRight agora está devidamente importado.
                     <ChevronRight size={14} className="text-gray-400" />
                   )}
                 </button>
@@ -139,7 +129,6 @@ export const PortariaGuide: React.FC = () => {
           </div>
         </div>
 
-        {/* Caixa de Conteúdo */}
         <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm space-y-8 font-body text-sm text-gray-700 leading-relaxed text-justify">
           <IntroSection />
           <AlienacaoMentalSection />
@@ -150,7 +139,6 @@ export const PortariaGuide: React.FC = () => {
         </div>
       </div>
 
-      {/* Botão Flutuante (FAB) para Voltar ao Topo */}
       {showScrollTop && (
         <button 
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}

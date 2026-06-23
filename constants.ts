@@ -20,27 +20,23 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
         "Seja refratária aos meios habituais de tratamento",
         "Provoque alteração completa ou considerável da personalidade",
         "Comprometa gravemente os juízos de valor e realidade, com destruição da autodeterminação e do pragmatismo",
-        "Torne o indivíduo total e permanentemente inválido para qualquer trabalho",
-        "Haver um nexo sintomático entre o quadro psíquico e a personalidade do indivíduo"
+        "Torne o indivíduo total e permanentemente inválido para qualquer trabalho"
       ],
       "Demência": [
         "Provoque alteração completa ou considerável da personalidade",
-        "Comprometa gravemente os juízos de valor e realidade, com destruição da autodeterminação e do pragmatismo",
+        "Comprometa gravemente os juízos de valor e realidade",
         "Torne o indivíduo total e permanentemente inválido para qualquer trabalho"
       ],
       "Esquizofrenia": [
         "Provoque alteração completa ou considerável da personalidade",
-        "Comprometa gravemente os juízos de valor e realidade, com destruction da autodeterminação e do pragmatismo",
         "Torne o indivíduo total e permanentemente inválido para qualquer trabalho"
       ],
       "Transtorno delirante persistente": [
         "Provoque alteração completa ou considerável da personalidade",
-        "Comprometa gravemente os juízos de valor e realidade, com destruição da autodeterminação e do pragmatismo",
         "Torne o indivíduo total e permanentemente inválido para qualquer trabalho"
       ],
       "Retardo mental profundo ou grave": [
         "Provoque alteração completa ou considerável da personalidade",
-        "Comprometa gravemente os juízos de valor e realidade, com destruição da autodeterminação e do pragmatismo",
         "Torne o indivíduo total e permanentemente inválido para qualquer trabalho"
       ],
       "Transtorno de personalidade e do comportamento": [
@@ -61,19 +57,15 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
         "Comprometimento grave e irreversível de personalidade"
       ],
       "Casos graves de epilepsia": [
-        "Predominância de sintomas de demencia",
+        "Predominância de sintomas de demência",
         "Resistência terapêutica ou elevada frequência de surtos psicóticos"
       ],
-      "Autismo infantil e atípico": [
-        "Próprio diagnóstico"
-      ],
-      "Síndrome de Rett": [
-        "Próprio diagnóstico"
-      ]
+      "Autismo infantil e atípico": [ "Próprio diagnóstico" ],
+      "Síndrome de Rett": [ "Próprio diagnóstico" ]
     }
   },
   "Cardiopatia Grave": {
-    "definicao": "São consideradas cardiopatias graves, as doenças cardiovasculares agudas ou crónicas que acarretam, de modo irreversível, em maior ou menor período de tempo, a perda da capacidade física e funcional do coração, determinando incapacidade permanente para todo e qualquer trabalho ou o risco de morte prematura.",
+    "definicao": "São consideradas cardiopatias graves, as doenças cardiovasculares agudas ou crônicas que acarretam, de modo irreversível, em maior ou menor período de tempo, a perda da capacidade física e funcional do coração, determinando incapacidade permanente para todo e qualquer trabalho ou o risco de morte prematura.",
     "documentos": [
       "Relatório médico com data do início do acompanhamento e terapêutica",
       "Eletrocardiograma (ECG)",
@@ -97,7 +89,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
         "Baixo débito cardíaco",
         "Insuficiência cardíaca aguda",
         "Arritmia ventricular maligna",
-        "Disfunção ventricular mecânica em paciente já revascularizado ou sem condi"
+        "Disfunção ventricular mecânica em paciente já revascularizado ou sem condições cirúrgicas"
       ],
       "Cardiopatia Isquêmica - Forma Aguda - SCA C/ SST ou BRE novo": [
         "Choque cardiogênico (Killip IV)",
@@ -107,8 +99,8 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
         "IAM anterior extenso (V1-V6, D1, AVL)",
         "BAV II grau Mobitz II",
         "BAVT ou distúrbio de condução interventricular",
-        "Infarto perioperatório de cirurgia de revasculariza",
-        "Infarto agudo em indivíduo com infarto prévio de grande extens"
+        "Infarto perioperatório de cirurgia de revascularização",
+        "Infarto agudo em indivíduo com infarto prévio de grande extensão"
       ],
       "Cardiopatia Isquêmica - Forma Crônica (Angina Estável)": [
         "Angina classes III e IV da CCS",
@@ -199,13 +191,13 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
       ],
       "Pericardiopatias e Aortopatias": [
         "Restrição de enchimento ventricular (Pericardite)",
-        "Aneurisma de Aorta Torácica > 5,5cm ou compress",
+        "Aneurisma de Aorta Torácica > 5,5cm",
         "Dissecção aguda e hematoma de aorta"
       ]
     }
   },
   "Cegueira": {
-    "definicao": "A Cegueira ou amaurose é um estado patológico no qual a acuidade visual de um olho (monocular) ou de ambos os olhos é igual a zero, sem percepção luminosa, após esgotados os recursos de corre ptica.",
+    "definicao": "A Cegueira ou amaurose é um estado patológico no qual a acuidade visual de um olho (monocular) ou de ambos os olhos é igual a zero, sem percepção luminosa, após esgotados os recursos de correção óptica.",
     "documentos": [
       "Laudo oftalmológico completo atual e da época do diagnóstico",
       "Acuidade visual da época do diagnóstico",
@@ -213,10 +205,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
       "Atestado de esgotamento de recursos terapêuticos (se aplicável)"
     ],
     "diagnosticos": {
-      "Visão subnormal": [
-        "20/70 x 20/200",
-        "20/200 x 20/400"
-      ],
+      "Visão subnormal": [ "20/70 x 20/200", "20/200 x 20/400" ],
       "Cegueira Total": [
         "20/400 x 20/1.200 ou 0,02 ou capacidade de contar dedos a 1 metro",
         "20/1.200 ou 0,02 ou capacidade de contar dedos a 1 metro x Percepção de luz",
@@ -235,11 +224,11 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
     "diagnosticos": {
       "Síndrome aguda da radiação": [
         "Quadro hematopoiético: alterações hematológicas provenientes de exposição (0,8 a 1,0 Gy)",
-        "Quadro gastrointestinal: alterações da mucosa levando ndrome disabsortiva (> 7,0 Gy)",
+        "Quadro gastrointestinal: alterações da mucosa levando síndrome disabsortiva (> 7,0 Gy)",
         "Quadro neurovascular: manifestações que conduzem à morte (superiores a 20 Gy)"
       ],
       "Síndrome cutânea da radiação": [
-        "Grau I ou Leve (8,0 a 10,0 Gy): pele seca e pigmenta",
+        "Grau I ou Leve (8,0 a 10,0 Gy): pele seca e pigmentada",
         "Grau II ou Moderada (12,0 a 30,0 Gy): atrofia de pele e úlcera tardia",
         "Grau III ou Grave (30,0 a 50,0 Gy): cicatrizes, fibrose, alterações escleróticas e necrose",
         "Grau IV ou Muito Grave (acima de 50,0 Gy): deformidade e recidiva de úlceras"
@@ -258,7 +247,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
       "Geral": [
         "Tremor: hipercinesia, predominantemente postural",
         "Rigidez muscular: acompanhada do sinal da roda dentada",
-        "Oligocinesia: diminuição da atividade motora espontânea e lentid"
+        "Oligocinesia: diminuição da atividade motora espontânea e lentidão"
       ]
     }
   },
@@ -298,7 +287,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
     }
   },
   "Estados Avançados de Doença de Paget": {
-    "definicao": "A doença de Paget é uma afec ssea crônica, caracterizada por deforma sseas de evolução lenta e progressiva.",
+    "definicao": "A doença de Paget é uma afecção óssea crônica, caracterizada por deformações ósseas de evolução lenta e progressiva.",
     "documentos": [
       "Relatório médico completo informando a data do diagnóstico",
       "Resultados dos exames elucidatórios",
@@ -307,7 +296,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
     ],
     "diagnosticos": {
       "Osteíte Deformante": [
-        "Les sseas generalizadas, deformidades, fraturas espontâneas e degeneração maligna",
+        "Lesões ósseas generalizadas, deformidades, fraturas espontâneas e degeração maligna",
         "Complicações neurológicas e sensoriais: surdez, perturbações olfativas e neuralgias",
         "Complicações cardiovasculares: insuficiência cardíaca e hipertensão ligadas à patologia"
       ]
@@ -315,9 +304,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
   },
   "Fibrose Cística": {
     "definicao": "Informação especificada nas definições, mas enquadrada nas normativas legais aplicáveis.",
-    "documentos": [
-      "Relatórios e laudos médicos atualizados (Padrão Geral)"
-    ],
+    "documentos": [ "Relatórios e laudos médicos atualizados (Padrão Geral)" ],
     "diagnosticos": {
       "Geral": [
         "Teste do suor confirmado com concentração superior a 60 mEq/L",
@@ -330,7 +317,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
   "Hanseníase": {
     "definicao": "Doença infecto-contagiosa crônica causada pelo Mycobacterium leprae. O diagnóstico é essencialmente clínico e epidemiológico, identificando lesões com alteração de sensibilidade e comprometimento de nervos.",
     "documentos": [
-      "Exame original confirmatório da doen",
+      "Exame original confirmatorio da doença",
       "Relatório do serviço de saúde com evolução e tempo de tratamento",
       "Descrição da data de início e término da poliquimioterapia",
       "Informação sobre atividade da doença, recidiva ou alta por cura",
@@ -345,7 +332,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
       ],
       "Lesões reacionais": [
         "Reação de Mitsuda positiva ou bacterioscópico positivo",
-        "Exame histológico revela granuloma tuberculóide",
+        "Exame histológico revela granuloma tuberculoide",
         "Clínica mostra placas eritemato-violáceas edematosas, escamosas e nódulos sugestivos"
       ]
     }
@@ -360,7 +347,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
     ],
     "diagnosticos": {
       "Geral": [
-        "Emagrecimento, icterícia, ascite, edemas e fenômenos hemorrágicos",
+        "Emagrecimento, ictêria, ascite, edemas e fenômenos hemorrágicos",
         "Alterações cutaneomucosas e neuropsiquiátricas"
       ],
       "Encefalopatia Hepática": [
@@ -385,21 +372,9 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
       "Exame que determinou o início da terapia dialítica e data de início"
     ],
     "diagnosticos": {
-      "Estágio 3": [
-        "FG = 30 - 59",
-        "Cr = 2,1 - 6,0",
-        "Insuficiência Renal moderada ou Laboratorial com sintomas clínicos"
-      ],
-      "Estágio 4": [
-        "FG = 15 - 29",
-        "Cr = 6,1 - 9,0",
-        "Insuficiência Renal grave ou clínica"
-      ],
-      "Estágio 5": [
-        "FG < 15",
-        "Cr > 9,0",
-        "Insuficiência Renal terminal ou pré-dialítica"
-      ]
+      "Estágio 3": [ "FG = 30 - 59", "Cr = 2,1 - 6,0", "Insuficiência Renal moderada ou Laboratorial com sintomas clínicos" ],
+      "Estágio 4": [ "FG = 15 - 29", "Cr = 6,1 - 9,0", "Insuficiência Renal grave ou clínica" ],
+      "Estágio 5": [ "FG < 15", "Cr > 9,0", "Insuficiência Renal terminal ou pré-dialítica" ]
     }
   },
   "Neoplasia Maligna": {
@@ -422,7 +397,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
   "Paralisia Irreversível e Incapacitante": {
     "definicao": "Incapacidade de contração voluntária de um músculo ou grupo de músculos, resultante de uma lesão orgânica destrutiva ou degenerativa nas vias motoras.",
     "documentos": [
-      "Relatório médico completo com diagnóstico e data da manifesta",
+      "Relatório médico completo com diagnóstico e data da manifestação",
       "Segmentos corporais acometidos",
       "Tratamento instituído e sequelas definitivas",
       "Exames de imagem"
@@ -436,47 +411,27 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
     }
   },
   "Pênfigo": {
-    "definicao": "Dermatoses de caráter autoimune que formam bolhas na pele e mucosas (não possui definição detalhada no anexo principal).",
-    "documentos": [
-      "Relatórios e laudos médicos atualizados (Padrão Geral)"
-    ],
+    "definicao": "Dermatoses de caráter autoimune que formam bolhas na pele e mucosas.",
+    "documentos": [ "Relatórios e laudos médicos atualizados (Padrão Geral)" ],
     "diagnosticos": {
-      "Pênfigo vulgar": [
-        "Dermatose bolhosa crônica com volumosas bolhas intra-epidérmicas e manifestações graves"
-      ],
-      "Pênfigo foliáceo": [
-        "Endêmico, crônico com espoliação proteica. Manchas eritematosas, bolhas flácidas com descamação e ardor"
-      ],
-      "Pênfigo vegetante": [
-        "Bolhas que se rompem e exsudam líquido fétido, formando vegetações papilomatosas. Alto índice de mortalidade se não tratado"
-      ],
-      "Pênfigo eritematoso": [
-        "Síndrome de Senear-Usher: lesões em face e tronco lembrando lúpus. Evolução benigna"
-      ]
+      "Pênfigo vulgar": [ "Dermatose bolhosa crônica com volumosas bolhas intra-epidérmicas e manifestações graves" ],
+      "Pênfigo foliáceo": [ "Endêmico, crônico com espoliação proteíca. Manchas eritematosas, bolhas flácidas com descamação e ardor" ],
+      "Pênfigo vegetante": [ "Bolhas que se rompem e exsudam líquido fétido, formando vegetações papilomatosas. Alto índice de mortalidade se não tratado" ],
+      "Pênfigo eritematoso": [ "Síndrome de Senear-Usher: lesões em face e tronco lembrando lúpus. Evolução benigna" ]
     }
   },
   "SIDA/AIDS": {
     "definicao": "Manifestação mais grave da infecção pelo HIV, caracterizando-se por severa imunodeficiência e aparecimento de doenças oportunistas.",
     "documentos": [
-      "Relatório informando doenças oportunísticas",
+      "Relatório informando doenças oportunistas",
       "Exame inicial (ELISA) e confirmatório (Western-Blot)",
       "Exames de CD4, CD8 e Carga viral",
       "Informações sobre terapia antirretroviral"
     ],
     "diagnosticos": {
-      "Categoria A3": [
-        "CD4 < 200",
-        "Infecção assintomática, infecção aguda ou Linfadenopatia generalizada persistente"
-      ],
-      "Categoria B3": [
-        "CD4 < 200",
-        "Angiomatose bacilar, candidíase vulvovaginal persistente ou orofaringeana",
-        "Sintomas constitucionais (febre persistente ou diarreia crônica)"
-      ],
-      "Categoria C": [
-        "Candidíase esofágica, brônquica ou pulmonar; Criptococose; Câncer cervical; Infecções por Citomegalovírus",
-        "Herpes, Histoplasmose, Micobacteriose, Tuberculose, Pneumonias, Toxoplasmose cerebral, Sarcoma de Kaposi e Linfomas"
-      ]
+      "Categoria A3": [ "CD4 < 200", "Infecção assintomática, infecção aguda ou Linfadenopatia generalizada persistente" ],
+      "Categoria B3": [ "CD4 < 200", "Angiomatose bacilar, candidíase vulvovaginal persistente ou orofaringeana", "Sintomas constitucionais (febre persistente ou diarreia crônica)" ],
+      "Categoria C": [ "Candidíase esofágica, brônquica ou pulmonar; Criptococose; Câncer cervical; Infecções por Citomegalovírus", "Herpes, Histoplasmose, Micobacteriose, Tuberculose, Pneumonias, Toxoplasmose cerebral, Sarcoma de Kaposi e Linfomas" ]
     }
   },
   "Tuberculose Ativa": {
@@ -487,9 +442,7 @@ const RAW_DISEASES: Record<string, { definicao: string, documentos: string[], di
       "Exames de função pulmonar ou avaliação funcional do órgão atingido"
     ],
     "diagnosticos": {
-      "Geral": [
-        "Diagnóstico clínico, laboratorial ou por imagem atestando a atividade da doen"
-      ]
+      "Geral": [ "Diagnóstico clínico, laboratorial ou por imagem atestando a atividade da doença" ]
     }
   }
 };
