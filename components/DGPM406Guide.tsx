@@ -44,8 +44,8 @@ const ANEXOS: Anexo[] = [
   { id: 'a4', anexo: 'ANEXO E', title: 'EXAME DE SANIDADE', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
   { id: 'a5', anexo: 'ANEXO G', title: 'Guia de atendimento médico para perícia menor', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
   { id: 'a6', anexo: 'ANEXO I', title: 'Papeleta de dispensa', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
-  { id: 'a7', anexo: 'ANEXO J', title: 'TCLE para realização de exame tóxicoológico', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
-  { id: 'a8', anexo: 'ANEXO K', title: 'Perícia menor paragestantes saudáveis', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
+  { id: 'a7', anexo: 'ANEXO J', title: 'TCLE para realização de exame toxicológico', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
+  { id: 'a8', anexo: 'ANEXO K', title: 'Perícia menor para gestantes saudáveis', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
   { id: 'a9', anexo: 'ANEXO M', title: 'Tramitação de documentos e conclusões médico periciais', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
   { id: 'a10', anexo: 'ANEXO N', title: 'Padrões psicofísicos admissionais', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
   { id: 'a11', anexo: 'ANEXO O', title: 'Exames mínimos', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
@@ -60,14 +60,12 @@ const ANEXOS: Anexo[] = [
 ];
 
 export const DGPM406Guide: React.FC = () => {
-  // Documentação: Controle de abas internas da DGPM-406
   const [activeTab, setActiveTab] = useState<'capitulos' | 'anexos'>('capitulos');
 
   return (
     <div className="flex flex-col h-full bg-gray-50 animate-fade-in relative">
       <Header title="DGPM-406" />
 
-      {/* Abas Superiores baseadas no padrão M3/Premium */}
       <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
         <button
           onClick={() => setActiveTab('capitulos')}
@@ -86,7 +84,6 @@ export const DGPM406Guide: React.FC = () => {
         </button>
       </div>
 
-      {/* Conteúdo Dinâmico com a lista contínua solicitada anteriormente */}
       <div className="flex-1 overflow-y-auto p-4 pb-24 max-w-4xl mx-auto w-full">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden divide-y divide-gray-100">
           {activeTab === 'capitulos' ? (

@@ -43,21 +43,12 @@ export const Resumos: React.FC = () => {
       {chapters.map((chapter) => (
         <button
           key={chapter.id}
-          onClick={() => {
-            setActivePage(chapter.id);
-            setIsMenuOpen(false);
-            window.scrollTo(0,0);
-          }}
+          onClick={() => { setActivePage(chapter.id); setIsMenuOpen(false); window.scrollTo(0,0); }}
           className={`flex items-center w-full text-left px-4 py-3 my-1 rounded-lg text-sm font-medium transition-colors duration-200 ${
-            activePage === chapter.id
-              ? 'bg-navy/5 text-navy font-bold border-l-4 border-navy'
-              : 'text-gray-700 hover:bg-gray-50'
+            activePage === chapter.id ? 'bg-navy/5 text-navy font-bold border-l-4 border-navy' : 'text-gray-700 hover:bg-gray-50'
           }`}
         >
-          <Icon 
-            name={chapter.icon} 
-            className={`mr-3 text-[22px] ${activePage === chapter.id ? 'text-navy' : 'text-gray-400'}`} 
-          />
+          <Icon name={chapter.icon} className={`mr-3 text-[22px] ${activePage === chapter.id ? 'text-navy' : 'text-gray-400'}`} />
           <span className="flex-1">{chapter.title}</span>
         </button>
       ))}
@@ -69,62 +60,40 @@ export const Resumos: React.FC = () => {
       <Header 
         title="RESUMOS DGPM-406" 
         leftAction={
-          <button
-            className="p-1 -ml-2 text-white hover:text-gold transition-colors focus:outline-none"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label="Menu"
-          >
+          <button className="p-1 -ml-2 text-white hover:text-gold transition-colors focus:outline-none" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Menu">
             <Menu size={20} />
           </button>
         }
       />
 
-      {/* Fundo Desfocado (Backdrop) - Ajustado Z-index para 100 */}
       {isMenuOpen && (
-        <div
-          className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] transition-opacity duration-300 animate-fade-in"
-          onClick={() => setIsMenuOpen(false)}
-        ></div>
+        <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] transition-opacity duration-300 animate-fade-in" onClick={() => setIsMenuOpen(false)}></div>
       )}
 
-      {/* Menu Lateral - Ajustado Z-index para 110 e estilo modernizado */}
-      <aside
-        className={`fixed top-0 left-0 h-full bg-white w-80 p-4 z-[110] transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl rounded-r-2xl border-r border-gray-100 ${
-          isMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
+      <aside className={`fixed top-0 left-0 h-full bg-white w-80 p-4 z-[110] transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl rounded-r-2xl border-r border-gray-100 ${
+        isMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
         <div className="flex items-center justify-between mb-4 h-12 flex-shrink-0 border-b border-gray-100 mt-safe">
-            <h1 className="font-heading text-lg font-bold text-navy flex items-center">
-              <Icon name="local_hospital" className="text-gold text-[26px] mr-2"/>
-              Capítulos
-            </h1>
-            <button
-               onClick={() => setIsMenuOpen(false)}
-               className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-50"
-            >
-               <Icon name="close" className="text-2xl" />
-            </button>
+          <h1 className="font-heading text-lg font-bold text-navy flex items-center">
+            <Icon name="local_hospital" className="text-gold text-[26px] mr-2"/>
+            Capítulos
+          </h1>
+          <button onClick={() => setIsMenuOpen(false)} className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-50">
+            <Icon name="close" className="text-2xl" />
+          </button>
         </div>
         <nav className="flex-grow overflow-y-auto pb-20 custom-scrollbar pr-1">
           <NavLinks />
         </nav>
       </aside>
 
-      <div 
-        className={`flex-1 w-full transition-all duration-300 overflow-y-auto ${
-          isMenuOpen ? 'blur-sm' : ''
-        }`}
-      >
+      <div className={`flex-1 w-full transition-all duration-300 overflow-y-auto ${isMenuOpen ? 'blur-sm' : ''}`}>
         {renderPage()}
-
         {(() => {
           const currentIndex = chapters.findIndex(c => c.id === activePage);
           const nextChapter = chapters[currentIndex + 1];
-
           if (!nextChapter) return null;
-
           const nextChapterTitle = nextChapter.title.replace('Cap ', 'Capítulo ');
-
           return (
             <div className="w-full max-w-5xl mx-auto flex justify-end px-4 sm:px-8 mt-6 mb-10 pb-8">
               <button 

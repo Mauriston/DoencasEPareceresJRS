@@ -28,7 +28,6 @@ export const FinalidadesGuide: React.FC = () => {
       <Header title="Finalidades" />
       
       <div className="p-4 space-y-4 animate-fade-in overflow-auto pb-24 h-full">
-        {/* Card Branco Principal - Igual ao início de Portaria */}
         <div id="finalidades-card" className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col space-y-5">
           <div className="text-center pb-2 border-b border-gray-100">
             <h2 className="text-lg font-bold text-navy font-heading leading-tight uppercase">FINALIDADES DA INSPEÇÃO DE SAÚDE (IS)</h2>
@@ -37,7 +36,6 @@ export const FinalidadesGuide: React.FC = () => {
             </p>
           </div>
 
-          {/* Seletor Dropdown Especial estilo Premium */}
           <div className="flex flex-col space-y-2">
             <label htmlFor="finalidade-select" className="text-xs font-bold text-navy uppercase tracking-wider">
               Selecione a Finalidade do Benefício:
@@ -61,7 +59,6 @@ export const FinalidadesGuide: React.FC = () => {
             </div>
           </div>
 
-          {/* Box de Definição estilizada */}
           <div id="definition-box" className="p-4 bg-gray-50 rounded-lg border border-gray-100 shadow-sm flex flex-col space-y-3">
             <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
               <span className="material-symbols-outlined text-gold" style={{ fontSize: '20px' }}>

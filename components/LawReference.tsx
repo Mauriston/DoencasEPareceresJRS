@@ -1,6 +1,6 @@
 // Ficheiro: components/LawReference.tsx
 import React from 'react';
-import { Info } from 'lucide-react'; // Importação do ícone de Info
+import { Info } from 'lucide-react';
 import { Header } from './Header';
 
 interface Legislation {
@@ -25,14 +25,14 @@ const LEGISLATIONS: Legislation[] = [
     id: 'l2',
     legislation: 'LEI n  6.880/1980',
     title: 'Estatuto dos Militares',
-    provisions: 'Regula a situação jurídica, obrigações, deveres, direitos e prerrogativas dos membros da Marinha, Exército e Aeronáutica. Suas providências abrangem desde as condições de ingresso e a estruturação da hierarquia e disciplina até a definição de cargos, funções e os preceitos éticos que devem nortear a conduct militar.',
+    provisions: 'Regula a situação jurídica, obrigações, deveres, direitos e prerrogativas dos membros da Marinha, Exército e Aeronáutica.',
     link: 'https://drive.google.com/open?id=1Rg207oonhofRRX2fBDUrBcx0FQ5yIGT6',
     imageUrl: 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/biblioteca-da-pr/simbolos-nacionais/brasao-da-republica/brasaooficialcolorido.png'
   },
   {
     id: 'l3',
     legislation: 'LEI n  6.782/1980',
-    title: 'Equiparação do Acidente de Serviço Ó Doença Profissional',
+    title: 'Equiparação do Acidente de Serviço à Doença Profissional',
     provisions: 'Equipara ao acidente em serviço a doença profissional e as específicas em lei para efeito de pensão especial e dá outras providências.',
     link: 'https://drive.google.com/open?id=12zgDnVuXb4MWTQJv-dZSgqIu1gH61UDp',
     imageUrl: 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/biblioteca-da-pr/simbolos-nacionais/brasao-da-republica/brasaooficialcolorido.png'
@@ -57,7 +57,7 @@ const LEGISLATIONS: Legislation[] = [
     id: 'l6',
     legislation: 'LEI n  13.954/2019',
     title: 'Sistema de Proteção Social dos Militares',
-    provisions: 'Altera a Lei no 6.880, de 9 de dezembro de 1980 (Estatuto dos Militares), a Lei no 3.765, de 4 de maio de 1960, a Lei no 4.375, de 17 de agosto de 1964 (Lei do Serviço Militar), a Lei no 5.821, de 10 de novembro de 1972, a Lei no 12.705, de 8 de agosto de 2012, e o Decreto- Lei no 667, de 2 de julho de 1969, para reestruturar a carreira militar e dispor sobre o Sistema de Proteção Social dos Militares; revoga dispositivos e anexos da Medida Provisória no 2.215-10, de 31 de agosto de 2001, e da Lei no 11.784, de 22 de setembro de 2008; e dá outras providências.',
+    provisions: 'Altera a Lei no 6.880, de 9 de dezembro de 1980 (Estatuto dos Militares) e dá outras providências.',
     link: 'https://drive.google.com/open?id=1JiLQ54Zy6QEnwiuWab2ZvHBF2ul1T17c',
     imageUrl: 'https://www.gov.br/planalto/pt-br/conheca-a-presidencia/biblioteca-da-pr/simbolos-nacionais/brasao-da-republica/brasaooficialcolorido.png'
   },
@@ -65,7 +65,7 @@ const LEGISLATIONS: Legislation[] = [
     id: 'l7',
     legislation: 'PORTARIA GM-MD n  3551/2021',
     title: 'Portaria Normativa MD',
-    provisions: 'Aprova as normas para a avaliação pericial dos portadores de doenças especificadas em lei pelas Juntas de Inspeção de Saúde e pelos Agentes Médico-Periciais da Marinha, do Exército, da Aeronáutica e do Hospital das Forças Armadas, bem como os padrões e critérios para a concessão de benefícios aos seus pensionistas, dependentes ou beneficiários.',
+    provisions: 'Aprova as normas para a avaliação pericial dos portadores de doenças especificadas em lei pelas Juntas de Inspeção de Saúde e pelos Agentes Médico-Periciais da Marinha, do Exército, da Aeronáutica e do Hospital das Forças Armadas.',
     link: 'https://drive.google.com/open?id=1Rf2al57vzBQqb8uniy3m9ME_3xnOZFH4',
     imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/f/ff/Emblema_do_Minist%C3%A9rio_da_Defesa_do_Brasil_%282%29.jpg'
   },
@@ -89,7 +89,7 @@ const LEGISLATIONS: Legislation[] = [
     id: 'l10',
     legislation: 'RES CFM N  2.430/2025',
     title: 'Resolução do CFM que normatiza o Acto Médico-Pericial',
-    provisions: 'Dispõe sobre o ato médico pericial, a produção da prova técnica médica, estabelece critérios mínimos de segurança na construção da prova pericial, atualização o uso de tecnologias de comunicação na avaliação médico pericial',
+    provisions: 'Dispõe sobre o ato médico pericial, a produção da prova técnica médica, estabelece critérios mínimos de segurança na construção da prova pericial.',
     link: 'https://drive.google.com/open?id=1Kr8kPQEzDHZPkWiJwtePht-X-7eNsfDu',
     imageUrl: 'https://portal.cfm.org.br/wp-content/themes/portalcfm/assets/images/cfm_logo_bola.png'
   },
@@ -109,15 +109,12 @@ export const LawReference: React.FC = () => {
       <Header title="Legislação" />
       
       <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-4xl mx-auto w-full">
-        
-        {/* Documentação: NOVO Card de Título de Página com destaque e texto simplificado */}
         <div className="mb-4 bg-white p-6 rounded-2xl shadow-md border border-gray-200/80 text-center">
           <h2 className="text-xl font-heading font-black text-[#050F41] tracking-wide uppercase">
             LEGISLAÇÃO MÉDICO-PERICIAL
           </h2>
         </div>
 
-        {/* Contentor Único da Lista com Divisores (divide-y) */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden divide-y divide-gray-100">
           {LEGISLATIONS.map((law) => {
             const isBrasao = law.imageUrl.includes('brasao-da-republica');
@@ -130,7 +127,6 @@ export const LawReference: React.FC = () => {
                   rel="noopener noreferrer"
                   className="flex items-center justify-between p-4 hover:bg-gray-50/80 active:bg-gray-100 transition-colors focus:outline-none cursor-pointer gap-3"
                 >
-                  {/* Imagem Institucional à esquerda com máscara redonda */}
                   <div className="w-10 h-10 flex-shrink-0 bg-gray-50 rounded-full overflow-hidden border border-gray-100 flex items-center justify-center p-0.5">
                     <img 
                       src={law.imageUrl} 
@@ -142,7 +138,6 @@ export const LawReference: React.FC = () => {
                     />
                   </div>
 
-                  {/* Bloco de Texto centralizado à esquerda */}
                   <div className="flex flex-col flex-1 min-w-0">
                     <h3 className="text-[#050F41] font-heading font-bold text-[14px] leading-snug mb-0.5 group-hover:text-[#079551] transition-colors">
                       {law.legislation}
@@ -152,12 +147,10 @@ export const LawReference: React.FC = () => {
                     </p>
                   </div>
                   
-                  {/* Botão de Info limpo e purificado à direita */}
                   <button 
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      // Documentação: Exibe puramente a string com as provisions da lei atual
                       alert(law.provisions);
                     }}
                     title={law.provisions}
