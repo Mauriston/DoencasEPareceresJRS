@@ -13,11 +13,9 @@ export const OrdemInternaJRS: React.FC<Props> = ({ onBack }) => {
   useEffect(() => {
     const scrollContainer = document.querySelector('main');
     if (!scrollContainer) return;
-
     const handleScroll = () => {
       setShowScrollTop(scrollContainer.scrollTop > 250);
     };
-
     scrollContainer.addEventListener('scroll', handleScroll);
     return () => scrollContainer.removeEventListener('scroll', handleScroll);
   }, []);
@@ -35,7 +33,7 @@ export const OrdemInternaJRS: React.FC<Props> = ({ onBack }) => {
 Recife, PE, na data da assinatura.
 ORDEM INTERNA Nº HNRe 02-05D
 Assunto: Normas para o funcionamento da Junta Regular de Saúde
-Referências: A) Regimento interno deste Hospital Naval;
+Referencias: A) Regimento interno deste Hospital Naval;
 B) DGPM-406 (9ª Revisão);
 C) DGPM-401 (4ª Revisão); e
 D) Resolução CFM N° 2.430, de 21 de maio de 2025.
@@ -70,7 +68,7 @@ c) A Clínica de Odontologia Preventiva (HNRe-12.8);
 d) O Serviço de Fonoaudiologia (HNRe-14.4);
 e) A Seção de Emissão de Guias (HNRe-15.2); e
 f) O Serviço de Laboratório de Análises Clínicas (HNRe-16.1).
-I) Os Serviços de Apoio à JRS devem dar prioridade ao atendimento dos militares da ativa oriundos da JRS/HRNe na realização de exames complementares ou resposta de pareceres especializados, devendo também dar celeridade no que tange aos lançamentos dos resultados dos exames/laudos, de maneira a permitir que os AMP possam dar continuidade nos processos de conclusão das IS em tempo hábil; e
+I) Os Serviços de Apoio à JRS devem dar prioridade ao atendimento dos militares da ativa oriunos da JRS/HRNe na realização de exames complementares ou resposta de pareceres especializados, devendo também dar celeridade no que tange aos lançamentos dos resultados dos exames/laudos, de maneira a permitir que os AMP possam dar continuidade nos processos de conclusão das IS em tempo hábil; e
 II) Os AMP podem solicitar exames subsidiários e pareceres especializados às clínicas da MB ou extra-MB, quando julgarem pertinentes, para esclarecimento diagnóstico.
 
 ## 4. OBJETIVOS
@@ -87,7 +85,7 @@ I) Os AMP deverão avaliar e fazer os devidos registros no Sistema Naval de Insp
 II) Em nenhuma hipótese os AMP concluirão uma IS cujos exames e pareceres não estejam completamente digitados no SINAIS pela Sec/JRS. Neste cenário, o AMP deverá devolver a IS para a área de exames do SINAIS para que a devida digitação seja feita; e
 III) Todas as IS concluídas deverão ser votadas (no caso da JRS) e assinadas digitalmente no SINAIS no mesmo dia da conclusão;
 IV) Quando houver necessidade de solicitação de exames complementares ou pareceres especializados para concluir a IS, a conclusão deverá ser feita em no máximo 20 dias, mesmo que o inspecionado não apresente os exames ou pareceres solicitados em tempo hábil;
-b) Obedecer à propedêutica específica para a finalidade solicitada, sendo de inteira responsabilidade dos AMP o registro completo das informações médico-periciais, assim como pelos laudos exarados, que deverão ser devidamente justificados e tecnicamente embasados por dados da literatura médica reconhecida, à luz da Legislação vigente.
+b) Obedecer à propedeütica específica para a finalidade solicitada, sendo de inteira responsabilidade dos AMP o registro completo das informações médico-periciais, assim como pelos laudos exarados, que deverão ser devidamente justificados e tecnicamente embasados por dados da literatura médica reconhecida, à luz da Legislação vigente.
 c) Atuar com imparcialidade e isenção, analisando a condição do inspecionado bem como documentos, prontuários, exames complementares e circunstâncias profissionais; contando com autonomia técnica, ética, científica e funcional.
 d) Ter em mente que a relação médico-paciente no ato médico-pericial difere da clássica assistencial e que a finalidade primordial do ato médico pericial não é terapêutica, mas avaliativa e elucidativa, podendo apontar recomendações assistenciais.
 e) Ter compromisso com os princípios éticos da imparcialidade, do respeito à pessoa, da veracidade, da objetividade e da qualificação profissional.
@@ -111,7 +109,7 @@ e) Auxiliar e assessorar o Presidente da JRS/HNRe nas demandas administrativas d
 f) Assinar e despachar documentos do setor no Impedimento do Presidente da JRS/HNRe; e
 g) Executar as funções específicas do Presidente da JRS/HNRe, descritas no item 4.5, na ausência deste.
 5.5. Compete ao Presidente da JRS/HNRe:
-a) Realizar as funções que competem aos membros da JRS/HNRe descritas no item 4.4. alíneas “a”, “b”, “c” e “d”;
+a) Realizar as funções que competem aos membros da JRS/HNRe descritas no item 4.4. alíneas "a", "b", "c" e "d";
 b) Presidir as IS realizadas pela JRS/HNRe em conformidade com a referência B;
 c) Exercer a função de encarregado do setor - coordenar a equipe, supervisionar e controlar o cumprimento da rotina e horário de funcionamento;
 d) Aprovar para tramitação no SIGAD as minutas de mensagens, ofícios, comunicações padronizadas e demais documentos administrativos redigidos pela Sec/JRS;
@@ -177,8 +175,8 @@ Diretor
 
   const processedText = useMemo(() => {
     return rawMarkdown
-      .replace(/-\s*\d+\s*de\s*\d+\s*-/g, '') // Remove "- X de 8 -"
-      .replace(/HNRe 02-05D/g, '') // Remove cabeçalhos
+      .replace(/-\s*\d+\s*de\s*\d+\s*-/g, '')
+      .replace(/HNRe 02-05D/g, '')
       .split('\n')
       .filter(line => line.trim() !== '');
   }, []);
@@ -197,8 +195,6 @@ Diretor
       <div className="p-4 space-y-4 max-w-3xl mx-auto w-full flex-1 pb-32">
         <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-200/60 shadow-sm font-body">
           {processedText.map((line, idx) => {
-            
-            // Tratamento de Títulos H2
             if (line.startsWith('##')) {
               const text = line.replace('##', '').trim();
               return (
@@ -208,7 +204,6 @@ Diretor
               );
             }
             
-            // Identifica itens numéricos maiores (Ex: 3.1., 4.2.)
             const numericItemMatch = line.match(/^(\d+\.\d+\.?\s*)(.*)/);
             if (numericItemMatch) {
                return (
@@ -219,7 +214,6 @@ Diretor
                );
             }
 
-            // Identifica alíneas (Ex: a), b))
             const letterItemMatch = line.match(/^([a-z]\)\s*)(.*)/);
             if (letterItemMatch) {
                return (
@@ -230,7 +224,6 @@ Diretor
                );
             }
 
-            // Identifica algarismos romanos (Ex: I), II))
             const romanItemMatch = line.match(/^([IVXLC]+\)\s*)(.*)/);
             if (romanItemMatch) {
                return (
@@ -241,7 +234,6 @@ Diretor
                );
             }
 
-            // Parágrafo Normal
             return (
               <p key={idx} className="text-sm md:text-[15px] text-gray-700 leading-relaxed mb-3 text-justify">
                 {line}
@@ -250,7 +242,6 @@ Diretor
           })}
         </div>
 
-        {/* FAB: Scroll to Top */}
         {showScrollTop && (
           <button 
             onClick={scrollToTop}

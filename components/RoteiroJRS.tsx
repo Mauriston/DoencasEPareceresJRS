@@ -78,7 +78,7 @@ const ROTEIRO_DATA = {
       "modulo": "IS INGRESSO",
       "materiais": [
         { "formato": "Norma", "titulo": "Padrões Psicofísicos Admissionais", "descricao": "Anexo N - DGPM-406 REV 9", "url": "https://drive.google.com/file/d/1-HURtUmzyCHhXY3DfRVA4C8wMQdV8_wF/view?usp=sharing" },
-        { "formato": "Capítulo de Livro", "titulo": "Semiologia Pericial", "descricao": "Capítulo do Livro de Perícias Médicas do CREMEGO", "url": "https://drive.google.com/file/d/1ABmEtfF_2JKTCWppYlqXlOWgU5kEjWkp/view?usp=drive_link" },
+        { "formato": "Capítulo de Livro", "titulo": "Semiologia Pericial", "descricao": "Capítulo do Livro de Perícias Médicas do CREMEGO", "url": "https://drive.google.com/file/d/1ABmEtfF_2JKTcWppYlqXlOWgU5kEjWkp/view?usp=drive_link" },
         { "formato": "Norma", "titulo": "Procedimentos Médico-Periciais para Ingressar no SAM", "descricao": "Cap 3 - DGPM-406 REV 9", "url": "https://drive.google.com/file/d/1FielRLlQ7rmcjtaVJafdGF2x1SN90DE3/view?usp=sharing" },
         { "formato": "Infográfico", "titulo": "Inaptidões Ortopédicas", "descricao": "Resumo das condições de inaptidões ortopédicas nas IS de Ingresso.", "url": "https://i.imgur.com/yf9CtlL.png" },
         { "formato": "Infográfico", "titulo": "Inaptidões Oftalmológicas", "descricao": "Resumo das condições de inaptidões oftalmológicas nas IS de Ingresso.", "url": "https://i.imgur.com/LGMDQOm.png" },
@@ -109,7 +109,7 @@ const ROTEIRO_DATA = {
         { "formato": "Norma", "titulo": "Procedimentos Médico-Periciais para VDF e Restrições", "descricao": "Cap 6 - DGPM-406 REV 9", "url": "https://drive.google.com/file/d/1Lus5R4-UjHGZ8Ff5sylgfl8cN6qQpeo5/view?usp=sharing" },
         { "formato": "Vídeo", "titulo": "JRS/HNRe - Afastamentos de militares da ativa", "descricao": "Guia essencial sobre Afastamentos por Saúde para os militares da ativa", "url": "<iframe src=\"https://www.youtube.com/embed/zjqTtXkYFh0?si=i4dF8RkIIb9QVGC8\"></iframe>" },
         { "formato": "Infográfico", "titulo": "Afastamento de Militares da Ativa", "descricao": "Resumo das particularidades dos afastamentos dos Militares de Carreira", "url": "https://i.imgur.com/3rmVrM3.jpeg" },
-        { "formato": "Capítulo de Livro", "titulo": "Propedêutica Ortopédica Pericial", "descricao": "Capítulo do Livro de Perícias Médicas do CREMEGO", "url": "https://drive.google.com/file/d/1GSfNvat2kJhhBjjb3dJLIrnqRgJqEWLV/view?usp=drive_link" },
+        { "formato": "Capítulo de Livro", "titulo": "Propedeütica Ortopédica Pericial", "descricao": "Capítulo do Livro de Perícias Médicas do CREMEGO", "url": "https://drive.google.com/file/d/1GSfNvat2kJhhBjjb3dJLIrnqRgJqEWLV/view?usp=drive_link" },
         { "formato": "Aula", "titulo": "Introdução à Psiquiatria Forense", "descricao": "Aula do CMG(RM1-Md) Almir do CPMM no C-EXP-PERMED 2026", "url": "https://drive.google.com/file/d/1cwFu1v534r2OUHNvytK5GHBht8NWRc-0/view?usp=sharing" },
         { "formato": "Capítulo de Livro", "titulo": "Perícia Médica em Psiquiatria", "descricao": "Capítulo do Livro de Perícias Médicas do CREMEGO", "url": "https://drive.google.com/file/d/1iJjWHOwvZg6L5l5hrZHkS5uI9JaUYo-t/view?usp=drive_link" }
       ]
@@ -167,7 +167,6 @@ const ROTEIRO_DATA = {
   ]
 };
 
-// Extrator de Links puros
 const extractLink = (htmlString: string) => {
   const srcMatch = htmlString.match(/src="([^"]+)"/);
   if (srcMatch) return srcMatch[1];
@@ -176,7 +175,6 @@ const extractLink = (htmlString: string) => {
   return htmlString;
 };
 
-// Ícones visuais
 const getIconForFormat = (formato: string) => {
   const fmt = formato.toLowerCase();
   if (fmt.includes('apresentação')) return <MonitorPlay size={18} />;
@@ -215,7 +213,6 @@ export const RoteiroJRS: React.FC = () => {
       <Header title="Roteiro JRS" />
       
       <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-4xl mx-auto w-full">
-        {/* Banner Descritivo Superior */}
         <div className="mb-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-200/60">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -230,15 +227,12 @@ export const RoteiroJRS: React.FC = () => {
           </div>
         </div>
 
-        {/* Lista de Módulos Separados (gap-3) */}
         <div className="flex flex-col gap-3">
           {ROTEIRO_DATA.modulos.map((mod) => {
             const isExpanded = expandedModule === mod.modulo_id;
 
             return (
               <div key={mod.modulo_id} className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden transition-all duration-300">
-                
-                {/* Botão Principal do Cartão (Expande/Retrai) */}
                 <button 
                   onClick={() => toggleModule(mod.modulo_id)}
                   className={`w-full group flex items-center justify-between p-4 transition-colors focus:outline-none cursor-pointer ${isExpanded ? 'bg-gray-50/50' : 'hover:bg-gray-50/80'}`}
@@ -256,7 +250,6 @@ export const RoteiroJRS: React.FC = () => {
                   </div>
                 </button>
 
-                {/* Sub-itens de Materiais renderizados caso Expandido */}
                 {isExpanded && (
                   <div className="bg-white border-t border-gray-100 divide-y divide-gray-100 flex flex-col">
                     {mod.materiais.map((mat, idx) => (
@@ -269,7 +262,6 @@ export const RoteiroJRS: React.FC = () => {
                           <h4 className="text-[#050F41] font-heading font-bold text-[13px] leading-tight mb-0.5 group-hover:text-blue-600 transition-colors">
                             {mat.titulo}
                           </h4>
-                          {/* Substituído: Exibindo Formato com estilo de Badge no subtítulo */}
                           <p className="text-gray-500 font-body text-[11px] leading-relaxed line-clamp-1 uppercase tracking-wider font-semibold">
                             {mat.formato}
                           </p>
@@ -287,7 +279,6 @@ export const RoteiroJRS: React.FC = () => {
         </div>
       </div>
 
-      {/* MODAL DE VÍDEO (Youtube) */}
       {activeVideoUrl && (
         <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col items-center justify-center p-4 animate-fade-in backdrop-blur-sm">
           <div className="w-full max-w-4xl relative">
@@ -309,7 +300,6 @@ export const RoteiroJRS: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL DE IMAGEM (Imgur) */}
       {activeImageUrl && (
         <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col items-center justify-center p-4 animate-fade-in backdrop-blur-sm">
           <div className="relative w-full h-full max-w-5xl flex items-center justify-center">
