@@ -169,12 +169,11 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
                     {rec.tempoAtestado && (
                       <span className="text-[10px] text-gray-400">{rec.tempoAtestado.replace(/^(\d+)$/, '$1 dias')}</span>
                     )}
-                    {rec.vigente && (
-                      <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase">vigente</span>
-                    )}
-                    {rec.vdf && (
-                      <span className="bg-amber-100 text-amber-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase">VDF</span>
-                    )}
+                    {rec.vigente && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">V</span>}
+                    {rec.concluido && !rec.vigente && <span className="bg-green-100 text-green-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">C</span>}
+                    {rec.vdf && <span className="bg-purple-100 text-purple-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">VDF</span>}
+                    {rec.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES') && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">LTS</span>}
+                    {rec.dispensas.trim() !== '' && !rec.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES') && <span className="bg-amber-100 text-amber-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">R</span>}
                   </div>
                   {rec.cid && <p className="text-[11px] text-gray-500 mt-0.5">{rec.cid}</p>}
                   {rec.dispensas && <p className="text-[10px] text-gray-400 mt-0.5">{rec.dispensas}</p>}
