@@ -9,7 +9,7 @@ async function sha256(message: string): Promise<string> {
 }
 
 interface Props {
-  onLogin: (nome: string, perfil: 'admin' | 'user', usuario: string, senhaHash: string) => void;
+  onLogin: (nome: string, perfil: 'admin' | 'hnre' | 'user', usuario: string, senhaHash: string) => void;
 }
 
 type View = 'login' | 'register';
@@ -184,7 +184,7 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
 
               <div>
                 <label className={labelClass}>Nome completo</label>
-                <input type="text" value={regNome} onChange={e => setRegNome(e.target.value)} className={inputClass} placeholder="Seu nome completo" autoComplete="name" />
+                <input type="text" value={regNome} onChange={e => setRegNome(e.target.value.toUpperCase())} className={inputClass} placeholder="SEU NOME COMPLETO" autoCapitalize="characters" autoComplete="name" />
               </div>
 
               <div>
