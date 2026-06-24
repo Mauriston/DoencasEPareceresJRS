@@ -96,7 +96,7 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
 
   return (
     <div className="fixed inset-0 bg-[#050F41] flex flex-col items-center justify-center px-6">
-      <img src="https://i.imgur.com/5JjsbwG.png" alt="JRS/HNRe" className="w-56 mb-10 opacity-95" />
+      <img src="/login.png" alt="JRS/HNRe" className="w-56 mb-10 opacity-95" />
 
       {/* ── TELA DE LOGIN ── */}
       {view === 'login' && (
