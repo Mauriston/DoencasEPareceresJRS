@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import loginBg from '../public/login.png';
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
 
@@ -95,7 +96,7 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ backgroundImage: 'url(/login.png)', backgroundSize: 'cover', backgroundPosition: 'center top' }}>
+    <div className="fixed inset-0 flex flex-col" style={{ backgroundImage: `url(${loginBg})`, backgroundSize: 'cover', backgroundPosition: 'center top' }}>
       {/* Metade superior — imagem visível */}
       <div className="flex-1" />
 
