@@ -569,8 +569,59 @@ export const PericiaMenor: React.FC = () => {
           {isFetchingHistory ? (<div className="flex items-center justify-center py-12 gap-3 text-gray-400"><span className="w-5 h-5 border-2 border-gray-300 border-t-[#050F41] rounded-full animate-spin" /><span className="text-sm">Carregando histórico...</span></div>) : filteredHistory.length === 0 ? (<div className="text-center py-12 text-gray-400 text-sm">Nenhum registro encontrado.</div>) : (
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <table className="w-full text-xs">
-                <thead><tr className="bg-[#050F41]/5 border-b border-gray-100"><th className="text-left px-3 py-2.5 font-bold text-[#050F41] w-[30%] cursor-pointer select-none" onClick={() => handleSort('data')}><span className="flex items-center gap-1">Data<span className="material-symbols-outlined text-[13px] text-gray-400">{sortCol === 'data' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}</span></span></th><th className="text-left px-3 py-2.5 font-bold text-[#050F41] cursor-pointer select-none" onClick={() => handleSort('inspecionado')}><span className="flex items-center gap-1">Inspecionado<span className="material-symbols-outlined text-[13px] text-gray-400">{sortCol === 'inspecionado' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}</span></span></th></tr></thead>
-                <tbody>{filteredHistory.map((rec, i) => (<tr key={i} className={`border-b border-gray-50 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}><td className="px-3 py-2.5 align-top"><span className="font-semibold text-gray-800 block">{rec.dataAtestado}</span>{rec.tempoAtestado && (<span className="text-[10px] text-gray-400 mt-0.5 block">{String(rec.tempoAtestado).replace(/^(\d+)$/, '$1 dias')}</span>)}<div className="flex gap-1 mt-1 flex-wrap">{rec.vigente && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">V</span>}{rec.concluido && !rec.vigente && <span className="bg-green-100 text-green-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">C</span>}{rec.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES') && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">LTS</span>}{(rec.dispensas.trim() !== '' && !rec.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES')) && (<span className="bg-amber-100 text-amber-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">R</span>)}</div></td><td className="px-3 py-2.5 align-top"><button type="button" onClick={() => setSelectedPerson(rec.inspecionado)} className="font-semibold text-[#050F41] hover:text-[#079551] transition-colors flex items-start gap-1 text-left w-full"><span className="flex-1">{rec.inspecionado}</span><span className="material-symbols-outlined text-[13px] text-gray-400 shrink-0 mt-0.5">chevron_right</span></button>{rec.cid && (<span className="text-[10px] text-gray-400 mt-0.5 block">{rec.cid}</span>)}</td></tr>))}</tbody>
+                <thead>
+                  <tr className="bg-[#050F41]/5 border-b border-gray-100">
+                    <th className="text-left px-3 py-2.5 font-bold text-[#050F41] w-[30%] cursor-pointer select-none" onClick={() => handleSort('data')}>
+                      <span className="flex items-center gap-1">
+                        Data
+                        <span className="material-symbols-outlined text-[13px] text-gray-400">
+                          {sortCol === 'data' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
+                        </span>
+                      </span>
+                    </th>
+                    <th className="text-left px-3 py-2.5 font-bold text-[#050F41] cursor-pointer select-none" onClick={() => handleSort('inspecionado')}>
+                      <span className="flex items-center gap-1">
+                        Inspecionado
+                        <span className="material-symbols-outlined text-[13px] text-gray-400">
+                          {sortCol === 'inspecionado' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
+                        </span>
+                      </span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredHistory.map((rec, i) => (
+                    <tr key={i} className={`border-b border-gray-50 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+                      <td className="px-3 py-2.5 align-top">
+                        <span className="font-semibold text-gray-800 block">{rec.dataAtestado}</span>
+                        {rec.tempoHomolog && (
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">{String(rec.tempoHomolog).replace(/^(\d+)$/, '$1 dias')}</span>
+                        )}
+                        <div className="flex gap-1 mt-1 flex-wrap">
+                          {rec.vigente && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">V</span>}
+                          {rec.concluido && !rec.vigente && <span className="bg-green-100 text-green-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">C</span>}
+                          {rec.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES') && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">LTS</span>}
+                          {(rec.dispensas.trim() !== '' && !rec.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES')) && (
+                            <span className="bg-amber-100 text-amber-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">R</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2.5 align-top">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPerson(rec.inspecionado)}
+                          className="font-semibold text-[#050F41] hover:text-[#079551] transition-colors flex items-start gap-1 text-left w-full"
+                        >
+                          <span className="flex-1">{rec.inspecionado}</span>
+                          <span className="material-symbols-outlined text-[13px] text-gray-400 shrink-0 mt-0.5">chevron_right</span>
+                        </button>
+                        {rec.cid && (
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">{rec.cid}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             </div>
           )}

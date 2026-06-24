@@ -160,8 +160,8 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold text-gray-800">{rec.dataAtestado}</span>
-                    {rec.tempoAtestado && (
-                      <span className="text-[10px] text-gray-400">{rec.tempoAtestado.replace(/^(\d+)$/, '$1 dias')}</span>
+                    {rec.tempoHomolog && (
+                      <span className="text-[10px] text-gray-400">{String(rec.tempoHomolog).replace(/^(\d+)$/, '$1 dias')}</span>
                     )}
                     {rec.vigente && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">V</span>}
                     {rec.concluido && !rec.vigente && <span className="bg-green-100 text-green-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">C</span>}
