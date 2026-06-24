@@ -185,10 +185,10 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
                 <input
                   type="text"
                   value={regUsuario}
-                  onChange={e => setRegUsuario(e.target.value)}
+                  onChange={e => setRegUsuario(e.target.value.toUpperCase())}
                   className={inputClass}
-                  placeholder="ex: joao.silva"
-                  autoCapitalize="none"
+                  placeholder="Ex.: CT FUSMÁTICO"
+                  autoCapitalize="characters"
                   autoCorrect="off"
                   autoComplete="username"
                 />
