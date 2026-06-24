@@ -284,6 +284,42 @@ function doGet(e) {
         }
       }
       return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Usuário ou senha incorretos' })).setMimeType(ContentService.MimeType.JSON);
+
+    } else if (action === "getUsuarios") {
+      const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      const sheet = ss.getSheetByName('Usuarios');
+      if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: true, data: [] })).setMimeType(ContentService.MimeType.JSON);
+      const data = sheet.getDataRange().getValues();
+      const usuarios = [];
+      for (let i = 1; i < data.length; i++) {
+        const u = String(data[i][0] || '').trim();
+        const ativo = data[i][4];
+        const isAtivo = ativo === true || String(ativo).toUpperCase() === 'TRUE' || String(ativo).toUpperCase() === 'VERDADEIRO';
+        if (u && isAtivo) usuarios.push(u);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ success: true, data: usuarios })).setMimeType(ContentService.MimeType.JSON);
+
+    } else if (action === "createUsuario") {
+      const novoUsuario = String(e.parameter.usuario || '').trim().toLowerCase();
+      const senhaHash = String(e.parameter.senhaHash || '').trim();
+      const nome = String(e.parameter.nome || '').trim();
+      if (!novoUsuario || !senhaHash || !nome) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Dados incompletos' })).setMimeType(ContentService.MimeType.JSON);
+      }
+      const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      let sheet = ss.getSheetByName('Usuarios');
+      if (!sheet) {
+        sheet = ss.insertSheet('Usuarios');
+        sheet.appendRow(['usuario', 'senha_hash', 'nome', 'perfil', 'ativo']);
+      }
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0] || '').trim().toLowerCase() === novoUsuario) {
+          return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Usuário já existe' })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      sheet.appendRow([novoUsuario, senhaHash, nome, 'user', true]);
+      return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
     }
   } catch (err) {
     return ContentService.createTextOutput(
