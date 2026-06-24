@@ -276,8 +276,8 @@ function doGet(e) {
         const u = String(data[i][0] || '').trim().toLowerCase();
         const h = String(data[i][1] || '').trim();
         const nome = String(data[i][2] || '').trim();
-        const perfil = String(data[i][3] || '').trim();
-        const ativo = data[i][4];
+        const perfil = String(data[i][5] || '').trim();
+        const ativo = data[i][6];
         const isAtivo = ativo === true || String(ativo).toUpperCase() === 'TRUE' || String(ativo).toUpperCase() === 'VERDADEIRO';
         if (u === usuario && h === senhaHash && isAtivo) {
           return ContentService.createTextOutput(JSON.stringify({ success: true, nome, perfil })).setMimeType(ContentService.MimeType.JSON);
@@ -293,16 +293,18 @@ function doGet(e) {
       const usuarios = [];
       for (let i = 1; i < data.length; i++) {
         const u = String(data[i][0] || '').trim();
-        const ativo = data[i][4];
+        const ativo = data[i][6];
         const isAtivo = ativo === true || String(ativo).toUpperCase() === 'TRUE' || String(ativo).toUpperCase() === 'VERDADEIRO';
         if (u && isAtivo) usuarios.push(u);
       }
       return ContentService.createTextOutput(JSON.stringify({ success: true, data: usuarios })).setMimeType(ContentService.MimeType.JSON);
 
     } else if (action === "createUsuario") {
-      const novoUsuario = String(e.parameter.usuario || '').trim().toLowerCase();
+      const novoUsuario = String(e.parameter.usuario || '').trim().toUpperCase();
       const senhaHash = String(e.parameter.senhaHash || '').trim();
       const nome = String(e.parameter.nome || '').trim();
+      const nip = String(e.parameter.nip || '').trim();
+      const email = String(e.parameter.email || '').trim();
       if (!novoUsuario || !senhaHash || !nome) {
         return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Dados incompletos' })).setMimeType(ContentService.MimeType.JSON);
       }
@@ -310,15 +312,15 @@ function doGet(e) {
       let sheet = ss.getSheetByName('Usuarios');
       if (!sheet) {
         sheet = ss.insertSheet('Usuarios');
-        sheet.appendRow(['usuario', 'senha_hash', 'nome', 'perfil', 'ativo']);
+        sheet.appendRow(['usuario', 'senha_hash', 'nome', 'nip', 'email', 'perfil', 'ativo']);
       }
       const data = sheet.getDataRange().getValues();
       for (let i = 1; i < data.length; i++) {
-        if (String(data[i][0] || '').trim().toLowerCase() === novoUsuario) {
+        if (String(data[i][0] || '').trim().toUpperCase() === novoUsuario) {
           return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Usuário já existe' })).setMimeType(ContentService.MimeType.JSON);
         }
       }
-      sheet.appendRow([novoUsuario, senhaHash, nome, 'user', true]);
+      sheet.appendRow([novoUsuario, senhaHash, nome, nip, email, 'user', true]);
       return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
     }
   } catch (err) {

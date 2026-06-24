@@ -31,6 +31,8 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
   // Register state
   const [regNome, setRegNome] = useState('');
   const [regUsuario, setRegUsuario] = useState('');
+  const [regNip, setRegNip] = useState('');
+  const [regEmail, setRegEmail] = useState('');
   const [regSenha, setRegSenha] = useState('');
   const [regConfirma, setRegConfirma] = useState('');
   const [regLoading, setRegLoading] = useState(false);
@@ -73,7 +75,7 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
     setRegError('');
     try {
       const senhaHash = await sha256(regSenha);
-      const res = await fetch(`${GAS_URL}?action=createUsuario&nome=${encodeURIComponent(regNome)}&usuario=${encodeURIComponent(regUsuario.toLowerCase())}&senhaHash=${encodeURIComponent(senhaHash)}`);
+      const res = await fetch(`${GAS_URL}?action=createUsuario&nome=${encodeURIComponent(regNome)}&usuario=${encodeURIComponent(regUsuario.toUpperCase())}&nip=${encodeURIComponent(regNip)}&email=${encodeURIComponent(regEmail)}&senhaHash=${encodeURIComponent(senhaHash)}`);
       const json = await res.json();
       if (json.success) {
         setRegSuccess(true);
@@ -91,7 +93,7 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
   const goToLogin = (u?: string) => {
     setView('login');
     if (u) setUsuario(u);
-    setRegNome(''); setRegUsuario(''); setRegSenha(''); setRegConfirma('');
+    setRegNome(''); setRegUsuario(''); setRegNip(''); setRegEmail(''); setRegSenha(''); setRegConfirma('');
     setRegError(''); setRegSuccess(false);
   };
 
@@ -200,6 +202,16 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
               </div>
 
               <div>
+                <label className={labelClass}>NIP</label>
+                <input type="text" value={regNip} onChange={e => setRegNip(e.target.value)} className={inputClass} placeholder="Ex.: 13.0450.24" autoComplete="off" />
+              </div>
+
+              <div>
+                <label className={labelClass}>E-mail institucional</label>
+                <input type="email" value={regEmail} onChange={e => setRegEmail(e.target.value)} className={inputClass} placeholder="nome@marinha.mil.br" autoComplete="email" />
+              </div>
+
+              <div>
                 <label className={labelClass}>Senha</label>
                 <input type="password" value={regSenha} onChange={e => setRegSenha(e.target.value)} className={inputClass} placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
               </div>
@@ -213,7 +225,7 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
 
               <button
                 type="submit"
-                disabled={regLoading || !regNome || !regUsuario || !regSenha || !regConfirma}
+                disabled={regLoading || !regNome || !regUsuario || !regSenha || !regConfirma || !regNip || !regEmail}
                 className="w-full bg-[#079551] hover:bg-[#067a43] active:bg-[#056635] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl py-3.5 text-sm transition-colors mt-1"
               >
                 {regLoading ? 'Criando conta...' : 'Criar conta'}
