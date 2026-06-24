@@ -1268,8 +1268,8 @@ export const PericiaMenor: React.FC = () => {
                     <tr key={i} className={`border-b border-gray-50 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
                       <td className="px-3 py-2.5 align-top">
                         <span className="font-semibold text-gray-800 block">{rec.dataAtestado}</span>
-                        {rec.tempoAtestado && (
-                          <span className="text-[10px] text-gray-400 mt-0.5 block">{String(rec.tempoAtestado).replace(/^(\d+)$/, '$1 dias')}</span>
+                        {rec.tempoHomolog && (
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">{String(rec.tempoHomolog).replace(/^(\d+)$/, '$1 dias')}</span>
                         )}
                         <div className="flex gap-1 mt-1 flex-wrap">
                           {rec.vigente && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">V</span>}
