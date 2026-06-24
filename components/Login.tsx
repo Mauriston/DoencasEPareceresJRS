@@ -95,8 +95,12 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-[#050F41] flex flex-col items-center justify-center px-6">
-      <img src="/login.png" alt="JRS/HNRe" className="w-56 mb-10 opacity-95" />
+    <div className="fixed inset-0 flex flex-col" style={{ backgroundImage: 'url(/login.png)', backgroundSize: 'cover', backgroundPosition: 'center top' }}>
+      {/* Metade superior — imagem visível */}
+      <div className="flex-1" />
+
+      {/* Metade inferior — conteúdo sobre overlay */}
+      <div className="h-1/2 bg-[#050F41]/90 backdrop-blur-sm flex flex-col items-center justify-center px-6 overflow-y-auto py-4">
 
       {/* ── TELA DE LOGIN ── */}
       {view === 'login' && (
@@ -217,6 +221,7 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 };
