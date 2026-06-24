@@ -14,7 +14,7 @@ const CASOS_DATA = [
       "D": "O senhor deve considerar o militar 'Inapto para o Serviço Ativo da Marinha' e encaminhá-lo diretamente para a Junta Superior Distrital (JSD) para fins de reforma."
     },
     "gabarito": "C",
-    "explicacao": "A conduta baseia-se no item 2.1.5, inciso II, alínea 'a', que reserva à Junta Regular de Saúde (JRS) a competência para casos encaminhados por declínio de competência pelos MPI. Visto que se trata de diagnóstico inicial de doença especificada em lei, o MPI não possui competência para o enquadramento original, devendo observar o item 1.3.1, que limita a atuação do MPI em casos de VDF a situações excepcionais de ausência de JS na localidade. Ademais, a Portaria Normativa nº 3.551/GM-MD/2021 exige que a avaliação pericial para portadores de HIV seja realizada por Juntas de Saúde para a correta classificação clínica."
+    "explicacao": "A conduta baseia-se no item 2.1.5, inciso II, alínea 'a', que reserva à Junta Regular de Saúde (JRS) a competência para casos encaminhados por declínio de competência pelos MPI. Visto que se trata de diagnóstico inicial de doença especificada em lei, o MPI não possui competência para o enquadramento original, devendo observar o item 1.3.1, que limita a atuação do MPI em casos de VDF a situações excepcionais de ausência de JS na localidade. Além disso, a Portaria Normativa nº 3.551/GM-MD/2021 exige que a avaliação pericial para portadores de HIV seja realizada por Juntas de Saúde para a correta classificação clínica."
   },
   {
     "caso": "02",
@@ -27,7 +27,7 @@ const CASOS_DATA = [
       "e": "Um Cabo que está sendo licenciado ex-officio e necessita de Inspeção de Saúde para Deixar o Serviço Ativo da Marinha (SAM)."
     },
     "gabarito": "c",
-    "explicacao": "De acordo com o item 2.1.5, inciso II, alínea 'm', o Exame de Sanidade em Atestado de Origem (AO) é competência expressa da Junta Regular de Saúde (JRS). O MPI tem competência restrita às modalidades listadas no item 2.1.5, inciso I, que incluem Engajamento, Missão no Exterior e Deixar o SAM, mas excluem perícias que envolvam nexo causal laborativo. O Capítulo 13, item 13.1, reforça que a verificação de sequelas e a confirmação do nexo em AO/ISO exigem a ritualística colegiada da JRS para validade administrativa."
+    "explicacao": "De acordo com o item 2.1.5, inciso II, alínea 'm', o Exame de Sanidade em Atestado de Origem (AO) é competência expressa da Junta Regular de Saúde (JRS). O MPI tem competência restrita às modalidades listadas no item 2.1.5, inciso I, que incluem Engajamento, Missão no Exterior e Deixar o SAM, mas excluem perícias que envolvam nexo causal laborativo."
   },
   {
     "caso": "03",
@@ -39,7 +39,7 @@ const CASOS_DATA = [
       "D": "Até 15 dias, não sendo permitida prorrogação por MPI."
     },
     "gabarito": "C",
-    "explicacao": "A fundamentação encontra-se no Capítulo 4, item 4.4, que define a 'Rotina para Perícias Menores', limitando o afastamento total do serviço a um período máximo de 10 dias. Esta modalidade simplificada utiliza o Modelo DS-5, conforme o item 2.2.2, alínea 'e'. Qualquer necessidade de afastamento superior a 10 dias configura Licença para Tratamento de Saúde (LTS), exigindo Inspeção de Saúde formal para VDF, que é competência da JRS conforme o item 2.1.5, inciso II, alínea 'b'."
+    "explicacao": "A fundamentação encontra-se no Capítulo 4, item 4.4, que define a 'Rotina para Perícias Menores', limitando o afastamento total do serviço a um período máximo de 10 dias. Esta modalidade simplificada utiliza o Modelo DS-5. Qualquer necessidade de afastamento superior a 10 dias configura Licença para Tratamento de Saúde (LTS), exigindo Inspeção de Saúde formal para VDF, que é competência da JRS."
   },
   {
     "caso": "04",
@@ -51,7 +51,7 @@ const CASOS_DATA = [
       "D": "Conceder uma dispensa médica de 20 dias para que o militar realize exames e retorne para conclusão do laudo pelo próprio MPI."
     },
     "gabarito": "C",
-    "explicacao": "Conforme o item 2.1.5, inciso I, alínea 'a', o MPI tem competência para controles periódicos 'com ou sem restrições', mas o item 1.3, alínea 'n', determina que diante de anormalidades que exorbitem sua competência de decisão final, o AMP deve declinar para a instância adequada. A obrigatoriedade do declínio para a JRS é ratificada pelo item 2.1.5, inciso II, alínea 'c', que atribui à junta a exclusividade para deliberar sobre o Término de Incapacidade ou Restrições permanentes."
+    "explicacao": "Conforme o item 2.1.5, inciso I, alínea 'a', o MPI tem competência para controles periódicos 'com ou sem restrições', mas o item 1.3, alínea 'n', determina que diante de anormalidades que exorbitem sua competência de decisão final, o AMP deve declinar para a instância adequada."
   },
   {
     "caso": "05",
@@ -63,7 +63,7 @@ const CASOS_DATA = [
       "D": "Incapaz B-2."
     },
     "gabarito": "D",
-    "explicacao": "Para militares do Serviço Militar Inicial (SMI), o Capítulo 11, item 11.3, regula a VDF. O laudo 'Incapaz B-2' é aplicado quando a lesão ou doença é temporária e impede o serviço, mas é passível de recuperação. No SMI não se aplica o laudo B-1 (incapacidade temporária para algumas atividades), pois o conscrito deve possuir higidez plena para o ciclo de formação, conforme os padrões admissionais do Anexo N."
+    "explicacao": "Para militares do Serviço Militar Inicial (SMI), o Capítulo 11, item 11.3, regula a VDF. O laudo 'Incapaz B-2' é aplicado quando a lesão ou doença é temporária e impede o serviço, mas é passível de recuperação."
   },
   {
     "caso": "06",
@@ -75,7 +75,7 @@ const CASOS_DATA = [
       "D": "30 dias."
     },
     "gabarito": "B",
-    "explicacao": "A regra para militares do Serviço Militar Voluntário (SMV) está detalhada no Capítulo 11, item 11.8. O licenciamento ex-officio ocorre quando o militar temporário atinge 90 dias de afastamento total (LTS) por motivo de doença não relacionada ao serviço. Este limite é uma salvaguarda administrativa que diferencia o regime do militar temporário do de carreira, cuja validade de inspeções segue o Capítulo 2, item 2.1.2, alínea 'g'."
+    "explicacao": "A regra para militares do Serviço Militar Voluntário (SMV) está detalhada no Capítulo 11, item 11.8. O licenciamento ex-officio ocorre quando o militar temporário atinge 90 dias de afastamento total (LTS) por motivo de doença não relacionada ao serviço."
   },
   {
     "caso": "07",
@@ -87,7 +87,7 @@ const CASOS_DATA = [
       "D": "Encaminhar obrigatoriamente para a Junta Regular de Saúde para homologação do estado gestacional."
     },
     "gabarito": "A",
-    "explicacao": "O item 2.2.2, alínea 'j', introduz o 'Anexo K - Perícia Menor para Gestantes Saudáveis' como o instrumento normativo simplificado. O procedimento é detalhado no Capítulo 4, item 4.4, que dispensa a abertura de TIS formal no SINAIS para gestantes sem patologias. Essa medida garante a aplicação imediata de restrições protetivas (como proibição de embarque), sendo um ato administrativo célere conduzido pelo MPI, conforme o item 1.3.1."
+    "explicacao": "O item 2.2.2, alínea 'j', introduz o 'Anexo K - Perícia Menor para Gestantes Saudáveis' como o instrumento normativo simplificado. O procedimento é detalhado no Capítulo 4, item 4.4, que dispensa a abertura de TIS formal no SINAIS para gestantes sem patologias."
   },
   {
     "caso": "08",
@@ -99,7 +99,7 @@ const CASOS_DATA = [
       "D": "Declinar a competência imediatamente para a Junta Superior Distrital (JSD), visto que MPI não possui atribuição para estas modalidades."
     },
     "gabarito": "B",
-    "explicacao": "A base legal é o item 1.3.1, parágrafo único, que permite ao MPI realizar excepcionalmente IS para VDF e Benefícios em localidades sem JS, mediante encaminhamento ex officio para a JRS para apreciação documental. Este trâmite é reforçado no item 2.1.2, alínea 'h', garantindo que o exame físico seja feito localmente, mas a decisão final seja ratificada por órgão colegiado."
+    "explicacao": "A base legal é o item 1.3.1, parágrafo único, que permite ao MPI realizar excepcionalmente IS para VDF e Benefícios em localidades sem JS, mediante encaminhamento ex officio para a JRS para apreciação documental."
   },
   {
     "caso": "09",
@@ -111,7 +111,7 @@ const CASOS_DATA = [
       "D": "A impressão do TIS em papel timbrado com assinatura manual e carimbo, sendo o registro digital apenas opcional"
     },
     "gabarito": "A",
-    "explicacao": "A obrigatoriedade da assinatura digital é estabelecida no item 2.3.1, alínea 'l', que especifica o uso de Token pessoal e intransferível. Além disso, o item 2.3.3, alínea 'h', reforça que as IS só são consideradas concluídas quando numeradas e assinadas digitalmente no sistema SINAIS, servindo este registro como única comprovação válida do ato médico-pericial para fins de atos administrativos."
+    "explicacao": "A obrigatoriedade da assinatura digital é estabelecida no item 2.3.1, alínea 'l', que especifica o uso de Token pessoal e intransferível. Além disso, o item 2.3.3, alínea 'h', reforça que as IS só são consideradas concluídas quando numeradas e assinadas digitalmente no sistema SINAIS."
   },
   {
     "caso": "10",
@@ -123,11 +123,11 @@ const CASOS_DATA = [
       "D": "O MPI deve declinar a competência obrigatoriamente para a JRS por tratar-se de militar gestante."
     },
     "gabarito": "B",
-    "explicacao": "A conduta segue o Capítulo 11, item 11.9, 'Rotina para Deixar o SMV'. Como a gestação sem complicações não é causa de inaptidão nos Padrões Psicofísicos Pós-admissionais (Anexo O), o laudo deve ser 'Apto'. Pericialmente, a oficial mantém capacidade laboral para desligamento, resguardados direitos à estabilidade temporária se aplicáveis, conforme a Lei nº 9.029/1995 citada nas normas."
+    "explicacao": "A conduta segue o Capítulo 11, item 11.9, 'Rotina para Deixar o SMV'. Como a gestação sem complicações não é causa de inaptidão nos Padrões Psicofísicos Pós-admissionais (Anexo O), o laudo deve ser 'Apto'."
   },
   {
     "caso": "11",
-    "enunciado": "Um militar da ativa, sabidamente portador assintomático do vírus HIV, é apresentado para sua inspeção de saúde de rotina. De acordo com as normas de controle periódico, qual a periodicidade obrigatória desta IS e qual o Agente Médico- Pericial (AMP) competente para realizá-la?",
+    "enunciado": "Um militar da ativa, sabidamente portador assintomático do vírus HIV, é apresentado para sua inspeção de saúde de rotina. De acordo com as normas de controle periódico, qual a periodicidade obrigatória desta IS e qual o Agente Médico-Pericial (AMP) competente para realizá-la?",
     "alternativas": {
       "A": "Trienal, realizada por MPI.",
       "B": "Anual, realizada por MPI.",
@@ -135,11 +135,11 @@ const CASOS_DATA = [
       "D": "Anual, realizada obrigatoriamente por JRS."
     },
     "gabarito": "B",
-    "explicacao": "A periodicidade anual para portadores assintomáticos de HIV fundamenta-se na Portaria Normativa nº 3.551/GM-MD/2021 (Anexo V). O item 2.1.5, inciso I, alínea 'a', atribui ao MPI a competência para o 'Controle Periódico', mesmo com restrições preexistentes. A JRS intervém apenas em missões no exterior ou agravamento do quadro (mudança de categoria clínica), conforme o item 2.1.5, inciso II, alínea 'd'."
+    "explicacao": "A periodicidade anual para portadores assintomáticos de HIV fundamenta-se na Portaria Normativa nº 3.551/GM-MD/2021 (Anexo V). O item 2.1.5, inciso I, alínea 'a', atribui ao MPI a competência para o 'Controle Periódico', mesmo com restrições preexistentes."
   },
   {
     "caso": "12",
-    "enunciado": "Um militar da ativa é apresentado para Inspeção de Saúde de Controle Trienal, porém o Médico Perito Isolado (MPI) observa que o inspecionado encontra-se em gozo de Licença para Tratamento de Saúde (LTS). De acordo com as normas para inspeções pós-admissionais, qual a conduta correta a ser adotada pelo MPI?",
+    "enunciado": "Um militar da ativa é apresentado para Inspeção de Saúde de Controle Trienal, porém o MPI observa que o inspecionado encontra-se em gozo de Licença para Tratamento de Saúde (LTS). Qual a conduta correta a ser adotada pelo MPI?",
     "alternativas": {
       "A": "Realizar a inspeção de controle e concluir pela incapacidade temporária no mesmo Termo de Inspeção de Saúde (TIS).",
       "B": "Orientar a OM que não cabe apresentação para controle periódico de militar em LTS, devendo aguardar a aptidão para nova apresentação.",
@@ -147,11 +147,11 @@ const CASOS_DATA = [
       "D": "Concluir a inspeção de controle como 'Inapto para o SAM' e solicitar a abertura de Verificação de Deficiência Funcional (VDF)."
     },
     "gabarito": "B",
-    "explicacao": "O item 2.1.2, alínea 'f', esclarece que o laudo de aptidão por término de incapacidade não exclui outras modalidades de IS. No entanto, o Capítulo 4, item 4.1 (Controle Periódico), pressupõe higidez funcional. Estando o militar em LTS (Modelo DS-1 exarado por JS), a inspeção de controle é tecnicamente impossível de ser concluída como 'Apto' até que a causa da incapacidade seja sanada conforme o Capítulo 6."
+    "explicacao": "O item 2.1.2, alínea 'f', esclarece que estando o militar em LTS, a inspeção de controle é tecnicamente impossível de ser concluída como 'Apto' até que a causa da incapacidade seja sanada."
   },
   {
     "caso": "13",
-    "enunciado": "Durante uma Inspeção de Saúde realizada por um Médico Perito Isolado (MPI), o inspecionado solicita a entrada de um acompanhante na sala de exames. De acordo com a DGPM-406, qual é a norma sobre a presença de acompanhantes e a autonomia do Agente Médico-Pericial (AMP)?",
+    "enunciado": "Durante uma Inspeção de Saúde realizada por um Médico Perito Isolado (MPI), o inspecionado solicita a entrada de um acompanhante na sala de exames. Qual é a norma sobre a presença de acompanhantes e a autonomia do Agente Médico-Pericial (AMP)?",
     "alternativas": {
       "A": "A presença de acompanhante é um direito absoluto do periciado em qualquer modalidade de inspeção de saúde na Marinha.",
       "B": "Fica a critério do AMP a presença de acompanhante, desde que este não interfira, nem seja motivo de constrangimento ou pressão.",
@@ -159,7 +159,7 @@ const CASOS_DATA = [
       "D": "É expressamente proibida a entrada de civis ou militares como acompanhantes em atos médicos periciais devido ao sigilo militar."
     },
     "gabarito": "B",
-    "explicacao": "A norma está explícita no item 1.3, alínea 'o', que garante ao AMP autonomia: 'Fica a critério do AMP a presença de acompanhante durante a perícia'. Essa regra visa proteger o ato pericial de interferências ou pressões, mantendo o sigilo profissional estabelecido pelo Código de Ética Médica e resoluções dos conselhos de classe citadas no item 2.3.1, alínea 'b'."
+    "explicacao": "A norma está explícita no item 1.3, alínea 'o', que garante ao AMP autonomia: 'Fica a critério do AMP a presença de acompanhante durante a perícia'."
   },
   {
     "caso": "14",
@@ -171,23 +171,23 @@ const CASOS_DATA = [
       "D": "Declinar a competência obrigatoriamente, enviando o militar para a sede da JSD da jurisdição."
     },
     "gabarito": "B",
-    "explicacao": "O procedimento para localidades desprovidas de JS é definido no item 1.3.1, parágrafo único, exigindo encaminhamento ex officio do TIS para a JRS da jurisdição para 'apreciação documental'. Este fluxo é reiterado no item 2.1.5, inciso II, alínea 'n', garantindo que perícias de VDF feitas por MPI tenham validação colegiada para produzir efeitos administrativos conforme o Anexo M."
+    "explicacao": "O procedimento para localidades desprovidas de JS é definido no item 1.3.1, parágrafo único, exigindo encaminhamento ex officio do TIS para a JRS da jurisdição para 'apreciação documental'."
   },
   {
     "caso": "15",
     "enunciado": "Um militar recém-formado apresenta-se ao MPI para verificação de sua situação médico-pericial logo após a conclusão do curso de formação. Qual o prazo de validade das Inspeções de Saúde (IS) de ingresso no SAM e SMV para efeito de controle periódico?",
     "alternativas": {
-      "A": "Um ano, devendo ser renovada obrigatoriamente ao final do estágio probatório.",
+      "A": "Um ano, devendo ser renovada obrigatoriamente ao final do estágio procatório.",
       "B": "Três anos, a partir da data do documento que publicou a aptidão na seleção psicofísica.",
       "C": "Cinco anos, para coincidir com o primeiro ciclo de avaliação de desempenho.",
       "D": "Seis meses, sendo necessária nova IS para todas as renovações de compromisso anual."
     },
     "gabarito": "B",
-    "explicacao": "A validade é estabelecida no Capítulo 2, item 2.1.2, alínea 'g', que define o prazo de três anos para as IS de ingresso no SAM e SMV. A contagem inicia na data da publicação do resultado de aptidão na seleção psicofísica. Esta regra padroniza o ciclo de controle trienal, dispensando novas inspeções para renovações de compromisso anual durante esse período."
+    "explicacao": "A validade é estabelecida no Capítulo 2, item 2.1.2, alínea 'g', que define o prazo de três anos para as IS de ingresso no SAM e SMV."
   },
   {
     "caso": "16",
-    "enunciado": "Um militar de carreira realizou a Inspeção de Saúde de Controle Trienal com um Médico Perito Isolado (MPI) e a perícia foi numerada no SINAIS. De acordo com a DGPM-406, qual o prazo máximo para a expedição da mensagem de conclusão aos destinatários?",
+    "enunciado": "Um militar de carreira realizou a Inspeção de Saúde de Controle Trienal com um MPI e a perícia foi numerada no SINAIS. Qual o prazo máximo para a expedição da mensagem de conclusão aos destinatários?",
     "alternativas": {
       "A": "Cinco dias úteis após a data de conclusão da IS.",
       "B": "Sete dias úteis após a data de conclusão da IS.",
@@ -195,7 +195,7 @@ const CASOS_DATA = [
       "D": "Vinte dias corridos após a data de conclusão da IS."
     },
     "gabarito": "C",
-    "explicacao": "Conforme o item 2.3.2 das Normas para Encaminhamento, a mensagem informando o resultado da IS deve ser expedida aos destinatários no máximo em dez dias úteis após a data de conclusão da IS. Esta mensagem deve conter dados completos do inspecionado, finalidade, data de conclusão, laudo (sem diagnóstico) e o número do TIS."
+    "explicacao": "Conforme o item 2.3.2 das Normas para Encaminhamento, a mensagem informando o resultado da IS deve ser expedida aos destinatários no máximo em dez dias úteis após a data de conclusão da IS."
   },
   {
     "caso": "17",
@@ -207,7 +207,7 @@ const CASOS_DATA = [
       "D": "Exames civis só têm validade se forem acompanhados de firma reconhecida do médico responsável pelo laboratório."
     },
     "gabarito": "C",
-    "explicacao": "O item 3.1.1 estabelece que a JS/AMP apreciará os resultados de exames complementares apresentados, mas não ficará restrita a eles. Com base na autonomia da função pericial (item 1.3, alínea 'o'), o perito pode valer-se dos subsídios técnicos que julgar necessários e determinar a repetição ou novos exames para melhor avaliar a aptidão psicofísica."
+    "explicacao": "O item 3.1.1 estabelece que a JS/AMP apreciará os resultados de exames complementares apresentados, mas não ficará restrita a eles. Com base na autonomia da função pericial, o perito pode determinar a repetição ou novos exames."
   },
   {
     "caso": "18",
@@ -219,7 +219,7 @@ const CASOS_DATA = [
       "D": "O diagnóstico deve ser escrito em vermelho e centralizado no cabeçalho de todas as mensagens de conclusão de IS."
     },
     "gabarito": "B",
-    "explicacao": "O item 2.3.1 define que o TIS possui dois modelos: o DS-1 (completo), destinado à autoridade médica e arquivos, e o DS-1A (simplificado), para autoridade administrativa. O DS-1A contém apenas o sumário da IS e, conforme o item 2.3.2, as mensagens de conclusão devem conter o laudo sem menção ao diagnóstico, preservando o sigilo profissional conforme a Constituição e a Lei de Acesso à Informação."
+    "explicacao": "O item 2.3.1 define que o TIS possui dois modelos: o DS-1 (completo), destinado à autoridade médica e arquivos, e o DS-1A (simplificado), para autoridade administrativa. O DS-1A contém apenas o sumário da IS e as mensagens de conclusão devem conter o laudo sem menção ao diagnóstico."
   },
   {
     "caso": "19",
@@ -231,7 +231,7 @@ const CASOS_DATA = [
       "D": "O AMP deve solicitar à Polícia Naval a condução coercitiva do militar para a realização da perícia."
     },
     "gabarito": "B",
-    "explicacao": "De acordo com o item 2.1.2, alíneas 'b' e 'c', os militares devem comparecer ou agendar a IS em até sete dias úteis. A inobservância desse prazo ou a ausência na data agendada sem comunicação antecipada demanda o arquivamento da IS no SINAIS pelo AMP, após comunicação da ausência por mensagem. Caberá então à OM do inspecionado reapresentá-lo."
+    "explicacao": "De acordo com o item 2.1.2, alíneas 'b' e 'c', os militares devem comparecer ou agendar a IS em até sete dias úteis. A inobservância desse prazo ou a ausência na data agendada sem comunicação antecipada demanda o arquivamento da IS no SINAIS pelo AMP, após comunicação da ausência por mensagem."
   },
   {
     "caso": "20",
@@ -243,7 +243,7 @@ const CASOS_DATA = [
       "D": "O médico mais antigo da OM deve ser convocado extraordinariamente apenas para proferir o voto de desempate."
     },
     "gabarito": "C",
-    "explicacao": "Conforme o item 1.3, alínea 'm', se houver empate de votos (em situações de ausência ou impedimento), a JS deverá declinar competência para outra JS de mesma instância ou, na impossibilidade, para instância imediatamente superior. O processo deve obedecer preferencialmente ao critério geográfico e requer entendimento prévio entre os titulares das OM envolvidas."
+    "explicacao": "Conforme o item 1.3, alínea 'm', se houver empate de votos, a JS deverá declinar competência para outra JS de mesma instância ou, na impossibilidade, para instância imediatamente superior."
   },
   {
     "caso": "21",
@@ -255,7 +255,7 @@ const CASOS_DATA = [
       "D": "Apenas o Comandante da Marinha por meio de Portaria específica."
     },
     "gabarito": "C",
-    "explicacao": "As IS Extraordinárias são aquelas determinadas por autoridade judiciária ou de interesse da Administração Naval não previstas como rotina. Segundo o item 2.1.4, alínea 'b', a competência para requisitá-las é do Comandante da Marinha (CM), Diretor-Geral do Pessoal (DGPM), Diretor de Saúde (DSM), Titulares de SDP em suas áreas e Autoridade Judiciária."
+    "explicacao": "Segundo o item 2.1.4, alínea 'b', a competência para requisitar IS Extraordinárias é do Comandante da Marinha (CM), Diretor-Geral do Pessoal (DGPM), Diretor de Saúde (DSM), Titulares de SDP em suas áreas e Autoridade Judiciária."
   },
   {
     "caso": "22",
@@ -267,7 +267,7 @@ const CASOS_DATA = [
       "D": "O recurso é automático e a JRS deve reavaliar o caso em até 48 horas após a primeira conclusão."
     },
     "gabarito": "B",
-    "explicacao": "O direito ao recurso é garantido pelo item 2.1.2, alínea 'd', permitindo que o inspecionado requeira IS para o AMP de instância imediatamente superior. Por ocasião da conclusão da IS, o militar deve ser informado de seus direitos através do formulário 'Conhecimento de Recurso' (Anexo T), conforme o item 2.3.1, alínea 'h'. Os prazos e trâmites específicos seguem o Capítulo 12 das normas."
+    "explicacao": "O direito ao recurso é garantido pelo item 2.1.2, alínea 'd', permitindo que o inspecionado requeira IS para o AMP de instância imediatamente superior. O militar deve ser informado de seus direitos através do formulário 'Conhecimento de Recurso' (Anexo T)."
   },
   {
     "caso": "23",
@@ -279,7 +279,7 @@ const CASOS_DATA = [
       "D": "15 dias para Justiça e Disciplina; 30 dias para ESAM."
     },
     "gabarito": "A",
-    "explicacao": "Conforme o item 2.3.3, alínea 'f', a OM deve observar o prazo de validade de trinta dias para IS de Justiça e Disciplina e de 180 dias para IS de ESAM. Estes prazos são definidos para garantir a atualidade do estado psicofísico do militar no momento do ato administrativo, em conformidade com o Estatuto dos Militares."
+    "explicacao": "Conforme o item 2.3.3, alínea 'f', a OM deve observar o prazo de validade de trinta dias para IS de Justiça e Disciplina e de 180 dias para IS de ESAM."
   },
   {
     "caso": "24",
@@ -291,7 +291,7 @@ const CASOS_DATA = [
       "D": "Papeleta de Atendimento Médico (PAM)."
     },
     "gabarito": "C",
-    "explicacao": "O item 2.1.2, alínea 'a', especifica que enquanto os militares da ativa são apresentados preferencialmente pelo SEIS, os Servidores Civis devem ser, obrigatoriamente, apresentados por ofício. O Capítulo 10 detalha as rotinas específicas para SC, incluindo ingresso, controle periódico e VDF, mantendo a necessidade da formalização documental por ofício."
+    "explicacao": "O item 2.1.2, alínea 'a', especifica que enquanto os militares da ativa são apresentados preferencialmente pelo SEIS, os Servidores Civis devem ser, obrigatoriamente, apresentados por ofício."
   }
 ];
 
@@ -302,17 +302,13 @@ interface Props {
 export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  
   const [userAnswers, setUserAnswers] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [viewMode, setViewMode] = useState<'quiz' | 'results'>('quiz');
-  
-  // Documentação: Estado para exibir o botão de Scroll to Top
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   const currentCase = CASOS_DATA[currentIndex];
   const totalCases = CASOS_DATA.length;
-  
   const progressPercentage = ((currentIndex + 1) / totalCases) * 100;
 
   const correctCount = userAnswers.reduce((acc, ans, idx) => {
@@ -323,25 +319,17 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   const gradeNum = Number(gradeStr);
   const displayGrade = gradeStr.replace('.', ',');
 
-  // Documentação: Interceta a rolagem da tag <main> para mostrar o FAB de Scroll to Top
   useEffect(() => {
     const scrollContainer = document.querySelector('main');
     if (!scrollContainer) return;
-
-    const handleScroll = () => {
-      setShowScrollTop(scrollContainer.scrollTop > 250);
-    };
-
+    const handleScroll = () => { setShowScrollTop(scrollContainer.scrollTop > 250); };
     scrollContainer.addEventListener('scroll', handleScroll);
     return () => scrollContainer.removeEventListener('scroll', handleScroll);
   }, [viewMode]);
 
-  // Documentação: Função de scroll para o topo do <main>
   const scrollToTop = () => {
     const scrollContainer = document.querySelector('main');
-    if (scrollContainer) {
-      scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    if (scrollContainer) { scrollContainer.scrollTo({ top: 0, behavior: 'smooth' }); }
   };
 
   const handleSelect = (key: string) => {
@@ -351,11 +339,9 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
 
   const handleNext = () => {
     if (selectedAnswer === null) return;
-
     const newAnswers = [...userAnswers];
     newAnswers[currentIndex] = selectedAnswer;
     setUserAnswers(newAnswers);
-
     if (currentIndex < totalCases - 1) {
       setCurrentIndex(prev => prev + 1);
       setSelectedAnswer(null);
@@ -375,88 +361,20 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   const handleDownloadPDF = () => {
     const printWindow = window.open('', '', 'height=800,width=800');
     if (!printWindow) return;
-
-    const htmlContent = `
-      <html>
-        <head>
-          <title>Casos Periciais - Resultados</title>
-          <style>
-            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #333; line-height: 1.6; }
-            h1 { color: #050F41; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 30px; }
-            .summary { text-align: center; font-size: 18px; margin-bottom: 40px; background: #f8fafc; padding: 15px; border-radius: 8px; }
-            .grade { font-size: 24px; color: #079551; font-weight: bold; }
-            .caso { margin-bottom: 30px; page-break-inside: avoid; }
-            .caso-title { color: #050F41; font-size: 16px; margin-bottom: 10px; }
-            .enunciado { font-weight: 600; margin-bottom: 15px; color: #1e293b; }
-            .alternativa { margin-bottom: 8px; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 14px; }
-            .correta { background-color: #dcfce7; border-color: #22c55e; font-weight: bold; color: #14532d; }
-            .errada { background-color: #fee2e2; border-color: #ef4444; font-weight: bold; color: #7f1d1d; }
-            .explicacao { margin-top: 15px; padding: 15px; background-color: #fefce8; border-left: 4px solid #eab308; font-size: 14px; }
-          </style>
-        </head>
-        <body>
-          <h1>Casos Periciais - Desempenho</h1>
-          <div class="summary">
-            Nota Final: <span class="grade">${displayGrade}</span><br/>
-            Acertos: <strong>${correctCount}</strong> de ${totalCases} questões
-          </div>
-          ${CASOS_DATA.map((caso, index) => {
-            const uAns = userAnswers[index];
-            return `
-              <div class="caso">
-                <div class="caso-title"><strong>Caso ${caso.caso}</strong></div>
-                <p class="enunciado">${caso.enunciado}</p>
-                <div>
-                  ${Object.entries(caso.alternativas).map(([key, text]) => {
-                    const isGab = key.toUpperCase() === caso.gabarito.toUpperCase();
-                    const isUser = uAns?.toUpperCase() === key.toUpperCase();
-                    let className = "alternativa";
-                    if (isGab) className += " correta";
-                    else if (isUser) className += " errada";
-
-                    return `<div class="${className}"><strong>${key.toUpperCase()}</strong>: ${text}</div>`;
-                  }).join('')}
-                </div>
-                <div class="explicacao">
-                  <strong>Análise Pericial:</strong><br/>
-                  ${caso.explicacao}
-                </div>
-              </div>
-            `;
-          }).join('')}
-          <script>
-            window.onload = function() { 
-              window.print();
-              window.onafterprint = function() { window.close(); }
-            }
-          </script>
-        </body>
-      </html>
-    `;
-
+    const htmlContent = `<html><head><title>Casos Periciais - Resultados</title><style>body{font-family:Arial,sans-serif;padding:30px;color:#333;line-height:1.6;}h1{color:#050F41;text-align:center;}div.caso{margin-bottom:30px;page-break-inside:avoid;}</style></head><body><h1>Casos Periciais - Desempenho</h1><div class="summary">Nota: ${displayGrade} | Acertos: ${correctCount} de ${totalCases}</div>${CASOS_DATA.map((caso, index) => { const uAns = userAnswers[index]; return `<div class="caso"><h3>Caso ${caso.caso}</h3><p>${caso.enunciado}</p><p><strong>Resposta correta:</strong> ${caso.gabarito.toUpperCase()}</p><p><em>${caso.explicacao}</em></p></div>`; }).join('')}<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();}}</script></body></html>`;
     printWindow.document.write(htmlContent);
     printWindow.document.close();
   };
 
   const getOptionStyle = (key: string, savedAnswer: string | null = selectedAnswer) => {
-    if (savedAnswer === null) {
-      return "bg-white border-gray-200 hover:border-[#050F41] hover:shadow-md cursor-pointer font-normal text-gray-700";
-    }
-
+    if (savedAnswer === null) return "bg-white border-gray-200 hover:border-[#050F41] hover:shadow-md cursor-pointer font-normal text-gray-700";
     const isCorrect = key.toUpperCase() === currentCase.gabarito.toUpperCase();
     const isSelected = key.toUpperCase() === savedAnswer.toUpperCase();
-
-    if (isCorrect) {
-      return "bg-green-100 border-green-500 text-green-900 font-bold shadow-sm";
-    }
-    if (isSelected && !isCorrect) {
-      return "bg-red-50 border-red-400 text-red-900 font-bold shadow-sm";
-    }
-
+    if (isCorrect) return "bg-green-100 border-green-500 text-green-900 font-bold shadow-sm";
+    if (isSelected && !isCorrect) return "bg-red-50 border-red-400 text-red-900 font-bold shadow-sm";
     return "bg-gray-50 border-gray-100 opacity-60 cursor-default font-normal text-gray-500";
   };
 
-  // === VISUALIZAÇÃO DE RESULTADOS COMPLETOS ===
   if (viewMode === 'results') {
     return (
       <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
@@ -471,15 +389,9 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
         <div className="p-4 space-y-6 max-w-3xl mx-auto w-full flex-1 pb-32">
           <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm text-center flex flex-col items-center">
             <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Nota Final</h2>
-            <div className={`text-6xl font-black ${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>
-              {displayGrade}
-            </div>
+            <div className={`text-6xl font-black ${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>{displayGrade}</div>
             <p className="text-gray-500 mt-3 font-medium font-body">Você acertou <strong className="text-gray-800">{correctCount}</strong> de {totalCases} questões.</p>
-            
-            <button 
-              onClick={handleDownloadPDF} 
-              className="mt-6 flex items-center gap-2 bg-[#050F41] text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md hover:scale-105 transition-transform"
-            >
+            <button onClick={handleDownloadPDF} className="mt-6 flex items-center gap-2 bg-[#050F41] text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md hover:scale-105 transition-transform">
               <Download size={18} />
               Baixar PDF
             </button>
@@ -488,7 +400,6 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
           {CASOS_DATA.map((caso, index) => {
             const uAns = userAnswers[index];
             const isUserCorrect = uAns?.toUpperCase() === caso.gabarito.toUpperCase();
-
             return (
               <div key={index} className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
@@ -498,49 +409,33 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
                     : <div className="flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-md text-xs font-bold"><XCircle size={14} /> Errou</div>
                   }
                 </div>
-                <p className="text-[#050F41] font-heading text-[15px] leading-relaxed font-semibold mb-4">
-                  {caso.enunciado}
-                </p>
-                
+                <p className="text-[#050F41] font-heading text-[15px] leading-relaxed font-semibold mb-4">{caso.enunciado}</p>
                 <div className="space-y-2">
                   {Object.entries(caso.alternativas).map(([key, text]) => {
                     const isGab = key.toUpperCase() === caso.gabarito.toUpperCase();
                     const isUser = uAns?.toUpperCase() === key.toUpperCase();
-                    
                     let style = "bg-gray-50 border-gray-100 text-gray-500 opacity-60";
                     if (isGab) style = "bg-green-100 border-green-500 text-green-900 font-bold shadow-sm";
                     else if (isUser && !isGab) style = "bg-red-50 border-red-400 text-red-900 font-bold shadow-sm";
-
                     return (
                       <div key={key} className={`w-full text-left p-3 rounded-xl border text-sm font-body leading-relaxed flex items-start gap-3 ${style}`}>
-                        <div className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5 ${isGab ? 'bg-green-500 text-white border-green-500' : isUser ? 'bg-red-500 text-white border-red-500' : 'border-gray-200'}`}>
-                          {key.toUpperCase()}
-                        </div>
+                        <div className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5 ${isGab ? 'bg-green-500 text-white border-green-500' : isUser ? 'bg-red-500 text-white border-red-500' : 'border-gray-200'}`}>{key.toUpperCase()}</div>
                         <span className="flex-1 mt-0.5">{text}</span>
                       </div>
-                    )
+                    );
                   })}
                 </div>
-
                 <div className="bg-yellow-50/80 border border-yellow-200 p-4 rounded-xl mt-5 relative overflow-hidden">
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
                   <h4 className="text-xs font-bold font-heading text-yellow-800 mb-1 uppercase">Análise Pericial</h4>
-                  <p className="text-sm text-gray-800 font-body leading-relaxed text-justify">
-                    {caso.explicacao}
-                  </p>
+                  <p className="text-sm text-gray-800 font-body leading-relaxed text-justify">{caso.explicacao}</p>
                 </div>
               </div>
             );
           })}
         </div>
-
-        {/* Documentação: FAB de Scroll to Top exclusivo para a visualização de Resultados */}
         {showScrollTop && (
-          <button 
-            onClick={scrollToTop}
-            className="fixed bottom-24 right-6 bg-[#050F41] text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center border border-slate-700 animate-fade-in"
-            title="Voltar ao topo"
-          >
+          <button onClick={scrollToTop} className="fixed bottom-24 right-6 bg-[#050F41] text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center border border-slate-700 animate-fade-in" title="Voltar ao topo">
             <ArrowUp size={20} />
           </button>
         )}
@@ -548,7 +443,6 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
     );
   }
 
-  // === VISUALIZAÇÃO DO QUIZ (PADRÃO) ===
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
       <Header 
@@ -561,23 +455,16 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
       />
 
       <div className="w-full h-1.5 bg-gray-200">
-        <div 
-          className="h-full bg-[#079551] transition-all duration-500 ease-out"
-          style={{ width: `${progressPercentage}%` }}
-        />
+        <div className="h-full bg-[#079551] transition-all duration-500 ease-out" style={{ width: `${progressPercentage}%` }} />
       </div>
 
       <div className="p-4 space-y-6 max-w-3xl mx-auto w-full flex-1 pb-32">
         <div className="flex items-center justify-between mt-2">
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-            Caso {currentIndex + 1} de {totalCases}
-          </span>
+          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Caso {currentIndex + 1} de {totalCases}</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm">
-          <p className="text-[#050F41] font-heading text-[16px] leading-relaxed font-semibold">
-            {currentCase.enunciado}
-          </p>
+          <p className="text-[#050F41] font-heading text-[16px] leading-relaxed font-semibold">{currentCase.enunciado}</p>
         </div>
 
         <div className="space-y-3">
@@ -592,9 +479,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
                 selectedAnswer === null ? 'border-gray-300 text-gray-500 bg-gray-50' :
                 key.toUpperCase() === currentCase.gabarito.toUpperCase() ? 'border-green-500 bg-green-500 text-white' :
                 (key.toUpperCase() === selectedAnswer.toUpperCase() ? 'border-red-500 bg-red-500 text-white' : 'border-gray-200 text-gray-300')
-              }`}>
-                {key.toUpperCase()}
-              </div>
+              }`}>{key.toUpperCase()}</div>
               <span className="flex-1 mt-0.5">{text}</span>
             </button>
           ))}
@@ -607,9 +492,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
               <span className="material-symbols-outlined text-[18px] text-yellow-600">lightbulb</span>
               Análise Pericial
             </h3>
-            <p className="text-sm text-gray-800 font-body leading-relaxed text-justify">
-              {currentCase.explicacao}
-            </p>
+            <p className="text-sm text-gray-800 font-body leading-relaxed text-justify">{currentCase.explicacao}</p>
           </div>
         )}
       </div>
@@ -624,20 +507,15 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
         </button>
       )}
 
-      {/* MODAL DE RESULTADOS FINAIS */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050F41]/70 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white rounded-[32px] shadow-2xl p-8 w-full max-w-sm flex flex-col items-center text-center relative overflow-hidden">
-            
             <div className={`absolute -top-16 -right-16 w-32 h-32 rounded-full opacity-20 blur-2xl ${gradeNum >= 7 ? 'bg-green-500' : 'bg-red-500'}`}></div>
-
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-[#050F41] shadow-inner">
               <span className="material-symbols-outlined text-3xl">workspace_premium</span>
             </div>
-            
             <h2 className="text-2xl font-heading font-black text-[#050F41] mb-1">Desempenho</h2>
             <p className="text-gray-500 font-medium font-body text-sm mb-6">Você completou todos os casos!</p>
-            
             <div className="relative mb-8">
               <svg className="w-32 h-32 transform -rotate-90">
                 <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
@@ -647,31 +525,19 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
                 <span className={`text-5xl font-black ${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>{displayGrade}</span>
               </div>
             </div>
-
-            <p className="text-gray-600 font-body mb-8">
-              Você acertou <strong>{correctCount}</strong> de <strong>{totalCases}</strong> questões.
-            </p>
-
+            <p className="text-gray-600 font-body mb-8">Você acertou <strong>{correctCount}</strong> de <strong>{totalCases}</strong> questões.</p>
             <div className="flex items-center justify-center gap-6 w-full px-4">
               <button onClick={handleRestart} className="group flex flex-col items-center gap-2 focus:outline-none">
-                <div className="w-12 h-12 rounded-2xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-gray-200 group-hover:text-gray-800 transition-all shadow-sm">
-                  <X size={22} />
-                </div>
-                <span className="text-[10px] font-bold uppercase text-gray-500 group-hover:text-gray-800 transition-colors">Fechar</span>
+                <div className="w-12 h-12 rounded-2xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-gray-200 transition-all shadow-sm"><X size={22} /></div>
+                <span className="text-[10px] font-bold uppercase text-gray-500">Fechar</span>
               </button>
-              
               <button onClick={() => { setShowModal(false); setViewMode('results'); }} className="group flex flex-col items-center gap-2 focus:outline-none">
-                <div className="w-14 h-14 rounded-2xl bg-[#050F41] text-white flex items-center justify-center group-hover:scale-105 group-hover:shadow-lg transition-all shadow-md transform -translate-y-2">
-                  <Eye size={24} />
-                </div>
-                <span className="text-[10px] font-bold uppercase text-[#050F41] transition-colors">Ver</span>
+                <div className="w-14 h-14 rounded-2xl bg-[#050F41] text-white flex items-center justify-center group-hover:scale-105 transition-all shadow-md transform -translate-y-2"><Eye size={24} /></div>
+                <span className="text-[10px] font-bold uppercase text-[#050F41]">Ver</span>
               </button>
-
               <button onClick={() => { handleDownloadPDF(); setShowModal(false); setViewMode('results'); }} className="group flex flex-col items-center gap-2 focus:outline-none">
-                <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-green-100 group-hover:text-green-800 transition-all shadow-sm">
-                  <Download size={22} />
-                </div>
-                <span className="text-[10px] font-bold uppercase text-green-600 group-hover:text-green-800 transition-colors">Baixar</span>
+                <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-green-100 transition-all shadow-sm"><Download size={22} /></div>
+                <span className="text-[10px] font-bold uppercase text-green-600">Baixar</span>
               </button>
             </div>
           </div>

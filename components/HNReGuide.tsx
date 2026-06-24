@@ -22,7 +22,7 @@ const NORMAS_HNRE: NormaHNRe[] = [
     id: 'hnre-2', 
     headline: 'Ordem Interna JRS/HNRe', 
     subtitle: 'Ordem Interna nº 02-05D',
-    route: 'ordem-interna-jrs' // Rota configurada para o segundo item
+    route: 'ordem-interna-jrs'
   }
 ];
 

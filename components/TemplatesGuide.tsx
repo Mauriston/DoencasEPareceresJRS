@@ -13,50 +13,43 @@ const DEFAULT_TEMPLATES: Template[] = [
     Template_Documento: "DGPM-406 Anexo E",
     Descrição: "Exame de Sanidade",
     ID: "1WDthrv8_6sQjxZytEfWr2eYJ34o3LLmxWNroT55F0jc",
-    Link_Copia:
-      "https://docs.google.com/document/d/1WDthrv8_6sQjxZytEfWr2eYJ34o3LLmxWNroT55F0jc/copy",
+    Link_Copia: "https://docs.google.com/document/d/1WDthrv8_6sQjxZytEfWr2eYJ34o3LLmxWNroT55F0jc/copy",
   },
   {
     Template_Documento: "DGPM-406 Anexo E Campo III",
     Descrição: "Atestado de Origem Campo III Registro Médico",
     ID: "1AMJCB_XJ2jpEvgcP218OOWORdKls3lEDGP6qPt05-V0",
-    Link_Copia:
-      "https://docs.google.com/document/d/1AMJCB_XJ2jpEvgcP218OOWORdKls3lEDGP6qPt05-V0/copy",
+    Link_Copia: "https://docs.google.com/document/d/1AMJCB_XJ2jpEvgcP218OOWORdKls3lEDGP6qPt05-V0/copy",
   },
   {
     Template_Documento: "DGPM-406 Anexo G",
     Descrição: "Guia Atendimento de Perícia Menor",
     ID: "130zzSeDRw2nso-QgfwIjOzbyet67Uvy1FQzL-V5X6do",
-    Link_Copia:
-      "https://docs.google.com/document/d/130zzSeDRw2nso-QgfwIjOzbyet67Uvy1FQzL-V5X6do/copy",
+    Link_Copia: "https://docs.google.com/document/d/130zzSeDRw2nso-QgfwIjOzbyet67Uvy1FQzL-V5X6do/copy",
   },
   {
     Template_Documento: "DGPM-406 Anexo I",
     Descrição: "Papeleta de Dispensa",
     ID: "1HD-iUN18lDQHpCEM08uKjw_ZEl5qPk9aHtM2T_46xWk",
-    Link_Copia:
-      "https://docs.google.com/document/d/1HD-iUN18lDQHpCEM08uKjw_ZEl5qPk9aHtM2T_46xWk/copy",
+    Link_Copia: "https://docs.google.com/document/d/1HD-iUN18lDQHpCEM08uKjw_ZEl5qPk9aHtM2T_46xWk/copy",
   },
   {
     Template_Documento: "DGPM-406 Anexo J",
     Descrição: "TCLE Exame Toxicológico",
     ID: "1nf_3DnxbimFgQ-0xlDR6OaT7jnxoFwI6XtRJMECvbU8",
-    Link_Copia:
-      "https://docs.google.com/document/d/1nf_3DnxbimFgQ-0xlDR6OaT7jnxoFwI6XtRJMECvbU8/copy",
+    Link_Copia: "https://docs.google.com/document/d/1nf_3DnxbimFgQ-0xlDR6OaT7jnxoFwI6XtRJMECvbU8/copy",
   },
   {
     Template_Documento: "DGPM-406 Anexo K",
     Descrição: "Perícia Menor Gestante Saudável",
     ID: "15Y8tp3oJxri6-CpQzGK9ydykHvTQV34zmWOgD8pI8VM",
-    Link_Copia:
-      "https://docs.google.com/document/d/15Y8tp3oJxri6-CpQzGK9ydykHvTQV34zmWOgD8pI8VM/copy",
+    Link_Copia: "https://docs.google.com/document/d/15Y8tp3oJxri6-CpQzGK9ydykHvTQV34zmWOgD8pI8VM/copy",
   },
   {
     Template_Documento: "DGPM-406 Anexo T",
     Descrição: "Reconhecimento de Recurso",
     ID: "1HLg5ndXWqdfeUfRtFA6pm-4PXW_lvo-LNPZ14ThzmSo",
-    Link_Copia:
-      "https://docs.google.com/document/d/1HLg5ndXWqdfeUfRtFA6pm-4PXW_lvo-LNPZ14ThzmSo/copy",
+    Link_Copia: "https://docs.google.com/document/d/1HLg5ndXWqdfeUfRtFA6pm-4PXW_lvo-LNPZ14ThzmSo/copy",
   },
 ];
 
@@ -67,8 +60,7 @@ export const TemplatesGuide: React.FC = () => {
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const GAS_URL =
-          "https://script.google.com/macros/s/AKfycbyb1o5i-8k8F2tP_B29wN8O7K_-If2iG-p01A2Rih-I_K4C7t4IeE0X-F_w3EHTYqM1/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyb1o5i-8k8F2tP_B29wN8O7K_-If2iG-p01A2Rih-I_K4C7t4IeE0X-F_w3EHTYqM1/exec";
         const resp = await fetch(`${GAS_URL}?action=getTemplatesDocumentos`);
         if (resp.ok) {
           const data = await resp.json();
@@ -77,10 +69,7 @@ export const TemplatesGuide: React.FC = () => {
           }
         }
       } catch (err) {
-        console.error(
-          "Falha ao buscar templates do sheets, usando lista padrão:",
-          err,
-        );
+        console.error("Falha ao buscar templates do sheets, usando lista padrão:", err);
       } finally {
         setIsLoading(false);
       }
@@ -96,27 +85,15 @@ export const TemplatesGuide: React.FC = () => {
       <div className="flex-1 overflow-y-auto w-full max-w-2xl mx-auto px-4 py-6 space-y-4">
         {isLoading && templates === DEFAULT_TEMPLATES ? (
           <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-            <span
-              className="material-symbols-outlined animate-spin mb-2"
-              style={{ fontSize: "32px" }}
-            >
-              sync
-            </span>
+            <span className="material-symbols-outlined animate-spin mb-2" style={{ fontSize: "32px" }}>sync</span>
             <p className="text-sm">Buscando da planilha...</p>
           </div>
         ) : (
           templates.map((tpl, idx) => (
-            <div
-              key={idx}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center justify-between hover:shadow transition-shadow"
-            >
+            <div key={idx} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center justify-between hover:shadow transition-shadow">
               <div className="flex flex-col pr-4 flex-1">
-                <h3 className="font-heading font-medium text-navy text-base mb-1">
-                  {tpl.Template_Documento}
-                </h3>
-                <p className="text-gray-600 text-sm font-body">
-                  {tpl.Descrição}
-                </p>
+                <h3 className="font-heading font-medium text-navy text-base mb-1">{tpl.Template_Documento}</h3>
+                <p className="text-gray-600 text-sm font-body">{tpl.Descrição}</p>
               </div>
               <a
                 href={tpl.Link_Copia}
@@ -125,12 +102,7 @@ export const TemplatesGuide: React.FC = () => {
                 title="Copiar Template"
                 className="shrink-0 p-2 text-navy hover:text-gold hover:bg-navy/5 rounded-full transition-colors flex items-center justify-center"
               >
-                <span
-                  className="material-symbols-outlined"
-                  style={{ fontSize: "24px" }}
-                >
-                  content_copy
-                </span>
+                <span className="material-symbols-outlined" style={{ fontSize: "24px" }}>content_copy</span>
               </a>
             </div>
           ))

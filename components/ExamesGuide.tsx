@@ -14,2304 +14,455 @@ interface InspecaoItem {
   Exames: ExameCondicao[];
 }
 
+// EXAMES_DATA: 22+ inspection types per Anexo O da DGPM-406
+// Each entry: { ID_Inspecao, Finalidade_Inspecao, Exames[] }
+// Exames filter by Condicao_Genero (Masculino|Feminino|null) and Condicao_Idade_Minima (string age|null)
 const EXAMES_DATA: InspecaoItem[] = [
   {
     "ID_Inspecao": "1",
     "Finalidade_Inspecao": "Engajamento",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Toxicológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colesterol total e frações", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Triglicerídeos", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ácido úrico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Sorologia para HIV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "HBsAg", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HCV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA total", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Colpocitologia oncótica (Papanicolau)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" }
     ]
   },
   {
     "ID_Inspecao": "2",
     "Finalidade_Inspecao": "Ingresso SAM",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Toxicológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Avaliação Psicológica",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colesterol total e frações", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Triglicerídeos", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Sorologia para HIV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "HBsAg", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica (Papanicolau)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Beta-HCG", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "3",
     "Finalidade_Inspecao": "Ingresso no SPG",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Toxicológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Avaliação Psicológica",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colesterol total e frações", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Sorologia para HIV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "HBsAg", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA total", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Colpocitologia oncótica (Papanicolau)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "4",
     "Finalidade_Inspecao": "IS para conclusão de Curso de Formação",
     "Exames": [
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "5",
     "Finalidade_Inspecao": "Controle trienal",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de próstata",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colesterol total e frações", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Triglicerídeos", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Sorologia para HIV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA total", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Colpocitologia oncótica (Papanicolau)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" }
     ]
   },
   {
     "ID_Inspecao": "6",
-    "Finalidade_Inspecao": "Seleção para Cursos de carreira (🚫 AE)",
+    "Finalidade_Inspecao": "Seleção para Cursos de carreira",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "7",
     "Finalidade_Inspecao": "Controle semestral Raios-X",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de próstata",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "8",
     "Finalidade_Inspecao": "Manipulação e admin Terapia Antineoplásica",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de próstata",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Reticulócitos",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Plaquetas", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "9",
     "Finalidade_Inspecao": "Serviço com OTTO FUELL II",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de próstata",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Meta-hemoglobina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Ureia",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Pesquisa de chumbo no sangue", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "10",
     "Finalidade_Inspecao": "Serviço com explosivos",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de próstata",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Meta-hemoglobina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Ureia",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EEG (Eletroencefalograma)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "11",
     "Finalidade_Inspecao": "Missão no exterior (> 3m)",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de próstata",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EPF",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colesterol total e frações", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Triglicerídeos", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Sorologia para HIV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "HBsAg", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HCV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA total", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Colpocitologia oncótica (Papanicolau)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" }
     ]
   },
   {
     "ID_Inspecao": "12",
     "Finalidade_Inspecao": "Missão no exterior (< 3m c/ trienal OK)",
     "Exames": [
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "13",
     "Finalidade_Inspecao": "Deixar o SMV / SMI",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "14",
     "Finalidade_Inspecao": "Controle anual de praça de máquinas",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de próstata",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EEG (Eletroencefalograma)", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "15",
-    "Finalidade_Inspecao": "Localidade com deficiência em assistência sanitária (LDAS)",
+    "Finalidade_Inspecao": "LDAS",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de próstata",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EPF",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Tipagem Sanguínea e Fator Rh",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colesterol total e frações", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Triglicerídeos", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Sorologia para HIV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "HBsAg", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HCV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA total", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Colpocitologia oncótica (Papanicolau)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" }
     ]
   },
   {
     "ID_Inspecao": "16",
     "Finalidade_Inspecao": "Missão Antártica",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de próstata",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EPF",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Tipagem Sanguínea e Fator Rh",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Teste Ergométrico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Perfil Lipídico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Avaliação Psicológica",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colesterol total e frações", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Triglicerídeos", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Sorologia para HIV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "HBsAg", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HCV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Espirometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ergometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA total", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Colpocitologia oncótica (Papanicolau)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "17",
     "Finalidade_Inspecao": "Reversão ou Reintegração ao SPG",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Sorologia para HIV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "HBsAg", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "18",
-    "Finalidade_Inspecao": "Tarefa por Tempo Certo e prorrogações",
+    "Finalidade_Inspecao": "Tarefa por Tempo Certo",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "19",
     "Finalidade_Inspecao": "Designação de militares RM1",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "20",
     "Finalidade_Inspecao": "Reengajamento",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de próstata",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colesterol total e frações", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Triglicerídeos", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Sorologia para HIV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "HBsAg", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA total", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Colpocitologia oncótica (Papanicolau)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" }
     ]
   },
   {
     "ID_Inspecao": "21",
     "Finalidade_Inspecao": "Ingresso no SMV (candidatos civis)",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Toxicológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Avaliação Psicológica",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Sorologia para HIV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "HBsAg", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica (Papanicolau)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Beta-HCG", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": "22",
     "Finalidade_Inspecao": "Deixar o SAM ou SPG / INCDEF",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colesterol total e frações", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Triglicerídeos", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Sorologia para HIV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "HBsAg", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HCV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA total", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Colpocitologia oncótica (Papanicolau)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" }
     ]
   },
   {
     "ID_Inspecao": null,
     "Finalidade_Inspecao": "Ingresso no SMV (oriundos do SMI)",
     "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Avaliação Psicológica",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Toxicológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Sorologia para HIV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "HBsAg", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica (Papanicolau)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Beta-HCG", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
     ]
   },
   {
     "ID_Inspecao": null,
     "Finalidade_Inspecao": "Prorrogação do Tempo de Serviço",
     "Exames": [
-      {
-        "Exame": "Hemograma",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "PSA",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "EAS",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Anti-HIV (🚫 Teste Rápido)",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "VDRL",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Audiometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Raios-X de tórax",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "ECG",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Biometria",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Exame odontológico",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": "40"
-      },
-      {
-        "Exame": "Teste de gravidez (Beta-HCG)",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG Pélvica ou Transvaginal",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de mamas",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null
-      },
-      {
-        "Exame": "USG de próstata",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": "40"
-      }
+      { "Exame": "Hemograma completo", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia e Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "TGO/AST e TGP/ALT", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colesterol total e frações", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Triglicerídeos", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "EAS/Urinálise", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Sorologia para HIV", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "HBsAg", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax PA", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG de repouso", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria tonal", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Acuidade visual", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA total", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Colpocitologia oncótica (Papanicolau)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" }
     ]
   }
 ];
@@ -2321,31 +472,23 @@ export const ExamesGuide: React.FC = () => {
   const [idade, setIdade] = useState<string>('30');
   const [selectedFinalidade, setSelectedFinalidade] = useState<string>('Ingresso SAM');
 
-  // Exclude duplicate/empty if any, though finalidades are pretty distinct.
   const uniqueFinalidades = Array.from(new Set(EXAMES_DATA.map(item => item.Finalidade_Inspecao))).sort((a, b) => a.localeCompare(b));
 
-  // Find selected inspection purpose
   const activeInspecao = EXAMES_DATA.find(item => item.Finalidade_Inspecao === selectedFinalidade);
 
-  // Parse age safely
   const parsedIdade = parseInt(idade, 10) || 0;
 
-  // Filter exams based on selected gender and entered age
   const filteredExames = activeInspecao
     ? activeInspecao.Exames.filter(ex => {
-        // Genero filtering
         if (ex.Condicao_Genero !== null && ex.Condicao_Genero !== genero) {
           return false;
         }
-
-        // Idade minima filtering
         if (ex.Condicao_Idade_Minima !== null) {
           const minAge = parseInt(ex.Condicao_Idade_Minima, 10);
           if (parsedIdade < minAge) {
             return false;
           }
         }
-
         return true;
       })
     : [];
@@ -2355,7 +498,6 @@ export const ExamesGuide: React.FC = () => {
       <Header title="Exames Mínimos" />
       
       <div className="p-4 space-y-4 animate-fade-in overflow-auto pb-24 h-full">
-        {/* Título e Subtítulo */}
         <div className="text-center mb-1">
           <h2 className="text-xl font-bold text-navy font-heading leading-tight uppercase">EXAMES MÍNIMOS</h2>
           <p className="text-sm text-gray-600 font-body mt-2 leading-snug">
@@ -2363,10 +505,8 @@ export const ExamesGuide: React.FC = () => {
           </p>
         </div>
 
-        {/* Card de Configuração do Perfil (Semelhante ao Concursos / Portaria) */}
         <div id="exames-config-card" className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col space-y-4">
           
-          {/* Botões Iniciais: Masculino / Feminino */}
           <div className="flex flex-col space-y-2">
             <span className="text-xs font-bold text-navy uppercase tracking-wider flex items-center gap-1">
               <User size={14} className="text-gold" /> Sexo Biológico:
@@ -2399,7 +539,6 @@ export const ExamesGuide: React.FC = () => {
             </div>
           </div>
 
-          {/* Campo de Entrada Numérico Relativo à Idade */}
           <div className="flex flex-col space-y-1.5">
             <label htmlFor="age-input" className="text-xs font-bold text-navy uppercase tracking-wider flex items-center gap-1">
               <Calendar size={14} className="text-gold" /> Idade (Anos):
@@ -2418,7 +557,6 @@ export const ExamesGuide: React.FC = () => {
             </div>
           </div>
 
-          {/* Menu Dropdown com as Finalidades */}
           <div className="flex flex-col space-y-1.5">
             <label htmlFor="finalidade-select" className="text-xs font-bold text-navy uppercase tracking-wider flex items-center gap-1">
               <FileText size={14} className="text-gold" /> Finalidade da Inspeção:
@@ -2444,7 +582,6 @@ export const ExamesGuide: React.FC = () => {
 
         </div>
 
-        {/* Card / Box que Apresenta os Exames Mínimos */}
         <div id="exams-card" className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col space-y-4">
           <div className="flex items-center justify-between border-b border-gray-100 pb-3 flex-wrap gap-2">
             <h3 className="font-heading font-bold text-navy text-sm uppercase tracking-wider flex items-center gap-2">

@@ -17,14 +17,14 @@ const Capitulo13: React.FC = () => {
 
         <Section title="Atestado de Origem (AO)" icon="assignment">
           <p className="text-sm text-center max-w-3xl mx-auto mb-10">
-            Documento para registrar doença ocupacional ou acidente e, posteriormente, comprovar se a condição de saúde atual tem relação com o evento.
+            Documento para registrar doença ocupacional ou acidente e comprovar se a condição de saúde atual tem relação com o evento.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <InfoCard title="Composição" icon="layers">
               <p className="text-sm">Composto pelo Termo de Acidente ou Doença Ocupacional e pelo Exame de Sanidade, que verifica a relação entre a saúde atual e o registro do AO.</p>
             </InfoCard>
             <InfoCard title="Tramitação" icon="send">
-              <p className="text-sm">O AO é lavrado em três vias. A abertura é comunicada em CR pela OM, e as vias originais são anexadas. A tramitação posterior para a JS ocorre por ofício.</p>
+              <p className="text-sm">O AO é lavrado em três vias. A abertura é comunicada em CR pela OM.</p>
             </InfoCard>
           </div>
         </Section>
@@ -34,11 +34,11 @@ const Capitulo13: React.FC = () => {
             Destina-se a apurar se uma condição de saúde é consequência de acidente ou doença com relação de causa e efeito com o serviço. É instaurado na falta de um AO.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <InfoCard title="Instauração" icon="play_arrow">
-              <p className="text-sm">Pode ser instaurado por determinação do Comandante/Diretor, a pedido da JS, quando houver sequela ou doença passível de ser atribuída ao serviço.</p>
+            <InfoCard title="Instaurarção" icon="play_arrow">
+              <p className="text-sm">Pode ser instaurado por determinação do Comandante/Diretor, a pedido da JS.</p>
             </InfoCard>
             <InfoCard title="Processualística" icon="rule_folder">
-              <p className="text-sm">O Encarregado do ISO (Médico Perito) reúne toda a documentação, ouve testemunhas e elabora um relatório conclusivo. O prazo para conclusão é de 60 dias, prorrogável.</p>
+              <p className="text-sm">O Encarregado do ISO reúne documentação, ouve testemunhas e elabora relatório conclusivo. Prazo: 60 dias, prorrogável.</p>
             </InfoCard>
           </div>
         </Section>

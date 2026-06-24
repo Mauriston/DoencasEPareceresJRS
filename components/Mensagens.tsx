@@ -98,7 +98,6 @@ export const Mensagens: React.FC = () => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // fallback for older browsers
       const ta = document.createElement('textarea');
       ta.value = minuta;
       document.body.appendChild(ta);
@@ -127,7 +126,6 @@ export const Mensagens: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto px-4 pt-6 pb-28 w-full max-w-2xl mx-auto space-y-5">
 
-        {/* Upload Section */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
           <h2 className="font-heading font-bold text-navy text-base flex items-center gap-2 border-b border-gray-100 pb-2">
             <span className="material-symbols-outlined text-gold">add_photo_alternate</span>
@@ -139,7 +137,6 @@ export const Mensagens: React.FC = () => {
             Para múltiplas IS, adicione sempre em pares na ordem correta.
           </p>
 
-          {/* Click/tap zone */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -158,7 +155,6 @@ export const Mensagens: React.FC = () => {
             onChange={e => handleFilesSelected(e.target.files)}
           />
 
-          {/* Image preview pairs */}
           {images.length > 0 && (
             <div className="space-y-3 pt-1">
               {Array.from({ length: Math.ceil(images.length / 2) }).map((_, isIdx) => {
@@ -205,7 +201,6 @@ export const Mensagens: React.FC = () => {
                 );
               })}
 
-              {/* Summary bar */}
               <div className="flex items-center justify-between pt-1 px-1">
                 <span className="text-xs text-gray-500 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[14px]">photo_library</span>
@@ -227,7 +222,6 @@ export const Mensagens: React.FC = () => {
           )}
         </div>
 
-        {/* Error */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-4 rounded-xl flex items-start gap-2.5">
             <span className="material-symbols-outlined text-red-500 text-[18px] shrink-0 mt-0.5">error</span>
@@ -235,7 +229,6 @@ export const Mensagens: React.FC = () => {
           </div>
         )}
 
-        {/* Generate button */}
         {!minuta && (
           <button
             type="button"
@@ -263,11 +256,8 @@ export const Mensagens: React.FC = () => {
           </p>
         )}
 
-        {/* Result card */}
         {minuta && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-fade-in">
-
-            {/* Card header */}
             <div className="bg-[#050F41] px-5 py-3.5 flex items-center justify-between">
               <div className="flex items-center gap-2 text-white">
                 <span className="material-symbols-outlined text-[18px] text-[#079551]">task_alt</span>
@@ -275,63 +265,30 @@ export const Mensagens: React.FC = () => {
               </div>
               <div className="flex items-center gap-3">
                 {docUrl && (
-                  <a
-                    href={docUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-white/60 hover:text-white transition-colors"
-                    title="Abrir no Google Docs"
-                  >
+                  <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors" title="Abrir no Google Docs">
                     <span className="material-symbols-outlined text-[20px]">open_in_new</span>
                   </a>
                 )}
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="text-white/60 hover:text-white transition-colors"
-                  title="Copiar texto"
-                >
-                  <span className="material-symbols-outlined text-[20px]">
-                    {copied ? 'check_circle' : 'content_copy'}
-                  </span>
+                <button type="button" onClick={handleCopy} className="text-white/60 hover:text-white transition-colors" title="Copiar texto">
+                  <span className="material-symbols-outlined text-[20px]">{copied ? 'check_circle' : 'content_copy'}</span>
                 </button>
               </div>
             </div>
 
-            {/* Minuta text */}
-            <pre className="p-5 text-sm text-gray-800 whitespace-pre-wrap font-body leading-relaxed border-b border-gray-100">
-              {minuta}
-            </pre>
+            <pre className="p-5 text-sm text-gray-800 whitespace-pre-wrap font-body leading-relaxed border-b border-gray-100">{minuta}</pre>
 
-            {/* Action buttons */}
             <div className="px-5 py-4 flex gap-2.5">
               {docUrl && (
-                <a
-                  href={docUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 py-2.5 bg-[#079551] text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-green-700 transition-colors active:scale-[0.97]"
-                >
+                <a href={docUrl} target="_blank" rel="noopener noreferrer" className="flex-1 py-2.5 bg-[#079551] text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-green-700 transition-colors active:scale-[0.97]">
                   <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                   Abrir no Drive
                 </a>
               )}
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-gray-200 transition-colors active:scale-[0.97]"
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  {copied ? 'check' : 'content_copy'}
-                </span>
+              <button type="button" onClick={handleCopy} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-gray-200 transition-colors active:scale-[0.97]">
+                <span className="material-symbols-outlined text-[16px]">{copied ? 'check' : 'content_copy'}</span>
                 {copied ? 'Copiado!' : 'Copiar'}
               </button>
-              <button
-                type="button"
-                onClick={handleReset}
-                className="py-2.5 px-4 bg-gray-100 text-gray-500 rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors active:scale-[0.97]"
-                title="Nova minuta"
-              >
+              <button type="button" onClick={handleReset} className="py-2.5 px-4 bg-gray-100 text-gray-500 rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors active:scale-[0.97]" title="Nova minuta">
                 <span className="material-symbols-outlined text-[16px]">refresh</span>
               </button>
             </div>

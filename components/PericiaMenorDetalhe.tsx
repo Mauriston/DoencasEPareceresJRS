@@ -65,7 +65,6 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
     <div className="flex flex-col bg-gray-50 min-h-full">
       <Header onBack={onBack} />
 
-      {/* Título / subtítulos abaixo da barra de topo */}
       <div className="px-4 pb-3 pt-3 border-b border-gray-200 bg-white">
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Histórico de Perícias Menores</p>
         <h2 className="text-[#050F41] font-bold text-sm leading-snug mt-0.5">{person}</h2>
@@ -74,7 +73,6 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
 
       <div className="px-4 pt-4 pb-28 w-full max-w-2xl mx-auto space-y-4">
 
-        {/* KPI — Perícias Menores Realizadas */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
           <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-[#050F41]">assignment</span>
@@ -94,7 +92,6 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
           </div>
         </div>
 
-        {/* DIAS AFASTADOS */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
           <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-red-500">event_busy</span>
@@ -114,7 +111,6 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
           </div>
         </div>
 
-        {/* DIAS EM RESTRIÇÕES */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
           <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-amber-500">warning</span>
@@ -134,7 +130,6 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
           </div>
         </div>
 
-        {/* Top CIDs */}
         {stats.topCids.length > 0 && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
             <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2 mb-3">
@@ -155,7 +150,6 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
           </div>
         )}
 
-        {/* Histórico de Perícias */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="bg-[#050F41]/5 px-4 py-2.5 border-b border-gray-100">
             <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider">Histórico de Perícias</h3>

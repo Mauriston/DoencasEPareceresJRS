@@ -18,7 +18,7 @@ const Capitulo4: React.FC = () => {
 
         <Section title="Controle Periódico de Saúde" icon="event_repeat">
           <p className="text-sm text-center max-w-3xl mx-auto mb-10">
-            Visa verificar se o pessoal da ativa preenche os requisitos de saúde para o desempenho profissional, além de detectar patologias em estágio inicial. A competência geral é do MPI.
+            Visa verificar se o pessoal da ativa preenche os requisitos de saúde para o desempenho profissional.
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             <div className="bg-gray-50-light p-4 rounded-lg border border-gray-200">
@@ -49,15 +49,15 @@ const Capitulo4: React.FC = () => {
               <p className="text-sm">Para Localidade Deficiente em Assistência Sanitária. Competência da <strong>JRS</strong>. Avalia militar e dependentes.</p>
             </InfoCard>
             <InfoCard title="Licença (LTSPF)" icon="family_restroom">
-              <p className="text-sm">Para acompanhar tratamento de familiar. Competência da <strong>JRS</strong>, exige Parecer Social favorável.</p>
+              <p className="text-sm">Para acompanhar tratamento de familiar. Competência da <strong>JRS</strong>.</p>
             </InfoCard>
             <InfoCard title="Missões no Exterior" icon="flight_takeoff">
-              <p className="text-sm">Perícia para missões. Competência do <strong>MPI</strong> ou <strong>JRS</strong>, dependendo da complexidade, duração e local.</p>
+              <p className="text-sm">Perícia para missões. Competência do <strong>MPI</strong> ou <strong>JRS</strong>, dependendo da complexidade.</p>
             </InfoCard>
             <InfoCard title="Missão na Antártica" icon="ac_unit">
-              <p className="text-sm">Realizada exclusivamente por <strong>JRS</strong>, com critérios rigorosos para selecionar pessoal com alta higidez física e mental.</p>
+              <p className="text-sm">Realizada exclusivamente por <strong>JRS</strong>, com critérios rigorosos.</p>
             </InfoCard>
-             <InfoCard title="Perícias Menores" icon="medical_services">
+            <InfoCard title="Perícias Menores" icon="medical_services">
               <p className="text-sm">Para dispensa médica ou convalescença. Realizada por <strong>Médicos de OM ou MPI</strong>.</p>
             </InfoCard>
           </div>
