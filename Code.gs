@@ -260,6 +260,30 @@ function doGet(e) {
           message: "NIP não encontrado",
         }),
       ).setMimeType(ContentService.MimeType.JSON);
+    } else if (action === "login") {
+      const usuario = String(e.parameter.usuario || '').trim().toLowerCase();
+      const senhaHash = String(e.parameter.senhaHash || '').trim();
+      if (!usuario || !senhaHash) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Credenciais inválidas' })).setMimeType(ContentService.MimeType.JSON);
+      }
+      const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      const sheet = ss.getSheetByName('Usuarios');
+      if (!sheet) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Configuração inválida' })).setMimeType(ContentService.MimeType.JSON);
+      }
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        const u = String(data[i][0] || '').trim().toLowerCase();
+        const h = String(data[i][1] || '').trim();
+        const nome = String(data[i][2] || '').trim();
+        const perfil = String(data[i][3] || '').trim();
+        const ativo = data[i][4];
+        const isAtivo = ativo === true || String(ativo).toUpperCase() === 'TRUE' || String(ativo).toUpperCase() === 'VERDADEIRO';
+        if (u === usuario && h === senhaHash && isAtivo) {
+          return ContentService.createTextOutput(JSON.stringify({ success: true, nome, perfil })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Usuário ou senha incorretos' })).setMimeType(ContentService.MimeType.JSON);
     }
   } catch (err) {
     return ContentService.createTextOutput(
