@@ -203,7 +203,22 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
 
               <div>
                 <label className={labelClass}>NIP</label>
-                <input type="text" value={regNip} onChange={e => setRegNip(e.target.value)} className={inputClass} placeholder="Ex.: 13.0450.24" autoComplete="off" />
+                <input
+                  type="text"
+                  value={regNip}
+                  onChange={e => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+                    let masked = digits;
+                    if (digits.length > 2) masked = digits.slice(0, 2) + '.' + digits.slice(2);
+                    if (digits.length > 6) masked = digits.slice(0, 2) + '.' + digits.slice(2, 6) + '.' + digits.slice(6);
+                    setRegNip(masked);
+                  }}
+                  className={inputClass}
+                  placeholder="00.0000.00"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={10}
+                />
               </div>
 
               <div>
