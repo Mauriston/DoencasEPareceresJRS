@@ -6,7 +6,6 @@ import { LawReference } from './components/LawReference';
 import { DGPM406Guide } from './components/DGPM406Guide';
 import { ConcursosGuide } from './components/ConcursosGuide';
 import { PortariaGuide } from './components/PortariaGuide';
-import { FinalidadesGuide } from './components/FinalidadesGuide';
 import { ExamesGuide } from './components/ExamesGuide';
 import { Infograficos } from './components/Infograficos';
 import { Resumos } from './components/Resumos';
@@ -19,18 +18,16 @@ import { ArtigoPericiaAdministrativa } from './components/ArtigoPericiaAdministr
 import { ArtigoPericiaPsiquiatria } from './components/ArtigoPericiaPsiquiatria';
 import { CasosPericiais } from './components/CasosPericiais';
 import { Estudo } from './components/Estudo'; 
-import { HNReGuide } from './components/HNReGuide';
-import { RegimentoHNRe } from './components/RegimentoHNRe';
-import { OrdemInternaJRS } from './components/OrdemInternaJRS';
 import { PericiaMenor } from './components/PericiaMenor';
 import { Mensagens } from './components/Mensagens';
-import { RoteiroJRS } from './components/RoteiroJRS'; // <-- IMPORTAÇÃO DO ROTEIRO AQUI
+import { RoteiroJRS } from './components/RoteiroJRS';
+import { UsuariosManagement } from './components/UsuariosManagement';
 import { NavItem } from './types';
 import { NavContext } from './context/NavContext';
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
 
-interface AuthUser { nome: string; perfil: 'admin' | 'hnre' | 'user'; }
+interface AuthUser { nome: string; perfil: 'admin' | 'user_hnre' | 'user_outros' | 'hnre' | 'user' | string; }
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<NavItem>('splash');
@@ -60,7 +57,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (authUser?.perfil === 'user') return;
+    if (authUser?.perfil === 'user' || authUser?.perfil === 'user_outros') return;
     fetch(`${GAS_URL}?action=getPericiaMenorList`)
       .then(r => r.json())
       .then(json => {
@@ -71,7 +68,7 @@ const App: React.FC = () => {
       .catch(() => {});
   }, [authUser]);
 
-  const handleLogin = (nome: string, perfil: 'admin' | 'user', usuario: string, senhaHash: string) => {
+  const handleLogin = (nome: string, perfil: string, usuario: string, senhaHash: string) => {
     localStorage.setItem('jrs_auth', JSON.stringify({ usuario, senhaHash }));
     setAuthUser({ nome, perfil });
     setCurrentView('guide');
@@ -83,6 +80,8 @@ const App: React.FC = () => {
     setCurrentView('guide');
   };
 
+  const canAccessPareceresAndExtras = authUser?.perfil === 'admin' || authUser?.perfil === 'user_hnre' || authUser?.perfil === 'hnre';
+
   const renderView = () => {
     switch (currentView) {
       case 'guide': return <DiseaseGuide />;
@@ -90,28 +89,27 @@ const App: React.FC = () => {
       case 'dgpm406': return <DGPM406Guide />;
       case 'concursos': return <ConcursosGuide />;
       case 'portaria': return <PortariaGuide />;
-      case 'finalidades': return <FinalidadesGuide />;
       case 'exames': return <ExamesGuide />;
-      case 'infograficos': return <Infograficos />;
-      case 'resumos': return <Resumos />;
-      case 'pareceres': return <Pareceres />;
-      case 'pericia-menor': return <PericiaMenor />;
-      case 'mensagens': return <Mensagens />;
       case 'templates': return <TemplatesGuide />;
-      case 'artigos': return <Artigos onNavigate={setCurrentView} />;
-      case 'artigo-pericia': return <ArtigoPericiaMedica onBack={() => setCurrentView('estudo')} />;
-      case 'artigo-perfil': return <ArtigoPerfilPerito onBack={() => setCurrentView('estudo')} />;
-      case 'artigo-administrativa': return <ArtigoPericiaAdministrativa onBack={() => setCurrentView('estudo')} />;
-      case 'artigo-psiquiatria': return <ArtigoPericiaPsiquiatria onBack={() => setCurrentView('estudo')} />;
-      case 'casos': return <CasosPericiais onBack={() => setCurrentView('guide')} />; 
-      case 'estudo': return <Estudo onBack={() => setCurrentView('guide')} onNavigate={setCurrentView} />; 
-      case 'hnre': return <HNReGuide onNavigate={setCurrentView} />; 
-      case 'regimento-hnre': return <RegimentoHNRe onBack={() => setCurrentView('hnre')} />;
-      case 'ordem-interna-jrs': return <OrdemInternaJRS onBack={() => setCurrentView('hnre')} />;
-      
-      // Documentação: Chamada do renderizador da nova página Roteiro JRS
-      case 'roteiro': return <RoteiroJRS />; 
-      
+
+      // PARECERES & EXTRAS PAGES - Restricted for user_outros
+      case 'pareceres': return canAccessPareceresAndExtras ? <Pareceres /> : <DiseaseGuide />;
+      case 'pericia-menor': return canAccessPareceresAndExtras ? <PericiaMenor /> : <DiseaseGuide />;
+      case 'mensagens': return canAccessPareceresAndExtras ? <Mensagens /> : <DiseaseGuide />;
+      case 'infograficos': return canAccessPareceresAndExtras ? <Infograficos /> : <DiseaseGuide />;
+      case 'resumos': return canAccessPareceresAndExtras ? <Resumos /> : <DiseaseGuide />;
+      case 'artigos': return canAccessPareceresAndExtras ? <Artigos onNavigate={setCurrentView} /> : <DiseaseGuide />;
+      case 'artigo-pericia': return canAccessPareceresAndExtras ? <ArtigoPericiaMedica onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
+      case 'artigo-perfil': return canAccessPareceresAndExtras ? <ArtigoPerfilPerito onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
+      case 'artigo-administrativa': return canAccessPareceresAndExtras ? <ArtigoPericiaAdministrativa onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
+      case 'artigo-psiquiatria': return canAccessPareceresAndExtras ? <ArtigoPericiaPsiquiatria onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
+      case 'casos': return canAccessPareceresAndExtras ? <CasosPericiais onBack={() => setCurrentView('guide')} /> : <DiseaseGuide />;
+      case 'estudo': return canAccessPareceresAndExtras ? <Estudo onBack={() => setCurrentView('guide')} onNavigate={setCurrentView} /> : <DiseaseGuide />;
+      case 'roteiro': return canAccessPareceresAndExtras ? <RoteiroJRS /> : <DiseaseGuide />;
+
+      // USUÁRIOS PAGE - Restricted for non-admin
+      case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement /> : <DiseaseGuide />;
+
       default: return <DiseaseGuide />;
     }
   };

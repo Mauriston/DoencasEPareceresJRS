@@ -60,7 +60,7 @@ export const TemplatesGuide: React.FC = () => {
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbyb1o5i-8k8F2tP_B29wN8O7K_-If2iG-p01A2Rih-I_K4C7t4IeE0X-F_w3EHTYqM1/exec";
+        const GAS_URL = "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
         const resp = await fetch(`${GAS_URL}?action=getTemplatesDocumentos`);
         if (resp.ok) {
           const data = await resp.json();
@@ -99,6 +99,10 @@ export const TemplatesGuide: React.FC = () => {
                 href={tpl.Link_Copia}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.open(tpl.Link_Copia, '_blank');
+                }}
                 title="Copiar Template"
                 className="shrink-0 p-2 text-navy hover:text-gold hover:bg-navy/5 rounded-full transition-colors flex items-center justify-center"
               >

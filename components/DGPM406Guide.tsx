@@ -93,6 +93,10 @@ export const DGPM406Guide: React.FC = () => {
                 href={item.link}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.open(item.link, '_blank');
+                }}
                 className="group bg-white rounded-2xl border border-gray-200/60 p-4 hover:shadow-md hover:border-[#079551] transition-all duration-200 flex items-start justify-between cursor-pointer"
               >
                 <div className="flex flex-col pr-3 flex-1 min-w-0">
@@ -115,6 +119,10 @@ export const DGPM406Guide: React.FC = () => {
                 href={item.link}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.open(item.link, '_blank');
+                }}
                 className="group bg-white rounded-2xl border border-gray-200/60 p-4 hover:shadow-md hover:border-[#079551] transition-all duration-200 flex items-start justify-between cursor-pointer"
               >
                 <div className="flex flex-col pr-3 flex-1 min-w-0">

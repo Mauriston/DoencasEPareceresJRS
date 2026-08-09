@@ -46,6 +46,10 @@ export const DGPM406AnexosGuide: React.FC = () => {
               href={item.link}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => {
+                e.preventDefault();
+                window.open(item.link, '_blank');
+              }}
               className="group flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors focus:outline-none cursor-pointer"
             >
               {/* Documentação: Lado esquerdo com os textos alinhados numa coluna */}

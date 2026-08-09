@@ -1,5 +1,5 @@
 // Ficheiro: types.ts
-export type NavItem = 'splash' | 'guide' | 'laws' | 'dgpm406' | 'dgpm406-anexos' | 'concursos' | 'portaria' | 'finalidades' | 'exames' | 'infograficos' | 'resumos' | 'pareceres' | 'templates' | 'artigos' | 'artigo-pericia' | 'artigo-perfil' | 'artigo-administrativa' | 'artigo-psiquiatria' | 'casos' | 'estudo' | 'hnre' | 'regimento-hnre' | 'ordem-interna-jrs' | 'roteiro' | 'pericia-menor' | 'mensagens';
+export type NavItem = 'splash' | 'guide' | 'laws' | 'dgpm406' | 'dgpm406-anexos' | 'concursos' | 'portaria' | 'exames' | 'infograficos' | 'resumos' | 'pareceres' | 'templates' | 'artigos' | 'artigo-pericia' | 'artigo-perfil' | 'artigo-administrativa' | 'artigo-psiquiatria' | 'casos' | 'estudo' | 'roteiro' | 'pericia-menor' | 'mensagens';
 
 export interface Diagnosis {
   name: string;

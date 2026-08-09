@@ -115,17 +115,21 @@ export const LawReference: React.FC = () => {
           </h2>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden divide-y divide-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           {LEGISLATIONS.map((law) => {
             const isBrasao = law.imageUrl.includes('brasao-da-republica');
 
             return (
-              <div key={law.id} className="relative group">
+              <div key={law.id} className="relative group bg-white rounded-2xl shadow-sm border border-gray-200/60 hover:border-[#079551] hover:shadow-md transition-all overflow-hidden flex flex-col justify-between">
                 <a 
                   href={law.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between p-4 hover:bg-gray-50/80 active:bg-gray-100 transition-colors focus:outline-none cursor-pointer gap-3"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.open(law.link, '_blank');
+                  }}
+                  className="flex items-center justify-between p-4 active:bg-gray-50 transition-colors focus:outline-none cursor-pointer gap-3 h-full"
                 >
                   <div className="w-10 h-10 flex-shrink-0 bg-gray-50 rounded-full overflow-hidden border border-gray-100 flex items-center justify-center p-0.5">
                     <img 

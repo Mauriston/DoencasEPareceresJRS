@@ -10,6 +10,9 @@ export interface HeaderProps {
 }
 
 const getCategories = (authUser: AuthUser | null, periciaMenorVigentes: number) => {
+  const p = authUser?.perfil;
+  const isHNReOrAdmin = p === 'admin' || p === 'user_hnre' || p === 'hnre';
+
   const categories = [
     {
       id: 'beneficios',
@@ -17,13 +20,12 @@ const getCategories = (authUser: AuthUser | null, periciaMenorVigentes: number) 
       icon: 'stethoscope',
       subitems: [
         { id: 'guide' as NavItem, label: 'Doenças de Lei', icon: 'medical_information' },
-        { id: 'finalidades' as NavItem, label: 'Finalidades', icon: 'fact_check' },
         { id: 'portaria' as NavItem, label: 'Portaria', icon: 'article' },
       ],
     },
     {
       id: 'avaliacoes',
-      label: 'Avaliações',
+      label: 'Índices',
       icon: 'checklist',
       subitems: [
         { id: 'concursos' as NavItem, label: 'Concursos', icon: 'emoji_events' },
@@ -32,17 +34,17 @@ const getCategories = (authUser: AuthUser | null, periciaMenorVigentes: number) 
     },
   ];
 
-  if (authUser?.perfil === 'admin' || authUser?.perfil === 'hnre') {
+  if (isHNReOrAdmin) {
     const docSubitems: { id: NavItem; label: string; icon: string; badge?: number }[] = [
       { id: 'pareceres', label: 'Pareceres', icon: 'assignment' },
       { id: 'pericia-menor', label: 'Perícia Menor', icon: 'personal_injury', badge: periciaMenorVigentes },
     ];
-    if (authUser?.perfil === 'admin') {
+    if (p === 'admin') {
       docSubitems.push({ id: 'mensagens', label: 'Mensagens', icon: 'chat' });
     }
     categories.push({
       id: 'documentos',
-      label: 'Documentos',
+      label: 'Pareceres',
       icon: 'description',
       subitems: docSubitems,
     });
@@ -50,14 +52,9 @@ const getCategories = (authUser: AuthUser | null, periciaMenorVigentes: number) 
 
   const normasSubitems: { id: NavItem; label: string; icon: string }[] = [
     { id: 'dgpm406', label: 'DGPM-406', icon: 'anchor' },
-  ];
-  if (authUser?.perfil !== 'user') {
-    normasSubitems.push({ id: 'hnre', label: 'HNRe', icon: 'local_hospital' });
-  }
-  normasSubitems.push(
     { id: 'laws', label: 'Legislação', icon: 'balance' },
-    { id: 'templates', label: 'Templates', icon: 'edit_document' }
-  );
+    { id: 'templates', label: 'Templates', icon: 'edit_document' },
+  ];
   categories.push({
     id: 'normas',
     label: 'Normas',
@@ -65,21 +62,21 @@ const getCategories = (authUser: AuthUser | null, periciaMenorVigentes: number) 
     subitems: normasSubitems,
   });
 
-  const extrasSubitems: { id: NavItem; label: string; icon: string }[] = [
-    { id: 'casos', label: 'Casos Periciais', icon: 'quiz' },
-    { id: 'estudo', label: 'Estudo / Artigos', icon: 'school' },
-    { id: 'infograficos', label: 'Infográficos', icon: 'image' },
-    { id: 'resumos', label: 'Resumos', icon: 'menu_book' },
-  ];
-  if (authUser?.perfil !== 'user') {
-    extrasSubitems.push({ id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list' });
+  if (isHNReOrAdmin) {
+    const extrasSubitems: { id: NavItem; label: string; icon: string }[] = [
+      { id: 'casos', label: 'Casos Periciais', icon: 'quiz' },
+      { id: 'estudo', label: 'Estudo / Artigos', icon: 'school' },
+      { id: 'infograficos', label: 'Infográficos', icon: 'image' },
+      { id: 'resumos', label: 'Resumos', icon: 'menu_book' },
+      { id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list' },
+    ];
+    categories.push({
+      id: 'extras',
+      label: 'Extras',
+      icon: 'widgets',
+      subitems: extrasSubitems,
+    });
   }
-  categories.push({
-    id: 'extras',
-    label: 'Extras',
-    icon: 'widgets',
-    subitems: extrasSubitems,
-  });
 
   return categories;
 };
@@ -88,13 +85,13 @@ const isCategoryActive = (catId: string, currentView?: NavItem) => {
   if (!currentView) return false;
   switch (catId) {
     case 'beneficios':
-      return ['guide', 'finalidades', 'portaria'].includes(currentView);
+      return ['guide', 'portaria'].includes(currentView);
     case 'avaliacoes':
       return ['concursos', 'exames'].includes(currentView);
     case 'documentos':
       return ['pareceres', 'pericia-menor', 'mensagens'].includes(currentView);
     case 'normas':
-      return ['dgpm406', 'dgpm406-anexos', 'hnre', 'regimento-hnre', 'ordem-interna-jrs', 'laws', 'templates'].includes(currentView);
+      return ['dgpm406', 'dgpm406-anexos', 'laws', 'templates'].includes(currentView);
     case 'extras':
       return ['casos', 'estudo', 'artigos', 'artigo-pericia', 'artigo-perfil', 'artigo-administrativa', 'artigo-psiquiatria', 'infograficos', 'resumos', 'roteiro'].includes(currentView);
     default:
@@ -292,12 +289,12 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
                         <button
                           type="button"
                           onClick={() => {
-                            // sem função ao clique por enquanto
                             setIsAvatarMenuOpen(false);
+                            setCurrentView('usuarios');
                           }}
                           className="w-full text-left px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center space-x-2.5 transition-colors cursor-pointer"
                         >
-                          <span className="material-symbols-outlined text-[18px] text-gray-500">group</span>
+                          <span className="material-symbols-outlined text-[18px] text-[#050F41]">group</span>
                           <span>Usuários</span>
                         </button>
                       )}
@@ -417,7 +414,7 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
               })}
             </div>
 
-            {/* Mobile Drawer Footer with User Profile and Logout */}
+            {/* Mobile Drawer Footer with User Profile, Admin links, and Logout */}
             <div className="p-2.5 border-t border-gray-200 bg-gray-50 flex items-center justify-between shrink-0 gap-1.5">
               <div className="flex items-center space-x-2 min-w-0">
                 <div className="w-7 h-7 rounded-full bg-[#050F41] text-white flex items-center justify-center font-bold text-[11px] shrink-0 uppercase shadow-sm">
@@ -428,17 +425,32 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
                   <span className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider truncate">{authUser?.perfil}</span>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMobileDrawerOpen(false);
-                  handleLogout();
-                }}
-                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
-                title="Sair do sistema"
-              >
-                <span className="material-symbols-outlined text-[18px]">logout</span>
-              </button>
+              <div className="flex items-center space-x-1 shrink-0">
+                {authUser?.perfil === 'admin' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileDrawerOpen(false);
+                      setCurrentView('usuarios');
+                    }}
+                    className="p-1.5 text-gray-600 hover:text-[#050F41] hover:bg-gray-200/60 rounded-lg transition-colors shrink-0 flex items-center"
+                    title="Gestão de Usuários"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">group</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    handleLogout();
+                  }}
+                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0 flex items-center"
+                  title="Sair do sistema"
+                >
+                  <span className="material-symbols-outlined text-[18px]">logout</span>
+                </button>
+              </div>
             </div>
           </aside>
         </div>

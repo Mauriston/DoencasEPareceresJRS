@@ -291,13 +291,57 @@ function doGet(e) {
       if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: true, data: [] })).setMimeType(ContentService.MimeType.JSON);
       const data = sheet.getDataRange().getValues();
       const usuarios = [];
+      const isSimple = e.parameter.simple === 'true';
       for (let i = 1; i < data.length; i++) {
         const u = String(data[i][0] || '').trim();
-        const ativo = data[i][6];
-        const isAtivo = ativo === true || String(ativo).toUpperCase() === 'TRUE' || String(ativo).toUpperCase() === 'VERDADEIRO';
-        if (u && isAtivo) usuarios.push(u);
+        if (!u) continue;
+        const nome = String(data[i][2] || '').trim() || u;
+        const nip = String(data[i][3] || '').trim();
+        const email = String(data[i][4] || '').trim();
+        const perfil = String(data[i][5] || '').trim() || 'user_outros';
+        const rawAtivo = data[i][6];
+        const isAtivo = rawAtivo === true || String(rawAtivo).toUpperCase() === 'TRUE' || String(rawAtivo).toUpperCase() === 'VERDADEIRO' || rawAtivo === 1;
+
+        if (isSimple) {
+          if (isAtivo) usuarios.push(u);
+        } else {
+          usuarios.push({
+            id: `usr-${i}`,
+            usuario: u,
+            nome: nome,
+            nip: nip,
+            email: email,
+            perfil: perfil,
+            ativo: isAtivo
+          });
+        }
       }
       return ContentService.createTextOutput(JSON.stringify({ success: true, data: usuarios })).setMimeType(ContentService.MimeType.JSON);
+
+    } else if (action === "updateUsuario") {
+      const targetUsuario = String(e.parameter.usuario || '').trim().toUpperCase();
+      const nome = e.parameter.nome !== undefined ? String(e.parameter.nome).trim() : null;
+      const nip = e.parameter.nip !== undefined ? String(e.parameter.nip).trim() : null;
+      const email = e.parameter.email !== undefined ? String(e.parameter.email).trim() : null;
+      const perfil = e.parameter.perfil !== undefined ? String(e.parameter.perfil).trim() : null;
+      const ativo = e.parameter.ativo !== undefined ? (e.parameter.ativo === 'true' || e.parameter.ativo === true) : null;
+
+      const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      const sheet = ss.getSheetByName('Usuarios');
+      if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Aba Usuarios não encontrada' })).setMimeType(ContentService.MimeType.JSON);
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0] || '').trim().toUpperCase() === targetUsuario) {
+          const rowNum = i + 1;
+          if (nome !== null) sheet.getRange(rowNum, 3).setValue(nome);
+          if (nip !== null) sheet.getRange(rowNum, 4).setValue(nip);
+          if (email !== null) sheet.getRange(rowNum, 5).setValue(email);
+          if (perfil !== null) sheet.getRange(rowNum, 6).setValue(perfil);
+          if (ativo !== null) sheet.getRange(rowNum, 7).setValue(ativo);
+          return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Usuário não encontrado' })).setMimeType(ContentService.MimeType.JSON);
 
     } else if (action === "createUsuario") {
       const novoUsuario = String(e.parameter.usuario || '').trim().toUpperCase();
