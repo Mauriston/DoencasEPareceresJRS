@@ -332,30 +332,30 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
           />
 
           {/* Drawer Content */}
-          <aside className="relative w-72 max-w-[80vw] bg-white text-gray-800 h-full shadow-2xl flex flex-col z-50 animate-slide-in-left overflow-hidden">
+          <aside className="relative w-full max-w-[50vw] bg-white text-gray-800 h-full shadow-2xl flex flex-col z-50 animate-slide-in-left overflow-hidden">
             {/* Header with HNRe Logo at Top */}
-            <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
-              <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 bg-white rounded-xl p-1 flex items-center justify-center shadow-sm shrink-0">
+            <div className="p-3 bg-[#050F41] text-white flex items-center justify-between shrink-0 gap-2">
+              <div className="flex items-center space-x-2 min-w-0">
+                <div className="w-8 h-8 bg-white rounded-lg p-0.5 flex items-center justify-center shadow-sm shrink-0">
                   <img src="https://i.imgur.com/KUbQz08.png" alt="HNRe Logo" className="w-full h-full object-contain" />
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <h1 className="font-heading text-sm font-bold tracking-wide text-white uppercase truncate">JRS - HNRe</h1>
-                  <p className="text-[11px] text-gray-300 truncate font-body">Junta Regular de Saúde</p>
+                  <h1 className="font-heading text-xs font-bold tracking-wide text-white uppercase truncate">HNRe</h1>
+                  <p className="text-[10px] text-gray-300 truncate font-body">JRS</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsMobileDrawerOpen(false)}
-                className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+                className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0"
                 aria-label="Fechar menu"
               >
-                <span className="material-symbols-outlined text-[22px]">close</span>
+                <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
             {/* Accordion First-Level Category List */}
-            <div className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
+            <div className="flex-1 py-2.5 px-2 space-y-1 overflow-y-auto">
               {categories.map((category) => {
                 const isExpanded = expandedMobileCategory === category.id;
                 const isActive = isCategoryActive(category.id, currentView);
@@ -368,43 +368,43 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
                         // Accordion behavior: expand this category and collapse any other
                         setExpandedMobileCategory(isExpanded ? null : category.id);
                       }}
-                      className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-bold transition-all uppercase font-heading ${
+                      className={`w-full flex items-center justify-between px-2.5 py-2.5 rounded-xl text-xs font-bold transition-all uppercase font-heading ${
                         isActive || isExpanded
                           ? 'bg-[#050F41]/10 text-[#050F41]'
                           : 'text-gray-700 hover:bg-gray-100/70'
                       }`}
                     >
-                      <div className="flex items-center space-x-3">
-                        <span className="material-symbols-outlined text-[20px] text-[#050F41]">
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <span className="material-symbols-outlined text-[18px] text-[#050F41] shrink-0">
                           {category.icon}
                         </span>
-                        <span>{category.label}</span>
+                        <span className="truncate">{category.label}</span>
                       </div>
-                      <span className={`material-symbols-outlined text-[20px] text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-[#079551]' : ''}`}>
+                      <span className={`material-symbols-outlined text-[18px] text-gray-400 transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180 text-[#079551]' : ''}`}>
                         expand_more
                       </span>
                     </button>
 
                     {/* Accordion Subitems */}
                     {isExpanded && (
-                      <div className="pl-3 pr-1 py-1 space-y-1 bg-gray-50/80 rounded-xl my-1 border border-gray-100/80">
+                      <div className="pl-2 pr-1 py-1 space-y-0.5 bg-gray-50/80 rounded-xl my-1 border border-gray-100/80">
                         {category.subitems.map((sub) => (
                           <button
                             key={sub.id}
                             type="button"
                             onClick={() => handleNavigate(sub.id)}
-                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                            className={`w-full flex items-center justify-between px-2 py-2 rounded-lg text-[11px] font-semibold transition-all ${
                               currentView === sub.id
                                 ? 'bg-[#050F41] text-white shadow-sm font-bold'
                                 : 'text-gray-700 hover:bg-white hover:text-[#050F41]'
                             }`}
                           >
-                            <div className="flex items-center space-x-2.5">
-                              <span className="material-symbols-outlined text-[18px]">{sub.icon}</span>
-                              <span>{sub.label}</span>
+                            <div className="flex items-center space-x-2 min-w-0">
+                              <span className="material-symbols-outlined text-[16px] shrink-0">{sub.icon}</span>
+                              <span className="truncate">{sub.label}</span>
                             </div>
                             {'badge' in sub && sub.badge && sub.badge > 0 ? (
-                              <span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                              <span className="bg-red-500 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center shrink-0">
                                 {sub.badge}
                               </span>
                             ) : null}
@@ -418,14 +418,14 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
             </div>
 
             {/* Mobile Drawer Footer with User Profile and Logout */}
-            <div className="p-3.5 border-t border-gray-200 bg-gray-50 flex items-center justify-between shrink-0">
-              <div className="flex items-center space-x-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-[#050F41] text-white flex items-center justify-center font-bold text-xs shrink-0 uppercase shadow-sm">
+            <div className="p-2.5 border-t border-gray-200 bg-gray-50 flex items-center justify-between shrink-0 gap-1.5">
+              <div className="flex items-center space-x-2 min-w-0">
+                <div className="w-7 h-7 rounded-full bg-[#050F41] text-white flex items-center justify-center font-bold text-[11px] shrink-0 uppercase shadow-sm">
                   {authUser?.nome ? authUser.nome.charAt(0) : 'U'}
                 </div>
                 <div className="min-w-0 flex flex-col">
-                  <span className="text-xs font-bold text-[#050F41] truncate">{authUser?.nome}</span>
-                  <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">{authUser?.perfil}</span>
+                  <span className="text-[11px] font-bold text-[#050F41] truncate">{authUser?.nome}</span>
+                  <span className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider truncate">{authUser?.perfil}</span>
                 </div>
               </div>
               <button
@@ -434,10 +434,10 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
                   setIsMobileDrawerOpen(false);
                   handleLogout();
                 }}
-                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
                 title="Sair do sistema"
               >
-                <span className="material-symbols-outlined text-[20px]">logout</span>
+                <span className="material-symbols-outlined text-[18px]">logout</span>
               </button>
             </div>
           </aside>

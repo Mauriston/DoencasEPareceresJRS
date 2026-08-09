@@ -155,7 +155,7 @@ const App: React.FC = () => {
     >
       <div className="fixed inset-0 flex flex-col bg-[#F3F5F7] text-[#1F2937] overflow-hidden antialiased select-none">
         <div className="flex-1 flex flex-col h-full min-w-0 overflow-y-auto relative bg-[#F3F5F7]">
-          <main className="flex-grow w-full px-2 md:px-6 lg:px-8 flex flex-col pb-8">
+          <main className="flex-grow w-full flex flex-col pb-8">
             {renderView()}
           </main>
         </div>
