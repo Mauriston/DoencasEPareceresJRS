@@ -103,7 +103,7 @@ export const Infograficos: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
       <Header title="Infográficos" />
-      <div className="p-4 space-y-4 max-w-2xl mx-auto w-full flex-1">
+      <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto w-full flex-1 pb-24 md:pb-12">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
             <Loader2 className="animate-spin text-[#050F41]" size={40} />
@@ -112,29 +112,29 @@ export const Infograficos: React.FC = () => {
         ) : (
           <>
             {error && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs p-3.5 rounded-xl flex items-start gap-2.5 shadow-sm">
-                <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={16} />
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs md:text-sm p-4 rounded-xl flex items-start gap-2.5 shadow-sm">
+                <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={18} />
                 <div className="flex-1">
                   <p className="font-semibold">Sincronização Offline</p>
                   <p className="mt-0.5 opacity-90">{error}</p>
                 </div>
                 <button onClick={loadData} className="p-1 hover:bg-amber-100 rounded-lg text-amber-900 flex items-center justify-center transition-colors self-center">
-                  <RefreshCw size={14} />
+                  <RefreshCw size={16} />
                 </button>
               </div>
             )}
             {infograficos.length === 0 ? (
               <div className="text-center py-16 text-gray-500 font-body">Nenhum infográfico disponível no momento.</div>
             ) : (
-              <div className="grid grid-cols-1 gap-2.5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {infograficos.map((item) => (
-                  <button key={item.id} onClick={() => setSelectedItem(item)} className="group bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col w-full hover:shadow-md hover:border-[#079551] transition-all duration-300 text-left p-4">
+                  <button key={item.id} onClick={() => setSelectedItem(item)} className="group bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col w-full hover:shadow-md hover:border-[#079551] transition-all duration-300 text-left p-4 md:p-5">
                     <div className="flex justify-between items-start gap-4 w-full">
-                      <h3 className="text-sm font-bold text-[#050F41] font-heading leading-snug group-hover:text-[#079551] transition-colors">{item.title}</h3>
+                      <h3 className="text-sm md:text-base font-bold text-[#050F41] font-heading leading-snug group-hover:text-[#079551] transition-colors">{item.title}</h3>
                       <ChevronRight className="text-gray-400 group-hover:text-[#079551] transform group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" size={18} />
                     </div>
                     {item.description && (
-                      <p className="text-xs text-gray-500 font-body leading-relaxed line-clamp-2 mt-2">{item.description}</p>
+                      <p className="text-xs md:text-sm text-gray-500 font-body leading-relaxed line-clamp-3 mt-2">{item.description}</p>
                     )}
                   </button>
                 ))}

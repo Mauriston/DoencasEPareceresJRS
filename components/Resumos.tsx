@@ -87,25 +87,39 @@ export const Resumos: React.FC = () => {
         </nav>
       </aside>
 
-      <div className={`flex-1 w-full transition-all duration-300 overflow-y-auto ${isMenuOpen ? 'blur-sm' : ''}`}>
-        {renderPage()}
-        {(() => {
-          const currentIndex = chapters.findIndex(c => c.id === activePage);
-          const nextChapter = chapters[currentIndex + 1];
-          if (!nextChapter) return null;
-          const nextChapterTitle = nextChapter.title.replace('Cap ', 'Capítulo ');
-          return (
-            <div className="w-full max-w-5xl mx-auto flex justify-end px-4 sm:px-8 mt-6 mb-10 pb-8">
-              <button 
-                onClick={() => { setActivePage(nextChapter.id); window.scrollTo(0,0); }}
-                className="flex items-center space-x-2 bg-navy text-white px-5 py-3 rounded-xl hover:bg-navy/90 active:scale-95 transition-all shadow-md border-b-4 border-navy-light"
-              >
-                <span className="text-sm font-semibold">Ir para o {nextChapterTitle.split(':')[0]}</span>
-                <span className="material-symbols-outlined text-lg">arrow_forward_ios</span>
-              </button>
-            </div>
-          );
-        })()}
+      <div className="flex-1 w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 md:p-6 lg:p-8">
+        {/* Persistent chapter index on desktop */}
+        <div className="hidden lg:block lg:col-span-4 bg-white rounded-2xl p-4 border border-gray-200/80 shadow-sm h-fit sticky top-20">
+          <h2 className="font-heading text-base font-bold text-navy flex items-center mb-3 pb-2 border-b border-gray-100 uppercase">
+            <Icon name="local_hospital" className="text-gold text-[22px] mr-2"/>
+            Capítulos DGPM-406
+          </h2>
+          <nav className="space-y-1 max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
+            <NavLinks />
+          </nav>
+        </div>
+
+        {/* Chapter content area */}
+        <div className={`lg:col-span-8 w-full transition-all duration-300 overflow-y-auto ${isMenuOpen ? 'blur-sm' : ''}`}>
+          {renderPage()}
+          {(() => {
+            const currentIndex = chapters.findIndex(c => c.id === activePage);
+            const nextChapter = chapters[currentIndex + 1];
+            if (!nextChapter) return null;
+            const nextChapterTitle = nextChapter.title.replace('Cap ', 'Capítulo ');
+            return (
+              <div className="w-full flex justify-end px-2 mt-6 mb-10 pb-8">
+                <button 
+                  onClick={() => { setActivePage(nextChapter.id); window.scrollTo(0,0); }}
+                  className="flex items-center space-x-2 bg-navy text-white px-5 py-3 rounded-xl hover:bg-navy/90 active:scale-95 transition-all shadow-md border-b-4 border-navy-light"
+                >
+                  <span className="text-sm font-semibold">Ir para o {nextChapterTitle.split(':')[0]}</span>
+                  <span className="material-symbols-outlined text-lg">arrow_forward_ios</span>
+                </button>
+              </div>
+            );
+          })()}
+        </div>
       </div>
     </div>
   );

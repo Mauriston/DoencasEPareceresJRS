@@ -84,8 +84,8 @@ export const DGPM406Guide: React.FC = () => {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 pb-24 max-w-4xl mx-auto w-full">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden divide-y divide-gray-100">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 max-w-6xl mx-auto w-full pb-24 md:pb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {activeTab === 'capitulos' ? (
             CHAPTERS.map((item) => (
               <a 
@@ -93,17 +93,17 @@ export const DGPM406Guide: React.FC = () => {
                 href={item.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex items-center justify-between p-4 hover:bg-gray-50/80 active:bg-gray-100 transition-colors focus:outline-none cursor-pointer"
+                className="group bg-white rounded-2xl border border-gray-200/60 p-4 hover:shadow-md hover:border-[#079551] transition-all duration-200 flex items-start justify-between cursor-pointer"
               >
-                <div className="flex flex-col pr-4 flex-1">
-                  <h3 className="text-[#050F41] font-heading font-bold text-[14px] leading-snug mb-1 group-hover:text-[#079551] transition-colors">
+                <div className="flex flex-col pr-3 flex-1 min-w-0">
+                  <h3 className="text-[#050F41] font-heading font-bold text-sm md:text-base leading-snug mb-1 group-hover:text-[#079551] transition-colors">
                     {item.chapter}
                   </h3>
-                  <p className="text-gray-500 font-body text-[11px] font-medium leading-relaxed line-clamp-2">
+                  <p className="text-gray-500 font-body text-xs md:text-sm font-medium leading-relaxed line-clamp-3">
                     {item.title}
                   </p>
                 </div>
-                <div className="text-gray-400 group-hover:text-[#050F41] transition-colors flex-shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
+                <div className="text-gray-400 group-hover:text-[#050F41] transition-colors shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
                   <MoreVertical size={18} />
                 </div>
               </a>
@@ -115,17 +115,17 @@ export const DGPM406Guide: React.FC = () => {
                 href={item.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex items-center justify-between p-4 hover:bg-gray-50/80 active:bg-gray-100 transition-colors focus:outline-none cursor-pointer"
+                className="group bg-white rounded-2xl border border-gray-200/60 p-4 hover:shadow-md hover:border-[#079551] transition-all duration-200 flex items-start justify-between cursor-pointer"
               >
-                <div className="flex flex-col pr-4 flex-1">
-                  <h3 className="text-[#050F41] font-heading font-bold text-[14px] leading-snug mb-1 group-hover:text-[#079551] transition-colors">
+                <div className="flex flex-col pr-3 flex-1 min-w-0">
+                  <h3 className="text-[#050F41] font-heading font-bold text-sm md:text-base leading-snug mb-1 group-hover:text-[#079551] transition-colors">
                     {item.anexo}
                   </h3>
-                  <p className="text-gray-500 font-body text-[11px] font-medium leading-relaxed line-clamp-2">
+                  <p className="text-gray-500 font-body text-xs md:text-sm font-medium leading-relaxed line-clamp-3">
                     {item.title}
                   </p>
                 </div>
-                <div className="text-gray-400 group-hover:text-[#050F41] transition-colors flex-shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
+                <div className="text-gray-400 group-hover:text-[#050F41] transition-colors shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
                   <MoreVertical size={18} />
                 </div>
               </a>

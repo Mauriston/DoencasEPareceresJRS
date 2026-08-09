@@ -181,29 +181,50 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 };
 
 const getDiseaseIcon = (name: string) => {
+  const lower = name.toLowerCase();
+  if (lower.includes("espondilite")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">orthopedics</span>;
+  if (lower.includes("neoplasia")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">oncology</span>;
+  if (lower.includes("pênfigo") || lower.includes("penfigo")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">dermatology</span>;
+  if (lower.includes("hanseníase") || lower.includes("hanseniase")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">dermatology</span>;
+  if (lower.includes("fibrose")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">pulmonology</span>;
+  if (lower.includes("tuberculose")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">pulmonology</span>;
+  if (lower.includes("nefropatia")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">nephrology</span>;
+  if (lower.includes("paget")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">skeleton</span>;
+  if (lower.includes("alienação") || lower.includes("alienacao")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">psychology</span>;
+  if (lower.includes("parkinson")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">neurology</span>;
+  if (lower.includes("esclerose")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">neurology</span>;
+  if (lower.includes("hepatopatia")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">gastroenterology</span>;
+
   switch(name) {
-    case "Alienação Mental": return <Brain className="text-[#050F41]" size={22} />;
     case "Cardiopatia Grave": return <HeartPulse className="text-[#050F41]" size={22} />;
     case "Cegueira": return <EyeOff className="text-[#050F41]" size={22} />;
     case "Contaminação por Radiação": return <Radiation className="text-[#050F41]" size={22} />;
     case "Paralisia Irreversível e Incapacitante": return <Accessibility className="text-[#050F41]" size={22} />;
     case "SIDA/AIDS": return <Ribbon className="text-[#050F41]" size={22} />;
-    default: return <Stethoscope className="text-[#050F41]" size={22} />;
+    default: return <span className="material-symbols-outlined text-[22px] text-[#050F41]">stethoscope</span>;
   }
 };
 
 const getShortDiseaseName = (name: string) => {
-  const map: Record<string, string> = {
-    "Alienação Mental": "ALIENAÇÃO", "Cardiopatia Grave": "CARDIOPATIA", "Cegueira": "CEGUEIRA",
-    "Contaminação por Radiação": "RADIAÇÃO", "Doença de Parkinson": "PARKINSON",
-    "Esclerose Múltipla (EM)": "ESCLEROSE", "Espondilite Anquilosante": "ESPONDILITE",
-    "Estados Avançados de Doença de Paget": "PAGET", "Fibrose Cística": "FIBROSE CÍSTICA",
-    "Hanseníase": "HANSENÍASE", "Hepatopatia Grave": "HEPATOPATIA", "Nefropatia Grave": "NEFROPATIA",
-    "Neoplasia Maligna": "NEOPLASIA", "Paralisia Irreversível e Incapacitante": "PARALISIA",
-    "Pênfigo": "PÊNFIGO", "Pênfigo Grave": "PÊNFIGO", "SIDA/AIDS": "SIDA/AIDS",
-    "Tuberculose Ativa": "TUBERCULOSE"
-  };
-  return map[name] || name.toUpperCase();
+  const lower = name.toLowerCase();
+  if (lower.includes("alienação") || lower.includes("alienacao")) return "ALIENAÇÃO";
+  if (lower.includes("cardiopatia")) return "CARDIOPATIA";
+  if (lower.includes("cegueira")) return "CEGUEIRA";
+  if (lower.includes("radiação") || lower.includes("radiacao")) return "RADIAÇÃO";
+  if (lower.includes("parkinson")) return "PARKINSON";
+  if (lower.includes("esclerose")) return "ESCLEROSE";
+  if (lower.includes("espondilite")) return "ESPONDILITE";
+  if (lower.includes("paget")) return "PAGET";
+  if (lower.includes("fibrose")) return "FIBROSE CÍSTICA";
+  if (lower.includes("hanseníase") || lower.includes("hanseniase")) return "HANSENÍASE";
+  if (lower.includes("hepatopatia")) return "HEPATOPATIA";
+  if (lower.includes("nefropatia")) return "NEFROPATIA";
+  if (lower.includes("neoplasia")) return "NEOPLASIA";
+  if (lower.includes("paralisia")) return "PARALISIA";
+  if (lower.includes("pênfigo") || lower.includes("penfigo")) return "PÊNFIGO";
+  if (lower.includes("sida") || lower.includes("aids")) return "SIDA/AIDS";
+  if (lower.includes("tuberculose")) return "TUBERCULOSE";
+  return name.toUpperCase();
 };
 
 export const DiseaseGuide: React.FC = () => {
@@ -228,13 +249,21 @@ export const DiseaseGuide: React.FC = () => {
   useEffect(() => { setIsCopied(false); }, [selectedDiagnosis]);
 
   const handleDiseaseClick = (disease: Disease) => {
-    if (disease.diagnoses.length === 1) { setSelectedDisease(disease); setSelectedDiagnosis(disease.diagnoses[0]); }
-    else setExpandedDiseaseId(expandedDiseaseId === disease.id ? null : disease.id);
+    setSelectedDisease(disease);
+    if (disease.diagnoses.length === 1) {
+      setSelectedDiagnosis(disease.diagnoses[0]);
+    } else {
+      setSelectedDiagnosis(null);
+    }
   };
 
   const handleBackClick = () => {
-    if (selectedDisease && selectedDiagnosis && selectedDisease.diagnoses.length > 1) setSelectedDiagnosis(null);
-    else { setSelectedDisease(null); setSelectedDiagnosis(null); }
+    if (selectedDisease && selectedDiagnosis && selectedDisease.diagnoses.length > 1) {
+      setSelectedDiagnosis(null);
+    } else {
+      setSelectedDisease(null);
+      setSelectedDiagnosis(null);
+    }
   };
 
   const handleCopy = async () => {
@@ -287,123 +316,212 @@ export const DiseaseGuide: React.FC = () => {
   }
 
   const handleSearchResultClick = (result: any) => {
-    if(result.diagnosis) { setSelectedDisease(result.disease); setSelectedDiagnosis(result.diagnosis); }
-    else { setExpandedDiseaseId(result.disease.id); setSearchQuery(""); }
+    if (result.diagnosis) { 
+      setSelectedDisease(result.disease); 
+      setSelectedDiagnosis(result.diagnosis); 
+    } else { 
+      setSelectedDisease(result.disease);
+      if (result.disease.diagnoses.length === 1) {
+        setSelectedDiagnosis(result.disease.diagnoses[0]);
+      } else {
+        setSelectedDiagnosis(null);
+      }
+      setSearchQuery(""); 
+    }
   };
 
   if (isCalculatorOpen) return <CdrCalculator onClose={() => setIsCalculatorOpen(false)} />;
 
+  // PAGE LEVEL 2: Diagnoses List for a specific disease
+  if (selectedDisease && !selectedDiagnosis) {
+    return (
+      <div className="animate-fade-in flex flex-col h-full bg-[#F3F5F7] relative">
+        <Header title={getShortDiseaseName(selectedDisease.name)} />
+        <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto w-full flex-1 pb-24 md:pb-12">
+          <div className="px-1 flex items-center space-x-3">
+            <button 
+              onClick={() => setSelectedDisease(null)} 
+              className="p-2.5 rounded-xl bg-white border border-gray-200/80 text-[#050F41] hover:bg-gray-100 transition-colors shadow-xs shrink-0 flex items-center justify-center cursor-pointer" 
+              title="Voltar"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase">{selectedDisease.name}</h2>
+              <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5">Selecione o diagnóstico pericial associado:</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {selectedDisease.diagnoses.map((diagnosis, idx) => (
+              <div 
+                key={idx}
+                onClick={() => setSelectedDiagnosis(diagnosis)}
+                className="bg-white rounded-2xl p-4 md:p-5 border border-gray-200/60 shadow-sm hover:shadow-md hover:border-gray-300 transition-all cursor-pointer flex items-center justify-between group"
+              >
+                <div className="flex items-center space-x-3.5 pr-2">
+                  <div className="w-10 h-10 rounded-xl bg-[#050F41]/5 flex items-center justify-center shrink-0 [&>svg]:text-[#050F41]">
+                    {getDiseaseIcon(selectedDisease.name)}
+                  </div>
+                  <div>
+                    <h3 className="text-sm md:text-base font-bold text-gray-800 group-hover:text-[#050F41] transition-colors font-body">
+                      {diagnosis.name}
+                    </h3>
+                  </div>
+                </div>
+                <ChevronRight size={20} className="text-gray-400 group-hover:text-[#050F41] group-hover:translate-x-0.5 transition-all shrink-0" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // PAGE LEVEL 3: Final Detail (Definition, Criteria, Documents)
   if (selectedDisease && selectedDiagnosis) {
     const isDemencia = selectedDisease.name === "Alienação Mental" && selectedDiagnosis.name === "Demência";
     return (
       <div className="animate-fade-in flex flex-col h-full bg-[#F3F5F7] relative">
-        {/* Modals omitted for brevity — full implementation in source */}
-        <Header title={getShortDiseaseName(selectedDisease.name)} leftAction={<button onClick={handleBackClick} className="text-white p-2 rounded-full hover:bg-white/10"><ArrowLeft size={20} /></button>} />
-        <div className="p-4 space-y-4 max-w-2xl mx-auto w-full pb-40">
-          <div className="px-1">
-            <h2 className="text-xl font-heading font-bold text-[#050F41] uppercase">{selectedDisease.name}</h2>
-            {selectedDisease.diagnoses.length > 1 && <p className="text-xs font-semibold text-gray-500 mt-1">Diagnóstico Pericial: {selectedDiagnosis.name}</p>}
-          </div>
-          <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm">
-            <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
-              <span className="material-symbols-outlined mr-2 text-[#FAB932]">menu_book</span>DEFINIÇÃO
-            </h3>
-            <p className="font-body text-gray-800 text-sm leading-relaxed text-justify font-medium">{selectedDisease.definition}</p>
-          </div>
-          {selectedDisease.name === "SIDA/AIDS" && (
-            <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm">
-              <h3 className="font-heading font-bold text-base text-[#050F41] mb-5 border-b border-gray-100 pb-2 flex items-center uppercase">
-                <span className="material-symbols-outlined mr-2 text-[#FAB932]">grid_on</span>CLASSIFICAÇÃO
-              </h3>
-              <p className="text-xs text-gray-500">Grupos I (CD4 ≥500), II (200-499), III (&lt;200) / Classes A, B, C por sintomas e condições definidoras.</p>
-            </div>
-          )}
-          <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm">
-            <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
-              <span className="material-symbols-outlined mr-2 text-[#FAB932]">verified</span>CRITÉRIOS DE GRAVIDADE
-            </h3>
-            <ul className="space-y-3.5">
-              {selectedDiagnosis.criteria.map((item, idx) => (
-                <li key={idx} className="flex items-start gap-3 text-sm text-gray-700 font-body">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#079551] shrink-0 mt-2" />
-                  <span className="leading-relaxed text-justify flex-1">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm">
-            <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
-              <span className="material-symbols-outlined mr-2 text-[#FAB932]">folder_open</span>DOCUMENTOS NECESSÁRIOS
-            </h3>
-            <ul className="space-y-3">
-              {selectedDisease.documents.map((item, idx) => (
-                <li key={idx} className="flex items-start gap-3 text-sm text-gray-700 font-body">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#050F41] shrink-0 mt-2" />
-                  <span className="leading-relaxed text-justify flex-1 font-medium">{item}</span>
-                </li>
-              ))}
-            </ul>
-            {isDemencia && (
-              <button onClick={() => setIsCalculatorOpen(true)} className="mt-5 w-full py-3 bg-red-800 text-white rounded-xl font-bold flex items-center justify-center hover:bg-red-900 transition-colors shadow-sm">
-                <span className="material-symbols-outlined mr-2">calculate</span>CDR Score
+        <Header title={getShortDiseaseName(selectedDisease.name)} />
+        <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto w-full pb-24 md:pb-12">
+          <div className="px-1 flex items-center justify-between gap-4">
+            <div className="flex items-center space-x-3 min-w-0">
+              <button 
+                onClick={handleBackClick} 
+                className="p-2.5 rounded-xl bg-white border border-gray-200/80 text-[#050F41] hover:bg-gray-100 transition-colors shadow-xs shrink-0 flex items-center justify-center cursor-pointer" 
+                title="Voltar"
+              >
+                <ArrowLeft size={20} />
               </button>
+              <div className="min-w-0">
+                <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase truncate">{selectedDisease.name}</h2>
+                {selectedDisease.diagnoses.length > 1 && <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5 truncate">Diagnóstico Pericial: {selectedDiagnosis.name}</p>}
+              </div>
+            </div>
+
+            {/* Desktop side-by-side action buttons */}
+            <div className="hidden md:flex items-center gap-2.5 shrink-0">
+              <button 
+                onClick={handleCopy} 
+                disabled={isCopied} 
+                className={`px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all border cursor-pointer shadow-2xs ${
+                  isCopied 
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 cursor-not-allowed' 
+                    : 'bg-white text-[#050F41] border-gray-200 hover:bg-gray-50 active:scale-95'
+                }`}
+                title="Copiar texto"
+              >
+                <span className="material-symbols-outlined text-lg">{isCopied ? 'done_all' : 'content_copy'}</span>
+                <span>{isCopied ? 'Copiado' : 'Copiar'}</span>
+              </button>
+              <button 
+                onClick={handleDownloadPDF} 
+                className="px-3.5 py-2 bg-[#050F41] text-white rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-[#0a1b66] active:scale-95 transition-all border border-[#050F41] cursor-pointer shadow-2xs" 
+                title="Baixar PDF"
+              >
+                <Download size={18} />
+                <span>Baixar PDF</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-6 w-full">
+            <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
+              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
+                <span className="material-symbols-outlined mr-2 text-[#FAB932]">menu_book</span>DEFINIÇÃO
+              </h3>
+              <p className="font-body text-gray-800 text-sm md:text-base leading-relaxed text-justify font-medium">{selectedDisease.definition}</p>
+            </div>
+
+            {selectedDisease.name === "SIDA/AIDS" && (
+              <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
+                <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-4 border-b border-gray-100 pb-2 flex items-center uppercase">
+                  <span className="material-symbols-outlined mr-2 text-[#FAB932]">grid_on</span>CLASSIFICAÇÃO
+                </h3>
+                <p className="text-xs md:text-sm text-gray-600 font-medium">Grupos I (CD4 ≥500), II (200-499), III (&lt;200) / Classes A, B, C por sintomas e condições definidoras.</p>
+              </div>
             )}
+
+            {isDemencia && (
+              <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm w-full">
+                <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 flex items-center uppercase">
+                  <span className="material-symbols-outlined mr-2 text-red-700">psychology</span>AVALIAÇÃO DE COGNIÇÃO
+                </h3>
+                <p className="text-xs text-gray-600 mb-4">A avaliação do escore CDR é fundamental para quantificar a gravidade do comprometimento cognitivo.</p>
+                <button onClick={() => setIsCalculatorOpen(true)} className="w-full py-3 bg-red-800 text-white rounded-xl font-bold flex items-center justify-center hover:bg-red-900 transition-colors shadow-sm text-sm">
+                  <span className="material-symbols-outlined mr-2">calculate</span>CDR Score Calculator
+                </button>
+              </div>
+            )}
+
+            <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
+              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
+                <span className="material-symbols-outlined mr-2 text-[#FAB932]">verified</span>CRITÉRIOS DE GRAVIDADE
+              </h3>
+              <ul className="space-y-3.5">
+                {selectedDiagnosis.criteria.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-3 text-sm md:text-base text-gray-700 font-body">
+                    <span className="w-2 h-2 rounded-full bg-[#079551] shrink-0 mt-2" />
+                    <span className="leading-relaxed text-justify flex-1">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
+              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
+                <span className="material-symbols-outlined mr-2 text-[#FAB932]">folder_open</span>DOCUMENTOS NECESSÁRIOS
+              </h3>
+              <ul className="space-y-3">
+                {selectedDisease.documents.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-3 text-sm md:text-base text-gray-700 font-body">
+                    <span className="w-2 h-2 rounded-full bg-[#050F41] shrink-0 mt-2" />
+                    <span className="leading-relaxed text-justify flex-1 font-medium">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
-        <div className="fixed bottom-24 right-6 flex flex-col gap-3 z-40">
-          <button onClick={handleCopy} disabled={isCopied} className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all border ${isCopied ? 'bg-gray-300 text-gray-100 border-gray-300 cursor-not-allowed' : 'bg-blue-100 text-[#050F41] border-blue-200 hover:scale-105 active:scale-95'}`} title="Copiar texto">
-            <span className="material-symbols-outlined text-[26px]">{isCopied ? 'done_all' : 'content_copy'}</span>
+
+        <div className="fixed bottom-20 right-6 md:hidden flex flex-col gap-3 z-40">
+          <button onClick={handleCopy} disabled={isCopied} className={`w-12 h-12 rounded-full shadow-2xl flex items-center justify-center transition-all border ${isCopied ? 'bg-gray-300 text-gray-100 border-gray-300 cursor-not-allowed' : 'bg-blue-100 text-[#050F41] border-blue-200 hover:scale-105 active:scale-95'}`} title="Copiar texto">
+            <span className="material-symbols-outlined text-[24px]">{isCopied ? 'done_all' : 'content_copy'}</span>
           </button>
-          <button onClick={handleDownloadPDF} className="w-14 h-14 bg-[#050F41] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all border border-slate-700" title="Baixar PDF">
-            <Download size={24} />
+          <button onClick={handleDownloadPDF} className="w-12 h-12 bg-[#050F41] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all border border-slate-700" title="Baixar PDF">
+            <Download size={22} />
           </button>
         </div>
       </div>
     );
   }
 
+  // PAGE LEVEL 1: Main Diseases Grid
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7]">
       <Header title="Doenças de Lei" />
-      <div className="p-4 space-y-4 max-w-2xl mx-auto w-full flex-1 pb-36">
-        <div className="relative w-full z-20">
-          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
-          <input type="text" className="block w-full pl-11 pr-10 py-3.5 border border-gray-200 rounded-full bg-white text-sm text-gray-800 placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#050F41]/10 transition-all font-body" placeholder="Pesquisar por doença, diagnóstico ou critério..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsSearchFocused(true)} onBlur={() => setTimeout(() => setIsSearchFocused(false), 250)} />
-          {searchQuery && (<button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600"><X size={18} /></button>)}
-          {searchQuery.trim().length > 0 && isSearchFocused && searchResults.length > 0 && (
-            <ul className="absolute z-50 top-full mt-2 w-full bg-white border border-gray-200 rounded-2xl shadow-xl max-h-60 overflow-y-auto divide-y divide-gray-50">
-              {searchResults.map(result => (
-                <li key={result.id} className="cursor-pointer hover:bg-gray-50 p-3.5 flex items-center justify-between transition-colors group" onClick={() => handleSearchResultClick(result)}>
-                  <div className="flex-1 min-w-0 pr-2">
-                    <p className="text-xs font-bold text-[#050F41] group-hover:text-[#079551] transition-colors truncate">{result.name}</p>
-                    {result.sub && <p className="text-[10px] text-gray-400 mt-0.5 font-medium truncate">{result.sub}</p>}
-                  </div>
-                  <ChevronRight size={14} className="text-gray-300 group-hover:text-[#079551]" />
-                </li>
-              ))}
-            </ul>
-          )}
+      <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto w-full flex-1 pb-24 md:pb-12">
+        <div className="px-1">
+          <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase">
+            Doenças Previstas em Lei:
+          </h2>
+          <p className="text-xs md:text-sm font-semibold text-gray-500 mt-1">
+            Verifique as definições, os critérios clínicos e os documentos necessários para o enquadramento
+          </p>
         </div>
-        <div className="grid gap-2.5">
-          {filteredDiseases.map((disease) => (
-            <div key={disease.id} className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden transition-all duration-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {DISEASES.map((disease) => (
+            <div key={disease.id} className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md hover:border-gray-300">
               <div onClick={() => handleDiseaseClick(disease)} className="p-4 cursor-pointer flex items-center justify-between hover:bg-gray-50/50 transition-colors">
-                <div className="flex items-center space-x-3 truncate">
+                <div className="flex items-center space-x-3 truncate pr-2">
                   {getDiseaseIcon(disease.name)}
-                  <h3 className="text-[#050F41] font-heading text-sm font-semibold truncate m-0">{disease.name}</h3>
+                  <h3 className="text-[#050F41] font-heading text-sm md:text-base font-semibold truncate m-0">
+                    {disease.name.toLowerCase().includes("paget") ? "Doença de Paget" : disease.name}
+                  </h3>
                 </div>
-                <ChevronRight size={16} className={`text-gray-400 transition-transform ${expandedDiseaseId === disease.id && disease.diagnoses.length > 1 ? 'rotate-90 text-[#079551]' : ''}`} />
+                <ChevronRight size={16} className="text-gray-400 shrink-0" />
               </div>
-              {disease.diagnoses.length > 1 && expandedDiseaseId === disease.id && (
-                <div className="bg-gray-50/60 border-t border-gray-100 flex flex-col divide-y divide-gray-100/60">
-                  {disease.diagnoses.map((diagnosis, idx) => (
-                    <div key={idx} onClick={() => { setSelectedDisease(disease); setSelectedDiagnosis(diagnosis); }} className="p-3.5 pl-12 cursor-pointer flex justify-between items-center hover:bg-white transition-colors">
-                      <span className="text-xs font-medium text-gray-700 font-body">{diagnosis.name}</span>
-                      <ChevronRight size={14} className="text-gray-400" />
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           ))}
         </div>
