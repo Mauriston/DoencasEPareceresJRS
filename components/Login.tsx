@@ -40,7 +40,7 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
   const [regSuccess, setRegSuccess] = useState(false);
 
   useEffect(() => {
-    fetch(`${GAS_URL}?action=getUsuarios`)
+    fetch(`${GAS_URL}?action=getUsuarios&simple=true`)
       .then(r => r.json())
       .then(json => { if (json.success) setUsuarios(json.data); })
       .catch(() => {})
