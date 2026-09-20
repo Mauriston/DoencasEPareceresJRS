@@ -68,19 +68,19 @@ const STATUS_OPTIONS: { value: StatusCandidato; label: string }[] = [
 const getStatusBadge = (status: string) => {
   switch (status) {
     case 'APTO':
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200 whitespace-nowrap">APTO</span>;
+      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-green-100 text-green-800 border border-green-200 whitespace-nowrap">APTO</span>;
     case 'INAPTO':
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-800 border border-red-200 whitespace-nowrap">INAPTO</span>;
+      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-red-100 text-red-800 border border-red-200 whitespace-nowrap">INAPTO</span>;
     case 'FALTOU':
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 whitespace-nowrap">FALTOU</span>;
+      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-amber-100 text-amber-800 border border-amber-200 whitespace-nowrap">FALTOU</span>;
     case 'INSUF DOCUMENTAL':
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 whitespace-nowrap">INSUF. DOC.</span>;
+      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-purple-100 text-purple-800 border border-purple-200 whitespace-nowrap">INSUF. DOC.</span>;
     case 'Pendente':
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 whitespace-nowrap">PENDENTE</span>;
+      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-blue-100 text-blue-800 border border-blue-200 whitespace-nowrap">PENDENTE</span>;
     case 'Reagendado':
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 whitespace-nowrap">REAGENDADO</span>;
+      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 whitespace-nowrap">REAGENDADO</span>;
     default:
-      return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200 border-dashed whitespace-nowrap">SEM STATUS</span>;
+      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-gray-100 text-gray-500 border border-gray-200 border-dashed whitespace-nowrap">SEM STATUS</span>;
   }
 };
 
@@ -652,19 +652,45 @@ export const ConcursosJRS: React.FC = () => {
     );
   };
 
+  const CIRCULO_RAIO = 36;
+  const CIRCULO_CIRCUNFERENCIA = 2 * Math.PI * CIRCULO_RAIO;
+  const circuloOffset = CIRCULO_CIRCUNFERENCIA - (pctFinalizados / 100) * CIRCULO_CIRCUNFERENCIA;
+
   const progressoCardContent = (
-    <>
-      <div className="flex items-center justify-between mb-2">
+    <div className="flex items-center h-full w-full">
+      <div className="flex-1 min-w-0 pr-2">
         <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Finalizados</p>
-        <p className="text-sm font-bold text-[#050F41] font-heading">{totalFinalizados} / {total} ({pctFinalizados}%)</p>
+        <p className="text-2xl font-bold text-[#050F41] font-heading mt-1 leading-none">
+          {totalFinalizados}<span className="text-sm text-gray-400 font-semibold">/{total}</span>
+        </p>
       </div>
-      <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-[#079551] to-[#050F41] rounded-full transition-all duration-500"
-          style={{ width: `${pctFinalizados}%` }}
-        />
+      <div className="shrink-0 relative w-[88px] h-[88px]">
+        <svg width="88" height="88" viewBox="0 0 88 88" className="-rotate-90">
+          <circle cx="44" cy="44" r={CIRCULO_RAIO} fill="none" stroke="#E5E7EB" strokeWidth="8" />
+          <circle
+            cx="44"
+            cy="44"
+            r={CIRCULO_RAIO}
+            fill="none"
+            stroke="url(#concursosProgressGradient)"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={CIRCULO_CIRCUNFERENCIA}
+            strokeDashoffset={circuloOffset}
+            className="transition-all duration-500"
+          />
+          <defs>
+            <linearGradient id="concursosProgressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#079551" />
+              <stop offset="100%" stopColor="#050F41" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-sm font-bold text-[#050F41] font-heading">{pctFinalizados}%</span>
+        </div>
       </div>
-    </>
+    </div>
   );
 
   const handleCopiarNomeCandidato = async (nome: string) => {
@@ -905,7 +931,7 @@ export const ConcursosJRS: React.FC = () => {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[13px] font-bold text-[#050F41] uppercase tracking-wider">
+                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[15px] font-bold text-[#050F41] uppercase tracking-wider">
                       <th className="py-3.5 px-4 w-24 whitespace-nowrap">Data</th>
                       <th className="py-3.5 px-4 w-64">Candidato</th>
                       <th className="py-3.5 px-4 w-32">Status</th>
@@ -914,7 +940,7 @@ export const ConcursosJRS: React.FC = () => {
                       <th className="py-3.5 px-4 w-24 text-right">Ações</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-xs">
+                  <tbody className="divide-y divide-gray-100 text-[14px]">
                     {filteredCandidatos.map(c => (
                       <tr key={c.id} className="hover:bg-gray-50/80 transition-colors">
                         <td className="py-3.5 px-4 text-gray-600 whitespace-nowrap">{c.dataAgendamento || '-'}</td>
@@ -924,14 +950,14 @@ export const ConcursosJRS: React.FC = () => {
                           title="Clique para copiar o nome do candidato"
                         >
                           <p className="font-semibold text-gray-800">{c.nome}</p>
-                          <p className="text-[10px] font-mono text-gray-400">{c.id}</p>
+                          <p className="text-[12px] font-mono text-gray-400">{c.id}</p>
                         </td>
                         <td className="py-3.5 px-4">
                           {podeEditarInline ? (
                             <select
                               value={c.status || ''}
                               onChange={e => handleStatusChange(c, e.target.value)}
-                              className={`px-2 py-1.5 text-[11px] font-bold rounded-lg border focus:outline-none focus:border-[#050F41] cursor-pointer ${getStatusSelectClasses(c.status)}`}
+                              className={`px-2 py-1.5 text-[13px] font-bold rounded-lg border focus:outline-none focus:border-[#050F41] cursor-pointer ${getStatusSelectClasses(c.status)}`}
                             >
                               {STATUS_OPTIONS.map(o => (
                                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -945,7 +971,7 @@ export const ConcursosJRS: React.FC = () => {
                               type="text"
                               defaultValue={c.observacoes}
                               onBlur={e => handleCampoBlur(c, 'observacoes', e.target.value)}
-                              className="w-full px-2 py-1.5 text-[11px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white"
+                              className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white"
                               placeholder="-"
                             />
                           ) : (
@@ -958,7 +984,7 @@ export const ConcursosJRS: React.FC = () => {
                               type="text"
                               defaultValue={c.numTIS}
                               onBlur={e => handleCampoBlur(c, 'numTIS', e.target.value)}
-                              className="w-24 px-2 py-1.5 text-[11px] font-mono rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white"
+                              className="w-24 px-2 py-1.5 text-[13px] font-mono rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white"
                               placeholder="-"
                             />
                           ) : (c.numTIS || '-')}
