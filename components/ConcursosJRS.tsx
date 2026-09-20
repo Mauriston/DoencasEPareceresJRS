@@ -1172,17 +1172,21 @@ export const ConcursosJRS: React.FC = () => {
               {uploadStep === 'select' && (
                 <>
                   <p className="text-xs text-gray-500">
-                    Envie o PDF da mensagem inicial de apresentação dos candidatos. O texto será lido (OCR), os candidatos
-                    extraídos e cadastrados, e o período de agendamento da JRS identificado automaticamente.
+                    Envie o PDF da mensagem inicial de apresentação dos candidatos (ou escaneie/fotografe o documento
+                    impresso). O texto será lido (OCR), os candidatos extraídos e cadastrados, e o período de
+                    agendamento da JRS identificado automaticamente.
                   </p>
                   <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
                     <span className="material-symbols-outlined text-[32px] text-gray-400">picture_as_pdf</span>
                     <span className="text-xs font-bold text-gray-600">
-                      {uploadFile ? uploadFile.name : 'Clique para selecionar o PDF'}
+                      {uploadFile ? uploadFile.name : 'Clique para selecionar o PDF ou escanear um documento'}
                     </span>
+                    {/* accept inclui image/* para que o iOS ofereça a folha nativa de
+                        compartilhamento (Escolher Arquivo / Tirar Foto / Escanear Documentos),
+                        em vez de ir direto para o app Arquivos */}
                     <input
                       type="file"
-                      accept="application/pdf"
+                      accept="application/pdf,image/*"
                       className="hidden"
                       onChange={e => setUploadFile(e.target.files?.[0] || null)}
                     />
