@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Header } from './Header';
 
-// URL de implantação (aplicativo da web) do projeto Apps Script "TEMPLATE
-// CONCURSOS" (repositório Mauriston/concursos), que expõe a API de
-// candidatos (candidatosDataBase/candidatos) usada por esta tela. Ver
-// DOCUMENTACAO.md (§8) naquele repositório para o passo de implantação.
-const GAS_URL_CONCURSOS = 'COLE_AQUI_A_URL_DE_IMPLANTACAO_DO_APLICATIVO_DA_WEB';
+// URL de implantação (aplicativo da web) do projeto Apps Script
+// standalone "CodeConcursos.gs" (código-fonte também versionado neste
+// repositório), que expõe a API de candidatos (candidatosDataBase/
+// candidatos da planilha "TEMPLATE CONCURSOS") usada por esta tela.
+const GAS_URL_CONCURSOS = 'https://script.google.com/macros/s/AKfycbzYl4OP22rwwotNOCx1U8JWwnkuacDUoDWPVvJe1BZHvRAyLHSCIrWJaSbyCML-KlXX/exec';
 
 export type StatusCandidato = '' | 'Pendente' | 'APTO' | 'INAPTO' | 'FALTOU' | 'INSUF DOCUMENTAL';
 
