@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from './Header';
+import {
+  ROLES,
+  PAGE_DEFS,
+  FEATURE_DEFS,
+  Role,
+  FeatureKey,
+  getPagePermissions,
+  getFeaturePermissions,
+  savePermissions,
+} from '../config/permissions';
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
+
+async function sha256(message: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 export interface UserRecord {
   id: string;
@@ -9,7 +24,7 @@ export interface UserRecord {
   nome: string;
   nip: string;
   email: string;
-  perfil: 'admin' | 'user_hnre' | 'user_outros' | string;
+  perfil: 'admin' | 'user_medicos' | 'user_secretaria' | string;
   ativo: boolean;
   dataCriacao?: string;
 }
@@ -30,7 +45,7 @@ const DEFAULT_USERS: UserRecord[] = [
     nome: 'CT JÚLIO CÉSAR',
     nip: '',
     email: '',
-    perfil: 'user_hnre',
+    perfil: 'user_medicos',
     ativo: true,
   },
   {
@@ -39,7 +54,7 @@ const DEFAULT_USERS: UserRecord[] = [
     nome: '1T MÔNICA VIRGÍNIA',
     nip: '',
     email: '',
-    perfil: 'user_hnre',
+    perfil: 'user_medicos',
     ativo: true,
   },
   {
@@ -48,7 +63,7 @@ const DEFAULT_USERS: UserRecord[] = [
     nome: 'GM CASSUNDÉ',
     nip: '',
     email: '',
-    perfil: 'user_outros',
+    perfil: 'user_secretaria',
     ativo: true,
   },
 ];
@@ -65,6 +80,18 @@ export const UsuariosManagement: React.FC = () => {
   const [editForm, setEditForm] = useState<Partial<UserRecord>>({});
   const [saving, setSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // New User Modal State
+  const [showNewUserModal, setShowNewUserModal] = useState(false);
+  const [newUserForm, setNewUserForm] = useState({ usuario: '', nome: '', nip: '', email: '', perfil: 'user_secretaria', senha: '', confirma: '' });
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [newUserError, setNewUserError] = useState('');
+
+  // Permissions Matrix State
+  const [pagePerms, setPagePerms] = useState(getPagePermissions());
+  const [featurePerms, setFeaturePerms] = useState(getFeaturePermissions());
+  const [permsDirty, setPermsDirty] = useState(false);
+  const [savingPerms, setSavingPerms] = useState(false);
 
   // Load users on mount
   useEffect(() => {
@@ -96,7 +123,7 @@ export const UsuariosManagement: React.FC = () => {
               nome: saved?.nome || uUpper,
               nip: saved?.nip || '',
               email: saved?.email || '',
-              perfil: saved?.perfil || (uUpper === 'CT MAURISTON' ? 'admin' : (uUpper.includes('JÚLIO') || uUpper.includes('MÔNICA') ? 'user_hnre' : 'user_outros')),
+              perfil: saved?.perfil || (uUpper === 'CT MAURISTON' ? 'admin' : (uUpper.includes('JÚLIO') || uUpper.includes('MÔNICA') ? 'user_medicos' : 'user_secretaria')),
               ativo: saved?.ativo !== undefined ? saved.ativo : true,
             };
           } else {
@@ -108,7 +135,7 @@ export const UsuariosManagement: React.FC = () => {
               nome: String(item.nome || saved?.nome || uUpper).trim().toUpperCase(),
               nip: String(item.nip || saved?.nip || '').trim(),
               email: String(item.email || saved?.email || '').trim().toLowerCase(),
-              perfil: String(item.perfil || saved?.perfil || 'user_outros').trim(),
+              perfil: String(item.perfil || saved?.perfil || 'user_secretaria').trim(),
               ativo: item.ativo !== undefined
                 ? (item.ativo === true || String(item.ativo).toUpperCase() === 'TRUE' || String(item.ativo).toUpperCase() === 'VERDADEIRO')
                 : (saved?.ativo !== undefined ? saved.ativo : true),
@@ -179,7 +206,7 @@ export const UsuariosManagement: React.FC = () => {
         nome: editForm.nome.trim().toUpperCase(),
         nip: editForm.nip ? editForm.nip.trim() : '',
         email: editForm.email ? editForm.email.trim().toLowerCase() : '',
-        perfil: editForm.perfil || 'user_outros',
+        perfil: editForm.perfil || 'user_secretaria',
         ativo: editForm.ativo !== undefined ? editForm.ativo : true,
       };
 
@@ -219,6 +246,103 @@ export const UsuariosManagement: React.FC = () => {
     setEditForm(prev => ({ ...prev, nip: masked }));
   };
 
+  const handleOpenNewUser = () => {
+    setNewUserForm({ usuario: '', nome: '', nip: '', email: '', perfil: 'user_secretaria', senha: '', confirma: '' });
+    setNewUserError('');
+    setShowNewUserModal(true);
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewUserError('');
+
+    if (!newUserForm.usuario.trim() || !newUserForm.nome.trim()) {
+      setNewUserError('Preencha o usuário (login) e o nome completo.');
+      return;
+    }
+    if (newUserForm.senha !== newUserForm.confirma) {
+      setNewUserError('As senhas não coincidem.');
+      return;
+    }
+    if (newUserForm.senha.length < 6) {
+      setNewUserError('A senha deve ter no mínimo 6 caracteres.');
+      return;
+    }
+
+    const usuarioUpper = newUserForm.usuario.trim().toUpperCase();
+    if (users.some(u => u.usuario.toUpperCase() === usuarioUpper)) {
+      setNewUserError('Já existe um usuário com esse nome de login.');
+      return;
+    }
+
+    setCreatingUser(true);
+    try {
+      const senhaHash = await sha256(newUserForm.senha);
+      const resCreate = await fetch(
+        `${GAS_URL}?action=createUsuario&nome=${encodeURIComponent(newUserForm.nome.trim().toUpperCase())}` +
+        `&usuario=${encodeURIComponent(usuarioUpper)}&nip=${encodeURIComponent(newUserForm.nip)}` +
+        `&email=${encodeURIComponent(newUserForm.email)}&senhaHash=${encodeURIComponent(senhaHash)}`
+      );
+      const jsonCreate = await resCreate.json();
+      if (!jsonCreate.success) {
+        setNewUserError(jsonCreate.error || 'Erro ao criar usuário.');
+        setCreatingUser(false);
+        return;
+      }
+
+      // O perfil padrão do cadastro (createUsuario) é o de menor privilégio;
+      // ajustamos aqui caso o admin tenha escolhido outro perfil.
+      const qUpdate = new URLSearchParams({
+        action: 'updateUsuario',
+        usuario: usuarioUpper,
+        nome: newUserForm.nome.trim().toUpperCase(),
+        nip: newUserForm.nip,
+        email: newUserForm.email,
+        perfil: newUserForm.perfil,
+        ativo: 'true',
+      }).toString();
+      await fetch(`${GAS_URL}?${qUpdate}`).catch(() => {});
+
+      const novoUsuario: UserRecord = {
+        id: `usr-novo-${Date.now()}`,
+        usuario: usuarioUpper,
+        nome: newUserForm.nome.trim().toUpperCase(),
+        nip: newUserForm.nip.trim(),
+        email: newUserForm.email.trim().toLowerCase(),
+        perfil: newUserForm.perfil,
+        ativo: true,
+      };
+      const updatedList = [...users, novoUsuario];
+      setUsers(updatedList);
+      localStorage.setItem('jrs_usuarios_records', JSON.stringify(updatedList));
+
+      showToast(`Usuário "${usuarioUpper}" criado com sucesso.`);
+      setShowNewUserModal(false);
+    } catch {
+      setNewUserError('Erro de conexão ao criar usuário.');
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
+  const handleTogglePagePerm = (pageId: string, role: Role) => {
+    setPagePerms(prev => ({ ...prev, [pageId]: { ...prev[pageId], [role]: !prev[pageId][role] } }));
+    setPermsDirty(true);
+  };
+
+  const handleToggleFeaturePerm = (featureId: FeatureKey, role: Role) => {
+    setFeaturePerms(prev => ({ ...prev, [featureId]: { ...prev[featureId], [role]: !prev[featureId][role] } }));
+    setPermsDirty(true);
+  };
+
+  const handleSavePerms = () => {
+    setSavingPerms(true);
+    savePermissions(pagePerms, featurePerms);
+    setPermsDirty(false);
+    setSavingPerms(false);
+    showToast('Permissões de páginas e funcionalidades atualizadas.');
+  };
+
   // Filtered Users
   const filteredUsers = users.filter(u => {
     const matchesSearch =
@@ -242,13 +366,15 @@ export const UsuariosManagement: React.FC = () => {
     switch (perfil) {
       case 'admin':
         return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">ADMIN</span>;
+      case 'user_medicos':
       case 'user_hnre':
       case 'hnre':
-        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">USER HNRE</span>;
+        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">USER MÉDICOS</span>;
+      case 'user_secretaria':
       case 'user_outros':
       case 'user':
       default:
-        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">USER OUTROS</span>;
+        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">USER SECRETARIA</span>;
     }
   };
 
@@ -310,9 +436,18 @@ export const UsuariosManagement: React.FC = () => {
             >
               <option value="todos">Perfil: Todos</option>
               <option value="admin">Perfil: Admin</option>
-              <option value="user_hnre">Perfil: User HNRe</option>
-              <option value="user_outros">Perfil: User Outros</option>
+              <option value="user_medicos">Perfil: User Médicos</option>
+              <option value="user_secretaria">Perfil: User Secretaria</option>
             </select>
+
+            <button
+              type="button"
+              onClick={handleOpenNewUser}
+              className="px-4 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5 whitespace-nowrap"
+            >
+              <span className="material-symbols-outlined text-[16px]">person_add</span>
+              <span>Adicionar Usuário</span>
+            </button>
           </div>
         </div>
 
@@ -511,7 +646,258 @@ export const UsuariosManagement: React.FC = () => {
             </>
           )}
         </div>
+
+        {/* PERMISSÕES: PÁGINAS E FUNCIONALIDADES POR PERFIL */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden">
+          <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center space-x-2">
+              <span className="material-symbols-outlined text-[20px] text-[#050F41]">tune</span>
+              <div>
+                <h3 className="font-heading font-bold text-sm text-[#050F41]">Permissões por Perfil</h3>
+                <p className="text-[11px] text-gray-500">Define quais páginas e funcionalidades cada perfil pode acessar. O perfil Admin sempre tem acesso total.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleSavePerms}
+              disabled={!permsDirty || savingPerms}
+              className="px-4 py-2.5 bg-[#050F41] hover:bg-[#079551] disabled:opacity-40 disabled:hover:bg-[#050F41] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5 whitespace-nowrap"
+            >
+              <span className="material-symbols-outlined text-[16px]">save</span>
+              <span>{savingPerms ? 'Salvando...' : 'Salvar Permissões'}</span>
+            </button>
+          </div>
+
+          <div className="p-4 sm:p-5 space-y-6">
+            {/* Páginas */}
+            <div>
+              <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Páginas do App</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Página</th>
+                      {ROLES.map(role => (
+                        <th key={role.id} className="py-2.5 px-3 text-center">{role.label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 text-xs">
+                    {PAGE_DEFS.map(page => (
+                      <tr key={page.id} className="hover:bg-gray-50/60">
+                        <td className="py-2 px-3 font-semibold text-gray-800">{page.label}</td>
+                        {ROLES.map(role => (
+                          <td key={role.id} className="py-2 px-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={pagePerms[page.id]?.[role.id] ?? true}
+                              onChange={() => handleTogglePagePerm(page.id, role.id)}
+                              className="w-4 h-4 accent-[#050F41] cursor-pointer"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Funcionalidades */}
+            <div>
+              <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Funcionalidades — Concursos (Planilhas de Controle)</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Funcionalidade</th>
+                      {ROLES.map(role => (
+                        <th key={role.id} className="py-2.5 px-3 text-center">{role.label}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 text-xs">
+                    {FEATURE_DEFS.map(feature => (
+                      <tr key={feature.id} className="hover:bg-gray-50/60">
+                        <td className="py-2 px-3 font-semibold text-gray-800">{feature.label}</td>
+                        {ROLES.map(role => (
+                          <td key={role.id} className="py-2 px-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={featurePerms[feature.id]?.[role.id] ?? false}
+                              onChange={() => handleToggleFeaturePerm(feature.id, role.id)}
+                              className="w-4 h-4 accent-[#050F41] cursor-pointer"
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* NOVO USUÁRIO MODAL */}
+      {showNewUserModal && (
+        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-4 bg-[#050F41] text-white flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="material-symbols-outlined text-[22px] text-[#079551]">person_add</span>
+                <h3 className="font-heading font-bold text-sm uppercase">Adicionar Usuário</h3>
+              </div>
+              <button
+                onClick={() => setShowNewUserModal(false)}
+                className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser} className="p-5 overflow-y-auto space-y-4 flex-1">
+              {newUserError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs font-semibold text-red-700">
+                  {newUserError}
+                </div>
+              )}
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                  Nome de Usuário (Login)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newUserForm.usuario}
+                  onChange={e => setNewUserForm(prev => ({ ...prev, usuario: e.target.value.toUpperCase() }))}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                  placeholder="EX.: CT MAURISTON"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                  Nome Completo
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newUserForm.nome}
+                  onChange={e => setNewUserForm(prev => ({ ...prev, nome: e.target.value.toUpperCase() }))}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41]"
+                  placeholder="NOME COMPLETO"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                    NIP
+                  </label>
+                  <input
+                    type="text"
+                    value={newUserForm.nip}
+                    onChange={e => {
+                      const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+                      let masked = digits;
+                      if (digits.length > 2) masked = digits.slice(0, 2) + '.' + digits.slice(2);
+                      if (digits.length > 6) masked = digits.slice(0, 2) + '.' + digits.slice(2, 6) + '.' + digits.slice(6);
+                      setNewUserForm(prev => ({ ...prev, nip: masked }));
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-mono font-semibold text-gray-800 focus:outline-none focus:border-[#050F41]"
+                    placeholder="00.0000.00"
+                    maxLength={10}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                    Perfil de Acesso
+                  </label>
+                  <select
+                    value={newUserForm.perfil}
+                    onChange={e => setNewUserForm(prev => ({ ...prev, perfil: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                  >
+                    <option value="admin">Administrador (admin)</option>
+                    <option value="user_medicos">Usuário Médicos (user_medicos)</option>
+                    <option value="user_secretaria">Usuário Secretaria (user_secretaria)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                  E-mail Institucional
+                </label>
+                <input
+                  type="email"
+                  value={newUserForm.email}
+                  onChange={e => setNewUserForm(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41]"
+                  placeholder="exemplo@marinha.mil.br"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                    Senha
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={newUserForm.senha}
+                    onChange={e => setNewUserForm(prev => ({ ...prev, senha: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41]"
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                    Confirmar Senha
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={newUserForm.confirma}
+                    onChange={e => setNewUserForm(prev => ({ ...prev, confirma: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41]"
+                    placeholder="Repita a senha"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 flex items-center justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNewUserModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingUser}
+                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1"
+                >
+                  {creatingUser ? (
+                    <span>Criando...</span>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[16px]">save</span>
+                      <span>Criar Usuário</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* EDIT USER MODAL */}
       {editingUser && (
@@ -581,13 +967,13 @@ export const UsuariosManagement: React.FC = () => {
                     Perfil de Acesso
                   </label>
                   <select
-                    value={editForm.perfil || 'user_outros'}
+                    value={editForm.perfil || 'user_secretaria'}
                     onChange={e => setEditForm(prev => ({ ...prev, perfil: e.target.value }))}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
                   >
                     <option value="admin">Administrador (admin)</option>
-                    <option value="user_hnre">Usuário HNRe (user_hnre)</option>
-                    <option value="user_outros">Usuário Outros (user_outros)</option>
+                    <option value="user_medicos">Usuário Médicos (user_medicos)</option>
+                    <option value="user_secretaria">Usuário Secretaria (user_secretaria)</option>
                   </select>
                 </div>
               </div>

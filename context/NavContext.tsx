@@ -3,7 +3,7 @@ import { NavItem } from '../types';
 
 export interface AuthUser {
   nome: string;
-  perfil: 'admin' | 'hnre' | 'user';
+  perfil: 'admin' | 'user_medicos' | 'user_secretaria' | string;
 }
 
 export interface NavContextType {
