@@ -84,6 +84,25 @@ const getStatusBadge = (status: string) => {
   }
 };
 
+const getStatusSelectClasses = (status: string) => {
+  switch (status) {
+    case 'APTO':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'INAPTO':
+      return 'bg-red-100 text-red-800 border-red-200';
+    case 'FALTOU':
+      return 'bg-amber-100 text-amber-800 border-amber-200';
+    case 'INSUF DOCUMENTAL':
+      return 'bg-purple-100 text-purple-800 border-purple-200';
+    case 'Pendente':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'Reagendado':
+      return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+    default:
+      return 'bg-white text-gray-500 border-gray-200';
+  }
+};
+
 async function chamarApiConcursos<T = any>(action: string, params: Record<string, string> = {}): Promise<T> {
   const q = new URLSearchParams({ action, ...params }).toString();
   const res = await fetch(`${GAS_URL_CONCURSOS}?${q}`);
@@ -564,7 +583,7 @@ export const ConcursosJRS: React.FC = () => {
         if (!matchesSearch) return false;
 
         if (statusKpiFilter === 'nao-finalizados') {
-          if (!(c.status === '' || c.status === 'Pendente')) return false;
+          if (!(c.status === '' || c.status === 'Pendente' || c.status === 'Reagendado')) return false;
         } else if (statusKpiFilter && c.status !== statusKpiFilter) {
           return false;
         }
@@ -595,7 +614,7 @@ export const ConcursosJRS: React.FC = () => {
   const countInapto = candidatos.filter(c => c.status === 'INAPTO').length;
   const countInsuf = candidatos.filter(c => c.status === 'INSUF DOCUMENTAL').length;
   const countFaltou = candidatos.filter(c => c.status === 'FALTOU').length;
-  const countNaoFinalizados = candidatos.filter(c => c.status === '' || c.status === 'Pendente').length;
+  const countNaoFinalizados = candidatos.filter(c => c.status === '' || c.status === 'Pendente' || c.status === 'Reagendado').length;
 
   const dateFilterLabel =
     dateFilterMode === 'hoje' ? 'Hoje' :
@@ -896,13 +915,13 @@ export const ConcursosJRS: React.FC = () => {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                      <th className="py-3.5 px-4">Data</th>
-                      <th className="py-3.5 px-4">Candidato</th>
-                      <th className="py-3.5 px-4">Status</th>
+                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[13px] font-bold text-[#050F41] uppercase tracking-wider">
+                      <th className="py-3.5 px-4 w-24 whitespace-nowrap">Data</th>
+                      <th className="py-3.5 px-4 w-48">Candidato</th>
+                      <th className="py-3.5 px-4 w-32">Status</th>
                       <th className="py-3.5 px-4">Observações</th>
-                      <th className="py-3.5 px-4">Nº TIS</th>
-                      <th className="py-3.5 px-4 text-right">Ações</th>
+                      <th className="py-3.5 px-4 w-24">Nº TIS</th>
+                      <th className="py-3.5 px-4 w-20 text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-xs">
@@ -918,7 +937,7 @@ export const ConcursosJRS: React.FC = () => {
                             <select
                               value={c.status || ''}
                               onChange={e => handleStatusChange(c, e.target.value)}
-                              className="px-2 py-1.5 text-[11px] font-bold rounded-lg border border-gray-200 bg-gray-50 text-[#050F41] focus:outline-none focus:border-[#050F41] cursor-pointer"
+                              className={`px-2 py-1.5 text-[11px] font-bold rounded-lg border focus:outline-none focus:border-[#050F41] cursor-pointer ${getStatusSelectClasses(c.status)}`}
                             >
                               {STATUS_OPTIONS.map(o => (
                                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -926,7 +945,7 @@ export const ConcursosJRS: React.FC = () => {
                             </select>
                           ) : getStatusBadge(c.status)}
                         </td>
-                        <td className="py-3.5 px-4 text-gray-600 max-w-[220px]">
+                        <td className="py-3.5 px-4 text-gray-600">
                           {podeEditarInline ? (
                             <input
                               type="text"
@@ -936,7 +955,7 @@ export const ConcursosJRS: React.FC = () => {
                               placeholder="-"
                             />
                           ) : (
-                            <span className="truncate block max-w-[220px]" title={c.observacoes}>{c.observacoes || '-'}</span>
+                            <span className="truncate block" title={c.observacoes}>{c.observacoes || '-'}</span>
                           )}
                         </td>
                         <td className="py-3.5 px-4 font-mono text-gray-600">
@@ -1009,7 +1028,7 @@ export const ConcursosJRS: React.FC = () => {
                           <select
                             value={c.status || ''}
                             onChange={e => handleStatusChange(c, e.target.value)}
-                            className="w-full px-2 py-1.5 text-[11px] font-bold rounded-lg border border-gray-200 bg-white text-[#050F41] focus:outline-none"
+                            className={`w-full px-2 py-1.5 text-[11px] font-bold rounded-lg border focus:outline-none ${getStatusSelectClasses(c.status)}`}
                           >
                             {STATUS_OPTIONS.map(o => (
                               <option key={o.value} value={o.value}>{o.label}</option>
