@@ -622,6 +622,60 @@ export const ConcursosJRS: React.FC = () => {
     dateFilterMode === 'personalizado' && dateFilterCustom ? isoParaBR(dateFilterCustom) :
     'Data: Todos';
 
+  const kpiCards: { key: string; label: string; value: number; icon: string; valueColorClass: string; iconColorClass: string; filterValue: string | null }[] = [
+    { key: 'total', label: 'Total', value: total, icon: 'groups', valueColorClass: 'text-[#050F41]', iconColorClass: 'text-gray-500 bg-gray-100', filterValue: null },
+    { key: 'apto', label: 'Apto', value: countApto, icon: 'check_circle', valueColorClass: 'text-[#079551]', iconColorClass: 'text-[#079551] bg-green-50', filterValue: 'APTO' },
+    { key: 'inapto', label: 'Inapto', value: countInapto, icon: 'cancel', valueColorClass: 'text-red-600', iconColorClass: 'text-red-500 bg-red-50', filterValue: 'INAPTO' },
+    { key: 'insuf', label: 'Insuf. Doc.', value: countInsuf, icon: 'description', valueColorClass: 'text-purple-700', iconColorClass: 'text-purple-600 bg-purple-50', filterValue: 'INSUF DOCUMENTAL' },
+    { key: 'faltou', label: 'Faltou', value: countFaltou, icon: 'event_busy', valueColorClass: 'text-amber-600', iconColorClass: 'text-amber-500 bg-amber-50', filterValue: 'FALTOU' },
+    { key: 'nao-finalizados', label: 'Não Finaliz.', value: countNaoFinalizados, icon: 'pending_actions', valueColorClass: 'text-blue-700', iconColorClass: 'text-blue-600 bg-blue-50', filterValue: 'nao-finalizados' },
+  ];
+
+  const renderKpiCard = (card: typeof kpiCards[number], areaKey?: string) => {
+    const isActive = card.filterValue !== null && statusKpiFilter === card.filterValue;
+    return (
+      <button
+        key={card.key}
+        type="button"
+        style={areaKey ? { gridArea: areaKey } : undefined}
+        onClick={() => (card.filterValue === null ? setStatusKpiFilter('') : toggleStatusKpiFilter(card.filterValue))}
+        className={`p-3.5 rounded-2xl border shadow-sm flex items-center justify-between transition-all text-left ${
+          isActive ? 'bg-[#050F41] border-[#050F41]' : 'bg-white border-gray-200/60 hover:border-[#050F41]/40'
+        }`}
+      >
+        <div>
+          <p className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? 'text-white/70' : 'text-gray-400'}`}>{card.label}</p>
+          <p className={`text-xl font-bold font-heading ${isActive ? 'text-white' : card.valueColorClass}`}>{card.value}</p>
+        </div>
+        <span className={`material-symbols-outlined text-[22px] p-1.5 rounded-xl ${isActive ? 'text-white bg-white/10' : card.iconColorClass}`}>{card.icon}</span>
+      </button>
+    );
+  };
+
+  const progressoCardContent = (
+    <>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Finalizados</p>
+        <p className="text-sm font-bold text-[#050F41] font-heading">{totalFinalizados} / {total} ({pctFinalizados}%)</p>
+      </div>
+      <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-[#079551] to-[#050F41] rounded-full transition-all duration-500"
+          style={{ width: `${pctFinalizados}%` }}
+        />
+      </div>
+    </>
+  );
+
+  const handleCopiarNomeCandidato = async (nome: string) => {
+    try {
+      await navigator.clipboard.writeText(nome);
+      showToast(`Nome "${nome}" copiado para a área de transferência.`);
+    } catch {
+      showToast('Não foi possível copiar automaticamente. Selecione e copie o nome manualmente.');
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
       <Header title="Planilhas de Controle" />
@@ -796,91 +850,27 @@ export const ConcursosJRS: React.FC = () => {
         )}
 
         {/* KPI CARDS */}
-        <div className="space-y-3">
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/60 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Finalizados</p>
-              <p className="text-sm font-bold text-[#050F41] font-heading">{totalFinalizados} / {total} ({pctFinalizados}%)</p>
-            </div>
-            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#079551] to-[#050F41] rounded-full transition-all duration-500"
-                style={{ width: `${pctFinalizados}%` }}
-              />
-            </div>
+        {/* Mobile: barra de progresso empilhada + grade 2 colunas */}
+        <div className="sm:hidden space-y-3">
+          <div className="bg-white p-4 rounded-2xl border border-gray-200/60 shadow-sm">{progressoCardContent}</div>
+          <div className="grid grid-cols-2 gap-3">
+            {kpiCards.map(card => renderKpiCard(card))}
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <button
-              type="button"
-              onClick={() => toggleStatusKpiFilter('APTO')}
-              className={`p-3.5 rounded-2xl border shadow-sm flex items-center justify-between transition-all text-left ${
-                statusKpiFilter === 'APTO' ? 'bg-[#050F41] border-[#050F41]' : 'bg-white border-gray-200/60 hover:border-[#050F41]/40'
-              }`}
-            >
-              <div>
-                <p className={`text-[10px] font-bold uppercase tracking-wider ${statusKpiFilter === 'APTO' ? 'text-white/70' : 'text-gray-400'}`}>Apto</p>
-                <p className={`text-xl font-bold font-heading ${statusKpiFilter === 'APTO' ? 'text-white' : 'text-[#079551]'}`}>{countApto}</p>
-              </div>
-              <span className={`material-symbols-outlined text-[22px] p-1.5 rounded-xl ${statusKpiFilter === 'APTO' ? 'text-white bg-white/10' : 'text-[#079551] bg-green-50'}`}>check_circle</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => toggleStatusKpiFilter('INAPTO')}
-              className={`p-3.5 rounded-2xl border shadow-sm flex items-center justify-between transition-all text-left ${
-                statusKpiFilter === 'INAPTO' ? 'bg-[#050F41] border-[#050F41]' : 'bg-white border-gray-200/60 hover:border-[#050F41]/40'
-              }`}
-            >
-              <div>
-                <p className={`text-[10px] font-bold uppercase tracking-wider ${statusKpiFilter === 'INAPTO' ? 'text-white/70' : 'text-gray-400'}`}>Inapto</p>
-                <p className={`text-xl font-bold font-heading ${statusKpiFilter === 'INAPTO' ? 'text-white' : 'text-red-600'}`}>{countInapto}</p>
-              </div>
-              <span className={`material-symbols-outlined text-[22px] p-1.5 rounded-xl ${statusKpiFilter === 'INAPTO' ? 'text-white bg-white/10' : 'text-red-500 bg-red-50'}`}>cancel</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => toggleStatusKpiFilter('INSUF DOCUMENTAL')}
-              className={`p-3.5 rounded-2xl border shadow-sm flex items-center justify-between transition-all text-left ${
-                statusKpiFilter === 'INSUF DOCUMENTAL' ? 'bg-[#050F41] border-[#050F41]' : 'bg-white border-gray-200/60 hover:border-[#050F41]/40'
-              }`}
-            >
-              <div>
-                <p className={`text-[10px] font-bold uppercase tracking-wider ${statusKpiFilter === 'INSUF DOCUMENTAL' ? 'text-white/70' : 'text-gray-400'}`}>Insuf. Doc.</p>
-                <p className={`text-xl font-bold font-heading ${statusKpiFilter === 'INSUF DOCUMENTAL' ? 'text-white' : 'text-purple-700'}`}>{countInsuf}</p>
-              </div>
-              <span className={`material-symbols-outlined text-[22px] p-1.5 rounded-xl ${statusKpiFilter === 'INSUF DOCUMENTAL' ? 'text-white bg-white/10' : 'text-purple-600 bg-purple-50'}`}>description</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => toggleStatusKpiFilter('FALTOU')}
-              className={`p-3.5 rounded-2xl border shadow-sm flex items-center justify-between transition-all text-left ${
-                statusKpiFilter === 'FALTOU' ? 'bg-[#050F41] border-[#050F41]' : 'bg-white border-gray-200/60 hover:border-[#050F41]/40'
-              }`}
-            >
-              <div>
-                <p className={`text-[10px] font-bold uppercase tracking-wider ${statusKpiFilter === 'FALTOU' ? 'text-white/70' : 'text-gray-400'}`}>Faltou</p>
-                <p className={`text-xl font-bold font-heading ${statusKpiFilter === 'FALTOU' ? 'text-white' : 'text-amber-600'}`}>{countFaltou}</p>
-              </div>
-              <span className={`material-symbols-outlined text-[22px] p-1.5 rounded-xl ${statusKpiFilter === 'FALTOU' ? 'text-white bg-white/10' : 'text-amber-500 bg-amber-50'}`}>event_busy</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => toggleStatusKpiFilter('nao-finalizados')}
-              className={`p-3.5 rounded-2xl border shadow-sm flex items-center justify-between transition-all text-left ${
-                statusKpiFilter === 'nao-finalizados' ? 'bg-[#050F41] border-[#050F41]' : 'bg-white border-gray-200/60 hover:border-[#050F41]/40'
-              }`}
-            >
-              <div>
-                <p className={`text-[10px] font-bold uppercase tracking-wider ${statusKpiFilter === 'nao-finalizados' ? 'text-white/70' : 'text-gray-400'}`}>Não Finaliz.</p>
-                <p className={`text-xl font-bold font-heading ${statusKpiFilter === 'nao-finalizados' ? 'text-white' : 'text-blue-700'}`}>{countNaoFinalizados}</p>
-              </div>
-              <span className={`material-symbols-outlined text-[22px] p-1.5 rounded-xl ${statusKpiFilter === 'nao-finalizados' ? 'text-white bg-white/10' : 'text-blue-600 bg-blue-50'}`}>pending_actions</span>
-            </button>
+        {/* Desktop: progresso ocupa o espaço de 4 cards (2x2) à esquerda; os 6 KPIs em 3 colunas x 2 linhas à direita */}
+        <div
+          className="hidden sm:grid gap-3"
+          style={{
+            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+            gridTemplateRows: 'repeat(2, 1fr)',
+            gridTemplateAreas: '"progress progress k1 k2 k3" "progress progress k4 k5 k6"',
+          }}
+        >
+          <div style={{ gridArea: 'progress' }} className="bg-white p-4 rounded-2xl border border-gray-200/60 shadow-sm flex flex-col justify-center">
+            {progressoCardContent}
           </div>
+          {kpiCards.map((card, i) => renderKpiCard(card, `k${i + 1}`))}
         </div>
 
         {/* TABELA / LISTA DE CANDIDATOS */}
@@ -917,18 +907,22 @@ export const ConcursosJRS: React.FC = () => {
                   <thead>
                     <tr className="bg-gray-50/80 border-b border-gray-100 text-[13px] font-bold text-[#050F41] uppercase tracking-wider">
                       <th className="py-3.5 px-4 w-24 whitespace-nowrap">Data</th>
-                      <th className="py-3.5 px-4 w-48">Candidato</th>
+                      <th className="py-3.5 px-4 w-64">Candidato</th>
                       <th className="py-3.5 px-4 w-32">Status</th>
-                      <th className="py-3.5 px-4">Observações</th>
+                      <th className="py-3.5 px-4 w-56">Observações</th>
                       <th className="py-3.5 px-4 w-24">Nº TIS</th>
-                      <th className="py-3.5 px-4 w-20 text-right">Ações</th>
+                      <th className="py-3.5 px-4 w-24 text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-xs">
                     {filteredCandidatos.map(c => (
                       <tr key={c.id} className="hover:bg-gray-50/80 transition-colors">
                         <td className="py-3.5 px-4 text-gray-600 whitespace-nowrap">{c.dataAgendamento || '-'}</td>
-                        <td className="py-3.5 px-4">
+                        <td
+                          className="py-3.5 px-4 cursor-pointer"
+                          onClick={() => handleCopiarNomeCandidato(c.nome)}
+                          title="Clique para copiar o nome do candidato"
+                        >
                           <p className="font-semibold text-gray-800">{c.nome}</p>
                           <p className="text-[10px] font-mono text-gray-400">{c.id}</p>
                         </td>
@@ -975,19 +969,19 @@ export const ConcursosJRS: React.FC = () => {
                               href={c.termoRecursoUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-1.5 text-gray-500 hover:text-[#050F41] hover:bg-gray-100 rounded-lg transition-colors cursor-pointer inline-flex"
+                              className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex"
                               title="Abrir Termo de Recurso"
                             >
-                              <span className="material-symbols-outlined text-[18px]">description</span>
+                              <span className="material-symbols-outlined text-[22px]">description</span>
                             </a>
                           ) : c.status === 'INAPTO' ? (
                             <button
                               type="button"
                               onClick={() => handleGerarTermo(c.id, c.nome)}
-                              className="p-1.5 text-gray-500 hover:text-[#050F41] hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                              className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer"
                               title="Gerar Termo de Recurso"
                             >
-                              <span className="material-symbols-outlined text-[18px]">gavel</span>
+                              <span className="material-symbols-outlined text-[22px]">gavel</span>
                             </button>
                           ) : null}
 
@@ -995,10 +989,10 @@ export const ConcursosJRS: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleOpenReagendamento(c)}
-                              className="p-1.5 text-gray-500 hover:text-[#050F41] hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                              className="p-2 ml-1 text-[#079551] bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer"
                               title="Reagendar"
                             >
-                              <span className="material-symbols-outlined text-[18px]">event_repeat</span>
+                              <span className="material-symbols-outlined text-[22px]">event_repeat</span>
                             </button>
                           )}
                         </td>
