@@ -28,7 +28,7 @@ const getCategories = (authUser: AuthUser | null, periciaMenorVigentes: number) 
       label: 'Índices',
       icon: 'checklist',
       subitems: [
-        { id: 'concursos' as NavItem, label: 'Concursos', icon: 'emoji_events' },
+        { id: 'concursos' as NavItem, label: 'Índices de Concursos', icon: 'emoji_events' },
         { id: 'exames' as NavItem, label: 'Exames', icon: 'science' },
       ],
     },
@@ -37,6 +37,7 @@ const getCategories = (authUser: AuthUser | null, periciaMenorVigentes: number) 
   if (isHNReOrAdmin) {
     const docSubitems: { id: NavItem; label: string; icon: string; badge?: number }[] = [
       { id: 'pareceres', label: 'Pareceres', icon: 'assignment' },
+      { id: 'concursosJRS', label: 'Concursos', icon: 'fact_check' },
       { id: 'pericia-menor', label: 'Perícia Menor', icon: 'personal_injury', badge: periciaMenorVigentes },
     ];
     if (p === 'admin') {
@@ -89,7 +90,7 @@ const isCategoryActive = (catId: string, currentView?: NavItem) => {
     case 'avaliacoes':
       return ['concursos', 'exames'].includes(currentView);
     case 'documentos':
-      return ['pareceres', 'pericia-menor', 'mensagens'].includes(currentView);
+      return ['pareceres', 'concursosJRS', 'pericia-menor', 'mensagens'].includes(currentView);
     case 'normas':
       return ['dgpm406', 'dgpm406-anexos', 'laws', 'templates'].includes(currentView);
     case 'extras':

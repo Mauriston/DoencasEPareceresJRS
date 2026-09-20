@@ -5,6 +5,7 @@ import { DiseaseGuide } from './components/DiseaseGuide';
 import { LawReference } from './components/LawReference';
 import { DGPM406Guide } from './components/DGPM406Guide';
 import { ConcursosGuide } from './components/ConcursosGuide';
+import { ConcursosJRS } from './components/ConcursosJRS';
 import { PortariaGuide } from './components/PortariaGuide';
 import { ExamesGuide } from './components/ExamesGuide';
 import { Infograficos } from './components/Infograficos';
@@ -94,6 +95,7 @@ const App: React.FC = () => {
 
       // PARECERES & EXTRAS PAGES - Restricted for user_outros
       case 'pareceres': return canAccessPareceresAndExtras ? <Pareceres /> : <DiseaseGuide />;
+      case 'concursosJRS': return canAccessPareceresAndExtras ? <ConcursosJRS /> : <DiseaseGuide />;
       case 'pericia-menor': return canAccessPareceresAndExtras ? <PericiaMenor /> : <DiseaseGuide />;
       case 'mensagens': return canAccessPareceresAndExtras ? <Mensagens /> : <DiseaseGuide />;
       case 'infograficos': return canAccessPareceresAndExtras ? <Infograficos /> : <DiseaseGuide />;
