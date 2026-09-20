@@ -9,7 +9,7 @@ async function sha256(message: string): Promise<string> {
 }
 
 interface Props {
-  onLogin: (nome: string, perfil: 'admin' | 'hnre' | 'user', usuario: string, senhaHash: string) => void;
+  onLogin: (nome: string, perfil: string, usuario: string, senhaHash: string) => void;
 }
 
 type View = 'login' | 'register';

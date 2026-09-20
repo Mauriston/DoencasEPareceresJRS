@@ -61,6 +61,7 @@ function doGet(e) {
     if (action === 'listarCandidatos') return apiListarCandidatos();
     if (action === 'obterContextoAgendamento') return apiObterContextoAgendamento();
     if (action === 'gerarMinutaResultados') return apiGerarMinutaResultados();
+    if (action === 'listarDatasAgendamento') return apiListarDatasAgendamento();
     throw new Error('Ação GET desconhecida: "' + action + '".');
   });
 }
@@ -85,6 +86,7 @@ function doPost(e) {
     if (action === 'processarMensagemPDF') return apiProcessarMensagemPDF(corpo);
     if (action === 'verificarViabilidadeAgendamento') return apiVerificarViabilidadeAgendamento(corpo);
     if (action === 'confirmarAgendamento') return apiConfirmarAgendamento(corpo);
+    if (action === 'reagendarCandidato') return apiReagendarCandidato(corpo);
     throw new Error('Ação POST desconhecida: "' + action + '".');
   });
 }
@@ -426,6 +428,105 @@ function apiAtualizarCandidato(corpo) {
       abaDataBase.getRange(linhaDataBase, 9).setValue(laudoTexto);
     }
   }
+
+  var mapaNomes = {};
+  lerParesIdNome(abaCandidatos).forEach(function(c) { mapaNomes[c.id] = c.nome; });
+  var linhaAtualizada = abaDataBase.getRange(linhaDataBase, 1, 1, 11).getValues()[0];
+  return linhaCandidatoParaApi(id, mapaNomes[id] || '', linhaAtualizada);
+}
+
+/**
+ * action=listarDatasAgendamento (GET): lista as datas ativas (coluna
+ * "ativa" = TRUE) da aba "agendamentos" — as datas efetivamente
+ * configuradas na última confirmação de agendamento — cada uma com a
+ * quantidade de candidatos já agendados nela (contagem sobre
+ * "candidatosDataBase.dataAgendamento"). Usado pelo front-end para
+ * destacar os dias disponíveis no calendário de reagendamento e no
+ * filtro por data.
+ */
+function apiListarDatasAgendamento() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID_CONCURSOS);
+  var aba = ss.getSheetByName('agendamentos');
+  if (!aba) throw new Error('Aba "agendamentos" não encontrada.');
+
+  var ultimaLinha = aba.getLastRow();
+  var datas = [];
+  if (ultimaLinha >= 2) {
+    aba.getRange(2, 1, ultimaLinha - 1, 3).getValues().forEach(function(linha) {
+      if (linha[0] instanceof Date && !isNaN(linha[0].getTime()) && linha[2] === true) {
+        datas.push({ data: linha[0], diaSemana: String(linha[1]).trim() });
+      }
+    });
+  }
+  datas.sort(function(a, b) { return a.data.getTime() - b.data.getTime(); });
+
+  var contagem = contarAgendadosPorData(ss);
+
+  return datas.map(function(d) {
+    var chave = formatarChaveData(d.data);
+    return {
+      data: chave,
+      dataFormatada: formatarDataSimples(d.data),
+      diaSemana: d.diaSemana,
+      quantidadeAgendados: contagem[chave] || 0
+    };
+  });
+}
+
+/**
+ * Conta, para cada data (chave "AAAA-MM-DD"), quantos candidatos de
+ * "candidatosDataBase" têm essa "dataAgendamento".
+ */
+function contarAgendadosPorData(ss) {
+  var aba = ss.getSheetByName('candidatosDataBase');
+  if (!aba) throw new Error('Aba "candidatosDataBase" não encontrada.');
+
+  var ultimaLinha = aba.getLastRow();
+  var contagem = {};
+  if (ultimaLinha < 2) return contagem;
+
+  aba.getRange(2, 2, ultimaLinha - 1, 1).getValues().forEach(function(linha) {
+    if (linha[0] instanceof Date && !isNaN(linha[0].getTime())) {
+      var chave = formatarChaveData(linha[0]);
+      contagem[chave] = (contagem[chave] || 0) + 1;
+    }
+  });
+  return contagem;
+}
+
+/**
+ * action=reagendarCandidato (POST): { id, data (AAAA-MM-DD) } —
+ * reagenda um candidato para uma nova data já configurada em
+ * "agendamentos", limpando o resultado anterior (finalizado, Laudo,
+ * Data do Laudo) e marcando o Status como "Reagendado". Não passa
+ * pelo MAPA_LAUDO_POR_STATUS (não é um laudo). Não grava nada na aba
+ * "Principal".
+ */
+function apiReagendarCandidato(corpo) {
+  var id = String((corpo && corpo.id) || '').trim();
+  var dataStr = String((corpo && corpo.data) || '').trim();
+  if (!id) throw new Error('"id" é obrigatório.');
+  if (!dataStr) throw new Error('"data" é obrigatório.');
+
+  var partes = dataStr.split('-');
+  if (partes.length !== 3) throw new Error('"data" deve estar no formato AAAA-MM-DD.');
+  var novaData = new Date(parseInt(partes[0], 10), parseInt(partes[1], 10) - 1, parseInt(partes[2], 10), 12, 0, 0);
+  if (isNaN(novaData.getTime())) throw new Error('"data" inválida.');
+
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID_CONCURSOS);
+  var abaDataBase = ss.getSheetByName('candidatosDataBase');
+  var abaCandidatos = ss.getSheetByName('candidatos');
+  if (!abaDataBase) throw new Error('Aba "candidatosDataBase" não encontrada.');
+  if (!abaCandidatos) throw new Error('Aba "candidatos" não encontrada.');
+
+  var linhaDataBase = localizarLinhaCandidatosDataBasePorId(abaDataBase, id);
+  if (linhaDataBase === -1) throw new Error('Candidato com matrícula "' + id + '" não encontrado.');
+
+  abaDataBase.getRange(linhaDataBase, 2).setValue(novaData);
+  abaDataBase.getRange(linhaDataBase, 4).setValue('Reagendado');
+  abaDataBase.getRange(linhaDataBase, 6).setValue(false);
+  abaDataBase.getRange(linhaDataBase, 8).setValue('');
+  abaDataBase.getRange(linhaDataBase, 9).setValue('');
 
   var mapaNomes = {};
   lerParesIdNome(abaCandidatos).forEach(function(c) { mapaNomes[c.id] = c.nome; });

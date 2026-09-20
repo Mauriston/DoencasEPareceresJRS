@@ -25,10 +25,11 @@ import { RoteiroJRS } from './components/RoteiroJRS';
 import { UsuariosManagement } from './components/UsuariosManagement';
 import { NavItem } from './types';
 import { NavContext } from './context/NavContext';
+import { canAccessPage } from './config/permissions';
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
 
-interface AuthUser { nome: string; perfil: 'admin' | 'user_hnre' | 'user_outros' | 'hnre' | 'user' | string; }
+interface AuthUser { nome: string; perfil: 'admin' | 'user_medicos' | 'user_secretaria' | string; }
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<NavItem>('splash');
@@ -58,7 +59,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (authUser?.perfil === 'user' || authUser?.perfil === 'user_outros') return;
+    if (authUser?.perfil === 'user_secretaria') return;
     fetch(`${GAS_URL}?action=getPericiaMenorList`)
       .then(r => r.json())
       .then(json => {
@@ -81,33 +82,35 @@ const App: React.FC = () => {
     setCurrentView('guide');
   };
 
-  const canAccessPareceresAndExtras = authUser?.perfil === 'admin' || authUser?.perfil === 'user_hnre' || authUser?.perfil === 'hnre';
+  const can = (pageId: string) => canAccessPage(pageId, authUser?.perfil);
+  // Artigos e páginas de detalhe navegam a partir de "estudo": herdam a permissão dessa página.
+  const canAccessEstudo = can('estudo');
 
   const renderView = () => {
     switch (currentView) {
       case 'guide': return <DiseaseGuide />;
-      case 'laws': return <LawReference />;
-      case 'dgpm406': return <DGPM406Guide />;
-      case 'concursos': return <ConcursosGuide />;
-      case 'portaria': return <PortariaGuide />;
-      case 'exames': return <ExamesGuide />;
-      case 'templates': return <TemplatesGuide />;
+      case 'laws': return can('laws') ? <LawReference /> : <DiseaseGuide />;
+      case 'dgpm406': return can('dgpm406') ? <DGPM406Guide /> : <DiseaseGuide />;
+      case 'concursos': return can('concursos') ? <ConcursosGuide /> : <DiseaseGuide />;
+      case 'portaria': return can('portaria') ? <PortariaGuide /> : <DiseaseGuide />;
+      case 'exames': return can('exames') ? <ExamesGuide /> : <DiseaseGuide />;
+      case 'templates': return can('templates') ? <TemplatesGuide /> : <DiseaseGuide />;
 
-      // PARECERES & EXTRAS PAGES - Restricted for user_outros
-      case 'pareceres': return canAccessPareceresAndExtras ? <Pareceres /> : <DiseaseGuide />;
-      case 'concursosJRS': return canAccessPareceresAndExtras ? <ConcursosJRS /> : <DiseaseGuide />;
-      case 'pericia-menor': return canAccessPareceresAndExtras ? <PericiaMenor /> : <DiseaseGuide />;
-      case 'mensagens': return canAccessPareceresAndExtras ? <Mensagens /> : <DiseaseGuide />;
-      case 'infograficos': return canAccessPareceresAndExtras ? <Infograficos /> : <DiseaseGuide />;
-      case 'resumos': return canAccessPareceresAndExtras ? <Resumos /> : <DiseaseGuide />;
-      case 'artigos': return canAccessPareceresAndExtras ? <Artigos onNavigate={setCurrentView} /> : <DiseaseGuide />;
-      case 'artigo-pericia': return canAccessPareceresAndExtras ? <ArtigoPericiaMedica onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
-      case 'artigo-perfil': return canAccessPareceresAndExtras ? <ArtigoPerfilPerito onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
-      case 'artigo-administrativa': return canAccessPareceresAndExtras ? <ArtigoPericiaAdministrativa onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
-      case 'artigo-psiquiatria': return canAccessPareceresAndExtras ? <ArtigoPericiaPsiquiatria onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
-      case 'casos': return canAccessPareceresAndExtras ? <CasosPericiais onBack={() => setCurrentView('guide')} /> : <DiseaseGuide />;
-      case 'estudo': return canAccessPareceresAndExtras ? <Estudo onBack={() => setCurrentView('guide')} onNavigate={setCurrentView} /> : <DiseaseGuide />;
-      case 'roteiro': return canAccessPareceresAndExtras ? <RoteiroJRS /> : <DiseaseGuide />;
+      // PÁGINAS RESTRITAS POR PERFIL (config/permissions.ts, editável em Usuários)
+      case 'pareceres': return can('pareceres') ? <Pareceres /> : <DiseaseGuide />;
+      case 'concursosJRS': return can('concursosJRS') ? <ConcursosJRS /> : <DiseaseGuide />;
+      case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor /> : <DiseaseGuide />;
+      case 'mensagens': return can('mensagens') ? <Mensagens /> : <DiseaseGuide />;
+      case 'infograficos': return can('infograficos') ? <Infograficos /> : <DiseaseGuide />;
+      case 'resumos': return can('resumos') ? <Resumos /> : <DiseaseGuide />;
+      case 'artigos': return canAccessEstudo ? <Artigos onNavigate={setCurrentView} /> : <DiseaseGuide />;
+      case 'artigo-pericia': return canAccessEstudo ? <ArtigoPericiaMedica onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
+      case 'artigo-perfil': return canAccessEstudo ? <ArtigoPerfilPerito onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
+      case 'artigo-administrativa': return canAccessEstudo ? <ArtigoPericiaAdministrativa onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
+      case 'artigo-psiquiatria': return canAccessEstudo ? <ArtigoPericiaPsiquiatria onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
+      case 'casos': return can('casos') ? <CasosPericiais onBack={() => setCurrentView('guide')} /> : <DiseaseGuide />;
+      case 'estudo': return canAccessEstudo ? <Estudo onBack={() => setCurrentView('guide')} onNavigate={setCurrentView} /> : <DiseaseGuide />;
+      case 'roteiro': return can('roteiro') ? <RoteiroJRS /> : <DiseaseGuide />;
 
       // USUÁRIOS PAGE - Restricted for non-admin
       case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement /> : <DiseaseGuide />;

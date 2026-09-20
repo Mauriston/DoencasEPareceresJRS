@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { NavContext, AuthUser } from '../context/NavContext';
 import { NavItem } from '../types';
+import { canAccessPage } from '../config/permissions';
 
 export interface HeaderProps {
   title?: string;
@@ -11,75 +12,66 @@ export interface HeaderProps {
 
 const getCategories = (authUser: AuthUser | null, periciaMenorVigentes: number) => {
   const p = authUser?.perfil;
-  const isHNReOrAdmin = p === 'admin' || p === 'user_hnre' || p === 'hnre';
+  const can = (id: NavItem) => canAccessPage(id, p);
+
+  type Subitem = { id: NavItem; label: string; icon: string; badge?: number };
+  const filtrar = (subitems: Subitem[]) => subitems.filter(s => can(s.id));
 
   const categories = [
     {
       id: 'beneficios',
       label: 'Benefícios',
       icon: 'stethoscope',
-      subitems: [
-        { id: 'guide' as NavItem, label: 'Doenças de Lei', icon: 'medical_information' },
-        { id: 'portaria' as NavItem, label: 'Portaria', icon: 'article' },
-      ],
+      subitems: filtrar([
+        { id: 'guide', label: 'Doenças de Lei', icon: 'medical_information' },
+        { id: 'portaria', label: 'Portaria', icon: 'article' },
+      ]),
     },
     {
       id: 'avaliacoes',
-      label: 'Índices',
+      label: 'Concursos',
       icon: 'checklist',
-      subitems: [
-        { id: 'concursos' as NavItem, label: 'Índices de Concursos', icon: 'emoji_events' },
-        { id: 'exames' as NavItem, label: 'Exames', icon: 'science' },
-      ],
+      subitems: filtrar([
+        { id: 'concursosJRS', label: 'Planilhas de Controle', icon: 'fact_check' },
+        { id: 'concursos', label: 'Índices Mínimos', icon: 'emoji_events' },
+        { id: 'exames', label: 'Exames Mínimos', icon: 'science' },
+      ]),
     },
-  ];
-
-  if (isHNReOrAdmin) {
-    const docSubitems: { id: NavItem; label: string; icon: string; badge?: number }[] = [
-      { id: 'pareceres', label: 'Pareceres', icon: 'assignment' },
-      { id: 'concursosJRS', label: 'Concursos', icon: 'fact_check' },
-      { id: 'pericia-menor', label: 'Perícia Menor', icon: 'personal_injury', badge: periciaMenorVigentes },
-    ];
-    if (p === 'admin') {
-      docSubitems.push({ id: 'mensagens', label: 'Mensagens', icon: 'chat' });
-    }
-    categories.push({
+    {
       id: 'documentos',
       label: 'Pareceres',
       icon: 'description',
-      subitems: docSubitems,
-    });
-  }
-
-  const normasSubitems: { id: NavItem; label: string; icon: string }[] = [
-    { id: 'dgpm406', label: 'DGPM-406', icon: 'anchor' },
-    { id: 'laws', label: 'Legislação', icon: 'balance' },
-    { id: 'templates', label: 'Templates', icon: 'edit_document' },
-  ];
-  categories.push({
-    id: 'normas',
-    label: 'Normas',
-    icon: 'gavel',
-    subitems: normasSubitems,
-  });
-
-  if (isHNReOrAdmin) {
-    const extrasSubitems: { id: NavItem; label: string; icon: string }[] = [
-      { id: 'casos', label: 'Casos Periciais', icon: 'quiz' },
-      { id: 'estudo', label: 'Estudo / Artigos', icon: 'school' },
-      { id: 'infograficos', label: 'Infográficos', icon: 'image' },
-      { id: 'resumos', label: 'Resumos', icon: 'menu_book' },
-      { id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list' },
-    ];
-    categories.push({
+      subitems: filtrar([
+        { id: 'pareceres', label: 'Pareceres', icon: 'assignment' },
+        { id: 'pericia-menor', label: 'Perícia Menor', icon: 'personal_injury', badge: periciaMenorVigentes },
+        { id: 'mensagens', label: 'Mensagens', icon: 'chat' },
+      ]),
+    },
+    {
+      id: 'normas',
+      label: 'Normas',
+      icon: 'gavel',
+      subitems: filtrar([
+        { id: 'dgpm406', label: 'DGPM-406', icon: 'anchor' },
+        { id: 'laws', label: 'Legislação', icon: 'balance' },
+        { id: 'templates', label: 'Templates', icon: 'edit_document' },
+      ]),
+    },
+    {
       id: 'extras',
       label: 'Extras',
       icon: 'widgets',
-      subitems: extrasSubitems,
-    });
-  }
+      subitems: filtrar([
+        { id: 'casos', label: 'Casos Periciais', icon: 'quiz' },
+        { id: 'estudo', label: 'Estudo / Artigos', icon: 'school' },
+        { id: 'infograficos', label: 'Infográficos', icon: 'image' },
+        { id: 'resumos', label: 'Resumos', icon: 'menu_book' },
+        { id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list' },
+      ]),
+    },
+  ];
 
-  return categories;
+  return categories.filter(cat => cat.subitems.length > 0);
 };
 
 const isCategoryActive = (catId: string, currentView?: NavItem) => {
@@ -88,9 +80,9 @@ const isCategoryActive = (catId: string, currentView?: NavItem) => {
     case 'beneficios':
       return ['guide', 'portaria'].includes(currentView);
     case 'avaliacoes':
-      return ['concursos', 'exames'].includes(currentView);
+      return ['concursosJRS', 'concursos', 'exames'].includes(currentView);
     case 'documentos':
-      return ['pareceres', 'concursosJRS', 'pericia-menor', 'mensagens'].includes(currentView);
+      return ['pareceres', 'pericia-menor', 'mensagens'].includes(currentView);
     case 'normas':
       return ['dgpm406', 'dgpm406-anexos', 'laws', 'templates'].includes(currentView);
     case 'extras':
