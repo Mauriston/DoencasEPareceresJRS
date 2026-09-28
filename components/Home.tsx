@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { Header } from './Header';
 import { NavContext, getPrimeiroNome } from '../context/NavContext';
-import { getNavEntries } from '../config/navigation';
+import { getNavCategories } from '../config/navigation';
 
 export const Home: React.FC = () => {
   const nav = useContext(NavContext);
@@ -9,7 +9,7 @@ export const Home: React.FC = () => {
   const authUser = nav?.authUser || null;
   const periciaMenorVigentes = nav?.periciaMenorVigentes || 0;
 
-  const entries = getNavEntries(authUser?.perfil, periciaMenorVigentes);
+  const categories = getNavCategories(authUser?.perfil, periciaMenorVigentes);
   const primeiroNome = getPrimeiroNome(authUser);
 
   return (
@@ -25,22 +25,25 @@ export const Home: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-          {entries.map(entry => (
-            <button
-              key={entry.id}
-              type="button"
-              onClick={() => setCurrentView(entry.id)}
-              className="relative flex flex-col items-center justify-center gap-2.5 bg-[#079551] hover:bg-[#067a43] active:bg-[#056635] text-white rounded-2xl shadow-sm hover:shadow-md transition-all py-6 px-3 text-center"
-            >
-              {entry.badge ? (
-                <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white/30">
-                  {entry.badge}
-                </span>
-              ) : null}
-              <span className="material-symbols-outlined text-[28px]">{entry.icon}</span>
-              <span className="text-xs sm:text-sm font-bold leading-tight">{entry.label}</span>
-            </button>
-          ))}
+          {categories.map(cat => {
+            const badge = cat.subitems.reduce((acc, s) => acc + (s.badge || 0), 0);
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setCurrentView(cat.subitems[0].id)}
+                className="relative flex flex-col items-center justify-center gap-2.5 bg-[#079551] hover:bg-[#067a43] active:bg-[#056635] text-white rounded-2xl shadow-sm hover:shadow-md transition-all py-6 px-3 text-center"
+              >
+                {badge > 0 ? (
+                  <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white/30">
+                    {badge}
+                  </span>
+                ) : null}
+                <span className="material-symbols-outlined text-[28px]">{cat.icon}</span>
+                <span className="text-xs sm:text-sm font-bold leading-tight">{cat.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

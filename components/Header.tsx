@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { NavContext } from '../context/NavContext';
+import { getNavCategories, findCategoryForView } from '../config/navigation';
 
 export interface HeaderProps {
   title?: string;
@@ -45,9 +46,11 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
 
   const nav = useContext(NavContext);
+  const currentView = nav?.currentView;
   const setCurrentView = nav?.setCurrentView || (() => {});
   const authUser = nav?.authUser || null;
   const handleLogout = nav?.handleLogout || (() => {});
+  const periciaMenorVigentes = nav?.periciaMenorVigentes || 0;
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -57,7 +60,12 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
 
   const goHome = () => setCurrentView('home');
 
+  const categories = getNavCategories(authUser?.perfil, periciaMenorVigentes);
+  const activeCategory = currentView ? findCategoryForView(categories, currentView) : undefined;
+  const showAccessoryBar = !!activeCategory && activeCategory.subitems.length > 1;
+
   return (
+    <>
     <header
       className={`w-full sticky top-0 z-40 h-[56px] flex items-center justify-between transition-all duration-300 bg-[#050F41] text-white shadow-sm border-b border-white/10 shrink-0 ${
         isScrolled ? 'shadow-md' : ''
@@ -159,5 +167,31 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
         </div>
       </div>
     </header>
+
+    {showAccessoryBar && (
+      <div className="w-full sticky top-[56px] z-30 bg-white border-b border-gray-200 shadow-xs shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-1 px-4 md:px-8 h-11 min-w-max">
+          {activeCategory!.subitems.map(sub => (
+            <button
+              key={sub.id}
+              type="button"
+              onClick={() => setCurrentView(sub.id)}
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
+                currentView === sub.id ? 'bg-[#050F41] text-white' : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">{sub.icon}</span>
+              <span>{sub.label}</span>
+              {sub.badge ? (
+                <span className="bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center ml-0.5">
+                  {sub.badge}
+                </span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+    </>
   );
 };
