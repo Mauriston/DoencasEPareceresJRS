@@ -25,6 +25,8 @@ export interface NavContextType {
   updateAuthUser: (patch: Partial<AuthUser>) => void;
   handleLogout: () => void;
   periciaMenorVigentes: number;
+  isMobileMenuOpen: boolean;
+  setIsMobileMenuOpen: (open: boolean) => void;
 }
 
 export const NavContext = createContext<NavContextType | undefined>(undefined);

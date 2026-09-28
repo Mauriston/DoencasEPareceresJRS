@@ -1,7 +1,23 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from './Header';
 import { NavContext, getPrimeiroNome } from '../context/NavContext';
-import { getNavCategories } from '../config/navigation';
+import { getNavCategories, NavCategory } from '../config/navigation';
+
+/** Observa o breakpoint md (768px) do Tailwind em JS, para a motion de
+ * seleção de categoria (item 10) só se aplicar no desktop. */
+const useIsDesktop = (): boolean => {
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+  );
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 768px)');
+    const handler = () => setIsDesktop(mql.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+  return isDesktop;
+};
 
 export const Home: React.FC = () => {
   const nav = useContext(NavContext);
@@ -11,39 +27,110 @@ export const Home: React.FC = () => {
 
   const categories = getNavCategories(authUser?.perfil, periciaMenorVigentes);
   const primeiroNome = getPrimeiroNome(authUser);
+  const isDesktop = useIsDesktop();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // No mobile não há painel de subitens (item 10 é desktop-only): garante
+  // que a seleção não fique "presa" se a janela encolher.
+  useEffect(() => {
+    if (!isDesktop) setSelectedId(null);
+  }, [isDesktop]);
+
+  const selectedCategory: NavCategory | null = categories.find(c => c.id === selectedId) || null;
+
+  const handleCardClick = (cat: NavCategory) => {
+    if (isDesktop && cat.subitems.length > 1) {
+      setSelectedId(prev => (prev === cat.id ? null : cat.id));
+      return;
+    }
+    setCurrentView(cat.subitems[0].id);
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
-      <Header title="Hospital Naval de Recife - Junta Regular de Saúde" />
+      <Header title="JRS/HNRe" desktopTitle="Hospital Naval de Recife - Junta Regular de Saúde" />
 
       <div className="p-4 sm:p-6 lg:p-8 w-full flex-1">
         <div className="mb-6">
           <h1 className="font-heading text-xl sm:text-2xl font-bold text-[#050F41]">
             Olá, {primeiroNome || 'Perito'}!
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">O que pretende fazer agora?</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {selectedCategory ? `Escolha uma opção de ${selectedCategory.label}` : 'O que pretende fazer agora?'}
+          </p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
-          {categories.map(cat => {
-            const badge = cat.subitems.reduce((acc, s) => acc + (s.badge || 0), 0);
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setCurrentView(cat.subitems[0].id)}
-                className="relative flex flex-col items-center justify-center gap-2.5 bg-[#079551] hover:bg-[#067a43] active:bg-[#056635] text-white rounded-2xl shadow-sm hover:shadow-md transition-all py-6 px-3 text-center"
-              >
-                {badge > 0 ? (
-                  <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white/30">
-                    {badge}
+        <div className="flex flex-col md:flex-row items-start gap-4 sm:gap-6">
+          <div
+            className={`grid w-full gap-3 sm:gap-4 ${
+              selectedCategory ? 'grid-cols-1 md:w-60 md:shrink-0' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+            }`}
+          >
+            {categories.map(cat => {
+              const badge = cat.subitems.reduce((acc, s) => acc + (s.badge || 0), 0);
+              const isSelected = selectedCategory?.id === cat.id;
+              const isDimmed = !!selectedCategory && !isSelected;
+
+              return (
+                <motion.button
+                  key={cat.id}
+                  layout
+                  transition={{ type: 'spring', stiffness: 350, damping: 32 }}
+                  type="button"
+                  onClick={() => handleCardClick(cat)}
+                  className={`relative flex gap-2.5 rounded-2xl shadow-sm transition-colors duration-300 ${
+                    selectedCategory ? 'flex-row items-center justify-start py-3.5 px-4 text-left' : 'flex-col items-center justify-center py-6 px-3 text-center'
+                  } ${
+                    isDimmed
+                      ? 'bg-gray-200 text-gray-400 hover:bg-gray-200'
+                      : 'bg-[#079551] hover:bg-[#067a43] active:bg-[#056635] text-white hover:shadow-md'
+                  }`}
+                >
+                  {badge > 0 ? (
+                    <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white/30">
+                      {badge}
+                    </span>
+                  ) : null}
+                  <span className={`material-symbols-outlined shrink-0 ${selectedCategory ? 'text-[22px]' : 'text-[28px]'}`}>
+                    {cat.icon}
                   </span>
-                ) : null}
-                <span className="material-symbols-outlined text-[28px]">{cat.icon}</span>
-                <span className="text-xs sm:text-sm font-bold leading-tight">{cat.label}</span>
-              </button>
-            );
-          })}
+                  <span className={`font-bold leading-tight ${selectedCategory ? 'text-sm' : 'text-xs sm:text-sm'}`}>
+                    {cat.label}
+                  </span>
+                </motion.button>
+              );
+            })}
+          </div>
+
+          <AnimatePresence mode="wait">
+            {selectedCategory && (
+              <motion.div
+                key={selectedCategory.id}
+                initial={{ opacity: 0, x: 24 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 24 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 w-full flex-1"
+              >
+                {selectedCategory.subitems.map(sub => (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => setCurrentView(sub.id)}
+                    className="relative flex flex-col items-center justify-center gap-2.5 bg-white hover:bg-gray-50 active:bg-gray-100 text-[#050F41] rounded-2xl shadow-sm hover:shadow-md border border-gray-200/60 transition-all py-6 px-3 text-center"
+                  >
+                    {sub.badge ? (
+                      <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white">
+                        {sub.badge}
+                      </span>
+                    ) : null}
+                    <span className="material-symbols-outlined text-[28px] text-[#079551]">{sub.icon}</span>
+                    <span className="text-xs sm:text-sm font-bold leading-tight">{sub.label}</span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>

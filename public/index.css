@@ -1,0 +1,151 @@
+/* Ficheiro: public/index.css
+   Estilos globais que não cabem em classes utilitárias do Tailwind (CDN).
+   .md-content estiliza o HTML gerado a partir de Markdown (marked) nas
+   páginas da Portaria e dos capítulos/anexos da DGPM-406. */
+
+.md-content {
+  color: #1F2937;
+  font-family: 'Carlito', sans-serif;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  text-align: justify;
+}
+
+.md-content > *:first-child {
+  margin-top: 0;
+}
+
+.md-content h1,
+.md-content h2,
+.md-content h3,
+.md-content h4,
+.md-content h5,
+.md-content h6 {
+  font-family: 'Montserrat', sans-serif;
+  color: #050F41;
+  font-weight: 700;
+  text-align: left;
+  line-height: 1.35;
+}
+
+.md-content h1 {
+  font-size: 1.05rem;
+  margin: 0 0 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.md-content h2 {
+  font-size: 0.95rem;
+  margin: 1.75rem 0 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.md-content h3 {
+  font-size: 0.85rem;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.md-content h4,
+.md-content h5,
+.md-content h6 {
+  font-size: 0.8125rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.md-content p {
+  margin: 0 0 0.85rem;
+}
+
+.md-content strong {
+  color: #050F41;
+  font-weight: 700;
+}
+
+.md-content em {
+  font-style: italic;
+}
+
+.md-content ul,
+.md-content ol {
+  margin: 0 0 0.85rem;
+  padding-left: 1.25rem;
+}
+
+.md-content ul {
+  list-style: disc;
+}
+
+.md-content ol {
+  list-style: decimal;
+}
+
+.md-content li {
+  margin-bottom: 0.35rem;
+}
+
+.md-content li > ul,
+.md-content li > ol {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.md-content blockquote {
+  margin: 0 0 0.85rem;
+  padding: 0.5rem 0.9rem;
+  border-left: 3px solid #079551;
+  background: rgba(7, 149, 81, 0.05);
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: #374151;
+  font-style: italic;
+}
+
+.md-content hr {
+  margin: 1.5rem 0;
+  border: none;
+  border-top: 1px solid #E5E7EB;
+}
+
+.md-content a {
+  color: #079551;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.md-content code {
+  background: #F3F4F6;
+  color: #050F41;
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.75rem;
+}
+
+.md-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 1rem;
+  font-size: 0.75rem;
+  text-align: left;
+}
+
+.md-content thead {
+  background: #F9FAFB;
+}
+
+.md-content th,
+.md-content td {
+  border: 1px solid #E5E7EB;
+  padding: 0.5rem 0.6rem;
+  vertical-align: top;
+}
+
+.md-content th {
+  color: #050F41;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.md-content tbody tr:nth-child(even) {
+  background: #FAFAFA;
+}

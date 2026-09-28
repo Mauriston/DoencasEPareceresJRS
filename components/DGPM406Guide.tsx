@@ -1,13 +1,15 @@
 // Ficheiro: components/DGPM406Guide.tsx
 import React, { useState } from 'react';
 import { Header } from './Header';
-import { MoreVertical, BookOpen, Paperclip } from 'lucide-react';
+import { MarkdownDocPage } from './MarkdownDocPage';
+import { MoreVertical, BookOpen, Paperclip, FileText } from 'lucide-react';
 
 interface Chapter {
   id: string;
   chapter: string;
   title: string;
   link: string;
+  mdKey?: string;
 }
 
 interface Anexo {
@@ -15,26 +17,49 @@ interface Anexo {
   anexo: string;
   title: string;
   link: string;
+  mdKey?: string;
 }
+
+// Texto-fonte dos capítulos/anexos (extraído da DGPM-406, 9ª Rev). Só os
+// itens com arquivo .md correspondente ganham um "mdKey" e abrem a página
+// renderizada; os demais continuam apontando para o PDF no Drive.
+const chapterModules = import.meta.glob('../content/dgpm-406/capitulo-*.md', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
+const anexoModules = import.meta.glob('../content/dgpm-406/anexos/anexo-*.md', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
+const getModule = (modules: Record<string, string>, fileName: string): string | undefined => {
+  const key = Object.keys(modules).find(k => k.endsWith(`/${fileName}`));
+  return key ? modules[key] : undefined;
+};
 
 const CHAPTERS: Chapter[] = [
   { id: 'c0', chapter: 'DGPM-406 9ª REV', title: 'NORMAS REGULADORAS PARA INSPEÇÕES DE SAÚDE NA MARINHA', link: 'https://drive.google.com/open?id=1NlCZR1I24epU0-nucN4zHd2fUmO7SOFn' },
-  { id: 'c1', chapter: 'Capítulo 1', title: 'ESTRUTURA DO SUBSISTEMA MÉDICO-PERICIAL DA MB', link: 'https://drive.google.com/open?id=1nVX3dkkGHHyWDwVhPdVjw7DWItD0y1sy' },
-  { id: 'c2', chapter: 'Capítulo 2', title: 'PROCESSOS DAS INSPEÇÕES DE SAÚDE NA MB', link: 'https://drive.google.com/open?id=1L7TLBKFsRGaRI-rpaMEVvwg9bV_Y2A58' },
-  { id: 'c3', chapter: 'Capítulo 3', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INGRESSAR NO SERVIÇO ATIVO NA MARIINHA', link: 'https://drive.google.com/open?id=1FielRLlQ7rmcjtaVJafdGF2x1SN90DE3' },
-  { id: 'c4', chapter: 'Capítulo 4', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INSPEÇÕES DE SAÚDE PÓS-ADMISSIONAIS', link: 'https://drive.google.com/open?id=1lblyFP5bbCKdQyXuO1--JCz1VmlJOG38' },
-  { id: 'c6', chapter: 'Capítulo 6', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INSPEÇÕES DE SAÚDE PÓS-ADMISSIONAIS', link: 'https://drive.google.com/open?id=1Lus5R4-UjHGZ8Ff5sylgfl8cN6qQpeo5' },
-  { id: 'c7', chapter: 'Capítulo 7', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA IS DE JUSTIÇA E DISCIPLINA', link: 'https://drive.google.com/file/d/1fWgkRno35s4AzhA9BJqw_3eHXePYF2YC/view?usp=drivesdk' },
-  { id: 'c8', chapter: 'Capítulo 8', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA EXCLUSÃO DO SERVIÇO ATIVO DA MARINHA', link: 'https://drive.google.com/open?id=1ozUl0F2YNU_SEVkzDI8Dl-CeIn_gN6XC' },
-  { id: 'c9', chapter: 'Capítulo 9', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INSPEÇÕES DE SAÚDE PARA CONCESSÃO DE BENEFÍCIOS NA MB', link: 'https://drive.google.com/open?id=1JlzkalbaF4R7zrjt8qk9XvFu_jp4BMhL' },
-  { id: 'c10', chapter: 'Capítulo 10', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INSPEÇÕES DE SAÚDE DE SERVIDORES CIVIS DA MB', link: 'https://drive.google.com/open?id=1LusI_DszPSwjbLPIJqTJkh1E9hP4RtxQ' },
-  { id: 'c11', chapter: 'Capítulo 11', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA O SERVIÇO MILITAR TEMPORÁRIO', link: 'https://drive.google.com/open?id=1jFWJMETC-w6L8t7ylJyQgBVVQDfKDJNV' },
-  { id: 'c12', chapter: 'Capítulo 12', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INSPEÇÕES DE SAÚDE EM GRAU DE REVISÃO E RECURSOS', link: 'https://drive.google.com/file/d/1G5_BSDseclb32cu4T3ZaUVyFnmH5Rf9E/view?usp=drive_link' },
-  { id: 'c13', chapter: 'Capítulo 13', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA COMPROVAÇÃO DE NEXO CAUSAL LABORATIVO', link: 'https://drive.google.com/open?id=1K17M2dVRqpRVpRrqbSaYHvX0Gt31jxdN' },
-  { id: 'c14', chapter: 'Capítulo 14', title: 'PRONTUÁRIO MÉDICO INDIVIDUAL E GUIA SANITÁRIA', link: 'https://drive.google.com/open?id=121eIh1v3YPehkFJktqr70sDI0mSrw6Qs' },
-  { id: 'c15', chapter: 'Capítulo 15', title: 'ESTRUTURA E ROTINA DE FUNCIONAMENTO DO DEPARTAMENTO DE AUDITORIA MÉDICO-PERICIAL', link: 'https://drive.google.com/open?id=1sUi1tvbGMtQkWAcqJc9wXz7n8koZLizM' },
-  { id: 'c17', chapter: 'Capítulo 17', title: 'EXAME TOXICOLÓGICO', link: 'https://drive.google.com/open?id=1CL-hNZs5mhJlfqhJWe4Sq3YJwQPtnE2p' },
-  { id: 'c18', chapter: 'Capítulo 18', title: 'INSPEÇÃO DE SAÚDE DE VERIFICAÇÃO DE DEFICIÊNCIA FUNCIONAL E DETÉRMINO DE INCAPACIDADE NO SERVIÇO DE PRATICAGEM', link: 'https://drive.google.com/open?id=1_CJ9YqoixMsXp7Hjm25EyISFPitHBLaS' }
+  { id: 'c1', chapter: 'Capítulo 1', title: 'ESTRUTURA DO SUBSISTEMA MÉDICO-PERICIAL DA MB', link: 'https://drive.google.com/open?id=1nVX3dkkGHHyWDwVhPdVjw7DWItD0y1sy', mdKey: 'capitulo-01.md' },
+  { id: 'c2', chapter: 'Capítulo 2', title: 'PROCESSOS DAS INSPEÇÕES DE SAÚDE NA MB', link: 'https://drive.google.com/open?id=1L7TLBKFsRGaRI-rpaMEVvwg9bV_Y2A58', mdKey: 'capitulo-02.md' },
+  { id: 'c3', chapter: 'Capítulo 3', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INGRESSAR NO SERVIÇO ATIVO NA MARIINHA', link: 'https://drive.google.com/open?id=1FielRLlQ7rmcjtaVJafdGF2x1SN90DE3', mdKey: 'capitulo-03.md' },
+  { id: 'c4', chapter: 'Capítulo 4', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INSPEÇÕES DE SAÚDE PÓS-ADMISSIONAIS', link: 'https://drive.google.com/open?id=1lblyFP5bbCKdQyXuO1--JCz1VmlJOG38', mdKey: 'capitulo-04.md' },
+  { id: 'c5', chapter: 'Capítulo 5', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INSPEÇÕES DE SAÚDE PARA ATIVIDADES ESPECIAIS', link: 'https://drive.google.com/open?id=1NlCZR1I24epU0-nucN4zHd2fUmO7SOFn', mdKey: 'capitulo-05.md' },
+  { id: 'c6', chapter: 'Capítulo 6', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INSPEÇÕES DE SAÚDE PÓS-ADMISSIONAIS', link: 'https://drive.google.com/open?id=1Lus5R4-UjHGZ8Ff5sylgfl8cN6qQpeo5', mdKey: 'capitulo-06.md' },
+  { id: 'c7', chapter: 'Capítulo 7', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA IS DE JUSTIÇA E DISCIPLINA', link: 'https://drive.google.com/file/d/1fWgkRno35s4AzhA9BJqw_3eHXePYF2YC/view?usp=drivesdk', mdKey: 'capitulo-07.md' },
+  { id: 'c8', chapter: 'Capítulo 8', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA EXCLUSÃO DO SERVIÇO ATIVO DA MARINHA', link: 'https://drive.google.com/open?id=1ozUl0F2YNU_SEVkzDI8Dl-CeIn_gN6XC', mdKey: 'capitulo-08.md' },
+  { id: 'c9', chapter: 'Capítulo 9', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INSPEÇÕES DE SAÚDE PARA CONCESSÃO DE BENEFÍCIOS NA MB', link: 'https://drive.google.com/open?id=1JlzkalbaF4R7zrjt8qk9XvFu_jp4BMhL', mdKey: 'capitulo-09.md' },
+  { id: 'c10', chapter: 'Capítulo 10', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INSPEÇÕES DE SAÚDE DE SERVIDORES CIVIS DA MB', link: 'https://drive.google.com/open?id=1LusI_DszPSwjbLPIJqTJkh1E9hP4RtxQ', mdKey: 'capitulo-10.md' },
+  { id: 'c11', chapter: 'Capítulo 11', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA O SERVIÇO MILITAR TEMPORÁRIO', link: 'https://drive.google.com/open?id=1jFWJMETC-w6L8t7ylJyQgBVVQDfKDJNV', mdKey: 'capitulo-11.md' },
+  { id: 'c12', chapter: 'Capítulo 12', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INSPEÇÕES DE SAÚDE EM GRAU DE REVISÃO E RECURSOS', link: 'https://drive.google.com/file/d/1G5_BSDseclb32cu4T3ZaUVyFnmH5Rf9E/view?usp=drive_link', mdKey: 'capitulo-12.md' },
+  { id: 'c13', chapter: 'Capítulo 13', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA COMPROVAÇÃO DE NEXO CAUSAL LABORATIVO', link: 'https://drive.google.com/open?id=1K17M2dVRqpRVpRrqbSaYHvX0Gt31jxdN', mdKey: 'capitulo-13.md' },
+  { id: 'c14', chapter: 'Capítulo 14', title: 'PRONTUÁRIO MÉDICO INDIVIDUAL E GUIA SANITÁRIA', link: 'https://drive.google.com/open?id=121eIh1v3YPehkFJktqr70sDI0mSrw6Qs', mdKey: 'capitulo-14.md' },
+  { id: 'c15', chapter: 'Capítulo 15', title: 'ESTRUTURA E ROTINA DE FUNCIONAMENTO DO DEPARTAMENTO DE AUDITORIA MÉDICO-PERICIAL', link: 'https://drive.google.com/open?id=1sUi1tvbGMtQkWAcqJc9wXz7n8koZLizM', mdKey: 'capitulo-15.md' },
+  { id: 'c16', chapter: 'Capítulo 16', title: 'REVISÃO DE REFORMA POR INCAPACIDADE DEFINITIVA PARA O SAM OU INVALIDEZ', link: 'https://drive.google.com/open?id=1sUi1tvbGMtQkWAcqJc9wXz7n8koZLizM', mdKey: 'capitulo-16.md' },
+  { id: 'c17', chapter: 'Capítulo 17', title: 'EXAME TOXICOLÓGICO', link: 'https://drive.google.com/open?id=1CL-hNZs5mhJlfqhJWe4Sq3YJwQPtnE2p', mdKey: 'capitulo-17.md' },
+  { id: 'c18', chapter: 'Capítulo 18', title: 'INSPEÇÃO DE SAÚDE DE VERIFICAÇÃO DE DEFICIÊNCIA FUNCIONAL E DETÉRMINO DE INCAPACIDADE NO SERVIÇO DE PRATICAGEM', link: 'https://drive.google.com/open?id=1_CJ9YqoixMsXp7Hjm25EyISFPitHBLaS', mdKey: 'capitulo-18.md' },
 ];
 
 const ANEXOS: Anexo[] = [
@@ -47,20 +72,58 @@ const ANEXOS: Anexo[] = [
   { id: 'a7', anexo: 'ANEXO J', title: 'TCLE para realização de exame toxicológico', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
   { id: 'a8', anexo: 'ANEXO K', title: 'Perícia menor para gestantes saudáveis', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
   { id: 'a9', anexo: 'ANEXO M', title: 'Tramitação de documentos e conclusões médico periciais', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
-  { id: 'a10', anexo: 'ANEXO N', title: 'Padrões psicofísicos admissionais', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
-  { id: 'a11', anexo: 'ANEXO O', title: 'Exames mínimos', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
+  { id: 'a10', anexo: 'ANEXO N', title: 'Padrões psicofísicos admissionais', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC', mdKey: 'anexo-n.md' },
+  { id: 'a11', anexo: 'ANEXO O', title: 'Exames mínimos', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC', mdKey: 'anexo-o.md' },
   { id: 'a12', anexo: 'ANEXO P', title: 'Padrões psicofísicos pós-admissionais', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
   { id: 'a13', anexo: 'ANEXO R', title: 'Modelos da processualística do ISO', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
   { id: 'a14', anexo: 'ANEXO T', title: 'Reconhecimento de recurso', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
-  { id: 'a15', anexo: 'ANEXO U', title: 'Doenças previstas em lei', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
-  { id: 'a16', anexo: 'ANEXO V', title: 'Documentação médica pertinente às doenças previstas em lei', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
+  { id: 'a15', anexo: 'ANEXO U', title: 'Doenças previstas em lei', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC', mdKey: 'anexo-u.md' },
+  { id: 'a16', anexo: 'ANEXO V', title: 'Documentação médica pertinente às doenças previstas em lei', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC', mdKey: 'anexo-v.md' },
   { id: 'a17', anexo: 'ANEXO W', title: 'Folha de anamnese dirigida', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
   { id: 'a18', anexo: 'ANEXO Y', title: 'Cientificação resultado ingresso', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
   { id: 'a19', anexo: 'ANEXO AB', title: 'Índices mínimos e condições incapacitantes para o serviço de praticagem', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
 ];
 
+interface SelectedDoc {
+  title: string;
+  subtitle: string;
+  markdown: string;
+}
+
 export const DGPM406Guide: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'capitulos' | 'anexos'>('capitulos');
+  const [selectedDoc, setSelectedDoc] = useState<SelectedDoc | null>(null);
+
+  const openLink = (link: string) => window.open(link, '_blank', 'noopener,noreferrer');
+
+  const handleChapterClick = (item: Chapter) => {
+    const md = item.mdKey && getModule(chapterModules, item.mdKey);
+    if (md) {
+      setSelectedDoc({ title: item.chapter, subtitle: item.title, markdown: md });
+    } else {
+      openLink(item.link);
+    }
+  };
+
+  const handleAnexoClick = (item: Anexo) => {
+    const md = item.mdKey && getModule(anexoModules, item.mdKey);
+    if (md) {
+      setSelectedDoc({ title: item.anexo, subtitle: item.title, markdown: md });
+    } else {
+      openLink(item.link);
+    }
+  };
+
+  if (selectedDoc) {
+    return (
+      <MarkdownDocPage
+        title={selectedDoc.title}
+        subtitle={selectedDoc.subtitle}
+        markdown={selectedDoc.markdown}
+        onBack={() => setSelectedDoc(null)}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-gray-50 animate-fade-in relative">
@@ -88,16 +151,11 @@ export const DGPM406Guide: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {activeTab === 'capitulos' ? (
             CHAPTERS.map((item) => (
-              <a 
-                key={item.id} 
-                href={item.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.open(item.link, '_blank');
-                }}
-                className="group bg-white rounded-2xl border border-gray-200/60 p-4 hover:shadow-md hover:border-[#079551] transition-all duration-200 flex items-start justify-between cursor-pointer"
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleChapterClick(item)}
+                className="group bg-white rounded-2xl border border-gray-200/60 p-4 hover:shadow-md hover:border-[#079551] transition-all duration-200 flex items-start justify-between cursor-pointer text-left"
               >
                 <div className="flex flex-col pr-3 flex-1 min-w-0">
                   <h3 className="text-[#050F41] font-heading font-bold text-sm md:text-base leading-snug mb-1 group-hover:text-[#079551] transition-colors">
@@ -108,22 +166,17 @@ export const DGPM406Guide: React.FC = () => {
                   </p>
                 </div>
                 <div className="text-gray-400 group-hover:text-[#050F41] transition-colors shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
-                  <MoreVertical size={18} />
+                  {item.mdKey ? <FileText size={18} /> : <MoreVertical size={18} />}
                 </div>
-              </a>
+              </button>
             ))
           ) : (
             ANEXOS.map((item) => (
-              <a 
-                key={item.id} 
-                href={item.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.open(item.link, '_blank');
-                }}
-                className="group bg-white rounded-2xl border border-gray-200/60 p-4 hover:shadow-md hover:border-[#079551] transition-all duration-200 flex items-start justify-between cursor-pointer"
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleAnexoClick(item)}
+                className="group bg-white rounded-2xl border border-gray-200/60 p-4 hover:shadow-md hover:border-[#079551] transition-all duration-200 flex items-start justify-between cursor-pointer text-left"
               >
                 <div className="flex flex-col pr-3 flex-1 min-w-0">
                   <h3 className="text-[#050F41] font-heading font-bold text-sm md:text-base leading-snug mb-1 group-hover:text-[#079551] transition-colors">
@@ -134,9 +187,9 @@ export const DGPM406Guide: React.FC = () => {
                   </p>
                 </div>
                 <div className="text-gray-400 group-hover:text-[#050F41] transition-colors shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
-                  <MoreVertical size={18} />
+                  {item.mdKey ? <FileText size={18} /> : <MoreVertical size={18} />}
                 </div>
-              </a>
+              </button>
             ))
           )}
         </div>
