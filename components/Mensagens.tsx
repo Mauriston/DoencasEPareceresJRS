@@ -1,6 +1,7 @@
 // Ficheiro: components/Mensagens.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Header } from './Header';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
 
@@ -19,6 +20,7 @@ export const Mensagens: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isDesktop = useIsDesktop();
 
   const fileToBase64 = (file: File): Promise<{ base64: string; mimeType: string }> =>
     new Promise((resolve, reject) => {
@@ -32,10 +34,10 @@ export const Mensagens: React.FC = () => {
       reader.readAsDataURL(file);
     });
 
-  const handleFilesSelected = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+  const handleFilesSelected = async (files: File[]) => {
+    if (files.length === 0) return;
     const newItems: ImageItem[] = [];
-    for (const file of Array.from(files)) {
+    for (const file of files) {
       const { base64, mimeType } = await fileToBase64(file);
       newItems.push({
         file,
@@ -50,6 +52,28 @@ export const Mensagens: React.FC = () => {
     setError(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // Desktop: cola (Ctrl+V) uma ou mais imagens da área de transferência
+  // diretamente no campo, sem precisar selecionar arquivo/câmera. Ouve a
+  // página inteira (não só o campo) para não depender de foco em elemento
+  // específico, evitando as inconsistências de foco em <button> entre navegadores.
+  const handlePaste = useCallback((e: ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles = Array.from(items)
+      .filter(item => item.type.startsWith('image/'))
+      .map(item => item.getAsFile())
+      .filter((f): f is File => !!f);
+    if (imageFiles.length === 0) return;
+    e.preventDefault();
+    handleFilesSelected(imageFiles);
+  }, []);
+
+  useEffect(() => {
+    if (!isDesktop) return;
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isDesktop, handlePaste]);
 
   const removeImage = (idx: number) => {
     setImages(prev => {
@@ -144,7 +168,9 @@ export const Mensagens: React.FC = () => {
           >
             <span className="material-symbols-outlined text-[40px]">photo_camera</span>
             <span className="text-sm font-semibold">Tirar foto ou selecionar imagem</span>
-            <span className="text-xs opacity-60">Câmera · Galeria · Arquivos do dispositivo</span>
+            <span className="text-xs opacity-60">
+              {isDesktop ? 'Galeria · Arquivos · Colar (Ctrl+V)' : 'Câmera · Galeria · Arquivos do dispositivo'}
+            </span>
           </button>
           <input
             ref={fileInputRef}
@@ -152,7 +178,7 @@ export const Mensagens: React.FC = () => {
             accept="image/*"
             multiple
             className="hidden"
-            onChange={e => handleFilesSelected(e.target.files)}
+            onChange={e => handleFilesSelected(Array.from(e.target.files || []))}
           />
 
           {images.length > 0 && (

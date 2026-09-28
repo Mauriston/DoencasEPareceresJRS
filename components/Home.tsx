@@ -3,21 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from './Header';
 import { NavContext, getPrimeiroNome } from '../context/NavContext';
 import { getNavCategories, NavCategory } from '../config/navigation';
-
-/** Observa o breakpoint md (768px) do Tailwind em JS, para a motion de
- * seleção de categoria (item 10) só se aplicar no desktop. */
-const useIsDesktop = (): boolean => {
-  const [isDesktop, setIsDesktop] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
-  );
-  useEffect(() => {
-    const mql = window.matchMedia('(min-width: 768px)');
-    const handler = () => setIsDesktop(mql.matches);
-    mql.addEventListener('change', handler);
-    return () => mql.removeEventListener('change', handler);
-  }, []);
-  return isDesktop;
-};
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 export const Home: React.FC = () => {
   const nav = useContext(NavContext);
@@ -63,7 +49,7 @@ export const Home: React.FC = () => {
         <div className="flex flex-col md:flex-row items-start gap-4 sm:gap-6">
           <div
             className={`grid w-full gap-3 sm:gap-4 ${
-              selectedCategory ? 'grid-cols-1 md:w-60 md:shrink-0' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+              selectedCategory ? 'grid-cols-1 md:w-60 md:shrink-0' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
             }`}
           >
             {categories.map(cat => {
@@ -78,8 +64,8 @@ export const Home: React.FC = () => {
                   transition={{ type: 'spring', stiffness: 90, damping: 22, mass: 1 }}
                   type="button"
                   onClick={() => handleCardClick(cat)}
-                  className={`relative flex gap-2.5 rounded-2xl shadow-sm transition-colors duration-700 ${
-                    selectedCategory ? 'flex-row items-center justify-start py-3.5 px-4 text-left' : 'flex-col items-center justify-center py-6 px-3 text-center'
+                  className={`relative flex rounded-2xl shadow-sm transition-colors duration-700 text-left ${
+                    selectedCategory ? 'flex-row items-center gap-2.5 py-3.5 px-4' : 'flex-col gap-1.5 py-4 px-4'
                   } ${
                     isDimmed
                       ? 'bg-gray-200 text-gray-400 hover:bg-gray-200'
@@ -91,12 +77,19 @@ export const Home: React.FC = () => {
                       {badge}
                     </span>
                   ) : null}
-                  <span className={`material-symbols-outlined shrink-0 ${selectedCategory ? 'text-[22px]' : 'text-[28px]'}`}>
-                    {cat.icon}
+                  <span className={`flex items-center gap-2.5 ${selectedCategory ? '' : 'w-full'}`}>
+                    <span className={`material-symbols-outlined shrink-0 ${selectedCategory ? 'text-[22px]' : 'text-[26px]'}`}>
+                      {cat.icon}
+                    </span>
+                    <span className={`font-bold leading-tight ${selectedCategory ? 'text-sm' : 'text-sm sm:text-base'}`}>
+                      {cat.label}
+                    </span>
                   </span>
-                  <span className={`font-bold leading-tight ${selectedCategory ? 'text-sm' : 'text-xs sm:text-sm'}`}>
-                    {cat.label}
-                  </span>
+                  {!selectedCategory && (
+                    <span className="text-[11px] sm:text-xs font-medium leading-snug text-white/85">
+                      {cat.subtitle}
+                    </span>
+                  )}
                 </motion.button>
               );
             })}
@@ -117,15 +110,20 @@ export const Home: React.FC = () => {
                     key={sub.id}
                     type="button"
                     onClick={() => setCurrentView(sub.id)}
-                    className="relative flex flex-col items-center justify-center gap-2.5 bg-white hover:bg-gray-50 active:bg-gray-100 text-[#050F41] rounded-2xl shadow-sm hover:shadow-md border border-gray-200/60 transition-all py-6 px-3 text-center"
+                    className="relative flex flex-col gap-1.5 bg-white hover:bg-gray-50 active:bg-gray-100 text-[#050F41] rounded-2xl shadow-sm hover:shadow-md border border-gray-200/60 transition-all py-4 px-4 text-left"
                   >
                     {sub.badge ? (
                       <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white">
                         {sub.badge}
                       </span>
                     ) : null}
-                    <span className="material-symbols-outlined text-[28px] text-[#079551]">{sub.icon}</span>
-                    <span className="text-xs sm:text-sm font-bold leading-tight">{sub.label}</span>
+                    <span className="flex items-center gap-2.5 w-full">
+                      <span className="material-symbols-outlined text-[24px] text-[#079551] shrink-0">{sub.icon}</span>
+                      <span className="text-sm sm:text-base font-bold leading-tight">{sub.label}</span>
+                    </span>
+                    <span className="text-[11px] sm:text-xs font-medium leading-snug text-gray-500">
+                      {sub.subtitle}
+                    </span>
                   </button>
                 ))}
               </motion.div>
