@@ -19,6 +19,7 @@ export const Login: React.FC = () => {
   const [loginError, setLoginError] = useState('');
   const [usuariosLista, setUsuariosLista] = useState<UsuarioPublico[]>([]);
   const [listaFalhou, setListaFalhou] = useState(false);
+  const [entradaManual, setEntradaManual] = useState(false);
 
   useEffect(() => {
     listUsuariosPublicos()
@@ -101,8 +102,19 @@ export const Login: React.FC = () => {
       {view === 'login' && (
         <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
           <div>
-            <label className={labelClass}>Usuário</label>
-            {listaFalhou || usuariosLista.length === 0 ? (
+            <div className="flex items-center justify-between mb-1.5">
+              <label className={labelClass}>Usuário</label>
+              {!listaFalhou && usuariosLista.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setEntradaManual(prev => !prev)}
+                  className="text-white/40 hover:text-white/70 text-[10px] font-semibold uppercase tracking-wider transition-colors"
+                >
+                  {entradaManual ? 'Ver lista' : 'Não achou seu usuário?'}
+                </button>
+              )}
+            </div>
+            {entradaManual || listaFalhou || usuariosLista.length === 0 ? (
               <input
                 type="text"
                 value={usuario}
