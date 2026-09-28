@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { loginUsuario, criarContaEUsuario, mapAuthErrorMessage } from '../services/firebaseAuth';
+import { listUsuariosPublicos, UsuarioPublico } from '../services/firestoreUsuarios';
 
 const loginBg = 'https://i.imgur.com/c2aHsZU.png';
 
@@ -16,6 +17,14 @@ export const Login: React.FC = () => {
   const [senha, setSenha] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [usuariosLista, setUsuariosLista] = useState<UsuarioPublico[]>([]);
+  const [listaFalhou, setListaFalhou] = useState(false);
+
+  useEffect(() => {
+    listUsuariosPublicos()
+      .then(lista => setUsuariosLista(lista.filter(u => u.ativo).sort((a, b) => a.usuario.localeCompare(b.usuario))))
+      .catch(() => setListaFalhou(true));
+  }, []);
 
   // Register state
   const [regNome, setRegNome] = useState('');
@@ -93,16 +102,29 @@ export const Login: React.FC = () => {
         <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
           <div>
             <label className={labelClass}>Usuário</label>
-            <input
-              type="text"
-              value={usuario}
-              onChange={e => setUsuario(e.target.value.toUpperCase())}
-              className={inputClass}
-              placeholder="Ex.: CT MAURISTON"
-              autoCapitalize="characters"
-              autoCorrect="off"
-              autoComplete="username"
-            />
+            {listaFalhou || usuariosLista.length === 0 ? (
+              <input
+                type="text"
+                value={usuario}
+                onChange={e => setUsuario(e.target.value.toUpperCase())}
+                className={inputClass}
+                placeholder="Ex.: CT MAURISTON"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                autoComplete="username"
+              />
+            ) : (
+              <select
+                value={usuario}
+                onChange={e => setUsuario(e.target.value)}
+                className={`${inputClass} appearance-none`}
+              >
+                <option value="" className="text-gray-500">Selecione seu usuário</option>
+                {usuariosLista.map(u => (
+                  <option key={u.usuario} value={u.usuario} className="text-gray-900">{u.usuario}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div>

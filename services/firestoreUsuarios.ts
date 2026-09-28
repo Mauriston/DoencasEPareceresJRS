@@ -42,3 +42,20 @@ export const createUsuarioProfile = (uid: string, data: UsuarioDoc) =>
 
 export const updateUsuarioProfile = (uid: string, patch: Partial<UsuarioDoc>) =>
   updateDoc(doc(db, COLLECTION, uid), patch as Record<string, unknown>);
+
+// Réplica pública mínima (usuário + status ativo) para popular o menu
+// suspenso de login, legível sem autenticação — ver firestore.rules.
+const PUBLIC_COLLECTION = 'usuarios_publicos';
+
+export interface UsuarioPublico {
+  usuario: string;
+  ativo: boolean;
+}
+
+export const listUsuariosPublicos = async (): Promise<UsuarioPublico[]> => {
+  const snap = await getDocs(collection(db, PUBLIC_COLLECTION));
+  return snap.docs.map(d => d.data() as UsuarioPublico);
+};
+
+export const setUsuarioPublico = (uid: string, data: UsuarioPublico) =>
+  setDoc(doc(db, PUBLIC_COLLECTION, uid), data);

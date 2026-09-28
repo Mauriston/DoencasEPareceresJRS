@@ -63,6 +63,7 @@ export const criarContaEUsuario = async (
     const cred = await createUserWithEmailAndPassword(secondaryAuth, usuarioToEmail(usuario), senhaInicial);
     const secondaryDb = getFirestore(secondaryApp);
     await setDoc(doc(secondaryDb, 'usuarios', cred.user.uid), { usuario, ...perfil });
+    await setDoc(doc(secondaryDb, 'usuarios_publicos', cred.user.uid), { usuario, ativo: perfil.ativo });
     return cred.user.uid;
   } finally {
     await deleteApp(secondaryApp);

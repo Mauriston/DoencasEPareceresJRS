@@ -36,5 +36,17 @@ service cloud.firestore {
            .hasOnly(['email', 'gmail', 'celular', 'imageProfile', 'senhaTemporaria']));
       allow delete: if isAdmin();
     }
+
+    // Coleção "usuarios_publicos": réplica mínima (usuário + status ativo),
+    // sem NENHUM dado sensível (sem NIP, e-mail, celular, senha, foto etc.),
+    // usada só para popular o menu suspenso de login ANTES da autenticação
+    // — mesma exposição que já existia na tela de login anterior (a lista de
+    // usuários já era pública ali). Espelhada a partir de "usuarios" sempre
+    // que uma conta é criada (Login.tsx / UsuariosManagement.tsx) ou tem o
+    // status ativo/inativo alterado.
+    match /usuarios_publicos/{uid} {
+      allow read: if true;
+      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+    }
   }
 }
