@@ -1,6 +1,7 @@
 // Ficheiro: components/RoteiroJRS.tsx
 import React, { useState } from 'react';
 import { Header } from './Header';
+import { getDriveEmbedUrl, isGoogleDriveUrl } from '../utils/googleDrive';
 import { 
   MonitorPlay, FileText, Image as ImageIcon, PlayCircle, 
   GraduationCap, BookOpen, Book, Gavel, Scale, ChevronDown, X 
@@ -192,6 +193,7 @@ export const RoteiroJRS: React.FC = () => {
   const [expandedModule, setExpandedModule] = useState<number | null>(null);
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
+  const [activePdfUrl, setActivePdfUrl] = useState<string | null>(null);
 
   const toggleModule = (id: number) => {
     setExpandedModule(expandedModule === id ? null : id);
@@ -203,6 +205,10 @@ export const RoteiroJRS: React.FC = () => {
       setActiveVideoUrl(link);
     } else if (link.includes('imgur.com')) {
       setActiveImageUrl(link);
+    } else if (isGoogleDriveUrl(link)) {
+      const embedUrl = getDriveEmbedUrl(link);
+      if (embedUrl) setActivePdfUrl(embedUrl);
+      else window.open(link, '_blank');
     } else {
       window.open(link, '_blank');
     }
@@ -309,12 +315,28 @@ export const RoteiroJRS: React.FC = () => {
             >
               <X size={24} />
             </button>
-            <img 
-              src={activeImageUrl} 
-              alt="Visualização em ecrã inteiro" 
+            <img
+              src={activeImageUrl}
+              alt="Visualização em ecrã inteiro"
               className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
             />
           </div>
+        </div>
+      )}
+
+      {activePdfUrl && (
+        <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col p-4 animate-fade-in backdrop-blur-sm">
+          <button
+            onClick={() => setActivePdfUrl(null)}
+            className="self-end text-white hover:text-gray-300 bg-white/10 p-2 rounded-full transition-colors mb-2 shrink-0"
+          >
+            <X size={24} />
+          </button>
+          <iframe
+            src={activePdfUrl}
+            title="Documento"
+            className="flex-1 w-full rounded-xl bg-white shadow-2xl border-0"
+          />
         </div>
       )}
     </div>

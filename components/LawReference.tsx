@@ -1,7 +1,9 @@
 // Ficheiro: components/LawReference.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { Info } from 'lucide-react';
 import { Header } from './Header';
+import { PdfViewerPage } from './PdfViewerPage';
+import { getDriveEmbedUrl } from '../utils/googleDrive';
 
 interface Legislation {
   id: string;
@@ -104,6 +106,22 @@ const LEGISLATIONS: Legislation[] = [
 ];
 
 export const LawReference: React.FC = () => {
+  const [selectedLaw, setSelectedLaw] = useState<Legislation | null>(null);
+
+  if (selectedLaw) {
+    const embedUrl = getDriveEmbedUrl(selectedLaw.link);
+    if (embedUrl) {
+      return (
+        <PdfViewerPage
+          title={selectedLaw.legislation}
+          subtitle={selectedLaw.title}
+          embedUrl={embedUrl}
+          onBack={() => setSelectedLaw(null)}
+        />
+      );
+    }
+  }
+
   return (
     <div className="flex flex-col h-full bg-gray-50">
       <Header title="Legislação" />
@@ -120,21 +138,16 @@ export const LawReference: React.FC = () => {
             const isBrasao = law.imageUrl.includes('brasao-da-republica');
 
             return (
-              <div key={law.id} className="relative group bg-white rounded-2xl shadow-sm border border-gray-200/60 hover:border-[#079551] hover:shadow-md transition-all overflow-hidden flex flex-col justify-between">
-                <a 
-                  href={law.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    window.open(law.link, '_blank');
-                  }}
-                  className="flex items-center justify-between p-4 active:bg-gray-50 transition-colors focus:outline-none cursor-pointer gap-3 h-full"
+              <div key={law.id} className="relative group bg-white rounded-2xl shadow-sm border border-gray-200/60 hover:border-[#079551] hover:shadow-md transition-all overflow-hidden flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLaw(law)}
+                  className="flex-1 min-w-0 flex items-center gap-3 p-4 active:bg-gray-50 transition-colors focus:outline-none cursor-pointer text-left"
                 >
                   <div className="w-10 h-10 flex-shrink-0 bg-gray-50 rounded-full overflow-hidden border border-gray-100 flex items-center justify-center p-0.5">
-                    <img 
-                      src={law.imageUrl} 
-                      alt={law.legislation} 
+                    <img
+                      src={law.imageUrl}
+                      alt={law.legislation}
                       className={`w-full h-full object-contain transition-transform duration-300 ${
                         isBrasao ? 'scale-[1.5]' : ''
                       }`}
@@ -150,19 +163,16 @@ export const LawReference: React.FC = () => {
                       {law.title}
                     </p>
                   </div>
-                  
-                  <button 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      alert(law.provisions);
-                    }}
-                    title={law.provisions}
-                    className="text-gray-400 hover:text-[#050F41] transition-colors flex-shrink-0 focus:outline-none p-1.5"
-                  >
-                    <Info size={18} />
-                  </button>
-                </a>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => alert(law.provisions)}
+                  title={law.provisions}
+                  className="text-gray-400 hover:text-[#050F41] transition-colors flex-shrink-0 focus:outline-none p-1.5 mr-3"
+                >
+                  <Info size={18} />
+                </button>
               </div>
             );
           })}

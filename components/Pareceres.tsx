@@ -218,10 +218,10 @@ export const Pareceres: React.FC = () => {
     <div className="flex flex-col h-full bg-gray-50 relative">
       <Header title="PARECERES" />
       <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
-        <button onClick={() => handleTabChange('novo')} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'novo' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}>
+        <button onClick={() => handleTabChange('novo')} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'novo' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
           <span className="material-symbols-outlined text-[18px]">add_circle</span><span>Novo</span>
         </button>
-        <button onClick={() => handleTabChange('historico')} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'historico' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}>
+        <button onClick={() => handleTabChange('historico')} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'historico' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
           <span className="material-symbols-outlined text-[18px]">history</span><span>Histórico</span>
         </button>
       </div>

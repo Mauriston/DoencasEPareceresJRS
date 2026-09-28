@@ -149,3 +149,34 @@
 .md-content tbody tr:nth-child(even) {
   background: #FAFAFA;
 }
+
+/* Desktop: fontes um pouco maiores, já que o container também é mais largo. */
+@media (min-width: 768px) {
+  .md-content {
+    font-size: 0.9375rem;
+    line-height: 1.75;
+  }
+
+  .md-content h1 {
+    font-size: 1.375rem;
+  }
+
+  .md-content h2 {
+    font-size: 1.15rem;
+  }
+
+  .md-content h3 {
+    font-size: 1.0125rem;
+  }
+
+  .md-content h4,
+  .md-content h5,
+  .md-content h6 {
+    font-size: 0.9375rem;
+  }
+
+  .md-content table,
+  .md-content code {
+    font-size: 0.85rem;
+  }
+}

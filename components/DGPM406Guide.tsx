@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { Header } from './Header';
 import { MarkdownDocPage } from './MarkdownDocPage';
+import { PdfViewerPage } from './PdfViewerPage';
+import { getDriveEmbedUrl } from '../utils/googleDrive';
 import { MoreVertical, BookOpen, Paperclip, FileText } from 'lucide-react';
 
 interface Chapter {
@@ -84,43 +86,89 @@ const ANEXOS: Anexo[] = [
   { id: 'a19', anexo: 'ANEXO AB', title: 'Índices mínimos e condições incapacitantes para o serviço de praticagem', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
 ];
 
-interface SelectedDoc {
-  title: string;
-  subtitle: string;
-  markdown: string;
-}
+type SelectedDoc =
+  | { kind: 'markdown'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; markdown: string }
+  | { kind: 'pdf'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; embedUrl: string };
 
 export const DGPM406Guide: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'capitulos' | 'anexos'>('capitulos');
   const [selectedDoc, setSelectedDoc] = useState<SelectedDoc | null>(null);
 
-  const openLink = (link: string) => window.open(link, '_blank', 'noopener,noreferrer');
-
   const handleChapterClick = (item: Chapter) => {
     const md = item.mdKey && getModule(chapterModules, item.mdKey);
     if (md) {
-      setSelectedDoc({ title: item.chapter, subtitle: item.title, markdown: md });
+      setSelectedDoc({ kind: 'markdown', source: 'capitulo', title: item.chapter, subtitle: item.title, markdown: md });
+      return;
+    }
+    const embedUrl = getDriveEmbedUrl(item.link);
+    if (embedUrl) {
+      setSelectedDoc({ kind: 'pdf', source: 'capitulo', title: item.chapter, subtitle: item.title, embedUrl });
     } else {
-      openLink(item.link);
+      window.open(item.link, '_blank', 'noopener,noreferrer');
     }
   };
 
   const handleAnexoClick = (item: Anexo) => {
     const md = item.mdKey && getModule(anexoModules, item.mdKey);
     if (md) {
-      setSelectedDoc({ title: item.anexo, subtitle: item.title, markdown: md });
+      setSelectedDoc({ kind: 'markdown', source: 'anexo', title: item.anexo, subtitle: item.title, markdown: md });
+      return;
+    }
+    const embedUrl = getDriveEmbedUrl(item.link);
+    if (embedUrl) {
+      setSelectedDoc({ kind: 'pdf', source: 'anexo', title: item.anexo, subtitle: item.title, embedUrl });
     } else {
-      openLink(item.link);
+      window.open(item.link, '_blank', 'noopener,noreferrer');
     }
   };
 
-  if (selectedDoc) {
+  // Card fixo à esquerda (desktop) com a lista de capítulos, para navegar
+  // entre eles sem voltar à grade — só faz sentido quando o documento aberto
+  // é um capítulo (não um anexo).
+  const chapterNav = (
+    <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm p-3 max-h-[calc(100vh-140px)] overflow-y-auto">
+      <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-2 pb-2 mb-1 border-b border-gray-100">
+        Capítulos
+      </h3>
+      <nav className="space-y-0.5">
+        {CHAPTERS.map(item => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => handleChapterClick(item)}
+            className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold transition-colors ${
+              selectedDoc?.source === 'capitulo' && selectedDoc.title === item.chapter
+                ? 'bg-[#050F41] text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            {item.chapter}
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
+
+  if (selectedDoc?.kind === 'markdown') {
     return (
       <MarkdownDocPage
         title={selectedDoc.title}
         subtitle={selectedDoc.subtitle}
         markdown={selectedDoc.markdown}
         onBack={() => setSelectedDoc(null)}
+        sidebar={selectedDoc.source === 'capitulo' ? chapterNav : undefined}
+      />
+    );
+  }
+
+  if (selectedDoc?.kind === 'pdf') {
+    return (
+      <PdfViewerPage
+        title={selectedDoc.title}
+        subtitle={selectedDoc.subtitle}
+        embedUrl={selectedDoc.embedUrl}
+        onBack={() => setSelectedDoc(null)}
+        sidebar={selectedDoc.source === 'capitulo' ? chapterNav : undefined}
       />
     );
   }
@@ -132,7 +180,7 @@ export const DGPM406Guide: React.FC = () => {
       <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
         <button
           onClick={() => setActiveTab('capitulos')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'capitulos' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'capitulos' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
         >
           <BookOpen size={16} />
           <span>Capítulos</span>
@@ -140,7 +188,7 @@ export const DGPM406Guide: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('anexos')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'anexos' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}
+          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'anexos' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
         >
           <Paperclip size={16} />
           <span>Anexos</span>
