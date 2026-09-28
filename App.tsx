@@ -30,7 +30,7 @@ import { NavItem } from './types';
 import { NavContext, AuthUser } from './context/NavContext';
 import { canAccessPage } from './config/permissions';
 import { onAuthChange, logoutUsuario } from './services/firebaseAuth';
-import { getUsuarioProfile, UsuarioRecord } from './services/firestoreUsuarios';
+import { getUsuarioProfile, setUsuarioPublico, UsuarioRecord } from './services/firestoreUsuarios';
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
 
@@ -75,6 +75,10 @@ const App: React.FC = () => {
         setAuthUser(buildAuthUser(profile));
         setSenhaAlertDismissed(false);
         setCurrentView('home');
+        // Auto-cura do espelho público (menu suspenso de login): garante que
+        // este usuário sempre apareça na lista, mesmo se o registro em
+        // "usuarios_publicos" nunca tiver sido criado/estiver desatualizado.
+        setUsuarioPublico(profile.id, { usuario: profile.usuario, ativo: profile.ativo }).catch(() => {});
       } catch {
         await logoutUsuario();
         setAuthUser(null);

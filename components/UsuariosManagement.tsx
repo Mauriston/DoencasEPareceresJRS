@@ -11,7 +11,7 @@ import {
   savePermissions,
 } from '../config/permissions';
 import { formatNip, formatCelular } from '../utils/format';
-import { listUsuarios, updateUsuarioProfile, UsuarioRecord } from '../services/firestoreUsuarios';
+import { listUsuarios, updateUsuarioProfile, setUsuarioPublico, UsuarioRecord } from '../services/firestoreUsuarios';
 import { criarContaEUsuario, mapAuthErrorMessage } from '../services/firebaseAuth';
 
 export type UserRecord = UsuarioRecord;
@@ -78,6 +78,7 @@ export const UsuariosManagement: React.FC = () => {
     setUsers(prev => prev.map(u => (u.id === user.id ? { ...u, ativo: updatedStatus } : u)));
     try {
       await updateUsuarioProfile(user.id, { ativo: updatedStatus });
+      await setUsuarioPublico(user.id, { usuario: user.usuario, ativo: updatedStatus });
       showToast(`Usuário "${user.usuario}" ${updatedStatus ? 'ativado' : 'desativado'} com sucesso.`);
     } catch {
       setUsers(prev => prev.map(u => (u.id === user.id ? { ...u, ativo: !updatedStatus } : u)));
@@ -126,6 +127,9 @@ export const UsuariosManagement: React.FC = () => {
         perfil: updatedUser.perfil,
         ativo: updatedUser.ativo,
       });
+      if (updatedUser.ativo !== editingUser.ativo) {
+        await setUsuarioPublico(editingUser.id, { usuario: updatedUser.usuario, ativo: updatedUser.ativo });
+      }
 
       setUsers(prev => prev.map(u => (u.id === editingUser.id ? updatedUser : u)));
       showToast(`Dados do usuário "${updatedUser.usuario}" atualizados com sucesso!`);
