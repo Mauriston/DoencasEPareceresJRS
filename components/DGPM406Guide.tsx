@@ -42,6 +42,15 @@ const getModule = (modules: Record<string, string>, fileName: string): string | 
   return key ? modules[key] : undefined;
 };
 
+const toSentenceCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+
+// "Capítulo 4" -> "CAP 4 - {título sem capitalização}"; itens que não seguem
+// esse padrão (ex.: "DGPM-406 9ª REV", o card do PDF na íntegra) ficam como estão.
+const chapterNavLabel = (item: Chapter): string => {
+  const match = item.chapter.match(/^Capítulo (\d+)$/);
+  return match ? `CAP ${match[1]} - ${toSentenceCase(item.title)}` : item.chapter;
+};
+
 const CHAPTERS: Chapter[] = [
   { id: 'c0', chapter: 'DGPM-406 9ª REV', title: 'NORMAS REGULADORAS PARA INSPEÇÕES DE SAÚDE NA MARINHA', link: 'https://drive.google.com/open?id=1NlCZR1I24epU0-nucN4zHd2fUmO7SOFn' },
   { id: 'c1', chapter: 'Capítulo 1', title: 'ESTRUTURA DO SUBSISTEMA MÉDICO-PERICIAL DA MB', link: 'https://drive.google.com/open?id=1nVX3dkkGHHyWDwVhPdVjw7DWItD0y1sy', mdKey: 'capitulo-01.md' },
@@ -136,13 +145,13 @@ export const DGPM406Guide: React.FC = () => {
             key={item.id}
             type="button"
             onClick={() => handleChapterClick(item)}
-            className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold transition-colors ${
+            className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold leading-snug transition-colors ${
               selectedDoc?.source === 'capitulo' && selectedDoc.title === item.chapter
                 ? 'bg-[#050F41] text-white'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
-            {item.chapter}
+            {chapterNavLabel(item)}
           </button>
         ))}
       </nav>

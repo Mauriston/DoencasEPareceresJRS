@@ -21,7 +21,7 @@ export const PdfViewerPage: React.FC<PdfViewerPageProps> = ({ title, subtitle, e
     {subtitle && (
       <p className="px-4 pt-3 text-xs md:text-sm text-gray-500 text-center truncate">{subtitle}</p>
     )}
-    <div className={`flex-1 min-h-0 p-2 md:p-4 w-full ${sidebar ? 'md:grid md:grid-cols-[260px_1fr] md:gap-4' : 'flex'}`}>
+    <div className={`flex-1 min-h-0 p-2 md:p-4 w-full ${sidebar ? 'md:grid md:grid-cols-[220px_1fr] md:gap-4' : 'flex'}`}>
       {sidebar && <div className="hidden md:block overflow-y-auto">{sidebar}</div>}
       <iframe
         src={embedUrl}
