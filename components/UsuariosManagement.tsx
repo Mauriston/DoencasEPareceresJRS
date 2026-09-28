@@ -11,25 +11,10 @@ import {
   savePermissions,
 } from '../config/permissions';
 import { formatNip, formatCelular } from '../utils/format';
+import { listUsuarios, updateUsuarioProfile, UsuarioRecord } from '../services/firestoreUsuarios';
+import { criarContaEUsuario, mapAuthErrorMessage } from '../services/firebaseAuth';
 
-const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
-
-export interface UserRecord {
-  id: string;
-  usuario: string;
-  postoGraduacao: string;
-  cargo: string;
-  nome: string;
-  nip: string;
-  crmPe: string;
-  rqe: string;
-  email: string;
-  gmail: string;
-  celular: string;
-  perfil: 'admin' | 'user_medicos' | 'user_secretaria' | string;
-  ativo: boolean;
-  imageProfile: string;
-}
+export type UserRecord = UsuarioRecord;
 
 const emptyUserForm = {
   usuario: '', postoGraduacao: '', cargo: '', nome: '', nip: '',
@@ -73,15 +58,10 @@ export const UsuariosManagement: React.FC = () => {
     setLoading(true);
     setLoadError(false);
     try {
-      const res = await fetch(`${GAS_URL}?action=getUsuarios`);
-      const json = await res.json();
-      if (json.success && Array.isArray(json.data)) {
-        setUsers(json.data);
-      } else {
-        setLoadError(true);
-      }
+      const records = await listUsuarios();
+      setUsers(records);
     } catch (e) {
-      console.error('Error loading users from Google Sheets:', e);
+      console.error('Error loading users from Firestore:', e);
       setLoadError(true);
     } finally {
       setLoading(false);
@@ -97,10 +77,7 @@ export const UsuariosManagement: React.FC = () => {
     const updatedStatus = !user.ativo;
     setUsers(prev => prev.map(u => (u.id === user.id ? { ...u, ativo: updatedStatus } : u)));
     try {
-      const q = new URLSearchParams({ action: 'updateUsuario', usuario: user.usuario, ativo: String(updatedStatus) }).toString();
-      const res = await fetch(`${GAS_URL}?${q}`);
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error);
+      await updateUsuarioProfile(user.id, { ativo: updatedStatus });
       showToast(`Usuário "${user.usuario}" ${updatedStatus ? 'ativado' : 'desativado'} com sucesso.`);
     } catch {
       setUsers(prev => prev.map(u => (u.id === user.id ? { ...u, ativo: !updatedStatus } : u)));
@@ -115,13 +92,14 @@ export const UsuariosManagement: React.FC = () => {
 
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingUser || !editForm.usuario || !editForm.nome) return;
+    if (!editingUser || !editForm.nome) return;
 
     setSaving(true);
     try {
+      // "usuario" (login) nunca é editável aqui: é a identidade do Firebase
+      // Auth (e-mail sintético), imutável fora de um fluxo de recriação de conta.
       const updatedUser: UserRecord = {
         ...editingUser,
-        usuario: (editForm.usuario || '').trim().toUpperCase(),
         postoGraduacao: (editForm.postoGraduacao || '').trim(),
         cargo: (editForm.cargo || '').trim(),
         nome: (editForm.nome || '').trim().toUpperCase(),
@@ -135,9 +113,7 @@ export const UsuariosManagement: React.FC = () => {
         ativo: editForm.ativo !== undefined ? editForm.ativo : true,
       };
 
-      const q = new URLSearchParams({
-        action: 'updateUsuario',
-        usuario: updatedUser.usuario,
+      await updateUsuarioProfile(editingUser.id, {
         postoGraduacao: updatedUser.postoGraduacao,
         cargo: updatedUser.cargo,
         nome: updatedUser.nome,
@@ -148,11 +124,8 @@ export const UsuariosManagement: React.FC = () => {
         gmail: updatedUser.gmail,
         celular: updatedUser.celular,
         perfil: updatedUser.perfil,
-        ativo: String(updatedUser.ativo),
-      }).toString();
-      const res = await fetch(`${GAS_URL}?${q}`);
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Erro ao salvar alterações.');
+        ativo: updatedUser.ativo,
+      });
 
       setUsers(prev => prev.map(u => (u.id === editingUser.id ? updatedUser : u)));
       showToast(`Dados do usuário "${updatedUser.usuario}" atualizados com sucesso!`);
@@ -191,31 +164,8 @@ export const UsuariosManagement: React.FC = () => {
 
     setCreatingUser(true);
     try {
-      const q = new URLSearchParams({
-        action: 'createUsuario',
-        usuario: usuarioUpper,
-        nome: newUserForm.nome.trim().toUpperCase(),
-        postoGraduacao: newUserForm.postoGraduacao.trim(),
-        cargo: newUserForm.cargo.trim(),
-        nip: newUserForm.nip.trim(),
-        crmPe: newUserForm.crmPe.trim(),
-        rqe: newUserForm.rqe.trim(),
-        email: newUserForm.email.trim(),
-        gmail: newUserForm.gmail.trim(),
-        celular: newUserForm.celular.trim(),
-        perfil: newUserForm.perfil,
-      }).toString();
-      const res = await fetch(`${GAS_URL}?${q}`);
-      const json = await res.json();
-      if (!json.success) {
-        setNewUserError(json.error || 'Erro ao criar usuário.');
-        setCreatingUser(false);
-        return;
-      }
-
-      const novoUsuario: UserRecord = {
-        id: `usr-novo-${Date.now()}`,
-        usuario: usuarioUpper,
+      const senhaInicial = newUserForm.nip.replace(/\D/g, '');
+      const perfilData = {
         postoGraduacao: newUserForm.postoGraduacao.trim(),
         cargo: newUserForm.cargo.trim(),
         nome: newUserForm.nome.trim().toUpperCase(),
@@ -228,12 +178,16 @@ export const UsuariosManagement: React.FC = () => {
         perfil: newUserForm.perfil,
         ativo: true,
         imageProfile: '',
+        senhaTemporaria: true,
       };
+      const uid = await criarContaEUsuario(usuarioUpper, senhaInicial, perfilData);
+
+      const novoUsuario: UserRecord = { id: uid, usuario: usuarioUpper, ...perfilData };
       setUsers(prev => [...prev, novoUsuario]);
       showToast(`Usuário "${usuarioUpper}" criado com sucesso! Senha inicial: NIP (sem pontos).`);
       setShowNewUserModal(false);
-    } catch {
-      setNewUserError('Erro de conexão ao criar usuário.');
+    } catch (err: any) {
+      setNewUserError(mapAuthErrorMessage(err?.code, 'Erro ao criar usuário.'));
     } finally {
       setCreatingUser(false);
     }
@@ -717,7 +671,8 @@ export const UsuariosManagement: React.FC = () => {
             <form onSubmit={handleSaveEdit} className="p-5 overflow-y-auto space-y-4 flex-1">
               <div>
                 <label className={labelClass}>Nome de Usuário (Login)</label>
-                <input type="text" required value={editForm.usuario || ''} onChange={e => setEditForm(prev => ({ ...prev, usuario: e.target.value.toUpperCase() }))} className={inputClass} />
+                <input type="text" disabled value={editForm.usuario || ''} className={`${inputClass} bg-gray-100 text-gray-500 cursor-not-allowed`} />
+                <p className="text-[10px] text-gray-400 mt-1">Não pode ser alterado após a criação (é a identidade de login).</p>
               </div>
 
               <div>

@@ -1,23 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { loginUsuario, criarContaEUsuario, mapAuthErrorMessage } from '../services/firebaseAuth';
+
 const loginBg = 'https://i.imgur.com/c2aHsZU.png';
-
-const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
-
-async function sha256(message: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-interface Props {
-  onLogin: (loginResponse: any, senhaHash: string) => void;
-}
 
 type View = 'login' | 'register';
 
 const inputClass = 'w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/25 text-sm focus:outline-none focus:border-[#079551] focus:bg-white/15 transition-all';
 const labelClass = 'text-white/60 text-[11px] font-bold uppercase tracking-widest block mb-1.5';
 
-export const Login: React.FC<Props> = ({ onLogin }) => {
+export const Login: React.FC = () => {
   const [view, setView] = useState<View>('login');
 
   // Login state
@@ -25,8 +16,6 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
   const [senha, setSenha] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const [usuarios, setUsuarios] = useState<string[]>([]);
-  const [loadingUsuarios, setLoadingUsuarios] = useState(true);
 
   // Register state
   const [regNome, setRegNome] = useState('');
@@ -39,29 +28,15 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState(false);
 
-  useEffect(() => {
-    fetch(`${GAS_URL}?action=getUsuarios&simple=true`)
-      .then(r => r.json())
-      .then(json => { if (json.success) setUsuarios(json.data); })
-      .catch(() => {})
-      .finally(() => setLoadingUsuarios(false));
-  }, []);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
     setLoginError('');
     try {
-      const senhaHash = await sha256(senha);
-      const res = await fetch(`${GAS_URL}?action=login&usuario=${encodeURIComponent(usuario)}&senhaHash=${encodeURIComponent(senhaHash)}`);
-      const json = await res.json();
-      if (json.success) {
-        onLogin(json, senhaHash);
-      } else {
-        setLoginError(json.error || 'Usuário ou senha incorretos');
-      }
-    } catch {
-      setLoginError('Erro de conexão. Tente novamente.');
+      await loginUsuario(usuario.trim().toUpperCase(), senha);
+      // Sucesso: o listener onAuthStateChanged em App.tsx assume o resto.
+    } catch (err: any) {
+      setLoginError(mapAuthErrorMessage(err?.code, 'Erro de conexão. Tente novamente.'));
     } finally {
       setLoginLoading(false);
     }
@@ -74,17 +49,25 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
     setRegLoading(true);
     setRegError('');
     try {
-      const senhaHash = await sha256(regSenha);
-      const res = await fetch(`${GAS_URL}?action=createUsuario&nome=${encodeURIComponent(regNome)}&usuario=${encodeURIComponent(regUsuario.toUpperCase())}&nip=${encodeURIComponent(regNip)}&email=${encodeURIComponent(regEmail)}&senhaHash=${encodeURIComponent(senhaHash)}`);
-      const json = await res.json();
-      if (json.success) {
-        setRegSuccess(true);
-        setUsuarios(prev => [...prev, regUsuario.toLowerCase()]);
-      } else {
-        setRegError(json.error || 'Erro ao criar usuário');
-      }
-    } catch {
-      setRegError('Erro de conexão. Tente novamente.');
+      const usuarioUpper = regUsuario.trim().toUpperCase();
+      await criarContaEUsuario(usuarioUpper, regSenha, {
+        postoGraduacao: '',
+        cargo: '',
+        nome: regNome.trim().toUpperCase(),
+        nip: regNip.trim(),
+        crmPe: '',
+        rqe: '',
+        email: regEmail.trim(),
+        gmail: '',
+        celular: '',
+        perfil: 'user_secretaria',
+        ativo: true,
+        imageProfile: '',
+        senhaTemporaria: false,
+      });
+      setRegSuccess(true);
+    } catch (err: any) {
+      setRegError(mapAuthErrorMessage(err?.code, 'Erro ao criar usuário.'));
     } finally {
       setRegLoading(false);
     }
@@ -110,23 +93,16 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
         <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
           <div>
             <label className={labelClass}>Usuário</label>
-            {loadingUsuarios ? (
-              <div className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white/40 text-sm">
-                Carregando...
-              </div>
-            ) : (
-              <select
-                value={usuario}
-                onChange={e => setUsuario(e.target.value)}
-                className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#079551] focus:bg-white/15 transition-all appearance-none"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center' }}
-              >
-                <option value="" disabled style={{ background: '#050F41' }}>Selecione o usuário</option>
-                {usuarios.map(u => (
-                  <option key={u} value={u} style={{ background: '#050F41' }}>{u}</option>
-                ))}
-              </select>
-            )}
+            <input
+              type="text"
+              value={usuario}
+              onChange={e => setUsuario(e.target.value.toUpperCase())}
+              className={inputClass}
+              placeholder="Ex.: CT MAURISTON"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              autoComplete="username"
+            />
           </div>
 
           <div>
@@ -168,9 +144,9 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
             <div className="text-center space-y-4">
               <span className="material-symbols-outlined text-[48px] text-[#079551]">check_circle</span>
               <p className="text-white font-bold text-base">Conta criada com sucesso!</p>
-              <p className="text-white/60 text-xs">Você já pode fazer login com o usuário <span className="text-white font-semibold">{regUsuario.toLowerCase()}</span>.</p>
+              <p className="text-white/60 text-xs">Você já pode fazer login com o usuário <span className="text-white font-semibold">{regUsuario.toUpperCase()}</span>.</p>
               <button
-                onClick={() => goToLogin(regUsuario.toLowerCase())}
+                onClick={() => goToLogin(regUsuario.toUpperCase())}
                 className="w-full bg-[#079551] hover:bg-[#067a43] text-white font-bold rounded-xl py-3.5 text-sm transition-colors mt-2"
               >
                 Ir para o login

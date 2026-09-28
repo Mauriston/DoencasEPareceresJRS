@@ -2,6 +2,7 @@ import React, { createContext, useContext } from 'react';
 import { NavItem } from '../types';
 
 export interface AuthUser {
+  uid: string;
   usuario: string;
   nome: string;
   perfil: 'admin' | 'user_medicos' | 'user_secretaria' | string;

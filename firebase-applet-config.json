@@ -1,9 +1,9 @@
 {
-  "projectId": "gen-lang-client-0316191622",
-  "appId": "1:1001740918051:web:5d931926acb0883d160096",
-  "apiKey": "AIzaSyBuY4GTEmvFY3igym3G2cnuYwPFS9bZhlQ",
-  "authDomain": "gen-lang-client-0316191622.firebaseapp.com",
-  "storageBucket": "gen-lang-client-0316191622.firebasestorage.app",
-  "messagingSenderId": "1001740918051",
-  "measurementId": ""
+  "projectId": "jrs-app-web",
+  "appId": "1:666287638123:web:7f7641f8cc0ecd23e7532e",
+  "apiKey": "AIzaSyAWBYm6iGQNQXeC5DO038lMSruxpRjoX2c",
+  "authDomain": "jrs-app-web.firebaseapp.com",
+  "storageBucket": "jrs-app-web.firebasestorage.app",
+  "messagingSenderId": "666287638123",
+  "measurementId": "G-5KPMFVMSR2"
 }

@@ -1,14 +1,14 @@
 rules_version = '2';
 
 // Regras do Firebase Storage para as fotos de perfil dos usuários do app
-// (JRS/HNRe). Aplique manualmente no console do Firebase (Storage > Regras)
-// ou via `firebase deploy --only storage`, pois este ambiente não tem acesso
-// ao Firebase CLI/credenciais do projeto.
+// JRS/HNRe. Projeto dedicado (jrs-app-web) — aplique manualmente no console
+// do Firebase (Storage > Regras) ou via `firebase deploy --only storage`,
+// pois este ambiente não tem acesso ao Firebase CLI/credenciais do projeto.
 //
-// Leitura é pública (as fotos aparecem na topbar de todos os usuários).
-// A escrita exige apenas um usuário autenticado (o app usa login anônimo do
-// Firebase só para satisfazer esta regra — o login "de verdade" é o próprio
-// da aplicação, via planilha), limitada a imagens de até 5MB.
+// Leitura é pública (as fotos aparecem na topbar/sidebar de todos os
+// usuários). A escrita exige um usuário autenticado — o login do próprio
+// app já é via Firebase Authentication (e-mail/senha), então qualquer
+// usuário logado no app satisfaz esta regra.
 service firebase.storage {
   match /b/{bucket}/o {
     match /perfil/{usuario}/{arquivo} {

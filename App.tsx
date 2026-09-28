@@ -29,51 +29,60 @@ import { UsuariosManagement } from './components/UsuariosManagement';
 import { NavItem } from './types';
 import { NavContext, AuthUser } from './context/NavContext';
 import { canAccessPage } from './config/permissions';
+import { onAuthChange, logoutUsuario } from './services/firebaseAuth';
+import { getUsuarioProfile, UsuarioRecord } from './services/firestoreUsuarios';
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
 
-const buildAuthUser = (json: any): AuthUser => ({
-  usuario: json.usuario,
-  nome: json.nome,
-  perfil: json.perfil,
-  postoGraduacao: json.postoGraduacao,
-  cargo: json.cargo,
-  nip: json.nip,
-  crmPe: json.crmPe,
-  rqe: json.rqe,
-  email: json.email,
-  gmail: json.gmail,
-  celular: json.celular,
-  imageProfile: json.imageProfile,
-  senhaTemporaria: !!json.senhaTemporaria,
+const buildAuthUser = (profile: UsuarioRecord): AuthUser => ({
+  uid: profile.id,
+  usuario: profile.usuario,
+  nome: profile.nome,
+  perfil: profile.perfil,
+  postoGraduacao: profile.postoGraduacao,
+  cargo: profile.cargo,
+  nip: profile.nip,
+  crmPe: profile.crmPe,
+  rqe: profile.rqe,
+  email: profile.email,
+  gmail: profile.gmail,
+  celular: profile.celular,
+  imageProfile: profile.imageProfile,
+  senhaTemporaria: !!profile.senhaTemporaria,
 });
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<NavItem>('splash');
+  const [currentView, setCurrentView] = useState<NavItem>('home');
   const [periciaMenorVigentes, setPericiaMenorVigentes] = useState(0);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [senhaAlertDismissed, setSenhaAlertDismissed] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('jrs_auth');
-    if (saved) {
-      const { usuario, senhaHash } = JSON.parse(saved);
-      fetch(`${GAS_URL}?action=login&usuario=${encodeURIComponent(usuario)}&senhaHash=${encodeURIComponent(senhaHash)}`)
-        .then(r => r.json())
-        .then(json => {
-          if (json.success) {
-            setAuthUser(buildAuthUser(json));
-            setCurrentView('home');
-          } else {
-            localStorage.removeItem('jrs_auth');
-          }
-        })
-        .catch(() => {})
-        .finally(() => setAuthLoading(false));
-    } else {
-      setAuthLoading(false);
-    }
+    const unsubscribe = onAuthChange(async (firebaseUser) => {
+      if (!firebaseUser) {
+        setAuthUser(null);
+        setAuthLoading(false);
+        return;
+      }
+      try {
+        const profile = await getUsuarioProfile(firebaseUser.uid);
+        if (!profile || !profile.ativo) {
+          await logoutUsuario();
+          setAuthUser(null);
+          return;
+        }
+        setAuthUser(buildAuthUser(profile));
+        setSenhaAlertDismissed(false);
+        setCurrentView('home');
+      } catch {
+        await logoutUsuario();
+        setAuthUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    });
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
@@ -88,17 +97,9 @@ const App: React.FC = () => {
       .catch(() => {});
   }, [authUser]);
 
-  const handleLogin = (json: any, senhaHash: string) => {
-    localStorage.setItem('jrs_auth', JSON.stringify({ usuario: json.usuario, senhaHash }));
-    setAuthUser(buildAuthUser(json));
-    setSenhaAlertDismissed(false);
-    setCurrentView('home');
-  };
-
   const handleLogout = () => {
-    localStorage.removeItem('jrs_auth');
-    setAuthUser(null);
-    setCurrentView('guide');
+    logoutUsuario();
+    setCurrentView('home');
   };
 
   const updateAuthUser = (patch: Partial<AuthUser>) => {
@@ -153,22 +154,7 @@ const App: React.FC = () => {
   }
 
   if (!authUser) {
-    return <Login onLogin={handleLogin} />;
-  }
-
-  if (currentView === 'splash') {
-    return (
-      <div
-        className="fixed inset-0 w-full h-full cursor-pointer bg-[#050F41] flex flex-col items-center justify-center z-[100]"
-        onClick={() => setCurrentView('home')}
-      >
-        <img
-          src="https://i.imgur.com/5JjsbwG.png"
-          alt="Junta Regular de Saúde - Hospital Naval de Recife"
-          className="w-full h-full object-contain"
-        />
-      </div>
-    );
+    return <Login />;
   }
 
   const mostrarAlertaSenha = !!authUser.senhaTemporaria && currentView !== 'perfil' && !senhaAlertDismissed;

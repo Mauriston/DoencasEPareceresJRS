@@ -3,13 +3,8 @@ import { Header } from './Header';
 import { NavContext } from '../context/NavContext';
 import { uploadProfileImage } from '../services/profileImage';
 import { formatNip, formatCelular } from '../utils/format';
-
-const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
-
-async function sha256(message: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
+import { trocarSenha, mapAuthErrorMessage } from '../services/firebaseAuth';
+import { updateUsuarioProfile } from '../services/firestoreUsuarios';
 
 const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41] transition-colors';
 const labelClass = 'text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1';
@@ -55,10 +50,7 @@ export const Perfil: React.FC = () => {
     setUploading(true);
     try {
       const url = await uploadProfileImage(authUser.usuario, file);
-      const q = new URLSearchParams({ action: 'updateUsuario', usuario: authUser.usuario, imageProfile: url }).toString();
-      const res = await fetch(`${GAS_URL}?${q}`);
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Erro ao salvar imagem.');
+      await updateUsuarioProfile(authUser.uid, { imageProfile: url });
       updateAuthUser({ imageProfile: url });
       showToast('success', 'Foto de perfil atualizada com sucesso!');
     } catch (err: any) {
@@ -73,17 +65,9 @@ export const Perfil: React.FC = () => {
     if (!authUser) return;
     setSavingContato(true);
     try {
-      const q = new URLSearchParams({
-        action: 'updateUsuario',
-        usuario: authUser.usuario,
-        email: email.trim(),
-        gmail: gmail.trim(),
-        celular: celular.trim(),
-      }).toString();
-      const res = await fetch(`${GAS_URL}?${q}`);
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Erro ao salvar dados.');
-      updateAuthUser({ email: email.trim(), gmail: gmail.trim(), celular: celular.trim() });
+      const patch = { email: email.trim(), gmail: gmail.trim(), celular: celular.trim() };
+      await updateUsuarioProfile(authUser.uid, patch);
+      updateAuthUser(patch);
       showToast('success', 'Dados de contato atualizados com sucesso!');
     } catch (err: any) {
       showToast('error', err?.message || 'Erro de conexão.');
@@ -99,23 +83,13 @@ export const Perfil: React.FC = () => {
     if (novaSenha !== confirmaSenha) { showToast('error', 'As senhas não coincidem.'); return; }
     setSavingSenha(true);
     try {
-      const senhaAtualHash = await sha256(senhaAtual);
-      const novaSenhaHash = await sha256(novaSenha);
-      const q = new URLSearchParams({
-        action: 'updateSenha',
-        usuario: authUser.usuario,
-        senhaAtualHash,
-        novaSenhaHash,
-      }).toString();
-      const res = await fetch(`${GAS_URL}?${q}`);
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Erro ao alterar senha.');
+      await trocarSenha(authUser.usuario, senhaAtual, novaSenha);
+      await updateUsuarioProfile(authUser.uid, { senhaTemporaria: false });
       updateAuthUser({ senhaTemporaria: false });
-      localStorage.setItem('jrs_auth', JSON.stringify({ usuario: authUser.usuario, senhaHash: novaSenhaHash }));
       setSenhaAtual(''); setNovaSenha(''); setConfirmaSenha('');
       showToast('success', 'Senha alterada com sucesso!');
     } catch (err: any) {
-      showToast('error', err?.message || 'Erro de conexão.');
+      showToast('error', mapAuthErrorMessage(err?.code, 'Erro ao alterar senha.'));
     } finally {
       setSavingSenha(false);
     }
