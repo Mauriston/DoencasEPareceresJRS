@@ -108,7 +108,7 @@ export const LawReference: React.FC = () => {
     <div className="flex flex-col h-full bg-gray-50">
       <Header title="Legislação" />
       
-      <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-4xl mx-auto w-full">
+      <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-5xl mx-auto w-full">
         <div className="mb-4 bg-white p-6 rounded-2xl shadow-md border border-gray-200/80 text-center">
           <h2 className="text-xl font-heading font-black text-[#050F41] tracking-wide uppercase">
             LEGISLAÇÃO MÉDICO-PERICIAL

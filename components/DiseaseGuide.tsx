@@ -384,7 +384,7 @@ export const DiseaseGuide: React.FC = () => {
     return (
       <div className="animate-fade-in flex flex-col h-full bg-[#F3F5F7] relative">
         <Header title={getShortDiseaseName(selectedDisease.name)} />
-        <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto w-full pb-24 md:pb-12">
+        <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full pb-24 md:pb-12">
           <div className="px-1 flex items-center justify-between gap-4">
             <div className="flex items-center space-x-3 min-w-0">
               <button 
@@ -501,7 +501,7 @@ export const DiseaseGuide: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7]">
       <Header title="Doenças de Lei" />
-      <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-6xl mx-auto w-full flex-1 pb-24 md:pb-12">
+      <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full flex-1 pb-24 md:pb-12">
         <div className="px-1">
           <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase">
             Doenças Previstas em Lei:

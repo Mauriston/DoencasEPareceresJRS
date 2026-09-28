@@ -87,7 +87,7 @@ export const Resumos: React.FC = () => {
         </nav>
       </aside>
 
-      <div className="flex-1 w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 md:p-6 lg:p-8">
+      <div className="flex-1 w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 md:p-6 lg:p-8">
         {/* Persistent chapter index on desktop */}
         <div className="hidden lg:block lg:col-span-4 bg-white rounded-2xl p-4 border border-gray-200/80 shadow-sm h-fit sticky top-20">
           <h2 className="font-heading text-base font-bold text-navy flex items-center mb-3 pb-2 border-b border-gray-100 uppercase">

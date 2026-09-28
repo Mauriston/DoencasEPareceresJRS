@@ -15,25 +15,26 @@ export const ROLES: { id: Role; label: string }[] = [
 export interface PageDef {
   id: NavItem;
   label: string;
+  icon: string;
 }
 
 export const PAGE_DEFS: PageDef[] = [
-  { id: 'guide', label: 'Doenças de Lei' },
-  { id: 'portaria', label: 'Portaria' },
-  { id: 'concursosJRS', label: 'Planilhas de Controle' },
-  { id: 'concursos', label: 'Índices Mínimos' },
-  { id: 'exames', label: 'Exames Mínimos' },
-  { id: 'pareceres', label: 'Pareceres' },
-  { id: 'pericia-menor', label: 'Perícia Menor' },
-  { id: 'mensagens', label: 'Mensagens' },
-  { id: 'dgpm406', label: 'DGPM-406' },
-  { id: 'laws', label: 'Legislação' },
-  { id: 'templates', label: 'Templates' },
-  { id: 'casos', label: 'Casos Periciais' },
-  { id: 'estudo', label: 'Estudo / Artigos' },
-  { id: 'infograficos', label: 'Infográficos' },
-  { id: 'resumos', label: 'Resumos' },
-  { id: 'roteiro', label: 'Roteiro JRS' },
+  { id: 'guide', label: 'Doenças de Lei', icon: 'medical_information' },
+  { id: 'portaria', label: 'Portaria', icon: 'article' },
+  { id: 'concursosJRS', label: 'Planilhas de Controle', icon: 'fact_check' },
+  { id: 'concursos', label: 'Índices Mínimos', icon: 'emoji_events' },
+  { id: 'exames', label: 'Exames Mínimos', icon: 'science' },
+  { id: 'pareceres', label: 'Pareceres', icon: 'assignment' },
+  { id: 'pericia-menor', label: 'Perícia Menor', icon: 'personal_injury' },
+  { id: 'mensagens', label: 'Mensagens', icon: 'chat' },
+  { id: 'dgpm406', label: 'DGPM-406', icon: 'anchor' },
+  { id: 'laws', label: 'Legislação', icon: 'balance' },
+  { id: 'templates', label: 'Templates', icon: 'edit_document' },
+  { id: 'casos', label: 'Casos Periciais', icon: 'quiz' },
+  { id: 'estudo', label: 'Estudo / Artigos', icon: 'school' },
+  { id: 'infograficos', label: 'Infográficos', icon: 'image' },
+  { id: 'resumos', label: 'Resumos', icon: 'menu_book' },
+  { id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list' },
 ];
 
 export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {

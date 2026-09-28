@@ -744,7 +744,7 @@ export const ConcursosJRS: React.FC = () => {
         </div>
       )}
 
-      <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-6xl mx-auto w-full flex-1 space-y-4">
+      <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1600px] mx-auto w-full flex-1 space-y-4">
         {/* TOP BAR: BUSCA, FILTRO DE DATA E AÇÕES */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="relative flex-1">

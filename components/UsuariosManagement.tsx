@@ -13,64 +13,51 @@ import {
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
 
-async function sha256(message: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 export interface UserRecord {
   id: string;
   usuario: string;
+  postoGraduacao: string;
+  cargo: string;
   nome: string;
   nip: string;
+  crmPe: string;
+  rqe: string;
   email: string;
+  gmail: string;
+  celular: string;
   perfil: 'admin' | 'user_medicos' | 'user_secretaria' | string;
   ativo: boolean;
-  dataCriacao?: string;
+  imageProfile: string;
 }
 
-const DEFAULT_USERS: UserRecord[] = [
-  {
-    id: 'usr-1',
-    usuario: 'CT MAURISTON',
-    nome: 'CT MAURISTON',
-    nip: '',
-    email: '',
-    perfil: 'admin',
-    ativo: true,
-  },
-  {
-    id: 'usr-2',
-    usuario: 'CT JÚLIO CÉSAR',
-    nome: 'CT JÚLIO CÉSAR',
-    nip: '',
-    email: '',
-    perfil: 'user_medicos',
-    ativo: true,
-  },
-  {
-    id: 'usr-3',
-    usuario: '1T MÔNICA VIRGÍNIA',
-    nome: '1T MÔNICA VIRGÍNIA',
-    nip: '',
-    email: '',
-    perfil: 'user_medicos',
-    ativo: true,
-  },
-  {
-    id: 'usr-4',
-    usuario: 'GM CASSUNDÉ',
-    nome: 'GM CASSUNDÉ',
-    nip: '',
-    email: '',
-    perfil: 'user_secretaria',
-    ativo: true,
-  },
-];
+const emptyUserForm = {
+  usuario: '', postoGraduacao: '', cargo: '', nome: '', nip: '',
+  crmPe: '', rqe: '', email: '', gmail: '', celular: '', perfil: 'user_secretaria',
+};
+
+const formatNip = (val: string) => {
+  const digits = val.replace(/\D/g, '').slice(0, 8);
+  let masked = digits;
+  if (digits.length > 2) masked = digits.slice(0, 2) + '.' + digits.slice(2);
+  if (digits.length > 6) masked = digits.slice(0, 2) + '.' + digits.slice(2, 6) + '.' + digits.slice(6);
+  return masked;
+};
+
+const formatCelular = (val: string) => {
+  const digits = val.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+};
+
+const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41] transition-colors';
+const labelClass = 'text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1';
 
 export const UsuariosManagement: React.FC = () => {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'todos' | 'ativos' | 'inativos'>('todos');
   const [perfilFilter, setPerfilFilter] = useState<string>('todos');
@@ -83,7 +70,7 @@ export const UsuariosManagement: React.FC = () => {
 
   // New User Modal State
   const [showNewUserModal, setShowNewUserModal] = useState(false);
-  const [newUserForm, setNewUserForm] = useState({ usuario: '', nome: '', nip: '', email: '', perfil: 'user_secretaria', senha: '', confirma: '' });
+  const [newUserForm, setNewUserForm] = useState(emptyUserForm);
   const [creatingUser, setCreatingUser] = useState(false);
   const [newUserError, setNewUserError] = useState('');
 
@@ -93,73 +80,24 @@ export const UsuariosManagement: React.FC = () => {
   const [permsDirty, setPermsDirty] = useState(false);
   const [savingPerms, setSavingPerms] = useState(false);
 
-  // Load users on mount
   useEffect(() => {
     loadUsers();
   }, []);
 
   const loadUsers = async () => {
     setLoading(true);
+    setLoadError(false);
     try {
-      const savedLocal = localStorage.getItem('jrs_usuarios_records');
-      const localRecords: UserRecord[] = savedLocal ? JSON.parse(savedLocal) : [];
-      const savedMap = new Map<string, UserRecord>();
-      localRecords.forEach(r => {
-        if (r.usuario) savedMap.set(r.usuario.toUpperCase(), r);
-      });
-
-      // Try fetching user list directly from Google Sheets (aba Usuarios)
       const res = await fetch(`${GAS_URL}?action=getUsuarios`);
       const json = await res.json();
-
-      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-        const fetchedUsers: UserRecord[] = json.data.map((item: any, idx: number) => {
-          if (typeof item === 'string') {
-            const uUpper = item.trim().toUpperCase();
-            const saved = savedMap.get(uUpper);
-            return {
-              id: saved?.id || `usr-gas-${idx + 1}`,
-              usuario: uUpper,
-              nome: saved?.nome || uUpper,
-              nip: saved?.nip || '',
-              email: saved?.email || '',
-              perfil: saved?.perfil || (uUpper === 'CT MAURISTON' ? 'admin' : (uUpper.includes('JÚLIO') || uUpper.includes('MÔNICA') ? 'user_medicos' : 'user_secretaria')),
-              ativo: saved?.ativo !== undefined ? saved.ativo : true,
-            };
-          } else {
-            const uUpper = String(item.usuario || '').trim().toUpperCase();
-            const saved = savedMap.get(uUpper);
-            return {
-              id: item.id || saved?.id || `usr-${idx + 1}`,
-              usuario: uUpper,
-              nome: String(item.nome || saved?.nome || uUpper).trim().toUpperCase(),
-              nip: String(item.nip || saved?.nip || '').trim(),
-              email: String(item.email || saved?.email || '').trim().toLowerCase(),
-              perfil: String(item.perfil || saved?.perfil || 'user_secretaria').trim(),
-              ativo: item.ativo !== undefined
-                ? (item.ativo === true || String(item.ativo).toUpperCase() === 'TRUE' || String(item.ativo).toUpperCase() === 'VERDADEIRO')
-                : (saved?.ativo !== undefined ? saved.ativo : true),
-            };
-          }
-        });
-
-        setUsers(fetchedUsers);
-        localStorage.setItem('jrs_usuarios_records', JSON.stringify(fetchedUsers));
+      if (json.success && Array.isArray(json.data)) {
+        setUsers(json.data);
       } else {
-        if (localRecords.length > 0) {
-          setUsers(localRecords);
-        } else {
-          setUsers(DEFAULT_USERS);
-        }
+        setLoadError(true);
       }
     } catch (e) {
       console.error('Error loading users from Google Sheets:', e);
-      const savedLocal = localStorage.getItem('jrs_usuarios_records');
-      if (savedLocal) {
-        setUsers(JSON.parse(savedLocal));
-      } else {
-        setUsers(DEFAULT_USERS);
-      }
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -172,21 +110,17 @@ export const UsuariosManagement: React.FC = () => {
 
   const handleToggleStatus = async (user: UserRecord) => {
     const updatedStatus = !user.ativo;
-    const updatedUsers = users.map(u => u.id === user.id ? { ...u, ativo: updatedStatus } : u);
-    setUsers(updatedUsers);
-    localStorage.setItem('jrs_usuarios_records', JSON.stringify(updatedUsers));
-
-    // Async sync with GAS
+    setUsers(prev => prev.map(u => (u.id === user.id ? { ...u, ativo: updatedStatus } : u)));
     try {
-      const q = new URLSearchParams({
-        action: 'updateUsuario',
-        usuario: user.usuario,
-        ativo: String(updatedStatus)
-      }).toString();
-      fetch(`${GAS_URL}?${q}`).catch(() => {});
-    } catch {}
-
-    showToast(`Usuário "${user.usuario}" ${updatedStatus ? 'ativado' : 'desativado'} com sucesso.`);
+      const q = new URLSearchParams({ action: 'updateUsuario', usuario: user.usuario, ativo: String(updatedStatus) }).toString();
+      const res = await fetch(`${GAS_URL}?${q}`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error);
+      showToast(`Usuário "${user.usuario}" ${updatedStatus ? 'ativado' : 'desativado'} com sucesso.`);
+    } catch {
+      setUsers(prev => prev.map(u => (u.id === user.id ? { ...u, ativo: !updatedStatus } : u)));
+      showToast('Erro ao atualizar status do usuário.');
+    }
   };
 
   const handleOpenEdit = (user: UserRecord) => {
@@ -202,52 +136,51 @@ export const UsuariosManagement: React.FC = () => {
     try {
       const updatedUser: UserRecord = {
         ...editingUser,
-        usuario: editForm.usuario.trim().toUpperCase(),
-        nome: editForm.nome.trim().toUpperCase(),
-        nip: editForm.nip ? editForm.nip.trim() : '',
-        email: editForm.email ? editForm.email.trim().toLowerCase() : '',
+        usuario: (editForm.usuario || '').trim().toUpperCase(),
+        postoGraduacao: (editForm.postoGraduacao || '').trim(),
+        cargo: (editForm.cargo || '').trim(),
+        nome: (editForm.nome || '').trim().toUpperCase(),
+        nip: (editForm.nip || '').trim(),
+        crmPe: (editForm.crmPe || '').trim(),
+        rqe: (editForm.rqe || '').trim(),
+        email: (editForm.email || '').trim().toLowerCase(),
+        gmail: (editForm.gmail || '').trim().toLowerCase(),
+        celular: (editForm.celular || '').trim(),
         perfil: editForm.perfil || 'user_secretaria',
         ativo: editForm.ativo !== undefined ? editForm.ativo : true,
       };
 
-      const updatedList = users.map(u => u.id === editingUser.id ? updatedUser : u);
-      setUsers(updatedList);
-      localStorage.setItem('jrs_usuarios_records', JSON.stringify(updatedList));
+      const q = new URLSearchParams({
+        action: 'updateUsuario',
+        usuario: updatedUser.usuario,
+        postoGraduacao: updatedUser.postoGraduacao,
+        cargo: updatedUser.cargo,
+        nome: updatedUser.nome,
+        nip: updatedUser.nip,
+        crmPe: updatedUser.crmPe,
+        rqe: updatedUser.rqe,
+        email: updatedUser.email,
+        gmail: updatedUser.gmail,
+        celular: updatedUser.celular,
+        perfil: updatedUser.perfil,
+        ativo: String(updatedUser.ativo),
+      }).toString();
+      const res = await fetch(`${GAS_URL}?${q}`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Erro ao salvar alterações.');
 
-      // Attempt endpoint update
-      try {
-        const q = new URLSearchParams({
-          action: 'updateUsuario',
-          usuario: updatedUser.usuario,
-          nome: updatedUser.nome,
-          nip: updatedUser.nip,
-          email: updatedUser.email,
-          perfil: updatedUser.perfil,
-          ativo: String(updatedUser.ativo)
-        }).toString();
-        await fetch(`${GAS_URL}?${q}`).catch(() => {});
-      } catch {}
-
+      setUsers(prev => prev.map(u => (u.id === editingUser.id ? updatedUser : u)));
       showToast(`Dados do usuário "${updatedUser.usuario}" atualizados com sucesso!`);
       setEditingUser(null);
-    } catch {
-      showToast('Erro ao salvar alterações.');
+    } catch (err: any) {
+      showToast(err?.message || 'Erro ao salvar alterações.');
     } finally {
       setSaving(false);
     }
   };
 
-  // Format NIP helper
-  const handleNipChange = (val: string) => {
-    const digits = val.replace(/\D/g, '').slice(0, 8);
-    let masked = digits;
-    if (digits.length > 2) masked = digits.slice(0, 2) + '.' + digits.slice(2);
-    if (digits.length > 6) masked = digits.slice(0, 2) + '.' + digits.slice(2, 6) + '.' + digits.slice(6);
-    setEditForm(prev => ({ ...prev, nip: masked }));
-  };
-
   const handleOpenNewUser = () => {
-    setNewUserForm({ usuario: '', nome: '', nip: '', email: '', perfil: 'user_secretaria', senha: '', confirma: '' });
+    setNewUserForm(emptyUserForm);
     setNewUserError('');
     setShowNewUserModal(true);
   };
@@ -260,12 +193,8 @@ export const UsuariosManagement: React.FC = () => {
       setNewUserError('Preencha o usuário (login) e o nome completo.');
       return;
     }
-    if (newUserForm.senha !== newUserForm.confirma) {
-      setNewUserError('As senhas não coincidem.');
-      return;
-    }
-    if (newUserForm.senha.length < 6) {
-      setNewUserError('A senha deve ter no mínimo 6 caracteres.');
+    if (!newUserForm.nip.trim()) {
+      setNewUserError('Informe o NIP — ele será usado como senha inicial do usuário.');
       return;
     }
 
@@ -277,46 +206,46 @@ export const UsuariosManagement: React.FC = () => {
 
     setCreatingUser(true);
     try {
-      const senhaHash = await sha256(newUserForm.senha);
-      const resCreate = await fetch(
-        `${GAS_URL}?action=createUsuario&nome=${encodeURIComponent(newUserForm.nome.trim().toUpperCase())}` +
-        `&usuario=${encodeURIComponent(usuarioUpper)}&nip=${encodeURIComponent(newUserForm.nip)}` +
-        `&email=${encodeURIComponent(newUserForm.email)}&senhaHash=${encodeURIComponent(senhaHash)}`
-      );
-      const jsonCreate = await resCreate.json();
-      if (!jsonCreate.success) {
-        setNewUserError(jsonCreate.error || 'Erro ao criar usuário.');
+      const q = new URLSearchParams({
+        action: 'createUsuario',
+        usuario: usuarioUpper,
+        nome: newUserForm.nome.trim().toUpperCase(),
+        postoGraduacao: newUserForm.postoGraduacao.trim(),
+        cargo: newUserForm.cargo.trim(),
+        nip: newUserForm.nip.trim(),
+        crmPe: newUserForm.crmPe.trim(),
+        rqe: newUserForm.rqe.trim(),
+        email: newUserForm.email.trim(),
+        gmail: newUserForm.gmail.trim(),
+        celular: newUserForm.celular.trim(),
+        perfil: newUserForm.perfil,
+      }).toString();
+      const res = await fetch(`${GAS_URL}?${q}`);
+      const json = await res.json();
+      if (!json.success) {
+        setNewUserError(json.error || 'Erro ao criar usuário.');
         setCreatingUser(false);
         return;
       }
 
-      // O perfil padrão do cadastro (createUsuario) é o de menor privilégio;
-      // ajustamos aqui caso o admin tenha escolhido outro perfil.
-      const qUpdate = new URLSearchParams({
-        action: 'updateUsuario',
-        usuario: usuarioUpper,
-        nome: newUserForm.nome.trim().toUpperCase(),
-        nip: newUserForm.nip,
-        email: newUserForm.email,
-        perfil: newUserForm.perfil,
-        ativo: 'true',
-      }).toString();
-      await fetch(`${GAS_URL}?${qUpdate}`).catch(() => {});
-
       const novoUsuario: UserRecord = {
         id: `usr-novo-${Date.now()}`,
         usuario: usuarioUpper,
+        postoGraduacao: newUserForm.postoGraduacao.trim(),
+        cargo: newUserForm.cargo.trim(),
         nome: newUserForm.nome.trim().toUpperCase(),
         nip: newUserForm.nip.trim(),
+        crmPe: newUserForm.crmPe.trim(),
+        rqe: newUserForm.rqe.trim(),
         email: newUserForm.email.trim().toLowerCase(),
+        gmail: newUserForm.gmail.trim().toLowerCase(),
+        celular: newUserForm.celular.trim(),
         perfil: newUserForm.perfil,
         ativo: true,
+        imageProfile: '',
       };
-      const updatedList = [...users, novoUsuario];
-      setUsers(updatedList);
-      localStorage.setItem('jrs_usuarios_records', JSON.stringify(updatedList));
-
-      showToast(`Usuário "${usuarioUpper}" criado com sucesso.`);
+      setUsers(prev => [...prev, novoUsuario]);
+      showToast(`Usuário "${usuarioUpper}" criado com sucesso! Senha inicial: NIP (sem pontos).`);
       setShowNewUserModal(false);
     } catch {
       setNewUserError('Erro de conexão ao criar usuário.');
@@ -343,7 +272,6 @@ export const UsuariosManagement: React.FC = () => {
     showToast('Permissões de páginas e funcionalidades atualizadas.');
   };
 
-  // Filtered Users
   const filteredUsers = users.filter(u => {
     const matchesSearch =
       u.usuario.toLowerCase().includes(search.toLowerCase()) ||
@@ -351,13 +279,8 @@ export const UsuariosManagement: React.FC = () => {
       u.nip.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase());
 
-    const matchesStatus =
-      statusFilter === 'todos' ? true :
-      statusFilter === 'ativos' ? u.ativo : !u.ativo;
-
-    const matchesPerfil =
-      perfilFilter === 'todos' ? true :
-      u.perfil === perfilFilter;
+    const matchesStatus = statusFilter === 'todos' ? true : statusFilter === 'ativos' ? u.ativo : !u.ativo;
+    const matchesPerfil = perfilFilter === 'todos' ? true : u.perfil === perfilFilter;
 
     return matchesSearch && matchesStatus && matchesPerfil;
   });
@@ -367,12 +290,7 @@ export const UsuariosManagement: React.FC = () => {
       case 'admin':
         return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">ADMIN</span>;
       case 'user_medicos':
-      case 'user_hnre':
-      case 'hnre':
         return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">USER MÉDICOS</span>;
-      case 'user_secretaria':
-      case 'user_outros':
-      case 'user':
       default:
         return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">USER SECRETARIA</span>;
     }
@@ -382,7 +300,6 @@ export const UsuariosManagement: React.FC = () => {
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
       <Header title="Gestão de Usuários" />
 
-      {/* Toast Banner */}
       {toastMessage && (
         <div className="fixed top-20 right-4 z-[100] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in">
           <span className="material-symbols-outlined text-[18px] text-[#079551]">check_circle</span>
@@ -390,14 +307,10 @@ export const UsuariosManagement: React.FC = () => {
         </div>
       )}
 
-      <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-6xl mx-auto w-full flex-1 space-y-4">
-        {/* TOP BAR SEARCH & FILTERS */}
+      <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1600px] mx-auto w-full flex-1 space-y-4">
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          {/* Search Box */}
           <div className="relative flex-1">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">
-              search
-            </span>
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">search</span>
             <input
               type="text"
               value={search}
@@ -406,34 +319,20 @@ export const UsuariosManagement: React.FC = () => {
               className="w-full pl-10 pr-4 py-2.5 text-xs font-body rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-[#050F41] transition-all"
             />
             {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
+              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                 <span className="material-symbols-outlined text-[16px]">close</span>
               </button>
             )}
           </div>
 
-          {/* Filters */}
           <div className="flex items-center gap-2">
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value as any)}
-              className="px-3 py-2.5 text-xs font-semibold rounded-xl border border-gray-200 bg-gray-50 text-gray-700 focus:outline-none focus:border-[#050F41]"
-            >
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="px-3 py-2.5 text-xs font-semibold rounded-xl border border-gray-200 bg-gray-50 text-gray-700 focus:outline-none focus:border-[#050F41]">
               <option value="todos">Status: Todos</option>
               <option value="ativos">Status: Ativos</option>
               <option value="inativos">Status: Inativos</option>
             </select>
 
-            {/* Perfil Filter */}
-            <select
-              value={perfilFilter}
-              onChange={e => setPerfilFilter(e.target.value)}
-              className="px-3 py-2.5 text-xs font-semibold rounded-xl border border-gray-200 bg-gray-50 text-gray-700 focus:outline-none focus:border-[#050F41]"
-            >
+            <select value={perfilFilter} onChange={e => setPerfilFilter(e.target.value)} className="px-3 py-2.5 text-xs font-semibold rounded-xl border border-gray-200 bg-gray-50 text-gray-700 focus:outline-none focus:border-[#050F41]">
               <option value="todos">Perfil: Todos</option>
               <option value="admin">Perfil: Admin</option>
               <option value="user_medicos">Perfil: User Médicos</option>
@@ -451,7 +350,6 @@ export const UsuariosManagement: React.FC = () => {
           </div>
         </div>
 
-        {/* STATS OVERVIEW CARDS */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-white p-3.5 rounded-2xl border border-gray-200/60 shadow-sm flex items-center justify-between">
             <div>
@@ -460,7 +358,6 @@ export const UsuariosManagement: React.FC = () => {
             </div>
             <span className="material-symbols-outlined text-[24px] text-gray-400 bg-gray-50 p-2 rounded-xl">group</span>
           </div>
-
           <div className="bg-white p-3.5 rounded-2xl border border-gray-200/60 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ativos</p>
@@ -468,7 +365,6 @@ export const UsuariosManagement: React.FC = () => {
             </div>
             <span className="material-symbols-outlined text-[24px] text-[#079551] bg-green-50 p-2 rounded-xl">check_circle</span>
           </div>
-
           <div className="bg-white p-3.5 rounded-2xl border border-gray-200/60 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Inativos</p>
@@ -476,7 +372,6 @@ export const UsuariosManagement: React.FC = () => {
             </div>
             <span className="material-symbols-outlined text-[24px] text-red-500 bg-red-50 p-2 rounded-xl">block</span>
           </div>
-
           <div className="bg-white p-3.5 rounded-2xl border border-gray-200/60 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Admins</p>
@@ -486,12 +381,17 @@ export const UsuariosManagement: React.FC = () => {
           </div>
         </div>
 
-        {/* USER TABLE / LIST CONTAINER */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden">
           {loading ? (
             <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
               <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
               <p className="text-xs font-semibold">Carregando usuários...</p>
+            </div>
+          ) : loadError ? (
+            <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
+              <span className="material-symbols-outlined text-[36px] text-red-400">error</span>
+              <p className="text-sm font-bold text-gray-700">Não foi possível carregar os usuários</p>
+              <button onClick={loadUsers} className="mt-2 px-4 py-2 bg-[#050F41] text-white rounded-xl text-xs font-bold">Tentar novamente</button>
             </div>
           ) : filteredUsers.length === 0 ? (
             <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
@@ -501,13 +401,13 @@ export const UsuariosManagement: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* DESKTOP TABLE */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                       <th className="py-3.5 px-4">Usuário</th>
                       <th className="py-3.5 px-4">Nome Completo</th>
+                      <th className="py-3.5 px-4">Cargo</th>
                       <th className="py-3.5 px-4">NIP</th>
                       <th className="py-3.5 px-4">E-mail</th>
                       <th className="py-3.5 px-4">Perfil</th>
@@ -520,32 +420,27 @@ export const UsuariosManagement: React.FC = () => {
                       <tr key={user.id} className={`hover:bg-gray-50/80 transition-colors ${!user.ativo ? 'opacity-60 bg-gray-50/40' : ''}`}>
                         <td className="py-3.5 px-4 font-bold text-[#050F41]">
                           <div className="flex items-center space-x-2">
-                            <div className="w-7 h-7 rounded-full bg-[#050F41] text-white flex items-center justify-center font-bold text-[10px] uppercase shrink-0">
-                              {user.usuario.charAt(0)}
-                            </div>
+                            {user.imageProfile ? (
+                              <img src={user.imageProfile} alt={user.usuario} className="w-7 h-7 rounded-full object-cover shrink-0" />
+                            ) : (
+                              <div className="w-7 h-7 rounded-full bg-[#050F41] text-white flex items-center justify-center font-bold text-[10px] uppercase shrink-0">
+                                {user.usuario.charAt(0)}
+                              </div>
+                            )}
                             <span className="truncate max-w-[140px]">{user.usuario}</span>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 font-semibold text-gray-800">
-                          {user.nome}
-                        </td>
-                        <td className="py-3.5 px-4 font-mono text-gray-600">
-                          {user.nip || '-'}
-                        </td>
-                        <td className="py-3.5 px-4 text-gray-600 truncate max-w-[180px]">
-                          {user.email || '-'}
-                        </td>
-                        <td className="py-3.5 px-4">
-                          {getPerfilBadge(user.perfil)}
-                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-gray-800">{user.nome}</td>
+                        <td className="py-3.5 px-4 text-gray-600">{user.cargo || '-'}</td>
+                        <td className="py-3.5 px-4 font-mono text-gray-600">{user.nip || '-'}</td>
+                        <td className="py-3.5 px-4 text-gray-600 truncate max-w-[180px]">{user.email || '-'}</td>
+                        <td className="py-3.5 px-4">{getPerfilBadge(user.perfil)}</td>
                         <td className="py-3.5 px-4 text-center">
                           <button
                             type="button"
                             onClick={() => handleToggleStatus(user)}
                             className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
-                              user.ativo
-                                ? 'bg-green-100 text-green-800 hover:bg-green-200 border border-green-200'
-                                : 'bg-red-100 text-red-800 hover:bg-red-200 border border-red-200'
+                              user.ativo ? 'bg-green-100 text-green-800 hover:bg-green-200 border border-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200 border border-red-200'
                             }`}
                             title={user.ativo ? 'Clique para desativar' : 'Clique para ativar'}
                           >
@@ -555,27 +450,16 @@ export const UsuariosManagement: React.FC = () => {
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end space-x-1">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEdit(user)}
-                              className="p-1.5 text-gray-500 hover:text-[#050F41] hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-                              title="Editar dados do usuário"
-                            >
+                            <button type="button" onClick={() => handleOpenEdit(user)} className="p-1.5 text-gray-500 hover:text-[#050F41] hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Editar dados do usuário">
                               <span className="material-symbols-outlined text-[18px]">edit</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => handleToggleStatus(user)}
-                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                                user.ativo
-                                  ? 'text-gray-400 hover:text-red-600 hover:bg-red-50'
-                                  : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
-                              }`}
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${user.ativo ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
                               title={user.ativo ? 'Desativar usuário' : 'Ativar usuário'}
                             >
-                              <span className="material-symbols-outlined text-[18px]">
-                                {user.ativo ? 'block' : 'check_circle'}
-                              </span>
+                              <span className="material-symbols-outlined text-[18px]">{user.ativo ? 'block' : 'check_circle'}</span>
                             </button>
                           </div>
                         </td>
@@ -585,23 +469,24 @@ export const UsuariosManagement: React.FC = () => {
                 </table>
               </div>
 
-              {/* MOBILE CARDS LIST */}
               <div className="block md:hidden divide-y divide-gray-100">
                 {filteredUsers.map(user => (
                   <div key={user.id} className={`p-4 flex flex-col space-y-2.5 ${!user.ativo ? 'bg-gray-50/50 opacity-70' : ''}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center space-x-2 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-[#050F41] text-white flex items-center justify-center font-bold text-xs uppercase shrink-0">
-                          {user.usuario.charAt(0)}
-                        </div>
+                        {user.imageProfile ? (
+                          <img src={user.imageProfile} alt={user.usuario} className="w-8 h-8 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-[#050F41] text-white flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                            {user.usuario.charAt(0)}
+                          </div>
+                        )}
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-[#050F41] truncate">{user.usuario}</p>
                           <p className="text-[11px] text-gray-700 font-semibold truncate">{user.nome}</p>
                         </div>
                       </div>
-                      <div className="shrink-0 flex items-center space-x-1">
-                        {getPerfilBadge(user.perfil)}
-                      </div>
+                      <div className="shrink-0 flex items-center space-x-1">{getPerfilBadge(user.perfil)}</div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-600 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
@@ -620,25 +505,17 @@ export const UsuariosManagement: React.FC = () => {
                         type="button"
                         onClick={() => handleToggleStatus(user)}
                         className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[10px] font-bold transition-all ${
-                          user.ativo
-                            ? 'bg-green-100 text-green-800 border border-green-200'
-                            : 'bg-red-100 text-red-800 border border-red-200'
+                          user.ativo ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
                         }`}
                       >
                         <span className={`w-1.5 h-1.5 rounded-full ${user.ativo ? 'bg-green-600' : 'bg-red-600'}`} />
                         <span>{user.ativo ? 'ATIVO' : 'INATIVO'}</span>
                       </button>
 
-                      <div className="flex items-center space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEdit(user)}
-                          className="px-3 py-1.5 bg-[#050F41] text-white rounded-lg text-xs font-bold flex items-center space-x-1 shadow-sm"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">edit</span>
-                          <span>Editar</span>
-                        </button>
-                      </div>
+                      <button type="button" onClick={() => handleOpenEdit(user)} className="px-3 py-1.5 bg-[#050F41] text-white rounded-lg text-xs font-bold flex items-center space-x-1 shadow-sm">
+                        <span className="material-symbols-outlined text-[14px]">edit</span>
+                        <span>Editar</span>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -669,7 +546,6 @@ export const UsuariosManagement: React.FC = () => {
           </div>
 
           <div className="p-4 sm:p-5 space-y-6">
-            {/* Páginas */}
             <div>
               <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Páginas do App</h4>
               <div className="overflow-x-auto">
@@ -703,7 +579,6 @@ export const UsuariosManagement: React.FC = () => {
               </div>
             </div>
 
-            {/* Funcionalidades */}
             <div>
               <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Funcionalidades — Concursos (Planilhas de Controle)</h4>
               <div className="overflow-x-auto">
@@ -749,79 +624,50 @@ export const UsuariosManagement: React.FC = () => {
                 <span className="material-symbols-outlined text-[22px] text-[#079551]">person_add</span>
                 <h3 className="font-heading font-bold text-sm uppercase">Adicionar Usuário</h3>
               </div>
-              <button
-                onClick={() => setShowNewUserModal(false)}
-                className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
-              >
+              <button onClick={() => setShowNewUserModal(false)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
             <form onSubmit={handleCreateUser} className="p-5 overflow-y-auto space-y-4 flex-1">
               {newUserError && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs font-semibold text-red-700">
-                  {newUserError}
-                </div>
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs font-semibold text-red-700">{newUserError}</div>
               )}
 
-              <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                  Nome de Usuário (Login)
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newUserForm.usuario}
-                  onChange={e => setNewUserForm(prev => ({ ...prev, usuario: e.target.value.toUpperCase() }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
-                  placeholder="EX.: CT MAURISTON"
-                />
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] font-semibold text-blue-800 flex items-start gap-2">
+                <span className="material-symbols-outlined text-[16px] shrink-0">info</span>
+                <span>A senha inicial do usuário será o NIP (somente números). Ele será orientado a alterá-la no primeiro acesso.</span>
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                  Nome Completo
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newUserForm.nome}
-                  onChange={e => setNewUserForm(prev => ({ ...prev, nome: e.target.value.toUpperCase() }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41]"
-                  placeholder="NOME COMPLETO"
-                />
+                <label className={labelClass}>Nome de Usuário (Login)</label>
+                <input type="text" required value={newUserForm.usuario} onChange={e => setNewUserForm(prev => ({ ...prev, usuario: e.target.value.toUpperCase() }))} className={inputClass} placeholder="EX.: CT MAURISTON" />
+              </div>
+
+              <div>
+                <label className={labelClass}>Nome Completo</label>
+                <input type="text" required value={newUserForm.nome} onChange={e => setNewUserForm(prev => ({ ...prev, nome: e.target.value.toUpperCase() }))} className={inputClass} placeholder="NOME COMPLETO" />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                    NIP
-                  </label>
-                  <input
-                    type="text"
-                    value={newUserForm.nip}
-                    onChange={e => {
-                      const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
-                      let masked = digits;
-                      if (digits.length > 2) masked = digits.slice(0, 2) + '.' + digits.slice(2);
-                      if (digits.length > 6) masked = digits.slice(0, 2) + '.' + digits.slice(2, 6) + '.' + digits.slice(6);
-                      setNewUserForm(prev => ({ ...prev, nip: masked }));
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-mono font-semibold text-gray-800 focus:outline-none focus:border-[#050F41]"
-                    placeholder="00.0000.00"
-                    maxLength={10}
-                  />
+                  <label className={labelClass}>Posto/Graduação</label>
+                  <input type="text" value={newUserForm.postoGraduacao} onChange={e => setNewUserForm(prev => ({ ...prev, postoGraduacao: e.target.value }))} className={inputClass} placeholder="Ex.: Capitão-Tenente (Md)" />
                 </div>
-
                 <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                    Perfil de Acesso
-                  </label>
-                  <select
-                    value={newUserForm.perfil}
-                    onChange={e => setNewUserForm(prev => ({ ...prev, perfil: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
-                  >
+                  <label className={labelClass}>Cargo</label>
+                  <input type="text" value={newUserForm.cargo} onChange={e => setNewUserForm(prev => ({ ...prev, cargo: e.target.value }))} className={inputClass} placeholder="Ex.: Membro" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>NIP</label>
+                  <input type="text" required value={newUserForm.nip} onChange={e => setNewUserForm(prev => ({ ...prev, nip: formatNip(e.target.value) }))} className={`${inputClass} font-mono`} placeholder="00.0000.00" maxLength={10} />
+                </div>
+                <div>
+                  <label className={labelClass}>Perfil de Acesso</label>
+                  <select value={newUserForm.perfil} onChange={e => setNewUserForm(prev => ({ ...prev, perfil: e.target.value }))} className={inputClass}>
                     <option value="admin">Administrador (admin)</option>
                     <option value="user_medicos">Usuário Médicos (user_medicos)</option>
                     <option value="user_secretaria">Usuário Secretaria (user_secretaria)</option>
@@ -829,69 +675,39 @@ export const UsuariosManagement: React.FC = () => {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>CRM-PE</label>
+                  <input type="text" value={newUserForm.crmPe} onChange={e => setNewUserForm(prev => ({ ...prev, crmPe: e.target.value }))} className={inputClass} placeholder="Opcional" />
+                </div>
+                <div>
+                  <label className={labelClass}>RQE</label>
+                  <input type="text" value={newUserForm.rqe} onChange={e => setNewUserForm(prev => ({ ...prev, rqe: e.target.value }))} className={inputClass} placeholder="Opcional" />
+                </div>
+              </div>
+
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                  E-mail Institucional
-                </label>
-                <input
-                  type="email"
-                  value={newUserForm.email}
-                  onChange={e => setNewUserForm(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41]"
-                  placeholder="exemplo@marinha.mil.br"
-                />
+                <label className={labelClass}>E-mail Institucional</label>
+                <input type="email" value={newUserForm.email} onChange={e => setNewUserForm(prev => ({ ...prev, email: e.target.value }))} className={inputClass} placeholder="exemplo@marinha.mil.br" />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                    Senha
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={newUserForm.senha}
-                    onChange={e => setNewUserForm(prev => ({ ...prev, senha: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41]"
-                    placeholder="Mínimo 6 caracteres"
-                  />
+                  <label className={labelClass}>E-mail Google (Gmail)</label>
+                  <input type="email" value={newUserForm.gmail} onChange={e => setNewUserForm(prev => ({ ...prev, gmail: e.target.value }))} className={inputClass} placeholder="exemplo@gmail.com" />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                    Confirmar Senha
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={newUserForm.confirma}
-                    onChange={e => setNewUserForm(prev => ({ ...prev, confirma: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41]"
-                    placeholder="Repita a senha"
-                  />
+                  <label className={labelClass}>Celular</label>
+                  <input type="text" value={newUserForm.celular} onChange={e => setNewUserForm(prev => ({ ...prev, celular: formatCelular(e.target.value) }))} className={inputClass} placeholder="(00) 00000-0000" maxLength={15} />
                 </div>
               </div>
 
               <div className="pt-4 border-t border-gray-100 flex items-center justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNewUserModal(false)}
-                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
-                >
+                <button type="button" onClick={() => setShowNewUserModal(false)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={creatingUser}
-                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1"
-                >
-                  {creatingUser ? (
-                    <span>Criando...</span>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-[16px]">save</span>
-                      <span>Criar Usuário</span>
-                    </>
-                  )}
+                <button type="submit" disabled={creatingUser} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1">
+                  {creatingUser ? <span>Criando...</span> : (<><span className="material-symbols-outlined text-[16px]">save</span><span>Criar Usuário</span></>)}
                 </button>
               </div>
             </form>
@@ -903,74 +719,46 @@ export const UsuariosManagement: React.FC = () => {
       {editingUser && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
             <div className="p-4 bg-[#050F41] text-white flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className="material-symbols-outlined text-[22px] text-[#079551]">manage_accounts</span>
                 <h3 className="font-heading font-bold text-sm uppercase">Editar Dados do Usuário</h3>
               </div>
-              <button
-                onClick={() => setEditingUser(null)}
-                className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
-              >
+              <button onClick={() => setEditingUser(null)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
-            {/* Modal Form Body */}
             <form onSubmit={handleSaveEdit} className="p-5 overflow-y-auto space-y-4 flex-1">
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                  Nome de Usuário (Login)
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editForm.usuario || ''}
-                  onChange={e => setEditForm(prev => ({ ...prev, usuario: e.target.value.toUpperCase() }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
-                  placeholder="EX.: CT MAURISTON"
-                />
+                <label className={labelClass}>Nome de Usuário (Login)</label>
+                <input type="text" required value={editForm.usuario || ''} onChange={e => setEditForm(prev => ({ ...prev, usuario: e.target.value.toUpperCase() }))} className={inputClass} />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                  Nome Completo
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editForm.nome || ''}
-                  onChange={e => setEditForm(prev => ({ ...prev, nome: e.target.value.toUpperCase() }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41]"
-                  placeholder="NOME COMPLETO"
-                />
+                <label className={labelClass}>Nome Completo</label>
+                <input type="text" required value={editForm.nome || ''} onChange={e => setEditForm(prev => ({ ...prev, nome: e.target.value.toUpperCase() }))} className={inputClass} />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                    NIP
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.nip || ''}
-                    onChange={e => handleNipChange(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-mono font-semibold text-gray-800 focus:outline-none focus:border-[#050F41]"
-                    placeholder="00.0000.00"
-                    maxLength={10}
-                  />
+                  <label className={labelClass}>Posto/Graduação</label>
+                  <input type="text" value={editForm.postoGraduacao || ''} onChange={e => setEditForm(prev => ({ ...prev, postoGraduacao: e.target.value }))} className={inputClass} />
                 </div>
-
                 <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                    Perfil de Acesso
-                  </label>
-                  <select
-                    value={editForm.perfil || 'user_secretaria'}
-                    onChange={e => setEditForm(prev => ({ ...prev, perfil: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
-                  >
+                  <label className={labelClass}>Cargo</label>
+                  <input type="text" value={editForm.cargo || ''} onChange={e => setEditForm(prev => ({ ...prev, cargo: e.target.value }))} className={inputClass} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>NIP</label>
+                  <input type="text" value={editForm.nip || ''} onChange={e => setEditForm(prev => ({ ...prev, nip: formatNip(e.target.value) }))} className={`${inputClass} font-mono`} maxLength={10} />
+                </div>
+                <div>
+                  <label className={labelClass}>Perfil de Acesso</label>
+                  <select value={editForm.perfil || 'user_secretaria'} onChange={e => setEditForm(prev => ({ ...prev, perfil: e.target.value }))} className={inputClass}>
                     <option value="admin">Administrador (admin)</option>
                     <option value="user_medicos">Usuário Médicos (user_medicos)</option>
                     <option value="user_secretaria">Usuário Secretaria (user_secretaria)</option>
@@ -978,64 +766,53 @@ export const UsuariosManagement: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                  E-mail Institucional
-                </label>
-                <input
-                  type="email"
-                  value={editForm.email || ''}
-                  onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41]"
-                  placeholder="exemplo@marinha.mil.br"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>CRM-PE</label>
+                  <input type="text" value={editForm.crmPe || ''} onChange={e => setEditForm(prev => ({ ...prev, crmPe: e.target.value }))} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>RQE</label>
+                  <input type="text" value={editForm.rqe || ''} onChange={e => setEditForm(prev => ({ ...prev, rqe: e.target.value }))} className={inputClass} />
+                </div>
               </div>
 
-              {/* Status Toggle Switch */}
+              <div>
+                <label className={labelClass}>E-mail Institucional</label>
+                <input type="email" value={editForm.email || ''} onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))} className={inputClass} />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={labelClass}>E-mail Google (Gmail)</label>
+                  <input type="email" value={editForm.gmail || ''} onChange={e => setEditForm(prev => ({ ...prev, gmail: e.target.value }))} className={inputClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Celular</label>
+                  <input type="text" value={editForm.celular || ''} onChange={e => setEditForm(prev => ({ ...prev, celular: formatCelular(e.target.value) }))} className={inputClass} maxLength={15} />
+                </div>
+              </div>
+
               <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold text-[#050F41]">Status da Conta</p>
-                  <p className="text-[11px] text-gray-500">
-                    {editForm.ativo ? 'Usuário ativo e autorizado no sistema.' : 'Usuário desativado (sem acesso).'}
-                  </p>
+                  <p className="text-[11px] text-gray-500">{editForm.ativo ? 'Usuário ativo e autorizado no sistema.' : 'Usuário desativado (sem acesso).'}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setEditForm(prev => ({ ...prev, ativo: !prev.ativo }))}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    editForm.ativo ? 'bg-[#079551]' : 'bg-gray-300'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${editForm.ativo ? 'bg-[#079551]' : 'bg-gray-300'}`}
                 >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      editForm.ativo ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${editForm.ativo ? 'translate-x-5' : 'translate-x-0'}`} />
                 </button>
               </div>
 
-              {/* Modal Footer Actions */}
               <div className="pt-4 border-t border-gray-100 flex items-center justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingUser(null)}
-                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
-                >
+                <button type="button" onClick={() => setEditingUser(null)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1"
-                >
-                  {saving ? (
-                    <span>Salvando...</span>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-[16px]">save</span>
-                      <span>Salvar Alterações</span>
-                    </>
-                  )}
+                <button type="submit" disabled={saving} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1">
+                  {saving ? <span>Salvando...</span> : (<><span className="material-symbols-outlined text-[16px]">save</span><span>Salvar Alterações</span></>)}
                 </button>
               </div>
             </form>

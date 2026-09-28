@@ -37,7 +37,7 @@ export const DGPM406AnexosGuide: React.FC = () => {
     <div className="flex flex-col h-full bg-gray-50">
       <Header title="ANEXOS DGPM-406 REV 9" />
       
-      <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-4xl mx-auto w-full">
+      <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-5xl mx-auto w-full">
         {/* Documentação: Contentor único da lista com separadores internos (divide-y) */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden divide-y divide-gray-100">
           {ANEXOS.map((item) => (
