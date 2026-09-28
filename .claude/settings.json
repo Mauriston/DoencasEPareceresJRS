@@ -1,0 +1,14 @@
+   {
+     "hooks": {
+       "SessionStart": [
+         {
+           "hooks": [
+             {
+               "type": "command",
+               "command": "if [ -n \"$FIREBASE_SA_B64\" ]; then echo \"$FIREBASE_SA_B64\" | base64 -d > /tmp/firebase-sa.json && chmod 600 /tmp/firebase-sa.json; fi"
+             }
+           ]
+         }
+       ]
+     }
+   }
