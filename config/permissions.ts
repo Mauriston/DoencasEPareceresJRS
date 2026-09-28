@@ -16,24 +16,25 @@ export interface PageDef {
   id: NavItem;
   label: string;
   icon: string;
+  subtitle: string;
 }
 
 export const PAGE_DEFS: PageDef[] = [
-  { id: 'guide', label: 'Doenças de Lei', icon: 'medical_information' },
-  { id: 'portaria', label: 'Portaria', icon: 'article' },
-  { id: 'concursosJRS', label: 'Planilhas de Controle', icon: 'fact_check' },
-  { id: 'concursos', label: 'Índices Mínimos', icon: 'emoji_events' },
-  { id: 'exames', label: 'Exames Mínimos', icon: 'science' },
-  { id: 'pareceres', label: 'Pareceres', icon: 'assignment' },
-  { id: 'pericia-menor', label: 'Perícia Menor', icon: 'personal_injury' },
-  { id: 'mensagens', label: 'Mensagens', icon: 'chat' },
-  { id: 'dgpm406', label: 'DGPM-406', icon: 'anchor' },
-  { id: 'laws', label: 'Legislação', icon: 'balance' },
-  { id: 'templates', label: 'Templates', icon: 'edit_document' },
-  { id: 'casos', label: 'Casos Periciais', icon: 'quiz' },
-  { id: 'videos', label: 'Vídeos', icon: 'smart_display' },
-  { id: 'infograficos', label: 'Infográficos', icon: 'image' },
-  { id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list' },
+  { id: 'guide', label: 'Doenças de Lei', icon: 'medical_information', subtitle: 'Critérios clínicos e documentos por doença prevista em lei.' },
+  { id: 'portaria', label: 'Portaria', icon: 'article', subtitle: 'Leia a Portaria GM-MD nº 3.551/2021 na íntegra.' },
+  { id: 'concursosJRS', label: 'Planilhas de Controle', icon: 'fact_check', subtitle: 'Acompanhe o andamento dos candidatos em concurso.' },
+  { id: 'concursos', label: 'Índices Mínimos', icon: 'emoji_events', subtitle: 'Consulte os índices mínimos exigidos por concurso.' },
+  { id: 'exames', label: 'Exames Mínimos', icon: 'science', subtitle: 'Veja os exames mínimos exigidos por finalidade de IS.' },
+  { id: 'pareceres', label: 'Pareceres', icon: 'assignment', subtitle: 'Gere solicitações de Pareceres em PDF por especialidade.' },
+  { id: 'pericia-menor', label: 'Perícia Menor', icon: 'personal_injury', subtitle: 'Registre as Perícias Menores dos militares de bordo.' },
+  { id: 'mensagens', label: 'Mensagens', icon: 'chat', subtitle: 'Faça minutas das MSG de IS auxiliado por IA.' },
+  { id: 'dgpm406', label: 'DGPM-406', icon: 'anchor', subtitle: 'Consulte capítulos e anexos da DGPM-406.' },
+  { id: 'laws', label: 'Legislação', icon: 'balance', subtitle: 'Pesquise as leis que fundamentam as IS.' },
+  { id: 'templates', label: 'Templates', icon: 'edit_document', subtitle: 'Baixe modelos e templates para laudos e documentos.' },
+  { id: 'casos', label: 'Casos Periciais', icon: 'quiz', subtitle: 'Teste seus conhecimentos em casos comentados.' },
+  { id: 'videos', label: 'Vídeos', icon: 'smart_display', subtitle: 'Assista vídeos sobre os processos das IS.' },
+  { id: 'infograficos', label: 'Infográficos', icon: 'image', subtitle: 'Resumos ilustrados para consultas rápidas.' },
+  { id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list', subtitle: 'Trilha de estudos para capacitação dos AMP.' },
 ];
 
 export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {
