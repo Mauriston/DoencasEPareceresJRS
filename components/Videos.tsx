@@ -1,6 +1,7 @@
 // Ficheiro: components/Videos.tsx
 import React, { useState, useEffect } from 'react';
 import { Loader2, RefreshCw, AlertCircle, Play, X } from 'lucide-react';
+import { Header } from './Header';
 import { fetchExtras, ExtraItem } from '../services/extrasService';
 
 export const Videos: React.FC = () => {
@@ -51,6 +52,7 @@ export const Videos: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50 animate-fade-in relative">
+      <Header title="Vídeos" />
       <div className="p-4 space-y-6 overflow-y-auto w-full max-w-full flex-1 pb-24">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">

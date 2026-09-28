@@ -4,6 +4,7 @@ import { getNavCategories, findCategoryForView } from '../config/navigation';
 
 export interface HeaderProps {
   title?: string;
+  desktopTitle?: string;
   leftAction?: React.ReactNode;
   rightAction?: React.ReactNode;
   onBack?: () => void;
@@ -41,7 +42,7 @@ const Avatar: React.FC<{ nome?: string; imageProfile?: string; size?: number }> 
   );
 };
 
-export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, onBack }) => {
+export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction, rightAction, onBack }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
 
@@ -51,6 +52,7 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
   const authUser = nav?.authUser || null;
   const handleLogout = nav?.handleLogout || (() => {});
   const periciaMenorVigentes = nav?.periciaMenorVigentes || 0;
+  const setIsMobileMenuOpen = nav?.setIsMobileMenuOpen || (() => {});
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -58,14 +60,21 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const goHome = () => setCurrentView('home');
-
   const categories = getNavCategories(authUser?.perfil, periciaMenorVigentes);
   const activeCategory = currentView ? findCategoryForView(categories, currentView) : undefined;
-  const showAccessoryBar = !!activeCategory && activeCategory.subitems.length > 1;
+  const activeSubitem = activeCategory?.subitems.find(s => s.id === currentView);
+
+  // Desktop: "{categoria} - {subitem}" quando a página pertence a um menu
+  // principal; caso contrário (Home, Perfil, artigos, etc.) usa o título
+  // customizado (desktopTitle ou title) fornecido pela própria página.
+  const categoryTitle = activeCategory && activeSubitem
+    ? (activeSubitem.label === activeCategory.label
+        ? activeCategory.label
+        : `${activeCategory.label} - ${activeSubitem.label}`)
+    : undefined;
+  const resolvedDesktopTitle = categoryTitle ?? desktopTitle ?? title;
 
   return (
-    <>
     <header
       className={`w-full sticky top-0 z-40 h-[56px] flex items-center justify-between transition-all duration-300 bg-[#050F41] text-white shadow-sm border-b border-white/10 shrink-0 ${
         isScrolled ? 'shadow-md' : ''
@@ -73,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
     >
       <div className="w-full flex items-center justify-between px-4 md:px-8 h-full relative">
 
-        {/* MOBILE LEFT: BACK OR HOME BUTTON (desktop usa o logo da Sidebar) */}
+        {/* MOBILE LEFT: BACK OR HAMBURGER (desktop usa o logo da Sidebar) */}
         <div className="flex md:hidden items-center justify-start min-w-[48px]">
           {onBack ? (
             <button
@@ -87,11 +96,11 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
           ) : (
             <button
               type="button"
-              onClick={goHome}
+              onClick={() => setIsMobileMenuOpen(true)}
               className="flex items-center justify-center w-10 h-10 rounded-full text-white hover:bg-white/10 transition-colors"
-              aria-label="Página Inicial"
+              aria-label="Abrir menu"
             >
-              <span className="material-symbols-outlined text-[24px]">home</span>
+              <span className="material-symbols-outlined text-[24px]">menu</span>
             </button>
           )}
           {leftAction}
@@ -99,7 +108,8 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
 
         {/* CENTER: PAGE TITLE (sempre centralizado na topbar, independente dos lados) */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[60%] text-center px-2 font-heading text-sm md:text-base font-bold tracking-wide truncate text-white uppercase pointer-events-none">
-          {title}
+          <span className="md:hidden">{title}</span>
+          <span className="hidden md:inline">{resolvedDesktopTitle}</span>
         </div>
 
         {/* RIGHT: CUSTOM ACTION & USER BUTTON */}
@@ -170,43 +180,5 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
         </div>
       </div>
     </header>
-
-    {showAccessoryBar && (
-      <div className="w-full sticky top-[56px] z-30 bg-white border-b border-gray-200 shadow-xs shrink-0">
-        <div className="flex items-center gap-1 px-4 md:px-8 h-11">
-          <button
-            type="button"
-            onClick={goHome}
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-[#050F41] transition-colors shrink-0"
-            aria-label="Página Inicial"
-            title="Página Inicial"
-          >
-            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-          </button>
-
-          <div className="flex items-center gap-1 ml-auto overflow-x-auto min-w-0">
-            {activeCategory!.subitems.map(sub => (
-              <button
-                key={sub.id}
-                type="button"
-                onClick={() => setCurrentView(sub.id)}
-                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors shrink-0 ${
-                  currentView === sub.id ? 'bg-[#050F41] text-white' : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">{sub.icon}</span>
-                <span>{sub.label}</span>
-                {sub.badge ? (
-                  <span className="bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center ml-0.5">
-                    {sub.badge}
-                  </span>
-                ) : null}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    )}
-    </>
   );
 };

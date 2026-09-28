@@ -1,10 +1,12 @@
 // Ficheiro: config/navigation.ts
-// Estrutura de navegação em 2 níveis: os 5 menus principais que antes ficavam
-// na topbar (Benefícios, Concursos, Pareceres, Normas, Extras) + Usuários
-// (admin) são usados nos cards da Página Inicial e na barra lateral. Os
-// subitens de cada menu principal aparecem na barra acessória do Header,
-// de acordo com o menu selecionado. A visibilidade de cada subitem respeita
-// a mesma matriz de permissões por perfil já usada em toda a app.
+// Estrutura de navegação em 2 níveis: os menus principais (Benefícios,
+// Concursos, Pareceres, Perícia Menor, Mensagens, Normas, Extras) + Usuários
+// (admin) são usados nos cards da Página Inicial e como itens da barra
+// lateral. Um menu principal com mais de um subitem expande em accordion na
+// barra lateral (e, na Home/desktop, abre os cards de subitem ao lado); um
+// menu com um único subitem navega direto para ele. A visibilidade de cada
+// subitem respeita a mesma matriz de permissões por perfil já usada em toda
+// a app.
 import { NavItem } from '../types';
 import { PAGE_DEFS, canAccessPage } from './permissions';
 
@@ -25,9 +27,11 @@ export interface NavCategory {
 const CATEGORY_DEFS: { id: string; label: string; icon: string; pages: NavItem[] }[] = [
   { id: 'beneficios', label: 'Benefícios', icon: 'stethoscope', pages: ['guide', 'portaria'] },
   { id: 'concursos', label: 'Concursos', icon: 'checklist', pages: ['concursosJRS', 'concursos', 'exames'] },
-  { id: 'pareceres', label: 'Pareceres', icon: 'description', pages: ['pareceres', 'pericia-menor', 'mensagens'] },
+  { id: 'pareceres', label: 'Pareceres', icon: 'description', pages: ['pareceres'] },
+  { id: 'pericia-menor', label: 'Perícia Menor', icon: 'personal_injury', pages: ['pericia-menor'] },
+  { id: 'mensagens', label: 'Mensagens', icon: 'chat', pages: ['mensagens'] },
   { id: 'normas', label: 'Normas', icon: 'gavel', pages: ['dgpm406', 'laws', 'templates'] },
-  { id: 'extras', label: 'Extras', icon: 'widgets', pages: ['casos', 'estudo', 'infograficos', 'resumos', 'roteiro'] },
+  { id: 'extras', label: 'Extras', icon: 'widgets', pages: ['casos', 'videos', 'infograficos', 'roteiro'] },
 ];
 
 export const getNavCategories = (

@@ -31,9 +31,8 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'laws', label: 'Legislação', icon: 'balance' },
   { id: 'templates', label: 'Templates', icon: 'edit_document' },
   { id: 'casos', label: 'Casos Periciais', icon: 'quiz' },
-  { id: 'estudo', label: 'Estudo / Artigos', icon: 'school' },
+  { id: 'videos', label: 'Vídeos', icon: 'smart_display' },
   { id: 'infograficos', label: 'Infográficos', icon: 'image' },
-  { id: 'resumos', label: 'Resumos', icon: 'menu_book' },
   { id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list' },
 ];
 
@@ -50,9 +49,8 @@ export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {
   laws: { user_medicos: true, user_secretaria: true },
   templates: { user_medicos: true, user_secretaria: true },
   casos: { user_medicos: true, user_secretaria: false },
-  estudo: { user_medicos: true, user_secretaria: false },
+  videos: { user_medicos: true, user_secretaria: false },
   infograficos: { user_medicos: true, user_secretaria: false },
-  resumos: { user_medicos: true, user_secretaria: false },
   roteiro: { user_medicos: true, user_secretaria: false },
 };
 

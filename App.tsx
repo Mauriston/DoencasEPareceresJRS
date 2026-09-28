@@ -12,16 +12,10 @@ import { ConcursosJRS } from './components/ConcursosJRS';
 import { PortariaGuide } from './components/PortariaGuide';
 import { ExamesGuide } from './components/ExamesGuide';
 import { Infograficos } from './components/Infograficos';
-import { Resumos } from './components/Resumos';
 import { Pareceres } from './components/Pareceres';
 import { TemplatesGuide } from './components/TemplatesGuide';
-import { Artigos } from './components/Artigos';
-import { ArtigoPericiaMedica } from './components/ArtigoPericiaMedica';
-import { ArtigoPerfilPerito } from './components/ArtigoPerfilPerito';
-import { ArtigoPericiaAdministrativa } from './components/ArtigoPericiaAdministrativa';
-import { ArtigoPericiaPsiquiatria } from './components/ArtigoPericiaPsiquiatria';
 import { CasosPericiais } from './components/CasosPericiais';
-import { Estudo } from './components/Estudo';
+import { Videos } from './components/Videos';
 import { PericiaMenor } from './components/PericiaMenor';
 import { Mensagens } from './components/Mensagens';
 import { RoteiroJRS } from './components/RoteiroJRS';
@@ -57,6 +51,7 @@ const App: React.FC = () => {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [senhaAlertDismissed, setSenhaAlertDismissed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (firebaseUser) => {
@@ -110,9 +105,12 @@ const App: React.FC = () => {
     setAuthUser(prev => (prev ? { ...prev, ...patch } : prev));
   };
 
+  const navigateTo = (view: NavItem) => {
+    setCurrentView(view);
+    setIsMobileMenuOpen(false);
+  };
+
   const can = (pageId: string) => canAccessPage(pageId, authUser?.perfil);
-  // Artigos e páginas de detalhe navegam a partir de "estudo": herdam a permissão dessa página.
-  const canAccessEstudo = can('estudo');
 
   const renderView = () => {
     switch (currentView) {
@@ -132,14 +130,8 @@ const App: React.FC = () => {
       case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor /> : <DiseaseGuide />;
       case 'mensagens': return can('mensagens') ? <Mensagens /> : <DiseaseGuide />;
       case 'infograficos': return can('infograficos') ? <Infograficos /> : <DiseaseGuide />;
-      case 'resumos': return can('resumos') ? <Resumos /> : <DiseaseGuide />;
-      case 'artigos': return canAccessEstudo ? <Artigos onNavigate={setCurrentView} /> : <DiseaseGuide />;
-      case 'artigo-pericia': return canAccessEstudo ? <ArtigoPericiaMedica onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
-      case 'artigo-perfil': return canAccessEstudo ? <ArtigoPerfilPerito onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
-      case 'artigo-administrativa': return canAccessEstudo ? <ArtigoPericiaAdministrativa onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
-      case 'artigo-psiquiatria': return canAccessEstudo ? <ArtigoPericiaPsiquiatria onBack={() => setCurrentView('estudo')} /> : <DiseaseGuide />;
       case 'casos': return can('casos') ? <CasosPericiais onBack={() => setCurrentView('guide')} /> : <DiseaseGuide />;
-      case 'estudo': return canAccessEstudo ? <Estudo onBack={() => setCurrentView('guide')} onNavigate={setCurrentView} /> : <DiseaseGuide />;
+      case 'videos': return can('videos') ? <Videos /> : <DiseaseGuide />;
       case 'roteiro': return can('roteiro') ? <RoteiroJRS /> : <DiseaseGuide />;
 
       // USUÁRIOS PAGE - Restricted for non-admin
@@ -167,11 +159,13 @@ const App: React.FC = () => {
     <NavContext.Provider
       value={{
         currentView,
-        setCurrentView,
+        setCurrentView: navigateTo,
         authUser,
         updateAuthUser,
         handleLogout,
         periciaMenorVigentes,
+        isMobileMenuOpen,
+        setIsMobileMenuOpen,
       }}
     >
       <div className="fixed inset-0 flex bg-[#F3F5F7] text-[#1F2937] overflow-hidden antialiased select-none">
