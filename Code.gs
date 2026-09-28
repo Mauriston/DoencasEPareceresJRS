@@ -260,49 +260,6 @@ function doGet(e) {
           message: "NIP não encontrado",
         }),
       ).setMimeType(ContentService.MimeType.JSON);
-    } else if (action === "login") {
-      const usuario = String(e.parameter.usuario || '').trim().toLowerCase();
-      const senhaHash = String(e.parameter.senhaHash || '').trim();
-      if (!usuario || !senhaHash) {
-        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Credenciais inválidas' })).setMimeType(ContentService.MimeType.JSON);
-      }
-      const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-      const sheet = ss.getSheetByName('Usuarios');
-      if (!sheet) {
-        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Configuração inválida' })).setMimeType(ContentService.MimeType.JSON);
-      }
-      const map = getUsuariosHeaderMap_(sheet);
-      const data = sheet.getDataRange().getValues();
-      for (let i = 1; i < data.length; i++) {
-        const row = data[i];
-        const u = String(row[map['usuario']] || '').trim().toLowerCase();
-        if (u !== usuario) continue;
-        const h = String(row[map['senha_hash']] || '').trim();
-        const ativoRaw = row[map['ativo']];
-        const isAtivo = ativoRaw === true || String(ativoRaw).toUpperCase() === 'TRUE' || String(ativoRaw).toUpperCase() === 'VERDADEIRO';
-        if (h !== senhaHash || !isAtivo) break;
-        const nip = String(row[map['nip']] || '').trim();
-        const nipDigits = onlyDigits_(nip);
-        const senhaTemporaria = nipDigits.length > 0 && h === sha256Hex_(nipDigits);
-        return ContentService.createTextOutput(JSON.stringify({
-          success: true,
-          usuario: String(row[map['usuario']] || '').trim(),
-          nome: String(row[map['nome']] || '').trim(),
-          postoGraduacao: String(row[map['postoGraduação']] || '').trim(),
-          cargo: String(row[map['cargo']] || '').trim(),
-          nip: nip,
-          crmPe: String(row[map['CRMPE']] || '').trim(),
-          rqe: String(row[map['RQE']] || '').trim(),
-          email: String(row[map['email']] || '').trim(),
-          gmail: String(row[map['Gmail']] || '').trim(),
-          celular: String(row[map['celular']] || '').trim(),
-          perfil: String(row[map['perfil']] || '').trim(),
-          imageProfile: String(row[map['imageProfile']] || '').trim(),
-          senhaTemporaria: senhaTemporaria
-        })).setMimeType(ContentService.MimeType.JSON);
-      }
-      return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Usuário ou senha incorretos' })).setMimeType(ContentService.MimeType.JSON);
-
     } else if (action === "getUsuarios") {
       const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
       const sheet = ss.getSheetByName('Usuarios');
@@ -381,92 +338,6 @@ function doGet(e) {
       }
       return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Usuário não encontrado' })).setMimeType(ContentService.MimeType.JSON);
 
-    } else if (action === "updateSenha") {
-      // Autoalteração de senha pelo próprio usuário (perfil não é verificado aqui).
-      const targetUsuario = String(e.parameter.usuario || '').trim().toUpperCase();
-      const senhaAtualHash = String(e.parameter.senhaAtualHash || '').trim();
-      const novaSenhaHash = String(e.parameter.novaSenhaHash || '').trim();
-      if (!targetUsuario || !novaSenhaHash) {
-        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Dados incompletos' })).setMimeType(ContentService.MimeType.JSON);
-      }
-      const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-      const sheet = ss.getSheetByName('Usuarios');
-      if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Aba Usuarios não encontrada' })).setMimeType(ContentService.MimeType.JSON);
-      const map = getUsuariosHeaderMap_(sheet);
-      const data = sheet.getDataRange().getValues();
-      for (let i = 1; i < data.length; i++) {
-        if (String(data[i][map['usuario']] || '').trim().toUpperCase() !== targetUsuario) continue;
-        const currentHash = String(data[i][map['senha_hash']] || '').trim();
-        if (senhaAtualHash && currentHash !== senhaAtualHash) {
-          return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Senha atual incorreta' })).setMimeType(ContentService.MimeType.JSON);
-        }
-        sheet.getRange(i + 1, map['senha_hash'] + 1).setValue(novaSenhaHash);
-        return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
-      }
-      return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Usuário não encontrado' })).setMimeType(ContentService.MimeType.JSON);
-
-    } else if (action === "createUsuario") {
-      const novoUsuario = String(e.parameter.usuario || '').trim().toUpperCase();
-      const nome = String(e.parameter.nome || '').trim();
-      const nip = String(e.parameter.nip || '').trim();
-      const email = String(e.parameter.email || '').trim();
-      const postoGraduacao = String(e.parameter.postoGraduacao || '').trim();
-      const cargo = String(e.parameter.cargo || '').trim();
-      const crmPe = String(e.parameter.crmPe || '').trim();
-      const rqe = String(e.parameter.rqe || '').trim();
-      const gmail = String(e.parameter.gmail || '').trim();
-      const celular = String(e.parameter.celular || '').trim();
-      const perfil = String(e.parameter.perfil || 'user_secretaria').trim();
-      let senhaHash = String(e.parameter.senhaHash || '').trim();
-
-      if (!novoUsuario || !nome) {
-        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Dados incompletos' })).setMimeType(ContentService.MimeType.JSON);
-      }
-
-      // Quando o Admin cria o usuário (sem escolher senha), a senha inicial é o NIP
-      // (somente dígitos), com hash SHA-256 — o usuário é orientado a alterá-la no 1º acesso.
-      if (!senhaHash) {
-        const nipDigits = onlyDigits_(nip);
-        if (!nipDigits) {
-          return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Informe o NIP para gerar a senha inicial' })).setMimeType(ContentService.MimeType.JSON);
-        }
-        senhaHash = sha256Hex_(nipDigits);
-      }
-
-      const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-      let sheet = ss.getSheetByName('Usuarios');
-      if (!sheet) {
-        sheet = ss.insertSheet('Usuarios');
-        sheet.appendRow(['usuario', 'postoGraduação', 'cargo', 'senha_hash', 'nome', 'nip', 'CRMPE', 'RQE', 'email', 'Gmail', 'celular', 'perfil', 'ativo', 'imageProfile']);
-      }
-      const map = getUsuariosHeaderMap_(sheet);
-      const data = sheet.getDataRange().getValues();
-      for (let i = 1; i < data.length; i++) {
-        if (String(data[i][map['usuario']] || '').trim().toUpperCase() === novoUsuario) {
-          return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Usuário já existe' })).setMimeType(ContentService.MimeType.JSON);
-        }
-      }
-      const newRow = new Array(sheet.getLastColumn()).fill('');
-      const setCol = function (colName, value) {
-        const idx = map[colName];
-        if (idx !== undefined) newRow[idx] = value;
-      };
-      setCol('usuario', novoUsuario);
-      setCol('postoGraduação', postoGraduacao);
-      setCol('cargo', cargo);
-      setCol('senha_hash', senhaHash);
-      setCol('nome', nome);
-      setCol('nip', nip);
-      setCol('CRMPE', crmPe);
-      setCol('RQE', rqe);
-      setCol('email', email);
-      setCol('Gmail', gmail);
-      setCol('celular', celular);
-      setCol('perfil', perfil);
-      setCol('ativo', true);
-      setCol('imageProfile', '');
-      sheet.appendRow(newRow);
-      return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
     }
   } catch (err) {
     return ContentService.createTextOutput(
@@ -511,6 +382,140 @@ function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents);
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+    // ==========================================
+    // LÓGICA: LOGIN / SENHA (POST — nunca GET, para não vazar hash de senha
+    // em URL/histórico do navegador/logs do Apps Script)
+    // ==========================================
+    if (payload.action === "login") {
+      const usuario = String(payload.usuario || '').trim().toLowerCase();
+      const senhaHash = String(payload.senhaHash || '').trim();
+      if (!usuario || !senhaHash) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Credenciais inválidas' })).setMimeType(ContentService.MimeType.JSON);
+      }
+      const sheet = ss.getSheetByName('Usuarios');
+      if (!sheet) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Configuração inválida' })).setMimeType(ContentService.MimeType.JSON);
+      }
+      const map = getUsuariosHeaderMap_(sheet);
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        const u = String(row[map['usuario']] || '').trim().toLowerCase();
+        if (u !== usuario) continue;
+        const h = String(row[map['senha_hash']] || '').trim();
+        const ativoRaw = row[map['ativo']];
+        const isAtivo = ativoRaw === true || String(ativoRaw).toUpperCase() === 'TRUE' || String(ativoRaw).toUpperCase() === 'VERDADEIRO';
+        if (h !== senhaHash || !isAtivo) break;
+        const nip = String(row[map['nip']] || '').trim();
+        const nipDigits = onlyDigits_(nip);
+        const senhaTemporaria = nipDigits.length > 0 && h === sha256Hex_(nipDigits);
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          usuario: String(row[map['usuario']] || '').trim(),
+          nome: String(row[map['nome']] || '').trim(),
+          postoGraduacao: String(row[map['postoGraduação']] || '').trim(),
+          cargo: String(row[map['cargo']] || '').trim(),
+          nip: nip,
+          crmPe: String(row[map['CRMPE']] || '').trim(),
+          rqe: String(row[map['RQE']] || '').trim(),
+          email: String(row[map['email']] || '').trim(),
+          gmail: String(row[map['Gmail']] || '').trim(),
+          celular: String(row[map['celular']] || '').trim(),
+          perfil: String(row[map['perfil']] || '').trim(),
+          imageProfile: String(row[map['imageProfile']] || '').trim(),
+          senhaTemporaria: senhaTemporaria
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Usuário ou senha incorretos' })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (payload.action === "updateSenha") {
+      // Autoalteração de senha pelo próprio usuário (perfil não é verificado aqui).
+      const targetUsuario = String(payload.usuario || '').trim().toUpperCase();
+      const senhaAtualHash = String(payload.senhaAtualHash || '').trim();
+      const novaSenhaHash = String(payload.novaSenhaHash || '').trim();
+      if (!targetUsuario || !novaSenhaHash) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Dados incompletos' })).setMimeType(ContentService.MimeType.JSON);
+      }
+      const sheet = ss.getSheetByName('Usuarios');
+      if (!sheet) return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Aba Usuarios não encontrada' })).setMimeType(ContentService.MimeType.JSON);
+      const map = getUsuariosHeaderMap_(sheet);
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][map['usuario']] || '').trim().toUpperCase() !== targetUsuario) continue;
+        const currentHash = String(data[i][map['senha_hash']] || '').trim();
+        if (senhaAtualHash && currentHash !== senhaAtualHash) {
+          return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Senha atual incorreta' })).setMimeType(ContentService.MimeType.JSON);
+        }
+        sheet.getRange(i + 1, map['senha_hash'] + 1).setValue(novaSenhaHash);
+        return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Usuário não encontrado' })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (payload.action === "createUsuario") {
+      const novoUsuario = String(payload.usuario || '').trim().toUpperCase();
+      const nome = String(payload.nome || '').trim();
+      const nip = String(payload.nip || '').trim();
+      const email = String(payload.email || '').trim();
+      const postoGraduacao = String(payload.postoGraduacao || '').trim();
+      const cargo = String(payload.cargo || '').trim();
+      const crmPe = String(payload.crmPe || '').trim();
+      const rqe = String(payload.rqe || '').trim();
+      const gmail = String(payload.gmail || '').trim();
+      const celular = String(payload.celular || '').trim();
+      const perfil = String(payload.perfil || 'user_secretaria').trim();
+      let senhaHash = String(payload.senhaHash || '').trim();
+
+      if (!novoUsuario || !nome) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Dados incompletos' })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      // Quando o Admin cria o usuário (sem escolher senha), a senha inicial é o NIP
+      // (somente dígitos), com hash SHA-256 — o usuário é orientado a alterá-la no 1º acesso.
+      if (!senhaHash) {
+        const nipDigits = onlyDigits_(nip);
+        if (!nipDigits) {
+          return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Informe o NIP para gerar a senha inicial' })).setMimeType(ContentService.MimeType.JSON);
+        }
+        senhaHash = sha256Hex_(nipDigits);
+      }
+
+      let sheet = ss.getSheetByName('Usuarios');
+      if (!sheet) {
+        sheet = ss.insertSheet('Usuarios');
+        sheet.appendRow(['usuario', 'postoGraduação', 'cargo', 'senha_hash', 'nome', 'nip', 'CRMPE', 'RQE', 'email', 'Gmail', 'celular', 'perfil', 'ativo', 'imageProfile']);
+      }
+      const map = getUsuariosHeaderMap_(sheet);
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][map['usuario']] || '').trim().toUpperCase() === novoUsuario) {
+          return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'Usuário já existe' })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      const newRow = new Array(sheet.getLastColumn()).fill('');
+      const setCol = function (colName, value) {
+        const idx = map[colName];
+        if (idx !== undefined) newRow[idx] = value;
+      };
+      setCol('usuario', novoUsuario);
+      setCol('postoGraduação', postoGraduacao);
+      setCol('cargo', cargo);
+      setCol('senha_hash', senhaHash);
+      setCol('nome', nome);
+      setCol('nip', nip);
+      setCol('CRMPE', crmPe);
+      setCol('RQE', rqe);
+      setCol('email', email);
+      setCol('Gmail', gmail);
+      setCol('celular', celular);
+      setCol('perfil', perfil);
+      setCol('ativo', true);
+      setCol('imageProfile', '');
+      sheet.appendRow(newRow);
+      return ContentService.createTextOutput(JSON.stringify({ success: true })).setMimeType(ContentService.MimeType.JSON);
+    }
 
     // ==========================================
     // LÓGICA: EXTRAIR DADOS COM O GEMINI 2.5

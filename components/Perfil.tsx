@@ -101,13 +101,10 @@ export const Perfil: React.FC = () => {
     try {
       const senhaAtualHash = await sha256(senhaAtual);
       const novaSenhaHash = await sha256(novaSenha);
-      const q = new URLSearchParams({
-        action: 'updateSenha',
-        usuario: authUser.usuario,
-        senhaAtualHash,
-        novaSenhaHash,
-      }).toString();
-      const res = await fetch(`${GAS_URL}?${q}`);
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'updateSenha', usuario: authUser.usuario, senhaAtualHash, novaSenhaHash }),
+      });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || 'Erro ao alterar senha.');
       updateAuthUser({ senhaTemporaria: false });

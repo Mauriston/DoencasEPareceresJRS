@@ -59,7 +59,7 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('jrs_auth');
     if (saved) {
       const { usuario, senhaHash } = JSON.parse(saved);
-      fetch(`${GAS_URL}?action=login&usuario=${encodeURIComponent(usuario)}&senhaHash=${encodeURIComponent(senhaHash)}`)
+      fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'login', usuario, senhaHash }) })
         .then(r => r.json())
         .then(json => {
           if (json.success) {

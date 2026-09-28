@@ -5,6 +5,16 @@ rules_version = '2';
 // ou via `firebase deploy --only storage`, pois este ambiente não tem acesso
 // ao Firebase CLI/credenciais do projeto.
 //
+// ATENÇÃO: o projeto Firebase atual (gen-lang-client-0316191622, configurado
+// em firebase-applet-config.json) é COMPARTILHADO com outro app web que já
+// tem suas próprias regras publicadas. Regras de Storage são por bucket, não
+// por app — publicar este arquivo SUBSTITUIRIA (não mescla) as regras já
+// existentes do outro app. Só publique este arquivo se/quando o JRS/HNRe
+// passar a ter um projeto Firebase próprio; enquanto o projeto for
+// compartilhado, revise a regra global já publicada por lá (hoje ela já
+// permite leitura pública e escrita para qualquer usuário autenticado, o
+// que cobre o que este app precisa) em vez de sobrescrevê-la.
+//
 // Leitura é pública (as fotos aparecem na topbar de todos os usuários).
 // A escrita exige apenas um usuário autenticado (o app usa login anônimo do
 // Firebase só para satisfazer esta regra — o login "de verdade" é o próprio

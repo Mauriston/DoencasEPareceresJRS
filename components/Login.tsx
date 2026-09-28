@@ -53,7 +53,7 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
     setLoginError('');
     try {
       const senhaHash = await sha256(senha);
-      const res = await fetch(`${GAS_URL}?action=login&usuario=${encodeURIComponent(usuario)}&senhaHash=${encodeURIComponent(senhaHash)}`);
+      const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'login', usuario, senhaHash }) });
       const json = await res.json();
       if (json.success) {
         onLogin(json, senhaHash);
@@ -75,7 +75,17 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
     setRegError('');
     try {
       const senhaHash = await sha256(regSenha);
-      const res = await fetch(`${GAS_URL}?action=createUsuario&nome=${encodeURIComponent(regNome)}&usuario=${encodeURIComponent(regUsuario.toUpperCase())}&nip=${encodeURIComponent(regNip)}&email=${encodeURIComponent(regEmail)}&senhaHash=${encodeURIComponent(senhaHash)}`);
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'createUsuario',
+          nome: regNome,
+          usuario: regUsuario.toUpperCase(),
+          nip: regNip,
+          email: regEmail,
+          senhaHash,
+        }),
+      });
       const json = await res.json();
       if (json.success) {
         setRegSuccess(true);

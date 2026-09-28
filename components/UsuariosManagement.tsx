@@ -191,21 +191,23 @@ export const UsuariosManagement: React.FC = () => {
 
     setCreatingUser(true);
     try {
-      const q = new URLSearchParams({
-        action: 'createUsuario',
-        usuario: usuarioUpper,
-        nome: newUserForm.nome.trim().toUpperCase(),
-        postoGraduacao: newUserForm.postoGraduacao.trim(),
-        cargo: newUserForm.cargo.trim(),
-        nip: newUserForm.nip.trim(),
-        crmPe: newUserForm.crmPe.trim(),
-        rqe: newUserForm.rqe.trim(),
-        email: newUserForm.email.trim(),
-        gmail: newUserForm.gmail.trim(),
-        celular: newUserForm.celular.trim(),
-        perfil: newUserForm.perfil,
-      }).toString();
-      const res = await fetch(`${GAS_URL}?${q}`);
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'createUsuario',
+          usuario: usuarioUpper,
+          nome: newUserForm.nome.trim().toUpperCase(),
+          postoGraduacao: newUserForm.postoGraduacao.trim(),
+          cargo: newUserForm.cargo.trim(),
+          nip: newUserForm.nip.trim(),
+          crmPe: newUserForm.crmPe.trim(),
+          rqe: newUserForm.rqe.trim(),
+          email: newUserForm.email.trim(),
+          gmail: newUserForm.gmail.trim(),
+          celular: newUserForm.celular.trim(),
+          perfil: newUserForm.perfil,
+        }),
+      });
       const json = await res.json();
       if (!json.success) {
         setNewUserError(json.error || 'Erro ao criar usuário.');
