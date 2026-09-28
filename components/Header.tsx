@@ -73,18 +73,7 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
     >
       <div className="w-full flex items-center justify-between px-4 md:px-8 h-full relative">
 
-        {/* DESKTOP LEFT: LOGO ICON */}
-        <div className="hidden md:flex items-center shrink-0 min-w-[48px]">
-          <div
-            className="w-8 h-8 bg-white rounded-lg p-1 flex items-center justify-center shadow-sm cursor-pointer hover:bg-gray-100 transition-colors"
-            onClick={goHome}
-            title="Página Inicial"
-          >
-            <img src="https://i.imgur.com/KUbQz08.png" alt="HNRe Logo" className="h-full w-full object-contain" />
-          </div>
-        </div>
-
-        {/* MOBILE LEFT: BACK OR HOME BUTTON */}
+        {/* MOBILE LEFT: BACK OR HOME BUTTON (desktop usa o logo da Sidebar) */}
         <div className="flex md:hidden items-center justify-start min-w-[48px]">
           {onBack ? (
             <button
@@ -108,24 +97,38 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
           {leftAction}
         </div>
 
-        {/* CENTER: PAGE TITLE (sempre centralizado) */}
-        <div className="flex-1 text-center px-2 font-heading text-sm md:text-base font-bold tracking-wide truncate text-white uppercase">
+        {/* CENTER: PAGE TITLE (sempre centralizado na topbar, independente dos lados) */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[60%] text-center px-2 font-heading text-sm md:text-base font-bold tracking-wide truncate text-white uppercase pointer-events-none">
           {title}
         </div>
 
-        {/* RIGHT: CUSTOM ACTION & USER AVATAR */}
-        <div className="flex items-center justify-end space-x-2 min-w-[48px]">
+        {/* RIGHT: CUSTOM ACTION & USER BUTTON */}
+        <div className="ml-auto flex items-center justify-end space-x-2 min-w-[48px]">
           {rightAction}
 
           <div className="relative flex items-center shrink-0">
+            {/* Botão do usuário — compacto no mobile, com foto + usuário + cargo no desktop */}
             <button
               type="button"
               onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)}
-              className="rounded-full hover:opacity-90 transition-all shadow-sm focus:outline-none active:scale-95 cursor-pointer"
+              className="flex md:hidden rounded-full hover:opacity-90 transition-all shadow-sm focus:outline-none active:scale-95 cursor-pointer"
               aria-label="Menu do usuário"
-              title={authUser?.nome || 'Usuário'}
+              title={authUser?.usuario || 'Usuário'}
             >
               <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)}
+              className="hidden md:flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full bg-white/10 hover:bg-white/20 transition-all focus:outline-none active:scale-[0.98] cursor-pointer"
+              aria-label="Menu do usuário"
+            >
+              <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} />
+              <span className="flex flex-col items-start leading-tight">
+                <span className="text-xs font-bold text-white truncate max-w-[140px]">{authUser?.usuario || 'Usuário'}</span>
+                <span className="text-[10px] font-medium text-gray-300 truncate max-w-[140px]">{authUser?.cargo || ' '}</span>
+              </span>
             </button>
 
             {isAvatarMenuOpen && (
@@ -169,26 +172,38 @@ export const Header: React.FC<HeaderProps> = ({ title, leftAction, rightAction, 
     </header>
 
     {showAccessoryBar && (
-      <div className="w-full sticky top-[56px] z-30 bg-white border-b border-gray-200 shadow-xs shrink-0 overflow-x-auto">
-        <div className="flex items-center gap-1 px-4 md:px-8 h-11 min-w-max">
-          {activeCategory!.subitems.map(sub => (
-            <button
-              key={sub.id}
-              type="button"
-              onClick={() => setCurrentView(sub.id)}
-              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
-                currentView === sub.id ? 'bg-[#050F41] text-white' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">{sub.icon}</span>
-              <span>{sub.label}</span>
-              {sub.badge ? (
-                <span className="bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center ml-0.5">
-                  {sub.badge}
-                </span>
-              ) : null}
-            </button>
-          ))}
+      <div className="w-full sticky top-[56px] z-30 bg-white border-b border-gray-200 shadow-xs shrink-0">
+        <div className="flex items-center gap-1 px-4 md:px-8 h-11">
+          <button
+            type="button"
+            onClick={goHome}
+            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-[#050F41] transition-colors shrink-0"
+            aria-label="Página Inicial"
+            title="Página Inicial"
+          >
+            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+          </button>
+
+          <div className="flex items-center gap-1 ml-auto overflow-x-auto min-w-0">
+            {activeCategory!.subitems.map(sub => (
+              <button
+                key={sub.id}
+                type="button"
+                onClick={() => setCurrentView(sub.id)}
+                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors shrink-0 ${
+                  currentView === sub.id ? 'bg-[#050F41] text-white' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">{sub.icon}</span>
+                <span>{sub.label}</span>
+                {sub.badge ? (
+                  <span className="bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center ml-0.5">
+                    {sub.badge}
+                  </span>
+                ) : null}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     )}

@@ -10,6 +10,7 @@ import {
   getFeaturePermissions,
   savePermissions,
 } from '../config/permissions';
+import { formatNip, formatCelular } from '../utils/format';
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
 
@@ -33,22 +34,6 @@ export interface UserRecord {
 const emptyUserForm = {
   usuario: '', postoGraduacao: '', cargo: '', nome: '', nip: '',
   crmPe: '', rqe: '', email: '', gmail: '', celular: '', perfil: 'user_secretaria',
-};
-
-const formatNip = (val: string) => {
-  const digits = val.replace(/\D/g, '').slice(0, 8);
-  let masked = digits;
-  if (digits.length > 2) masked = digits.slice(0, 2) + '.' + digits.slice(2);
-  if (digits.length > 6) masked = digits.slice(0, 2) + '.' + digits.slice(2, 6) + '.' + digits.slice(6);
-  return masked;
-};
-
-const formatCelular = (val: string) => {
-  const digits = val.replace(/\D/g, '').slice(0, 11);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 };
 
 const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41] transition-colors';
@@ -125,7 +110,7 @@ export const UsuariosManagement: React.FC = () => {
 
   const handleOpenEdit = (user: UserRecord) => {
     setEditingUser(user);
-    setEditForm({ ...user });
+    setEditForm({ ...user, nip: formatNip(user.nip), celular: formatCelular(user.celular) });
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -432,7 +417,7 @@ export const UsuariosManagement: React.FC = () => {
                         </td>
                         <td className="py-3.5 px-4 font-semibold text-gray-800">{user.nome}</td>
                         <td className="py-3.5 px-4 text-gray-600">{user.cargo || '-'}</td>
-                        <td className="py-3.5 px-4 font-mono text-gray-600">{user.nip || '-'}</td>
+                        <td className="py-3.5 px-4 font-mono text-gray-600">{formatNip(user.nip) || '-'}</td>
                         <td className="py-3.5 px-4 text-gray-600 truncate max-w-[180px]">{user.email || '-'}</td>
                         <td className="py-3.5 px-4">{getPerfilBadge(user.perfil)}</td>
                         <td className="py-3.5 px-4 text-center">
@@ -492,7 +477,7 @@ export const UsuariosManagement: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-600 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
                       <div>
                         <span className="text-[9px] font-bold text-gray-400 uppercase block">NIP</span>
-                        <span className="font-mono font-medium">{user.nip || '-'}</span>
+                        <span className="font-mono font-medium">{formatNip(user.nip) || '-'}</span>
                       </div>
                       <div>
                         <span className="text-[9px] font-bold text-gray-400 uppercase block">E-mail</span>
