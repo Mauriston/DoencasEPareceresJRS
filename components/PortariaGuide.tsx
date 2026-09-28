@@ -36,13 +36,13 @@ export const PortariaGuide: React.FC = () => {
     <div className="flex flex-col h-full bg-[#F3F5F7] relative">
       <Header title="Portaria na Integra" />
 
-      <div className="p-4 space-y-4 max-w-2xl mx-auto w-full flex-1">
-        <div className="text-center bg-white p-5 rounded-2xl border border-gray-200/60 shadow-sm">
-          <h2 className="text-sm font-heading font-bold text-[#050F41]">PORTARIA GM-MD Nº 3.551, DE 26 DE AGOSTO DE 2021</h2>
-          <p className="text-xs text-gray-500 font-body mt-1">Diretrizes e Normas Técnicas Periciais Oficiais das Forças Armadas.</p>
+      <div className="p-4 md:p-6 space-y-4 max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto w-full flex-1">
+        <div className="text-center bg-white p-5 md:p-6 rounded-2xl border border-gray-200/60 shadow-sm">
+          <h2 className="text-sm md:text-base font-heading font-bold text-[#050F41]">PORTARIA GM-MD Nº 3.551, DE 26 DE AGOSTO DE 2021</h2>
+          <p className="text-xs md:text-sm text-gray-500 font-body mt-1">Diretrizes e Normas Técnicas Periciais Oficiais das Forças Armadas.</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm">
+        <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-200/60 shadow-sm">
           <MarkdownContent markdown={markdown} />
         </div>
       </div>

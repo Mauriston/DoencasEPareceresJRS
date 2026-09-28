@@ -1,7 +1,11 @@
 // Ficheiro: components/CasosPericiais.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Header } from './Header';
-import { ChevronRight, RotateCcw, X, Eye, Download, CheckCircle, XCircle, ArrowUp } from 'lucide-react';
+import { NavContext } from '../context/NavContext';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { getCasosResultado, saveCasosResultado } from '../services/firestoreCasos';
+import { ChevronRight, RotateCcw, Download, CheckCircle, XCircle, ArrowUp, Play, Smartphone, Eye } from 'lucide-react';
 
 const CASOS_DATA = [
   {
@@ -299,13 +303,20 @@ interface Props {
   onBack: () => void;
 }
 
+type Phase = 'loading' | 'mobile-only' | 'intro' | 'quiz' | 'results';
+
 export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
+  const nav = useContext(NavContext);
+  const uid = nav?.authUser?.uid;
+  const isDesktop = useIsDesktop();
+
+  const [phase, setPhase] = useState<Phase>('loading');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [userAnswers, setUserAnswers] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [viewMode, setViewMode] = useState<'quiz' | 'results'>('quiz');
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const currentCase = CASOS_DATA[currentIndex];
   const totalCases = CASOS_DATA.length;
@@ -314,18 +325,38 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   const correctCount = userAnswers.reduce((acc, ans, idx) => {
     return ans?.toUpperCase() === CASOS_DATA[idx].gabarito.toUpperCase() ? acc + 1 : acc;
   }, 0);
-  
+
   const gradeStr = ((correctCount / totalCases) * 10).toFixed(1);
   const gradeNum = Number(gradeStr);
   const displayGrade = gradeStr.replace('.', ',');
 
+  // Esta funcionalidade só existe no mobile; no desktop mostra um aviso.
+  // Se já houver um resultado salvo no Firestore, abre direto na revisão.
+  useEffect(() => {
+    if (isDesktop) { setPhase('mobile-only'); return; }
+    if (!uid) { setPhase('intro'); return; }
+    let active = true;
+    getCasosResultado(uid)
+      .then(result => {
+        if (!active) return;
+        if (result) {
+          setUserAnswers(result.respostas);
+          setPhase('results');
+        } else {
+          setPhase('intro');
+        }
+      })
+      .catch(() => { if (active) setPhase('intro'); });
+    return () => { active = false; };
+  }, [uid, isDesktop]);
+
   useEffect(() => {
     const scrollContainer = document.querySelector('main');
-    if (!scrollContainer) return;
+    if (!scrollContainer || phase !== 'results') return;
     const handleScroll = () => { setShowScrollTop(scrollContainer.scrollTop > 250); };
     scrollContainer.addEventListener('scroll', handleScroll);
     return () => scrollContainer.removeEventListener('scroll', handleScroll);
-  }, [viewMode]);
+  }, [phase]);
 
   const scrollToTop = () => {
     const scrollContainer = document.querySelector('main');
@@ -337,16 +368,37 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
     setSelectedAnswer(key);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (selectedAnswer === null) return;
     const newAnswers = [...userAnswers];
     newAnswers[currentIndex] = selectedAnswer;
     setUserAnswers(newAnswers);
+
     if (currentIndex < totalCases - 1) {
       setCurrentIndex(prev => prev + 1);
       setSelectedAnswer(null);
-    } else {
-      setShowModal(true);
+      return;
+    }
+
+    setShowModal(true);
+    if (uid) {
+      const acertos = newAnswers.reduce((acc, ans, idx) => (
+        ans?.toUpperCase() === CASOS_DATA[idx].gabarito.toUpperCase() ? acc + 1 : acc
+      ), 0);
+      setSaving(true);
+      try {
+        await saveCasosResultado(uid, {
+          respostas: newAnswers,
+          acertos,
+          total: totalCases,
+          nota: Number(((acertos / totalCases) * 10).toFixed(1)),
+          concluidoEm: new Date().toISOString(),
+        });
+      } catch {
+        // Mantém o resultado exibido localmente mesmo se a gravação falhar.
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -355,7 +407,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
     setSelectedAnswer(null);
     setUserAnswers([]);
     setShowModal(false);
-    setViewMode('quiz');
+    setPhase('quiz');
   };
 
   const handleDownloadPDF = () => {
@@ -375,167 +427,222 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
     return "bg-gray-50 border-gray-100 opacity-60 cursor-default font-normal text-gray-500";
   };
 
-  if (viewMode === 'results') {
+  if (phase === 'loading') {
     return (
-      <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
-        <Header
-          title="REVISÃO DOS CASOS"
-          onBack={onBack}
-          rightAction={
-            <button onClick={handleRestart} className="text-white p-2 rounded-full hover:bg-white/10 transition-colors" title="Refazer casos">
-              <RotateCcw size={18} />
-            </button>
-          }
-        />
-        <div className="p-4 space-y-6 max-w-3xl mx-auto w-full flex-1 pb-32">
-          <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm text-center flex flex-col items-center">
-            <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Nota Final</h2>
-            <div className={`text-6xl font-black ${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>{displayGrade}</div>
-            <p className="text-gray-500 mt-3 font-medium font-body">Você acertou <strong className="text-gray-800">{correctCount}</strong> de {totalCases} questões.</p>
-            <button onClick={handleDownloadPDF} className="mt-6 flex items-center gap-2 bg-[#050F41] text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md hover:scale-105 transition-transform">
-              <Download size={18} />
-              Baixar PDF
-            </button>
-          </div>
-
-          {CASOS_DATA.map((caso, index) => {
-            const uAns = userAnswers[index];
-            const isUserCorrect = uAns?.toUpperCase() === caso.gabarito.toUpperCase();
-            return (
-              <div key={index} className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-[#050F41] font-heading">Caso {caso.caso}</h3>
-                  {isUserCorrect 
-                    ? <div className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-md text-xs font-bold"><CheckCircle size={14} /> Acertou</div>
-                    : <div className="flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-md text-xs font-bold"><XCircle size={14} /> Errou</div>
-                  }
-                </div>
-                <p className="text-[#050F41] font-heading text-[15px] leading-relaxed font-semibold mb-4">{caso.enunciado}</p>
-                <div className="space-y-2">
-                  {Object.entries(caso.alternativas).map(([key, text]) => {
-                    const isGab = key.toUpperCase() === caso.gabarito.toUpperCase();
-                    const isUser = uAns?.toUpperCase() === key.toUpperCase();
-                    let style = "bg-gray-50 border-gray-100 text-gray-500 opacity-60";
-                    if (isGab) style = "bg-green-100 border-green-500 text-green-900 font-bold shadow-sm";
-                    else if (isUser && !isGab) style = "bg-red-50 border-red-400 text-red-900 font-bold shadow-sm";
-                    return (
-                      <div key={key} className={`w-full text-left p-3 rounded-xl border text-sm font-body leading-relaxed flex items-start gap-3 ${style}`}>
-                        <div className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5 ${isGab ? 'bg-green-500 text-white border-green-500' : isUser ? 'bg-red-500 text-white border-red-500' : 'border-gray-200'}`}>{key.toUpperCase()}</div>
-                        <span className="flex-1 mt-0.5">{text}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="bg-yellow-50/80 border border-yellow-200 p-4 rounded-xl mt-5 relative overflow-hidden">
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
-                  <h4 className="text-xs font-bold font-heading text-yellow-800 mb-1 uppercase">Análise Pericial</h4>
-                  <p className="text-sm text-gray-800 font-body leading-relaxed text-justify">{caso.explicacao}</p>
-                </div>
-              </div>
-            );
-          })}
+      <div className="flex flex-col h-full bg-[#F3F5F7]">
+        <Header title="CASOS PERICIAIS" onBack={onBack} />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-gray-200 border-t-[#050F41] rounded-full animate-spin" />
         </div>
-        {showScrollTop && (
-          <button onClick={scrollToTop} className="fixed bottom-24 right-6 bg-[#050F41] text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center border border-slate-700 animate-fade-in" title="Voltar ao topo">
-            <ArrowUp size={20} />
+      </div>
+    );
+  }
+
+  if (phase === 'mobile-only') {
+    return (
+      <div className="flex flex-col h-full bg-[#F3F5F7]">
+        <Header title="CASOS PERICIAIS" onBack={onBack} />
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 max-w-sm mx-auto">
+          <div className="w-16 h-16 rounded-2xl bg-[#050F41]/5 flex items-center justify-center mb-4 text-[#050F41]">
+            <Smartphone size={28} />
+          </div>
+          <h2 className="font-heading font-bold text-[#050F41] text-base uppercase mb-2">Disponível só no mobile</h2>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            O teste de Casos Periciais foi desenhado para a visualização mobile do aplicativo. Acesse esta página pelo seu celular para realizá-lo.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'intro') {
+    return (
+      <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
+        <Header title="CASOS PERICIAIS" onBack={onBack} />
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 max-w-sm mx-auto w-full">
+          <div className="w-16 h-16 rounded-2xl bg-[#050F41]/5 flex items-center justify-center mb-5 text-[#050F41]">
+            <span className="material-symbols-outlined text-[32px]">quiz</span>
+          </div>
+          <h1 className="font-heading text-xl font-black text-[#050F41] uppercase mb-3">Teste seus conhecimentos</h1>
+          <p className="text-sm text-gray-600 leading-relaxed mb-3">
+            Este teste reúne <strong>{totalCases} casos periciais comentados</strong>, baseados em situações práticas da rotina das Juntas de Inspeção de Saúde e fundamentados na DGPM-406.
+          </p>
+          <p className="text-sm text-gray-600 leading-relaxed mb-8">
+            Resolvê-los ajuda a fixar os principais critérios e procedimentos médico-periciais, sendo uma ótima revisão antes de atuar em uma Junta. Depois de iniciado, é preciso concluir todos os casos para ver o resultado, que fica salvo no seu perfil.
+          </p>
+          <button
+            type="button"
+            onClick={() => setPhase('quiz')}
+            className="w-full py-4 bg-[#079551] hover:bg-[#067a43] text-white font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md"
+          >
+            <Play size={20} fill="currentColor" />
+            Iniciar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'quiz') {
+    return createPortal(
+      <div className="fixed inset-0 z-[300] bg-[#F3F5F7] flex flex-col">
+        <div className="h-14 shrink-0 bg-[#050F41] flex items-center justify-center px-4">
+          <h1 className="text-white font-heading font-bold text-sm uppercase tracking-wide truncate">Teste seus conhecimentos</h1>
+        </div>
+        <div className="w-full h-1.5 bg-gray-200 shrink-0">
+          <div className="h-full bg-[#079551] transition-all duration-500 ease-out" style={{ width: `${progressPercentage}%` }} />
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 space-y-6 max-w-3xl mx-auto w-full pb-32">
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Caso {currentIndex + 1} de {totalCases}</span>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm">
+              <p className="text-[#050F41] font-heading text-[16px] leading-relaxed font-semibold">{currentCase.enunciado}</p>
+            </div>
+
+            <div className="space-y-3">
+              {Object.entries(currentCase.alternativas).map(([key, text]) => (
+                <button
+                  key={key}
+                  onClick={() => handleSelect(key)}
+                  disabled={selectedAnswer !== null}
+                  className={`w-full text-left p-4 rounded-xl border transition-all duration-300 text-sm font-body leading-relaxed flex items-start gap-3 focus:outline-none ${getOptionStyle(key)}`}
+                >
+                  <div className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5 ${
+                    selectedAnswer === null ? 'border-gray-300 text-gray-500 bg-gray-50' :
+                    key.toUpperCase() === currentCase.gabarito.toUpperCase() ? 'border-green-500 bg-green-500 text-white' :
+                    (key.toUpperCase() === selectedAnswer.toUpperCase() ? 'border-red-500 bg-red-500 text-white' : 'border-gray-200 text-gray-300')
+                  }`}>{key.toUpperCase()}</div>
+                  <span className="flex-1 mt-0.5">{text}</span>
+                </button>
+              ))}
+            </div>
+
+            {selectedAnswer !== null && (
+              <div className="animate-fade-in bg-yellow-50/80 border border-yellow-200 p-5 rounded-2xl mt-6 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
+                <h3 className="text-sm font-bold font-heading text-[#050F41] mb-2 uppercase flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-yellow-600">lightbulb</span>
+                  Análise Pericial
+                </h3>
+                <p className="text-sm text-gray-800 font-body leading-relaxed text-justify">{currentCase.explicacao}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {selectedAnswer !== null && (
+          <button
+            onClick={handleNext}
+            className="fixed bottom-8 right-6 bg-[#050F41] text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-10 flex items-center justify-center border border-slate-700 animate-fade-in"
+            title={currentIndex < totalCases - 1 ? "Próximo Caso" : "Finalizar Casos"}
+          >
+            {currentIndex < totalCases - 1 ? <ChevronRight size={24} /> : <CheckCircle size={24} />}
           </button>
         )}
-      </div>
+
+        {showModal && (
+          <div className="fixed inset-0 z-20 flex items-center justify-center bg-[#050F41]/70 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-white rounded-[32px] shadow-2xl p-8 w-full max-w-sm flex flex-col items-center text-center relative overflow-hidden">
+              <div className={`absolute -top-16 -right-16 w-32 h-32 rounded-full opacity-20 blur-2xl ${gradeNum >= 7 ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-[#050F41] shadow-inner">
+                <span className="material-symbols-outlined text-3xl">workspace_premium</span>
+              </div>
+              <h2 className="text-2xl font-heading font-black text-[#050F41] mb-1">Desempenho</h2>
+              <p className="text-gray-500 font-medium font-body text-sm mb-6">Você completou todos os casos!</p>
+              <div className="relative mb-8">
+                <svg className="w-32 h-32 transform -rotate-90">
+                  <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
+                  <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="377" strokeDashoffset={377 - (377 * gradeNum) / 10} className={`${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'} transition-all duration-1000 ease-out`} strokeLinecap="round" />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className={`text-5xl font-black ${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>{displayGrade}</span>
+                </div>
+              </div>
+              <p className="text-gray-600 font-body mb-6">Você acertou <strong>{correctCount}</strong> de <strong>{totalCases}</strong> questões.</p>
+              <button
+                type="button"
+                onClick={() => { setShowModal(false); setPhase('results'); }}
+                className="w-full py-3.5 bg-[#050F41] hover:bg-[#0a1b66] text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+              >
+                <Eye size={18} />
+                Ver Resultado
+              </button>
+              {saving && <p className="text-[11px] text-gray-400 mt-3">Salvando resultado...</p>}
+            </div>
+          </div>
+        )}
+      </div>,
+      document.body
     );
   }
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
-      <Header title="CASOS PERICIAIS" onBack={onBack} />
-
-      <div className="w-full h-1.5 bg-gray-200">
-        <div className="h-full bg-[#079551] transition-all duration-500 ease-out" style={{ width: `${progressPercentage}%` }} />
-      </div>
-
+      <Header
+        title="REVISÃO DOS CASOS"
+        onBack={onBack}
+        rightAction={
+          <button onClick={handleRestart} className="text-white p-2 rounded-full hover:bg-white/10 transition-colors" title="Refazer casos">
+            <RotateCcw size={18} />
+          </button>
+        }
+      />
       <div className="p-4 space-y-6 max-w-3xl mx-auto w-full flex-1 pb-32">
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Caso {currentIndex + 1} de {totalCases}</span>
+        <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm text-center flex flex-col items-center">
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Nota Final</h2>
+          <div className={`text-6xl font-black ${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>{displayGrade}</div>
+          <p className="text-gray-500 mt-3 font-medium font-body">Você acertou <strong className="text-gray-800">{correctCount}</strong> de {totalCases} questões.</p>
+          <button onClick={handleDownloadPDF} className="mt-6 flex items-center gap-2 bg-[#050F41] text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md hover:scale-105 transition-transform">
+            <Download size={18} />
+            Baixar PDF
+          </button>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm">
-          <p className="text-[#050F41] font-heading text-[16px] leading-relaxed font-semibold">{currentCase.enunciado}</p>
-        </div>
-
-        <div className="space-y-3">
-          {Object.entries(currentCase.alternativas).map(([key, text]) => (
-            <button
-              key={key}
-              onClick={() => handleSelect(key)}
-              disabled={selectedAnswer !== null}
-              className={`w-full text-left p-4 rounded-xl border transition-all duration-300 text-sm font-body leading-relaxed flex items-start gap-3 focus:outline-none ${getOptionStyle(key)}`}
-            >
-              <div className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5 ${
-                selectedAnswer === null ? 'border-gray-300 text-gray-500 bg-gray-50' :
-                key.toUpperCase() === currentCase.gabarito.toUpperCase() ? 'border-green-500 bg-green-500 text-white' :
-                (key.toUpperCase() === selectedAnswer.toUpperCase() ? 'border-red-500 bg-red-500 text-white' : 'border-gray-200 text-gray-300')
-              }`}>{key.toUpperCase()}</div>
-              <span className="flex-1 mt-0.5">{text}</span>
-            </button>
-          ))}
-        </div>
-
-        {selectedAnswer !== null && (
-          <div className="animate-fade-in bg-yellow-50/80 border border-yellow-200 p-5 rounded-2xl mt-6 relative overflow-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
-            <h3 className="text-sm font-bold font-heading text-[#050F41] mb-2 uppercase flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-yellow-600">lightbulb</span>
-              Análise Pericial
-            </h3>
-            <p className="text-sm text-gray-800 font-body leading-relaxed text-justify">{currentCase.explicacao}</p>
-          </div>
-        )}
-      </div>
-
-      {selectedAnswer !== null && (
-        <button 
-          onClick={handleNext}
-          className="fixed bottom-24 right-6 bg-[#050F41] text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center border border-slate-700 animate-fade-in"
-          title={currentIndex < totalCases - 1 ? "Próximo Caso" : "Finalizar Casos"}
-        >
-          {currentIndex < totalCases - 1 ? <ChevronRight size={24} /> : <CheckCircle size={24} />}
-        </button>
-      )}
-
-      {showModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050F41]/70 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white rounded-[32px] shadow-2xl p-8 w-full max-w-sm flex flex-col items-center text-center relative overflow-hidden">
-            <div className={`absolute -top-16 -right-16 w-32 h-32 rounded-full opacity-20 blur-2xl ${gradeNum >= 7 ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-[#050F41] shadow-inner">
-              <span className="material-symbols-outlined text-3xl">workspace_premium</span>
-            </div>
-            <h2 className="text-2xl font-heading font-black text-[#050F41] mb-1">Desempenho</h2>
-            <p className="text-gray-500 font-medium font-body text-sm mb-6">Você completou todos os casos!</p>
-            <div className="relative mb-8">
-              <svg className="w-32 h-32 transform -rotate-90">
-                <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
-                <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="377" strokeDashoffset={377 - (377 * gradeNum) / 10} className={`${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'} transition-all duration-1000 ease-out`} strokeLinecap="round" />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={`text-5xl font-black ${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>{displayGrade}</span>
+        {CASOS_DATA.map((caso, index) => {
+          const uAns = userAnswers[index];
+          const isUserCorrect = uAns?.toUpperCase() === caso.gabarito.toUpperCase();
+          return (
+            <div key={index} className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-[#050F41] font-heading">Caso {caso.caso}</h3>
+                {isUserCorrect
+                  ? <div className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-md text-xs font-bold"><CheckCircle size={14} /> Acertou</div>
+                  : <div className="flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-md text-xs font-bold"><XCircle size={14} /> Errou</div>
+                }
+              </div>
+              <p className="text-[#050F41] font-heading text-[15px] leading-relaxed font-semibold mb-4">{caso.enunciado}</p>
+              <div className="space-y-2">
+                {Object.entries(caso.alternativas).map(([key, text]) => {
+                  const isGab = key.toUpperCase() === caso.gabarito.toUpperCase();
+                  const isUser = uAns?.toUpperCase() === key.toUpperCase();
+                  let style = "bg-gray-50 border-gray-100 text-gray-500 opacity-60";
+                  if (isGab) style = "bg-green-100 border-green-500 text-green-900 font-bold shadow-sm";
+                  else if (isUser && !isGab) style = "bg-red-50 border-red-400 text-red-900 font-bold shadow-sm";
+                  return (
+                    <div key={key} className={`w-full text-left p-3 rounded-xl border text-sm font-body leading-relaxed flex items-start gap-3 ${style}`}>
+                      <div className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5 ${isGab ? 'bg-green-500 text-white border-green-500' : isUser ? 'bg-red-500 text-white border-red-500' : 'border-gray-200'}`}>{key.toUpperCase()}</div>
+                      <span className="flex-1 mt-0.5">{text}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="bg-yellow-50/80 border border-yellow-200 p-4 rounded-xl mt-5 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
+                <h4 className="text-xs font-bold font-heading text-yellow-800 mb-1 uppercase">Análise Pericial</h4>
+                <p className="text-sm text-gray-800 font-body leading-relaxed text-justify">{caso.explicacao}</p>
               </div>
             </div>
-            <p className="text-gray-600 font-body mb-8">Você acertou <strong>{correctCount}</strong> de <strong>{totalCases}</strong> questões.</p>
-            <div className="flex items-center justify-center gap-6 w-full px-4">
-              <button onClick={handleRestart} className="group flex flex-col items-center gap-2 focus:outline-none">
-                <div className="w-12 h-12 rounded-2xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-gray-200 transition-all shadow-sm"><X size={22} /></div>
-                <span className="text-[10px] font-bold uppercase text-gray-500">Fechar</span>
-              </button>
-              <button onClick={() => { setShowModal(false); setViewMode('results'); }} className="group flex flex-col items-center gap-2 focus:outline-none">
-                <div className="w-14 h-14 rounded-2xl bg-[#050F41] text-white flex items-center justify-center group-hover:scale-105 transition-all shadow-md transform -translate-y-2"><Eye size={24} /></div>
-                <span className="text-[10px] font-bold uppercase text-[#050F41]">Ver</span>
-              </button>
-              <button onClick={() => { handleDownloadPDF(); setShowModal(false); setViewMode('results'); }} className="group flex flex-col items-center gap-2 focus:outline-none">
-                <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-green-100 transition-all shadow-sm"><Download size={22} /></div>
-                <span className="text-[10px] font-bold uppercase text-green-600">Baixar</span>
-              </button>
-            </div>
-          </div>
-        </div>
+          );
+        })}
+      </div>
+      {showScrollTop && (
+        <button onClick={scrollToTop} className="fixed bottom-24 right-6 bg-[#050F41] text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center border border-slate-700 animate-fade-in" title="Voltar ao topo">
+          <ArrowUp size={20} />
+        </button>
       )}
     </div>
   );

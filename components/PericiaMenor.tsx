@@ -1,10 +1,12 @@
 // Ficheiro: components/PericiaMenor.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Header } from './Header';
 import { PericiaMenorDetalhe } from './PericiaMenorDetalhe';
 import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown, CheckCircle, Camera, Crop as CropIcon, Sparkles, X } from 'lucide-react';
 import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { NavContext } from '../context/NavContext';
+import { canUseFeature } from '../config/permissions';
 
 interface PericiaMenorRecord {
   inspecionado: string;
@@ -38,6 +40,11 @@ const removeAcentos = (str: string) => str.normalize("NFD").replace(/[̀-ͯ]/g, 
 const GAS_URL = "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
 
 export const PericiaMenor: React.FC = () => {
+  const nav = useContext(NavContext);
+  const perfil = nav?.authUser?.perfil;
+  const canNovo = canUseFeature('pericia-menor.novo', perfil);
+  const canHistorico = canUseFeature('pericia-menor.historico', perfil);
+
   const [nip, setNip] = useState('');
   const [militarStatus, setMilitarStatus] = useState<"" | "loading" | "found" | "not_found">(" ");
   const [inspecionado, setInspecionado] = useState("");
@@ -92,7 +99,7 @@ export const PericiaMenor: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successPdfUrl, setSuccessPdfUrl] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'novo' | 'historico'>('novo');
+  const [activeTab, setActiveTab] = useState<'novo' | 'historico'>(canNovo ? 'novo' : 'historico');
   const [history, setHistory] = useState<PericiaMenorRecord[]>([]);
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
@@ -331,6 +338,13 @@ export const PericiaMenor: React.FC = () => {
     } catch (e) { console.error(e); } finally { setIsFetchingHistory(false); }
   };
 
+  // Se o perfil não tiver acesso à aba "Novo", a página já abre em
+  // "Histórico" (ver activeTab acima) — carrega os dados de uma vez.
+  useEffect(() => {
+    if (!canNovo && canHistorico) fetchHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const handleClick = (e: MouseEvent) => { if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSearchDropdown(false); };
     document.addEventListener('mousedown', handleClick);
@@ -366,18 +380,20 @@ export const PericiaMenor: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-gray-50 relative">
       <Header title="Perícia Menor" />
+      {canNovo && canHistorico && (
       <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
-        <button onClick={() => setActiveTab('novo')} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'novo' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}>
+        <button onClick={() => setActiveTab('novo')} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'novo' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
           <span className="material-symbols-outlined text-[18px]">add_circle</span><span>Novo</span>
         </button>
-        <button onClick={() => { setActiveTab('historico'); fetchHistory(); }} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'historico' ? 'bg-[#079551] text-white' : 'text-white/50 hover:text-white/80'}`}>
+        <button onClick={() => { setActiveTab('historico'); fetchHistory(); }} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'historico' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
           <span className="material-symbols-outlined text-[18px]">history</span><span>Histórico</span>
           {vigentesCount > 0 && (<span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">{vigentesCount}</span>)}
         </button>
       </div>
+      )}
 
-      {activeTab === 'novo' && (
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 w-full max-w-2xl mx-auto space-y-6">
+      {activeTab === 'novo' && canNovo && (
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 w-full max-w-2xl md:max-w-5xl mx-auto space-y-6">
         {/* IA Section */}
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 animate-fade-in shadow-inner">
           <div className="flex items-center justify-between mb-3">
@@ -404,6 +420,7 @@ export const PericiaMenor: React.FC = () => {
           )}
         </div>
 
+        <div className="md:grid md:grid-cols-2 md:gap-6 md:items-start space-y-6 md:space-y-0">
         {/* Militar Section */}
         <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
           <h2 className="text-sm font-bold text-[#050F41] uppercase mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-[#FAB932]">person</span>Dados do Militar</h2>
@@ -442,6 +459,7 @@ export const PericiaMenor: React.FC = () => {
           </div>
         </section>
 
+        <div className="space-y-6">
         {/* Atestado Section */}
         <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
           <h2 className="text-sm font-bold text-[#050F41] uppercase mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-[#FAB932]">medical_information</span>Dados do Atestado</h2>
@@ -491,6 +509,8 @@ export const PericiaMenor: React.FC = () => {
             <div><label className="block text-xs font-semibold text-gray-600 mb-2 uppercase">Perito *</label><div className="flex space-x-2">{isLoadingLookups ? (<p className="text-xs text-gray-400 flex items-center gap-2"><Loader2 size={14} className="animate-spin"/> A carregar peritos...</p>) : (peritosDisponiveis.map((p, idx) => (<button type="button" key={idx} onClick={() => setSelectedPerito(p.PERITO)} className={`flex-1 px-2 py-2.5 rounded-xl text-sm font-bold border ${selectedPerito === p.PERITO ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-200'}`}>{p.PERITO}</button>)))}</div></div>
           </div>
         </section>
+        </div>
+        </div>
 
         <div className="flex justify-end items-center gap-4 pt-4 pb-8">
           <button type="button" onClick={handleReset} className="w-14 h-14 bg-white text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full flex items-center justify-center shadow-md border border-gray-200 active:scale-95" title="Limpar"><span className="material-symbols-outlined text-[26px]">delete</span></button>
@@ -548,9 +568,10 @@ export const PericiaMenor: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'historico' && (
-        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-28 w-full max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-4 space-y-3">
+      {activeTab === 'historico' && canHistorico && (
+        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-28 w-full max-w-2xl md:max-w-6xl mx-auto">
+        <div className="md:grid md:grid-cols-[280px_1fr] md:gap-6 md:items-start">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-4 md:mb-0 space-y-3">
             <div className="relative" ref={searchRef}>
               <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-[18px]">search</span>
               <input type="text" placeholder="Buscar por inspecionado..." value={historySearch} onChange={e => { setHistorySearch(e.target.value); setShowSearchDropdown(true); }} onFocus={() => setShowSearchDropdown(true)} className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#050F41] bg-gray-50" />
@@ -565,6 +586,7 @@ export const PericiaMenor: React.FC = () => {
               <button type="button" onClick={() => { setFilterRestricoes(v => { const next = !v; if (next) setFilterLts(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterRestricoes ? 'bg-amber-400 text-white border-amber-400' : 'bg-white text-gray-600 border-gray-300'}`}>{filterRestricoes && <span className="material-symbols-outlined text-[13px]">check</span>}Restrições{restricoesTotal > 0 && (<span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterRestricoes ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'}`}>{restricoesTotal}</span>)}</button>
             </div>
           </div>
+          <div>
           {filteredHistory.length > 0 && (<div className="flex justify-end mb-3 px-1"><span className="bg-gray-100 text-gray-600 text-xs font-bold px-2.5 py-1 rounded-full">{filteredHistory.length} registro{filteredHistory.length !== 1 ? 's' : ''}</span></div>)}
           {isFetchingHistory ? (<div className="flex items-center justify-center py-12 gap-3 text-gray-400"><span className="w-5 h-5 border-2 border-gray-300 border-t-[#050F41] rounded-full animate-spin" /><span className="text-sm">Carregando histórico...</span></div>) : filteredHistory.length === 0 ? (<div className="text-center py-12 text-gray-400 text-sm">Nenhum registro encontrado.</div>) : (
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -625,6 +647,8 @@ export const PericiaMenor: React.FC = () => {
               </table>
             </div>
           )}
+          </div>
+        </div>
         </div>
       )}
     </div>

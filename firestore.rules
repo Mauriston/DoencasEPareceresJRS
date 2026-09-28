@@ -1,9 +1,9 @@
 rules_version = '2';
 
 // Regras do Firestore para o app JRS/HNRe (projeto dedicado jrs-app-web).
-// Aplique manualmente no console do Firebase (Firestore Database > Regras)
-// ou via `firebase deploy --only firestore:rules`, pois este ambiente não
-// tem acesso ao Firebase CLI/credenciais do projeto.
+// Aplique no console do Firebase (Firestore Database > Regras) ou via
+// `firebase deploy --only firestore:rules` (a sessão do Claude Code na nuvem
+// tem uma service account dedicada para isso, ver .claude/settings.json).
 //
 // Coleção "usuarios": id do documento = UID do Firebase Authentication.
 // - Qualquer usuário autenticado pode ler a lista (necessário para telas
@@ -47,6 +47,13 @@ service cloud.firestore {
     match /usuarios_publicos/{uid} {
       allow read: if true;
       allow write: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+    }
+
+    // Coleção "casos_periciais_resultados": id do documento = UID. Guarda o
+    // resultado mais recente do teste "Casos Periciais" (Extras); cada
+    // usuário só pode ler/gravar o PRÓPRIO resultado.
+    match /casos_periciais_resultados/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
   }
 }

@@ -23,6 +23,7 @@ const emptyUserForm = {
 
 const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41] transition-colors';
 const labelClass = 'text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1';
+const featureGroups = [...new Set(FEATURE_DEFS.map(f => f.group))];
 
 export const UsuariosManagement: React.FC = () => {
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -502,7 +503,10 @@ export const UsuariosManagement: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-xs">
-                    {PAGE_DEFS.map(page => (
+                    {/* "Perícia Menor" não entra aqui: é controlada pelas duas
+                        features (Novo/Histórico) na tabela de Funcionalidades
+                        abaixo — ver canAccessPage em config/permissions.ts. */}
+                    {PAGE_DEFS.filter(page => page.id !== 'pericia-menor').map(page => (
                       <tr key={page.id} className="hover:bg-gray-50/60">
                         <td className="py-2 px-3 font-semibold text-gray-800">{page.label}</td>
                         {ROLES.map(role => (
@@ -522,38 +526,40 @@ export const UsuariosManagement: React.FC = () => {
               </div>
             </div>
 
-            <div>
-              <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Funcionalidades — Concursos (Planilhas de Controle)</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                      <th className="py-2.5 px-3">Funcionalidade</th>
-                      {ROLES.map(role => (
-                        <th key={role.id} className="py-2.5 px-3 text-center">{role.label}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 text-xs">
-                    {FEATURE_DEFS.map(feature => (
-                      <tr key={feature.id} className="hover:bg-gray-50/60">
-                        <td className="py-2 px-3 font-semibold text-gray-800">{feature.label}</td>
+            {featureGroups.map(group => (
+              <div key={group}>
+                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Funcionalidades — {group}</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                        <th className="py-2.5 px-3">Funcionalidade</th>
                         {ROLES.map(role => (
-                          <td key={role.id} className="py-2 px-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={featurePerms[feature.id]?.[role.id] ?? false}
-                              onChange={() => handleToggleFeaturePerm(feature.id, role.id)}
-                              className="w-4 h-4 accent-[#050F41] cursor-pointer"
-                            />
-                          </td>
+                          <th key={role.id} className="py-2.5 px-3 text-center">{role.label}</th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-xs">
+                      {FEATURE_DEFS.filter(feature => feature.group === group).map(feature => (
+                        <tr key={feature.id} className="hover:bg-gray-50/60">
+                          <td className="py-2 px-3 font-semibold text-gray-800">{feature.label}</td>
+                          {ROLES.map(role => (
+                            <td key={role.id} className="py-2 px-3 text-center">
+                              <input
+                                type="checkbox"
+                                checked={featurePerms[feature.id]?.[role.id] ?? false}
+                                onChange={() => handleToggleFeaturePerm(feature.id, role.id)}
+                                className="w-4 h-4 accent-[#050F41] cursor-pointer"
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>

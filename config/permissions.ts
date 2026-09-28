@@ -26,6 +26,11 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'concursos', label: 'Índices Mínimos', icon: 'emoji_events', subtitle: 'Consulte os índices mínimos exigidos por concurso.' },
   { id: 'exames', label: 'Exames Mínimos', icon: 'science', subtitle: 'Veja os exames mínimos exigidos por finalidade de IS.' },
   { id: 'pareceres', label: 'Pareceres', icon: 'assignment', subtitle: 'Gere solicitações de Pareceres em PDF por especialidade.' },
+  // "Perícia Menor" não tem permissão de página própria: é controlada pelas
+  // duas sub-permissões (features) "pericia-menor.novo"/"pericia-menor.historico"
+  // abaixo — uma por aba —, editáveis na tabela de Páginas do App (ver
+  // canAccessPage e UsuariosManagement.tsx). Este registro só fornece
+  // label/ícone/subtítulo para a navegação (Home/Sidebar).
   { id: 'pericia-menor', label: 'Perícia Menor', icon: 'personal_injury', subtitle: 'Registre as Perícias Menores dos militares de bordo.' },
   { id: 'mensagens', label: 'Mensagens', icon: 'chat', subtitle: 'Faça minutas das MSG de IS auxiliado por IA.' },
   { id: 'dgpm406', label: 'DGPM-406', icon: 'anchor', subtitle: 'Consulte capítulos e anexos da DGPM-406.' },
@@ -44,7 +49,6 @@ export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {
   concursos: { user_medicos: true, user_secretaria: true },
   exames: { user_medicos: true, user_secretaria: true },
   pareceres: { user_medicos: true, user_secretaria: false },
-  'pericia-menor': { user_medicos: true, user_secretaria: false },
   mensagens: { user_medicos: false, user_secretaria: false },
   dgpm406: { user_medicos: true, user_secretaria: true },
   laws: { user_medicos: true, user_secretaria: true },
@@ -59,18 +63,25 @@ export type FeatureKey =
   | 'concursosJRS.editarDadosTabela'
   | 'concursosJRS.registrarMensagemPDF'
   | 'concursosJRS.reagendar'
-  | 'concursosJRS.gerarMinutaResultados';
+  | 'concursosJRS.gerarMinutaResultados'
+  | 'pericia-menor.novo'
+  | 'pericia-menor.historico';
 
 export interface FeatureDef {
   id: FeatureKey;
   label: string;
+  group: string;
 }
 
 export const FEATURE_DEFS: FeatureDef[] = [
-  { id: 'concursosJRS.editarDadosTabela', label: 'Editar Status/Observações/Nº TIS na tabela' },
-  { id: 'concursosJRS.registrarMensagemPDF', label: 'Registrar Mensagem (PDF) e configurar agendamento' },
-  { id: 'concursosJRS.reagendar', label: 'Reagendar candidato' },
-  { id: 'concursosJRS.gerarMinutaResultados', label: 'Gerar Minuta de Resultados' },
+  { id: 'concursosJRS.editarDadosTabela', label: 'Editar Status/Observações/Nº TIS na tabela', group: 'Concursos (Planilhas de Controle)' },
+  { id: 'concursosJRS.registrarMensagemPDF', label: 'Registrar Mensagem (PDF) e configurar agendamento', group: 'Concursos (Planilhas de Controle)' },
+  { id: 'concursosJRS.reagendar', label: 'Reagendar candidato', group: 'Concursos (Planilhas de Controle)' },
+  { id: 'concursosJRS.gerarMinutaResultados', label: 'Gerar Minuta de Resultados', group: 'Concursos (Planilhas de Controle)' },
+  // Substituem a antiga permissão única de página "Perícia Menor": cada aba
+  // (Novo/Histórico) é liberada separadamente por perfil.
+  { id: 'pericia-menor.novo', label: 'Perícia Menor - Novo', group: 'Perícia Menor' },
+  { id: 'pericia-menor.historico', label: 'Perícia Menor - Histórico', group: 'Perícia Menor' },
 ];
 
 export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolean>> = {
@@ -78,6 +89,8 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'concursosJRS.registrarMensagemPDF': { user_medicos: true, user_secretaria: false },
   'concursosJRS.reagendar': { user_medicos: false, user_secretaria: true },
   'concursosJRS.gerarMinutaResultados': { user_medicos: true, user_secretaria: false },
+  'pericia-menor.novo': { user_medicos: true, user_secretaria: false },
+  'pericia-menor.historico': { user_medicos: true, user_secretaria: false },
 };
 
 const STORAGE_KEY = 'jrs_permissoes_config';
@@ -133,16 +146,21 @@ export const savePermissions = (
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ pages, features }));
 };
 
-export const canAccessPage = (pageId: string, perfil: string | undefined): boolean => {
-  if (perfil === 'admin') return true;
-  if (perfil !== 'user_medicos' && perfil !== 'user_secretaria') return false;
-  const perms = getPagePermissions();
-  return perms[pageId] ? perms[pageId][perfil] : true;
-};
-
 export const canUseFeature = (featureId: FeatureKey, perfil: string | undefined): boolean => {
   if (perfil === 'admin') return true;
   if (perfil !== 'user_medicos' && perfil !== 'user_secretaria') return false;
   const perms = getFeaturePermissions();
   return perms[featureId] ? perms[featureId][perfil] : false;
+};
+
+export const canAccessPage = (pageId: string, perfil: string | undefined): boolean => {
+  if (perfil === 'admin') return true;
+  // "Perícia Menor" não tem permissão de página própria: a página aparece
+  // (na Home/Sidebar e na rota) se pelo menos uma das abas estiver liberada.
+  if (pageId === 'pericia-menor') {
+    return canUseFeature('pericia-menor.novo', perfil) || canUseFeature('pericia-menor.historico', perfil);
+  }
+  if (perfil !== 'user_medicos' && perfil !== 'user_secretaria') return false;
+  const perms = getPagePermissions();
+  return perms[pageId] ? perms[pageId][perfil] : true;
 };
