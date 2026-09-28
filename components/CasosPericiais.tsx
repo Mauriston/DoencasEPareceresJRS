@@ -1,7 +1,7 @@
 // Ficheiro: components/CasosPericiais.tsx
 import React, { useEffect, useState } from 'react';
 import { Header } from './Header';
-import { ArrowLeft, ChevronRight, RotateCcw, X, Eye, Download, CheckCircle, XCircle, ArrowUp } from 'lucide-react';
+import { ChevronRight, RotateCcw, X, Eye, Download, CheckCircle, XCircle, ArrowUp } from 'lucide-react';
 
 const CASOS_DATA = [
   {
@@ -378,13 +378,14 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   if (viewMode === 'results') {
     return (
       <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
-        <Header 
-          title="REVISÃO DOS CASOS" 
-          leftAction={
-            <button onClick={handleRestart} className="text-white p-2 rounded-full hover:bg-white/10 transition-colors">
-              <ArrowLeft size={20} />
+        <Header
+          title="REVISÃO DOS CASOS"
+          onBack={onBack}
+          rightAction={
+            <button onClick={handleRestart} className="text-white p-2 rounded-full hover:bg-white/10 transition-colors" title="Refazer casos">
+              <RotateCcw size={18} />
             </button>
-          } 
+          }
         />
         <div className="p-4 space-y-6 max-w-3xl mx-auto w-full flex-1 pb-32">
           <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm text-center flex flex-col items-center">
@@ -445,14 +446,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
-      <Header 
-        title="CASOS PERICIAIS" 
-        leftAction={
-          <button onClick={onBack} className="text-white p-2 rounded-full hover:bg-white/10 transition-colors">
-            <ArrowLeft size={20} />
-          </button>
-        } 
-      />
+      <Header title="CASOS PERICIAIS" onBack={onBack} />
 
       <div className="w-full h-1.5 bg-gray-200">
         <div className="h-full bg-[#079551] transition-all duration-500 ease-out" style={{ width: `${progressPercentage}%` }} />

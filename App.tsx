@@ -1,5 +1,6 @@
 // Ficheiro: App.tsx
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Login } from './components/Login';
 import { Home } from './components/Home';
 import { Sidebar } from './components/Sidebar';
@@ -172,7 +173,18 @@ const App: React.FC = () => {
         <Sidebar />
         <div className="flex-1 flex flex-col h-full min-w-0 overflow-y-auto relative bg-[#F3F5F7]">
           <main className="flex-grow w-full flex flex-col pb-8">
-            {renderView()}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentView}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
+                className="flex flex-col flex-1 min-h-0 w-full"
+              >
+                {renderView()}
+              </motion.div>
+            </AnimatePresence>
           </main>
         </div>
       </div>
