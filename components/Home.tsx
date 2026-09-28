@@ -1,9 +1,8 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from './Header';
 import { NavContext, getPrimeiroNome } from '../context/NavContext';
 import { getNavCategories, NavCategory } from '../config/navigation';
-import { useIsDesktop } from '../hooks/useIsDesktop';
 
 export const Home: React.FC = () => {
   const nav = useContext(NavContext);
@@ -13,19 +12,16 @@ export const Home: React.FC = () => {
 
   const categories = getNavCategories(authUser?.perfil, periciaMenorVigentes);
   const primeiroNome = getPrimeiroNome(authUser);
-  const isDesktop = useIsDesktop();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  // No mobile não há painel de subitens (item 10 é desktop-only): garante
-  // que a seleção não fique "presa" se a janela encolher.
-  useEffect(() => {
-    if (!isDesktop) setSelectedId(null);
-  }, [isDesktop]);
 
   const selectedCategory: NavCategory | null = categories.find(c => c.id === selectedId) || null;
 
+  // Categorias com mais de um subitem mostram os cards de subitem (mobile e
+  // desktop); no desktop os cards principais também se reorganizam numa
+  // coluna à esquerda (motion), no mobile eles simplesmente somem, sem
+  // precisar reagrupar.
   const handleCardClick = (cat: NavCategory) => {
-    if (isDesktop && cat.subitems.length > 1) {
+    if (cat.subitems.length > 1) {
       setSelectedId(prev => (prev === cat.id ? null : cat.id));
       return;
     }
@@ -48,8 +44,8 @@ export const Home: React.FC = () => {
 
         <div className="flex flex-col md:flex-row items-start gap-4 sm:gap-6">
           <div
-            className={`grid w-full gap-3 sm:gap-4 ${
-              selectedCategory ? 'grid-cols-1 md:w-60 md:shrink-0' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+            className={`w-full gap-3 sm:gap-4 ${
+              selectedCategory ? 'hidden md:grid md:grid-cols-1 md:w-60 md:shrink-0' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
             }`}
           >
             {categories.map(cat => {
@@ -103,8 +99,17 @@ export const Home: React.FC = () => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 24 }}
                 transition={{ duration: 0.55, delay: 0.15, ease: [0.4, 0, 0.2, 1] }}
-                className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 w-full flex-1"
+                className="w-full flex-1"
               >
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(null)}
+                  className="md:hidden flex items-center gap-1.5 text-sm font-bold text-[#050F41] mb-4"
+                >
+                  <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                  Voltar
+                </button>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 w-full">
                 {selectedCategory.subitems.map(sub => (
                   <button
                     key={sub.id}
@@ -126,6 +131,7 @@ export const Home: React.FC = () => {
                     </span>
                   </button>
                 ))}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
