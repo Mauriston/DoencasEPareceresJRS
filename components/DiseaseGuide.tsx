@@ -336,20 +336,11 @@ export const DiseaseGuide: React.FC = () => {
   if (selectedDisease && !selectedDiagnosis) {
     return (
       <div className="animate-fade-in flex flex-col h-full bg-[#F3F5F7] relative">
-        <Header title={getShortDiseaseName(selectedDisease.name)} />
+        <Header title={getShortDiseaseName(selectedDisease.name)} onBack={() => setSelectedDisease(null)} />
         <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto w-full flex-1 pb-24 md:pb-12">
-          <div className="px-1 flex items-center space-x-3">
-            <button 
-              onClick={() => setSelectedDisease(null)} 
-              className="p-2.5 rounded-xl bg-white border border-gray-200/80 text-[#050F41] hover:bg-gray-100 transition-colors shadow-xs shrink-0 flex items-center justify-center cursor-pointer" 
-              title="Voltar"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div>
-              <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase">{selectedDisease.name}</h2>
-              <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5">Selecione o diagnóstico pericial associado:</p>
-            </div>
+          <div className="px-1">
+            <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase">{selectedDisease.name}</h2>
+            <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5">Selecione o diagnóstico pericial associado:</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -383,21 +374,12 @@ export const DiseaseGuide: React.FC = () => {
     const isDemencia = selectedDisease.name === "Alienação Mental" && selectedDiagnosis.name === "Demência";
     return (
       <div className="animate-fade-in flex flex-col h-full bg-[#F3F5F7] relative">
-        <Header title={getShortDiseaseName(selectedDisease.name)} />
+        <Header title={getShortDiseaseName(selectedDisease.name)} onBack={handleBackClick} />
         <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full pb-24 md:pb-12">
           <div className="px-1 flex items-center justify-between gap-4">
-            <div className="flex items-center space-x-3 min-w-0">
-              <button 
-                onClick={handleBackClick} 
-                className="p-2.5 rounded-xl bg-white border border-gray-200/80 text-[#050F41] hover:bg-gray-100 transition-colors shadow-xs shrink-0 flex items-center justify-center cursor-pointer" 
-                title="Voltar"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <div className="min-w-0">
-                <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase truncate">{selectedDisease.name}</h2>
-                {selectedDisease.diagnoses.length > 1 && <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5 truncate">Diagnóstico Pericial: {selectedDiagnosis.name}</p>}
-              </div>
+            <div className="min-w-0">
+              <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase truncate">{selectedDisease.name}</h2>
+              {selectedDisease.diagnoses.length > 1 && <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5 truncate">Diagnóstico Pericial: {selectedDiagnosis.name}</p>}
             </div>
 
             {/* Desktop side-by-side action buttons */}

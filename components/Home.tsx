@@ -75,10 +75,10 @@ export const Home: React.FC = () => {
                 <motion.button
                   key={cat.id}
                   layout
-                  transition={{ type: 'spring', stiffness: 350, damping: 32 }}
+                  transition={{ type: 'spring', stiffness: 90, damping: 22, mass: 1 }}
                   type="button"
                   onClick={() => handleCardClick(cat)}
-                  className={`relative flex gap-2.5 rounded-2xl shadow-sm transition-colors duration-300 ${
+                  className={`relative flex gap-2.5 rounded-2xl shadow-sm transition-colors duration-700 ${
                     selectedCategory ? 'flex-row items-center justify-start py-3.5 px-4 text-left' : 'flex-col items-center justify-center py-6 px-3 text-center'
                   } ${
                     isDimmed
@@ -109,7 +109,7 @@ export const Home: React.FC = () => {
                 initial={{ opacity: 0, x: 24 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 24 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
+                transition={{ duration: 0.55, delay: 0.15, ease: [0.4, 0, 0.2, 1] }}
                 className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 w-full flex-1"
               >
                 {selectedCategory.subitems.map(sub => (

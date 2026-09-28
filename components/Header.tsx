@@ -75,6 +75,7 @@ export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction,
   const resolvedDesktopTitle = categoryTitle ?? desktopTitle ?? title;
 
   return (
+    <>
     <header
       className={`w-full sticky top-0 z-40 h-[56px] flex items-center justify-between transition-all duration-300 bg-[#050F41] text-white shadow-sm border-b border-white/10 shrink-0 ${
         isScrolled ? 'shadow-md' : ''
@@ -82,27 +83,16 @@ export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction,
     >
       <div className="w-full flex items-center justify-between px-4 md:px-8 h-full relative">
 
-        {/* MOBILE LEFT: BACK OR HAMBURGER (desktop usa o logo da Sidebar) */}
+        {/* MOBILE LEFT: HAMBURGER (o botão de voltar fica abaixo da topbar) */}
         <div className="flex md:hidden items-center justify-start min-w-[48px]">
-          {onBack ? (
-            <button
-              type="button"
-              onClick={onBack}
-              className="flex items-center justify-center w-10 h-10 rounded-full text-white hover:bg-white/10 transition-colors"
-              aria-label="Voltar"
-            >
-              <span className="material-symbols-outlined text-[24px]">chevron_left</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="flex items-center justify-center w-10 h-10 rounded-full text-white hover:bg-white/10 transition-colors"
-              aria-label="Abrir menu"
-            >
-              <span className="material-symbols-outlined text-[24px]">menu</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="flex items-center justify-center w-10 h-10 rounded-full text-white hover:bg-white/10 transition-colors"
+            aria-label="Abrir menu"
+          >
+            <span className="material-symbols-outlined text-[24px]">menu</span>
+          </button>
           {leftAction}
         </div>
 
@@ -180,5 +170,22 @@ export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction,
         </div>
       </div>
     </header>
+
+    {/* Botão de voltar à página anterior: canto superior esquerdo, logo
+        abaixo da topbar, em todas as subpáginas (quando onBack é fornecido). */}
+    {onBack && (
+      <div className="w-full sticky top-[56px] z-30 px-4 md:px-8 pt-3 pointer-events-none shrink-0">
+        <button
+          type="button"
+          onClick={onBack}
+          className="pointer-events-auto flex items-center justify-center w-9 h-9 rounded-full bg-white text-[#050F41] shadow-md border border-gray-200/70 hover:bg-gray-50 active:scale-95 transition-all"
+          aria-label="Voltar"
+          title="Voltar"
+        >
+          <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+        </button>
+      </div>
+    )}
+    </>
   );
 };
