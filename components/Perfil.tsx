@@ -2,6 +2,7 @@ import React, { useContext, useRef, useState } from 'react';
 import { Header } from './Header';
 import { NavContext } from '../context/NavContext';
 import { uploadProfileImage } from '../services/profileImage';
+import { formatNip, formatCelular } from '../utils/format';
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
 
@@ -9,14 +10,6 @@ async function sha256(message: string): Promise<string> {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
-
-const formatCelular = (val: string) => {
-  const digits = val.replace(/\D/g, '').slice(0, 11);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-};
 
 const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41] transition-colors';
 const labelClass = 'text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1';
@@ -40,7 +33,7 @@ export const Perfil: React.FC = () => {
 
   const [email, setEmail] = useState(authUser?.email || '');
   const [gmail, setGmail] = useState(authUser?.gmail || '');
-  const [celular, setCelular] = useState(authUser?.celular || '');
+  const [celular, setCelular] = useState(formatCelular(authUser?.celular || ''));
   const [savingContato, setSavingContato] = useState(false);
 
   const [senhaAtual, setSenhaAtual] = useState('');
@@ -185,7 +178,7 @@ export const Perfil: React.FC = () => {
             <InfoField label="Usuário" value={authUser?.usuario} />
             <InfoField label="Posto/Graduação" value={authUser?.postoGraduacao} />
             <InfoField label="Cargo" value={authUser?.cargo} />
-            <InfoField label="NIP" value={authUser?.nip} />
+            <InfoField label="NIP" value={formatNip(authUser?.nip)} />
             <InfoField label="CRM-PE" value={authUser?.crmPe} />
             <InfoField label="RQE" value={authUser?.rqe} />
           </div>
