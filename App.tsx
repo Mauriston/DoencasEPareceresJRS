@@ -1,6 +1,9 @@
 // Ficheiro: App.tsx
 import React, { useState, useEffect } from 'react';
 import { Login } from './components/Login';
+import { Home } from './components/Home';
+import { Sidebar } from './components/Sidebar';
+import { Perfil } from './components/Perfil';
 import { DiseaseGuide } from './components/DiseaseGuide';
 import { LawReference } from './components/LawReference';
 import { DGPM406Guide } from './components/DGPM406Guide';
@@ -18,24 +21,39 @@ import { ArtigoPerfilPerito } from './components/ArtigoPerfilPerito';
 import { ArtigoPericiaAdministrativa } from './components/ArtigoPericiaAdministrativa';
 import { ArtigoPericiaPsiquiatria } from './components/ArtigoPericiaPsiquiatria';
 import { CasosPericiais } from './components/CasosPericiais';
-import { Estudo } from './components/Estudo'; 
+import { Estudo } from './components/Estudo';
 import { PericiaMenor } from './components/PericiaMenor';
 import { Mensagens } from './components/Mensagens';
 import { RoteiroJRS } from './components/RoteiroJRS';
 import { UsuariosManagement } from './components/UsuariosManagement';
 import { NavItem } from './types';
-import { NavContext } from './context/NavContext';
+import { NavContext, AuthUser } from './context/NavContext';
 import { canAccessPage } from './config/permissions';
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
 
-interface AuthUser { nome: string; perfil: 'admin' | 'user_medicos' | 'user_secretaria' | string; }
+const buildAuthUser = (json: any): AuthUser => ({
+  usuario: json.usuario,
+  nome: json.nome,
+  perfil: json.perfil,
+  postoGraduacao: json.postoGraduacao,
+  cargo: json.cargo,
+  nip: json.nip,
+  crmPe: json.crmPe,
+  rqe: json.rqe,
+  email: json.email,
+  gmail: json.gmail,
+  celular: json.celular,
+  imageProfile: json.imageProfile,
+  senhaTemporaria: !!json.senhaTemporaria,
+});
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<NavItem>('splash');
   const [periciaMenorVigentes, setPericiaMenorVigentes] = useState(0);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [senhaAlertDismissed, setSenhaAlertDismissed] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('jrs_auth');
@@ -45,8 +63,8 @@ const App: React.FC = () => {
         .then(r => r.json())
         .then(json => {
           if (json.success) {
-            setAuthUser({ nome: json.nome, perfil: json.perfil });
-            setCurrentView('guide');
+            setAuthUser(buildAuthUser(json));
+            setCurrentView('home');
           } else {
             localStorage.removeItem('jrs_auth');
           }
@@ -70,10 +88,11 @@ const App: React.FC = () => {
       .catch(() => {});
   }, [authUser]);
 
-  const handleLogin = (nome: string, perfil: string, usuario: string, senhaHash: string) => {
-    localStorage.setItem('jrs_auth', JSON.stringify({ usuario, senhaHash }));
-    setAuthUser({ nome, perfil });
-    setCurrentView('guide');
+  const handleLogin = (json: any, senhaHash: string) => {
+    localStorage.setItem('jrs_auth', JSON.stringify({ usuario: json.usuario, senhaHash }));
+    setAuthUser(buildAuthUser(json));
+    setSenhaAlertDismissed(false);
+    setCurrentView('home');
   };
 
   const handleLogout = () => {
@@ -82,12 +101,18 @@ const App: React.FC = () => {
     setCurrentView('guide');
   };
 
+  const updateAuthUser = (patch: Partial<AuthUser>) => {
+    setAuthUser(prev => (prev ? { ...prev, ...patch } : prev));
+  };
+
   const can = (pageId: string) => canAccessPage(pageId, authUser?.perfil);
   // Artigos e páginas de detalhe navegam a partir de "estudo": herdam a permissão dessa página.
   const canAccessEstudo = can('estudo');
 
   const renderView = () => {
     switch (currentView) {
+      case 'home': return <Home />;
+      case 'perfil': return <Perfil />;
       case 'guide': return <DiseaseGuide />;
       case 'laws': return can('laws') ? <LawReference /> : <DiseaseGuide />;
       case 'dgpm406': return can('dgpm406') ? <DGPM406Guide /> : <DiseaseGuide />;
@@ -115,7 +140,7 @@ const App: React.FC = () => {
       // USUÁRIOS PAGE - Restricted for non-admin
       case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement /> : <DiseaseGuide />;
 
-      default: return <DiseaseGuide />;
+      default: return <Home />;
     }
   };
 
@@ -135,7 +160,7 @@ const App: React.FC = () => {
     return (
       <div
         className="fixed inset-0 w-full h-full cursor-pointer bg-[#050F41] flex flex-col items-center justify-center z-[100]"
-        onClick={() => setCurrentView('guide')}
+        onClick={() => setCurrentView('home')}
       >
         <img
           src="https://i.imgur.com/5JjsbwG.png"
@@ -146,23 +171,59 @@ const App: React.FC = () => {
     );
   }
 
+  const mostrarAlertaSenha = !!authUser.senhaTemporaria && currentView !== 'perfil' && !senhaAlertDismissed;
+
   return (
     <NavContext.Provider
       value={{
         currentView,
         setCurrentView,
         authUser,
+        updateAuthUser,
         handleLogout,
         periciaMenorVigentes,
       }}
     >
-      <div className="fixed inset-0 flex flex-col bg-[#F3F5F7] text-[#1F2937] overflow-hidden antialiased select-none">
+      <div className="fixed inset-0 flex bg-[#F3F5F7] text-[#1F2937] overflow-hidden antialiased select-none">
+        <Sidebar />
         <div className="flex-1 flex flex-col h-full min-w-0 overflow-y-auto relative bg-[#F3F5F7]">
           <main className="flex-grow w-full flex flex-col pb-8">
             {renderView()}
           </main>
         </div>
       </div>
+
+      {mostrarAlertaSenha && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
+            <div className="p-5 flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mb-3">
+                <span className="material-symbols-outlined text-[28px] text-amber-500">warning</span>
+              </div>
+              <h3 className="font-heading font-bold text-sm text-[#050F41] mb-1.5">Altere sua senha inicial</h3>
+              <p className="text-xs text-gray-500 mb-5">
+                Você ainda está usando a senha temporária (seu NIP). Por segurança, altere sua senha de acesso.
+              </p>
+              <div className="flex items-center gap-2 w-full">
+                <button
+                  type="button"
+                  onClick={() => setSenhaAlertDismissed(true)}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Depois
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setSenhaAlertDismissed(true); setCurrentView('perfil'); }}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#079551] hover:bg-[#067a43] text-white text-xs font-bold transition-colors"
+                >
+                  Alterar Senha
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </NavContext.Provider>
   );
 };

@@ -212,7 +212,7 @@ export const RoteiroJRS: React.FC = () => {
     <div className="flex flex-col h-full bg-gray-50">
       <Header title="Roteiro JRS" />
       
-      <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-4xl mx-auto w-full">
+      <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-5xl mx-auto w-full">
         <div className="mb-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-200/60">
           <div className="flex items-start justify-between gap-4">
             <div>

@@ -9,7 +9,7 @@ async function sha256(message: string): Promise<string> {
 }
 
 interface Props {
-  onLogin: (nome: string, perfil: string, usuario: string, senhaHash: string) => void;
+  onLogin: (loginResponse: any, senhaHash: string) => void;
 }
 
 type View = 'login' | 'register';
@@ -56,7 +56,7 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
       const res = await fetch(`${GAS_URL}?action=login&usuario=${encodeURIComponent(usuario)}&senhaHash=${encodeURIComponent(senhaHash)}`);
       const json = await res.json();
       if (json.success) {
-        onLogin(json.nome, json.perfil, usuario, senhaHash);
+        onLogin(json, senhaHash);
       } else {
         setLoginError(json.error || 'Usuário ou senha incorretos');
       }
