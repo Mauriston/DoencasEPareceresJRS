@@ -1,8 +1,9 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from './Header';
 import { NavContext, getPrimeiroNome } from '../context/NavContext';
 import { getNavCategories, NavCategory } from '../config/navigation';
+import { listarConcursos } from '../services/firestoreConcursos';
 
 export const Home: React.FC = () => {
   const nav = useContext(NavContext);
@@ -13,6 +14,20 @@ export const Home: React.FC = () => {
   const categories = getNavCategories(authUser?.perfil, periciaMenorVigentes);
   const primeiroNome = getPrimeiroNome(authUser);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [temConcursoEmAndamento, setTemConcursoEmAndamento] = useState(false);
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      try {
+        const lista = await listarConcursos();
+        if (!cancelado) setTemConcursoEmAndamento(lista.some(c => c.status === 'em_andamento'));
+      } catch {
+        // silencioso: não bloqueia a Home se a checagem falhar
+      }
+    })();
+    return () => { cancelado = true; };
+  }, []);
 
   const selectedCategory: NavCategory | null = categories.find(c => c.id === selectedId) || null;
 
@@ -52,6 +67,7 @@ export const Home: React.FC = () => {
               const badge = cat.subitems.reduce((acc, s) => acc + (s.badge || 0), 0);
               const isSelected = selectedCategory?.id === cat.id;
               const isDimmed = !!selectedCategory && !isSelected;
+              const isConcursosEmAndamento = cat.id === 'concursos' && temConcursoEmAndamento;
 
               return (
                 <motion.button
@@ -65,6 +81,8 @@ export const Home: React.FC = () => {
                   } ${
                     isDimmed
                       ? 'bg-gray-200 text-gray-400 hover:bg-gray-200'
+                      : isConcursosEmAndamento
+                      ? 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white hover:shadow-md'
                       : 'bg-[#079551] hover:bg-[#067a43] active:bg-[#056635] text-white hover:shadow-md'
                   }`}
                 >
@@ -110,12 +128,18 @@ export const Home: React.FC = () => {
                   Voltar
                 </button>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 w-full">
-                {selectedCategory.subitems.map(sub => (
+                {selectedCategory.subitems.map(sub => {
+                  const isPlanilhasEmAndamento = sub.id === 'concursosJRS' && temConcursoEmAndamento;
+                  return (
                   <button
                     key={sub.id}
                     type="button"
                     onClick={() => setCurrentView(sub.id)}
-                    className="relative flex flex-col gap-1.5 bg-white hover:bg-gray-50 active:bg-gray-100 text-[#050F41] rounded-2xl shadow-sm hover:shadow-md border border-gray-200/60 transition-all py-4 px-4 md:py-5 md:px-5 text-left"
+                    className={`relative flex flex-col gap-1.5 rounded-2xl shadow-sm hover:shadow-md transition-all py-4 px-4 md:py-5 md:px-5 text-left ${
+                      isPlanilhasEmAndamento
+                        ? 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white border border-red-600'
+                        : 'bg-white hover:bg-gray-50 active:bg-gray-100 text-[#050F41] border border-gray-200/60'
+                    }`}
                   >
                     {sub.badge ? (
                       <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white">
@@ -123,14 +147,15 @@ export const Home: React.FC = () => {
                       </span>
                     ) : null}
                     <span className="flex items-center gap-2.5 w-full">
-                      <span className="material-symbols-outlined text-[24px] md:text-[30px] text-[#079551] shrink-0">{sub.icon}</span>
+                      <span className={`material-symbols-outlined text-[24px] md:text-[30px] shrink-0 ${isPlanilhasEmAndamento ? 'text-white' : 'text-[#079551]'}`}>{sub.icon}</span>
                       <span className="text-sm sm:text-base md:text-lg font-bold leading-tight">{sub.label}</span>
                     </span>
-                    <span className="text-[11px] sm:text-xs md:text-sm font-medium leading-snug text-gray-500">
+                    <span className={`text-[11px] sm:text-xs md:text-sm font-medium leading-snug ${isPlanilhasEmAndamento ? 'text-white/85' : 'text-gray-500'}`}>
                       {sub.subtitle}
                     </span>
                   </button>
-                ))}
+                  );
+                })}
                 </div>
               </motion.div>
             )}
