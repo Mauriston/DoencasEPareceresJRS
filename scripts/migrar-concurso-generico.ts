@@ -114,6 +114,25 @@ async function migrar() {
   const campoBooleano = (linha: string[], indice: number): boolean =>
     indice !== -1 && campo(linha, indice).toUpperCase() === 'TRUE';
 
+  // Datas vêm em formatos diferentes conforme a planilha de origem
+  // (algumas usam AAAA-MM-DD também em dataLaudo, quando o padrão do app é
+  // dataAgendamento em ISO e dataLaudo em DD/MM/AAAA) — normaliza os dois
+  // sentidos para manter consistência com o resto do app.
+  const paraISO = (valor: string): string => {
+    if (!valor) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) return valor;
+    const m = valor.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    return valor;
+  };
+  const paraBR = (valor: string): string => {
+    if (!valor) return '';
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(valor)) return valor;
+    const m = valor.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+    return valor;
+  };
+
   const concursoRef = db.collection('concursos').doc();
   const batch = db.batch();
 
@@ -132,12 +151,12 @@ async function migrar() {
     const id = campo(linha, col.id);
     batch.set(concursoRef.collection('candidatos').doc(id), {
       nome: campo(linha, col.nome),
-      dataAgendamento: campo(linha, col.dataAgendamento),
+      dataAgendamento: paraISO(campo(linha, col.dataAgendamento)),
       status: campo(linha, col.status),
       observacoes: campo(linha, col.observacoes),
       finalizado: campoBooleano(linha, col.finalizado),
       recurso: campoBooleano(linha, col.recurso),
-      dataLaudo: campo(linha, col.dataLaudo),
+      dataLaudo: paraBR(campo(linha, col.dataLaudo)),
       laudo: campo(linha, col.laudo),
       numTIS: campo(linha, col.numTIS),
       termoRecursoUrl: campo(linha, col.termoRecursoUrl),
