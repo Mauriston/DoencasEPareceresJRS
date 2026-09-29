@@ -21,7 +21,7 @@ import {
   MAPA_LAUDO_POR_STATUS, candidatoEstaFinalizado, formatarDataSimples, formatarDataMilitar,
   formatarChaveData, parseChaveData, calcularDiasUteis, distribuirCandidatosNasDatas,
   aplicarPontuacao, numeroItemLista, NOMES_DIAS_SEMANA,
-  type CandidatoBasico, type CabecalhoMensagem,
+  type CandidatoBasico, type CabecalhoMensagem, type CandidatoImportadoCsv,
 } from '../utils/concursosUtils';
 
 const db = getFirestore(app);
@@ -215,6 +215,70 @@ export const criarConcursoDaMensagem = async (params: {
   await flush();
 
   return { concursoId, diasUteis };
+};
+
+/**
+ * Cria um concurso diretamente a partir de um CSV já interpretado (ver
+ * `interpretarCsvCandidatosDataBase` em utils/concursosUtils.ts) — usado
+ * para importar concursos que não têm mensagem administrativa nem
+ * agendamento a configurar no app (normalmente já encerrados). Sem
+ * "mensagens" nem "agendamentos"; status escolhido livremente pelo Admin na
+ * própria tela de importação.
+ */
+export const importarConcursoDeCsv = async (
+  nome: string,
+  status: ConcursoStatus,
+  candidatos: CandidatoImportadoCsv[]
+): Promise<{ concursoId: string }> => {
+  const novoConcursoRef = doc(collection(db, COL_CONCURSOS));
+  const concursoId = novoConcursoRef.id;
+
+  const operacoes: (() => Promise<any>)[] = [];
+  let batch = writeBatch(db);
+  let contador = 0;
+  const flush = async () => {
+    if (contador > 0) {
+      await batch.commit();
+      batch = writeBatch(db);
+      contador = 0;
+    }
+  };
+  const add = (fn: (b: typeof batch) => void) => {
+    fn(batch);
+    contador++;
+    if (contador >= 400) operacoes.push(flush);
+  };
+
+  add(b => b.set(novoConcursoRef, {
+    nome,
+    status,
+    dataHoraMensagemInicial: '',
+    assuntoMensagemInicial: '',
+    periodoInicioISO: '',
+    periodoFimISO: '',
+    totalCandidatos: candidatos.length,
+    criadoEm: serverTimestamp(),
+  }));
+
+  candidatos.forEach(c => {
+    add(b => b.set(candidatoRef(concursoId, c.id), {
+      nome: c.nome,
+      dataAgendamento: c.dataAgendamento,
+      status: c.status,
+      observacoes: c.observacoes,
+      finalizado: c.finalizado,
+      recurso: c.recurso,
+      dataLaudo: c.dataLaudo,
+      laudo: c.laudo,
+      numTIS: c.numTIS,
+      termoRecursoUrl: c.termoRecursoUrl,
+    }));
+  });
+
+  for (const op of operacoes) await op();
+  await flush();
+
+  return { concursoId };
 };
 
 export const criarCandidato = async (concursoId: string, id: string, nome: string): Promise<CandidatoRecord> => {

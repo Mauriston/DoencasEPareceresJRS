@@ -3,7 +3,7 @@ import { Header } from './Header';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
 import {
-  listarConcursos, getConcurso, listarCandidatos, criarConcursoDaMensagem, atualizarCandidato,
+  listarConcursos, getConcurso, listarCandidatos, criarConcursoDaMensagem, importarConcursoDeCsv, atualizarCandidato,
   reagendarCandidato, listarDatasAgendamento, obterContextoAgendamento, confirmarAgendamento,
   gerarMinutaResultados, abrirConcurso, encerrarConcurso, salvarTermoRecurso,
   STATUS_LABELS,
@@ -12,8 +12,8 @@ import {
 import { uploadMensagemPdf, uploadTermoRecursoPdf } from '../services/firebaseStorageConcursos';
 import {
   limparRuidoPaginacao, extrairCabecalhoMensagem, extrairCandidatos, extrairPeriodoJRS,
-  extrairNomeConcurso, formatarChaveData, parseChaveData,
-  type CabecalhoMensagem, type CandidatoBasico,
+  extrairNomeConcurso, formatarChaveData, parseChaveData, interpretarCsvCandidatosDataBase,
+  type CabecalhoMensagem, type CandidatoBasico, type CandidatoImportadoCsv,
 } from '../utils/concursosUtils';
 
 // URL de implantação (aplicativo da web) do projeto Apps Script standalone
@@ -544,6 +544,146 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
 };
 
 // =========================================================================
+// MODAL "IMPORTAR CONCURSO (CSV)" — cria um concurso direto de um CSV no
+// formato da aba "candidatosDataBase" (uso do Admin, sem mensagem/agendamento)
+// =========================================================================
+
+interface ModalImportarCsvProps {
+  onClose: (concursoIdCriado?: string) => void;
+}
+
+const STATUS_IMPORTACAO_OPTIONS: { value: ConcursoRecord['status']; label: string }[] = [
+  { value: 'encerrado', label: 'Encerrado' },
+  { value: 'em_andamento', label: 'Em Andamento' },
+  { value: 'em_breve', label: 'Em Breve' },
+];
+
+const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
+  const [nomeConcurso, setNomeConcurso] = useState('');
+  const [status, setStatus] = useState<ConcursoRecord['status']>('encerrado');
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [candidatos, setCandidatos] = useState<CandidatoImportadoCsv[]>([]);
+  const [erro, setErro] = useState<string | null>(null);
+  const [processando, setProcessando] = useState(false);
+  const [concursoIdCriado, setConcursoIdCriado] = useState<string | null>(null);
+
+  const handleSelecionarArquivo = async (file: File | null) => {
+    setErro(null);
+    setCandidatos([]);
+    setFileName(file?.name || null);
+    if (!file) return;
+    try {
+      const texto = await file.text();
+      const lista = interpretarCsvCandidatosDataBase(texto);
+      if (lista.length === 0) throw new Error('Nenhum candidato encontrado no CSV.');
+      setCandidatos(lista);
+    } catch (e: any) {
+      setErro(e?.message || 'Erro ao ler o CSV.');
+    }
+  };
+
+  const handleImportar = async () => {
+    if (!nomeConcurso.trim()) { setErro('Informe o nome do concurso.'); return; }
+    if (candidatos.length === 0) { setErro('Selecione um CSV válido com ao menos um candidato.'); return; }
+    setErro(null);
+    setProcessando(true);
+    try {
+      const { concursoId } = await importarConcursoDeCsv(nomeConcurso.trim(), status, candidatos);
+      setConcursoIdCriado(concursoId);
+    } catch (e: any) {
+      setErro(e?.message || 'Erro ao importar o concurso.');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+          <div className="flex items-center space-x-2">
+            <span className="material-symbols-outlined text-[22px] text-[#079551]">table_view</span>
+            <h3 className="font-heading font-bold text-sm uppercase">Importar Concurso (CSV)</h3>
+          </div>
+          <button onClick={() => onClose(concursoIdCriado || undefined)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+
+        <div className="p-5 overflow-y-auto space-y-4 flex-1">
+          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-semibold">{erro}</div>}
+
+          {concursoIdCriado ? (
+            <>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                <p className="text-xs font-bold text-green-800">Concurso "{nomeConcurso}" importado com sucesso ({candidatos.length} candidato(s)).</p>
+              </div>
+              <div className="pt-2 flex items-center justify-end">
+                <button type="button" onClick={() => onClose(concursoIdCriado)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">Ver Concurso</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500">
+                Importa um concurso direto de um CSV no formato da aba "candidatosDataBase" (com a coluna do nome do
+                candidato em qualquer posição). Não cria mensagem nem calendário de agendamento — use para concursos
+                que não precisam mais ser agendados pelo app (normalmente já encerrados).
+              </p>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do concurso</label>
+                <input
+                  type="text"
+                  value={nomeConcurso}
+                  onChange={e => setNomeConcurso(e.target.value)}
+                  placeholder="Ex.: CPAEAM/2026"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Status inicial</label>
+                <select
+                  value={status}
+                  onChange={e => setStatus(e.target.value as ConcursoRecord['status'])}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                >
+                  {STATUS_IMPORTACAO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Arquivo CSV</label>
+                <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
+                  <span className="material-symbols-outlined text-[32px] text-gray-400">table_view</span>
+                  <span className="text-xs font-bold text-gray-600">{fileName || 'Clique para selecionar o CSV'}</span>
+                  <input type="file" accept=".csv,text/csv" className="hidden" onChange={e => handleSelecionarArquivo(e.target.files?.[0] || null)} />
+                </label>
+                {candidatos.length > 0 && (
+                  <p className="text-[11px] text-green-700 font-bold mt-1.5">{candidatos.length} candidato(s) identificado(s).</p>
+                )}
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button
+                  type="button"
+                  disabled={processando || candidatos.length === 0}
+                  onClick={handleImportar}
+                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
+                >
+                  {processando ? 'Importando...' : 'Importar Concurso'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// =========================================================================
 // LISTA DE CONCURSOS
 // =========================================================================
 
@@ -554,6 +694,7 @@ interface ConcursosListaProps {
   podeRegistrarMensagem: boolean;
   onSelecionar: (id: string) => void;
   onNovoConcursoClick: () => void;
+  onImportarCsvClick: () => void;
   onAbrir: (id: string, nome: string) => void;
 }
 
@@ -563,7 +704,7 @@ const GRUPOS_STATUS: { status: ConcursoRecord['status']; titulo: string }[] = [
   { status: 'encerrado', titulo: 'Encerrado' },
 ];
 
-const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, isAdmin, podeRegistrarMensagem, onSelecionar, onNovoConcursoClick, onAbrir }) => {
+const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, isAdmin, podeRegistrarMensagem, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onAbrir }) => {
   const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number }>>({});
 
   useEffect(() => {
@@ -583,16 +724,28 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, isA
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
       <Header title="Planilhas de Controle" />
       <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1200px] mx-auto w-full flex-1 space-y-6">
-        {podeRegistrarMensagem && (
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={onNovoConcursoClick}
-              className="px-4 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5"
-            >
-              <span className="material-symbols-outlined text-[16px]">upload_file</span>
-              <span>Registrar Mensagem (PDF) — Novo Concurso</span>
-            </button>
+        {(podeRegistrarMensagem || isAdmin) && (
+          <div className="flex justify-end gap-2 flex-wrap">
+            {podeRegistrarMensagem && (
+              <button
+                type="button"
+                onClick={onNovoConcursoClick}
+                className="px-4 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5"
+              >
+                <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                <span>Registrar Mensagem (PDF) — Novo Concurso</span>
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={onImportarCsvClick}
+                className="px-4 py-2.5 bg-white hover:bg-gray-50 text-[#050F41] rounded-xl text-xs font-bold transition-colors shadow-sm border border-gray-200 flex items-center space-x-1.5"
+              >
+                <span className="material-symbols-outlined text-[16px]">table_view</span>
+                <span>Importar Concurso (CSV)</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -1440,6 +1593,7 @@ export const ConcursosJRS: React.FC = () => {
   const [loadingConcursos, setLoadingConcursos] = useState(true);
   const [selectedConcursoId, setSelectedConcursoId] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showImportarCsvModal, setShowImportarCsvModal] = useState(false);
 
   const carregarConcursos = async () => {
     setLoadingConcursos(true);
@@ -1463,6 +1617,12 @@ export const ConcursosJRS: React.FC = () => {
     if (concursoIdCriado) setSelectedConcursoId(concursoIdCriado);
   };
 
+  const handleFecharModalImportarCsv = (concursoIdCriado?: string) => {
+    setShowImportarCsvModal(false);
+    carregarConcursos();
+    if (concursoIdCriado) setSelectedConcursoId(concursoIdCriado);
+  };
+
   if (selectedConcursoId) {
     return (
       <ConcursoDetalhe
@@ -1482,9 +1642,11 @@ export const ConcursosJRS: React.FC = () => {
         podeRegistrarMensagem={podeRegistrarMensagem}
         onSelecionar={setSelectedConcursoId}
         onNovoConcursoClick={() => setShowUploadModal(true)}
+        onImportarCsvClick={() => setShowImportarCsvModal(true)}
         onAbrir={handleAbrirDaLista}
       />
       {showUploadModal && <ModalRegistrarMensagem onClose={handleFecharModalUpload} isAdmin={isAdmin} />}
+      {showImportarCsvModal && <ModalImportarCsv onClose={handleFecharModalImportarCsv} />}
     </>
   );
 };
