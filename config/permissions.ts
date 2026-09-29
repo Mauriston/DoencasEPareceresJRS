@@ -75,7 +75,7 @@ export interface FeatureDef {
 
 export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'concursosJRS.editarDadosTabela', label: 'Editar Status/Observações/Nº TIS na tabela', group: 'Concursos (Planilhas de Controle)' },
-  { id: 'concursosJRS.registrarMensagemPDF', label: 'Registrar Mensagem (PDF) e configurar agendamento', group: 'Concursos (Planilhas de Controle)' },
+  { id: 'concursosJRS.registrarMensagemPDF', label: 'Registrar Mensagem (PDF): criar concurso, candidatos e agendamento', group: 'Concursos (Planilhas de Controle)' },
   { id: 'concursosJRS.reagendar', label: 'Reagendar candidato', group: 'Concursos (Planilhas de Controle)' },
   { id: 'concursosJRS.gerarMinutaResultados', label: 'Gerar Minuta de Resultados', group: 'Concursos (Planilhas de Controle)' },
   // Substituem a antiga permissão única de página "Perícia Menor": cada aba

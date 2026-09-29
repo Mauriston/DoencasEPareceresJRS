@@ -55,5 +55,29 @@ service cloud.firestore {
     match /casos_periciais_resultados/{uid} {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
+
+    // Coleção "concursos": backend do menu Concursos ("Planilhas de
+    // Controle"), com subcoleções "candidatos", "mensagens" e
+    // "agendamentos" por concurso. Qualquer usuário autenticado lê/edita os
+    // dados (o controle fino por perfil — user_medicos/user_secretaria —
+    // já é feito na UI via config/permissions.ts, mesmo padrão do resto do
+    // app); só o Admin pode alterar o "status" do concurso (Em Breve/Em
+    // Andamento/Encerrado) ou apagar um concurso.
+    match /concursos/{concursoId} {
+      allow read, create: if isSignedIn();
+      allow update: if isSignedIn() &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']) || isAdmin());
+      allow delete: if isAdmin();
+
+      match /candidatos/{candidatoId} {
+        allow read, write: if isSignedIn();
+      }
+      match /mensagens/{mensagemId} {
+        allow read, write: if isSignedIn();
+      }
+      match /agendamentos/{data} {
+        allow read, write: if isSignedIn();
+      }
+    }
   }
 }

@@ -17,5 +17,18 @@ service firebase.storage {
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
+
+    // PDFs do menu Concursos ("Planilhas de Controle"): cópia da mensagem
+    // administrativa original (concursos/{id}/mensagens/...) e o Termo de
+    // Cientificação de Recurso de cada candidato
+    // (concursos/{id}/termos/{matricula}.pdf), gerado pelo Apps Script
+    // standalone mínimo (ver CodeConcursos.gs) e enviado pelo app. Acesso
+    // restrito a usuários autenticados, como o restante do app.
+    match /concursos/{concursoId}/{arquivo=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+    }
   }
 }

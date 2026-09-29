@@ -2,60 +2,28 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Header } from './Header';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
+import {
+  listarConcursos, getConcurso, listarCandidatos, criarConcursoDaMensagem, atualizarCandidato,
+  reagendarCandidato, listarDatasAgendamento, obterContextoAgendamento, confirmarAgendamento,
+  gerarMinutaResultados, abrirConcurso, encerrarConcurso, salvarTermoRecurso,
+  STATUS_LABELS,
+  type ConcursoRecord, type CandidatoRecord, type DataAgendamentoInfo,
+} from '../services/firestoreConcursos';
+import { uploadMensagemPdf, uploadTermoRecursoPdf } from '../services/firebaseStorageConcursos';
+import {
+  limparRuidoPaginacao, extrairCabecalhoMensagem, extrairCandidatos, extrairPeriodoJRS,
+  extrairNomeConcurso, formatarChaveData, parseChaveData,
+  type CabecalhoMensagem, type CandidatoBasico,
+} from '../utils/concursosUtils';
 
-// URL de implantação (aplicativo da web) do projeto Apps Script
-// standalone "CodeConcursos.gs" (código-fonte também versionado neste
-// repositório), que expõe a API de candidatos (candidatosDataBase/
-// candidatos da planilha "TEMPLATE CONCURSOS") usada por esta tela.
-const GAS_URL_CONCURSOS = 'https://script.google.com/macros/s/AKfycbzYl4OP22rwwotNOCx1U8JWwnkuacDUoDWPVvJe1BZHvRAyLHSCIrWJaSbyCML-KlXX/exec';
+// URL de implantação (aplicativo da web) do projeto Apps Script standalone
+// mínimo "CodeConcursos.gs" (código-fonte também versionado neste
+// repositório) — hoje responsável apenas por gerar o PDF do Termo de
+// Cientificação de Recurso a partir do template Google Docs. Todo o resto
+// do backend de Concursos vive no Firestore (ver services/firestoreConcursos.ts).
+const GAS_URL_TERMO_RECURSO = 'https://script.google.com/macros/s/AKfycbzYl4OP22rwwotNOCx1U8JWwnkuacDUoDWPVvJe1BZHvRAyLHSCIrWJaSbyCML-KlXX/exec';
 
-export type StatusCandidato = '' | 'Pendente' | 'APTO' | 'INAPTO' | 'FALTOU' | 'INSUF DOCUMENTAL' | 'Reagendado';
-
-export interface CandidatoRecord {
-  id: string;
-  nome: string;
-  dataAgendamento: string;
-  status: StatusCandidato | string;
-  observacoes: string;
-  finalizado: boolean;
-  recurso: boolean;
-  dataLaudo: string;
-  laudo: string;
-  numTIS: string;
-  termoRecursoUrl: string;
-}
-
-interface ResumoMensagemPDF {
-  dataHora: string;
-  candidatosNaMensagem: number;
-  novosCandidatos: number;
-  periodoInfo: string;
-  diasUteisDisponiveis: number;
-}
-
-interface ContextoAgendamento {
-  totalPendentes: number;
-  periodoInicio: string;
-  periodoFim: string;
-  diasUteisDisponiveis: number;
-}
-
-interface ViabilidadeAgendamento {
-  viavel: boolean;
-  mensagem?: string;
-  agendamento?: { dataFormatada: string; diaSemana: string; candidatos: string[] }[];
-}
-
-interface DataAgendamentoInfo {
-  data: string; // AAAA-MM-DD
-  dataFormatada: string;
-  diaSemana: string;
-  quantidadeAgendados: number;
-}
-
-const DIAS_SEMANA_UTEIS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
-
-const STATUS_OPTIONS: { value: StatusCandidato; label: string }[] = [
+const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'Sem status' },
   { value: 'Pendente', label: 'Pendente' },
   { value: 'APTO', label: 'Apto' },
@@ -86,43 +54,23 @@ const getStatusBadge = (status: string) => {
 
 const getStatusSelectClasses = (status: string) => {
   switch (status) {
-    case 'APTO':
-      return 'bg-green-100 text-green-800 border-green-200';
-    case 'INAPTO':
-      return 'bg-red-100 text-red-800 border-red-200';
-    case 'FALTOU':
-      return 'bg-amber-100 text-amber-800 border-amber-200';
-    case 'INSUF DOCUMENTAL':
-      return 'bg-purple-100 text-purple-800 border-purple-200';
-    case 'Pendente':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'Reagendado':
-      return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-    default:
-      return 'bg-white text-gray-500 border-gray-200';
+    case 'APTO': return 'bg-green-100 text-green-800 border-green-200';
+    case 'INAPTO': return 'bg-red-100 text-red-800 border-red-200';
+    case 'FALTOU': return 'bg-amber-100 text-amber-800 border-amber-200';
+    case 'INSUF DOCUMENTAL': return 'bg-purple-100 text-purple-800 border-purple-200';
+    case 'Pendente': return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'Reagendado': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+    default: return 'bg-white text-gray-500 border-gray-200';
   }
 };
 
-async function chamarApiConcursos<T = any>(action: string, params: Record<string, string> = {}): Promise<T> {
-  const q = new URLSearchParams({ action, ...params }).toString();
-  const res = await fetch(`${GAS_URL_CONCURSOS}?${q}`);
-  const json = await res.json();
-  if (!json.sucesso) throw new Error(json.erro || 'Erro desconhecido na API.');
-  return json.dados as T;
-}
-
-async function chamarApiConcursosPost<T = any>(body: Record<string, unknown>): Promise<T> {
-  const res = await fetch(GAS_URL_CONCURSOS, {
-    method: 'POST',
-    // text/plain evita o preflight CORS (OPTIONS), que o aplicativo da
-    // web do Apps Script não trata; o corpo continua sendo JSON válido.
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(body),
-  });
-  const json = await res.json();
-  if (!json.sucesso) throw new Error(json.erro || 'Erro desconhecido na API.');
-  return json.dados as T;
-}
+const getConcursoStatusClasses = (status: ConcursoRecord['status']) => {
+  switch (status) {
+    case 'em_andamento': return 'bg-green-100 text-green-800 border-green-200';
+    case 'encerrado': return 'bg-gray-200 text-gray-600 border-gray-300';
+    default: return 'bg-amber-100 text-amber-800 border-amber-200';
+  }
+};
 
 const parseDataBR = (str: string): Date | null => {
   if (!str) return null;
@@ -133,12 +81,27 @@ const parseDataBR = (str: string): Date | null => {
   return new Date(y, m - 1, d);
 };
 
-const toISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
 const isoParaBR = (iso: string) => {
   const [y, m, d] = iso.split('-');
   return `${d}/${m}/${y}`;
 };
+
+const fileParaBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const resultado = reader.result as string;
+    resolve(resultado.split(',')[1] || '');
+  };
+  reader.onerror = reject;
+  reader.readAsDataURL(file);
+});
+
+interface ConfirmDialogState {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  onConfirm: () => void;
+}
 
 interface CalendarioAgendamentoProps {
   datas: DataAgendamentoInfo[];
@@ -162,7 +125,7 @@ const CalendarioAgendamento: React.FC<CalendarioAgendamentoProps> = ({ datas, on
   const celulas: (string | null)[] = [];
   for (let i = 0; i < primeiroDiaSemana; i++) celulas.push(null);
   for (let dia = 1; dia <= diasNoMes; dia++) {
-    celulas.push(toISO(new Date(mesAtual.getFullYear(), mesAtual.getMonth(), dia)));
+    celulas.push(formatarChaveData(new Date(mesAtual.getFullYear(), mesAtual.getMonth(), dia)));
   }
 
   if (loading) {
@@ -176,21 +139,13 @@ const CalendarioAgendamento: React.FC<CalendarioAgendamentoProps> = ({ datas, on
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <button
-          type="button"
-          onClick={() => setMesAtual(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
-          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
-        >
+        <button type="button" onClick={() => setMesAtual(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
           <span className="material-symbols-outlined text-[18px]">chevron_left</span>
         </button>
         <span className="text-xs font-bold text-[#050F41] uppercase">
           {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
         </span>
-        <button
-          type="button"
-          onClick={() => setMesAtual(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
-          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
-        >
+        <button type="button" onClick={() => setMesAtual(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
           <span className="material-symbols-outlined text-[18px]">chevron_right</span>
         </button>
       </div>
@@ -207,11 +162,7 @@ const CalendarioAgendamento: React.FC<CalendarioAgendamentoProps> = ({ datas, on
           const info = mapaDatas[iso];
           const dia = Number(iso.split('-')[2]);
           if (!info) {
-            return (
-              <div key={i} className="aspect-square flex items-center justify-center text-[11px] text-gray-300 rounded-lg">
-                {dia}
-              </div>
-            );
+            return <div key={i} className="aspect-square flex items-center justify-center text-[11px] text-gray-300 rounded-lg">{dia}</div>;
           }
           return (
             <button
@@ -228,28 +179,505 @@ const CalendarioAgendamento: React.FC<CalendarioAgendamentoProps> = ({ datas, on
         })}
       </div>
 
-      {datas.length === 0 && (
-        <p className="text-xs text-gray-400 text-center py-4">Nenhuma data de agendamento configurada.</p>
-      )}
+      {datas.length === 0 && <p className="text-xs text-gray-400 text-center py-4">Nenhuma data de agendamento configurada.</p>}
     </div>
   );
 };
 
-interface ConfirmDialogState {
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  onConfirm: () => void;
+// =========================================================================
+// MODAL "REGISTRAR MENSAGEM (PDF)" — cria um novo concurso do zero
+// =========================================================================
+
+type UploadStep = 'select' | 'processando' | 'revisao' | 'agendamento' | 'concluido';
+
+interface ModalRegistrarMensagemProps {
+  onClose: (concursoIdCriado?: string) => void;
+  isAdmin: boolean;
 }
 
-export const ConcursosJRS: React.FC = () => {
+const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose, isAdmin }) => {
+  const [step, setStep] = useState<UploadStep>('select');
+  const [file, setFile] = useState<File | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const [cabecalho, setCabecalho] = useState<CabecalhoMensagem | null>(null);
+  const [nomeConcurso, setNomeConcurso] = useState('');
+  const [periodoInicio, setPeriodoInicio] = useState('');
+  const [periodoFim, setPeriodoFim] = useState('');
+  const [candidatos, setCandidatos] = useState<CandidatoBasico[]>([]);
+
+  const [concursoId, setConcursoId] = useState<string | null>(null);
+  const [datasDisponiveis, setDatasDisponiveis] = useState<DataAgendamentoInfo[]>([]);
+  const [datasSelecionadas, setDatasSelecionadas] = useState<Set<string>>(new Set());
+  const [quantidadePorDia, setQuantidadePorDia] = useState('3');
+  const [totalPendentes, setTotalPendentes] = useState(0);
+  const [minuta, setMinuta] = useState<string | null>(null);
+  const [semPeriodo, setSemPeriodo] = useState(false);
+
+  const [processando, setProcessando] = useState(false);
+
+  const handleProcessar = async () => {
+    if (!file) return;
+    setErro(null);
+    setProcessando(true);
+    setStep('processando');
+    try {
+      const fileBase64 = await fileParaBase64(file);
+      const res = await fetch('/api/concursos/ocr-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileBase64, mimeType: file.type || 'application/pdf' }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Erro ao transcrever o documento.');
+
+      const textoLimpo = limparRuidoPaginacao(json.texto || '');
+      const cab = extrairCabecalhoMensagem(textoLimpo);
+      if (!cab.dataHora) {
+        throw new Error('Não foi possível localizar o código Data-Hora (ID único) da mensagem no documento. Confira o arquivo e tente novamente.');
+      }
+
+      const candidatosExtraidos = extrairCandidatos(cab.texto || textoLimpo);
+      const periodo = extrairPeriodoJRS(cab.texto || textoLimpo);
+
+      setCabecalho(cab);
+      setNomeConcurso(extrairNomeConcurso(cab.subject));
+      setCandidatos(candidatosExtraidos);
+      setPeriodoInicio(periodo ? formatarChaveData(periodo.inicio) : '');
+      setPeriodoFim(periodo ? formatarChaveData(periodo.fim) : '');
+      setStep('revisao');
+    } catch (e: any) {
+      setErro(e?.message || 'Erro ao processar o documento.');
+      setStep('select');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const atualizarCandidatoEditavel = (indice: number, campo: 'id' | 'nome', valor: string) => {
+    setCandidatos(prev => prev.map((c, i) => (i === indice ? { ...c, [campo]: valor } : c)));
+  };
+
+  const removerCandidatoEditavel = (indice: number) => {
+    setCandidatos(prev => prev.filter((_, i) => i !== indice));
+  };
+
+  const adicionarCandidatoEditavel = () => {
+    setCandidatos(prev => [...prev, { id: '', nome: '' }]);
+  };
+
+  const handleConfirmarCriacao = async () => {
+    if (!cabecalho) return;
+    if (!nomeConcurso.trim()) { setErro('Informe o nome do concurso.'); return; }
+    const candidatosValidos = candidatos.filter(c => c.id.trim() && c.nome.trim());
+    if (candidatosValidos.length === 0) { setErro('Adicione ao menos um candidato válido (matrícula e nome).'); return; }
+
+    setErro(null);
+    setProcessando(true);
+    try {
+      const periodo = periodoInicio && periodoFim ? { inicio: parseChaveData(periodoInicio), fim: parseChaveData(periodoFim) } : null;
+      const { concursoId: novoId } = await criarConcursoDaMensagem({
+        nome: nomeConcurso.trim(),
+        cabecalho,
+        candidatos: candidatosValidos,
+        periodo,
+        fileUrl: '',
+      });
+      setConcursoId(novoId);
+      uploadMensagemPdf(novoId, file!).catch(() => {});
+
+      if (periodo) {
+        const [contexto, datas] = await Promise.all([obterContextoAgendamento(novoId), listarDatasAgendamento(novoId)]);
+        setTotalPendentes(contexto.totalPendentes);
+        setDatasDisponiveis(datas);
+        setDatasSelecionadas(new Set(datas.map(d => d.data)));
+        setStep('agendamento');
+      } else {
+        setSemPeriodo(true);
+        setStep('concluido');
+      }
+    } catch (e: any) {
+      setErro(e?.message || 'Erro ao criar o concurso.');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const toggleData = (dataISO: string) => {
+    setDatasSelecionadas(prev => {
+      const proximo = new Set(prev);
+      if (proximo.has(dataISO)) proximo.delete(dataISO); else proximo.add(dataISO);
+      return proximo;
+    });
+  };
+
+  const quantidadeCoberta = datasSelecionadas.size * (parseInt(quantidadePorDia, 10) || 0);
+  const agendamentoViavel = quantidadeCoberta >= totalPendentes && totalPendentes > 0;
+
+  const handleConfirmarAgendamento = async () => {
+    if (!concursoId) return;
+    setErro(null);
+    setProcessando(true);
+    try {
+      const resultado = await confirmarAgendamento(concursoId, Array.from(datasSelecionadas), parseInt(quantidadePorDia, 10) || 0);
+      setMinuta(resultado.minuta);
+      setStep('concluido');
+    } catch (e: any) {
+      setErro(e?.message || 'Erro ao confirmar o agendamento.');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const handleCopiarTexto = async (texto: string) => {
+    try { await navigator.clipboard.writeText(texto); } catch { /* ignora falha de clipboard */ }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+          <div className="flex items-center space-x-2">
+            <span className="material-symbols-outlined text-[22px] text-[#079551]">upload_file</span>
+            <h3 className="font-heading font-bold text-sm uppercase">Registrar Mensagem (PDF) — Novo Concurso</h3>
+          </div>
+          <button onClick={() => onClose(step === 'concluido' ? concursoId || undefined : undefined)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+
+        <div className="p-5 overflow-y-auto space-y-4 flex-1">
+          {erro && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-semibold">{erro}</div>
+          )}
+
+          {step === 'select' && (
+            <>
+              <p className="text-xs text-gray-500">
+                Envie o PDF (ou fotografe/escaneie) da mensagem administrativa inicial de apresentação dos candidatos.
+                O texto será transcrito por IA, os candidatos e o período de agendamento identificados automaticamente
+                — você poderá revisar e corrigir tudo antes de criar o concurso.
+              </p>
+              <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
+                <span className="material-symbols-outlined text-[32px] text-gray-400">picture_as_pdf</span>
+                <span className="text-xs font-bold text-gray-600">{file ? file.name : 'Clique para selecionar o PDF ou escanear um documento'}</span>
+                <input type="file" accept="application/pdf,image/*" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
+              </label>
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button
+                  type="button"
+                  disabled={!file || processando}
+                  onClick={handleProcessar}
+                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1 disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[16px]">upload</span>
+                  <span>Processar Mensagem</span>
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 'processando' && (
+            <div className="text-center py-8 text-gray-500 space-y-2">
+              <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
+              <p className="text-xs font-semibold">Transcrevendo o documento e identificando os candidatos...</p>
+            </div>
+          )}
+
+          {step === 'revisao' && (
+            <>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800">
+                Confira e corrija os dados extraídos antes de criar o concurso — a matrícula de cada candidato precisa estar correta.
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do concurso</label>
+                <input
+                  type="text"
+                  value={nomeConcurso}
+                  onChange={e => setNomeConcurso(e.target.value)}
+                  placeholder="Ex.: CPAEM/2026"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Período JRS — início</label>
+                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs focus:outline-none focus:border-[#050F41]" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Período JRS — fim</label>
+                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs focus:outline-none focus:border-[#050F41]" />
+                </div>
+              </div>
+              {!periodoInicio && (
+                <p className="text-[11px] text-amber-700">Período não identificado automaticamente — informe manualmente para já configurar o agendamento, ou deixe em branco para agendar depois.</p>
+              )}
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Candidatos ({candidatos.length})</label>
+                  <button type="button" onClick={adicionarCandidatoEditavel} className="text-[11px] font-bold text-[#050F41] flex items-center space-x-1">
+                    <span className="material-symbols-outlined text-[14px]">add</span>
+                    <span>Adicionar</span>
+                  </button>
+                </div>
+                <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                  {candidatos.map((c, i) => (
+                    <div key={i} className="flex items-center gap-2 p-2">
+                      <input
+                        type="text"
+                        value={c.id}
+                        onChange={e => atualizarCandidatoEditavel(i, 'id', e.target.value)}
+                        placeholder="Matrícula"
+                        className="w-28 shrink-0 px-2 py-1.5 text-[12px] font-mono rounded-lg border border-gray-200 focus:outline-none focus:border-[#050F41]"
+                      />
+                      <input
+                        type="text"
+                        value={c.nome}
+                        onChange={e => atualizarCandidatoEditavel(i, 'nome', e.target.value)}
+                        placeholder="Nome do candidato"
+                        className="flex-1 px-2 py-1.5 text-[12px] rounded-lg border border-gray-200 focus:outline-none focus:border-[#050F41]"
+                      />
+                      <button type="button" onClick={() => removerCandidatoEditavel(i)} className="p-1.5 text-gray-400 hover:text-red-600 shrink-0">
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </div>
+                  ))}
+                  {candidatos.length === 0 && <p className="text-xs text-gray-400 text-center py-4">Nenhum candidato identificado.</p>}
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button
+                  type="button"
+                  disabled={processando}
+                  onClick={handleConfirmarCriacao}
+                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
+                >
+                  {processando ? 'Criando concurso...' : 'Confirmar e Criar Concurso'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 'agendamento' && (
+            <>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-gray-700">
+                <span className="font-bold">Candidatos a agendar:</span> {totalPendentes}
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Quantidade de IS por dia</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={quantidadePorDia}
+                  onChange={e => setQuantidadePorDia(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2">Datas disponíveis (marque as que serão usadas)</label>
+                <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-56 overflow-y-auto">
+                  {datasDisponiveis.map(d => (
+                    <label key={d.data} className="flex items-center gap-2 p-2 text-xs cursor-pointer hover:bg-gray-50">
+                      <input type="checkbox" checked={datasSelecionadas.has(d.data)} onChange={() => toggleData(d.data)} className="accent-[#050F41]" />
+                      <span className="font-bold text-[#050F41]">{d.dataFormatada}</span>
+                      <span className="text-gray-500">({d.diaSemana})</span>
+                    </label>
+                  ))}
+                  {datasDisponiveis.length === 0 && <p className="text-xs text-gray-400 text-center py-4">Nenhuma data útil no período informado.</p>}
+                </div>
+              </div>
+
+              <div className={`rounded-xl p-3 text-xs font-bold ${agendamentoViavel ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-amber-50 border border-amber-200 text-amber-800'}`}>
+                {quantidadeCoberta} / {totalPendentes} candidatos cobertos com {datasSelecionadas.size} data(s) × {quantidadePorDia || 0} por dia
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Agendar Depois</button>
+                <button
+                  type="button"
+                  disabled={!agendamentoViavel || processando}
+                  onClick={handleConfirmarAgendamento}
+                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
+                >
+                  {processando ? 'Confirmando...' : 'Confirmar Agendamento e Gerar Minuta'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 'concluido' && (
+            <>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                <p className="text-xs font-bold text-green-800">
+                  Concurso "{nomeConcurso}" criado com sucesso{semPeriodo ? '.' : ' e agendamento confirmado.'}
+                </p>
+              </div>
+              {minuta && (
+                <>
+                  <textarea readOnly value={minuta} rows={12} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-[11px] font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap" />
+                  <button type="button" onClick={() => handleCopiarTexto(minuta)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1">
+                    <span className="material-symbols-outlined text-[16px]">content_copy</span>
+                    <span>Copiar Minuta</span>
+                  </button>
+                </>
+              )}
+              {!isAdmin && (
+                <p className="text-[11px] text-gray-500">O concurso ficará com status "Em Breve" até um Admin abri-lo.</p>
+              )}
+              <div className="pt-2 flex items-center justify-end">
+                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">Concluir</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// =========================================================================
+// LISTA DE CONCURSOS
+// =========================================================================
+
+interface ConcursosListaProps {
+  concursos: ConcursoRecord[];
+  loading: boolean;
+  isAdmin: boolean;
+  podeRegistrarMensagem: boolean;
+  onSelecionar: (id: string) => void;
+  onNovoConcursoClick: () => void;
+  onAbrir: (id: string, nome: string) => void;
+}
+
+const GRUPOS_STATUS: { status: ConcursoRecord['status']; titulo: string }[] = [
+  { status: 'em_andamento', titulo: 'Em Andamento' },
+  { status: 'em_breve', titulo: 'Em Breve' },
+  { status: 'encerrado', titulo: 'Encerrado' },
+];
+
+const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, isAdmin, podeRegistrarMensagem, onSelecionar, onNovoConcursoClick, onAbrir }) => {
+  const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number }>>({});
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      const entradas = await Promise.all(concursos.map(async c => {
+        if (c.status !== 'em_andamento') return [c.id, { total: c.totalCandidatos, finalizados: 0 }] as const;
+        const candidatos = await listarCandidatos(c.id);
+        return [c.id, { total: candidatos.length, finalizados: candidatos.filter(x => x.finalizado).length }] as const;
+      }));
+      if (!cancelado) setContadores(Object.fromEntries(entradas));
+    })();
+    return () => { cancelado = true; };
+  }, [concursos]);
+
+  return (
+    <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
+      <Header title="Planilhas de Controle" />
+      <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1200px] mx-auto w-full flex-1 space-y-6">
+        {podeRegistrarMensagem && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onNovoConcursoClick}
+              className="px-4 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5"
+            >
+              <span className="material-symbols-outlined text-[16px]">upload_file</span>
+              <span>Registrar Mensagem (PDF) — Novo Concurso</span>
+            </button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
+            <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
+          </div>
+        ) : concursos.length === 0 ? (
+          <div className="bg-white p-10 rounded-2xl border border-gray-200/60 shadow-sm text-center text-gray-500">
+            <span className="material-symbols-outlined text-[36px] text-gray-300">fact_check</span>
+            <p className="text-sm font-bold text-gray-700 mt-2">Nenhum concurso cadastrado</p>
+            {podeRegistrarMensagem && <p className="text-xs text-gray-400 mt-1">Registre a mensagem administrativa inicial para criar o primeiro.</p>}
+          </div>
+        ) : (
+          GRUPOS_STATUS.map(grupo => {
+            const itens = concursos.filter(c => c.status === grupo.status);
+            if (itens.length === 0) return null;
+            return (
+              <div key={grupo.status}>
+                <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{grupo.titulo} ({itens.length})</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {itens.map(c => {
+                    const contagem = contadores[c.id];
+                    const pct = contagem && contagem.total > 0 ? Math.round((contagem.finalizados / contagem.total) * 100) : null;
+                    return (
+                      <div key={c.id} className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col">
+                        <button type="button" onClick={() => onSelecionar(c.id)} className="text-left p-4 flex-1 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h3 className="font-heading font-bold text-sm text-[#050F41]">{c.nome}</h3>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(c.status)}`}>{STATUS_LABELS[c.status]}</span>
+                          </div>
+                          <p className="text-[11px] text-gray-500">{c.totalCandidatos} candidato(s)</p>
+                          {c.periodoInicioISO && (
+                            <p className="text-[11px] text-gray-500">{isoParaBR(c.periodoInicioISO)} a {isoParaBR(c.periodoFimISO)}</p>
+                          )}
+                          {pct !== null && (
+                            <div className="mt-2">
+                              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-[#079551]" style={{ width: `${pct}%` }} />
+                              </div>
+                              <p className="text-[10px] text-gray-400 mt-1">{pct}% IS finalizadas</p>
+                            </div>
+                          )}
+                        </button>
+                        {isAdmin && c.status === 'em_breve' && (
+                          <button
+                            type="button"
+                            onClick={() => onAbrir(c.id, c.nome)}
+                            className="px-4 py-2 border-t border-gray-100 text-[11px] font-bold text-[#079551] hover:bg-green-50 transition-colors flex items-center justify-center space-x-1"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">play_circle</span>
+                            <span>Abrir Concurso</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};
+
+// =========================================================================
+// DETALHE DO CONCURSO (tabela de candidatos)
+// =========================================================================
+
+interface ConcursoDetalheProps {
+  concursoId: string;
+  isAdmin: boolean;
+  onVoltar: () => void;
+}
+
+const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, isAdmin, onVoltar }) => {
   const nav = useNav();
   const perfil = nav?.authUser?.perfil;
-  const podeEditarInline = canUseFeature('concursosJRS.editarDadosTabela', perfil);
-  const podeRegistrarMensagem = canUseFeature('concursosJRS.registrarMensagemPDF', perfil);
-  const podeReagendar = canUseFeature('concursosJRS.reagendar', perfil);
+  const podeEditarInlineBase = canUseFeature('concursosJRS.editarDadosTabela', perfil);
+  const podeReagendarBase = canUseFeature('concursosJRS.reagendar', perfil);
   const podeGerarMinutaResultados = canUseFeature('concursosJRS.gerarMinutaResultados', perfil);
 
+  const [concurso, setConcurso] = useState<ConcursoRecord | null>(null);
   const [candidatos, setCandidatos] = useState<CandidatoRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -267,53 +695,41 @@ export const ConcursosJRS: React.FC = () => {
   const [datasAgendamento, setDatasAgendamento] = useState<DataAgendamentoInfo[]>([]);
   const [loadingDatasAgendamento, setLoadingDatasAgendamento] = useState(false);
 
-  // --- Registrar Mensagem (PDF) + Agendamento (fluxo único) ---
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadStep, setUploadStep] = useState<'select' | 'summary' | 'agendamento' | 'concluido'>('select');
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState<ResumoMensagemPDF | null>(null);
-  const [contextoAgendamento, setContextoAgendamento] = useState<ContextoAgendamento | null>(null);
-  const [loadingContexto, setLoadingContexto] = useState(false);
-  const [quantidadePorDia, setQuantidadePorDia] = useState('3');
-  const [diasSemanaSelecionados, setDiasSemanaSelecionados] = useState<string[]>(['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']);
-  const [verificando, setVerificando] = useState(false);
-  const [previaAgendamento, setPreviaAgendamento] = useState<ViabilidadeAgendamento | null>(null);
-  const [confirmandoAgendamento, setConfirmandoAgendamento] = useState(false);
-  const [minutaAgendamento, setMinutaAgendamento] = useState<string | null>(null);
-
-  // --- Reagendamento individual ---
   const [reagendandoCandidato, setReagendandoCandidato] = useState<CandidatoRecord | null>(null);
   const [confirmandoReagendamento, setConfirmandoReagendamento] = useState(false);
 
-  // --- Gerar Minuta de Resultados ---
   const [gerandoMinutaResultados, setGerandoMinutaResultados] = useState(false);
   const [minutaResultados, setMinutaResultados] = useState<string | null>(null);
   const [pendentesFinalizacao, setPendentesFinalizacao] = useState<{ id: string; nome: string }[] | null>(null);
 
-  useEffect(() => {
-    loadCandidatos();
-  }, []);
+  const podeEditar = podeEditarInlineBase && concurso?.status === 'em_andamento';
+  const podeReagendar = podeReagendarBase && concurso?.status === 'em_andamento';
 
-  const loadCandidatos = async () => {
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const carregarTudo = async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const dados = await chamarApiConcursos<CandidatoRecord[]>('listarCandidatos');
-      setCandidatos(dados || []);
+      const [c, lista] = await Promise.all([getConcurso(concursoId), listarCandidatos(concursoId)]);
+      setConcurso(c);
+      setCandidatos(lista);
     } catch (e: any) {
-      console.error('Erro ao carregar candidatos:', e);
       setLoadError(e?.message || 'Não foi possível carregar os candidatos.');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => { carregarTudo(); }, [concursoId]);
+
   const loadDatasAgendamento = async () => {
     setLoadingDatasAgendamento(true);
     try {
-      const dados = await chamarApiConcursos<DataAgendamentoInfo[]>('listarDatasAgendamento');
-      setDatasAgendamento(dados || []);
+      setDatasAgendamento(await listarDatasAgendamento(concursoId));
     } catch (e: any) {
       showToast(e?.message || 'Erro ao carregar as datas de agendamento.');
     } finally {
@@ -321,37 +737,35 @@ export const ConcursosJRS: React.FC = () => {
     }
   };
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
-
-  const handleGerarTermo = async (id: string, nome: string) => {
-    try {
-      const resultado = await chamarApiConcursosPost<{ candidato: string; url: string }>({
-        action: 'gerarTermoRecurso',
-        id,
-      });
-      setCandidatos(prev => prev.map(c => (c.id === id ? { ...c, recurso: true, termoRecursoUrl: resultado.url } : c)));
-      showToast(`Termo de Recurso gerado para ${nome}.`);
-      window.open(resultado.url, '_blank');
-    } catch (e: any) {
-      showToast(e?.message || 'Erro ao gerar o Termo de Recurso.');
-    }
-  };
-
   const salvarCampoCandidato = async (candidato: CandidatoRecord, patch: { status?: string; observacoes?: string; numTIS?: string }) => {
     try {
-      const atualizado = await chamarApiConcursosPost<CandidatoRecord>({
-        action: 'atualizarCandidato',
-        id: candidato.id,
-        ...patch,
-      });
+      const atualizado = await atualizarCandidato(concursoId, candidato.id, patch);
       setCandidatos(prev => prev.map(c => (c.id === atualizado.id ? atualizado : c)));
       return atualizado;
     } catch (e: any) {
       showToast(e?.message || 'Erro ao salvar alterações.');
       return null;
+    }
+  };
+
+  const handleGerarTermo = async (id: string, nome: string) => {
+    try {
+      const candidato = candidatos.find(c => c.id === id);
+      const res = await fetch(GAS_URL_TERMO_RECURSO, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'gerarTermoRecurso', candidato: nome, dataLaudo: candidato?.dataLaudo || '' }),
+      });
+      const json = await res.json();
+      if (!json.sucesso) throw new Error(json.erro || 'Erro ao gerar o Termo de Recurso.');
+
+      const url = await uploadTermoRecursoPdf(concursoId, id, json.dados.pdfBase64);
+      await salvarTermoRecurso(concursoId, id, url);
+      setCandidatos(prev => prev.map(c => (c.id === id ? { ...c, recurso: true, termoRecursoUrl: url } : c)));
+      showToast(`Termo de Recurso gerado para ${nome}.`);
+      window.open(url, '_blank');
+    } catch (e: any) {
+      showToast(e?.message || 'Erro ao gerar o Termo de Recurso.');
     }
   };
 
@@ -370,10 +784,7 @@ export const ConcursosJRS: React.FC = () => {
               title: 'Gerar Termo de Recurso',
               message: `Gerar o termo de Cientificação de Recurso para ${atualizado.nome}?`,
               confirmLabel: 'Gerar Termo',
-              onConfirm: () => {
-                setConfirmDialog(null);
-                handleGerarTermo(atualizado.id, atualizado.nome);
-              },
+              onConfirm: () => { setConfirmDialog(null); handleGerarTermo(atualizado.id, atualizado.nome); },
             });
           }
         },
@@ -388,135 +799,6 @@ export const ConcursosJRS: React.FC = () => {
   const handleCampoBlur = (candidato: CandidatoRecord, campo: 'observacoes' | 'numTIS', valor: string) => {
     if (valor === candidato[campo]) return;
     salvarCampoCandidato(candidato, { [campo]: valor });
-  };
-
-  const fileParaBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const resultado = reader.result as string;
-      resolve(resultado.split(',')[1] || '');
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-
-  const handleOpenUploadModal = () => {
-    setUploadFile(null);
-    setUploadResult(null);
-    setUploadStep('select');
-    setPreviaAgendamento(null);
-    setMinutaAgendamento(null);
-    setShowUploadModal(true);
-  };
-
-  const handleCloseUploadModal = () => {
-    setShowUploadModal(false);
-    loadDatasAgendamento();
-  };
-
-  const handleUploadMensagem = async () => {
-    if (!uploadFile) return;
-    setUploading(true);
-    try {
-      const base64Data = await fileParaBase64(uploadFile);
-      const resultado = await chamarApiConcursosPost<ResumoMensagemPDF>({
-        action: 'processarMensagemPDF',
-        base64Data,
-        mimeType: uploadFile.type || 'application/pdf',
-        nomeArquivo: uploadFile.name,
-      });
-      setUploadResult(resultado);
-      setUploadStep('summary');
-      showToast('Mensagem processada com sucesso.');
-      await loadCandidatos();
-    } catch (e: any) {
-      showToast(e?.message || 'Erro ao processar a mensagem em PDF.');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleAvancarParaAgendamento = async () => {
-    setUploadStep('agendamento');
-    setLoadingContexto(true);
-    try {
-      const contexto = await chamarApiConcursos<ContextoAgendamento>('obterContextoAgendamento');
-      setContextoAgendamento(contexto);
-    } catch (e: any) {
-      showToast(e?.message || 'Erro ao carregar contexto de agendamento.');
-    } finally {
-      setLoadingContexto(false);
-    }
-  };
-
-  const toggleDiaSemana = (dia: string) => {
-    setDiasSemanaSelecionados(prev =>
-      prev.includes(dia) ? prev.filter(d => d !== dia) : [...prev, dia]
-    );
-  };
-
-  const handleVerificarViabilidade = async () => {
-    setVerificando(true);
-    setPreviaAgendamento(null);
-    try {
-      const resultado = await chamarApiConcursosPost<ViabilidadeAgendamento>({
-        action: 'verificarViabilidadeAgendamento',
-        quantidadePorDia: parseInt(quantidadePorDia, 10) || 0,
-        diasSemanaSelecionados,
-      });
-      setPreviaAgendamento(resultado);
-    } catch (e: any) {
-      showToast(e?.message || 'Erro ao verificar viabilidade do agendamento.');
-    } finally {
-      setVerificando(false);
-    }
-  };
-
-  const handleConfirmarAgendamento = async () => {
-    setConfirmandoAgendamento(true);
-    try {
-      const resultado = await chamarApiConcursosPost<{ minuta: string }>({
-        action: 'confirmarAgendamento',
-        quantidadePorDia: parseInt(quantidadePorDia, 10) || 0,
-        diasSemanaSelecionados,
-      });
-      setMinutaAgendamento(resultado.minuta);
-      setPreviaAgendamento(null);
-      setUploadStep('concluido');
-      showToast('Agendamento confirmado com sucesso.');
-      await loadCandidatos();
-    } catch (e: any) {
-      showToast(e?.message || 'Erro ao confirmar o agendamento.');
-    } finally {
-      setConfirmandoAgendamento(false);
-    }
-  };
-
-  const handleCopiarTexto = async (texto: string) => {
-    try {
-      await navigator.clipboard.writeText(texto);
-      showToast('Minuta copiada para a área de transferência.');
-    } catch {
-      showToast('Não foi possível copiar automaticamente. Selecione e copie o texto manualmente.');
-    }
-  };
-
-  const handleGerarMinutaResultados = async () => {
-    setGerandoMinutaResultados(true);
-    setMinutaResultados(null);
-    setPendentesFinalizacao(null);
-    try {
-      const resultado = await chamarApiConcursos<{ bloqueado: boolean; pendentes?: { id: string; nome: string }[]; minuta?: string }>('gerarMinutaResultados');
-      if (resultado.bloqueado) {
-        setPendentesFinalizacao(resultado.pendentes || []);
-      } else {
-        setMinutaResultados(resultado.minuta || '');
-      }
-    } catch (e: any) {
-      showToast(e?.message || 'Erro ao gerar a minuta de resultados.');
-    } finally {
-      setGerandoMinutaResultados(false);
-    }
   };
 
   const handleOpenReagendamento = (candidato: CandidatoRecord) => {
@@ -535,11 +817,7 @@ export const ConcursosJRS: React.FC = () => {
         setConfirmDialog(null);
         setConfirmandoReagendamento(true);
         try {
-          const atualizado = await chamarApiConcursosPost<CandidatoRecord>({
-            action: 'reagendarCandidato',
-            id: candidato.id,
-            data: dataISO,
-          });
+          const atualizado = await reagendarCandidato(concursoId, candidato.id, dataISO);
           setCandidatos(prev => prev.map(c => (c.id === atualizado.id ? atualizado : c)));
           showToast(`${atualizado.nome} reagendado(a) para ${isoParaBR(dataISO)}.`);
           setReagendandoCandidato(null);
@@ -553,9 +831,99 @@ export const ConcursosJRS: React.FC = () => {
     });
   };
 
-  const toggleStatusKpiFilter = (status: string) => {
-    setStatusKpiFilter(prev => (prev === status ? '' : status));
+  const handleGerarMinutaResultados = async () => {
+    setGerandoMinutaResultados(true);
+    setMinutaResultados(null);
+    setPendentesFinalizacao(null);
+    try {
+      const resultado = await gerarMinutaResultados(concursoId);
+      if ('minuta' in resultado) setMinutaResultados(resultado.minuta);
+      else setPendentesFinalizacao(resultado.pendentes);
+    } catch (e: any) {
+      showToast(e?.message || 'Erro ao gerar a minuta de resultados.');
+    } finally {
+      setGerandoMinutaResultados(false);
+    }
   };
+
+  const handleFecharMinutaResultados = () => {
+    const mostrarPrompt = isAdmin && minutaResultados !== null && concurso?.status === 'em_andamento';
+    setMinutaResultados(null);
+    setPendentesFinalizacao(null);
+    if (mostrarPrompt) {
+      setConfirmDialog({
+        title: 'Encerrar Concurso',
+        message: 'Deseja encerrar este concurso agora? Ele ficará com status "Encerrado".',
+        confirmLabel: 'Encerrar Concurso',
+        onConfirm: async () => {
+          setConfirmDialog(null);
+          try {
+            await encerrarConcurso(concursoId);
+            showToast('Concurso encerrado.');
+            carregarTudo();
+          } catch (e: any) {
+            showToast(e?.message || 'Erro ao encerrar o concurso.');
+          }
+        },
+      });
+    }
+  };
+
+  const handleEncerrarManual = () => {
+    setConfirmDialog({
+      title: 'Encerrar Concurso',
+      message: 'Deseja encerrar este concurso agora? Ele ficará com status "Encerrado".',
+      confirmLabel: 'Encerrar Concurso',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await encerrarConcurso(concursoId);
+          showToast('Concurso encerrado.');
+          carregarTudo();
+        } catch (e: any) {
+          showToast(e?.message || 'Erro ao encerrar o concurso.');
+        }
+      },
+    });
+  };
+
+  const handleAbrirManual = () => {
+    setConfirmDialog({
+      title: 'Abrir Concurso',
+      message: 'Deseja abrir este concurso agora? Ele ficará com status "Em Andamento" e liberado para edição.',
+      confirmLabel: 'Abrir Concurso',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await abrirConcurso(concursoId);
+          showToast('Concurso aberto.');
+          carregarTudo();
+        } catch (e: any) {
+          showToast(e?.message || 'Erro ao abrir o concurso.');
+        }
+      },
+    });
+  };
+
+  const handleCopiarTexto = async (texto: string) => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      showToast('Minuta copiada para a área de transferência.');
+    } catch {
+      showToast('Não foi possível copiar automaticamente. Selecione e copie o texto manualmente.');
+    }
+  };
+
+  const handleCopiarNomeCandidato = async (nome: string) => {
+    try {
+      await navigator.clipboard.writeText(nome);
+      showToast(`Nome "${nome}" copiado para a área de transferência.`);
+    } catch {
+      showToast('Não foi possível copiar automaticamente. Selecione e copie o nome manualmente.');
+    }
+  };
+
+  const toggleStatusKpiFilter = (status: string) => setStatusKpiFilter(prev => (prev === status ? '' : status));
 
   const hojeBR = new Date().toLocaleDateString('pt-BR');
   const inicioSemana = (() => {
@@ -574,12 +942,15 @@ export const ConcursosJRS: React.FC = () => {
     return fim;
   })();
 
+  const candidatosComDataBR = useMemo(() => candidatos.map(c => ({
+    ...c,
+    dataAgendamentoBR: c.dataAgendamento ? isoParaBR(c.dataAgendamento) : '',
+  })), [candidatos]);
+
   const filteredCandidatos = useMemo(() => {
-    return candidatos
+    return candidatosComDataBR
       .filter(c => {
-        const matchesSearch =
-          c.id.toLowerCase().includes(search.toLowerCase()) ||
-          c.nome.toLowerCase().includes(search.toLowerCase());
+        const matchesSearch = c.id.toLowerCase().includes(search.toLowerCase()) || c.nome.toLowerCase().includes(search.toLowerCase());
         if (!matchesSearch) return false;
 
         if (statusKpiFilter === 'nao-finalizados') {
@@ -589,23 +960,23 @@ export const ConcursosJRS: React.FC = () => {
         }
 
         if (dateFilterMode === 'hoje') {
-          if (c.dataAgendamento !== hojeBR) return false;
+          if (c.dataAgendamentoBR !== hojeBR) return false;
         } else if (dateFilterMode === 'semana') {
-          const data = parseDataBR(c.dataAgendamento);
+          const data = parseDataBR(c.dataAgendamentoBR);
           if (!data || data < inicioSemana || data > fimSemana) return false;
         } else if (dateFilterMode === 'personalizado' && dateFilterCustom) {
-          if (c.dataAgendamento !== isoParaBR(dateFilterCustom)) return false;
+          if (c.dataAgendamento !== dateFilterCustom) return false;
         }
 
         return true;
       })
       .sort((a, b) => {
-        const da = parseDataBR(a.dataAgendamento)?.getTime() ?? Infinity;
-        const db = parseDataBR(b.dataAgendamento)?.getTime() ?? Infinity;
-        if (da !== db) return da - db;
+        const da = a.dataAgendamento || '9999';
+        const db = b.dataAgendamento || '9999';
+        if (da !== db) return da.localeCompare(db);
         return a.nome.localeCompare(b.nome, 'pt-BR');
       });
-  }, [candidatos, search, statusKpiFilter, dateFilterMode, dateFilterCustom]);
+  }, [candidatosComDataBR, search, statusKpiFilter, dateFilterMode, dateFilterCustom, hojeBR]);
 
   const total = candidatos.length;
   const totalFinalizados = candidatos.filter(c => c.finalizado).length;
@@ -615,6 +986,7 @@ export const ConcursosJRS: React.FC = () => {
   const countInsuf = candidatos.filter(c => c.status === 'INSUF DOCUMENTAL').length;
   const countFaltou = candidatos.filter(c => c.status === 'FALTOU').length;
   const countNaoFinalizados = candidatos.filter(c => c.status === '' || c.status === 'Pendente' || c.status === 'Reagendado').length;
+  const todosFinalizados = total > 0 && totalFinalizados === total;
 
   const dateFilterLabel =
     dateFilterMode === 'hoje' ? 'Hoje' :
@@ -639,9 +1011,7 @@ export const ConcursosJRS: React.FC = () => {
         type="button"
         style={areaKey ? { gridArea: areaKey } : undefined}
         onClick={() => (card.filterValue === null ? setStatusKpiFilter('') : toggleStatusKpiFilter(card.filterValue))}
-        className={`p-3.5 rounded-2xl border shadow-sm flex items-center justify-between transition-all text-left ${
-          isActive ? 'bg-[#050F41] border-[#050F41]' : 'bg-white border-gray-200/60 hover:border-[#050F41]/40'
-        }`}
+        className={`p-3.5 rounded-2xl border shadow-sm flex items-center justify-between transition-all text-left ${isActive ? 'bg-[#050F41] border-[#050F41]' : 'bg-white border-gray-200/60 hover:border-[#050F41]/40'}`}
       >
         <div>
           <p className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? 'text-white/70' : 'text-gray-400'}`}>{card.label}</p>
@@ -667,18 +1037,7 @@ export const ConcursosJRS: React.FC = () => {
       <div className="shrink-0 relative w-[88px] h-[88px]">
         <svg width="88" height="88" viewBox="0 0 88 88" className="-rotate-90">
           <circle cx="44" cy="44" r={CIRCULO_RAIO} fill="none" stroke="#E5E7EB" strokeWidth="8" />
-          <circle
-            cx="44"
-            cy="44"
-            r={CIRCULO_RAIO}
-            fill="none"
-            stroke="url(#concursosProgressGradient)"
-            strokeWidth="8"
-            strokeLinecap="round"
-            strokeDasharray={CIRCULO_CIRCUNFERENCIA}
-            strokeDashoffset={circuloOffset}
-            className="transition-all duration-500"
-          />
+          <circle cx="44" cy="44" r={CIRCULO_RAIO} fill="none" stroke="url(#concursosProgressGradient)" strokeWidth="8" strokeLinecap="round" strokeDasharray={CIRCULO_CIRCUNFERENCIA} strokeDashoffset={circuloOffset} className="transition-all duration-500" />
           <defs>
             <linearGradient id="concursosProgressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#079551" />
@@ -693,18 +1052,9 @@ export const ConcursosJRS: React.FC = () => {
     </div>
   );
 
-  const handleCopiarNomeCandidato = async (nome: string) => {
-    try {
-      await navigator.clipboard.writeText(nome);
-      showToast(`Nome "${nome}" copiado para a área de transferência.`);
-    } catch {
-      showToast('Não foi possível copiar automaticamente. Selecione e copie o nome manualmente.');
-    }
-  };
-
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
-      <Header title="Planilhas de Controle" />
+      <Header title={concurso?.nome || 'Planilhas de Controle'} onBack={onVoltar} />
 
       {toastMessage && (
         <div className="fixed top-20 right-4 z-[100] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in max-w-[90vw]">
@@ -713,7 +1063,6 @@ export const ConcursosJRS: React.FC = () => {
         </div>
       )}
 
-      {/* DIÁLOGO DE CONFIRMAÇÃO (estilo do app, substitui window.confirm) */}
       {confirmDialog && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
@@ -724,20 +1073,8 @@ export const ConcursosJRS: React.FC = () => {
             <div className="p-5 space-y-4">
               <p className="text-xs text-gray-700 leading-relaxed">{confirmDialog.message}</p>
               <div className="flex items-center justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setConfirmDialog(null)}
-                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmDialog.onConfirm}
-                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
-                >
-                  {confirmDialog.confirmLabel || 'Confirmar'}
-                </button>
+                <button type="button" onClick={() => setConfirmDialog(null)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" onClick={confirmDialog.onConfirm} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">{confirmDialog.confirmLabel || 'Confirmar'}</button>
               </div>
             </div>
           </div>
@@ -745,27 +1082,28 @@ export const ConcursosJRS: React.FC = () => {
       )}
 
       <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1600px] mx-auto w-full flex-1 space-y-4">
-        {/* TOP BAR: BUSCA, FILTRO DE DATA E AÇÕES */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          <div className="relative flex-1">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">
-              search
-            </span>
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar por matrícula ou nome..."
-              className="w-full pl-10 pr-4 py-2.5 text-xs font-body rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-[#050F41] transition-all"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <span className="material-symbols-outlined text-[16px]">close</span>
-              </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {concurso && (
+              <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(concurso.status)}`}>
+                {STATUS_LABELS[concurso.status]}
+              </span>
             )}
+            <div className="relative flex-1 min-w-[180px]">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">search</span>
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar por matrícula ou nome..."
+                className="w-full pl-10 pr-4 py-2.5 text-xs font-body rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-[#050F41] transition-all"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -773,63 +1111,23 @@ export const ConcursosJRS: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowDateMenu(prev => !prev)}
-                className={`px-3 py-2.5 text-xs font-semibold rounded-xl border flex items-center space-x-1.5 whitespace-nowrap ${
-                  dateFilterMode !== 'todos'
-                    ? 'bg-[#050F41] text-white border-[#050F41]'
-                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
-                }`}
+                className={`px-3 py-2.5 text-xs font-semibold rounded-xl border flex items-center space-x-1.5 whitespace-nowrap ${dateFilterMode !== 'todos' ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
               >
                 <span className="material-symbols-outlined text-[16px]">event</span>
                 <span>{dateFilterLabel}</span>
               </button>
-
               {showDateMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowDateMenu(false)} />
                   <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 z-50 animate-fade-in space-y-0.5">
-                    <button
-                      type="button"
-                      onClick={() => { setDateFilterMode('todos'); setDateFilterCustom(null); setShowDateMenu(false); }}
-                      className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100"
-                    >
-                      Todos
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setDateFilterMode('hoje'); setShowDateMenu(false); }}
-                      className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100"
-                    >
-                      Hoje
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setDateFilterMode('semana'); setShowDateMenu(false); }}
-                      className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100"
-                    >
-                      Esta Semana
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setShowDateMenu(false); setShowDateCalendar(true); loadDatasAgendamento(); }}
-                      className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100"
-                    >
-                      Personalizado...
-                    </button>
+                    <button type="button" onClick={() => { setDateFilterMode('todos'); setDateFilterCustom(null); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100">Todos</button>
+                    <button type="button" onClick={() => { setDateFilterMode('hoje'); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100">Hoje</button>
+                    <button type="button" onClick={() => { setDateFilterMode('semana'); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100">Esta Semana</button>
+                    <button type="button" onClick={() => { setShowDateMenu(false); setShowDateCalendar(true); loadDatasAgendamento(); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100">Personalizado...</button>
                   </div>
                 </>
               )}
             </div>
-
-            {podeRegistrarMensagem && (
-              <button
-                type="button"
-                onClick={handleOpenUploadModal}
-                className="px-4 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5 whitespace-nowrap"
-              >
-                <span className="material-symbols-outlined text-[16px]">upload_file</span>
-                <span>Registrar Mensagem (PDF)</span>
-              </button>
-            )}
 
             {podeGerarMinutaResultados && (
               <button
@@ -838,16 +1136,32 @@ export const ConcursosJRS: React.FC = () => {
                 disabled={gerandoMinutaResultados}
                 className="px-4 py-2.5 bg-white hover:bg-gray-50 text-[#050F41] rounded-xl text-xs font-bold transition-colors shadow-sm border border-gray-200 flex items-center space-x-1.5 whitespace-nowrap"
               >
-                <span className="material-symbols-outlined text-[16px]">
-                  {gerandoMinutaResultados ? 'progress_activity' : 'summarize'}
-                </span>
+                <span className="material-symbols-outlined text-[16px]">{gerandoMinutaResultados ? 'progress_activity' : 'summarize'}</span>
                 <span>Minuta de Resultados</span>
+              </button>
+            )}
+
+            {isAdmin && concurso?.status === 'em_breve' && (
+              <button type="button" onClick={handleAbrirManual} className="px-4 py-2.5 bg-[#079551] hover:bg-[#067a43] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5 whitespace-nowrap">
+                <span className="material-symbols-outlined text-[16px]">play_circle</span>
+                <span>Abrir Concurso</span>
+              </button>
+            )}
+            {isAdmin && concurso?.status === 'em_andamento' && (
+              <button
+                type="button"
+                onClick={handleEncerrarManual}
+                disabled={!todosFinalizados}
+                title={todosFinalizados ? '' : 'Só é possível encerrar quando todos os candidatos estiverem finalizados.'}
+                className="px-4 py-2.5 bg-gray-700 hover:bg-gray-800 text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <span className="material-symbols-outlined text-[16px]">stop_circle</span>
+                <span>Encerrar Concurso</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* CALENDÁRIO DO FILTRO PERSONALIZADO */}
         {showDateCalendar && (
           <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
             <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden flex flex-col">
@@ -864,42 +1178,23 @@ export const ConcursosJRS: React.FC = () => {
                 <CalendarioAgendamento
                   datas={datasAgendamento}
                   loading={loadingDatasAgendamento}
-                  onSelect={(dataISO) => {
-                    setDateFilterMode('personalizado');
-                    setDateFilterCustom(dataISO);
-                    setShowDateCalendar(false);
-                  }}
+                  onSelect={(dataISO) => { setDateFilterMode('personalizado'); setDateFilterCustom(dataISO); setShowDateCalendar(false); }}
                 />
               </div>
             </div>
           </div>
         )}
 
-        {/* KPI CARDS */}
-        {/* Mobile: barra de progresso empilhada + grade 2 colunas */}
         <div className="sm:hidden space-y-3">
           <div className="bg-white p-4 rounded-2xl border border-gray-200/60 shadow-sm">{progressoCardContent}</div>
-          <div className="grid grid-cols-2 gap-3">
-            {kpiCards.map(card => renderKpiCard(card))}
-          </div>
+          <div className="grid grid-cols-2 gap-3">{kpiCards.map(card => renderKpiCard(card))}</div>
         </div>
 
-        {/* Desktop: progresso ocupa o espaço de 4 cards (2x2) à esquerda; os 6 KPIs em 3 colunas x 2 linhas à direita */}
-        <div
-          className="hidden sm:grid gap-3"
-          style={{
-            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-            gridTemplateRows: 'repeat(2, 1fr)',
-            gridTemplateAreas: '"progress progress k1 k2 k3" "progress progress k4 k5 k6"',
-          }}
-        >
-          <div style={{ gridArea: 'progress' }} className="bg-white p-4 rounded-2xl border border-gray-200/60 shadow-sm flex flex-col justify-center">
-            {progressoCardContent}
-          </div>
+        <div className="hidden sm:grid gap-3" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gridTemplateRows: 'repeat(2, 1fr)', gridTemplateAreas: '"progress progress k1 k2 k3" "progress progress k4 k5 k6"' }}>
+          <div style={{ gridArea: 'progress' }} className="bg-white p-4 rounded-2xl border border-gray-200/60 shadow-sm flex flex-col justify-center">{progressoCardContent}</div>
           {kpiCards.map((card, i) => renderKpiCard(card, `k${i + 1}`))}
         </div>
 
-        {/* TABELA / LISTA DE CANDIDATOS */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden">
           {loading ? (
             <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
@@ -911,13 +1206,7 @@ export const ConcursosJRS: React.FC = () => {
               <span className="material-symbols-outlined text-[36px] text-red-400">error</span>
               <p className="text-sm font-bold text-gray-700">Não foi possível carregar os candidatos</p>
               <p className="text-xs text-gray-400 max-w-sm">{loadError}</p>
-              <button
-                type="button"
-                onClick={loadCandidatos}
-                className="mt-2 px-4 py-2 bg-[#050F41] text-white rounded-xl text-xs font-bold"
-              >
-                Tentar novamente
-              </button>
+              <button type="button" onClick={carregarTudo} className="mt-2 px-4 py-2 bg-[#050F41] text-white rounded-xl text-xs font-bold">Tentar novamente</button>
             </div>
           ) : filteredCandidatos.length === 0 ? (
             <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
@@ -927,7 +1216,6 @@ export const ConcursosJRS: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* DESKTOP TABLE */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -943,81 +1231,41 @@ export const ConcursosJRS: React.FC = () => {
                   <tbody className="divide-y divide-gray-100 text-[14px]">
                     {filteredCandidatos.map(c => (
                       <tr key={c.id} className="hover:bg-gray-50/80 transition-colors">
-                        <td className="py-3.5 px-4 text-gray-600 whitespace-nowrap">{c.dataAgendamento || '-'}</td>
-                        <td
-                          className="py-3.5 px-4 cursor-pointer"
-                          onClick={() => handleCopiarNomeCandidato(c.nome)}
-                          title="Clique para copiar o nome do candidato"
-                        >
+                        <td className="py-3.5 px-4 text-gray-600 whitespace-nowrap">{c.dataAgendamentoBR || '-'}</td>
+                        <td className="py-3.5 px-4 cursor-pointer" onClick={() => handleCopiarNomeCandidato(c.nome)} title="Clique para copiar o nome do candidato">
                           <p className="font-semibold text-gray-800">{c.nome}</p>
                           <p className="text-[12px] font-mono text-gray-400">{c.id}</p>
                         </td>
                         <td className="py-3.5 px-4">
-                          {podeEditarInline ? (
-                            <select
-                              value={c.status || ''}
-                              onChange={e => handleStatusChange(c, e.target.value)}
-                              className={`px-2 py-1.5 text-[13px] font-bold rounded-lg border focus:outline-none focus:border-[#050F41] cursor-pointer ${getStatusSelectClasses(c.status)}`}
-                            >
-                              {STATUS_OPTIONS.map(o => (
-                                <option key={o.value} value={o.value}>{o.label}</option>
-                              ))}
+                          {podeEditar ? (
+                            <select value={c.status || ''} onChange={e => handleStatusChange(c, e.target.value)} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg border focus:outline-none focus:border-[#050F41] cursor-pointer ${getStatusSelectClasses(c.status)}`}>
+                              {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                             </select>
                           ) : getStatusBadge(c.status)}
                         </td>
                         <td className="py-3.5 px-4 text-gray-600">
-                          {podeEditarInline ? (
-                            <input
-                              type="text"
-                              defaultValue={c.observacoes}
-                              onBlur={e => handleCampoBlur(c, 'observacoes', e.target.value)}
-                              className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white"
-                              placeholder="-"
-                            />
-                          ) : (
-                            <span className="truncate block" title={c.observacoes}>{c.observacoes || '-'}</span>
-                          )}
+                          {podeEditar ? (
+                            <input type="text" defaultValue={c.observacoes} onBlur={e => handleCampoBlur(c, 'observacoes', e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
+                          ) : <span className="truncate block" title={c.observacoes}>{c.observacoes || '-'}</span>}
                         </td>
                         <td className="py-3.5 px-4 font-mono text-gray-600">
-                          {podeEditarInline ? (
-                            <input
-                              type="text"
-                              defaultValue={c.numTIS}
-                              onBlur={e => handleCampoBlur(c, 'numTIS', e.target.value)}
-                              className="w-24 px-2 py-1.5 text-[13px] font-mono rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white"
-                              placeholder="-"
-                            />
+                          {podeEditar ? (
+                            <input type="text" defaultValue={c.numTIS} onBlur={e => handleCampoBlur(c, 'numTIS', e.target.value)} className="w-24 px-2 py-1.5 text-[13px] font-mono rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
                           ) : (c.numTIS || '-')}
                         </td>
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
                           {c.termoRecursoUrl ? (
-                            <a
-                              href={c.termoRecursoUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex"
-                              title="Abrir Termo de Recurso"
-                            >
+                            <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Abrir Termo de Recurso">
                               <span className="material-symbols-outlined text-[22px]">description</span>
                             </a>
                           ) : c.status === 'INAPTO' ? (
-                            <button
-                              type="button"
-                              onClick={() => handleGerarTermo(c.id, c.nome)}
-                              className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer"
-                              title="Gerar Termo de Recurso"
-                            >
+                            <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer" title="Gerar Termo de Recurso">
                               <span className="material-symbols-outlined text-[22px]">gavel</span>
                             </button>
                           ) : null}
 
                           {podeReagendar && !c.finalizado && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenReagendamento(c)}
-                              className="p-2 ml-1 text-[#079551] bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer"
-                              title="Reagendar"
-                            >
+                            <button type="button" onClick={() => handleOpenReagendamento(c)} className="p-2 ml-1 text-[#079551] bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer" title="Reagendar">
                               <span className="material-symbols-outlined text-[22px]">event_repeat</span>
                             </button>
                           )}
@@ -1028,7 +1276,6 @@ export const ConcursosJRS: React.FC = () => {
                 </table>
               </div>
 
-              {/* MOBILE CARDS LIST */}
               <div className="block md:hidden divide-y divide-gray-100">
                 {filteredCandidatos.map(c => (
                   <div key={c.id} className="p-4 flex flex-col space-y-2.5">
@@ -1036,46 +1283,30 @@ export const ConcursosJRS: React.FC = () => {
                       <div className="min-w-0">
                         <p className="text-[11px] text-gray-700 font-semibold truncate">{c.nome}</p>
                         <p className="text-[10px] font-mono text-gray-400">{c.id}</p>
-                        <p className="text-[10px] text-gray-500 mt-0.5">{c.dataAgendamento || 'Sem data'}</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">{c.dataAgendamentoBR || 'Sem data'}</p>
                       </div>
                       <div className="shrink-0">{getStatusBadge(c.status)}</div>
                     </div>
 
-                    {podeEditarInline && (
+                    {podeEditar && (
                       <div className="grid grid-cols-1 gap-2 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
                         <div>
                           <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Status</span>
-                          <select
-                            value={c.status || ''}
-                            onChange={e => handleStatusChange(c, e.target.value)}
-                            className={`w-full px-2 py-1.5 text-[11px] font-bold rounded-lg border focus:outline-none ${getStatusSelectClasses(c.status)}`}
-                          >
-                            {STATUS_OPTIONS.map(o => (
-                              <option key={o.value} value={o.value}>{o.label}</option>
-                            ))}
+                          <select value={c.status || ''} onChange={e => handleStatusChange(c, e.target.value)} className={`w-full px-2 py-1.5 text-[11px] font-bold rounded-lg border focus:outline-none ${getStatusSelectClasses(c.status)}`}>
+                            {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                           </select>
                         </div>
                         <div>
                           <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Nº TIS</span>
-                          <input
-                            type="text"
-                            defaultValue={c.numTIS}
-                            onBlur={e => handleCampoBlur(c, 'numTIS', e.target.value)}
-                            className="w-full px-2 py-1.5 text-[11px] font-mono rounded-lg border border-gray-200 bg-white focus:outline-none"
-                          />
+                          <input type="text" defaultValue={c.numTIS} onBlur={e => handleCampoBlur(c, 'numTIS', e.target.value)} className="w-full px-2 py-1.5 text-[11px] font-mono rounded-lg border border-gray-200 bg-white focus:outline-none" />
                         </div>
                         <div>
                           <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Observações</span>
-                          <input
-                            type="text"
-                            defaultValue={c.observacoes}
-                            onBlur={e => handleCampoBlur(c, 'observacoes', e.target.value)}
-                            className="w-full px-2 py-1.5 text-[11px] rounded-lg border border-gray-200 bg-white focus:outline-none"
-                          />
+                          <input type="text" defaultValue={c.observacoes} onBlur={e => handleCampoBlur(c, 'observacoes', e.target.value)} className="w-full px-2 py-1.5 text-[11px] rounded-lg border border-gray-200 bg-white focus:outline-none" />
                         </div>
                       </div>
                     )}
-                    {!podeEditarInline && c.observacoes && (
+                    {!podeEditar && c.observacoes && (
                       <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100">
                         <span className="text-[9px] font-bold text-gray-400 uppercase block">Observações</span>
                         <span className="text-[11px] font-medium text-gray-600">{c.observacoes}</span>
@@ -1084,32 +1315,19 @@ export const ConcursosJRS: React.FC = () => {
 
                     <div className="flex items-center justify-between pt-1">
                       {c.termoRecursoUrl ? (
-                        <a
-                          href={c.termoRecursoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[11px] font-bold text-[#050F41] underline flex items-center space-x-1"
-                        >
+                        <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold text-[#050F41] underline flex items-center space-x-1">
                           <span className="material-symbols-outlined text-[14px]">description</span>
                           <span>Termo de Recurso</span>
                         </a>
                       ) : c.status === 'INAPTO' ? (
-                        <button
-                          type="button"
-                          onClick={() => handleGerarTermo(c.id, c.nome)}
-                          className="text-[11px] font-bold text-[#050F41] underline flex items-center space-x-1"
-                        >
+                        <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="text-[11px] font-bold text-[#050F41] underline flex items-center space-x-1">
                           <span className="material-symbols-outlined text-[14px]">gavel</span>
                           <span>Gerar Termo</span>
                         </button>
                       ) : <span />}
 
                       {podeReagendar && !c.finalizado && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenReagendamento(c)}
-                          className="px-3 py-1.5 bg-[#050F41] text-white rounded-lg text-xs font-bold flex items-center space-x-1 shadow-sm"
-                        >
+                        <button type="button" onClick={() => handleOpenReagendamento(c)} className="px-3 py-1.5 bg-[#050F41] text-white rounded-lg text-xs font-bold flex items-center space-x-1 shadow-sm">
                           <span className="material-symbols-outlined text-[14px]">event_repeat</span>
                           <span>Reagendar</span>
                         </button>
@@ -1123,7 +1341,6 @@ export const ConcursosJRS: React.FC = () => {
         </div>
       </div>
 
-      {/* MODAL DE REAGENDAMENTO */}
       {reagendandoCandidato && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden flex flex-col">
@@ -1132,261 +1349,17 @@ export const ConcursosJRS: React.FC = () => {
                 <span className="material-symbols-outlined text-[20px] text-[#079551] shrink-0">event_repeat</span>
                 <h3 className="font-heading font-bold text-sm uppercase truncate">Reagendar {reagendandoCandidato.nome}</h3>
               </div>
-              <button
-                onClick={() => setReagendandoCandidato(null)}
-                disabled={confirmandoReagendamento}
-                className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 shrink-0"
-              >
+              <button onClick={() => setReagendandoCandidato(null)} disabled={confirmandoReagendamento} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 shrink-0">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
             <div className="p-4">
-              <CalendarioAgendamento
-                datas={datasAgendamento}
-                loading={loadingDatasAgendamento || confirmandoReagendamento}
-                onSelect={handleSelecionarDataReagendamento}
-              />
+              <CalendarioAgendamento datas={datasAgendamento} loading={loadingDatasAgendamento || confirmandoReagendamento} onSelect={handleSelecionarDataReagendamento} />
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL DE REGISTRAR MENSAGEM (PDF) + AGENDAMENTO */}
-      {showUploadModal && (
-        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-4 bg-[#050F41] text-white flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className="material-symbols-outlined text-[22px] text-[#079551]">upload_file</span>
-                <h3 className="font-heading font-bold text-sm uppercase">Registrar Mensagem (PDF)</h3>
-              </div>
-              <button
-                onClick={handleCloseUploadModal}
-                className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-
-            <div className="p-5 overflow-y-auto space-y-4 flex-1">
-              {uploadStep === 'select' && (
-                <>
-                  <p className="text-xs text-gray-500">
-                    Envie o PDF da mensagem inicial de apresentação dos candidatos (ou escaneie/fotografe o documento
-                    impresso). O texto será lido (OCR), os candidatos extraídos e cadastrados, e o período de
-                    agendamento da JRS identificado automaticamente.
-                  </p>
-                  <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
-                    <span className="material-symbols-outlined text-[32px] text-gray-400">picture_as_pdf</span>
-                    <span className="text-xs font-bold text-gray-600">
-                      {uploadFile ? uploadFile.name : 'Clique para selecionar o PDF ou escanear um documento'}
-                    </span>
-                    {/* accept inclui image/* para que o iOS ofereça a folha nativa de
-                        compartilhamento (Escolher Arquivo / Tirar Foto / Escanear Documentos),
-                        em vez de ir direto para o app Arquivos */}
-                    <input
-                      type="file"
-                      accept="application/pdf,image/*"
-                      className="hidden"
-                      onChange={e => setUploadFile(e.target.files?.[0] || null)}
-                    />
-                  </label>
-
-                  <div className="pt-2 flex items-center justify-end space-x-2">
-                    <button
-                      type="button"
-                      onClick={handleCloseUploadModal}
-                      className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!uploadFile || uploading}
-                      onClick={handleUploadMensagem}
-                      className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1 disabled:opacity-50"
-                    >
-                      {uploading ? (
-                        <>
-                          <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
-                          <span>Processando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="material-symbols-outlined text-[16px]">upload</span>
-                          <span>Processar Mensagem</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {uploadStep === 'summary' && uploadResult && (
-                <>
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2 text-xs text-gray-700">
-                    <p><span className="font-bold">Data-Hora:</span> {uploadResult.dataHora}</p>
-                    <p><span className="font-bold">Candidatos na mensagem:</span> {uploadResult.candidatosNaMensagem}</p>
-                    <p><span className="font-bold">Novos candidatos cadastrados:</span> {uploadResult.novosCandidatos}</p>
-                    <p><span className="font-bold">Período JRS:</span> {uploadResult.periodoInfo}</p>
-                    <p><span className="font-bold">Dias úteis disponíveis:</span> {uploadResult.diasUteisDisponiveis}</p>
-                  </div>
-                  <div className="pt-2 flex items-center justify-end space-x-2">
-                    <button
-                      type="button"
-                      onClick={handleCloseUploadModal}
-                      className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
-                    >
-                      Concluir sem Agendar
-                    </button>
-                    {uploadResult.diasUteisDisponiveis > 0 && (
-                      <button
-                        type="button"
-                        onClick={handleAvancarParaAgendamento}
-                        className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">event_available</span>
-                        <span>Configurar Agendamento Agora</span>
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {uploadStep === 'agendamento' && (
-                loadingContexto ? (
-                  <div className="text-center py-6 text-gray-500">
-                    <span className="material-symbols-outlined animate-spin text-[28px] text-[#050F41]">progress_activity</span>
-                  </div>
-                ) : (
-                  <>
-                    {contextoAgendamento && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-gray-700 space-y-1">
-                        <p><span className="font-bold">Candidatos pendentes de agendamento:</span> {contextoAgendamento.totalPendentes}</p>
-                        <p><span className="font-bold">Período disponível:</span> {contextoAgendamento.periodoInicio} a {contextoAgendamento.periodoFim} ({contextoAgendamento.diasUteisDisponiveis} dias úteis)</p>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                        Candidatos por dia
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={quantidadePorDia}
-                        onChange={e => setQuantidadePorDia(e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2">
-                        Dias da semana
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {DIAS_SEMANA_UTEIS.map(dia => (
-                          <button
-                            key={dia}
-                            type="button"
-                            onClick={() => toggleDiaSemana(dia)}
-                            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-colors ${
-                              diasSemanaSelecionados.includes(dia)
-                                ? 'bg-[#050F41] text-white border-[#050F41]'
-                                : 'bg-gray-50 text-gray-600 border-gray-200'
-                            }`}
-                          >
-                            {dia}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {previaAgendamento && (
-                      previaAgendamento.viavel ? (
-                        <div className="bg-green-50 border border-green-200 rounded-xl p-3 space-y-2 max-h-56 overflow-y-auto">
-                          {previaAgendamento.agendamento?.map((item, i) => (
-                            <div key={i} className="text-xs text-gray-700">
-                              <p className="font-bold text-[#050F41]">{item.dataFormatada} ({item.diaSemana}) — {item.candidatos.length} candidato(s)</p>
-                              <p className="text-[11px] text-gray-500">{item.candidatos.join(', ')}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div
-                          className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800"
-                          dangerouslySetInnerHTML={{ __html: previaAgendamento.mensagem || '' }}
-                        />
-                      )
-                    )}
-
-                    <div className="pt-2 flex items-center justify-end space-x-2">
-                      <button
-                        type="button"
-                        onClick={handleCloseUploadModal}
-                        className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        disabled={verificando || !diasSemanaSelecionados.length}
-                        onClick={handleVerificarViabilidade}
-                        className="px-4 py-2.5 rounded-xl border border-[#050F41] text-xs font-bold text-[#050F41] hover:bg-gray-50 transition-colors disabled:opacity-50"
-                      >
-                        {verificando ? 'Verificando...' : 'Verificar Viabilidade'}
-                      </button>
-                      {previaAgendamento?.viavel && (
-                        <button
-                          type="button"
-                          disabled={confirmandoAgendamento}
-                          onClick={handleConfirmarAgendamento}
-                          className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
-                        >
-                          {confirmandoAgendamento ? 'Confirmando...' : 'Confirmar Agendamento'}
-                        </button>
-                      )}
-                    </div>
-                  </>
-                )
-              )}
-
-              {uploadStep === 'concluido' && minutaAgendamento && (
-                <>
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                    <p className="text-xs font-bold text-green-800">Agendamento confirmado com sucesso.</p>
-                  </div>
-                  <textarea
-                    readOnly
-                    value={minutaAgendamento}
-                    rows={12}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-[11px] font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap"
-                  />
-                  <div className="pt-2 flex items-center justify-end space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => handleCopiarTexto(minutaAgendamento)}
-                      className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">content_copy</span>
-                      <span>Copiar Minuta</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCloseUploadModal}
-                      className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
-                    >
-                      Concluir
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DE MINUTA DE RESULTADOS */}
       {(minutaResultados !== null || pendentesFinalizacao !== null) && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
@@ -1395,10 +1368,7 @@ export const ConcursosJRS: React.FC = () => {
                 <span className="material-symbols-outlined text-[22px] text-[#079551]">summarize</span>
                 <h3 className="font-heading font-bold text-sm uppercase">Minuta de Resultados da IS</h3>
               </div>
-              <button
-                onClick={() => { setMinutaResultados(null); setPendentesFinalizacao(null); }}
-                className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
-              >
+              <button onClick={handleFecharMinutaResultados} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
@@ -1407,9 +1377,7 @@ export const ConcursosJRS: React.FC = () => {
               {pendentesFinalizacao && pendentesFinalizacao.length > 0 ? (
                 <>
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                    <p className="text-xs font-bold text-amber-800">
-                      Ainda há {pendentesFinalizacao.length} candidato(s) não finalizado(s). Finalize todos antes de gerar a minuta de resultados.
-                    </p>
+                    <p className="text-xs font-bold text-amber-800">Ainda há {pendentesFinalizacao.length} candidato(s) não finalizado(s). Finalize todos antes de gerar a minuta de resultados.</p>
                   </div>
                   <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
                     {pendentesFinalizacao.map(p => (
@@ -1421,37 +1389,85 @@ export const ConcursosJRS: React.FC = () => {
                   </div>
                 </>
               ) : (
-                <textarea
-                  readOnly
-                  value={minutaResultados ?? ''}
-                  rows={16}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-[11px] font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap"
-                />
+                <textarea readOnly value={minutaResultados ?? ''} rows={16} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-[11px] font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap" />
               )}
 
               <div className="pt-2 flex items-center justify-end space-x-2">
                 {minutaResultados && (
-                  <button
-                    type="button"
-                    onClick={() => handleCopiarTexto(minutaResultados)}
-                    className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1"
-                  >
+                  <button type="button" onClick={() => handleCopiarTexto(minutaResultados)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1">
                     <span className="material-symbols-outlined text-[16px]">content_copy</span>
                     <span>Copiar Minuta</span>
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => { setMinutaResultados(null); setPendentesFinalizacao(null); }}
-                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
-                >
-                  Fechar
-                </button>
+                <button type="button" onClick={handleFecharMinutaResultados} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">Fechar</button>
               </div>
             </div>
           </div>
         </div>
       )}
     </div>
+  );
+};
+
+// =========================================================================
+// COMPONENTE PRINCIPAL — alterna entre a lista de concursos e o detalhe
+// =========================================================================
+
+export const ConcursosJRS: React.FC = () => {
+  const nav = useNav();
+  const perfil = nav?.authUser?.perfil;
+  const isAdmin = perfil === 'admin';
+  const podeRegistrarMensagem = canUseFeature('concursosJRS.registrarMensagemPDF', perfil);
+
+  const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
+  const [loadingConcursos, setLoadingConcursos] = useState(true);
+  const [selectedConcursoId, setSelectedConcursoId] = useState<string | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+
+  const carregarConcursos = async () => {
+    setLoadingConcursos(true);
+    try {
+      setConcursos(await listarConcursos());
+    } finally {
+      setLoadingConcursos(false);
+    }
+  };
+
+  useEffect(() => { carregarConcursos(); }, []);
+
+  const handleAbrirDaLista = async (id: string) => {
+    await abrirConcurso(id);
+    carregarConcursos();
+  };
+
+  const handleFecharModalUpload = (concursoIdCriado?: string) => {
+    setShowUploadModal(false);
+    carregarConcursos();
+    if (concursoIdCriado) setSelectedConcursoId(concursoIdCriado);
+  };
+
+  if (selectedConcursoId) {
+    return (
+      <ConcursoDetalhe
+        concursoId={selectedConcursoId}
+        isAdmin={isAdmin}
+        onVoltar={() => { setSelectedConcursoId(null); carregarConcursos(); }}
+      />
+    );
+  }
+
+  return (
+    <>
+      <ConcursosLista
+        concursos={concursos}
+        loading={loadingConcursos}
+        isAdmin={isAdmin}
+        podeRegistrarMensagem={podeRegistrarMensagem}
+        onSelecionar={setSelectedConcursoId}
+        onNovoConcursoClick={() => setShowUploadModal(true)}
+        onAbrir={handleAbrirDaLista}
+      />
+      {showUploadModal && <ModalRegistrarMensagem onClose={handleFecharModalUpload} isAdmin={isAdmin} />}
+    </>
   );
 };
