@@ -65,14 +65,16 @@ export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction,
   const activeSubitem = activeCategory?.subitems.find(s => s.id === currentView);
 
   // Desktop: "{categoria} - {subitem}" quando a página pertence a um menu
-  // principal; caso contrário (Home, Perfil, artigos, etc.) usa o título
-  // customizado (desktopTitle ou title) fornecido pela própria página.
+  // principal; a própria página pode sobrepor isso passando "desktopTitle"
+  // explicitamente (ex.: título dinâmico de uma subpágina, como o nome do
+  // concurso selecionado em Concursos); sem "desktopTitle", cai para
+  // "categoryTitle" e por fim para "title".
   const categoryTitle = activeCategory && activeSubitem
     ? (activeSubitem.label === activeCategory.label
         ? activeCategory.label
         : `${activeCategory.label} - ${activeSubitem.label}`)
     : undefined;
-  const resolvedDesktopTitle = categoryTitle ?? desktopTitle ?? title;
+  const resolvedDesktopTitle = desktopTitle ?? categoryTitle ?? title;
 
   return (
     <>

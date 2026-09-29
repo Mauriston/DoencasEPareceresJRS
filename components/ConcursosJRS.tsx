@@ -619,10 +619,27 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, isA
                     const pct = contagem && contagem.total > 0 ? Math.round((contagem.finalizados / contagem.total) * 100) : null;
                     return (
                       <div key={c.id} className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col">
-                        <button type="button" onClick={() => onSelecionar(c.id)} className="text-left p-4 flex-1 hover:bg-gray-50 transition-colors">
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => onSelecionar(c.id)}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onSelecionar(c.id); }}
+                          className="text-left p-4 flex-1 hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <h3 className="font-heading font-bold text-sm text-[#050F41]">{c.nome}</h3>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(c.status)}`}>{STATUS_LABELS[c.status]}</span>
+                            {isAdmin && c.status === 'encerrado' ? (
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); onAbrir(c.id, c.nome); }}
+                                title="Reabrir concurso (Em Andamento)"
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap hover:brightness-95 transition-all ${getConcursoStatusClasses(c.status)}`}
+                              >
+                                {STATUS_LABELS[c.status]}
+                              </button>
+                            ) : (
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(c.status)}`}>{STATUS_LABELS[c.status]}</span>
+                            )}
                           </div>
                           <p className="text-[11px] text-gray-500">{c.totalCandidatos} candidato(s)</p>
                           {c.periodoInicioISO && (
@@ -636,7 +653,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, isA
                               <p className="text-[10px] text-gray-400 mt-1">{pct}% IS finalizadas</p>
                             </div>
                           )}
-                        </button>
+                        </div>
                         {isAdmin && c.status === 'em_breve' && (
                           <button
                             type="button"
@@ -1054,7 +1071,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, isAdmin, 
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
-      <Header title={concurso?.nome || 'Planilhas de Controle'} onBack={onVoltar} />
+      <Header title={concurso?.nome || 'Planilhas de Controle'} desktopTitle={concurso?.nome} onBack={onVoltar} />
 
       {toastMessage && (
         <div className="fixed top-20 right-4 z-[100] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in max-w-[90vw]">
