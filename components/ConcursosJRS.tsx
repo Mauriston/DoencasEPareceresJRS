@@ -1782,31 +1782,29 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       )}
 
       <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1600px] mx-auto w-full flex-1 space-y-4">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              type="button"
-              onClick={onVoltar}
-              className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-white text-[#050F41] shadow-sm border border-gray-200/70 hover:bg-gray-50 active:scale-95 transition-all"
-              aria-label="Voltar"
-              title="Voltar"
-            >
-              <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-            </button>
-            <h1 className="font-heading font-bold text-xl sm:text-2xl text-[#050F41] truncate">
-              {concurso?.nome || 'Concurso'} <span className="text-gray-400 font-semibold">-</span> {total} Candidato{total === 1 ? '' : 's'}
-            </h1>
-          </div>
+        <div className="relative flex items-center justify-center min-h-[40px] px-12 sm:px-16">
+          <button
+            type="button"
+            onClick={onVoltar}
+            className="absolute left-0 top-1/2 -translate-y-1/2 shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-white text-[#050F41] shadow-sm border border-gray-200/70 hover:bg-gray-50 active:scale-95 transition-all"
+            aria-label="Voltar"
+            title="Voltar"
+          >
+            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+          </button>
+          <h1 className="font-heading font-bold text-xl sm:text-2xl text-[#050F41] text-center truncate">
+            {concurso?.nome || 'Concurso'} <span className="text-gray-400 font-semibold">-</span> {total} Candidato{total === 1 ? '' : 's'}
+          </h1>
           {concurso && (
-            <span className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(concurso.status)}`}>
+            <span className={`absolute right-0 top-1/2 -translate-y-1/2 shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(concurso.status)}`}>
               {STATUS_LABELS[concurso.status]}
             </span>
           )}
         </div>
 
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 space-y-3">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
-          <div className="relative md:flex-1 md:max-w-md min-w-[220px]">
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 flex-wrap">
+          <div className="relative lg:flex-1 lg:max-w-md min-w-[220px]">
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-[24px]">search</span>
             <input
               type="text"
@@ -1840,6 +1838,23 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             )}
           </div>
 
+          <div className="flex flex-wrap items-center gap-2 lg:flex-1">
+            {chipFilters.map(chip => {
+              const isActive = statusKpiFilter === chip.filterValue;
+              return (
+                <button
+                  key={chip.key}
+                  type="button"
+                  onClick={() => toggleStatusKpiFilter(chip.filterValue)}
+                  className={`px-4 py-2 rounded-full text-sm font-bold border transition-all flex items-center gap-2 ${isActive ? chip.corAtivo : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
+                >
+                  <span>{chip.label}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-black ${isActive ? 'bg-white/25' : 'bg-gray-100'}`}>{chip.value}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <div className="relative shrink-0 md:w-56">
             <button
               type="button"
@@ -1861,23 +1876,6 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               </>
             )}
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {chipFilters.map(chip => {
-            const isActive = statusKpiFilter === chip.filterValue;
-            return (
-              <button
-                key={chip.key}
-                type="button"
-                onClick={() => toggleStatusKpiFilter(chip.filterValue)}
-                className={`px-4 py-2 rounded-full text-sm font-bold border transition-all flex items-center gap-2 ${isActive ? chip.corAtivo : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
-              >
-                <span>{chip.label}</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-black ${isActive ? 'bg-white/25' : 'bg-gray-100'}`}>{chip.value}</span>
-              </button>
-            );
-          })}
         </div>
         </div>
 
