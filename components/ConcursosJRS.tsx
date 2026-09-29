@@ -5,7 +5,7 @@ import { canUseFeature } from '../config/permissions';
 import {
   listarConcursos, getConcurso, listarCandidatos, criarConcursoDaMensagem, importarConcursoDeCsv, atualizarCandidato,
   reagendarCandidato, listarDatasAgendamento, obterContextoAgendamento, confirmarAgendamento,
-  gerarMinutaResultados, abrirConcurso, encerrarConcurso, salvarTermoRecurso,
+  gerarMinutaResultados, abrirConcurso, voltarParaEmBreve, encerrarConcurso, salvarTermoRecurso,
   listarMensagens, arquivarMensagem, obterEstatisticasAnuais,
   STATUS_LABELS,
   type ConcursoRecord, type CandidatoRecord, type DataAgendamentoInfo, type MensagemRecord, type EstatisticasAnuais, type EstatisticaConcursoStatus,
@@ -690,9 +690,9 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
 
 const getConcursoCardBg = (status: ConcursoRecord['status']) => {
   switch (status) {
-    case 'encerrado': return 'bg-green-50';
-    case 'em_andamento': return 'bg-red-50';
-    default: return 'bg-amber-50';
+    case 'encerrado': return 'bg-green-100';
+    case 'em_andamento': return 'bg-red-100';
+    default: return 'bg-amber-100';
   }
 };
 
@@ -703,11 +703,11 @@ const CircularMini: React.FC<{ pct: number }> = ({ pct }) => {
   return (
     <div className="relative w-16 h-16 shrink-0">
       <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
-        <circle cx="32" cy="32" r={r} fill="none" stroke="#FCA5A5" strokeOpacity={0.4} strokeWidth="6" />
+        <circle cx="32" cy="32" r={r} fill="none" stroke="#FFFFFF" strokeWidth="6" />
         <circle cx="32" cy="32" r={r} fill="none" stroke="#079551" strokeWidth="6" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} className="transition-all duration-500" />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-xs font-bold text-[#050F41]">{pct}%</span>
+        <span className="text-base font-black text-[#050F41]">{pct}%</span>
       </div>
     </div>
   );
@@ -1023,20 +1023,25 @@ interface MenuAcoesConcursoProps {
   podeListarMensagens: boolean;
   podeEncerrar: boolean;
   onAbrir: () => void;
+  onVoltarParaEmBreve: () => void;
   onEncerrar: () => void;
   onMinutaResultados: () => void;
   onRegistrarMensagem: () => void;
   onListarMensagens: () => void;
 }
 
-const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeEncerrar, onAbrir, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens }) => {
+const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeEncerrar, onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens }) => {
   const [aberto, setAberto] = useState(false);
 
   const itens: { key: string; label: string; icon: string; onClick: () => void; disabled?: boolean; title?: string }[] = [];
-  if (podeAbrirEncerrar && (status === 'em_breve' || status === 'encerrado')) {
+  if (podeAbrirEncerrar && status === 'encerrado') {
     itens.push({ key: 'abrir', label: 'Abrir Concurso', icon: 'play_circle', onClick: onAbrir });
   }
+  if (podeAbrirEncerrar && status === 'em_breve') {
+    itens.push({ key: 'em-andamento', label: 'Em Andamento', icon: 'play_circle', onClick: onAbrir });
+  }
   if (podeAbrirEncerrar && status === 'em_andamento') {
+    itens.push({ key: 'em-breve', label: 'Em Breve', icon: 'undo', onClick: onVoltarParaEmBreve });
     itens.push({
       key: 'encerrar', label: 'Encerrar Concurso', icon: 'stop_circle', onClick: onEncerrar,
       disabled: !podeEncerrar, title: podeEncerrar ? undefined : 'Só é possível encerrar quando todos os candidatos estiverem finalizados.',
@@ -1167,6 +1172,24 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
           onRecarregar();
         } catch (e: any) {
           showToast(e?.message || 'Erro ao abrir o concurso.');
+        }
+      },
+    });
+  };
+
+  const handleVoltarParaEmBreve = (id: string, nome: string) => {
+    setConfirmDialog({
+      title: 'Voltar para Em Breve',
+      message: `Deseja alterar o concurso "${nome}" para o status "Em Breve"?`,
+      confirmLabel: 'Confirmar',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await voltarParaEmBreve(id);
+          showToast('Concurso alterado para "Em Breve".');
+          onRecarregar();
+        } catch (e: any) {
+          showToast(e?.message || 'Erro ao alterar o status do concurso.');
         }
       },
     });
@@ -1409,22 +1432,20 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                             >
                               <div className="flex items-start justify-between gap-2 mb-2">
                                 <h3 className="font-heading font-bold text-lg text-[#050F41] truncate">{c.nome}</h3>
-                                <div className="flex items-center gap-0.5 shrink-0">
-                                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${getConcursoStatusClasses(c.status)}`}>{STATUS_LABELS[c.status]}</span>
-                                  <MenuAcoesConcurso
-                                    status={c.status}
-                                    podeAbrirEncerrar={podeAbrirEncerrar}
-                                    podeGerarMinutaResultados={podeGerarMinutaResultados}
-                                    podeRegistrarMensagemArquivo={podeRegistrarMensagemArquivo}
-                                    podeListarMensagens={podeListarMensagens}
-                                    podeEncerrar={podeEncerrar}
-                                    onAbrir={() => handleAbrir(c.id, c.nome)}
-                                    onEncerrar={() => handleEncerrar(c.id, c.nome)}
-                                    onMinutaResultados={() => handleMinutaResultados(c.id)}
-                                    onRegistrarMensagem={() => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome })}
-                                    onListarMensagens={() => setListarMensagensAlvo({ id: c.id, nome: c.nome })}
-                                  />
-                                </div>
+                                <MenuAcoesConcurso
+                                  status={c.status}
+                                  podeAbrirEncerrar={podeAbrirEncerrar}
+                                  podeGerarMinutaResultados={podeGerarMinutaResultados}
+                                  podeRegistrarMensagemArquivo={podeRegistrarMensagemArquivo}
+                                  podeListarMensagens={podeListarMensagens}
+                                  podeEncerrar={podeEncerrar}
+                                  onAbrir={() => handleAbrir(c.id, c.nome)}
+                                  onVoltarParaEmBreve={() => handleVoltarParaEmBreve(c.id, c.nome)}
+                                  onEncerrar={() => handleEncerrar(c.id, c.nome)}
+                                  onMinutaResultados={() => handleMinutaResultados(c.id)}
+                                  onRegistrarMensagem={() => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome })}
+                                  onListarMensagens={() => setListarMensagensAlvo({ id: c.id, nome: c.nome })}
+                                />
                               </div>
                               <p className="text-sm text-gray-600">{c.totalCandidatos} candidato(s)</p>
                               {c.periodoInicioISO && (
@@ -1733,7 +1754,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
-      <Header title={concurso?.nome || 'Planilhas de Controle'} desktopTitle={concurso?.nome} onBack={onVoltar} />
+      <Header title={concurso?.nome || 'Planilhas de Controle'} desktopTitle={concurso?.nome} />
 
       {toastMessage && (
         <div className="fixed top-20 right-4 z-[100] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in max-w-[90vw]">
@@ -1761,36 +1782,31 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       )}
 
       <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1600px] mx-auto w-full flex-1 space-y-4">
-        <div className="text-center space-y-1">
-          <h1 className="font-heading font-bold text-2xl sm:text-3xl text-[#050F41]">
-            {concurso?.nome || 'Concurso'} <span className="text-gray-400 font-semibold">-</span> {total} Candidato{total === 1 ? '' : 's'}
-          </h1>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={onVoltar}
+              className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-white text-[#050F41] shadow-sm border border-gray-200/70 hover:bg-gray-50 active:scale-95 transition-all"
+              aria-label="Voltar"
+              title="Voltar"
+            >
+              <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+            </button>
+            <h1 className="font-heading font-bold text-xl sm:text-2xl text-[#050F41] truncate">
+              {concurso?.nome || 'Concurso'} <span className="text-gray-400 font-semibold">-</span> {total} Candidato{total === 1 ? '' : 's'}
+            </h1>
+          </div>
           {concurso && (
-            <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(concurso.status)}`}>
+            <span className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(concurso.status)}`}>
               {STATUS_LABELS[concurso.status]}
             </span>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          {chipFilters.map(chip => {
-            const isActive = statusKpiFilter === chip.filterValue;
-            return (
-              <button
-                key={chip.key}
-                type="button"
-                onClick={() => toggleStatusKpiFilter(chip.filterValue)}
-                className={`px-4 py-2 rounded-full text-sm font-bold border transition-all flex items-center gap-2 ${isActive ? chip.corAtivo : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
-              >
-                <span>{chip.label}</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-black ${isActive ? 'bg-white/25' : 'bg-gray-100'}`}>{chip.value}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 flex flex-col md:flex-row items-stretch md:items-center gap-3">
-          <div className="relative flex-1 min-w-[220px]">
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 space-y-3">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          <div className="relative md:flex-1 md:max-w-md min-w-[220px]">
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-[24px]">search</span>
             <input
               type="text"
@@ -1824,11 +1840,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             )}
           </div>
 
-          <div className="relative shrink-0">
+          <div className="relative shrink-0 md:w-56">
             <button
               type="button"
               onClick={() => setShowDateMenu(prev => !prev)}
-              className={`px-4 py-3.5 text-sm font-bold rounded-xl border flex items-center space-x-2 whitespace-nowrap ${dateFilterMode !== 'todos' ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
+              className={`w-full px-4 py-3.5 text-sm font-bold rounded-xl border flex items-center justify-center space-x-2 whitespace-nowrap ${dateFilterMode !== 'todos' ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
             >
               <span className="material-symbols-outlined text-[20px]">event</span>
               <span>{dateFilterLabel}</span>
@@ -1845,6 +1861,24 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               </>
             )}
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {chipFilters.map(chip => {
+            const isActive = statusKpiFilter === chip.filterValue;
+            return (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => toggleStatusKpiFilter(chip.filterValue)}
+                className={`px-4 py-2 rounded-full text-sm font-bold border transition-all flex items-center gap-2 ${isActive ? chip.corAtivo : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
+              >
+                <span>{chip.label}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-black ${isActive ? 'bg-white/25' : 'bg-gray-100'}`}>{chip.value}</span>
+              </button>
+            );
+          })}
+        </div>
         </div>
 
         {showDateCalendar && (
@@ -1892,21 +1926,29 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
           ) : (
             <>
               <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse table-fixed">
+                  <colgroup>
+                    <col style={{ width: '3%' }} />
+                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '12%' }} />
+                    <col style={{ width: '40%' }} />
+                    <col style={{ width: '12%' }} />
+                    <col style={{ width: '15%' }} />
+                  </colgroup>
                   <thead>
                     <tr className="bg-gray-50/80 border-b border-gray-100 text-[15px] font-bold text-[#050F41] uppercase tracking-wider">
-                      <th className="py-3.5 px-4 w-64" colSpan={2}>Candidato</th>
-                      <th className="py-3.5 px-4 w-32">Status</th>
-                      <th className="py-3.5 px-4 w-56">Observações</th>
-                      <th className="py-3.5 px-4 w-24">Nº TIS</th>
-                      <th className="py-3.5 px-4 w-24 text-right">Ações</th>
+                      <th className="py-3.5 px-4" colSpan={2}>Candidato</th>
+                      <th className="py-3.5 px-4">Status</th>
+                      <th className="py-3.5 px-4">Observações</th>
+                      <th className="py-3.5 px-4">Nº TIS</th>
+                      <th className="py-3.5 px-4 text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-[14px]">
                     {gruposPorData.map(grupo => (
                       <React.Fragment key={grupo.dataBR}>
                         <tr className="bg-gray-50/60">
-                          <td colSpan={6} className="py-2 px-4 text-[12px] font-bold text-gray-500 uppercase tracking-wider">{grupo.dataBR}</td>
+                          <td colSpan={6} className="py-2 px-4 text-sm font-bold text-[#050F41] uppercase tracking-wider">{grupo.dataBR}</td>
                         </tr>
                         {grupo.itens.map(c => (
                           <tr key={c.id} className="hover:bg-gray-50/80 transition-colors">
@@ -1933,7 +1975,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                             </td>
                             <td className="py-3.5 px-4 text-gray-600">
                               {podeEditar ? (
-                                <input type="text" defaultValue={c.numTIS} onBlur={e => handleCampoBlur(c, 'numTIS', e.target.value)} className="w-24 px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
+                                <input type="text" defaultValue={c.numTIS} onBlur={e => handleCampoBlur(c, 'numTIS', e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
                               ) : (c.numTIS || '-')}
                             </td>
                             <td className="py-3.5 px-4 text-right whitespace-nowrap">
