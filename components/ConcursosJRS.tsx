@@ -6,8 +6,9 @@ import {
   listarConcursos, getConcurso, listarCandidatos, criarConcursoDaMensagem, importarConcursoDeCsv, atualizarCandidato,
   reagendarCandidato, listarDatasAgendamento, obterContextoAgendamento, confirmarAgendamento,
   gerarMinutaResultados, abrirConcurso, encerrarConcurso, salvarTermoRecurso,
+  listarMensagens, arquivarMensagem, obterEstatisticasAnuais,
   STATUS_LABELS,
-  type ConcursoRecord, type CandidatoRecord, type DataAgendamentoInfo,
+  type ConcursoRecord, type CandidatoRecord, type DataAgendamentoInfo, type MensagemRecord, type EstatisticasAnuais, type EstatisticaConcursoStatus,
 } from '../services/firestoreConcursos';
 import { uploadMensagemPdf, uploadTermoRecursoPdf } from '../services/firebaseStorageConcursos';
 import {
@@ -687,25 +688,444 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
 // LISTA DE CONCURSOS
 // =========================================================================
 
+const getConcursoCardBg = (status: ConcursoRecord['status']) => {
+  switch (status) {
+    case 'encerrado': return 'bg-green-50';
+    case 'em_andamento': return 'bg-red-50';
+    default: return 'bg-amber-50';
+  }
+};
+
+const CircularMini: React.FC<{ pct: number }> = ({ pct }) => {
+  const r = 26;
+  const c = 2 * Math.PI * r;
+  const offset = c - (Math.max(0, Math.min(100, pct)) / 100) * c;
+  return (
+    <div className="relative w-16 h-16 shrink-0">
+      <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
+        <circle cx="32" cy="32" r={r} fill="none" stroke="#FCA5A5" strokeOpacity={0.4} strokeWidth="6" />
+        <circle cx="32" cy="32" r={r} fill="none" stroke="#079551" strokeWidth="6" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} className="transition-all duration-500" />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-xs font-bold text-[#050F41]">{pct}%</span>
+      </div>
+    </div>
+  );
+};
+
+// -------------------------------------------------------------------------
+// Modal do gráfico de barras (clique nos KPIs anuais de Faltas/Inaptos/IDM)
+// -------------------------------------------------------------------------
+interface ModalKpiBarChartProps {
+  titulo: string;
+  corBarra: string;
+  itens: EstatisticaConcursoStatus[];
+  onSelecionarConcurso: (id: string) => void;
+  onClose: () => void;
+}
+
+const ModalKpiBarChart: React.FC<ModalKpiBarChartProps> = ({ titulo, corBarra, itens, onSelecionarConcurso, onClose }) => {
+  const max = Math.max(1, ...itens.map(i => i.quantidade));
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+          <h3 className="font-heading font-bold text-sm uppercase">{titulo} — Top 4 Concursos</h3>
+          <button onClick={onClose} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+        <div className="p-5 space-y-4 overflow-y-auto">
+          {itens.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-6">Nenhuma ocorrência no ano corrente.</p>
+          ) : itens.map(item => (
+            <button key={item.concursoId} type="button" onClick={() => { onSelecionarConcurso(item.concursoId); onClose(); }} className="w-full text-left group">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-[#050F41] group-hover:underline truncate pr-2">{item.concursoNome}</span>
+                <span className="text-xs font-black text-gray-700 shrink-0">{item.quantidade}</span>
+              </div>
+              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${corBarra}`} style={{ width: `${(item.quantidade / max) * 100}%` }} />
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// -------------------------------------------------------------------------
+// Modal "Registrar Mensagem" — arquiva UMA mensagem qualquer de um concurso
+// já existente (reagendamento, resultado de recurso etc.), diferente do
+// fluxo que cria um concurso novo a partir da mensagem de apresentação.
+// -------------------------------------------------------------------------
+const PROPOSITO_MENSAGEM_OPTIONS = ['Reagendamento', 'Resultado de Recurso', 'Outros'];
+
+interface ModalRegistrarMensagemArquivoProps {
+  concursoId: string;
+  concursoNome: string;
+  onClose: () => void;
+}
+
+const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps> = ({ concursoId, concursoNome, onClose }) => {
+  const [step, setStep] = useState<'select' | 'processando' | 'revisao' | 'concluido'>('select');
+  const [file, setFile] = useState<File | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [cabecalho, setCabecalho] = useState<CabecalhoMensagem | null>(null);
+  const [processando, setProcessando] = useState(false);
+
+  const handleProcessar = async () => {
+    if (!file) return;
+    setErro(null);
+    setProcessando(true);
+    setStep('processando');
+    try {
+      const fileBase64 = await fileParaBase64(file);
+      const res = await fetch('/api/concursos/ocr-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileBase64, mimeType: file.type || 'application/pdf' }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || 'Erro ao transcrever o documento.');
+
+      const textoLimpo = limparRuidoPaginacao(json.texto || '');
+      const cab = extrairCabecalhoMensagem(textoLimpo);
+      if (!cab.dataHora) {
+        throw new Error('Não foi possível localizar o código Data-Hora (ID único) da mensagem no documento.');
+      }
+      setCabecalho(cab);
+      setStep('revisao');
+    } catch (e: any) {
+      setErro(e?.message || 'Erro ao processar o documento.');
+      setStep('select');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const handleConfirmar = async () => {
+    if (!cabecalho || !file) return;
+    setErro(null);
+    setProcessando(true);
+    try {
+      const fileUrl = await uploadMensagemPdf(concursoId, file);
+      await arquivarMensagem(concursoId, cabecalho, fileUrl);
+      setStep('concluido');
+    } catch (e: any) {
+      setErro(e?.message || 'Erro ao arquivar a mensagem.');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+          <div className="min-w-0">
+            <h3 className="font-heading font-bold text-sm uppercase truncate">Registrar Mensagem</h3>
+            <p className="text-[11px] text-white/70 truncate">{concursoNome}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0">
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+
+        <div className="p-5 overflow-y-auto space-y-4 flex-1">
+          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-semibold">{erro}</div>}
+
+          {step === 'select' && (
+            <>
+              <p className="text-xs text-gray-500">
+                Envie o PDF de uma mensagem administrativa referente a este concurso (ex.: solicitação de
+                reagendamento, resultado de recurso). Será arquivada com data-hora, remetente e assunto
+                identificados automaticamente.
+              </p>
+              <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
+                <span className="material-symbols-outlined text-[32px] text-gray-400">picture_as_pdf</span>
+                <span className="text-xs font-bold text-gray-600">{file ? file.name : 'Clique para selecionar o PDF'}</span>
+                <input type="file" accept="application/pdf,image/*" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
+              </label>
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" disabled={!file || processando} onClick={handleProcessar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-50">Processar Mensagem</button>
+              </div>
+            </>
+          )}
+
+          {step === 'processando' && (
+            <div className="text-center py-8 text-gray-500 space-y-2">
+              <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
+              <p className="text-xs font-semibold">Transcrevendo o documento...</p>
+            </div>
+          )}
+
+          {step === 'revisao' && cabecalho && (
+            <>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800">Confira os dados extraídos antes de arquivar a mensagem.</div>
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Data-Hora</label>
+                <input type="text" value={cabecalho.dataHora} onChange={e => setCabecalho({ ...cabecalho, dataHora: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-mono text-[#050F41] focus:outline-none focus:border-[#050F41]" />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Remetente</label>
+                <input type="text" value={cabecalho.sender} onChange={e => setCabecalho({ ...cabecalho, sender: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-[#050F41] focus:outline-none focus:border-[#050F41]" />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Assunto</label>
+                <input type="text" value={cabecalho.subject} onChange={e => setCabecalho({ ...cabecalho, subject: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-[#050F41] focus:outline-none focus:border-[#050F41]" />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Tipo</label>
+                <select value={cabecalho.purpose || 'Outros'} onChange={e => setCabecalho({ ...cabecalho, purpose: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]">
+                  {PROPOSITO_MENSAGEM_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-50">
+                  {processando ? 'Arquivando...' : 'Arquivar Mensagem'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 'concluido' && (
+            <>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                <p className="text-xs font-bold text-green-800">Mensagem arquivada com sucesso.</p>
+              </div>
+              <div className="pt-2 flex items-center justify-end">
+                <button type="button" onClick={onClose} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">Concluir</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// -------------------------------------------------------------------------
+// Modal "Listar Mensagens" — mensagens arquivadas de um concurso
+// -------------------------------------------------------------------------
+interface ModalListarMensagensProps {
+  concursoId: string;
+  concursoNome: string;
+  onClose: () => void;
+}
+
+const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId, concursoNome, onClose }) => {
+  const [mensagens, setMensagens] = useState<MensagemRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selecionada, setSelecionada] = useState<MensagemRecord | null>(null);
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const lista = await listarMensagens(concursoId);
+        if (!cancelado) setMensagens(lista);
+      } finally {
+        if (!cancelado) setLoading(false);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [concursoId]);
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+          <div className="min-w-0 flex items-center gap-2">
+            {selecionada && (
+              <button onClick={() => setSelecionada(null)} className="p-1 rounded-lg hover:bg-white/10 shrink-0">
+                <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+              </button>
+            )}
+            <div className="min-w-0">
+              <h3 className="font-heading font-bold text-sm uppercase truncate">Mensagens Arquivadas</h3>
+              <p className="text-[11px] text-white/70 truncate">{concursoNome}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0">
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1">
+          {selecionada ? (
+            <div className="p-5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[#050F41] truncate">{selecionada.subject || 'Sem assunto'}</p>
+                  <p className="text-[11px] text-gray-500">{selecionada.sender} — {selecionada.dataHora}</p>
+                </div>
+                {selecionada.fileUrl && (
+                  <a href={selecionada.fileUrl} download target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-[11px] font-bold transition-colors shadow-sm flex items-center space-x-1 shrink-0">
+                    <span className="material-symbols-outlined text-[16px]">download</span>
+                    <span>Baixar PDF</span>
+                  </a>
+                )}
+              </div>
+              {selecionada.fileUrl ? (
+                <iframe title="Visualização do PDF" src={selecionada.fileUrl} className="w-full h-[60vh] rounded-xl border border-gray-200" />
+              ) : (
+                <p className="text-xs text-gray-400 text-center py-8">PDF não disponível para esta mensagem.</p>
+              )}
+            </div>
+          ) : loading ? (
+            <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
+              <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
+            </div>
+          ) : mensagens.length === 0 ? (
+            <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
+              <span className="material-symbols-outlined text-[36px] text-gray-300">mail</span>
+              <p className="text-sm font-bold text-gray-700">Nenhuma mensagem arquivada</p>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-[#050F41] uppercase tracking-wider">
+                  <th className="py-3 px-4">Data-Hora</th>
+                  <th className="py-3 px-4">Remetente</th>
+                  <th className="py-3 px-4">Assunto</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-xs">
+                {mensagens.map(m => (
+                  <tr key={m.id} onClick={() => setSelecionada(m)} className="hover:bg-gray-50 cursor-pointer transition-colors">
+                    <td className="py-3 px-4 font-mono text-gray-600 whitespace-nowrap">{m.dataHora}</td>
+                    <td className="py-3 px-4 text-gray-700 font-semibold">{m.sender || '-'}</td>
+                    <td className="py-3 px-4 text-gray-700">{m.subject || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// -------------------------------------------------------------------------
+// Menu de 3 pontos (ações do concurso) exibido em cada card
+// -------------------------------------------------------------------------
+interface MenuAcoesConcursoProps {
+  status: ConcursoRecord['status'];
+  podeAbrirEncerrar: boolean;
+  podeGerarMinutaResultados: boolean;
+  podeRegistrarMensagemArquivo: boolean;
+  podeListarMensagens: boolean;
+  podeEncerrar: boolean;
+  onAbrir: () => void;
+  onEncerrar: () => void;
+  onMinutaResultados: () => void;
+  onRegistrarMensagem: () => void;
+  onListarMensagens: () => void;
+}
+
+const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeEncerrar, onAbrir, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens }) => {
+  const [aberto, setAberto] = useState(false);
+
+  const itens: { key: string; label: string; icon: string; onClick: () => void; disabled?: boolean; title?: string }[] = [];
+  if (podeAbrirEncerrar && (status === 'em_breve' || status === 'encerrado')) {
+    itens.push({ key: 'abrir', label: 'Abrir Concurso', icon: 'play_circle', onClick: onAbrir });
+  }
+  if (podeAbrirEncerrar && status === 'em_andamento') {
+    itens.push({
+      key: 'encerrar', label: 'Encerrar Concurso', icon: 'stop_circle', onClick: onEncerrar,
+      disabled: !podeEncerrar, title: podeEncerrar ? undefined : 'Só é possível encerrar quando todos os candidatos estiverem finalizados.',
+    });
+  }
+  if (podeGerarMinutaResultados && status !== 'em_breve') {
+    itens.push({ key: 'minuta', label: 'Minuta Resultados', icon: 'summarize', onClick: onMinutaResultados });
+  }
+  if (podeRegistrarMensagemArquivo) {
+    itens.push({ key: 'registrar-msg', label: 'Registrar Mensagem', icon: 'upload_file', onClick: onRegistrarMensagem });
+  }
+  if (podeListarMensagens) {
+    itens.push({ key: 'listar-msg', label: 'Listar Mensagens', icon: 'mail', onClick: onListarMensagens });
+  }
+
+  if (itens.length === 0) return null;
+
+  return (
+    <div className="relative shrink-0" onClick={e => e.stopPropagation()}>
+      <button type="button" onClick={() => setAberto(prev => !prev)} className="p-1 rounded-lg text-gray-400 hover:text-[#050F41] hover:bg-black/5 transition-colors">
+        <span className="material-symbols-outlined text-[20px]">more_vert</span>
+      </button>
+      {aberto && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} />
+          <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 z-50 animate-fade-in space-y-0.5">
+            {itens.map(item => (
+              <button
+                key={item.key}
+                type="button"
+                disabled={item.disabled}
+                title={item.title}
+                onClick={() => { setAberto(false); item.onClick(); }}
+                className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100 flex items-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              >
+                <span className="material-symbols-outlined text-[16px]">{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 interface ConcursosListaProps {
   concursos: ConcursoRecord[];
   loading: boolean;
-  isAdmin: boolean;
   podeRegistrarMensagem: boolean;
+  podeGerarMinutaResultados: boolean;
+  podeImportarCsv: boolean;
+  podeAbrirEncerrar: boolean;
+  podeRegistrarMensagemArquivo: boolean;
+  podeListarMensagens: boolean;
   onSelecionar: (id: string) => void;
   onNovoConcursoClick: () => void;
   onImportarCsvClick: () => void;
-  onAbrir: (id: string, nome: string) => void;
+  onRecarregar: () => void;
 }
 
 const GRUPOS_STATUS: { status: ConcursoRecord['status']; titulo: string }[] = [
+  { status: 'encerrado', titulo: 'Encerrados' },
   { status: 'em_andamento', titulo: 'Em Andamento' },
   { status: 'em_breve', titulo: 'Em Breve' },
-  { status: 'encerrado', titulo: 'Encerrado' },
 ];
 
-const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, isAdmin, podeRegistrarMensagem, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onAbrir }) => {
+const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
   const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number }>>({});
+  const [openGroups, setOpenGroups] = useState<Set<ConcursoRecord['status']>>(new Set(['em_andamento', 'em_breve']));
+
+  const [estatisticas, setEstatisticas] = useState<EstatisticasAnuais | null>(null);
+  const [loadingEstatisticas, setLoadingEstatisticas] = useState(true);
+  const [kpiModal, setKpiModal] = useState<{ titulo: string; corBarra: string; itens: EstatisticaConcursoStatus[] } | null>(null);
+
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
+  const [minutaResultados, setMinutaResultados] = useState<string | null>(null);
+  const [pendentesFinalizacao, setPendentesFinalizacao] = useState<{ id: string; nome: string }[] | null>(null);
+  const [gerandoMinuta, setGerandoMinuta] = useState(false);
+  const [registrarMensagemAlvo, setRegistrarMensagemAlvo] = useState<{ id: string; nome: string } | null>(null);
+  const [listarMensagensAlvo, setListarMensagensAlvo] = useState<{ id: string; nome: string } | null>(null);
+
+  const anoCorrente = new Date().getFullYear();
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   useEffect(() => {
     let cancelado = false;
@@ -720,31 +1140,228 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, isA
     return () => { cancelado = true; };
   }, [concursos]);
 
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      setLoadingEstatisticas(true);
+      try {
+        const est = await obterEstatisticasAnuais(anoCorrente);
+        if (!cancelado) setEstatisticas(est);
+      } finally {
+        if (!cancelado) setLoadingEstatisticas(false);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [concursos]);
+
+  const handleAbrir = (id: string, nome: string) => {
+    setConfirmDialog({
+      title: 'Abrir Concurso',
+      message: `Deseja abrir o concurso "${nome}" agora? Ele ficará com status "Em Andamento".`,
+      confirmLabel: 'Abrir Concurso',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await abrirConcurso(id);
+          showToast('Concurso aberto.');
+          onRecarregar();
+        } catch (e: any) {
+          showToast(e?.message || 'Erro ao abrir o concurso.');
+        }
+      },
+    });
+  };
+
+  const handleEncerrar = (id: string, nome: string) => {
+    setConfirmDialog({
+      title: 'Encerrar Concurso',
+      message: `Deseja encerrar o concurso "${nome}" agora? Ele ficará com status "Encerrado".`,
+      confirmLabel: 'Encerrar Concurso',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await encerrarConcurso(id);
+          showToast('Concurso encerrado.');
+          onRecarregar();
+        } catch (e: any) {
+          showToast(e?.message || 'Erro ao encerrar o concurso.');
+        }
+      },
+    });
+  };
+
+  const handleMinutaResultados = async (id: string) => {
+    setGerandoMinuta(true);
+    setMinutaResultados(null);
+    setPendentesFinalizacao(null);
+    try {
+      const resultado = await gerarMinutaResultados(id);
+      if ('minuta' in resultado) setMinutaResultados(resultado.minuta);
+      else setPendentesFinalizacao(resultado.pendentes);
+    } catch (e: any) {
+      showToast(e?.message || 'Erro ao gerar a minuta de resultados.');
+    } finally {
+      setGerandoMinuta(false);
+    }
+  };
+
+  const handleCopiarTexto = async (texto: string) => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      showToast('Minuta copiada para a área de transferência.');
+    } catch {
+      showToast('Não foi possível copiar automaticamente.');
+    }
+  };
+
+  const kpiDefs = estatisticas ? [
+    { key: 'finalizadas', label: 'IS Ingresso Finalizadas', value: String(estatisticas.totalFinalizadas), corBorda: 'border-l-[#079551]', corTexto: 'text-[#079551]', corBarra: 'bg-[#079551]', itens: null as EstatisticaConcursoStatus[] | null },
+    { key: 'faltas', label: '% de Faltas', value: `${estatisticas.percentualFaltas}%`, corBorda: 'border-l-amber-400', corTexto: 'text-amber-600', corBarra: 'bg-amber-400', itens: estatisticas.topFaltas },
+    { key: 'inaptos', label: '% de Inaptos', value: `${estatisticas.percentualInaptos}%`, corBorda: 'border-l-red-500', corTexto: 'text-red-600', corBarra: 'bg-red-500', itens: estatisticas.topInaptos },
+    { key: 'idm', label: '% de IDM', value: `${estatisticas.percentualIdm}%`, corBorda: 'border-l-gray-500', corTexto: 'text-gray-600', corBarra: 'bg-gray-500', itens: estatisticas.topIdm },
+  ] : [];
+
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
       <Header title="Planilhas de Controle" />
+
+      {toastMessage && (
+        <div className="fixed top-20 right-4 z-[100] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in max-w-[90vw]">
+          <span className="material-symbols-outlined text-[18px] text-[#079551] shrink-0">check_circle</span>
+          <span className="font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
+      {confirmDialog && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
+            <div className="p-4 bg-[#050F41] text-white flex items-center space-x-2">
+              <span className="material-symbols-outlined text-[20px] text-[#FAB932]">help</span>
+              <h3 className="font-heading font-bold text-sm uppercase">{confirmDialog.title}</h3>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-gray-700 leading-relaxed">{confirmDialog.message}</p>
+              <div className="flex items-center justify-end space-x-2">
+                <button type="button" onClick={() => setConfirmDialog(null)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" onClick={confirmDialog.onConfirm} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">{confirmDialog.confirmLabel || 'Confirmar'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(minutaResultados !== null || pendentesFinalizacao !== null || gerandoMinuta) && (
+        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-4 bg-[#050F41] text-white flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="material-symbols-outlined text-[22px] text-[#079551]">summarize</span>
+                <h3 className="font-heading font-bold text-sm uppercase">Minuta de Resultados da IS</h3>
+              </div>
+              <button onClick={() => { setMinutaResultados(null); setPendentesFinalizacao(null); }} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto space-y-4 flex-1">
+              {gerandoMinuta ? (
+                <div className="text-center py-8 text-gray-500">
+                  <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
+                </div>
+              ) : pendentesFinalizacao && pendentesFinalizacao.length > 0 ? (
+                <>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                    <p className="text-xs font-bold text-amber-800">Ainda há {pendentesFinalizacao.length} candidato(s) não finalizado(s). Finalize todos antes de gerar a minuta de resultados.</p>
+                  </div>
+                  <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
+                    {pendentesFinalizacao.map(p => (
+                      <div key={p.id} className="p-2.5 text-xs flex items-center justify-between">
+                        <span className="font-mono font-bold text-[#050F41]">{p.id}</span>
+                        <span className="text-gray-600">{p.nome}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <textarea readOnly value={minutaResultados ?? ''} rows={16} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-[11px] font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap" />
+              )}
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                {minutaResultados && (
+                  <button type="button" onClick={() => handleCopiarTexto(minutaResultados)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1">
+                    <span className="material-symbols-outlined text-[16px]">content_copy</span>
+                    <span>Copiar Minuta</span>
+                  </button>
+                )}
+                <button type="button" onClick={() => { setMinutaResultados(null); setPendentesFinalizacao(null); }} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">Fechar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {registrarMensagemAlvo && (
+        <ModalRegistrarMensagemArquivo
+          concursoId={registrarMensagemAlvo.id}
+          concursoNome={registrarMensagemAlvo.nome}
+          onClose={() => setRegistrarMensagemAlvo(null)}
+        />
+      )}
+      {listarMensagensAlvo && (
+        <ModalListarMensagens
+          concursoId={listarMensagensAlvo.id}
+          concursoNome={listarMensagensAlvo.nome}
+          onClose={() => setListarMensagensAlvo(null)}
+        />
+      )}
+      {kpiModal && (
+        <ModalKpiBarChart
+          titulo={kpiModal.titulo}
+          corBarra={kpiModal.corBarra}
+          itens={kpiModal.itens}
+          onSelecionarConcurso={onSelecionar}
+          onClose={() => setKpiModal(null)}
+        />
+      )}
+
       <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1200px] mx-auto w-full flex-1 space-y-6">
-        {(podeRegistrarMensagem || isAdmin) && (
-          <div className="flex justify-end gap-2 flex-wrap">
-            {podeRegistrarMensagem && (
-              <button
-                type="button"
-                onClick={onNovoConcursoClick}
-                className="px-4 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5"
-              >
-                <span className="material-symbols-outlined text-[16px]">upload_file</span>
-                <span>Registrar Mensagem (PDF) — Novo Concurso</span>
-              </button>
-            )}
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={onImportarCsvClick}
-                className="px-4 py-2.5 bg-white hover:bg-gray-50 text-[#050F41] rounded-xl text-xs font-bold transition-colors shadow-sm border border-gray-200 flex items-center space-x-1.5"
-              >
-                <span className="material-symbols-outlined text-[16px]">table_view</span>
-                <span>Importar Concurso (CSV)</span>
-              </button>
+        {!loadingEstatisticas && estatisticas && (
+          <div className="bg-gray-100 border border-gray-200/80 rounded-2xl p-4 flex flex-col md:flex-row gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
+              {kpiDefs.map(def => (
+                <button
+                  key={def.key}
+                  type="button"
+                  disabled={def.itens === null}
+                  onClick={() => def.itens !== null && setKpiModal({ titulo: def.label, corBarra: def.corBarra, itens: def.itens })}
+                  className={`text-left bg-white rounded-xl border-l-4 ${def.corBorda} border-t border-r border-b border-gray-200 p-3.5 shadow-sm transition-all ${def.itens !== null ? 'hover:shadow-md cursor-pointer' : 'cursor-default'}`}
+                >
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{def.label}</p>
+                  <p className={`text-2xl font-black font-heading mt-1 ${def.corTexto}`}>{def.value}</p>
+                </button>
+              ))}
+            </div>
+            {(podeRegistrarMensagem || podeImportarCsv) && (
+              <div className="flex md:flex-col gap-2 md:w-44 shrink-0">
+                {podeRegistrarMensagem && (
+                  <button
+                    type="button"
+                    onClick={onNovoConcursoClick}
+                    className="flex-1 px-4 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center justify-center space-x-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}>add</span>
+                    <span>Concurso</span>
+                  </button>
+                )}
+                {podeImportarCsv && (
+                  <button
+                    type="button"
+                    onClick={onImportarCsvClick}
+                    className="flex-1 px-4 py-2.5 bg-white hover:bg-gray-50 text-[#050F41] rounded-xl text-xs font-bold transition-colors shadow-sm border border-gray-200 flex items-center justify-center space-x-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'wght' 700" }}>arrow_upward</span>
+                    <span>CSV</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -763,64 +1380,78 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, isA
           GRUPOS_STATUS.map(grupo => {
             const itens = concursos.filter(c => c.status === grupo.status);
             if (itens.length === 0) return null;
+            const expandido = openGroups.has(grupo.status);
             return (
               <div key={grupo.status}>
-                <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{grupo.titulo} ({itens.length})</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {itens.map(c => {
-                    const contagem = contadores[c.id];
-                    const pct = contagem && contagem.total > 0 ? Math.round((contagem.finalizados / contagem.total) * 100) : null;
-                    return (
-                      <div key={c.id} className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col">
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => onSelecionar(c.id)}
-                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onSelecionar(c.id); }}
-                          className="text-left p-4 flex-1 hover:bg-gray-50 transition-colors cursor-pointer"
-                        >
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h3 className="font-heading font-bold text-sm text-[#050F41]">{c.nome}</h3>
-                            {isAdmin && c.status === 'encerrado' ? (
-                              <button
-                                type="button"
-                                onClick={e => { e.stopPropagation(); onAbrir(c.id, c.nome); }}
-                                title="Reabrir concurso (Em Andamento)"
-                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap hover:brightness-95 transition-all ${getConcursoStatusClasses(c.status)}`}
-                              >
-                                {STATUS_LABELS[c.status]}
-                              </button>
-                            ) : (
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(c.status)}`}>{STATUS_LABELS[c.status]}</span>
+                <button
+                  type="button"
+                  onClick={() => setOpenGroups(new Set([grupo.status]))}
+                  className="w-full flex items-center justify-between mb-2 py-1 group"
+                >
+                  <h2 className="text-sm font-bold text-gray-600 uppercase tracking-wider">{grupo.titulo} ({itens.length})</h2>
+                  <span className={`material-symbols-outlined text-[22px] text-gray-400 group-hover:text-[#050F41] transition-transform ${expandido ? 'rotate-180' : ''}`}>expand_more</span>
+                </button>
+                {expandido && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {itens.map(c => {
+                      const contagem = contadores[c.id];
+                      const pct = contagem && contagem.total > 0 ? Math.round((contagem.finalizados / contagem.total) * 100) : null;
+                      const podeEncerrar = !!contagem && contagem.total > 0 && contagem.finalizados === contagem.total;
+                      return (
+                        <div key={c.id} className={`rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col ${getConcursoCardBg(c.status)}`}>
+                          <div className="flex items-stretch flex-1">
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => onSelecionar(c.id)}
+                              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onSelecionar(c.id); }}
+                              className="text-left p-4 flex-1 min-w-0 hover:bg-black/[0.03] transition-colors cursor-pointer"
+                            >
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <h3 className="font-heading font-bold text-lg text-[#050F41] truncate">{c.nome}</h3>
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${getConcursoStatusClasses(c.status)}`}>{STATUS_LABELS[c.status]}</span>
+                                  <MenuAcoesConcurso
+                                    status={c.status}
+                                    podeAbrirEncerrar={podeAbrirEncerrar}
+                                    podeGerarMinutaResultados={podeGerarMinutaResultados}
+                                    podeRegistrarMensagemArquivo={podeRegistrarMensagemArquivo}
+                                    podeListarMensagens={podeListarMensagens}
+                                    podeEncerrar={podeEncerrar}
+                                    onAbrir={() => handleAbrir(c.id, c.nome)}
+                                    onEncerrar={() => handleEncerrar(c.id, c.nome)}
+                                    onMinutaResultados={() => handleMinutaResultados(c.id)}
+                                    onRegistrarMensagem={() => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome })}
+                                    onListarMensagens={() => setListarMensagensAlvo({ id: c.id, nome: c.nome })}
+                                  />
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-600">{c.totalCandidatos} candidato(s)</p>
+                              {c.periodoInicioISO && (
+                                <p className="text-sm text-gray-500">{isoParaBR(c.periodoInicioISO)} a {isoParaBR(c.periodoFimISO)}</p>
+                              )}
+                            </div>
+                            {c.status === 'em_andamento' && pct !== null && (
+                              <div className="flex items-center justify-center pr-4 pl-1 shrink-0">
+                                <CircularMini pct={pct} />
+                              </div>
                             )}
                           </div>
-                          <p className="text-[11px] text-gray-500">{c.totalCandidatos} candidato(s)</p>
-                          {c.periodoInicioISO && (
-                            <p className="text-[11px] text-gray-500">{isoParaBR(c.periodoInicioISO)} a {isoParaBR(c.periodoFimISO)}</p>
-                          )}
-                          {pct !== null && (
-                            <div className="mt-2">
-                              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-[#079551]" style={{ width: `${pct}%` }} />
-                              </div>
-                              <p className="text-[10px] text-gray-400 mt-1">{pct}% IS finalizadas</p>
-                            </div>
+                          {podeAbrirEncerrar && c.status === 'em_breve' && (
+                            <button
+                              type="button"
+                              onClick={() => handleAbrir(c.id, c.nome)}
+                              className="px-4 py-2.5 border-t border-black/5 text-xs font-bold text-[#079551] hover:bg-black/[0.03] transition-colors flex items-center justify-center space-x-1.5"
+                            >
+                              <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}>play_circle</span>
+                              <span>Concurso</span>
+                            </button>
                           )}
                         </div>
-                        {isAdmin && c.status === 'em_breve' && (
-                          <button
-                            type="button"
-                            onClick={() => onAbrir(c.id, c.nome)}
-                            className="px-4 py-2 border-t border-gray-100 text-[11px] font-bold text-[#079551] hover:bg-green-50 transition-colors flex items-center justify-center space-x-1"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">play_circle</span>
-                            <span>Abrir Concurso</span>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })
@@ -836,22 +1467,21 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, isA
 
 interface ConcursoDetalheProps {
   concursoId: string;
-  isAdmin: boolean;
   onVoltar: () => void;
 }
 
-const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, isAdmin, onVoltar }) => {
+const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar }) => {
   const nav = useNav();
   const perfil = nav?.authUser?.perfil;
   const podeEditarInlineBase = canUseFeature('concursosJRS.editarDadosTabela', perfil);
   const podeReagendarBase = canUseFeature('concursosJRS.reagendar', perfil);
-  const podeGerarMinutaResultados = canUseFeature('concursosJRS.gerarMinutaResultados', perfil);
 
   const [concurso, setConcurso] = useState<ConcursoRecord | null>(null);
   const [candidatos, setCandidatos] = useState<CandidatoRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
 
   const [statusKpiFilter, setStatusKpiFilter] = useState<string>('');
   const [dateFilterMode, setDateFilterMode] = useState<'todos' | 'hoje' | 'semana' | 'personalizado'>('todos');
@@ -867,10 +1497,6 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, isAdmin, 
 
   const [reagendandoCandidato, setReagendandoCandidato] = useState<CandidatoRecord | null>(null);
   const [confirmandoReagendamento, setConfirmandoReagendamento] = useState(false);
-
-  const [gerandoMinutaResultados, setGerandoMinutaResultados] = useState(false);
-  const [minutaResultados, setMinutaResultados] = useState<string | null>(null);
-  const [pendentesFinalizacao, setPendentesFinalizacao] = useState<{ id: string; nome: string }[] | null>(null);
 
   const podeEditar = podeEditarInlineBase && concurso?.status === 'em_andamento';
   const podeReagendar = podeReagendarBase && concurso?.status === 'em_andamento';
@@ -1001,89 +1627,6 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, isAdmin, 
     });
   };
 
-  const handleGerarMinutaResultados = async () => {
-    setGerandoMinutaResultados(true);
-    setMinutaResultados(null);
-    setPendentesFinalizacao(null);
-    try {
-      const resultado = await gerarMinutaResultados(concursoId);
-      if ('minuta' in resultado) setMinutaResultados(resultado.minuta);
-      else setPendentesFinalizacao(resultado.pendentes);
-    } catch (e: any) {
-      showToast(e?.message || 'Erro ao gerar a minuta de resultados.');
-    } finally {
-      setGerandoMinutaResultados(false);
-    }
-  };
-
-  const handleFecharMinutaResultados = () => {
-    const mostrarPrompt = isAdmin && minutaResultados !== null && concurso?.status === 'em_andamento';
-    setMinutaResultados(null);
-    setPendentesFinalizacao(null);
-    if (mostrarPrompt) {
-      setConfirmDialog({
-        title: 'Encerrar Concurso',
-        message: 'Deseja encerrar este concurso agora? Ele ficará com status "Encerrado".',
-        confirmLabel: 'Encerrar Concurso',
-        onConfirm: async () => {
-          setConfirmDialog(null);
-          try {
-            await encerrarConcurso(concursoId);
-            showToast('Concurso encerrado.');
-            carregarTudo();
-          } catch (e: any) {
-            showToast(e?.message || 'Erro ao encerrar o concurso.');
-          }
-        },
-      });
-    }
-  };
-
-  const handleEncerrarManual = () => {
-    setConfirmDialog({
-      title: 'Encerrar Concurso',
-      message: 'Deseja encerrar este concurso agora? Ele ficará com status "Encerrado".',
-      confirmLabel: 'Encerrar Concurso',
-      onConfirm: async () => {
-        setConfirmDialog(null);
-        try {
-          await encerrarConcurso(concursoId);
-          showToast('Concurso encerrado.');
-          carregarTudo();
-        } catch (e: any) {
-          showToast(e?.message || 'Erro ao encerrar o concurso.');
-        }
-      },
-    });
-  };
-
-  const handleAbrirManual = () => {
-    setConfirmDialog({
-      title: 'Abrir Concurso',
-      message: 'Deseja abrir este concurso agora? Ele ficará com status "Em Andamento" e liberado para edição.',
-      confirmLabel: 'Abrir Concurso',
-      onConfirm: async () => {
-        setConfirmDialog(null);
-        try {
-          await abrirConcurso(concursoId);
-          showToast('Concurso aberto.');
-          carregarTudo();
-        } catch (e: any) {
-          showToast(e?.message || 'Erro ao abrir o concurso.');
-        }
-      },
-    });
-  };
-
-  const handleCopiarTexto = async (texto: string) => {
-    try {
-      await navigator.clipboard.writeText(texto);
-      showToast('Minuta copiada para a área de transferência.');
-    } catch {
-      showToast('Não foi possível copiar automaticamente. Selecione e copie o texto manualmente.');
-    }
-  };
-
   const handleCopiarNomeCandidato = async (nome: string) => {
     try {
       await navigator.clipboard.writeText(nome);
@@ -1149,14 +1692,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, isAdmin, 
   }, [candidatosComDataBR, search, statusKpiFilter, dateFilterMode, dateFilterCustom, hojeBR]);
 
   const total = candidatos.length;
-  const totalFinalizados = candidatos.filter(c => c.finalizado).length;
-  const pctFinalizados = total > 0 ? Math.round((totalFinalizados / total) * 100) : 0;
   const countApto = candidatos.filter(c => c.status === 'APTO').length;
   const countInapto = candidatos.filter(c => c.status === 'INAPTO').length;
   const countInsuf = candidatos.filter(c => c.status === 'INSUF DOCUMENTAL').length;
   const countFaltou = candidatos.filter(c => c.status === 'FALTOU').length;
   const countNaoFinalizados = candidatos.filter(c => c.status === '' || c.status === 'Pendente' || c.status === 'Reagendado').length;
-  const todosFinalizados = total > 0 && totalFinalizados === total;
 
   const dateFilterLabel =
     dateFilterMode === 'hoje' ? 'Hoje' :
@@ -1164,63 +1704,32 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, isAdmin, 
     dateFilterMode === 'personalizado' && dateFilterCustom ? isoParaBR(dateFilterCustom) :
     'Data: Todos';
 
-  const kpiCards: { key: string; label: string; value: number; icon: string; valueColorClass: string; iconColorClass: string; filterValue: string | null }[] = [
-    { key: 'total', label: 'Total', value: total, icon: 'groups', valueColorClass: 'text-[#050F41]', iconColorClass: 'text-gray-500 bg-gray-100', filterValue: null },
-    { key: 'apto', label: 'Apto', value: countApto, icon: 'check_circle', valueColorClass: 'text-[#079551]', iconColorClass: 'text-[#079551] bg-green-50', filterValue: 'APTO' },
-    { key: 'inapto', label: 'Inapto', value: countInapto, icon: 'cancel', valueColorClass: 'text-red-600', iconColorClass: 'text-red-500 bg-red-50', filterValue: 'INAPTO' },
-    { key: 'insuf', label: 'Insuf. Doc.', value: countInsuf, icon: 'description', valueColorClass: 'text-purple-700', iconColorClass: 'text-purple-600 bg-purple-50', filterValue: 'INSUF DOCUMENTAL' },
-    { key: 'faltou', label: 'Faltou', value: countFaltou, icon: 'event_busy', valueColorClass: 'text-amber-600', iconColorClass: 'text-amber-500 bg-amber-50', filterValue: 'FALTOU' },
-    { key: 'nao-finalizados', label: 'Não Finaliz.', value: countNaoFinalizados, icon: 'pending_actions', valueColorClass: 'text-blue-700', iconColorClass: 'text-blue-600 bg-blue-50', filterValue: 'nao-finalizados' },
+  const chipFilters: { key: string; label: string; value: number; filterValue: string; corAtivo: string }[] = [
+    { key: 'apto', label: 'Aptos', value: countApto, filterValue: 'APTO', corAtivo: 'bg-[#079551] border-[#079551] text-white' },
+    { key: 'inapto', label: 'Inaptos', value: countInapto, filterValue: 'INAPTO', corAtivo: 'bg-red-600 border-red-600 text-white' },
+    { key: 'insuf', label: 'IDM', value: countInsuf, filterValue: 'INSUF DOCUMENTAL', corAtivo: 'bg-purple-600 border-purple-600 text-white' },
+    { key: 'faltou', label: 'Faltas', value: countFaltou, filterValue: 'FALTOU', corAtivo: 'bg-amber-500 border-amber-500 text-white' },
+    { key: 'nao-finalizados', label: 'Não Finalizados', value: countNaoFinalizados, filterValue: 'nao-finalizados', corAtivo: 'bg-blue-600 border-blue-600 text-white' },
   ];
 
-  const renderKpiCard = (card: typeof kpiCards[number], areaKey?: string) => {
-    const isActive = card.filterValue !== null && statusKpiFilter === card.filterValue;
-    return (
-      <button
-        key={card.key}
-        type="button"
-        style={areaKey ? { gridArea: areaKey } : undefined}
-        onClick={() => (card.filterValue === null ? setStatusKpiFilter('') : toggleStatusKpiFilter(card.filterValue))}
-        className={`p-3.5 rounded-2xl border shadow-sm flex items-center justify-between transition-all text-left ${isActive ? 'bg-[#050F41] border-[#050F41]' : 'bg-white border-gray-200/60 hover:border-[#050F41]/40'}`}
-      >
-        <div>
-          <p className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? 'text-white/70' : 'text-gray-400'}`}>{card.label}</p>
-          <p className={`text-xl font-bold font-heading ${isActive ? 'text-white' : card.valueColorClass}`}>{card.value}</p>
-        </div>
-        <span className={`material-symbols-outlined text-[22px] p-1.5 rounded-xl ${isActive ? 'text-white bg-white/10' : card.iconColorClass}`}>{card.icon}</span>
-      </button>
-    );
-  };
+  const sugestoesCandidatos = useMemo(() => {
+    if (!search.trim()) return [];
+    const termo = search.toLowerCase();
+    return candidatos
+      .filter(c => c.nome.toLowerCase().includes(termo) || c.id.toLowerCase().includes(termo))
+      .slice(0, 6);
+  }, [candidatos, search]);
 
-  const CIRCULO_RAIO = 36;
-  const CIRCULO_CIRCUNFERENCIA = 2 * Math.PI * CIRCULO_RAIO;
-  const circuloOffset = CIRCULO_CIRCUNFERENCIA - (pctFinalizados / 100) * CIRCULO_CIRCUNFERENCIA;
-
-  const progressoCardContent = (
-    <div className="flex items-center h-full w-full">
-      <div className="flex-1 min-w-0 pr-2">
-        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Finalizados</p>
-        <p className="text-2xl font-bold text-[#050F41] font-heading mt-1 leading-none">
-          {totalFinalizados}<span className="text-sm text-gray-400 font-semibold">/{total}</span>
-        </p>
-      </div>
-      <div className="shrink-0 relative w-[88px] h-[88px]">
-        <svg width="88" height="88" viewBox="0 0 88 88" className="-rotate-90">
-          <circle cx="44" cy="44" r={CIRCULO_RAIO} fill="none" stroke="#E5E7EB" strokeWidth="8" />
-          <circle cx="44" cy="44" r={CIRCULO_RAIO} fill="none" stroke="url(#concursosProgressGradient)" strokeWidth="8" strokeLinecap="round" strokeDasharray={CIRCULO_CIRCUNFERENCIA} strokeDashoffset={circuloOffset} className="transition-all duration-500" />
-          <defs>
-            <linearGradient id="concursosProgressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#079551" />
-              <stop offset="100%" stopColor="#050F41" />
-            </linearGradient>
-          </defs>
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-sm font-bold text-[#050F41] font-heading">{pctFinalizados}%</span>
-        </div>
-      </div>
-    </div>
-  );
+  const gruposPorData = useMemo(() => {
+    const grupos: { dataBR: string; itens: typeof filteredCandidatos }[] = [];
+    filteredCandidatos.forEach(c => {
+      const label = c.dataAgendamentoBR || 'Sem data';
+      const ultimo = grupos[grupos.length - 1];
+      if (ultimo && ultimo.dataBR === label) ultimo.itens.push(c);
+      else grupos.push({ dataBR: label, itens: [c] });
+    });
+    return grupos;
+  }, [filteredCandidatos]);
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
@@ -1252,82 +1761,88 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, isAdmin, 
       )}
 
       <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1600px] mx-auto w-full flex-1 space-y-4">
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            {concurso && (
-              <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(concurso.status)}`}>
-                {STATUS_LABELS[concurso.status]}
-              </span>
+        <div className="text-center space-y-1">
+          <h1 className="font-heading font-bold text-2xl sm:text-3xl text-[#050F41]">
+            {concurso?.nome || 'Concurso'} <span className="text-gray-400 font-semibold">-</span> {total} Candidato{total === 1 ? '' : 's'}
+          </h1>
+          {concurso && (
+            <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(concurso.status)}`}>
+              {STATUS_LABELS[concurso.status]}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {chipFilters.map(chip => {
+            const isActive = statusKpiFilter === chip.filterValue;
+            return (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => toggleStatusKpiFilter(chip.filterValue)}
+                className={`px-4 py-2 rounded-full text-sm font-bold border transition-all flex items-center gap-2 ${isActive ? chip.corAtivo : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
+              >
+                <span>{chip.label}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-black ${isActive ? 'bg-white/25' : 'bg-gray-100'}`}>{chip.value}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          <div className="relative flex-1 min-w-[220px]">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-[24px]">search</span>
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onFocus={() => setMostrarSugestoes(true)}
+              onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
+              placeholder="Buscar por matrícula ou nome..."
+              autoComplete="off"
+              className="w-full pl-12 pr-10 py-3.5 text-base font-body rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-[#050F41] transition-all"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
             )}
-            <div className="relative flex-1 min-w-[180px]">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">search</span>
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar por matrícula ou nome..."
-                className="w-full pl-10 pr-4 py-2.5 text-xs font-body rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-[#050F41] transition-all"
-              />
-              {search && (
-                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  <span className="material-symbols-outlined text-[16px]">close</span>
-                </button>
-              )}
-            </div>
+            {mostrarSugestoes && sugestoesCandidatos.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 animate-fade-in max-h-64 overflow-y-auto">
+                {sugestoesCandidatos.map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onMouseDown={() => { setSearch(c.nome); setMostrarSugestoes(false); }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center justify-between gap-2"
+                  >
+                    <span className="text-sm font-semibold text-gray-800 truncate">{c.nome}</span>
+                    <span className="text-xs font-mono text-gray-400 shrink-0">{c.id}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowDateMenu(prev => !prev)}
-                className={`px-3 py-2.5 text-xs font-semibold rounded-xl border flex items-center space-x-1.5 whitespace-nowrap ${dateFilterMode !== 'todos' ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
-              >
-                <span className="material-symbols-outlined text-[16px]">event</span>
-                <span>{dateFilterLabel}</span>
-              </button>
-              {showDateMenu && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowDateMenu(false)} />
-                  <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 z-50 animate-fade-in space-y-0.5">
-                    <button type="button" onClick={() => { setDateFilterMode('todos'); setDateFilterCustom(null); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100">Todos</button>
-                    <button type="button" onClick={() => { setDateFilterMode('hoje'); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100">Hoje</button>
-                    <button type="button" onClick={() => { setDateFilterMode('semana'); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100">Esta Semana</button>
-                    <button type="button" onClick={() => { setShowDateMenu(false); setShowDateCalendar(true); loadDatasAgendamento(); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100">Personalizado...</button>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {podeGerarMinutaResultados && (
-              <button
-                type="button"
-                onClick={handleGerarMinutaResultados}
-                disabled={gerandoMinutaResultados}
-                className="px-4 py-2.5 bg-white hover:bg-gray-50 text-[#050F41] rounded-xl text-xs font-bold transition-colors shadow-sm border border-gray-200 flex items-center space-x-1.5 whitespace-nowrap"
-              >
-                <span className="material-symbols-outlined text-[16px]">{gerandoMinutaResultados ? 'progress_activity' : 'summarize'}</span>
-                <span>Minuta de Resultados</span>
-              </button>
-            )}
-
-            {isAdmin && concurso?.status === 'em_breve' && (
-              <button type="button" onClick={handleAbrirManual} className="px-4 py-2.5 bg-[#079551] hover:bg-[#067a43] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5 whitespace-nowrap">
-                <span className="material-symbols-outlined text-[16px]">play_circle</span>
-                <span>Abrir Concurso</span>
-              </button>
-            )}
-            {isAdmin && concurso?.status === 'em_andamento' && (
-              <button
-                type="button"
-                onClick={handleEncerrarManual}
-                disabled={!todosFinalizados}
-                title={todosFinalizados ? '' : 'Só é possível encerrar quando todos os candidatos estiverem finalizados.'}
-                className="px-4 py-2.5 bg-gray-700 hover:bg-gray-800 text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <span className="material-symbols-outlined text-[16px]">stop_circle</span>
-                <span>Encerrar Concurso</span>
-              </button>
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowDateMenu(prev => !prev)}
+              className={`px-4 py-3.5 text-sm font-bold rounded-xl border flex items-center space-x-2 whitespace-nowrap ${dateFilterMode !== 'todos' ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
+            >
+              <span className="material-symbols-outlined text-[20px]">event</span>
+              <span>{dateFilterLabel}</span>
+            </button>
+            {showDateMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowDateMenu(false)} />
+                <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 z-50 animate-fade-in space-y-0.5">
+                  <button type="button" onClick={() => { setDateFilterMode('todos'); setDateFilterCustom(null); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100">Todos</button>
+                  <button type="button" onClick={() => { setDateFilterMode('hoje'); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100">Hoje</button>
+                  <button type="button" onClick={() => { setDateFilterMode('semana'); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100">Esta Semana</button>
+                  <button type="button" onClick={() => { setShowDateMenu(false); setShowDateCalendar(true); loadDatasAgendamento(); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100">Personalizado...</button>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -1355,16 +1870,6 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, isAdmin, 
           </div>
         )}
 
-        <div className="sm:hidden space-y-3">
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/60 shadow-sm">{progressoCardContent}</div>
-          <div className="grid grid-cols-2 gap-3">{kpiCards.map(card => renderKpiCard(card))}</div>
-        </div>
-
-        <div className="hidden sm:grid gap-3" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gridTemplateRows: 'repeat(2, 1fr)', gridTemplateAreas: '"progress progress k1 k2 k3" "progress progress k4 k5 k6"' }}>
-          <div style={{ gridArea: 'progress' }} className="bg-white p-4 rounded-2xl border border-gray-200/60 shadow-sm flex flex-col justify-center">{progressoCardContent}</div>
-          {kpiCards.map((card, i) => renderKpiCard(card, `k${i + 1}`))}
-        </div>
-
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden">
           {loading ? (
             <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
@@ -1390,8 +1895,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, isAdmin, 
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50/80 border-b border-gray-100 text-[15px] font-bold text-[#050F41] uppercase tracking-wider">
-                      <th className="py-3.5 px-4 w-24 whitespace-nowrap">Data</th>
-                      <th className="py-3.5 px-4 w-64">Candidato</th>
+                      <th className="py-3.5 px-4 w-64" colSpan={2}>Candidato</th>
                       <th className="py-3.5 px-4 w-32">Status</th>
                       <th className="py-3.5 px-4 w-56">Observações</th>
                       <th className="py-3.5 px-4 w-24">Nº TIS</th>
@@ -1399,48 +1903,59 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, isAdmin, 
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-[14px]">
-                    {filteredCandidatos.map(c => (
-                      <tr key={c.id} className="hover:bg-gray-50/80 transition-colors">
-                        <td className="py-3.5 px-4 text-gray-600 whitespace-nowrap">{c.dataAgendamentoBR || '-'}</td>
-                        <td className="py-3.5 px-4 cursor-pointer" onClick={() => handleCopiarNomeCandidato(c.nome)} title="Clique para copiar o nome do candidato">
-                          <p className="font-semibold text-gray-800">{c.nome}</p>
-                          <p className="text-[12px] font-mono text-gray-400">{c.id}</p>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          {podeEditar ? (
-                            <select value={c.status || ''} onChange={e => handleStatusChange(c, e.target.value)} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg border focus:outline-none focus:border-[#050F41] cursor-pointer ${getStatusSelectClasses(c.status)}`}>
-                              {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                            </select>
-                          ) : getStatusBadge(c.status)}
-                        </td>
-                        <td className="py-3.5 px-4 text-gray-600">
-                          {podeEditar ? (
-                            <input type="text" defaultValue={c.observacoes} onBlur={e => handleCampoBlur(c, 'observacoes', e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
-                          ) : <span className="truncate block" title={c.observacoes}>{c.observacoes || '-'}</span>}
-                        </td>
-                        <td className="py-3.5 px-4 font-mono text-gray-600">
-                          {podeEditar ? (
-                            <input type="text" defaultValue={c.numTIS} onBlur={e => handleCampoBlur(c, 'numTIS', e.target.value)} className="w-24 px-2 py-1.5 text-[13px] font-mono rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
-                          ) : (c.numTIS || '-')}
-                        </td>
-                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          {c.termoRecursoUrl ? (
-                            <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Abrir Termo de Recurso">
-                              <span className="material-symbols-outlined text-[22px]">description</span>
-                            </a>
-                          ) : c.status === 'INAPTO' ? (
-                            <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer" title="Gerar Termo de Recurso">
-                              <span className="material-symbols-outlined text-[22px]">gavel</span>
-                            </button>
-                          ) : null}
+                    {gruposPorData.map(grupo => (
+                      <React.Fragment key={grupo.dataBR}>
+                        <tr className="bg-gray-50/60">
+                          <td colSpan={6} className="py-2 px-4 text-[12px] font-bold text-gray-500 uppercase tracking-wider">{grupo.dataBR}</td>
+                        </tr>
+                        {grupo.itens.map(c => (
+                          <tr key={c.id} className="hover:bg-gray-50/80 transition-colors">
+                            <td className="py-3.5 pl-4 pr-0 w-8">
+                              {c.finalizado && (
+                                <span className="material-symbols-outlined text-[20px] text-[#079551]" style={{ fontVariationSettings: "'FILL' 1" }} title="Finalizado">check_circle</span>
+                              )}
+                            </td>
+                            <td className="py-3.5 pl-2 pr-4 cursor-pointer" onClick={() => handleCopiarNomeCandidato(c.nome)} title="Clique para copiar o nome do candidato">
+                              <p className="font-semibold text-gray-800">{c.nome}</p>
+                              <p className="text-[12px] font-mono text-gray-400">{c.id}</p>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              {podeEditar ? (
+                                <select value={c.status || ''} onChange={e => handleStatusChange(c, e.target.value)} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg border focus:outline-none focus:border-[#050F41] cursor-pointer ${getStatusSelectClasses(c.status)}`}>
+                                  {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                </select>
+                              ) : getStatusBadge(c.status)}
+                            </td>
+                            <td className="py-3.5 px-4 text-gray-600">
+                              {podeEditar ? (
+                                <input type="text" defaultValue={c.observacoes} onBlur={e => handleCampoBlur(c, 'observacoes', e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
+                              ) : <span className="truncate block" title={c.observacoes}>{c.observacoes || '-'}</span>}
+                            </td>
+                            <td className="py-3.5 px-4 text-gray-600">
+                              {podeEditar ? (
+                                <input type="text" defaultValue={c.numTIS} onBlur={e => handleCampoBlur(c, 'numTIS', e.target.value)} className="w-24 px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
+                              ) : (c.numTIS || '-')}
+                            </td>
+                            <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                              {c.termoRecursoUrl ? (
+                                <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Abrir Termo de Recurso">
+                                  <span className="material-symbols-outlined text-[22px]">description</span>
+                                </a>
+                              ) : c.status === 'INAPTO' ? (
+                                <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer" title="Gerar Termo de Recurso">
+                                  <span className="material-symbols-outlined text-[22px]">gavel</span>
+                                </button>
+                              ) : null}
 
-                          {podeReagendar && !c.finalizado && (
-                            <button type="button" onClick={() => handleOpenReagendamento(c)} className="p-2 ml-1 text-[#079551] bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer" title="Reagendar">
-                              <span className="material-symbols-outlined text-[22px]">event_repeat</span>
-                            </button>
-                          )}
-                        </td>
-                      </tr>
+                              {podeReagendar && !c.finalizado && (
+                                <button type="button" onClick={() => handleOpenReagendamento(c)} className="p-2 ml-1 text-[#079551] bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer" title="Reagendar">
+                                  <span className="material-symbols-outlined text-[22px]">event_repeat</span>
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -1530,51 +2045,6 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, isAdmin, 
         </div>
       )}
 
-      {(minutaResultados !== null || pendentesFinalizacao !== null) && (
-        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-4 bg-[#050F41] text-white flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className="material-symbols-outlined text-[22px] text-[#079551]">summarize</span>
-                <h3 className="font-heading font-bold text-sm uppercase">Minuta de Resultados da IS</h3>
-              </div>
-              <button onClick={handleFecharMinutaResultados} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-
-            <div className="p-5 overflow-y-auto space-y-4 flex-1">
-              {pendentesFinalizacao && pendentesFinalizacao.length > 0 ? (
-                <>
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                    <p className="text-xs font-bold text-amber-800">Ainda há {pendentesFinalizacao.length} candidato(s) não finalizado(s). Finalize todos antes de gerar a minuta de resultados.</p>
-                  </div>
-                  <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
-                    {pendentesFinalizacao.map(p => (
-                      <div key={p.id} className="p-2.5 text-xs flex items-center justify-between">
-                        <span className="font-mono font-bold text-[#050F41]">{p.id}</span>
-                        <span className="text-gray-600">{p.nome}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <textarea readOnly value={minutaResultados ?? ''} rows={16} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-[11px] font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap" />
-              )}
-
-              <div className="pt-2 flex items-center justify-end space-x-2">
-                {minutaResultados && (
-                  <button type="button" onClick={() => handleCopiarTexto(minutaResultados)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1">
-                    <span className="material-symbols-outlined text-[16px]">content_copy</span>
-                    <span>Copiar Minuta</span>
-                  </button>
-                )}
-                <button type="button" onClick={handleFecharMinutaResultados} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">Fechar</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -1588,6 +2058,11 @@ export const ConcursosJRS: React.FC = () => {
   const perfil = nav?.authUser?.perfil;
   const isAdmin = perfil === 'admin';
   const podeRegistrarMensagem = canUseFeature('concursosJRS.registrarMensagemPDF', perfil);
+  const podeGerarMinutaResultados = canUseFeature('concursosJRS.gerarMinutaResultados', perfil);
+  const podeImportarCsv = canUseFeature('concursosJRS.importarCsv', perfil);
+  const podeAbrirEncerrar = canUseFeature('concursosJRS.abrirEncerrarConcurso', perfil);
+  const podeRegistrarMensagemArquivo = canUseFeature('concursosJRS.registrarMensagemArquivo', perfil);
+  const podeListarMensagens = canUseFeature('concursosJRS.listarMensagens', perfil);
 
   const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
   const [loadingConcursos, setLoadingConcursos] = useState(true);
@@ -1606,11 +2081,6 @@ export const ConcursosJRS: React.FC = () => {
 
   useEffect(() => { carregarConcursos(); }, []);
 
-  const handleAbrirDaLista = async (id: string) => {
-    await abrirConcurso(id);
-    carregarConcursos();
-  };
-
   const handleFecharModalUpload = (concursoIdCriado?: string) => {
     setShowUploadModal(false);
     carregarConcursos();
@@ -1627,7 +2097,6 @@ export const ConcursosJRS: React.FC = () => {
     return (
       <ConcursoDetalhe
         concursoId={selectedConcursoId}
-        isAdmin={isAdmin}
         onVoltar={() => { setSelectedConcursoId(null); carregarConcursos(); }}
       />
     );
@@ -1638,12 +2107,16 @@ export const ConcursosJRS: React.FC = () => {
       <ConcursosLista
         concursos={concursos}
         loading={loadingConcursos}
-        isAdmin={isAdmin}
         podeRegistrarMensagem={podeRegistrarMensagem}
+        podeGerarMinutaResultados={podeGerarMinutaResultados}
+        podeImportarCsv={podeImportarCsv}
+        podeAbrirEncerrar={podeAbrirEncerrar}
+        podeRegistrarMensagemArquivo={podeRegistrarMensagemArquivo}
+        podeListarMensagens={podeListarMensagens}
         onSelecionar={setSelectedConcursoId}
         onNovoConcursoClick={() => setShowUploadModal(true)}
         onImportarCsvClick={() => setShowImportarCsvModal(true)}
-        onAbrir={handleAbrirDaLista}
+        onRecarregar={carregarConcursos}
       />
       {showUploadModal && <ModalRegistrarMensagem onClose={handleFecharModalUpload} isAdmin={isAdmin} />}
       {showImportarCsvModal && <ModalImportarCsv onClose={handleFecharModalImportarCsv} />}

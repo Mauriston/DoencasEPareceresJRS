@@ -64,6 +64,10 @@ export type FeatureKey =
   | 'concursosJRS.registrarMensagemPDF'
   | 'concursosJRS.reagendar'
   | 'concursosJRS.gerarMinutaResultados'
+  | 'concursosJRS.importarCsv'
+  | 'concursosJRS.abrirEncerrarConcurso'
+  | 'concursosJRS.registrarMensagemArquivo'
+  | 'concursosJRS.listarMensagens'
   | 'pericia-menor.novo'
   | 'pericia-menor.historico';
 
@@ -78,6 +82,10 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'concursosJRS.registrarMensagemPDF', label: 'Registrar Mensagem (PDF): criar concurso, candidatos e agendamento', group: 'Concursos (Planilhas de Controle)' },
   { id: 'concursosJRS.reagendar', label: 'Reagendar candidato', group: 'Concursos (Planilhas de Controle)' },
   { id: 'concursosJRS.gerarMinutaResultados', label: 'Gerar Minuta de Resultados', group: 'Concursos (Planilhas de Controle)' },
+  { id: 'concursosJRS.importarCsv', label: 'Importar Concurso (CSV)', group: 'Concursos (Planilhas de Controle)' },
+  { id: 'concursosJRS.abrirEncerrarConcurso', label: 'Abrir/Encerrar Concurso', group: 'Concursos (Planilhas de Controle)' },
+  { id: 'concursosJRS.registrarMensagemArquivo', label: 'Registrar Mensagem: arquivar mensagem em concurso existente', group: 'Concursos (Planilhas de Controle)' },
+  { id: 'concursosJRS.listarMensagens', label: 'Listar Mensagens arquivadas do concurso', group: 'Concursos (Planilhas de Controle)' },
   // Substituem a antiga permissão única de página "Perícia Menor": cada aba
   // (Novo/Histórico) é liberada separadamente por perfil.
   { id: 'pericia-menor.novo', label: 'Perícia Menor - Novo', group: 'Perícia Menor' },
@@ -89,6 +97,10 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'concursosJRS.registrarMensagemPDF': { user_medicos: true, user_secretaria: false },
   'concursosJRS.reagendar': { user_medicos: false, user_secretaria: true },
   'concursosJRS.gerarMinutaResultados': { user_medicos: true, user_secretaria: false },
+  'concursosJRS.importarCsv': { user_medicos: false, user_secretaria: false },
+  'concursosJRS.abrirEncerrarConcurso': { user_medicos: false, user_secretaria: false },
+  'concursosJRS.registrarMensagemArquivo': { user_medicos: true, user_secretaria: false },
+  'concursosJRS.listarMensagens': { user_medicos: true, user_secretaria: true },
   'pericia-menor.novo': { user_medicos: true, user_secretaria: false },
   'pericia-menor.historico': { user_medicos: true, user_secretaria: false },
 };

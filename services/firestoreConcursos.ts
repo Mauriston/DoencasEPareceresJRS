@@ -528,3 +528,123 @@ export const encerrarConcurso = async (concursoId: string) => {
 
 export const salvarTermoRecurso = (concursoId: string, candidatoId: string, url: string) =>
   updateDoc(candidatoRef(concursoId, candidatoId), { recurso: true, termoRecursoUrl: url });
+
+/**
+ * Lista as mensagens arquivadas de um concurso (a de criação — "Apresentação
+ * e IS" — e quaisquer outras arquivadas via `arquivarMensagem`), mais
+ * recente primeiro.
+ */
+export const listarMensagens = async (concursoId: string): Promise<MensagemRecord[]> => {
+  const snap = await getDocs(mensagensCol(concursoId));
+  return snap.docs
+    .map(d => {
+      const data = d.data() as any;
+      return {
+        id: d.id,
+        dataHora: data.dataHora || '',
+        fileUrl: data.fileUrl || '',
+        proposito: data.proposito || '',
+        sender: data.sender || '',
+        recipient: data.recipient || '',
+        info: data.info || '',
+        subject: data.subject || '',
+        texto: data.texto || '',
+      };
+    })
+    .sort((a, b) => b.dataHora.localeCompare(a.dataHora));
+};
+
+/**
+ * Arquiva uma mensagem administrativa qualquer do concurso (ex.: pedido de
+ * reagendamento, resultado de recurso) — diferente da mensagem inicial de
+ * apresentação de candidatos, que já é arquivada automaticamente ao criar o
+ * concurso. Só grava o cabeçalho (Data-Hora/remetente/assunto) e o link do
+ * PDF no Storage; não extrai candidatos nem período.
+ */
+export const arquivarMensagem = async (concursoId: string, cabecalho: CabecalhoMensagem, fileUrl: string): Promise<void> => {
+  await setDoc(doc(mensagensCol(concursoId)), {
+    dataHora: cabecalho.dataHora,
+    fileUrl,
+    proposito: cabecalho.purpose || 'Outros',
+    sender: cabecalho.sender,
+    recipient: cabecalho.recipient,
+    info: cabecalho.info,
+    subject: cabecalho.subject,
+    texto: cabecalho.texto,
+  });
+};
+
+export interface EstatisticaConcursoStatus {
+  concursoId: string;
+  concursoNome: string;
+  quantidade: number;
+}
+
+export interface EstatisticasAnuais {
+  ano: number;
+  totalFinalizadas: number;
+  percentualFaltas: number;
+  percentualInaptos: number;
+  percentualIdm: number;
+  topFaltas: EstatisticaConcursoStatus[];
+  topInaptos: EstatisticaConcursoStatus[];
+  topIdm: EstatisticaConcursoStatus[];
+}
+
+const parseDataBRSimples = (str: string): Date | null => {
+  const partes = str.split('/');
+  if (partes.length !== 3) return null;
+  const [d, m, y] = partes.map(Number);
+  if (!d || !m || !y) return null;
+  return new Date(y, m - 1, d);
+};
+
+/**
+ * Agrega, entre todos os concursos, as IS de Ingresso finalizadas no ano
+ * informado (por `dataLaudo`, com fallback em `dataAgendamento`): total,
+ * percentuais de Faltas/Inaptos/IDM sobre o total finalizado, e o ranking
+ * dos concursos com mais ocorrências de cada um desses três status (top 4),
+ * para o painel de KPIs da lista de concursos.
+ */
+export const obterEstatisticasAnuais = async (ano: number): Promise<EstatisticasAnuais> => {
+  const concursos = await listarConcursos();
+  const porConcurso = await Promise.all(concursos.map(async c => ({ concurso: c, candidatos: await listarCandidatos(c.id) })));
+
+  let totalFinalizadas = 0, faltas = 0, inaptos = 0, idm = 0;
+  const porStatus: Record<'FALTOU' | 'INAPTO' | 'INSUF DOCUMENTAL', EstatisticaConcursoStatus[]> = {
+    FALTOU: [], INAPTO: [], 'INSUF DOCUMENTAL': [],
+  };
+
+  porConcurso.forEach(({ concurso, candidatos }) => {
+    let faltasConcurso = 0, inaptosConcurso = 0, idmConcurso = 0;
+
+    candidatos.forEach(c => {
+      if (!c.finalizado) return;
+      const dataRef = (c.dataLaudo && parseDataBRSimples(c.dataLaudo)) || (c.dataAgendamento ? parseChaveData(c.dataAgendamento) : null);
+      if (!dataRef || dataRef.getFullYear() !== ano) return;
+
+      totalFinalizadas++;
+      const status = String(c.status).trim().toUpperCase();
+      if (status === 'FALTOU') { faltas++; faltasConcurso++; }
+      else if (status === 'INAPTO') { inaptos++; inaptosConcurso++; }
+      else if (status === 'INSUF DOCUMENTAL') { idm++; idmConcurso++; }
+    });
+
+    if (faltasConcurso > 0) porStatus.FALTOU.push({ concursoId: concurso.id, concursoNome: concurso.nome, quantidade: faltasConcurso });
+    if (inaptosConcurso > 0) porStatus.INAPTO.push({ concursoId: concurso.id, concursoNome: concurso.nome, quantidade: inaptosConcurso });
+    if (idmConcurso > 0) porStatus['INSUF DOCUMENTAL'].push({ concursoId: concurso.id, concursoNome: concurso.nome, quantidade: idmConcurso });
+  });
+
+  const top4 = (lista: EstatisticaConcursoStatus[]) => [...lista].sort((a, b) => b.quantidade - a.quantidade).slice(0, 4);
+
+  return {
+    ano,
+    totalFinalizadas,
+    percentualFaltas: totalFinalizadas ? Math.round((faltas / totalFinalizadas) * 100) : 0,
+    percentualInaptos: totalFinalizadas ? Math.round((inaptos / totalFinalizadas) * 100) : 0,
+    percentualIdm: totalFinalizadas ? Math.round((idm / totalFinalizadas) * 100) : 0,
+    topFaltas: top4(porStatus.FALTOU),
+    topInaptos: top4(porStatus.INAPTO),
+    topIdm: top4(porStatus['INSUF DOCUMENTAL']),
+  };
+};
