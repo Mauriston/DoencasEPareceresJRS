@@ -266,6 +266,141 @@ export const extrairCandidatos = (texto: string): CandidatoBasico[] => {
 export interface PeriodoJRS { inicio: Date; fim: Date; }
 
 /** Extrai o período de agendamento da JRS, no padrão "03AGO a 14SET2026 (JRS)". */
+// =========================================================================
+// IMPORTAÇÃO DE CONCURSO A PARTIR DE CSV ("candidatosDataBase" + nome)
+// =========================================================================
+
+/** Parser de CSV tolerante a campos entre aspas (com vírgulas/quebras de linha internas). */
+export const parseCsvGenerico = (texto: string): string[][] => {
+  const linhas: string[][] = [];
+  let campo = '';
+  let linha: string[] = [];
+  let dentroAspas = false;
+
+  for (let i = 0; i < texto.length; i++) {
+    const c = texto[i];
+    if (dentroAspas) {
+      if (c === '"') {
+        if (texto[i + 1] === '"') { campo += '"'; i++; }
+        else dentroAspas = false;
+      } else {
+        campo += c;
+      }
+    } else if (c === '"') {
+      dentroAspas = true;
+    } else if (c === ',') {
+      linha.push(campo);
+      campo = '';
+    } else if (c === '\r') {
+      // ignora
+    } else if (c === '\n') {
+      linha.push(campo);
+      linhas.push(linha);
+      linha = [];
+      campo = '';
+    } else {
+      campo += c;
+    }
+  }
+  if (campo.length > 0 || linha.length > 0) {
+    linha.push(campo);
+    linhas.push(linha);
+  }
+  return linhas.filter(l => l.some(v => v.trim() !== ''));
+};
+
+const normalizarCabecalho = (s: string): string =>
+  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/** Datas de origem variam de formato (algumas planilhas usam AAAA-MM-DD também em
+ * dataLaudo) — normaliza dataAgendamento para ISO e dataLaudo para DD/MM/AAAA. */
+export const paraDataISO = (valor: string): string => {
+  if (!valor) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) return valor;
+  const m = valor.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return valor;
+};
+export const paraDataBR = (valor: string): string => {
+  if (!valor) return '';
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(valor)) return valor;
+  const m = valor.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  return valor;
+};
+
+export interface CandidatoImportadoCsv {
+  id: string;
+  nome: string;
+  dataAgendamento: string;
+  status: string;
+  observacoes: string;
+  finalizado: boolean;
+  recurso: boolean;
+  dataLaudo: string;
+  laudo: string;
+  numTIS: string;
+  termoRecursoUrl: string;
+}
+
+/**
+ * Interpreta um CSV no formato da aba "candidatosDataBase" (+ coluna de nome
+ * do candidato em qualquer posição) — colunas identificadas pelo cabeçalho,
+ * não pela ordem, tolerante a variações de acentuação/espaçamento.
+ */
+export const interpretarCsvCandidatosDataBase = (texto: string): CandidatoImportadoCsv[] => {
+  const linhas = parseCsvGenerico(texto);
+  if (linhas.length === 0) return [];
+
+  const cabecalho = linhas[0].map(normalizarCabecalho);
+  const idx = (nomes: string[]): number => {
+    for (const n of nomes) {
+      const i = cabecalho.indexOf(normalizarCabecalho(n));
+      if (i !== -1) return i;
+    }
+    return -1;
+  };
+
+  const col = {
+    id: idx(['id']),
+    nome: idx(['candidato', 'nome']),
+    dataAgendamento: idx(['dataAgendamento']),
+    status: idx(['status']),
+    observacoes: idx(['observacoes']),
+    finalizado: idx(['finalizado']),
+    recurso: idx(['recurso']),
+    dataLaudo: idx(['dataLaudo']),
+    laudo: idx(['Laudo']),
+    numTIS: idx(['nºTIS', 'nTIS', 'numTIS']),
+    termoRecursoUrl: idx(['termoRecursoUrl']),
+  };
+
+  if (col.id === -1 || col.nome === -1) {
+    throw new Error('O CSV precisa ter ao menos as colunas "id" e "candidato" (ou "nome").');
+  }
+
+  const campo = (linha: string[], indice: number): string => (indice !== -1 ? (linha[indice] || '').trim() : '');
+  const campoBooleano = (linha: string[], indice: number): boolean =>
+    indice !== -1 && campo(linha, indice).toUpperCase() === 'TRUE';
+
+  return linhas
+    .slice(1)
+    .filter(l => campo(l, col.id))
+    .map(linha => ({
+      id: campo(linha, col.id),
+      nome: campo(linha, col.nome),
+      dataAgendamento: paraDataISO(campo(linha, col.dataAgendamento)),
+      status: campo(linha, col.status),
+      observacoes: campo(linha, col.observacoes),
+      finalizado: campoBooleano(linha, col.finalizado),
+      recurso: campoBooleano(linha, col.recurso),
+      dataLaudo: paraDataBR(campo(linha, col.dataLaudo)),
+      laudo: campo(linha, col.laudo),
+      numTIS: campo(linha, col.numTIS),
+      termoRecursoUrl: campo(linha, col.termoRecursoUrl),
+    }));
+};
+
 export const extrairPeriodoJRS = (texto: string): PeriodoJRS | null => {
   const meses: Record<string, number> = {
     JAN: 0, FEV: 1, MAR: 2, ABR: 3, MAI: 4, JUN: 5,
