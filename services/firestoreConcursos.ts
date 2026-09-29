@@ -517,6 +517,9 @@ export const gerarMinutaResultados = async (
 /** Abre o concurso (Em Breve → Em Andamento). Exclusivo do Admin (UI). */
 export const abrirConcurso = (concursoId: string) => updateDoc(concursoRef(concursoId), { status: 'em_andamento' as ConcursoStatus });
 
+/** Volta o concurso de Em Andamento para Em Breve (correção de status). Exclusivo do Admin (UI). */
+export const voltarParaEmBreve = (concursoId: string) => updateDoc(concursoRef(concursoId), { status: 'em_breve' as ConcursoStatus });
+
 /** Encerra o concurso, só quando todos os candidatos estão finalizados. Exclusivo do Admin (UI). */
 export const encerrarConcurso = async (concursoId: string) => {
   const candidatos = await listarCandidatos(concursoId);

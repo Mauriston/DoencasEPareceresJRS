@@ -83,7 +83,7 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'concursosJRS.reagendar', label: 'Reagendar candidato', group: 'Concursos (Planilhas de Controle)' },
   { id: 'concursosJRS.gerarMinutaResultados', label: 'Gerar Minuta de Resultados', group: 'Concursos (Planilhas de Controle)' },
   { id: 'concursosJRS.importarCsv', label: 'Importar Concurso (CSV)', group: 'Concursos (Planilhas de Controle)' },
-  { id: 'concursosJRS.abrirEncerrarConcurso', label: 'Abrir/Encerrar Concurso', group: 'Concursos (Planilhas de Controle)' },
+  { id: 'concursosJRS.abrirEncerrarConcurso', label: 'Alterar Status do Concurso (Abrir/Encerrar/Em Breve)', group: 'Concursos (Planilhas de Controle)' },
   { id: 'concursosJRS.registrarMensagemArquivo', label: 'Registrar Mensagem: arquivar mensagem em concurso existente', group: 'Concursos (Planilhas de Controle)' },
   { id: 'concursosJRS.listarMensagens', label: 'Listar Mensagens arquivadas do concurso', group: 'Concursos (Planilhas de Controle)' },
   // Substituem a antiga permissão única de página "Perícia Menor": cada aba
