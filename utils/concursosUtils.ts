@@ -270,6 +270,11 @@ export const extrairCandidatos = (texto: string): CandidatoBasico[] => {
     if (nome) candidatos.push({ id, nome });
   }
 
+  // Ordena por nome (não pela ordem em que aparecem na mensagem) para que o
+  // agendamento automático — que distribui os candidatos nas datas na ordem
+  // desta lista — também siga a ordem alfabética.
+  candidatos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+
   return candidatos;
 };
 
