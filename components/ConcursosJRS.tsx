@@ -324,10 +324,12 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
       // paralelo com o resultado descartado), e o PDF nunca aparecia depois.
       const novoId = novoConcursoId();
       const fileUrl = await uploadMensagemPdf(novoId, file!);
+      // A mensagem que cria o concurso é sempre do tipo "Apresentação",
+      // independente do que a heurística de extração tenha identificado.
       await criarConcursoDaMensagem({
         concursoId: novoId,
         nome: nomeConcurso.trim(),
-        cabecalho,
+        cabecalho: { ...cabecalho, purpose: 'Apresentação' },
         candidatos: candidatosValidos,
         periodo,
         fileUrl,
@@ -1001,6 +1003,18 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
   const [mensagens, setMensagens] = useState<MensagemRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selecionada, setSelecionada] = useState<MensagemRecord | null>(null);
+  const [textoCopiado, setTextoCopiado] = useState(false);
+
+  const handleCopiarTexto = async () => {
+    if (!selecionada?.texto) return;
+    try {
+      await navigator.clipboard.writeText(selecionada.texto);
+      setTextoCopiado(true);
+      setTimeout(() => setTextoCopiado(false), 2000);
+    } catch {
+      // Copiar é um atalho de conveniência — falha silenciosa não impede o uso do modal.
+    }
+  };
 
   useEffect(() => {
     let cancelado = false;
@@ -1050,17 +1064,29 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
                     download
                     target="_blank"
                     rel="noopener noreferrer"
-                    title="Baixar PDF do Storage"
-                    className="p-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl transition-colors shadow-sm flex items-center justify-center shrink-0"
+                    className="px-3 py-2 bg-[#079551] hover:bg-[#067a43] text-white rounded-xl text-[11px] md:text-sm font-bold transition-colors shadow-sm flex items-center space-x-1.5 shrink-0"
                   >
-                    <span className="material-symbols-outlined text-[18px]">download</span>
+                    <span className="material-symbols-outlined text-[16px]">download</span>
+                    <span>Download Mensagem</span>
                   </a>
                 )}
               </div>
               {selecionada.texto ? (
-                <div className="w-full max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-4">
-                  <p className="text-xs md:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{selecionada.texto}</p>
-                </div>
+                <>
+                  <div className="w-full max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <p className="text-xs md:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{selecionada.texto}</p>
+                  </div>
+                  <div className="flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={handleCopiarTexto}
+                      title="Copiar texto da mensagem"
+                      className="p-2 rounded-lg text-gray-500 hover:text-[#050F41] hover:bg-gray-100 transition-colors flex items-center justify-center"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">{textoCopiado ? 'check' : 'content_copy'}</span>
+                    </button>
+                  </div>
+                </>
               ) : (
                 <p className="text-xs md:text-sm text-gray-400 text-center py-8">Texto da mensagem não disponível.</p>
               )}
@@ -1079,6 +1105,7 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] md:text-sm font-bold text-[#050F41] uppercase tracking-wider">
                   <th className="py-3 px-4">Data-Hora</th>
+                  <th className="py-3 px-4">Tipo</th>
                   <th className="py-3 px-4">Remetente</th>
                   <th className="py-3 px-4">Assunto</th>
                   <th className="py-3 px-4 w-10"></th>
@@ -1088,14 +1115,12 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
                 {mensagens.map(m => (
                   <tr key={m.id} onClick={() => setSelecionada(m)} className="hover:bg-gray-50 cursor-pointer transition-colors">
                     <td className="py-3 px-4 font-mono text-gray-600 whitespace-nowrap">{m.dataHora}</td>
+                    <td className="py-3 px-4 text-gray-700 font-semibold whitespace-nowrap">{m.proposito || '-'}</td>
                     <td className="py-3 px-4 text-gray-700 font-semibold">{m.sender || '-'}</td>
                     <td className="py-3 px-4 text-gray-700">{m.subject || '-'}</td>
                     <td className="py-3 px-4 text-right">
-                      <span
-                        className={`material-symbols-outlined text-[18px] ${m.fileUrl ? 'text-[#050F41]' : 'text-gray-300'}`}
-                        title={m.fileUrl ? 'Ver PDF' : 'PDF não disponível'}
-                      >
-                        picture_as_pdf
+                      <span className="material-symbols-outlined text-[18px] text-[#050F41]" title="Ver mensagem">
+                        visibility
                       </span>
                     </td>
                   </tr>
@@ -1371,18 +1396,18 @@ const construirItensMenuConcurso = ({
   if (podeAbrirEncerrar && status === 'encerrado') {
     itens.push({ key: 'abrir', label: 'Reabrir Concurso', icon: 'play_circle', onClick: onAbrir });
   }
-  if (podeAbrirEncerrar && status === 'em_breve') {
-    itens.push({ key: 'em-andamento', label: 'Em Andamento', icon: 'play_circle', onClick: onAbrir });
-  }
+  // Para "Em Breve" o card já tem um botão próprio ("Abrir Concurso") logo
+  // abaixo — o menu de 3 pontos não repete essa ação.
   if (podeAbrirEncerrar && status === 'em_andamento') {
-    itens.push({
-      key: 'em-breve', label: 'Em Breve', icon: 'undo', onClick: onVoltarParaEmBreve,
-      disabled: !podeVoltarParaEmBreve, title: podeVoltarParaEmBreve ? undefined : 'Só é possível voltar para "Em Breve" quando nenhum candidato tiver lançamento (status, Nº TIS ou observações) na tabela.',
-    });
-    itens.push({
-      key: 'encerrar', label: 'Encerrar Concurso', icon: 'stop_circle', onClick: onEncerrar,
-      disabled: !podeEncerrar, title: podeEncerrar ? undefined : 'Só é possível encerrar quando todos os candidatos estiverem finalizados.',
-    });
+    // Itens sem utilidade no momento (sem lançamento para voltar, ou nem
+    // todos finalizados para encerrar) não aparecem — diferente da Minuta
+    // Resultados, que continua sendo mostrada desabilitada com o motivo.
+    if (podeVoltarParaEmBreve) {
+      itens.push({ key: 'em-breve', label: 'Em Breve', icon: 'undo', onClick: onVoltarParaEmBreve });
+    }
+    if (podeEncerrar) {
+      itens.push({ key: 'encerrar', label: 'Encerrar Concurso', icon: 'stop_circle', onClick: onEncerrar });
+    }
   }
   // Status "encerrado": o menu mostra apenas Reabrir/Minuta/Listar Mensagens
   // (não é exibir desabilitado — os demais itens nem entram na lista).
@@ -1405,11 +1430,10 @@ const construirItensMenuConcurso = ({
   if (podeRegistrarMensagemArquivo && status !== 'encerrado') {
     itens.push({ key: 'registrar-msg', label: 'Registrar Mensagem', icon: 'upload', onClick: onRegistrarMensagem });
   }
-  if (podeListarMensagens) {
-    itens.push({
-      key: 'listar-msg', label: 'Listar Mensagens', icon: 'stacked_email', onClick: onListarMensagens,
-      disabled: !temMensagensRegistradas, title: temMensagensRegistradas ? undefined : 'Nenhuma mensagem registrada para este concurso.',
-    });
+  // "Listar Mensagens" não aparece desabilitado: só entra no menu quando já
+  // existe pelo menos uma mensagem arquivada para o concurso.
+  if (podeListarMensagens && temMensagensRegistradas) {
+    itens.push({ key: 'listar-msg', label: 'Listar Mensagens', icon: 'stacked_email', onClick: onListarMensagens });
   }
   return itens;
 };
@@ -1486,6 +1510,7 @@ interface ConcursosListaProps {
   podeRegistrarMensagemArquivo: boolean;
   podeListarMensagens: boolean;
   podeAdicionarCandidato: boolean;
+  podeVisualizarTabela: boolean;
   onSelecionar: (id: string) => void;
   onNovoConcursoClick: () => void;
   onImportarCsvClick: () => void;
@@ -1504,13 +1529,37 @@ const ICONE_STATUS_CONCURSO: Record<ConcursoRecord['status'], string> = {
   em_breve: 'event_upcoming',
 };
 
-const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
+// Cores dos ícones de status na visão em tabela (pedido específico do
+// usuário — não seguem o padrão semântico usual de verde/vermelho).
+const COR_ICONE_STATUS_CONCURSO: Record<ConcursoRecord['status'], string> = {
+  encerrado: 'text-[#079551]',
+  em_andamento: 'text-red-700',
+  em_breve: 'text-amber-700',
+};
+
+// Concursos "Em Breve" ainda não têm movimentação — zero nessas colunas é
+// apenas ausência de dado, então a célula fica em branco em vez de "0".
+const celulaNumericaTabela = (valor: number, status: ConcursoRecord['status']): React.ReactNode =>
+  valor === 0 && status === 'em_breve' ? '' : valor;
+
+const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeVisualizarTabela, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
   const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number; temLancamento: boolean }>>({});
   const [temMensagens, setTemMensagens] = useState<Record<string, boolean>>({});
   const [openGroups, setOpenGroups] = useState<Set<ConcursoRecord['status']>>(new Set(['em_andamento', 'em_breve']));
   const [viewMode, setViewMode] = useState<'cards' | 'tabela'>('cards');
   const [statusCounts, setStatusCounts] = useState<Record<string, { apto: number; inapto: number; faltou: number; idm: number }>>({});
   const [loadingStatusCounts, setLoadingStatusCounts] = useState(false);
+  // A visão em tabela é um recurso de desktop — no mobile os cards sempre
+  // aparecem, mesmo que o usuário tenha deixado a tabela ativa antes de
+  // reduzir a janela/girar o aparelho.
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  const efetivoViewMode: 'cards' | 'tabela' = isDesktop && podeVisualizarTabela ? viewMode : 'cards';
 
   const [estatisticas, setEstatisticas] = useState<EstatisticasAnuais | null>(null);
   const [loadingEstatisticas, setLoadingEstatisticas] = useState(true);
@@ -1559,7 +1608,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
   // Aptos/Inaptos/IDM/Faltas só são buscados quando a visão em tabela é
   // aberta (a visão em cards não precisa dessa quebra por status).
   useEffect(() => {
-    if (viewMode !== 'tabela') return;
+    if (efetivoViewMode !== 'tabela') return;
     let cancelado = false;
     (async () => {
       setLoadingStatusCounts(true);
@@ -1579,7 +1628,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
       }
     })();
     return () => { cancelado = true; };
-  }, [viewMode, concursos]);
+  }, [efetivoViewMode, concursos]);
 
   useEffect(() => {
     let cancelado = false;
@@ -1797,7 +1846,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
 
       <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1200px] mx-auto w-full flex-1 space-y-6">
         {!loadingEstatisticas && estatisticas && (
-          <div className="bg-gray-100 border border-gray-200/80 rounded-2xl p-4 flex flex-col md:flex-row gap-4">
+          <div className="hidden md:flex bg-gray-100 border border-gray-200/80 rounded-2xl p-4 gap-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
               {kpiDefs.map(def => (
                 <button
@@ -1851,21 +1900,23 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-end">
-              <button
-                type="button"
-                onClick={() => setViewMode(v => (v === 'cards' ? 'tabela' : 'cards'))}
-                title={viewMode === 'cards' ? 'Ver em modo tabela' : 'Ver em modo cards'}
-                className="p-2 rounded-xl bg-white border border-gray-200 shadow-sm text-gray-500 hover:text-[#050F41] hover:bg-gray-50 transition-colors"
-              >
-                <span className="material-symbols-outlined text-[20px]">{viewMode === 'cards' ? 'table_rows' : 'grid_view'}</span>
-              </button>
-            </div>
-            {viewMode === 'tabela' ? (
+            {podeVisualizarTabela && (
+              <div className="hidden md:flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => setViewMode(v => (v === 'cards' ? 'tabela' : 'cards'))}
+                  title={viewMode === 'cards' ? 'Ver em modo tabela' : 'Ver em modo cards'}
+                  className="p-2 rounded-xl bg-white border border-gray-200 shadow-sm text-gray-500 hover:text-[#050F41] hover:bg-gray-50 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[20px]">{viewMode === 'cards' ? 'table_rows' : 'grid_view'}</span>
+                </button>
+              </div>
+            )}
+            {efetivoViewMode === 'tabela' ? (
               <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[860px]">
                   <thead>
-                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-[#050F41] uppercase tracking-wider">
+                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[13px] font-bold text-[#050F41] uppercase tracking-wider">
                       <th className="py-3 px-4">Concurso</th>
                       <th className="py-3 px-4">Período</th>
                       <th className="py-3 px-4 text-center">Candidatos</th>
@@ -1911,15 +1962,20 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                             return (
                               <tr key={c.id} onClick={() => onSelecionar(c.id)} className="hover:bg-gray-50 cursor-pointer transition-colors">
                                 <td className="py-3 px-4 font-bold text-[#050F41]">
-                                  <span className="material-symbols-outlined text-[18px] align-middle mr-1.5 text-gray-400">{ICONE_STATUS_CONCURSO[c.status]}</span>
+                                  <span
+                                    className={`material-symbols-outlined text-[20px] align-middle mr-1.5 ${COR_ICONE_STATUS_CONCURSO[c.status]}`}
+                                    style={{ fontVariationSettings: "'wght' 600" }}
+                                  >
+                                    {ICONE_STATUS_CONCURSO[c.status]}
+                                  </span>
                                   {c.nome}
                                 </td>
                                 <td className="py-3 px-4 text-gray-500 whitespace-nowrap">{c.periodoInicioISO ? `${isoParaBR(c.periodoInicioISO)} a ${isoParaBR(c.periodoFimISO)}` : '-'}</td>
-                                <td className="py-3 px-4 text-center font-semibold text-gray-700">{c.totalCandidatos}</td>
-                                <td className="py-3 px-4 text-center text-gray-700">{sc ? sc.apto : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4 text-center text-gray-700">{sc ? sc.inapto : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4 text-center text-gray-700">{sc ? sc.idm : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4 text-center text-gray-700">{sc ? sc.faltou : (loadingStatusCounts ? '…' : '-')}</td>
+                                <td className="py-3 px-4 text-center font-bold text-[#050F41]">{celulaNumericaTabela(c.totalCandidatos, c.status)}</td>
+                                <td className="py-3 px-4 text-center font-bold text-[#079551]">{sc ? celulaNumericaTabela(sc.apto, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
+                                <td className="py-3 px-4 text-center font-bold text-red-800">{sc ? celulaNumericaTabela(sc.inapto, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
+                                <td className="py-3 px-4 text-center font-bold text-[#050F41]">{sc ? celulaNumericaTabela(sc.idm, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
+                                <td className="py-3 px-4 text-center font-bold text-[#050F41]">{sc ? celulaNumericaTabela(sc.faltou, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
                                 <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
                                   <div className="flex items-center justify-end gap-1">
                                     {itensAcoes.map(item => (
@@ -1928,9 +1984,9 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                                         type="button"
                                         title={item.label}
                                         onClick={item.onClick}
-                                        className="p-1.5 rounded-lg text-gray-400 hover:text-[#050F41] hover:bg-black/5 transition-colors"
+                                        className="p-1.5 rounded-lg text-gray-600 hover:text-[#050F41] hover:bg-black/5 transition-colors"
                                       >
-                                        <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
+                                        <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'wght' 600" }}>{item.icon}</span>
                                       </button>
                                     ))}
                                   </div>
@@ -2023,7 +2079,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                               className="px-4 py-2.5 border-t border-black/5 text-xs font-bold text-[#079551] hover:bg-black/[0.03] transition-colors flex items-center justify-center space-x-1.5"
                             >
                               <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}>play_circle</span>
-                              <span>Concurso</span>
+                              <span>Abrir Concurso</span>
                             </button>
                           )}
                         </div>
@@ -2700,6 +2756,7 @@ export const ConcursosJRS: React.FC = () => {
   const podeRegistrarMensagemArquivo = canUseFeature('concursosJRS.registrarMensagemArquivo', perfil);
   const podeListarMensagens = canUseFeature('concursosJRS.listarMensagens', perfil);
   const podeAdicionarCandidato = canUseFeature('concursosJRS.adicionarCandidato', perfil);
+  const podeVisualizarTabela = canUseFeature('concursosJRS.visualizarTabela', perfil);
 
   const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
   const [loadingConcursos, setLoadingConcursos] = useState(true);
@@ -2751,6 +2808,7 @@ export const ConcursosJRS: React.FC = () => {
         podeRegistrarMensagemArquivo={podeRegistrarMensagemArquivo}
         podeListarMensagens={podeListarMensagens}
         podeAdicionarCandidato={podeAdicionarCandidato}
+        podeVisualizarTabela={podeVisualizarTabela}
         onSelecionar={setSelectedConcursoId}
         onNovoConcursoClick={() => setShowUploadModal(true)}
         onImportarCsvClick={() => setShowImportarCsvModal(true)}

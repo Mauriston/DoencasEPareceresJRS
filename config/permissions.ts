@@ -69,6 +69,7 @@ export type FeatureKey =
   | 'concursosJRS.registrarMensagemArquivo'
   | 'concursosJRS.listarMensagens'
   | 'concursosJRS.adicionarCandidato'
+  | 'concursosJRS.visualizarTabela'
   | 'pericia-menor.novo'
   | 'pericia-menor.historico';
 
@@ -88,6 +89,7 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'concursosJRS.registrarMensagemArquivo', label: 'Registrar Mensagem: arquivar mensagem em concurso existente', group: 'Concursos (Planilhas de Controle)' },
   { id: 'concursosJRS.listarMensagens', label: 'Listar Mensagens arquivadas do concurso', group: 'Concursos (Planilhas de Controle)' },
   { id: 'concursosJRS.adicionarCandidato', label: 'Adicionar Candidato manualmente (concurso Em Andamento/Em Breve)', group: 'Concursos (Planilhas de Controle)' },
+  { id: 'concursosJRS.visualizarTabela', label: 'Alternar para visão em tabela (lista de concursos, desktop)', group: 'Concursos (Planilhas de Controle)' },
   // Substituem a antiga permissão única de página "Perícia Menor": cada aba
   // (Novo/Histórico) é liberada separadamente por perfil.
   { id: 'pericia-menor.novo', label: 'Perícia Menor - Novo', group: 'Perícia Menor' },
@@ -104,6 +106,7 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'concursosJRS.registrarMensagemArquivo': { user_medicos: true, user_secretaria: false },
   'concursosJRS.listarMensagens': { user_medicos: true, user_secretaria: true },
   'concursosJRS.adicionarCandidato': { user_medicos: true, user_secretaria: false },
+  'concursosJRS.visualizarTabela': { user_medicos: true, user_secretaria: true },
   'pericia-menor.novo': { user_medicos: true, user_secretaria: false },
   'pericia-menor.historico': { user_medicos: true, user_secretaria: false },
 };

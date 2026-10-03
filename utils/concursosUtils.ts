@@ -206,7 +206,7 @@ export interface CabecalhoMensagem {
   info: string;
   subject: string;
   texto: string;
-  purpose: 'Apresentação e IS' | 'Outros';
+  purpose: 'Apresentação' | 'Outros';
 }
 
 /** Extrai os campos do cabeçalho da mensagem SIGAD-MB. */
@@ -236,7 +236,7 @@ export const extrairCabecalhoMensagem = (texto: string): CabecalhoMensagem => {
   const corpoTexto = mTexto ? mTexto[1].trim() : '';
 
   const purpose: CabecalhoMensagem['purpose'] = /candidatos\s+abaixo\s+relacionados/i.test(corpoTexto)
-    ? 'Apresentação e IS'
+    ? 'Apresentação'
     : 'Outros';
 
   return { dataHora, sender, recipient, info, subject, texto: corpoTexto, purpose };
