@@ -1001,6 +1001,18 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
   const [mensagens, setMensagens] = useState<MensagemRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selecionada, setSelecionada] = useState<MensagemRecord | null>(null);
+  const [textoCopiado, setTextoCopiado] = useState(false);
+
+  const handleCopiarTexto = async () => {
+    if (!selecionada?.texto) return;
+    try {
+      await navigator.clipboard.writeText(selecionada.texto);
+      setTextoCopiado(true);
+      setTimeout(() => setTextoCopiado(false), 2000);
+    } catch {
+      // Copiar é um atalho de conveniência — falha silenciosa não impede o uso do modal.
+    }
+  };
 
   useEffect(() => {
     let cancelado = false;
@@ -1050,17 +1062,29 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
                     download
                     target="_blank"
                     rel="noopener noreferrer"
-                    title="Baixar PDF do Storage"
-                    className="p-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl transition-colors shadow-sm flex items-center justify-center shrink-0"
+                    className="px-3 py-2 bg-[#079551] hover:bg-[#067a43] text-white rounded-xl text-[11px] md:text-sm font-bold transition-colors shadow-sm flex items-center space-x-1.5 shrink-0"
                   >
-                    <span className="material-symbols-outlined text-[18px]">download</span>
+                    <span className="material-symbols-outlined text-[16px]">download</span>
+                    <span>Download Mensagem</span>
                   </a>
                 )}
               </div>
               {selecionada.texto ? (
-                <div className="w-full max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-4">
-                  <p className="text-xs md:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{selecionada.texto}</p>
-                </div>
+                <>
+                  <div className="w-full max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <p className="text-xs md:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{selecionada.texto}</p>
+                  </div>
+                  <div className="flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={handleCopiarTexto}
+                      title="Copiar texto da mensagem"
+                      className="p-2 rounded-lg text-gray-500 hover:text-[#050F41] hover:bg-gray-100 transition-colors flex items-center justify-center"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">{textoCopiado ? 'check' : 'content_copy'}</span>
+                    </button>
+                  </div>
+                </>
               ) : (
                 <p className="text-xs md:text-sm text-gray-400 text-center py-8">Texto da mensagem não disponível.</p>
               )}
