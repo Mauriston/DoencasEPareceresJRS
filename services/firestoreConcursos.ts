@@ -464,7 +464,7 @@ export const confirmarAgendamento = async (
   });
   await batch.commit();
 
-  const mensagemInicial = mensagensSnap.docs.find(d => (d.data() as any).proposito === 'Apresentação e IS');
+  const mensagemInicial = mensagensSnap.docs.find(d => (d.data() as any).proposito === 'Apresentação');
   const dataHoraInicial = mensagemInicial ? (mensagemInicial.data() as any).dataHora : concurso.dataHoraMensagemInicial || 'R-000000Z/MMM/AAAA';
   const nomeConcurso = extrairNomeConcursoDoAssunto(concurso.assuntoMensagemInicial || concurso.nome);
 
@@ -486,7 +486,7 @@ export const gerarMinutaResultados = async (
     return { bloqueado: true, pendentes: pendentes.map(c => ({ id: c.id, nome: c.nome })) };
   }
 
-  const mensagemInicial = mensagensSnap.docs.find(d => (d.data() as any).proposito === 'Apresentação e IS');
+  const mensagemInicial = mensagensSnap.docs.find(d => (d.data() as any).proposito === 'Apresentação');
   const dataHoraInicial = mensagemInicial ? (mensagemInicial.data() as any).dataHora : concurso.dataHoraMensagemInicial || 'R-000000Z/MMM/AAAA';
   const nomeConcurso = extrairNomeConcursoDoAssunto(concurso.assuntoMensagemInicial || concurso.nome);
 
@@ -582,9 +582,9 @@ export const salvarTermoRecurso = (concursoId: string, candidatoId: string, url:
   updateDoc(candidatoRef(concursoId, candidatoId), { recurso: true, termoRecursoUrl: url });
 
 /**
- * Lista as mensagens arquivadas de um concurso (a de criação — "Apresentação
- * e IS" — e quaisquer outras arquivadas via `arquivarMensagem`), mais
- * recente primeiro.
+ * Lista as mensagens arquivadas de um concurso (a de criação — "Apresentação"
+ * — e quaisquer outras arquivadas via `arquivarMensagem`), mais recente
+ * primeiro.
  */
 export const listarMensagens = async (concursoId: string): Promise<MensagemRecord[]> => {
   const snap = await getDocs(mensagensCol(concursoId));

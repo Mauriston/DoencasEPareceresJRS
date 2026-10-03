@@ -324,10 +324,12 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
       // paralelo com o resultado descartado), e o PDF nunca aparecia depois.
       const novoId = novoConcursoId();
       const fileUrl = await uploadMensagemPdf(novoId, file!);
+      // A mensagem que cria o concurso é sempre do tipo "Apresentação",
+      // independente do que a heurística de extração tenha identificado.
       await criarConcursoDaMensagem({
         concursoId: novoId,
         nome: nomeConcurso.trim(),
-        cabecalho,
+        cabecalho: { ...cabecalho, purpose: 'Apresentação' },
         candidatos: candidatosValidos,
         periodo,
         fileUrl,
@@ -1103,6 +1105,7 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] md:text-sm font-bold text-[#050F41] uppercase tracking-wider">
                   <th className="py-3 px-4">Data-Hora</th>
+                  <th className="py-3 px-4">Tipo</th>
                   <th className="py-3 px-4">Remetente</th>
                   <th className="py-3 px-4">Assunto</th>
                   <th className="py-3 px-4 w-10"></th>
@@ -1112,6 +1115,7 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
                 {mensagens.map(m => (
                   <tr key={m.id} onClick={() => setSelecionada(m)} className="hover:bg-gray-50 cursor-pointer transition-colors">
                     <td className="py-3 px-4 font-mono text-gray-600 whitespace-nowrap">{m.dataHora}</td>
+                    <td className="py-3 px-4 text-gray-700 font-semibold whitespace-nowrap">{m.proposito || '-'}</td>
                     <td className="py-3 px-4 text-gray-700 font-semibold">{m.sender || '-'}</td>
                     <td className="py-3 px-4 text-gray-700">{m.subject || '-'}</td>
                     <td className="py-3 px-4 text-right">
