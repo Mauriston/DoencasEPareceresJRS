@@ -847,7 +847,7 @@ const ModalKpiBarChart: React.FC<ModalKpiBarChartProps> = ({ titulo, corBarra, i
 // já existente (reagendamento, resultado de recurso etc.), diferente do
 // fluxo que cria um concurso novo a partir da mensagem de apresentação.
 // -------------------------------------------------------------------------
-const PROPOSITO_MENSAGEM_OPTIONS = ['Reagendamento', 'Resultado de Recurso', 'Outros'];
+const PROPOSITO_MENSAGEM_OPTIONS = ['Agendamento', 'Reagendamento', 'Solicitação de Reagendamento', 'Resultado de Recurso', 'Outros'];
 
 interface ModalRegistrarMensagemArquivoProps {
   concursoId: string;
@@ -1045,16 +1045,24 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
                   <p className="text-[11px] md:text-sm text-gray-500">{selecionada.sender} — {selecionada.dataHora}</p>
                 </div>
                 {selecionada.fileUrl && (
-                  <a href={selecionada.fileUrl} download target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-[11px] md:text-sm font-bold transition-colors shadow-sm flex items-center space-x-1 shrink-0">
-                    <span className="material-symbols-outlined text-[16px]">download</span>
-                    <span>Baixar PDF</span>
+                  <a
+                    href={selecionada.fileUrl}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Baixar PDF do Storage"
+                    className="p-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl transition-colors shadow-sm flex items-center justify-center shrink-0"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">download</span>
                   </a>
                 )}
               </div>
-              {selecionada.fileUrl ? (
-                <iframe title="Visualização do PDF" src={selecionada.fileUrl} className="w-full h-[60vh] rounded-xl border border-gray-200" />
+              {selecionada.texto ? (
+                <div className="w-full max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-xs md:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{selecionada.texto}</p>
+                </div>
               ) : (
-                <p className="text-xs md:text-sm text-gray-400 text-center py-8">PDF não disponível para esta mensagem.</p>
+                <p className="text-xs md:text-sm text-gray-400 text-center py-8">Texto da mensagem não disponível.</p>
               )}
             </div>
           ) : loading ? (
@@ -1318,8 +1326,20 @@ const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = ({ concu
 };
 
 // -------------------------------------------------------------------------
-// Menu de 3 pontos (ações do concurso) exibido em cada card
+// Menu de 3 pontos (ações do concurso) exibido em cada card — a lógica de
+// construção dos itens é compartilhada com a coluna "Ações" da visão em
+// tabela (ver TabelaConcursos), que reaproveita a mesma habilitação mas
+// omite por completo os itens desabilitados.
 // -------------------------------------------------------------------------
+interface ItemMenuAcao {
+  key: string;
+  label: string;
+  icon: string;
+  onClick: () => void;
+  disabled?: boolean;
+  title?: string;
+}
+
 interface MenuAcoesConcursoProps {
   status: ConcursoRecord['status'];
   podeAbrirEncerrar: boolean;
@@ -1342,7 +1362,59 @@ interface MenuAcoesConcursoProps {
   onAdicionarCandidato: () => void;
 }
 
-const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeEncerrar, podeVoltarParaEmBreve, minutaHabilitada, temPeriodoConfigurado, temMensagensRegistradas, onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens, onDefinirPeriodoAgendamento, onAdicionarCandidato }) => {
+const construirItensMenuConcurso = ({
+  status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato,
+  podeEncerrar, podeVoltarParaEmBreve, minutaHabilitada, temPeriodoConfigurado, temMensagensRegistradas,
+  onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens, onDefinirPeriodoAgendamento, onAdicionarCandidato,
+}: MenuAcoesConcursoProps): ItemMenuAcao[] => {
+  const itens: ItemMenuAcao[] = [];
+  if (podeAbrirEncerrar && status === 'encerrado') {
+    itens.push({ key: 'abrir', label: 'Reabrir Concurso', icon: 'play_circle', onClick: onAbrir });
+  }
+  if (podeAbrirEncerrar && status === 'em_breve') {
+    itens.push({ key: 'em-andamento', label: 'Em Andamento', icon: 'play_circle', onClick: onAbrir });
+  }
+  if (podeAbrirEncerrar && status === 'em_andamento') {
+    itens.push({
+      key: 'em-breve', label: 'Em Breve', icon: 'undo', onClick: onVoltarParaEmBreve,
+      disabled: !podeVoltarParaEmBreve, title: podeVoltarParaEmBreve ? undefined : 'Só é possível voltar para "Em Breve" quando nenhum candidato tiver lançamento (status, Nº TIS ou observações) na tabela.',
+    });
+    itens.push({
+      key: 'encerrar', label: 'Encerrar Concurso', icon: 'stop_circle', onClick: onEncerrar,
+      disabled: !podeEncerrar, title: podeEncerrar ? undefined : 'Só é possível encerrar quando todos os candidatos estiverem finalizados.',
+    });
+  }
+  // Status "encerrado": o menu mostra apenas Reabrir/Minuta/Listar Mensagens
+  // (não é exibir desabilitado — os demais itens nem entram na lista).
+  if (podeGerarMinutaResultados && status !== 'em_breve') {
+    itens.push({
+      key: 'minuta', label: 'Minuta Resultados', icon: 'outgoing_mail', onClick: onMinutaResultados,
+      disabled: !minutaHabilitada, title: minutaHabilitada ? undefined : 'Só é possível gerar a minuta quando todos os candidatos estiverem finalizados.',
+    });
+  }
+  if (podeAbrirEncerrar && status !== 'encerrado') {
+    itens.push({
+      key: 'periodo-agendamento',
+      label: temPeriodoConfigurado ? 'Editar Período de Agendamento' : 'Definir Período de Agendamento',
+      icon: temPeriodoConfigurado ? 'edit_calendar' : 'calendar_add_on', onClick: onDefinirPeriodoAgendamento,
+    });
+  }
+  if (podeAdicionarCandidato && (status === 'em_andamento' || status === 'em_breve')) {
+    itens.push({ key: 'adicionar-candidato', label: 'Adicionar Candidato', icon: 'person_add', onClick: onAdicionarCandidato });
+  }
+  if (podeRegistrarMensagemArquivo && status !== 'encerrado') {
+    itens.push({ key: 'registrar-msg', label: 'Registrar Mensagem', icon: 'upload', onClick: onRegistrarMensagem });
+  }
+  if (podeListarMensagens) {
+    itens.push({
+      key: 'listar-msg', label: 'Listar Mensagens', icon: 'stacked_email', onClick: onListarMensagens,
+      disabled: !temMensagensRegistradas, title: temMensagensRegistradas ? undefined : 'Nenhuma mensagem registrada para este concurso.',
+    });
+  }
+  return itens;
+};
+
+const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = (props) => {
   const [aberto, setAberto] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -1358,48 +1430,7 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrir
     };
   }, [aberto]);
 
-  const itens: { key: string; label: string; icon: string; onClick: () => void; disabled?: boolean; title?: string }[] = [];
-  if (podeAbrirEncerrar && status === 'encerrado') {
-    itens.push({ key: 'abrir', label: 'Abrir Concurso', icon: 'play_circle', onClick: onAbrir });
-  }
-  if (podeAbrirEncerrar && status === 'em_breve') {
-    itens.push({ key: 'em-andamento', label: 'Em Andamento', icon: 'play_circle', onClick: onAbrir });
-  }
-  if (podeAbrirEncerrar && status === 'em_andamento') {
-    itens.push({
-      key: 'em-breve', label: 'Em Breve', icon: 'undo', onClick: onVoltarParaEmBreve,
-      disabled: !podeVoltarParaEmBreve, title: podeVoltarParaEmBreve ? undefined : 'Só é possível voltar para "Em Breve" quando nenhum candidato tiver lançamento (status, Nº TIS ou observações) na tabela.',
-    });
-    itens.push({
-      key: 'encerrar', label: 'Encerrar Concurso', icon: 'stop_circle', onClick: onEncerrar,
-      disabled: !podeEncerrar, title: podeEncerrar ? undefined : 'Só é possível encerrar quando todos os candidatos estiverem finalizados.',
-    });
-  }
-  if (podeGerarMinutaResultados && status !== 'em_breve') {
-    itens.push({
-      key: 'minuta', label: 'Minuta Resultados', icon: 'summarize', onClick: onMinutaResultados,
-      disabled: !minutaHabilitada, title: minutaHabilitada ? undefined : 'Só é possível gerar a minuta quando todos os candidatos estiverem finalizados.',
-    });
-  }
-  if (podeAbrirEncerrar) {
-    itens.push({
-      key: 'periodo-agendamento',
-      label: temPeriodoConfigurado ? 'Editar Período de Agendamento' : 'Definir Período de Agendamento',
-      icon: 'event', onClick: onDefinirPeriodoAgendamento,
-    });
-  }
-  if (podeAdicionarCandidato && (status === 'em_andamento' || status === 'em_breve')) {
-    itens.push({ key: 'adicionar-candidato', label: 'Adicionar Candidato', icon: 'person_add', onClick: onAdicionarCandidato });
-  }
-  if (podeRegistrarMensagemArquivo) {
-    itens.push({ key: 'registrar-msg', label: 'Registrar Mensagem', icon: 'upload_file', onClick: onRegistrarMensagem });
-  }
-  if (podeListarMensagens) {
-    itens.push({
-      key: 'listar-msg', label: 'Listar Mensagens', icon: 'mail', onClick: onListarMensagens,
-      disabled: !temMensagensRegistradas, title: temMensagensRegistradas ? undefined : 'Nenhuma mensagem registrada para este concurso.',
-    });
-  }
+  const itens = construirItensMenuConcurso(props);
 
   if (itens.length === 0) return null;
 
@@ -1421,7 +1452,7 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrir
               senão o menu era cortado pela borda do próprio card. */}
           <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} />
           <div
-            className="fixed w-52 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 z-50 animate-fade-in space-y-0.5"
+            className="fixed w-52 md:w-64 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 z-50 animate-fade-in space-y-0.5"
             style={{ top: pos.top, right: pos.right }}
           >
             {itens.map(item => (
@@ -1431,9 +1462,9 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrir
                 disabled={item.disabled}
                 title={item.title}
                 onClick={() => { setAberto(false); item.onClick(); }}
-                className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-100 flex items-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                className="w-full text-left px-3 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold text-gray-700 hover:bg-gray-100 flex items-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               >
-                <span className="material-symbols-outlined text-[16px]">{item.icon}</span>
+                <span className="material-symbols-outlined text-[16px] md:text-[20px]">{item.icon}</span>
                 <span>{item.label}</span>
               </button>
             ))}
@@ -1467,10 +1498,19 @@ const GRUPOS_STATUS: { status: ConcursoRecord['status']; titulo: string }[] = [
   { status: 'em_breve', titulo: 'Em Breve' },
 ];
 
+const ICONE_STATUS_CONCURSO: Record<ConcursoRecord['status'], string> = {
+  encerrado: 'select_check_box',
+  em_andamento: 'patient_list',
+  em_breve: 'event_upcoming',
+};
+
 const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
   const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number; temLancamento: boolean }>>({});
   const [temMensagens, setTemMensagens] = useState<Record<string, boolean>>({});
   const [openGroups, setOpenGroups] = useState<Set<ConcursoRecord['status']>>(new Set(['em_andamento', 'em_breve']));
+  const [viewMode, setViewMode] = useState<'cards' | 'tabela'>('cards');
+  const [statusCounts, setStatusCounts] = useState<Record<string, { apto: number; inapto: number; faltou: number; idm: number }>>({});
+  const [loadingStatusCounts, setLoadingStatusCounts] = useState(false);
 
   const [estatisticas, setEstatisticas] = useState<EstatisticasAnuais | null>(null);
   const [loadingEstatisticas, setLoadingEstatisticas] = useState(true);
@@ -1515,6 +1555,31 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
     })();
     return () => { cancelado = true; };
   }, [concursos]);
+
+  // Aptos/Inaptos/IDM/Faltas só são buscados quando a visão em tabela é
+  // aberta (a visão em cards não precisa dessa quebra por status).
+  useEffect(() => {
+    if (viewMode !== 'tabela') return;
+    let cancelado = false;
+    (async () => {
+      setLoadingStatusCounts(true);
+      try {
+        const entradas = await Promise.all(concursos.map(async c => {
+          const candidatosDoConcurso = await listarCandidatos(c.id);
+          return [c.id, {
+            apto: candidatosDoConcurso.filter(x => x.status === 'APTO').length,
+            inapto: candidatosDoConcurso.filter(x => x.status === 'INAPTO').length,
+            faltou: candidatosDoConcurso.filter(x => x.status === 'FALTOU').length,
+            idm: candidatosDoConcurso.filter(x => x.status === 'INSUF DOCUMENTAL').length,
+          }] as const;
+        }));
+        if (!cancelado) setStatusCounts(Object.fromEntries(entradas));
+      } finally {
+        if (!cancelado) setLoadingStatusCounts(false);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [viewMode, concursos]);
 
   useEffect(() => {
     let cancelado = false;
@@ -1785,7 +1850,102 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
             {podeRegistrarMensagem && <p className="text-xs text-gray-400 mt-1">Registre a mensagem administrativa inicial para criar o primeiro.</p>}
           </div>
         ) : (
-          GRUPOS_STATUS.map(grupo => {
+          <>
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setViewMode(v => (v === 'cards' ? 'tabela' : 'cards'))}
+                title={viewMode === 'cards' ? 'Ver em modo tabela' : 'Ver em modo cards'}
+                className="p-2 rounded-xl bg-white border border-gray-200 shadow-sm text-gray-500 hover:text-[#050F41] hover:bg-gray-50 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px]">{viewMode === 'cards' ? 'table_rows' : 'grid_view'}</span>
+              </button>
+            </div>
+            {viewMode === 'tabela' ? (
+              <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[860px]">
+                  <thead>
+                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-[#050F41] uppercase tracking-wider">
+                      <th className="py-3 px-4">Concurso</th>
+                      <th className="py-3 px-4">Período</th>
+                      <th className="py-3 px-4 text-center">Candidatos</th>
+                      <th className="py-3 px-4 text-center">Aptos</th>
+                      <th className="py-3 px-4 text-center">Inaptos</th>
+                      <th className="py-3 px-4 text-center">IDM</th>
+                      <th className="py-3 px-4 text-center">Faltas</th>
+                      <th className="py-3 px-4 text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 text-xs md:text-sm">
+                    {GRUPOS_STATUS.map(grupo => {
+                      const itensGrupo = concursos
+                        .filter(c => c.status === grupo.status)
+                        .sort((a, b) => (a.periodoInicioISO || '9999-99-99').localeCompare(b.periodoInicioISO || '9999-99-99'));
+                      if (itensGrupo.length === 0) return null;
+                      return (
+                        <React.Fragment key={grupo.status}>
+                          <tr className="bg-gray-100/70">
+                            <td colSpan={8} className="py-2 px-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider">{grupo.titulo} ({itensGrupo.length})</td>
+                          </tr>
+                          {itensGrupo.map(c => {
+                            const contagem = contadores[c.id];
+                            const podeEncerrar = !!contagem && contagem.total > 0 && contagem.finalizados === contagem.total;
+                            const podeVoltarParaEmBreve = !contagem?.temLancamento;
+                            const minutaHabilitada = c.status === 'encerrado' || podeEncerrar;
+                            const temPeriodoConfigurado = !!c.periodoInicioISO;
+                            const temMensagensRegistradas = !!temMensagens[c.id];
+                            const sc = statusCounts[c.id];
+                            const itensAcoes = construirItensMenuConcurso({
+                              status: c.status,
+                              podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato,
+                              podeEncerrar, podeVoltarParaEmBreve, minutaHabilitada, temPeriodoConfigurado, temMensagensRegistradas,
+                              onAbrir: () => handleAbrir(c.id, c.nome),
+                              onVoltarParaEmBreve: () => handleVoltarParaEmBreve(c.id, c.nome),
+                              onEncerrar: () => handleEncerrar(c.id, c.nome),
+                              onMinutaResultados: () => handleMinutaResultados(c.id),
+                              onRegistrarMensagem: () => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome }),
+                              onListarMensagens: () => setListarMensagensAlvo({ id: c.id, nome: c.nome }),
+                              onDefinirPeriodoAgendamento: () => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome }),
+                              onAdicionarCandidato: () => setAdicionarCandidatoAlvo({ id: c.id, nome: c.nome }),
+                            }).filter(item => !item.disabled);
+                            return (
+                              <tr key={c.id} onClick={() => onSelecionar(c.id)} className="hover:bg-gray-50 cursor-pointer transition-colors">
+                                <td className="py-3 px-4 font-bold text-[#050F41]">
+                                  <span className="material-symbols-outlined text-[18px] align-middle mr-1.5 text-gray-400">{ICONE_STATUS_CONCURSO[c.status]}</span>
+                                  {c.nome}
+                                </td>
+                                <td className="py-3 px-4 text-gray-500 whitespace-nowrap">{c.periodoInicioISO ? `${isoParaBR(c.periodoInicioISO)} a ${isoParaBR(c.periodoFimISO)}` : '-'}</td>
+                                <td className="py-3 px-4 text-center font-semibold text-gray-700">{c.totalCandidatos}</td>
+                                <td className="py-3 px-4 text-center text-gray-700">{sc ? sc.apto : (loadingStatusCounts ? '…' : '-')}</td>
+                                <td className="py-3 px-4 text-center text-gray-700">{sc ? sc.inapto : (loadingStatusCounts ? '…' : '-')}</td>
+                                <td className="py-3 px-4 text-center text-gray-700">{sc ? sc.idm : (loadingStatusCounts ? '…' : '-')}</td>
+                                <td className="py-3 px-4 text-center text-gray-700">{sc ? sc.faltou : (loadingStatusCounts ? '…' : '-')}</td>
+                                <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
+                                  <div className="flex items-center justify-end gap-1">
+                                    {itensAcoes.map(item => (
+                                      <button
+                                        key={item.key}
+                                        type="button"
+                                        title={item.label}
+                                        onClick={item.onClick}
+                                        className="p-1.5 rounded-lg text-gray-400 hover:text-[#050F41] hover:bg-black/5 transition-colors"
+                                      >
+                                        <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              GRUPOS_STATUS.map(grupo => {
             const itens = concursos
               .filter(c => c.status === grupo.status)
               .sort((a, b) => (a.periodoInicioISO || '9999-99-99').localeCompare(b.periodoInicioISO || '9999-99-99'));
@@ -1845,7 +2005,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                                   onAdicionarCandidato={() => setAdicionarCandidatoAlvo({ id: c.id, nome: c.nome })}
                                 />
                               </div>
-                              <p className="text-sm text-gray-600">{c.totalCandidatos} candidato(s)</p>
+                              <p className="text-base font-bold text-[#050F41]">{c.totalCandidatos} candidato(s)</p>
                               {c.periodoInicioISO && (
                                 <p className="text-sm text-gray-500">{isoParaBR(c.periodoInicioISO)} a {isoParaBR(c.periodoFimISO)}</p>
                               )}
@@ -1874,6 +2034,8 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
               </div>
             );
           })
+            )}
+          </>
         )}
       </div>
     </div>
