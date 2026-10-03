@@ -16,6 +16,7 @@ import {
   extrairNomeConcurso, formatarChaveData, parseChaveData, interpretarCsvCandidatosDataBase,
   type CabecalhoMensagem, type CandidatoBasico, type CandidatoImportadoCsv,
 } from '../utils/concursosUtils';
+import { apiUrl } from '../utils/apiBase';
 
 // URL de implantação (aplicativo da web) do projeto Apps Script standalone
 // mínimo "CodeConcursos.gs" (código-fonte também versionado neste
@@ -121,7 +122,7 @@ const transcreverPdfViaOcr = async (file: File): Promise<string> => {
   const fileBase64 = await fileParaBase64(file);
   let res: Response;
   try {
-    res = await fetch('/api/concursos/ocr-pdf', {
+    res = await fetch(apiUrl('/api/concursos/ocr-pdf'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fileBase64, mimeType: file.type || 'application/pdf' }),

@@ -5,7 +5,26 @@ import { GoogleGenAI } from "@google/genai";
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  // Cloud Run injeta a porta via a variável de ambiente PORT (normalmente
+  // 8080) — o container precisa escutar nela, não numa porta fixa.
+  const PORT = Number(process.env.PORT) || 3000;
+
+  // O frontend é publicado como site estático no GitHub Pages (ver
+  // .github/workflows/deploy.yml) e por isso roda numa origem diferente
+  // deste servidor (aqui hospedado no Cloud Run) — sem CORS liberado o
+  // navegador bloqueia as chamadas a /api/*. ALLOWED_ORIGIN pode ser
+  // sobrescrita (ex.: domínio próprio) via variável de ambiente no Cloud Run.
+  const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "https://mauriston.github.io";
+  app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
 
   app.use(express.json({ limit: "50mb" }));
 

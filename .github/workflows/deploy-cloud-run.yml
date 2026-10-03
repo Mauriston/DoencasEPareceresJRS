@@ -1,0 +1,67 @@
+name: Deploy API to Cloud Run
+
+# O frontend (site estático) vai para o GitHub Pages (ver deploy.yml); este
+# workflow publica só o backend (server.ts, endpoints /api/* que falam com o
+# Gemini) no Cloud Run, no mesmo projeto Google Cloud do Firebase.
+#
+# Antes do primeiro deploy, configure no repositório (Settings > Secrets and
+# variables > Actions):
+#   Secrets:
+#     GCP_PROJECT_ID   - id do projeto (ex.: jrs-app-web)
+#     GCP_SA_KEY       - chave JSON de uma service account com papéis
+#                        "Cloud Run Admin", "Artifact Registry Writer",
+#                        "Cloud Build Editor" e "Service Account User"
+#     GEMINI_API_KEY   - a mesma chave usada hoje pelo app
+#   Variables (opcional):
+#     ALLOWED_ORIGIN   - origem do frontend publicado, se for diferente de
+#                        https://mauriston.github.io (ex.: domínio próprio)
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'server.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.github/workflows/deploy-cloud-run.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  SERVICE_NAME: jrs-hnre-api
+  REGION: southamerica-east1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Autenticar no Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Deploy no Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          source: .
+          flags: --allow-unauthenticated
+          env_vars: |
+            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+            ALLOWED_ORIGIN=${{ vars.ALLOWED_ORIGIN || 'https://mauriston.github.io' }}
+
+      - name: URL do serviço
+        run: |
+          echo "Backend publicado em: ${{ steps.deploy.outputs.url }}"
+          echo "Defina essa URL na variável de repositório API_BASE_URL (Settings > Secrets and variables > Actions > Variables) e rode novamente o workflow 'Deploy to GitHub Pages' para o frontend passar a usá-la."

@@ -32,7 +32,11 @@ jobs:
         
       - name: Build
         run: npm run build
-        
+        env:
+          # URL do backend no Cloud Run (ver deploy-cloud-run.yml); em branco
+          # até o primeiro deploy do backend, o que só deixa /api/* indisponível.
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
