@@ -1091,11 +1091,8 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
                     <td className="py-3 px-4 text-gray-700 font-semibold">{m.sender || '-'}</td>
                     <td className="py-3 px-4 text-gray-700">{m.subject || '-'}</td>
                     <td className="py-3 px-4 text-right">
-                      <span
-                        className={`material-symbols-outlined text-[18px] ${m.fileUrl ? 'text-[#050F41]' : 'text-gray-300'}`}
-                        title={m.fileUrl ? 'Ver PDF' : 'PDF não disponível'}
-                      >
-                        picture_as_pdf
+                      <span className="material-symbols-outlined text-[18px] text-[#050F41]" title="Ver mensagem">
+                        visibility
                       </span>
                     </td>
                   </tr>
@@ -1371,18 +1368,18 @@ const construirItensMenuConcurso = ({
   if (podeAbrirEncerrar && status === 'encerrado') {
     itens.push({ key: 'abrir', label: 'Reabrir Concurso', icon: 'play_circle', onClick: onAbrir });
   }
-  if (podeAbrirEncerrar && status === 'em_breve') {
-    itens.push({ key: 'em-andamento', label: 'Em Andamento', icon: 'play_circle', onClick: onAbrir });
-  }
+  // Para "Em Breve" o card já tem um botão próprio ("Abrir Concurso") logo
+  // abaixo — o menu de 3 pontos não repete essa ação.
   if (podeAbrirEncerrar && status === 'em_andamento') {
-    itens.push({
-      key: 'em-breve', label: 'Em Breve', icon: 'undo', onClick: onVoltarParaEmBreve,
-      disabled: !podeVoltarParaEmBreve, title: podeVoltarParaEmBreve ? undefined : 'Só é possível voltar para "Em Breve" quando nenhum candidato tiver lançamento (status, Nº TIS ou observações) na tabela.',
-    });
-    itens.push({
-      key: 'encerrar', label: 'Encerrar Concurso', icon: 'stop_circle', onClick: onEncerrar,
-      disabled: !podeEncerrar, title: podeEncerrar ? undefined : 'Só é possível encerrar quando todos os candidatos estiverem finalizados.',
-    });
+    // Itens sem utilidade no momento (sem lançamento para voltar, ou nem
+    // todos finalizados para encerrar) não aparecem — diferente da Minuta
+    // Resultados, que continua sendo mostrada desabilitada com o motivo.
+    if (podeVoltarParaEmBreve) {
+      itens.push({ key: 'em-breve', label: 'Em Breve', icon: 'undo', onClick: onVoltarParaEmBreve });
+    }
+    if (podeEncerrar) {
+      itens.push({ key: 'encerrar', label: 'Encerrar Concurso', icon: 'stop_circle', onClick: onEncerrar });
+    }
   }
   // Status "encerrado": o menu mostra apenas Reabrir/Minuta/Listar Mensagens
   // (não é exibir desabilitado — os demais itens nem entram na lista).
@@ -1405,11 +1402,10 @@ const construirItensMenuConcurso = ({
   if (podeRegistrarMensagemArquivo && status !== 'encerrado') {
     itens.push({ key: 'registrar-msg', label: 'Registrar Mensagem', icon: 'upload', onClick: onRegistrarMensagem });
   }
-  if (podeListarMensagens) {
-    itens.push({
-      key: 'listar-msg', label: 'Listar Mensagens', icon: 'stacked_email', onClick: onListarMensagens,
-      disabled: !temMensagensRegistradas, title: temMensagensRegistradas ? undefined : 'Nenhuma mensagem registrada para este concurso.',
-    });
+  // "Listar Mensagens" não aparece desabilitado: só entra no menu quando já
+  // existe pelo menos uma mensagem arquivada para o concurso.
+  if (podeListarMensagens && temMensagensRegistradas) {
+    itens.push({ key: 'listar-msg', label: 'Listar Mensagens', icon: 'stacked_email', onClick: onListarMensagens });
   }
   return itens;
 };
@@ -1503,6 +1499,19 @@ const ICONE_STATUS_CONCURSO: Record<ConcursoRecord['status'], string> = {
   em_andamento: 'patient_list',
   em_breve: 'event_upcoming',
 };
+
+// Cores dos ícones de status na visão em tabela (pedido específico do
+// usuário — não seguem o padrão semântico usual de verde/vermelho).
+const COR_ICONE_STATUS_CONCURSO: Record<ConcursoRecord['status'], string> = {
+  encerrado: 'text-[#079551]',
+  em_andamento: 'text-red-700',
+  em_breve: 'text-amber-700',
+};
+
+// Concursos "Em Breve" ainda não têm movimentação — zero nessas colunas é
+// apenas ausência de dado, então a célula fica em branco em vez de "0".
+const celulaNumericaTabela = (valor: number, status: ConcursoRecord['status']): React.ReactNode =>
+  valor === 0 && status === 'em_breve' ? '' : valor;
 
 const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
   const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number; temLancamento: boolean }>>({});
@@ -1865,7 +1874,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
               <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[860px]">
                   <thead>
-                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-[#050F41] uppercase tracking-wider">
+                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[13px] font-bold text-[#050F41] uppercase tracking-wider">
                       <th className="py-3 px-4">Concurso</th>
                       <th className="py-3 px-4">Período</th>
                       <th className="py-3 px-4 text-center">Candidatos</th>
@@ -1911,15 +1920,20 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                             return (
                               <tr key={c.id} onClick={() => onSelecionar(c.id)} className="hover:bg-gray-50 cursor-pointer transition-colors">
                                 <td className="py-3 px-4 font-bold text-[#050F41]">
-                                  <span className="material-symbols-outlined text-[18px] align-middle mr-1.5 text-gray-400">{ICONE_STATUS_CONCURSO[c.status]}</span>
+                                  <span
+                                    className={`material-symbols-outlined text-[20px] align-middle mr-1.5 ${COR_ICONE_STATUS_CONCURSO[c.status]}`}
+                                    style={{ fontVariationSettings: "'wght' 600" }}
+                                  >
+                                    {ICONE_STATUS_CONCURSO[c.status]}
+                                  </span>
                                   {c.nome}
                                 </td>
                                 <td className="py-3 px-4 text-gray-500 whitespace-nowrap">{c.periodoInicioISO ? `${isoParaBR(c.periodoInicioISO)} a ${isoParaBR(c.periodoFimISO)}` : '-'}</td>
-                                <td className="py-3 px-4 text-center font-semibold text-gray-700">{c.totalCandidatos}</td>
-                                <td className="py-3 px-4 text-center text-gray-700">{sc ? sc.apto : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4 text-center text-gray-700">{sc ? sc.inapto : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4 text-center text-gray-700">{sc ? sc.idm : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4 text-center text-gray-700">{sc ? sc.faltou : (loadingStatusCounts ? '…' : '-')}</td>
+                                <td className="py-3 px-4 text-center font-bold text-[#050F41]">{celulaNumericaTabela(c.totalCandidatos, c.status)}</td>
+                                <td className="py-3 px-4 text-center font-bold text-[#079551]">{sc ? celulaNumericaTabela(sc.apto, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
+                                <td className="py-3 px-4 text-center font-bold text-red-800">{sc ? celulaNumericaTabela(sc.inapto, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
+                                <td className="py-3 px-4 text-center font-bold text-[#050F41]">{sc ? celulaNumericaTabela(sc.idm, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
+                                <td className="py-3 px-4 text-center font-bold text-[#050F41]">{sc ? celulaNumericaTabela(sc.faltou, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
                                 <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
                                   <div className="flex items-center justify-end gap-1">
                                     {itensAcoes.map(item => (
@@ -1928,9 +1942,9 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                                         type="button"
                                         title={item.label}
                                         onClick={item.onClick}
-                                        className="p-1.5 rounded-lg text-gray-400 hover:text-[#050F41] hover:bg-black/5 transition-colors"
+                                        className="p-1.5 rounded-lg text-gray-600 hover:text-[#050F41] hover:bg-black/5 transition-colors"
                                       >
-                                        <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
+                                        <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'wght' 600" }}>{item.icon}</span>
                                       </button>
                                     ))}
                                   </div>
@@ -2023,7 +2037,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                               className="px-4 py-2.5 border-t border-black/5 text-xs font-bold text-[#079551] hover:bg-black/[0.03] transition-colors flex items-center justify-center space-x-1.5"
                             >
                               <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}>play_circle</span>
-                              <span>Concurso</span>
+                              <span>Abrir Concurso</span>
                             </button>
                           )}
                         </div>
