@@ -6,7 +6,7 @@ import {
   listarConcursos, getConcurso, listarCandidatos, criarConcursoDaMensagem, importarConcursoDeCsv, atualizarCandidato,
   reagendarCandidato, listarDatasAgendamento, obterContextoAgendamento, confirmarAgendamento,
   gerarMinutaResultados, abrirConcurso, voltarParaEmBreve, encerrarConcurso, salvarTermoRecurso,
-  listarMensagens, arquivarMensagem, obterEstatisticasAnuais,
+  listarMensagens, arquivarMensagem, obterEstatisticasAnuais, definirPeriodoAgendamento,
   STATUS_LABELS,
   type ConcursoRecord, type CandidatoRecord, type DataAgendamentoInfo, type MensagemRecord, type EstatisticasAnuais, type EstatisticaConcursoStatus,
 } from '../services/firestoreConcursos';
@@ -96,6 +96,53 @@ const fileParaBase64 = (file: File): Promise<string> => new Promise((resolve, re
   reader.onerror = reject;
   reader.readAsDataURL(file);
 });
+
+// Acima disso o arquivo costuma estourar o limite de tamanho de requisição
+// do servidor/infra antes mesmo de chegar à IA, retornando uma página de
+// erro em HTML em vez de JSON (ver transcreverPdfViaOcr).
+const TAMANHO_MAXIMO_PDF_OCR = 15 * 1024 * 1024; // 15 MB
+
+/**
+ * Envia um PDF (ou foto/scan) ao endpoint de transcrição por IA e devolve o
+ * texto transcrito. Centraliza a checagem de tamanho do arquivo e o
+ * tratamento de respostas que não são JSON — isso acontece quando a
+ * requisição é grande demais e a infra devolve uma página de erro em HTML
+ * (o sintoma típico é "Unexpected token '<' ... is not valid JSON").
+ */
+const transcreverPdfViaOcr = async (file: File): Promise<string> => {
+  if (file.size > TAMANHO_MAXIMO_PDF_OCR) {
+    const tamanhoMB = (file.size / (1024 * 1024)).toFixed(1);
+    throw new Error(
+      `O arquivo tem ${tamanhoMB} MB — acima do limite de ${TAMANHO_MAXIMO_PDF_OCR / (1024 * 1024)} MB aceito para transcrição automática. ` +
+      'Tente um PDF menor (reduza a resolução do scan ou separe-o em partes), ou use a importação por CSV para concursos já encerrados.'
+    );
+  }
+
+  const fileBase64 = await fileParaBase64(file);
+  let res: Response;
+  try {
+    res = await fetch('/api/concursos/ocr-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileBase64, mimeType: file.type || 'application/pdf' }),
+    });
+  } catch {
+    throw new Error('Não foi possível conectar ao servidor para transcrever o PDF. Verifique sua conexão e tente novamente.');
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(
+      res.ok
+        ? 'O servidor respondeu em um formato inesperado ao transcrever o PDF.'
+        : `O servidor retornou um erro inesperado (código ${res.status}) ao transcrever o PDF — isso costuma acontecer quando o arquivo é grande demais. Tente um PDF menor.`
+    );
+  }
+
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || 'Erro ao transcrever o documento.');
+  return json.texto || '';
+};
 
 interface ConfirmDialogState {
   title: string;
@@ -223,16 +270,8 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
     setProcessando(true);
     setStep('processando');
     try {
-      const fileBase64 = await fileParaBase64(file);
-      const res = await fetch('/api/concursos/ocr-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileBase64, mimeType: file.type || 'application/pdf' }),
-      });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Erro ao transcrever o documento.');
-
-      const textoLimpo = limparRuidoPaginacao(json.texto || '');
+      const texto = await transcreverPdfViaOcr(file);
+      const textoLimpo = limparRuidoPaginacao(texto);
       const cab = extrairCabecalhoMensagem(textoLimpo);
       if (!cab.dataHora) {
         throw new Error('Não foi possível localizar o código Data-Hora (ID único) da mensagem no documento. Confira o arquivo e tente novamente.');
@@ -362,6 +401,7 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
               <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
                 <span className="material-symbols-outlined text-[32px] text-gray-400">picture_as_pdf</span>
                 <span className="text-xs font-bold text-gray-600">{file ? file.name : 'Clique para selecionar o PDF ou escanear um documento'}</span>
+                <span className="text-[10px] text-gray-400">Máx. 15 MB</span>
                 <input type="file" accept="application/pdf,image/*" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
               </label>
               <div className="pt-2 flex items-center justify-end space-x-2">
@@ -564,6 +604,8 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
   const [status, setStatus] = useState<ConcursoRecord['status']>('encerrado');
   const [fileName, setFileName] = useState<string | null>(null);
   const [candidatos, setCandidatos] = useState<CandidatoImportadoCsv[]>([]);
+  const [periodoInicio, setPeriodoInicio] = useState('');
+  const [periodoFim, setPeriodoFim] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [processando, setProcessando] = useState(false);
   const [concursoIdCriado, setConcursoIdCriado] = useState<string | null>(null);
@@ -586,10 +628,17 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
   const handleImportar = async () => {
     if (!nomeConcurso.trim()) { setErro('Informe o nome do concurso.'); return; }
     if (candidatos.length === 0) { setErro('Selecione um CSV válido com ao menos um candidato.'); return; }
+    if ((periodoInicio && !periodoFim) || (!periodoInicio && periodoFim)) {
+      setErro('Informe as duas datas do período (início e fim), ou deixe ambas em branco.');
+      return;
+    }
     setErro(null);
     setProcessando(true);
     try {
       const { concursoId } = await importarConcursoDeCsv(nomeConcurso.trim(), status, candidatos);
+      if (periodoInicio && periodoFim) {
+        await definirPeriodoAgendamento(concursoId, parseChaveData(periodoInicio), parseChaveData(periodoFim));
+      }
       setConcursoIdCriado(concursoId);
     } catch (e: any) {
       setErro(e?.message || 'Erro ao importar o concurso.');
@@ -627,8 +676,9 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
             <>
               <p className="text-xs text-gray-500">
                 Importa um concurso direto de um CSV no formato da aba "candidatosDataBase" (com a coluna do nome do
-                candidato em qualquer posição). Não cria mensagem nem calendário de agendamento — use para concursos
-                que não precisam mais ser agendados pelo app (normalmente já encerrados).
+                candidato em qualquer posição). Não cria mensagem administrativa — se o concurso ainda terá
+                candidatos reagendados pelo app, informe o período de IS abaixo para liberar o calendário de
+                reagendamento; deixe em branco se ele não precisa mais ser agendado (normalmente já encerrados).
               </p>
 
               <div>
@@ -652,6 +702,18 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
                   {STATUS_IMPORTACAO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Período IS — início (opcional)</label>
+                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs focus:outline-none focus:border-[#050F41]" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Período IS — fim (opcional)</label>
+                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs focus:outline-none focus:border-[#050F41]" />
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-400 -mt-2">Informe o período para liberar o calendário de reagendamento (gera os dias úteis automaticamente).</p>
 
               <div>
                 <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Arquivo CSV</label>
@@ -781,16 +843,8 @@ const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps
     setProcessando(true);
     setStep('processando');
     try {
-      const fileBase64 = await fileParaBase64(file);
-      const res = await fetch('/api/concursos/ocr-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileBase64, mimeType: file.type || 'application/pdf' }),
-      });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || 'Erro ao transcrever o documento.');
-
-      const textoLimpo = limparRuidoPaginacao(json.texto || '');
+      const texto = await transcreverPdfViaOcr(file);
+      const textoLimpo = limparRuidoPaginacao(texto);
       const cab = extrairCabecalhoMensagem(textoLimpo);
       if (!cab.dataHora) {
         throw new Error('Não foi possível localizar o código Data-Hora (ID único) da mensagem no documento.');
@@ -846,6 +900,7 @@ const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps
               <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
                 <span className="material-symbols-outlined text-[32px] text-gray-400">picture_as_pdf</span>
                 <span className="text-xs font-bold text-gray-600">{file ? file.name : 'Clique para selecionar o PDF'}</span>
+                <span className="text-[10px] text-gray-400">Máx. 15 MB</span>
                 <input type="file" accept="application/pdf,image/*" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
               </label>
               <div className="pt-2 flex items-center justify-end space-x-2">
@@ -1013,6 +1068,93 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
 };
 
 // -------------------------------------------------------------------------
+// Modal "Definir Período de Agendamento" — gera (ou regenera) o calendário de
+// dias úteis de um concurso; necessário para concursos importados via CSV,
+// que não têm essa subcoleção e por isso não permitem reagendar candidatos.
+// -------------------------------------------------------------------------
+interface ModalDefinirPeriodoAgendamentoProps {
+  concursoId: string;
+  concursoNome: string;
+  onClose: (atualizado?: boolean) => void;
+}
+
+const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendamentoProps> = ({ concursoId, concursoNome, onClose }) => {
+  const [periodoInicio, setPeriodoInicio] = useState('');
+  const [periodoFim, setPeriodoFim] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [processando, setProcessando] = useState(false);
+  const [concluido, setConcluido] = useState(false);
+
+  const handleConfirmar = async () => {
+    if (!periodoInicio || !periodoFim) { setErro('Informe as duas datas do período.'); return; }
+    setErro(null);
+    setProcessando(true);
+    try {
+      await definirPeriodoAgendamento(concursoId, parseChaveData(periodoInicio), parseChaveData(periodoFim));
+      setConcluido(true);
+    } catch (e: any) {
+      setErro(e?.message || 'Erro ao definir o período de agendamento.');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+          <div className="min-w-0">
+            <h3 className="font-heading font-bold text-sm uppercase truncate">Definir Período de Agendamento</h3>
+            <p className="text-[11px] text-white/70 truncate">{concursoNome}</p>
+          </div>
+          <button onClick={() => onClose(concluido)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0">
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+
+        <div className="p-5 overflow-y-auto space-y-4 flex-1">
+          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-semibold">{erro}</div>}
+
+          {concluido ? (
+            <>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                <p className="text-xs font-bold text-green-800">Período definido com sucesso. O calendário de reagendamento já está liberado.</p>
+              </div>
+              <div className="pt-2 flex items-center justify-end">
+                <button type="button" onClick={() => onClose(true)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">Concluir</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500">
+                Informe o período das IS deste concurso para gerar os dias úteis disponíveis para reagendamento. Se o
+                concurso já tiver um calendário configurado, ele será substituído pelo novo período.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Início</label>
+                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs focus:outline-none focus:border-[#050F41]" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Fim</label>
+                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs focus:outline-none focus:border-[#050F41]" />
+                </div>
+              </div>
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-50">
+                  {processando ? 'Salvando...' : 'Confirmar'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// -------------------------------------------------------------------------
 // Menu de 3 pontos (ações do concurso) exibido em cada card
 // -------------------------------------------------------------------------
 interface MenuAcoesConcursoProps {
@@ -1028,9 +1170,10 @@ interface MenuAcoesConcursoProps {
   onMinutaResultados: () => void;
   onRegistrarMensagem: () => void;
   onListarMensagens: () => void;
+  onDefinirPeriodoAgendamento: () => void;
 }
 
-const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeEncerrar, onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens }) => {
+const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeEncerrar, onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens, onDefinirPeriodoAgendamento }) => {
   const [aberto, setAberto] = useState(false);
 
   const itens: { key: string; label: string; icon: string; onClick: () => void; disabled?: boolean; title?: string }[] = [];
@@ -1049,6 +1192,9 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrir
   }
   if (podeGerarMinutaResultados && status !== 'em_breve') {
     itens.push({ key: 'minuta', label: 'Minuta Resultados', icon: 'summarize', onClick: onMinutaResultados });
+  }
+  if (podeAbrirEncerrar) {
+    itens.push({ key: 'periodo-agendamento', label: 'Definir Período de Agendamento', icon: 'event', onClick: onDefinirPeriodoAgendamento });
   }
   if (podeRegistrarMensagemArquivo) {
     itens.push({ key: 'registrar-msg', label: 'Registrar Mensagem', icon: 'upload_file', onClick: onRegistrarMensagem });
@@ -1124,6 +1270,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
   const [gerandoMinuta, setGerandoMinuta] = useState(false);
   const [registrarMensagemAlvo, setRegistrarMensagemAlvo] = useState<{ id: string; nome: string } | null>(null);
   const [listarMensagensAlvo, setListarMensagensAlvo] = useState<{ id: string; nome: string } | null>(null);
+  const [periodoAgendamentoAlvo, setPeriodoAgendamentoAlvo] = useState<{ id: string; nome: string } | null>(null);
 
   const anoCorrente = new Date().getFullYear();
 
@@ -1335,6 +1482,13 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
           onClose={() => setListarMensagensAlvo(null)}
         />
       )}
+      {periodoAgendamentoAlvo && (
+        <ModalDefinirPeriodoAgendamento
+          concursoId={periodoAgendamentoAlvo.id}
+          concursoNome={periodoAgendamentoAlvo.nome}
+          onClose={() => setPeriodoAgendamentoAlvo(null)}
+        />
+      )}
       {kpiModal && (
         <ModalKpiBarChart
           titulo={kpiModal.titulo}
@@ -1445,6 +1599,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                                   onMinutaResultados={() => handleMinutaResultados(c.id)}
                                   onRegistrarMensagem={() => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome })}
                                   onListarMensagens={() => setListarMensagensAlvo({ id: c.id, nome: c.nome })}
+                                  onDefinirPeriodoAgendamento={() => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome })}
                                 />
                               </div>
                               <p className="text-sm text-gray-600">{c.totalCandidatos} candidato(s)</p>
