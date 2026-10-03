@@ -281,12 +281,12 @@ export const importarConcursoDeCsv = async (
   return { concursoId };
 };
 
-export const criarCandidato = async (concursoId: string, id: string, nome: string): Promise<CandidatoRecord> => {
+export const criarCandidato = async (concursoId: string, id: string, nome: string, dataAgendamento: string = ''): Promise<CandidatoRecord> => {
   const existente = await getDoc(candidatoRef(concursoId, id));
   if (existente.exists()) throw new Error(`Já existe um candidato com a matrícula "${id}" neste concurso.`);
 
   const dados = {
-    nome, dataAgendamento: '', status: '', observacoes: '', finalizado: false,
+    nome, dataAgendamento, status: '', observacoes: '', finalizado: false,
     recurso: false, dataLaudo: '', laudo: '', numTIS: '', termoRecursoUrl: '',
   };
   await setDoc(candidatoRef(concursoId, id), dados);
