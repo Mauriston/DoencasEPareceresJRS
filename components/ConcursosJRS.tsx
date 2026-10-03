@@ -5,7 +5,7 @@ import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
 import {
   listarConcursos, getConcurso, listarCandidatos, criarConcursoDaMensagem, importarConcursoDeCsv, atualizarCandidato,
-  reagendarCandidato, listarDatasAgendamento, obterContextoAgendamento, confirmarAgendamento,
+  criarCandidato, reagendarCandidato, listarDatasAgendamento, obterContextoAgendamento, confirmarAgendamento,
   gerarMinutaResultados, abrirConcurso, voltarParaEmBreve, encerrarConcurso, salvarTermoRecurso,
   listarMensagens, arquivarMensagem, obterEstatisticasAnuais, definirPeriodoAgendamento,
   STATUS_LABELS,
@@ -1174,6 +1174,135 @@ const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendamentoPro
 };
 
 // -------------------------------------------------------------------------
+// Modal "Adicionar Candidato" — inclui manualmente um candidato num
+// concurso já Em Andamento ou Em Breve, perguntando a data de agendamento
+// dentre as já configuradas (calendário de dias úteis do período).
+// -------------------------------------------------------------------------
+interface ModalAdicionarCandidatoProps {
+  concursoId: string;
+  concursoNome: string;
+  onClose: (atualizado?: boolean) => void;
+}
+
+const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = ({ concursoId, concursoNome, onClose }) => {
+  const [matricula, setMatricula] = useState('');
+  const [nome, setNome] = useState('');
+  const [dataAgendamento, setDataAgendamento] = useState('');
+  const [datas, setDatas] = useState<DataAgendamentoInfo[]>([]);
+  const [loadingDatas, setLoadingDatas] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [concluido, setConcluido] = useState(false);
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      setLoadingDatas(true);
+      try {
+        const lista = await listarDatasAgendamento(concursoId);
+        if (!cancelado) setDatas(lista);
+      } finally {
+        if (!cancelado) setLoadingDatas(false);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [concursoId]);
+
+  const handleSalvar = async () => {
+    if (!matricula.trim() || !nome.trim()) { setErro('Informe a matrícula e o nome do candidato.'); return; }
+    setErro(null);
+    setSalvando(true);
+    try {
+      await criarCandidato(concursoId, matricula.trim(), nome.trim().toUpperCase(), dataAgendamento);
+      setConcluido(true);
+    } catch (e: any) {
+      setErro(e?.message || 'Erro ao adicionar o candidato.');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+          <div className="min-w-0">
+            <h3 className="font-heading font-bold text-sm uppercase truncate">Adicionar Candidato</h3>
+            <p className="text-[11px] text-white/70 truncate">{concursoNome}</p>
+          </div>
+          <button onClick={() => onClose(concluido)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0">
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+
+        <div className="p-5 overflow-y-auto space-y-4 flex-1">
+          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs md:text-sm text-red-700 font-semibold">{erro}</div>}
+
+          {concluido ? (
+            <>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                <p className="text-xs md:text-sm font-bold text-green-800">Candidato "{nome.trim().toUpperCase()}" adicionado com sucesso.</p>
+              </div>
+              <div className="pt-2 flex items-center justify-end">
+                <button type="button" onClick={() => onClose(true)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Concluir</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Matrícula</label>
+                <input
+                  type="text"
+                  value={matricula}
+                  onChange={e => setMatricula(e.target.value)}
+                  placeholder="Ex.: 550039-7"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-mono text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do candidato</label>
+                <input
+                  type="text"
+                  value={nome}
+                  onChange={e => setNome(e.target.value.toUpperCase())}
+                  placeholder="NOME COMPLETO"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Data de agendamento</label>
+                {loadingDatas ? (
+                  <p className="text-xs md:text-sm text-gray-400">Carregando datas...</p>
+                ) : datas.length === 0 ? (
+                  <p className="text-[11px] md:text-sm text-amber-700">Este concurso ainda não tem datas configuradas — o candidato será adicionado sem agendamento (pode ser agendado depois).</p>
+                ) : (
+                  <select
+                    value={dataAgendamento}
+                    onChange={e => setDataAgendamento(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                  >
+                    <option value="">Agendar depois</option>
+                    {datas.map(d => (
+                      <option key={d.data} value={d.data}>{d.dataFormatada} ({d.diaSemana}) — {d.quantidadeAgendados} agendado(s)</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <div className="pt-2 flex items-center justify-end space-x-2">
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" disabled={salvando} onClick={handleSalvar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
+                  {salvando ? 'Adicionando...' : 'Adicionar Candidato'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// -------------------------------------------------------------------------
 // Menu de 3 pontos (ações do concurso) exibido em cada card
 // -------------------------------------------------------------------------
 interface MenuAcoesConcursoProps {
@@ -1182,6 +1311,7 @@ interface MenuAcoesConcursoProps {
   podeGerarMinutaResultados: boolean;
   podeRegistrarMensagemArquivo: boolean;
   podeListarMensagens: boolean;
+  podeAdicionarCandidato: boolean;
   podeEncerrar: boolean;
   onAbrir: () => void;
   onVoltarParaEmBreve: () => void;
@@ -1190,9 +1320,10 @@ interface MenuAcoesConcursoProps {
   onRegistrarMensagem: () => void;
   onListarMensagens: () => void;
   onDefinirPeriodoAgendamento: () => void;
+  onAdicionarCandidato: () => void;
 }
 
-const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeEncerrar, onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens, onDefinirPeriodoAgendamento }) => {
+const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeEncerrar, onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens, onDefinirPeriodoAgendamento, onAdicionarCandidato }) => {
   const [aberto, setAberto] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -1227,6 +1358,9 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrir
   }
   if (podeAbrirEncerrar) {
     itens.push({ key: 'periodo-agendamento', label: 'Definir Período de Agendamento', icon: 'event', onClick: onDefinirPeriodoAgendamento });
+  }
+  if (podeAdicionarCandidato && (status === 'em_andamento' || status === 'em_breve')) {
+    itens.push({ key: 'adicionar-candidato', label: 'Adicionar Candidato', icon: 'person_add', onClick: onAdicionarCandidato });
   }
   if (podeRegistrarMensagemArquivo) {
     itens.push({ key: 'registrar-msg', label: 'Registrar Mensagem', icon: 'upload_file', onClick: onRegistrarMensagem });
@@ -1288,6 +1422,7 @@ interface ConcursosListaProps {
   podeAbrirEncerrar: boolean;
   podeRegistrarMensagemArquivo: boolean;
   podeListarMensagens: boolean;
+  podeAdicionarCandidato: boolean;
   onSelecionar: (id: string) => void;
   onNovoConcursoClick: () => void;
   onImportarCsvClick: () => void;
@@ -1300,7 +1435,7 @@ const GRUPOS_STATUS: { status: ConcursoRecord['status']; titulo: string }[] = [
   { status: 'em_breve', titulo: 'Em Breve' },
 ];
 
-const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
+const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
   const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number }>>({});
   const [openGroups, setOpenGroups] = useState<Set<ConcursoRecord['status']>>(new Set(['em_andamento', 'em_breve']));
 
@@ -1316,6 +1451,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
   const [registrarMensagemAlvo, setRegistrarMensagemAlvo] = useState<{ id: string; nome: string } | null>(null);
   const [listarMensagensAlvo, setListarMensagensAlvo] = useState<{ id: string; nome: string } | null>(null);
   const [periodoAgendamentoAlvo, setPeriodoAgendamentoAlvo] = useState<{ id: string; nome: string } | null>(null);
+  const [adicionarCandidatoAlvo, setAdicionarCandidatoAlvo] = useState<{ id: string; nome: string } | null>(null);
 
   const anoCorrente = new Date().getFullYear();
 
@@ -1534,6 +1670,13 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
           onClose={() => setPeriodoAgendamentoAlvo(null)}
         />
       )}
+      {adicionarCandidatoAlvo && (
+        <ModalAdicionarCandidato
+          concursoId={adicionarCandidatoAlvo.id}
+          concursoNome={adicionarCandidatoAlvo.nome}
+          onClose={atualizado => { setAdicionarCandidatoAlvo(null); if (atualizado) onRecarregar(); }}
+        />
+      )}
       {kpiModal && (
         <ModalKpiBarChart
           titulo={kpiModal.titulo}
@@ -1639,6 +1782,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                                   podeGerarMinutaResultados={podeGerarMinutaResultados}
                                   podeRegistrarMensagemArquivo={podeRegistrarMensagemArquivo}
                                   podeListarMensagens={podeListarMensagens}
+                                  podeAdicionarCandidato={podeAdicionarCandidato}
                                   podeEncerrar={podeEncerrar}
                                   onAbrir={() => handleAbrir(c.id, c.nome)}
                                   onVoltarParaEmBreve={() => handleVoltarParaEmBreve(c.id, c.nome)}
@@ -1647,6 +1791,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                                   onRegistrarMensagem={() => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome })}
                                   onListarMensagens={() => setListarMensagensAlvo({ id: c.id, nome: c.nome })}
                                   onDefinirPeriodoAgendamento={() => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome })}
+                                  onAdicionarCandidato={() => setAdicionarCandidatoAlvo({ id: c.id, nome: c.nome })}
                                 />
                               </div>
                               <p className="text-sm text-gray-600">{c.totalCandidatos} candidato(s)</p>
@@ -2341,6 +2486,7 @@ export const ConcursosJRS: React.FC = () => {
   const podeAbrirEncerrar = canUseFeature('concursosJRS.abrirEncerrarConcurso', perfil);
   const podeRegistrarMensagemArquivo = canUseFeature('concursosJRS.registrarMensagemArquivo', perfil);
   const podeListarMensagens = canUseFeature('concursosJRS.listarMensagens', perfil);
+  const podeAdicionarCandidato = canUseFeature('concursosJRS.adicionarCandidato', perfil);
 
   const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
   const [loadingConcursos, setLoadingConcursos] = useState(true);
@@ -2391,6 +2537,7 @@ export const ConcursosJRS: React.FC = () => {
         podeAbrirEncerrar={podeAbrirEncerrar}
         podeRegistrarMensagemArquivo={podeRegistrarMensagemArquivo}
         podeListarMensagens={podeListarMensagens}
+        podeAdicionarCandidato={podeAdicionarCandidato}
         onSelecionar={setSelectedConcursoId}
         onNovoConcursoClick={() => setShowUploadModal(true)}
         onImportarCsvClick={() => setShowImportarCsvModal(true)}
