@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { apiUrl } from '../utils/apiBase';
 
 export const ImageScanner: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,7 +29,7 @@ export const ImageScanner: React.FC = () => {
     try {
       // Remove data:image/jpeg;base64, prefix
       const base64Data = image.split(',')[1];
-      const response = await fetch("/api/gemini/analyze-image", {
+      const response = await fetch(apiUrl("/api/gemini/analyze-image"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: base64Data }),
