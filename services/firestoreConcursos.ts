@@ -435,7 +435,13 @@ export const confirmarAgendamento = async (
   ]);
   if (!concurso) throw new Error('Concurso não encontrado.');
 
-  const pendentes = candidatos.filter(c => !c.dataAgendamento);
+  // listarCandidatos devolve os documentos na ordem do Firestore (pelo ID,
+  // ou seja, pela matrícula) — para o agendamento seguir ordem alfabética é
+  // preciso reordenar por nome aqui, já que distribuirCandidatosNasDatas só
+  // distribui na ordem em que os candidatos chegam.
+  const pendentes = candidatos
+    .filter(c => !c.dataAgendamento)
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
   const datasOrdenadas = [...datasSelecionadasISO].sort();
   const datasComDiaSemana = datasOrdenadas.map(iso => ({ data: iso, diaSemana: NOMES_DIAS_SEMANA[parseChaveData(iso).getDay()] }));
 

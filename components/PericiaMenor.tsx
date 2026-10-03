@@ -526,12 +526,12 @@ export const PericiaMenor: React.FC = () => {
             <button onClick={() => setShowPesquisarNomeModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white z-10"><span className="material-symbols-outlined">close</span></button>
             <div className="p-6 bg-[#050F41] text-white shrink-0"><h2 className="text-xl font-bold">Pesquisar Militar</h2><p className="text-blue-100 text-sm mt-1">Busque pelo nome completo</p></div>
             <div className="p-6 flex-1 flex flex-col min-h-0">
-              <div className="relative shrink-0 mb-4"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400"><span className="material-symbols-outlined">search</span></div><input type="text" value={pesquisarNomeTerm} onChange={(e) => setPesquisarNomeTerm(e.target.value)} placeholder="Ex: João da Silva..." className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-10 p-2.5" autoFocus /></div>
+              <div className="relative shrink-0 mb-4"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400"><span className="material-symbols-outlined">search</span></div><input type="text" value={pesquisarNomeTerm} onChange={(e) => setPesquisarNomeTerm(e.target.value)} placeholder="Ex: João da Silva..." className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-10 p-2.5 md:text-base" autoFocus /></div>
               <div className="flex-1 overflow-y-auto min-h-[50px] border border-gray-100 rounded-lg bg-gray-50/50">
-                {isCarregandoMilitares ? (<div className="p-8 text-center flex flex-col items-center"><div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mb-2"></div><p className="text-sm">Carregando...</p></div>) : (
+                {isCarregandoMilitares ? (<div className="p-8 text-center flex flex-col items-center"><div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mb-2"></div><p className="text-sm md:text-base">Carregando...</p></div>) : (
                   <div className="flex flex-col">
-                    {militaresInfoList.filter(m => { if (!pesquisarNomeTerm) return false; const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean); const name = removeAcentos(m.nome.toLowerCase()); return terms.every(t => name.includes(t)); }).slice(0, 50).map((m, idx) => (<div key={idx} onClick={() => selecionarNomeNip(m.nip)} className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer"><div className="font-bold text-[#050F41] text-sm">{m.nome}</div><div className="text-xs text-gray-500 font-mono mt-0.5">{m.nip}</div></div>))}
-                    {pesquisarNomeTerm && militaresInfoList.filter(m => { const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean); return terms.every(t => removeAcentos(m.nome.toLowerCase()).includes(t)); }).length === 0 && (<div className="p-8 text-center text-gray-500 text-sm">Nenhum militar encontrado.</div>)}
+                    {militaresInfoList.filter(m => { if (!pesquisarNomeTerm) return false; const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean); const name = removeAcentos(m.nome.toLowerCase()); return terms.every(t => name.includes(t)); }).slice(0, 50).map((m, idx) => (<div key={idx} onClick={() => selecionarNomeNip(m.nip)} className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer"><div className="font-bold text-[#050F41] text-sm md:text-base">{m.nome}</div><div className="text-xs md:text-sm text-gray-500 font-mono mt-0.5">{m.nip}</div></div>))}
+                    {pesquisarNomeTerm && militaresInfoList.filter(m => { const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean); return terms.every(t => removeAcentos(m.nome.toLowerCase()).includes(t)); }).length === 0 && (<div className="p-8 text-center text-gray-500 text-sm md:text-base">Nenhum militar encontrado.</div>)}
                   </div>
                 )}
               </div>
@@ -545,7 +545,7 @@ export const PericiaMenor: React.FC = () => {
         <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col animate-fade-in backdrop-blur-sm">
           <div className="p-4 bg-black flex justify-between items-center text-white shrink-0 border-b border-gray-800"><h3 className="font-bold flex items-center gap-2"><CropIcon size={20} className="text-[#FAB932]" /> Recortar Atestado</h3><button onClick={() => { setShowCropModal(false); setImgSrc(''); }} className="p-2 text-gray-400 hover:text-white"><X size={24} /></button></div>
           <div className="flex-1 overflow-auto flex items-center justify-center p-4">{imgSrc && (<ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)}><img ref={imgRef} src={imgSrc} alt="Crop" style={{ maxHeight: '70vh', objectFit: 'contain' }} /></ReactCrop>)}</div>
-          <div className="p-4 bg-black shrink-0 pb-10"><p className="text-gray-400 text-xs text-center mb-4">Arraste os cantos para selecionar nome, datas e o CID.</p><button onClick={handleCropComplete} className="w-full py-4 bg-[#079551] hover:bg-green-600 text-white font-bold rounded-xl flex justify-center items-center gap-2"><CheckCircle2 size={20} /> Confirmar Recorte</button></div>
+          <div className="p-4 bg-black shrink-0 pb-10"><p className="text-gray-400 text-xs md:text-sm text-center mb-4">Arraste os cantos para selecionar nome, datas e o CID.</p><button onClick={handleCropComplete} className="w-full py-4 bg-[#079551] hover:bg-green-600 text-white font-bold rounded-xl flex justify-center items-center gap-2"><CheckCircle2 size={20} /> Confirmar Recorte</button></div>
         </div>
       )}
 
@@ -553,12 +553,12 @@ export const PericiaMenor: React.FC = () => {
       {(isSubmitting || successPdfUrl) && (
         <div className="fixed inset-0 z-[200] bg-white/95 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in p-6">
           {!successPdfUrl ? (
-            <div className="flex flex-col items-center text-center space-y-4"><Loader2 className="animate-spin text-[#050F41]" size={48} /><h2 className="text-xl font-bold text-[#050F41]">A gerar Perícia Menor...</h2><p className="text-sm text-gray-500 max-w-xs">O documento está a ser processado e salvo no Google Drive.</p></div>
+            <div className="flex flex-col items-center text-center space-y-4"><Loader2 className="animate-spin text-[#050F41]" size={48} /><h2 className="text-xl font-bold text-[#050F41]">A gerar Perícia Menor...</h2><p className="text-sm md:text-base text-gray-500 max-w-xs">O documento está a ser processado e salvo no Google Drive.</p></div>
           ) : (
             <div className="flex flex-col items-center text-center space-y-5 max-w-sm">
               <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-2"><CheckCircle className="text-green-600" size={40} /></div>
               <h2 className="text-2xl font-black text-[#050F41]">Sucesso!</h2>
-              <p className="text-sm text-gray-600">A perícia foi gerada e a planilha atualizada.</p>
+              <p className="text-sm md:text-base text-gray-600">A perícia foi gerada e a planilha atualizada.</p>
               <div className="flex flex-col w-full gap-3 mt-4">
                 <a href={successPdfUrl} target="_blank" rel="noopener noreferrer" onClick={handleReset} className="w-full py-3.5 bg-[#050F41] text-white rounded-xl font-bold flex items-center justify-center gap-2"><span className="material-symbols-outlined text-[20px]">picture_as_pdf</span> Ver PDF Gerado</a>
                 <button onClick={handleReset} className="w-full py-3.5 bg-gray-100 text-gray-700 rounded-xl font-bold flex items-center justify-center gap-2"><span className="material-symbols-outlined text-[20px]">add_circle</span> Nova Perícia Menor</button>

@@ -496,11 +496,11 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
         <div className="flex-1 overflow-y-auto">
           <div className="p-4 space-y-6 max-w-3xl mx-auto w-full pb-32">
             <div className="flex items-center justify-between mt-2">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Caso {currentIndex + 1} de {totalCases}</span>
+              <span className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider">Caso {currentIndex + 1} de {totalCases}</span>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm">
-              <p className="text-[#050F41] font-heading text-[16px] leading-relaxed font-semibold">{currentCase.enunciado}</p>
+              <p className="text-[#050F41] font-heading text-[16px] md:text-lg leading-relaxed font-semibold">{currentCase.enunciado}</p>
             </div>
 
             <div className="space-y-3">
@@ -509,7 +509,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
                   key={key}
                   onClick={() => handleSelect(key)}
                   disabled={selectedAnswer !== null}
-                  className={`w-full text-left p-4 rounded-xl border transition-all duration-300 text-sm font-body leading-relaxed flex items-start gap-3 focus:outline-none ${getOptionStyle(key)}`}
+                  className={`w-full text-left p-4 rounded-xl border transition-all duration-300 text-sm md:text-base font-body leading-relaxed flex items-start gap-3 focus:outline-none ${getOptionStyle(key)}`}
                 >
                   <div className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5 ${
                     selectedAnswer === null ? 'border-gray-300 text-gray-500 bg-gray-50' :
@@ -524,11 +524,11 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
             {selectedAnswer !== null && (
               <div className="animate-fade-in bg-yellow-50/80 border border-yellow-200 p-5 rounded-2xl mt-6 relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
-                <h3 className="text-sm font-bold font-heading text-[#050F41] mb-2 uppercase flex items-center gap-2">
+                <h3 className="text-sm md:text-base font-bold font-heading text-[#050F41] mb-2 uppercase flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px] text-yellow-600">lightbulb</span>
                   Análise Pericial
                 </h3>
-                <p className="text-sm text-gray-800 font-body leading-relaxed text-justify">{currentCase.explicacao}</p>
+                <p className="text-sm md:text-base text-gray-800 font-body leading-relaxed text-justify">{currentCase.explicacao}</p>
               </div>
             )}
           </div>
@@ -552,7 +552,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
                 <span className="material-symbols-outlined text-3xl">workspace_premium</span>
               </div>
               <h2 className="text-2xl font-heading font-black text-[#050F41] mb-1">Desempenho</h2>
-              <p className="text-gray-500 font-medium font-body text-sm mb-6">Você completou todos os casos!</p>
+              <p className="text-gray-500 font-medium font-body text-sm md:text-base mb-6">Você completou todos os casos!</p>
               <div className="relative mb-8">
                 <svg className="w-32 h-32 transform -rotate-90">
                   <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
@@ -571,7 +571,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
                 <Eye size={18} />
                 Ver Resultado
               </button>
-              {saving && <p className="text-[11px] text-gray-400 mt-3">Salvando resultado...</p>}
+              {saving && <p className="text-[11px] md:text-sm text-gray-400 mt-3">Salvando resultado...</p>}
             </div>
           </div>
         )}

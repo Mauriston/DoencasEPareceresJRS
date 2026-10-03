@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Header } from './Header';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
@@ -191,7 +192,7 @@ const CalendarioAgendamento: React.FC<CalendarioAgendamentoProps> = ({ datas, on
         <button type="button" onClick={() => setMesAtual(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
           <span className="material-symbols-outlined text-[18px]">chevron_left</span>
         </button>
-        <span className="text-xs font-bold text-[#050F41] uppercase">
+        <span className="text-xs md:text-sm font-bold text-[#050F41] uppercase">
           {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
         </span>
         <button type="button" onClick={() => setMesAtual(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
@@ -201,7 +202,7 @@ const CalendarioAgendamento: React.FC<CalendarioAgendamentoProps> = ({ datas, on
 
       <div className="grid grid-cols-7 gap-1 mb-1">
         {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
-          <div key={i} className="text-center text-[10px] font-bold text-gray-400">{d}</div>
+          <div key={i} className="text-center text-[10px] md:text-xs font-bold text-gray-400">{d}</div>
         ))}
       </div>
 
@@ -211,7 +212,7 @@ const CalendarioAgendamento: React.FC<CalendarioAgendamentoProps> = ({ datas, on
           const info = mapaDatas[iso];
           const dia = Number(iso.split('-')[2]);
           if (!info) {
-            return <div key={i} className="aspect-square flex items-center justify-center text-[11px] text-gray-300 rounded-lg">{dia}</div>;
+            return <div key={i} className="aspect-square flex items-center justify-center text-[11px] md:text-sm text-gray-300 rounded-lg">{dia}</div>;
           }
           return (
             <button
@@ -219,16 +220,16 @@ const CalendarioAgendamento: React.FC<CalendarioAgendamentoProps> = ({ datas, on
               type="button"
               onClick={() => onSelect(iso)}
               title={`${info.dataFormatada} — ${info.quantidadeAgendados} agendado(s)`}
-              className="aspect-square flex flex-col items-center justify-center rounded-lg text-[11px] font-bold bg-[#050F41]/5 text-[#050F41] border border-[#050F41]/20 hover:bg-[#050F41] hover:text-white transition-colors cursor-pointer"
+              className="aspect-square flex flex-col items-center justify-center rounded-lg text-[11px] md:text-sm font-bold bg-[#050F41]/5 text-[#050F41] border border-[#050F41]/20 hover:bg-[#050F41] hover:text-white transition-colors cursor-pointer"
             >
               <span>{dia}</span>
-              <span className="text-[8px] font-semibold opacity-70">{info.quantidadeAgendados}</span>
+              <span className="text-[8px] md:text-[10px] font-semibold opacity-70">{info.quantidadeAgendados}</span>
             </button>
           );
         })}
       </div>
 
-      {datas.length === 0 && <p className="text-xs text-gray-400 text-center py-4">Nenhuma data de agendamento configurada.</p>}
+      {datas.length === 0 && <p className="text-xs md:text-sm text-gray-400 text-center py-4">Nenhuma data de agendamento configurada.</p>}
     </div>
   );
 };
@@ -352,6 +353,11 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
     });
   };
 
+  const todasDatasSelecionadas = datasDisponiveis.length > 0 && datasDisponiveis.every(d => datasSelecionadas.has(d.data));
+  const toggleTodasDatas = () => {
+    setDatasSelecionadas(todasDatasSelecionadas ? new Set() : new Set(datasDisponiveis.map(d => d.data)));
+  };
+
   const quantidadeCoberta = datasSelecionadas.size * (parseInt(quantidadePorDia, 10) || 0);
   const agendamentoViavel = quantidadeCoberta >= totalPendentes && totalPendentes > 0;
 
@@ -389,29 +395,29 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
 
         <div className="p-5 overflow-y-auto space-y-4 flex-1">
           {erro && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-semibold">{erro}</div>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs md:text-sm text-red-700 font-semibold">{erro}</div>
           )}
 
           {step === 'select' && (
             <>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs md:text-sm text-gray-500">
                 Envie o PDF (ou fotografe/escaneie) da mensagem administrativa inicial de apresentação dos candidatos.
                 O texto será transcrito por IA, os candidatos e o período de agendamento identificados automaticamente
                 — você poderá revisar e corrigir tudo antes de criar o concurso.
               </p>
               <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
                 <span className="material-symbols-outlined text-[32px] text-gray-400">picture_as_pdf</span>
-                <span className="text-xs font-bold text-gray-600">{file ? file.name : 'Clique para selecionar o PDF ou escanear um documento'}</span>
-                <span className="text-[10px] text-gray-400">Máx. 15 MB</span>
+                <span className="text-xs md:text-sm font-bold text-gray-600">{file ? file.name : 'Clique para selecionar o PDF ou escanear um documento'}</span>
+                <span className="text-[10px] md:text-xs text-gray-400">Máx. 15 MB</span>
                 <input type="file" accept="application/pdf,image/*" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
               </label>
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
                 <button
                   type="button"
                   disabled={!file || processando}
                   onClick={handleProcessar}
-                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1 disabled:opacity-50"
+                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm flex items-center space-x-1 disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[16px]">upload</span>
                   <span>Processar Mensagem</span>
@@ -423,45 +429,45 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
           {step === 'processando' && (
             <div className="text-center py-8 text-gray-500 space-y-2">
               <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
-              <p className="text-xs font-semibold">Transcrevendo o documento e identificando os candidatos...</p>
+              <p className="text-xs md:text-sm font-semibold">Transcrevendo o documento e identificando os candidatos...</p>
             </div>
           )}
 
           {step === 'revisao' && (
             <>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs md:text-sm text-blue-800">
                 Confira e corrija os dados extraídos antes de criar o concurso — a matrícula de cada candidato precisa estar correta.
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do concurso</label>
+                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do concurso</label>
                 <input
                   type="text"
                   value={nomeConcurso}
                   onChange={e => setNomeConcurso(e.target.value)}
                   placeholder="Ex.: CPAEM/2026"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm md:text-base font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Período JRS — início</label>
-                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs focus:outline-none focus:border-[#050F41]" />
+                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Período JRS — início</label>
+                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm focus:outline-none focus:border-[#050F41]" />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Período JRS — fim</label>
-                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs focus:outline-none focus:border-[#050F41]" />
+                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Período JRS — fim</label>
+                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm focus:outline-none focus:border-[#050F41]" />
                 </div>
               </div>
               {!periodoInicio && (
-                <p className="text-[11px] text-amber-700">Período não identificado automaticamente — informe manualmente para já configurar o agendamento, ou deixe em branco para agendar depois.</p>
+                <p className="text-[11px] md:text-sm text-amber-700">Período não identificado automaticamente — informe manualmente para já configurar o agendamento, ou deixe em branco para agendar depois.</p>
               )}
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Candidatos ({candidatos.length})</label>
-                  <button type="button" onClick={adicionarCandidatoEditavel} className="text-[11px] font-bold text-[#050F41] flex items-center space-x-1">
+                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider">Candidatos ({candidatos.length})</label>
+                  <button type="button" onClick={adicionarCandidatoEditavel} className="text-[11px] md:text-sm font-bold text-[#050F41] flex items-center space-x-1">
                     <span className="material-symbols-outlined text-[14px]">add</span>
                     <span>Adicionar</span>
                   </button>
@@ -488,17 +494,17 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
                       </button>
                     </div>
                   ))}
-                  {candidatos.length === 0 && <p className="text-xs text-gray-400 text-center py-4">Nenhum candidato identificado.</p>}
+                  {candidatos.length === 0 && <p className="text-xs md:text-sm text-gray-400 text-center py-4">Nenhum candidato identificado.</p>}
                 </div>
               </div>
 
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
                 <button
                   type="button"
                   disabled={processando}
                   onClick={handleConfirmarCriacao}
-                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
+                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
                 >
                   {processando ? 'Criando concurso...' : 'Confirmar e Criar Concurso'}
                 </button>
@@ -508,46 +514,58 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
 
           {step === 'agendamento' && (
             <>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-gray-700">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs md:text-sm text-gray-700">
                 <span className="font-bold">Candidatos a agendar:</span> {totalPendentes}
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Quantidade de IS por dia</label>
+                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Quantidade de IS por dia</label>
                 <input
                   type="number"
                   min={1}
                   value={quantidadePorDia}
                   onChange={e => setQuantidadePorDia(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-2">Datas disponíveis (marque as que serão usadas)</label>
+                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-2">Datas disponíveis (marque as que serão usadas)</label>
                 <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-56 overflow-y-auto">
+                  {datasDisponiveis.length > 0 && (
+                    <label className="flex items-center gap-2 p-2 text-xs md:text-sm font-bold text-[#050F41] cursor-pointer hover:bg-gray-50 bg-gray-50/60">
+                      <input
+                        type="checkbox"
+                        checked={todasDatasSelecionadas}
+                        ref={el => { if (el) el.indeterminate = !todasDatasSelecionadas && datasSelecionadas.size > 0; }}
+                        onChange={toggleTodasDatas}
+                        className="accent-[#050F41]"
+                      />
+                      <span>{todasDatasSelecionadas ? 'Desmarcar todas' : 'Selecionar todas'}</span>
+                    </label>
+                  )}
                   {datasDisponiveis.map(d => (
-                    <label key={d.data} className="flex items-center gap-2 p-2 text-xs cursor-pointer hover:bg-gray-50">
+                    <label key={d.data} className="flex items-center gap-2 p-2 text-xs md:text-sm cursor-pointer hover:bg-gray-50">
                       <input type="checkbox" checked={datasSelecionadas.has(d.data)} onChange={() => toggleData(d.data)} className="accent-[#050F41]" />
                       <span className="font-bold text-[#050F41]">{d.dataFormatada}</span>
                       <span className="text-gray-500">({d.diaSemana})</span>
                     </label>
                   ))}
-                  {datasDisponiveis.length === 0 && <p className="text-xs text-gray-400 text-center py-4">Nenhuma data útil no período informado.</p>}
+                  {datasDisponiveis.length === 0 && <p className="text-xs md:text-sm text-gray-400 text-center py-4">Nenhuma data útil no período informado.</p>}
                 </div>
               </div>
 
-              <div className={`rounded-xl p-3 text-xs font-bold ${agendamentoViavel ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-amber-50 border border-amber-200 text-amber-800'}`}>
+              <div className={`rounded-xl p-3 text-xs md:text-sm font-bold ${agendamentoViavel ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-amber-50 border border-amber-200 text-amber-800'}`}>
                 {quantidadeCoberta} / {totalPendentes} candidatos cobertos com {datasSelecionadas.size} data(s) × {quantidadePorDia || 0} por dia
               </div>
 
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Agendar Depois</button>
+                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Agendar Depois</button>
                 <button
                   type="button"
                   disabled={!agendamentoViavel || processando}
                   onClick={handleConfirmarAgendamento}
-                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
+                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
                 >
                   {processando ? 'Confirmando...' : 'Confirmar Agendamento e Gerar Minuta'}
                 </button>
@@ -558,24 +576,24 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
           {step === 'concluido' && (
             <>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                <p className="text-xs font-bold text-green-800">
+                <p className="text-xs md:text-sm font-bold text-green-800">
                   Concurso "{nomeConcurso}" criado com sucesso{semPeriodo ? '.' : ' e agendamento confirmado.'}
                 </p>
               </div>
               {minuta && (
                 <>
-                  <textarea readOnly value={minuta} rows={12} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-[11px] font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap" />
-                  <button type="button" onClick={() => handleCopiarTexto(minuta)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1">
+                  <textarea readOnly value={minuta} rows={12} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-[11px] md:text-sm font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap" />
+                  <button type="button" onClick={() => handleCopiarTexto(minuta)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1">
                     <span className="material-symbols-outlined text-[16px]">content_copy</span>
                     <span>Copiar Minuta</span>
                   </button>
                 </>
               )}
               {!isAdmin && (
-                <p className="text-[11px] text-gray-500">O concurso ficará com status "Em Breve" até um Admin abri-lo.</p>
+                <p className="text-[11px] md:text-sm text-gray-500">O concurso ficará com status "Em Breve" até um Admin abri-lo.</p>
               )}
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">Concluir</button>
+                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Concluir</button>
               </div>
             </>
           )}
@@ -662,20 +680,20 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
         </div>
 
         <div className="p-5 overflow-y-auto space-y-4 flex-1">
-          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-semibold">{erro}</div>}
+          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs md:text-sm text-red-700 font-semibold">{erro}</div>}
 
           {concursoIdCriado ? (
             <>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                <p className="text-xs font-bold text-green-800">Concurso "{nomeConcurso}" importado com sucesso ({candidatos.length} candidato(s)).</p>
+                <p className="text-xs md:text-sm font-bold text-green-800">Concurso "{nomeConcurso}" importado com sucesso ({candidatos.length} candidato(s)).</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={() => onClose(concursoIdCriado)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">Ver Concurso</button>
+                <button type="button" onClick={() => onClose(concursoIdCriado)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Ver Concurso</button>
               </div>
             </>
           ) : (
             <>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs md:text-sm text-gray-500">
                 Importa um concurso direto de um CSV no formato da aba "candidatosDataBase" (com a coluna do nome do
                 candidato em qualquer posição). Não cria mensagem administrativa — se o concurso ainda terá
                 candidatos reagendados pelo app, informe o período de IS abaixo para liberar o calendário de
@@ -683,22 +701,22 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
               </p>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do concurso</label>
+                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do concurso</label>
                 <input
                   type="text"
                   value={nomeConcurso}
                   onChange={e => setNomeConcurso(e.target.value)}
                   placeholder="Ex.: CPAEAM/2026"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm md:text-base font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Status inicial</label>
+                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Status inicial</label>
                 <select
                   value={status}
                   onChange={e => setStatus(e.target.value as ConcursoRecord['status'])}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
                 >
                   {STATUS_IMPORTACAO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -706,35 +724,35 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Período IS — início (opcional)</label>
-                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs focus:outline-none focus:border-[#050F41]" />
+                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Período IS — início (opcional)</label>
+                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm focus:outline-none focus:border-[#050F41]" />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Período IS — fim (opcional)</label>
-                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs focus:outline-none focus:border-[#050F41]" />
+                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Período IS — fim (opcional)</label>
+                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm focus:outline-none focus:border-[#050F41]" />
                 </div>
               </div>
-              <p className="text-[11px] text-gray-400 -mt-2">Informe o período para liberar o calendário de reagendamento (gera os dias úteis automaticamente).</p>
+              <p className="text-[11px] md:text-sm text-gray-400 -mt-2">Informe o período para liberar o calendário de reagendamento (gera os dias úteis automaticamente).</p>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Arquivo CSV</label>
+                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Arquivo CSV</label>
                 <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
                   <span className="material-symbols-outlined text-[32px] text-gray-400">table_view</span>
-                  <span className="text-xs font-bold text-gray-600">{fileName || 'Clique para selecionar o CSV'}</span>
+                  <span className="text-xs md:text-sm font-bold text-gray-600">{fileName || 'Clique para selecionar o CSV'}</span>
                   <input type="file" accept=".csv,text/csv" className="hidden" onChange={e => handleSelecionarArquivo(e.target.files?.[0] || null)} />
                 </label>
                 {candidatos.length > 0 && (
-                  <p className="text-[11px] text-green-700 font-bold mt-1.5">{candidatos.length} candidato(s) identificado(s).</p>
+                  <p className="text-[11px] md:text-sm text-green-700 font-bold mt-1.5">{candidatos.length} candidato(s) identificado(s).</p>
                 )}
               </div>
 
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
                 <button
                   type="button"
                   disabled={processando || candidatos.length === 0}
                   onClick={handleImportar}
-                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-50"
+                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
                 >
                   {processando ? 'Importando...' : 'Importar Concurso'}
                 </button>
@@ -800,12 +818,12 @@ const ModalKpiBarChart: React.FC<ModalKpiBarChartProps> = ({ titulo, corBarra, i
         </div>
         <div className="p-5 space-y-4 overflow-y-auto">
           {itens.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-6">Nenhuma ocorrência no ano corrente.</p>
+            <p className="text-xs md:text-sm text-gray-400 text-center py-6">Nenhuma ocorrência no ano corrente.</p>
           ) : itens.map(item => (
             <button key={item.concursoId} type="button" onClick={() => { onSelecionarConcurso(item.concursoId); onClose(); }} className="w-full text-left group">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-bold text-[#050F41] group-hover:underline truncate pr-2">{item.concursoNome}</span>
-                <span className="text-xs font-black text-gray-700 shrink-0">{item.quantidade}</span>
+                <span className="text-xs md:text-sm font-bold text-[#050F41] group-hover:underline truncate pr-2">{item.concursoNome}</span>
+                <span className="text-xs md:text-sm font-black text-gray-700 shrink-0">{item.quantidade}</span>
               </div>
               <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                 <div className={`h-full rounded-full ${corBarra}`} style={{ width: `${(item.quantidade / max) * 100}%` }} />
@@ -889,24 +907,24 @@ const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps
         </div>
 
         <div className="p-5 overflow-y-auto space-y-4 flex-1">
-          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-semibold">{erro}</div>}
+          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs md:text-sm text-red-700 font-semibold">{erro}</div>}
 
           {step === 'select' && (
             <>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs md:text-sm text-gray-500">
                 Envie o PDF de uma mensagem administrativa referente a este concurso (ex.: solicitação de
                 reagendamento, resultado de recurso). Será arquivada com data-hora, remetente e assunto
                 identificados automaticamente.
               </p>
               <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
                 <span className="material-symbols-outlined text-[32px] text-gray-400">picture_as_pdf</span>
-                <span className="text-xs font-bold text-gray-600">{file ? file.name : 'Clique para selecionar o PDF'}</span>
-                <span className="text-[10px] text-gray-400">Máx. 15 MB</span>
+                <span className="text-xs md:text-sm font-bold text-gray-600">{file ? file.name : 'Clique para selecionar o PDF'}</span>
+                <span className="text-[10px] md:text-xs text-gray-400">Máx. 15 MB</span>
                 <input type="file" accept="application/pdf,image/*" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
               </label>
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-                <button type="button" disabled={!file || processando} onClick={handleProcessar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-50">Processar Mensagem</button>
+                <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" disabled={!file || processando} onClick={handleProcessar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50">Processar Mensagem</button>
               </div>
             </>
           )}
@@ -914,34 +932,34 @@ const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps
           {step === 'processando' && (
             <div className="text-center py-8 text-gray-500 space-y-2">
               <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
-              <p className="text-xs font-semibold">Transcrevendo o documento...</p>
+              <p className="text-xs md:text-sm font-semibold">Transcrevendo o documento...</p>
             </div>
           )}
 
           {step === 'revisao' && cabecalho && (
             <>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800">Confira os dados extraídos antes de arquivar a mensagem.</div>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs md:text-sm text-blue-800">Confira os dados extraídos antes de arquivar a mensagem.</div>
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Data-Hora</label>
-                <input type="text" value={cabecalho.dataHora} onChange={e => setCabecalho({ ...cabecalho, dataHora: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-mono text-[#050F41] focus:outline-none focus:border-[#050F41]" />
+                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Data-Hora</label>
+                <input type="text" value={cabecalho.dataHora} onChange={e => setCabecalho({ ...cabecalho, dataHora: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-mono text-[#050F41] focus:outline-none focus:border-[#050F41]" />
               </div>
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Remetente</label>
-                <input type="text" value={cabecalho.sender} onChange={e => setCabecalho({ ...cabecalho, sender: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-[#050F41] focus:outline-none focus:border-[#050F41]" />
+                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Remetente</label>
+                <input type="text" value={cabecalho.sender} onChange={e => setCabecalho({ ...cabecalho, sender: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm text-[#050F41] focus:outline-none focus:border-[#050F41]" />
               </div>
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Assunto</label>
-                <input type="text" value={cabecalho.subject} onChange={e => setCabecalho({ ...cabecalho, subject: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs text-[#050F41] focus:outline-none focus:border-[#050F41]" />
+                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Assunto</label>
+                <input type="text" value={cabecalho.subject} onChange={e => setCabecalho({ ...cabecalho, subject: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm text-[#050F41] focus:outline-none focus:border-[#050F41]" />
               </div>
               <div>
-                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Tipo</label>
-                <select value={cabecalho.purpose || 'Outros'} onChange={e => setCabecalho({ ...cabecalho, purpose: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]">
+                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Tipo</label>
+                <select value={cabecalho.purpose || 'Outros'} onChange={e => setCabecalho({ ...cabecalho, purpose: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]">
                   {PROPOSITO_MENSAGEM_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-50">
+                <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
                   {processando ? 'Arquivando...' : 'Arquivar Mensagem'}
                 </button>
               </div>
@@ -951,10 +969,10 @@ const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps
           {step === 'concluido' && (
             <>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                <p className="text-xs font-bold text-green-800">Mensagem arquivada com sucesso.</p>
+                <p className="text-xs md:text-sm font-bold text-green-800">Mensagem arquivada com sucesso.</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={onClose} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">Concluir</button>
+                <button type="button" onClick={onClose} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Concluir</button>
               </div>
             </>
           )}
@@ -1017,11 +1035,11 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
             <div className="p-5 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-[#050F41] truncate">{selecionada.subject || 'Sem assunto'}</p>
-                  <p className="text-[11px] text-gray-500">{selecionada.sender} — {selecionada.dataHora}</p>
+                  <p className="text-xs md:text-sm font-bold text-[#050F41] truncate">{selecionada.subject || 'Sem assunto'}</p>
+                  <p className="text-[11px] md:text-sm text-gray-500">{selecionada.sender} — {selecionada.dataHora}</p>
                 </div>
                 {selecionada.fileUrl && (
-                  <a href={selecionada.fileUrl} download target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-[11px] font-bold transition-colors shadow-sm flex items-center space-x-1 shrink-0">
+                  <a href={selecionada.fileUrl} download target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-[11px] md:text-sm font-bold transition-colors shadow-sm flex items-center space-x-1 shrink-0">
                     <span className="material-symbols-outlined text-[16px]">download</span>
                     <span>Baixar PDF</span>
                   </a>
@@ -1030,7 +1048,7 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
               {selecionada.fileUrl ? (
                 <iframe title="Visualização do PDF" src={selecionada.fileUrl} className="w-full h-[60vh] rounded-xl border border-gray-200" />
               ) : (
-                <p className="text-xs text-gray-400 text-center py-8">PDF não disponível para esta mensagem.</p>
+                <p className="text-xs md:text-sm text-gray-400 text-center py-8">PDF não disponível para esta mensagem.</p>
               )}
             </div>
           ) : loading ? (
@@ -1045,13 +1063,13 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
           ) : (
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-[#050F41] uppercase tracking-wider">
+                <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] md:text-sm font-bold text-[#050F41] uppercase tracking-wider">
                   <th className="py-3 px-4">Data-Hora</th>
                   <th className="py-3 px-4">Remetente</th>
                   <th className="py-3 px-4">Assunto</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-xs">
+              <tbody className="divide-y divide-gray-100 text-xs md:text-sm">
                 {mensagens.map(m => (
                   <tr key={m.id} onClick={() => setSelecionada(m)} className="hover:bg-gray-50 cursor-pointer transition-colors">
                     <td className="py-3 px-4 font-mono text-gray-600 whitespace-nowrap">{m.dataHora}</td>
@@ -1114,36 +1132,36 @@ const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendamentoPro
         </div>
 
         <div className="p-5 overflow-y-auto space-y-4 flex-1">
-          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-semibold">{erro}</div>}
+          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs md:text-sm text-red-700 font-semibold">{erro}</div>}
 
           {concluido ? (
             <>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                <p className="text-xs font-bold text-green-800">Período definido com sucesso. O calendário de reagendamento já está liberado.</p>
+                <p className="text-xs md:text-sm font-bold text-green-800">Período definido com sucesso. O calendário de reagendamento já está liberado.</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={() => onClose(true)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">Concluir</button>
+                <button type="button" onClick={() => onClose(true)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Concluir</button>
               </div>
             </>
           ) : (
             <>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs md:text-sm text-gray-500">
                 Informe o período das IS deste concurso para gerar os dias úteis disponíveis para reagendamento. Se o
                 concurso já tiver um calendário configurado, ele será substituído pelo novo período.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Início</label>
-                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs focus:outline-none focus:border-[#050F41]" />
+                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Início</label>
+                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm focus:outline-none focus:border-[#050F41]" />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Fim</label>
-                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs focus:outline-none focus:border-[#050F41]" />
+                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Fim</label>
+                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm focus:outline-none focus:border-[#050F41]" />
                 </div>
               </div>
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm disabled:opacity-50">
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
                   {processando ? 'Salvando...' : 'Confirmar'}
                 </button>
               </div>
@@ -1176,6 +1194,19 @@ interface MenuAcoesConcursoProps {
 
 const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeEncerrar, onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens, onDefinirPeriodoAgendamento }) => {
   const [aberto, setAberto] = useState(false);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!aberto) return;
+    const fechar = () => setAberto(false);
+    window.addEventListener('scroll', fechar, true);
+    window.addEventListener('resize', fechar);
+    return () => {
+      window.removeEventListener('scroll', fechar, true);
+      window.removeEventListener('resize', fechar);
+    };
+  }, [aberto]);
 
   const itens: { key: string; label: string; icon: string; onClick: () => void; disabled?: boolean; title?: string }[] = [];
   if (podeAbrirEncerrar && status === 'encerrado') {
@@ -1206,15 +1237,27 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrir
 
   if (itens.length === 0) return null;
 
+  const abrirMenu = () => {
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (rect) setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    setAberto(true);
+  };
+
   return (
     <div className="relative shrink-0" onClick={e => e.stopPropagation()}>
-      <button type="button" onClick={() => setAberto(prev => !prev)} className="p-1 rounded-lg text-gray-400 hover:text-[#050F41] hover:bg-black/5 transition-colors">
+      <button ref={btnRef} type="button" onClick={() => (aberto ? setAberto(false) : abrirMenu())} className="p-1 rounded-lg text-gray-400 hover:text-[#050F41] hover:bg-black/5 transition-colors">
         <span className="material-symbols-outlined text-[20px]">more_vert</span>
       </button>
-      {aberto && (
+      {aberto && pos && createPortal(
         <>
+          {/* Renderizado via portal (fora do card, que tem overflow-hidden para os
+              cantos arredondados) e posicionado em "fixed" a partir do botão —
+              senão o menu era cortado pela borda do próprio card. */}
           <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} />
-          <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 z-50 animate-fade-in space-y-0.5">
+          <div
+            className="fixed w-52 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 z-50 animate-fade-in space-y-0.5"
+            style={{ top: pos.top, right: pos.right }}
+          >
             {itens.map(item => (
               <button
                 key={item.key}
@@ -1229,7 +1272,8 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrir
               </button>
             ))}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
@@ -1411,10 +1455,10 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
               <h3 className="font-heading font-bold text-sm uppercase">{confirmDialog.title}</h3>
             </div>
             <div className="p-5 space-y-4">
-              <p className="text-xs text-gray-700 leading-relaxed">{confirmDialog.message}</p>
+              <p className="text-xs md:text-sm text-gray-700 leading-relaxed">{confirmDialog.message}</p>
               <div className="flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => setConfirmDialog(null)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-                <button type="button" onClick={confirmDialog.onConfirm} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">{confirmDialog.confirmLabel || 'Confirmar'}</button>
+                <button type="button" onClick={() => setConfirmDialog(null)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" onClick={confirmDialog.onConfirm} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">{confirmDialog.confirmLabel || 'Confirmar'}</button>
               </div>
             </div>
           </div>
@@ -1441,11 +1485,11 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
               ) : pendentesFinalizacao && pendentesFinalizacao.length > 0 ? (
                 <>
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                    <p className="text-xs font-bold text-amber-800">Ainda há {pendentesFinalizacao.length} candidato(s) não finalizado(s). Finalize todos antes de gerar a minuta de resultados.</p>
+                    <p className="text-xs md:text-sm font-bold text-amber-800">Ainda há {pendentesFinalizacao.length} candidato(s) não finalizado(s). Finalize todos antes de gerar a minuta de resultados.</p>
                   </div>
                   <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
                     {pendentesFinalizacao.map(p => (
-                      <div key={p.id} className="p-2.5 text-xs flex items-center justify-between">
+                      <div key={p.id} className="p-2.5 text-xs md:text-sm flex items-center justify-between">
                         <span className="font-mono font-bold text-[#050F41]">{p.id}</span>
                         <span className="text-gray-600">{p.nome}</span>
                       </div>
@@ -1453,16 +1497,16 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                   </div>
                 </>
               ) : (
-                <textarea readOnly value={minutaResultados ?? ''} rows={16} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-[11px] font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap" />
+                <textarea readOnly value={minutaResultados ?? ''} rows={16} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-[11px] md:text-sm font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap" />
               )}
               <div className="pt-2 flex items-center justify-end space-x-2">
                 {minutaResultados && (
-                  <button type="button" onClick={() => handleCopiarTexto(minutaResultados)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1">
+                  <button type="button" onClick={() => handleCopiarTexto(minutaResultados)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1">
                     <span className="material-symbols-outlined text-[16px]">content_copy</span>
                     <span>Copiar Minuta</span>
                   </button>
                 )}
-                <button type="button" onClick={() => { setMinutaResultados(null); setPendentesFinalizacao(null); }} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">Fechar</button>
+                <button type="button" onClick={() => { setMinutaResultados(null); setPendentesFinalizacao(null); }} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Fechar</button>
               </div>
             </div>
           </div>
@@ -1931,10 +1975,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               <h3 className="font-heading font-bold text-sm uppercase">{confirmDialog.title}</h3>
             </div>
             <div className="p-5 space-y-4">
-              <p className="text-xs text-gray-700 leading-relaxed">{confirmDialog.message}</p>
+              <p className="text-xs md:text-sm text-gray-700 leading-relaxed">{confirmDialog.message}</p>
               <div className="flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => setConfirmDialog(null)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-                <button type="button" onClick={confirmDialog.onConfirm} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm">{confirmDialog.confirmLabel || 'Confirmar'}</button>
+                <button type="button" onClick={() => setConfirmDialog(null)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" onClick={confirmDialog.onConfirm} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">{confirmDialog.confirmLabel || 'Confirmar'}</button>
               </div>
             </div>
           </div>
@@ -2241,20 +2285,20 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             <div className="p-4">
               {!loadingDatasAgendamento && datasAgendamento.length === 0 ? (
                 <div className="text-center py-4 space-y-3">
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs md:text-sm text-gray-500">
                     Este concurso ainda não tem um período de IS configurado, por isso não há datas disponíveis para reagendamento.
                   </p>
                   {podeAbrirEncerrar ? (
                     <button
                       type="button"
                       onClick={() => setShowDefinirPeriodoModal(true)}
-                      className="px-4 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm inline-flex items-center space-x-1.5"
+                      className="px-4 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm inline-flex items-center space-x-1.5"
                     >
                       <span className="material-symbols-outlined text-[16px]">event</span>
                       <span>Definir Período de Agendamento</span>
                     </button>
                   ) : (
-                    <p className="text-[11px] text-gray-400">Peça a um Admin para configurar o período deste concurso.</p>
+                    <p className="text-[11px] md:text-sm text-gray-400">Peça a um Admin para configurar o período deste concurso.</p>
                   )}
                 </div>
               ) : (
