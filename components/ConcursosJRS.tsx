@@ -4,7 +4,7 @@ import { Header } from './Header';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
 import {
-  listarConcursos, getConcurso, listarCandidatos, criarConcursoDaMensagem, importarConcursoDeCsv, atualizarCandidato,
+  listarConcursos, getConcurso, listarCandidatos, criarConcursoDaMensagem, novoConcursoId, importarConcursoDeCsv, atualizarCandidato,
   criarCandidato, reagendarCandidato, listarDatasAgendamento, obterContextoAgendamento, confirmarAgendamento,
   gerarMinutaResultados, abrirConcurso, voltarParaEmBreve, encerrarConcurso, salvarTermoRecurso,
   listarMensagens, arquivarMensagem, obterEstatisticasAnuais, definirPeriodoAgendamento,
@@ -318,15 +318,21 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
     setProcessando(true);
     try {
       const periodo = periodoInicio && periodoFim ? { inicio: parseChaveData(periodoInicio), fim: parseChaveData(periodoFim) } : null;
-      const { concursoId: novoId } = await criarConcursoDaMensagem({
+      // O Storage exige o ID do concurso no caminho do arquivo, então o ID é
+      // gerado antes e o upload é aguardado aqui — se não, o registro da
+      // mensagem ficava com fileUrl vazio para sempre (o upload rodava em
+      // paralelo com o resultado descartado), e o PDF nunca aparecia depois.
+      const novoId = novoConcursoId();
+      const fileUrl = await uploadMensagemPdf(novoId, file!);
+      await criarConcursoDaMensagem({
+        concursoId: novoId,
         nome: nomeConcurso.trim(),
         cabecalho,
         candidatos: candidatosValidos,
         periodo,
-        fileUrl: '',
+        fileUrl,
       });
       setConcursoId(novoId);
-      uploadMensagemPdf(novoId, file!).catch(() => {});
 
       if (periodo) {
         const [contexto, datas] = await Promise.all([obterContextoAgendamento(novoId), listarDatasAgendamento(novoId)]);
@@ -1067,6 +1073,7 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
                   <th className="py-3 px-4">Data-Hora</th>
                   <th className="py-3 px-4">Remetente</th>
                   <th className="py-3 px-4">Assunto</th>
+                  <th className="py-3 px-4 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-xs md:text-sm">
@@ -1075,6 +1082,14 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
                     <td className="py-3 px-4 font-mono text-gray-600 whitespace-nowrap">{m.dataHora}</td>
                     <td className="py-3 px-4 text-gray-700 font-semibold">{m.sender || '-'}</td>
                     <td className="py-3 px-4 text-gray-700">{m.subject || '-'}</td>
+                    <td className="py-3 px-4 text-right">
+                      <span
+                        className={`material-symbols-outlined text-[18px] ${m.fileUrl ? 'text-[#050F41]' : 'text-gray-300'}`}
+                        title={m.fileUrl ? 'Ver PDF' : 'PDF não disponível'}
+                      >
+                        picture_as_pdf
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1313,6 +1328,10 @@ interface MenuAcoesConcursoProps {
   podeListarMensagens: boolean;
   podeAdicionarCandidato: boolean;
   podeEncerrar: boolean;
+  podeVoltarParaEmBreve: boolean;
+  minutaHabilitada: boolean;
+  temPeriodoConfigurado: boolean;
+  temMensagensRegistradas: boolean;
   onAbrir: () => void;
   onVoltarParaEmBreve: () => void;
   onEncerrar: () => void;
@@ -1323,7 +1342,7 @@ interface MenuAcoesConcursoProps {
   onAdicionarCandidato: () => void;
 }
 
-const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeEncerrar, onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens, onDefinirPeriodoAgendamento, onAdicionarCandidato }) => {
+const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeEncerrar, podeVoltarParaEmBreve, minutaHabilitada, temPeriodoConfigurado, temMensagensRegistradas, onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens, onDefinirPeriodoAgendamento, onAdicionarCandidato }) => {
   const [aberto, setAberto] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -1347,17 +1366,27 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrir
     itens.push({ key: 'em-andamento', label: 'Em Andamento', icon: 'play_circle', onClick: onAbrir });
   }
   if (podeAbrirEncerrar && status === 'em_andamento') {
-    itens.push({ key: 'em-breve', label: 'Em Breve', icon: 'undo', onClick: onVoltarParaEmBreve });
+    itens.push({
+      key: 'em-breve', label: 'Em Breve', icon: 'undo', onClick: onVoltarParaEmBreve,
+      disabled: !podeVoltarParaEmBreve, title: podeVoltarParaEmBreve ? undefined : 'Só é possível voltar para "Em Breve" quando nenhum candidato tiver lançamento (status, Nº TIS ou observações) na tabela.',
+    });
     itens.push({
       key: 'encerrar', label: 'Encerrar Concurso', icon: 'stop_circle', onClick: onEncerrar,
       disabled: !podeEncerrar, title: podeEncerrar ? undefined : 'Só é possível encerrar quando todos os candidatos estiverem finalizados.',
     });
   }
   if (podeGerarMinutaResultados && status !== 'em_breve') {
-    itens.push({ key: 'minuta', label: 'Minuta Resultados', icon: 'summarize', onClick: onMinutaResultados });
+    itens.push({
+      key: 'minuta', label: 'Minuta Resultados', icon: 'summarize', onClick: onMinutaResultados,
+      disabled: !minutaHabilitada, title: minutaHabilitada ? undefined : 'Só é possível gerar a minuta quando todos os candidatos estiverem finalizados.',
+    });
   }
   if (podeAbrirEncerrar) {
-    itens.push({ key: 'periodo-agendamento', label: 'Definir Período de Agendamento', icon: 'event', onClick: onDefinirPeriodoAgendamento });
+    itens.push({
+      key: 'periodo-agendamento',
+      label: temPeriodoConfigurado ? 'Editar Período de Agendamento' : 'Definir Período de Agendamento',
+      icon: 'event', onClick: onDefinirPeriodoAgendamento,
+    });
   }
   if (podeAdicionarCandidato && (status === 'em_andamento' || status === 'em_breve')) {
     itens.push({ key: 'adicionar-candidato', label: 'Adicionar Candidato', icon: 'person_add', onClick: onAdicionarCandidato });
@@ -1366,7 +1395,10 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrir
     itens.push({ key: 'registrar-msg', label: 'Registrar Mensagem', icon: 'upload_file', onClick: onRegistrarMensagem });
   }
   if (podeListarMensagens) {
-    itens.push({ key: 'listar-msg', label: 'Listar Mensagens', icon: 'mail', onClick: onListarMensagens });
+    itens.push({
+      key: 'listar-msg', label: 'Listar Mensagens', icon: 'mail', onClick: onListarMensagens,
+      disabled: !temMensagensRegistradas, title: temMensagensRegistradas ? undefined : 'Nenhuma mensagem registrada para este concurso.',
+    });
   }
 
   if (itens.length === 0) return null;
@@ -1436,7 +1468,8 @@ const GRUPOS_STATUS: { status: ConcursoRecord['status']; titulo: string }[] = [
 ];
 
 const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
-  const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number }>>({});
+  const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number; temLancamento: boolean }>>({});
+  const [temMensagens, setTemMensagens] = useState<Record<string, boolean>>({});
   const [openGroups, setOpenGroups] = useState<Set<ConcursoRecord['status']>>(new Set(['em_andamento', 'em_breve']));
 
   const [estatisticas, setEstatisticas] = useState<EstatisticasAnuais | null>(null);
@@ -1464,11 +1497,21 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
     let cancelado = false;
     (async () => {
       const entradas = await Promise.all(concursos.map(async c => {
-        if (c.status !== 'em_andamento') return [c.id, { total: c.totalCandidatos, finalizados: 0 }] as const;
+        if (c.status !== 'em_andamento') return [c.id, { total: c.totalCandidatos, finalizados: 0, temLancamento: false }] as const;
         const candidatos = await listarCandidatos(c.id);
-        return [c.id, { total: candidatos.length, finalizados: candidatos.filter(x => x.finalizado).length }] as const;
+        const temLancamento = candidatos.some(x => x.status !== '' || x.numTIS !== '' || x.observacoes !== '');
+        return [c.id, { total: candidatos.length, finalizados: candidatos.filter(x => x.finalizado).length, temLancamento }] as const;
       }));
       if (!cancelado) setContadores(Object.fromEntries(entradas));
+    })();
+    return () => { cancelado = true; };
+  }, [concursos]);
+
+  useEffect(() => {
+    let cancelado = false;
+    (async () => {
+      const entradas = await Promise.all(concursos.map(async c => [c.id, (await listarMensagens(c.id)).length > 0] as const));
+      if (!cancelado) setTemMensagens(Object.fromEntries(entradas));
     })();
     return () => { cancelado = true; };
   }, [concursos]);
@@ -1764,6 +1807,10 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                       const contagem = contadores[c.id];
                       const pct = contagem && contagem.total > 0 ? Math.round((contagem.finalizados / contagem.total) * 100) : null;
                       const podeEncerrar = !!contagem && contagem.total > 0 && contagem.finalizados === contagem.total;
+                      const podeVoltarParaEmBreve = !contagem?.temLancamento;
+                      const minutaHabilitada = c.status === 'encerrado' || podeEncerrar;
+                      const temPeriodoConfigurado = !!c.periodoInicioISO;
+                      const temMensagensRegistradas = !!temMensagens[c.id];
                       return (
                         <div key={c.id} className={`rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col ${getConcursoCardBg(c.status)}`}>
                           <div className="flex items-stretch flex-1">
@@ -1784,6 +1831,10 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                                   podeListarMensagens={podeListarMensagens}
                                   podeAdicionarCandidato={podeAdicionarCandidato}
                                   podeEncerrar={podeEncerrar}
+                                  podeVoltarParaEmBreve={podeVoltarParaEmBreve}
+                                  minutaHabilitada={minutaHabilitada}
+                                  temPeriodoConfigurado={temPeriodoConfigurado}
+                                  temMensagensRegistradas={temMensagensRegistradas}
                                   onAbrir={() => handleAbrir(c.id, c.nome)}
                                   onVoltarParaEmBreve={() => handleVoltarParaEmBreve(c.id, c.nome)}
                                   onEncerrar={() => handleEncerrar(c.id, c.nome)}
