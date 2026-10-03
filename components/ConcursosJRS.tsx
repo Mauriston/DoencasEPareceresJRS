@@ -1510,6 +1510,7 @@ interface ConcursosListaProps {
   podeRegistrarMensagemArquivo: boolean;
   podeListarMensagens: boolean;
   podeAdicionarCandidato: boolean;
+  podeVisualizarTabela: boolean;
   onSelecionar: (id: string) => void;
   onNovoConcursoClick: () => void;
   onImportarCsvClick: () => void;
@@ -1541,13 +1542,24 @@ const COR_ICONE_STATUS_CONCURSO: Record<ConcursoRecord['status'], string> = {
 const celulaNumericaTabela = (valor: number, status: ConcursoRecord['status']): React.ReactNode =>
   valor === 0 && status === 'em_breve' ? '' : valor;
 
-const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
+const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeVisualizarTabela, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
   const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number; temLancamento: boolean }>>({});
   const [temMensagens, setTemMensagens] = useState<Record<string, boolean>>({});
   const [openGroups, setOpenGroups] = useState<Set<ConcursoRecord['status']>>(new Set(['em_andamento', 'em_breve']));
   const [viewMode, setViewMode] = useState<'cards' | 'tabela'>('cards');
   const [statusCounts, setStatusCounts] = useState<Record<string, { apto: number; inapto: number; faltou: number; idm: number }>>({});
   const [loadingStatusCounts, setLoadingStatusCounts] = useState(false);
+  // A visão em tabela é um recurso de desktop — no mobile os cards sempre
+  // aparecem, mesmo que o usuário tenha deixado a tabela ativa antes de
+  // reduzir a janela/girar o aparelho.
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  const efetivoViewMode: 'cards' | 'tabela' = isDesktop && podeVisualizarTabela ? viewMode : 'cards';
 
   const [estatisticas, setEstatisticas] = useState<EstatisticasAnuais | null>(null);
   const [loadingEstatisticas, setLoadingEstatisticas] = useState(true);
@@ -1596,7 +1608,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
   // Aptos/Inaptos/IDM/Faltas só são buscados quando a visão em tabela é
   // aberta (a visão em cards não precisa dessa quebra por status).
   useEffect(() => {
-    if (viewMode !== 'tabela') return;
+    if (efetivoViewMode !== 'tabela') return;
     let cancelado = false;
     (async () => {
       setLoadingStatusCounts(true);
@@ -1616,7 +1628,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
       }
     })();
     return () => { cancelado = true; };
-  }, [viewMode, concursos]);
+  }, [efetivoViewMode, concursos]);
 
   useEffect(() => {
     let cancelado = false;
@@ -1834,7 +1846,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
 
       <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1200px] mx-auto w-full flex-1 space-y-6">
         {!loadingEstatisticas && estatisticas && (
-          <div className="bg-gray-100 border border-gray-200/80 rounded-2xl p-4 flex flex-col md:flex-row gap-4">
+          <div className="hidden md:flex bg-gray-100 border border-gray-200/80 rounded-2xl p-4 gap-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
               {kpiDefs.map(def => (
                 <button
@@ -1888,17 +1900,19 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-end">
-              <button
-                type="button"
-                onClick={() => setViewMode(v => (v === 'cards' ? 'tabela' : 'cards'))}
-                title={viewMode === 'cards' ? 'Ver em modo tabela' : 'Ver em modo cards'}
-                className="p-2 rounded-xl bg-white border border-gray-200 shadow-sm text-gray-500 hover:text-[#050F41] hover:bg-gray-50 transition-colors"
-              >
-                <span className="material-symbols-outlined text-[20px]">{viewMode === 'cards' ? 'table_rows' : 'grid_view'}</span>
-              </button>
-            </div>
-            {viewMode === 'tabela' ? (
+            {podeVisualizarTabela && (
+              <div className="hidden md:flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => setViewMode(v => (v === 'cards' ? 'tabela' : 'cards'))}
+                  title={viewMode === 'cards' ? 'Ver em modo tabela' : 'Ver em modo cards'}
+                  className="p-2 rounded-xl bg-white border border-gray-200 shadow-sm text-gray-500 hover:text-[#050F41] hover:bg-gray-50 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[20px]">{viewMode === 'cards' ? 'table_rows' : 'grid_view'}</span>
+                </button>
+              </div>
+            )}
+            {efetivoViewMode === 'tabela' ? (
               <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[860px]">
                   <thead>
@@ -2742,6 +2756,7 @@ export const ConcursosJRS: React.FC = () => {
   const podeRegistrarMensagemArquivo = canUseFeature('concursosJRS.registrarMensagemArquivo', perfil);
   const podeListarMensagens = canUseFeature('concursosJRS.listarMensagens', perfil);
   const podeAdicionarCandidato = canUseFeature('concursosJRS.adicionarCandidato', perfil);
+  const podeVisualizarTabela = canUseFeature('concursosJRS.visualizarTabela', perfil);
 
   const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
   const [loadingConcursos, setLoadingConcursos] = useState(true);
@@ -2793,6 +2808,7 @@ export const ConcursosJRS: React.FC = () => {
         podeRegistrarMensagemArquivo={podeRegistrarMensagemArquivo}
         podeListarMensagens={podeListarMensagens}
         podeAdicionarCandidato={podeAdicionarCandidato}
+        podeVisualizarTabela={podeVisualizarTabela}
         onSelecionar={setSelectedConcursoId}
         onNovoConcursoClick={() => setShowUploadModal(true)}
         onImportarCsvClick={() => setShowImportarCsvModal(true)}
