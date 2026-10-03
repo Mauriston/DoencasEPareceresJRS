@@ -352,6 +352,11 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
     });
   };
 
+  const todasDatasSelecionadas = datasDisponiveis.length > 0 && datasDisponiveis.every(d => datasSelecionadas.has(d.data));
+  const toggleTodasDatas = () => {
+    setDatasSelecionadas(todasDatasSelecionadas ? new Set() : new Set(datasDisponiveis.map(d => d.data)));
+  };
+
   const quantidadeCoberta = datasSelecionadas.size * (parseInt(quantidadePorDia, 10) || 0);
   const agendamentoViavel = quantidadeCoberta >= totalPendentes && totalPendentes > 0;
 
@@ -526,6 +531,18 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
               <div>
                 <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-2">Datas disponíveis (marque as que serão usadas)</label>
                 <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-56 overflow-y-auto">
+                  {datasDisponiveis.length > 0 && (
+                    <label className="flex items-center gap-2 p-2 text-xs md:text-sm font-bold text-[#050F41] cursor-pointer hover:bg-gray-50 bg-gray-50/60">
+                      <input
+                        type="checkbox"
+                        checked={todasDatasSelecionadas}
+                        ref={el => { if (el) el.indeterminate = !todasDatasSelecionadas && datasSelecionadas.size > 0; }}
+                        onChange={toggleTodasDatas}
+                        className="accent-[#050F41]"
+                      />
+                      <span>{todasDatasSelecionadas ? 'Desmarcar todas' : 'Selecionar todas'}</span>
+                    </label>
+                  )}
                   {datasDisponiveis.map(d => (
                     <label key={d.data} className="flex items-center gap-2 p-2 text-xs md:text-sm cursor-pointer hover:bg-gray-50">
                       <input type="checkbox" checked={datasSelecionadas.has(d.data)} onChange={() => toggleData(d.data)} className="accent-[#050F41]" />
