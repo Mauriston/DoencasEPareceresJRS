@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Header } from './Header';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
@@ -1193,6 +1194,19 @@ interface MenuAcoesConcursoProps {
 
 const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeEncerrar, onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens, onDefinirPeriodoAgendamento }) => {
   const [aberto, setAberto] = useState(false);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!aberto) return;
+    const fechar = () => setAberto(false);
+    window.addEventListener('scroll', fechar, true);
+    window.addEventListener('resize', fechar);
+    return () => {
+      window.removeEventListener('scroll', fechar, true);
+      window.removeEventListener('resize', fechar);
+    };
+  }, [aberto]);
 
   const itens: { key: string; label: string; icon: string; onClick: () => void; disabled?: boolean; title?: string }[] = [];
   if (podeAbrirEncerrar && status === 'encerrado') {
@@ -1223,15 +1237,27 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrir
 
   if (itens.length === 0) return null;
 
+  const abrirMenu = () => {
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (rect) setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    setAberto(true);
+  };
+
   return (
     <div className="relative shrink-0" onClick={e => e.stopPropagation()}>
-      <button type="button" onClick={() => setAberto(prev => !prev)} className="p-1 rounded-lg text-gray-400 hover:text-[#050F41] hover:bg-black/5 transition-colors">
+      <button ref={btnRef} type="button" onClick={() => (aberto ? setAberto(false) : abrirMenu())} className="p-1 rounded-lg text-gray-400 hover:text-[#050F41] hover:bg-black/5 transition-colors">
         <span className="material-symbols-outlined text-[20px]">more_vert</span>
       </button>
-      {aberto && (
+      {aberto && pos && createPortal(
         <>
+          {/* Renderizado via portal (fora do card, que tem overflow-hidden para os
+              cantos arredondados) e posicionado em "fixed" a partir do botão —
+              senão o menu era cortado pela borda do próprio card. */}
           <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} />
-          <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 z-50 animate-fade-in space-y-0.5">
+          <div
+            className="fixed w-52 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 z-50 animate-fade-in space-y-0.5"
+            style={{ top: pos.top, right: pos.right }}
+          >
             {itens.map(item => (
               <button
                 key={item.key}
@@ -1246,7 +1272,8 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = ({ status, podeAbrir
               </button>
             ))}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
