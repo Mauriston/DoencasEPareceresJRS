@@ -138,18 +138,26 @@ export const listarCandidatos = async (concursoId: string): Promise<CandidatoRec
  * inicial sempre "em_breve" — cabe ao Admin abrir o concurso depois
  * (ver `abrirConcurso`).
  */
+/**
+ * Gera um ID de concurso antecipadamente — necessário quando o PDF da
+ * mensagem precisa ser enviado ao Storage (que exige o ID no caminho do
+ * arquivo) antes de `criarConcursoDaMensagem` gravar os documentos no
+ * Firestore, para o fileUrl real já sair correto no registro da mensagem.
+ */
+export const novoConcursoId = (): string => doc(collection(db, COL_CONCURSOS)).id;
+
 export const criarConcursoDaMensagem = async (params: {
+  concursoId: string;
   nome: string;
   cabecalho: CabecalhoMensagem;
   candidatos: CandidatoBasico[];
   periodo: { inicio: Date; fim: Date } | null;
   fileUrl: string;
 }): Promise<{ concursoId: string; diasUteis: Date[] }> => {
-  const { nome, cabecalho, candidatos, periodo, fileUrl } = params;
+  const { concursoId, nome, cabecalho, candidatos, periodo, fileUrl } = params;
   const diasUteis = periodo ? calcularDiasUteis(periodo.inicio, periodo.fim) : [];
 
-  const novoConcursoRef = doc(collection(db, COL_CONCURSOS));
-  const concursoId = novoConcursoRef.id;
+  const novoConcursoRef = doc(db, COL_CONCURSOS, concursoId);
 
   const operacoes: (() => Promise<any>)[] = [];
   let batch = writeBatch(db);
