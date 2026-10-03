@@ -197,21 +197,21 @@ const App: React.FC = () => {
                 <span className="material-symbols-outlined text-[28px] text-amber-500">warning</span>
               </div>
               <h3 className="font-heading font-bold text-sm text-[#050F41] mb-1.5">Altere sua senha inicial</h3>
-              <p className="text-xs text-gray-500 mb-5">
+              <p className="text-xs md:text-sm text-gray-500 mb-5">
                 Você ainda está usando a senha temporária (seu NIP). Por segurança, altere sua senha de acesso.
               </p>
               <div className="flex items-center gap-2 w-full">
                 <button
                   type="button"
                   onClick={() => setSenhaAlertDismissed(true)}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
                 >
                   Depois
                 </button>
                 <button
                   type="button"
                   onClick={() => { setSenhaAlertDismissed(true); setCurrentView('perfil'); }}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#079551] hover:bg-[#067a43] text-white text-xs font-bold transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#079551] hover:bg-[#067a43] text-white text-xs md:text-sm font-bold transition-colors"
                 >
                   Alterar Senha
                 </button>

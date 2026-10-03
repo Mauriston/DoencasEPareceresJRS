@@ -21,8 +21,8 @@ const emptyUserForm = {
   crmPe: '', rqe: '', email: '', gmail: '', celular: '', perfil: 'user_secretaria',
 };
 
-const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41] transition-colors';
-const labelClass = 'text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1';
+const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-semibold text-gray-800 focus:outline-none focus:border-[#050F41] transition-colors';
+const labelClass = 'text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1';
 const featureGroups = [...new Set(FEATURE_DEFS.map(f => f.group))];
 
 export const UsuariosManagement: React.FC = () => {
@@ -580,10 +580,10 @@ export const UsuariosManagement: React.FC = () => {
 
             <form onSubmit={handleCreateUser} className="p-5 overflow-y-auto space-y-4 flex-1">
               {newUserError && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs font-semibold text-red-700">{newUserError}</div>
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs md:text-sm font-semibold text-red-700">{newUserError}</div>
               )}
 
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] font-semibold text-blue-800 flex items-start gap-2">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] md:text-sm font-semibold text-blue-800 flex items-start gap-2">
                 <span className="material-symbols-outlined text-[16px] shrink-0">info</span>
                 <span>A senha inicial do usuário será o NIP (somente números). Ele será orientado a alterá-la no primeiro acesso.</span>
               </div>
@@ -652,10 +652,10 @@ export const UsuariosManagement: React.FC = () => {
               </div>
 
               <div className="pt-4 border-t border-gray-100 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => setShowNewUserModal(false)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+                <button type="button" onClick={() => setShowNewUserModal(false)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">
                   Cancelar
                 </button>
-                <button type="submit" disabled={creatingUser} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1">
+                <button type="submit" disabled={creatingUser} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm flex items-center space-x-1">
                   {creatingUser ? <span>Criando...</span> : (<><span className="material-symbols-outlined text-[16px]">save</span><span>Criar Usuário</span></>)}
                 </button>
               </div>
@@ -682,7 +682,7 @@ export const UsuariosManagement: React.FC = () => {
               <div>
                 <label className={labelClass}>Nome de Usuário (Login)</label>
                 <input type="text" disabled value={editForm.usuario || ''} className={`${inputClass} bg-gray-100 text-gray-500 cursor-not-allowed`} />
-                <p className="text-[10px] text-gray-400 mt-1">Não pode ser alterado após a criação (é a identidade de login).</p>
+                <p className="text-[10px] md:text-xs text-gray-400 mt-1">Não pode ser alterado após a criação (é a identidade de login).</p>
               </div>
 
               <div>
@@ -745,8 +745,8 @@ export const UsuariosManagement: React.FC = () => {
 
               <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold text-[#050F41]">Status da Conta</p>
-                  <p className="text-[11px] text-gray-500">{editForm.ativo ? 'Usuário ativo e autorizado no sistema.' : 'Usuário desativado (sem acesso).'}</p>
+                  <p className="text-xs md:text-sm font-bold text-[#050F41]">Status da Conta</p>
+                  <p className="text-[11px] md:text-sm text-gray-500">{editForm.ativo ? 'Usuário ativo e autorizado no sistema.' : 'Usuário desativado (sem acesso).'}</p>
                 </div>
                 <button
                   type="button"
@@ -758,10 +758,10 @@ export const UsuariosManagement: React.FC = () => {
               </div>
 
               <div className="pt-4 border-t border-gray-100 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => setEditingUser(null)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+                <button type="button" onClick={() => setEditingUser(null)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">
                   Cancelar
                 </button>
-                <button type="submit" disabled={saving} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1">
+                <button type="submit" disabled={saving} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm flex items-center space-x-1">
                   {saving ? <span>Salvando...</span> : (<><span className="material-symbols-outlined text-[16px]">save</span><span>Salvar Alterações</span></>)}
                 </button>
               </div>
