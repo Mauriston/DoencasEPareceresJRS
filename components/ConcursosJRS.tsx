@@ -1556,7 +1556,9 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
           </div>
         ) : (
           GRUPOS_STATUS.map(grupo => {
-            const itens = concursos.filter(c => c.status === grupo.status);
+            const itens = concursos
+              .filter(c => c.status === grupo.status)
+              .sort((a, b) => (a.periodoInicioISO || '9999-99-99').localeCompare(b.periodoInicioISO || '9999-99-99'));
             if (itens.length === 0) return null;
             const expandido = openGroups.has(grupo.status);
             return (
