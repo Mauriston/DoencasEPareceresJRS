@@ -1652,6 +1652,8 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   const perfil = nav?.authUser?.perfil;
   const podeEditarInlineBase = canUseFeature('concursosJRS.editarDadosTabela', perfil);
   const podeReagendarBase = canUseFeature('concursosJRS.reagendar', perfil);
+  const podeAbrirEncerrar = canUseFeature('concursosJRS.abrirEncerrarConcurso', perfil);
+  const [showDefinirPeriodoModal, setShowDefinirPeriodoModal] = useState(false);
 
   const [concurso, setConcurso] = useState<ConcursoRecord | null>(null);
   const [candidatos, setCandidatos] = useState<CandidatoRecord[]>([]);
@@ -2235,10 +2237,44 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               </button>
             </div>
             <div className="p-4">
-              <CalendarioAgendamento datas={datasAgendamento} loading={loadingDatasAgendamento || confirmandoReagendamento} onSelect={handleSelecionarDataReagendamento} />
+              {!loadingDatasAgendamento && datasAgendamento.length === 0 ? (
+                <div className="text-center py-4 space-y-3">
+                  <p className="text-xs text-gray-500">
+                    Este concurso ainda não tem um período de IS configurado, por isso não há datas disponíveis para reagendamento.
+                  </p>
+                  {podeAbrirEncerrar ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowDefinirPeriodoModal(true)}
+                      className="px-4 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm inline-flex items-center space-x-1.5"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">event</span>
+                      <span>Definir Período de Agendamento</span>
+                    </button>
+                  ) : (
+                    <p className="text-[11px] text-gray-400">Peça a um Admin para configurar o período deste concurso.</p>
+                  )}
+                </div>
+              ) : (
+                <CalendarioAgendamento datas={datasAgendamento} loading={loadingDatasAgendamento || confirmandoReagendamento} onSelect={handleSelecionarDataReagendamento} />
+              )}
             </div>
           </div>
         </div>
+      )}
+
+      {showDefinirPeriodoModal && (
+        <ModalDefinirPeriodoAgendamento
+          concursoId={concursoId}
+          concursoNome={concurso?.nome || ''}
+          onClose={atualizado => {
+            setShowDefinirPeriodoModal(false);
+            if (atualizado) {
+              loadDatasAgendamento();
+              carregarTudo();
+            }
+          }}
+        />
       )}
 
     </div>
