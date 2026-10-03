@@ -520,6 +520,41 @@ export const abrirConcurso = (concursoId: string) => updateDoc(concursoRef(concu
 /** Volta o concurso de Em Andamento para Em Breve (correção de status). Exclusivo do Admin (UI). */
 export const voltarParaEmBreve = (concursoId: string) => updateDoc(concursoRef(concursoId), { status: 'em_breve' as ConcursoStatus });
 
+/**
+ * Define (ou redefine) o período de IS de um concurso e gera o calendário de
+ * dias úteis em "agendamentos" a partir dele — substitui por completo os
+ * documentos de "agendamentos" já existentes. Necessário para liberar o
+ * reagendamento de candidatos em concursos que não passaram pelo fluxo normal
+ * de criação (ex.: importados via CSV, que não têm mensagem/agendamento).
+ */
+export const definirPeriodoAgendamento = async (concursoId: string, periodoInicio: Date, periodoFim: Date): Promise<void> => {
+  const diasUteis = calcularDiasUteis(periodoInicio, periodoFim);
+  if (diasUteis.length === 0) {
+    throw new Error('Nenhum dia útil encontrado no período informado.');
+  }
+
+  const antigosSnap = await getDocs(agendamentosCol(concursoId));
+  for (let i = 0; i < antigosSnap.docs.length; i += 400) {
+    const lote = writeBatch(db);
+    antigosSnap.docs.slice(i, i + 400).forEach(d => lote.delete(d.ref));
+    await lote.commit();
+  }
+
+  for (let i = 0; i < diasUteis.length; i += 400) {
+    const lote = writeBatch(db);
+    diasUteis.slice(i, i + 400).forEach(d => {
+      const chave = formatarChaveData(d);
+      lote.set(doc(agendamentosCol(concursoId), chave), { diaSemana: NOMES_DIAS_SEMANA[d.getDay()] });
+    });
+    await lote.commit();
+  }
+
+  await updateDoc(concursoRef(concursoId), {
+    periodoInicioISO: formatarChaveData(periodoInicio),
+    periodoFimISO: formatarChaveData(periodoFim),
+  });
+};
+
 /** Encerra o concurso, só quando todos os candidatos estão finalizados. Exclusivo do Admin (UI). */
 export const encerrarConcurso = async (concursoId: string) => {
   const candidatos = await listarCandidatos(concursoId);
