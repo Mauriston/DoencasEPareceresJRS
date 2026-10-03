@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 
 async function startServer() {
@@ -109,6 +108,11 @@ async function startServer() {
   });
 
   if (process.env.NODE_ENV !== "production") {
+    // Import dinâmico: em produção (Cloud Run) o container não tem o pacote
+    // "vite" instalado (é devDependency, removido por "npm ci --omit=dev"),
+    // e um import estático travaria o processo antes mesmo de ele escutar
+    // na porta — por isso só carregamos o módulo quando de fato em modo dev.
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
