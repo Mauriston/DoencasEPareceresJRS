@@ -216,7 +216,17 @@ export const extrairCabecalhoMensagem = (texto: string): CabecalhoMensagem => {
     return m ? m[1].trim() : '';
   };
 
-  const dataHora = extrair(/Data-Hora\s*[\r\n]+\s*([^\r\n]+)/i);
+  // O código Data-Hora (DTG) é único no documento e tem formato fixo
+  // <R|P><DDHHMM>Z/<MÊS>/<ANO> (ex.: R181644Z/SET/2026). Buscar esse padrão
+  // diretamente — restrito à região antes de "De:", onde fica o cabeçalho —
+  // é mais confiável do que esperar o valor na linha seguinte ao rótulo
+  // "Data-Hora": o OCR pode linearizar a tabela do cabeçalho (Data-Hora |
+  // Precedência | Restrição Acesso | Status da Mensagem) rótulo-a-rótulo
+  // depois valor-a-valor, ou tudo numa linha só, variando conforme o motor.
+  const idxDe = texto.search(/\bDe:\s/i);
+  const blocoCabecalho = idxDe === -1 ? texto : texto.slice(0, idxDe);
+  const mDtg = blocoCabecalho.match(/\b([RP])-?(\d{6}Z\/[A-ZÇ]{3}\/\d{2,4})\b/i);
+  const dataHora = mDtg ? (mDtg[1] + mDtg[2]).toUpperCase() : extrair(/Data-Hora\s*[\r\n]*\s*([^\r\n]+)/i);
   const sender = extrair(/\bDe:\s*([^\r\n]+)/i);
   const recipient = extrair(/\bPara:\s*([^\r\n]+)/i);
   const info = extrair(/\bInfo:\s*([^\r\n]+)/i);
