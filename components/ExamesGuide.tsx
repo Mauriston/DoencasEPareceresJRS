@@ -19,2997 +19,577 @@ interface InspecaoItem {
 // Exames filtram por Condicao_Genero (Masculino|Feminino|null) e Condicao_Idade_Minima (idade mínima|null).
 const EXAMES_DATA: InspecaoItem[] = [
   {
-    "Finalidade_Inspecao": "Controle anual de praça de máquinas",
-    "Grupo_Finalidade_Inspecao": "Controle Periódico",
+    "ID_Inspecao": "1",
+    "Finalidade_Inspecao": "Engajamento",
     "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame odontológico geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame toxicológico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Seleção por amostragem. Validade de 60 dias a partir da data da coleta."
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal. \nSe positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo."
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Toxicológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
-    "Finalidade_Inspecao": "Controle semestral Raios-X",
-    "Grupo_Finalidade_Inspecao": "Controle Periódico",
+    "ID_Inspecao": "2",
+    "Finalidade_Inspecao": "Ingresso SAM",
     "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal.\nDeverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização. "
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame odontológico geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade anual"
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": "Periodicidade anual"
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade anual"
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade anual"
-      },
-      {
-        "Exame": "Exame toxicológico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Seleção por amostragem. Validade de 60 dias a partir da data da coleta."
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": "Periodicidade anual"
-      },
-      {
-        "Exame": "Teste Imunológico de Gravidez (TIG)",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal.\nSe positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      }
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Toxicológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Avaliação Psicológica", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
     ]
   },
   {
-    "Finalidade_Inspecao": "Controle trienal",
-    "Grupo_Finalidade_Inspecao": "Controle Periódico",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame odontológico geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame toxicológico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Seleção por amostragem. Validade de 60 dias a partir da data da coleta."
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Se positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Manipulação e admin Terapia Antineoplásica",
-    "Grupo_Finalidade_Inspecao": "Controle Periódico",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal.\nDeverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame odontológico geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade anual"
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": "Periodicidade anual"
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Beta-HCG qualitativo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 90 dias a partir da data da coleta."
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade anual"
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame toxicológico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Seleção por amostragem. Validade de 60 dias a partir da data da coleta."
-      },
-      {
-        "Exame": "Função Hepática",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Transaminases , Bilirrubinas Totais e frações, Albumina, Fosfatase Alcalina, Gama-GT e Atividade da protrombina"
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Ureia",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal.\nSe positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal.\nSe positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Prorrogação do Tempo de Serviço",
-    "Grupo_Finalidade_Inspecao": "Controle Periódico",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame odontológico geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame toxicológico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Seleção por amostragem. Validade de 60 dias a partir da data da coleta."
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Se positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Reengajamento",
-    "Grupo_Finalidade_Inspecao": "Controle Periódico",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame odontológico geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame toxicológico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 60 dias a partir da data da coleta."
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Se positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Serviço com explosivos",
-    "Grupo_Finalidade_Inspecao": "Controle Periódico",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame odontológico geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia Especial",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "fundoscopia e biomicroscopia"
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame toxicológico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Função Hepática",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Transaminases , Bilirrubinas Totais e frações, Albumina, Fosfatase Alcalina, Gama-GT e Atividade da protrombina"
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Teste Imunológico de Gravidez (TIG)",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal.\nSe positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": " com D2 longo"
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Serviço com OTTO FUELL II",
-    "Grupo_Finalidade_Inspecao": "Controle Periódico",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame odontológico geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia Especial",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "avaliação da Pressão Intra Ocular – PIO"
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal"
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame toxicológico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Seleção por amostragem. Validade de 60 dias a partir da data da coleta."
-      },
-      {
-        "Exame": "Função Hepática",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Transaminases , Bilirrubinas Totais e frações, Albumina, Fosfatase Alcalina, Gama-GT e Atividade da protrombina"
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Teste Imunológico de Gravidez (TIG)",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Periodicidade trienal.\nSe positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": " com D2 longo"
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Tarefa por Tempo Certo e prorrogações",
-    "Grupo_Finalidade_Inspecao": "Controle Periódico",
-    "Exames": [
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame toxicológico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Seleção por amostragem. Validade de 60 dias a partir da data da coleta."
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Se positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Engajamento e Ingresso no SMV \n(oriundos do SMI)",
-    "Grupo_Finalidade_Inspecao": "Ingresso",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame odontológico geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "🚫 Teste Rápido"
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame toxicológico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Se positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
-    ]
-  },
-  {
+    "ID_Inspecao": "3",
     "Finalidade_Inspecao": "Ingresso no SPG",
-    "Grupo_Finalidade_Inspecao": "Ingresso",
     "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame odontológico geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Ultrassonografia de mamas",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Ultrassonografia transvaginal ou pélvica",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Beta-HCG qualitativo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 90 dias a partir da data da coleta."
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Se positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Toxicológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Avaliação Psicológica", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
     ]
   },
   {
-    "Finalidade_Inspecao": "Ingresso SAM / SMV\n(oriundos do meio civil)",
-    "Grupo_Finalidade_Inspecao": "Ingresso",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame odontológico geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Ultrassonografia de mamas",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Ultrassonografia transvaginal ou pélvica",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "🚫 Teste Rápido"
-      },
-      {
-        "Exame": "Beta-HCG qualitativo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser colhido em, no máximo, sete dias corridos antes da data inicial do prazo de Inspeção de Saúde estabelecido no Cronograma de Eventos do Concurso/Processo Seletivo;"
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame toxicológico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Se positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Nasofibroscopia",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Para os candidados a SG-MU, naipe cantor tenor e cantora soprano"
-      },
-      {
-        "Exame": "Teste ergométrico",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Para todos os candidatos ao ingresso no SMV que exercerão atividades na área de treinamento físico-militar (atletas RM2) e para os demais candidatos quando apresentarem queixas relacionadas ao aparelho cardiovascular. Exame com validade de 1 ano."
-      },
-      {
-        "Exame": "Videolaringoestroboscopia",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Para os candidados a SG-MU, naipe cantor tenor e cantora soprano. Validade de 1 ano."
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Deixar o SAM, SMV, SMI ou SPG",
-    "Grupo_Finalidade_Inspecao": "Licenciamento",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": " Exceto para o Serviço Público Geral - SPG"
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Teste Imunológico de Gravidez (TIG)",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Para as militares/servidoras civis que estão deixando o Serviço Ativo/Serviço Público e que não serão incluídas na Reserva Remunerada da Marinha ou quadro de servidoras civis inativas"
-      },
-      {
-        "Exame": "Transaminases",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "ou sorologia para sífilis.\nSe VDRL positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Incapacidade definitiva para o SAM/SPG",
-    "Grupo_Finalidade_Inspecao": "Licenciamento",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": " Exceto para o Serviço Público Geral - SPG"
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Teste Imunológico de Gravidez (TIG)",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Para as militares/servidoras civis que estão deixando o Serviço Ativo/Serviço Público e que não serão incluídas na Reserva Remunerada da Marinha ou quadro de servidoras civis inativas"
-      },
-      {
-        "Exame": "Transaminases",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "ou sorologia para sífilis.\nSe VDRL positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Localidade com deficiência em assistência sanitária (LDAS)",
-    "Grupo_Finalidade_Inspecao": "Missões",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia Especial",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "tonometria, fundoscopia e biomicroscopia"
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Radiografia panorâmica das arcadas dentárias",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Teste Imunológico de Gravidez (TIG)",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Se positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Ecocardiograma bidimensional com Doppler",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 45,
-        "Observacoes": "ou quando houver indicação clínica. Validade de 1 ano."
-      },
-      {
-        "Exame": "Ecocardiograma bidimensional com Doppler",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 45,
-        "Observacoes": "ou quando houver indicação clínica. Validade de 1 ano"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Com D2 longo"
-      },
-      {
-        "Exame": "Teste ergométrico",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 45,
-        "Observacoes": "ou quando houver indicação clínica. Validade de 1 ano"
-      },
-      {
-        "Exame": "Teste ergométrico",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 45,
-        "Observacoes": "ou quando houver indicação clínica. Validade de 1 ano"
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Missão Antártica",
-    "Grupo_Finalidade_Inspecao": "Missões",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia Especial",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "(tonometria, fundoscopia e biomicroscopia"
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "PA e perfil. Validade de 1 ano."
-      },
-      {
-        "Exame": "Radiografia panorâmica das arcadas dentárias",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Ácido úrico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hepatograma",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Parasitológico das fezes",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Provas de atividade reumática",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Teste Imunológico de Gravidez (TIG)",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Ureia",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Se positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Ecocardiograma bidimensional com Doppler",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": "ou quando houver indicação clínica. Validade de 1 ano."
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Com D2 longo"
-      },
-      {
-        "Exame": "Eletroencefalograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Teste ergométrico",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": "ou quando houver indicação clínica"
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Missão no exterior (< 3m c/ trienal OK)",
-    "Grupo_Finalidade_Inspecao": "Missões",
-    "Exames": [
-      {
-        "Exame": "Radiografia panorâmica das arcadas dentárias",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Missão no exterior (> 3m)",
-    "Grupo_Finalidade_Inspecao": "Missões",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Radiografia panorâmica das arcadas dentárias",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Teste Imunológico de Gravidez (TIG)",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Transaminases",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Se positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
-    ]
-  },
-  {
-    "Finalidade_Inspecao": "Designação de militares RM1",
-    "Grupo_Finalidade_Inspecao": "Outros",
-    "Exames": [
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Se positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
-    ]
-  },
-  {
+    "ID_Inspecao": "4",
     "Finalidade_Inspecao": "IS para conclusão de Curso de Formação",
-    "Grupo_Finalidade_Inspecao": "Outros",
     "Exames": [
-      {
-        "Exame": "Exame toxicológico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Observar o disposto no capítulo 17 da DGPM-406"
-      }
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
     ]
   },
   {
-    "Finalidade_Inspecao": "IS inopinada de avaliação toxicológica preventiva direcionada",
-    "Grupo_Finalidade_Inspecao": "Outros",
+    "ID_Inspecao": "5",
+    "Finalidade_Inspecao": "Controle trienal",
     "Exames": [
-      {
-        "Exame": "Exame toxicológico",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Observar o disposto no capítulo 17 da DGPM-407"
-      }
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" }
     ]
   },
   {
-    "Finalidade_Inspecao": "Reversão ou Reintegração ao SPG",
-    "Grupo_Finalidade_Inspecao": "Outros",
-    "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame odontológico geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Se positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
-    ]
-  },
-  {
+    "ID_Inspecao": "6",
     "Finalidade_Inspecao": "Seleção para Cursos de carreira (🚫 AE)",
-    "Grupo_Finalidade_Inspecao": "Outros",
     "Exames": [
-      {
-        "Exame": "Audiometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Deverá ser precedidos de repouso auditivo de cerca de 14h, não devendo haver uso de fones de ouvido ou exposição a ambientes com níveis elevados de ruído no dia anterior à realização."
-      },
-      {
-        "Exame": "Biometria",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Exame odontológico geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Laudo detalhado do exame físico ginecológico e de mamas emitido por especialista",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Oftalmologia geral",
-        "Grupo_Exame": "Avaliações",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Mamografia",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Radiografia de tórax",
-        "Grupo_Exame": "Exames de imagem",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Validade de 1 ano"
-      },
-      {
-        "Exame": "Anti-HIV",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colesterol total e frações",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Colpocitologia oncótica",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Creatinina",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "EAS",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Glicemia de jejum",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Hemograma completo",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "PSA total",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Masculino",
-        "Condicao_Idade_Minima": 40,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Teste Imunológico de Gravidez (TIG)",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": "Feminino",
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      },
-      {
-        "Exame": "Triglicerídeos",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": 30,
-        "Observacoes": null
-      },
-      {
-        "Exame": "VDRL",
-        "Grupo_Exame": "Exames laboratoriais",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": "Se positivo, o FTA-ABS (IgG e IgM) deverá ser solicitado para o diagnóstico definitivo"
-      },
-      {
-        "Exame": "Eletrocardiograma",
-        "Grupo_Exame": "Outros exames",
-        "Condicao_Genero": null,
-        "Condicao_Idade_Minima": null,
-        "Observacoes": null
-      }
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": "7",
+    "Finalidade_Inspecao": "Controle semestral Raios-X",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": "8",
+    "Finalidade_Inspecao": "Manipulação e admin Terapia Antineoplásica",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Reticulócitos", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": "9",
+    "Finalidade_Inspecao": "Serviço com OTTO FUELL II",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Meta-hemoglobina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": "10",
+    "Finalidade_Inspecao": "Serviço com explosivos",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Meta-hemoglobina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Ureia", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": "11",
+    "Finalidade_Inspecao": "Missão no exterior (> 3m)",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EPF", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": "12",
+    "Finalidade_Inspecao": "Missão no exterior (< 3m c/ trienal OK)",
+    "Exames": [
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": "13",
+    "Finalidade_Inspecao": "Deixar o SMV / SMI",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": "14",
+    "Finalidade_Inspecao": "Controle anual de praça de máquinas",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" }
+    ]
+  },
+  {
+    "ID_Inspecao": "15",
+    "Finalidade_Inspecao": "Localidade com deficiência em assistência sanitária (LDAS)",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EPF", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Tipagem Sanguínea e Fator Rh", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": "16",
+    "Finalidade_Inspecao": "Missão Antártica",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EPF", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Tipagem Sanguínea e Fator Rh", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Teste Ergométrico", "Condicao_Genero": null, "Condicao_Idade_Minima": "40" },
+      { "Exame": "Perfil Lipídico", "Condicao_Genero": null, "Condicao_Idade_Minima": "40" },
+      { "Exame": "Avaliação Psicológica", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": "17",
+    "Finalidade_Inspecao": "Reversão ou Reintegração ao SPG",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": "18",
+    "Finalidade_Inspecao": "Tarefa por Tempo Certo e prorrogações",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": "19",
+    "Finalidade_Inspecao": "Designação de militares RM1",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" }
+    ]
+  },
+  {
+    "ID_Inspecao": "20",
+    "Finalidade_Inspecao": "Reengajamento",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" }
+    ]
+  },
+  {
+    "ID_Inspecao": "21",
+    "Finalidade_Inspecao": "Ingresso no SMV (candidatos civis)",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Toxicológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Avaliação Psicológica", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": "22",
+    "Finalidade_Inspecao": "Deixar o SAM ou SPG / INCDEF",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": null,
+    "Finalidade_Inspecao": "Ingresso no SMV (oriundos do SMI)",
+    "Exames": [
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Avaliação Psicológica", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Toxicológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null }
+    ]
+  },
+  {
+    "ID_Inspecao": null,
+    "Finalidade_Inspecao": "Prorrogação do Tempo de Serviço",
+    "Exames": [
+      { "Exame": "Hemograma", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Glicemia de jejum", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Creatinina", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Transaminases", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "PSA", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "EAS", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Anti-HIV (🚫 Teste Rápido)", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "VDRL", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Audiometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Oftalmologia geral", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Raios-X de tórax", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "ECG", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Biometria", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Exame odontológico", "Condicao_Genero": null, "Condicao_Idade_Minima": null },
+      { "Exame": "Colpocitologia oncótica", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "Mamografia", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": "40" },
+      { "Exame": "Teste de gravidez (Beta-HCG)", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG Pélvica ou Transvaginal", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de mamas", "Condicao_Genero": "Feminino", "Condicao_Idade_Minima": null },
+      { "Exame": "USG de próstata", "Condicao_Genero": "Masculino", "Condicao_Idade_Minima": "40" }
     ]
   }
 ];
