@@ -18,6 +18,7 @@ import {
   type CabecalhoMensagem, type CandidatoBasico, type CandidatoImportadoCsv,
 } from '../utils/concursosUtils';
 import { apiUrl } from '../utils/apiBase';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 // URL de implantação (aplicativo da web) do projeto Apps Script standalone
 // mínimo "CodeConcursos.gs" (código-fonte também versionado neste
@@ -2139,6 +2140,22 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
   const [reagendandoCandidato, setReagendandoCandidato] = useState<CandidatoRecord | null>(null);
   const [confirmandoReagendamento, setConfirmandoReagendamento] = useState(false);
+  // Mobile: célula de Observações abre um modal ampliado (ler/editar) em vez
+  // do input inline usado no desktop.
+  const [observacaoModalCandidato, setObservacaoModalCandidato] = useState<CandidatoRecord | null>(null);
+  // Mobile: botão de voltar flutuante sobre a tabela ao rolar + botão de
+  // voltar ao topo (ver JSX mais abaixo).
+  const isDesktop = useIsDesktop();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [mostrarBotaoTopo, setMostrarBotaoTopo] = useState(false);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const handleScroll = () => setMostrarBotaoTopo(el.scrollTop > 300);
+    el.addEventListener('scroll', handleScroll);
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const podeEditar = podeEditarInlineBase && concurso?.status === 'em_andamento';
   const podeReagendar = podeReagendarBase && concurso?.status === 'em_andamento';
@@ -2375,7 +2392,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
-      <Header title={concurso?.nome || 'Planilhas de Controle'} desktopTitle={concurso?.nome} />
+      {/* No mobile o botão de voltar da topbar (sticky, flutua sobre a
+          tabela ao rolar) assume essa função; no desktop o botão próprio
+          desta página (dentro do título) continua como estava. */}
+      <Header title={concurso?.nome || 'Planilhas de Controle'} desktopTitle={concurso?.nome} onBack={!isDesktop ? onVoltar : undefined} />
 
       {toastMessage && (
         <div className="fixed top-20 right-4 z-[100] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in max-w-[90vw]">
@@ -2402,22 +2422,48 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         </div>
       )}
 
-      <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1600px] mx-auto w-full flex-1 space-y-4">
-        <div className="relative flex items-center justify-center min-h-[40px] px-12 sm:px-16">
+      {!isDesktop && mostrarBotaoTopo && (
+        <button
+          type="button"
+          onClick={() => scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="md:hidden fixed bottom-6 right-4 z-[90] w-11 h-11 rounded-full bg-[#050F41] text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+          aria-label="Voltar ao topo"
+          title="Voltar ao topo"
+        >
+          <span className="material-symbols-outlined text-[22px]">arrow_upward</span>
+        </button>
+      )}
+
+      <div ref={scrollContainerRef} className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1600px] mx-auto w-full flex-1 space-y-4">
+        <div className="relative flex flex-col items-center gap-1.5 min-h-[40px] md:flex-row md:justify-center md:gap-0 px-2 md:px-16">
+          {/* Desktop: botão de voltar próprio desta página (some no mobile
+              — lá quem flutua sobre a tabela é o botão sticky do Header). */}
           <button
             type="button"
             onClick={onVoltar}
-            className="absolute left-0 top-1/2 -translate-y-1/2 shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-white text-[#050F41] shadow-sm border border-gray-200/70 hover:bg-gray-50 active:scale-95 transition-all"
+            className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 shrink-0 items-center justify-center w-9 h-9 rounded-full bg-white text-[#050F41] shadow-sm border border-gray-200/70 hover:bg-gray-50 active:scale-95 transition-all"
             aria-label="Voltar"
             title="Voltar"
           >
             <span className="material-symbols-outlined text-[20px]">arrow_back</span>
           </button>
-          <h1 className="font-heading font-bold text-xl sm:text-2xl text-[#050F41] text-center truncate">
+          {/* Mobile: nome e contagem em linhas separadas (sem o hífen, que
+              estourava sem espaço) e chip de status centralizado abaixo. */}
+          <h1 className="md:hidden font-heading font-bold text-xl text-[#050F41] text-center truncate w-full px-10">
+            {concurso?.nome || 'Concurso'}<br />
+            {total} Candidato{total === 1 ? '' : 's'}
+          </h1>
+          {concurso && (
+            <span className={`md:hidden shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(concurso.status)}`}>
+              {STATUS_LABELS[concurso.status]}
+            </span>
+          )}
+          {/* Desktop: layout original, em uma linha só com o chip à direita. */}
+          <h1 className="hidden md:block font-heading font-bold text-xl sm:text-2xl text-[#050F41] text-center truncate">
             {concurso?.nome || 'Concurso'} <span className="text-gray-400 font-semibold">-</span> {total} Candidato{total === 1 ? '' : 's'}
           </h1>
           {concurso && (
-            <span className={`absolute right-0 top-1/2 -translate-y-1/2 shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(concurso.status)}`}>
+            <span className={`hidden md:inline-block absolute right-0 top-1/2 -translate-y-1/2 shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(concurso.status)}`}>
               {STATUS_LABELS[concurso.status]}
             </span>
           )}
@@ -2544,8 +2590,8 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             </div>
           ) : (
             <>
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left border-collapse table-fixed">
+              <div className="overflow-x-auto pb-2">
+                <table className="w-full min-w-[780px] text-left border-collapse table-fixed">
                   <colgroup>
                     <col style={{ width: '3%' }} />
                     <col style={{ width: '18%' }} />
@@ -2588,9 +2634,20 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                               ) : getStatusBadge(c.status)}
                             </td>
                             <td className="py-3.5 px-4 text-gray-600">
-                              {podeEditar ? (
-                                <input type="text" defaultValue={c.observacoes} onBlur={e => handleCampoBlur(c, 'observacoes', e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
-                              ) : <span className="truncate block" title={c.observacoes}>{c.observacoes || '-'}</span>}
+                              {/* Desktop: input inline, como sempre foi. */}
+                              <div className="hidden md:block">
+                                {podeEditar ? (
+                                  <input type="text" defaultValue={c.observacoes} onBlur={e => handleCampoBlur(c, 'observacoes', e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
+                                ) : <span className="truncate block" title={c.observacoes}>{c.observacoes || '-'}</span>}
+                              </div>
+                              {/* Mobile: abre um modal ampliado para ler/editar. */}
+                              <button
+                                type="button"
+                                onClick={() => setObservacaoModalCandidato(c)}
+                                className="md:hidden w-full text-left truncate text-[13px] text-gray-600 underline decoration-dotted underline-offset-2"
+                              >
+                                {c.observacoes || '-'}
+                              </button>
                             </td>
                             <td className="py-3.5 px-4 text-gray-600">
                               {podeEditar ? (
@@ -2620,67 +2677,6 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                     ))}
                   </tbody>
                 </table>
-              </div>
-
-              <div className="block md:hidden divide-y divide-gray-100">
-                {filteredCandidatos.map(c => (
-                  <div key={c.id} className="p-4 flex flex-col space-y-2.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[11px] text-gray-700 font-semibold truncate">{c.nome}</p>
-                        <p className="text-[10px] font-mono text-gray-400">{c.id}</p>
-                        <p className="text-[10px] text-gray-500 mt-0.5">{c.dataAgendamentoBR || 'Sem data'}</p>
-                      </div>
-                      <div className="shrink-0">{getStatusBadge(c.status)}</div>
-                    </div>
-
-                    {podeEditar && (
-                      <div className="grid grid-cols-1 gap-2 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-                        <div>
-                          <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Status</span>
-                          <select value={c.status || ''} onChange={e => handleStatusChange(c, e.target.value)} className={`w-full px-2 py-1.5 text-[11px] font-bold rounded-lg border focus:outline-none ${getStatusSelectClasses(c.status)}`}>
-                            {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Nº TIS</span>
-                          <input type="text" defaultValue={c.numTIS} onBlur={e => handleCampoBlur(c, 'numTIS', e.target.value)} className="w-full px-2 py-1.5 text-[11px] font-mono rounded-lg border border-gray-200 bg-white focus:outline-none" />
-                        </div>
-                        <div>
-                          <span className="text-[9px] font-bold text-gray-400 uppercase block mb-1">Observações</span>
-                          <input type="text" defaultValue={c.observacoes} onBlur={e => handleCampoBlur(c, 'observacoes', e.target.value)} className="w-full px-2 py-1.5 text-[11px] rounded-lg border border-gray-200 bg-white focus:outline-none" />
-                        </div>
-                      </div>
-                    )}
-                    {!podeEditar && c.observacoes && (
-                      <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-                        <span className="text-[9px] font-bold text-gray-400 uppercase block">Observações</span>
-                        <span className="text-[11px] font-medium text-gray-600">{c.observacoes}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-1">
-                      {c.termoRecursoUrl ? (
-                        <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] font-bold text-[#050F41] underline flex items-center space-x-1">
-                          <span className="material-symbols-outlined text-[14px]">description</span>
-                          <span>Termo de Recurso</span>
-                        </a>
-                      ) : c.status === 'INAPTO' ? (
-                        <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="text-[11px] font-bold text-[#050F41] underline flex items-center space-x-1">
-                          <span className="material-symbols-outlined text-[14px]">gavel</span>
-                          <span>Gerar Termo</span>
-                        </button>
-                      ) : <span />}
-
-                      {podeReagendar && !c.finalizado && (
-                        <button type="button" onClick={() => handleOpenReagendamento(c)} className="px-3 py-1.5 bg-[#050F41] text-white rounded-lg text-xs font-bold flex items-center space-x-1 shadow-sm">
-                          <span className="material-symbols-outlined text-[14px]">event_repeat</span>
-                          <span>Reagendar</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
               </div>
             </>
           )}
@@ -2738,6 +2734,40 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             }
           }}
         />
+      )}
+
+      {/* Mobile: modal ampliado para ler/editar a célula Observações
+          (no desktop a edição continua inline na própria tabela). */}
+      {observacaoModalCandidato && (
+        <div className="md:hidden fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+              <div className="min-w-0">
+                <h3 className="font-heading font-bold text-sm uppercase truncate">Observações</h3>
+                <p className="text-[11px] text-white/70 truncate">{observacaoModalCandidato.nome}</p>
+              </div>
+              <button onClick={() => setObservacaoModalCandidato(null)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0">
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto space-y-4 flex-1">
+              {podeEditar ? (
+                <textarea
+                  defaultValue={observacaoModalCandidato.observacoes}
+                  onBlur={e => handleCampoBlur(observacaoModalCandidato, 'observacoes', e.target.value)}
+                  rows={6}
+                  placeholder="Sem observações."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-700 focus:outline-none focus:border-[#050F41] resize-none"
+                />
+              ) : (
+                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{observacaoModalCandidato.observacoes || 'Sem observações.'}</p>
+              )}
+              <div className="flex items-center justify-end">
+                <button type="button" onClick={() => setObservacaoModalCandidato(null)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Fechar</button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
