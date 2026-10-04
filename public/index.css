@@ -180,3 +180,26 @@
     font-size: 0.85rem;
   }
 }
+
+/* Barra de rolagem horizontal sempre visível e estilizada — usada em
+   modais/tabelas mais largos que a tela, para o usuário perceber que dá
+   para rolar para os lados (muitos navegadores mobile escondem a barra
+   fina padrão até o toque, o que esconde a pista de que há mais colunas). */
+.scroll-x-visible {
+  scrollbar-width: thin;
+  scrollbar-color: #050F41 #E5E7EB;
+}
+
+.scroll-x-visible::-webkit-scrollbar {
+  height: 8px;
+}
+
+.scroll-x-visible::-webkit-scrollbar-track {
+  background: #E5E7EB;
+  border-radius: 9999px;
+}
+
+.scroll-x-visible::-webkit-scrollbar-thumb {
+  background: #050F41;
+  border-radius: 9999px;
+}

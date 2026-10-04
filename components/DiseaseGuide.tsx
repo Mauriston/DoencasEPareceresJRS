@@ -159,7 +159,7 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <h3 className="text-lg font-bold text-[#050F41]">Interpretação dos Resultados</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1"><X size={20} /></button>
             </div>
-            <div className="p-4 overflow-x-auto">
+            <div className="p-4 overflow-x-auto scroll-x-visible">
               <table className="w-full text-left text-sm md:text-base text-gray-600 border-collapse">
                 <thead className="bg-gray-50 text-gray-700 text-xs md:text-sm uppercase">
                   <tr><th className="px-4 py-3 border-b border-gray-200">Global CDR</th><th className="px-4 py-3 border-b border-gray-200">CDR-SB</th><th className="px-4 py-3 border-b border-gray-200">Demência</th></tr>

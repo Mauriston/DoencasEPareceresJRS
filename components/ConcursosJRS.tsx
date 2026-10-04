@@ -1102,7 +1102,8 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
               <p className="text-sm font-bold text-gray-700">Nenhuma mensagem arquivada</p>
             </div>
           ) : (
-            <table className="w-full text-left border-collapse">
+            <div className="overflow-x-auto scroll-x-visible">
+            <table className="w-full min-w-[520px] text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] md:text-sm font-bold text-[#050F41] uppercase tracking-wider">
                   <th className="py-3 px-4">Data-Hora</th>
@@ -1128,6 +1129,7 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>
@@ -1917,7 +1919,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
               </div>
             )}
             {efetivoViewMode === 'tabela' ? (
-              <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden overflow-x-auto">
+              <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden overflow-x-auto scroll-x-visible">
                 <table className="w-full text-left border-collapse min-w-[860px]">
                   <thead>
                     <tr className="bg-gray-50/80 border-b border-gray-100 text-[13px] font-bold text-[#050F41] uppercase tracking-wider">
@@ -2590,7 +2592,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto pb-2">
+              <div className="overflow-x-auto pb-2 scroll-x-visible">
                 <table className="w-full min-w-[780px] text-left border-collapse table-fixed">
                   <colgroup>
                     <col style={{ width: '3%' }} />
