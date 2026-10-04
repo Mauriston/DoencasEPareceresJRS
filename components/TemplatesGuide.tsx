@@ -82,34 +82,37 @@ export const TemplatesGuide: React.FC = () => {
     <div className="flex flex-col h-full bg-gray-light relative pb-20">
       <Header title="TEMPLATES" />
 
-      <div className="flex-1 overflow-y-auto w-full max-w-2xl mx-auto px-4 py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto w-full max-w-5xl mx-auto px-4 py-6">
         {isLoading && templates === DEFAULT_TEMPLATES ? (
           <div className="flex flex-col items-center justify-center py-10 text-gray-400">
             <span className="material-symbols-outlined animate-spin mb-2" style={{ fontSize: "32px" }}>sync</span>
             <p className="text-sm">Buscando da planilha...</p>
           </div>
         ) : (
-          templates.map((tpl, idx) => (
-            <div key={idx} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center justify-between hover:shadow transition-shadow">
-              <div className="flex flex-col pr-4 flex-1">
-                <h3 className="font-heading font-medium text-navy text-base mb-1">{tpl.Template_Documento}</h3>
-                <p className="text-gray-600 text-sm font-body">{tpl.Descrição}</p>
+          // Lista simples (não mais cards soltos) — 1 coluna no mobile, 2 no desktop.
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {templates.map((tpl, idx) => (
+              <div key={idx} className="bg-white rounded-xl border border-gray-200/60 hover:border-[#079551] hover:shadow-md transition-all p-4 flex items-center justify-between">
+                <div className="flex flex-col pr-4 flex-1 min-w-0">
+                  <h3 className="font-heading font-medium text-navy text-base mb-1">{tpl.Template_Documento}</h3>
+                  <p className="text-gray-600 text-sm font-body">{tpl.Descrição}</p>
+                </div>
+                <a
+                  href={tpl.Link_Copia}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.open(tpl.Link_Copia, '_blank');
+                  }}
+                  title="Copiar Template"
+                  className="shrink-0 p-2 text-navy hover:text-gold hover:bg-navy/5 rounded-full transition-colors flex items-center justify-center"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: "24px" }}>content_copy</span>
+                </a>
               </div>
-              <a
-                href={tpl.Link_Copia}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.open(tpl.Link_Copia, '_blank');
-                }}
-                title="Copiar Template"
-                className="shrink-0 p-2 text-navy hover:text-gold hover:bg-navy/5 rounded-full transition-colors flex items-center justify-center"
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: "24px" }}>content_copy</span>
-              </a>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
     </div>

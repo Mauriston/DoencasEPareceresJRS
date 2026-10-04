@@ -27,6 +27,8 @@ export interface NavContextType {
   periciaMenorVigentes: number;
   isMobileMenuOpen: boolean;
   setIsMobileMenuOpen: (open: boolean) => void;
+  isAvatarMenuOpen: boolean;
+  setIsAvatarMenuOpen: (open: boolean) => void;
 }
 
 export const NavContext = createContext<NavContextType | undefined>(undefined);

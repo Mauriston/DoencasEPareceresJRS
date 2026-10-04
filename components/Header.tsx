@@ -16,7 +16,7 @@ const PERFIL_LABELS: Record<string, string> = {
   user_secretaria: 'User Secretaria',
 };
 
-const Avatar: React.FC<{ nome?: string; imageProfile?: string; size?: number }> = ({ nome, imageProfile, size = 32 }) => {
+export const Avatar: React.FC<{ nome?: string; imageProfile?: string; size?: number }> = ({ nome, imageProfile, size = 32 }) => {
   const style = { width: size, height: size };
   if (imageProfile) {
     return (
@@ -44,7 +44,6 @@ const Avatar: React.FC<{ nome?: string; imageProfile?: string; size?: number }> 
 
 export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction, rightAction, onBack }) => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
 
   const nav = useContext(NavContext);
   const currentView = nav?.currentView;
@@ -53,6 +52,10 @@ export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction,
   const handleLogout = nav?.handleLogout || (() => {});
   const periciaMenorVigentes = nav?.periciaMenorVigentes || 0;
   const setIsMobileMenuOpen = nav?.setIsMobileMenuOpen || (() => {});
+  // Compartilhado com o item de rodapé do drawer mobile do Sidebar, que
+  // também precisa abrir este mesmo menu (ver Sidebar.tsx).
+  const isAvatarMenuOpen = nav?.isAvatarMenuOpen || false;
+  const setIsAvatarMenuOpen = nav?.setIsAvatarMenuOpen || (() => {});
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -109,16 +112,11 @@ export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction,
           {rightAction}
 
           <div className="relative flex items-center shrink-0">
-            {/* Botão do usuário — compacto no mobile, com foto + usuário + cargo no desktop */}
-            <button
-              type="button"
-              onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)}
-              className="flex md:hidden rounded-full hover:opacity-90 transition-all shadow-sm focus:outline-none active:scale-95 cursor-pointer"
-              aria-label="Menu do usuário"
-              title={authUser?.usuario || 'Usuário'}
-            >
+            {/* No mobile o avatar é só decorativo — abrir o menu do usuário
+                agora é feito pelo item de rodapé do drawer (Sidebar.tsx). */}
+            <div className="flex md:hidden shrink-0" title={authUser?.usuario || 'Usuário'}>
               <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} />
-            </button>
+            </div>
 
             <button
               type="button"

@@ -208,12 +208,17 @@ export const UsuariosManagement: React.FC = () => {
     setPermsDirty(true);
   };
 
-  const handleSavePerms = () => {
+  const handleSavePerms = async () => {
     setSavingPerms(true);
-    savePermissions(pagePerms, featurePerms);
-    setPermsDirty(false);
-    setSavingPerms(false);
-    showToast('Permissões de páginas e funcionalidades atualizadas.');
+    try {
+      await savePermissions(pagePerms, featurePerms);
+      setPermsDirty(false);
+      showToast('Permissões de páginas e funcionalidades atualizadas.');
+    } catch {
+      showToast('Erro ao salvar as permissões. Tente novamente.');
+    } finally {
+      setSavingPerms(false);
+    }
   };
 
   const filteredUsers = users.filter(u => {
@@ -345,7 +350,7 @@ export const UsuariosManagement: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className="hidden md:block overflow-x-auto">
+              <div className="hidden md:block overflow-x-auto scroll-x-visible">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
@@ -492,7 +497,7 @@ export const UsuariosManagement: React.FC = () => {
           <div className="p-4 sm:p-5 space-y-6">
             <div>
               <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Páginas do App</h4>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto scroll-x-visible">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
@@ -529,7 +534,7 @@ export const UsuariosManagement: React.FC = () => {
             {featureGroups.map(group => (
               <div key={group}>
                 <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Funcionalidades — {group}</h4>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto scroll-x-visible">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">

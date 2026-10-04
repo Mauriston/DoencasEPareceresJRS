@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { NavContext } from '../context/NavContext';
 import { getNavCategories, findCategoryForView, NavCategory } from '../config/navigation';
+import { Avatar } from './Header';
 
 /**
  * Barra lateral com os menus principais (mesmos cards da Página Inicial).
@@ -17,6 +18,7 @@ export const Sidebar: React.FC = () => {
   const periciaMenorVigentes = nav?.periciaMenorVigentes || 0;
   const isMobileMenuOpen = nav?.isMobileMenuOpen || false;
   const setIsMobileMenuOpen = nav?.setIsMobileMenuOpen || (() => {});
+  const setIsAvatarMenuOpen = nav?.setIsAvatarMenuOpen || (() => {});
 
   const categories = getNavCategories(authUser?.perfil, periciaMenorVigentes);
   const activeCategory = currentView ? findCategoryForView(categories, currentView) : undefined;
@@ -150,12 +152,12 @@ export const Sidebar: React.FC = () => {
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between border-b border-white/10 shrink-0">
+        <div className="relative flex items-center justify-center border-b border-white/10 shrink-0">
           <Logo onClick={() => setCurrentView('home')} />
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(false)}
-            className="mr-3 p-1.5 text-white/70 hover:text-white transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-white/70 hover:text-white transition-colors"
             aria-label="Fechar menu"
           >
             <span className="material-symbols-outlined text-2xl">close</span>
@@ -164,6 +166,17 @@ export const Sidebar: React.FC = () => {
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3">
           {categories.map(cat => renderCategory(cat, 'drawer'))}
         </nav>
+        <button
+          type="button"
+          onClick={() => { setIsMobileMenuOpen(false); setIsAvatarMenuOpen(true); }}
+          className="shrink-0 border-t border-white/10 px-4 py-3 flex items-center gap-3 text-left hover:bg-white/5 transition-colors"
+        >
+          <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} />
+          <span className="min-w-0 flex flex-col items-start leading-tight">
+            <span className="text-sm font-bold text-white truncate max-w-[170px]">{authUser?.usuario || 'Usuário'}</span>
+            <span className="text-[11px] font-medium text-gray-400 truncate max-w-[170px]">{authUser?.cargo || ' '}</span>
+          </span>
+        </button>
       </aside>
     </>
   );

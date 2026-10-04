@@ -4,7 +4,7 @@ import { Header } from './Header';
 import { MarkdownDocPage } from './MarkdownDocPage';
 import { PdfViewerPage } from './PdfViewerPage';
 import { getDriveEmbedUrl } from '../utils/googleDrive';
-import { MoreVertical, BookOpen, Paperclip, FileText } from 'lucide-react';
+import { BookOpen, Paperclip } from 'lucide-react';
 
 interface Chapter {
   id: string;
@@ -205,25 +205,29 @@ export const DGPM406Guide: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto w-full pb-24 md:pb-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Lista simples (não mais cards em grade) — 1 coluna no mobile, 2
+            no desktop. O ícone indica o que o clique faz: abre/renderiza um
+            PDF (file_open) ou navega para uma página com o texto já
+            renderizado (single_arrow, só os itens com .md). */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
           {activeTab === 'capitulos' ? (
             CHAPTERS.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => handleChapterClick(item)}
-                className="group bg-white rounded-2xl border border-gray-200/60 p-4 hover:shadow-md hover:border-[#079551] transition-all duration-200 flex items-start justify-between cursor-pointer text-left"
+                className="group flex items-center gap-3 bg-white rounded-xl border border-gray-200/60 px-4 py-3 hover:shadow-md hover:border-[#079551] transition-all duration-200 cursor-pointer text-left"
               >
-                <div className="flex flex-col pr-3 flex-1 min-w-0">
-                  <h3 className="text-[#050F41] font-heading font-bold text-sm md:text-base leading-snug mb-1 group-hover:text-[#079551] transition-colors">
+                <span className="material-symbols-outlined text-[20px] text-gray-400 group-hover:text-[#050F41] transition-colors shrink-0">
+                  {item.mdKey ? 'single_arrow' : 'file_open'}
+                </span>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <h3 className="text-[#050F41] font-heading font-bold text-sm leading-snug group-hover:text-[#079551] transition-colors">
                     {item.chapter}
                   </h3>
-                  <p className="text-gray-500 font-body text-xs md:text-sm font-medium leading-relaxed line-clamp-3">
+                  <p className="text-gray-500 font-body text-xs font-medium leading-relaxed line-clamp-2">
                     {item.title}
                   </p>
-                </div>
-                <div className="text-gray-400 group-hover:text-[#050F41] transition-colors shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
-                  {item.mdKey ? <FileText size={18} /> : <MoreVertical size={18} />}
                 </div>
               </button>
             ))
@@ -233,18 +237,18 @@ export const DGPM406Guide: React.FC = () => {
                 key={item.id}
                 type="button"
                 onClick={() => handleAnexoClick(item)}
-                className="group bg-white rounded-2xl border border-gray-200/60 p-4 hover:shadow-md hover:border-[#079551] transition-all duration-200 flex items-start justify-between cursor-pointer text-left"
+                className="group flex items-center gap-3 bg-white rounded-xl border border-gray-200/60 px-4 py-3 hover:shadow-md hover:border-[#079551] transition-all duration-200 cursor-pointer text-left"
               >
-                <div className="flex flex-col pr-3 flex-1 min-w-0">
-                  <h3 className="text-[#050F41] font-heading font-bold text-sm md:text-base leading-snug mb-1 group-hover:text-[#079551] transition-colors">
+                <span className="material-symbols-outlined text-[20px] text-gray-400 group-hover:text-[#050F41] transition-colors shrink-0">
+                  {item.mdKey ? 'single_arrow' : 'file_open'}
+                </span>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <h3 className="text-[#050F41] font-heading font-bold text-sm leading-snug group-hover:text-[#079551] transition-colors">
                     {item.anexo}
                   </h3>
-                  <p className="text-gray-500 font-body text-xs md:text-sm font-medium leading-relaxed line-clamp-3">
+                  <p className="text-gray-500 font-body text-xs font-medium leading-relaxed line-clamp-2">
                     {item.title}
                   </p>
-                </div>
-                <div className="text-gray-400 group-hover:text-[#050F41] transition-colors shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
-                  {item.mdKey ? <FileText size={18} /> : <MoreVertical size={18} />}
                 </div>
               </button>
             ))
