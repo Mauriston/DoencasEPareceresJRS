@@ -1964,7 +1964,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                                 <td className="py-3 px-4 font-bold text-[#050F41]">
                                   <span
                                     className={`material-symbols-outlined text-[20px] align-middle mr-1.5 ${COR_ICONE_STATUS_CONCURSO[c.status]}`}
-                                    style={{ fontVariationSettings: "'wght' 600" }}
+                                    style={{ fontVariationSettings: "'FILL' 1, 'wght' 700, 'GRAD' 200, 'opsz' 24" }}
                                   >
                                     {ICONE_STATUS_CONCURSO[c.status]}
                                   </span>
