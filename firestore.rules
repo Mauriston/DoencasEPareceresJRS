@@ -49,6 +49,17 @@ service cloud.firestore {
       allow write: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
     }
 
+    // Coleção "config": documentos de configuração global do app. O único
+    // doc hoje é "permissoes" (config/permissoes), a matriz de páginas e
+    // funcionalidades por perfil editada em Usuários (Admin) — antes só
+    // persistida em localStorage (não compartilhada entre dispositivos).
+    // Qualquer usuário autenticado lê (precisa para canAccessPage/
+    // canUseFeature funcionarem no próprio dispositivo); só o Admin grava.
+    match /config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // Coleção "casos_periciais_resultados": id do documento = UID. Guarda o
     // resultado mais recente do teste "Casos Periciais" (Extras); cada
     // usuário só pode ler/gravar o PRÓPRIO resultado.

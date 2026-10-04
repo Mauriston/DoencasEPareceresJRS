@@ -1,9 +1,11 @@
 // Ficheiro: config/permissions.ts
 // Matriz de permissões (páginas do app e funcionalidades) por perfil de
-// usuário, editável em Usuários (Admin) e persistida localmente
-// (localStorage) neste navegador. O perfil "admin" sempre tem acesso
+// usuário, editável em Usuários (Admin) e persistida no Firestore
+// (services/firestorePermissions.ts, doc config/permissoes) — compartilhada
+// entre todos os usuários/dispositivos. O perfil "admin" sempre tem acesso
 // total e não aparece como editável na matriz.
 import { NavItem } from '../types';
+import { salvarPermissoesRemoto, type PermissoesArmazenadas } from '../services/firestorePermissions';
 
 export type Role = 'user_medicos' | 'user_secretaria';
 
@@ -111,30 +113,23 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'pericia-menor.historico': { user_medicos: true, user_secretaria: false },
 };
 
-const STORAGE_KEY = 'jrs_permissoes_config';
+// Cache em memória alimentado pelo listener em tempo real do Firestore
+// (iniciado no bootstrap do app — ver App.tsx `observarPermissoes`). Mantém
+// `getPagePermissions`/`getFeaturePermissions`/`canUseFeature`/`canAccessPage`
+// síncronos (chamados inline durante o render em várias páginas) sem
+// precisar transformá-los em funções assíncronas.
+let permissoesCache: PermissoesArmazenadas | null = null;
 
-interface StoredPermissions {
-  pages: Record<string, Partial<Record<Role, boolean>>>;
-  features: Record<string, Partial<Record<Role, boolean>>>;
-}
-
-const readStored = (): StoredPermissions => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { pages: {}, features: {} };
-    const parsed = JSON.parse(raw);
-    return { pages: parsed.pages || {}, features: parsed.features || {} };
-  } catch {
-    return { pages: {}, features: {} };
-  }
+export const setPermissoesCache = (dados: PermissoesArmazenadas | null) => {
+  permissoesCache = dados;
 };
 
 export const getPagePermissions = (): Record<string, Record<Role, boolean>> => {
-  const stored = readStored();
+  const stored = permissoesCache?.pages || {};
   const result: Record<string, Record<Role, boolean>> = {};
   PAGE_DEFS.forEach(page => {
     const defaults = DEFAULT_PAGE_PERMISSIONS[page.id] || { user_medicos: true, user_secretaria: true };
-    const overrides = stored.pages[page.id] || {};
+    const overrides = stored[page.id] || {};
     result[page.id] = {
       user_medicos: overrides.user_medicos ?? defaults.user_medicos,
       user_secretaria: overrides.user_secretaria ?? defaults.user_secretaria,
@@ -144,11 +139,11 @@ export const getPagePermissions = (): Record<string, Record<Role, boolean>> => {
 };
 
 export const getFeaturePermissions = (): Record<FeatureKey, Record<Role, boolean>> => {
-  const stored = readStored();
+  const stored = permissoesCache?.features || {};
   const result = {} as Record<FeatureKey, Record<Role, boolean>>;
   FEATURE_DEFS.forEach(feature => {
     const defaults = DEFAULT_FEATURE_PERMISSIONS[feature.id];
-    const overrides = stored.features[feature.id] || {};
+    const overrides = stored[feature.id] || {};
     result[feature.id] = {
       user_medicos: overrides.user_medicos ?? defaults.user_medicos,
       user_secretaria: overrides.user_secretaria ?? defaults.user_secretaria,
@@ -160,9 +155,7 @@ export const getFeaturePermissions = (): Record<FeatureKey, Record<Role, boolean
 export const savePermissions = (
   pages: Record<string, Record<Role, boolean>>,
   features: Record<FeatureKey, Record<Role, boolean>>
-) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ pages, features }));
-};
+): Promise<void> => salvarPermissoesRemoto({ pages, features });
 
 export const canUseFeature = (featureId: FeatureKey, perfil: string | undefined): boolean => {
   if (perfil === 'admin') return true;

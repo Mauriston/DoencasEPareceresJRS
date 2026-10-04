@@ -208,12 +208,17 @@ export const UsuariosManagement: React.FC = () => {
     setPermsDirty(true);
   };
 
-  const handleSavePerms = () => {
+  const handleSavePerms = async () => {
     setSavingPerms(true);
-    savePermissions(pagePerms, featurePerms);
-    setPermsDirty(false);
-    setSavingPerms(false);
-    showToast('Permissões de páginas e funcionalidades atualizadas.');
+    try {
+      await savePermissions(pagePerms, featurePerms);
+      setPermsDirty(false);
+      showToast('Permissões de páginas e funcionalidades atualizadas.');
+    } catch {
+      showToast('Erro ao salvar as permissões. Tente novamente.');
+    } finally {
+      setSavingPerms(false);
+    }
   };
 
   const filteredUsers = users.filter(u => {

@@ -1,5 +1,5 @@
 // Ficheiro: App.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useReducer } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Login } from './components/Login';
 import { Home } from './components/Home';
@@ -23,9 +23,29 @@ import { RoteiroJRS } from './components/RoteiroJRS';
 import { UsuariosManagement } from './components/UsuariosManagement';
 import { NavItem } from './types';
 import { NavContext, AuthUser } from './context/NavContext';
-import { canAccessPage } from './config/permissions';
+import { canAccessPage, setPermissoesCache } from './config/permissions';
 import { onAuthChange, logoutUsuario } from './services/firebaseAuth';
 import { getUsuarioProfile, setUsuarioPublico, UsuarioRecord } from './services/firestoreUsuarios';
+import { observarPermissoes, salvarPermissoesRemoto, type PermissoesArmazenadas } from './services/firestorePermissions';
+
+// Chave do antigo armazenamento (localStorage, só neste navegador) das
+// permissões — mantido aqui apenas para a migração automática de uma vez
+// (ver efeito abaixo): se um admin abrir o app num navegador que ainda tem
+// essa configuração local e o documento compartilhado no Firestore ainda
+// não existir, promove-a automaticamente em vez de descartar silenciosamente
+// o que o admin já tinha configurado.
+const LEGACY_PERMISSOES_STORAGE_KEY = 'jrs_permissoes_config';
+const lerPermissoesLegadoLocalStorage = (): PermissoesArmazenadas | null => {
+  try {
+    const raw = localStorage.getItem(LEGACY_PERMISSOES_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return { pages: parsed.pages || {}, features: parsed.features || {} };
+  } catch {
+    return null;
+  }
+};
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
 
@@ -51,8 +71,43 @@ const App: React.FC = () => {
   const [periciaMenorVigentes, setPericiaMenorVigentes] = useState(0);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [permissoesLoading, setPermissoesLoading] = useState(true);
   const [senhaAlertDismissed, setSenhaAlertDismissed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // A matriz de permissões (config/permissoes no Firestore) é compartilhada
+  // entre todos os usuários/dispositivos — o listener fica aberto durante
+  // toda a sessão para refletir em tempo real uma alteração feita por um
+  // admin em outro lugar. Como canAccessPage/canUseFeature continuam
+  // síncronos (lêem um cache em memória), forçamos um novo render do app
+  // a cada atualização para que as páginas já montadas releiam o cache.
+  const [, forcarRerenderPermissoes] = useReducer(x => x + 1, 0);
+
+  useEffect(() => {
+    if (!authUser) {
+      // Sem usuário autenticado as regras do Firestore negam a leitura do
+      // documento — não há por que assinar nem bloquear a tela de login.
+      setPermissoesCache(null);
+      setPermissoesLoading(false);
+      return;
+    }
+    setPermissoesLoading(true);
+    const unsubscribe = observarPermissoes(dados => {
+      if (dados === null && authUser.perfil === 'admin') {
+        const legado = lerPermissoesLegadoLocalStorage();
+        if (legado) {
+          // Doc remoto ainda não existe: promove a configuração que este
+          // admin já tinha localmente em vez de perdê-la. O próprio
+          // onSnapshot dispara de novo com os dados reais em seguida.
+          salvarPermissoesRemoto(legado).catch(() => {});
+          return;
+        }
+      }
+      setPermissoesCache(dados);
+      setPermissoesLoading(false);
+      forcarRerenderPermissoes();
+    });
+    return unsubscribe;
+  }, [authUser?.uid]);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (firebaseUser) => {
@@ -152,6 +207,14 @@ const App: React.FC = () => {
 
   if (!authUser) {
     return <Login />;
+  }
+
+  if (permissoesLoading) {
+    return (
+      <div className="fixed inset-0 bg-[#050F41] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
   }
 
   const mostrarAlertaSenha = !!authUser.senhaTemporaria && currentView !== 'perfil' && !senhaAlertDismissed;
