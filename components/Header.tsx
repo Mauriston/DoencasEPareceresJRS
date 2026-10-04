@@ -10,7 +10,7 @@ export interface HeaderProps {
   onBack?: () => void;
 }
 
-const PERFIL_LABELS: Record<string, string> = {
+export const PERFIL_LABELS: Record<string, string> = {
   admin: 'Administrador',
   user_medicos: 'User Médicos',
   user_secretaria: 'User Secretaria',
@@ -41,6 +41,47 @@ export const Avatar: React.FC<{ nome?: string; imageProfile?: string; size?: num
     </div>
   );
 };
+
+// Conteúdo do menu do usuário (avatar/nome/perfil + Perfil/Logout) — extraído
+// para ser reaproveitado tanto no dropdown do avatar (desktop, aqui no
+// Header) quanto no menu equivalente aberto pelo item de rodapé do drawer
+// mobile (Sidebar.tsx), que o posiciona perto de si mesmo em vez de aqui.
+export const UserDropdownContent: React.FC<{
+  authUser: { nome?: string; imageProfile?: string; perfil?: string } | null;
+  onPerfilClick: () => void;
+  onLogoutClick: () => void;
+}> = ({ authUser, onPerfilClick, onLogoutClick }) => (
+  <div className="w-56 bg-white text-gray-800 rounded-xl shadow-xl border border-gray-100 py-1.5 animate-fade-in divide-y divide-gray-100">
+    <div className="px-4 py-2.5 flex items-center space-x-2.5">
+      <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} />
+      <div className="min-w-0">
+        <p className="text-xs font-bold text-[#050F41] truncate">{authUser?.nome || 'Usuário'}</p>
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider truncate">
+          {PERFIL_LABELS[authUser?.perfil || ''] || authUser?.perfil || 'perfil'}
+        </p>
+      </div>
+    </div>
+    <div className="py-1">
+      <button
+        type="button"
+        onClick={onPerfilClick}
+        className="w-full text-left px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center space-x-2.5 transition-colors cursor-pointer"
+      >
+        <span className="material-symbols-outlined text-[18px] text-[#050F41]">account_circle</span>
+        <span>Perfil</span>
+      </button>
+
+      <button
+        type="button"
+        onClick={onLogoutClick}
+        className="w-full text-left px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center space-x-2.5 transition-colors cursor-pointer"
+      >
+        <span className="material-symbols-outlined text-[18px] text-red-500">logout</span>
+        <span>Logout</span>
+      </button>
+    </div>
+  </div>
+);
 
 export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction, rightAction, onBack }) => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -131,40 +172,20 @@ export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction,
               </span>
             </button>
 
+            {/* No mobile quem abre e renderiza esse menu é o item de rodapé
+                do drawer (Sidebar.tsx), ancorado perto de si mesmo — aqui só
+                no desktop, ancorado no próprio avatar da topbar. */}
             {isAvatarMenuOpen && (
-              <>
+              <div className="hidden md:block">
                 <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsAvatarMenuOpen(false)} />
-                <div className="absolute right-0 top-11 w-56 bg-white text-gray-800 rounded-xl shadow-xl border border-gray-100 py-1.5 z-50 animate-fade-in divide-y divide-gray-100">
-                  <div className="px-4 py-2.5 flex items-center space-x-2.5">
-                    <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} />
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-[#050F41] truncate">{authUser?.nome || 'Usuário'}</p>
-                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider truncate">
-                        {PERFIL_LABELS[authUser?.perfil || ''] || authUser?.perfil || 'perfil'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="py-1">
-                    <button
-                      type="button"
-                      onClick={() => { setIsAvatarMenuOpen(false); setCurrentView('perfil'); }}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center space-x-2.5 transition-colors cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[18px] text-[#050F41]">account_circle</span>
-                      <span>Perfil</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => { setIsAvatarMenuOpen(false); handleLogout(); }}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center space-x-2.5 transition-colors cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[18px] text-red-500">logout</span>
-                      <span>Logout</span>
-                    </button>
-                  </div>
+                <div className="absolute right-0 top-11 z-50">
+                  <UserDropdownContent
+                    authUser={authUser}
+                    onPerfilClick={() => { setIsAvatarMenuOpen(false); setCurrentView('perfil'); }}
+                    onLogoutClick={() => { setIsAvatarMenuOpen(false); handleLogout(); }}
+                  />
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>

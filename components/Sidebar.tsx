@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { NavContext } from '../context/NavContext';
 import { getNavCategories, findCategoryForView, NavCategory } from '../config/navigation';
-import { Avatar } from './Header';
+import { Avatar, UserDropdownContent } from './Header';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 
 /**
@@ -19,7 +19,12 @@ export const Sidebar: React.FC = () => {
   const periciaMenorVigentes = nav?.periciaMenorVigentes || 0;
   const isMobileMenuOpen = nav?.isMobileMenuOpen || false;
   const setIsMobileMenuOpen = nav?.setIsMobileMenuOpen || (() => {});
+  // Compartilhado com o dropdown do avatar no Header (desktop); no mobile
+  // quem abre/renderiza esse menu é o item de rodapé abaixo, perto de si
+  // mesmo, em vez do avatar da topbar.
+  const isAvatarMenuOpen = nav?.isAvatarMenuOpen || false;
   const setIsAvatarMenuOpen = nav?.setIsAvatarMenuOpen || (() => {});
+  const handleLogout = nav?.handleLogout || (() => {});
 
   const isDesktop = useIsDesktop();
   const categories = getNavCategories(authUser?.perfil, periciaMenorVigentes, isDesktop);
@@ -168,17 +173,35 @@ export const Sidebar: React.FC = () => {
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3">
           {categories.map(cat => renderCategory(cat, 'drawer'))}
         </nav>
-        <button
-          type="button"
-          onClick={() => { setIsMobileMenuOpen(false); setIsAvatarMenuOpen(true); }}
-          className="shrink-0 border-t border-white/10 px-4 py-3 flex items-center gap-3 text-left hover:bg-white/5 transition-colors"
-        >
-          <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} />
-          <span className="min-w-0 flex flex-col items-start leading-tight">
-            <span className="text-sm font-bold text-white truncate max-w-[170px]">{authUser?.usuario || 'Usuário'}</span>
-            <span className="text-[11px] font-medium text-gray-400 truncate max-w-[170px]">{authUser?.cargo || ' '}</span>
-          </span>
-        </button>
+        <div className="relative shrink-0">
+          {/* Menu do usuário abre aqui mesmo, perto do item que o aciona,
+              em vez de ancorado no avatar da topbar (Header.tsx). O drawer
+              continua aberto por trás — só fecha ao escolher Perfil/Logout
+              ou ao tocar fora (backdrop abaixo). */}
+          {isAvatarMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-[125]" onClick={() => setIsAvatarMenuOpen(false)} />
+              <div className="absolute left-3 right-3 bottom-full mb-2 z-[130]">
+                <UserDropdownContent
+                  authUser={authUser}
+                  onPerfilClick={() => { setIsAvatarMenuOpen(false); setCurrentView('perfil'); }}
+                  onLogoutClick={() => { setIsAvatarMenuOpen(false); handleLogout(); }}
+                />
+              </div>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)}
+            className="w-full border-t border-white/10 px-4 py-3 flex items-center gap-3 text-left hover:bg-white/5 transition-colors"
+          >
+            <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} />
+            <span className="min-w-0 flex flex-col items-start leading-tight">
+              <span className="text-sm font-bold text-white truncate max-w-[170px]">{authUser?.usuario || 'Usuário'}</span>
+              <span className="text-[11px] font-medium text-gray-400 truncate max-w-[170px]">{authUser?.cargo || ' '}</span>
+            </span>
+          </button>
+        </div>
       </aside>
     </>
   );
