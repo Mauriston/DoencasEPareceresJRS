@@ -138,7 +138,7 @@ export const LawReference: React.FC = () => {
             const isBrasao = law.imageUrl.includes('brasao-da-republica');
 
             return (
-              <div key={law.id} className="relative group bg-white rounded-2xl shadow-sm border border-gray-200/60 hover:border-[#079551] hover:shadow-md transition-all overflow-hidden flex items-center justify-between">
+              <div key={law.id} className="relative group bg-white rounded-xl border border-gray-200/60 hover:border-[#079551] hover:shadow-md transition-all overflow-hidden flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => setSelectedLaw(law)}
