@@ -74,6 +74,10 @@ const App: React.FC = () => {
   const [permissoesLoading, setPermissoesLoading] = useState(true);
   const [senhaAlertDismissed, setSenhaAlertDismissed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // Estado do menu do usuário (avatar) compartilhado entre o Header (que o
+  // renderiza) e o item de rodapé do drawer mobile do Sidebar (que também
+  // precisa abri-lo).
+  const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   // A matriz de permissões (config/permissoes no Firestore) é compartilhada
   // entre todos os usuários/dispositivos — o listener fica aberto durante
   // toda a sessão para refletir em tempo real uma alteração feita por um
@@ -230,6 +234,8 @@ const App: React.FC = () => {
         periciaMenorVigentes,
         isMobileMenuOpen,
         setIsMobileMenuOpen,
+        isAvatarMenuOpen,
+        setIsAvatarMenuOpen,
       }}
     >
       <div className="fixed inset-0 flex bg-[#F3F5F7] text-[#1F2937] overflow-hidden antialiased select-none">
