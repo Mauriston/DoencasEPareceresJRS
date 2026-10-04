@@ -189,7 +189,11 @@ const getIconForFormat = (formato: string) => {
   return <Book size={18} />;
 };
 
-export const RoteiroJRS: React.FC = () => {
+interface RoteiroJRSProps {
+  onBack?: () => void;
+}
+
+export const RoteiroJRS: React.FC<RoteiroJRSProps> = ({ onBack }) => {
   const [expandedModule, setExpandedModule] = useState<number | null>(null);
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
@@ -216,7 +220,7 @@ export const RoteiroJRS: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      <Header title="Roteiro JRS" />
+      <Header title="Roteiro JRS" onBack={onBack} />
       
       <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-5xl mx-auto w-full">
         <div className="mb-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-200/60">

@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react';
 import { NavContext } from '../context/NavContext';
 import { getNavCategories, findCategoryForView, NavCategory } from '../config/navigation';
 import { Avatar } from './Header';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 /**
  * Barra lateral com os menus principais (mesmos cards da Página Inicial).
@@ -20,7 +21,8 @@ export const Sidebar: React.FC = () => {
   const setIsMobileMenuOpen = nav?.setIsMobileMenuOpen || (() => {});
   const setIsAvatarMenuOpen = nav?.setIsAvatarMenuOpen || (() => {});
 
-  const categories = getNavCategories(authUser?.perfil, periciaMenorVigentes);
+  const isDesktop = useIsDesktop();
+  const categories = getNavCategories(authUser?.perfil, periciaMenorVigentes, isDesktop);
   const activeCategory = currentView ? findCategoryForView(categories, currentView) : undefined;
 
   const [expandedId, setExpandedId] = useState<string | undefined>(activeCategory?.id);

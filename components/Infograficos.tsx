@@ -3,7 +3,11 @@ import { Loader2, RefreshCw, AlertCircle, ArrowLeft, Download, Share2, ChevronRi
 import { Header } from './Header';
 import { fetchExtras, ExtraItem } from '../services/extrasService';
 
-export const Infograficos: React.FC = () => {
+interface InfograficosProps {
+  onBack?: () => void;
+}
+
+export const Infograficos: React.FC<InfograficosProps> = ({ onBack }) => {
   const [infograficos, setInfograficos] = useState<ExtraItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +106,7 @@ export const Infograficos: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
-      <Header title="Infográficos" />
+      <Header title="Infográficos" onBack={onBack} />
       <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full flex-1 pb-24 md:pb-12">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">

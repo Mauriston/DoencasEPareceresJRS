@@ -189,10 +189,10 @@ const App: React.FC = () => {
       case 'concursosJRS': return can('concursosJRS') ? <ConcursosJRS /> : <DiseaseGuide />;
       case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor /> : <DiseaseGuide />;
       case 'mensagens': return can('mensagens') ? <Mensagens /> : <DiseaseGuide />;
-      case 'infograficos': return can('infograficos') ? <Infograficos /> : <DiseaseGuide />;
-      case 'casos': return can('casos') ? <CasosPericiais onBack={() => setCurrentView('guide')} /> : <DiseaseGuide />;
-      case 'videos': return can('videos') ? <Videos /> : <DiseaseGuide />;
-      case 'roteiro': return can('roteiro') ? <RoteiroJRS /> : <DiseaseGuide />;
+      case 'infograficos': return can('infograficos') ? <Infograficos onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'casos': return can('casos') ? <CasosPericiais onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'videos': return can('videos') ? <Videos onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'roteiro': return can('roteiro') ? <RoteiroJRS onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
 
       // USUÁRIOS PAGE - Restricted for non-admin
       case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement /> : <DiseaseGuide />;
