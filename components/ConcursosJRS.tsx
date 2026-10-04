@@ -1417,7 +1417,10 @@ const construirItensMenuConcurso = ({
       disabled: !minutaHabilitada, title: minutaHabilitada ? undefined : 'Só é possível gerar a minuta quando todos os candidatos estiverem finalizados.',
     });
   }
-  if (podeAbrirEncerrar && status !== 'encerrado') {
+  // "Editar" (período já configurado) só aparece enquanto o concurso não
+  // tiver lançamentos de dados — mudar o período depois disso invalidaria
+  // os dados já lançados. "Definir" (primeira vez) não tem essa restrição.
+  if (podeAbrirEncerrar && status !== 'encerrado' && (!temPeriodoConfigurado || podeVoltarParaEmBreve)) {
     itens.push({
       key: 'periodo-agendamento',
       label: temPeriodoConfigurado ? 'Editar Período de Agendamento' : 'Definir Período de Agendamento',
