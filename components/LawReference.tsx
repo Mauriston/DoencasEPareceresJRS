@@ -105,7 +105,11 @@ const LEGISLATIONS: Legislation[] = [
   }
 ];
 
-export const LawReference: React.FC = () => {
+interface LawReferenceProps {
+  onBack?: () => void;
+}
+
+export const LawReference: React.FC<LawReferenceProps> = ({ onBack }) => {
   const [selectedLaw, setSelectedLaw] = useState<Legislation | null>(null);
 
   if (selectedLaw) {
@@ -124,7 +128,7 @@ export const LawReference: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      <Header title="Legislação" />
+      <Header title="Legislação" onBack={onBack} />
       
       <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-5xl mx-auto w-full">
         <div className="mb-4 bg-white p-6 rounded-2xl shadow-md border border-gray-200/80 text-center">

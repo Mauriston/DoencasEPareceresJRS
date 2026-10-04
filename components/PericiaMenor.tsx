@@ -39,7 +39,11 @@ const removeAcentos = (str: string) => str.normalize("NFD").replace(/[̀-ͯ]/g, 
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
 
-export const PericiaMenor: React.FC = () => {
+interface PericiaMenorProps {
+  onBack?: () => void;
+}
+
+export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
   const nav = useContext(NavContext);
   const perfil = nav?.authUser?.perfil;
   const canNovo = canUseFeature('pericia-menor.novo', perfil);
@@ -379,7 +383,7 @@ export const PericiaMenor: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50 relative">
-      <Header title="Perícia Menor" />
+      <Header title="Perícia Menor" onBack={onBack} />
       {canNovo && canHistorico && (
       <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
         <button onClick={() => setActiveTab('novo')} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'novo' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>

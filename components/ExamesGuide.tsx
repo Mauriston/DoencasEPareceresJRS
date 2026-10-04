@@ -594,7 +594,11 @@ const EXAMES_DATA: InspecaoItem[] = [
   }
 ];
 
-export const ExamesGuide: React.FC = () => {
+interface ExamesGuideProps {
+  onBack?: () => void;
+}
+
+export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
   const [genero, setGenero] = useState<'Masculino' | 'Feminino'>('Masculino');
   const [idade, setIdade] = useState<string>('30');
   const [selectedFinalidade, setSelectedFinalidade] = useState<string>('Ingresso SAM');
@@ -622,7 +626,7 @@ export const ExamesGuide: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      <Header title="Exames Mínimos" />
+      <Header title="Exames Mínimos" onBack={onBack} />
       
       <div className="p-4 space-y-4 animate-fade-in overflow-auto pb-24 h-full">
         <div className="text-center mb-1">

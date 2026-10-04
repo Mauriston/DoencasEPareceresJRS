@@ -18,7 +18,11 @@ const portariaMarkdown = Object.keys(portariaModules)
   .map(key => portariaModules[key])
   .join('\n\n---\n\n');
 
-export const PortariaGuide: React.FC = () => {
+interface PortariaGuideProps {
+  onBack?: () => void;
+}
+
+export const PortariaGuide: React.FC<PortariaGuideProps> = ({ onBack }) => {
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
@@ -34,7 +38,7 @@ export const PortariaGuide: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] relative">
-      <Header title="Portaria na Integra" />
+      <Header title="Portaria na Integra" onBack={onBack} />
 
       <div className="p-4 md:p-6 space-y-4 max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto w-full flex-1">
         <div className="text-center bg-white p-5 md:p-6 rounded-2xl border border-gray-200/60 shadow-sm">

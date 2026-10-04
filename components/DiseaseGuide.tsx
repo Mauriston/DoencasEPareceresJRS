@@ -227,7 +227,11 @@ const getShortDiseaseName = (name: string) => {
   return name.toUpperCase();
 };
 
-export const DiseaseGuide: React.FC = () => {
+interface DiseaseGuideProps {
+  onBack?: () => void;
+}
+
+export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedDisease, setSelectedDisease] = useState<Disease | null>(null);
@@ -482,7 +486,7 @@ export const DiseaseGuide: React.FC = () => {
   // PAGE LEVEL 1: Main Diseases Grid
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7]">
-      <Header title="Doenças de Lei" />
+      <Header title="Doenças de Lei" onBack={onBack} />
       <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full flex-1 pb-24 md:pb-12">
         <div className="px-1">
           <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase">

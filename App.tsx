@@ -22,11 +22,13 @@ import { Mensagens } from './components/Mensagens';
 import { RoteiroJRS } from './components/RoteiroJRS';
 import { UsuariosManagement } from './components/UsuariosManagement';
 import { NavItem } from './types';
-import { NavContext, AuthUser } from './context/NavContext';
+import { NavContext, AuthUser, getPrimeiroNome } from './context/NavContext';
 import { canAccessPage, setPermissoesCache } from './config/permissions';
 import { onAuthChange, logoutUsuario } from './services/firebaseAuth';
 import { getUsuarioProfile, setUsuarioPublico, UsuarioRecord } from './services/firestoreUsuarios';
 import { observarPermissoes, salvarPermissoesRemoto, type PermissoesArmazenadas } from './services/firestorePermissions';
+import { getCasosResultado } from './services/firestoreCasos';
+import { useIsDesktop } from './hooks/useIsDesktop';
 
 // Chave do antigo armazenamento (localStorage, só neste navegador) das
 // permissões — mantido aqui apenas para a migração automática de uma vez
@@ -73,6 +75,11 @@ const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(true);
   const [permissoesLoading, setPermissoesLoading] = useState(true);
   const [senhaAlertDismissed, setSenhaAlertDismissed] = useState(false);
+  const [casosAlertDismissed, setCasosAlertDismissed] = useState(false);
+  // null enquanto ainda não verificamos; depois, true/false conforme já
+  // existe (ou não) um resultado salvo para este usuário.
+  const [casosRespondido, setCasosRespondido] = useState<boolean | null>(null);
+  const isDesktop = useIsDesktop();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // Estado do menu do usuário (avatar) compartilhado entre o Header (que o
   // renderiza) e o item de rodapé do drawer mobile do Sidebar (que também
@@ -113,6 +120,19 @@ const App: React.FC = () => {
     return unsubscribe;
   }, [authUser?.uid]);
 
+  // Lembrete de Casos Periciais (só mobile, ver modal mais abaixo): verifica
+  // uma vez por login se este usuário já tem um resultado salvo. A
+  // permissão em si (canAccessPage) é checada no render, não aqui, para
+  // sempre refletir o cache de permissões mais atual.
+  useEffect(() => {
+    if (!authUser) { setCasosRespondido(null); return; }
+    let cancelado = false;
+    getCasosResultado(authUser.uid)
+      .then(resultado => { if (!cancelado) setCasosRespondido(!!resultado); })
+      .catch(() => { if (!cancelado) setCasosRespondido(null); });
+    return () => { cancelado = true; };
+  }, [authUser?.uid]);
+
   useEffect(() => {
     const unsubscribe = onAuthChange(async (firebaseUser) => {
       if (!firebaseUser) {
@@ -129,6 +149,7 @@ const App: React.FC = () => {
         }
         setAuthUser(buildAuthUser(profile));
         setSenhaAlertDismissed(false);
+        setCasosAlertDismissed(false);
         setCurrentView('home');
         // Auto-cura do espelho público (menu suspenso de login): garante que
         // este usuário sempre apareça na lista, mesmo se o registro em
@@ -176,26 +197,26 @@ const App: React.FC = () => {
     switch (currentView) {
       case 'home': return <Home />;
       case 'perfil': return <Perfil />;
-      case 'guide': return <DiseaseGuide />;
-      case 'laws': return can('laws') ? <LawReference /> : <DiseaseGuide />;
-      case 'dgpm406': return can('dgpm406') ? <DGPM406Guide /> : <DiseaseGuide />;
-      case 'concursos': return can('concursos') ? <ConcursosGuide /> : <DiseaseGuide />;
-      case 'portaria': return can('portaria') ? <PortariaGuide /> : <DiseaseGuide />;
-      case 'exames': return can('exames') ? <ExamesGuide /> : <DiseaseGuide />;
-      case 'templates': return can('templates') ? <TemplatesGuide /> : <DiseaseGuide />;
+      case 'guide': return <DiseaseGuide onBack={() => setCurrentView('home')} />;
+      case 'laws': return can('laws') ? <LawReference onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'dgpm406': return can('dgpm406') ? <DGPM406Guide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'concursos': return can('concursos') ? <ConcursosGuide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'portaria': return can('portaria') ? <PortariaGuide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'exames': return can('exames') ? <ExamesGuide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'templates': return can('templates') ? <TemplatesGuide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
 
       // PÁGINAS RESTRITAS POR PERFIL (config/permissions.ts, editável em Usuários)
-      case 'pareceres': return can('pareceres') ? <Pareceres /> : <DiseaseGuide />;
-      case 'concursosJRS': return can('concursosJRS') ? <ConcursosJRS /> : <DiseaseGuide />;
-      case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor /> : <DiseaseGuide />;
-      case 'mensagens': return can('mensagens') ? <Mensagens /> : <DiseaseGuide />;
-      case 'infograficos': return can('infograficos') ? <Infograficos /> : <DiseaseGuide />;
-      case 'casos': return can('casos') ? <CasosPericiais onBack={() => setCurrentView('guide')} /> : <DiseaseGuide />;
-      case 'videos': return can('videos') ? <Videos /> : <DiseaseGuide />;
-      case 'roteiro': return can('roteiro') ? <RoteiroJRS /> : <DiseaseGuide />;
+      case 'pareceres': return can('pareceres') ? <Pareceres onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'concursosJRS': return can('concursosJRS') ? <ConcursosJRS onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'mensagens': return can('mensagens') ? <Mensagens onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'infograficos': return can('infograficos') ? <Infograficos onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'casos': return can('casos') ? <CasosPericiais onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'videos': return can('videos') ? <Videos onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'roteiro': return can('roteiro') ? <RoteiroJRS onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
 
       // USUÁRIOS PAGE - Restricted for non-admin
-      case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement /> : <DiseaseGuide />;
+      case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
 
       default: return <Home />;
     }
@@ -222,6 +243,15 @@ const App: React.FC = () => {
   }
 
   const mostrarAlertaSenha = !!authUser.senhaTemporaria && currentView !== 'perfil' && !senhaAlertDismissed;
+  // Só mobile, só depois do alerta de senha (se houver), só quem tem
+  // permissão para a página e ainda não respondeu.
+  const mostrarAlertaCasos =
+    !isDesktop &&
+    !mostrarAlertaSenha &&
+    !casosAlertDismissed &&
+    casosRespondido === false &&
+    currentView !== 'casos' &&
+    canAccessPage('casos', authUser.perfil);
 
   return (
     <NavContext.Provider
@@ -283,6 +313,41 @@ const App: React.FC = () => {
                   className="flex-1 px-4 py-2.5 rounded-xl bg-[#079551] hover:bg-[#067a43] text-white text-xs md:text-sm font-bold transition-colors"
                 >
                   Alterar Senha
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mostrarAlertaCasos && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
+            <div className="p-5 flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+                <span className="material-symbols-outlined text-[28px] text-[#050F41]">quiz</span>
+              </div>
+              <h3 className="font-heading font-bold text-sm text-[#050F41] mb-1.5">{getPrimeiroNome(authUser)},</h3>
+              <p className="text-xs md:text-sm text-gray-500 mb-1">
+                Você ainda não respondeu os <strong className="text-gray-700">Casos Periciais</strong>. Trata-se de
+                um bloco de 24 questões comentadas de múltipla escolha sobre os pontos mais importantes na prática
+                da DGPM-406. Não deixe de fazer essa auto-avaliação!
+              </p>
+              <p className="text-xs md:text-sm text-gray-400 italic mb-5">CT Mauriston.</p>
+              <div className="flex items-center gap-2 w-full">
+                <button
+                  type="button"
+                  onClick={() => setCasosAlertDismissed(true)}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Responder depois
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setCasosAlertDismissed(true); setCurrentView('casos'); }}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#079551] hover:bg-[#067a43] text-white text-xs md:text-sm font-bold transition-colors"
+                >
+                  Responder
                 </button>
               </div>
             </div>

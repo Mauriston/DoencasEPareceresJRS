@@ -99,7 +99,11 @@ type SelectedDoc =
   | { kind: 'markdown'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; markdown: string }
   | { kind: 'pdf'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; embedUrl: string };
 
-export const DGPM406Guide: React.FC = () => {
+interface DGPM406GuideProps {
+  onBack?: () => void;
+}
+
+export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState<'capitulos' | 'anexos'>('capitulos');
   const [selectedDoc, setSelectedDoc] = useState<SelectedDoc | null>(null);
 
@@ -184,7 +188,7 @@ export const DGPM406Guide: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50 animate-fade-in relative">
-      <Header title="DGPM-406" />
+      <Header title="DGPM-406" onBack={onBack} />
 
       <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
         <button

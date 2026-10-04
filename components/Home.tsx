@@ -4,14 +4,16 @@ import { Header } from './Header';
 import { NavContext, getPrimeiroNome } from '../context/NavContext';
 import { getNavCategories, NavCategory } from '../config/navigation';
 import { listarConcursos } from '../services/firestoreConcursos';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 export const Home: React.FC = () => {
   const nav = useContext(NavContext);
   const setCurrentView = nav?.setCurrentView || (() => {});
   const authUser = nav?.authUser || null;
   const periciaMenorVigentes = nav?.periciaMenorVigentes || 0;
+  const isDesktop = useIsDesktop();
 
-  const categories = getNavCategories(authUser?.perfil, periciaMenorVigentes);
+  const categories = getNavCategories(authUser?.perfil, periciaMenorVigentes, isDesktop);
   const primeiroNome = getPrimeiroNome(authUser);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [temConcursoEmAndamento, setTemConcursoEmAndamento] = useState(false);

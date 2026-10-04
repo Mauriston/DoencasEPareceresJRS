@@ -4,7 +4,11 @@ import { Loader2, RefreshCw, AlertCircle, Play, X } from 'lucide-react';
 import { Header } from './Header';
 import { fetchExtras, ExtraItem } from '../services/extrasService';
 
-export const Videos: React.FC = () => {
+interface VideosProps {
+  onBack?: () => void;
+}
+
+export const Videos: React.FC<VideosProps> = ({ onBack }) => {
   const [videos, setVideos] = useState<ExtraItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +56,7 @@ export const Videos: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50 animate-fade-in relative">
-      <Header title="Vídeos" />
+      <Header title="Vídeos" onBack={onBack} />
       <div className="p-4 space-y-6 overflow-y-auto w-full max-w-full flex-1 pb-24">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">

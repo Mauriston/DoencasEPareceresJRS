@@ -26,6 +26,12 @@ export interface NavCategory {
   subitems: NavSubItem[];
 }
 
+// "Casos Periciais" e "Vídeos" só aparecem no menu (Sidebar/Home) na
+// visualização mobile — a própria página já trata o acesso via desktop
+// (ex.: CasosPericiais mostra um aviso "só no mobile"), mas o item nem
+// precisa aparecer no menu nesse caso.
+const MOBILE_ONLY_PAGES: NavItem[] = ['casos', 'videos'];
+
 const CATEGORY_DEFS: { id: string; label: string; icon: string; subtitle: string; pages: NavItem[] }[] = [
   { id: 'concursos', label: 'Concursos', icon: 'checklist', subtitle: 'Acesse as planilhas de acompanhamento.', pages: ['concursosJRS', 'concursos', 'exames'] },
   { id: 'beneficios', label: 'Benefícios', icon: 'stethoscope', subtitle: 'Verifique os critérios de enquadramento das Doenças de Lei.', pages: ['guide', 'portaria'] },
@@ -38,7 +44,8 @@ const CATEGORY_DEFS: { id: string; label: string; icon: string; subtitle: string
 
 export const getNavCategories = (
   perfil: string | undefined,
-  periciaMenorVigentes: number = 0
+  periciaMenorVigentes: number = 0,
+  isDesktop: boolean = false
 ): NavCategory[] => {
   const pageMap = new Map(PAGE_DEFS.map(p => [p.id, p]));
 
@@ -51,6 +58,7 @@ export const getNavCategories = (
       .map(id => pageMap.get(id))
       .filter((p): p is NonNullable<typeof p> => !!p)
       .filter(p => canAccessPage(p.id, perfil))
+      .filter(p => !(isDesktop && MOBILE_ONLY_PAGES.includes(p.id)))
       .map(p => ({
         id: p.id,
         label: p.label,

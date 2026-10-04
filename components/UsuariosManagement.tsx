@@ -25,7 +25,11 @@ const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-
 const labelClass = 'text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1';
 const featureGroups = [...new Set(FEATURE_DEFS.map(f => f.group))];
 
-export const UsuariosManagement: React.FC = () => {
+interface UsuariosManagementProps {
+  onBack?: () => void;
+}
+
+export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }) => {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -247,7 +251,7 @@ export const UsuariosManagement: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
-      <Header title="Gestão de Usuários" />
+      <Header title="Gestão de Usuários" onBack={onBack} />
 
       {toastMessage && (
         <div className="fixed top-20 right-4 z-[100] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in">

@@ -12,7 +12,11 @@ interface ImageItem {
   mimeType: string;
 }
 
-export const Mensagens: React.FC = () => {
+interface MensagensProps {
+  onBack?: () => void;
+}
+
+export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [minuta, setMinuta] = useState<string | null>(null);
@@ -146,7 +150,7 @@ export const Mensagens: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50 relative">
-      <Header title="MENSAGENS" />
+      <Header title="MENSAGENS" onBack={onBack} />
 
       <div className="flex-1 overflow-y-auto px-4 pt-6 pb-28 w-full max-w-2xl mx-auto space-y-5">
 
