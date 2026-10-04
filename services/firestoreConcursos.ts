@@ -311,6 +311,12 @@ export const atualizarCandidato = async (
   if (!snap.exists()) throw new Error(`Candidato com matrícula "${id}" não encontrado.`);
   const atual = toCandidatoRecord(id, snap.data());
 
+  // Uma IS finalizada trava Status/Observações/Nº TIS para edição — mesmo
+  // para o perfil Admin. A única forma de "desfazer" seria direto no banco.
+  if (atual.finalizado) {
+    throw new Error('Esta IS já foi finalizada e não pode mais ser editada.');
+  }
+
   const proximo: Partial<CandidatoRecord> = {};
 
   if (patch.observacoes !== undefined) proximo.observacoes = patch.observacoes || '';
@@ -336,8 +342,22 @@ export const atualizarCandidato = async (
   }
 
   const statusFinal = proximo.status !== undefined ? proximo.status : atual.status;
+  const statusFinalUpper = String(statusFinal || '').trim().toUpperCase();
   const numTisFinal = proximo.numTIS !== undefined ? proximo.numTIS : atual.numTIS;
-  proximo.finalizado = candidatoEstaFinalizado(statusFinal, numTisFinal);
+
+  // Ao inserir o Nº TIS com um status que gera laudo (Apto/Inapto/Faltou/
+  // Insuf. Documental), Apto e Faltou finalizam de imediato limpando as
+  // Observações; Inapto e Insuf. Documental exigem Observações preenchidas
+  // (a UI trata o fluxo de alerta — ver ConcursoDetalhe) e só finalizam
+  // quando já houver algo lançado ali.
+  if (patch.numTIS !== undefined && numTisFinal.trim() && MAPA_LAUDO_POR_STATUS[statusFinalUpper]) {
+    if (statusFinalUpper === 'APTO' || statusFinalUpper === 'FALTOU') {
+      proximo.observacoes = '';
+    }
+  }
+
+  const observacoesFinal = proximo.observacoes !== undefined ? proximo.observacoes : atual.observacoes;
+  proximo.finalizado = candidatoEstaFinalizado(statusFinal, numTisFinal, observacoesFinal);
 
   await updateDoc(candidatoRef(concursoId, id), proximo as any);
   return { ...atual, ...proximo };

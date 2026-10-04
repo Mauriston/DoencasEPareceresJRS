@@ -15,6 +15,7 @@ import { uploadMensagemPdf, uploadTermoRecursoPdf } from '../services/firebaseSt
 import {
   limparRuidoPaginacao, extrairCabecalhoMensagem, extrairCandidatos, extrairPeriodoJRS,
   extrairNomeConcurso, formatarChaveData, parseChaveData, interpretarCsvCandidatosDataBase,
+  MAPA_LAUDO_POR_STATUS,
   type CabecalhoMensagem, type CandidatoBasico, type CandidatoImportadoCsv,
 } from '../utils/concursosUtils';
 import { apiUrl } from '../utils/apiBase';
@@ -1412,9 +1413,10 @@ const construirItensMenuConcurso = ({
       itens.push({ key: 'encerrar', label: 'Encerrar Concurso', icon: 'stop_circle', onClick: onEncerrar });
     }
   }
-  // Status "encerrado": o menu mostra apenas Reabrir/Minuta/Listar Mensagens
-  // (não é exibir desabilitado — os demais itens nem entram na lista).
-  if (podeGerarMinutaResultados && status !== 'em_breve') {
+  // Minuta Resultados só aparece com o concurso "Em Andamento" — some tanto
+  // da tabela quanto do menu de 3 pontos do card quando "Encerrado" (e
+  // nunca apareceu quando "Em Breve").
+  if (podeGerarMinutaResultados && status === 'em_andamento') {
     itens.push({
       key: 'minuta', label: 'Minuta Resultados', icon: 'outgoing_mail', onClick: onMinutaResultados,
       disabled: !minutaHabilitada, title: minutaHabilitada ? undefined : 'Só é possível gerar a minuta quando todos os candidatos estiverem finalizados.',
@@ -1509,6 +1511,7 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = (props) => {
 interface ConcursosListaProps {
   concursos: ConcursoRecord[];
   loading: boolean;
+  perfil?: string;
   podeRegistrarMensagem: boolean;
   podeGerarMinutaResultados: boolean;
   podeImportarCsv: boolean;
@@ -1549,16 +1552,16 @@ const COR_ICONE_STATUS_CONCURSO: Record<ConcursoRecord['status'], string> = {
 const celulaNumericaTabela = (valor: number, status: ConcursoRecord['status']): React.ReactNode =>
   valor === 0 && status === 'em_breve' ? '' : valor;
 
-const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeVisualizarTabela, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar, onBack }) => {
+const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, perfil, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeVisualizarTabela, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar, onBack }) => {
   const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number; temLancamento: boolean }>>({});
-  const [temMensagens, setTemMensagens] = useState<Record<string, boolean>>({});
+  // Contagem de mensagens arquivadas por concurso — usada tanto para saber
+  // se "Listar Mensagens" deve aparecer no menu quanto para o badge do
+  // ícone na coluna Ações da visão em tabela (mobile).
+  const [mensagensCount, setMensagensCount] = useState<Record<string, number>>({});
   const [openGroups, setOpenGroups] = useState<Set<ConcursoRecord['status']>>(new Set(['em_andamento', 'em_breve']));
   const [viewMode, setViewMode] = useState<'cards' | 'tabela'>('cards');
   const [statusCounts, setStatusCounts] = useState<Record<string, { apto: number; inapto: number; faltou: number; idm: number }>>({});
   const [loadingStatusCounts, setLoadingStatusCounts] = useState(false);
-  // A visão em tabela é um recurso de desktop — no mobile os cards sempre
-  // aparecem, mesmo que o usuário tenha deixado a tabela ativa antes de
-  // reduzir a janela/girar o aparelho.
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches);
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 768px)');
@@ -1566,7 +1569,13 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
-  const efetivoViewMode: 'cards' | 'tabela' = isDesktop && podeVisualizarTabela ? viewMode : 'cards';
+  // No desktop a tabela é sempre opcional (alterna com o botão, começa em
+  // cards). No mobile ela também fica disponível: perfil User Secretaria
+  // vê a tabela direto, sem o botão de alternar (fica travado em tabela);
+  // os demais perfis mantêm os cards como padrão, com o botão de alternar
+  // agora também visível no mobile.
+  const tabelaTravadaSecretaria = !isDesktop && perfil === 'user_secretaria';
+  const efetivoViewMode: 'cards' | 'tabela' = !podeVisualizarTabela ? 'cards' : tabelaTravadaSecretaria ? 'tabela' : viewMode;
 
   const [estatisticas, setEstatisticas] = useState<EstatisticasAnuais | null>(null);
   const [loadingEstatisticas, setLoadingEstatisticas] = useState(true);
@@ -1606,8 +1615,8 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
   useEffect(() => {
     let cancelado = false;
     (async () => {
-      const entradas = await Promise.all(concursos.map(async c => [c.id, (await listarMensagens(c.id)).length > 0] as const));
-      if (!cancelado) setTemMensagens(Object.fromEntries(entradas));
+      const entradas = await Promise.all(concursos.map(async c => [c.id, (await listarMensagens(c.id)).length] as const));
+      if (!cancelado) setMensagensCount(Object.fromEntries(entradas));
     })();
     return () => { cancelado = true; };
   }, [concursos]);
@@ -1907,8 +1916,12 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
           </div>
         ) : (
           <>
-            {podeVisualizarTabela && (
-              <div className="hidden md:flex items-center justify-end">
+            {/* Perfil User Secretaria no mobile fica travado na tabela — sem
+                botão para alternar. Os demais perfis mantêm os cards como
+                padrão, com o botão de alternar agora disponível também no
+                mobile (antes era um recurso só de desktop). */}
+            {podeVisualizarTabela && !tabelaTravadaSecretaria && (
+              <div className="flex items-center justify-end">
                 <button
                   type="button"
                   onClick={() => setViewMode(v => (v === 'cards' ? 'tabela' : 'cards'))}
@@ -1951,7 +1964,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                             const podeVoltarParaEmBreve = !contagem?.temLancamento;
                             const minutaHabilitada = c.status === 'encerrado' || podeEncerrar;
                             const temPeriodoConfigurado = !!c.periodoInicioISO;
-                            const temMensagensRegistradas = !!temMensagens[c.id];
+                            const temMensagensRegistradas = !!mensagensCount[c.id];
                             const sc = statusCounts[c.id];
                             const itensAcoes = construirItensMenuConcurso({
                               status: c.status,
@@ -1984,18 +1997,29 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                                 <td className="py-3 px-4 text-center font-bold text-[#050F41]">{sc ? celulaNumericaTabela(sc.idm, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
                                 <td className="py-3 px-4 text-center font-bold text-[#050F41]">{sc ? celulaNumericaTabela(sc.faltou, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
                                 <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
-                                  <div className="flex items-center justify-end gap-1">
-                                    {itensAcoes.map(item => (
-                                      <button
-                                        key={item.key}
-                                        type="button"
-                                        title={item.label}
-                                        onClick={item.onClick}
-                                        className="p-1.5 rounded-lg text-gray-600 hover:text-[#050F41] hover:bg-black/5 transition-colors"
-                                      >
-                                        <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'wght' 600" }}>{item.icon}</span>
-                                      </button>
-                                    ))}
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    {itensAcoes.map(item => {
+                                      // Exceções vermelhas: Minuta Resultados (só aparece com o
+                                      // concurso em andamento) e Encerrar Concurso (sempre).
+                                      const vermelho = item.key === 'minuta' || item.key === 'encerrar';
+                                      const mostrarBadgeMensagens = item.key === 'listar-msg' && (c.status === 'em_andamento' || c.status === 'em_breve');
+                                      return (
+                                        <button
+                                          key={item.key}
+                                          type="button"
+                                          title={item.label}
+                                          onClick={item.onClick}
+                                          className={`relative p-2 rounded-xl transition-colors cursor-pointer ${vermelho ? 'text-red-700 bg-red-50 hover:bg-red-600 hover:text-white' : 'text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white'}`}
+                                        >
+                                          <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'wght' 600" }}>{item.icon}</span>
+                                          {mostrarBadgeMensagens && mensagensCount[c.id] > 0 && (
+                                            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#079551] text-white text-[10px] font-bold flex items-center justify-center">
+                                              {mensagensCount[c.id]}
+                                            </span>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
                                   </div>
                                 </td>
                               </tr>
@@ -2033,7 +2057,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
                       const podeVoltarParaEmBreve = !contagem?.temLancamento;
                       const minutaHabilitada = c.status === 'encerrado' || podeEncerrar;
                       const temPeriodoConfigurado = !!c.periodoInicioISO;
-                      const temMensagensRegistradas = !!temMensagens[c.id];
+                      const temMensagensRegistradas = !!mensagensCount[c.id];
                       return (
                         <div key={c.id} className={`rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col ${getConcursoCardBg(c.status)}`}>
                           <div className="flex items-stretch flex-1">
@@ -2143,14 +2167,40 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
   const [reagendandoCandidato, setReagendandoCandidato] = useState<CandidatoRecord | null>(null);
   const [confirmandoReagendamento, setConfirmandoReagendamento] = useState(false);
-  // Mobile: célula de Observações abre um modal ampliado (ler/editar) em vez
-  // do input inline usado no desktop.
-  const [observacaoModalCandidato, setObservacaoModalCandidato] = useState<CandidatoRecord | null>(null);
-  // Mobile: botão de voltar flutuante sobre a tabela ao rolar + botão de
+  // Mobile: item da lista abre um modal full-screen com os detalhes da IS
+  // (Status/Observações editáveis, Nº TIS somente leitura, ações) em vez da
+  // edição inline usada no desktop.
+  const [candidatoModalMobile, setCandidatoModalMobile] = useState<CandidatoRecord | null>(null);
+  // Mobile: botão de voltar flutuante sobre a lista ao rolar + botão de
   // voltar ao topo (ver JSX mais abaixo).
   const isDesktop = useIsDesktop();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [mostrarBotaoTopo, setMostrarBotaoTopo] = useState(false);
+
+  // Fluxo de finalização via Nº TIS (desktop, único lugar onde o campo é
+  // editável — ver regra em "Mobile: Nº TIS nunca editável"). Quando o
+  // status exige motivo (Inapto/Insuf. Documental) e as Observações ainda
+  // estão vazias, o Nº TIS fica retido aqui (não é persistido) até o
+  // usuário preencher as Observações; qualquer outra ação aborta a
+  // finalização sem deixar rastro no banco.
+  const [pendingFinalizacao, setPendingFinalizacao] = useState<{ candidatoId: string; status: string; numTIS: string } | null>(null);
+  const [alertDialog, setAlertDialog] = useState<{ message: string } | null>(null);
+  const obsPendenteRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!pendingFinalizacao || alertDialog) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (obsPendenteRef.current && obsPendenteRef.current.contains(e.target as Node)) return;
+      setPendingFinalizacao(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [pendingFinalizacao, alertDialog]);
+
+  // Accordion por data: uma data só vira accordion (recolhida por padrão)
+  // quando todas as IS daquele dia estão finalizadas — e isso é desprezado
+  // enquanto houver algum filtro ativo (busca, status ou data).
+  const [openDateGroups, setOpenDateGroups] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const el = scrollContainerRef.current;
@@ -2162,6 +2212,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
   const podeEditar = podeEditarInlineBase && concurso?.status === 'em_andamento';
   const podeReagendar = podeReagendarBase && concurso?.status === 'em_andamento';
+  // Nº TIS só é habilitado quando o Status já tem laudo associado (Apto,
+  // Inapto, Faltou ou Insuf. Documental) — ver MAPA_LAUDO_POR_STATUS.
+  const statusTemLaudo = (status: string) => !!MAPA_LAUDO_POR_STATUS[String(status || '').trim().toUpperCase()];
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -2228,6 +2281,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   };
 
   const handleStatusChange = (candidato: CandidatoRecord, novoStatus: string) => {
+    // Trocar o status é "outra ação" diferente de preencher as Observações
+    // pendentes — aborta a finalização em andamento desta linha, se houver.
+    if (pendingFinalizacao?.candidatoId === candidato.id) setPendingFinalizacao(null);
+
     if (novoStatus === 'INAPTO' && candidato.status !== 'INAPTO') {
       setConfirmDialog({
         title: 'Confirmar Status',
@@ -2254,9 +2311,70 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     });
   };
 
-  const handleCampoBlur = (candidato: CandidatoRecord, campo: 'observacoes' | 'numTIS', valor: string) => {
-    if (valor === candidato[campo]) return;
-    salvarCampoCandidato(candidato, { [campo]: valor });
+  const handleObservacoesBlur = (candidato: CandidatoRecord, valor: string) => {
+    if (valor === candidato.observacoes) return;
+    salvarCampoCandidato(candidato, { observacoes: valor }).then(atualizado => {
+      if (atualizado) showToast(atualizado.finalizado ? `IS de ${atualizado.nome} finalizada.` : `Dados de ${atualizado.nome} atualizados com sucesso.`);
+    });
+  };
+
+  // Único lugar onde o Nº TIS é editável (desktop — ver "Mobile: Nº TIS
+  // nunca editável"). Decide, a partir do Status atual, se finaliza de
+  // imediato (Apto/Faltou — Observações são limpas automaticamente pelo
+  // backend), se já finaliza porque já há Observações (Inapto/Insuf.
+  // Documental), ou se precisa reter o valor e pedir o motivo.
+  const handleNumTisBlur = (candidato: CandidatoRecord, valor: string) => {
+    const trimmed = valor.trim();
+    if (trimmed === (candidato.numTIS || '').trim()) return;
+
+    const statusUpper = String(candidato.status || '').trim().toUpperCase();
+    const temLaudo = !!MAPA_LAUDO_POR_STATUS[statusUpper];
+
+    if (!trimmed || !temLaudo) {
+      salvarCampoCandidato(candidato, { numTIS: trimmed });
+      return;
+    }
+
+    if (statusUpper === 'APTO' || statusUpper === 'FALTOU') {
+      salvarCampoCandidato(candidato, { numTIS: trimmed }).then(atualizado => {
+        if (atualizado) showToast(`IS de ${atualizado.nome} finalizada.`);
+      });
+      return;
+    }
+
+    // INAPTO ou INSUF. DOCUMENTAL: só finaliza se já houver Observações.
+    if ((candidato.observacoes || '').trim()) {
+      salvarCampoCandidato(candidato, { numTIS: trimmed }).then(atualizado => {
+        if (atualizado) showToast(`IS de ${atualizado.nome} finalizada.`);
+      });
+      return;
+    }
+
+    // Sem Observações: retém o Nº TIS localmente (não persiste ainda) e
+    // pede o motivo. O clique fora do campo de Observações em destaque
+    // aborta a finalização (ver useEffect acima).
+    setPendingFinalizacao({ candidatoId: candidato.id, status: statusUpper, numTIS: trimmed });
+    setAlertDialog({
+      message: statusUpper === 'INAPTO'
+        ? 'Para finalizar a IS, insira nas observações o motivo da inaptidão.'
+        : 'Para finalizar a IS, insira nas observações o motivo da IDM.',
+    });
+  };
+
+  const handleObservacoesPendenteBlur = (candidato: CandidatoRecord, valor: string) => {
+    if (!pendingFinalizacao || pendingFinalizacao.candidatoId !== candidato.id) return;
+    const trimmed = valor.trim();
+    if (!trimmed) {
+      // Saiu do campo (ex.: Tab) sem preencher — aborta, igual ao clique
+      // fora (que cobre o caso do mouse; este cobre o do teclado).
+      setPendingFinalizacao(null);
+      return;
+    }
+    const pendente = pendingFinalizacao;
+    setPendingFinalizacao(null);
+    salvarCampoCandidato(candidato, { numTIS: pendente.numTIS, observacoes: valor }).then(atualizado => {
+      if (atualizado) showToast(`IS de ${atualizado.nome} finalizada.`);
+    });
   };
 
   const handleOpenReagendamento = (candidato: CandidatoRecord) => {
@@ -2382,16 +2500,29 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       .slice(0, 6);
   }, [candidatos, search]);
 
+  // Nenhum filtro ativo = nenhuma busca, chip de status ou data selecionados
+  // — condição para o grupo de uma data poder virar accordion (ver abaixo).
+  const filtrosAtivos = !!search.trim() || !!statusKpiFilter || dateFilterMode !== 'todos';
+
   const gruposPorData = useMemo(() => {
-    const grupos: { dataBR: string; itens: typeof filteredCandidatos }[] = [];
+    const grupos: { dataBR: string; itens: typeof filteredCandidatos; finalizado: boolean }[] = [];
     filteredCandidatos.forEach(c => {
       const label = c.dataAgendamentoBR || 'Sem data';
       const ultimo = grupos[grupos.length - 1];
       if (ultimo && ultimo.dataBR === label) ultimo.itens.push(c);
-      else grupos.push({ dataBR: label, itens: [c] });
+      else grupos.push({ dataBR: label, itens: [c], finalizado: false });
     });
+    grupos.forEach(g => { g.finalizado = g.itens.every(c => c.finalizado); });
     return grupos;
   }, [filteredCandidatos]);
+
+  const toggleDateGroup = (dataBR: string) => {
+    setOpenDateGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(dataBR)) next.delete(dataBR); else next.add(dataBR);
+      return next;
+    });
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
@@ -2508,7 +2639,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 lg:flex-1">
+          {/* Chip filters: só no desktop (tabela) — na lista mobile ficam só
+              a busca por nome e o filtro de data. */}
+          <div className="hidden md:flex flex-wrap items-center gap-2 lg:flex-1">
             {chipFilters.map(chip => {
               const isActive = statusKpiFilter === chip.filterValue;
               return (
@@ -2593,7 +2726,8 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto pb-2 scroll-x-visible">
+              {/* DESKTOP: tabela, como sempre foi. */}
+              <div className="hidden md:block overflow-x-auto pb-2 scroll-x-visible">
                 <table className="w-full min-w-[780px] text-left border-collapse table-fixed">
                   <colgroup>
                     <col style={{ width: '3%' }} />
@@ -2613,73 +2747,148 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-[14px]">
-                    {gruposPorData.map(grupo => (
-                      <React.Fragment key={grupo.dataBR}>
-                        <tr className="bg-gray-50/60">
-                          <td colSpan={6} className="py-2 px-4 text-sm font-bold text-[#050F41] uppercase tracking-wider">{grupo.dataBR}</td>
-                        </tr>
-                        {grupo.itens.map(c => (
-                          <tr key={c.id} className="hover:bg-gray-50/80 transition-colors">
-                            <td className="py-3.5 pl-4 pr-0 w-8">
-                              {c.finalizado && (
-                                <span className="material-symbols-outlined text-[20px] text-[#079551]" style={{ fontVariationSettings: "'FILL' 1" }} title="Finalizado">check_circle</span>
-                              )}
-                            </td>
-                            <td className="py-3.5 pl-2 pr-4 cursor-pointer" onClick={() => handleCopiarNomeCandidato(c.nome)} title="Clique para copiar o nome do candidato">
-                              <p className="font-semibold text-gray-800">{c.nome}</p>
-                              <p className="text-[12px] font-mono text-gray-400">{c.id}</p>
-                            </td>
-                            <td className="py-3.5 px-4">
-                              {podeEditar ? (
-                                <select value={c.status || ''} onChange={e => handleStatusChange(c, e.target.value)} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg border focus:outline-none focus:border-[#050F41] cursor-pointer ${getStatusSelectClasses(c.status)}`}>
-                                  {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                                </select>
-                              ) : getStatusBadge(c.status)}
-                            </td>
-                            <td className="py-3.5 px-4 text-gray-600">
-                              {/* Desktop: input inline, como sempre foi. */}
-                              <div className="hidden md:block">
-                                {podeEditar ? (
-                                  <input type="text" defaultValue={c.observacoes} onBlur={e => handleCampoBlur(c, 'observacoes', e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
-                                ) : <span className="truncate block" title={c.observacoes}>{c.observacoes || '-'}</span>}
+                    {gruposPorData.map(grupo => {
+                      // Um grupo só vira accordion (recolhido por padrão) quando
+                      // todas as IS do dia já estão finalizadas — e isso é
+                      // desprezado enquanto houver algum filtro ativo.
+                      const grupoAccordion = grupo.finalizado && !filtrosAtivos;
+                      const expandidoGrupo = !grupoAccordion || openDateGroups.has(grupo.dataBR);
+                      return (
+                        <React.Fragment key={grupo.dataBR}>
+                          <tr
+                            className={`bg-gray-50/60 ${grupoAccordion ? 'cursor-pointer select-none hover:bg-gray-100/70' : ''}`}
+                            onClick={grupoAccordion ? () => toggleDateGroup(grupo.dataBR) : undefined}
+                          >
+                            <td colSpan={6} className="py-2.5 px-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base font-extrabold text-[#050F41] uppercase tracking-wider">
+                                  {grupo.dataBR} <span className="text-gray-400 font-bold">({grupo.itens.length})</span>
+                                </span>
+                                {grupoAccordion && (
+                                  <span className={`material-symbols-outlined text-[20px] text-gray-400 ml-auto transition-transform duration-200 ${expandidoGrupo ? 'rotate-180' : ''}`}>expand_more</span>
+                                )}
                               </div>
-                              {/* Mobile: abre um modal ampliado para ler/editar. */}
-                              <button
-                                type="button"
-                                onClick={() => setObservacaoModalCandidato(c)}
-                                className="md:hidden w-full text-left truncate text-[13px] text-gray-600 underline decoration-dotted underline-offset-2"
-                              >
-                                {c.observacoes || '-'}
-                              </button>
-                            </td>
-                            <td className="py-3.5 px-4 text-gray-600">
-                              {podeEditar ? (
-                                <input type="text" defaultValue={c.numTIS} onBlur={e => handleCampoBlur(c, 'numTIS', e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
-                              ) : (c.numTIS || '-')}
-                            </td>
-                            <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                              {c.termoRecursoUrl ? (
-                                <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Abrir Termo de Recurso">
-                                  <span className="material-symbols-outlined text-[22px]">description</span>
-                                </a>
-                              ) : c.status === 'INAPTO' ? (
-                                <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer" title="Gerar Termo de Recurso">
-                                  <span className="material-symbols-outlined text-[22px]">gavel</span>
-                                </button>
-                              ) : null}
-
-                              {podeReagendar && !c.finalizado && (
-                                <button type="button" onClick={() => handleOpenReagendamento(c)} className="p-2 ml-1 text-[#079551] bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer" title="Reagendar">
-                                  <span className="material-symbols-outlined text-[22px]">event_repeat</span>
-                                </button>
-                              )}
                             </td>
                           </tr>
-                        ))}
-                      </React.Fragment>
-                    ))}
+                          {expandidoGrupo && grupo.itens.map(c => {
+                            const estaPendente = pendingFinalizacao?.candidatoId === c.id;
+                            const editavel = podeEditar && !c.finalizado;
+                            const numTisHabilitado = editavel && statusTemLaudo(c.status);
+                            return (
+                              <tr key={c.id} className="hover:bg-gray-50/80 transition-colors">
+                                <td className="py-3.5 pl-4 pr-0 w-8">
+                                  {c.finalizado && (
+                                    <span className="material-symbols-outlined text-[20px] text-[#079551]" style={{ fontVariationSettings: "'FILL' 1" }} title="Finalizado">check_circle</span>
+                                  )}
+                                </td>
+                                <td className="py-3.5 pl-2 pr-4 cursor-pointer" onClick={() => handleCopiarNomeCandidato(c.nome)} title="Clique para copiar o nome do candidato">
+                                  <p className="font-semibold text-gray-800">{c.nome}</p>
+                                  <p className="text-[12px] font-mono text-gray-400">{c.id}</p>
+                                </td>
+                                <td className="py-3.5 px-4">
+                                  {editavel ? (
+                                    <select value={c.status || ''} onChange={e => handleStatusChange(c, e.target.value)} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg border focus:outline-none focus:border-[#050F41] cursor-pointer ${getStatusSelectClasses(c.status)}`}>
+                                      {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                    </select>
+                                  ) : getStatusBadge(c.status)}
+                                </td>
+                                <td className="py-3.5 px-4 text-gray-600">
+                                  {estaPendente ? (
+                                    <input
+                                      ref={obsPendenteRef}
+                                      type="text"
+                                      defaultValue=""
+                                      autoFocus
+                                      onBlur={e => handleObservacoesPendenteBlur(c, e.target.value)}
+                                      placeholder={pendingFinalizacao?.status === 'INAPTO' ? 'Digite aqui o motivo da inaptidão' : 'Digite aqui o motivo da IDM'}
+                                      className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-red-300 bg-red-50 placeholder:text-red-400 focus:outline-none focus:border-red-500"
+                                    />
+                                  ) : editavel ? (
+                                    <input type="text" defaultValue={c.observacoes} onBlur={e => handleObservacoesBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
+                                  ) : <span className="truncate block" title={c.observacoes}>{c.observacoes || '-'}</span>}
+                                </td>
+                                <td className="py-3.5 px-4 text-gray-600">
+                                  {estaPendente ? (
+                                    <input type="text" value={pendingFinalizacao?.numTIS || ''} disabled className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-amber-300 bg-amber-100 text-amber-900 font-semibold cursor-not-allowed" />
+                                  ) : numTisHabilitado ? (
+                                    <input type="text" defaultValue={c.numTIS} onBlur={e => handleNumTisBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
+                                  ) : editavel ? (
+                                    <input type="text" value={c.numTIS} disabled title="Defina o Status (Apto, Inapto, Faltou ou Insuf. Documental) para habilitar este campo." className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed" />
+                                  ) : (c.numTIS || '-')}
+                                </td>
+                                <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                                  {c.termoRecursoUrl ? (
+                                    <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Abrir Termo de Recurso">
+                                      <span className="material-symbols-outlined text-[22px]">description</span>
+                                    </a>
+                                  ) : c.status === 'INAPTO' ? (
+                                    <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer" title="Gerar Termo de Recurso">
+                                      <span className="material-symbols-outlined text-[22px]">gavel</span>
+                                    </button>
+                                  ) : null}
+
+                                  {podeReagendar && !c.finalizado && (
+                                    <button type="button" onClick={() => handleOpenReagendamento(c)} className="p-2 ml-1 text-[#079551] bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer" title="Reagendar">
+                                      <span className="material-symbols-outlined text-[22px]">event_repeat</span>
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
+              </div>
+
+              {/* MOBILE: lista Material Design 3 (sem tabela/rolagem horizontal). */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {gruposPorData.map(grupo => {
+                  const grupoAccordion = grupo.finalizado && !filtrosAtivos;
+                  const expandidoGrupo = !grupoAccordion || openDateGroups.has(grupo.dataBR);
+                  return (
+                    <div key={grupo.dataBR}>
+                      <button
+                        type="button"
+                        disabled={!grupoAccordion}
+                        onClick={grupoAccordion ? () => toggleDateGroup(grupo.dataBR) : undefined}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 bg-gray-50/60 text-left"
+                      >
+                        <span className="text-sm font-extrabold text-[#050F41] uppercase tracking-wider">
+                          {grupo.dataBR} <span className="text-gray-400 font-bold">({grupo.itens.length})</span>
+                        </span>
+                        {grupoAccordion && (
+                          <span className={`material-symbols-outlined text-[20px] text-gray-400 ml-auto transition-transform duration-200 ${expandidoGrupo ? 'rotate-180' : ''}`}>expand_more</span>
+                        )}
+                      </button>
+                      {expandidoGrupo && grupo.itens.map(c => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setCandidatoModalMobile(c)}
+                          className="w-full flex items-center gap-3 px-4 py-3 border-t border-gray-100 text-left active:bg-gray-50 transition-colors"
+                        >
+                          <span className="w-6 h-6 shrink-0 flex items-center justify-center">
+                            {c.finalizado ? (
+                              <span className="material-symbols-outlined text-[20px] text-[#079551]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            ) : c.status === 'Reagendado' ? (
+                              <span className="material-symbols-outlined text-[20px] text-indigo-500">event_repeat</span>
+                            ) : null}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-semibold text-gray-800 truncate">{c.nome}</span>
+                            {c.observacoes && (
+                              <span className="block text-xs text-gray-500 truncate">{c.observacoes}</span>
+                            )}
+                          </span>
+                          <span className="shrink-0">{c.status ? getStatusBadge(c.status) : null}</span>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}
@@ -2739,39 +2948,111 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         />
       )}
 
-      {/* Mobile: modal ampliado para ler/editar a célula Observações
-          (no desktop a edição continua inline na própria tabela). */}
-      {observacaoModalCandidato && (
-        <div className="md:hidden fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
-              <div className="min-w-0">
-                <h3 className="font-heading font-bold text-sm uppercase truncate">Observações</h3>
-                <p className="text-[11px] text-white/70 truncate">{observacaoModalCandidato.nome}</p>
-              </div>
-              <button onClick={() => setObservacaoModalCandidato(null)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0">
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
+      {/* Alerta (um único botão OK) pedindo o motivo nas Observações antes
+          de finalizar uma IS Inapto/Insuf. Documental — ver handleNumTisBlur. */}
+      {alertDialog && (
+        <div className="fixed inset-0 z-[220] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
+            <div className="p-4 bg-[#050F41] text-white flex items-center space-x-2">
+              <span className="material-symbols-outlined text-[20px] text-[#FAB932]">warning</span>
+              <h3 className="font-heading font-bold text-sm uppercase">Observações obrigatórias</h3>
             </div>
-            <div className="p-5 overflow-y-auto space-y-4 flex-1">
-              {podeEditar ? (
-                <textarea
-                  defaultValue={observacaoModalCandidato.observacoes}
-                  onBlur={e => handleCampoBlur(observacaoModalCandidato, 'observacoes', e.target.value)}
-                  rows={6}
-                  placeholder="Sem observações."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-700 focus:outline-none focus:border-[#050F41] resize-none"
-                />
-              ) : (
-                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{observacaoModalCandidato.observacoes || 'Sem observações.'}</p>
-              )}
+            <div className="p-5 space-y-4">
+              <p className="text-xs md:text-sm text-gray-700 leading-relaxed">{alertDialog.message}</p>
               <div className="flex items-center justify-end">
-                <button type="button" onClick={() => setObservacaoModalCandidato(null)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Fechar</button>
+                <button type="button" onClick={() => setAlertDialog(null)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">OK</button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Mobile: modal full-screen com os detalhes da IS do candidato
+          tocado na lista — Status/Observações editáveis conforme perfil e
+          estado de finalização, Nº TIS sempre somente leitura (nunca
+          editável no mobile) e as ações cabíveis (Termo de Recurso,
+          Reagendar). No desktop a edição continua inline na própria tabela. */}
+      {candidatoModalMobile && (() => {
+        const c = candidatos.find(x => x.id === candidatoModalMobile.id) || candidatoModalMobile;
+        const editavel = podeEditar && !c.finalizado;
+        const podeGerarTermo = !c.termoRecursoUrl && c.status === 'INAPTO';
+        return (
+          <div className="md:hidden fixed inset-0 z-[150] bg-[#F3F5F7] flex flex-col animate-fade-in">
+            <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0 shadow-md">
+              <div className="min-w-0">
+                <h3 className="font-heading font-bold text-base truncate">{c.nome}</h3>
+                <p className="text-[11px] text-white/70 font-mono truncate">{c.id}{c.dataAgendamento ? ` · ${isoParaBR(c.dataAgendamento)}` : ''}</p>
+              </div>
+              <button onClick={() => setCandidatoModalMobile(null)} className="text-gray-300 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors shrink-0">
+                <span className="material-symbols-outlined text-[24px]">close</span>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {c.finalizado && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[20px] text-[#079551]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                  <p className="text-xs font-bold text-green-800">IS finalizada — os dados não podem mais ser alterados.</p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
+                {editavel ? (
+                  <select value={c.status || ''} onChange={e => handleStatusChange(c, e.target.value)} className={`w-full px-3 py-2.5 text-sm font-bold rounded-xl border focus:outline-none focus:border-[#050F41] ${getStatusSelectClasses(c.status)}`}>
+                    {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                ) : (
+                  <div>{getStatusBadge(c.status)}</div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Observações</label>
+                {editavel ? (
+                  <textarea
+                    defaultValue={c.observacoes}
+                    onBlur={e => handleObservacoesBlur(c, e.target.value)}
+                    rows={5}
+                    placeholder="Sem observações."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-700 focus:outline-none focus:border-[#050F41] resize-none"
+                  />
+                ) : (
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{c.observacoes || 'Sem observações.'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Nº TIS</label>
+                {/* Nunca editável no mobile — só é lançado na visão desktop. */}
+                <p className="text-sm font-semibold text-gray-700">{c.numTIS || '-'}</p>
+              </div>
+
+              {(podeGerarTermo || c.termoRecursoUrl || (podeReagendar && !c.finalizado)) && (
+                <div className="pt-2 space-y-2">
+                  {c.termoRecursoUrl ? (
+                    <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-gray-100 text-[#050F41] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-[20px]">description</span>
+                      <span>Abrir Termo de Recurso</span>
+                    </a>
+                  ) : podeGerarTermo ? (
+                    <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="w-full px-4 py-3 bg-gray-100 text-[#050F41] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-[20px]">gavel</span>
+                      <span>Gerar Termo de Recurso</span>
+                    </button>
+                  ) : null}
+                  {podeReagendar && !c.finalizado && (
+                    <button type="button" onClick={() => { setCandidatoModalMobile(null); handleOpenReagendamento(c); }} className="w-full px-4 py-3 bg-green-50 text-[#079551] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-[20px]">event_repeat</span>
+                      <span>Reagendar</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
@@ -2841,6 +3122,7 @@ export const ConcursosJRS: React.FC<ConcursosJRSProps> = ({ onBack }) => {
       <ConcursosLista
         concursos={concursos}
         loading={loadingConcursos}
+        perfil={perfil}
         podeRegistrarMensagem={podeRegistrarMensagem}
         podeGerarMinutaResultados={podeGerarMinutaResultados}
         podeImportarCsv={podeImportarCsv}

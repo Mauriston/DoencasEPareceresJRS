@@ -179,10 +179,17 @@ export const extrairNomeConcurso = (subject: string): string => {
 
 /**
  * Regra que decide se um candidato está "finalizado": status com laudo
- * válido (ver MAPA_LAUDO_POR_STATUS) E Nº TIS preenchido.
+ * válido (ver MAPA_LAUDO_POR_STATUS) E Nº TIS preenchido — e, para os
+ * status Inapto e Insuficiência Documental Médica, também Observações
+ * preenchidas (motivo da inaptidão/IDM), exigido antes de finalizar.
  */
-export const candidatoEstaFinalizado = (statusValor: string, numTisValor: string): boolean =>
-  !!MAPA_LAUDO_POR_STATUS[String(statusValor || '').trim().toUpperCase()] && !!String(numTisValor || '').trim();
+export const candidatoEstaFinalizado = (statusValor: string, numTisValor: string, observacoesValor: string = ''): boolean => {
+  const statusUpper = String(statusValor || '').trim().toUpperCase();
+  if (!MAPA_LAUDO_POR_STATUS[statusUpper]) return false;
+  if (!String(numTisValor || '').trim()) return false;
+  if ((statusUpper === 'INAPTO' || statusUpper === 'INSUF DOCUMENTAL') && !String(observacoesValor || '').trim()) return false;
+  return true;
+};
 
 // =========================================================================
 // EXTRAÇÃO DA MENSAGEM ADMINISTRATIVA (texto já transcrito do PDF)
