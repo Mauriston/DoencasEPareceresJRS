@@ -214,7 +214,11 @@ const inaptidaoCategories = Array.from(new Set(ANEXO_N_INAPTIDAO.map(r => r["Ín
   items: ANEXO_N_INAPTIDAO.filter(r => r["Índice"] === indice).map(r => r.Valor),
 }));
 
-export const ConcursosGuide: React.FC = () => {
+interface ConcursosGuideProps {
+  onBack?: () => void;
+}
+
+export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState<'indices' | 'inaptidao'>('indices');
   const [activeIndice, setActiveIndice] = useState<string>("altura");
   const [activeInaptidao, setActiveInaptidao] = useState<string>("cabeca");
@@ -224,7 +228,7 @@ export const ConcursosGuide: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7]">
-      <Header title="Índices Mínimos - ANEXO N" />
+      <Header title="Índices Mínimos - ANEXO N" onBack={onBack} />
       <div className="p-4 space-y-4 max-w-2xl mx-auto w-full flex-1">
         <div className="text-center mb-1">
           <h2 className="text-base font-heading font-bold text-[#050F41]">PADRÕES PSICOFÍSICOS ADMISSIONAIS</h2>

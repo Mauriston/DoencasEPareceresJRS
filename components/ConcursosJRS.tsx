@@ -1521,6 +1521,7 @@ interface ConcursosListaProps {
   onNovoConcursoClick: () => void;
   onImportarCsvClick: () => void;
   onRecarregar: () => void;
+  onBack?: () => void;
 }
 
 const GRUPOS_STATUS: { status: ConcursoRecord['status']; titulo: string }[] = [
@@ -1548,7 +1549,7 @@ const COR_ICONE_STATUS_CONCURSO: Record<ConcursoRecord['status'], string> = {
 const celulaNumericaTabela = (valor: number, status: ConcursoRecord['status']): React.ReactNode =>
   valor === 0 && status === 'em_breve' ? '' : valor;
 
-const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeVisualizarTabela, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
+const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeVisualizarTabela, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar, onBack }) => {
   const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number; temLancamento: boolean }>>({});
   const [temMensagens, setTemMensagens] = useState<Record<string, boolean>>({});
   const [openGroups, setOpenGroups] = useState<Set<ConcursoRecord['status']>>(new Set(['em_andamento', 'em_breve']));
@@ -1737,7 +1738,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, pod
 
   return (
     <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
-      <Header title="Planilhas de Controle" />
+      <Header title="Planilhas de Controle" onBack={onBack} />
 
       {toastMessage && (
         <div className="fixed top-20 right-4 z-[100] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in max-w-[90vw]">
@@ -2780,7 +2781,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 // COMPONENTE PRINCIPAL — alterna entre a lista de concursos e o detalhe
 // =========================================================================
 
-export const ConcursosJRS: React.FC = () => {
+interface ConcursosJRSProps {
+  onBack?: () => void;
+}
+
+export const ConcursosJRS: React.FC<ConcursosJRSProps> = ({ onBack }) => {
   const nav = useNav();
   const perfil = nav?.authUser?.perfil;
   const isAdmin = perfil === 'admin';
@@ -2848,6 +2853,7 @@ export const ConcursosJRS: React.FC = () => {
         onNovoConcursoClick={() => setShowUploadModal(true)}
         onImportarCsvClick={() => setShowImportarCsvModal(true)}
         onRecarregar={carregarConcursos}
+        onBack={onBack}
       />
       {showUploadModal && <ModalRegistrarMensagem onClose={handleFecharModalUpload} isAdmin={isAdmin} />}
       {showImportarCsvModal && <ModalImportarCsv onClose={handleFecharModalImportarCsv} />}

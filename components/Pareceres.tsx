@@ -7,7 +7,11 @@ const extractNameFromInspecionado = (text: string) => {
   return match.length > 1 ? match[1].trim() : text.trim();
 };
 
-export const Pareceres: React.FC = () => {
+interface PareceresProps {
+  onBack?: () => void;
+}
+
+export const Pareceres: React.FC<PareceresProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState<'novo' | 'historico'>('novo');
   const [peritoSelecionado, setPeritoSelecionado] = useState("");
   const [finalidade, setFinalidade] = useState("");
@@ -216,7 +220,7 @@ export const Pareceres: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50 relative">
-      <Header title="PARECERES" />
+      <Header title="PARECERES" onBack={onBack} />
       <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
         <button onClick={() => handleTabChange('novo')} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'novo' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
           <span className="material-symbols-outlined text-[18px]">add_circle</span><span>Novo</span>

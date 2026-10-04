@@ -53,7 +53,11 @@ const DEFAULT_TEMPLATES: Template[] = [
   },
 ];
 
-export const TemplatesGuide: React.FC = () => {
+interface TemplatesGuideProps {
+  onBack?: () => void;
+}
+
+export const TemplatesGuide: React.FC<TemplatesGuideProps> = ({ onBack }) => {
   const [templates, setTemplates] = useState<Template[]>(DEFAULT_TEMPLATES);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -80,7 +84,7 @@ export const TemplatesGuide: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-light relative pb-20">
-      <Header title="TEMPLATES" />
+      <Header title="TEMPLATES" onBack={onBack} />
 
       <div className="flex-1 overflow-y-auto w-full max-w-5xl mx-auto px-4 py-6">
         {isLoading && templates === DEFAULT_TEMPLATES ? (

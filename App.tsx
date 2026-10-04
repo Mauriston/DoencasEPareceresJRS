@@ -197,26 +197,26 @@ const App: React.FC = () => {
     switch (currentView) {
       case 'home': return <Home />;
       case 'perfil': return <Perfil />;
-      case 'guide': return <DiseaseGuide />;
-      case 'laws': return can('laws') ? <LawReference /> : <DiseaseGuide />;
-      case 'dgpm406': return can('dgpm406') ? <DGPM406Guide /> : <DiseaseGuide />;
-      case 'concursos': return can('concursos') ? <ConcursosGuide /> : <DiseaseGuide />;
-      case 'portaria': return can('portaria') ? <PortariaGuide /> : <DiseaseGuide />;
-      case 'exames': return can('exames') ? <ExamesGuide /> : <DiseaseGuide />;
-      case 'templates': return can('templates') ? <TemplatesGuide /> : <DiseaseGuide />;
+      case 'guide': return <DiseaseGuide onBack={() => setCurrentView('home')} />;
+      case 'laws': return can('laws') ? <LawReference onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'dgpm406': return can('dgpm406') ? <DGPM406Guide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'concursos': return can('concursos') ? <ConcursosGuide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'portaria': return can('portaria') ? <PortariaGuide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'exames': return can('exames') ? <ExamesGuide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'templates': return can('templates') ? <TemplatesGuide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
 
       // PÁGINAS RESTRITAS POR PERFIL (config/permissions.ts, editável em Usuários)
-      case 'pareceres': return can('pareceres') ? <Pareceres /> : <DiseaseGuide />;
-      case 'concursosJRS': return can('concursosJRS') ? <ConcursosJRS /> : <DiseaseGuide />;
-      case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor /> : <DiseaseGuide />;
-      case 'mensagens': return can('mensagens') ? <Mensagens /> : <DiseaseGuide />;
+      case 'pareceres': return can('pareceres') ? <Pareceres onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'concursosJRS': return can('concursosJRS') ? <ConcursosJRS onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'mensagens': return can('mensagens') ? <Mensagens onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
       case 'infograficos': return can('infograficos') ? <Infograficos onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
       case 'casos': return can('casos') ? <CasosPericiais onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
       case 'videos': return can('videos') ? <Videos onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
       case 'roteiro': return can('roteiro') ? <RoteiroJRS onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
 
       // USUÁRIOS PAGE - Restricted for non-admin
-      case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement /> : <DiseaseGuide />;
+      case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
 
       default: return <Home />;
     }
