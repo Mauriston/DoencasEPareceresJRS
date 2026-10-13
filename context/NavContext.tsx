@@ -5,7 +5,7 @@ export interface AuthUser {
   uid: string;
   usuario: string;
   nome: string;
-  perfil: 'admin' | 'user_medicos' | 'user_secretaria' | string;
+  perfil: 'admin' | 'user_medicos' | 'user_secretaria' | 'user_medicos_mpi' | string;
   postoGraduacao?: string;
   cargo?: string;
   nip?: string;
