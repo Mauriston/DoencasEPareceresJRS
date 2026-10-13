@@ -2,11 +2,9 @@
 import React, { useState } from 'react';
 import { Header } from './Header';
 import { MarkdownDocPage } from './MarkdownDocPage';
-import { PdfViewerPage } from './PdfViewerPage';
 import { StoragePdfIconButton, StoragePdfFab } from './StoragePdfButtons';
 import { useStoragePdf } from '../hooks/useStoragePdf';
 import { capituloPdfPath, anexoPdfPath, NORMA_COMPLETA_PDF_PATH } from '../services/firebaseStorageNormas';
-import { getDriveEmbedUrl } from '../utils/googleDrive';
 import { BookOpen, Paperclip } from 'lucide-react';
 
 interface Chapter {
@@ -98,9 +96,7 @@ const ANEXOS: Anexo[] = [
   { id: 'a19', anexo: 'ANEXO AB', title: 'Índices mínimos e condições incapacitantes para o serviço de praticagem', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
 ];
 
-type SelectedDoc =
-  | { kind: 'markdown'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; markdown: string; pdfPath?: string }
-  | { kind: 'pdf'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; embedUrl: string };
+type SelectedDoc = { kind: 'markdown'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; markdown: string; pdfPath?: string };
 
 interface DGPM406GuideProps {
   onBack?: () => void;
@@ -124,12 +120,8 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
       openPdf(NORMA_COMPLETA_PDF_PATH, `${item.chapter} — ${item.title}`);
       return;
     }
-    const embedUrl = getDriveEmbedUrl(item.link);
-    if (embedUrl) {
-      setSelectedDoc({ kind: 'pdf', source: 'capitulo', title: item.chapter, subtitle: item.title, embedUrl });
-    } else {
-      window.open(item.link, '_blank', 'noopener,noreferrer');
-    }
+    const numero = item.chapter.match(/^Capítulo (\d+)$/)?.[1];
+    if (numero) openPdf(capituloPdfPath(Number(numero)), `${item.chapter} — ${item.title}`);
   };
 
   const handleAnexoClick = (item: Anexo) => {
@@ -138,12 +130,9 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
       setSelectedDoc({ kind: 'markdown', source: 'anexo', title: item.anexo, subtitle: item.title, markdown: md, pdfPath: anexoPdfPath(item.anexo.replace(/^ANEXO\s+/i, '')) });
       return;
     }
-    const embedUrl = getDriveEmbedUrl(item.link);
-    if (embedUrl) {
-      setSelectedDoc({ kind: 'pdf', source: 'anexo', title: item.anexo, subtitle: item.title, embedUrl });
-    } else {
-      window.open(item.link, '_blank', 'noopener,noreferrer');
-    }
+    // Anexo sem página renderizada: abre o PDF salvo no Storage (modal
+    // fullscreen no desktop, nova aba no mobile).
+    openPdf(anexoPdfPath(item.anexo.replace(/^ANEXO\s+/i, '')), `${item.anexo} — ${item.title}`);
   };
 
   // Card fixo à esquerda (desktop) com a lista de capítulos, para navegar
@@ -173,7 +162,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
     </div>
   );
 
-  if (selectedDoc?.kind === 'markdown') {
+  if (selectedDoc) {
     const baixar = selectedDoc.pdfPath
       ? () => openPdf(selectedDoc.pdfPath!, `${selectedDoc.title} — ${selectedDoc.subtitle}`)
       : undefined;
@@ -192,18 +181,6 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
         {baixar && <StoragePdfFab busy={baixandoPdf} onClick={baixar} />}
         {modalElement}
       </>
-    );
-  }
-
-  if (selectedDoc?.kind === 'pdf') {
-    return (
-      <PdfViewerPage
-        title={selectedDoc.title}
-        subtitle={selectedDoc.subtitle}
-        embedUrl={selectedDoc.embedUrl}
-        onBack={() => setSelectedDoc(null)}
-        sidebar={selectedDoc.source === 'capitulo' ? chapterNav : undefined}
-      />
     );
   }
 
@@ -232,8 +209,8 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto w-full pb-24 md:pb-12">
         {/* Capítulos: tabela no desktop e lista de itens no mobile. O ícone
-            indica o que o clique faz: abre o PDF na íntegra (file_open, só o
-            primeiro item) ou navega para o capítulo renderizado (chevron). */}
+            indica o que o clique faz: abre o PDF (file_open) ou navega para a
+            página renderizada (chevron). Anexos: mesma tabela no desktop. */}
         {activeTab === 'capitulos' && (
           <div className="hidden md:block bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden">
             <table className="w-full text-left border-collapse">
@@ -260,7 +237,33 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
             </table>
           </div>
         )}
-        <div className={`grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 ${activeTab === 'capitulos' ? 'md:hidden' : ''}`}>
+        {activeTab === 'anexos' && (
+          <div className="hidden md:block bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-bold text-[#050F41] uppercase tracking-wider">
+                  <th className="py-3 px-4 w-44">Anexo</th>
+                  <th className="py-3 px-4">Título</th>
+                  <th className="py-3 px-4 w-12"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {ANEXOS.map(item => (
+                  <tr key={item.id} onClick={() => handleAnexoClick(item)} className="group hover:bg-gray-50 cursor-pointer transition-colors">
+                    <td className="py-3 px-4 text-sm font-heading font-bold text-[#050F41] group-hover:text-[#079551] whitespace-nowrap transition-colors">{item.anexo}</td>
+                    <td className="py-3 px-4 text-xs font-medium text-gray-500 uppercase">{item.title}</td>
+                    <td className="py-3 px-4 text-right">
+                      <span className="material-symbols-outlined text-[20px] text-gray-400 group-hover:text-[#050F41] transition-colors align-middle">
+                        {item.mdKey ? 'chevron_right' : 'file_open'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 md:hidden">
           {activeTab === 'capitulos' ? (
             CHAPTERS.map((item) => (
               <button
