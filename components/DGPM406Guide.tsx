@@ -116,13 +116,24 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
   // Desktop: visualização em modal fullscreen; mobile: abre o PDF em nova aba,
   // como já é feito com os PDFs das mensagens de concursos no Storage.
   const handleDownloadCapitulo = async (numero: number, title: string) => {
+    // No mobile a aba precisa ser aberta de forma síncrona, dentro do clique
+    // (antes de qualquer await); senão o navegador a trata como pop-up e pede
+    // permissão. Abre-se uma aba em branco e depois aponta-se para o PDF.
+    const novaAba = isDesktop ? null : window.open('', '_blank');
+    if (novaAba) novaAba.opener = null;
     setBaixandoPdf(true);
     try {
       const url = await getCapituloPdfUrl(numero);
-      if (!url) { alert('PDF deste capítulo ainda não está disponível.'); return; }
+      if (!url) {
+        novaAba?.close();
+        alert('PDF deste capítulo ainda não está disponível.');
+        return;
+      }
       if (isDesktop) setPdfModal({ title, url });
-      else window.open(url, '_blank', 'noopener,noreferrer');
+      else if (novaAba) novaAba.location.href = url;
+      else window.location.assign(url);
     } catch {
+      novaAba?.close();
       alert('Não foi possível abrir o PDF. Tente novamente.');
     } finally {
       setBaixandoPdf(false);
