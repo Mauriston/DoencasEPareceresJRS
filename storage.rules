@@ -30,5 +30,13 @@ service firebase.storage {
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType == 'application/pdf';
     }
+
+    // PDFs dos capítulos da DGPM-406 (dgpm406/capitulos/capitulo-NN.pdf),
+    // exibidos/baixados na página Normas > DGPM-406. Leitura para usuários
+    // autenticados; escrita só pelo script de carga (Admin SDK ignora regras).
+    match /dgpm406/{arquivo=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
   }
 }
