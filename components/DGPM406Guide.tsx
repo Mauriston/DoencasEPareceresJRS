@@ -5,7 +5,7 @@ import { MarkdownDocPage } from './MarkdownDocPage';
 import { PdfViewerPage } from './PdfViewerPage';
 import { StoragePdfIconButton, StoragePdfFab } from './StoragePdfButtons';
 import { useStoragePdf } from '../hooks/useStoragePdf';
-import { capituloPdfPath, anexoPdfPath } from '../services/firebaseStorageNormas';
+import { capituloPdfPath, anexoPdfPath, NORMA_COMPLETA_PDF_PATH } from '../services/firebaseStorageNormas';
 import { getDriveEmbedUrl } from '../utils/googleDrive';
 import { BookOpen, Paperclip } from 'lucide-react';
 
@@ -118,6 +118,12 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
       setSelectedDoc({ kind: 'markdown', source: 'capitulo', title: item.chapter, subtitle: item.title, markdown: md, pdfPath: numero ? capituloPdfPath(Number(numero)) : undefined });
       return;
     }
+    // Primeiro item (DGPM-406 na íntegra): abre o PDF salvo no Storage —
+    // modal fullscreen no desktop, nova aba no mobile.
+    if (item.id === 'c0') {
+      openPdf(NORMA_COMPLETA_PDF_PATH, `${item.chapter} — ${item.title}`);
+      return;
+    }
     const embedUrl = getDriveEmbedUrl(item.link);
     if (embedUrl) {
       setSelectedDoc({ kind: 'pdf', source: 'capitulo', title: item.chapter, subtitle: item.title, embedUrl });
@@ -203,6 +209,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50 animate-fade-in relative">
+      {modalElement}
       <Header title="DGPM-406" onBack={onBack} />
 
       <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
