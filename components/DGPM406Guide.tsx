@@ -3,9 +3,9 @@ import React, { useState } from 'react';
 import { Header } from './Header';
 import { MarkdownDocPage } from './MarkdownDocPage';
 import { PdfViewerPage } from './PdfViewerPage';
-import { PdfFullscreenModal } from './PdfFullscreenModal';
-import { useIsDesktop } from '../hooks/useIsDesktop';
-import { getCapituloPdfUrl } from '../services/firebaseStorageDgpm406';
+import { StoragePdfIconButton, StoragePdfFab } from './StoragePdfButtons';
+import { useStoragePdf } from '../hooks/useStoragePdf';
+import { capituloPdfPath, anexoPdfPath } from '../services/firebaseStorageNormas';
 import { getDriveEmbedUrl } from '../utils/googleDrive';
 import { BookOpen, Paperclip } from 'lucide-react';
 
@@ -99,7 +99,7 @@ const ANEXOS: Anexo[] = [
 ];
 
 type SelectedDoc =
-  | { kind: 'markdown'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; markdown: string; capituloNumero?: number }
+  | { kind: 'markdown'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; markdown: string; pdfPath?: string }
   | { kind: 'pdf'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; embedUrl: string };
 
 interface DGPM406GuideProps {
@@ -109,42 +109,13 @@ interface DGPM406GuideProps {
 export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState<'capitulos' | 'anexos'>('capitulos');
   const [selectedDoc, setSelectedDoc] = useState<SelectedDoc | null>(null);
-  const isDesktop = useIsDesktop();
-  const [pdfModal, setPdfModal] = useState<{ title: string; url: string } | null>(null);
-  const [baixandoPdf, setBaixandoPdf] = useState(false);
-
-  // Desktop: visualização em modal fullscreen; mobile: abre o PDF em nova aba,
-  // como já é feito com os PDFs das mensagens de concursos no Storage.
-  const handleDownloadCapitulo = async (numero: number, title: string) => {
-    // No mobile a aba precisa ser aberta de forma síncrona, dentro do clique
-    // (antes de qualquer await); senão o navegador a trata como pop-up e pede
-    // permissão. Abre-se uma aba em branco e depois aponta-se para o PDF.
-    const novaAba = isDesktop ? null : window.open('', '_blank');
-    if (novaAba) novaAba.opener = null;
-    setBaixandoPdf(true);
-    try {
-      const url = await getCapituloPdfUrl(numero);
-      if (!url) {
-        novaAba?.close();
-        alert('PDF deste capítulo ainda não está disponível.');
-        return;
-      }
-      if (isDesktop) setPdfModal({ title, url });
-      else if (novaAba) novaAba.location.href = url;
-      else window.location.assign(url);
-    } catch {
-      novaAba?.close();
-      alert('Não foi possível abrir o PDF. Tente novamente.');
-    } finally {
-      setBaixandoPdf(false);
-    }
-  };
+  const { open: openPdf, busy: baixandoPdf, modalElement } = useStoragePdf();
 
   const handleChapterClick = (item: Chapter) => {
     const md = item.mdKey && getModule(chapterModules, item.mdKey);
     if (md) {
       const numero = item.chapter.match(/^Capítulo (\d+)$/)?.[1];
-      setSelectedDoc({ kind: 'markdown', source: 'capitulo', title: item.chapter, subtitle: item.title, markdown: md, capituloNumero: numero ? Number(numero) : undefined });
+      setSelectedDoc({ kind: 'markdown', source: 'capitulo', title: item.chapter, subtitle: item.title, markdown: md, pdfPath: numero ? capituloPdfPath(Number(numero)) : undefined });
       return;
     }
     const embedUrl = getDriveEmbedUrl(item.link);
@@ -158,7 +129,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
   const handleAnexoClick = (item: Anexo) => {
     const md = item.mdKey && getModule(anexoModules, item.mdKey);
     if (md) {
-      setSelectedDoc({ kind: 'markdown', source: 'anexo', title: item.anexo, subtitle: item.title, markdown: md });
+      setSelectedDoc({ kind: 'markdown', source: 'anexo', title: item.anexo, subtitle: item.title, markdown: md, pdfPath: anexoPdfPath(item.anexo.replace(/^ANEXO\s+/i, '')) });
       return;
     }
     const embedUrl = getDriveEmbedUrl(item.link);
@@ -197,41 +168,23 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
   );
 
   if (selectedDoc?.kind === 'markdown') {
+    const baixar = selectedDoc.pdfPath
+      ? () => openPdf(selectedDoc.pdfPath!, `${selectedDoc.title} — ${selectedDoc.subtitle}`)
+      : undefined;
     return (
       <>
-      <MarkdownDocPage
-        title={selectedDoc.title}
-        subtitle={selectedDoc.subtitle}
-        markdown={selectedDoc.markdown}
-        onBack={() => setSelectedDoc(null)}
-        sidebar={selectedDoc.source === 'capitulo' ? chapterNav : undefined}
-        actions={selectedDoc.capituloNumero !== undefined ? (
-          <button
-            type="button"
-            disabled={baixandoPdf}
-            onClick={() => handleDownloadCapitulo(selectedDoc.capituloNumero!, `${selectedDoc.title} — ${selectedDoc.subtitle}`)}
-            title="Baixar capítulo em PDF"
-            className="hidden md:flex p-2 rounded-lg text-gray-500 hover:text-[#050F41] hover:bg-gray-100 transition-colors items-center justify-center disabled:opacity-50"
-          >
-            <span className={`material-symbols-outlined text-[22px] ${baixandoPdf ? 'animate-spin' : ''}`}>{baixandoPdf ? 'progress_activity' : 'download'}</span>
-          </button>
-        ) : undefined}
-      />
-      {/* Mobile: botão flutuante, sempre visível ao rolar o texto. Fica fora
-          do MarkdownDocPage para que o position:fixed não dependa dos
-          ancestrais dele. */}
-      {selectedDoc.capituloNumero !== undefined && (
-        <button
-          type="button"
-          disabled={baixandoPdf}
-          onClick={() => handleDownloadCapitulo(selectedDoc.capituloNumero!, `${selectedDoc.title} — ${selectedDoc.subtitle}`)}
-          title="Baixar capítulo em PDF"
-          className="md:hidden fixed bottom-6 right-4 z-40 w-14 h-14 rounded-full bg-[#079551] text-white shadow-lg active:scale-95 transition-transform flex items-center justify-center disabled:opacity-60"
-        >
-          <span className={`material-symbols-outlined text-[26px] ${baixandoPdf ? 'animate-spin' : ''}`}>{baixandoPdf ? 'progress_activity' : 'download'}</span>
-        </button>
-      )}
-      {pdfModal && <PdfFullscreenModal title={pdfModal.title} url={pdfModal.url} onClose={() => setPdfModal(null)} />}
+        <MarkdownDocPage
+          title={selectedDoc.title}
+          subtitle={selectedDoc.subtitle}
+          markdown={selectedDoc.markdown}
+          onBack={() => setSelectedDoc(null)}
+          sidebar={selectedDoc.source === 'capitulo' ? chapterNav : undefined}
+          actions={baixar ? <StoragePdfIconButton busy={baixandoPdf} onClick={baixar} /> : undefined}
+        />
+        {/* Mobile: botão flutuante fora do MarkdownDocPage, para o position:fixed
+            não depender dos ancestrais dele. */}
+        {baixar && <StoragePdfFab busy={baixandoPdf} onClick={baixar} />}
+        {modalElement}
       </>
     );
   }
