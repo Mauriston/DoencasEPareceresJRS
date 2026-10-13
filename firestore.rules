@@ -12,8 +12,9 @@ rules_version = '2';
 // - Um usuário pode criar o PRÓPRIO documento (fluxo de autocadastro em
 //   Login.tsx), desde que não se autoconceda perfil "admin" e já crie a
 //   conta ativa.
-// - O próprio usuário só pode EDITAR e-mail, Gmail, celular, foto de perfil
-//   e a flag de senha temporária (nunca perfil, nome, NIP, cargo, etc.).
+// - O próprio usuário só pode EDITAR e-mail, Gmail, celular, foto de perfil,
+//   a flag de senha temporária e a flag "pwaTutorialConcluido" (tutorial de
+//   ícone na tela inicial já concluído) (nunca perfil, nome, NIP, cargo, etc.).
 service cloud.firestore {
   match /databases/{database}/documents {
     function isSignedIn() {
@@ -33,7 +34,7 @@ service cloud.firestore {
       allow update: if isAdmin() ||
         (isSignedIn() && request.auth.uid == uid &&
          request.resource.data.diff(resource.data).affectedKeys()
-           .hasOnly(['email', 'gmail', 'celular', 'imageProfile', 'senhaTemporaria']));
+           .hasOnly(['email', 'gmail', 'celular', 'imageProfile', 'senhaTemporaria', 'pwaTutorialConcluido']));
       allow delete: if isAdmin();
     }
 
