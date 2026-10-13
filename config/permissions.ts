@@ -7,11 +7,12 @@
 import { NavItem } from '../types';
 import { salvarPermissoesRemoto, type PermissoesArmazenadas } from '../services/firestorePermissions';
 
-export type Role = 'user_medicos' | 'user_secretaria';
+export type Role = 'user_medicos' | 'user_secretaria' | 'user_medicos_mpi';
 
 export const ROLES: { id: Role; label: string }[] = [
   { id: 'user_medicos', label: 'User Médicos' },
   { id: 'user_secretaria', label: 'User Secretaria' },
+  { id: 'user_medicos_mpi', label: 'User Médicos MPI' },
 ];
 
 export interface PageDef {
@@ -44,21 +45,23 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list', subtitle: 'Trilha de estudos para capacitação dos AMP.' },
 ];
 
+// Perfil novo (user_medicos_mpi) começa espelhando os defaults de
+// user_medicos — o Admin ajusta a matriz depois conforme a necessidade.
 export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {
-  guide: { user_medicos: true, user_secretaria: true },
-  portaria: { user_medicos: true, user_secretaria: true },
-  concursosJRS: { user_medicos: true, user_secretaria: true },
-  concursos: { user_medicos: true, user_secretaria: true },
-  exames: { user_medicos: true, user_secretaria: true },
-  pareceres: { user_medicos: true, user_secretaria: false },
-  mensagens: { user_medicos: false, user_secretaria: false },
-  dgpm406: { user_medicos: true, user_secretaria: true },
-  laws: { user_medicos: true, user_secretaria: true },
-  templates: { user_medicos: true, user_secretaria: true },
-  casos: { user_medicos: true, user_secretaria: false },
-  videos: { user_medicos: true, user_secretaria: false },
-  infograficos: { user_medicos: true, user_secretaria: false },
-  roteiro: { user_medicos: true, user_secretaria: false },
+  guide: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  portaria: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  concursosJRS: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  concursos: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  exames: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  pareceres: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  mensagens: { user_medicos: false, user_secretaria: false, user_medicos_mpi: false },
+  dgpm406: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  laws: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  templates: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  casos: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  videos: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  infograficos: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  roteiro: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
 };
 
 export type FeatureKey =
@@ -99,18 +102,18 @@ export const FEATURE_DEFS: FeatureDef[] = [
 ];
 
 export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolean>> = {
-  'concursosJRS.editarDadosTabela': { user_medicos: true, user_secretaria: false },
-  'concursosJRS.registrarMensagemPDF': { user_medicos: true, user_secretaria: false },
-  'concursosJRS.reagendar': { user_medicos: false, user_secretaria: true },
-  'concursosJRS.gerarMinutaResultados': { user_medicos: true, user_secretaria: false },
-  'concursosJRS.importarCsv': { user_medicos: false, user_secretaria: false },
-  'concursosJRS.abrirEncerrarConcurso': { user_medicos: false, user_secretaria: false },
-  'concursosJRS.registrarMensagemArquivo': { user_medicos: true, user_secretaria: false },
-  'concursosJRS.listarMensagens': { user_medicos: true, user_secretaria: true },
-  'concursosJRS.adicionarCandidato': { user_medicos: true, user_secretaria: false },
-  'concursosJRS.visualizarTabela': { user_medicos: true, user_secretaria: true },
-  'pericia-menor.novo': { user_medicos: true, user_secretaria: false },
-  'pericia-menor.historico': { user_medicos: true, user_secretaria: false },
+  'concursosJRS.editarDadosTabela': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  'concursosJRS.registrarMensagemPDF': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  'concursosJRS.reagendar': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false },
+  'concursosJRS.gerarMinutaResultados': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  'concursosJRS.importarCsv': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false },
+  'concursosJRS.abrirEncerrarConcurso': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false },
+  'concursosJRS.registrarMensagemArquivo': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  'concursosJRS.listarMensagens': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  'concursosJRS.adicionarCandidato': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  'concursosJRS.visualizarTabela': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  'pericia-menor.novo': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  'pericia-menor.historico': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
 };
 
 // Cache em memória alimentado pelo listener em tempo real do Firestore
@@ -128,11 +131,12 @@ export const getPagePermissions = (): Record<string, Record<Role, boolean>> => {
   const stored = permissoesCache?.pages || {};
   const result: Record<string, Record<Role, boolean>> = {};
   PAGE_DEFS.forEach(page => {
-    const defaults = DEFAULT_PAGE_PERMISSIONS[page.id] || { user_medicos: true, user_secretaria: true };
+    const defaults = DEFAULT_PAGE_PERMISSIONS[page.id] || { user_medicos: true, user_secretaria: true, user_medicos_mpi: true };
     const overrides = stored[page.id] || {};
     result[page.id] = {
       user_medicos: overrides.user_medicos ?? defaults.user_medicos,
       user_secretaria: overrides.user_secretaria ?? defaults.user_secretaria,
+      user_medicos_mpi: overrides.user_medicos_mpi ?? defaults.user_medicos_mpi,
     };
   });
   return result;
@@ -147,6 +151,7 @@ export const getFeaturePermissions = (): Record<FeatureKey, Record<Role, boolean
     result[feature.id] = {
       user_medicos: overrides.user_medicos ?? defaults.user_medicos,
       user_secretaria: overrides.user_secretaria ?? defaults.user_secretaria,
+      user_medicos_mpi: overrides.user_medicos_mpi ?? defaults.user_medicos_mpi,
     };
   });
   return result;
@@ -157,9 +162,12 @@ export const savePermissions = (
   features: Record<FeatureKey, Record<Role, boolean>>
 ): Promise<void> => salvarPermissoesRemoto({ pages, features });
 
+const isPerfilEditavel = (perfil: string | undefined): perfil is Role =>
+  perfil === 'user_medicos' || perfil === 'user_secretaria' || perfil === 'user_medicos_mpi';
+
 export const canUseFeature = (featureId: FeatureKey, perfil: string | undefined): boolean => {
   if (perfil === 'admin') return true;
-  if (perfil !== 'user_medicos' && perfil !== 'user_secretaria') return false;
+  if (!isPerfilEditavel(perfil)) return false;
   const perms = getFeaturePermissions();
   return perms[featureId] ? perms[featureId][perfil] : false;
 };
@@ -171,7 +179,7 @@ export const canAccessPage = (pageId: string, perfil: string | undefined): boole
   if (pageId === 'pericia-menor') {
     return canUseFeature('pericia-menor.novo', perfil) || canUseFeature('pericia-menor.historico', perfil);
   }
-  if (perfil !== 'user_medicos' && perfil !== 'user_secretaria') return false;
+  if (!isPerfilEditavel(perfil)) return false;
   const perms = getPagePermissions();
   return perms[pageId] ? perms[pageId][perfil] : true;
 };

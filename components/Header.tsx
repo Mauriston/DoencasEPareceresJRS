@@ -14,6 +14,7 @@ export const PERFIL_LABELS: Record<string, string> = {
   admin: 'Administrador',
   user_medicos: 'User Médicos',
   user_secretaria: 'User Secretaria',
+  user_medicos_mpi: 'User Médicos MPI',
 };
 
 export const Avatar: React.FC<{ nome?: string; imageProfile?: string; size?: number }> = ({ nome, imageProfile, size = 32 }) => {

@@ -244,6 +244,8 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
         return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">ADMIN</span>;
       case 'user_medicos':
         return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">USER MÉDICOS</span>;
+      case 'user_medicos_mpi':
+        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200">USER MÉDICOS MPI</span>;
       default:
         return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">USER SECRETARIA</span>;
     }
@@ -289,6 +291,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
               <option value="todos">Perfil: Todos</option>
               <option value="admin">Perfil: Admin</option>
               <option value="user_medicos">Perfil: User Médicos</option>
+              <option value="user_medicos_mpi">Perfil: User Médicos MPI</option>
               <option value="user_secretaria">Perfil: User Secretaria</option>
             </select>
 
@@ -628,6 +631,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
                   <select value={newUserForm.perfil} onChange={e => setNewUserForm(prev => ({ ...prev, perfil: e.target.value }))} className={inputClass}>
                     <option value="admin">Administrador (admin)</option>
                     <option value="user_medicos">Usuário Médicos (user_medicos)</option>
+                    <option value="user_medicos_mpi">Usuário Médicos MPI (user_medicos_mpi)</option>
                     <option value="user_secretaria">Usuário Secretaria (user_secretaria)</option>
                   </select>
                 </div>
@@ -720,6 +724,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
                   <select value={editForm.perfil || 'user_secretaria'} onChange={e => setEditForm(prev => ({ ...prev, perfil: e.target.value }))} className={inputClass}>
                     <option value="admin">Administrador (admin)</option>
                     <option value="user_medicos">Usuário Médicos (user_medicos)</option>
+                    <option value="user_medicos_mpi">Usuário Médicos MPI (user_medicos_mpi)</option>
                     <option value="user_secretaria">Usuário Secretaria (user_secretaria)</option>
                   </select>
                 </div>

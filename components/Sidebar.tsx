@@ -193,13 +193,13 @@ export const Sidebar: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)}
-            className="w-full border-t border-white/10 px-4 py-3 flex items-center gap-3 text-left hover:bg-white/5 transition-colors"
+            className="w-full border-t border-white/10 px-4 py-3 flex items-center justify-end gap-3 text-right hover:bg-white/5 transition-colors"
           >
-            <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} />
-            <span className="min-w-0 flex flex-col items-start leading-tight">
+            <span className="min-w-0 flex flex-col items-end leading-tight">
               <span className="text-sm font-bold text-white truncate max-w-[170px]">{authUser?.usuario || 'Usuário'}</span>
               <span className="text-[11px] font-medium text-gray-400 truncate max-w-[170px]">{authUser?.cargo || ' '}</span>
             </span>
+            <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} />
           </button>
         </div>
       </aside>
