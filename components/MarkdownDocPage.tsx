@@ -30,7 +30,7 @@ export const MarkdownDocPage: React.FC<MarkdownDocPageProps> = ({ title, subtitl
         <div>
           {subtitle && (
             <div className="relative text-center bg-white p-4 rounded-2xl border border-gray-200/60 shadow-sm mb-4">
-              <p className={`text-xs md:text-sm text-gray-500 font-body ${actions ? 'px-10' : ''}`}>{subtitle}</p>
+              <p className={`text-xs md:text-sm text-gray-500 font-body ${actions ? 'md:px-10' : ''}`}>{subtitle}</p>
               {actions && <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">{actions}</div>}
             </div>
           )}

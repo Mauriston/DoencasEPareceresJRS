@@ -207,16 +207,30 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
         sidebar={selectedDoc.source === 'capitulo' ? chapterNav : undefined}
         actions={selectedDoc.capituloNumero !== undefined ? (
           <button
-              type="button"
-              disabled={baixandoPdf}
-              onClick={() => handleDownloadCapitulo(selectedDoc.capituloNumero!, `${selectedDoc.title} — ${selectedDoc.subtitle}`)}
-              title="Baixar capítulo em PDF"
-              className="p-2 rounded-lg text-gray-500 hover:text-[#050F41] hover:bg-gray-100 transition-colors flex items-center justify-center disabled:opacity-50"
-            >
-              <span className={`material-symbols-outlined text-[22px] ${baixandoPdf ? 'animate-spin' : ''}`}>{baixandoPdf ? 'progress_activity' : 'download'}</span>
+            type="button"
+            disabled={baixandoPdf}
+            onClick={() => handleDownloadCapitulo(selectedDoc.capituloNumero!, `${selectedDoc.title} — ${selectedDoc.subtitle}`)}
+            title="Baixar capítulo em PDF"
+            className="hidden md:flex p-2 rounded-lg text-gray-500 hover:text-[#050F41] hover:bg-gray-100 transition-colors items-center justify-center disabled:opacity-50"
+          >
+            <span className={`material-symbols-outlined text-[22px] ${baixandoPdf ? 'animate-spin' : ''}`}>{baixandoPdf ? 'progress_activity' : 'download'}</span>
           </button>
         ) : undefined}
       />
+      {/* Mobile: botão flutuante, sempre visível ao rolar o texto. Fica fora
+          do MarkdownDocPage para que o position:fixed não dependa dos
+          ancestrais dele. */}
+      {selectedDoc.capituloNumero !== undefined && (
+        <button
+          type="button"
+          disabled={baixandoPdf}
+          onClick={() => handleDownloadCapitulo(selectedDoc.capituloNumero!, `${selectedDoc.title} — ${selectedDoc.subtitle}`)}
+          title="Baixar capítulo em PDF"
+          className="md:hidden fixed bottom-6 right-4 z-40 w-14 h-14 rounded-full bg-[#079551] text-white shadow-lg active:scale-95 transition-transform flex items-center justify-center disabled:opacity-60"
+        >
+          <span className={`material-symbols-outlined text-[26px] ${baixandoPdf ? 'animate-spin' : ''}`}>{baixandoPdf ? 'progress_activity' : 'download'}</span>
+        </button>
+      )}
       {pdfModal && <PdfFullscreenModal title={pdfModal.title} url={pdfModal.url} onClose={() => setPdfModal(null)} />}
       </>
     );
