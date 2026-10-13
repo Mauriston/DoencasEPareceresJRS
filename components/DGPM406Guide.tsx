@@ -3,9 +3,9 @@ import React, { useState } from 'react';
 import { Header } from './Header';
 import { MarkdownDocPage } from './MarkdownDocPage';
 import { PdfViewerPage } from './PdfViewerPage';
-import { PdfFullscreenModal } from './PdfFullscreenModal';
-import { useIsDesktop } from '../hooks/useIsDesktop';
-import { getCapituloPdfUrl } from '../services/firebaseStorageDgpm406';
+import { StoragePdfIconButton, StoragePdfFab } from './StoragePdfButtons';
+import { useStoragePdf } from '../hooks/useStoragePdf';
+import { capituloPdfPath, anexoPdfPath, NORMA_COMPLETA_PDF_PATH } from '../services/firebaseStorageNormas';
 import { getDriveEmbedUrl } from '../utils/googleDrive';
 import { BookOpen, Paperclip } from 'lucide-react';
 
@@ -99,7 +99,7 @@ const ANEXOS: Anexo[] = [
 ];
 
 type SelectedDoc =
-  | { kind: 'markdown'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; markdown: string; capituloNumero?: number }
+  | { kind: 'markdown'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; markdown: string; pdfPath?: string }
   | { kind: 'pdf'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; embedUrl: string };
 
 interface DGPM406GuideProps {
@@ -109,31 +109,19 @@ interface DGPM406GuideProps {
 export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState<'capitulos' | 'anexos'>('capitulos');
   const [selectedDoc, setSelectedDoc] = useState<SelectedDoc | null>(null);
-  const isDesktop = useIsDesktop();
-  const [pdfModal, setPdfModal] = useState<{ title: string; url: string } | null>(null);
-  const [baixandoPdf, setBaixandoPdf] = useState(false);
-
-  // Desktop: visualização em modal fullscreen; mobile: abre o PDF em nova aba,
-  // como já é feito com os PDFs das mensagens de concursos no Storage.
-  const handleDownloadCapitulo = async (numero: number, title: string) => {
-    setBaixandoPdf(true);
-    try {
-      const url = await getCapituloPdfUrl(numero);
-      if (!url) { alert('PDF deste capítulo ainda não está disponível.'); return; }
-      if (isDesktop) setPdfModal({ title, url });
-      else window.open(url, '_blank', 'noopener,noreferrer');
-    } catch {
-      alert('Não foi possível abrir o PDF. Tente novamente.');
-    } finally {
-      setBaixandoPdf(false);
-    }
-  };
+  const { open: openPdf, busy: baixandoPdf, modalElement } = useStoragePdf();
 
   const handleChapterClick = (item: Chapter) => {
     const md = item.mdKey && getModule(chapterModules, item.mdKey);
     if (md) {
       const numero = item.chapter.match(/^Capítulo (\d+)$/)?.[1];
-      setSelectedDoc({ kind: 'markdown', source: 'capitulo', title: item.chapter, subtitle: item.title, markdown: md, capituloNumero: numero ? Number(numero) : undefined });
+      setSelectedDoc({ kind: 'markdown', source: 'capitulo', title: item.chapter, subtitle: item.title, markdown: md, pdfPath: numero ? capituloPdfPath(Number(numero)) : undefined });
+      return;
+    }
+    // Primeiro item (DGPM-406 na íntegra): abre o PDF salvo no Storage —
+    // modal fullscreen no desktop, nova aba no mobile.
+    if (item.id === 'c0') {
+      openPdf(NORMA_COMPLETA_PDF_PATH, `${item.chapter} — ${item.title}`);
       return;
     }
     const embedUrl = getDriveEmbedUrl(item.link);
@@ -147,7 +135,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
   const handleAnexoClick = (item: Anexo) => {
     const md = item.mdKey && getModule(anexoModules, item.mdKey);
     if (md) {
-      setSelectedDoc({ kind: 'markdown', source: 'anexo', title: item.anexo, subtitle: item.title, markdown: md });
+      setSelectedDoc({ kind: 'markdown', source: 'anexo', title: item.anexo, subtitle: item.title, markdown: md, pdfPath: anexoPdfPath(item.anexo.replace(/^ANEXO\s+/i, '')) });
       return;
     }
     const embedUrl = getDriveEmbedUrl(item.link);
@@ -186,27 +174,23 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
   );
 
   if (selectedDoc?.kind === 'markdown') {
+    const baixar = selectedDoc.pdfPath
+      ? () => openPdf(selectedDoc.pdfPath!, `${selectedDoc.title} — ${selectedDoc.subtitle}`)
+      : undefined;
     return (
       <>
-      <MarkdownDocPage
-        title={selectedDoc.title}
-        subtitle={selectedDoc.subtitle}
-        markdown={selectedDoc.markdown}
-        onBack={() => setSelectedDoc(null)}
-        sidebar={selectedDoc.source === 'capitulo' ? chapterNav : undefined}
-        actions={selectedDoc.capituloNumero !== undefined ? (
-          <button
-              type="button"
-              disabled={baixandoPdf}
-              onClick={() => handleDownloadCapitulo(selectedDoc.capituloNumero!, `${selectedDoc.title} — ${selectedDoc.subtitle}`)}
-              title="Baixar capítulo em PDF"
-              className="p-2 rounded-lg text-gray-500 hover:text-[#050F41] hover:bg-gray-100 transition-colors flex items-center justify-center disabled:opacity-50"
-            >
-              <span className={`material-symbols-outlined text-[22px] ${baixandoPdf ? 'animate-spin' : ''}`}>{baixandoPdf ? 'progress_activity' : 'download'}</span>
-          </button>
-        ) : undefined}
-      />
-      {pdfModal && <PdfFullscreenModal title={pdfModal.title} url={pdfModal.url} onClose={() => setPdfModal(null)} />}
+        <MarkdownDocPage
+          title={selectedDoc.title}
+          subtitle={selectedDoc.subtitle}
+          markdown={selectedDoc.markdown}
+          onBack={() => setSelectedDoc(null)}
+          sidebar={selectedDoc.source === 'capitulo' ? chapterNav : undefined}
+          actions={baixar ? <StoragePdfIconButton busy={baixandoPdf} onClick={baixar} /> : undefined}
+        />
+        {/* Mobile: botão flutuante fora do MarkdownDocPage, para o position:fixed
+            não depender dos ancestrais dele. */}
+        {baixar && <StoragePdfFab busy={baixandoPdf} onClick={baixar} />}
+        {modalElement}
       </>
     );
   }
@@ -225,6 +209,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50 animate-fade-in relative">
+      {modalElement}
       <Header title="DGPM-406" onBack={onBack} />
 
       <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
