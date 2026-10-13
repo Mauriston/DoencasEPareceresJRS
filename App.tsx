@@ -24,8 +24,15 @@ import { UsuariosManagement } from './components/UsuariosManagement';
 import { NavItem } from './types';
 import { NavContext, AuthUser, getPrimeiroNome } from './context/NavContext';
 import { canAccessPage, setPermissoesCache } from './config/permissions';
+import { InstallAppTutorial } from './components/InstallAppTutorial';
+import { InstallAppQrDialog } from './components/InstallAppQrDialog';
 import { onAuthChange, logoutUsuario } from './services/firebaseAuth';
-import { getUsuarioProfile, setUsuarioPublico, UsuarioRecord } from './services/firestoreUsuarios';
+import { consumirTokenDaUrl, entrarComToken } from './services/handoff';
+import {
+  detectarPlataformaTutorial, isMobileDevice, isStandalone,
+  marcarTutorialConcluidoLocal, tutorialConcluidoLocal,
+} from './utils/pwa';
+import { getUsuarioProfile, setUsuarioPublico, updateUsuarioProfile, UsuarioRecord } from './services/firestoreUsuarios';
 import { observarPermissoes, salvarPermissoesRemoto, type PermissoesArmazenadas } from './services/firestorePermissions';
 import { getCasosResultado } from './services/firestoreCasos';
 import { useIsDesktop } from './hooks/useIsDesktop';
@@ -66,6 +73,7 @@ const buildAuthUser = (profile: UsuarioRecord): AuthUser => ({
   celular: profile.celular,
   imageProfile: profile.imageProfile,
   senhaTemporaria: !!profile.senhaTemporaria,
+  pwaTutorialConcluido: !!profile.pwaTutorialConcluido,
 });
 
 const App: React.FC = () => {
@@ -76,6 +84,12 @@ const App: React.FC = () => {
   const [permissoesLoading, setPermissoesLoading] = useState(true);
   const [senhaAlertDismissed, setSenhaAlertDismissed] = useState(false);
   const [casosAlertDismissed, setCasosAlertDismissed] = useState(false);
+  const [pwaAlertDismissed, setPwaAlertDismissed] = useState(false);
+  // Login vindo do QR code do desktop (#h=<custom token>): lido uma única vez
+  // e removido da barra de endereço; enquanto a troca por sessão acontece,
+  // mantemos a tela de carregamento em vez de piscar o Login.
+  const [handoffToken] = useState<string | null>(() => consumirTokenDaUrl());
+  const [handoffPendente, setHandoffPendente] = useState(!!handoffToken);
   // null enquanto ainda não verificamos; depois, true/false conforme já
   // existe (ou não) um resultado salvo para este usuário.
   const [casosRespondido, setCasosRespondido] = useState<boolean | null>(null);
@@ -134,6 +148,18 @@ const App: React.FC = () => {
   }, [authUser?.uid]);
 
   useEffect(() => {
+    if (!handoffToken) return;
+    entrarComToken(handoffToken)
+      .catch(() => {}) // token inválido/expirado: segue para o login normal
+      .finally(() => setHandoffPendente(false));
+  }, [handoffToken]);
+
+  // Já abriu pelo ícone da tela inicial: não há mais o que ensinar.
+  useEffect(() => {
+    if (authUser && !authUser.pwaTutorialConcluido && isStandalone()) concluirTutorialPwa();
+  }, [authUser?.uid]);
+
+  useEffect(() => {
     const unsubscribe = onAuthChange(async (firebaseUser) => {
       if (!firebaseUser) {
         setAuthUser(null);
@@ -150,6 +176,7 @@ const App: React.FC = () => {
         setAuthUser(buildAuthUser(profile));
         setSenhaAlertDismissed(false);
         setCasosAlertDismissed(false);
+        setPwaAlertDismissed(false);
         setCurrentView('home');
         // Auto-cura do espelho público (menu suspenso de login): garante que
         // este usuário sempre apareça na lista, mesmo se o registro em
@@ -176,6 +203,16 @@ const App: React.FC = () => {
       })
       .catch(() => {});
   }, [authUser]);
+
+  // Tutorial do ícone na tela inicial concluído (ou "já instalei"): grava
+  // neste aparelho e no perfil (vale para o desktop também). A gravação no
+  // perfil é best-effort — o localStorage já garante este aparelho.
+  const concluirTutorialPwa = () => {
+    marcarTutorialConcluidoLocal();
+    if (!authUser) return;
+    setAuthUser(prev => (prev ? { ...prev, pwaTutorialConcluido: true } : prev));
+    updateUsuarioProfile(authUser.uid, { pwaTutorialConcluido: true }).catch(() => {});
+  };
 
   const handleLogout = () => {
     logoutUsuario();
@@ -222,7 +259,7 @@ const App: React.FC = () => {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || handoffPendente) {
     return (
       <div className="fixed inset-0 bg-[#050F41] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -252,6 +289,17 @@ const App: React.FC = () => {
     casosRespondido === false &&
     currentView !== 'casos' &&
     canAccessPage('casos', authUser.perfil);
+  // Ícone na tela inicial: só para usuários comuns (não admin) que ainda não
+  // concluíram o tutorial nem abriram o app pelo ícone. No celular abre o
+  // passo a passo; no desktop, o QR code que leva o app (e o login) ao celular.
+  const pwaPendente =
+    authUser.perfil !== 'admin' &&
+    !authUser.pwaTutorialConcluido &&
+    !tutorialConcluidoLocal() &&
+    !isStandalone() &&
+    !pwaAlertDismissed;
+  const mostrarTutorialPwa = pwaPendente && isMobileDevice() && !mostrarAlertaSenha && !mostrarAlertaCasos;
+  const mostrarQrPwa = pwaPendente && !isMobileDevice() && !mostrarAlertaSenha;
 
   return (
     <NavContext.Provider
@@ -318,6 +366,21 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {mostrarTutorialPwa && (
+        <InstallAppTutorial
+          plataformaInicial={detectarPlataformaTutorial()}
+          onClose={() => setPwaAlertDismissed(true)}
+          onComplete={concluirTutorialPwa}
+        />
+      )}
+
+      {mostrarQrPwa && (
+        <InstallAppQrDialog
+          onClose={() => setPwaAlertDismissed(true)}
+          onAlreadyInstalled={concluirTutorialPwa}
+        />
       )}
 
       {mostrarAlertaCasos && (

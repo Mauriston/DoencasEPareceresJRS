@@ -1,0 +1,13 @@
+{
+  "name": "JRS/HNRe",
+  "short_name": "JRS/HNRe",
+  "description": "Guia para a avaliação pericial dos portadores de doenças especificadas em lei.",
+  "start_url": "/DoencasEPareceresJRS/",
+  "scope": "/DoencasEPareceresJRS/",
+  "display": "standalone",
+  "background_color": "#050F41",
+  "theme_color": "#050F41",
+  "icons": [
+    { "src": "https://i.imgur.com/KUbQz08.png", "sizes": "any", "type": "image/png", "purpose": "any" }
+  ]
+}

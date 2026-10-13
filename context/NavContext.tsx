@@ -16,6 +16,7 @@ export interface AuthUser {
   celular?: string;
   imageProfile?: string;
   senhaTemporaria?: boolean;
+  pwaTutorialConcluido?: boolean;
 }
 
 export interface NavContextType {

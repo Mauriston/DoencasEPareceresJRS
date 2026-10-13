@@ -17,7 +17,7 @@ async function startServer() {
   app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
     if (req.method === "OPTIONS") {
       res.sendStatus(204);
       return;
@@ -26,6 +26,40 @@ async function startServer() {
   });
 
   app.use(express.json({ limit: "50mb" }));
+
+  // Passagem de login desktop -> celular (QR code de "Instalar app", ver
+  // components/InstallAppQrDialog.tsx). O Firebase Auth não exporta a sessão
+  // do navegador, então o desktop (já logado) pede aqui um *custom token*
+  // para o PRÓPRIO usuário: o ID token dele é verificado e um token de uso
+  // único-ish (válido por até 1h, trafega só no fragmento "#" da URL do QR,
+  // nunca enviado a servidores) é emitido para o celular trocá-lo por uma
+  // sessão via signInWithCustomToken. Requer, no Cloud Run, que a service
+  // account do serviço tenha o papel "Service Account Token Creator" sobre
+  // si mesma (permite assinar o custom token com credenciais padrão).
+  app.post("/api/auth/handoff-token", async (req, res) => {
+    try {
+      const authHeader = String(req.headers.authorization || "");
+      const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+      if (!idToken) {
+        res.status(401).json({ success: false, error: "Token ausente." });
+        return;
+      }
+      const { initializeApp, applicationDefault, getApps } = await import("firebase-admin/app");
+      const { getAuth } = await import("firebase-admin/auth");
+      const adminApp = getApps()[0] || initializeApp({
+        credential: applicationDefault(),
+        projectId: process.env.FIREBASE_PROJECT_ID || "jrs-app-web",
+        serviceAccountId: process.env.FIREBASE_SERVICE_ACCOUNT_EMAIL || undefined,
+      });
+      const adminAuth = getAuth(adminApp);
+      const decoded = await adminAuth.verifyIdToken(idToken, true);
+      const token = await adminAuth.createCustomToken(decoded.uid);
+      res.json({ success: true, token });
+    } catch (error: any) {
+      console.error("Handoff token error:", error);
+      res.status(401).json({ success: false, error: "Não foi possível gerar o acesso para o celular." });
+    }
+  });
 
   app.post("/api/gemini/analyze-image", async (req, res) => {
     try {
