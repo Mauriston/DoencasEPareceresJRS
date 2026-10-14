@@ -2163,7 +2163,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
-  const [cidModal, setCidModal] = useState<CandidatoRecord | null>(null);
+  // obrigatorio: primeira marcação como Inapto (não dá para dispensar).
+  // numTIS: preenchido quando o modal foi aberto ao digitar o Nº TIS de um Inapto sem CID.
+  const [cidModal, setCidModal] = useState<{ candidato: CandidatoRecord; obrigatorio: boolean; numTIS?: string } | null>(null);
+  const [numTisResetKey, setNumTisResetKey] = useState(0);
 
   const [datasAgendamento, setDatasAgendamento] = useState<DataAgendamentoInfo[]>([]);
   const [loadingDatasAgendamento, setLoadingDatasAgendamento] = useState(false);
@@ -2302,27 +2305,39 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               title: 'Gerar Termo de Recurso',
               message: `Gerar o termo de Cientificação de Recurso para ${atualizado.nome}?`,
               confirmLabel: 'Gerar Termo',
-              onConfirm: () => { setConfirmDialog(null); handleGerarTermo(atualizado.id, atualizado.nome); setCidModal(atualizado); },
-              onCancel: () => setCidModal(atualizado),
+              onConfirm: () => { setConfirmDialog(null); handleGerarTermo(atualizado.id, atualizado.nome); setCidModal({ candidato: atualizado, obrigatorio: true }); },
+              onCancel: () => setCidModal({ candidato: atualizado, obrigatorio: true }),
             });
           }
         },
       });
       return;
     }
-    salvarCampoCandidato(candidato, { status: novoStatus }).then(atualizado => {
+    // Saindo de Inapto, o CID que estava nas Observações perde o sentido: apaga.
+    const patch = candidato.status === 'INAPTO' && novoStatus !== 'INAPTO'
+      ? { status: novoStatus, observacoes: '' }
+      : { status: novoStatus };
+    salvarCampoCandidato(candidato, patch).then(atualizado => {
       if (atualizado) showToast(`Dados de ${atualizado.nome} atualizados com sucesso.`);
     });
   };
 
-  // CID obrigatório após marcar Inapto: sobrescreve as Observações com o DESCRABREV.
-  const handleCidConfirmado = (descrAbrev: string) => {
-    const candidato = cidModal;
+  // Clique numa opção do modal de CID: grava o DESCRABREV nas Observações,
+  // sobrescrevendo o que houvesse (e o Nº TIS, se o modal veio do campo Nº TIS).
+  const handleCidSelecionado = (descrAbrev: string) => {
+    if (!cidModal) return;
+    const { candidato, numTIS } = cidModal;
     setCidModal(null);
-    if (!candidato) return;
-    salvarCampoCandidato(candidato, { observacoes: descrAbrev }).then(atualizado => {
+    const patch = numTIS ? { observacoes: descrAbrev, numTIS } : { observacoes: descrAbrev };
+    salvarCampoCandidato(candidato, patch).then(atualizado => {
       if (atualizado) showToast(atualizado.finalizado ? `IS de ${atualizado.nome} finalizada.` : `Dados de ${atualizado.nome} atualizados com sucesso.`);
     });
+  };
+
+  const handleCidFechado = () => {
+    // Se o modal veio do Nº TIS, descarta o valor digitado (nada foi salvo).
+    if (cidModal?.numTIS) setNumTisResetKey(k => k + 1);
+    setCidModal(null);
   };
 
   const handleObservacoesBlur = (candidato: CandidatoRecord, valor: string) => {
@@ -2361,6 +2376,12 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       salvarCampoCandidato(candidato, { numTIS: trimmed }).then(atualizado => {
         if (atualizado) showToast(`IS de ${atualizado.nome} finalizada.`);
       });
+      return;
+    }
+
+    // Inapto sem CID: pede o CID no modal e grava Nº TIS + CID juntos.
+    if (statusUpper === 'INAPTO') {
+      setCidModal({ candidato, obrigatorio: false, numTIS: trimmed });
       return;
     }
 
@@ -2553,7 +2574,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       )}
 
       {cidModal && (
-        <CidInaptidaoModal candidatoNome={cidModal.nome} onConfirm={handleCidConfirmado} onClose={() => setCidModal(null)} />
+        <CidInaptidaoModal candidatoNome={cidModal.candidato.nome} obrigatorio={cidModal.obrigatorio} onSelect={handleCidSelecionado} onClose={handleCidFechado} />
       )}
 
       {confirmDialog && (
@@ -2821,6 +2842,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                       placeholder={pendingFinalizacao?.status === 'INAPTO' ? 'Digite aqui o motivo da inaptidão' : 'Digite aqui o motivo da IDM'}
                                       className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-red-300 bg-red-50 placeholder:text-red-400 focus:outline-none focus:border-red-500"
                                     />
+                                  ) : editavel && c.status === 'INAPTO' ? (
+                                    <button type="button" onClick={() => setCidModal({ candidato: c, obrigatorio: false })} title="Clique para escolher/trocar o CID da inaptidão" className="w-full text-left truncate px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 hover:bg-white hover:border-[#050F41] cursor-pointer transition-colors">
+                                      {c.observacoes || <span className="text-gray-400">Selecionar CID...</span>}
+                                    </button>
                                   ) : editavel ? (
                                     <input key={`obs-${c.id}-${c.observacoes}`} type="text" defaultValue={c.observacoes} onBlur={e => handleObservacoesBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
                                   ) : <span className="truncate block" title={c.observacoes}>{c.observacoes || '-'}</span>}
@@ -2829,7 +2854,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                   {estaPendente ? (
                                     <input type="text" value={pendingFinalizacao?.numTIS || ''} disabled className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-amber-300 bg-amber-100 text-amber-900 font-semibold cursor-not-allowed" />
                                   ) : numTisHabilitado ? (
-                                    <input type="text" defaultValue={c.numTIS} onBlur={e => handleNumTisBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
+                                    <input key={`tis-${c.id}-${numTisResetKey}`} type="text" defaultValue={c.numTIS} onBlur={e => handleNumTisBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
                                   ) : editavel ? (
                                     <input type="text" value={c.numTIS} disabled title="Defina o Status (Apto, Inapto, Faltou ou Insuf. Documental) para habilitar este campo." className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed" />
                                   ) : (c.numTIS || '-')}
@@ -3027,7 +3052,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
               <div>
                 <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Observações</label>
-                {editavel ? (
+                {editavel && c.status === 'INAPTO' ? (
+                  <button type="button" onClick={() => setCidModal({ candidato: c, obrigatorio: false })} className="w-full text-left px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-700 bg-white">
+                    {c.observacoes || <span className="text-gray-400">Selecionar CID...</span>}
+                  </button>
+                ) : editavel ? (
                   <textarea
                     key={`obs-${c.id}-${c.observacoes}`}
                     defaultValue={c.observacoes}
