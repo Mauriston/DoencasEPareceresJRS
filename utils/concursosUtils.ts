@@ -364,6 +364,8 @@ export interface CandidatoImportadoCsv {
   numTIS: string;
   termoRecursoUrl: string;
   termoCientificacaoUrl?: string;
+  solicitacaoParecerUrl?: string;
+  solicitacaoExamesUrl?: string;
 }
 
 /**
