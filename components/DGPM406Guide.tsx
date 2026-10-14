@@ -96,7 +96,7 @@ const ANEXOS: Anexo[] = [
   { id: 'a19', anexo: 'ANEXO AB', title: 'Índices mínimos e condições incapacitantes para o serviço de praticagem', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
 ];
 
-type SelectedDoc = { kind: 'markdown'; source: 'capitulo' | 'anexo'; title: string; subtitle: string; markdown: string; pdfPath?: string };
+type SelectedDoc = { kind: 'markdown'; source: 'capitulo' | 'anexo'; id: string; title: string; subtitle: string; markdown: string; pdfPath?: string };
 
 interface DGPM406GuideProps {
   onBack?: () => void;
@@ -111,7 +111,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
     const md = item.mdKey && getModule(chapterModules, item.mdKey);
     if (md) {
       const numero = item.chapter.match(/^Capítulo (\d+)$/)?.[1];
-      setSelectedDoc({ kind: 'markdown', source: 'capitulo', title: item.chapter, subtitle: item.title, markdown: md, pdfPath: numero ? capituloPdfPath(Number(numero)) : undefined });
+      setSelectedDoc({ kind: 'markdown', source: 'capitulo', id: item.id, title: item.chapter, subtitle: item.title, markdown: md, pdfPath: numero ? capituloPdfPath(Number(numero)) : undefined });
       return;
     }
     // Primeiro item (DGPM-406 na íntegra): abre o PDF salvo no Storage —
@@ -127,7 +127,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
   const handleAnexoClick = (item: Anexo) => {
     const md = item.mdKey && getModule(anexoModules, item.mdKey);
     if (md) {
-      setSelectedDoc({ kind: 'markdown', source: 'anexo', title: item.anexo, subtitle: item.title, markdown: md, pdfPath: anexoPdfPath(item.anexo.replace(/^ANEXO\s+/i, '')) });
+      setSelectedDoc({ kind: 'markdown', source: 'anexo', id: item.id, title: item.anexo, subtitle: item.title, markdown: md, pdfPath: anexoPdfPath(item.anexo.replace(/^ANEXO\s+/i, '')) });
       return;
     }
     // Anexo sem página renderizada: abre o PDF salvo no Storage (modal
@@ -135,32 +135,43 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
     openPdf(anexoPdfPath(item.anexo.replace(/^ANEXO\s+/i, '')), `${item.anexo} — ${item.title}`);
   };
 
-  // Card fixo à esquerda (desktop) com a lista de capítulos, para navegar
-  // entre eles sem voltar à grade — só faz sentido quando o documento aberto
-  // é um capítulo (não um anexo).
-  const chapterNav = (
+  // Card fixo à esquerda (desktop) com a lista de capítulos ou de anexos (conforme
+  // o documento aberto), para navegar entre eles sem voltar à grade.
+  const navCard = (heading: string, children: React.ReactNode) => (
     <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm p-3 max-h-[calc(100vh-140px)] overflow-y-auto">
       <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-2 pb-2 mb-1 border-b border-gray-100">
-        Capítulos
+        {heading}
       </h3>
-      <nav className="space-y-0.5">
-        {CHAPTERS.map(item => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => handleChapterClick(item)}
-            className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold leading-snug transition-colors ${
-              selectedDoc?.source === 'capitulo' && selectedDoc.title === item.chapter
-                ? 'bg-[#050F41] text-white'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            {chapterNavLabel(item)}
-          </button>
-        ))}
-      </nav>
+      <nav className="space-y-0.5">{children}</nav>
     </div>
   );
+
+  const navButtonClass = (active: boolean) =>
+    `w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold leading-snug transition-colors ${
+      active ? 'bg-[#050F41] text-white' : 'text-gray-600 hover:bg-gray-100'
+    }`;
+
+  const chapterNav = navCard('Capítulos', CHAPTERS.map(item => (
+    <button
+      key={item.id}
+      type="button"
+      onClick={() => handleChapterClick(item)}
+      className={navButtonClass(selectedDoc?.source === 'capitulo' && selectedDoc.id === item.id)}
+    >
+      {chapterNavLabel(item)}
+    </button>
+  )));
+
+  const anexoNav = navCard('Anexos', ANEXOS.map(item => (
+    <button
+      key={item.id}
+      type="button"
+      onClick={() => handleAnexoClick(item)}
+      className={navButtonClass(selectedDoc?.source === 'anexo' && selectedDoc.id === item.id)}
+    >
+      {`${item.anexo} - ${item.title}`}
+    </button>
+  )));
 
   if (selectedDoc) {
     const baixar = selectedDoc.pdfPath
@@ -170,10 +181,9 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
       <>
         <MarkdownDocPage
           title={selectedDoc.title}
-          subtitle={selectedDoc.subtitle}
           markdown={selectedDoc.markdown}
           onBack={() => setSelectedDoc(null)}
-          sidebar={selectedDoc.source === 'capitulo' ? chapterNav : undefined}
+          sidebar={selectedDoc.source === 'capitulo' ? chapterNav : anexoNav}
           actions={baixar ? <StoragePdfIconButton busy={baixandoPdf} onClick={baixar} /> : undefined}
         />
         {/* Mobile: botão flutuante fora do MarkdownDocPage, para o position:fixed
