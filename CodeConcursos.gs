@@ -61,6 +61,14 @@ function formatarDataSimples(data) {
   return dia + '/' + mes + '/' + data.getFullYear();
 }
 
+/** Formata uma data (objeto Date) para o padrão militar "DDMMMAAAA" (ex.: 13OUT2026), ou string vazia se não for uma data válida. */
+function formatarDataMilitar(data) {
+  if (!data || Object.prototype.toString.call(data) !== '[object Date]' || isNaN(data.getTime())) return '';
+  var meses = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+  var dia = String(data.getDate()).padStart(2, '0');
+  return dia + meses[data.getMonth()] + data.getFullYear();
+}
+
 /**
  * action=gerarTermoRecurso (POST): { candidatoId, candidatoNome, nomeConcurso,
  * dataLaudo, nomeUsuario, postoGraduacao, cargo } — gera o PDF do Termo de
@@ -72,7 +80,7 @@ function formatarDataSimples(data) {
  *
  * Placeholders do template:
  *   {{candidatoNome}} {{candidatoId}} (matrícula) {{nomeConcurso}} {{dataLaudo}}
- *   {{DATA_HOJE}} {{nomeUsuario}} {{postoGraduacao}} {{cargo}}
+ *   {{DATA_HOJE}} (DDMMMAAAA, ex.: 13OUT2026) {{nomeUsuario}} {{postoGraduacao}} {{cargo}}
  */
 function apiGerarTermoRecurso(corpo) {
   var campo = function(nome) { return String((corpo && corpo[nome]) || '').trim(); };
@@ -87,7 +95,7 @@ function apiGerarTermoRecurso(corpo) {
     candidatoId: candidatoId,
     nomeConcurso: campo('nomeConcurso'),
     dataLaudo: campo('dataLaudo'),
-    DATA_HOJE: formatarDataSimples(new Date()),
+    DATA_HOJE: formatarDataMilitar(new Date()),
     nomeUsuario: campo('nomeUsuario'),
     postoGraduacao: campo('postoGraduacao'),
     cargo: campo('cargo')
