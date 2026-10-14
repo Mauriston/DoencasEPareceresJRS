@@ -2320,6 +2320,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   const statusPermiteSolicitacao = (c: CandidatoRecord) =>
     !c.finalizado && STATUS_PERMITEM_SOLICITACAO.includes(String(c.status || '').trim().toUpperCase());
 
+  // Quem não gera (ex.: secretaria) só enxerga o menu quando há documento para visualizar.
+  const qtdSolicitacoes = (c: CandidatoRecord) => (c.solicitacaoParecerUrl ? 1 : 0) + (c.solicitacaoExamesUrl ? 1 : 0);
+  const temSolicitacaoGerada = (c: CandidatoRecord) => qtdSolicitacoes(c) > 0;
+  const mostrarMenuAcoes = (c: CandidatoRecord) => podeSolicitarBase || temSolicitacaoGerada(c);
+
   useEffect(() => {
     if (!menuAcoes) return;
     const fechar = () => setMenuAcoes(null);
@@ -2775,6 +2780,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         const item = (tipo: 'parecer' | 'exames', rotuloGerar: string, rotuloVer: string, icone: string) => {
           const url = tipo === 'parecer' ? c.solicitacaoParecerUrl : c.solicitacaoExamesUrl;
           const gerando = gerandoSolicitacaoIds.has(c.id);
+          if (!url && !podeSolicitarBase) return null; // sem permissão de gerar: só aparece o que já existe
           const habilitado = !!url || (statusPermiteSolicitacao(c) && !gerando);
           return (
             <button
@@ -3114,9 +3120,12 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                     </button>
                                   )}
 
-                                  {podeSolicitarBase && (
-                                    <button type="button" onClick={e => abrirMenuAcoes(e, c.id)} className="p-2 ml-1 text-gray-600 bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer" title="Mais ações" aria-haspopup="menu" aria-expanded={menuAcoes?.id === c.id}>
-                                      <span className="material-symbols-outlined text-[22px]">{gerandoSolicitacaoIds.has(c.id) ? 'progress_activity' : 'more_vert'}</span>
+                                  {mostrarMenuAcoes(c) && (
+                                    <button type="button" onClick={e => abrirMenuAcoes(e, c.id)} className="relative p-2 ml-1 text-gray-600 bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer" title={qtdSolicitacoes(c) ? `Mais ações — ${qtdSolicitacoes(c)} documento(s) gerado(s)` : 'Mais ações'} aria-haspopup="menu" aria-expanded={menuAcoes?.id === c.id}>
+                                      <span className={`material-symbols-outlined text-[22px] ${gerandoSolicitacaoIds.has(c.id) ? 'animate-spin' : ''}`}>{gerandoSolicitacaoIds.has(c.id) ? 'progress_activity' : 'more_vert'}</span>
+                                      {qtdSolicitacoes(c) > 0 && (
+                                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#079551] text-white text-[10px] font-bold leading-none flex items-center justify-center ring-2 ring-white">{qtdSolicitacoes(c)}</span>
+                                      )}
                                     </button>
                                   )}
                                 </td>
@@ -3331,7 +3340,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                   <p className="text-sm font-semibold text-gray-700">{c.numTIS || '-'}</p>
                 </div>
 
-                {(podeGerarTermo || c.termoRecursoUrl || c.termoCientificacaoUrl || gerandoCientIds.has(c.id) || podeGerarCientificacao(c) || podeSolicitarBase || (podeReagendar && !c.finalizado)) && (
+                {(podeGerarTermo || c.termoRecursoUrl || c.termoCientificacaoUrl || gerandoCientIds.has(c.id) || podeGerarCientificacao(c) || mostrarMenuAcoes(c) || (podeReagendar && !c.finalizado)) && (
                   <div className="pt-2 space-y-2">
                     {c.termoRecursoUrl ? (
                       <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
@@ -3360,8 +3369,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                         <span>Gerar Termo de Cientificação</span>
                       </button>
                     ) : null}
-                    {podeSolicitarBase && (['parecer', 'exames'] as const).map(tipo => {
+                    {mostrarMenuAcoes(c) && (['parecer', 'exames'] as const).map(tipo => {
                       const url = tipo === 'parecer' ? c.solicitacaoParecerUrl : c.solicitacaoExamesUrl;
+                      if (!url && !podeSolicitarBase) return null;
                       const habilitado = !!url || (statusPermiteSolicitacao(c) && !gerandoSolicitacaoIds.has(c.id));
                       const rotuloItem = tipo === 'parecer' ? (url ? 'Ver Parecer' : 'Gerar Parecer') : (url ? 'Ver Exames' : 'Gerar Exames');
                       return (
