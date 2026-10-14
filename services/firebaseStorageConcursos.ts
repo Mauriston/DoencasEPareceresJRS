@@ -10,7 +10,7 @@
 //     allow read, write: if request.auth != null && ...
 //   }
 import { getAuth } from 'firebase/auth';
-import { getStorage, ref, uploadBytes, uploadString, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
 import { app } from './firebaseAuth';
 
 const MAX_TERMO_SIZE_BYTES = 10 * 1024 * 1024;
@@ -42,4 +42,29 @@ export const uploadTermoRecursoPdf = async (concursoId: string, candidatoId: str
   const storageRef = ref(storage, caminho);
   await uploadString(storageRef, pdfBase64, 'base64', { contentType: 'application/pdf' });
   return getDownloadURL(storageRef);
+};
+
+const caminhoTermoCientificacao = (concursoId: string, candidatoId: string) =>
+  `concursos/${concursoId}/termos/${candidatoId}_cientificacao.pdf`;
+
+export const uploadTermoCientificacaoPdf = async (concursoId: string, candidatoId: string, pdfBase64: string): Promise<string> => {
+  exigirSessao();
+
+  const tamanhoAproximado = Math.ceil((pdfBase64.length * 3) / 4);
+  if (tamanhoAproximado > MAX_TERMO_SIZE_BYTES) {
+    throw new Error('O PDF do Termo de Cientificação gerado é maior que o permitido.');
+  }
+
+  const storageRef = ref(getStorage(app), caminhoTermoCientificacao(concursoId, candidatoId));
+  await uploadString(storageRef, pdfBase64, 'base64', { contentType: 'application/pdf' });
+  return getDownloadURL(storageRef);
+};
+
+/** Apaga o PDF do Termo de Cientificação (best-effort: se já não existir ou a regra negar, o link no Firestore é limpo de qualquer forma). */
+export const removerTermoCientificacaoPdf = async (concursoId: string, candidatoId: string): Promise<void> => {
+  try {
+    await deleteObject(ref(getStorage(app), caminhoTermoCientificacao(concursoId, candidatoId)));
+  } catch {
+    // silencioso
+  }
 };

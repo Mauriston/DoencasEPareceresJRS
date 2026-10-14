@@ -22,6 +22,7 @@
  */
 
 var ID_TEMPLATE_TERMO_RECURSO = '1gVSaakcQJBrFJnF4umFbI_cjR9abCXPjfOyfSUFKnRo';
+var ID_TEMPLATE_TERMO_CIENTIFICACAO = '1uSdvvwxjPDkvGm7kjCrDGaGnPVF3_pDu4rN6C6tJFiI';
 
 /** Ponto de entrada POST do aplicativo da web. Espera um corpo JSON com a propriedade "action". */
 function doPost(e) {
@@ -34,6 +35,7 @@ function doPost(e) {
     }
 
     if (corpo.action === 'gerarTermoRecurso') return apiGerarTermoRecurso(corpo);
+    if (corpo.action === 'gerarTermoCientificacao') return apiGerarTermoCientificacao(corpo);
     throw new Error('Ação POST desconhecida: "' + corpo.action + '".');
   });
 }
@@ -109,6 +111,78 @@ function apiGerarTermoRecurso(corpo) {
     Object.keys(valores).forEach(function(chave) {
       body.replaceText('\\{\\{' + chave + '\\}\\}', valores[chave]);
     });
+
+    docAberto.saveAndClose();
+
+    var pdfBlob = docCopia.getAs('application/pdf');
+    var base64 = Utilities.base64Encode(pdfBlob.getBytes());
+
+    return { candidatoId: candidatoId, pdfBase64: base64 };
+  } finally {
+    docCopia.setTrashed(true);
+  }
+}
+
+/**
+ * action=gerarTermoCientificacao (POST): { candidatoId, candidatoNome,
+ * nomeConcurso, status } — gera o PDF do Termo de Cientificação de Resultado
+ * de IS Ingresso/Seleção a partir do template Google Docs, e devolve o
+ * conteúdo em base64 (o app grava o PDF no Firebase Storage). Só o candidato
+ * assina, então não há dados de médico.
+ *
+ * "status": APTO | INAPTO | INSUF DOCUMENTAL. Cada opção do template tem um
+ * marcador entre parênteses: o do resultado vira "X" (e o parágrafo inteiro
+ * da opção fica em negrito); os outros dois são esvaziados.
+ *
+ * Placeholders do template:
+ *   {{candidatoNome}} {{candidatoId}} {{nomeConcurso}} {{DATA_HOJE}} (DDMMMAAAA)
+ *   {{X_APTO}} {{X_INAPTO}} {{X_IDM}}
+ */
+function apiGerarTermoCientificacao(corpo) {
+  var campo = function(nome) { return String((corpo && corpo[nome]) || '').trim(); };
+
+  var candidatoId = campo('candidatoId');
+  var candidatoNome = campo('candidatoNome');
+  if (!candidatoId) throw new Error('"candidatoId" (matrícula do candidato) é obrigatório.');
+  if (!candidatoNome) throw new Error('"candidatoNome" é obrigatório.');
+
+  var mapaMarcadores = { 'APTO': 'X_APTO', 'INAPTO': 'X_INAPTO', 'INSUF DOCUMENTAL': 'X_IDM' };
+  var status = campo('status').toUpperCase();
+  var marcadorEscolhido = mapaMarcadores[status];
+  if (!marcadorEscolhido) throw new Error('"status" deve ser APTO, INAPTO ou INSUF DOCUMENTAL.');
+
+  var valores = {
+    candidatoNome: candidatoNome,
+    candidatoId: candidatoId,
+    nomeConcurso: campo('nomeConcurso'),
+    DATA_HOJE: formatarDataMilitar(new Date())
+  };
+
+  var docCopia = DriveApp.getFileById(ID_TEMPLATE_TERMO_CIENTIFICACAO).makeCopy('Temp_Cientificacao_' + candidatoId);
+  try {
+    var docAberto = DocumentApp.openById(docCopia.getId());
+    var body = docAberto.getBody();
+
+    // Localiza o parágrafo da opção escolhida antes de trocar o marcador.
+    var achado = body.findText('\\{\\{' + marcadorEscolhido + '\\}\\}');
+    var paragrafo = null;
+    if (achado) {
+      var el = achado.getElement();
+      while (el && el.getType() !== DocumentApp.ElementType.PARAGRAPH && el.getType() !== DocumentApp.ElementType.LIST_ITEM) {
+        el = el.getParent();
+      }
+      paragrafo = el;
+    }
+
+    Object.keys(mapaMarcadores).forEach(function(chave) {
+      var marcador = mapaMarcadores[chave];
+      body.replaceText('\\{\\{' + marcador + '\\}\\}', marcador === marcadorEscolhido ? 'X' : '');
+    });
+    Object.keys(valores).forEach(function(chave) {
+      body.replaceText('\\{\\{' + chave + '\\}\\}', valores[chave]);
+    });
+
+    if (paragrafo) paragrafo.editAsText().setBold(true);
 
     docAberto.saveAndClose();
 

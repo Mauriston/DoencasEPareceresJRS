@@ -26,9 +26,11 @@ service firebase.storage {
     // restrito a usuários autenticados, como o restante do app.
     match /concursos/{concursoId}/{arquivo=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null
+      allow create, update: if request.auth != null
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType == 'application/pdf';
+      // Apagar: o Termo de Cientificação é removido quando o Status do candidato muda.
+      allow delete: if request.auth != null;
     }
 
     // PDFs dos capítulos da DGPM-406 (dgpm406/capitulos/capitulo-NN.pdf),
