@@ -60,16 +60,16 @@ const carregarCids = (): Promise<TabelaCid> => {
   return cidPromise;
 };
 
-interface CidInaptidaoModalProps {
+interface CidPickerProps {
   candidatoNome: string;
   /** Chamado ao clicar numa opção da lista, com o DESCRABREV do CID escolhido. */
   onSelect: (descrAbrev: string) => void;
-  /** Quando true (primeira marcação como Inapto), o modal não tem como ser dispensado. */
-  obrigatorio: boolean;
+  /** Usado só se a tabela de CID não puder ser carregada (botão "Fechar"). */
   onClose: () => void;
 }
 
-export const CidInaptidaoModal: React.FC<CidInaptidaoModalProps> = ({ candidatoNome, onSelect, obrigatorio, onClose }) => {
+/** Texto + busca + lista de CIDs, sem moldura: usado no modal (desktop) e dentro do bottom sheet (mobile). */
+export const CidPicker: React.FC<CidPickerProps> = ({ candidatoNome, onSelect, onClose }) => {
   const [tabela, setTabela] = useState<TabelaCid | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
@@ -100,77 +100,91 @@ export const CidInaptidaoModal: React.FC<CidInaptidaoModalProps> = ({ candidatoN
   const mostrarLista = busca.trim().length >= 2;
 
   return (
-    <div
-      className="fixed inset-0 z-[210] bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 pt-[8vh] animate-fade-in"
-      onClick={obrigatorio ? undefined : onClose}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg max-h-[84vh] flex flex-col overflow-hidden"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between gap-2 shrink-0">
-          <div className="flex items-center space-x-2">
-            <span className="material-symbols-outlined text-[20px] text-[#FAB932]">medical_information</span>
-            <h3 className="font-heading font-bold text-sm uppercase">CID da inaptidão</h3>
+    <div className="space-y-3">
+      <p className="text-xs md:text-sm text-gray-700 leading-relaxed">
+        Informe o CID da inaptidão do candidato (a) <strong>{candidatoNome}</strong>
+      </p>
+
+      {erro ? (
+        <p className="text-xs md:text-sm text-red-700 font-semibold">{erro}</p>
+      ) : (
+        <>
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-gray-400 pointer-events-none">search</span>
+            <input
+              ref={inputRef}
+              type="text"
+              value={busca}
+              disabled={!cids}
+              onChange={e => setBusca(e.target.value)}
+              placeholder={cids ? 'Digite o código ou a descrição do CID...' : 'Carregando tabela de CID...'}
+              className="w-full pl-10 pr-3 py-3 text-sm font-semibold rounded-xl border border-gray-300 focus:outline-none focus:border-[#050F41] disabled:bg-gray-50"
+            />
           </div>
-          {!obrigatorio && (
-            <button type="button" onClick={onClose} aria-label="Fechar" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
+
+          {tabela?.incompleta && (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              A tabela de CID está incompleta (arquivo truncado): alguns códigos, como os do capítulo Z, podem não aparecer na busca.
+            </p>
           )}
+
+          {mostrarLista && (
+            <ul className="max-h-[40vh] overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white">
+              {resultados.length === 0 ? (
+                <li className="px-4 py-3 text-xs text-gray-500">Nenhum CID encontrado.</li>
+              ) : resultados.map(c => (
+                <li key={c.SUBCAT}>
+                  <button type="button" onClick={() => onSelect(c.DESCRABREV)} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none">
+                    <span className="block text-sm font-bold text-[#050F41]">{c.SUBCAT}</span>
+                    <span className="block text-xs text-gray-500 leading-snug">{c.DESCRICAO}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+
+      {erro && (
+        <div className="flex justify-end">
+          <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Fechar</button>
         </div>
-        <div className="p-5 space-y-3 overflow-y-auto">
-          <p className="text-xs md:text-sm text-gray-700 leading-relaxed">
-            Informe o CID da inaptidão do candidato (a) <strong>{candidatoNome}</strong>
-          </p>
-
-          {erro ? (
-            <p className="text-xs md:text-sm text-red-700 font-semibold">{erro}</p>
-          ) : (
-            <>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-gray-400 pointer-events-none">search</span>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={busca}
-                  disabled={!cids}
-                  onChange={e => setBusca(e.target.value)}
-                  placeholder={cids ? 'Digite o código ou a descrição do CID...' : 'Carregando tabela de CID...'}
-                  className="w-full pl-10 pr-3 py-3 text-sm font-semibold rounded-xl border border-gray-300 focus:outline-none focus:border-[#050F41] disabled:bg-gray-50"
-                />
-              </div>
-
-              {tabela?.incompleta && (
-                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  A tabela de CID está incompleta (arquivo truncado): alguns códigos, como os do capítulo Z, podem não aparecer na busca.
-                </p>
-              )}
-
-              {mostrarLista && (
-                <ul className="max-h-[40vh] overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100">
-                  {resultados.length === 0 ? (
-                    <li className="px-4 py-3 text-xs text-gray-500">Nenhum CID encontrado.</li>
-                  ) : resultados.map(c => (
-                    <li key={c.SUBCAT}>
-                      <button type="button" onClick={() => onSelect(c.DESCRABREV)} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none">
-                        <span className="block text-sm font-bold text-[#050F41]">{c.SUBCAT}</span>
-                        <span className="block text-xs text-gray-500 leading-snug">{c.DESCRICAO}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-
-          {erro && (
-            <div className="flex justify-end">
-              <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Fechar</button>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 };
+
+interface CidInaptidaoModalProps {
+  candidatoNome: string;
+  onSelect: (descrAbrev: string) => void;
+  /** Quando true (primeira marcação como Inapto), o modal não tem como ser dispensado. */
+  obrigatorio: boolean;
+  onClose: () => void;
+}
+
+export const CidInaptidaoModal: React.FC<CidInaptidaoModalProps> = ({ candidatoNome, onSelect, obrigatorio, onClose }) => (
+  <div
+    className="fixed inset-0 z-[210] bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 pt-[8vh] animate-fade-in"
+    onClick={obrigatorio ? undefined : onClose}
+  >
+    <div
+      className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg max-h-[84vh] flex flex-col overflow-hidden"
+      onClick={e => e.stopPropagation()}
+    >
+      <div className="p-4 bg-[#050F41] text-white flex items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center space-x-2">
+          <span className="material-symbols-outlined text-[20px] text-[#FAB932]">medical_information</span>
+          <h3 className="font-heading font-bold text-sm uppercase">CID da inaptidão</h3>
+        </div>
+        {!obrigatorio && (
+          <button type="button" onClick={onClose} aria-label="Fechar" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        )}
+      </div>
+      <div className="p-5 overflow-y-auto">
+        <CidPicker candidatoNome={candidatoNome} onSelect={onSelect} onClose={onClose} />
+      </div>
+    </div>
+  </div>
+);

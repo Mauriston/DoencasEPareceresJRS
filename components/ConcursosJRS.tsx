@@ -1,5 +1,5 @@
-import { CidInaptidaoModal } from './CidInaptidaoModal';
-import { MotivoIdmModal } from './MotivoIdmModal';
+import { CidInaptidaoModal, CidPicker } from './CidInaptidaoModal';
+import { MotivoIdmModal, IdmPicker } from './MotivoIdmModal';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Header } from './Header';
@@ -2534,10 +2534,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         </div>
       )}
 
-      {motivoModal && motivoModal.tipo === 'CID' && (
+      {motivoModal && (isDesktop || !candidatoModalMobile) && motivoModal.tipo === 'CID' && (
         <CidInaptidaoModal candidatoNome={motivoModal.candidato.nome} obrigatorio={motivoModal.obrigatorio} onSelect={handleMotivoSelecionado} onClose={handleMotivoFechado} />
       )}
-      {motivoModal && motivoModal.tipo === 'IDM' && (
+      {motivoModal && (isDesktop || !candidatoModalMobile) && motivoModal.tipo === 'IDM' && (
         <MotivoIdmModal candidatoNome={motivoModal.candidato.nome} observacoesAtuais={motivoModal.candidato.observacoes || ''} obrigatorio={motivoModal.obrigatorio} onConfirm={handleMotivoSelecionado} onClose={handleMotivoFechado} />
       )}
 
@@ -2951,82 +2951,114 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         const c = candidatos.find(x => x.id === candidatoModalMobile.id) || candidatoModalMobile;
         const editavel = podeEditar && !c.finalizado;
         const podeGerarTermo = !c.termoRecursoUrl && c.status === 'INAPTO';
+        // CID (Inapto) / exames da IDM: no mobile a escolha acontece dentro do próprio sheet.
+        const motivoNoSheet = motivoModal && motivoModal.candidato.id === c.id ? motivoModal : null;
+        const sheetTravado = !!motivoNoSheet?.obrigatorio;
+        const fecharSheet = () => {
+          if (sheetTravado) return;
+          setMotivoModal(null);
+          setCandidatoModalMobile(null);
+        };
         return (
-          <div className="md:hidden fixed inset-0 z-[150] bg-[#F3F5F7] flex flex-col animate-fade-in">
-            <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0 shadow-md">
-              <div className="min-w-0">
-                <h3 className="font-heading font-bold text-base truncate">{c.nome}</h3>
-                <p className="text-[11px] text-white/70 font-mono truncate">{c.id}{c.dataAgendamento ? ` · ${isoParaBR(c.dataAgendamento)}` : ''}</p>
+          <div className="md:hidden fixed inset-0 z-[150] flex flex-col justify-end">
+            <div className="absolute inset-0 bg-black/50 animate-backdrop-in" onClick={fecharSheet} />
+            <div className="relative bg-[#F3F5F7] rounded-t-3xl shadow-2xl flex flex-col animate-sheet-up" style={{ maxHeight: '92dvh' }}>
+              <div className="pt-2.5 pb-1 flex justify-center shrink-0" onClick={fecharSheet}>
+                <span className="w-10 h-1.5 rounded-full bg-gray-300" />
               </div>
-              <button onClick={() => setCandidatoModalMobile(null)} className="text-gray-300 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors shrink-0">
-                <span className="material-symbols-outlined text-[24px]">close</span>
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5 space-y-5">
-              {c.finalizado && (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[20px] text-[#079551]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                  <p className="text-xs font-bold text-green-800">IS finalizada — os dados não podem mais ser alterados.</p>
+              <div className="px-5 py-3 flex items-center justify-between gap-3 shrink-0 border-b border-gray-200/70">
+                <div className="min-w-0">
+                  <h3 className="font-heading font-bold text-base text-[#050F41] truncate">{c.nome}</h3>
+                  <p className="text-[11px] text-gray-500 font-mono truncate">{c.id}{c.dataAgendamento ? ` · ${isoParaBR(c.dataAgendamento)}` : ''}</p>
                 </div>
-              )}
-
-              <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
-                {editavel ? (
-                  <select value={c.status || ''} onChange={e => handleStatusChange(c, e.target.value)} className={`w-full px-3 py-2.5 text-sm font-bold rounded-xl border focus:outline-none focus:border-[#050F41] ${getStatusSelectClasses(c.status)}`}>
-                    {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                ) : (
-                  <div>{getStatusBadge(c.status)}</div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Observações</label>
-                {editavel && (c.status === 'INAPTO' || c.status === 'INSUF DOCUMENTAL') ? (
-                  <button type="button" onClick={() => setMotivoModal({ candidato: c, tipo: c.status === 'INAPTO' ? 'CID' : 'IDM', obrigatorio: false })} className="w-full text-left px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-700 bg-white">
-                    {c.observacoes || <span className="text-gray-400">{c.status === 'INAPTO' ? 'Selecionar CID...' : 'Selecionar motivo...'}</span>}
+                {!sheetTravado && (
+                  <button onClick={fecharSheet} aria-label="Fechar" className="text-gray-500 hover:text-[#050F41] p-1.5 rounded-lg hover:bg-gray-200/60 transition-colors shrink-0">
+                    <span className="material-symbols-outlined text-[24px]">close</span>
                   </button>
-                ) : editavel ? (
-                  <textarea
-                    key={`obs-${c.id}-${c.observacoes}`}
-                    defaultValue={c.observacoes}
-                    onBlur={e => handleObservacoesBlur(c, e.target.value)}
-                    rows={5}
-                    placeholder="Sem observações."
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-700 focus:outline-none focus:border-[#050F41] resize-none"
-                  />
-                ) : (
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{c.observacoes || 'Sem observações.'}</p>
                 )}
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Nº TIS</label>
-                {/* Nunca editável no mobile — só é lançado na visão desktop. */}
-                <p className="text-sm font-semibold text-gray-700">{c.numTIS || '-'}</p>
-              </div>
-
-              {(podeGerarTermo || c.termoRecursoUrl || (podeReagendar && !c.finalizado)) && (
-                <div className="pt-2 space-y-2">
-                  {c.termoRecursoUrl ? (
-                    <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-gray-100 text-[#050F41] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
-                      <span className="material-symbols-outlined text-[20px]">description</span>
-                      <span>Abrir Termo de Recurso</span>
-                    </a>
-                  ) : podeGerarTermo ? (
-                    <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="w-full px-4 py-3 bg-gray-100 text-[#050F41] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
-                      <span className="material-symbols-outlined text-[20px]">gavel</span>
-                      <span>Gerar Termo de Recurso</span>
-                    </button>
-                  ) : null}
-                  {podeReagendar && !c.finalizado && (
-                    <button type="button" onClick={() => { setCandidatoModalMobile(null); handleOpenReagendamento(c); }} className="w-full px-4 py-3 bg-green-50 text-[#079551] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
-                      <span className="material-symbols-outlined text-[20px]">event_repeat</span>
-                      <span>Reagendar</span>
+              {motivoNoSheet ? (
+                <div className="flex-1 overflow-y-auto p-5 pb-8 space-y-4">
+                  {!motivoNoSheet.obrigatorio && (
+                    <button type="button" onClick={handleMotivoFechado} className="flex items-center gap-1 text-sm font-bold text-[#050F41]">
+                      <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                      Voltar
                     </button>
                   )}
+                  {motivoNoSheet.tipo === 'CID' ? (
+                    <CidPicker candidatoNome={c.nome} onSelect={handleMotivoSelecionado} onClose={handleMotivoFechado} />
+                  ) : (
+                    <IdmPicker candidatoNome={c.nome} observacoesAtuais={c.observacoes || ''} onConfirm={handleMotivoSelecionado} />
+                  )}
+                </div>
+              ) : (
+                <div className="flex-1 overflow-y-auto p-5 pb-8 space-y-5">
+                {c.finalizado && (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[20px] text-[#079551]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                    <p className="text-xs font-bold text-green-800">IS finalizada — os dados não podem mais ser alterados.</p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
+                  {editavel ? (
+                    <select value={c.status || ''} onChange={e => handleStatusChange(c, e.target.value)} className={`w-full px-3 py-2.5 text-sm font-bold rounded-xl border focus:outline-none focus:border-[#050F41] ${getStatusSelectClasses(c.status)}`}>
+                      {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  ) : (
+                    <div>{getStatusBadge(c.status)}</div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Observações</label>
+                  {editavel && (c.status === 'INAPTO' || c.status === 'INSUF DOCUMENTAL') ? (
+                    <button type="button" onClick={() => setMotivoModal({ candidato: c, tipo: c.status === 'INAPTO' ? 'CID' : 'IDM', obrigatorio: false })} className="w-full text-left px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-700 bg-white">
+                      {c.observacoes || <span className="text-gray-400">{c.status === 'INAPTO' ? 'Selecionar CID...' : 'Selecionar motivo...'}</span>}
+                    </button>
+                  ) : editavel ? (
+                    <textarea
+                      key={`obs-${c.id}-${c.observacoes}`}
+                      defaultValue={c.observacoes}
+                      onBlur={e => handleObservacoesBlur(c, e.target.value)}
+                      rows={5}
+                      placeholder="Sem observações."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-700 focus:outline-none focus:border-[#050F41] resize-none"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{c.observacoes || 'Sem observações.'}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Nº TIS</label>
+                  {/* Nunca editável no mobile — só é lançado na visão desktop. */}
+                  <p className="text-sm font-semibold text-gray-700">{c.numTIS || '-'}</p>
+                </div>
+
+                {(podeGerarTermo || c.termoRecursoUrl || (podeReagendar && !c.finalizado)) && (
+                  <div className="pt-2 space-y-2">
+                    {c.termoRecursoUrl ? (
+                      <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-gray-100 text-[#050F41] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                        <span className="material-symbols-outlined text-[20px]">description</span>
+                        <span>Abrir Termo de Recurso</span>
+                      </a>
+                    ) : podeGerarTermo ? (
+                      <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="w-full px-4 py-3 bg-gray-100 text-[#050F41] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                        <span className="material-symbols-outlined text-[20px]">gavel</span>
+                        <span>Gerar Termo de Recurso</span>
+                      </button>
+                    ) : null}
+                    {podeReagendar && !c.finalizado && (
+                      <button type="button" onClick={() => { setCandidatoModalMobile(null); handleOpenReagendamento(c); }} className="w-full px-4 py-3 bg-green-50 text-[#079551] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                        <span className="material-symbols-outlined text-[20px]">event_repeat</span>
+                        <span>Reagendar</span>
+                      </button>
+                    )}
+                  </div>
+                )}
                 </div>
               )}
             </div>
