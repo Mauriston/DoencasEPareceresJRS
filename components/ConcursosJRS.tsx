@@ -2321,7 +2321,8 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     !c.finalizado && STATUS_PERMITEM_SOLICITACAO.includes(String(c.status || '').trim().toUpperCase());
 
   // Quem não gera (ex.: secretaria) só enxerga o menu quando há documento para visualizar.
-  const temSolicitacaoGerada = (c: CandidatoRecord) => !!(c.solicitacaoParecerUrl || c.solicitacaoExamesUrl);
+  const qtdSolicitacoes = (c: CandidatoRecord) => (c.solicitacaoParecerUrl ? 1 : 0) + (c.solicitacaoExamesUrl ? 1 : 0);
+  const temSolicitacaoGerada = (c: CandidatoRecord) => qtdSolicitacoes(c) > 0;
   const mostrarMenuAcoes = (c: CandidatoRecord) => podeSolicitarBase || temSolicitacaoGerada(c);
 
   useEffect(() => {
@@ -3120,8 +3121,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                   )}
 
                                   {mostrarMenuAcoes(c) && (
-                                    <button type="button" onClick={e => abrirMenuAcoes(e, c.id)} className="p-2 ml-1 text-gray-600 bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer" title="Mais ações" aria-haspopup="menu" aria-expanded={menuAcoes?.id === c.id}>
-                                      <span className="material-symbols-outlined text-[22px]">{gerandoSolicitacaoIds.has(c.id) ? 'progress_activity' : 'more_vert'}</span>
+                                    <button type="button" onClick={e => abrirMenuAcoes(e, c.id)} className="relative p-2 ml-1 text-gray-600 bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer" title={qtdSolicitacoes(c) ? `Mais ações — ${qtdSolicitacoes(c)} documento(s) gerado(s)` : 'Mais ações'} aria-haspopup="menu" aria-expanded={menuAcoes?.id === c.id}>
+                                      <span className={`material-symbols-outlined text-[22px] ${gerandoSolicitacaoIds.has(c.id) ? 'animate-spin' : ''}`}>{gerandoSolicitacaoIds.has(c.id) ? 'progress_activity' : 'more_vert'}</span>
+                                      {qtdSolicitacoes(c) > 0 && (
+                                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#079551] text-white text-[10px] font-bold leading-none flex items-center justify-center ring-2 ring-white">{qtdSolicitacoes(c)}</span>
+                                      )}
                                     </button>
                                   )}
                                 </td>
