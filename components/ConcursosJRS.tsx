@@ -15,6 +15,7 @@ import {
   STATUS_LABELS,
   type ConcursoRecord, type CandidatoRecord, type DataAgendamentoInfo, type MensagemRecord, type EstatisticasAnuais, type EstatisticaConcursoStatus,
 } from '../services/firestoreConcursos';
+import { juntarPdfsBase64 } from '../services/pdfMerge';
 import { uploadMensagemPdf, uploadTermoRecursoPdf, uploadTermoCientificacaoPdf } from '../services/firebaseStorageConcursos';
 import {
   limparRuidoPaginacao, extrairCabecalhoMensagem, extrairCandidatos, extrairPeriodoJRS,
@@ -1753,7 +1754,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
       <Header title="Planilhas de Controle" onBack={onBack} />
 
       {toastMessage && (
-        <div className="fixed top-20 right-4 z-[100] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in max-w-[90vw]">
+        <div className="fixed top-20 right-4 z-[300] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in max-w-[90vw]">
           <span className="material-symbols-outlined text-[18px] text-[#079551] shrink-0">check_circle</span>
           <span className="font-semibold">{toastMessage}</span>
         </div>
@@ -2261,8 +2262,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   };
 
   // Termo de Cientificação de Resultado: qualquer perfil gera/visualiza (só o candidato assina).
-  // Apto/Insuf. Documental: ícone na planilha assim que o status cumpre as exigências. Inapto: gerado
-  // automaticamente em segundo plano logo após o Termo de Recurso.
+  // Apto/Insuf. Documental: ícone na planilha assim que o status cumpre as exigências.
   const [gerandoCientIds, setGerandoCientIds] = useState<Set<string>>(new Set());
   const marcarGerandoCient = (id: string, gerando: boolean) =>
     setGerandoCientIds(prev => {
@@ -2271,29 +2271,34 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       return proximo;
     });
   // Não espera o Nº TIS (que finaliza e trava a IS): basta o preenchimento exigido pelo Status —
-  // Apto só o status; Insuf. Documental também o motivo nas Observações.
+  // Apto só o status; Insuf. Documental também o motivo nas Observações. Inapto não entra aqui:
+  // o Termo de Cientificação vai anexado ao PDF do Termo de Recurso (ver gerarTermo).
   const podeGerarCientificacao = (c: CandidatoRecord) =>
     !c.termoCientificacaoUrl && (c.status === 'APTO' || (c.status === 'INSUF DOCUMENTAL' && !!c.observacoes.trim()));
+
+  const pedirPdfCientificacao = async (id: string, nome: string, status: string): Promise<string> => {
+    const res = await fetch(GAS_URL_TERMO_RECURSO, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'gerarTermoCientificacao',
+        candidatoId: id,
+        candidatoNome: nome,
+        nomeConcurso: concurso?.nome || '',
+        status,
+      }),
+    });
+    const json = await res.json();
+    if (!json.sucesso) throw new Error(json.erro || 'Erro ao gerar o Termo de Cientificação.');
+    return json.dados.pdfBase64;
+  };
 
   const gerarTermoCientificacao = async (id: string, nome: string, status: string, abrir: boolean) => {
     if (gerandoCientIds.has(id)) return;
     marcarGerandoCient(id, true);
     try {
-      const res = await fetch(GAS_URL_TERMO_RECURSO, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'gerarTermoCientificacao',
-          candidatoId: id,
-          candidatoNome: nome,
-          nomeConcurso: concurso?.nome || '',
-          status,
-        }),
-      });
-      const json = await res.json();
-      if (!json.sucesso) throw new Error(json.erro || 'Erro ao gerar o Termo de Cientificação.');
-
-      const url = await uploadTermoCientificacaoPdf(concursoId, id, json.dados.pdfBase64);
+      const pdfBase64 = await pedirPdfCientificacao(id, nome, status);
+      const url = await uploadTermoCientificacaoPdf(concursoId, id, pdfBase64);
       await salvarTermoCientificacao(concursoId, id, url);
       setCandidatos(prev => prev.map(c => (c.id === id ? { ...c, termoCientificacaoUrl: url } : c)));
       showToast(`Termo de Cientificação gerado para ${nome}.`);
@@ -2346,6 +2351,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     marcarGerandoTermo(id, true);
     try {
       const candidato = candidatos.find(c => c.id === id);
+      // Inapto: o PDF único leva o Termo de Recurso (1ª página) e o Termo de Cientificação (anexado).
+      const cientificacaoPromise = pedirPdfCientificacao(id, nome, 'INAPTO');
+      cientificacaoPromise.catch(() => {}); // o erro é tratado quando a promise é aguardada abaixo
       const res = await fetch(GAS_URL_TERMO_RECURSO, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -2363,17 +2371,14 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       const json = await res.json();
       if (!json.sucesso) throw new Error(json.erro || 'Erro ao gerar o Termo de Recurso.');
 
-      const url = await uploadTermoRecursoPdf(concursoId, id, json.dados.pdfBase64);
+      const pdfUnico = await juntarPdfsBase64([json.dados.pdfBase64, await cientificacaoPromise]);
+      const url = await uploadTermoRecursoPdf(concursoId, id, pdfUnico);
       await salvarTermoRecurso(concursoId, id, url);
       setCandidatos(prev => prev.map(c => (c.id === id ? { ...c, recurso: true, termoRecursoUrl: url } : c)));
-      showToast(`Termo de Recurso gerado para ${nome}.`);
+      showToast(`Termo de Recurso e Cientificação gerados para ${nome}.`);
       // No desktop abre no próprio app (modal); no mobile o navegador bloquearia
       // uma nova aba aberta após o await — o termo fica disponível pelo botão.
-      if (isDesktop) abrirPdfUrl(url, `Termo de Recurso — ${nome}`);
-      // Inapto: o Termo de Cientificação é gerado em segundo plano (sem bloquear o fluxo).
-      if (candidato?.status === 'INAPTO' && !candidato.termoCientificacaoUrl) {
-        gerarTermoCientificacao(id, nome, 'INAPTO', false);
-      }
+      if (isDesktop) abrirPdfUrl(url, `Termo de Recurso e Cientificação — ${nome}`);
     } catch (e: any) {
       showToast(e?.message || 'Erro ao gerar o Termo de Recurso.');
     } finally {
@@ -2383,10 +2388,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
   const handleStatusChange = (candidato: CandidatoRecord, novoStatus: string) => {
     // Já existe Termo de Cientificação (do status atual): confirma antes, pois ele será apagado.
-    if (candidato.termoCientificacaoUrl && novoStatus !== candidato.status) {
+    if ((candidato.termoCientificacaoUrl || candidato.termoRecursoUrl) && novoStatus !== candidato.status) {
+      const termoApagado = candidato.termoRecursoUrl ? 'Termo de Recurso e Cientificação' : 'Termo de Cientificação de Resultado';
       setConfirmDialog({
         title: 'Alterar Status',
-        message: `${candidato.nome} já possui Termo de Cientificação de Resultado gerado. Ao alterar o Status, o termo gerado será apagado. Deseja continuar?`,
+        message: `${candidato.nome} já possui ${termoApagado} gerado. Ao alterar o Status, o termo gerado será apagado. Deseja continuar?`,
         confirmLabel: 'Alterar e apagar termo',
         onConfirm: () => {
           setConfirmDialog(null);
@@ -2662,7 +2668,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       <Header title={concurso?.nome || 'Planilhas de Controle'} desktopTitle={concurso?.nome} onBack={!isDesktop ? onVoltar : undefined} />
 
       {toastMessage && (
-        <div className="fixed top-20 right-4 z-[100] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in max-w-[90vw]">
+        <div className="fixed top-20 right-4 z-[300] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in max-w-[90vw]">
           <span className="material-symbols-outlined text-[18px] text-[#079551] shrink-0">check_circle</span>
           <span className="font-semibold">{toastMessage}</span>
         </div>
@@ -2952,7 +2958,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                 </td>
                                 <td className="py-3.5 px-4 text-right whitespace-nowrap">
                                   {c.termoRecursoUrl ? (
-                                    <button type="button" onClick={() => abrirPdfUrl(c.termoRecursoUrl!, `Termo de Recurso — ${c.nome}`)} className="p-2 text-green-800 bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Recurso">
+                                    <button type="button" onClick={() => abrirPdfUrl(c.termoRecursoUrl!, `Termo de Recurso e Cientificação — ${c.nome}`)} className="p-2 text-green-800 bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Recurso e Cientificação">
                                       <span className="material-symbols-outlined text-[22px]">description</span>
                                     </button>
                                   ) : c.status === 'INAPTO' && podeGerarTermoBase ? (
@@ -3197,7 +3203,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                     {c.termoRecursoUrl ? (
                       <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[20px]">description</span>
-                        <span>Visualizar Termo de Recurso</span>
+                        <span>Visualizar Termo de Recurso e Cientificação</span>
                       </a>
                     ) : podeGerarTermo ? (
                       <button type="button" disabled={gerandoTermoIds.has(c.id)} onClick={() => handleGerarTermo(c.id, c.nome)} className="w-full px-4 py-3 bg-red-50 text-red-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:cursor-wait disabled:opacity-80" aria-busy={gerandoTermoIds.has(c.id)}>

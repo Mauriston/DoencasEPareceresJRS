@@ -68,3 +68,12 @@ export const removerTermoCientificacaoPdf = async (concursoId: string, candidato
     // silencioso
   }
 };
+
+/** Apaga o PDF do Termo de Recurso (best-effort, como o de Cientificação). */
+export const removerTermoRecursoPdf = async (concursoId: string, candidatoId: string): Promise<void> => {
+  try {
+    await deleteObject(ref(getStorage(app), `concursos/${concursoId}/termos/${candidatoId}.pdf`));
+  } catch {
+    // silencioso
+  }
+};

@@ -17,7 +17,7 @@ import {
   writeBatch, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { app } from './firebaseAuth';
-import { removerTermoCientificacaoPdf } from './firebaseStorageConcursos';
+import { removerTermoCientificacaoPdf, removerTermoRecursoPdf } from './firebaseStorageConcursos';
 import {
   MAPA_LAUDO_POR_STATUS, candidatoEstaFinalizado, formatarDataSimples, formatarDataMilitar,
   formatarChaveData, parseChaveData, calcularDiasUteis, distribuirCandidatosNasDatas,
@@ -388,6 +388,12 @@ export const atualizarCandidato = async (
     proximo.termoCientificacaoUrl = '';
     await removerTermoCientificacaoPdf(concursoId, id);
   }
+  // Inapto: o Termo de Recurso (que leva junto o de Cientificação) também perde o sentido.
+  if (proximo.status !== undefined && proximo.status !== atual.status && atual.termoRecursoUrl) {
+    proximo.termoRecursoUrl = '';
+    proximo.recurso = false;
+    await removerTermoRecursoPdf(concursoId, id);
+  }
 
   const statusFinal = proximo.status !== undefined ? proximo.status : atual.status;
   const statusFinalUpper = String(statusFinal || '').trim().toUpperCase();
@@ -423,8 +429,11 @@ export const reagendarCandidato = async (concursoId: string, id: string, dataISO
     dataLaudo: '',
     laudo: '',
     termoCientificacaoUrl: '',
+    termoRecursoUrl: '',
+    recurso: false,
   };
   if (atual.termoCientificacaoUrl) await removerTermoCientificacaoPdf(concursoId, id);
+  if (atual.termoRecursoUrl) await removerTermoRecursoPdf(concursoId, id);
   await updateDoc(candidatoRef(concursoId, id), proximo);
   return { ...atual, ...proximo };
 };
