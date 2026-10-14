@@ -2153,6 +2153,14 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   // Só médicos (user_medicos/admin, ou MPI escolhendo o responsável) geram o termo; a secretaria só visualiza.
   const podeGerarTermoBase = canUseFeature('concursosJRS.gerarTermoRecurso', perfil);
   const [responsavelModal, setResponsavelModal] = useState<{ id: string; nome: string } | null>(null);
+  // Matrículas com geração do termo em andamento (o ícone mostra um spinner).
+  const [gerandoTermoIds, setGerandoTermoIds] = useState<Set<string>>(new Set());
+  const marcarGerandoTermo = (id: string, gerando: boolean) =>
+    setGerandoTermoIds(prev => {
+      const proximo = new Set(prev);
+      if (gerando) proximo.add(id); else proximo.delete(id);
+      return proximo;
+    });
   const [showDefinirPeriodoModal, setShowDefinirPeriodoModal] = useState(false);
 
   const [concurso, setConcurso] = useState<ConcursoRecord | null>(null);
@@ -2280,6 +2288,8 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   };
 
   const gerarTermo = async (id: string, nome: string, signatario: SignatarioTermo) => {
+    if (gerandoTermoIds.has(id)) return;
+    marcarGerandoTermo(id, true);
     try {
       const candidato = candidatos.find(c => c.id === id);
       const res = await fetch(GAS_URL_TERMO_RECURSO, {
@@ -2308,6 +2318,8 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       if (isDesktop) abrirPdfUrl(url, `Termo de Recurso — ${nome}`);
     } catch (e: any) {
       showToast(e?.message || 'Erro ao gerar o Termo de Recurso.');
+    } finally {
+      marcarGerandoTermo(id, false);
     }
   };
 
@@ -2865,8 +2877,8 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                       <span className="material-symbols-outlined text-[22px]">description</span>
                                     </button>
                                   ) : c.status === 'INAPTO' && podeGerarTermoBase ? (
-                                    <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="p-2 text-red-800 bg-red-50 hover:bg-red-700 hover:text-white rounded-xl transition-colors cursor-pointer" title="Gerar Termo de Recurso">
-                                      <span className="material-symbols-outlined text-[22px]">gavel</span>
+                                    <button type="button" disabled={gerandoTermoIds.has(c.id)} onClick={() => handleGerarTermo(c.id, c.nome)} className="p-2 text-red-800 bg-red-50 hover:bg-red-700 hover:text-white rounded-xl transition-colors cursor-pointer disabled:cursor-wait disabled:hover:bg-red-50 disabled:hover:text-red-800" title={gerandoTermoIds.has(c.id) ? 'Gerando o Termo de Recurso...' : 'Gerar Termo de Recurso'} aria-busy={gerandoTermoIds.has(c.id)}>
+                                      <span className={`material-symbols-outlined text-[22px] ${gerandoTermoIds.has(c.id) ? 'animate-spin' : ''}`}>{gerandoTermoIds.has(c.id) ? 'progress_activity' : 'gavel'}</span>
                                     </button>
                                   ) : null}
 
@@ -3095,9 +3107,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                         <span>Visualizar Termo de Recurso</span>
                       </a>
                     ) : podeGerarTermo ? (
-                      <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="w-full px-4 py-3 bg-red-50 text-red-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
-                        <span className="material-symbols-outlined text-[20px]">gavel</span>
-                        <span>Gerar Termo de Recurso</span>
+                      <button type="button" disabled={gerandoTermoIds.has(c.id)} onClick={() => handleGerarTermo(c.id, c.nome)} className="w-full px-4 py-3 bg-red-50 text-red-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:cursor-wait disabled:opacity-80" aria-busy={gerandoTermoIds.has(c.id)}>
+                        <span className={`material-symbols-outlined text-[20px] ${gerandoTermoIds.has(c.id) ? 'animate-spin' : ''}`}>{gerandoTermoIds.has(c.id) ? 'progress_activity' : 'gavel'}</span>
+                        <span>{gerandoTermoIds.has(c.id) ? 'Gerando termo...' : 'Gerar Termo de Recurso'}</span>
                       </button>
                     ) : null}
                     {podeReagendar && !c.finalizado && (
