@@ -35,9 +35,17 @@ export const useStoragePdf = () => {
     }
   }, [isDesktop]);
 
+  // Abre um PDF cuja URL já é conhecida (ex.: termo de recurso já gerado):
+  // modal no desktop, nova aba no mobile — mesmo comportamento de `open`, sem
+  // a busca da URL no Storage (por isso é síncrono e seguro de chamar no clique).
+  const openUrl = useCallback((url: string, title: string) => {
+    if (isDesktop) setModal({ title, url });
+    else window.open(url, '_blank');
+  }, [isDesktop]);
+
   const modalElement = modal
     ? React.createElement(PdfFullscreenModal, { title: modal.title, url: modal.url, onClose: () => setModal(null) })
     : null;
 
-  return { open, busy, modalElement };
+  return { open, openUrl, busy, modalElement };
 };
