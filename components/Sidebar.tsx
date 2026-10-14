@@ -129,7 +129,7 @@ export const Sidebar: React.FC = () => {
       title="Página Inicial"
     >
       <div className="w-9 h-9 bg-white rounded-lg p-1 flex items-center justify-center shadow-sm shrink-0">
-        <img src="https://i.imgur.com/KUbQz08.png" alt="JRS/HNRe" className="h-full w-full object-contain" />
+        <img src="https://i.imgur.com/8HeAdv4.png" alt="JRS/HNRe" className="h-full w-full object-contain" />
       </div>
       <span className="text-[10px] font-bold uppercase tracking-wider text-white/90 whitespace-nowrap">
         JRS/HNRe
