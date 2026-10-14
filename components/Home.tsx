@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Header } from './Header';
 import { NavContext, getPrimeiroNome } from '../context/NavContext';
 import { getNavCategories, NavCategory } from '../config/navigation';
-import { listarConcursos } from '../services/firestoreConcursos';
+import { observarConcursos } from '../services/firestoreConcursos';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 
 export const Home: React.FC = () => {
@@ -18,18 +18,10 @@ export const Home: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [temConcursoEmAndamento, setTemConcursoEmAndamento] = useState(false);
 
-  useEffect(() => {
-    let cancelado = false;
-    (async () => {
-      try {
-        const lista = await listarConcursos();
-        if (!cancelado) setTemConcursoEmAndamento(lista.some(c => c.status === 'em_andamento'));
-      } catch {
-        // silencioso: não bloqueia a Home se a checagem falhar
-      }
-    })();
-    return () => { cancelado = true; };
-  }, []);
+  useEffect(() => observarConcursos(
+    lista => setTemConcursoEmAndamento(lista.some(c => c.status === 'em_andamento')),
+    () => { /* silencioso: não bloqueia a Home se a checagem falhar */ },
+  ), []);
 
   const selectedCategory: NavCategory | null = categories.find(c => c.id === selectedId) || null;
 
