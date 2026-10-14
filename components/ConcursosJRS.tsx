@@ -2253,7 +2253,16 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       const res = await fetch(GAS_URL_TERMO_RECURSO, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'gerarTermoRecurso', candidato: nome, dataLaudo: candidato?.dataLaudo || '' }),
+        body: JSON.stringify({
+          action: 'gerarTermoRecurso',
+          candidatoId: id,
+          candidatoNome: nome,
+          nomeConcurso: concurso?.nome || '',
+          dataLaudo: candidato?.dataLaudo || '',
+          nomeUsuario: nav?.authUser?.nome || '',
+          postoGraduacao: nav?.authUser?.postoGraduacao || '',
+          cargo: nav?.authUser?.cargo || '',
+        }),
       });
       const json = await res.json();
       if (!json.sucesso) throw new Error(json.erro || 'Erro ao gerar o Termo de Recurso.');

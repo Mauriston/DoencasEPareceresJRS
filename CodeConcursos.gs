@@ -10,16 +10,18 @@
  * partir do template Google Docs e devolvê-lo em base64, para o app fazer
  * o upload no Firebase Storage.
  *
- * Implantação: no editor deste projeto, Implantar → Nova implantação →
- * Aplicativo da web, "Executar como: Eu", "Quem pode acessar: Qualquer
- * pessoa". Colar a URL ".../exec" gerada em GAS_URL_TERMO_RECURSO
+ * Implantação: crie um projeto Apps Script STANDALONE (script.google.com →
+ * Novo projeto; não atrelado a planilha nem ao Docs do template), cole este
+ * arquivo e use Implantar → Nova implantação → Aplicativo da web, "Executar
+ * como: Eu", "Quem pode acessar: Qualquer pessoa". Colar a URL ".../exec"
+ * gerada em GAS_URL_TERMO_RECURSO
  * (components/ConcursosJRS.tsx). Como o script usa Docs/Drive só para
  * copiar e exportar o template (nunca grava nada no Drive do usuário além
  * de uma cópia temporária, descartada ao final), a primeira execução pode
  * pedir autorização dessas permissões.
  */
 
-var ID_TEMPLATE_TERMO_RECURSO = '1CpgsInQSHnx_ji6NBfAiKmRmbfczKYW-M0QO4LZllgc';
+var ID_TEMPLATE_TERMO_RECURSO = '1gVSaakcQJBrFJnF4umFbI_cjR9abCXPjfOyfSUFKnRo';
 
 /** Ponto de entrada POST do aplicativo da web. Espera um corpo JSON com a propriedade "action". */
 function doPost(e) {
@@ -60,34 +62,52 @@ function formatarDataSimples(data) {
 }
 
 /**
- * action=gerarTermoRecurso (POST): { candidato, dataLaudo } — gera o PDF
- * do Termo de Cientificação de Recurso a partir do template Google Docs,
- * preenchendo os placeholders, e devolve o conteúdo em base64. Não lê nem
- * grava nada em planilhas ou pastas do Drive do usuário: a cópia do
- * template é sempre temporária e descartada ao final.
+ * action=gerarTermoRecurso (POST): { candidatoId, candidatoNome, nomeConcurso,
+ * dataLaudo, nomeUsuario, postoGraduacao, cargo } — gera o PDF do Termo de
+ * Reconhecimento de Recurso a partir do template Google Docs
+ * ("JRSApp - TEMPLATE RECONHECIMENTO RECURSO"), preenchendo os placeholders
+ * abaixo, e devolve o conteúdo em base64 (o app grava o PDF no Firebase
+ * Storage). Não lê nem grava nada em planilhas ou pastas do Drive do usuário:
+ * a cópia do template é sempre temporária e descartada ao final.
+ *
+ * Placeholders do template:
+ *   {{candidatoNome}} {{candidatoId}} (matrícula) {{nomeConcurso}} {{dataLaudo}}
+ *   {{DATA_HOJE}} {{nomeUsuario}} {{postoGraduacao}} {{cargo}}
  */
 function apiGerarTermoRecurso(corpo) {
-  var candidato = String((corpo && corpo.candidato) || '').trim();
-  var dataLaudo = String((corpo && corpo.dataLaudo) || '').trim();
-  if (!candidato) throw new Error('"candidato" é obrigatório.');
+  var campo = function(nome) { return String((corpo && corpo[nome]) || '').trim(); };
 
-  var dataHojeFormatada = formatarDataSimples(new Date());
+  var candidatoId = campo('candidatoId');
+  var candidatoNome = campo('candidatoNome');
+  if (!candidatoId) throw new Error('"candidatoId" (matrícula do candidato) é obrigatório.');
+  if (!candidatoNome) throw new Error('"candidatoNome" é obrigatório.');
 
-  var docCopia = DriveApp.getFileById(ID_TEMPLATE_TERMO_RECURSO).makeCopy('Temp_Recurso_' + candidato);
+  var valores = {
+    candidatoNome: candidatoNome,
+    candidatoId: candidatoId,
+    nomeConcurso: campo('nomeConcurso'),
+    dataLaudo: campo('dataLaudo'),
+    DATA_HOJE: formatarDataSimples(new Date()),
+    nomeUsuario: campo('nomeUsuario'),
+    postoGraduacao: campo('postoGraduacao'),
+    cargo: campo('cargo')
+  };
+
+  var docCopia = DriveApp.getFileById(ID_TEMPLATE_TERMO_RECURSO).makeCopy('Temp_Recurso_' + candidatoId);
   try {
     var docAberto = DocumentApp.openById(docCopia.getId());
     var body = docAberto.getBody();
 
-    body.replaceText('\\{\\{Candidato\\}\\}', candidato);
-    body.replaceText('\\{\\{Data Laudo\\}\\}', dataLaudo);
-    body.replaceText('\\{\\{DATA_HOJE\\}\\}', dataHojeFormatada);
+    Object.keys(valores).forEach(function(chave) {
+      body.replaceText('\\{\\{' + chave + '\\}\\}', valores[chave]);
+    });
 
     docAberto.saveAndClose();
 
     var pdfBlob = docCopia.getAs('application/pdf');
     var base64 = Utilities.base64Encode(pdfBlob.getBytes());
 
-    return { candidato: candidato, pdfBase64: base64 };
+    return { candidatoId: candidatoId, pdfBase64: base64 };
   } finally {
     docCopia.setTrashed(true);
   }
