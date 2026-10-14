@@ -363,6 +363,7 @@ export interface CandidatoImportadoCsv {
   laudo: string;
   numTIS: string;
   termoRecursoUrl: string;
+  termoCientificacaoUrl?: string;
 }
 
 /**

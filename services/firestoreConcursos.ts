@@ -17,6 +17,7 @@ import {
   writeBatch, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { app } from './firebaseAuth';
+import { removerTermoCientificacaoPdf } from './firebaseStorageConcursos';
 import {
   MAPA_LAUDO_POR_STATUS, candidatoEstaFinalizado, formatarDataSimples, formatarDataMilitar,
   formatarChaveData, parseChaveData, calcularDiasUteis, distribuirCandidatosNasDatas,
@@ -61,6 +62,7 @@ export interface CandidatoRecord {
   laudo: string;
   numTIS: string;
   termoRecursoUrl: string;
+  termoCientificacaoUrl: string;
 }
 
 export interface MensagemRecord {
@@ -112,6 +114,7 @@ const toCandidatoRecord = (id: string, data: any): CandidatoRecord => ({
   laudo: data.laudo || '',
   numTIS: data.numTIS || '',
   termoRecursoUrl: data.termoRecursoUrl || '',
+  termoCientificacaoUrl: data.termoCientificacaoUrl || '',
 });
 
 export const listarConcursos = async (): Promise<ConcursoRecord[]> => {
@@ -235,6 +238,7 @@ export const criarConcursoDaMensagem = async (params: {
       laudo: '',
       numTIS: '',
       termoRecursoUrl: '',
+      termoCientificacaoUrl: '',
     }));
   });
 
@@ -317,6 +321,7 @@ export const importarConcursoDeCsv = async (
       laudo: c.laudo,
       numTIS: c.numTIS,
       termoRecursoUrl: c.termoRecursoUrl,
+      termoCientificacaoUrl: c.termoCientificacaoUrl || '',
     }));
   });
 
@@ -332,7 +337,7 @@ export const criarCandidato = async (concursoId: string, id: string, nome: strin
 
   const dados = {
     nome, dataAgendamento, status: '', observacoes: '', finalizado: false,
-    recurso: false, dataLaudo: '', laudo: '', numTIS: '', termoRecursoUrl: '',
+    recurso: false, dataLaudo: '', laudo: '', numTIS: '', termoRecursoUrl: '', termoCientificacaoUrl: '',
   };
   await setDoc(candidatoRef(concursoId, id), dados);
   await updateDoc(concursoRef(concursoId), { totalCandidatos: (await listarCandidatos(concursoId)).length });
@@ -378,6 +383,12 @@ export const atualizarCandidato = async (
     }
   }
 
+  // Mudou o Status: o Termo de Cientificação gerado para o status anterior perde o sentido.
+  if (proximo.status !== undefined && proximo.status !== atual.status && atual.termoCientificacaoUrl) {
+    proximo.termoCientificacaoUrl = '';
+    await removerTermoCientificacaoPdf(concursoId, id);
+  }
+
   const statusFinal = proximo.status !== undefined ? proximo.status : atual.status;
   const statusFinalUpper = String(statusFinal || '').trim().toUpperCase();
   const numTisFinal = proximo.numTIS !== undefined ? proximo.numTIS : atual.numTIS;
@@ -411,7 +422,9 @@ export const reagendarCandidato = async (concursoId: string, id: string, dataISO
     finalizado: false,
     dataLaudo: '',
     laudo: '',
+    termoCientificacaoUrl: '',
   };
+  if (atual.termoCientificacaoUrl) await removerTermoCientificacaoPdf(concursoId, id);
   await updateDoc(candidatoRef(concursoId, id), proximo);
   return { ...atual, ...proximo };
 };
@@ -634,6 +647,9 @@ export const encerrarConcurso = async (concursoId: string) => {
   }
   await updateDoc(concursoRef(concursoId), { status: 'encerrado' as ConcursoStatus });
 };
+
+export const salvarTermoCientificacao = (concursoId: string, candidatoId: string, url: string) =>
+  updateDoc(candidatoRef(concursoId, candidatoId), { termoCientificacaoUrl: url });
 
 export const salvarTermoRecurso = (concursoId: string, candidatoId: string, url: string) =>
   updateDoc(candidatoRef(concursoId, candidatoId), { recurso: true, termoRecursoUrl: url });
