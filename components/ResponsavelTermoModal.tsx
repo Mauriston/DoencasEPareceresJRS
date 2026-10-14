@@ -7,11 +7,17 @@ import React, { useEffect, useState } from 'react';
 import { Avatar } from './Header';
 import { listUsuarios, UsuarioRecord } from '../services/firestoreUsuarios';
 
-// Ordem hierárquica pelo prefixo do campo "usuario" (posto); o restante segue a ordem alfabética.
+// Ordem de antiguidade dos médicos da JRS (do mais antigo ao mais moderno), pelo campo
+// "usuario". Quem não estiver na lista vem depois, ordenado pelo posto e, em seguida, pelo nome.
+const ORDEM_ANTIGUIDADE = ['CT MAURISTON', 'CT JÚLIO CÉSAR', '1T MÔNICA VIRGÍNIA'];
 const ORDEM_POSTO = ['CMG', 'CF', 'CC', 'CT', '1T', '2T'];
 const rankPosto = (usuario: string) => {
   const idx = ORDEM_POSTO.indexOf((usuario || '').trim().split(/\s+/)[0]?.toUpperCase());
   return idx === -1 ? ORDEM_POSTO.length : idx;
+};
+const rankAntiguidade = (usuario: string) => {
+  const idx = ORDEM_ANTIGUIDADE.indexOf((usuario || '').trim().toUpperCase());
+  return idx === -1 ? ORDEM_ANTIGUIDADE.length : idx;
 };
 
 interface ResponsavelTermoModalProps {
@@ -29,7 +35,10 @@ export const ResponsavelTermoModal: React.FC<ResponsavelTermoModalProps> = ({ ca
       .then(lista => {
         const jrs = lista
           .filter(u => u.ativo && (u.perfil === 'user_medicos' || u.perfil === 'admin'))
-          .sort((a, b) => rankPosto(a.usuario) - rankPosto(b.usuario) || a.usuario.localeCompare(b.usuario, 'pt-BR'));
+          .sort((a, b) =>
+            rankAntiguidade(a.usuario) - rankAntiguidade(b.usuario) ||
+            rankPosto(a.usuario) - rankPosto(b.usuario) ||
+            a.usuario.localeCompare(b.usuario, 'pt-BR'));
         setMedicos(jrs);
       })
       .catch(e => setErro(e?.message || 'Não foi possível carregar a lista de médicos.'));
@@ -50,7 +59,7 @@ export const ResponsavelTermoModal: React.FC<ResponsavelTermoModalProps> = ({ ca
         </div>
         <div className="p-5 space-y-4">
           <p className="text-xs md:text-sm text-gray-700 leading-relaxed">
-            Quem é o médico responsável pela IS de <strong>{candidatoNome}</strong>? Ele constará como signatário do Termo de Recurso.
+            Quem é o médico responsável pela IS de <strong>{candidatoNome}</strong>?
           </p>
 
           {erro ? (
@@ -68,7 +77,8 @@ export const ResponsavelTermoModal: React.FC<ResponsavelTermoModalProps> = ({ ca
                   onClick={() => onSelect(m)}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-[#050F41] hover:text-white hover:border-[#050F41] text-[#050F41] transition-colors text-left"
                 >
-                  <Avatar nome={m.nome} imageProfile={m.imageProfile} size={36} />
+                  {/* Avatar maior que a linha (margem negativa) para não aumentar a altura do botão. */}
+                  <span className="-my-1.5 shrink-0 flex"><Avatar nome={m.nome} imageProfile={m.imageProfile} size={48} /></span>
                   <span className="text-sm md:text-base font-bold">{m.usuario}</span>
                 </button>
               ))}
