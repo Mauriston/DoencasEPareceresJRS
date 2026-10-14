@@ -2261,7 +2261,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   };
 
   // Termo de Cientificação de Resultado: qualquer perfil gera/visualiza (só o candidato assina).
-  // Apto/Insuf. Documental: ícone na planilha quando a IS está finalizada. Inapto: gerado
+  // Apto/Insuf. Documental: ícone na planilha assim que o status cumpre as exigências. Inapto: gerado
   // automaticamente em segundo plano logo após o Termo de Recurso.
   const [gerandoCientIds, setGerandoCientIds] = useState<Set<string>>(new Set());
   const marcarGerandoCient = (id: string, gerando: boolean) =>
@@ -2270,8 +2270,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       if (gerando) proximo.add(id); else proximo.delete(id);
       return proximo;
     });
+  // Não espera o Nº TIS (que finaliza e trava a IS): basta o preenchimento exigido pelo Status —
+  // Apto só o status; Insuf. Documental também o motivo nas Observações.
   const podeGerarCientificacao = (c: CandidatoRecord) =>
-    !c.termoCientificacaoUrl && (c.status === 'APTO' || c.status === 'INSUF DOCUMENTAL') && c.finalizado;
+    !c.termoCientificacaoUrl && (c.status === 'APTO' || (c.status === 'INSUF DOCUMENTAL' && !!c.observacoes.trim()));
 
   const gerarTermoCientificacao = async (id: string, nome: string, status: string, abrir: boolean) => {
     if (gerandoCientIds.has(id)) return;
