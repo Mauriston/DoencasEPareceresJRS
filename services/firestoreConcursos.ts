@@ -63,6 +63,8 @@ export interface CandidatoRecord {
   numTIS: string;
   termoRecursoUrl: string;
   termoCientificacaoUrl: string;
+  solicitacaoParecerUrl: string;
+  solicitacaoExamesUrl: string;
 }
 
 export interface MensagemRecord {
@@ -115,6 +117,8 @@ const toCandidatoRecord = (id: string, data: any): CandidatoRecord => ({
   numTIS: data.numTIS || '',
   termoRecursoUrl: data.termoRecursoUrl || '',
   termoCientificacaoUrl: data.termoCientificacaoUrl || '',
+  solicitacaoParecerUrl: data.solicitacaoParecerUrl || '',
+  solicitacaoExamesUrl: data.solicitacaoExamesUrl || '',
 });
 
 export const listarConcursos = async (): Promise<ConcursoRecord[]> => {
@@ -239,6 +243,8 @@ export const criarConcursoDaMensagem = async (params: {
       numTIS: '',
       termoRecursoUrl: '',
       termoCientificacaoUrl: '',
+      solicitacaoParecerUrl: '',
+      solicitacaoExamesUrl: '',
     }));
   });
 
@@ -322,6 +328,8 @@ export const importarConcursoDeCsv = async (
       numTIS: c.numTIS,
       termoRecursoUrl: c.termoRecursoUrl,
       termoCientificacaoUrl: c.termoCientificacaoUrl || '',
+      solicitacaoParecerUrl: c.solicitacaoParecerUrl || '',
+      solicitacaoExamesUrl: c.solicitacaoExamesUrl || '',
     }));
   });
 
@@ -338,6 +346,7 @@ export const criarCandidato = async (concursoId: string, id: string, nome: strin
   const dados = {
     nome, dataAgendamento, status: '', observacoes: '', finalizado: false,
     recurso: false, dataLaudo: '', laudo: '', numTIS: '', termoRecursoUrl: '', termoCientificacaoUrl: '',
+    solicitacaoParecerUrl: '', solicitacaoExamesUrl: '',
   };
   await setDoc(candidatoRef(concursoId, id), dados);
   await updateDoc(concursoRef(concursoId), { totalCandidatos: (await listarCandidatos(concursoId)).length });
@@ -659,6 +668,39 @@ export const encerrarConcurso = async (concursoId: string) => {
 
 export const salvarTermoCientificacao = (concursoId: string, candidatoId: string, url: string) =>
   updateDoc(candidatoRef(concursoId, candidatoId), { termoCientificacaoUrl: url });
+
+/**
+ * Registra um Pedido de Parecer / Solicitação de Exames já gerado: grava o link,
+ * leva o candidato a "Pendente" e acrescenta "SOLICITADO ..." às Observações.
+ * Só vale para Sem status, Pendente ou Reagendado (e IS não finalizada).
+ */
+export const STATUS_PERMITEM_SOLICITACAO = ['', 'PENDENTE', 'REAGENDADO'];
+
+export const registrarSolicitacao = async (
+  concursoId: string,
+  id: string,
+  tipo: 'parecer' | 'exames',
+  url: string,
+  textoObservacao: string,
+): Promise<CandidatoRecord> => {
+  const snap = await getDoc(candidatoRef(concursoId, id));
+  if (!snap.exists()) throw new Error(`Candidato com matrícula "${id}" não encontrado.`);
+  const atual = toCandidatoRecord(id, snap.data());
+  if (atual.finalizado || !STATUS_PERMITEM_SOLICITACAO.includes(String(atual.status || '').trim().toUpperCase())) {
+    throw new Error('O status atual do candidato não permite gerar esta solicitação.');
+  }
+  const observacoes = atual.observacoes.trim() ? `${atual.observacoes.trim()}; ${textoObservacao}` : textoObservacao;
+  const proximo = {
+    [tipo === 'parecer' ? 'solicitacaoParecerUrl' : 'solicitacaoExamesUrl']: url,
+    status: 'Pendente',
+    dataLaudo: '',
+    laudo: '',
+    observacoes,
+    finalizado: false,
+  };
+  await updateDoc(candidatoRef(concursoId, id), proximo);
+  return { ...atual, ...proximo };
+};
 
 export const salvarTermoRecurso = (concursoId: string, candidatoId: string, url: string) =>
   updateDoc(candidatoRef(concursoId, candidatoId), { recurso: true, termoRecursoUrl: url });

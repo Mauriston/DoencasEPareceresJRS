@@ -23,6 +23,8 @@
 
 var ID_TEMPLATE_TERMO_RECURSO = '1gVSaakcQJBrFJnF4umFbI_cjR9abCXPjfOyfSUFKnRo';
 var ID_TEMPLATE_TERMO_CIENTIFICACAO = '1uSdvvwxjPDkvGm7kjCrDGaGnPVF3_pDu4rN6C6tJFiI';
+var ID_TEMPLATE_SOLICITACAO_PARECER = '1YW9-KBCafN1OFA4bSZZqiKLBmq-fubVElpzs3RCm_00';
+var ID_TEMPLATE_SOLICITACAO_EXAMES = '1SSAzdWANvfQJx7Sip2-NbqDGAM0cgpVD6Q4Ci9UhGqQ';
 
 /** Ponto de entrada POST do aplicativo da web. Espera um corpo JSON com a propriedade "action". */
 function doPost(e) {
@@ -36,6 +38,8 @@ function doPost(e) {
 
     if (corpo.action === 'gerarTermoRecurso') return apiGerarTermoRecurso(corpo);
     if (corpo.action === 'gerarTermoCientificacao') return apiGerarTermoCientificacao(corpo);
+    if (corpo.action === 'gerarSolicitacaoParecer') return apiGerarSolicitacaoParecer(corpo);
+    if (corpo.action === 'gerarSolicitacaoExames') return apiGerarSolicitacaoExames(corpo);
     throw new Error('Ação POST desconhecida: "' + corpo.action + '".');
   });
 }
@@ -193,4 +197,85 @@ function apiGerarTermoCientificacao(corpo) {
   } finally {
     docCopia.setTrashed(true);
   }
+}
+
+/**
+ * Gera o PDF de um template Google Docs substituindo os placeholders "{{chave}}"
+ * pelos valores informados (a cópia do template é temporária e descartada).
+ * "$" é escapado porque o replaceText trata "$1" como referência a grupo.
+ */
+function gerarPdfDeTemplate(idTemplate, nomeTemp, valores) {
+  var docCopia = DriveApp.getFileById(idTemplate).makeCopy(nomeTemp);
+  try {
+    var docAberto = DocumentApp.openById(docCopia.getId());
+    var body = docAberto.getBody();
+    Object.keys(valores).forEach(function(chave) {
+      body.replaceText('\\{\\{' + chave + '\\}\\}', String(valores[chave]).replace(/\$/g, '\\$'));
+    });
+    docAberto.saveAndClose();
+    return Utilities.base64Encode(docCopia.getAs('application/pdf').getBytes());
+  } finally {
+    docCopia.setTrashed(true);
+  }
+}
+
+/** Valores comuns aos dois documentos: candidato, concurso, data e médico signatário. */
+function valoresBaseSolicitacao(corpo) {
+  var campo = function(nome) { return String((corpo && corpo[nome]) || '').trim(); };
+  var candidatoId = campo('candidatoId');
+  var candidatoNome = campo('candidatoNome');
+  if (!candidatoId) throw new Error('"candidatoId" (matrícula do candidato) é obrigatório.');
+  if (!candidatoNome) throw new Error('"candidatoNome" é obrigatório.');
+  return {
+    campo: campo,
+    candidatoId: candidatoId,
+    valores: {
+      candidatoNome: candidatoNome,
+      candidatoId: candidatoId,
+      nomeConcurso: campo('nomeConcurso'),
+      DATA_HOJE: formatarDataMilitar(new Date()),
+      nomeUsuario: campo('nomeUsuario'),
+      postoGraduacao: campo('postoGraduacao'),
+      cargo: campo('cargo'),
+      crmPe: campo('crmPe'),
+      email: campo('email')
+    }
+  };
+}
+
+/**
+ * action=gerarSolicitacaoParecer (POST): { candidatoId, candidatoNome, nomeConcurso,
+ * especialidade, historico, nomeUsuario, postoGraduacao, cargo, crmPe, email } —
+ * Pedido de Parecer Médico. Placeholders: {{especialidade}} {{historico}} +
+ * os comuns (candidatoNome, candidatoId, nomeConcurso, DATA_HOJE, nomeUsuario,
+ * postoGraduacao, cargo, crmPe, email).
+ */
+function apiGerarSolicitacaoParecer(corpo) {
+  var base = valoresBaseSolicitacao(corpo);
+  var especialidade = base.campo('especialidade');
+  var historico = base.campo('historico');
+  if (!especialidade) throw new Error('"especialidade" é obrigatória.');
+  if (!historico) throw new Error('"historico" é obrigatório.');
+  base.valores.especialidade = especialidade;
+  base.valores.historico = historico;
+  return {
+    candidatoId: base.candidatoId,
+    pdfBase64: gerarPdfDeTemplate(ID_TEMPLATE_SOLICITACAO_PARECER, 'Temp_Parecer_' + base.candidatoId, base.valores)
+  };
+}
+
+/**
+ * action=gerarSolicitacaoExames (POST): mesmos campos, com "exames" no lugar de
+ * especialidade/historico — Solicitação de Exames Complementares Periciais.
+ * Placeholder próprio: {{exames}}.
+ */
+function apiGerarSolicitacaoExames(corpo) {
+  var base = valoresBaseSolicitacao(corpo);
+  var exames = base.campo('exames');
+  if (!exames) throw new Error('"exames" é obrigatório.');
+  base.valores.exames = exames;
+  return {
+    candidatoId: base.candidatoId,
+    pdfBase64: gerarPdfDeTemplate(ID_TEMPLATE_SOLICITACAO_EXAMES, 'Temp_Exames_' + base.candidatoId, base.valores)
+  };
 }

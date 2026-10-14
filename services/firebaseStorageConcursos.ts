@@ -77,3 +77,17 @@ export const removerTermoRecursoPdf = async (concursoId: string, candidatoId: st
     // silencioso
   }
 };
+
+/** Pedido de Parecer / Solicitação de Exames gerado pelo Apps Script (base64 → Storage). */
+export const uploadSolicitacaoPdf = async (concursoId: string, candidatoId: string, tipo: 'parecer' | 'exames', pdfBase64: string): Promise<string> => {
+  exigirSessao();
+
+  const tamanhoAproximado = Math.ceil((pdfBase64.length * 3) / 4);
+  if (tamanhoAproximado > MAX_TERMO_SIZE_BYTES) {
+    throw new Error('O PDF gerado é maior que o permitido.');
+  }
+
+  const storageRef = ref(getStorage(app), `concursos/${concursoId}/termos/${candidatoId}_${tipo}.pdf`);
+  await uploadString(storageRef, pdfBase64, 'base64', { contentType: 'application/pdf' });
+  return getDownloadURL(storageRef);
+};

@@ -10,13 +10,14 @@ import { canUseFeature } from '../config/permissions';
 import {
   listarConcursos, getConcurso, listarCandidatos, observarConcursos, observarConcurso, observarCandidatos, criarConcursoDaMensagem, novoConcursoId, importarConcursoDeCsv, atualizarCandidato,
   criarCandidato, reagendarCandidato, listarDatasAgendamento, obterContextoAgendamento, confirmarAgendamento,
-  gerarMinutaResultados, abrirConcurso, voltarParaEmBreve, encerrarConcurso, salvarTermoRecurso, salvarTermoCientificacao,
+  gerarMinutaResultados, abrirConcurso, voltarParaEmBreve, encerrarConcurso, salvarTermoRecurso, salvarTermoCientificacao, registrarSolicitacao, STATUS_PERMITEM_SOLICITACAO,
   listarMensagens, arquivarMensagem, obterEstatisticasAnuais, definirPeriodoAgendamento,
   STATUS_LABELS,
   type ConcursoRecord, type CandidatoRecord, type DataAgendamentoInfo, type MensagemRecord, type EstatisticasAnuais, type EstatisticaConcursoStatus,
 } from '../services/firestoreConcursos';
+import { SolicitarParecerModal, SolicitarExamesModal } from './SolicitacaoModais';
 import { juntarPdfsBase64 } from '../services/pdfMerge';
-import { uploadMensagemPdf, uploadTermoRecursoPdf, uploadTermoCientificacaoPdf } from '../services/firebaseStorageConcursos';
+import { uploadMensagemPdf, uploadTermoRecursoPdf, uploadTermoCientificacaoPdf, uploadSolicitacaoPdf } from '../services/firebaseStorageConcursos';
 import {
   limparRuidoPaginacao, extrairCabecalhoMensagem, extrairCandidatos, extrairPeriodoJRS,
   extrairNomeConcurso, formatarChaveData, parseChaveData, interpretarCsvCandidatosDataBase,
@@ -2310,6 +2311,94 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     }
   };
 
+  // Pedido de Parecer / Solicitação de Exames (menu ⋮ da coluna Ações). Quem pode: admin,
+  // user_medicos e user_medicos_mpi — o próprio usuário assina; secretaria não vê o menu.
+  const podeSolicitarBase = canUseFeature('concursosJRS.solicitarParecerExames', perfil);
+  const [solicitacaoModal, setSolicitacaoModal] = useState<{ tipo: 'parecer' | 'exames'; candidato: CandidatoRecord } | null>(null);
+  const [gerandoSolicitacaoIds, setGerandoSolicitacaoIds] = useState<Set<string>>(new Set());
+  const [menuAcoes, setMenuAcoes] = useState<{ id: string; top: number; right: number } | null>(null);
+  const statusPermiteSolicitacao = (c: CandidatoRecord) =>
+    !c.finalizado && STATUS_PERMITEM_SOLICITACAO.includes(String(c.status || '').trim().toUpperCase());
+
+  useEffect(() => {
+    if (!menuAcoes) return;
+    const fechar = () => setMenuAcoes(null);
+    const aoTecla = (e: KeyboardEvent) => { if (e.key === 'Escape') fechar(); };
+    window.addEventListener('scroll', fechar, true);
+    window.addEventListener('resize', fechar);
+    window.addEventListener('keydown', aoTecla);
+    return () => {
+      window.removeEventListener('scroll', fechar, true);
+      window.removeEventListener('resize', fechar);
+      window.removeEventListener('keydown', aoTecla);
+    };
+  }, [menuAcoes]);
+
+  const abrirMenuAcoes = (e: React.MouseEvent<HTMLElement>, id: string) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setMenuAcoes(prev => (prev?.id === id ? null : { id, top: r.bottom + 6, right: Math.max(8, window.innerWidth - r.right) }));
+  };
+
+  const handleItemSolicitacao = (tipo: 'parecer' | 'exames', c: CandidatoRecord) => {
+    setMenuAcoes(null);
+    const url = tipo === 'parecer' ? c.solicitacaoParecerUrl : c.solicitacaoExamesUrl;
+    const titulo = tipo === 'parecer' ? 'Pedido de Parecer' : 'Solicitação de Exames';
+    if (url) {
+      abrirPdfUrl(url, `${titulo} — ${c.nome}`);
+      return;
+    }
+    if (!statusPermiteSolicitacao(c) || gerandoSolicitacaoIds.has(c.id)) return;
+    setSolicitacaoModal({ tipo, candidato: c });
+  };
+
+  const gerarSolicitacao = async (
+    tipo: 'parecer' | 'exames',
+    candidato: CandidatoRecord,
+    dados: { especialidade?: string; historico?: string; exames?: string },
+  ) => {
+    setSolicitacaoModal(null);
+    const id = candidato.id;
+    setGerandoSolicitacaoIds(prev => new Set(prev).add(id));
+    try {
+      const res = await fetch(GAS_URL_TERMO_RECURSO, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: tipo === 'parecer' ? 'gerarSolicitacaoParecer' : 'gerarSolicitacaoExames',
+          candidatoId: id,
+          candidatoNome: candidato.nome,
+          nomeConcurso: concurso?.nome || '',
+          ...dados,
+          nomeUsuario: nav?.authUser?.nome || '',
+          postoGraduacao: nav?.authUser?.postoGraduacao || '',
+          cargo: nav?.authUser?.cargo || '',
+          crmPe: nav?.authUser?.crmPe || '',
+          email: nav?.authUser?.email || '',
+        }),
+      });
+      const json = await res.json();
+      if (!json.sucesso) throw new Error(json.erro || 'Erro ao gerar o documento.');
+
+      const url = await uploadSolicitacaoPdf(concursoId, id, tipo, json.dados.pdfBase64);
+      const observacao = tipo === 'parecer'
+        ? `SOLICITADO PARECER ${(dados.especialidade || '').toUpperCase()}`
+        : `SOLICITADO ${(dados.exames || '').split(/\s*\n\s*/).filter(Boolean).join('; ')}`;
+      const atualizado = await registrarSolicitacao(concursoId, id, tipo, url, observacao);
+      setCandidatos(prev => prev.map(c => (c.id === id ? atualizado : c)));
+      const titulo = tipo === 'parecer' ? 'Pedido de Parecer' : 'Solicitação de Exames';
+      showToast(`${titulo} gerado para ${candidato.nome}.`);
+      if (isDesktop) abrirPdfUrl(url, `${titulo} — ${candidato.nome}`);
+    } catch (e: any) {
+      showToast(e?.message || 'Erro ao gerar o documento.');
+    } finally {
+      setGerandoSolicitacaoIds(prev => {
+        const proximo = new Set(prev);
+        proximo.delete(id);
+        return proximo;
+      });
+    }
+  };
+
   const salvarCampoCandidato = async (candidato: CandidatoRecord, patch: { status?: string; observacoes?: string; numTIS?: string }) => {
     try {
       const atualizado = await atualizarCandidato(concursoId, candidato.id, patch);
@@ -2680,6 +2769,44 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         <ResponsavelTermoModal candidatoNome={responsavelModal.nome} onSelect={handleResponsavelEscolhido} onClose={() => setResponsavelModal(null)} />
       )}
 
+      {menuAcoes && (() => {
+        const c = candidatos.find(x => x.id === menuAcoes.id);
+        if (!c) return null;
+        const item = (tipo: 'parecer' | 'exames', rotuloGerar: string, rotuloVer: string, icone: string) => {
+          const url = tipo === 'parecer' ? c.solicitacaoParecerUrl : c.solicitacaoExamesUrl;
+          const gerando = gerandoSolicitacaoIds.has(c.id);
+          const habilitado = !!url || (statusPermiteSolicitacao(c) && !gerando);
+          return (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!habilitado}
+              onClick={() => handleItemSolicitacao(tipo, c)}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-left text-[#050F41] hover:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            >
+              <span className={`material-symbols-outlined text-[20px] ${url ? 'text-[#079551]' : ''}`}>{icone}</span>
+              <span>{url ? rotuloVer : rotuloGerar}</span>
+            </button>
+          );
+        };
+        return (
+          <>
+            <div className="fixed inset-0 z-[140]" onClick={() => setMenuAcoes(null)} />
+            <div role="menu" className="fixed z-[141] w-52 py-1 bg-white rounded-xl border border-gray-200 shadow-xl" style={{ top: menuAcoes.top, right: menuAcoes.right }}>
+              {item('parecer', 'Gerar Parecer', 'Ver Parecer', 'stethoscope')}
+              {item('exames', 'Gerar Exames', 'Ver Exames', 'lab_research')}
+            </div>
+          </>
+        );
+      })()}
+
+      {solicitacaoModal?.tipo === 'parecer' && (
+        <SolicitarParecerModal candidatoNome={solicitacaoModal.candidato.nome} onClose={() => setSolicitacaoModal(null)} onGerar={d => gerarSolicitacao('parecer', solicitacaoModal.candidato, d)} />
+      )}
+      {solicitacaoModal?.tipo === 'exames' && (
+        <SolicitarExamesModal candidatoNome={solicitacaoModal.candidato.nome} onClose={() => setSolicitacaoModal(null)} onGerar={d => gerarSolicitacao('exames', solicitacaoModal.candidato, d)} />
+      )}
+
       {motivoModal && (isDesktop || !candidatoModalMobile) && motivoModal.tipo === 'CID' && (
         <CidInaptidaoModal candidatoNome={motivoModal.candidato.nome} obrigatorio={motivoModal.obrigatorio} onSelect={handleMotivoSelecionado} onClose={handleMotivoFechado} />
       )}
@@ -2986,6 +3113,12 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                       <span className="material-symbols-outlined text-[22px]">event_repeat</span>
                                     </button>
                                   )}
+
+                                  {podeSolicitarBase && (
+                                    <button type="button" onClick={e => abrirMenuAcoes(e, c.id)} className="p-2 ml-1 text-gray-600 bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer" title="Mais ações" aria-haspopup="menu" aria-expanded={menuAcoes?.id === c.id}>
+                                      <span className="material-symbols-outlined text-[22px]">{gerandoSolicitacaoIds.has(c.id) ? 'progress_activity' : 'more_vert'}</span>
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -3198,7 +3331,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                   <p className="text-sm font-semibold text-gray-700">{c.numTIS || '-'}</p>
                 </div>
 
-                {(podeGerarTermo || c.termoRecursoUrl || c.termoCientificacaoUrl || gerandoCientIds.has(c.id) || podeGerarCientificacao(c) || (podeReagendar && !c.finalizado)) && (
+                {(podeGerarTermo || c.termoRecursoUrl || c.termoCientificacaoUrl || gerandoCientIds.has(c.id) || podeGerarCientificacao(c) || podeSolicitarBase || (podeReagendar && !c.finalizado)) && (
                   <div className="pt-2 space-y-2">
                     {c.termoRecursoUrl ? (
                       <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
@@ -3227,6 +3360,17 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                         <span>Gerar Termo de Cientificação</span>
                       </button>
                     ) : null}
+                    {podeSolicitarBase && (['parecer', 'exames'] as const).map(tipo => {
+                      const url = tipo === 'parecer' ? c.solicitacaoParecerUrl : c.solicitacaoExamesUrl;
+                      const habilitado = !!url || (statusPermiteSolicitacao(c) && !gerandoSolicitacaoIds.has(c.id));
+                      const rotuloItem = tipo === 'parecer' ? (url ? 'Ver Parecer' : 'Gerar Parecer') : (url ? 'Ver Exames' : 'Gerar Exames');
+                      return (
+                        <button key={tipo} type="button" disabled={!habilitado} onClick={() => { if (!url) setCandidatoModalMobile(null); handleItemSolicitacao(tipo, c); }} className={`w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${url ? 'bg-green-50 text-green-800' : 'bg-white text-[#050F41] border border-gray-200'}`}>
+                          <span className="material-symbols-outlined text-[20px]">{tipo === 'parecer' ? 'stethoscope' : 'lab_research'}</span>
+                          <span>{rotuloItem}</span>
+                        </button>
+                      );
+                    })}
                     {podeReagendar && !c.finalizado && (
                       <button type="button" onClick={() => { setCandidatoModalMobile(null); handleOpenReagendamento(c); }} className="w-full px-4 py-3 bg-green-50 text-[#079551] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[20px]">event_repeat</span>
