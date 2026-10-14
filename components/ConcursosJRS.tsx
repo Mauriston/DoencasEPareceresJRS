@@ -28,7 +28,7 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 // repositório) — hoje responsável apenas por gerar o PDF do Termo de
 // Cientificação de Recurso a partir do template Google Docs. Todo o resto
 // do backend de Concursos vive no Firestore (ver services/firestoreConcursos.ts).
-const GAS_URL_TERMO_RECURSO = 'https://script.google.com/macros/s/AKfycbzYl4OP22rwwotNOCx1U8JWwnkuacDUoDWPVvJe1BZHvRAyLHSCIrWJaSbyCML-KlXX/exec';
+const GAS_URL_TERMO_RECURSO = 'https://script.google.com/macros/s/AKfycbx9FDjnQKRhu26z4VQRDRdHnAvKUaIfNaViEjHLHoX1St4sNyri6ppYTrgEg7ne869tnw/exec';
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'Sem status' },
