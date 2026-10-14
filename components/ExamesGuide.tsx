@@ -39,12 +39,12 @@ const FINALIDADES = GRUPOS_FINALIDADE.flatMap(g =>
 
 const FINALIDADE_PADRAO = 'Ingresso SAM / SMV (oriundos do meio civil)';
 
-// Menu suspenso com os grupos de finalidade em sanfona: o clique no grupo
-// expande suas finalidades logo abaixo (um grupo aberto por vez) e os demais
-// grupos ficam esmaecidos, como nos menus do iOS.
+// Menu suspenso no estilo dos menus nativos do iOS: lista escura de grupos com
+// seta ">"; ao tocar num grupo, a lista esmaece e o grupo sobe como um cartão
+// (título com seta "v") listando as finalidades. Tocar no título volta à lista.
 const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => void }> = ({ value, onChange }) => {
   const [aberto, setAberto] = useState(false);
-  const [grupoAberto, setGrupoAberto] = useState<string | null>(null);
+  const [grupoAberto, setGrupoAberto] = useState<{ nome: string; topo: number } | null>(null);
   const raiz = useRef<HTMLDivElement>(null);
 
   const grupoDoValor = GRUPOS_FINALIDADE.find(g =>
@@ -67,9 +67,12 @@ const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => 
     };
   }, [aberto]);
 
+  const grupoSelecionado = grupoAberto
+    ? GRUPOS_FINALIDADE.find(g => g.Grupo_Finalidade_Inspecao === grupoAberto.nome)
+    : undefined;
+
   const alternar = () => {
-    // Ao abrir, já expande o grupo da finalidade selecionada.
-    if (!aberto) setGrupoAberto(grupoDoValor);
+    setGrupoAberto(null);
     setAberto(a => !a);
   };
 
@@ -91,46 +94,68 @@ const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => 
       </button>
 
       {aberto && (
-        <div className="absolute z-30 left-0 right-0 mt-2 max-h-[60vh] overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-xl p-2 animate-fade-in">
-          {GRUPOS_FINALIDADE.map(grupo => {
-            const nomeGrupo = grupo.Grupo_Finalidade_Inspecao;
-            const expandido = grupoAberto === nomeGrupo;
-            const esmaecido = grupoAberto !== null && !expandido;
-            return (
-              <div key={nomeGrupo} className={`transition-opacity ${esmaecido ? 'opacity-40' : ''}`}>
+        <div className="absolute z-30 left-0 right-0 mt-2 animate-fade-in">
+          {/* Nível 1: grupos. Com um grupo aberto, a lista inteira esmaece e o
+              toque nela volta ao nível 1. */}
+          <div
+            className={`rounded-[28px] bg-[#1c1c1e]/95 backdrop-blur-xl text-white shadow-2xl ring-1 ring-white/10 py-2 transition-opacity duration-200 ${grupoAberto ? 'opacity-40' : ''}`}
+            onClick={grupoAberto ? () => setGrupoAberto(null) : undefined}
+          >
+            {GRUPOS_FINALIDADE.map((grupo, i) => (
+              <button
+                key={grupo.Grupo_Finalidade_Inspecao}
+                type="button"
+                disabled={!!grupoAberto}
+                onClick={(e) => {
+                  setGrupoAberto({ nome: grupo.Grupo_Finalidade_Inspecao, topo: e.currentTarget.offsetTop });
+                }}
+                className={`w-full flex items-center justify-between gap-3 px-6 py-4 text-base md:text-lg font-medium text-left ${i > 0 ? 'border-t border-white/10' : ''} ${grupo.Grupo_Finalidade_Inspecao === grupoDoValor ? 'text-white' : 'text-white/90'}`}
+              >
+                <span>{grupo.Grupo_Finalidade_Inspecao}</span>
+                <ChevronRight size={20} className="flex-shrink-0 text-white/70" />
+              </button>
+            ))}
+          </div>
+
+          {/* Nível 2: o grupo tocado "sobe" como um cartão por cima da lista,
+              com o título (seta para baixo) e as finalidades abaixo. */}
+          {grupoSelecionado && grupoAberto && (
+            <div
+              className="absolute left-0 right-0 animate-fade-in"
+              style={{ top: Math.max(0, grupoAberto.topo - 8) }}
+            >
+              <div className="rounded-[28px] bg-[#141416] text-white shadow-2xl ring-1 ring-white/10 max-h-[65vh] overflow-y-auto">
                 <button
                   type="button"
-                  onClick={() => setGrupoAberto(expandido ? null : nomeGrupo)}
-                  aria-expanded={expandido}
-                  className={`w-full flex items-center justify-between gap-2 px-3 py-3 rounded-xl text-sm md:text-base font-bold text-navy hover:bg-gray-100 transition-colors ${expandido ? 'bg-gray-100' : ''}`}
+                  aria-expanded
+                  onClick={() => setGrupoAberto(null)}
+                  className="w-full flex items-center justify-between gap-3 px-6 py-4 text-base md:text-lg font-semibold text-left border-b border-white/10"
                 >
-                  <span>{nomeGrupo}</span>
-                  {expandido ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                  <span>{grupoSelecionado.Grupo_Finalidade_Inspecao}</span>
+                  <ChevronDown size={20} className="flex-shrink-0 text-white/80" />
                 </button>
-                {expandido && (
-                  <div role="listbox" className="py-1 pl-2">
-                    {grupo.Finalidades_Inspecao.map(f => {
-                      const nome = limparNome(f.Finalidade_Inspecao);
-                      const ativo = nome === value;
-                      return (
-                        <button
-                          key={nome}
-                          type="button"
-                          role="option"
-                          aria-selected={ativo}
-                          onClick={() => { onChange(nome); setAberto(false); }}
-                          className={`w-full flex items-center justify-between gap-2 text-left px-3 py-2.5 rounded-lg text-sm md:text-base leading-snug transition-colors ${ativo ? 'bg-navy text-white font-bold' : 'text-gray-700 font-medium hover:bg-gray-50'}`}
-                        >
-                          <span>{nome}</span>
-                          {ativo && <CheckCircle2 size={16} className="flex-shrink-0 text-gold" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                <div role="listbox" className="py-1">
+                  {grupoSelecionado.Finalidades_Inspecao.map((f, i) => {
+                    const nome = limparNome(f.Finalidade_Inspecao);
+                    const ativo = nome === value;
+                    return (
+                      <button
+                        key={nome}
+                        type="button"
+                        role="option"
+                        aria-selected={ativo}
+                        onClick={() => { onChange(nome); setAberto(false); setGrupoAberto(null); }}
+                        className={`w-full flex items-center justify-between gap-3 px-6 py-3.5 text-left text-base md:text-lg leading-snug hover:bg-white/5 ${i > 0 ? 'border-t border-white/5' : ''} ${ativo ? 'font-bold text-white' : 'text-white/85'}`}
+                      >
+                        <span>{nome}</span>
+                        {ativo && <CheckCircle2 size={18} className="flex-shrink-0 text-gold" />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            );
-          })}
+            </div>
+          )}
         </div>
       )}
     </div>
