@@ -19,16 +19,38 @@ const MAX_RESULTADOS = 50;
 
 const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
+interface TabelaCid {
+  lista: CidIndexado[];
+  /** true quando o cid.json está truncado e só as entradas íntegras foram aproveitadas. */
+  incompleta: boolean;
+}
+
+const indexar = (lista: CidItem[]): CidIndexado[] =>
+  lista.map(c => ({ ...c, subcatNorm: normalizar(c.SUBCAT), descNorm: normalizar(c.DESCRICAO) }));
+
+// Se o arquivo vier cortado no meio (upload/transferência truncados), descarta
+// a última entrada incompleta e fecha o array, em vez de perder a tabela toda.
+const parseCidJson = (texto: string): TabelaCid => {
+  try {
+    return { lista: indexar(JSON.parse(texto) as CidItem[]), incompleta: false };
+  } catch {
+    const fim = texto.lastIndexOf('},');
+    if (fim === -1) throw new Error('Não foi possível ler a tabela de CID.');
+    const lista = JSON.parse(`${texto.slice(0, fim + 1)}]`) as CidItem[];
+    return { lista: indexar(lista), incompleta: true };
+  }
+};
+
 // Cache de módulo: o cid.json (~2 MB) só é baixado/indexado uma vez.
-let cidPromise: Promise<CidIndexado[]> | null = null;
-const carregarCids = (): Promise<CidIndexado[]> => {
+let cidPromise: Promise<TabelaCid> | null = null;
+const carregarCids = (): Promise<TabelaCid> => {
   if (!cidPromise) {
     cidPromise = fetch(`${import.meta.env.BASE_URL}cid.json`)
       .then(res => {
         if (!res.ok) throw new Error('Não foi possível carregar a tabela de CID.');
-        return res.json() as Promise<CidItem[]>;
+        return res.text();
       })
-      .then(lista => lista.map(c => ({ ...c, subcatNorm: normalizar(c.SUBCAT), descNorm: normalizar(c.DESCRICAO) })))
+      .then(parseCidJson)
       .catch(e => {
         cidPromise = null;
         throw e;
@@ -45,15 +67,17 @@ interface CidInaptidaoModalProps {
 }
 
 export const CidInaptidaoModal: React.FC<CidInaptidaoModalProps> = ({ candidatoNome, onConfirm, onClose }) => {
-  const [cids, setCids] = useState<CidIndexado[] | null>(null);
+  const [tabela, setTabela] = useState<TabelaCid | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
   const [selecionado, setSelecionado] = useState<CidItem | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    carregarCids().then(setCids).catch(e => setErro(e?.message || 'Erro ao carregar a tabela de CID.'));
+    carregarCids().then(setTabela).catch(e => setErro(e?.message || 'Erro ao carregar a tabela de CID.'));
   }, []);
+
+  const cids = tabela?.lista ?? null;
 
   useEffect(() => { inputRef.current?.focus(); }, [cids]);
 
@@ -121,6 +145,12 @@ export const CidInaptidaoModal: React.FC<CidInaptidaoModalProps> = ({ candidatoN
                 </ul>
               )}
             </div>
+          )}
+
+          {tabela?.incompleta && (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              A tabela de CID está incompleta (arquivo truncado): alguns códigos, como os do capítulo Z, podem não aparecer na busca.
+            </p>
           )}
 
           {selecionado && (
