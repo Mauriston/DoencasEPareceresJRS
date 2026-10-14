@@ -1,5 +1,7 @@
 import { CidInaptidaoModal, CidPicker } from './CidInaptidaoModal';
 import { MotivoIdmModal, IdmPicker } from './MotivoIdmModal';
+import { ResponsavelTermoModal } from './ResponsavelTermoModal';
+import type { UsuarioRecord } from '../services/firestoreUsuarios';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Header } from './Header';
@@ -2148,6 +2150,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   const podeEditarInlineBase = canUseFeature('concursosJRS.editarDadosTabela', perfil);
   const podeReagendarBase = canUseFeature('concursosJRS.reagendar', perfil);
   const podeAbrirEncerrar = canUseFeature('concursosJRS.abrirEncerrarConcurso', perfil);
+  // Só médicos (user_medicos/admin, ou MPI escolhendo o responsável) geram o termo; a secretaria só visualiza.
+  const podeGerarTermoBase = canUseFeature('concursosJRS.gerarTermoRecurso', perfil);
+  const [responsavelModal, setResponsavelModal] = useState<{ id: string; nome: string } | null>(null);
   const [showDefinirPeriodoModal, setShowDefinirPeriodoModal] = useState(false);
 
   const [concurso, setConcurso] = useState<ConcursoRecord | null>(null);
@@ -2249,7 +2254,32 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     }
   };
 
-  const handleGerarTermo = async (id: string, nome: string) => {
+  type SignatarioTermo = { nome: string; postoGraduacao: string; cargo: string };
+
+  // Ponto de entrada da geração do termo. Quem assina é sempre médico da JRS:
+  // user_medicos/admin assinam com o próprio nome; o MPI escolhe, no modal, o
+  // médico responsável pela IS.
+  const handleGerarTermo = (id: string, nome: string) => {
+    if (!podeGerarTermoBase) return;
+    if (perfil === 'user_medicos_mpi') {
+      setResponsavelModal({ id, nome });
+      return;
+    }
+    gerarTermo(id, nome, {
+      nome: nav?.authUser?.nome || '',
+      postoGraduacao: nav?.authUser?.postoGraduacao || '',
+      cargo: nav?.authUser?.cargo || '',
+    });
+  };
+
+  const handleResponsavelEscolhido = (medico: UsuarioRecord) => {
+    const alvo = responsavelModal;
+    setResponsavelModal(null);
+    if (!alvo) return;
+    gerarTermo(alvo.id, alvo.nome, { nome: medico.nome, postoGraduacao: medico.postoGraduacao, cargo: medico.cargo });
+  };
+
+  const gerarTermo = async (id: string, nome: string, signatario: SignatarioTermo) => {
     try {
       const candidato = candidatos.find(c => c.id === id);
       const res = await fetch(GAS_URL_TERMO_RECURSO, {
@@ -2261,9 +2291,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
           candidatoNome: nome,
           nomeConcurso: concurso?.nome || '',
           dataLaudo: candidato?.dataLaudo || '',
-          nomeUsuario: nav?.authUser?.nome || '',
-          postoGraduacao: nav?.authUser?.postoGraduacao || '',
-          cargo: nav?.authUser?.cargo || '',
+          nomeUsuario: signatario.nome,
+          postoGraduacao: signatario.postoGraduacao,
+          cargo: signatario.cargo,
         }),
       });
       const json = await res.json();
@@ -2294,6 +2324,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
           const atualizado = await salvarCampoCandidato(candidato, patchInapto);
           if (atualizado) {
             showToast(`Dados de ${atualizado.nome} atualizados com sucesso.`);
+            if (!podeGerarTermoBase) {
+              setMotivoModal({ candidato: atualizado, tipo: 'CID', obrigatorio: true });
+              return;
+            }
             setConfirmDialog({
               title: 'Gerar Termo de Recurso',
               message: `Gerar o termo de Cientificação de Recurso para ${atualizado.nome}?`,
@@ -2827,11 +2861,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                 </td>
                                 <td className="py-3.5 px-4 text-right whitespace-nowrap">
                                   {c.termoRecursoUrl ? (
-                                    <button type="button" onClick={() => abrirPdfUrl(c.termoRecursoUrl!, `Termo de Recurso — ${c.nome}`)} className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Abrir Termo de Recurso">
+                                    <button type="button" onClick={() => abrirPdfUrl(c.termoRecursoUrl!, `Termo de Recurso — ${c.nome}`)} className="p-2 text-green-800 bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Recurso">
                                       <span className="material-symbols-outlined text-[22px]">description</span>
                                     </button>
-                                  ) : c.status === 'INAPTO' ? (
-                                    <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer" title="Gerar Termo de Recurso">
+                                  ) : c.status === 'INAPTO' && podeGerarTermoBase ? (
+                                    <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="p-2 text-red-800 bg-red-50 hover:bg-red-700 hover:text-white rounded-xl transition-colors cursor-pointer" title="Gerar Termo de Recurso">
                                       <span className="material-symbols-outlined text-[22px]">gavel</span>
                                     </button>
                                   ) : null}
@@ -2965,7 +2999,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       {candidatoModalMobile && (() => {
         const c = candidatos.find(x => x.id === candidatoModalMobile.id) || candidatoModalMobile;
         const editavel = podeEditar && !c.finalizado;
-        const podeGerarTermo = !c.termoRecursoUrl && c.status === 'INAPTO';
+        const podeGerarTermo = !c.termoRecursoUrl && c.status === 'INAPTO' && podeGerarTermoBase;
         // CID (Inapto) / exames da IDM: no mobile a escolha acontece dentro do próprio sheet.
         const motivoNoSheet = motivoModal && motivoModal.candidato.id === c.id ? motivoModal : null;
         const sheetTravado = !!motivoNoSheet?.obrigatorio;
@@ -3056,12 +3090,12 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                 {(podeGerarTermo || c.termoRecursoUrl || (podeReagendar && !c.finalizado)) && (
                   <div className="pt-2 space-y-2">
                     {c.termoRecursoUrl ? (
-                      <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-gray-100 text-[#050F41] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                      <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[20px]">description</span>
-                        <span>Abrir Termo de Recurso</span>
+                        <span>Visualizar Termo de Recurso</span>
                       </a>
                     ) : podeGerarTermo ? (
-                      <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="w-full px-4 py-3 bg-gray-100 text-[#050F41] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                      <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="w-full px-4 py-3 bg-red-50 text-red-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[20px]">gavel</span>
                         <span>Gerar Termo de Recurso</span>
                       </button>
