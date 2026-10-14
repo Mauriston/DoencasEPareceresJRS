@@ -278,11 +278,66 @@ const ANEXO_N_INAPTIDAO: { Índice: string; Valor: string }[] = [
 
 const slugify = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+// Ícones (Material Symbols) de cada segmento/órgão na aba Inaptidão.
+const ICONES_INAPTIDAO: Record<string, string> = {
+  "Cabeça e Pescoço": 'face',
+  "Ouvido e Audição": 'hearing',
+  "Olhos e Visão": 'visibility',
+  "Boca, Nariz, Laringe, Faringe, Traqueia e Esôfago": 'ent',
+  "Aparelho Estomatognático": 'dentistry',
+  "Pele e Tecido Celular Subcutâneo ou Conjuntivo": 'dermatology',
+  "Pulmões e Parede Torácica": 'pulmonology',
+  "Sistema Cardiovascular e Síndromes Vasculíticas": 'cardiology',
+  "Abdome e Trato Gastrointestinal": 'gastroenterology',
+  "Aparelho Geniturinário": 'urology',
+  "Aparelho Osteomioarticular e Doenças Reumatológicas": 'rheumatology',
+  "Doenças Metabólicas e Endócrinas": 'endocrinology',
+  "Sangue e Órgãos Hematopoiéticos": 'hematology',
+  "Doenças Neurológicas": 'neurology',
+  "Doenças Psiquiátricas": 'cognition',
+  "Tumores e Neoplasias": 'oncology',
+  "Condições Ginecológicas": 'female',
+  "Outras condições": 'clinical_notes',
+};
+
 const inaptidaoCategories = Array.from(new Set(ANEXO_N_INAPTIDAO.map(r => r["Índice"]))).map(indice => ({
   id: slugify(indice),
   title: indice,
+  icon: ICONES_INAPTIDAO[indice] ?? 'clinical_notes',
   items: ANEXO_N_INAPTIDAO.filter(r => r["Índice"] === indice).map(r => r.Valor),
 }));
+
+// Seletor com cara de filtro: rótulo "Filtrar por", borda destacada e botão de seta.
+const FiltroSelect: React.FC<{
+  value: string;
+  onChange: (v: string) => void;
+  options: { id: string; title: string }[];
+  accent: 'navy' | 'red';
+}> = ({ value, onChange, options, accent }) => {
+  const cor = accent === 'red'
+    ? { borda: 'border-red-700/70 focus-within:border-red-700', texto: 'text-red-700', botao: 'bg-red-700' }
+    : { borda: 'border-[#050F41]/70 focus-within:border-[#050F41]', texto: 'text-[#050F41]', botao: 'bg-[#050F41]' };
+  return (
+    <div>
+      <label className={`flex items-center gap-1.5 text-xs md:text-sm font-bold uppercase tracking-wider mb-1.5 ml-1 ${cor.texto}`}>
+        <span className="material-symbols-outlined text-[18px] md:text-[20px]">filter_list</span>
+        Filtrar por
+      </label>
+      <div className={`relative flex items-center bg-white border-2 ${cor.borda} rounded-xl shadow-sm transition-colors`}>
+        <select
+          className="w-full bg-transparent text-gray-800 py-3 md:py-4 pl-4 md:pl-5 pr-14 rounded-xl font-bold focus:outline-none text-sm md:text-base appearance-none cursor-pointer font-body"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          {options.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
+        </select>
+        <span className={`absolute right-2 md:right-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-9 md:h-9 rounded-lg ${cor.botao} text-white flex items-center justify-center pointer-events-none`}>
+          <ChevronDown size={20} />
+        </span>
+      </div>
+    </div>
+  );
+};
 
 const TabelaIndice: React.FC<{ bloco: Extract<Bloco, { tipo: 'tabela' }> }> = ({ bloco }) => (
   <div>
@@ -372,9 +427,7 @@ export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
     );
   }
 
-  const selectCls = 'w-full bg-white border border-gray-200 text-gray-700 py-3 md:py-4 px-4 md:px-5 rounded-xl font-semibold focus:outline-none focus:border-[#050F41] text-sm md:text-base shadow-sm appearance-none cursor-pointer font-body';
-
-  return (
+    return (
     <div className="flex flex-col h-full bg-[#F3F5F7]">
       {modalElement}
       <Header title="Índices Mínimos - ANEXO N" onBack={onBack} />
@@ -402,12 +455,7 @@ export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
 
           {activeTab === 'indices' && (
             <div className="space-y-3.5 md:space-y-4 animate-fade-in">
-              <div className="relative">
-                <select className={selectCls} value={activeIndice} onChange={(e) => setActiveIndice(e.target.value)}>
-                  {indicesList.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
-                </select>
-                <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+              <FiltroSelect accent="navy" value={activeIndice} onChange={setActiveIndice} options={indicesList} />
               {currentIndice && (
                 <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-200/60 space-y-5">
                   <h3 className="flex items-center gap-2.5 text-base md:text-xl font-heading font-bold text-[#050F41] pb-3 border-b border-gray-100">
@@ -422,15 +470,13 @@ export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
 
           {activeTab === 'inaptidao' && (
             <div className="space-y-3.5 md:space-y-4 animate-fade-in">
-              <div className="relative">
-                <select className={selectCls} value={activeInaptidao} onChange={(e) => setActiveInaptidao(e.target.value)}>
-                  {inaptidaoCategories.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
-                </select>
-                <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+              <FiltroSelect accent="red" value={activeInaptidao} onChange={setActiveInaptidao} options={inaptidaoCategories} />
               {currentInaptidao && (
                 <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-200/60">
-                  <h3 className="text-base md:text-xl font-heading font-bold text-red-700 pb-3 mb-4 border-b border-gray-100">{currentInaptidao.title}</h3>
+                  <h3 className="flex items-center gap-2.5 text-base md:text-xl font-heading font-bold text-red-700 pb-3 mb-4 border-b border-gray-100">
+                    <span className="material-symbols-outlined text-[26px] md:text-[30px] shrink-0">{currentInaptidao.icon}</span>
+                    {currentInaptidao.title}
+                  </h3>
                   <ul className="space-y-3.5">
                     {currentInaptidao.items.map((item, idx) => (
                       <li key={idx} className="flex gap-3 text-gray-700 font-body text-sm md:text-base">
