@@ -2595,6 +2595,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
       {pdfModalElement}
 
+      {responsavelModal && (
+        <ResponsavelTermoModal candidatoNome={responsavelModal.nome} onSelect={handleResponsavelEscolhido} onClose={() => setResponsavelModal(null)} />
+      )}
+
       {motivoModal && (isDesktop || !candidatoModalMobile) && motivoModal.tipo === 'CID' && (
         <CidInaptidaoModal candidatoNome={motivoModal.candidato.nome} obrigatorio={motivoModal.obrigatorio} onSelect={handleMotivoSelecionado} onClose={handleMotivoFechado} />
       )}
