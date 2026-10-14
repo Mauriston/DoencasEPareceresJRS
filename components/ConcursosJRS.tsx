@@ -8,7 +8,7 @@ import { Header } from './Header';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
 import {
-  listarConcursos, getConcurso, listarCandidatos, criarConcursoDaMensagem, novoConcursoId, importarConcursoDeCsv, atualizarCandidato,
+  listarConcursos, getConcurso, listarCandidatos, observarConcursos, observarConcurso, observarCandidatos, criarConcursoDaMensagem, novoConcursoId, importarConcursoDeCsv, atualizarCandidato,
   criarCandidato, reagendarCandidato, listarDatasAgendamento, obterContextoAgendamento, confirmarAgendamento,
   gerarMinutaResultados, abrirConcurso, voltarParaEmBreve, encerrarConcurso, salvarTermoRecurso,
   listarMensagens, arquivarMensagem, obterEstatisticasAnuais, definirPeriodoAgendamento,
@@ -1604,18 +1604,18 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  // Contadores em tempo real: uma assinatura por concurso em andamento.
   useEffect(() => {
-    let cancelado = false;
-    (async () => {
-      const entradas = await Promise.all(concursos.map(async c => {
-        if (c.status !== 'em_andamento') return [c.id, { total: c.totalCandidatos, finalizados: 0, temLancamento: false }] as const;
-        const candidatos = await listarCandidatos(c.id);
+    const base: Record<string, { total: number; finalizados: number; temLancamento: boolean }> = {};
+    concursos.forEach(c => { if (c.status !== 'em_andamento') base[c.id] = { total: c.totalCandidatos, finalizados: 0, temLancamento: false }; });
+    setContadores(prev => ({ ...prev, ...base }));
+    const offs = concursos.filter(c => c.status === 'em_andamento').map(c =>
+      observarCandidatos(c.id, candidatos => {
         const temLancamento = candidatos.some(x => x.status !== '' || x.numTIS !== '' || x.observacoes !== '');
-        return [c.id, { total: candidatos.length, finalizados: candidatos.filter(x => x.finalizado).length, temLancamento }] as const;
-      }));
-      if (!cancelado) setContadores(Object.fromEntries(entradas));
-    })();
-    return () => { cancelado = true; };
+        setContadores(prev => ({ ...prev, [c.id]: { total: candidatos.length, finalizados: candidatos.filter(x => x.finalizado).length, temLancamento } }));
+      }),
+    );
+    return () => offs.forEach(off => off());
   }, [concursos]);
 
   useEffect(() => {
@@ -1631,25 +1631,22 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
   // aberta (a visão em cards não precisa dessa quebra por status).
   useEffect(() => {
     if (efetivoViewMode !== 'tabela') return;
-    let cancelado = false;
-    (async () => {
-      setLoadingStatusCounts(true);
-      try {
-        const entradas = await Promise.all(concursos.map(async c => {
-          const candidatosDoConcurso = await listarCandidatos(c.id);
-          return [c.id, {
-            apto: candidatosDoConcurso.filter(x => x.status === 'APTO').length,
-            inapto: candidatosDoConcurso.filter(x => x.status === 'INAPTO').length,
-            faltou: candidatosDoConcurso.filter(x => x.status === 'FALTOU').length,
-            idm: candidatosDoConcurso.filter(x => x.status === 'INSUF DOCUMENTAL').length,
-          }] as const;
-        }));
-        if (!cancelado) setStatusCounts(Object.fromEntries(entradas));
-      } finally {
-        if (!cancelado) setLoadingStatusCounts(false);
-      }
-    })();
-    return () => { cancelado = true; };
+    setLoadingStatusCounts(true);
+    let restantes = concursos.length;
+    if (restantes === 0) setLoadingStatusCounts(false);
+    const vistos = new Set<string>();
+    const offs = concursos.map(c =>
+      observarCandidatos(c.id, lista => {
+        setStatusCounts(prev => ({ ...prev, [c.id]: {
+          apto: lista.filter(x => x.status === 'APTO').length,
+          inapto: lista.filter(x => x.status === 'INAPTO').length,
+          faltou: lista.filter(x => x.status === 'FALTOU').length,
+          idm: lista.filter(x => x.status === 'INSUF DOCUMENTAL').length,
+        } }));
+        if (!vistos.has(c.id)) { vistos.add(c.id); if (vistos.size === restantes) setLoadingStatusCounts(false); }
+      }, () => setLoadingStatusCounts(false)),
+    );
+    return () => offs.forEach(off => off());
   }, [efetivoViewMode, concursos]);
 
   useEffect(() => {
@@ -2238,7 +2235,19 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     }
   };
 
-  useEffect(() => { carregarTudo(); }, [concursoId]);
+  // Tempo real: o concurso e os candidatos são assinados no Firestore, então
+  // lançamentos de outros usuários aparecem sem recarregar a página.
+  useEffect(() => {
+    setLoading(true);
+    setLoadError(null);
+    let pendentes = 2;
+    const pronto = () => { if (--pendentes === 0) setLoading(false); };
+    let primeiroC = true, primeiroL = true;
+    const erro = (e: Error) => { setLoadError(e?.message || 'Não foi possível carregar os candidatos.'); setLoading(false); };
+    const offC = observarConcurso(concursoId, c => { setConcurso(c); if (primeiroC) { primeiroC = false; pronto(); } }, erro);
+    const offL = observarCandidatos(concursoId, l => { setCandidatos(l); if (primeiroL) { primeiroL = false; pronto(); } }, erro);
+    return () => { offC(); offL(); };
+  }, [concursoId]);
 
   const loadDatasAgendamento = async () => {
     setLoadingDatasAgendamento(true);
@@ -3171,7 +3180,13 @@ export const ConcursosJRS: React.FC<ConcursosJRSProps> = ({ onBack }) => {
     }
   };
 
-  useEffect(() => { carregarConcursos(); }, []);
+  useEffect(() => {
+    setLoadingConcursos(true);
+    return observarConcursos(
+      lista => { setConcursos(lista); setLoadingConcursos(false); },
+      () => setLoadingConcursos(false),
+    );
+  }, []);
 
   const handleFecharModalUpload = (concursoIdCriado?: string) => {
     setShowUploadModal(false);

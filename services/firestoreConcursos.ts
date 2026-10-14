@@ -13,7 +13,7 @@
 // apresentaram, o que antes exigia uma planilha "TEMPLATE CONCURSOS"
 // separada por concurso — aqui é só mais um documento na mesma coleção.
 import {
-  getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc,
+  getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, onSnapshot,
   writeBatch, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { app } from './firebaseAuth';
@@ -130,6 +130,43 @@ export const listarCandidatos = async (concursoId: string): Promise<CandidatoRec
   const snap = await getDocs(candidatosCol(concursoId));
   return snap.docs.map(d => toCandidatoRecord(d.id, d.data()));
 };
+
+/**
+ * Versões em tempo real das leituras acima (onSnapshot): o callback é chamado
+ * na carga inicial e a cada alteração feita por qualquer usuário, sem precisar
+ * recarregar a página. Devolvem a função de cancelamento da assinatura.
+ */
+export const observarConcursos = (
+  cb: (lista: ConcursoRecord[]) => void,
+  onError?: (e: Error) => void,
+): (() => void) =>
+  onSnapshot(
+    collection(db, COL_CONCURSOS),
+    snap => cb(snap.docs.map(d => toConcursoRecord(d.id, d.data())).sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))),
+    e => onError?.(e),
+  );
+
+export const observarConcurso = (
+  concursoId: string,
+  cb: (c: ConcursoRecord | null) => void,
+  onError?: (e: Error) => void,
+): (() => void) =>
+  onSnapshot(
+    concursoRef(concursoId),
+    snap => cb(snap.exists() ? toConcursoRecord(snap.id, snap.data()) : null),
+    e => onError?.(e),
+  );
+
+export const observarCandidatos = (
+  concursoId: string,
+  cb: (lista: CandidatoRecord[]) => void,
+  onError?: (e: Error) => void,
+): (() => void) =>
+  onSnapshot(
+    candidatosCol(concursoId),
+    snap => cb(snap.docs.map(d => toCandidatoRecord(d.id, d.data()))),
+    e => onError?.(e),
+  );
 
 /**
  * Cria um novo concurso a partir dos dados já extraídos da mensagem
