@@ -22,6 +22,7 @@ import {
 } from '../utils/concursosUtils';
 import { apiUrl } from '../utils/apiBase';
 import { useIsDesktop } from '../hooks/useIsDesktop';
+import { useStoragePdf } from '../hooks/useStoragePdf';
 
 // URL de implantação (aplicativo da web) do projeto Apps Script standalone
 // mínimo "CodeConcursos.gs" (código-fonte também versionado neste
@@ -2182,6 +2183,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   // Mobile: botão de voltar flutuante sobre a lista ao rolar + botão de
   // voltar ao topo (ver JSX mais abaixo).
   const isDesktop = useIsDesktop();
+  const { openUrl: abrirPdfUrl, modalElement: pdfModalElement } = useStoragePdf();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [mostrarBotaoTopo, setMostrarBotaoTopo] = useState(false);
 
@@ -2271,7 +2273,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       await salvarTermoRecurso(concursoId, id, url);
       setCandidatos(prev => prev.map(c => (c.id === id ? { ...c, recurso: true, termoRecursoUrl: url } : c)));
       showToast(`Termo de Recurso gerado para ${nome}.`);
-      window.open(url, '_blank');
+      // No desktop abre no próprio app (modal); no mobile o navegador bloquearia
+      // uma nova aba aberta após o await — o termo fica disponível pelo botão.
+      if (isDesktop) abrirPdfUrl(url, `Termo de Recurso — ${nome}`);
     } catch (e: any) {
       showToast(e?.message || 'Erro ao gerar o Termo de Recurso.');
     }
@@ -2542,6 +2546,8 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
           <span className="font-semibold">{toastMessage}</span>
         </div>
       )}
+
+      {pdfModalElement}
 
       {motivoModal && (isDesktop || !candidatoModalMobile) && motivoModal.tipo === 'CID' && (
         <CidInaptidaoModal candidatoNome={motivoModal.candidato.nome} obrigatorio={motivoModal.obrigatorio} onSelect={handleMotivoSelecionado} onClose={handleMotivoFechado} />
@@ -2821,9 +2827,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                 </td>
                                 <td className="py-3.5 px-4 text-right whitespace-nowrap">
                                   {c.termoRecursoUrl ? (
-                                    <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Abrir Termo de Recurso">
+                                    <button type="button" onClick={() => abrirPdfUrl(c.termoRecursoUrl!, `Termo de Recurso — ${c.nome}`)} className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Abrir Termo de Recurso">
                                       <span className="material-symbols-outlined text-[22px]">description</span>
-                                    </a>
+                                    </button>
                                   ) : c.status === 'INAPTO' ? (
                                     <button type="button" onClick={() => handleGerarTermo(c.id, c.nome)} className="p-2 text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer" title="Gerar Termo de Recurso">
                                       <span className="material-symbols-outlined text-[22px]">gavel</span>
