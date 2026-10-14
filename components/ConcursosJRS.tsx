@@ -1,3 +1,4 @@
+import { CidInaptidaoModal } from './CidInaptidaoModal';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Header } from './Header';
@@ -153,6 +154,7 @@ interface ConfirmDialogState {
   message: string;
   confirmLabel?: string;
   onConfirm: () => void;
+  onCancel?: () => void;
 }
 
 interface CalendarioAgendamentoProps {
@@ -1766,7 +1768,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
             <div className="p-5 space-y-4">
               <p className="text-xs md:text-sm text-gray-700 leading-relaxed">{confirmDialog.message}</p>
               <div className="flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => setConfirmDialog(null)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" onClick={() => { setConfirmDialog(null); confirmDialog.onCancel?.(); }} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
                 <button type="button" onClick={confirmDialog.onConfirm} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">{confirmDialog.confirmLabel || 'Confirmar'}</button>
               </div>
             </div>
@@ -2161,6 +2163,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
+  const [cidModal, setCidModal] = useState<CandidatoRecord | null>(null);
 
   const [datasAgendamento, setDatasAgendamento] = useState<DataAgendamentoInfo[]>([]);
   const [loadingDatasAgendamento, setLoadingDatasAgendamento] = useState(false);
@@ -2299,7 +2302,8 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               title: 'Gerar Termo de Recurso',
               message: `Gerar o termo de Cientificação de Recurso para ${atualizado.nome}?`,
               confirmLabel: 'Gerar Termo',
-              onConfirm: () => { setConfirmDialog(null); handleGerarTermo(atualizado.id, atualizado.nome); },
+              onConfirm: () => { setConfirmDialog(null); handleGerarTermo(atualizado.id, atualizado.nome); setCidModal(atualizado); },
+              onCancel: () => setCidModal(atualizado),
             });
           }
         },
@@ -2308,6 +2312,16 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     }
     salvarCampoCandidato(candidato, { status: novoStatus }).then(atualizado => {
       if (atualizado) showToast(`Dados de ${atualizado.nome} atualizados com sucesso.`);
+    });
+  };
+
+  // CID obrigatório após marcar Inapto: sobrescreve as Observações com o DESCRABREV.
+  const handleCidConfirmado = (descrAbrev: string) => {
+    const candidato = cidModal;
+    setCidModal(null);
+    if (!candidato) return;
+    salvarCampoCandidato(candidato, { observacoes: descrAbrev }).then(atualizado => {
+      if (atualizado) showToast(atualizado.finalizado ? `IS de ${atualizado.nome} finalizada.` : `Dados de ${atualizado.nome} atualizados com sucesso.`);
     });
   };
 
@@ -2538,6 +2552,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         </div>
       )}
 
+      {cidModal && (
+        <CidInaptidaoModal candidatoNome={cidModal.nome} onConfirm={handleCidConfirmado} onClose={() => setCidModal(null)} />
+      )}
+
       {confirmDialog && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
@@ -2548,7 +2566,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             <div className="p-5 space-y-4">
               <p className="text-xs md:text-sm text-gray-700 leading-relaxed">{confirmDialog.message}</p>
               <div className="flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => setConfirmDialog(null)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" onClick={() => { setConfirmDialog(null); confirmDialog.onCancel?.(); }} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
                 <button type="button" onClick={confirmDialog.onConfirm} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">{confirmDialog.confirmLabel || 'Confirmar'}</button>
               </div>
             </div>
@@ -2804,7 +2822,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                       className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-red-300 bg-red-50 placeholder:text-red-400 focus:outline-none focus:border-red-500"
                                     />
                                   ) : editavel ? (
-                                    <input type="text" defaultValue={c.observacoes} onBlur={e => handleObservacoesBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
+                                    <input key={`obs-${c.id}-${c.observacoes}`} type="text" defaultValue={c.observacoes} onBlur={e => handleObservacoesBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
                                   ) : <span className="truncate block" title={c.observacoes}>{c.observacoes || '-'}</span>}
                                 </td>
                                 <td className="py-3.5 px-4 text-gray-600">
@@ -3011,6 +3029,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                 <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Observações</label>
                 {editavel ? (
                   <textarea
+                    key={`obs-${c.id}-${c.observacoes}`}
                     defaultValue={c.observacoes}
                     onBlur={e => handleObservacoesBlur(c, e.target.value)}
                     rows={5}
