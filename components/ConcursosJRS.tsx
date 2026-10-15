@@ -2255,6 +2255,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
   const podeEditar = podeEditarInlineBase && concurso?.status === 'em_andamento';
   const podeReagendar = podeReagendarBase && concurso?.status === 'em_andamento';
+  // Reagendar só faz sentido enquanto a IS não tem laudo (Apto, Inapto, Insuf. Documental ou Faltou).
+  const podeReagendarCandidato = (c: CandidatoRecord) =>
+    podeReagendar && !c.finalizado && !MAPA_LAUDO_POR_STATUS[String(c.status || '').trim().toUpperCase()];
   // Nº TIS só é habilitado quando o Status já tem laudo associado (Apto,
   // Inapto, Faltou ou Insuf. Documental) — ver MAPA_LAUDO_POR_STATUS.
   const statusTemLaudo = (status: string) => !!MAPA_LAUDO_POR_STATUS[String(status || '').trim().toUpperCase()];
@@ -3238,7 +3241,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                     </button>
                                   ) : null}
 
-                                  {podeReagendar && !c.finalizado && (
+                                  {podeReagendarCandidato(c) && (
                                     <button type="button" onClick={() => handleOpenReagendamento(c)} className="p-2 ml-1 text-[#079551] bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer" title="Reagendar">
                                       <span className="material-symbols-outlined text-[22px]">event_repeat</span>
                                     </button>
@@ -3464,7 +3467,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                   <p className="text-sm font-semibold text-gray-700">{c.numTIS || '-'}</p>
                 </div>
 
-                {(podeGerarTermo || c.termoRecursoUrl || c.termoCientificacaoUrl || gerandoCientIds.has(c.id) || podeGerarCientificacao(c) || mostrarMenuAcoes(c) || (podeReagendar && !c.finalizado)) && (
+                {(podeGerarTermo || c.termoRecursoUrl || c.termoCientificacaoUrl || gerandoCientIds.has(c.id) || podeGerarCientificacao(c) || mostrarMenuAcoes(c) || podeReagendarCandidato(c)) && (
                   <div className="pt-2 space-y-2">
                     {c.termoRecursoUrl ? (
                       <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
@@ -3523,7 +3526,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                         <span>Limpar</span>
                       </button>
                     )}
-                    {podeReagendar && !c.finalizado && (
+                    {podeReagendarCandidato(c) && (
                       <button type="button" onClick={() => { setCandidatoModalMobile(null); handleOpenReagendamento(c); }} className="w-full px-4 py-3 bg-green-50 text-[#079551] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[20px]">event_repeat</span>
                         <span>Reagendar</span>
