@@ -2930,6 +2930,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       )}
 
       <div ref={scrollContainerRef} className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1600px] mx-auto w-full flex-1 space-y-4">
+        {/* Desktop: título + busca/filtros ficam fixos no topo ao rolar a tabela
+            (o fundo cobre o espaço para as linhas passarem por baixo). */}
+        <div className="md:sticky md:top-0 md:z-20 md:-mt-6 md:pt-6 md:pb-2 md:bg-[#F3F5F7] space-y-4">
         <div className="relative flex flex-col items-center gap-1.5 min-h-[40px] md:flex-row md:justify-center md:gap-0 px-2 md:px-16">
           {/* Desktop: botão de voltar próprio desta página (some no mobile
               — lá quem flutua sobre a tabela é o botão sticky do Header). */}
@@ -3040,6 +3043,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               </>
             )}
           </div>
+        </div>
         </div>
         </div>
 
