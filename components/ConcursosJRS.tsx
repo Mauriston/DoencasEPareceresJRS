@@ -2628,6 +2628,8 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         if (!atualizado) return;
         showToast(`Dados de ${atualizado.nome} atualizados com sucesso.`);
         setMotivoModal({ candidato: atualizado, tipo: 'IDM', obrigatorio: true });
+        // O Termo de Cientificação só depende do status: já é gerado em segundo plano (visualiza-se pelo ícone).
+        gerarTermoCientificacao(atualizado.id, atualizado.nome, 'INSUF DOCUMENTAL', false);
       });
       return;
     }
@@ -2635,7 +2637,12 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     const saindoDeMotivo = (candidato.status === 'INAPTO' || candidato.status === 'INSUF DOCUMENTAL') && novoStatus !== candidato.status;
     const patch = saindoDeMotivo ? { status: novoStatus, observacoes: '' } : { status: novoStatus };
     salvarCampoCandidato(candidato, patch).then(atualizado => {
-      if (atualizado) showToast(`Dados de ${atualizado.nome} atualizados com sucesso.`);
+      if (!atualizado) return;
+      showToast(`Dados de ${atualizado.nome} atualizados com sucesso.`);
+      // Apto: o Termo de Cientificação é gerado em segundo plano (visualiza-se pelo ícone, sem abrir sozinho).
+      if (atualizado.status === 'APTO' && candidato.status !== 'APTO') {
+        gerarTermoCientificacao(atualizado.id, atualizado.nome, 'APTO', false);
+      }
     });
   };
 
