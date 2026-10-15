@@ -2324,6 +2324,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   const qtdSolicitacoes = (c: CandidatoRecord) => c.solicitacoesParecer.length + c.solicitacoesExames.length;
   // Editar/Limpar: exclusivos do perfil Admin (nem desabilitados para os demais).
   const ehAdmin = perfil === 'admin';
+  // Limpar só faz sentido se há algum PDF gerado (termos, pareceres ou exames).
+  const temDocumentoGerado = (c: CandidatoRecord) =>
+    !!(c.termoRecursoUrl || c.termoCientificacaoUrl) || qtdSolicitacoes(c) > 0;
   const temSolicitacaoGerada = (c: CandidatoRecord) => qtdSolicitacoes(c) > 0;
   const mostrarMenuAcoes = (c: CandidatoRecord) => podeSolicitarBase || temSolicitacaoGerada(c) || ehAdmin;
 
@@ -2851,7 +2854,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               )}
               {docsVer.length > 0 && (
                 <>
-                  {podeSolicitarBase && <div className="my-1 border-t border-gray-100" />}
+                  {podeSolicitarBase && <div className="my-1 border-t border-gray-300" />}
                   {docsVer.map(({ tipo, d, chave }) => (
                     <button key={chave} type="button" role="menuitem" onClick={() => handleVerSolicitacao(tipo, d, c)} className={classeItem}>
                       <span className="material-symbols-outlined text-[20px] text-[#079551]">{tipo === 'parecer' ? 'clinical_notes' : 'lab_panel'}</span>
@@ -2862,17 +2865,19 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               )}
               {mostrarAdmin && (
                 <>
-                  {(podeSolicitarBase || docsVer.length > 0) && <div className="my-1 border-t border-gray-100" />}
+                  {(podeSolicitarBase || docsVer.length > 0) && (c.finalizado || temDocumentoGerado(c)) && <div className="my-1 border-t border-gray-300" />}
                   {c.finalizado && (
                     <button type="button" role="menuitem" onClick={() => handleEditarIS(c)} className={classeItem}>
                       <span className="material-symbols-outlined text-[20px]">edit</span>
                       <span>Editar</span>
                     </button>
                   )}
-                  <button type="button" role="menuitem" onClick={() => handleLimparIS(c)} className={`${classeItem} !text-red-700 hover:!bg-red-50`}>
-                    <span className="material-symbols-outlined text-[20px]">ink_eraser</span>
-                    <span>Limpar</span>
-                  </button>
+                  {temDocumentoGerado(c) && (
+                    <button type="button" role="menuitem" onClick={() => handleLimparIS(c)} className={`${classeItem} !text-red-700 hover:!bg-red-50`}>
+                      <span className="material-symbols-outlined text-[20px]">ink_eraser</span>
+                      <span>Limpar</span>
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -3467,7 +3472,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                         <span>Editar</span>
                       </button>
                     )}
-                    {ehAdmin && (
+                    {ehAdmin && temDocumentoGerado(c) && (
                       <button type="button" onClick={() => handleLimparIS(c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-red-50 text-red-700">
                         <span className="material-symbols-outlined text-[20px]">ink_eraser</span>
                         <span>Limpar</span>
