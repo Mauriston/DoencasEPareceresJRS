@@ -10,7 +10,7 @@ import { canUseFeature } from '../config/permissions';
 import {
   listarConcursos, getConcurso, listarCandidatos, observarConcursos, observarConcurso, observarCandidatos, criarConcursoDaMensagem, novoConcursoId, importarConcursoDeCsv, atualizarCandidato,
   criarCandidato, reagendarCandidato, listarDatasAgendamento, obterContextoAgendamento, confirmarAgendamento,
-  gerarMinutaResultados, abrirConcurso, voltarParaEmBreve, encerrarConcurso, salvarTermoRecurso, salvarTermoCientificacao, registrarSolicitacao, STATUS_PERMITEM_SOLICITACAO,
+  gerarMinutaResultados, abrirConcurso, voltarParaEmBreve, encerrarConcurso, salvarTermoRecurso, salvarTermoCientificacao, registrarSolicitacao, STATUS_PERMITEM_SOLICITACAO, reabrirIS, limparIS, type SolicitacaoDoc,
   listarMensagens, arquivarMensagem, obterEstatisticasAnuais, definirPeriodoAgendamento,
   STATUS_LABELS,
   type ConcursoRecord, type CandidatoRecord, type DataAgendamentoInfo, type MensagemRecord, type EstatisticasAnuais, type EstatisticaConcursoStatus,
@@ -2321,9 +2321,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     !c.finalizado && STATUS_PERMITEM_SOLICITACAO.includes(String(c.status || '').trim().toUpperCase());
 
   // Quem não gera (ex.: secretaria) só enxerga o menu quando há documento para visualizar.
-  const qtdSolicitacoes = (c: CandidatoRecord) => (c.solicitacaoParecerUrl ? 1 : 0) + (c.solicitacaoExamesUrl ? 1 : 0);
+  const qtdSolicitacoes = (c: CandidatoRecord) => c.solicitacoesParecer.length + c.solicitacoesExames.length;
+  // Editar/Limpar: exclusivos do perfil Admin (nem desabilitados para os demais).
+  const ehAdmin = perfil === 'admin';
   const temSolicitacaoGerada = (c: CandidatoRecord) => qtdSolicitacoes(c) > 0;
-  const mostrarMenuAcoes = (c: CandidatoRecord) => podeSolicitarBase || temSolicitacaoGerada(c);
+  const mostrarMenuAcoes = (c: CandidatoRecord) => podeSolicitarBase || temSolicitacaoGerada(c) || ehAdmin;
 
   useEffect(() => {
     if (!menuAcoes) return;
@@ -2344,16 +2346,59 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     setMenuAcoes(prev => (prev?.id === id ? null : { id, top: r.bottom + 6, right: Math.max(8, window.innerWidth - r.right) }));
   };
 
-  const handleItemSolicitacao = (tipo: 'parecer' | 'exames', c: CandidatoRecord) => {
+  // Gerar abre o diálogo e continua disponível após gerar (uma IS pode precisar de vários pareceres/pedidos de exames).
+  const handleGerarSolicitacao = (tipo: 'parecer' | 'exames', c: CandidatoRecord) => {
     setMenuAcoes(null);
-    const url = tipo === 'parecer' ? c.solicitacaoParecerUrl : c.solicitacaoExamesUrl;
-    const titulo = tipo === 'parecer' ? 'Pedido de Parecer' : 'Solicitação de Exames';
-    if (url) {
-      abrirPdfUrl(url, `${titulo} — ${c.nome}`);
-      return;
-    }
     if (!statusPermiteSolicitacao(c) || gerandoSolicitacaoIds.has(c.id)) return;
     setSolicitacaoModal({ tipo, candidato: c });
+  };
+
+  const handleVerSolicitacao = (tipo: 'parecer' | 'exames', doc: SolicitacaoDoc, c: CandidatoRecord) => {
+    setMenuAcoes(null);
+    const titulo = tipo === 'parecer' ? 'Pedido de Parecer' : 'Solicitação de Exames';
+    abrirPdfUrl(doc.url, `${titulo} — ${doc.rotulo} — ${c.nome}`);
+  };
+
+  // Admin — Editar: reabre a IS finalizada (apaga o Nº TIS).
+  const handleEditarIS = (c: CandidatoRecord) => {
+    setMenuAcoes(null);
+    setCandidatoModalMobile(null);
+    setConfirmDialog({
+      title: 'Editar IS',
+      message: `Reabrir a IS de ${c.nome} para edição? O Nº TIS será apagado.`,
+      confirmLabel: 'Reabrir IS',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const atualizado = await reabrirIS(concursoId, c.id);
+          setCandidatos(prev => prev.map(x => (x.id === c.id ? atualizado : x)));
+          showToast(`IS de ${c.nome} reaberta para edição.`);
+        } catch (e: any) {
+          showToast(e?.message || 'Erro ao reabrir a IS.');
+        }
+      },
+    });
+  };
+
+  // Admin — Limpar: apaga todas as colunas da IS e todos os documentos gerados.
+  const handleLimparIS = (c: CandidatoRecord) => {
+    setMenuAcoes(null);
+    setCandidatoModalMobile(null);
+    setConfirmDialog({
+      title: 'Limpar IS',
+      message: `Limpar toda a IS de ${c.nome}? O Status volta a "Sem status" e serão apagados Observações, Nº TIS, laudo e todos os documentos gerados (termo de recurso, termo de cientificação, pareceres e pedidos de exames). Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Limpar IS',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const atualizado = await limparIS(concursoId, c.id);
+          setCandidatos(prev => prev.map(x => (x.id === c.id ? atualizado : x)));
+          showToast(`IS de ${c.nome} limpa.`);
+        } catch (e: any) {
+          showToast(e?.message || 'Erro ao limpar a IS.');
+        }
+      },
+    });
   };
 
   const gerarSolicitacao = async (
@@ -2388,11 +2433,14 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       const observacao = tipo === 'parecer'
         ? `SOLICITADO PARECER ${(dados.especialidade || '').toUpperCase()}`
         : `SOLICITADO ${(dados.exames || '').split(/\s*\n\s*/).filter(Boolean).join('; ')}`;
-      const atualizado = await registrarSolicitacao(concursoId, id, tipo, url, observacao);
+      const rotulo = tipo === 'parecer'
+        ? (dados.especialidade || 'Parecer')
+        : ((dados.exames || '').split(/\s*\n\s*/).filter(Boolean)[0] || 'Exames').slice(0, 40);
+      const atualizado = await registrarSolicitacao(concursoId, id, tipo, { url, rotulo }, observacao);
       setCandidatos(prev => prev.map(c => (c.id === id ? atualizado : c)));
       const titulo = tipo === 'parecer' ? 'Pedido de Parecer' : 'Solicitação de Exames';
       showToast(`${titulo} gerado para ${candidato.nome}.`);
-      if (isDesktop) abrirPdfUrl(url, `${titulo} — ${candidato.nome}`);
+      if (isDesktop) abrirPdfUrl(url, `${titulo} — ${rotulo} — ${candidato.nome}`);
     } catch (e: any) {
       showToast(e?.message || 'Erro ao gerar o documento.');
     } finally {
@@ -2777,30 +2825,56 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       {menuAcoes && (() => {
         const c = candidatos.find(x => x.id === menuAcoes.id);
         if (!c) return null;
-        const item = (tipo: 'parecer' | 'exames', rotuloGerar: string, rotuloVer: string, icone: string) => {
-          const url = tipo === 'parecer' ? c.solicitacaoParecerUrl : c.solicitacaoExamesUrl;
-          const gerando = gerandoSolicitacaoIds.has(c.id);
-          if (!url && !podeSolicitarBase) return null; // sem permissão de gerar: só aparece o que já existe
-          const habilitado = !!url || (statusPermiteSolicitacao(c) && !gerando);
-          return (
-            <button
-              type="button"
-              role="menuitem"
-              disabled={!habilitado}
-              onClick={() => handleItemSolicitacao(tipo, c)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-left text-[#050F41] hover:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-            >
-              <span className={`material-symbols-outlined text-[20px] ${url ? 'text-[#079551]' : ''}`}>{icone}</span>
-              <span>{url ? rotuloVer : rotuloGerar}</span>
-            </button>
-          );
-        };
+        const gerando = gerandoSolicitacaoIds.has(c.id);
+        const classeItem = 'w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-left text-[#050F41] hover:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:bg-transparent';
+        const habilitadoGerar = statusPermiteSolicitacao(c) && !gerando;
+        const docsVer = [
+          ...c.solicitacoesParecer.map((d, i) => ({ tipo: 'parecer' as const, d, chave: `p${i}` })),
+          ...c.solicitacoesExames.map((d, i) => ({ tipo: 'exames' as const, d, chave: `e${i}` })),
+        ];
+        const mostrarAdmin = ehAdmin;
         return (
           <>
             <div className="fixed inset-0 z-[140]" onClick={() => setMenuAcoes(null)} />
-            <div role="menu" className="fixed z-[141] w-52 py-1 bg-white rounded-xl border border-gray-200 shadow-xl" style={{ top: menuAcoes.top, right: menuAcoes.right }}>
-              {item('parecer', 'Gerar Parecer', 'Ver Parecer', 'stethoscope')}
-              {item('exames', 'Gerar Exames', 'Ver Exames', 'lab_research')}
+            <div role="menu" className="fixed z-[141] w-64 py-1 bg-white rounded-xl border border-gray-200 shadow-xl max-h-[70vh] overflow-y-auto" style={{ top: menuAcoes.top, right: menuAcoes.right }}>
+              {podeSolicitarBase && (
+                <>
+                  <button type="button" role="menuitem" disabled={!habilitadoGerar} onClick={() => handleGerarSolicitacao('parecer', c)} className={classeItem}>
+                    <span className="material-symbols-outlined text-[20px]">stethoscope</span>
+                    <span>Gerar Parecer</span>
+                  </button>
+                  <button type="button" role="menuitem" disabled={!habilitadoGerar} onClick={() => handleGerarSolicitacao('exames', c)} className={classeItem}>
+                    <span className="material-symbols-outlined text-[20px]">lab_research</span>
+                    <span>Gerar Exames</span>
+                  </button>
+                </>
+              )}
+              {docsVer.length > 0 && (
+                <>
+                  {podeSolicitarBase && <div className="my-1 border-t border-gray-100" />}
+                  {docsVer.map(({ tipo, d, chave }) => (
+                    <button key={chave} type="button" role="menuitem" onClick={() => handleVerSolicitacao(tipo, d, c)} className={classeItem}>
+                      <span className="material-symbols-outlined text-[20px] text-[#079551]">{tipo === 'parecer' ? 'clinical_notes' : 'lab_panel'}</span>
+                      <span className="min-w-0 truncate">{tipo === 'parecer' ? 'Ver Parecer' : 'Ver Exames'} · {d.rotulo}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+              {mostrarAdmin && (
+                <>
+                  {(podeSolicitarBase || docsVer.length > 0) && <div className="my-1 border-t border-gray-100" />}
+                  {c.finalizado && (
+                    <button type="button" role="menuitem" onClick={() => handleEditarIS(c)} className={classeItem}>
+                      <span className="material-symbols-outlined text-[20px]">edit</span>
+                      <span>Editar</span>
+                    </button>
+                  )}
+                  <button type="button" role="menuitem" onClick={() => handleLimparIS(c)} className={`${classeItem} !text-red-700 hover:!bg-red-50`}>
+                    <span className="material-symbols-outlined text-[20px]">ink_eraser</span>
+                    <span>Limpar</span>
+                  </button>
+                </>
+              )}
             </div>
           </>
         );
@@ -3369,18 +3443,36 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                         <span>Gerar Termo de Cientificação</span>
                       </button>
                     ) : null}
-                    {mostrarMenuAcoes(c) && (['parecer', 'exames'] as const).map(tipo => {
-                      const url = tipo === 'parecer' ? c.solicitacaoParecerUrl : c.solicitacaoExamesUrl;
-                      if (!url && !podeSolicitarBase) return null;
-                      const habilitado = !!url || (statusPermiteSolicitacao(c) && !gerandoSolicitacaoIds.has(c.id));
-                      const rotuloItem = tipo === 'parecer' ? (url ? 'Ver Parecer' : 'Gerar Parecer') : (url ? 'Ver Exames' : 'Gerar Exames');
+                    {podeSolicitarBase && (['parecer', 'exames'] as const).map(tipo => {
+                      const habilitado = statusPermiteSolicitacao(c) && !gerandoSolicitacaoIds.has(c.id);
                       return (
-                        <button key={tipo} type="button" disabled={!habilitado} onClick={() => { if (!url) setCandidatoModalMobile(null); handleItemSolicitacao(tipo, c); }} className={`w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${url ? 'bg-green-50 text-green-800' : 'bg-white text-[#050F41] border border-gray-200'}`}>
+                        <button key={tipo} type="button" disabled={!habilitado} onClick={() => { setCandidatoModalMobile(null); handleGerarSolicitacao(tipo, c); }} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-[#050F41] border border-gray-200 disabled:opacity-40 disabled:cursor-not-allowed">
                           <span className="material-symbols-outlined text-[20px]">{tipo === 'parecer' ? 'stethoscope' : 'lab_research'}</span>
-                          <span>{rotuloItem}</span>
+                          <span>{tipo === 'parecer' ? 'Gerar Parecer' : 'Gerar Exames'}</span>
                         </button>
                       );
                     })}
+                    {[
+                      ...c.solicitacoesParecer.map((d, i) => ({ tipo: 'parecer' as const, d, chave: `p${i}` })),
+                      ...c.solicitacoesExames.map((d, i) => ({ tipo: 'exames' as const, d, chave: `e${i}` })),
+                    ].map(({ tipo, d, chave }) => (
+                      <button key={chave} type="button" onClick={() => handleVerSolicitacao(tipo, d, c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-green-50 text-green-800">
+                        <span className="material-symbols-outlined text-[20px]">{tipo === 'parecer' ? 'clinical_notes' : 'lab_panel'}</span>
+                        <span className="min-w-0 truncate">{tipo === 'parecer' ? 'Ver Parecer' : 'Ver Exames'} · {d.rotulo}</span>
+                      </button>
+                    ))}
+                    {ehAdmin && c.finalizado && (
+                      <button type="button" onClick={() => handleEditarIS(c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-[#050F41] border border-gray-200">
+                        <span className="material-symbols-outlined text-[20px]">edit</span>
+                        <span>Editar</span>
+                      </button>
+                    )}
+                    {ehAdmin && (
+                      <button type="button" onClick={() => handleLimparIS(c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-red-50 text-red-700">
+                        <span className="material-symbols-outlined text-[20px]">ink_eraser</span>
+                        <span>Limpar</span>
+                      </button>
+                    )}
                     {podeReagendar && !c.finalizado && (
                       <button type="button" onClick={() => { setCandidatoModalMobile(null); handleOpenReagendamento(c); }} className="w-full px-4 py-3 bg-green-50 text-[#079551] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[20px]">event_repeat</span>

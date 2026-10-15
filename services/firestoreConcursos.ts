@@ -17,7 +17,7 @@ import {
   writeBatch, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { app } from './firebaseAuth';
-import { removerTermoCientificacaoPdf, removerTermoRecursoPdf } from './firebaseStorageConcursos';
+import { removerTermoCientificacaoPdf, removerTermoRecursoPdf, removerPdfPorUrl } from './firebaseStorageConcursos';
 import {
   MAPA_LAUDO_POR_STATUS, candidatoEstaFinalizado, formatarDataSimples, formatarDataMilitar,
   formatarChaveData, parseChaveData, calcularDiasUteis, distribuirCandidatosNasDatas,
@@ -63,8 +63,16 @@ export interface CandidatoRecord {
   numTIS: string;
   termoRecursoUrl: string;
   termoCientificacaoUrl: string;
-  solicitacaoParecerUrl: string;
-  solicitacaoExamesUrl: string;
+  /** Pedidos de parecer / solicitações de exames gerados (uma IS pode ter vários de cada). */
+  solicitacoesParecer: SolicitacaoDoc[];
+  solicitacoesExames: SolicitacaoDoc[];
+}
+
+export interface SolicitacaoDoc {
+  url: string;
+  /** Texto curto do item no menu: especialidade (parecer) ou início da lista de exames. */
+  rotulo: string;
+  criadoEm: string;
 }
 
 export interface MensagemRecord {
@@ -104,6 +112,16 @@ const toConcursoRecord = (id: string, data: any): ConcursoRecord => ({
   criadoEm: data.criadoEm instanceof Timestamp ? data.criadoEm.toDate().toISOString() : (data.criadoEm || ''),
 });
 
+/** Lê a lista de documentos gerados; aceita o campo antigo de URL única (legado). */
+const lerSolicitacoes = (lista: any, urlLegado: any, rotuloLegado: string): SolicitacaoDoc[] => {
+  if (Array.isArray(lista)) {
+    return lista
+      .filter(x => x && typeof x.url === 'string' && x.url)
+      .map(x => ({ url: x.url, rotulo: String(x.rotulo || rotuloLegado), criadoEm: String(x.criadoEm || '') }));
+  }
+  return typeof urlLegado === 'string' && urlLegado ? [{ url: urlLegado, rotulo: rotuloLegado, criadoEm: '' }] : [];
+};
+
 const toCandidatoRecord = (id: string, data: any): CandidatoRecord => ({
   id,
   nome: data.nome || '',
@@ -117,8 +135,8 @@ const toCandidatoRecord = (id: string, data: any): CandidatoRecord => ({
   numTIS: data.numTIS || '',
   termoRecursoUrl: data.termoRecursoUrl || '',
   termoCientificacaoUrl: data.termoCientificacaoUrl || '',
-  solicitacaoParecerUrl: data.solicitacaoParecerUrl || '',
-  solicitacaoExamesUrl: data.solicitacaoExamesUrl || '',
+  solicitacoesParecer: lerSolicitacoes(data.solicitacoesParecer, data.solicitacaoParecerUrl, 'Parecer'),
+  solicitacoesExames: lerSolicitacoes(data.solicitacoesExames, data.solicitacaoExamesUrl, 'Exames'),
 });
 
 export const listarConcursos = async (): Promise<ConcursoRecord[]> => {
@@ -243,8 +261,8 @@ export const criarConcursoDaMensagem = async (params: {
       numTIS: '',
       termoRecursoUrl: '',
       termoCientificacaoUrl: '',
-      solicitacaoParecerUrl: '',
-      solicitacaoExamesUrl: '',
+      solicitacoesParecer: [],
+      solicitacoesExames: [],
     }));
   });
 
@@ -328,8 +346,8 @@ export const importarConcursoDeCsv = async (
       numTIS: c.numTIS,
       termoRecursoUrl: c.termoRecursoUrl,
       termoCientificacaoUrl: c.termoCientificacaoUrl || '',
-      solicitacaoParecerUrl: c.solicitacaoParecerUrl || '',
-      solicitacaoExamesUrl: c.solicitacaoExamesUrl || '',
+      solicitacoesParecer: [],
+      solicitacoesExames: [],
     }));
   });
 
@@ -346,7 +364,7 @@ export const criarCandidato = async (concursoId: string, id: string, nome: strin
   const dados = {
     nome, dataAgendamento, status: '', observacoes: '', finalizado: false,
     recurso: false, dataLaudo: '', laudo: '', numTIS: '', termoRecursoUrl: '', termoCientificacaoUrl: '',
-    solicitacaoParecerUrl: '', solicitacaoExamesUrl: '',
+    solicitacoesParecer: [], solicitacoesExames: [],
   };
   await setDoc(candidatoRef(concursoId, id), dados);
   await updateDoc(concursoRef(concursoId), { totalCandidatos: (await listarCandidatos(concursoId)).length });
@@ -680,7 +698,7 @@ export const registrarSolicitacao = async (
   concursoId: string,
   id: string,
   tipo: 'parecer' | 'exames',
-  url: string,
+  doc: { url: string; rotulo: string },
   textoObservacao: string,
 ): Promise<CandidatoRecord> => {
   const snap = await getDoc(candidatoRef(concursoId, id));
@@ -690,8 +708,11 @@ export const registrarSolicitacao = async (
     throw new Error('O status atual do candidato não permite gerar esta solicitação.');
   }
   const observacoes = atual.observacoes.trim() ? `${atual.observacoes.trim()}; ${textoObservacao}` : textoObservacao;
+  const novoDoc: SolicitacaoDoc = { url: doc.url, rotulo: doc.rotulo, criadoEm: new Date().toISOString() };
   const proximo = {
-    [tipo === 'parecer' ? 'solicitacaoParecerUrl' : 'solicitacaoExamesUrl']: url,
+    ...(tipo === 'parecer'
+      ? { solicitacoesParecer: [...atual.solicitacoesParecer, novoDoc] }
+      : { solicitacoesExames: [...atual.solicitacoesExames, novoDoc] }),
     status: 'Pendente',
     dataLaudo: '',
     laudo: '',
@@ -699,6 +720,44 @@ export const registrarSolicitacao = async (
     finalizado: false,
   };
   await updateDoc(candidatoRef(concursoId, id), proximo);
+  return { ...atual, ...proximo };
+};
+
+/**
+ * Admin — "Editar": reabre uma IS finalizada para edição. O Nº TIS é apagado
+ * (era ele que, junto com o status, finalizava a IS); o restante é mantido.
+ */
+export const reabrirIS = async (concursoId: string, id: string): Promise<CandidatoRecord> => {
+  const snap = await getDoc(candidatoRef(concursoId, id));
+  if (!snap.exists()) throw new Error(`Candidato com matrícula "${id}" não encontrado.`);
+  const atual = toCandidatoRecord(id, snap.data());
+  const proximo = { numTIS: '', finalizado: false };
+  await updateDoc(candidatoRef(concursoId, id), proximo);
+  return { ...atual, ...proximo };
+};
+
+/**
+ * Admin — "Limpar": apaga todas as colunas da IS (volta a "Sem status") e todos
+ * os documentos gerados (termos de recurso e de cientificação, pareceres e
+ * exames), inclusive os PDFs no Storage. Nome, matrícula e data de agendamento
+ * são mantidos.
+ */
+export const limparIS = async (concursoId: string, id: string): Promise<CandidatoRecord> => {
+  const snap = await getDoc(candidatoRef(concursoId, id));
+  if (!snap.exists()) throw new Error(`Candidato com matrícula "${id}" não encontrado.`);
+  const atual = toCandidatoRecord(id, snap.data());
+  const proximo = {
+    status: '', observacoes: '', finalizado: false, recurso: false,
+    dataLaudo: '', laudo: '', numTIS: '',
+    termoRecursoUrl: '', termoCientificacaoUrl: '',
+    solicitacoesParecer: [] as SolicitacaoDoc[], solicitacoesExames: [] as SolicitacaoDoc[],
+  };
+  await updateDoc(candidatoRef(concursoId, id), proximo);
+  const urls = [
+    atual.termoRecursoUrl, atual.termoCientificacaoUrl,
+    ...atual.solicitacoesParecer.map(d => d.url), ...atual.solicitacoesExames.map(d => d.url),
+  ].filter(Boolean);
+  await Promise.all(urls.map(removerPdfPorUrl));
   return { ...atual, ...proximo };
 };
 
