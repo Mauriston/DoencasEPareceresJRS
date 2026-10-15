@@ -19,7 +19,7 @@ import { SolicitarParecerModal, SolicitarExamesModal } from './SolicitacaoModais
 import { juntarPdfsBase64 } from '../services/pdfMerge';
 import { uploadMensagemPdf, uploadTermoRecursoPdf, uploadTermoCientificacaoPdf, uploadSolicitacaoPdf } from '../services/firebaseStorageConcursos';
 import {
-  limparRuidoPaginacao, extrairCabecalhoMensagem, extrairCandidatos, extrairPeriodoJRS,
+  limparRuidoPaginacao, extrairCabecalhoMensagem, extrairCandidatosComAgendamento, extrairPeriodoJRS,
   extrairNomeConcurso, formatarChaveData, parseChaveData, interpretarCsvCandidatosDataBase,
   MAPA_LAUDO_POR_STATUS,
   type CabecalhoMensagem, type CandidatoBasico, type CandidatoImportadoCsv,
@@ -275,6 +275,8 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
   const [semPeriodo, setSemPeriodo] = useState(false);
   // Texto transcrito do PDF — mostrado na revisão quando nada foi identificado, para diagnosticar o formato.
   const [textoTranscrito, setTextoTranscrito] = useState('');
+  // Mensagem de agendamento (HOSRCF): candidatos agrupados por dia — o concurso já nasce com as datas.
+  const [modoAgendamento, setModoAgendamento] = useState(false);
 
   const [processando, setProcessando] = useState(false);
 
@@ -292,8 +294,15 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
         throw new Error('Não foi possível localizar o código Data-Hora (ID único) da mensagem no documento. Confira o arquivo e tente novamente.');
       }
 
-      const candidatosExtraidos = extrairCandidatos(cab.texto || textoLimpo);
+      const mDtg = cab.dataHora.match(/\/([A-ZÇ]{3})\/(\d{2,4})$/);
+      const anoMsg = mDtg ? (mDtg[2].length === 2 ? 2000 + parseInt(mDtg[2], 10) : parseInt(mDtg[2], 10)) : undefined;
+      const mesMsg = mDtg ? ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'].indexOf(mDtg[1]) : -1;
+      const { candidatos: candidatosExtraidos, modoAgendamento: agendamentoIdentificado } = extrairCandidatosComAgendamento(
+        cab.texto || textoLimpo,
+        { remetente: cab.sender, anoPadrao: anoMsg, mesReferencia: mesMsg >= 0 ? mesMsg : undefined },
+      );
       const periodo = extrairPeriodoJRS(cab.texto || textoLimpo);
+      setModoAgendamento(agendamentoIdentificado);
 
       setCabecalho(cab);
       setNomeConcurso(extrairNomeConcurso(cab.subject));
@@ -309,7 +318,7 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
     }
   };
 
-  const atualizarCandidatoEditavel = (indice: number, campo: 'id' | 'nome', valor: string) => {
+  const atualizarCandidatoEditavel = (indice: number, campo: 'id' | 'nome' | 'dataAgendamento', valor: string) => {
     setCandidatos(prev => prev.map((c, i) => (i === indice ? { ...c, [campo]: valor } : c)));
   };
 
@@ -342,14 +351,18 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
       await criarConcursoDaMensagem({
         concursoId: novoId,
         nome: nomeConcurso.trim(),
-        cabecalho: { ...cabecalho, purpose: 'Apresentação' },
+        cabecalho: { ...cabecalho, purpose: modoAgendamento ? 'Agendamento' : 'Apresentação' },
         candidatos: candidatosValidos,
         periodo,
         fileUrl,
       });
       setConcursoId(novoId);
 
-      if (periodo) {
+      if (modoAgendamento) {
+        // Já agendado pelas datas da mensagem: não há distribuição automática nem minuta.
+        setSemPeriodo(!periodo);
+        setStep('concluido');
+      } else if (periodo) {
         const [contexto, datas] = await Promise.all([obterContextoAgendamento(novoId), listarDatasAgendamento(novoId)]);
         setTotalPendentes(contexto.totalPendentes);
         setDatasDisponiveis(datas);
@@ -422,9 +435,10 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
           {step === 'select' && (
             <>
               <p className="text-xs md:text-sm text-gray-500">
-                Envie o PDF (ou fotografe/escaneie) da mensagem administrativa inicial de apresentação dos candidatos.
-                O texto será transcrito por IA, os candidatos e o período de agendamento identificados automaticamente
-                — você poderá revisar e corrigir tudo antes de criar o concurso.
+                Envie o PDF (ou fotografe/escaneie) da mensagem administrativa de apresentação dos candidatos
+                ou a mensagem de agendamento enviada pelo HNRe (candidatos agrupados por dia).
+                O texto será transcrito por IA, os candidatos, as datas de agendamento (quando houver) e o período
+                da JRS identificados automaticamente — você poderá revisar e corrigir tudo antes de criar o concurso.
               </p>
               <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
                 <span className="material-symbols-outlined text-[32px] text-gray-400">picture_as_pdf</span>
@@ -459,6 +473,11 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs md:text-sm text-blue-800">
                 Confira e corrija os dados extraídos antes de criar o concurso — a matrícula de cada candidato precisa estar correta.
               </div>
+              {modoAgendamento && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-xs md:text-sm text-green-800">
+                  <span className="font-bold">Mensagem de agendamento identificada:</span> os candidatos serão criados já agendados nas datas abaixo (ajuste a data de qualquer um, se necessário).
+                </div>
+              )}
 
               <div>
                 <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do concurso</label>
@@ -495,7 +514,7 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
                 </div>
                 <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-64 overflow-y-auto">
                   {candidatos.map((c, i) => (
-                    <div key={i} className="flex items-center gap-2 p-2">
+                    <div key={i} className="flex flex-wrap items-center gap-2 p-2">
                       <input
                         type="text"
                         value={c.id}
@@ -508,8 +527,17 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
                         value={c.nome}
                         onChange={e => atualizarCandidatoEditavel(i, 'nome', e.target.value)}
                         placeholder="Nome do candidato"
-                        className="flex-1 px-2 py-1.5 text-[12px] rounded-lg border border-gray-200 focus:outline-none focus:border-[#050F41]"
+                        className="flex-1 min-w-[140px] px-2 py-1.5 text-[12px] rounded-lg border border-gray-200 focus:outline-none focus:border-[#050F41]"
                       />
+                      {modoAgendamento && (
+                        <input
+                          type="date"
+                          value={c.dataAgendamento || ''}
+                          onChange={e => atualizarCandidatoEditavel(i, 'dataAgendamento', e.target.value)}
+                          aria-label="Data de agendamento"
+                          className="w-[9.5rem] shrink-0 px-2 py-1.5 text-[12px] rounded-lg border border-gray-200 focus:outline-none focus:border-[#050F41]"
+                        />
+                      )}
                       <button type="button" onClick={() => removerCandidatoEditavel(i)} className="p-1.5 text-gray-400 hover:text-red-600 shrink-0">
                         <span className="material-symbols-outlined text-[18px]">delete</span>
                       </button>
@@ -608,7 +636,7 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
             <>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3">
                 <p className="text-xs md:text-sm font-bold text-green-800">
-                  Concurso "{nomeConcurso}" criado com sucesso{semPeriodo ? '.' : ' e agendamento confirmado.'}
+                  Concurso "{nomeConcurso}" criado com sucesso{modoAgendamento ? ` com os ${candidatos.filter(c => c.id.trim() && c.nome.trim()).length} candidatos já agendados nas datas da mensagem${semPeriodo ? ' (defina o período de agendamento depois, se precisar reagendar).' : '.'}` : semPeriodo ? '.' : ' e agendamento confirmado.'}
                 </p>
               </div>
               {minuta && (

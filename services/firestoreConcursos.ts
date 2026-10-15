@@ -251,7 +251,8 @@ export const criarConcursoDaMensagem = async (params: {
   candidatos.forEach(c => {
     add(b => b.set(candidatoRef(concursoId, c.id), {
       nome: c.nome,
-      dataAgendamento: '',
+      // Mensagem de agendamento (HOSRCF): o candidato já nasce agendado na data da lista.
+      dataAgendamento: c.dataAgendamento || '',
       status: '',
       observacoes: '',
       finalizado: false,
@@ -277,8 +278,14 @@ export const criarConcursoDaMensagem = async (params: {
     texto: cabecalho.texto,
   }));
 
-  diasUteis.forEach(d => {
-    const chave = formatarChaveData(d);
+  // Calendário do concurso: dias úteis do período + as datas já agendadas pela mensagem de
+  // agendamento (para o calendário de reagendamento reconhecê-las mesmo sem período definido).
+  const datasCalendario = new Map<string, Date>();
+  diasUteis.forEach(d => datasCalendario.set(formatarChaveData(d), d));
+  candidatos.forEach(c => {
+    if (c.dataAgendamento && !datasCalendario.has(c.dataAgendamento)) datasCalendario.set(c.dataAgendamento, parseChaveData(c.dataAgendamento));
+  });
+  datasCalendario.forEach((d, chave) => {
     add(b => b.set(doc(agendamentosCol(concursoId), chave), {
       diaSemana: NOMES_DIAS_SEMANA[d.getDay()],
     }));
