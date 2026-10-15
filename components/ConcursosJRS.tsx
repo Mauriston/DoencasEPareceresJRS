@@ -2851,7 +2851,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               )}
               {docsVer.length > 0 && (
                 <>
-                  {podeSolicitarBase && <div className="my-1 border-t border-gray-100" />}
+                  {podeSolicitarBase && <div className="my-1 border-t border-gray-300" />}
                   {docsVer.map(({ tipo, d, chave }) => (
                     <button key={chave} type="button" role="menuitem" onClick={() => handleVerSolicitacao(tipo, d, c)} className={classeItem}>
                       <span className="material-symbols-outlined text-[20px] text-[#079551]">{tipo === 'parecer' ? 'clinical_notes' : 'lab_panel'}</span>
@@ -2862,7 +2862,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               )}
               {mostrarAdmin && (
                 <>
-                  {(podeSolicitarBase || docsVer.length > 0) && <div className="my-1 border-t border-gray-100" />}
+                  {(podeSolicitarBase || docsVer.length > 0) && <div className="my-1 border-t border-gray-300" />}
                   {c.finalizado && (
                     <button type="button" role="menuitem" onClick={() => handleEditarIS(c)} className={classeItem}>
                       <span className="material-symbols-outlined text-[20px]">edit</span>
