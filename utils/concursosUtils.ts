@@ -340,7 +340,20 @@ export const extrairCandidatosComAgendamento = (
   opcoes: { remetente?: string; anoPadrao?: number; mesReferencia?: number } = {},
 ): { candidatos: CandidatoBasico[]; modoAgendamento: boolean } => {
   const inicio = texto.search(/candidatos\s+abaixo\s+relacionados/i);
-  const fim = texto.search(/\bDOIS\s*[-–—]/i);
+
+  // Fim da lista: "BRAVO - Informações complementares" ou o parágrafo "DOIS - ..." que segue a lista.
+  // Na mensagem de agendamento os grupos por dia também são numerados ("UNO - 11NOV2026 às 7h30:",
+  // "DOIS - 12NOV2026 ..."), então um "DOIS -" seguido logo de uma data é cabeçalho de grupo, não o fim.
+  const idxBravo = texto.search(/\bBRAVO\s*[-–—]/i);
+  let idxDois = -1;
+  const regexDois = /\bDOIS\s*[-–—]/gi;
+  let md: RegExpExecArray | null;
+  while ((md = regexDois.exec(texto)) !== null) {
+    const seguinte = texto.slice(md.index + md[0].length, md.index + md[0].length + 30);
+    const primeiraData = localizarMarcadoresData(seguinte)[0];
+    if (!primeiraData || primeiraData.inicio > 3) { idxDois = md.index; break; }
+  }
+  const fim = [idxBravo, idxDois].filter(i => i >= 0).sort((a, b) => a - b)[0] ?? -1;
   const trecho = texto.substring(inicio >= 0 ? inicio : 0, fim >= 0 ? fim : texto.length);
 
   const ids: { id: string; inicio: number; fim: number }[] = [];
@@ -367,8 +380,12 @@ export const extrairCandidatosComAgendamento = (
     const proximoId = idx + 1 < ids.length ? ids[idx + 1].inicio : trecho.length;
     const proximaData = marcadores.find(d => d.inicio >= item.fim);
     const limite = Math.min(proximoId, proximaData ? proximaData.inicio : trecho.length);
-    const nome = trecho.slice(item.fim, limite)
+    const bruto = trecho.slice(item.fim, limite);
+    // Cada item termina em ";" (o último, em "." ou "; e") — o que vier depois é rótulo de grupo etc.
+    const nome = (bruto.includes(';') ? bruto.slice(0, bruto.indexOf(';')) : bruto)
       .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b(?:UNO|DOIS|TR[EÊ]S|QUATRO|CINCO|SEIS|SETE|OITO|NOVE|DEZ|ONZE|DOZE)\s*[-–—]?\s*$/i, '') // numeração do próximo grupo
       .trim()
       .replace(/\b(?:NO\s+)?(?:DIA|DATA|EM)\s*[:\-–]?\s*$/i, '') // rótulo que antecede a data da próxima lista
       .trim()
