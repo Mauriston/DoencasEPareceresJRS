@@ -273,6 +273,8 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
   const [totalPendentes, setTotalPendentes] = useState(0);
   const [minuta, setMinuta] = useState<string | null>(null);
   const [semPeriodo, setSemPeriodo] = useState(false);
+  // Texto transcrito do PDF — mostrado na revisão quando nada foi identificado, para diagnosticar o formato.
+  const [textoTranscrito, setTextoTranscrito] = useState('');
 
   const [processando, setProcessando] = useState(false);
 
@@ -284,6 +286,7 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
     try {
       const texto = await transcreverPdfViaOcr(file);
       const textoLimpo = limparRuidoPaginacao(texto);
+      setTextoTranscrito(textoLimpo);
       const cab = extrairCabecalhoMensagem(textoLimpo);
       if (!cab.dataHora) {
         throw new Error('Não foi possível localizar o código Data-Hora (ID único) da mensagem no documento. Confira o arquivo e tente novamente.');
@@ -512,7 +515,17 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
                       </button>
                     </div>
                   ))}
-                  {candidatos.length === 0 && <p className="text-xs md:text-sm text-gray-400 text-center py-4">Nenhum candidato identificado.</p>}
+                  {candidatos.length === 0 && (
+                    <div className="py-3 space-y-2">
+                      <p className="text-xs md:text-sm text-gray-400 text-center">Nenhum candidato identificado.</p>
+                      {textoTranscrito && (
+                        <details className="text-[11px] text-gray-500">
+                          <summary className="cursor-pointer font-semibold text-center">Ver texto transcrito do PDF</summary>
+                          <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-gray-50 border border-gray-200 p-2 font-mono">{textoTranscrito}</pre>
+                        </details>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

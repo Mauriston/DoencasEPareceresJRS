@@ -261,7 +261,9 @@ export const extrairCandidatos = (texto: string): CandidatoBasico[] => {
   const trecho = texto.substring(inicio >= 0 ? inicio : 0, fim >= 0 ? fim : texto.length);
 
   const candidatos: CandidatoBasico[] = [];
-  const regexItem = /(\d{6}-\d)\s+([\s\S]+?)(?=\d{6}-\d|$)/g;
+  // Matrícula: 5 a 7 dígitos + hífen + dígito verificador (ex.: 102073-2, 60027-6). \b evita pegar
+  // trechos de números maiores (telefones, protocolos).
+  const regexItem = /\b(\d{5,7}-\d)\b\s+([\s\S]+?)(?=\b\d{5,7}-\d\b|$)/g;
   let m: RegExpExecArray | null;
 
   while ((m = regexItem.exec(trecho)) !== null) {
