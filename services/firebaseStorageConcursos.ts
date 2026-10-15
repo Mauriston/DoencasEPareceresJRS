@@ -87,7 +87,16 @@ export const uploadSolicitacaoPdf = async (concursoId: string, candidatoId: stri
     throw new Error('O PDF gerado é maior que o permitido.');
   }
 
-  const storageRef = ref(getStorage(app), `concursos/${concursoId}/termos/${candidatoId}_${tipo}.pdf`);
+  const storageRef = ref(getStorage(app), `concursos/${concursoId}/termos/${candidatoId}_${tipo}_${Date.now()}.pdf`);
   await uploadString(storageRef, pdfBase64, 'base64', { contentType: 'application/pdf' });
   return getDownloadURL(storageRef);
+};
+
+/** Apaga um PDF do Storage a partir da URL de download (best-effort). */
+export const removerPdfPorUrl = async (url: string): Promise<void> => {
+  try {
+    await deleteObject(ref(getStorage(app), url));
+  } catch {
+    // silencioso
+  }
 };
