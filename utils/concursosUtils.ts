@@ -146,7 +146,8 @@ export const calcularDiasUteis = (dataInicial: Date, dataFinal: Date): Date[] =>
 
 export const NOMES_DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
-export interface CandidatoBasico { id: string; nome: string; }
+/** `dataAgendamento` (AAAA-MM-DD) só vem preenchida quando o candidato foi lido de uma mensagem de agendamento. */
+export interface CandidatoBasico { id: string; nome: string; dataAgendamento?: string; }
 
 /**
  * Distribui os candidatos (na ordem recebida) pelas datas disponíveis,
@@ -213,7 +214,7 @@ export interface CabecalhoMensagem {
   info: string;
   subject: string;
   texto: string;
-  purpose: 'Apresentação' | 'Outros';
+  purpose: 'Apresentação' | 'Agendamento' | 'Outros';
 }
 
 /** Extrai os campos do cabeçalho da mensagem SIGAD-MB. */
@@ -285,6 +286,133 @@ export const extrairCandidatos = (texto: string): CandidatoBasico[] => {
   candidatos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
 
   return candidatos;
+};
+
+const MESES_ABREV: Record<string, number> = {
+  JAN: 0, FEV: 1, MAR: 2, ABR: 3, MAI: 4, JUN: 5, JUL: 6, AGO: 7, SET: 8, OUT: 9, NOV: 10, DEZ: 11,
+};
+
+interface MarcadorData { inicio: number; fim: number; dia: number; mes: number; ano?: number; }
+
+/** Localiza datas no texto: "06/10/2026", "06/10", "06OUT", "06 OUT 2026", "6 de outubro de 2026"... */
+const localizarMarcadoresData = (texto: string): MarcadorData[] => {
+  const marcadores: MarcadorData[] = [];
+  const ano = (s?: string) => (s ? (s.length === 2 ? 2000 + parseInt(s, 10) : parseInt(s, 10)) : undefined);
+
+  // Numéricas com barra ou ponto (a matrícula usa hífen, então não conflita) e dd-mm-aaaa.
+  const regexNumerica = /\b(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{4}|\d{2}))?\b|\b(\d{1,2})-(\d{1,2})-(\d{4})\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = regexNumerica.exec(texto)) !== null) {
+    const dia = parseInt(m[1] ?? m[4], 10);
+    const mes = parseInt(m[2] ?? m[5], 10) - 1;
+    if (dia >= 1 && dia <= 31 && mes >= 0 && mes <= 11) {
+      marcadores.push({ inicio: m.index, fim: m.index + m[0].length, dia, mes, ano: ano(m[3] ?? m[6]) });
+    }
+  }
+
+  // Com nome do mês (abreviado ou por extenso).
+  const regexMes = /\b(\d{1,2})\s*(?:DE\s+)?(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[A-ZÇ]*\.?(?:\s*(?:DE\s*)?\/?\s*(\d{4}|\d{2})\b)?/gi;
+  while ((m = regexMes.exec(texto)) !== null) {
+    const dia = parseInt(m[1], 10);
+    const mes = MESES_ABREV[m[2].toUpperCase()];
+    if (dia >= 1 && dia <= 31 && mes !== undefined) {
+      marcadores.push({ inicio: m.index, fim: m.index + m[0].length, dia, mes, ano: ano(m[3]) });
+    }
+  }
+
+  return marcadores.sort((a, b) => a.inicio - b.inicio);
+};
+
+/**
+ * Extrai os candidatos de uma mensagem que pode ser de APRESENTAÇÃO (lista única) ou de
+ * AGENDAMENTO (candidatos agrupados em listas por dia, como a enviada pelo HOSRCF). No
+ * agendamento, cada candidato recebe a data da lista em que aparece (`dataAgendamento`).
+ *
+ * É considerada mensagem de agendamento quando os candidatos aparecem sob 2 ou mais datas
+ * diferentes — ou sob uma data, se o remetente for o HOSRCF. Datas do período da JRS
+ * ("03AGO a 14SET2026 (JRS)") não contam como data de agendamento.
+ *
+ * `anoPadrao`/`mesReferencia` (do Data-Hora da mensagem) completam datas sem ano; um mês bem
+ * anterior ao da mensagem é tratado como do ano seguinte (ex.: mensagem de DEZ com datas de JAN).
+ */
+export const extrairCandidatosComAgendamento = (
+  texto: string,
+  opcoes: { remetente?: string; anoPadrao?: number; mesReferencia?: number } = {},
+): { candidatos: CandidatoBasico[]; modoAgendamento: boolean } => {
+  const inicio = texto.search(/candidatos\s+abaixo\s+relacionados/i);
+
+  // Fim da lista: "BRAVO - Informações complementares" ou o parágrafo "DOIS - ..." que segue a lista.
+  // Na mensagem de agendamento os grupos por dia também são numerados ("UNO - 11NOV2026 às 7h30:",
+  // "DOIS - 12NOV2026 ..."), então um "DOIS -" seguido logo de uma data é cabeçalho de grupo, não o fim.
+  const idxBravo = texto.search(/\bBRAVO\s*[-–—]/i);
+  let idxDois = -1;
+  const regexDois = /\bDOIS\s*[-–—]/gi;
+  let md: RegExpExecArray | null;
+  while ((md = regexDois.exec(texto)) !== null) {
+    const seguinte = texto.slice(md.index + md[0].length, md.index + md[0].length + 30);
+    const primeiraData = localizarMarcadoresData(seguinte)[0];
+    if (!primeiraData || primeiraData.inicio > 3) { idxDois = md.index; break; }
+  }
+  const fim = [idxBravo, idxDois].filter(i => i >= 0).sort((a, b) => a - b)[0] ?? -1;
+  const trecho = texto.substring(inicio >= 0 ? inicio : 0, fim >= 0 ? fim : texto.length);
+
+  const ids: { id: string; inicio: number; fim: number }[] = [];
+  const regexId = /\b(\d{5,7}-\d)\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = regexId.exec(trecho)) !== null) ids.push({ id: m[1], inicio: m.index, fim: m.index + m[0].length });
+
+  // Descarta datas que na verdade são parte de uma matrícula (ex.: o "6 MARCOS" de "70123-6 MARCOS ...")
+  // e as do período da JRS.
+  const spansProibidos: [number, number][] = ids.map(i => [i.inicio, i.fim]);
+  const regexPeriodo = /(\d{1,2})\s*([A-ZÇ]{3})\s*(\d{4})?\s*a\s*(\d{1,2})\s*([A-ZÇ]{3})\s*(\d{4})\s*\(\s*JRS\s*\)/gi;
+  while ((m = regexPeriodo.exec(trecho)) !== null) spansProibidos.push([m.index, m.index + m[0].length]);
+  const marcadores = localizarMarcadoresData(trecho).filter(
+    d => !spansProibidos.some(([a, b]) => d.inicio < b && d.fim > a),
+  );
+
+  const resolverData = (d: MarcadorData): string => {
+    let a = d.ano ?? opcoes.anoPadrao ?? new Date().getFullYear();
+    if (d.ano === undefined && opcoes.mesReferencia !== undefined && d.mes < opcoes.mesReferencia - 6) a += 1;
+    return formatarChaveData(new Date(a, d.mes, d.dia));
+  };
+
+  const candidatos: CandidatoBasico[] = ids.map((item, idx) => {
+    const proximoId = idx + 1 < ids.length ? ids[idx + 1].inicio : trecho.length;
+    const proximaData = marcadores.find(d => d.inicio >= item.fim);
+    const limite = Math.min(proximoId, proximaData ? proximaData.inicio : trecho.length);
+    const bruto = trecho.slice(item.fim, limite);
+    // Cada item termina em ";" (o último, em "." ou "; e") — o que vier depois é rótulo de grupo etc.
+    const nome = (bruto.includes(';') ? bruto.slice(0, bruto.indexOf(';')) : bruto)
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b(?:UNO|DOIS|TR[EÊ]S|QUATRO|CINCO|SEIS|SETE|OITO|NOVE|DEZ|ONZE|DOZE)\s*[-–—]?\s*$/i, '') // numeração do próximo grupo
+      .trim()
+      .replace(/\b(?:NO\s+)?(?:DIA|DATA|EM)\s*[:\-–]?\s*$/i, '') // rótulo que antecede a data da próxima lista
+      .trim()
+      .replace(/-\s*$/, '')
+      .trim()
+      .replace(/;\s*e$/i, '')
+      .replace(/[;.:,]+$/, '')
+      .trim();
+    const anterior = [...marcadores].reverse().find(d => d.inicio < item.inicio);
+    return { id: item.id, nome, dataAgendamento: anterior ? resolverData(anterior) : undefined };
+  }).filter(c => c.nome);
+
+  const datasDistintas = new Set(candidatos.map(c => c.dataAgendamento).filter(Boolean));
+  const remetenteHospital = /HOSRCF/i.test(opcoes.remetente || '');
+  const modoAgendamento = datasDistintas.size >= 2 || (datasDistintas.size >= 1 && remetenteHospital);
+
+  if (!modoAgendamento) {
+    candidatos.forEach(c => { delete c.dataAgendamento; });
+  }
+
+  // Apresentação: ordem alfabética (o agendamento automático segue a ordem da lista).
+  // Agendamento: ordem cronológica, depois alfabética dentro do dia.
+  candidatos.sort((a, b) =>
+    (a.dataAgendamento || '').localeCompare(b.dataAgendamento || '') ||
+    a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+
+  return { candidatos, modoAgendamento };
 };
 
 export interface PeriodoJRS { inicio: Date; fim: Date; }
