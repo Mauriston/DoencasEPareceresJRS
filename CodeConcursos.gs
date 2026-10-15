@@ -23,7 +23,7 @@
 
 var ID_TEMPLATE_TERMO_RECURSO = '1gVSaakcQJBrFJnF4umFbI_cjR9abCXPjfOyfSUFKnRo';
 var ID_TEMPLATE_TERMO_CIENTIFICACAO = '1uSdvvwxjPDkvGm7kjCrDGaGnPVF3_pDu4rN6C6tJFiI';
-var ID_TEMPLATE_SOLICITACAO_PARECER = '1YW9-KBCafN1OFA4bSZZqiKLBmq-fubVElpzs3RCm_00';
+var ID_TEMPLATE_SOLICITACAO_PARECER = '16KIcTgceHNdbTNRe8UeYPjJXn4r_d450Xy61conLO3Q';
 var ID_TEMPLATE_SOLICITACAO_EXAMES = '1SSAzdWANvfQJx7Sip2-NbqDGAM0cgpVD6Q4Ci9UhGqQ';
 
 /** Ponto de entrada POST do aplicativo da web. Espera um corpo JSON com a propriedade "action". */
@@ -202,15 +202,20 @@ function apiGerarTermoCientificacao(corpo) {
 /**
  * Gera o PDF de um template Google Docs substituindo os placeholders "{{chave}}"
  * pelos valores informados (a cópia do template é temporária e descartada).
+ * Os placeholders são substituídos no corpo, no cabeçalho e no RODAPÉ (inclusive dentro de
+ * tabelas): body.replaceText não alcança o rodapé — no template do Pedido de Parecer, a data
+ * ({{DATA_HOJE}}) e o bloco de assinatura ficam numa tabela no rodapé.
  * "$" é escapado porque o replaceText trata "$1" como referência a grupo.
  */
 function gerarPdfDeTemplate(idTemplate, nomeTemp, valores) {
   var docCopia = DriveApp.getFileById(idTemplate).makeCopy(nomeTemp);
   try {
     var docAberto = DocumentApp.openById(docCopia.getId());
-    var body = docAberto.getBody();
+    var partes = [docAberto.getBody(), docAberto.getHeader(), docAberto.getFooter()].filter(function(p) { return p; });
     Object.keys(valores).forEach(function(chave) {
-      body.replaceText('\\{\\{' + chave + '\\}\\}', String(valores[chave]).replace(/\$/g, '\\$'));
+      var padrao = '\\{\\{' + chave + '\\}\\}';
+      var texto = String(valores[chave]).replace(/\$/g, '\\$');
+      partes.forEach(function(parte) { parte.replaceText(padrao, texto); });
     });
     docAberto.saveAndClose();
     return Utilities.base64Encode(docCopia.getAs('application/pdf').getBytes());
