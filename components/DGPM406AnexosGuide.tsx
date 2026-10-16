@@ -1,7 +1,7 @@
 // Ficheiro: components/DGPM406AnexosGuide.tsx
 import React from 'react';
 import { Header } from './Header';
-import { MoreVertical } from 'lucide-react'; // Ícone dos 3 pontinhos
+import { MoreVertical } from './ui/icons'; // Ícone dos 3 pontinhos
 
 interface Anexo {
   id: string;
@@ -54,7 +54,7 @@ export const DGPM406AnexosGuide: React.FC = () => {
             >
               {/* Documentação: Lado esquerdo com os textos alinhados numa coluna */}
               <div className="flex flex-col pr-4 flex-1">
-                <h3 className="text-[#050F41] font-heading font-bold text-[14px] leading-snug mb-1 group-hover:text-[#079551] transition-colors">
+                <h3 className="text-navy font-heading font-bold text-sm leading-snug mb-1 group-hover:text-green-700 transition-colors">
                   {item.anexo}
                 </h3>
                 <p className="text-gray-500 font-body text-xs font-medium leading-relaxed line-clamp-2">
@@ -63,7 +63,7 @@ export const DGPM406AnexosGuide: React.FC = () => {
               </div>
               
               {/* Documentação: Lado direito com o ícone de 3 pontinhos alinhado */}
-              <div className="text-ink-3 group-hover:text-[#050F41] transition-colors flex-shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
+              <div className="text-ink-3 group-hover:text-navy transition-colors flex-shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
                 <MoreVertical size={18} />
               </div>
             </a>

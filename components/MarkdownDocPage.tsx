@@ -17,7 +17,7 @@ interface MarkdownDocPageProps {
 }
 
 export const MarkdownDocPage: React.FC<MarkdownDocPageProps> = ({ title, markdown, onBack, sidebar, actions }) => (
-  <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
+  <div className="flex flex-col h-full bg-canvas animate-fade-in">
     <Header title={title} onBack={onBack} />
     <div className={`p-4 md:p-6 lg:p-8 w-full flex-1 ${sidebar ? '' : 'max-w-3xl md:max-w-5xl mx-auto'}`}>
       <div className={sidebar ? 'md:grid md:grid-cols-[220px_1fr] md:gap-5 md:items-start' : ''}>

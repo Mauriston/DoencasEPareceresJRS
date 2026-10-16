@@ -1,6 +1,6 @@
 // Ficheiro: components/Videos.tsx
 import React, { useState, useEffect } from 'react';
-import { Loader2, RefreshCw, AlertCircle, Play, X } from 'lucide-react';
+import { Loader2, RefreshCw, AlertCircle, Play, X } from './ui/icons';
 import { Header } from './Header';
 import { fetchExtras, ExtraItem } from '../services/extrasService';
 
@@ -60,7 +60,7 @@ export const Videos: React.FC<VideosProps> = ({ onBack }) => {
       <div className="p-4 space-y-6 overflow-y-auto w-full max-w-full flex-1 pb-24">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
-            <Loader2 className="animate-spin text-[#050F41]" size={40} />
+            <Loader2 className="animate-spin text-navy" size={40} />
             <p className="text-sm font-semibold text-gray-500 font-body">Carregando os vídeos da planilha do Google...</p>
           </div>
         ) : (
@@ -94,7 +94,7 @@ export const Videos: React.FC<VideosProps> = ({ onBack }) => {
                   return (
                     <button 
                       key={video.id} 
-                      className="group bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden flex flex-col w-full text-left focus:outline-none hover:shadow-md hover:border-[#079551] active:scale-[0.98] transition-all animate-fade-in"
+                      className="group bg-white rounded-lg shadow-sm border border-gray-200/60 overflow-hidden flex flex-col w-full text-left focus:outline-none hover:shadow-md hover:border-green active:scale-[0.98] transition-all animate-fade-in"
                       onClick={() => {
                         if (hasYoutube) {
                           setSelectedVideo(video.youtubeId!);
@@ -118,14 +118,14 @@ export const Videos: React.FC<VideosProps> = ({ onBack }) => {
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                           {hasYoutube && (
                             <div className="w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg pl-1 group-hover:scale-110 transition-transform">
-                              <Play size={18} className="text-[#050F41]" />
+                              <Play size={18} className="text-navy" />
                             </div>
                           )}
                         </div>
                       </div>
 
                       <div className="flex-1 p-3 flex flex-col items-center justify-center min-w-0 bg-white">
-                        <h3 className="text-xs font-heading font-bold text-[#050F41] leading-snug line-clamp-3 text-center group-hover:text-[#079551] transition-colors">
+                        <h3 className="text-xs font-heading font-bold text-navy leading-snug line-clamp-3 text-center group-hover:text-green-700 transition-colors">
                           {video.title}
                         </h3>
                       </div>

@@ -18,10 +18,10 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({ pagina }) => {
   const perfilLabel = PERFIL_LABELS[perfil || ''] || perfil || 'seu perfil';
 
   return (
-    <div className="flex flex-col h-full bg-[#F3F5F7]">
+    <div className="flex flex-col h-full bg-canvas">
       <Header title="Acesso negado" />
       <div className="flex-1 flex items-center justify-center p-6">
-        <div role="alert" className="bg-white rounded-[14px] border border-[#E3E6ED] p-8 w-full max-w-md text-center space-y-4">
+        <div role="alert" className="bg-white rounded-xl border border-line p-8 w-full max-w-md text-center space-y-4">
           <span className="material-symbols-outlined text-[40px] text-wine" aria-hidden="true">lock</span>
           <h1 className="font-heading font-extrabold text-xl text-navy">Acesso não autorizado</h1>
           <p className="text-sm text-ink leading-relaxed">

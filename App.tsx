@@ -264,7 +264,7 @@ const App: React.FC = () => {
 
   if (authLoading || handoffPendente) {
     return (
-      <div className="fixed inset-0 bg-[#050F41] flex items-center justify-center">
+      <div className="fixed inset-0 bg-navy flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     );
@@ -276,7 +276,7 @@ const App: React.FC = () => {
 
   if (permissoesLoading) {
     return (
-      <div className="fixed inset-0 bg-[#050F41] flex items-center justify-center">
+      <div className="fixed inset-0 bg-navy flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     );
@@ -319,9 +319,9 @@ const App: React.FC = () => {
         setIsAvatarMenuOpen,
       }}
     >
-      <div className="fixed inset-0 flex bg-[#F3F5F7] text-[#1F2937] overflow-hidden antialiased">
+      <div className="fixed inset-0 flex bg-canvas text-ink overflow-hidden antialiased">
         <Sidebar />
-        <div className="flex-1 flex flex-col h-full min-w-0 overflow-y-auto relative bg-[#F3F5F7]">
+        <div className="flex-1 flex flex-col h-full min-w-0 overflow-y-auto relative bg-canvas">
           <main className="flex-grow w-full flex flex-col pb-8">
             <AnimatePresence mode="wait">
               <motion.div
@@ -344,24 +344,24 @@ const App: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
             <div className="p-5 flex flex-col items-center text-center">
               <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mb-3">
-                <span className="material-symbols-outlined text-[28px] text-amber-500">warning</span>
+                <span className="material-symbols-outlined text-[28px] text-amber-600">warning</span>
               </div>
-              <h3 className="font-heading font-bold text-sm text-[#050F41] mb-1.5">Altere sua senha inicial</h3>
-              <p className="text-xs md:text-sm text-gray-500 mb-5">
+              <h3 className="font-heading font-bold text-sm text-navy mb-1.5">Altere sua senha inicial</h3>
+              <p className="text-sm text-gray-500 mb-5">
                 Você ainda está usando a senha temporária (seu NIP). Por segurança, altere sua senha de acesso.
               </p>
               <div className="flex items-center gap-2 w-full">
                 <button
                   type="button"
                   onClick={() => setSenhaAlertDismissed(true)}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
                 >
                   Depois
                 </button>
                 <button
                   type="button"
                   onClick={() => { setSenhaAlertDismissed(true); setCurrentView('perfil'); }}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#079551] hover:bg-[#067a43] text-white text-xs md:text-sm font-bold transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-navy hover:bg-navy-hover text-white text-sm font-bold transition-colors"
                 >
                   Alterar Senha
                 </button>
@@ -391,27 +391,27 @@ const App: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
             <div className="p-5 flex flex-col items-center text-center">
               <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-3">
-                <span className="material-symbols-outlined text-[28px] text-[#050F41]">quiz</span>
+                <span className="material-symbols-outlined text-[28px] text-navy">quiz</span>
               </div>
-              <h3 className="font-heading font-bold text-sm text-[#050F41] mb-1.5">{getPrimeiroNome(authUser)},</h3>
-              <p className="text-xs md:text-sm text-gray-500 mb-1">
+              <h3 className="font-heading font-bold text-sm text-navy mb-1.5">{getPrimeiroNome(authUser)},</h3>
+              <p className="text-sm text-gray-500 mb-1">
                 Você ainda não respondeu os <strong className="text-gray-700">Casos Periciais</strong>. Trata-se de
                 um bloco de 24 questões comentadas de múltipla escolha sobre os pontos mais importantes na prática
                 da DGPM-406. Não deixe de fazer essa auto-avaliação!
               </p>
-              <p className="text-xs md:text-sm text-ink-3 italic mb-5">CT Mauriston.</p>
+              <p className="text-sm text-ink-3 italic mb-5">CT Mauriston.</p>
               <div className="flex items-center gap-2 w-full">
                 <button
                   type="button"
                   onClick={() => setCasosAlertDismissed(true)}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
                 >
                   Responder depois
                 </button>
                 <button
                   type="button"
                   onClick={() => { setCasosAlertDismissed(true); setCurrentView('casos'); }}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#079551] hover:bg-[#067a43] text-white text-xs md:text-sm font-bold transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-navy hover:bg-navy-hover text-white text-sm font-bold transition-colors"
                 >
                   Responder
                 </button>

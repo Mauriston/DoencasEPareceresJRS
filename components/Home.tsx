@@ -5,6 +5,7 @@ import { NavContext, getPrimeiroNome } from '../context/NavContext';
 import { getNavCategories, NavCategory } from '../config/navigation';
 import { observarConcursos } from '../services/firestoreConcursos';
 import { useIsDesktop } from '../hooks/useIsDesktop';
+import { StatusTag } from './ui/StatusTag';
 
 export const Home: React.FC = () => {
   const nav = useContext(NavContext);
@@ -38,12 +39,12 @@ export const Home: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
+    <div className="flex flex-col h-full bg-canvas animate-fade-in">
       <Header title="JRS/HNRe" desktopTitle="Hospital Naval de Recife - Junta Regular de Saúde" />
 
       <div className="p-4 sm:p-6 lg:p-8 w-full flex-1">
         <div className="mb-6">
-          <h1 className="font-heading text-xl sm:text-2xl font-bold text-[#050F41]">
+          <h1 className="font-heading text-2xl font-extrabold text-navy">
             Olá, {primeiroNome || 'Perito'}!
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
@@ -70,31 +71,30 @@ export const Home: React.FC = () => {
                   transition={{ type: 'spring', stiffness: 90, damping: 22, mass: 1 }}
                   type="button"
                   onClick={() => handleCardClick(cat)}
-                  className={`relative flex rounded-2xl shadow-sm transition-colors duration-700 text-left ${
+                  className={`relative flex rounded-xl border transition-colors duration-300 text-left ${
                     selectedCategory ? 'flex-row items-center gap-2.5 py-3.5 px-4' : 'flex-col gap-1.5 py-4 px-4 md:py-5 md:px-5'
                   } ${
                     isDimmed
-                      ? 'bg-gray-200 text-ink-3 hover:bg-gray-200'
-                      : isConcursosEmAndamento
-                      ? 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white hover:shadow-md'
-                      : 'bg-[#079551] hover:bg-[#067a43] active:bg-[#056635] text-white hover:shadow-md'
+                      ? 'bg-thead border-line text-ink-3 hover:border-navy'
+                      : 'bg-white border-line text-navy hover:border-navy active:bg-thead'
                   }`}
                 >
                   {badge > 0 ? (
-                    <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white/30">
+                    <span className="absolute top-2.5 right-2.5 bg-wine text-white text-xs font-bold rounded-full min-w-5 h-5 px-1 flex items-center justify-center">
                       {badge}
                     </span>
                   ) : null}
                   <span className={`flex items-center gap-2.5 ${selectedCategory ? '' : 'w-full'}`}>
-                    <span className={`material-symbols-outlined shrink-0 ${selectedCategory ? 'text-[22px] md:text-[24px]' : 'text-[26px] md:text-[34px]'}`}>
+                    <span className={`material-symbols-outlined shrink-0 text-navy ${selectedCategory ? 'text-[22px] md:text-[24px]' : 'text-[26px] md:text-[34px]'}`} aria-hidden="true">
                       {cat.icon}
                     </span>
-                    <span className={`font-bold leading-tight ${selectedCategory ? 'text-sm md:text-base' : 'text-sm sm:text-base md:text-lg'}`}>
+                    <span className={`font-bold leading-tight ${selectedCategory ? 'text-base' : 'text-base'}`}>
                       {cat.label}
                     </span>
+                    {isConcursosEmAndamento && <StatusTag tone="navy" className="ml-auto">Em andamento</StatusTag>}
                   </span>
                   {!selectedCategory && (
-                    <span className="text-xs md:text-sm font-medium leading-snug text-white/85">
+                    <span className="text-sm font-medium leading-snug text-ink-3">
                       {cat.subtitle}
                     </span>
                   )}
@@ -116,7 +116,7 @@ export const Home: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedId(null)}
-                  className="md:hidden flex items-center gap-1.5 text-sm font-bold text-[#050F41] mb-4"
+                  className="md:hidden flex items-center gap-1.5 text-sm font-bold text-navy mb-4"
                 >
                   <span className="material-symbols-outlined text-[20px]">arrow_back</span>
                   Voltar
@@ -129,22 +129,19 @@ export const Home: React.FC = () => {
                     key={sub.id}
                     type="button"
                     onClick={() => setCurrentView(sub.id)}
-                    className={`relative flex flex-col gap-1.5 rounded-2xl shadow-sm hover:shadow-md transition-all py-4 px-4 md:py-5 md:px-5 text-left ${
-                      isPlanilhasEmAndamento
-                        ? 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white border border-red-600'
-                        : 'bg-white hover:bg-gray-50 active:bg-gray-100 text-[#050F41] border border-gray-200/60'
-                    }`}
+                    className="relative flex flex-col gap-1.5 rounded-xl bg-white hover:border-navy active:bg-thead transition-colors py-4 px-4 md:py-5 md:px-5 text-left border border-line text-navy"
                   >
                     {sub.badge ? (
-                      <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white">
+                      <span className="absolute top-2.5 right-2.5 bg-wine text-white text-xs font-bold rounded-full min-w-5 h-5 px-1 flex items-center justify-center">
                         {sub.badge}
                       </span>
                     ) : null}
                     <span className="flex items-center gap-2.5 w-full">
-                      <span className={`material-symbols-outlined text-[24px] md:text-[30px] shrink-0 ${isPlanilhasEmAndamento ? 'text-white' : 'text-[#079551]'}`}>{sub.icon}</span>
-                      <span className="text-sm sm:text-base md:text-lg font-bold leading-tight">{sub.label}</span>
+                      <span className="material-symbols-outlined text-[24px] md:text-[30px] shrink-0 text-navy" aria-hidden="true">{sub.icon}</span>
+                      <span className="text-base font-bold leading-tight">{sub.label}</span>
+                      {isPlanilhasEmAndamento && <StatusTag tone="navy" className="ml-auto">Em andamento</StatusTag>}
                     </span>
-                    <span className={`text-xs md:text-sm font-medium leading-snug ${isPlanilhasEmAndamento ? 'text-white/85' : 'text-gray-500'}`}>
+                    <span className="text-sm font-medium leading-snug text-ink-3">
                       {sub.subtitle}
                     </span>
                   </button>

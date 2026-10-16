@@ -88,7 +88,7 @@ export const ImageScanner: React.FC = () => {
                 >
                   <span className="material-symbols-outlined text-4xl text-navy/50 mb-2">add_a_photo</span>
                   <p className="text-navy/70 font-medium">Toque para selecionar uma imagem</p>
-                  <p className="text-sm md:text-base text-navy/50 mt-1">JPEG ou PNG</p>
+                  <p className="text-base text-navy/50 mt-1">JPEG ou PNG</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">
@@ -96,7 +96,7 @@ export const ImageScanner: React.FC = () => {
                     <img src={image} alt="Preview" className="max-h-64 object-contain" />
                     <button
                       onClick={reset}
-                      className="absolute top-2 right-2 bg-navy/80 text-white p-1 rounded-full hover:bg-[#B42318] transition-colors"
+                      className="absolute top-2 right-2 bg-navy/80 text-white p-1 rounded-full hover:bg-wine transition-colors"
                     >
                       <span className="material-symbols-outlined text-sm">close</span>
                     </button>
@@ -105,7 +105,7 @@ export const ImageScanner: React.FC = () => {
                   {!result && !isAnalyzing && (
                     <button
                       onClick={handleAnalyze}
-                      className="w-full bg-navy text-white font-heading font-bold py-3 min-h-[48px] rounded-xl hover:bg-navy/90 transition-colors flex items-center justify-center"
+                      className="w-full bg-navy text-white font-heading font-bold py-3 min-h-[48px] rounded-lg hover:bg-navy/90 transition-colors flex items-center justify-center"
                     >
                       <span className="material-symbols-outlined mr-2">auto_awesome</span>
                       Analisar Imagem
@@ -115,25 +115,25 @@ export const ImageScanner: React.FC = () => {
                   {isAnalyzing && (
                     <div className="flex flex-col items-center justify-center py-8">
                       <div className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin"></div>
-                      <p className="mt-4 text-navy font-semibold text-sm md:text-base animate-pulse">
+                      <p className="mt-4 text-navy font-semibold text-base animate-pulse">
                         Extraindo informações...
                       </p>
                     </div>
                   )}
 
                   {error && (
-                    <div className="bg-[#FEE4E2] text-[#B42318] p-4 rounded-xl text-sm md:text-base border border-[#FDA29B]">
+                    <div className="bg-wine/10 text-wine p-4 rounded-xl text-base border border-wine/30">
                       {error}
                     </div>
                   )}
 
                   {result && (
                     <div className="bg-white p-4 rounded-xl border border-navy/20 shadow-sm">
-                      <h4 className="font-heading font-bold text-navy mb-2 flex items-center text-sm md:text-base border-b pb-2">
+                      <h4 className="font-heading font-bold text-navy mb-2 flex items-center text-base border-b pb-2">
                         <span className="material-symbols-outlined mr-2 text-navy">check_circle</span>
                         Resultado da Análise
                       </h4>
-                      <div className="whitespace-pre-wrap text-sm md:text-base text-navy/80 font-body">
+                      <div className="whitespace-pre-wrap text-base text-navy/80 font-body">
                         {result}
                       </div>
                     </div>

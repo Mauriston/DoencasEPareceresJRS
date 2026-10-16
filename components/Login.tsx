@@ -4,7 +4,7 @@ import { listUsuariosPublicos, UsuarioPublico } from '../services/firestoreUsuar
 
 const loginBg = 'https://i.imgur.com/c2aHsZU.png';
 
-const inputClass = 'w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 text-sm focus:outline-none focus:border-[#079551] focus:bg-white/15 transition-all';
+const inputClass = 'w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 text-sm focus:outline-none focus:border-green focus:bg-white/15 transition-all';
 const labelClass = 'text-white/60 text-xs font-bold uppercase tracking-widest block mb-1.5';
 
 // Não há mais cadastro próprio nesta tela — todo usuário novo é criado pelo
@@ -45,7 +45,7 @@ export const Login: React.FC = () => {
       <div className="flex-1" />
 
       {/* Metade inferior — conteúdo sobre overlay */}
-      <div className="h-1/2 bg-[#050F41]/90 backdrop-blur-sm flex flex-col items-center justify-center px-6 overflow-y-auto py-4">
+      <div className="h-1/2 bg-navy/90 backdrop-blur-sm flex flex-col items-center justify-center px-6 overflow-y-auto py-4">
 
       <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4">
         <div>
@@ -98,12 +98,12 @@ export const Login: React.FC = () => {
           />
         </div>
 
-        {loginError && <p className="text-red-400 text-xs text-center pt-1">{loginError}</p>}
+        {loginError && <p className="text-red-200 text-xs text-center pt-1">{loginError}</p>}
 
         <button
           type="submit"
           disabled={loginLoading || !usuario || !senha}
-          className="w-full bg-[#079551] hover:bg-[#067a43] active:bg-[#056635] disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl py-3.5 text-sm transition-colors"
+          className="w-full bg-navy hover:bg-navy-hover active:bg-navy-pressed disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-lg py-3.5 text-sm transition-colors"
         >
           {loginLoading ? 'Verificando...' : 'Entrar'}
         </button>

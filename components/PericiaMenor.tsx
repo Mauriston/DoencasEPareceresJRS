@@ -4,7 +4,8 @@ import { Header } from './Header';
 import { PericiaMenorDetalhe } from './PericiaMenorDetalhe';
 import { PericiaStatusTags } from './ui/PericiaStatusTags';
 import { Button } from './ui/Button';
-import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown, CheckCircle, Camera, Crop as CropIcon, Sparkles, X } from 'lucide-react';
+import { Segmented } from './ui/Segmented';
+import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown, CheckCircle, Camera, Crop as CropIcon, Sparkles, X } from './ui/icons';
 import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { NavContext } from '../context/NavContext';
@@ -387,14 +388,15 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
     <div className="flex flex-col h-full bg-gray-50 relative">
       <Header title="Perícia Menor" onBack={onBack} />
       {canNovo && canHistorico && (
-      <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
-        <button onClick={() => setActiveTab('novo')} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'novo' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-          <span className="material-symbols-outlined text-[18px]">add_circle</span><span>Novo</span>
-        </button>
-        <button onClick={() => { setActiveTab('historico'); fetchHistory(); }} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'historico' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-          <span className="material-symbols-outlined text-[18px]">history</span><span>Histórico</span>
-          {vigentesCount > 0 && (<span className="bg-wine text-white text-xs font-bold rounded-full min-w-5 h-5 px-1 flex items-center justify-center leading-none">{vigentesCount}</span>)}
-        </button>
+      <div className="px-4 pt-4 w-full max-w-2xl md:max-w-5xl mx-auto">
+        <Segmented
+          ariaLabel="Seção de Perícia Menor"
+          fullWidth
+          className="md:w-auto md:inline-flex"
+          options={[{ value: 'novo', label: 'Novo', icon: 'add_circle' }, { value: 'historico', label: 'Histórico', icon: 'history', badge: vigentesCount }]}
+          value={activeTab}
+          onChange={tab => { setActiveTab(tab); if (tab === 'historico') fetchHistory(); }}
+        />
       </div>
       )}
 
@@ -403,7 +405,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
         {/* IA Section */}
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 animate-fade-in shadow-inner">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-[#050F41] tracking-wider flex items-center gap-2"><Camera size={16} className="text-blue-600" /> Leitura Inteligente (IA)</h3>
+            <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2"><Camera size={16} className="text-blue-600" /> Leitura Inteligente (IA)</h3>
           </div>
           {!croppedImageUrl ? (
             <div className="flex justify-center">
@@ -414,10 +416,10 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
             <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-blue-200 shadow-sm">
               <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-gray-200"><img src={croppedImageUrl} alt="Atestado Recortado" className="w-full h-full object-cover" /></div>
               <div className="flex-1">
-                <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1 uppercase"><CheckCircle2 size={14}/> Imagem Capturada</p>
+                <p className="text-xs font-bold text-green-700 mb-2 flex items-center gap-1 uppercase"><CheckCircle2 size={14}/> Imagem Capturada</p>
                 <div className="flex gap-2">
-                  <button type="button" onClick={extractDataWithGemini} disabled={isExtracting} className="flex-1 py-2 bg-gradient-to-r from-[#050F41] to-blue-800 text-white text-xs font-bold rounded-lg hover:opacity-90 flex items-center justify-center gap-1.5 disabled:opacity-50">
-                    {isExtracting ? <span className="flex items-center gap-1.5"><Loader2 size={14} className="animate-spin"/> A analisar...</span> : <span className="flex items-center gap-1.5"><Sparkles size={14} className="text-yellow-400"/> Extrair Dados</span>}
+                  <button type="button" onClick={extractDataWithGemini} disabled={isExtracting} className="flex-1 py-2 bg-gradient-to-r from-navy to-blue-800 text-white text-xs font-bold rounded-lg hover:opacity-90 flex items-center justify-center gap-1.5 disabled:opacity-50">
+                    {isExtracting ? <span className="flex items-center gap-1.5"><Loader2 size={14} className="animate-spin"/> A analisar...</span> : <span className="flex items-center gap-1.5"><Sparkles size={14} className="text-amber-400"/> Extrair Dados</span>}
                   </button>
                   <button type="button" onClick={() => setCroppedImageUrl('')} disabled={isExtracting} className="px-3 py-2 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 disabled:opacity-50">Refazer</button>
                 </div>
@@ -429,23 +431,23 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
         <div className="md:grid md:grid-cols-2 md:gap-6 md:items-start space-y-6 md:space-y-0">
         {/* Militar Section */}
         <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-sm font-bold text-[#050F41] mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-navy">person</span>Dados do Militar</h2>
+          <h2 className="text-sm font-bold text-navy mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-navy">person</span>Dados do Militar</h2>
           <div className="space-y-4">
             <div className="relative z-[100] mb-4">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Serviço *</label>
-              <input type="text" value={selectedServico ? selectedServico.servico_label : servicoQuery} onChange={(e) => handleServicoSearch(e.target.value)} placeholder="Busque pelo nome do serviço..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#050F41]" />
+              <input type="text" value={selectedServico ? selectedServico.servico_label : servicoQuery} onChange={(e) => handleServicoSearch(e.target.value)} placeholder="Busque pelo nome do serviço..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-navy" />
               {showServicoDropdown && filteredServicos.length > 0 && (
                 <ul className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
-                  {filteredServicos.map((s, idx) => (<li key={idx} onClick={() => { setSelectedServico(s); setShowServicoDropdown(false); setServicoQuery(''); }} className="px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer"><span className="font-bold text-[#050F41] block">{s.servico_label}</span><span className="text-xs text-gray-500">{s.superior_direto}</span></li>))}
+                  {filteredServicos.map((s, idx) => (<li key={idx} onClick={() => { setSelectedServico(s); setShowServicoDropdown(false); setServicoQuery(''); }} className="px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer"><span className="font-bold text-navy block">{s.servico_label}</span><span className="text-xs text-gray-500">{s.superior_direto}</span></li>))}
                 </ul>
               )}
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">NIP *</label>
               <div className="relative">
-                <input type="text" value={nip} onChange={handleNipChange} placeholder="00.0000.00" className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-xl focus:ring-navy focus:border-navy block p-3 font-mono" required />
+                <input type="text" value={nip} onChange={handleNipChange} placeholder="00.0000.00" className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-3 font-mono" required />
                 {militarStatus === "loading" && (<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"><div className="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin"></div></div>)}
-                {militarStatus === "found" && (<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-green-500"><CheckCircle2 size={18} /></div>)}
+                {militarStatus === "found" && (<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-green-700"><CheckCircle2 size={18} /></div>)}
               </div>
               {searchError && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {searchError}</p>}
               <div className="mt-1.5 text-right"><button type="button" onClick={() => abrirModalPesquisaNome()} className="text-xs text-blue-600 underline hover:text-blue-800 uppercase font-bold">Pesquisar pelo nome</button></div>
@@ -468,7 +470,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
         <div className="space-y-6">
         {/* Atestado Section */}
         <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-sm font-bold text-[#050F41] mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-navy">medical_information</span>Dados do Atestado</h2>
+          <h2 className="text-sm font-bold text-navy mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-navy">medical_information</span>Dados do Atestado</h2>
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="w-full"><label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Data Atestado *</label><input type="date" value={dataAtestado} onChange={(e) => setDataAtestado(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm" /></div>
@@ -477,20 +479,20 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
             <div className="relative z-[90]">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">CID *</label>
               <input type="text" value={selectedCid ? selectedCid.DESCRABREV : cidQuery} onChange={(e) => handleCidSearch(e.target.value)} placeholder="Busque por código ou doença..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm" />
-              {showCidDropdown && filteredCids.length > 0 && (<ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">{filteredCids.map((cid, idx) => (<li key={idx} onClick={() => { setSelectedCid(cid); setShowCidDropdown(false); setCidQuery(''); }} className="px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer"><span className="font-bold text-[#050F41] block">{cid.DESCRABREV}</span><span className="text-xs text-gray-500">{cid.DESCRICAO}</span></li>))}</ul>)}
+              {showCidDropdown && filteredCids.length > 0 && (<ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">{filteredCids.map((cid, idx) => (<li key={idx} onClick={() => { setSelectedCid(cid); setShowCidDropdown(false); setCidQuery(''); }} className="px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer"><span className="font-bold text-navy block">{cid.DESCRABREV}</span><span className="text-xs text-gray-500">{cid.DESCRICAO}</span></li>))}</ul>)}
             </div>
           </div>
         </section>
 
         {/* Homologacao Section */}
         <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-sm font-bold text-[#050F41] mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-navy">verified</span>Homologação</h2>
+          <h2 className="text-sm font-bold text-navy mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-navy">verified</span>Homologação</h2>
           <div className="space-y-6">
             <div><label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Tempo Homologado *</label><input type="text" value={tempoHomologacao} onChange={(e) => handleTempoInput(e.target.value, setTempoHomologacao, 20)} onBlur={() => formatTempoBlur(tempoHomologacao, setTempoHomologacao)} onFocus={() => formatTempoFocus(tempoHomologacao, setTempoHomologacao)} placeholder="Máx: 20 dias" className="w-full sm:w-1/2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm" /></div>
             <div className="relative z-[80]">
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase">Dispensas *</label>
               <button type="button" onClick={() => setShowDispensasDropdown(!showDispensasDropdown)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm flex justify-between items-center">
-                <span className={`truncate font-medium ${selectedDispensas.length > 0 ? 'text-[#050F41]' : 'text-ink-3'}`}>{selectedDispensas.length === 0 ? 'Selecione as dispensas...' : selectedDispensas.includes('TODAS AS ATIVIDADES') ? 'TODAS AS ATIVIDADES' : `${selectedDispensas.length} dispensa(s) selecionada(s)`}</span>
+                <span className={`truncate font-medium ${selectedDispensas.length > 0 ? 'text-navy' : 'text-ink-3'}`}>{selectedDispensas.length === 0 ? 'Selecione as dispensas...' : selectedDispensas.includes('TODAS AS ATIVIDADES') ? 'TODAS AS ATIVIDADES' : `${selectedDispensas.length} dispensa(s) selecionada(s)`}</span>
                 <ChevronDown size={18} className={`text-ink-3 transition-transform duration-200 ${showDispensasDropdown ? 'rotate-180' : ''}`} />
               </button>
               {showDispensasDropdown && (
@@ -501,8 +503,8 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
                       const isSelected = selectedDispensas.includes(disp);
                       const isDisabled = (isTodas && selectedDispensas.length > 0 && !isSelected) || (!isTodas && selectedDispensas.includes('TODAS AS ATIVIDADES'));
                       return (
-                        <button key={idx} onClick={() => handleDispensaToggle(disp)} disabled={isDisabled} type="button" className={`flex items-center text-left p-3 rounded-xl border text-xs transition-all ${isSelected ? 'bg-blue-50 border-blue-200 text-[#050F41] font-bold' : isDisabled ? 'bg-gray-50 border-gray-100 text-ink-3 cursor-not-allowed opacity-60' : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'}`}>
-                          <div className={`w-4 h-4 rounded-md shrink-0 mr-3 flex items-center justify-center border ${isSelected ? 'bg-[#050F41] border-[#050F41]' : 'border-gray-300 bg-white'}`}>{isSelected && <CheckCircle2 size={12} strokeWidth={3} className="text-white" />}</div>
+                        <button key={idx} onClick={() => handleDispensaToggle(disp)} disabled={isDisabled} type="button" className={`flex items-center text-left p-3 rounded-xl border text-xs transition-all ${isSelected ? 'bg-blue-50 border-blue-200 text-navy font-bold' : isDisabled ? 'bg-gray-50 border-gray-100 text-ink-3 cursor-not-allowed opacity-60' : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'}`}>
+                          <div className={`w-4 h-4 rounded-md shrink-0 mr-3 flex items-center justify-center border ${isSelected ? 'bg-navy border-navy' : 'border-gray-300 bg-white'}`}>{isSelected && <CheckCircle2 size={12} strokeWidth={3} className="text-white" />}</div>
                           <span>{disp}</span>
                         </button>
                       );
@@ -511,8 +513,8 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
                 </div>
               )}
             </div>
-            <div><label className="block text-xs font-semibold text-gray-600 mb-2 uppercase">VDF *</label><div className="flex space-x-2"><button type="button" onClick={() => setVdf(true)} className={`flex-1 py-2.5 rounded-xl font-bold border ${vdf === true ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>SIM</button><button type="button" onClick={() => setVdf(false)} className={`flex-1 py-2.5 rounded-xl font-bold border ${vdf === false ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>NÃO</button></div></div>
-            <div><label className="block text-xs font-semibold text-gray-600 mb-2 uppercase">Perito *</label><div className="flex space-x-2">{isLoadingLookups ? (<p className="text-xs text-ink-3 flex items-center gap-2"><Loader2 size={14} className="animate-spin"/> A carregar peritos...</p>) : (peritosDisponiveis.map((p, idx) => (<button type="button" key={idx} onClick={() => setSelectedPerito(p.PERITO)} className={`flex-1 px-2 py-2.5 rounded-xl text-sm font-bold border ${selectedPerito === p.PERITO ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-200'}`}>{p.PERITO}</button>)))}</div></div>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-2 uppercase">VDF *</label><div className="flex space-x-2"><button type="button" onClick={() => setVdf(true)} className={`flex-1 py-2.5 rounded-xl font-bold border ${vdf === true ? 'bg-navy text-white border-navy' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>SIM</button><button type="button" onClick={() => setVdf(false)} className={`flex-1 py-2.5 rounded-xl font-bold border ${vdf === false ? 'bg-navy text-white border-navy' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>NÃO</button></div></div>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-2 uppercase">Perito *</label><div className="flex space-x-2">{isLoadingLookups ? (<p className="text-xs text-ink-3 flex items-center gap-2"><Loader2 size={14} className="animate-spin"/> A carregar peritos...</p>) : (peritosDisponiveis.map((p, idx) => (<button type="button" key={idx} onClick={() => setSelectedPerito(p.PERITO)} className={`flex-1 px-2 py-2.5 rounded-xl text-sm font-bold border ${selectedPerito === p.PERITO ? 'bg-navy text-white border-navy' : 'bg-white text-gray-600 border-gray-200'}`}>{p.PERITO}</button>)))}</div></div>
           </div>
         </section>
         </div>
@@ -530,14 +532,14 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setShowPesquisarNomeModal(false)} className="absolute top-4 right-4 text-ink-3 hover:text-white z-10"><span className="material-symbols-outlined">close</span></button>
-            <div className="p-6 bg-[#050F41] text-white shrink-0"><h2 className="text-xl font-bold">Pesquisar Militar</h2><p className="text-blue-100 text-sm mt-1">Busque pelo nome completo</p></div>
+            <div className="p-6 bg-navy text-white shrink-0"><h2 className="text-xl font-bold">Pesquisar Militar</h2><p className="text-blue-100 text-sm mt-1">Busque pelo nome completo</p></div>
             <div className="p-6 flex-1 flex flex-col min-h-0">
-              <div className="relative shrink-0 mb-4"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-ink-3"><span className="material-symbols-outlined">search</span></div><input type="text" value={pesquisarNomeTerm} onChange={(e) => setPesquisarNomeTerm(e.target.value)} placeholder="Ex: João da Silva..." className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-10 p-2.5 md:text-base" autoFocus /></div>
+              <div className="relative shrink-0 mb-4"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-ink-3"><span className="material-symbols-outlined">search</span></div><input type="text" value={pesquisarNomeTerm} onChange={(e) => setPesquisarNomeTerm(e.target.value)} placeholder="Ex: João da Silva..." className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-10 p-2.5 " autoFocus /></div>
               <div className="flex-1 overflow-y-auto min-h-[50px] border border-gray-100 rounded-lg bg-gray-50/50">
-                {isCarregandoMilitares ? (<div className="p-8 text-center flex flex-col items-center"><div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mb-2"></div><p className="text-sm md:text-base">Carregando...</p></div>) : (
+                {isCarregandoMilitares ? (<div className="p-8 text-center flex flex-col items-center"><div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mb-2"></div><p className="text-base">Carregando...</p></div>) : (
                   <div className="flex flex-col">
-                    {militaresInfoList.filter(m => { if (!pesquisarNomeTerm) return false; const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean); const name = removeAcentos(m.nome.toLowerCase()); return terms.every(t => name.includes(t)); }).slice(0, 50).map((m, idx) => (<div key={idx} onClick={() => selecionarNomeNip(m.nip)} className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer"><div className="font-bold text-[#050F41] text-sm md:text-base">{m.nome}</div><div className="text-xs md:text-sm text-gray-500 font-mono mt-0.5">{m.nip}</div></div>))}
-                    {pesquisarNomeTerm && militaresInfoList.filter(m => { const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean); return terms.every(t => removeAcentos(m.nome.toLowerCase()).includes(t)); }).length === 0 && (<div className="p-8 text-center text-gray-500 text-sm md:text-base">Nenhum militar encontrado.</div>)}
+                    {militaresInfoList.filter(m => { if (!pesquisarNomeTerm) return false; const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean); const name = removeAcentos(m.nome.toLowerCase()); return terms.every(t => name.includes(t)); }).slice(0, 50).map((m, idx) => (<div key={idx} onClick={() => selecionarNomeNip(m.nip)} className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer"><div className="font-bold text-navy text-base">{m.nome}</div><div className="text-sm text-gray-500 font-mono mt-0.5">{m.nip}</div></div>))}
+                    {pesquisarNomeTerm && militaresInfoList.filter(m => { const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean); return terms.every(t => removeAcentos(m.nome.toLowerCase()).includes(t)); }).length === 0 && (<div className="p-8 text-center text-gray-500 text-base">Nenhum militar encontrado.</div>)}
                   </div>
                 )}
               </div>
@@ -549,9 +551,9 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
       {/* Crop Modal */}
       {showCropModal && (
         <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col animate-fade-in backdrop-blur-sm">
-          <div className="p-4 bg-black flex justify-between items-center text-white shrink-0 border-b border-gray-800"><h3 className="font-bold flex items-center gap-2"><CropIcon size={20} className="text-[#FAB932]" /> Recortar Atestado</h3><button onClick={() => { setShowCropModal(false); setImgSrc(''); }} className="p-2 text-white/70 hover:text-white"><X size={24} /></button></div>
+          <div className="p-4 bg-black flex justify-between items-center text-white shrink-0 border-b border-gray-800"><h3 className="font-bold flex items-center gap-2"><CropIcon size={20} className="text-gold" /> Recortar Atestado</h3><button onClick={() => { setShowCropModal(false); setImgSrc(''); }} className="p-2 text-white/70 hover:text-white"><X size={24} /></button></div>
           <div className="flex-1 overflow-auto flex items-center justify-center p-4">{imgSrc && (<ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)}><img ref={imgRef} src={imgSrc} alt="Crop" style={{ maxHeight: '70vh', objectFit: 'contain' }} /></ReactCrop>)}</div>
-          <div className="p-4 bg-black shrink-0 pb-10"><p className="text-white/70 text-xs md:text-sm text-center mb-4">Arraste os cantos para selecionar nome, datas e o CID.</p><button onClick={handleCropComplete} className="w-full py-4 bg-[#079551] hover:bg-green-600 text-white font-bold rounded-xl flex justify-center items-center gap-2"><CheckCircle2 size={20} /> Confirmar Recorte</button></div>
+          <div className="p-4 bg-black shrink-0 pb-10"><p className="text-white/70 text-sm text-center mb-4">Arraste os cantos para selecionar nome, datas e o CID.</p><button onClick={handleCropComplete} className="w-full py-4 bg-navy hover:bg-navy-hover border border-white/30 text-white font-bold rounded-lg flex justify-center items-center gap-2"><CheckCircle2 size={20} /> Confirmar Recorte</button></div>
         </div>
       )}
 
@@ -559,15 +561,15 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
       {(isSubmitting || successPdfUrl) && (
         <div className="fixed inset-0 z-[200] bg-white/95 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in p-6">
           {!successPdfUrl ? (
-            <div className="flex flex-col items-center text-center space-y-4"><Loader2 className="animate-spin text-[#050F41]" size={48} /><h2 className="text-xl font-bold text-[#050F41]">A gerar Perícia Menor...</h2><p className="text-sm md:text-base text-gray-500 max-w-xs">O documento está a ser processado e salvo no Google Drive.</p></div>
+            <div className="flex flex-col items-center text-center space-y-4"><Loader2 className="animate-spin text-navy" size={48} /><h2 className="text-xl font-bold text-navy">A gerar Perícia Menor...</h2><p className="text-base text-gray-500 max-w-xs">O documento está a ser processado e salvo no Google Drive.</p></div>
           ) : (
             <div className="flex flex-col items-center text-center space-y-5 max-w-sm">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-2"><CheckCircle className="text-green-600" size={40} /></div>
-              <h2 className="text-2xl font-black text-[#050F41]">Sucesso!</h2>
-              <p className="text-sm md:text-base text-gray-600">A perícia foi gerada e a planilha atualizada.</p>
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-2"><CheckCircle className="text-green-700" size={40} /></div>
+              <h2 className="text-2xl font-black text-navy">Sucesso!</h2>
+              <p className="text-base text-gray-600">A perícia foi gerada e a planilha atualizada.</p>
               <div className="flex flex-col w-full gap-3 mt-4">
-                <a href={successPdfUrl} target="_blank" rel="noopener noreferrer" onClick={handleReset} className="w-full py-3.5 bg-[#050F41] text-white rounded-xl font-bold flex items-center justify-center gap-2"><span className="material-symbols-outlined text-[20px]">picture_as_pdf</span> Ver PDF Gerado</a>
-                <button onClick={handleReset} className="w-full py-3.5 bg-gray-100 text-gray-700 rounded-xl font-bold flex items-center justify-center gap-2"><span className="material-symbols-outlined text-[20px]">add_circle</span> Nova Perícia Menor</button>
+                <a href={successPdfUrl} target="_blank" rel="noopener noreferrer" onClick={handleReset} className="w-full py-3.5 bg-navy text-white rounded-lg font-bold flex items-center justify-center gap-2"><span className="material-symbols-outlined text-[20px]">picture_as_pdf</span> Ver PDF Gerado</a>
+                <button onClick={handleReset} className="w-full py-3.5 bg-gray-100 text-gray-700 rounded-lg font-bold flex items-center justify-center gap-2"><span className="material-symbols-outlined text-[20px]">add_circle</span> Nova Perícia Menor</button>
               </div>
             </div>
           )}
@@ -580,37 +582,37 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-4 md:mb-0 space-y-3">
             <div className="relative" ref={searchRef}>
               <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-ink-3 text-[18px]">search</span>
-              <input type="text" placeholder="Buscar por inspecionado..." value={historySearch} onChange={e => { setHistorySearch(e.target.value); setShowSearchDropdown(true); }} onFocus={() => setShowSearchDropdown(true)} className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#050F41] bg-gray-50" />
+              <input type="text" placeholder="Buscar por inspecionado..." value={historySearch} onChange={e => { setHistorySearch(e.target.value); setShowSearchDropdown(true); }} onFocus={() => setShowSearchDropdown(true)} className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-navy bg-gray-50" />
               {showSearchDropdown && searchSuggestions.length > 0 && (<div className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg mt-1 overflow-hidden">{searchSuggestions.map((name, i) => (<button key={i} type="button" onMouseDown={() => { setHistorySearch(name); setShowSearchDropdown(false); }} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-50 last:border-0">{name}</button>))}</div>)}
             </div>
             <div className="flex gap-2 flex-wrap">
-              <button type="button" onClick={() => { setFilterVigente(v => { const next = !v; if (next) setFilterConcluido(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterVigente ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300'}`}>{filterVigente && <span className="material-symbols-outlined text-[13px]">check</span>}Vigentes{vigentesTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterVigente ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>{vigentesTotal}</span>)}</button>
-              <button type="button" onClick={() => { setFilterConcluido(v => { const next = !v; if (next) setFilterVigente(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterConcluido ? 'bg-[#079551] text-white border-[#079551]' : 'bg-white text-gray-600 border-gray-300'}`}>{filterConcluido && <span className="material-symbols-outlined text-[13px]">check</span>}Concluídos{concluidosTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterConcluido ? 'bg-white/25 text-white' : 'bg-green-100 text-green-700'}`}>{concluidosTotal}</span>)}</button>
+              <button type="button" onClick={() => { setFilterVigente(v => { const next = !v; if (next) setFilterConcluido(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterVigente ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300'}`}>{filterVigente && <span className="material-symbols-outlined text-sm">check</span>}Vigentes{vigentesTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterVigente ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>{vigentesTotal}</span>)}</button>
+              <button type="button" onClick={() => { setFilterConcluido(v => { const next = !v; if (next) setFilterVigente(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterConcluido ? 'bg-green-700 text-white border-green' : 'bg-white text-gray-600 border-gray-300'}`}>{filterConcluido && <span className="material-symbols-outlined text-sm">check</span>}Concluídos{concluidosTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterConcluido ? 'bg-white/25 text-white' : 'bg-green-100 text-green-700'}`}>{concluidosTotal}</span>)}</button>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <button type="button" onClick={() => { setFilterLts(v => { const next = !v; if (next) setFilterRestricoes(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterLts ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300'}`}>{filterLts && <span className="material-symbols-outlined text-[13px]">check</span>}LTS{ltsTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterLts ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>{ltsTotal}</span>)}</button>
-              <button type="button" onClick={() => { setFilterRestricoes(v => { const next = !v; if (next) setFilterLts(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterRestricoes ? 'bg-amber-400 text-white border-amber-400' : 'bg-white text-gray-600 border-gray-300'}`}>{filterRestricoes && <span className="material-symbols-outlined text-[13px]">check</span>}Restrições{restricoesTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterRestricoes ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'}`}>{restricoesTotal}</span>)}</button>
+              <button type="button" onClick={() => { setFilterLts(v => { const next = !v; if (next) setFilterRestricoes(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterLts ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300'}`}>{filterLts && <span className="material-symbols-outlined text-sm">check</span>}LTS{ltsTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterLts ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>{ltsTotal}</span>)}</button>
+              <button type="button" onClick={() => { setFilterRestricoes(v => { const next = !v; if (next) setFilterLts(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterRestricoes ? 'bg-amber-400 text-white border-amber-400' : 'bg-white text-gray-600 border-gray-300'}`}>{filterRestricoes && <span className="material-symbols-outlined text-sm">check</span>}Restrições{restricoesTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterRestricoes ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'}`}>{restricoesTotal}</span>)}</button>
             </div>
           </div>
           <div>
           {filteredHistory.length > 0 && (<div className="flex justify-end mb-3 px-1"><span className="bg-gray-100 text-gray-600 text-xs font-bold px-2.5 py-1 rounded-full">{filteredHistory.length} registro{filteredHistory.length !== 1 ? 's' : ''}</span></div>)}
-          {isFetchingHistory ? (<div className="flex items-center justify-center py-12 gap-3 text-ink-3"><span className="w-5 h-5 border-2 border-gray-300 border-t-[#050F41] rounded-full animate-spin" /><span className="text-sm">Carregando histórico...</span></div>) : filteredHistory.length === 0 ? (<div className="text-center py-12 text-ink-3 text-sm">Nenhum registro encontrado.</div>) : (
+          {isFetchingHistory ? (<div className="flex items-center justify-center py-12 gap-3 text-ink-3"><span className="w-5 h-5 border-2 border-gray-300 border-t-navy rounded-full animate-spin" /><span className="text-sm">Carregando histórico...</span></div>) : filteredHistory.length === 0 ? (<div className="text-center py-12 text-ink-3 text-sm">Nenhum registro encontrado.</div>) : (
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="bg-[#050F41]/5 border-b border-gray-100">
-                    <th className="text-left px-3 py-2.5 font-bold text-[#050F41] w-[30%] cursor-pointer select-none" onClick={() => handleSort('data')}>
+                  <tr className="bg-navy/5 border-b border-gray-100">
+                    <th className="text-left px-3 py-2.5 font-bold text-navy w-[30%] cursor-pointer select-none" onClick={() => handleSort('data')}>
                       <span className="flex items-center gap-1">
                         Data
-                        <span className="material-symbols-outlined text-[13px] text-ink-3">
+                        <span className="material-symbols-outlined text-sm text-ink-3">
                           {sortCol === 'data' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
                         </span>
                       </span>
                     </th>
-                    <th className="text-left px-3 py-2.5 font-bold text-[#050F41] cursor-pointer select-none" onClick={() => handleSort('inspecionado')}>
+                    <th className="text-left px-3 py-2.5 font-bold text-navy cursor-pointer select-none" onClick={() => handleSort('inspecionado')}>
                       <span className="flex items-center gap-1">
                         Inspecionado
-                        <span className="material-symbols-outlined text-[13px] text-ink-3">
+                        <span className="material-symbols-outlined text-sm text-ink-3">
                           {sortCol === 'inspecionado' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
                         </span>
                       </span>
@@ -631,10 +633,10 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
                         <button
                           type="button"
                           onClick={() => setSelectedPerson(rec.inspecionado)}
-                          className="font-semibold text-[#050F41] hover:text-[#079551] transition-colors flex items-start gap-1 text-left w-full"
+                          className="font-semibold text-navy hover:text-green-700 transition-colors flex items-start gap-1 text-left w-full"
                         >
                           <span className="flex-1">{rec.inspecionado}</span>
-                          <span className="material-symbols-outlined text-[13px] text-ink-3 shrink-0 mt-0.5">chevron_right</span>
+                          <span className="material-symbols-outlined text-sm text-ink-3 shrink-0 mt-0.5">chevron_right</span>
                         </button>
                         {rec.cid && (
                           <span className="text-xs text-ink-3 mt-0.5 block">{rec.cid}</span>

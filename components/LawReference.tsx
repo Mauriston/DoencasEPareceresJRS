@@ -1,6 +1,6 @@
 // Ficheiro: components/LawReference.tsx
 import React, { useState } from 'react';
-import { Info } from 'lucide-react';
+import { Info } from './ui/icons';
 import { Header } from './Header';
 import { PdfViewerPage } from './PdfViewerPage';
 import { getDriveEmbedUrl } from '../utils/googleDrive';
@@ -132,7 +132,7 @@ export const LawReference: React.FC<LawReferenceProps> = ({ onBack }) => {
       
       <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-5xl mx-auto w-full">
         <div className="mb-4 bg-white p-6 rounded-2xl shadow-md border border-gray-200/80 text-center">
-          <h2 className="text-xl font-heading font-black text-[#050F41] tracking-wide">
+          <h2 className="text-xl font-heading font-black text-navy tracking-wide">
             LEGISLAÇÃO MÉDICO-PERICIAL
           </h2>
         </div>
@@ -142,7 +142,7 @@ export const LawReference: React.FC<LawReferenceProps> = ({ onBack }) => {
             const isBrasao = law.imageUrl.includes('brasao-da-republica');
 
             return (
-              <div key={law.id} className="relative group bg-white rounded-xl border border-gray-200/60 hover:border-[#079551] hover:shadow-md transition-all overflow-hidden flex items-center justify-between">
+              <div key={law.id} className="relative group bg-white rounded-xl border border-gray-200/60 hover:border-green hover:shadow-md transition-all overflow-hidden flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => setSelectedLaw(law)}
@@ -160,7 +160,7 @@ export const LawReference: React.FC<LawReferenceProps> = ({ onBack }) => {
                   </div>
 
                   <div className="flex flex-col flex-1 min-w-0">
-                    <h3 className="text-[#050F41] font-heading font-bold text-[14px] leading-snug mb-0.5 group-hover:text-[#079551] transition-colors">
+                    <h3 className="text-navy font-heading font-bold text-sm leading-snug mb-0.5 group-hover:text-green-700 transition-colors">
                       {law.legislation}
                     </h3>
                     <p className="text-gray-500 font-body text-xs font-medium leading-relaxed line-clamp-2">
@@ -173,7 +173,7 @@ export const LawReference: React.FC<LawReferenceProps> = ({ onBack }) => {
                   type="button"
                   onClick={() => alert(law.provisions)}
                   title={law.provisions}
-                  className="text-ink-3 hover:text-[#050F41] transition-colors flex-shrink-0 focus:outline-none p-1.5 mr-3"
+                  className="text-ink-3 hover:text-navy transition-colors flex-shrink-0 focus:outline-none p-1.5 mr-3"
                 >
                   <Info size={18} />
                 </button>

@@ -68,15 +68,15 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
 
       <div className="px-4 pb-3 pt-3 border-b border-gray-200 bg-white">
         <p className="eyebrow">Histórico de Perícias Menores</p>
-        <h2 className="text-[#050F41] font-bold text-sm leading-snug mt-0.5">{person}</h2>
+        <h2 className="text-navy font-bold text-sm leading-snug mt-0.5">{person}</h2>
         {om && <p className="text-gray-500 text-xs mt-0.5">OM: {om}</p>}
       </div>
 
       <div className="px-4 pt-4 pb-28 w-full max-w-2xl mx-auto space-y-4">
 
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
-          <h3 className="text-xs font-bold text-[#050F41] tracking-wider flex items-center gap-2">
-            <span className="material-symbols-outlined text-[16px] text-[#050F41]">assignment</span>
+          <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2">
+            <span className="material-symbols-outlined text-[16px] text-navy">assignment</span>
             Perícias Menores Realizadas
           </h3>
           <div className="grid grid-cols-3 gap-2">
@@ -85,7 +85,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
               { label: 'Vigentes', value: stats.vigentes, color: stats.vigentes > 0 ? 'text-wine' : 'text-ink-3', filete: 'border-t-wine' },
               { label: 'VDF', value: stats.vdfCount, color: stats.vdfCount > 0 ? 'text-gold-ink' : 'text-ink-3', filete: 'border-t-gold' },
             ].map(k => (
-              <div key={k.label} className={`bg-white rounded-xl border border-[#E3E6ED] border-t-4 ${k.filete} p-2.5 text-center`}>
+              <div key={k.label} className={`bg-white rounded-xl border border-line border-t-4 ${k.filete} p-2.5 text-center`}>
                 <p className={`text-xl font-bold ${k.color}`}>{k.value}</p>
                 <p className="text-xs text-ink-3 font-semibold mt-0.5">{k.label}</p>
               </div>
@@ -94,7 +94,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
-          <h3 className="text-xs font-bold text-[#050F41] tracking-wider flex items-center gap-2">
+          <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-navy">event_busy</span>
             Dias Afastados
           </h3>
@@ -104,7 +104,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
               { label: `Ano ${new Date().getFullYear()}`, value: stats.diasAfastadoAno },
               { label: 'Últimos 30d', value: stats.diasAfastado30 },
             ].map(k => (
-              <div key={k.label} className="bg-white rounded-xl border border-[#E3E6ED] border-t-4 border-t-wine p-2.5 text-center">
+              <div key={k.label} className="bg-white rounded-xl border border-line border-t-4 border-t-wine p-2.5 text-center">
                 <p className="text-xl font-bold text-wine">{k.value}</p>
                 <p className="text-xs text-ink-3 font-semibold mt-0.5">{k.label}</p>
               </div>
@@ -113,7 +113,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
-          <h3 className="text-xs font-bold text-[#050F41] tracking-wider flex items-center gap-2">
+          <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-navy">warning</span>
             Dias em Restrições
           </h3>
@@ -123,7 +123,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
               { label: `Ano ${new Date().getFullYear()}`, value: stats.diasRestricaoAno },
               { label: 'Últimos 30d', value: stats.diasRestricao30 },
             ].map(k => (
-              <div key={k.label} className="bg-white rounded-xl border border-[#E3E6ED] border-t-4 border-t-gold p-2.5 text-center">
+              <div key={k.label} className="bg-white rounded-xl border border-line border-t-4 border-t-gold p-2.5 text-center">
                 <p className="text-xl font-bold text-gold-ink">{k.value}</p>
                 <p className="text-xs text-ink-3 font-semibold mt-0.5">{k.label}</p>
               </div>
@@ -133,16 +133,16 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
 
         {stats.topCids.length > 0 && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-            <h3 className="text-xs font-bold text-[#050F41] tracking-wider flex items-center gap-2 mb-3">
-              <span className="material-symbols-outlined text-[16px] text-[#079551]">diagnosis</span>
+            <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2 mb-3">
+              <span className="material-symbols-outlined text-[16px] text-green-700">diagnosis</span>
               Principais CID
             </h3>
             <div className="space-y-1.5">
               {stats.topCids.map(([cid, count]) => (
                 <div key={cid} className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-[#050F41] w-20 shrink-0">{cid}</span>
+                  <span className="font-mono text-xs font-bold text-navy w-20 shrink-0">{cid}</span>
                   <div className="flex-1 bg-gray-100 rounded-full h-1.5">
-                    <div className="bg-[#079551] h-1.5 rounded-full" style={{ width: `${(count / stats.topCids[0][1]) * 100}%` }} />
+                    <div className="bg-green h-1.5 rounded-full" style={{ width: `${(count / stats.topCids[0][1]) * 100}%` }} />
                   </div>
                   <span className="text-xs text-gray-500 w-6 text-right">{count}x</span>
                 </div>
@@ -152,8 +152,8 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
         )}
 
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-[#050F41]/5 px-4 py-2.5 border-b border-gray-100">
-            <h3 className="text-xs font-bold text-[#050F41] tracking-wider">Histórico de Perícias</h3>
+          <div className="bg-navy/5 px-4 py-2.5 border-b border-gray-100">
+            <h3 className="text-xs font-bold text-navy tracking-wider">Histórico de Perícias</h3>
           </div>
           {sorted.map((rec, i) => (
             <div key={i} className={`px-4 py-3 border-b border-gray-50 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
@@ -171,7 +171,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
                 </div>
                 {rec.link && (
                   <a href={rec.link} target="_blank" rel="noopener noreferrer"
-                    className="shrink-0 w-11 h-11 bg-gray-100 hover:bg-[#050F41] text-ink-3 hover:text-white rounded-full flex items-center justify-center transition-colors"
+                    className="shrink-0 w-11 h-11 bg-gray-100 hover:bg-navy text-ink-3 hover:text-white rounded-full flex items-center justify-center transition-colors"
                     title="Abrir documento" aria-label="Abrir documento">
                     <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                   </a>

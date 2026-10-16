@@ -16,10 +16,10 @@ interface PdfViewerPageProps {
 }
 
 export const PdfViewerPage: React.FC<PdfViewerPageProps> = ({ title, subtitle, embedUrl, onBack, sidebar }) => (
-  <div className="flex flex-col h-full bg-[#F3F5F7]">
+  <div className="flex flex-col h-full bg-canvas">
     <Header title={title} onBack={onBack} />
     {subtitle && (
-      <p className="px-4 pt-3 text-xs md:text-sm text-gray-500 text-center truncate">{subtitle}</p>
+      <p className="px-4 pt-3 text-sm text-gray-500 text-center truncate">{subtitle}</p>
     )}
     <div className={`flex-1 min-h-0 p-2 md:p-4 w-full ${sidebar ? 'md:grid md:grid-cols-[220px_1fr] md:gap-4' : 'flex'}`}>
       {sidebar && <div className="hidden md:block overflow-y-auto">{sidebar}</div>}

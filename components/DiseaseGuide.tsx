@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { DISEASES } from '../constants';
 import { Disease, Diagnosis } from '../types';
-import { ChevronRight, Info, Brain, HeartPulse, EyeOff, Radiation, Accessibility, Stethoscope, Ribbon, X, Download, ArrowLeft } from 'lucide-react';
+import { ChevronRight, Info, Brain, HeartPulse, EyeOff, Radiation, Accessibility, Stethoscope, Ribbon, X, Download, ArrowLeft } from './ui/icons';
 import { jsPDF } from 'jspdf';
 import { Header } from './Header';
 import { Button } from './ui/Button';
@@ -106,22 +106,22 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <div className="fixed inset-0 z-[100] bg-gray-50 flex flex-col animate-fade-in font-body pb-28">
       <header className="bg-white shadow-sm sticky top-0 z-40 flex items-center px-4 py-4">
-        <button onClick={onClose} className="mr-4 text-gray-500 hover:text-[#050F41] transition-colors p-1"><ArrowLeft size={24} /></button>
+        <button onClick={onClose} className="mr-4 text-gray-500 hover:text-navy transition-colors p-1"><ArrowLeft size={24} /></button>
         <div>
-          <h1 className="text-xl font-bold text-[#050F41] font-heading leading-none">CDR Score</h1>
+          <h1 className="text-xl font-bold text-navy font-heading leading-none">CDR Score</h1>
           <p className="text-xs text-gray-500 mt-1">Calculadora validada em português</p>
         </div>
       </header>
       <main className="flex-1 overflow-y-auto max-w-3xl mx-auto p-4 w-full custom-scrollbar">
         {cdrData.map(cat => (
           <div key={cat.id} className="mb-8">
-            <h2 className="text-base font-bold text-[#050F41] mb-3">{cat.nome} <span className="text-gray-500 font-normal">{cat.sigla}</span></h2>
+            <h2 className="text-base font-bold text-navy mb-3">{cat.nome} <span className="text-gray-500 font-normal">{cat.sigla}</span></h2>
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
               {cat.opcoes.map(opt => {
                 const isSelected = scores[cat.id as keyof typeof scores] === opt.pt;
                 return (
                   <div key={opt.pt} onClick={() => { setScores({...scores, [cat.id]: opt.pt}); setIsCopied(false); }}
-                    className={`flex items-center p-3 cursor-pointer select-none transition-colors border-b border-gray-100 last:border-0 ${isSelected ? 'bg-[#050F41] text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>
+                    className={`flex items-center p-3 cursor-pointer select-none transition-colors border-b border-gray-100 last:border-0 ${isSelected ? 'bg-navy text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>
                     <div className="flex-1 pr-4 text-sm leading-snug">{opt.desc}</div>
                     <div className={`font-bold text-sm px-2 py-1 rounded bg-black/5 ${isSelected ? 'text-white' : 'text-gray-500'}`}>{opt.pt === 0 ? '0' : '+' + opt.pt}</div>
                   </div>
@@ -131,7 +131,7 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </div>
         ))}
       </main>
-      <div className={`fixed bottom-0 left-0 w-full text-white shadow-lg z-50 transition-colors duration-300 ${isGrave ? 'bg-red-900' : 'bg-[#050F41]'}`}>
+      <div className={`fixed bottom-0 left-0 w-full text-white shadow-lg z-50 transition-colors duration-300 ${isGrave ? 'bg-red-900' : 'bg-navy'}`}>
         <div className="max-w-3xl mx-auto flex flex-row items-center justify-between p-4">
           <div className="flex flex-col justify-center">
             <div className="flex items-baseline gap-1">
@@ -157,19 +157,19 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div className="fixed inset-0 z-[110] bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}>
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-4 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-[#050F41]">Interpretação dos Resultados</h3>
+              <h3 className="text-lg font-bold text-navy">Interpretação dos Resultados</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-ink-3 hover:text-gray-600 p-1"><X size={20} /></button>
             </div>
             <div className="p-4 overflow-x-auto scroll-x-visible">
-              <table className="w-full text-left text-sm md:text-base text-gray-600 border-collapse">
-                <thead className="bg-gray-50 text-gray-700 text-xs md:text-sm uppercase">
+              <table className="w-full text-left text-base text-gray-600 border-collapse">
+                <thead className="bg-gray-50 text-gray-700 text-sm uppercase">
                   <tr><th className="px-4 py-3 border-b border-gray-200">Global CDR</th><th className="px-4 py-3 border-b border-gray-200">CDR-SB</th><th className="px-4 py-3 border-b border-gray-200">Demência</th></tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   <tr><td className="px-4 py-3 font-medium">0</td><td className="px-4 py-3">0</td><td className="px-4 py-3">Normal (sem demência)</td></tr>
                   <tr><td className="px-4 py-3 font-medium">0.5</td><td className="px-4 py-3">0.5-4.0</td><td className="px-4 py-3">Questionável a muito leve</td></tr>
                   <tr><td className="px-4 py-3 font-medium">1</td><td className="px-4 py-3">4.5-9.0</td><td className="px-4 py-3">Leve</td></tr>
-                  <tr className="bg-red-50"><td className="px-4 py-3 font-medium">2</td><td className="px-4 py-3">9.5-15.5</td><td className="px-4 py-3 font-medium text-[#050F41]">MODERADA</td></tr>
+                  <tr className="bg-red-50"><td className="px-4 py-3 font-medium">2</td><td className="px-4 py-3">9.5-15.5</td><td className="px-4 py-3 font-medium text-navy">MODERADA</td></tr>
                   <tr className="bg-red-100"><td className="px-4 py-3 font-bold text-red-800">3</td><td className="px-4 py-3">16.0-18.0</td><td className="px-4 py-3 font-bold text-red-800">GRAVE</td></tr>
                 </tbody>
               </table>
@@ -183,26 +183,26 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
 const getDiseaseIcon = (name: string) => {
   const lower = name.toLowerCase();
-  if (lower.includes("espondilite")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">orthopedics</span>;
-  if (lower.includes("neoplasia")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">oncology</span>;
-  if (lower.includes("pênfigo") || lower.includes("penfigo")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">dermatology</span>;
-  if (lower.includes("hanseníase") || lower.includes("hanseniase")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">dermatology</span>;
-  if (lower.includes("fibrose")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">pulmonology</span>;
-  if (lower.includes("tuberculose")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">pulmonology</span>;
-  if (lower.includes("nefropatia")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">nephrology</span>;
-  if (lower.includes("paget")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">skeleton</span>;
-  if (lower.includes("alienação") || lower.includes("alienacao")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">psychology</span>;
-  if (lower.includes("parkinson")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">neurology</span>;
-  if (lower.includes("esclerose")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">neurology</span>;
-  if (lower.includes("hepatopatia")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">gastroenterology</span>;
+  if (lower.includes("espondilite")) return <span className="material-symbols-outlined text-[22px] text-navy">orthopedics</span>;
+  if (lower.includes("neoplasia")) return <span className="material-symbols-outlined text-[22px] text-navy">oncology</span>;
+  if (lower.includes("pênfigo") || lower.includes("penfigo")) return <span className="material-symbols-outlined text-[22px] text-navy">dermatology</span>;
+  if (lower.includes("hanseníase") || lower.includes("hanseniase")) return <span className="material-symbols-outlined text-[22px] text-navy">dermatology</span>;
+  if (lower.includes("fibrose")) return <span className="material-symbols-outlined text-[22px] text-navy">pulmonology</span>;
+  if (lower.includes("tuberculose")) return <span className="material-symbols-outlined text-[22px] text-navy">pulmonology</span>;
+  if (lower.includes("nefropatia")) return <span className="material-symbols-outlined text-[22px] text-navy">nephrology</span>;
+  if (lower.includes("paget")) return <span className="material-symbols-outlined text-[22px] text-navy">skeleton</span>;
+  if (lower.includes("alienação") || lower.includes("alienacao")) return <span className="material-symbols-outlined text-[22px] text-navy">psychology</span>;
+  if (lower.includes("parkinson")) return <span className="material-symbols-outlined text-[22px] text-navy">neurology</span>;
+  if (lower.includes("esclerose")) return <span className="material-symbols-outlined text-[22px] text-navy">neurology</span>;
+  if (lower.includes("hepatopatia")) return <span className="material-symbols-outlined text-[22px] text-navy">gastroenterology</span>;
 
   switch(name) {
-    case "Cardiopatia Grave": return <HeartPulse className="text-[#050F41]" size={22} />;
-    case "Cegueira": return <EyeOff className="text-[#050F41]" size={22} />;
-    case "Contaminação por Radiação": return <Radiation className="text-[#050F41]" size={22} />;
-    case "Paralisia Irreversível e Incapacitante": return <Accessibility className="text-[#050F41]" size={22} />;
-    case "SIDA/AIDS": return <Ribbon className="text-[#050F41]" size={22} />;
-    default: return <span className="material-symbols-outlined text-[22px] text-[#050F41]">stethoscope</span>;
+    case "Cardiopatia Grave": return <HeartPulse className="text-navy" size={22} />;
+    case "Cegueira": return <EyeOff className="text-navy" size={22} />;
+    case "Contaminação por Radiação": return <Radiation className="text-navy" size={22} />;
+    case "Paralisia Irreversível e Incapacitante": return <Accessibility className="text-navy" size={22} />;
+    case "SIDA/AIDS": return <Ribbon className="text-navy" size={22} />;
+    default: return <span className="material-symbols-outlined text-[22px] text-navy">stethoscope</span>;
   }
 };
 
@@ -340,12 +340,12 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
   // PAGE LEVEL 2: Diagnoses List for a specific disease
   if (selectedDisease && !selectedDiagnosis) {
     return (
-      <div className="animate-fade-in flex flex-col h-full bg-[#F3F5F7] relative">
+      <div className="animate-fade-in flex flex-col h-full bg-canvas relative">
         <Header title={getShortDiseaseName(selectedDisease.name)} onBack={() => setSelectedDisease(null)} />
         <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto w-full flex-1 pb-24 md:pb-12">
           <div className="px-1">
-            <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41]">{selectedDisease.name}</h2>
-            <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5">Selecione o diagnóstico pericial associado</p>
+            <h2 className="text-2xl font-heading font-bold text-navy">{selectedDisease.name}</h2>
+            <p className="text-sm font-semibold text-gray-500 mt-0.5">Selecione o diagnóstico pericial associado</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -356,16 +356,16 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
                 className="bg-white rounded-2xl p-4 md:p-5 border border-gray-200/60 shadow-sm hover:shadow-md hover:border-gray-300 transition-all cursor-pointer flex items-center justify-between group"
               >
                 <div className="flex items-center space-x-3.5 pr-2">
-                  <div className="w-10 h-10 rounded-xl bg-[#050F41]/5 flex items-center justify-center shrink-0 [&>svg]:text-[#050F41]">
+                  <div className="w-10 h-10 rounded-xl bg-navy/5 flex items-center justify-center shrink-0 [&>svg]:text-navy">
                     {getDiseaseIcon(selectedDisease.name)}
                   </div>
                   <div>
-                    <h3 className="text-sm md:text-base font-bold text-gray-800 group-hover:text-[#050F41] transition-colors font-body">
+                    <h3 className="text-base font-bold text-gray-800 group-hover:text-navy transition-colors font-body">
                       {diagnosis.name}
                     </h3>
                   </div>
                 </div>
-                <ChevronRight size={20} className="text-ink-3 group-hover:text-[#050F41] group-hover:translate-x-0.5 transition-all shrink-0" />
+                <ChevronRight size={20} className="text-ink-3 group-hover:text-navy group-hover:translate-x-0.5 transition-all shrink-0" />
               </div>
             ))}
           </div>
@@ -378,13 +378,13 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
   if (selectedDisease && selectedDiagnosis) {
     const isDemencia = selectedDisease.name === "Alienação Mental" && selectedDiagnosis.name === "Demência";
     return (
-      <div className="animate-fade-in flex flex-col h-full bg-[#F3F5F7] relative">
+      <div className="animate-fade-in flex flex-col h-full bg-canvas relative">
         <Header title={getShortDiseaseName(selectedDisease.name)} onBack={handleBackClick} />
         <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full pb-24 md:pb-12">
           <div className="px-1 flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] truncate">{selectedDisease.name}</h2>
-              {selectedDisease.diagnoses.length > 1 && <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5 truncate">Diagnóstico pericial: {selectedDiagnosis.name}</p>}
+              <h2 className="text-2xl font-heading font-bold text-navy truncate">{selectedDisease.name}</h2>
+              {selectedDisease.diagnoses.length > 1 && <p className="text-sm font-semibold text-gray-500 mt-0.5 truncate">Diagnóstico pericial: {selectedDiagnosis.name}</p>}
             </div>
 
             {/* Desktop side-by-side action buttons */}
@@ -392,10 +392,10 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
               <button 
                 onClick={handleCopy} 
                 disabled={isCopied} 
-                className={`px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all border cursor-pointer shadow-2xs ${
+                className={`px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all border cursor-pointer shadow-2xs ${
                   isCopied 
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 cursor-not-allowed' 
-                    : 'bg-white text-[#050F41] border-gray-200 hover:bg-gray-50 active:scale-95'
+                    ? 'bg-green-50 text-green-700 border-green-200 cursor-not-allowed' 
+                    : 'bg-white text-navy border-gray-200 hover:bg-gray-50 active:scale-95'
                 }`}
                 title="Copiar texto"
               >
@@ -404,7 +404,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
               </button>
               <button 
                 onClick={handleDownloadPDF} 
-                className="px-3.5 py-2 bg-[#050F41] text-white rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-[#0a1b66] active:scale-95 transition-all border border-[#050F41] cursor-pointer shadow-2xs" 
+                className="px-3.5 py-2 bg-navy text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-navy-hover active:scale-95 transition-all border border-navy cursor-pointer shadow-2xs" 
                 title="Baixar PDF"
               >
                 <Download size={18} />
@@ -415,24 +415,24 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
 
           <div className="space-y-6 w-full">
             <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center">
+              <h3 className="font-heading font-bold text-lg text-navy mb-3 border-b border-gray-100 pb-2 flex items-center">
                 <span className="material-symbols-outlined mr-2 text-navy">menu_book</span>Definição
               </h3>
-              <p className="font-body text-gray-800 text-sm md:text-base leading-relaxed font-medium">{selectedDisease.definition}</p>
+              <p className="font-body text-gray-800 text-base leading-relaxed font-medium">{selectedDisease.definition}</p>
             </div>
 
             {selectedDisease.name === "SIDA/AIDS" && (
               <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-                <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-4 border-b border-gray-100 pb-2 flex items-center">
+                <h3 className="font-heading font-bold text-lg text-navy mb-4 border-b border-gray-100 pb-2 flex items-center">
                   <span className="material-symbols-outlined mr-2 text-navy">grid_on</span>Classificação
                 </h3>
-                <p className="text-xs md:text-sm text-gray-600 font-medium">Grupos I (CD4 ≥500), II (200-499), III (&lt;200) / Classes A, B, C por sintomas e condições definidoras.</p>
+                <p className="text-sm text-gray-600 font-medium">Grupos I (CD4 ≥500), II (200-499), III (&lt;200) / Classes A, B, C por sintomas e condições definidoras.</p>
               </div>
             )}
 
             {isDemencia && (
               <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm w-full">
-                <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 flex items-center">
+                <h3 className="font-heading font-bold text-base text-navy mb-3 flex items-center">
                   <span className="material-symbols-outlined mr-2 text-red-700">psychology</span>Avaliação de cognição
                 </h3>
                 <p className="text-xs text-gray-600 mb-4">A avaliação do escore CDR é fundamental para quantificar a gravidade do comprometimento cognitivo.</p>
@@ -443,13 +443,13 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
             )}
 
             <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center">
+              <h3 className="font-heading font-bold text-lg text-navy mb-3 border-b border-gray-100 pb-2 flex items-center">
                 <span className="material-symbols-outlined mr-2 text-navy">verified</span>Critérios de gravidade
               </h3>
               <ul className="space-y-3.5">
                 {selectedDiagnosis.criteria.map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-sm md:text-base text-gray-700 font-body">
-                    <span className="w-2 h-2 rounded-full bg-[#079551] shrink-0 mt-2" />
+                  <li key={idx} className="flex items-start gap-3 text-base text-gray-700 font-body">
+                    <span className="w-2 h-2 rounded-full bg-green shrink-0 mt-2" />
                     <span className="leading-relaxed flex-1">{item}</span>
                   </li>
                 ))}
@@ -457,13 +457,13 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
             </div>
 
             <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center">
+              <h3 className="font-heading font-bold text-lg text-navy mb-3 border-b border-gray-100 pb-2 flex items-center">
                 <span className="material-symbols-outlined mr-2 text-navy">folder_open</span>Documentos necessários
               </h3>
               <ul className="space-y-3">
                 {selectedDisease.documents.map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-sm md:text-base text-gray-700 font-body">
-                    <span className="w-2 h-2 rounded-full bg-[#050F41] shrink-0 mt-2" />
+                  <li key={idx} className="flex items-start gap-3 text-base text-gray-700 font-body">
+                    <span className="w-2 h-2 rounded-full bg-navy shrink-0 mt-2" />
                     <span className="leading-relaxed flex-1 font-medium">{item}</span>
                   </li>
                 ))}
@@ -473,7 +473,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
         </div>
 
         {/* Mobile: barra de ações rotulada (antes, dois botões circulares só com ícone). */}
-        <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-[#E3E6ED] p-3 flex gap-2" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+        <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-line p-3 flex gap-2" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
           <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} onClick={handleCopy} className="flex-1">{isCopied ? 'Copiado' : 'Copiar'}</Button>
           <Button icon="download" onClick={handleDownloadPDF} className="flex-1">Baixar PDF</Button>
         </div>
@@ -483,14 +483,14 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
 
   // PAGE LEVEL 1: Main Diseases Grid
   return (
-    <div className="flex flex-col h-full bg-[#F3F5F7]">
+    <div className="flex flex-col h-full bg-canvas">
       <Header title="Doenças de Lei" onBack={onBack} />
       <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full flex-1 pb-24 md:pb-12">
         <div className="px-1">
-          <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41]">
+          <h2 className="text-2xl font-heading font-bold text-navy">
             Doenças previstas em lei
           </h2>
-          <p className="text-xs md:text-sm font-semibold text-gray-500 mt-1">
+          <p className="text-sm font-semibold text-gray-500 mt-1">
             Verifique as definições, os critérios clínicos e os documentos necessários para o enquadramento
           </p>
         </div>
@@ -500,7 +500,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
               <div onClick={() => handleDiseaseClick(disease)} className="p-4 cursor-pointer flex items-center justify-between hover:bg-gray-50/50 transition-colors">
                 <div className="flex items-center space-x-3 truncate pr-2">
                   {getDiseaseIcon(disease.name)}
-                  <h3 className="text-[#050F41] font-heading text-sm md:text-base font-semibold truncate m-0">
+                  <h3 className="text-navy font-heading text-base font-semibold truncate m-0">
                     {disease.name.toLowerCase().includes("paget") ? "Doença de Paget" : disease.name}
                   </h3>
                 </div>

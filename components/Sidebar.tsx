@@ -63,7 +63,7 @@ export const Sidebar: React.FC = () => {
             isActive ? 'bg-white/15 text-white' : 'text-gray-300 hover:bg-white/10 hover:text-white'
           }`}
         >
-          {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-[#079551] rounded-r-full" />}
+          {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-gold rounded-r-full" />}
           <span className="material-symbols-outlined text-[22px] shrink-0">{cat.icon}</span>
           <span
             className={`ml-3 text-xs font-bold uppercase tracking-wide transition-opacity duration-150 ${
@@ -140,7 +140,7 @@ export const Sidebar: React.FC = () => {
   return (
     <>
       {/* DESKTOP: barra fixa, só ícones, expande no hover */}
-      <aside className="hidden md:flex group/sidebar flex-col shrink-0 h-full bg-[#050F41] text-white overflow-hidden transition-[width] duration-200 ease-in-out w-[64px] hover:w-[240px] z-30">
+      <aside className="hidden md:flex group/sidebar flex-col shrink-0 h-full bg-navy text-white overflow-hidden transition-[width] duration-200 ease-in-out w-[64px] hover:w-[240px] z-30">
         <Logo onClick={() => setCurrentView('home')} />
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3">
           {categories.map(cat => renderCategory(cat, 'rail'))}
@@ -155,7 +155,7 @@ export const Sidebar: React.FC = () => {
         />
       )}
       <aside
-        className={`md:hidden fixed top-0 left-0 h-full w-[260px] bg-[#050F41] text-white z-[120] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
+        className={`md:hidden fixed top-0 left-0 h-full w-[260px] bg-navy text-white z-[120] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

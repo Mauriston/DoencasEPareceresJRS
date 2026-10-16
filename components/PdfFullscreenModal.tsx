@@ -18,7 +18,7 @@ export const PdfFullscreenModal: React.FC<PdfFullscreenModalProps> = ({ title, u
 
   return (
     <div className="fixed inset-0 z-[200] bg-black/70 flex flex-col animate-fade-in">
-      <div className="p-3 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+      <div className="p-3 bg-navy text-white flex items-center justify-between shrink-0">
         <h3 className="font-heading font-bold text-sm truncate">{title}</h3>
         <div className="flex items-center gap-1 shrink-0">
           <a

@@ -1,0 +1,31 @@
+/* Tokens do DS JRS/HNRe expostos como variáveis CSS (os mesmos valores do
+   tailwind.config.js — use as classes utilitárias; as variáveis servem a CSS
+   escrito à mão, como o .md-content). Decisão registrada: o app adota o azul
+   marinho #050F41 do MIV MB (o deck do CONGES usa #121C4B). */
+:root {
+  --navy: #050f41;
+  --navy-hover: #01002b;
+  --navy-pressed: #020020;
+  --blue: #1c4587;
+  --gold: #fab932;
+  --gold-ink: #8a6100;
+  --green: #079551;
+  --green-dark: #04643b;
+  --wine: #85200c;
+  --wine-dark: #6b1a0a;
+
+  --ink-1: #050f41;
+  --ink-2: #3d4460;
+  --ink-3: #5a627a;
+  --ink-4: #8a93ac;
+  --line: #e3e6ed;
+  --paper: #f7f8fa;
+  --thead: #f2f4f8;
+
+  --radius-control: 8px;
+  --radius-card: 14px;
+  --shadow-overlay: 0 3px 12px rgba(18, 28, 75, 0.08);
+
+  /* Altura da topbar fixa do shell — referência dos elementos sticky. */
+  --topbar-h: 56px;
+}

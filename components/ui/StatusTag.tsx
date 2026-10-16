@@ -9,13 +9,13 @@ import React from 'react';
 export type StatusTone = 'success' | 'danger' | 'attention' | 'neutral' | 'navy' | 'navyOutline' | 'muted';
 
 const TONES: Record<StatusTone, { box: string; dot: string }> = {
-  success: { box: 'bg-green/10 text-[#04643B]', dot: 'bg-green' },
+  success: { box: 'bg-green/10 text-green-700', dot: 'bg-green' },
   danger: { box: 'bg-wine/10 text-wine', dot: 'bg-wine' },
   attention: { box: 'bg-gold/20 text-gold-ink', dot: 'bg-gold' },
-  neutral: { box: 'bg-[#F2F4F8] text-ink-3 border border-[#E3E6ED]', dot: 'bg-ink-4' },
+  neutral: { box: 'bg-thead text-ink-3 border border-line', dot: 'bg-ink-4' },
   navy: { box: 'bg-navy text-white', dot: 'bg-white' },
   navyOutline: { box: 'bg-white text-navy border border-navy', dot: 'bg-transparent border border-navy' },
-  muted: { box: 'bg-[#F2F4F8] text-ink-3', dot: 'bg-[#B9BFD1]' },
+  muted: { box: 'bg-thead text-ink-3', dot: 'bg-ink-5' },
 };
 
 interface StatusTagProps {

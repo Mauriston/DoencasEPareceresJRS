@@ -23,7 +23,7 @@ export const StoragePdfIconButton: React.FC<StoragePdfButtonProps> = ({ busy, on
     disabled={busy}
     onClick={onClick}
     title="Baixar em PDF"
-    className="hidden md:inline-flex min-h-[44px] px-4 gap-2 rounded-lg text-sm font-bold text-navy bg-white border border-navy hover:bg-[#F2F4F8] transition-colors items-center justify-center disabled:opacity-50"
+    className="hidden md:inline-flex min-h-[44px] px-4 gap-2 rounded-lg text-sm font-bold text-navy bg-white border border-navy hover:bg-thead transition-colors items-center justify-center disabled:opacity-50"
   >
     {icon(busy, 'text-[20px]')}
     Baixar PDF

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Header } from './Header';
-import { ChevronDown, ChevronRight, CheckCircle2, User, Calendar, FileText, Info, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, CheckCircle2, User, Calendar, FileText, Info, X } from './ui/icons';
 import examesData from '../data/anexoOExamesMinimos.json';
 
 // Anexo O da DGPM-406 (9ª Rev): finalidades de IS agrupadas (Controle
@@ -84,7 +84,7 @@ const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => 
         aria-haspopup="listbox"
         aria-expanded={aberto}
         onClick={alternar}
-        className="w-full flex items-center justify-between gap-3 bg-gray-50 border border-gray-200 text-gray-800 text-sm md:text-base font-semibold rounded-lg p-3 text-left focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy transition-all font-body shadow-inner"
+        className="w-full flex items-center justify-between gap-3 bg-gray-50 border border-gray-200 text-gray-800 text-base font-semibold rounded-lg p-3 text-left focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy transition-all font-body shadow-inner"
       >
         <span className="min-w-0">
           {grupoDoValor && <span className="block text-xs font-bold text-ink-3 uppercase tracking-wider">{grupoDoValor}</span>}
@@ -98,7 +98,7 @@ const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => 
           {/* Nível 1: grupos. Com um grupo aberto, a lista inteira esmaece e o
               toque nela volta ao nível 1. */}
           <div
-            className={`rounded-[28px] bg-[#1c1c1e]/95 backdrop-blur-xl text-white shadow-2xl ring-1 ring-white/10 py-2 transition-opacity duration-200 ${grupoAberto ? 'opacity-40' : ''}`}
+            className={`rounded-[28px] bg-navy/95 backdrop-blur-xl text-white shadow-2xl ring-1 ring-white/10 py-2 transition-opacity duration-200 ${grupoAberto ? 'opacity-40' : ''}`}
             onClick={grupoAberto ? () => setGrupoAberto(null) : undefined}
           >
             {GRUPOS_FINALIDADE.map((grupo, i) => (
@@ -109,7 +109,7 @@ const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => 
                 onClick={(e) => {
                   setGrupoAberto({ nome: grupo.Grupo_Finalidade_Inspecao, topo: e.currentTarget.offsetTop });
                 }}
-                className={`w-full flex items-center justify-between gap-3 px-6 py-4 text-base md:text-lg font-medium text-left ${i > 0 ? 'border-t border-white/10' : ''} ${grupo.Grupo_Finalidade_Inspecao === grupoDoValor ? 'text-white' : 'text-white/90'}`}
+                className={`w-full flex items-center justify-between gap-3 px-6 py-4 text-lg font-medium text-left ${i > 0 ? 'border-t border-white/10' : ''} ${grupo.Grupo_Finalidade_Inspecao === grupoDoValor ? 'text-white' : 'text-white/90'}`}
               >
                 <span>{grupo.Grupo_Finalidade_Inspecao}</span>
                 <ChevronRight size={20} className="flex-shrink-0 text-white/70" />
@@ -124,12 +124,12 @@ const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => 
               className="absolute left-0 right-0 animate-fade-in"
               style={{ top: Math.max(0, grupoAberto.topo - 8) }}
             >
-              <div className="rounded-[28px] bg-[#141416] text-white shadow-2xl ring-1 ring-white/10 max-h-[65vh] overflow-y-auto">
+              <div className="rounded-[28px] bg-navy text-white shadow-2xl ring-1 ring-white/10 max-h-[65vh] overflow-y-auto">
                 <button
                   type="button"
                   aria-expanded
                   onClick={() => setGrupoAberto(null)}
-                  className="w-full flex items-center justify-between gap-3 px-6 py-4 text-base md:text-lg font-semibold text-left border-b border-white/10"
+                  className="w-full flex items-center justify-between gap-3 px-6 py-4 text-lg font-semibold text-left border-b border-white/10"
                 >
                   <span>{grupoSelecionado.Grupo_Finalidade_Inspecao}</span>
                   <ChevronDown size={20} className="flex-shrink-0 text-white/80" />
@@ -145,7 +145,7 @@ const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => 
                         role="option"
                         aria-selected={ativo}
                         onClick={() => { onChange(nome); setAberto(false); setGrupoAberto(null); }}
-                        className={`w-full flex items-center justify-between gap-3 px-6 py-3.5 text-left text-base md:text-lg leading-snug hover:bg-white/5 ${i > 0 ? 'border-t border-white/5' : ''} ${ativo ? 'font-bold text-white' : 'text-white/85'}`}
+                        className={`w-full flex items-center justify-between gap-3 px-6 py-3.5 text-left text-lg leading-snug hover:bg-white/5 ${i > 0 ? 'border-t border-white/5' : ''} ${ativo ? 'font-bold text-white' : 'text-white/85'}`}
                       >
                         <span>{nome}</span>
                         {ativo && <CheckCircle2 size={18} className="flex-shrink-0 text-gold" />}
@@ -200,8 +200,8 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
       <div className="flex-1 overflow-auto pb-24">
         <div className="p-4 md:p-6 space-y-4 md:space-y-5 animate-fade-in max-w-3xl mx-auto w-full">
         <div className="text-center mb-1">
-          <h2 className="text-xl md:text-2xl font-bold text-navy font-heading leading-tight">Exames mínimos</h2>
-          <p className="text-sm md:text-base text-gray-600 font-body mt-2 leading-snug">
+          <h2 className="text-2xl font-bold text-navy font-heading leading-tight">Exames mínimos</h2>
+          <p className="text-base text-gray-600 font-body mt-2 leading-snug">
             Exames mínimos por finalidade de IS observando o sexo e a idade de acordo com o Anexo O da DGPM-406.
           </p>
         </div>
@@ -209,7 +209,7 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
         <div id="exames-config-card" className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-[1fr_140px] md:gap-4 space-y-4 md:space-y-0">
             <div className="flex flex-col space-y-2">
-              <span className="text-xs md:text-sm font-bold text-navy uppercase tracking-wider flex items-center gap-1">
+              <span className="text-sm font-bold text-navy uppercase tracking-wider flex items-center gap-1">
                 <User size={15} className="text-navy" /> Sexo Biológico:
               </span>
               <div className="grid grid-cols-2 gap-2">
@@ -218,7 +218,7 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
                     key={g}
                     id={`gender-btn-${g.toLowerCase()}`}
                     type="button"
-                    className={`py-2.5 md:py-3 text-sm md:text-base font-bold rounded-lg transition-all flex items-center justify-center gap-1 focus:outline-none ${
+                    className={`py-2.5 md:py-3 text-base font-bold rounded-lg transition-all flex items-center justify-center gap-1 focus:outline-none ${
                       genero === g ? 'bg-navy text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                     onClick={() => setGenero(g)}
@@ -230,7 +230,7 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
             </div>
 
             <div className="flex flex-col space-y-2">
-              <label htmlFor="age-input" className="text-xs md:text-sm font-bold text-navy uppercase tracking-wider flex items-center gap-1">
+              <label htmlFor="age-input" className="text-sm font-bold text-navy uppercase tracking-wider flex items-center gap-1">
                 <Calendar size={15} className="text-navy" /> Idade (Anos):
               </label>
               <input
@@ -241,13 +241,13 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
                 value={idade}
                 onChange={(e) => setIdade(e.target.value)}
                 placeholder="Idade"
-                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm md:text-base font-semibold rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy font-body shadow-inner"
+                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-base font-semibold rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy font-body shadow-inner"
               />
             </div>
           </div>
 
           <div className="flex flex-col space-y-2">
-            <label className="text-xs md:text-sm font-bold text-navy uppercase tracking-wider flex items-center gap-1">
+            <label className="text-sm font-bold text-navy uppercase tracking-wider flex items-center gap-1">
               <FileText size={15} className="text-navy" /> Finalidade da Inspeção:
             </label>
             <FinalidadeDropdown value={selectedFinalidade} onChange={setSelectedFinalidade} />
@@ -256,13 +256,13 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
 
         <div id="exams-card" className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col space-y-4">
           <div className="flex items-center justify-between border-b border-gray-100 pb-3 flex-wrap gap-2">
-            <h3 className="font-heading font-bold text-navy text-sm md:text-base tracking-wider flex items-center gap-2">
+            <h3 className="font-heading font-bold text-navy text-base tracking-wider flex items-center gap-2">
               <span className="material-symbols-outlined text-navy" style={{ fontSize: '22px' }}>
                 medical_information
               </span>
               Relação de Exames Mínimos
             </h3>
-            <span className="text-xs md:text-sm bg-navy/5 text-navy px-2.5 py-1 rounded-full font-bold font-mono">
+            <span className="text-sm bg-navy/5 text-navy px-2.5 py-1 rounded-full font-bold font-mono">
               {totalExames} exames
             </span>
           </div>
@@ -281,7 +281,7 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
                         <div key={ex.Exame} className="flex items-center justify-between gap-3 py-2.5 px-1 hover:bg-gray-50 transition-all">
                           <div className="flex items-center gap-2.5 min-w-0">
                             <CheckCircle2 size={18} className="text-navy flex-shrink-0" />
-                            <span className="text-sm md:text-base font-semibold text-navy font-body">{ex.Exame}</span>
+                            <span className="text-base font-semibold text-navy font-body">{ex.Exame}</span>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             {(ex.Condicao_Genero || ex.Condicao_Idade_Minima !== null) && (
@@ -297,7 +297,7 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
                                 title="Ver observações"
                                 aria-label={`Observações sobre ${ex.Exame}`}
                                 onClick={() => setObsModal({ exame: ex.Exame, texto: obs })}
-                                className="p-1.5 rounded-lg text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white transition-colors"
+                                className="p-1.5 rounded-lg text-navy bg-gray-100 hover:bg-navy hover:text-white transition-colors"
                               >
                                 <Info size={18} />
                               </button>
@@ -322,9 +322,9 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
       {obsModal && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setObsModal(null)}>
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-4 bg-[#050F41] text-white flex items-center justify-between gap-2">
+            <div className="p-4 bg-navy text-white flex items-center justify-between gap-2">
               <div className="flex items-center space-x-2 min-w-0">
-                <Info size={20} className="text-[#FAB932] flex-shrink-0" />
+                <Info size={20} className="text-gold flex-shrink-0" />
                 <h3 className="font-heading font-bold text-sm truncate">{obsModal.exame}</h3>
               </div>
               <button type="button" onClick={() => setObsModal(null)} aria-label="Fechar" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
@@ -335,7 +335,7 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
               <p className="text-xs font-bold text-ink-3 uppercase tracking-wider">Observações</p>
               <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{obsModal.texto}</p>
               <div className="flex justify-end">
-                <button type="button" onClick={() => setObsModal(null)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Fechar</button>
+                <button type="button" onClick={() => setObsModal(null)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Fechar</button>
               </div>
             </div>
           </div>

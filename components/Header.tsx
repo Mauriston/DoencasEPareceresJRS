@@ -56,7 +56,7 @@ export const UserDropdownContent: React.FC<{
     <div className="px-4 py-2.5 flex items-center space-x-2.5">
       <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} />
       <div className="min-w-0">
-        <p className="text-xs font-bold text-[#050F41] truncate">{authUser?.nome || 'Usuário'}</p>
+        <p className="text-xs font-bold text-navy truncate">{authUser?.nome || 'Usuário'}</p>
         <p className="text-xs font-semibold text-ink-3 uppercase tracking-wider truncate">
           {PERFIL_LABELS[authUser?.perfil || ''] || authUser?.perfil || 'perfil'}
         </p>
@@ -68,7 +68,7 @@ export const UserDropdownContent: React.FC<{
         onClick={onPerfilClick}
         className="w-full text-left px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center space-x-2.5 transition-colors cursor-pointer"
       >
-        <span className="material-symbols-outlined text-[18px] text-[#050F41]">account_circle</span>
+        <span className="material-symbols-outlined text-[18px] text-navy">account_circle</span>
         <span>Perfil</span>
       </button>
 
@@ -124,7 +124,7 @@ export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction,
   return (
     <>
     <header
-      className={`w-full sticky top-0 z-40 h-[56px] flex items-center justify-between transition-all duration-300 bg-[#050F41] text-white shadow-sm border-b border-white/10 shrink-0 ${
+      className={`w-full sticky top-0 z-40 h-[56px] flex items-center justify-between transition-all duration-300 bg-navy text-white shadow-sm border-b border-white/10 shrink-0 ${
         isScrolled ? 'shadow-md' : ''
       }`}
     >
@@ -144,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction,
         </div>
 
         {/* CENTER: PAGE TITLE (sempre centralizado na topbar, independente dos lados) */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[60%] text-center px-2 font-heading text-sm md:text-base font-bold tracking-wide truncate text-white pointer-events-none">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[60%] text-center px-2 font-heading text-base font-bold tracking-wide truncate text-white pointer-events-none">
           <span className="md:hidden">{title}</span>
           <span className="hidden md:inline">{resolvedDesktopTitle}</span>
         </div>
@@ -200,7 +200,7 @@ export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction,
         <button
           type="button"
           onClick={onBack}
-          className="pointer-events-auto flex items-center justify-center w-9 h-9 rounded-full bg-white text-[#050F41] shadow-md border border-gray-200/70 hover:bg-gray-50 active:scale-95 transition-all"
+          className="pointer-events-auto flex items-center justify-center w-9 h-9 rounded-full bg-white text-navy shadow-md border border-gray-200/70 hover:bg-gray-50 active:scale-95 transition-all"
           aria-label="Voltar"
           title="Voltar"
         >

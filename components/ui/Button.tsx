@@ -9,9 +9,9 @@ export type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'ghost';
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: 'bg-navy text-white border border-navy hover:bg-navy-hover active:bg-navy-pressed',
-  secondary: 'bg-white text-navy border border-navy hover:bg-[#F2F4F8]',
+  secondary: 'bg-white text-navy border border-navy hover:bg-thead',
   destructive: 'bg-white text-wine border border-wine hover:bg-wine/10',
-  ghost: 'bg-transparent text-navy border border-transparent hover:bg-[#F2F4F8]',
+  ghost: 'bg-transparent text-navy border border-transparent hover:bg-thead',
 };
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

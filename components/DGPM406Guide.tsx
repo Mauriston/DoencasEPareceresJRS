@@ -1,11 +1,11 @@
 // Ficheiro: components/DGPM406Guide.tsx
 import React, { useState } from 'react';
 import { Header } from './Header';
+import { Segmented } from './ui/Segmented';
 import { MarkdownDocPage } from './MarkdownDocPage';
 import { StoragePdfIconButton, StoragePdfFab } from './StoragePdfButtons';
 import { useStoragePdf } from '../hooks/useStoragePdf';
 import { capituloPdfPath, anexoPdfPath, NORMA_COMPLETA_PDF_PATH } from '../services/firebaseStorageNormas';
-import { BookOpen, Paperclip } from 'lucide-react';
 
 interface Chapter {
   id: string;
@@ -148,7 +148,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
 
   const navButtonClass = (active: boolean) =>
     `w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold leading-snug transition-colors ${
-      active ? 'bg-[#050F41] text-white' : 'text-gray-600 hover:bg-gray-100'
+      active ? 'bg-navy text-white' : 'text-gray-600 hover:bg-gray-100'
     }`;
 
   const chapterNav = navCard('Capítulos', CHAPTERS.map(item => (
@@ -199,22 +199,15 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
       {modalElement}
       <Header title="DGPM-406" onBack={onBack} />
 
-      <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
-        <button
-          onClick={() => setActiveTab('capitulos')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'capitulos' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-        >
-          <BookOpen size={16} />
-          <span>Capítulos</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('anexos')}
-          className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'anexos' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-        >
-          <Paperclip size={16} />
-          <span>Anexos</span>
-        </button>
+      <div className="px-4 md:px-6 lg:px-8 pt-4 max-w-[1600px] mx-auto w-full">
+        <Segmented
+          ariaLabel="Seção da DGPM-406"
+          fullWidth
+          className="md:w-auto md:inline-flex"
+          options={[{ value: 'capitulos', label: 'Capítulos', icon: 'menu_book' }, { value: 'anexos', label: 'Anexos', icon: 'attach_file' }]}
+          value={activeTab}
+          onChange={setActiveTab}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto w-full pb-24 md:pb-12">
@@ -225,7 +218,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
           <div className="hidden md:block bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-bold text-[#050F41] uppercase tracking-wider">
+                <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-bold text-navy uppercase tracking-wider">
                   <th className="py-3 px-4 w-44">Capítulo</th>
                   <th className="py-3 px-4">Título</th>
                   <th className="py-3 px-4 w-12"></th>
@@ -234,10 +227,10 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
               <tbody className="divide-y divide-gray-100">
                 {CHAPTERS.map(item => (
                   <tr key={item.id} onClick={() => handleChapterClick(item)} className="group hover:bg-gray-50 cursor-pointer transition-colors">
-                    <td className="py-3 px-4 text-sm font-heading font-bold text-[#050F41] group-hover:text-[#079551] whitespace-nowrap transition-colors">{item.chapter}</td>
+                    <td className="py-3 px-4 text-sm font-heading font-bold text-navy group-hover:text-green-700 whitespace-nowrap transition-colors">{item.chapter}</td>
                     <td className="py-3 px-4 text-xs font-medium text-gray-500 uppercase">{item.title}</td>
                     <td className="py-3 px-4 text-right">
-                      <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-[#050F41] transition-colors align-middle">
+                      <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors align-middle">
                         {item.mdKey ? 'chevron_right' : 'file_open'}
                       </span>
                     </td>
@@ -251,7 +244,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
           <div className="hidden md:block bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-bold text-[#050F41] uppercase tracking-wider">
+                <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-bold text-navy uppercase tracking-wider">
                   <th className="py-3 px-4 w-44">Anexo</th>
                   <th className="py-3 px-4">Título</th>
                   <th className="py-3 px-4 w-12"></th>
@@ -260,10 +253,10 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
               <tbody className="divide-y divide-gray-100">
                 {ANEXOS.map(item => (
                   <tr key={item.id} onClick={() => handleAnexoClick(item)} className="group hover:bg-gray-50 cursor-pointer transition-colors">
-                    <td className="py-3 px-4 text-sm font-heading font-bold text-[#050F41] group-hover:text-[#079551] whitespace-nowrap transition-colors">{item.anexo}</td>
+                    <td className="py-3 px-4 text-sm font-heading font-bold text-navy group-hover:text-green-700 whitespace-nowrap transition-colors">{item.anexo}</td>
                     <td className="py-3 px-4 text-xs font-medium text-gray-500 uppercase">{item.title}</td>
                     <td className="py-3 px-4 text-right">
-                      <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-[#050F41] transition-colors align-middle">
+                      <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors align-middle">
                         {item.mdKey ? 'chevron_right' : 'file_open'}
                       </span>
                     </td>
@@ -280,13 +273,13 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
                 key={item.id}
                 type="button"
                 onClick={() => handleChapterClick(item)}
-                className="group flex items-center gap-3 bg-white rounded-xl border border-gray-200/60 px-4 py-3 hover:shadow-md hover:border-[#079551] transition-all duration-200 cursor-pointer text-left"
+                className="group flex items-center gap-3 bg-white rounded-xl border border-gray-200/60 px-4 py-3 hover:shadow-md hover:border-green transition-all duration-200 cursor-pointer text-left"
               >
-                <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-[#050F41] transition-colors shrink-0">
+                <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors shrink-0">
                   {item.mdKey ? 'single_arrow' : 'file_open'}
                 </span>
                 <div className="flex flex-col min-w-0 flex-1">
-                  <h3 className="text-[#050F41] font-heading font-bold text-sm leading-snug group-hover:text-[#079551] transition-colors">
+                  <h3 className="text-navy font-heading font-bold text-sm leading-snug group-hover:text-green-700 transition-colors">
                     {item.chapter}
                   </h3>
                   <p className="text-gray-500 font-body text-xs font-medium leading-relaxed line-clamp-2">
@@ -301,13 +294,13 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
                 key={item.id}
                 type="button"
                 onClick={() => handleAnexoClick(item)}
-                className="group flex items-center gap-3 bg-white rounded-xl border border-gray-200/60 px-4 py-3 hover:shadow-md hover:border-[#079551] transition-all duration-200 cursor-pointer text-left"
+                className="group flex items-center gap-3 bg-white rounded-xl border border-gray-200/60 px-4 py-3 hover:shadow-md hover:border-green transition-all duration-200 cursor-pointer text-left"
               >
-                <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-[#050F41] transition-colors shrink-0">
+                <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors shrink-0">
                   {item.mdKey ? 'single_arrow' : 'file_open'}
                 </span>
                 <div className="flex flex-col min-w-0 flex-1">
-                  <h3 className="text-[#050F41] font-heading font-bold text-sm leading-snug group-hover:text-[#079551] transition-colors">
+                  <h3 className="text-navy font-heading font-bold text-sm leading-snug group-hover:text-green-700 transition-colors">
                     {item.anexo}
                   </h3>
                   <p className="text-gray-500 font-body text-xs font-medium leading-relaxed line-clamp-2">
