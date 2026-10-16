@@ -1,11 +1,15 @@
 // Ficheiro: components/DiseaseGuide.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { DISEASES } from '../constants';
 import { Disease, Diagnosis } from '../types';
 import { ChevronRight, Info, Brain, HeartPulse, EyeOff, Radiation, Accessibility, Stethoscope, Ribbon, X, Download, ArrowLeft } from './ui/icons';
 import { jsPDF } from 'jspdf';
 import { Container, PageHeader } from './ui/Page';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { NavContext } from '../context/NavContext';
+import { canAccessPage } from '../config/permissions';
+import { pathForView } from '../config/routes';
+import { EmptyState } from './ui/EmptyState';
 import { useBreadcrumbs } from '../context/BreadcrumbContext';
 import { doencaPath } from '../config/routes';
 import { Button } from './ui/Button';
@@ -234,6 +238,7 @@ const getShortDiseaseName = (name: string) => {
 export const DiseaseGuide: React.FC = () => {
   // Os três níveis são rotas: /beneficios/doencas · /:doencaId · /:doencaId/:diagnosticoIdx
   const navigate = useNavigate();
+  const nav = useContext(NavContext);
   const { doencaId, diagnosticoIdx } = useParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -260,8 +265,11 @@ export const DiseaseGuide: React.FC = () => {
   const [isBavImageExpanded, setIsBavImageExpanded] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  // Checklist de documentos reunidos (apenas visual; zera ao trocar de diagnóstico).
+  const [docsMarcados, setDocsMarcados] = useState<Set<number>>(new Set());
+  const podeVerPortaria = canAccessPage('portaria', nav?.authUser?.perfil);
 
-  useEffect(() => { setIsCopied(false); }, [selectedDiagnosis]);
+  useEffect(() => { setIsCopied(false); setDocsMarcados(new Set()); }, [selectedDiagnosis]);
 
   const handleDiseaseClick = (disease: Disease) => navigate(doencaPath(disease.id));
 
@@ -332,25 +340,21 @@ export const DiseaseGuide: React.FC = () => {
         <Container size="reading" className="py-6 md:py-8 pb-10 space-y-6">
           <PageHeader title={selectedDisease.name} description="Selecione o diagnóstico pericial associado" />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-3">
             {selectedDisease.diagnoses.map((diagnosis, idx) => (
-              <div 
+              <Link
                 key={idx}
-                onClick={() => navigate(doencaPath(selectedDisease.id, idx))}
-                className="bg-white rounded-2xl p-4 md:p-5 border border-gray-200/60 shadow-sm hover:shadow-md hover:border-gray-300 transition-all cursor-pointer flex items-center justify-between group"
+                to={doencaPath(selectedDisease.id, idx)}
+                className="bg-white rounded-xl p-4 border border-line hover:border-navy transition-colors flex items-center justify-between gap-3 min-h-[64px] group"
               >
-                <div className="flex items-center space-x-3.5 pr-2">
-                  <div className="w-10 h-10 rounded-xl bg-navy/5 flex items-center justify-center shrink-0 [&>svg]:text-navy">
+                <span className="flex items-center gap-3.5 min-w-0">
+                  <span className="w-10 h-10 rounded-lg bg-thead flex items-center justify-center shrink-0 [&>svg]:text-navy">
                     {getDiseaseIcon(selectedDisease.name)}
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-gray-800 group-hover:text-navy transition-colors font-body">
-                      {diagnosis.name}
-                    </h3>
-                  </div>
-                </div>
-                <ChevronRight size={20} className="text-ink-3 group-hover:text-navy group-hover:translate-x-0.5 transition-all shrink-0" />
-              </div>
+                  </span>
+                  <span className="text-base font-bold text-navy">{diagnosis.name}</span>
+                </span>
+                <ChevronRight size={20} className="text-ink-4 group-hover:text-navy shrink-0" />
+              </Link>
             ))}
           </div>
         </Container>
@@ -358,84 +362,102 @@ export const DiseaseGuide: React.FC = () => {
     );
   }
 
-  // PAGE LEVEL 3: Final Detail (Definition, Criteria, Documents)
+  // PAGE LEVEL 3: Final Detail — leitura em 8 colunas (≈70 caracteres por linha)
+  // + aside de 4 com os documentos necessários (checklist) e as ações rotuladas.
   if (selectedDisease && selectedDiagnosis) {
     const isDemencia = selectedDisease.name === "Alienação Mental" && selectedDiagnosis.name === "Demência";
+    const totalDocs = selectedDisease.documents.length;
+    const secao = 'bg-white rounded-xl p-5 md:p-6 border border-line';
+    const tituloSecao = 'font-heading font-bold text-lg text-navy mb-3 pb-2 border-b border-line flex items-center gap-2';
     return (
       <div className="animate-fade-in flex flex-col flex-1 relative">
-        <Container size="data" className="py-6 md:py-8 pb-28 md:pb-10 space-y-6">
+        <Container size="data" className="py-6 md:py-8 pb-28 md:pb-10">
           <PageHeader
             title={selectedDisease.name}
             description={selectedDisease.diagnoses.length > 1 ? `Diagnóstico pericial: ${selectedDiagnosis.name}` : undefined}
-            actions={(
-              <div className="hidden md:flex gap-2">
-                <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} onClick={handleCopy}>{isCopied ? 'Copiado' : 'Copiar'}</Button>
-                <Button icon="download" onClick={handleDownloadPDF}>Baixar PDF</Button>
-              </div>
-            )}
           />
 
+          <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start space-y-6 lg:space-y-0">
+            <div className="lg:col-span-8 space-y-6 min-w-0">
+              <section className={secao}>
+                <h2 className={tituloSecao}>
+                  <span className="material-symbols-outlined text-navy" aria-hidden="true">menu_book</span>Definição
+                </h2>
+                <p className="text-base text-ink leading-relaxed">{selectedDisease.definition}</p>
+              </section>
 
-          <div className="space-y-6 w-full">
-            <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-              <h3 className="font-heading font-bold text-lg text-navy mb-3 border-b border-gray-100 pb-2 flex items-center">
-                <span className="material-symbols-outlined mr-2 text-navy">menu_book</span>Definição
-              </h3>
-              <p className="font-body text-gray-800 text-base leading-relaxed font-medium">{selectedDisease.definition}</p>
+              {selectedDisease.name === "SIDA/AIDS" && (
+                <section className={secao}>
+                  <h2 className={tituloSecao}>
+                    <span className="material-symbols-outlined text-navy" aria-hidden="true">grid_on</span>Classificação
+                  </h2>
+                  <p className="text-base text-ink leading-relaxed">Grupos I (CD4 ≥500), II (200-499), III (&lt;200) / Classes A, B, C por sintomas e condições definidoras.</p>
+                </section>
+              )}
+
+              {isDemencia && (
+                <section className={secao}>
+                  <h2 className={tituloSecao}>
+                    <span className="material-symbols-outlined text-navy" aria-hidden="true">psychology</span>Avaliação de cognição
+                  </h2>
+                  <p className="text-sm text-ink-3 mb-4">A avaliação do escore CDR é fundamental para quantificar a gravidade do comprometimento cognitivo.</p>
+                  <Button icon="calculate" fullWidth onClick={() => setIsCalculatorOpen(true)}>CDR Score Calculator</Button>
+                </section>
+              )}
+
+              <section className={secao}>
+                <h2 className={tituloSecao}>
+                  <span className="material-symbols-outlined text-navy" aria-hidden="true">verified</span>Critérios de gravidade
+                </h2>
+                <ol className="space-y-4">
+                  {selectedDiagnosis.criteria.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-3 text-base text-ink">
+                      <span className="w-7 h-7 rounded-full bg-navy text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5" aria-hidden="true">{idx + 1}</span>
+                      <span className="leading-relaxed flex-1">{item}</span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
             </div>
 
-            {selectedDisease.name === "SIDA/AIDS" && (
-              <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-                <h3 className="font-heading font-bold text-lg text-navy mb-4 border-b border-gray-100 pb-2 flex items-center">
-                  <span className="material-symbols-outlined mr-2 text-navy">grid_on</span>Classificação
-                </h3>
-                <p className="text-sm text-gray-600 font-medium">Grupos I (CD4 ≥500), II (200-499), III (&lt;200) / Classes A, B, C por sintomas e condições definidoras.</p>
+            <aside className="lg:col-span-4 lg:sticky lg:top-6 space-y-4 min-w-0" aria-label="Documentos e ações">
+              <section className={secao}>
+                <h2 className={tituloSecao}>
+                  <span className="material-symbols-outlined text-navy" aria-hidden="true">folder_open</span>Documentos necessários
+                </h2>
+                <p className="text-xs font-semibold text-ink-3 mb-2" aria-live="polite">{docsMarcados.size} de {totalDocs} reunidos</p>
+                <ul className="space-y-1">
+                  {selectedDisease.documents.map((item, idx) => (
+                    <li key={idx}>
+                      <label className="flex items-start gap-3 min-h-[44px] py-2 cursor-pointer rounded-lg hover:bg-thead px-1">
+                        <input
+                          type="checkbox"
+                          checked={docsMarcados.has(idx)}
+                          onChange={() => setDocsMarcados(prev => { const proximo = new Set(prev); if (proximo.has(idx)) proximo.delete(idx); else proximo.add(idx); return proximo; })}
+                          className="mt-1 w-5 h-5 shrink-0 accent-navy"
+                        />
+                        <span className={`text-sm leading-snug ${docsMarcados.has(idx) ? 'text-ink-3 line-through' : 'text-ink'}`}>{item}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <div className="hidden md:flex flex-col gap-2">
+                <Button icon="download" fullWidth onClick={handleDownloadPDF}>Baixar PDF</Button>
+                <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} fullWidth onClick={handleCopy}>{isCopied ? 'Copiado' : 'Copiar texto'}</Button>
+                {podeVerPortaria && (
+                  <Link to={pathForView('portaria')} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold text-navy hover:bg-thead transition-colors">
+                    <span className="material-symbols-outlined text-[20px]" aria-hidden="true">article</span>
+                    Ler a Portaria GM-MD nº 3.551/2021
+                  </Link>
+                )}
               </div>
-            )}
-
-            {isDemencia && (
-              <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm w-full">
-                <h3 className="font-heading font-bold text-base text-navy mb-3 flex items-center">
-                  <span className="material-symbols-outlined mr-2 text-red-700">psychology</span>Avaliação de cognição
-                </h3>
-                <p className="text-xs text-gray-600 mb-4">A avaliação do escore CDR é fundamental para quantificar a gravidade do comprometimento cognitivo.</p>
-                <button onClick={() => setIsCalculatorOpen(true)} className="w-full py-3 bg-red-800 text-white rounded-xl font-bold flex items-center justify-center hover:bg-red-900 transition-colors shadow-sm text-sm">
-                  <span className="material-symbols-outlined mr-2">calculate</span>CDR Score Calculator
-                </button>
-              </div>
-            )}
-
-            <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-              <h3 className="font-heading font-bold text-lg text-navy mb-3 border-b border-gray-100 pb-2 flex items-center">
-                <span className="material-symbols-outlined mr-2 text-navy">verified</span>Critérios de gravidade
-              </h3>
-              <ul className="space-y-3.5">
-                {selectedDiagnosis.criteria.map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-base text-gray-700 font-body">
-                    <span className="w-2 h-2 rounded-full bg-green shrink-0 mt-2" />
-                    <span className="leading-relaxed flex-1">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-              <h3 className="font-heading font-bold text-lg text-navy mb-3 border-b border-gray-100 pb-2 flex items-center">
-                <span className="material-symbols-outlined mr-2 text-navy">folder_open</span>Documentos necessários
-              </h3>
-              <ul className="space-y-3">
-                {selectedDisease.documents.map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-base text-gray-700 font-body">
-                    <span className="w-2 h-2 rounded-full bg-navy shrink-0 mt-2" />
-                    <span className="leading-relaxed flex-1 font-medium">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            </aside>
           </div>
-                </Container>
+        </Container>
 
-        {/* Mobile: barra de ações rotulada (antes, dois botões circulares só com ícone). */}
+        {/* Mobile: barra de ações rotulada. */}
         <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-line p-3 flex gap-2" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
           <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} onClick={handleCopy} className="flex-1">{isCopied ? 'Copiado' : 'Copiar'}</Button>
           <Button icon="download" onClick={handleDownloadPDF} className="flex-1">Baixar PDF</Button>
@@ -444,26 +466,66 @@ export const DiseaseGuide: React.FC = () => {
     );
   }
 
-  // PAGE LEVEL 1: Main Diseases Grid
+  // PAGE LEVEL 1: lista de doenças com busca no topo (nome, diagnóstico e critério).
+  const consultaAtiva = searchQuery.trim().length > 0;
+  const tituloTipo: Record<string, string> = { disease: 'Doenças', diagnosis: 'Diagnósticos', criterion: 'Critérios' };
   return (
     <div className="flex flex-col flex-1 animate-fade-in">
       <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
         <PageHeader title="Doenças previstas em lei" description="Verifique as definições, os critérios clínicos e os documentos necessários para o enquadramento." />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {DISEASES.map((disease) => (
-            <div key={disease.id} className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md hover:border-gray-300">
-              <div onClick={() => handleDiseaseClick(disease)} className="p-4 cursor-pointer flex items-center justify-between hover:bg-gray-50/50 transition-colors">
-                <div className="flex items-center space-x-3 truncate pr-2">
-                  {getDiseaseIcon(disease.name)}
-                  <h3 className="text-navy font-heading text-base font-semibold truncate m-0">
-                    {disease.name.toLowerCase().includes("paget") ? "Doença de Paget" : disease.name}
-                  </h3>
-                </div>
-                <ChevronRight size={16} className="text-ink-3 shrink-0" />
-              </div>
-            </div>
-          ))}
+
+        <div className="relative max-w-form">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            aria-label="Buscar doença, diagnóstico ou critério"
+            placeholder="Buscar por doença, diagnóstico ou critério…"
+            autoComplete="off"
+            className="w-full min-h-[44px] pl-10 pr-4 rounded-lg border border-line bg-white text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+          />
         </div>
+
+        {consultaAtiva ? (
+          <div className="space-y-5" role="region" aria-label="Resultados da busca" aria-live="polite">
+            {searchResults.length === 0 ? (
+              <div className="bg-white border border-line rounded-xl"><EmptyState icon="search_off" title="Nenhum resultado" description={`Nada encontrado para “${searchQuery}”.`} /></div>
+            ) : (['disease', 'diagnosis', 'criterion'] as const).map(tipo => {
+              const itens = searchResults.filter(r => r.type === tipo).slice(0, 12);
+              if (itens.length === 0) return null;
+              return (
+                <section key={tipo}>
+                  <h2 className="eyebrow mb-2">{tituloTipo[tipo]} ({searchResults.filter(r => r.type === tipo).length})</h2>
+                  <ul className="bg-white border border-line rounded-xl divide-y divide-line overflow-clip">
+                    {itens.map(r => (
+                      <li key={r.id}>
+                        <button type="button" onClick={() => handleSearchResultClick(r)} className="w-full text-left px-4 min-h-[52px] py-2.5 hover:bg-thead transition-colors">
+                          <span className="block text-sm font-bold text-navy">{r.name}</span>
+                          {r.sub && <span className="block text-xs text-ink-3 mt-0.5">{r.sub}</span>}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {DISEASES.map((disease) => (
+              <Link key={disease.id} to={doencaPath(disease.id)} className="bg-white rounded-xl border border-line hover:border-navy transition-colors p-4 flex items-center justify-between gap-2 min-h-[64px]">
+                <span className="flex items-center gap-3 min-w-0">
+                  {getDiseaseIcon(disease.name)}
+                  <span className="text-navy font-heading text-base font-semibold truncate">
+                    {disease.name.toLowerCase().includes("paget") ? "Doença de Paget" : disease.name}
+                  </span>
+                </span>
+                <ChevronRight size={20} className="text-ink-4 shrink-0" />
+              </Link>
+            ))}
+          </div>
+        )}
       </Container>
     </div>
   );

@@ -18,3 +18,9 @@ export const formatCelular = (val: string | undefined | null): string => {
   if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 };
+
+/** "CT (RM2-Md) 12.3456.78 FULANO DE TAL" → "FULANO DE TAL" (remove posto e NIP). */
+export const extrairNomeInspecionado = (texto: string): string => {
+  const partes = texto.split(/\d{2}\.\d{4}\.\d{2}/);
+  return partes.length > 1 ? partes[1].trim() : texto.trim();
+};
