@@ -33,6 +33,7 @@ import { useStoragePdf } from '../hooks/useStoragePdf';
 import { Button } from './ui/Button';
 import { Segmented } from './ui/Segmented';
 import { EmptyState } from './ui/EmptyState';
+import { AccessDenied } from './ui/AccessDenied';
 import { controlClass } from './ui/Field';
 import { ConfirmDialog } from './ui/Dialog';
 import { Toast } from './ui/Toast';
@@ -392,19 +393,30 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
   };
 
   return (
-    <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 bg-navy text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-2">
-            <span className="material-symbols-outlined text-[22px] text-gold">upload_file</span>
-            <h3 className="font-heading font-bold text-sm">Registrar Mensagem (PDF) — Novo Concurso</h3>
-          </div>
-          <button onClick={() => onClose(step === 'concluido' ? concursoId || undefined : undefined)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
-
-        <div className="p-5 overflow-y-auto space-y-4 flex-1">
+    <Container size="form" className="py-6 md:py-8 pb-10 animate-fade-in">
+      <PageHeader title="Novo concurso" description="Registre a mensagem em PDF; o concurso nasce com os candidatos identificados." />
+      {/* F60: etapas numeradas e escritas — 1 Mensagem · 2 Revisão · 3 Agendamento. */}
+      <ol className="flex items-center gap-2 mb-5" aria-label="Etapas do novo concurso">
+        {[
+          { n: 1, rotulo: 'Mensagem', ativa: step === 'select' || step === 'processando' },
+          { n: 2, rotulo: 'Revisão', ativa: step === 'revisao' },
+          { n: 3, rotulo: 'Agendamento', ativa: step === 'agendamento' || step === 'concluido' },
+        ].map((e, i, arr) => {
+          const indiceAtual = arr.findIndex(x => x.ativa);
+          const feita = i < indiceAtual;
+          return (
+            <li key={e.n} className="flex items-center gap-2 flex-1 last:flex-none" aria-current={e.ativa ? 'step' : undefined}>
+              <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 border ${e.ativa ? 'bg-navy text-white border-navy' : feita ? 'bg-white text-green-700 border-green-700' : 'bg-white text-ink-3 border-line'}`}>
+                {feita ? <span className="material-symbols-outlined text-[18px]" aria-label="concluída">check</span> : e.n}
+              </span>
+              <span className={`text-sm font-semibold ${e.ativa ? 'text-navy' : 'text-ink-3'}`}>{e.rotulo}</span>
+              {i < arr.length - 1 && <span className="flex-1 h-px bg-line" aria-hidden="true" />}
+            </li>
+          );
+        })}
+      </ol>
+      <div className="bg-white rounded-xl border border-line">
+        <div className="p-5 space-y-4">
           {erro && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 font-semibold">{erro}</div>
           )}
@@ -635,7 +647,7 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
           )}
         </div>
       </div>
-    </div>
+    </Container>
   );
 };
 
@@ -3216,7 +3228,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                             ) : null}
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-semibold text-gray-800 truncate">{c.nome}</span>
+                            <span className="flex items-center gap-2 min-w-0">
+                              <span className="text-sm font-semibold text-ink truncate">{c.nome}</span>
+                              {c.id === proximoCandidatoId && <StatusTag tone="navyOutline" dot={false}>Próximo</StatusTag>}
+                            </span>
                             {c.observacoes && (
                               <span className="block text-xs text-gray-500 truncate">{c.observacoes}</span>
                             )}
@@ -3482,7 +3497,6 @@ export const ConcursosJRS: React.FC = () => {
 
   const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
   const [loadingConcursos, setLoadingConcursos] = useState(true);
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [showImportarCsvModal, setShowImportarCsvModal] = useState(false);
 
   const carregarConcursos = async () => {
@@ -3503,9 +3517,8 @@ export const ConcursosJRS: React.FC = () => {
   }, []);
 
   const handleFecharModalUpload = (concursoIdCriado?: string) => {
-    setShowUploadModal(false);
     carregarConcursos();
-    if (concursoIdCriado) setSelectedConcursoId(concursoIdCriado);
+    setSelectedConcursoId(concursoIdCriado ?? null);
   };
 
   const handleFecharModalImportarCsv = (concursoIdCriado?: string) => {
@@ -3513,6 +3526,13 @@ export const ConcursosJRS: React.FC = () => {
     carregarConcursos();
     if (concursoIdCriado) setSelectedConcursoId(concursoIdCriado);
   };
+
+  // /concursos/novo: criação do concurso como página própria (F60), com a mesma permissão do botão.
+  if (selectedConcursoId === 'novo') {
+    return podeRegistrarMensagem
+      ? <ModalRegistrarMensagem onClose={handleFecharModalUpload} isAdmin={isAdmin} />
+      : <AccessDenied pagina="Novo concurso" />;
+  }
 
   if (selectedConcursoId) {
     return (
@@ -3538,11 +3558,10 @@ export const ConcursosJRS: React.FC = () => {
         podeAdicionarCandidato={podeAdicionarCandidato}
         podeVisualizarTabela={podeVisualizarTabela}
         onSelecionar={setSelectedConcursoId}
-        onNovoConcursoClick={() => setShowUploadModal(true)}
+        onNovoConcursoClick={() => nav?.navigate('/concursos/novo')}
         onImportarCsvClick={() => setShowImportarCsvModal(true)}
         onRecarregar={carregarConcursos}
       />
-      {showUploadModal && <ModalRegistrarMensagem onClose={handleFecharModalUpload} isAdmin={isAdmin} />}
       {showImportarCsvModal && <ModalImportarCsv onClose={handleFecharModalImportarCsv} />}
     </>
   );
