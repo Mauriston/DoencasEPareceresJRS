@@ -7,8 +7,13 @@ import { EmptyState } from './ui/EmptyState';
 import { PericiaMenorDetalhe } from './PericiaMenorDetalhe';
 import { PericiaStatusTags } from './ui/PericiaStatusTags';
 import { Button } from './ui/Button';
+import { Field, controlClass } from './ui/Field';
+import { ChoiceGroup } from './ui/ChoiceGroup';
+import { Dialog, ConfirmDialog } from './ui/Dialog';
+import { Toast } from './ui/Toast';
+import { GAS_URL } from '../config/endpoints';
 import { Segmented } from './ui/Segmented';
-import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown, CheckCircle, Camera, Crop as CropIcon, Sparkles, X } from './ui/icons';
+import { CheckCircle2, ChevronDown, Camera, Crop as CropIcon, X } from './ui/icons';
 import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { NavContext } from '../context/NavContext';
@@ -42,8 +47,6 @@ const QUADROS = ["AA", "AFN", "CA", "CD", "CN", "EN", "FN", "IM", "Md", "QC-CA",
 const ESP_PRACAS = ["AD", "AH", "AM", "AR", "MC", "MT", "AT", "AV", "BA", "CA", "CP", "CI", "CN", "CL", "CT", "CO", "DA", "DM", "DT", "ED", "EP", "EL", "ET", "TE", "EF", "EG", "ES", "AE", "EN", "FR", "GC", "GR", "HN", "HD", "IF", "MR", "MA", "NA", "MI", "MG", "ML", "ME", "MO", "MS", "MU", "ND", "OR", "OS", "PL", "PC", "PD", "PT", "QI", "RM", "RB", "SC", "SI", "TC"];
 
 const removeAcentos = (str: string) => str.normalize("NFD").replace(/[̀-ͯ]/g, "");
-
-const GAS_URL = "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
 
 export const PericiaMenor: React.FC = () => {
   const nav = useContext(NavContext);
@@ -104,6 +107,11 @@ export const PericiaMenor: React.FC = () => {
   const [peritosDisponiveis, setPeritosDisponiveis] = useState<any[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [erros, setErros] = useState<Record<string, string>>({});
+  const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const avisar = (msg: string, tone: 'success' | 'error' = 'error') => { setToast({ msg, tone }); window.setTimeout(() => setToast(null), 5000); };
+  const limparErro = (k: string) => setErros(er => (er[k] ? { ...er, [k]: '' } : er));
   const [successPdfUrl, setSuccessPdfUrl] = useState<string | null>(null);
   // Aba e pessoa são níveis da URL: /pericia-menor/novo · /historico · /historico/:pessoa.
   const { aba: abaParam, pessoa: pessoaParam } = useParams();
@@ -116,7 +124,6 @@ export const PericiaMenor: React.FC = () => {
   const [history, setHistory] = useState<PericiaMenorRecord[]>([]);
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
-  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [filterVigente, setFilterVigente] = useState(true);
   const [filterConcluido, setFilterConcluido] = useState(false);
   const [filterLts, setFilterLts] = useState(false);
@@ -126,7 +133,6 @@ export const PericiaMenor: React.FC = () => {
   const selectedPerson: string | null = pessoaParam ? decodeURIComponent(pessoaParam) : null;
   const setSelectedPerson = (nome: string | null) => nav?.navigate(nome ? periciaMenorPath('historico', nome) : periciaMenorPath('historico'));
   const [vigentesCount, setVigentesCount] = useState(0);
-  const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchLookups = async () => {
@@ -303,24 +309,53 @@ export const PericiaMenor: React.FC = () => {
           if (foundCid) { setSelectedCid(foundCid); setCidQuery(''); } else setCidQuery(result.data.cid);
         }
         if (result.data.nomeMilitar) await abrirModalPesquisaNome(result.data.nomeMilitar, true);
-      } else alert(`Aviso: ${result.message || "Não foi possível ler o documento."}`);
-    } catch (err) { console.error(err); alert("Erro de comunicação com o servidor ao invocar a IA."); }
+      } else avisar(`Aviso: ${result.message || 'Não foi possível ler o documento.'}`);
+    } catch (err) { console.error(err); avisar('Erro de comunicação com o servidor ao invocar a IA.'); }
     finally { setIsExtracting(false); }
   };
 
   const handleReset = () => {
     setSuccessPdfUrl(null); setNip(''); setMilitarStatus(""); setSearchError(''); setServicoQuery(''); setSelectedServico(null);
     setDataAtestado(''); setTempoAtestado(''); setCidQuery(''); setSelectedCid(null); setTempoHomologacao('');
-    setSelectedDispensas([]); setVdf(null); setSelectedPerito(''); setNome(''); setPg(''); setQuadro('');
+    setSelectedDispensas([]); setVdf(null); setSelectedPerito(''); setNome(''); setPg(''); setQuadro(''); setErros({});
     setEspPraca(''); setOm(''); setSituacao(''); setCirculo(''); setOmLeitura(''); setCroppedImageUrl('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSubmit = async () => {
-    if (!nip || !selectedServico || !dataAtestado || !tempoAtestado || !selectedCid || !tempoHomologacao || selectedDispensas.length === 0 || vdf === null || !selectedPerito) {
-      alert("Por favor, preencha todos os campos obrigatórios (*)"); return;
+  const validar = () => {
+    const e: Record<string, string> = {};
+    if (!selectedServico) e.servico = 'Selecione o serviço na lista.';
+    if (!nip) e.nip = 'Informe o NIP do militar.';
+    else if (nip.length < 10) e.nip = 'O NIP tem o formato 00.0000.00.';
+    if (!dataAtestado) e.dataAtestado = 'Informe a data do atestado.';
+    if (!tempoAtestado) e.tempoAtestado = 'Informe o tempo do atestado.';
+    if (!selectedCid) e.cid = 'Selecione o CID na lista.';
+    if (!tempoHomologacao) e.tempoHomolog = 'Informe o tempo homologado.';
+    if (selectedDispensas.length === 0) e.dispensas = 'Selecione ao menos uma dispensa.';
+    if (vdf === null) e.vdf = 'Indique se há VDF.';
+    if (!selectedPerito) e.perito = 'Selecione o perito.';
+    if (militarStatus === 'not_found') {
+      if (!pg) e.pg = 'Selecione o posto/graduação.';
+      if (!om.trim()) e.om = 'Informe a OM.';
+      if (!nome.trim()) e.nome = 'Informe o nome completo.';
     }
-    if (militarStatus === "not_found" && (!pg || !om || !nome)) { alert("Preencha os dados manuais do militar."); return; }
+    return e;
+  };
+
+  const handleSubmit = () => {
+    const novos = validar();
+    setErros(novos);
+    if (Object.keys(novos).length > 0) {
+      avisar('Revise os campos destacados.');
+      requestAnimationFrame(() => document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+      return;
+    }
+    setShowConfirm(true);
+  };
+
+  const executeSubmit = async () => {
+    setShowConfirm(false);
+    if (!selectedServico || !selectedCid) return;
     setIsSubmitting(true);
     let militarIdentifier = militarStatus === "found" ? inspecionado : `${pg} ${quadro ? quadro + ' ' : ''}${espPraca ? espPraca + ' ' : ''}${nip} ${nome}`.trim().replace(/\s+/g, ' ');
     const tempoHomologNumerico = parseInt(tempoHomologacao.replace(/\D/g, ''), 10);
@@ -337,8 +372,8 @@ export const PericiaMenor: React.FC = () => {
       const response = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
       const data = await response.json();
       if (data.success) setSuccessPdfUrl(data.pdfUrl);
-      else alert("Erro ao gerar Perícia Menor: " + data.message);
-    } catch (error) { console.error(error); alert("Falha na comunicação com o servidor."); }
+      else avisar('Erro ao gerar Perícia Menor: ' + data.message);
+    } catch (error) { console.error(error); avisar('Falha na comunicação com o servidor.'); }
     finally { setIsSubmitting(false); }
   };
 
@@ -359,12 +394,6 @@ export const PericiaMenor: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, canHistorico]);
 
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => { if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSearchDropdown(false); };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
   const isRestricao = (r: PericiaMenorRecord) => r.dispensas.trim() !== '' && !r.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES');
   const vigentesTotal = history.filter(r => r.vigente).length;
   const concluidosTotal = history.filter(r => r.concluido).length;
@@ -382,9 +411,21 @@ export const PericiaMenor: React.FC = () => {
     .filter(r => historySearch === '' || r.inspecionado.toLowerCase().includes(historySearch.toLowerCase()))
     .sort((a, b) => { let cmp = sortCol === 'data' ? parseDate(a.dataAtestado) - parseDate(b.dataAtestado) : a.inspecionado.localeCompare(b.inspecionado, 'pt-BR'); return sortDir === 'asc' ? cmp : -cmp; });
 
-  const searchSuggestions = historySearch.length >= 1
-    ? Array.from(new Set<string>(history.map(r => r.inspecionado))).filter(n => n.toLowerCase().includes(historySearch.toLowerCase())).slice(0, 8)
-    : [];
+  // Os filtros continuam exclusivos entre si (vigentes × concluídas, LTS × restrições);
+  // "Todas"/"Todos os tipos" = nenhum filtro ativo.
+  const statusFiltro: 'vigentes' | 'concluidas' | 'todas' = filterVigente ? 'vigentes' : filterConcluido ? 'concluidas' : 'todas';
+  const definirStatusFiltro = (v: 'vigentes' | 'concluidas' | 'todas') => { setFilterVigente(v === 'vigentes'); setFilterConcluido(v === 'concluidas'); };
+  const tipoFiltro: 'todos' | 'lts' | 'restricoes' = filterLts ? 'lts' : filterRestricoes ? 'restricoes' : 'todos';
+  const definirTipoFiltro = (v: 'todos' | 'lts' | 'restricoes') => { setFilterLts(v === 'lts'); setFilterRestricoes(v === 'restricoes'); };
+  const iconeOrdem = (col: 'data' | 'inspecionado') => (sortCol === col ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more');
+  const ariaSort = (col: 'data' | 'inspecionado') => (sortCol === col ? (sortDir === 'asc' ? 'ascending' as const : 'descending' as const) : 'none' as const);
+  const resultadosNome = militaresInfoList.filter(m => {
+    if (!pesquisarNomeTerm.trim()) return false;
+    const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean);
+    const name = removeAcentos(m.nome.toLowerCase());
+    return terms.every(t => name.includes(t));
+  });
+  const card = 'bg-white rounded-xl border border-line p-5 space-y-4';
 
   if (selectedPerson !== null && canHistorico) {
     const personRecords = history.filter(r => r.inspecionado === selectedPerson);
@@ -399,6 +440,7 @@ export const PericiaMenor: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1 relative">
+      <Toast message={toast?.msg ?? null} tone={toast?.tone} />
       <Container size="data" className="pt-6 md:pt-8">
         <PageHeader title="Perícia Menor" description="Registre e consulte as Perícias Menores dos militares de bordo." />
       </Container>
@@ -415,257 +457,328 @@ export const PericiaMenor: React.FC = () => {
       </Container>
       )}
 
-      {activeTab === 'novo' && canNovo && (
-      <Container size="data" className="pb-10 space-y-6">
-        {/* IA Section */}
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 animate-fade-in shadow-inner">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2"><Camera size={16} className="text-blue-600" /> Leitura Inteligente (IA)</h3>
-          </div>
-          {!croppedImageUrl ? (
-            <div className="flex justify-center">
-              <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={onSelectFile} className="hidden" />
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full py-3.5 bg-white border border-blue-300 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 shadow-sm"><Camera size={18} /> Fotografar Atestado</button>
+      {activeTab === 'novo' && canNovo && successPdfUrl && (
+        <Container size="form" className="pb-10">
+          <div className="bg-white rounded-xl border border-line p-6 md:p-8 text-center flex flex-col items-center gap-3">
+            <span className="material-symbols-outlined text-[48px] text-green-700" aria-hidden="true">check_circle</span>
+            <h2 className="font-heading text-xl font-bold text-navy">Perícia menor gerada</h2>
+            <p className="text-sm text-ink-2 max-w-sm">O PDF foi salvo no Google Drive e a planilha foi atualizada.</p>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2">
+              <a href={successPdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover">
+                <span className="material-symbols-outlined text-[20px]" aria-hidden="true">picture_as_pdf</span>Ver PDF gerado
+              </a>
+              <Button variant="ghost" icon="add" onClick={handleReset}>Nova perícia menor</Button>
             </div>
+          </div>
+        </Container>
+      )}
+
+      {activeTab === 'novo' && canNovo && !successPdfUrl && (
+      <Container size="data" className="pb-0">
+        {/* Leitura inteligente (IA) */}
+        <section className="bg-white border border-line border-l-4 border-l-gold rounded-xl p-4 mb-5" aria-labelledby="pm-ia">
+          <h2 id="pm-ia" className="font-heading font-bold text-navy text-base flex items-center gap-2"><Camera size={18} aria-hidden="true" /> Leitura inteligente do atestado</h2>
+          <p className="text-xs text-ink-3 mt-1 mb-3">Fotografe o atestado para preencher data, tempo, CID e militar automaticamente. Opcional.</p>
+          <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={onSelectFile} className="hidden" />
+          {!croppedImageUrl ? (
+            <Button variant="secondary" icon="photo_camera" onClick={() => fileInputRef.current?.click()}>Fotografar atestado</Button>
           ) : (
-            <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-blue-200 shadow-sm">
-              <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-gray-200"><img src={croppedImageUrl} alt="Atestado Recortado" className="w-full h-full object-cover" /></div>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-green-700 mb-2 flex items-center gap-1 uppercase"><CheckCircle2 size={14}/> Imagem Capturada</p>
-                <div className="flex gap-2">
-                  <button type="button" onClick={extractDataWithGemini} disabled={isExtracting} className="flex-1 py-2 bg-gradient-to-r from-navy to-blue-800 text-white text-xs font-bold rounded-lg hover:opacity-90 flex items-center justify-center gap-1.5 disabled:opacity-50">
-                    {isExtracting ? <span className="flex items-center gap-1.5"><Loader2 size={14} className="animate-spin"/> A analisar...</span> : <span className="flex items-center gap-1.5"><Sparkles size={14} className="text-amber-400"/> Extrair Dados</span>}
-                  </button>
-                  <button type="button" onClick={() => setCroppedImageUrl('')} disabled={isExtracting} className="px-3 py-2 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 disabled:opacity-50">Refazer</button>
-                </div>
+            <div className="flex items-center gap-3">
+              <img src={croppedImageUrl} alt="Atestado recortado" className="w-16 h-16 rounded-lg object-cover border border-line shrink-0" />
+              <div className="flex flex-wrap gap-2">
+                <Button icon="auto_awesome" loading={isExtracting} onClick={extractDataWithGemini}>{isExtracting ? 'Analisando…' : 'Extrair dados'}</Button>
+                <Button variant="secondary" disabled={isExtracting} onClick={() => setCroppedImageUrl('')}>Refazer</Button>
               </div>
             </div>
           )}
-        </div>
+        </section>
 
-        <div className="md:grid md:grid-cols-2 md:gap-6 md:items-start space-y-6 md:space-y-0">
-        {/* Militar Section */}
-        <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-sm font-bold text-navy mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-navy">person</span>Dados do Militar</h2>
-          <div className="space-y-4">
-            <div className="relative z-[100] mb-4">
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Serviço *</label>
-              <input type="text" value={selectedServico ? selectedServico.servico_label : servicoQuery} onChange={(e) => handleServicoSearch(e.target.value)} placeholder="Busque pelo nome do serviço..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-navy" />
+        <div className="md:grid md:grid-cols-2 md:gap-5 md:items-start space-y-5 md:space-y-0">
+          <section className={card} aria-labelledby="pm-militar">
+            <h2 id="pm-militar" className="font-heading font-bold text-navy text-base">Dados do militar</h2>
+            <div className="relative z-[100]">
+              <Field label="Serviço" required error={erros.servico}>
+                {a => (
+                  <input {...a} type="text" role="combobox" aria-expanded={showServicoDropdown} aria-autocomplete="list" autoComplete="off" value={selectedServico ? selectedServico.servico_label : servicoQuery}
+                    onChange={e => { handleServicoSearch(e.target.value); limparErro('servico'); }} placeholder="Busque pelo nome do serviço…" />
+                )}
+              </Field>
               {showServicoDropdown && filteredServicos.length > 0 && (
-                <ul className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">
-                  {filteredServicos.map((s, idx) => (<li key={idx} onClick={() => { setSelectedServico(s); setShowServicoDropdown(false); setServicoQuery(''); }} className="px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer"><span className="font-bold text-navy block">{s.servico_label}</span><span className="text-xs text-gray-500">{s.superior_direto}</span></li>))}
+                <ul role="listbox" className="absolute z-[110] w-full mt-1 bg-white border border-line rounded-lg shadow-lg max-h-56 overflow-y-auto divide-y divide-line">
+                  {filteredServicos.map((s, idx) => (
+                    <li key={idx} role="option" aria-selected={false}>
+                      <button type="button" onClick={() => { setSelectedServico(s); setShowServicoDropdown(false); setServicoQuery(''); }} className="w-full text-left px-4 py-2 min-h-[44px] hover:bg-thead">
+                        <span className="font-bold text-navy block text-sm">{s.servico_label}</span><span className="text-xs text-ink-3">{s.superior_direto}</span>
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">NIP *</label>
-              <div className="relative">
-                <input type="text" value={nip} onChange={handleNipChange} placeholder="00.0000.00" className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-3 font-mono" required />
-                {militarStatus === "loading" && (<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"><div className="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin"></div></div>)}
-                {militarStatus === "found" && (<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-green-700"><CheckCircle2 size={18} /></div>)}
-              </div>
-              {searchError && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {searchError}</p>}
-              <div className="mt-1.5 text-right"><button type="button" onClick={() => abrirModalPesquisaNome()} className="text-xs text-blue-600 underline hover:text-blue-800 uppercase font-bold">Pesquisar pelo nome</button></div>
+              <Field label="NIP" required error={erros.nip || (militarStatus === 'not_found' ? undefined : undefined)} help={searchError || 'Formato 00.0000.00. Ao completar, o militar é buscado na base.'}>
+                {a => (
+                  <div className="relative">
+                    <input {...a} type="text" inputMode="numeric" value={nip} onChange={handleNipChange} placeholder="00.0000.00" className={`${a.className} font-mono pr-10`} />
+                    {militarStatus === 'loading' && <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-navy animate-spin" aria-label="Buscando militar">progress_activity</span>}
+                    {militarStatus === 'found' && <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-green-700" aria-label="Militar encontrado">check_circle</span>}
+                  </div>
+                )}
+              </Field>
+              <button type="button" onClick={() => abrirModalPesquisaNome()} className="mt-1 inline-flex items-center gap-1 min-h-[44px] text-sm font-bold text-navy underline underline-offset-2">
+                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">person_search</span>Pesquisar pelo nome
+              </button>
             </div>
-            {militarStatus === "found" && (<div className="bg-blue-50 border-l-4 border-navy p-3 rounded-r-lg space-y-2 animate-fade-in"><div><label className="block text-xs font-bold text-navy/70 uppercase">Inspecionado</label><p className="text-sm font-medium text-navy">{inspecionado}</p></div><div><label className="block text-xs font-bold text-navy/70 uppercase">OM</label><p className="text-sm font-medium text-navy">{omLeitura}</p></div></div>)}
-            {militarStatus === "not_found" && (
-              <div className="space-y-4 animate-fade-in border-t border-dashed border-gray-200 pt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div><label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Posto/Graduação *</label><select value={pg} onChange={(e) => setPg(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl p-3"><option value="">Sel...</option>{PG_OPTIONS.map(o => (<option key={o} value={o}>{o}</option>))}</select></div>
-                  <div><label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">OM *</label><input type="text" list="om-options-pm" value={om} onChange={(e) => setOm(e.target.value)} placeholder="Ex: HNRe" className="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl p-3" /><datalist id="om-options-pm">{omsOptions.map(opt => (<option key={opt} value={opt} />))}</datalist></div>
+            {militarStatus === 'found' && (
+              <dl className="bg-thead border border-line border-l-4 border-l-navy rounded-lg p-3 space-y-2">
+                <div><dt className="text-xs font-semibold text-ink-3">Inspecionado</dt><dd className="text-sm font-bold text-navy">{inspecionado}</dd></div>
+                <div><dt className="text-xs font-semibold text-ink-3">OM</dt><dd className="text-sm font-bold text-navy">{omLeitura}</dd></div>
+              </dl>
+            )}
+            {militarStatus === 'not_found' && (
+              <div className="space-y-4 border-t border-dashed border-line pt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="Posto/Graduação" required error={erros.pg}>
+                    {a => (<select {...a} value={pg} onChange={e => { setPg(e.target.value); limparErro('pg'); }}><option value="">Selecione…</option>{PG_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}</select>)}
+                  </Field>
+                  <Field label="OM" required error={erros.om}>
+                    {a => (<><input {...a} type="text" list="om-options-pm" value={om} onChange={e => { setOm(e.target.value); limparErro('om'); }} placeholder="Ex.: HNRe" /><datalist id="om-options-pm">{omsOptions.map(opt => <option key={opt} value={opt} />)}</datalist></>)}
+                  </Field>
                 </div>
-                {circulo === "Oficial" && (<div><label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Quadro *</label><select value={quadro} onChange={(e) => setQuadro(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl p-3"><option value="">Sel...</option>{QUADROS.map(q => (<option key={q} value={q}>{q}</option>))}</select></div>)}
-                {circulo === "Praça" && (<div><label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Especialidade *</label><select value={espPraca} onChange={(e) => setEspPraca(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl p-3"><option value="">Sel...</option>{ESP_PRACAS.map(p => (<option key={p} value={p}>{p}</option>))}</select></div>)}
-                <div><label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Nome Completo *</label><input type="text" value={nome} onChange={(e) => setNome(e.target.value.toUpperCase())} className="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl p-3 uppercase" /></div>
+                {circulo === 'Oficial' && (
+                  <Field label="Quadro" required error={erros.quadro}>
+                    {a => (<select {...a} value={quadro} onChange={e => { setQuadro(e.target.value); limparErro('quadro'); }}><option value="">Selecione…</option>{QUADROS.map(q => <option key={q} value={q}>{q}</option>)}</select>)}
+                  </Field>
+                )}
+                {circulo === 'Praça' && (
+                  <Field label="Especialidade (praça)" required error={erros.espPraca}>
+                    {a => (<select {...a} value={espPraca} onChange={e => { setEspPraca(e.target.value); limparErro('espPraca'); }}><option value="">Selecione…</option>{ESP_PRACAS.map(p => <option key={p} value={p}>{p}</option>)}</select>)}
+                  </Field>
+                )}
+                <Field label="Nome completo" required error={erros.nome}>
+                  {a => <input {...a} type="text" value={nome} onChange={e => { setNome(e.target.value.toUpperCase()); limparErro('nome'); }} className={`${a.className} uppercase`} />}
+                </Field>
               </div>
             )}
-          </div>
-        </section>
+          </section>
 
-        <div className="space-y-6">
-        {/* Atestado Section */}
-        <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-sm font-bold text-navy mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-navy">medical_information</span>Dados do Atestado</h2>
-          <div className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="w-full"><label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Data Atestado *</label><input type="date" value={dataAtestado} onChange={(e) => setDataAtestado(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm" /></div>
-              <div className="w-full"><label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Tempo Atestado *</label><input type="text" value={tempoAtestado} onChange={(e) => handleTempoInput(e.target.value, setTempoAtestado)} onBlur={() => formatTempoBlur(tempoAtestado, setTempoAtestado)} onFocus={() => formatTempoFocus(tempoAtestado, setTempoAtestado)} placeholder="Ex.: 5 dias" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm" /></div>
-            </div>
-            <div className="relative z-[90]">
-              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">CID *</label>
-              <input type="text" value={selectedCid ? selectedCid.DESCRABREV : cidQuery} onChange={(e) => handleCidSearch(e.target.value)} placeholder="Busque por código ou doença..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm" />
-              {showCidDropdown && filteredCids.length > 0 && (<ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-50">{filteredCids.map((cid, idx) => (<li key={idx} onClick={() => { setSelectedCid(cid); setShowCidDropdown(false); setCidQuery(''); }} className="px-4 py-3 text-sm hover:bg-blue-50 cursor-pointer"><span className="font-bold text-navy block">{cid.DESCRABREV}</span><span className="text-xs text-gray-500">{cid.DESCRICAO}</span></li>))}</ul>)}
-            </div>
-          </div>
-        </section>
-
-        {/* Homologacao Section */}
-        <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-sm font-bold text-navy mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-navy">verified</span>Homologação</h2>
-          <div className="space-y-6">
-            <div><label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Tempo Homologado *</label><input type="text" value={tempoHomologacao} onChange={(e) => handleTempoInput(e.target.value, setTempoHomologacao, 20)} onBlur={() => formatTempoBlur(tempoHomologacao, setTempoHomologacao)} onFocus={() => formatTempoFocus(tempoHomologacao, setTempoHomologacao)} placeholder="Máx: 20 dias" className="w-full sm:w-1/2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm" /></div>
-            <div className="relative z-[80]">
-              <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase">Dispensas *</label>
-              <button type="button" onClick={() => setShowDispensasDropdown(!showDispensasDropdown)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm flex justify-between items-center">
-                <span className={`truncate font-medium ${selectedDispensas.length > 0 ? 'text-navy' : 'text-ink-3'}`}>{selectedDispensas.length === 0 ? 'Selecione as dispensas...' : selectedDispensas.includes('TODAS AS ATIVIDADES') ? 'TODAS AS ATIVIDADES' : `${selectedDispensas.length} dispensa(s) selecionada(s)`}</span>
-                <ChevronDown size={18} className={`text-ink-3 transition-transform duration-200 ${showDispensasDropdown ? 'rotate-180' : ''}`} />
-              </button>
-              {showDispensasDropdown && (
-                <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in">
-                  {isLoadingLookups ? (<p className="text-xs text-ink-3 col-span-2 text-center py-4 flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> A carregar dispensas...</p>) : (
-                    dispensasDisponiveis.map((disp, idx) => {
-                      const isTodas = disp === 'TODAS AS ATIVIDADES';
-                      const isSelected = selectedDispensas.includes(disp);
-                      const isDisabled = (isTodas && selectedDispensas.length > 0 && !isSelected) || (!isTodas && selectedDispensas.includes('TODAS AS ATIVIDADES'));
-                      return (
-                        <button key={idx} onClick={() => handleDispensaToggle(disp)} disabled={isDisabled} type="button" className={`flex items-center text-left p-3 rounded-xl border text-xs transition-all ${isSelected ? 'bg-blue-50 border-blue-200 text-navy font-bold' : isDisabled ? 'bg-gray-50 border-gray-100 text-ink-3 cursor-not-allowed opacity-60' : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'}`}>
-                          <div className={`w-4 h-4 rounded-md shrink-0 mr-3 flex items-center justify-center border ${isSelected ? 'bg-navy border-navy' : 'border-gray-300 bg-white'}`}>{isSelected && <CheckCircle2 size={12} strokeWidth={3} className="text-white" />}</div>
-                          <span>{disp}</span>
+          <div className="space-y-5">
+            <section className={card} aria-labelledby="pm-atestado">
+              <h2 id="pm-atestado" className="font-heading font-bold text-navy text-base">Dados do atestado</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Data do atestado" required error={erros.dataAtestado}>
+                  {a => <input {...a} type="date" value={dataAtestado} onChange={e => { setDataAtestado(e.target.value); limparErro('dataAtestado'); }} />}
+                </Field>
+                <Field label="Tempo do atestado" required error={erros.tempoAtestado}>
+                  {a => <input {...a} type="text" inputMode="numeric" value={tempoAtestado} onChange={e => { handleTempoInput(e.target.value, setTempoAtestado); limparErro('tempoAtestado'); }} onBlur={() => formatTempoBlur(tempoAtestado, setTempoAtestado)} onFocus={() => formatTempoFocus(tempoAtestado, setTempoAtestado)} placeholder="Ex.: 5 dias" />}
+                </Field>
+              </div>
+              <div className="relative z-[90]">
+                <Field label="CID" required error={erros.cid}>
+                  {a => <input {...a} type="text" role="combobox" aria-expanded={showCidDropdown} aria-autocomplete="list" autoComplete="off" value={selectedCid ? selectedCid.DESCRABREV : cidQuery} onChange={e => { handleCidSearch(e.target.value); limparErro('cid'); }} placeholder="Busque por código ou doença…" />}
+                </Field>
+                {showCidDropdown && filteredCids.length > 0 && (
+                  <ul role="listbox" className="absolute z-10 w-full mt-1 bg-white border border-line rounded-lg shadow-lg max-h-56 overflow-y-auto divide-y divide-line">
+                    {filteredCids.map((cid, idx) => (
+                      <li key={idx} role="option" aria-selected={false}>
+                        <button type="button" onClick={() => { setSelectedCid(cid); setShowCidDropdown(false); setCidQuery(''); }} className="w-full text-left px-4 py-2 min-h-[44px] hover:bg-thead">
+                          <span className="font-bold text-navy block text-sm">{cid.DESCRABREV}</span><span className="text-xs text-ink-3">{cid.DESCRICAO}</span>
                         </button>
-                      );
-                    })
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
+
+            <section className={card} aria-labelledby="pm-homolog">
+              <h2 id="pm-homolog" className="font-heading font-bold text-navy text-base">Homologação</h2>
+              <Field label="Tempo homologado" required error={erros.tempoHomolog} help="Máximo de 20 dias.">
+                {a => <input {...a} type="text" inputMode="numeric" value={tempoHomologacao} onChange={e => { handleTempoInput(e.target.value, setTempoHomologacao, 20); limparErro('tempoHomolog'); }} onBlur={() => formatTempoBlur(tempoHomologacao, setTempoHomologacao)} onFocus={() => formatTempoFocus(tempoHomologacao, setTempoHomologacao)} placeholder="Ex.: 5 dias" className={`${a.className} sm:w-1/2`} />}
+              </Field>
+              <div className="relative z-[80]">
+                <Field label="Dispensas" required error={erros.dispensas}>
+                  {a => (
+                    <button id={a.id} type="button" aria-haspopup="listbox" aria-expanded={showDispensasDropdown} aria-invalid={a['aria-invalid']} aria-describedby={a['aria-describedby']} onClick={() => setShowDispensasDropdown(!showDispensasDropdown)} className={`${a.className} flex justify-between items-center text-left`}>
+                      <span className={`truncate ${selectedDispensas.length > 0 ? 'text-navy font-semibold' : 'text-ink-4'}`}>{selectedDispensas.length === 0 ? 'Selecione as dispensas…' : selectedDispensas.includes('TODAS AS ATIVIDADES') ? 'TODAS AS ATIVIDADES' : `${selectedDispensas.length} dispensa(s) selecionada(s)`}</span>
+                      <ChevronDown size={18} className={`text-ink-3 transition-transform duration-200 ${showDispensasDropdown ? 'rotate-180' : ''}`} aria-hidden="true" />
+                    </button>
                   )}
-                </div>
-              )}
-            </div>
-            <div><label className="block text-xs font-semibold text-gray-600 mb-2 uppercase">VDF *</label><div className="flex space-x-2"><button type="button" onClick={() => setVdf(true)} className={`flex-1 py-2.5 rounded-xl font-bold border ${vdf === true ? 'bg-navy text-white border-navy' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>SIM</button><button type="button" onClick={() => setVdf(false)} className={`flex-1 py-2.5 rounded-xl font-bold border ${vdf === false ? 'bg-navy text-white border-navy' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>NÃO</button></div></div>
-            <div><label className="block text-xs font-semibold text-gray-600 mb-2 uppercase">Perito *</label><div className="flex space-x-2">{isLoadingLookups ? (<p className="text-xs text-ink-3 flex items-center gap-2"><Loader2 size={14} className="animate-spin"/> A carregar peritos...</p>) : (peritosDisponiveis.map((p, idx) => (<button type="button" key={idx} onClick={() => setSelectedPerito(p.PERITO)} className={`flex-1 px-2 py-2.5 rounded-xl text-sm font-bold border ${selectedPerito === p.PERITO ? 'bg-navy text-white border-navy' : 'bg-white text-gray-600 border-gray-200'}`}>{p.PERITO}</button>)))}</div></div>
-          </div>
-        </section>
-        </div>
-        </div>
-
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-between items-stretch gap-3 pt-4 pb-8">
-          <Button variant="destructive" icon="delete" onClick={handleReset}>Limpar</Button>
-          <Button icon="send" loading={isSubmitting} onClick={handleSubmit}>Gerar perícia menor</Button>
-        </div>
-            </Container>
-      )}
-
-      {/* Name search modal */}
-      {showPesquisarNomeModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setShowPesquisarNomeModal(false)} className="absolute top-4 right-4 text-ink-3 hover:text-white z-10"><span className="material-symbols-outlined">close</span></button>
-            <div className="p-6 bg-navy text-white shrink-0"><h2 className="text-xl font-bold">Pesquisar Militar</h2><p className="text-blue-100 text-sm mt-1">Busque pelo nome completo</p></div>
-            <div className="p-6 flex-1 flex flex-col min-h-0">
-              <div className="relative shrink-0 mb-4"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-ink-3"><span className="material-symbols-outlined">search</span></div><input type="text" value={pesquisarNomeTerm} onChange={(e) => setPesquisarNomeTerm(e.target.value)} placeholder="Ex: João da Silva..." className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-10 p-2.5 " autoFocus /></div>
-              <div className="flex-1 overflow-y-auto min-h-[50px] border border-gray-100 rounded-lg bg-gray-50/50">
-                {isCarregandoMilitares ? (<div className="p-8 text-center flex flex-col items-center"><div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mb-2"></div><p className="text-base">Carregando...</p></div>) : (
-                  <div className="flex flex-col">
-                    {militaresInfoList.filter(m => { if (!pesquisarNomeTerm) return false; const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean); const name = removeAcentos(m.nome.toLowerCase()); return terms.every(t => name.includes(t)); }).slice(0, 50).map((m, idx) => (<div key={idx} onClick={() => selecionarNomeNip(m.nip)} className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer"><div className="font-bold text-navy text-base">{m.nome}</div><div className="text-sm text-gray-500 font-mono mt-0.5">{m.nip}</div></div>))}
-                    {pesquisarNomeTerm && militaresInfoList.filter(m => { const terms = removeAcentos(pesquisarNomeTerm.toLowerCase()).split(/\s+/).filter(Boolean); return terms.every(t => removeAcentos(m.nome.toLowerCase()).includes(t)); }).length === 0 && (<div className="p-8 text-center text-gray-500 text-base">Nenhum militar encontrado.</div>)}
+                </Field>
+                {showDispensasDropdown && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-line rounded-lg shadow-lg max-h-64 overflow-y-auto p-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {isLoadingLookups ? (<p className="text-xs text-ink-3 col-span-2 text-center py-4" role="status">Carregando dispensas…</p>) : (
+                      dispensasDisponiveis.map((disp, idx) => {
+                        const isTodas = disp === 'TODAS AS ATIVIDADES';
+                        const isSelected = selectedDispensas.includes(disp);
+                        const isDisabled = (isTodas && selectedDispensas.length > 0 && !isSelected) || (!isTodas && selectedDispensas.includes('TODAS AS ATIVIDADES'));
+                        return (
+                          <button key={idx} onClick={() => { handleDispensaToggle(disp); limparErro('dispensas'); }} disabled={isDisabled} type="button" role="checkbox" aria-checked={isSelected} className={`flex items-center text-left px-3 min-h-[44px] rounded-lg border text-sm transition-colors ${isSelected ? 'bg-thead border-navy text-navy font-bold' : isDisabled ? 'bg-thead border-line text-ink-4 cursor-not-allowed' : 'bg-white border-line text-ink hover:border-navy'}`}>
+                            <span className={`w-4 h-4 rounded shrink-0 mr-3 flex items-center justify-center border ${isSelected ? 'bg-navy border-navy' : 'border-ink-4 bg-white'}`}>{isSelected && <CheckCircle2 size={12} strokeWidth={3} className="text-white" aria-hidden="true" />}</span>
+                            <span>{disp}</span>
+                          </button>
+                        );
+                      })
+                    )}
                   </div>
                 )}
               </div>
-            </div>
+              <ChoiceGroup<'SIM' | 'NAO'>
+                label="VDF (Verificação de Deficiência Funcional)" required error={erros.vdf}
+                value={vdf === null ? '' : vdf ? 'SIM' : 'NAO'}
+                onChange={v => { setVdf(v === 'SIM'); limparErro('vdf'); }}
+                options={[{ value: 'SIM', label: 'Sim' }, { value: 'NAO', label: 'Não' }]}
+              />
+              {isLoadingLookups ? (
+                <p className="text-xs text-ink-3" role="status">Carregando peritos…</p>
+              ) : (
+                <ChoiceGroup<string>
+                  label="Perito" required error={erros.perito} value={selectedPerito}
+                  onChange={v => { setSelectedPerito(v); limparErro('perito'); }}
+                  options={peritosDisponiveis.map(p => ({ value: p.PERITO, label: p.PERITO }))}
+                />
+              )}
+            </section>
           </div>
         </div>
-      )}
 
-      {/* Crop Modal */}
-      {showCropModal && (
-        <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col animate-fade-in backdrop-blur-sm">
-          <div className="p-4 bg-black flex justify-between items-center text-white shrink-0 border-b border-gray-800"><h3 className="font-bold flex items-center gap-2"><CropIcon size={20} className="text-gold" /> Recortar Atestado</h3><button onClick={() => { setShowCropModal(false); setImgSrc(''); }} className="p-2 text-white/70 hover:text-white"><X size={24} /></button></div>
-          <div className="flex-1 overflow-auto flex items-center justify-center p-4">{imgSrc && (<ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)}><img ref={imgRef} src={imgSrc} alt="Crop" style={{ maxHeight: '70vh', objectFit: 'contain' }} /></ReactCrop>)}</div>
-          <div className="p-4 bg-black shrink-0 pb-10"><p className="text-white/70 text-sm text-center mb-4">Arraste os cantos para selecionar nome, datas e o CID.</p><button onClick={handleCropComplete} className="w-full py-4 bg-navy hover:bg-navy-hover border border-white/30 text-white font-bold rounded-lg flex justify-center items-center gap-2"><CheckCircle2 size={20} /> Confirmar Recorte</button></div>
+        <div className="sticky bottom-0 -mx-4 md:-mx-8 px-4 md:px-8 py-3 mt-5 bg-canvas/95 backdrop-blur border-t border-line flex flex-col-reverse sm:flex-row sm:justify-between gap-2 z-10">
+          <Button variant="secondary" icon="restart_alt" onClick={handleReset}>Limpar</Button>
+          <Button icon="send" loading={isSubmitting} onClick={handleSubmit}>{isSubmitting ? 'Gerando perícia menor…' : 'Gerar perícia menor'}</Button>
         </div>
+      </Container>
       )}
 
-      {/* Submit overlay */}
-      {(isSubmitting || successPdfUrl) && (
-        <div className="fixed inset-0 z-[200] bg-white/95 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in p-6">
-          {!successPdfUrl ? (
-            <div className="flex flex-col items-center text-center space-y-4"><Loader2 className="animate-spin text-navy" size={48} /><h2 className="text-xl font-bold text-navy">A gerar Perícia Menor...</h2><p className="text-base text-gray-500 max-w-xs">O documento está a ser processado e salvo no Google Drive.</p></div>
-          ) : (
-            <div className="flex flex-col items-center text-center space-y-5 max-w-sm">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-2"><CheckCircle className="text-green-700" size={40} /></div>
-              <h2 className="text-2xl font-black text-navy">Sucesso!</h2>
-              <p className="text-base text-gray-600">A perícia foi gerada e a planilha atualizada.</p>
-              <div className="flex flex-col w-full gap-3 mt-4">
-                <a href={successPdfUrl} target="_blank" rel="noopener noreferrer" onClick={handleReset} className="w-full py-3.5 bg-navy text-white rounded-lg font-bold flex items-center justify-center gap-2"><span className="material-symbols-outlined text-[20px]">picture_as_pdf</span> Ver PDF Gerado</a>
-                <button onClick={handleReset} className="w-full py-3.5 bg-gray-100 text-gray-700 rounded-lg font-bold flex items-center justify-center gap-2"><span className="material-symbols-outlined text-[20px]">add_circle</span> Nova Perícia Menor</button>
-              </div>
+      {/* Busca de militar por nome */}
+      {showPesquisarNomeModal && (
+        <Dialog title="Pesquisar militar" icon="person_search" onClose={() => setShowPesquisarNomeModal(false)}>
+          <div className="space-y-3">
+            <input type="search" aria-label="Nome do militar" autoFocus value={pesquisarNomeTerm} onChange={e => setPesquisarNomeTerm(e.target.value)} placeholder="Ex.: João da Silva" className={controlClass} autoComplete="off" />
+            <div className="max-h-72 overflow-y-auto border border-line rounded-lg" role="listbox" aria-label="Militares encontrados">
+              {isCarregandoMilitares ? (
+                <p className="p-6 text-center text-ink-3" role="status">Carregando base de dados…</p>
+              ) : !pesquisarNomeTerm.trim() ? (
+                <p className="p-6 text-center text-ink-3">Digite para buscar.</p>
+              ) : resultadosNome.length === 0 ? (
+                <p className="p-6 text-center text-ink-3">Nenhum militar encontrado.</p>
+              ) : resultadosNome.slice(0, 50).map((m, idx) => (
+                <button key={idx} type="button" role="option" aria-selected={false} onClick={() => selecionarNomeNip(m.nip)} className="w-full text-left px-4 py-2 min-h-[44px] border-b border-line last:border-b-0 hover:bg-thead">
+                  <span className="block font-bold text-navy text-sm">{m.nome}</span>
+                  <span className="block text-xs text-ink-3 font-mono">{m.nip}</span>
+                </button>
+              ))}
             </div>
-          )}
+          </div>
+        </Dialog>
+      )}
+
+      {showConfirm && (
+        <ConfirmDialog title="Gerar perícia menor" message="Confirma a geração da perícia menor? O PDF será salvo no Drive e a planilha atualizada." confirmLabel="Gerar perícia menor" onConfirm={executeSubmit} onCancel={() => setShowConfirm(false)} />
+      )}
+
+      {/* Recorte do atestado */}
+      {showCropModal && (
+        <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col animate-fade-in" role="dialog" aria-modal="true" aria-label="Recortar atestado">
+          <div className="p-4 bg-black flex justify-between items-center text-white shrink-0 border-b border-white/20"><h2 className="font-bold flex items-center gap-2 text-sm"><CropIcon size={20} className="text-gold" aria-hidden="true" /> Recortar atestado</h2><button type="button" aria-label="Fechar" onClick={() => { setShowCropModal(false); setImgSrc(''); }} className="w-11 h-11 flex items-center justify-center text-white/80 hover:text-white"><X size={24} /></button></div>
+          <div className="flex-1 overflow-auto flex items-center justify-center p-4">{imgSrc && (<ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)}><img ref={imgRef} src={imgSrc} alt="Atestado a recortar" style={{ maxHeight: '70vh', objectFit: 'contain' }} /></ReactCrop>)}</div>
+          <div className="p-4 bg-black shrink-0 pb-10"><p className="text-white/70 text-sm text-center mb-4">Arraste os cantos para selecionar nome, datas e o CID.</p><Button fullWidth icon="check" onClick={handleCropComplete}>Confirmar recorte</Button></div>
         </div>
       )}
 
       {activeTab === 'historico' && canHistorico && (
-        <Container size="data" className="pb-10">
-        <div className="md:grid md:grid-cols-[280px_1fr] md:gap-6 md:items-start">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-4 md:mb-0 space-y-3">
-            <div className="relative" ref={searchRef}>
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-ink-3 text-[18px]">search</span>
-              <input type="text" placeholder="Buscar por inspecionado..." value={historySearch} onChange={e => { setHistorySearch(e.target.value); setShowSearchDropdown(true); }} onFocus={() => setShowSearchDropdown(true)} className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-navy bg-gray-50" />
-              {showSearchDropdown && searchSuggestions.length > 0 && (<div className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg mt-1 overflow-hidden">{searchSuggestions.map((name, i) => (<button key={i} type="button" onMouseDown={() => { setHistorySearch(name); setShowSearchDropdown(false); }} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-50 last:border-0">{name}</button>))}</div>)}
+        <Container size="data" className="pb-10 space-y-4">
+          <div className="bg-white rounded-xl border border-line p-4 space-y-3">
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
+              <input type="search" aria-label="Buscar por nome ou NIP" placeholder="Buscar por nome ou NIP…" value={historySearch} onChange={e => setHistorySearch(e.target.value)} className={`${controlClass} pl-10`} autoComplete="off" />
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <button type="button" onClick={() => { setFilterVigente(v => { const next = !v; if (next) setFilterConcluido(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterVigente ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300'}`}>{filterVigente && <span className="material-symbols-outlined text-sm">check</span>}Vigentes{vigentesTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterVigente ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>{vigentesTotal}</span>)}</button>
-              <button type="button" onClick={() => { setFilterConcluido(v => { const next = !v; if (next) setFilterVigente(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterConcluido ? 'bg-green-700 text-white border-green' : 'bg-white text-gray-600 border-gray-300'}`}>{filterConcluido && <span className="material-symbols-outlined text-sm">check</span>}Concluídos{concluidosTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterConcluido ? 'bg-white/25 text-white' : 'bg-green-100 text-green-700'}`}>{concluidosTotal}</span>)}</button>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <button type="button" onClick={() => { setFilterLts(v => { const next = !v; if (next) setFilterRestricoes(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterLts ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300'}`}>{filterLts && <span className="material-symbols-outlined text-sm">check</span>}LTS{ltsTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterLts ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>{ltsTotal}</span>)}</button>
-              <button type="button" onClick={() => { setFilterRestricoes(v => { const next = !v; if (next) setFilterLts(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterRestricoes ? 'bg-amber-400 text-white border-amber-400' : 'bg-white text-gray-600 border-gray-300'}`}>{filterRestricoes && <span className="material-symbols-outlined text-sm">check</span>}Restrições{restricoesTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterRestricoes ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'}`}>{restricoesTotal}</span>)}</button>
+            <div className="flex flex-col lg:flex-row gap-2 lg:items-center">
+              <Segmented
+                ariaLabel="Situação da perícia"
+                className="overflow-x-auto"
+                value={statusFiltro}
+                onChange={definirStatusFiltro}
+                options={[
+                  { value: 'vigentes', label: 'Vigentes', badge: vigentesTotal },
+                  { value: 'concluidas', label: 'Concluídas', badge: concluidosTotal },
+                  { value: 'todas', label: 'Todas' },
+                ]}
+              />
+              <Segmented
+                ariaLabel="Tipo de dispensa"
+                className="overflow-x-auto"
+                value={tipoFiltro}
+                onChange={definirTipoFiltro}
+                options={[
+                  { value: 'todos', label: 'Todos os tipos' },
+                  { value: 'lts', label: 'LTS', badge: ltsTotal },
+                  { value: 'restricoes', label: 'Restrições', badge: restricoesTotal },
+                ]}
+              />
             </div>
           </div>
-          <div>
-          {filteredHistory.length > 0 && (<div className="flex justify-end mb-3 px-1"><span className="bg-gray-100 text-gray-600 text-xs font-bold px-2.5 py-1 rounded-full">{filteredHistory.length} registro{filteredHistory.length !== 1 ? 's' : ''}</span></div>)}
-          {isFetchingHistory ? (<div className="flex items-center justify-center py-12 gap-3 text-ink-3"><span className="w-5 h-5 border-2 border-gray-300 border-t-navy rounded-full animate-spin" /><span className="text-sm">Carregando histórico...</span></div>) : filteredHistory.length === 0 ? (<div className="text-center py-12 text-ink-3 text-sm">Nenhum registro encontrado.</div>) : (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-navy/5 border-b border-gray-100">
-                    <th className="text-left px-3 py-2.5 font-bold text-navy w-[30%] cursor-pointer select-none" onClick={() => handleSort('data')}>
-                      <span className="flex items-center gap-1">
-                        Data
-                        <span className="material-symbols-outlined text-sm text-ink-3">
-                          {sortCol === 'data' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
-                        </span>
-                      </span>
-                    </th>
-                    <th className="text-left px-3 py-2.5 font-bold text-navy cursor-pointer select-none" onClick={() => handleSort('inspecionado')}>
-                      <span className="flex items-center gap-1">
-                        Inspecionado
-                        <span className="material-symbols-outlined text-sm text-ink-3">
-                          {sortCol === 'inspecionado' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
-                        </span>
-                      </span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+
+          <div className="bg-white rounded-xl border border-line overflow-clip">
+            {isFetchingHistory ? (
+              <p className="p-10 text-center text-sm text-ink-3" role="status">Carregando histórico…</p>
+            ) : filteredHistory.length === 0 ? (
+              <EmptyState icon="personal_injury" title="Nenhum registro encontrado" description="Ajuste a busca ou os filtros de situação e tipo." />
+            ) : (
+              <>
+                {/* Mobile: duas linhas por registro */}
+                <ul className="md:hidden divide-y divide-line">
                   {filteredHistory.map((rec, i) => (
-                    <tr key={i} className={`border-b border-gray-50 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
-                      <td className="px-3 py-2.5 align-top">
-                        <span className="font-semibold text-gray-800 block">{rec.dataAtestado}</span>
-                        {rec.tempoHomolog && (
-                          <span className="text-xs text-ink-3 mt-0.5 block">{String(rec.tempoHomolog).replace(/^(\d+)$/, '$1 dias')}</span>
-                        )}
-                        <div className="mt-1.5"><PericiaStatusTags registro={rec} /></div>
-                      </td>
-                      <td className="px-3 py-2.5 align-top">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPerson(rec.inspecionado)}
-                          className="font-semibold text-navy hover:text-navy transition-colors flex items-start gap-1 text-left w-full"
-                        >
-                          <span className="flex-1">{rec.inspecionado}</span>
-                          <span className="material-symbols-outlined text-sm text-ink-3 shrink-0 mt-0.5">chevron_right</span>
-                        </button>
-                        {rec.cid && (
-                          <span className="text-xs text-ink-3 mt-0.5 block">{rec.cid}</span>
-                        )}
-                      </td>
-                    </tr>
+                    <li key={i}>
+                      <button type="button" onClick={() => setSelectedPerson(rec.inspecionado)} className="w-full text-left px-4 py-3 min-h-[56px] hover:bg-thead flex items-start gap-2">
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-sm font-bold text-navy break-words">{rec.inspecionado}</span>
+                          <span className="block text-xs text-ink-3 mt-0.5">{rec.dataAtestado}{rec.tempoHomolog ? ` · ${String(rec.tempoHomolog).replace(/^(\d+)$/, '$1 dias')}` : ''}{rec.cid ? ` · ${rec.cid}` : ''}</span>
+                          <span className="block mt-1.5"><PericiaStatusTags registro={rec} /></span>
+                        </span>
+                        <span className="material-symbols-outlined text-[20px] text-ink-4 shrink-0 mt-0.5" aria-hidden="true">chevron_right</span>
+                      </button>
+                    </li>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                </ul>
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-thead text-ink-3 text-xs border-b border-line">
+                      <tr>
+                        <th scope="col" aria-sort={ariaSort('data')} className="px-4 py-3 text-left font-semibold whitespace-nowrap">
+                          <button type="button" onClick={() => handleSort('data')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">Data do atestado<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('data')}</span></button>
+                        </th>
+                        <th scope="col" aria-sort={ariaSort('inspecionado')} className="px-4 py-3 text-left font-semibold">
+                          <button type="button" onClick={() => handleSort('inspecionado')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">Inspecionado<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('inspecionado')}</span></button>
+                        </th>
+                        <th scope="col" className="px-4 py-3 text-left font-semibold">CID</th>
+                        <th scope="col" className="px-4 py-3 text-left font-semibold">Homologado</th>
+                        <th scope="col" className="px-4 py-3 text-left font-semibold">Situação</th>
+                        <th scope="col" className="px-4 py-3 text-right font-semibold"><span className="sr-only">Ação</span></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {filteredHistory.map((rec, i) => (
+                        <tr key={i} className="hover:bg-thead transition-colors">
+                          <td className="px-4 py-3 align-top whitespace-nowrap text-ink-2">{rec.dataAtestado}</td>
+                          <td className="px-4 py-3 align-top font-semibold text-navy">{rec.inspecionado}</td>
+                          <td className="px-4 py-3 align-top text-ink-2">{rec.cid || '—'}</td>
+                          <td className="px-4 py-3 align-top text-ink-2 whitespace-nowrap">{rec.tempoHomolog ? String(rec.tempoHomolog).replace(/^(\d+)$/, '$1 dias') : '—'}</td>
+                          <td className="px-4 py-3 align-top"><PericiaStatusTags registro={rec} /></td>
+                          <td className="px-4 py-2 align-top text-right">
+                            <button type="button" onClick={() => setSelectedPerson(rec.inspecionado)} className="inline-flex items-center gap-1 min-h-[44px] px-2 text-sm font-bold text-navy hover:underline">
+                              Ver histórico<span className="material-symbols-outlined text-[18px]" aria-hidden="true">chevron_right</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
-        </div>
-                </Container>
+          {filteredHistory.length > 0 && <p className="text-center text-xs text-ink-3" role="status">{filteredHistory.length} registro{filteredHistory.length !== 1 ? 's' : ''}</p>}
+        </Container>
       )}
     </div>
   );
