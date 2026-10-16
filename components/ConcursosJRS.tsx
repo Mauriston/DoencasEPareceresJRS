@@ -31,6 +31,9 @@ import { apiUrl } from '../utils/apiBase';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { useStoragePdf } from '../hooks/useStoragePdf';
 import { Button } from './ui/Button';
+import { Segmented } from './ui/Segmented';
+import { EmptyState } from './ui/EmptyState';
+import { controlClass } from './ui/Field';
 import { ConfirmDialog } from './ui/Dialog';
 import { Toast } from './ui/Toast';
 import { KpiMini } from './ui/KpiMini';
@@ -1472,8 +1475,8 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = (props) => {
 
   return (
     <div className="relative shrink-0" onClick={e => e.stopPropagation()}>
-      <button ref={btnRef} type="button" onClick={() => (aberto ? setAberto(false) : abrirMenu())} className="p-1 rounded-lg text-ink-3 hover:text-navy hover:bg-black/5 transition-colors">
-        <span className="material-symbols-outlined text-[20px]">more_vert</span>
+      <button ref={btnRef} type="button" aria-label="Ações do concurso" aria-haspopup="menu" aria-expanded={aberto} onClick={() => (aberto ? setAberto(false) : abrirMenu())} className="w-11 h-11 -m-2 flex items-center justify-center rounded-lg text-ink-3 hover:text-navy hover:bg-thead transition-colors">
+        <span className="material-symbols-outlined text-[22px]" aria-hidden="true">more_vert</span>
       </button>
       {aberto && pos && createPortal(
         <>
@@ -1482,7 +1485,7 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = (props) => {
               senão o menu era cortado pela borda do próprio card. */}
           <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} />
           <div
-            className="fixed w-52 md:w-64 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 z-50 animate-fade-in space-y-0.5"
+            role="menu" className="fixed w-64 bg-white rounded-xl shadow-xl border border-line p-1.5 z-50 animate-fade-in space-y-0.5"
             style={{ top: pos.top, right: pos.right }}
           >
             {itens.map(item => (
@@ -1492,9 +1495,9 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = (props) => {
                 disabled={item.disabled}
                 title={item.title}
                 onClick={() => { setAberto(false); item.onClick(); }}
-                className="w-full text-left px-3 py-2 md:py-2.5 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-100 flex items-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                role="menuitem" className="w-full text-left px-3 min-h-[44px] rounded-lg text-sm font-semibold text-navy hover:bg-thead flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               >
-                <span className="material-symbols-outlined text-[16px] md:text-[20px]">{item.icon}</span>
+                <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{item.icon}</span>
                 <span>{item.label}</span>
               </button>
             ))}
@@ -1541,8 +1544,18 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
   // se "Listar Mensagens" deve aparecer no menu quanto para o badge do
   // ícone na coluna Ações da visão em tabela (mobile).
   const [mensagensCount, setMensagensCount] = useState<Record<string, number>>({});
-  const [openGroups, setOpenGroups] = useState<Set<ConcursoRecord['status']>>(new Set(['em_andamento', 'em_breve']));
-  const [viewMode, setViewMode] = useState<'cards' | 'tabela'>('cards');
+  // Filtros da lista: situação (padrão = em andamento, ou a primeira com itens),
+  // ano e busca. A vista (cards × tabela) é preferência persistida, com rótulo.
+  const [statusSel, setStatusSel] = useState<ConcursoRecord['status'] | null>(null);
+  const [anoFiltro, setAnoFiltro] = useState('');
+  const [busca, setBusca] = useState('');
+  const [viewMode, setViewMode] = useState<'cards' | 'tabela'>(() => {
+    try { return localStorage.getItem('jrs.concursos.vista') === 'tabela' ? 'tabela' : 'cards'; } catch { return 'cards'; }
+  });
+  const definirViewMode = (v: 'cards' | 'tabela') => {
+    setViewMode(v);
+    try { localStorage.setItem('jrs.concursos.vista', v); } catch { /* preferência é opcional */ }
+  };
   const [statusCounts, setStatusCounts] = useState<Record<string, { apto: number; inapto: number; faltou: number; idm: number }>>({});
   const [loadingStatusCounts, setLoadingStatusCounts] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches);
@@ -1718,6 +1731,48 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
     }
   };
 
+  const GRUPOS_STATUS_ORDEM: { status: ConcursoRecord['status']; titulo: string }[] = [
+    { status: 'em_andamento', titulo: 'Em andamento' },
+    { status: 'em_breve', titulo: 'Em breve' },
+    { status: 'encerrado', titulo: 'Encerrados' },
+  ];
+  const contagemPorStatus = {
+    em_andamento: concursos.filter(c => c.status === 'em_andamento').length,
+    em_breve: concursos.filter(c => c.status === 'em_breve').length,
+    encerrado: concursos.filter(c => c.status === 'encerrado').length,
+  } as Record<ConcursoRecord['status'], number>;
+  const statusPadrao: ConcursoRecord['status'] = contagemPorStatus.em_andamento ? 'em_andamento' : contagemPorStatus.em_breve ? 'em_breve' : 'encerrado';
+  const statusAtivo = statusSel ?? statusPadrao;
+  const anoDe = (c: ConcursoRecord) => (c.periodoInicioISO ? c.periodoInicioISO.slice(0, 4) : '');
+  const anosDisponiveis = Array.from(new Set(concursos.map(anoDe).filter(Boolean))).sort().reverse();
+  const itensFiltrados = concursos
+    .filter(c => c.status === statusAtivo)
+    .filter(c => !anoFiltro || anoDe(c) === anoFiltro)
+    .filter(c => !busca.trim() || c.nome.toLowerCase().includes(busca.trim().toLowerCase()))
+    .sort((a, b) => (a.periodoInicioISO || '9999-99-99').localeCompare(b.periodoInicioISO || '9999-99-99'));
+
+  const montarMenuProps = (c: ConcursoRecord): MenuAcoesConcursoProps => {
+    const contagem = contadores[c.id];
+    const podeEncerrar = !!contagem && contagem.total > 0 && contagem.finalizados === contagem.total;
+    const podeVoltarParaEmBreve = !contagem?.temLancamento;
+    return {
+      status: c.status,
+      podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato,
+      podeEncerrar, podeVoltarParaEmBreve,
+      minutaHabilitada: c.status === 'encerrado' || podeEncerrar,
+      temPeriodoConfigurado: !!c.periodoInicioISO,
+      temMensagensRegistradas: !!mensagensCount[c.id],
+      onAbrir: () => handleAbrir(c.id, c.nome),
+      onVoltarParaEmBreve: () => handleVoltarParaEmBreve(c.id, c.nome),
+      onEncerrar: () => handleEncerrar(c.id, c.nome),
+      onMinutaResultados: () => handleMinutaResultados(c.id),
+      onRegistrarMensagem: () => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome }),
+      onListarMensagens: () => setListarMensagensAlvo({ id: c.id, nome: c.nome }),
+      onDefinirPeriodoAgendamento: () => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome }),
+      onAdicionarCandidato: () => setAdicionarCandidatoAlvo({ id: c.id, nome: c.nome }),
+    };
+  };
+
   const kpiDefs = estatisticas ? [
     { key: 'finalizadas', label: 'IS Ingresso Finalizadas', value: String(estatisticas.totalFinalizadas), corTexto: 'text-green-700', corBarra: 'bg-green', itens: null as EstatisticaConcursoStatus[] | null },
     { key: 'faltas', label: '% de Faltas', value: `${estatisticas.percentualFaltas}%`, corTexto: 'text-gold-ink', corBarra: 'bg-gold', itens: estatisticas.topFaltas },
@@ -1858,210 +1913,131 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
             <span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span>
           </div>
         ) : concursos.length === 0 ? (
-          <div className="bg-white p-10 rounded-2xl border border-gray-200/60 shadow-sm text-center text-gray-500">
-            <span className="material-symbols-outlined text-[36px] text-gray-300">fact_check</span>
-            <p className="text-sm font-bold text-gray-700 mt-2">Nenhum concurso cadastrado</p>
-            {podeRegistrarMensagem && <p className="text-xs text-ink-3 mt-1">Registre a mensagem administrativa inicial para criar o primeiro.</p>}
+          <div className="bg-white rounded-xl border border-line">
+            <EmptyState icon="fact_check" title="Nenhum concurso cadastrado" description={podeRegistrarMensagem ? 'Registre a mensagem administrativa inicial para criar o primeiro.' : undefined} />
           </div>
         ) : (
           <>
-            {/* Perfil User Secretaria no mobile fica travado na tabela — sem
-                botão para alternar. Os demais perfis mantêm os cards como
-                padrão, com o botão de alternar agora disponível também no
-                mobile (antes era um recurso só de desktop). */}
-            {podeVisualizarTabela && !tabelaTravadaSecretaria && (
-              <div className="flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={() => setViewMode(v => (v === 'cards' ? 'tabela' : 'cards'))}
-                  title={viewMode === 'cards' ? 'Ver em modo tabela' : 'Ver em modo cards'}
-                  className="p-2 rounded-xl bg-white border border-gray-200 shadow-sm text-gray-500 hover:text-navy hover:bg-gray-50 transition-colors"
-                >
-                  <span className="material-symbols-outlined text-[20px]">{viewMode === 'cards' ? 'table_rows' : 'grid_view'}</span>
-                </button>
+            {/* Filtros (F43/F46): status em Segmented (padrão: em andamento), ano e busca. */}
+            <div className="bg-white rounded-xl border border-line p-4 space-y-3">
+              <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+                <Segmented
+                  ariaLabel="Situação do concurso"
+                  className="overflow-x-auto"
+                  value={statusAtivo}
+                  onChange={v => setStatusSel(v)}
+                  options={GRUPOS_STATUS_ORDEM.map(g => ({ value: g.status, label: g.titulo, badge: contagemPorStatus[g.status] }))}
+                />
+                {podeVisualizarTabela && !tabelaTravadaSecretaria && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-ink-3">Visualização</span>
+                    <Segmented
+                      ariaLabel="Modo de visualização"
+                      value={viewMode}
+                      onChange={definirViewMode}
+                      options={[{ value: 'cards', label: 'Cards', icon: 'grid_view' }, { value: 'tabela', label: 'Tabela', icon: 'table_rows' }]}
+                    />
+                  </div>
+                )}
               </div>
-            )}
-            {efetivoViewMode === 'tabela' ? (
-              <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden overflow-x-auto scroll-x-visible">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
+                  <input type="search" aria-label="Buscar concurso" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar concurso…" className={`${controlClass} pl-10`} autoComplete="off" />
+                </div>
+                <select aria-label="Filtrar por ano" value={anoFiltro} onChange={e => setAnoFiltro(e.target.value)} className={`${controlClass} sm:w-44`}>
+                  <option value="">Todos os anos</option>
+                  {anosDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {itensFiltrados.length === 0 ? (
+              <div className="bg-white rounded-xl border border-line">
+                <EmptyState icon="fact_check" title="Nenhum concurso neste filtro" description="Troque a situação, o ano ou a busca para ver outros concursos." />
+              </div>
+            ) : efetivoViewMode === 'tabela' ? (
+              <div className="bg-white rounded-xl border border-line overflow-clip overflow-x-auto scroll-x-visible">
                 <table className="w-full text-left border-collapse min-w-[860px]">
                   <thead>
-                    <tr className="bg-gray-50/80 border-b border-gray-100 text-sm font-bold text-navy uppercase tracking-wider">
-                      <th className="py-3 px-4">Concurso</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4">Período</th>
-                      <th className="py-3 px-4 text-center">Candidatos</th>
-                      <th className="py-3 px-4 text-center">Aptos</th>
-                      <th className="py-3 px-4 text-center">Inaptos</th>
-                      <th className="py-3 px-4 text-center">IDM</th>
-                      <th className="py-3 px-4 text-center">Faltas</th>
-                      <th className="py-3 px-4 text-right">Ações</th>
+                    <tr className="bg-thead border-b border-line text-xs font-semibold text-ink-3">
+                      <th scope="col" className="py-3 px-4">Concurso</th>
+                      <th scope="col" className="py-3 px-4">Situação</th>
+                      <th scope="col" className="py-3 px-4">Período</th>
+                      <th scope="col" className="py-3 px-4 text-center">Candidatos</th>
+                      <th scope="col" className="py-3 px-4 text-center">Aptos</th>
+                      <th scope="col" className="py-3 px-4 text-center">Inaptos</th>
+                      <th scope="col" className="py-3 px-4 text-center">IDM</th>
+                      <th scope="col" className="py-3 px-4 text-center">Faltas</th>
+                      <th scope="col" className="py-3 px-4 text-right"><span className="sr-only">Ações</span></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-sm">
-                    {GRUPOS_STATUS.map(grupo => {
-                      const itensGrupo = concursos
-                        .filter(c => c.status === grupo.status)
-                        .sort((a, b) => (a.periodoInicioISO || '9999-99-99').localeCompare(b.periodoInicioISO || '9999-99-99'));
-                      if (itensGrupo.length === 0) return null;
+                  <tbody className="divide-y divide-line text-sm">
+                    {itensFiltrados.map(c => {
+                      const sc = statusCounts[c.id];
                       return (
-                        <React.Fragment key={grupo.status}>
-                          <tr className="bg-gray-100/70">
-                            <td colSpan={8} className="py-2 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">{grupo.titulo} ({itensGrupo.length})</td>
-                          </tr>
-                          {itensGrupo.map(c => {
-                            const contagem = contadores[c.id];
-                            const podeEncerrar = !!contagem && contagem.total > 0 && contagem.finalizados === contagem.total;
-                            const podeVoltarParaEmBreve = !contagem?.temLancamento;
-                            const minutaHabilitada = c.status === 'encerrado' || podeEncerrar;
-                            const temPeriodoConfigurado = !!c.periodoInicioISO;
-                            const temMensagensRegistradas = !!mensagensCount[c.id];
-                            const sc = statusCounts[c.id];
-                            const itensAcoes = construirItensMenuConcurso({
-                              status: c.status,
-                              podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato,
-                              podeEncerrar, podeVoltarParaEmBreve, minutaHabilitada, temPeriodoConfigurado, temMensagensRegistradas,
-                              onAbrir: () => handleAbrir(c.id, c.nome),
-                              onVoltarParaEmBreve: () => handleVoltarParaEmBreve(c.id, c.nome),
-                              onEncerrar: () => handleEncerrar(c.id, c.nome),
-                              onMinutaResultados: () => handleMinutaResultados(c.id),
-                              onRegistrarMensagem: () => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome }),
-                              onListarMensagens: () => setListarMensagensAlvo({ id: c.id, nome: c.nome }),
-                              onDefinirPeriodoAgendamento: () => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome }),
-                              onAdicionarCandidato: () => setAdicionarCandidatoAlvo({ id: c.id, nome: c.nome }),
-                            }).filter(item => !item.disabled);
-                            return (
-                              <tr key={c.id} onClick={() => onSelecionar(c.id)} className="hover:bg-gray-50 cursor-pointer transition-colors">
-                                <td className="py-3 px-4 font-bold text-navy">{c.nome}</td>
-                                <td className="py-3 px-4"><ConcursoStatusTag status={c.status} /></td>
-                                <td className="py-3 px-4 text-gray-500 whitespace-nowrap">{c.periodoInicioISO ? `${isoParaBR(c.periodoInicioISO)} a ${isoParaBR(c.periodoFimISO)}` : '-'}</td>
-                                <td className="py-3 px-4 text-center font-bold text-navy">{celulaNumericaTabela(c.totalCandidatos, c.status)}</td>
-                                <td className="py-3 px-4 text-center font-bold text-green-700">{sc ? celulaNumericaTabela(sc.apto, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4 text-center font-bold text-red-800">{sc ? celulaNumericaTabela(sc.inapto, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4 text-center font-bold text-navy">{sc ? celulaNumericaTabela(sc.idm, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4 text-center font-bold text-navy">{sc ? celulaNumericaTabela(sc.faltou, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
-                                  <div className="flex items-center justify-end gap-1.5">
-                                    {itensAcoes.map(item => {
-                                      // Exceções vermelhas: Minuta Resultados (só aparece com o
-                                      // concurso em andamento) e Encerrar Concurso (sempre).
-                                      const vermelho = item.key === 'minuta' || item.key === 'encerrar';
-                                      const mostrarBadgeMensagens = item.key === 'listar-msg' && (c.status === 'em_andamento' || c.status === 'em_breve');
-                                      return (
-                                        <button
-                                          key={item.key}
-                                          type="button"
-                                          title={item.label}
-                                          onClick={item.onClick}
-                                          className={`relative p-2 rounded-lg transition-colors cursor-pointer ${vermelho ? 'text-red-700 bg-red-50 hover:bg-red-600 hover:text-white' : 'text-navy bg-gray-100 hover:bg-navy hover:text-white'}`}
-                                        >
-                                          <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'wght' 600" }}>{item.icon}</span>
-                                          {mostrarBadgeMensagens && mensagensCount[c.id] > 0 && (
-                                            <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-green-700 text-white text-xs font-bold flex items-center justify-center">
-                                              {mensagensCount[c.id]}
-                                            </span>
-                                          )}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </React.Fragment>
+                        <tr key={c.id} onClick={() => onSelecionar(c.id)} className="hover:bg-thead cursor-pointer transition-colors">
+                          <td className="py-2 px-4 font-bold text-navy">
+                            <button type="button" onClick={e => { e.stopPropagation(); onSelecionar(c.id); }} className="text-left font-bold text-navy hover:underline min-h-[44px]">{c.nome}</button>
+                          </td>
+                          <td className="py-2 px-4"><ConcursoStatusTag status={c.status} /></td>
+                          <td className="py-2 px-4 text-ink-2 whitespace-nowrap">{c.periodoInicioISO ? `${isoParaBR(c.periodoInicioISO)} a ${isoParaBR(c.periodoFimISO)}` : '—'}</td>
+                          <td className="py-2 px-4 text-center font-bold text-navy">{celulaNumericaTabela(c.totalCandidatos, c.status)}</td>
+                          <td className="py-2 px-4 text-center font-bold text-green-700">{sc ? celulaNumericaTabela(sc.apto, c.status) : (loadingStatusCounts ? '…' : '—')}</td>
+                          <td className="py-2 px-4 text-center font-bold text-wine">{sc ? celulaNumericaTabela(sc.inapto, c.status) : (loadingStatusCounts ? '…' : '—')}</td>
+                          <td className="py-2 px-4 text-center font-bold text-navy">{sc ? celulaNumericaTabela(sc.idm, c.status) : (loadingStatusCounts ? '…' : '—')}</td>
+                          <td className="py-2 px-4 text-center font-bold text-navy">{sc ? celulaNumericaTabela(sc.faltou, c.status) : (loadingStatusCounts ? '…' : '—')}</td>
+                          <td className="py-2 px-4 text-right" onClick={e => e.stopPropagation()}>
+                            <MenuAcoesConcurso {...montarMenuProps(c)} />
+                          </td>
+                        </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
             ) : (
-              GRUPOS_STATUS.map(grupo => {
-            const itens = concursos
-              .filter(c => c.status === grupo.status)
-              .sort((a, b) => (a.periodoInicioISO || '9999-99-99').localeCompare(b.periodoInicioISO || '9999-99-99'));
-            if (itens.length === 0) return null;
-            const expandido = openGroups.has(grupo.status);
-            return (
-              <div key={grupo.status}>
-                <button
-                  type="button"
-                  onClick={() => setOpenGroups(new Set([grupo.status]))}
-                  className="w-full flex items-center justify-between mb-2 py-1 group"
-                >
-                  <h2 className="text-sm font-bold text-gray-600 tracking-wider">{grupo.titulo} ({itens.length})</h2>
-                  <span className={`material-symbols-outlined text-[22px] text-ink-3 group-hover:text-navy transition-transform ${expandido ? 'rotate-180' : ''}`}>expand_more</span>
-                </button>
-                {expandido && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {itens.map(c => {
-                      const contagem = contadores[c.id];
-                      const podeEncerrar = !!contagem && contagem.total > 0 && contagem.finalizados === contagem.total;
-                      const podeVoltarParaEmBreve = !contagem?.temLancamento;
-                      const minutaHabilitada = c.status === 'encerrado' || podeEncerrar;
-                      const temPeriodoConfigurado = !!c.periodoInicioISO;
-                      const temMensagensRegistradas = !!mensagensCount[c.id];
-                      return (
-                        <div key={c.id} className={`rounded-xl border border-line bg-white overflow-hidden flex flex-col`}>
-                          <div className="flex items-stretch flex-1">
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => onSelecionar(c.id)}
-                              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onSelecionar(c.id); }}
-                              className="text-left p-4 flex-1 min-w-0 hover:bg-black/[0.03] transition-colors cursor-pointer"
-                            >
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <h3 className="font-heading font-bold text-lg text-navy truncate">{c.nome}</h3>
-                                <MenuAcoesConcurso
-                                  status={c.status}
-                                  podeAbrirEncerrar={podeAbrirEncerrar}
-                                  podeGerarMinutaResultados={podeGerarMinutaResultados}
-                                  podeRegistrarMensagemArquivo={podeRegistrarMensagemArquivo}
-                                  podeListarMensagens={podeListarMensagens}
-                                  podeAdicionarCandidato={podeAdicionarCandidato}
-                                  podeEncerrar={podeEncerrar}
-                                  podeVoltarParaEmBreve={podeVoltarParaEmBreve}
-                                  minutaHabilitada={minutaHabilitada}
-                                  temPeriodoConfigurado={temPeriodoConfigurado}
-                                  temMensagensRegistradas={temMensagensRegistradas}
-                                  onAbrir={() => handleAbrir(c.id, c.nome)}
-                                  onVoltarParaEmBreve={() => handleVoltarParaEmBreve(c.id, c.nome)}
-                                  onEncerrar={() => handleEncerrar(c.id, c.nome)}
-                                  onMinutaResultados={() => handleMinutaResultados(c.id)}
-                                  onRegistrarMensagem={() => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome })}
-                                  onListarMensagens={() => setListarMensagensAlvo({ id: c.id, nome: c.nome })}
-                                  onDefinirPeriodoAgendamento={() => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome })}
-                                  onAdicionarCandidato={() => setAdicionarCandidatoAlvo({ id: c.id, nome: c.nome })}
-                                />
-                              </div>
-                              <div className="mb-2"><ConcursoStatusTag status={c.status} /></div>
-                              <p className="text-base font-bold text-navy">{c.totalCandidatos} candidato(s)</p>
-                              {c.status === 'em_andamento' && contagem && contagem.total > 0 && (
-                                <ProgressBar className="mt-2" atual={contagem.finalizados} total={contagem.total} unidade="finalizados" />
-                              )}
-                              {c.periodoInicioISO && (
-                                <p className="text-sm text-gray-500">{isoParaBR(c.periodoInicioISO)} a {isoParaBR(c.periodoFimISO)}</p>
-                              )}
-                            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {itensFiltrados.map(c => {
+                  const contagem = contadores[c.id];
+                  return (
+                    <div key={c.id} className="rounded-xl border border-line bg-white overflow-clip flex flex-col">
+                      <div className="flex items-stretch flex-1">
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => onSelecionar(c.id)}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onSelecionar(c.id); }}
+                          className="text-left p-4 flex-1 min-w-0 hover:bg-thead transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h3 className="font-heading font-bold text-lg text-navy truncate">{c.nome}</h3>
+                            <MenuAcoesConcurso {...montarMenuProps(c)} />
                           </div>
-                          {podeAbrirEncerrar && c.status === 'em_breve' && (
-                            <button
-                              type="button"
-                              onClick={() => handleAbrir(c.id, c.nome)}
-                              className="px-4 py-2.5 border-t border-black/5 text-xs font-bold text-green-700 hover:bg-black/[0.03] transition-colors flex items-center justify-center space-x-1.5"
-                            >
-                              <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}>play_circle</span>
-                              <span>Abrir Concurso</span>
-                            </button>
+                          <div className="mb-2"><ConcursoStatusTag status={c.status} /></div>
+                          <p className="text-base font-bold text-navy">{c.totalCandidatos} candidato(s)</p>
+                          {c.status === 'em_andamento' && contagem && contagem.total > 0 && (
+                            <ProgressBar className="mt-2" atual={contagem.finalizados} total={contagem.total} unidade="finalizados" />
+                          )}
+                          {c.periodoInicioISO && (
+                            <p className="text-sm text-ink-2 mt-1">{isoParaBR(c.periodoInicioISO)} a {isoParaBR(c.periodoFimISO)}</p>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                      </div>
+                      {podeAbrirEncerrar && c.status === 'em_breve' && (
+                        <button
+                          type="button"
+                          onClick={() => handleAbrir(c.id, c.nome)}
+                          className="px-4 min-h-[44px] border-t border-line text-sm font-bold text-navy hover:bg-thead transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <span className="material-symbols-outlined text-[20px]" aria-hidden="true">play_circle</span>
+                          <span>Abrir concurso</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })
             )}
           </>
         )}
