@@ -130,7 +130,7 @@ export const ImageScanner: React.FC = () => {
                   {result && (
                     <div className="bg-white p-4 rounded-xl border border-navy/20 shadow-sm">
                       <h4 className="font-heading font-bold text-navy mb-2 flex items-center text-sm md:text-base border-b pb-2">
-                        <span className="material-symbols-outlined mr-2 text-gold">check_circle</span>
+                        <span className="material-symbols-outlined mr-2 text-navy">check_circle</span>
                         Resultado da Análise
                       </h4>
                       <div className="whitespace-pre-wrap text-sm md:text-base text-navy/80 font-body">

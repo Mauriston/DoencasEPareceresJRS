@@ -55,7 +55,7 @@ export const ResponsavelTermoModal: React.FC<ResponsavelTermoModalProps> = ({ ca
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="p-4 bg-[#050F41] text-white flex items-center space-x-2">
           <span className="material-symbols-outlined text-[20px] text-[#FAB932]">stethoscope</span>
-          <h3 className="font-heading font-bold text-sm uppercase">Médico responsável pela IS</h3>
+          <h3 className="font-heading font-bold text-sm">Médico responsável pela IS</h3>
         </div>
         <div className="p-5 space-y-4">
           <p className="text-xs md:text-sm text-gray-700 leading-relaxed">

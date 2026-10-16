@@ -8,7 +8,7 @@
   font-family: 'Carlito', sans-serif;
   font-size: 0.8125rem;
   line-height: 1.7;
-  text-align: justify;
+  text-align: left;
 }
 
 .md-content > *:first-child {
@@ -202,4 +202,50 @@
 .scroll-x-visible::-webkit-scrollbar-thumb {
   background: #050F41;
   border-radius: 9999px;
+}
+
+/* O texto de normas, critérios e minutas precisa ser selecionável e copiável
+   (o app já não bloqueia a seleção globalmente); só os controles de
+   interface — que não têm texto a copiar — impedem a seleção ao toque. */
+button,
+[role="button"],
+[role="tab"],
+summary,
+th[role="button"],
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Eyebrow / rótulo de seção: único uso de caixa alta do app (DS JRS/HNRe). */
+.eyebrow {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #1c4587;
+}
+
+/* Alvo de toque mínimo de 44px (WCAG 2.5.5 / DS): só em telas de toque, para
+   não inflar a densidade de tabelas e barras no desktop. Botões só com ícone
+   também ganham 44px de largura. Use .touch-exempt para exceções raras. */
+@media (pointer: coarse) {
+  button:not(.touch-exempt),
+  [role="button"]:not(.touch-exempt),
+  select:not(.touch-exempt),
+  summary {
+    min-height: 44px;
+  }
+  button:not(.touch-exempt):has(> .material-symbols-outlined:only-child) {
+    min-width: 44px;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="file"]):not(.touch-exempt) {
+    min-height: 44px;
+  }
+}
+
+/* Altura da topbar fixa do shell — referência dos elementos sticky das telas. */
+:root {
+  --topbar-h: 56px;
 }

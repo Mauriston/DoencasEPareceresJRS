@@ -57,7 +57,7 @@ export const UserDropdownContent: React.FC<{
       <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} />
       <div className="min-w-0">
         <p className="text-xs font-bold text-[#050F41] truncate">{authUser?.nome || 'Usuário'}</p>
-        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider truncate">
+        <p className="text-xs font-semibold text-ink-3 uppercase tracking-wider truncate">
           {PERFIL_LABELS[authUser?.perfil || ''] || authUser?.perfil || 'perfil'}
         </p>
       </div>
@@ -144,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction,
         </div>
 
         {/* CENTER: PAGE TITLE (sempre centralizado na topbar, independente dos lados) */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[60%] text-center px-2 font-heading text-sm md:text-base font-bold tracking-wide truncate text-white uppercase pointer-events-none">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[60%] text-center px-2 font-heading text-sm md:text-base font-bold tracking-wide truncate text-white pointer-events-none">
           <span className="md:hidden">{title}</span>
           <span className="hidden md:inline">{resolvedDesktopTitle}</span>
         </div>
@@ -169,7 +169,7 @@ export const Header: React.FC<HeaderProps> = ({ title, desktopTitle, leftAction,
               <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} />
               <span className="flex flex-col items-start leading-tight">
                 <span className="text-xs font-bold text-white truncate max-w-[140px]">{authUser?.usuario || 'Usuário'}</span>
-                <span className="text-[10px] font-medium text-gray-300 truncate max-w-[140px]">{authUser?.cargo || ' '}</span>
+                <span className="text-xs font-medium text-white/80 truncate max-w-[140px]">{authUser?.cargo || ' '}</span>
               </span>
             </button>
 

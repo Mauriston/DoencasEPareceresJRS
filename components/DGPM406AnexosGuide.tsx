@@ -57,13 +57,13 @@ export const DGPM406AnexosGuide: React.FC = () => {
                 <h3 className="text-[#050F41] font-heading font-bold text-[14px] leading-snug mb-1 group-hover:text-[#079551] transition-colors">
                   {item.anexo}
                 </h3>
-                <p className="text-gray-500 font-body text-[11px] font-medium leading-relaxed line-clamp-2">
+                <p className="text-gray-500 font-body text-xs font-medium leading-relaxed line-clamp-2">
                   {item.title}
                 </p>
               </div>
               
               {/* Documentação: Lado direito com o ícone de 3 pontinhos alinhado */}
-              <div className="text-gray-400 group-hover:text-[#050F41] transition-colors flex-shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
+              <div className="text-ink-3 group-hover:text-[#050F41] transition-colors flex-shrink-0 bg-gray-50 group-hover:bg-blue-50/50 p-2 rounded-full">
                 <MoreVertical size={18} />
               </div>
             </a>

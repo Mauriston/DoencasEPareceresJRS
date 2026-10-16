@@ -111,7 +111,7 @@ export const Videos: React.FC<VideosProps> = ({ onBack }) => {
                             className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
                           />
                         ) : (
-                          <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-500 font-medium text-[10px] p-2 leading-relaxed text-center">
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-500 font-medium text-xs p-2 leading-relaxed text-center">
                             Link direto indisponível
                           </div>
                         )}
@@ -125,7 +125,7 @@ export const Videos: React.FC<VideosProps> = ({ onBack }) => {
                       </div>
 
                       <div className="flex-1 p-3 flex flex-col items-center justify-center min-w-0 bg-white">
-                        <h3 className="text-[11px] font-heading font-bold text-[#050F41] leading-snug line-clamp-3 text-center group-hover:text-[#079551] transition-colors">
+                        <h3 className="text-xs font-heading font-bold text-[#050F41] leading-snug line-clamp-3 text-center group-hover:text-[#079551] transition-colors">
                           {video.title}
                         </h3>
                       </div>

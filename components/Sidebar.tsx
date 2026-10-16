@@ -74,7 +74,7 @@ export const Sidebar: React.FC = () => {
           </span>
           {badge > 0 ? (
             <span
-              className={`ml-auto mr-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 items-center justify-center shrink-0 ${
+              className={`ml-auto mr-1 bg-wine text-white text-xs font-bold rounded-full min-w-5 h-5 px-1 items-center justify-center shrink-0 ${
                 variant === 'rail' ? 'hidden group-hover/sidebar:flex' : 'flex'
               }`}
             >
@@ -104,13 +104,13 @@ export const Sidebar: React.FC = () => {
                 type="button"
                 onClick={() => setCurrentView(sub.id)}
                 className={`w-full flex items-center h-10 pl-[46px] pr-4 transition-colors whitespace-nowrap ${
-                  currentView === sub.id ? 'text-white font-bold bg-white/10' : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  currentView === sub.id ? 'text-white font-bold bg-white/10' : 'text-white/70 hover:bg-white/5 hover:text-white'
                 }`}
               >
                 <span className="material-symbols-outlined text-[16px] shrink-0 mr-2">{sub.icon}</span>
-                <span className="text-[11px] uppercase tracking-wide truncate">{sub.label}</span>
+                <span className="text-xs uppercase tracking-wide truncate">{sub.label}</span>
                 {sub.badge ? (
-                  <span className="ml-auto bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center shrink-0">
+                  <span className="ml-auto bg-wine text-white text-xs font-bold rounded-full min-w-5 h-5 px-1 flex items-center justify-center shrink-0">
                     {sub.badge}
                   </span>
                 ) : null}
@@ -131,7 +131,7 @@ export const Sidebar: React.FC = () => {
       <div className="w-9 h-9 bg-white rounded-lg p-1 flex items-center justify-center shadow-sm shrink-0">
         <img src="https://i.imgur.com/8HeAdv4.png" alt="JRS/HNRe" className="h-full w-full object-contain" />
       </div>
-      <span className="text-[10px] font-bold uppercase tracking-wider text-white/90 whitespace-nowrap">
+      <span className="text-xs font-bold uppercase tracking-wider text-white/90 whitespace-nowrap">
         JRS/HNRe
       </span>
     </div>
@@ -197,7 +197,7 @@ export const Sidebar: React.FC = () => {
           >
             <span className="min-w-0 flex flex-col items-end leading-tight">
               <span className="text-sm font-bold text-white truncate max-w-[170px]">{authUser?.usuario || 'Usuário'}</span>
-              <span className="text-[11px] font-medium text-gray-400 truncate max-w-[170px]">{authUser?.cargo || ' '}</span>
+              <span className="text-xs font-medium text-white/70 truncate max-w-[170px]">{authUser?.cargo || ' '}</span>
             </span>
             <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} />
           </button>

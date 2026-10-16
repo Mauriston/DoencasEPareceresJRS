@@ -7,11 +7,11 @@ import { trocarSenha, mapAuthErrorMessage } from '../services/firebaseAuth';
 import { updateUsuarioProfile } from '../services/firestoreUsuarios';
 
 const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41] transition-colors';
-const labelClass = 'text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1';
+const labelClass = 'text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1';
 
 const InfoField: React.FC<{ label: string; value?: string }> = ({ label, value }) => (
   <div>
-    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">{label}</span>
+    <span className="text-xs font-bold text-ink-3 uppercase tracking-wider block">{label}</span>
     <span className="text-sm font-semibold text-gray-800">{value || '—'}</span>
   </div>
 );
@@ -122,7 +122,7 @@ export const Perfil: React.FC = () => {
               />
             ) : (
               <div className="w-28 h-28 rounded-full bg-gray-100 border-4 border-gray-100 shadow-sm flex items-center justify-center">
-                <span className="material-symbols-outlined text-[56px] text-gray-400">person</span>
+                <span className="material-symbols-outlined text-[56px] text-ink-3">person</span>
               </div>
             )}
             <button

@@ -40,7 +40,7 @@ const PaginaFalsa: React.FC = () => (
   <div className="absolute inset-0 bg-[#F3F5F7]">
     <div className="h-14 bg-[#050F41] flex items-end px-3 pb-2">
       <img src={APP_ICON} alt="" className="w-6 h-6 rounded" />
-      <span className="ml-2 text-[10px] font-bold text-white">JRS/HNRe</span>
+      <span className="ml-2 text-xs font-bold text-white">JRS/HNRe</span>
     </div>
     <div className="p-3 space-y-2">
       {[80, 100, 65, 90, 55].map((w, i) => (
@@ -52,7 +52,7 @@ const PaginaFalsa: React.FC = () => (
 
 const BarraEndereco: React.FC<{ children?: React.ReactNode; direita?: React.ReactNode }> = ({ direita }) => (
   <div className="absolute top-0 inset-x-0 h-10 bg-gray-100 border-b border-gray-300 flex items-center gap-1.5 px-2 z-10">
-    <div className="flex-1 h-5 rounded-full bg-white border border-gray-300 text-[8px] text-gray-500 flex items-center px-2">
+    <div className="flex-1 h-5 rounded-full bg-white border border-gray-300 text-xs text-gray-500 flex items-center px-2">
       mauriston.github.io
     </div>
     {direita}
@@ -61,8 +61,8 @@ const BarraEndereco: React.FC<{ children?: React.ReactNode; direita?: React.Reac
 
 const BarraInferiorSafari: React.FC<{ destacarCompartilhar?: boolean }> = ({ destacarCompartilhar }) => (
   <div className="absolute bottom-0 inset-x-0 h-12 bg-gray-100 border-t border-gray-300 flex items-center justify-around px-1 z-10">
-    <Icon name="chevron_left" className="text-[20px] text-gray-400" />
-    <Icon name="chevron_right" className="text-[20px] text-gray-400" />
+    <Icon name="chevron_left" className="text-[20px] text-ink-3" />
+    <Icon name="chevron_right" className="text-[20px] text-ink-3" />
     {destacarCompartilhar ? (
       <Alvo><Icon name="ios_share" className="text-[20px] text-blue-600" /></Alvo>
     ) : (
@@ -74,7 +74,7 @@ const BarraInferiorSafari: React.FC<{ destacarCompartilhar?: boolean }> = ({ des
 );
 
 const Dica: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <div className={`absolute z-20 px-2 py-1 rounded-lg bg-[#050F41] text-white text-[9px] font-bold shadow-lg ${className}`}>
+  <div className={`absolute z-20 px-2 py-1 rounded-lg bg-[#050F41] text-white text-xs font-bold shadow-lg ${className}`}>
     {children}
   </div>
 );
@@ -106,11 +106,11 @@ const CenaIosLista: React.FC = () => (
       <div className="flex items-center gap-2 pb-2 border-b border-gray-300">
         <img src={APP_ICON} alt="" className="w-7 h-7 rounded-lg" />
         <div className="leading-tight">
-          <div className="text-[9px] font-bold text-gray-800">JRS/HNRe</div>
-          <div className="text-[8px] text-gray-500">mauriston.github.io</div>
+          <div className="text-xs font-bold text-gray-800">JRS/HNRe</div>
+          <div className="text-xs text-gray-500">mauriston.github.io</div>
         </div>
       </div>
-      <div className="mt-2 rounded-xl bg-white divide-y divide-gray-200 text-[9px] text-gray-800">
+      <div className="mt-2 rounded-xl bg-white divide-y divide-gray-200 text-xs text-gray-800">
         <div className="flex items-center justify-between px-2.5 py-2">Copiar <Icon name="content_copy" className="text-[14px]" /></div>
         <div className="flex items-center justify-between px-2.5 py-2">Adicionar aos Favoritos <Icon name="star" className="text-[14px]" /></div>
         <div className="flex items-center justify-between px-2.5 py-2 relative">
@@ -132,16 +132,16 @@ const CenaIosConfirmar: React.FC = () => (
     <PaginaFalsa />
     <div className="absolute inset-0 bg-black/40 z-10" />
     <div className="absolute bottom-0 inset-x-0 h-[88%] rounded-t-2xl bg-gray-100 z-20 p-2.5">
-      <div className="flex items-center justify-between text-[9px]">
+      <div className="flex items-center justify-between text-xs">
         <span className="text-blue-600">Cancelar</span>
         <span className="font-bold text-gray-800">Adicionar à Tela…</span>
         <Alvo><span className="text-blue-600 font-bold px-1">Adicionar</span></Alvo>
       </div>
       <div className="mt-3 rounded-xl bg-white p-2.5 flex items-center gap-2">
         <img src={APP_ICON} alt="" className="w-10 h-10 rounded-xl" />
-        <div className="flex-1 text-[10px] font-bold text-gray-800 border-b border-gray-200 pb-1">JRS/HNRe</div>
+        <div className="flex-1 text-xs font-bold text-gray-800 border-b border-gray-200 pb-1">JRS/HNRe</div>
       </div>
-      <p className="mt-2 px-1 text-[8px] text-gray-500 leading-snug">
+      <p className="mt-2 px-1 text-xs text-gray-500 leading-snug">
         Um ícone será adicionado à sua tela de início para que você possa acessar rapidamente este site.
       </p>
     </div>
@@ -161,7 +161,7 @@ const CenaAndroidOpcao: React.FC = () => (
   <Moldura>
     <PaginaFalsa />
     <BarraEndereco direita={<Icon name="more_vert" className="text-[18px] text-gray-700" />} />
-    <div className="absolute top-9 right-2 w-[150px] rounded-lg bg-white shadow-2xl border border-gray-200 z-20 text-[9px] text-gray-800 divide-y divide-gray-100">
+    <div className="absolute top-9 right-2 w-[150px] rounded-lg bg-white shadow-2xl border border-gray-200 z-20 text-xs text-gray-800 divide-y divide-gray-100">
       <div className="px-2.5 py-2">Nova guia</div>
       <div className="px-2.5 py-2">Favoritos</div>
       <div className="px-2.5 py-2">
@@ -180,12 +180,12 @@ const CenaAndroidConfirmar: React.FC = () => (
     <PaginaFalsa />
     <div className="absolute inset-0 bg-black/45 z-10" />
     <div className="absolute z-20 left-3 right-3 top-1/2 -translate-y-1/2 rounded-2xl bg-white p-3 shadow-2xl">
-      <div className="text-[10px] font-bold text-gray-800 mb-2">Adicionar à tela inicial</div>
+      <div className="text-xs font-bold text-gray-800 mb-2">Adicionar à tela inicial</div>
       <div className="flex items-center gap-2 mb-3">
         <img src={APP_ICON} alt="" className="w-9 h-9 rounded-xl" />
-        <div className="flex-1 text-[10px] text-gray-800 border-b border-gray-300 pb-0.5">JRS/HNRe</div>
+        <div className="flex-1 text-xs text-gray-800 border-b border-gray-300 pb-0.5">JRS/HNRe</div>
       </div>
-      <div className="flex justify-end gap-3 text-[10px] font-bold">
+      <div className="flex justify-end gap-3 text-xs font-bold">
         <span className="text-gray-500">Cancelar</span>
         <Alvo><span className="text-[#079551] px-1">Adicionar</span></Alvo>
       </div>
@@ -206,7 +206,7 @@ const CenaTelaInicial: React.FC = () => (
       ))}
       <div className="flex flex-col items-center gap-1">
         <Alvo><img src={APP_ICON} alt="" className="w-9 h-9 rounded-xl" /></Alvo>
-        <div className="text-[8px] font-bold text-white">JRS/HNRe</div>
+        <div className="text-xs font-bold text-white">JRS/HNRe</div>
       </div>
     </div>
     <Dica className="bottom-6 left-1/2 -translate-x-1/2 w-[170px] text-center">Pronto! O ícone está na sua tela inicial</Dica>
@@ -271,7 +271,7 @@ export const InstallAppTutorial: React.FC<Props> = ({ plataformaInicial, onClose
                 key={p.id}
                 type="button"
                 onClick={() => { setPlataforma(p.id); setIndice(0); }}
-                className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-colors ${
+                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-colors ${
                   plataforma === p.id ? 'bg-[#050F41] text-white' : 'text-gray-500'
                 }`}
               >
@@ -282,7 +282,7 @@ export const InstallAppTutorial: React.FC<Props> = ({ plataformaInicial, onClose
 
           <div key={`${plataforma}-${indice}`} className="animate-fade-in mb-3">{passo.cena}</div>
 
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[#079551] mb-0.5">
+          <p className="text-xs font-bold uppercase tracking-widest text-[#079551] mb-0.5">
             Passo {indice + 1} de {passos.length}
           </p>
           <h4 className="font-heading font-bold text-sm text-[#050F41] mb-1">{passo.titulo}</h4>

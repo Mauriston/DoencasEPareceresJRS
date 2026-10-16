@@ -446,7 +446,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
           <div className="w-16 h-16 rounded-2xl bg-[#050F41]/5 flex items-center justify-center mb-4 text-[#050F41]">
             <Smartphone size={28} />
           </div>
-          <h2 className="font-heading font-bold text-[#050F41] text-base uppercase mb-2">Disponível só no mobile</h2>
+          <h2 className="font-heading font-bold text-[#050F41] text-base mb-2">Disponível só no mobile</h2>
           <p className="text-sm text-gray-500 leading-relaxed">
             O teste de Casos Periciais foi desenhado para a visualização mobile do aplicativo. Acesse esta página pelo seu celular para realizá-lo.
           </p>
@@ -463,7 +463,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
           <div className="w-16 h-16 rounded-2xl bg-[#050F41]/5 flex items-center justify-center mb-5 text-[#050F41]">
             <span className="material-symbols-outlined text-[32px]">quiz</span>
           </div>
-          <h1 className="font-heading text-xl font-black text-[#050F41] uppercase mb-3">Teste seus conhecimentos</h1>
+          <h1 className="font-heading text-xl font-black text-[#050F41] mb-3">Teste seus conhecimentos</h1>
           <p className="text-sm text-gray-600 leading-relaxed mb-3">
             Este teste reúne <strong>{totalCases} casos periciais comentados</strong>, baseados em situações práticas da rotina das Juntas de Inspeção de Saúde e fundamentados na DGPM-406.
           </p>
@@ -487,7 +487,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
     return createPortal(
       <div className="fixed inset-0 z-[300] bg-[#F3F5F7] flex flex-col">
         <div className="h-14 shrink-0 bg-[#050F41] flex items-center justify-center px-4">
-          <h1 className="text-white font-heading font-bold text-sm uppercase tracking-wide truncate">Teste seus conhecimentos</h1>
+          <h1 className="text-white font-heading font-bold text-sm tracking-wide truncate">Teste seus conhecimentos</h1>
         </div>
         <div className="w-full h-1.5 bg-gray-200 shrink-0">
           <div className="h-full bg-[#079551] transition-all duration-500 ease-out" style={{ width: `${progressPercentage}%` }} />
@@ -524,11 +524,11 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
             {selectedAnswer !== null && (
               <div className="animate-fade-in bg-yellow-50/80 border border-yellow-200 p-5 rounded-2xl mt-6 relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
-                <h3 className="text-sm md:text-base font-bold font-heading text-[#050F41] mb-2 uppercase flex items-center gap-2">
+                <h3 className="text-sm md:text-base font-bold font-heading text-[#050F41] mb-2 flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px] text-yellow-600">lightbulb</span>
                   Análise Pericial
                 </h3>
-                <p className="text-sm md:text-base text-gray-800 font-body leading-relaxed text-justify">{currentCase.explicacao}</p>
+                <p className="text-sm md:text-base text-gray-800 font-body leading-relaxed">{currentCase.explicacao}</p>
               </div>
             )}
           </div>
@@ -571,7 +571,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
                 <Eye size={18} />
                 Ver Resultado
               </button>
-              {saving && <p className="text-[11px] md:text-sm text-gray-400 mt-3">Salvando resultado...</p>}
+              {saving && <p className="text-xs md:text-sm text-ink-3 mt-3">Salvando resultado...</p>}
             </div>
           </div>
         )}
@@ -593,7 +593,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
       />
       <div className="p-4 space-y-6 max-w-3xl mx-auto w-full flex-1 pb-32">
         <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm text-center flex flex-col items-center">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Nota Final</h2>
+          <h2 className="text-sm font-bold text-gray-500 tracking-wider mb-2">Nota Final</h2>
           <div className={`text-6xl font-black ${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>{displayGrade}</div>
           <p className="text-gray-500 mt-3 font-medium font-body">Você acertou <strong className="text-gray-800">{correctCount}</strong> de {totalCases} questões.</p>
           <button onClick={handleDownloadPDF} className="mt-6 flex items-center gap-2 bg-[#050F41] text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md hover:scale-105 transition-transform">
@@ -632,8 +632,8 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
               </div>
               <div className="bg-yellow-50/80 border border-yellow-200 p-4 rounded-xl mt-5 relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
-                <h4 className="text-xs font-bold font-heading text-yellow-800 mb-1 uppercase">Análise Pericial</h4>
-                <p className="text-sm text-gray-800 font-body leading-relaxed text-justify">{caso.explicacao}</p>
+                <h4 className="text-xs font-bold font-heading text-yellow-800 mb-1">Análise Pericial</h4>
+                <p className="text-sm text-gray-800 font-body leading-relaxed">{caso.explicacao}</p>
               </div>
             </div>
           );

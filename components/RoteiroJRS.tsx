@@ -226,8 +226,8 @@ export const RoteiroJRS: React.FC<RoteiroJRSProps> = ({ onBack }) => {
         <div className="mb-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-200/60">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-heading font-bold text-[#050F41] uppercase">{ROTEIRO_DATA.curso}</h2>
-              <p className="text-sm text-gray-600 font-body mt-2 text-justify leading-relaxed">
+              <h2 className="text-xl font-heading font-bold text-[#050F41]">{ROTEIRO_DATA.curso}</h2>
+              <p className="text-sm text-gray-600 font-body mt-2 leading-relaxed">
                 Trilha estruturada de aprendizagem e consulta rápida para capacitação dos Agentes Médico-Periciais.
               </p>
             </div>
@@ -251,11 +251,11 @@ export const RoteiroJRS: React.FC<RoteiroJRSProps> = ({ onBack }) => {
                     <h3 className={`font-heading font-bold text-[14px] leading-snug mb-1 transition-colors ${isExpanded ? 'text-[#079551]' : 'text-[#050F41] group-hover:text-[#079551]'}`}>
                       {mod.modulo}
                     </h3>
-                    <p className="text-gray-500 font-body text-[11px] font-medium leading-relaxed uppercase">
+                    <p className="text-gray-500 font-body text-xs font-medium leading-relaxed uppercase">
                       Módulo {mod.modulo_id}
                     </p>
                   </div>
-                  <div className={`text-gray-400 p-2 rounded-full transition-transform duration-300 ${isExpanded ? 'rotate-180 text-[#079551]' : 'group-hover:text-[#050F41] group-hover:bg-gray-100'}`}>
+                  <div className={`text-ink-3 p-2 rounded-full transition-transform duration-300 ${isExpanded ? 'rotate-180 text-[#079551]' : 'group-hover:text-[#050F41] group-hover:bg-gray-100'}`}>
                     <ChevronDown size={18} />
                   </div>
                 </button>
@@ -272,11 +272,11 @@ export const RoteiroJRS: React.FC<RoteiroJRSProps> = ({ onBack }) => {
                           <h4 className="text-[#050F41] font-heading font-bold text-[13px] leading-tight mb-0.5 group-hover:text-blue-600 transition-colors">
                             {mat.titulo}
                           </h4>
-                          <p className="text-gray-500 font-body text-[11px] leading-relaxed line-clamp-1 uppercase tracking-wider font-semibold">
+                          <p className="text-gray-500 font-body text-xs leading-relaxed line-clamp-1 uppercase tracking-wider font-semibold">
                             {mat.formato}
                           </p>
                         </div>
-                        <div className="flex-shrink-0 text-gray-400 group-hover:text-blue-600 p-2 rounded-full bg-gray-50 group-hover:bg-blue-50 border border-gray-100 shadow-sm transition-all">
+                        <div className="flex-shrink-0 text-ink-3 group-hover:text-blue-600 p-2 rounded-full bg-gray-50 group-hover:bg-blue-50 border border-gray-100 shadow-sm transition-all">
                           {getIconForFormat(mat.formato)}
                         </div>
                       </button>

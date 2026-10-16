@@ -58,11 +58,11 @@ export const InstallAppQrDialog: React.FC<Props> = ({ onClose, onAlreadyInstalle
           </div>
 
           {qr && !comLogin && (
-            <p className="text-[11px] text-amber-600 mb-2">
+            <p className="text-xs text-amber-600 mb-2">
               Não foi possível enviar o login: você precisará entrar normalmente no celular.
             </p>
           )}
-          <p className="text-[11px] text-gray-400 mb-4">
+          <p className="text-xs text-ink-3 mb-4">
             Este QR code dá acesso à sua conta — não o compartilhe nem mostre a tela a terceiros.
             {qr && comLogin && (
               <> <button type="button" onClick={gerar} className="font-bold text-[#079551]">Gerar novo QR</button></>

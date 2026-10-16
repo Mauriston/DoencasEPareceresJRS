@@ -110,7 +110,7 @@ export const CidPicker: React.FC<CidPickerProps> = ({ candidatoNome, onSelect, o
       ) : (
         <>
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-gray-400 pointer-events-none">search</span>
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none">search</span>
             <input
               ref={inputRef}
               type="text"
@@ -174,7 +174,7 @@ export const CidInaptidaoModal: React.FC<CidInaptidaoModalProps> = ({ candidatoN
       <div className="p-4 bg-[#050F41] text-white flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center space-x-2">
           <span className="material-symbols-outlined text-[20px] text-[#FAB932]">medical_information</span>
-          <h3 className="font-heading font-bold text-sm uppercase">CID da inaptidão</h3>
+          <h3 className="font-heading font-bold text-sm">CID da inaptidão</h3>
         </div>
         {!obrigatorio && (
           <button type="button" onClick={onClose} aria-label="Fechar" className="p-1 rounded-lg hover:bg-white/10 transition-colors">

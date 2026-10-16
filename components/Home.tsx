@@ -74,14 +74,14 @@ export const Home: React.FC = () => {
                     selectedCategory ? 'flex-row items-center gap-2.5 py-3.5 px-4' : 'flex-col gap-1.5 py-4 px-4 md:py-5 md:px-5'
                   } ${
                     isDimmed
-                      ? 'bg-gray-200 text-gray-400 hover:bg-gray-200'
+                      ? 'bg-gray-200 text-ink-3 hover:bg-gray-200'
                       : isConcursosEmAndamento
                       ? 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white hover:shadow-md'
                       : 'bg-[#079551] hover:bg-[#067a43] active:bg-[#056635] text-white hover:shadow-md'
                   }`}
                 >
                   {badge > 0 ? (
-                    <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white/30">
+                    <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white/30">
                       {badge}
                     </span>
                   ) : null}
@@ -94,7 +94,7 @@ export const Home: React.FC = () => {
                     </span>
                   </span>
                   {!selectedCategory && (
-                    <span className="text-[11px] sm:text-xs md:text-sm font-medium leading-snug text-white/85">
+                    <span className="text-xs md:text-sm font-medium leading-snug text-white/85">
                       {cat.subtitle}
                     </span>
                   )}
@@ -136,7 +136,7 @@ export const Home: React.FC = () => {
                     }`}
                   >
                     {sub.badge ? (
-                      <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white">
+                      <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white">
                         {sub.badge}
                       </span>
                     ) : null}
@@ -144,7 +144,7 @@ export const Home: React.FC = () => {
                       <span className={`material-symbols-outlined text-[24px] md:text-[30px] shrink-0 ${isPlanilhasEmAndamento ? 'text-white' : 'text-[#079551]'}`}>{sub.icon}</span>
                       <span className="text-sm sm:text-base md:text-lg font-bold leading-tight">{sub.label}</span>
                     </span>
-                    <span className={`text-[11px] sm:text-xs md:text-sm font-medium leading-snug ${isPlanilhasEmAndamento ? 'text-white/85' : 'text-gray-500'}`}>
+                    <span className={`text-xs md:text-sm font-medium leading-snug ${isPlanilhasEmAndamento ? 'text-white/85' : 'text-gray-500'}`}>
                       {sub.subtitle}
                     </span>
                   </button>

@@ -91,7 +91,7 @@ export const Infograficos: React.FC<InfograficosProps> = ({ onBack }) => {
           {selectedItem.imageUrl ? (
             <img src={selectedItem.imageUrl} alt={selectedItem.title} className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl block" referrerPolicy="no-referrer" />
           ) : (
-            <div className="flex flex-col items-center justify-center p-10 text-gray-400 h-full">
+            <div className="flex flex-col items-center justify-center p-10 text-ink-3 h-full">
               <span className="material-symbols-outlined text-4xl mb-4 opacity-50">broken_image</span>
               <p>Imagem não disponível</p>
             </div>
@@ -135,7 +135,7 @@ export const Infograficos: React.FC<InfograficosProps> = ({ onBack }) => {
                   <button key={item.id} onClick={() => setSelectedItem(item)} className="group bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col w-full hover:shadow-md hover:border-[#079551] transition-all duration-300 text-left p-4 md:p-5">
                     <div className="flex justify-between items-start gap-4 w-full">
                       <h3 className="text-sm md:text-base font-bold text-[#050F41] font-heading leading-snug group-hover:text-[#079551] transition-colors">{item.title}</h3>
-                      <ChevronRight className="text-gray-400 group-hover:text-[#079551] transform group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" size={18} />
+                      <ChevronRight className="text-ink-3 group-hover:text-[#079551] transform group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" size={18} />
                     </div>
                     {item.description && (
                       <p className="text-xs md:text-sm text-gray-500 font-body leading-relaxed line-clamp-3 mt-2">{item.description}</p>

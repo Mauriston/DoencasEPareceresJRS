@@ -434,7 +434,7 @@ export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
       <div className="flex-1 overflow-y-auto pb-24 md:pb-10">
         <div className="p-4 md:p-6 space-y-4 md:space-y-5 max-w-2xl md:max-w-4xl mx-auto w-full">
           <div className="text-center mb-1">
-            <h2 className="text-base md:text-2xl font-heading font-bold text-[#050F41]">PADRÕES PSICOFÍSICOS ADMISSIONAIS</h2>
+            <h2 className="text-base md:text-2xl font-heading font-bold text-[#050F41]">Padrões psicofísicos admissionais</h2>
             <p className="text-xs md:text-base text-gray-500 font-body mt-1">Índices mínimos e condições incapacitantes para ingresso.</p>
           </div>
 
@@ -491,7 +491,7 @@ export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
           )}
 
           <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-200/60">
-            <h3 className="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Veja também</h3>
+            <h3 className="text-xs md:text-sm font-bold text-ink-3 tracking-wider mb-3">Veja também</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <button
                 type="button"

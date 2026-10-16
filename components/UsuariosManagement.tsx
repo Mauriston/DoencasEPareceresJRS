@@ -22,7 +22,7 @@ const emptyUserForm = {
 };
 
 const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-semibold text-gray-800 focus:outline-none focus:border-[#050F41] transition-colors';
-const labelClass = 'text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1';
+const labelClass = 'text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1';
 const featureGroups = [...new Set(FEATURE_DEFS.map(f => f.group))];
 
 interface UsuariosManagementProps {
@@ -241,13 +241,13 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
   const getPerfilBadge = (perfil: string) => {
     switch (perfil) {
       case 'admin':
-        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">ADMIN</span>;
+        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">ADMIN</span>;
       case 'user_medicos':
-        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">USER MÉDICOS</span>;
+        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">USER MÉDICOS</span>;
       case 'user_medicos_mpi':
-        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200">USER MÉDICOS MPI</span>;
+        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 border border-teal-200">USER MÉDICOS MPI</span>;
       default:
-        return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">USER SECRETARIA</span>;
+        return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200">USER SECRETARIA</span>;
     }
   };
 
@@ -265,7 +265,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
       <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1600px] mx-auto w-full flex-1 space-y-4">
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="relative flex-1">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">search</span>
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-ink-3 text-[20px]">search</span>
             <input
               type="text"
               value={search}
@@ -274,7 +274,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
               className="w-full pl-10 pr-4 py-2.5 text-xs font-body rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-[#050F41] transition-all"
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 hover:text-gray-600">
                 <span className="material-symbols-outlined text-[16px]">close</span>
               </button>
             )}
@@ -309,28 +309,28 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-white p-3.5 rounded-2xl border border-gray-200/60 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total</p>
+              <p className="text-xs font-bold text-ink-3 uppercase tracking-wider">Total</p>
               <p className="text-xl font-bold text-[#050F41] font-heading">{users.length}</p>
             </div>
-            <span className="material-symbols-outlined text-[24px] text-gray-400 bg-gray-50 p-2 rounded-xl">group</span>
+            <span className="material-symbols-outlined text-[24px] text-ink-3 bg-gray-50 p-2 rounded-xl">group</span>
           </div>
           <div className="bg-white p-3.5 rounded-2xl border border-gray-200/60 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ativos</p>
+              <p className="text-xs font-bold text-ink-3 uppercase tracking-wider">Ativos</p>
               <p className="text-xl font-bold text-[#079551] font-heading">{users.filter(u => u.ativo).length}</p>
             </div>
             <span className="material-symbols-outlined text-[24px] text-[#079551] bg-green-50 p-2 rounded-xl">check_circle</span>
           </div>
           <div className="bg-white p-3.5 rounded-2xl border border-gray-200/60 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Inativos</p>
+              <p className="text-xs font-bold text-ink-3 uppercase tracking-wider">Inativos</p>
               <p className="text-xl font-bold text-red-600 font-heading">{users.filter(u => !u.ativo).length}</p>
             </div>
             <span className="material-symbols-outlined text-[24px] text-red-500 bg-red-50 p-2 rounded-xl">block</span>
           </div>
           <div className="bg-white p-3.5 rounded-2xl border border-gray-200/60 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Admins</p>
+              <p className="text-xs font-bold text-ink-3 uppercase tracking-wider">Admins</p>
               <p className="text-xl font-bold text-purple-700 font-heading">{users.filter(u => u.perfil === 'admin').length}</p>
             </div>
             <span className="material-symbols-outlined text-[24px] text-purple-600 bg-purple-50 p-2 rounded-xl">admin_panel_settings</span>
@@ -353,14 +353,14 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
             <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
               <span className="material-symbols-outlined text-[36px] text-gray-300">person_off</span>
               <p className="text-sm font-bold text-gray-700">Nenhum usuário encontrado</p>
-              <p className="text-xs text-gray-400">Tente ajustar seus termos de pesquisa ou filtros.</p>
+              <p className="text-xs text-ink-3">Tente ajustar seus termos de pesquisa ou filtros.</p>
             </div>
           ) : (
             <>
               <div className="hidden md:block overflow-x-auto scroll-x-visible">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                    <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
                       <th className="py-3.5 px-4">Usuário</th>
                       <th className="py-3.5 px-4">Nome Completo</th>
                       <th className="py-3.5 px-4">Cargo</th>
@@ -379,7 +379,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
                             {user.imageProfile ? (
                               <img src={user.imageProfile} alt={user.usuario} className="w-7 h-7 rounded-full object-cover shrink-0" />
                             ) : (
-                              <div className="w-7 h-7 rounded-full bg-[#050F41] text-white flex items-center justify-center font-bold text-[10px] uppercase shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-[#050F41] text-white flex items-center justify-center font-bold text-xs uppercase shrink-0">
                                 {user.usuario.charAt(0)}
                               </div>
                             )}
@@ -395,7 +395,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
                           <button
                             type="button"
                             onClick={() => handleToggleStatus(user)}
-                            className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                            className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                               user.ativo ? 'bg-green-100 text-green-800 hover:bg-green-200 border border-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200 border border-red-200'
                             }`}
                             title={user.ativo ? 'Clique para desativar' : 'Clique para ativar'}
@@ -412,7 +412,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
                             <button
                               type="button"
                               onClick={() => handleToggleStatus(user)}
-                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${user.ativo ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${user.ativo ? 'text-ink-3 hover:text-red-600 hover:bg-red-50' : 'text-ink-3 hover:text-green-600 hover:bg-green-50'}`}
                               title={user.ativo ? 'Desativar usuário' : 'Ativar usuário'}
                             >
                               <span className="material-symbols-outlined text-[18px]">{user.ativo ? 'block' : 'check_circle'}</span>
@@ -439,19 +439,19 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
                         )}
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-[#050F41] truncate">{user.usuario}</p>
-                          <p className="text-[11px] text-gray-700 font-semibold truncate">{user.nome}</p>
+                          <p className="text-xs text-gray-700 font-semibold truncate">{user.nome}</p>
                         </div>
                       </div>
                       <div className="shrink-0 flex items-center space-x-1">{getPerfilBadge(user.perfil)}</div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-600 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
                       <div>
-                        <span className="text-[9px] font-bold text-gray-400 uppercase block">NIP</span>
+                        <span className="text-xs font-bold text-ink-3 uppercase block">NIP</span>
                         <span className="font-mono font-medium">{formatNip(user.nip) || '-'}</span>
                       </div>
                       <div>
-                        <span className="text-[9px] font-bold text-gray-400 uppercase block">E-mail</span>
+                        <span className="text-xs font-bold text-ink-3 uppercase block">E-mail</span>
                         <span className="truncate block font-medium">{user.email || '-'}</span>
                       </div>
                     </div>
@@ -460,7 +460,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
                       <button
                         type="button"
                         onClick={() => handleToggleStatus(user)}
-                        className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-[10px] font-bold transition-all ${
+                        className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
                           user.ativo ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
                         }`}
                       >
@@ -487,7 +487,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
               <span className="material-symbols-outlined text-[20px] text-[#050F41]">tune</span>
               <div>
                 <h3 className="font-heading font-bold text-sm text-[#050F41]">Permissões por Perfil</h3>
-                <p className="text-[11px] text-gray-500">Define quais páginas e funcionalidades cada perfil pode acessar. O perfil Admin sempre tem acesso total.</p>
+                <p className="text-xs text-gray-500">Define quais páginas e funcionalidades cada perfil pode acessar. O perfil Admin sempre tem acesso total.</p>
               </div>
             </div>
             <button
@@ -503,11 +503,11 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
 
           <div className="p-4 sm:p-5 space-y-6">
             <div>
-              <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Páginas do App</h4>
+              <h4 className="text-xs font-bold text-ink-3 tracking-wider mb-2">Páginas do App</h4>
               <div className="overflow-x-auto scroll-x-visible">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                    <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
                       <th className="py-2.5 px-3">Página</th>
                       {ROLES.map(role => (
                         <th key={role.id} className="py-2.5 px-3 text-center">{role.label}</th>
@@ -540,11 +540,11 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
 
             {featureGroups.map(group => (
               <div key={group}>
-                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Funcionalidades — {group}</h4>
+                <h4 className="text-xs font-bold text-ink-3 tracking-wider mb-2">Funcionalidades — {group}</h4>
                 <div className="overflow-x-auto scroll-x-visible">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                      <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
                         <th className="py-2.5 px-3">Funcionalidade</th>
                         {ROLES.map(role => (
                           <th key={role.id} className="py-2.5 px-3 text-center">{role.label}</th>
@@ -583,7 +583,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
             <div className="p-4 bg-[#050F41] text-white flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className="material-symbols-outlined text-[22px] text-[#079551]">person_add</span>
-                <h3 className="font-heading font-bold text-sm uppercase">Adicionar Usuário</h3>
+                <h3 className="font-heading font-bold text-sm">Adicionar Usuário</h3>
               </div>
               <button onClick={() => setShowNewUserModal(false)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
                 <span className="material-symbols-outlined text-[20px]">close</span>
@@ -595,7 +595,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
                 <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs md:text-sm font-semibold text-red-700">{newUserError}</div>
               )}
 
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-[11px] md:text-sm font-semibold text-blue-800 flex items-start gap-2">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs md:text-sm font-semibold text-blue-800 flex items-start gap-2">
                 <span className="material-symbols-outlined text-[16px] shrink-0">info</span>
                 <span>A senha inicial do usuário será o NIP (somente números). Ele será orientado a alterá-la no primeiro acesso.</span>
               </div>
@@ -684,7 +684,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
             <div className="p-4 bg-[#050F41] text-white flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className="material-symbols-outlined text-[22px] text-[#079551]">manage_accounts</span>
-                <h3 className="font-heading font-bold text-sm uppercase">Editar Dados do Usuário</h3>
+                <h3 className="font-heading font-bold text-sm">Editar Dados do Usuário</h3>
               </div>
               <button onClick={() => setEditingUser(null)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
                 <span className="material-symbols-outlined text-[20px]">close</span>
@@ -695,7 +695,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
               <div>
                 <label className={labelClass}>Nome de Usuário (Login)</label>
                 <input type="text" disabled value={editForm.usuario || ''} className={`${inputClass} bg-gray-100 text-gray-500 cursor-not-allowed`} />
-                <p className="text-[10px] md:text-xs text-gray-400 mt-1">Não pode ser alterado após a criação (é a identidade de login).</p>
+                <p className="text-xs text-ink-3 mt-1">Não pode ser alterado após a criação (é a identidade de login).</p>
               </div>
 
               <div>
@@ -760,7 +760,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
               <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
                 <div>
                   <p className="text-xs md:text-sm font-bold text-[#050F41]">Status da Conta</p>
-                  <p className="text-[11px] md:text-sm text-gray-500">{editForm.ativo ? 'Usuário ativo e autorizado no sistema.' : 'Usuário desativado (sem acesso).'}</p>
+                  <p className="text-xs md:text-sm text-gray-500">{editForm.ativo ? 'Usuário ativo e autorizado no sistema.' : 'Usuário desativado (sem acesso).'}</p>
                 </div>
                 <button
                   type="button"

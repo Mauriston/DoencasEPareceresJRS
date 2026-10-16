@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Header } from './Header';
 import { PericiaMenorDetalhe } from './PericiaMenorDetalhe';
+import { PericiaStatusTags } from './ui/PericiaStatusTags';
+import { Button } from './ui/Button';
 import { Search, Loader2, AlertCircle, CheckCircle2, ChevronDown, CheckCircle, Camera, Crop as CropIcon, Sparkles, X } from 'lucide-react';
 import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -373,7 +375,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
     .sort((a, b) => { let cmp = sortCol === 'data' ? parseDate(a.dataAtestado) - parseDate(b.dataAtestado) : a.inspecionado.localeCompare(b.inspecionado, 'pt-BR'); return sortDir === 'asc' ? cmp : -cmp; });
 
   const searchSuggestions = historySearch.length >= 1
-    ? [...new Set(history.map(r => r.inspecionado))].filter(n => n.toLowerCase().includes(historySearch.toLowerCase())).slice(0, 8)
+    ? Array.from(new Set<string>(history.map(r => r.inspecionado))).filter(n => n.toLowerCase().includes(historySearch.toLowerCase())).slice(0, 8)
     : [];
 
   if (selectedPerson !== null) {
@@ -391,7 +393,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
         </button>
         <button onClick={() => { setActiveTab('historico'); fetchHistory(); }} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'historico' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
           <span className="material-symbols-outlined text-[18px]">history</span><span>Histórico</span>
-          {vigentesCount > 0 && (<span className="bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">{vigentesCount}</span>)}
+          {vigentesCount > 0 && (<span className="bg-wine text-white text-xs font-bold rounded-full min-w-5 h-5 px-1 flex items-center justify-center leading-none">{vigentesCount}</span>)}
         </button>
       </div>
       )}
@@ -401,7 +403,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
         {/* IA Section */}
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 animate-fade-in shadow-inner">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-[#050F41] uppercase tracking-wider flex items-center gap-2"><Camera size={16} className="text-blue-600" /> Leitura Inteligente (IA)</h3>
+            <h3 className="text-xs font-bold text-[#050F41] tracking-wider flex items-center gap-2"><Camera size={16} className="text-blue-600" /> Leitura Inteligente (IA)</h3>
           </div>
           {!croppedImageUrl ? (
             <div className="flex justify-center">
@@ -412,7 +414,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
             <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-blue-200 shadow-sm">
               <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-gray-200"><img src={croppedImageUrl} alt="Atestado Recortado" className="w-full h-full object-cover" /></div>
               <div className="flex-1">
-                <p className="text-[11px] font-bold text-green-600 mb-2 flex items-center gap-1 uppercase"><CheckCircle2 size={14}/> Imagem Capturada</p>
+                <p className="text-xs font-bold text-green-600 mb-2 flex items-center gap-1 uppercase"><CheckCircle2 size={14}/> Imagem Capturada</p>
                 <div className="flex gap-2">
                   <button type="button" onClick={extractDataWithGemini} disabled={isExtracting} className="flex-1 py-2 bg-gradient-to-r from-[#050F41] to-blue-800 text-white text-xs font-bold rounded-lg hover:opacity-90 flex items-center justify-center gap-1.5 disabled:opacity-50">
                     {isExtracting ? <span className="flex items-center gap-1.5"><Loader2 size={14} className="animate-spin"/> A analisar...</span> : <span className="flex items-center gap-1.5"><Sparkles size={14} className="text-yellow-400"/> Extrair Dados</span>}
@@ -427,7 +429,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
         <div className="md:grid md:grid-cols-2 md:gap-6 md:items-start space-y-6 md:space-y-0">
         {/* Militar Section */}
         <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-sm font-bold text-[#050F41] uppercase mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-[#FAB932]">person</span>Dados do Militar</h2>
+          <h2 className="text-sm font-bold text-[#050F41] mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-navy">person</span>Dados do Militar</h2>
           <div className="space-y-4">
             <div className="relative z-[100] mb-4">
               <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Serviço *</label>
@@ -446,9 +448,9 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
                 {militarStatus === "found" && (<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-green-500"><CheckCircle2 size={18} /></div>)}
               </div>
               {searchError && <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {searchError}</p>}
-              <div className="mt-1.5 text-right"><button type="button" onClick={() => abrirModalPesquisaNome()} className="text-[10px] text-blue-600 underline hover:text-blue-800 uppercase font-bold">Pesquisar pelo nome</button></div>
+              <div className="mt-1.5 text-right"><button type="button" onClick={() => abrirModalPesquisaNome()} className="text-xs text-blue-600 underline hover:text-blue-800 uppercase font-bold">Pesquisar pelo nome</button></div>
             </div>
-            {militarStatus === "found" && (<div className="bg-blue-50 border-l-4 border-navy p-3 rounded-r-lg space-y-2 animate-fade-in"><div><label className="block text-[10px] font-bold text-navy/70 uppercase">Inspecionado</label><p className="text-sm font-medium text-navy">{inspecionado}</p></div><div><label className="block text-[10px] font-bold text-navy/70 uppercase">OM</label><p className="text-sm font-medium text-navy">{omLeitura}</p></div></div>)}
+            {militarStatus === "found" && (<div className="bg-blue-50 border-l-4 border-navy p-3 rounded-r-lg space-y-2 animate-fade-in"><div><label className="block text-xs font-bold text-navy/70 uppercase">Inspecionado</label><p className="text-sm font-medium text-navy">{inspecionado}</p></div><div><label className="block text-xs font-bold text-navy/70 uppercase">OM</label><p className="text-sm font-medium text-navy">{omLeitura}</p></div></div>)}
             {militarStatus === "not_found" && (
               <div className="space-y-4 animate-fade-in border-t border-dashed border-gray-200 pt-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -466,7 +468,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
         <div className="space-y-6">
         {/* Atestado Section */}
         <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-sm font-bold text-[#050F41] uppercase mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-[#FAB932]">medical_information</span>Dados do Atestado</h2>
+          <h2 className="text-sm font-bold text-[#050F41] mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-navy">medical_information</span>Dados do Atestado</h2>
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="w-full"><label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Data Atestado *</label><input type="date" value={dataAtestado} onChange={(e) => setDataAtestado(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm" /></div>
@@ -482,24 +484,24 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
 
         {/* Homologacao Section */}
         <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-          <h2 className="text-sm font-bold text-[#050F41] uppercase mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-[#FAB932]">verified</span>Homologação</h2>
+          <h2 className="text-sm font-bold text-[#050F41] mb-4 font-heading border-b border-gray-100 pb-2 flex items-center gap-2"><span className="material-symbols-outlined text-navy">verified</span>Homologação</h2>
           <div className="space-y-6">
             <div><label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Tempo Homologado *</label><input type="text" value={tempoHomologacao} onChange={(e) => handleTempoInput(e.target.value, setTempoHomologacao, 20)} onBlur={() => formatTempoBlur(tempoHomologacao, setTempoHomologacao)} onFocus={() => formatTempoFocus(tempoHomologacao, setTempoHomologacao)} placeholder="Máx: 20 dias" className="w-full sm:w-1/2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm" /></div>
             <div className="relative z-[80]">
               <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase">Dispensas *</label>
               <button type="button" onClick={() => setShowDispensasDropdown(!showDispensasDropdown)} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm flex justify-between items-center">
-                <span className={`truncate font-medium ${selectedDispensas.length > 0 ? 'text-[#050F41]' : 'text-gray-400'}`}>{selectedDispensas.length === 0 ? 'Selecione as dispensas...' : selectedDispensas.includes('TODAS AS ATIVIDADES') ? 'TODAS AS ATIVIDADES' : `${selectedDispensas.length} dispensa(s) selecionada(s)`}</span>
-                <ChevronDown size={18} className={`text-gray-400 transition-transform duration-200 ${showDispensasDropdown ? 'rotate-180' : ''}`} />
+                <span className={`truncate font-medium ${selectedDispensas.length > 0 ? 'text-[#050F41]' : 'text-ink-3'}`}>{selectedDispensas.length === 0 ? 'Selecione as dispensas...' : selectedDispensas.includes('TODAS AS ATIVIDADES') ? 'TODAS AS ATIVIDADES' : `${selectedDispensas.length} dispensa(s) selecionada(s)`}</span>
+                <ChevronDown size={18} className={`text-ink-3 transition-transform duration-200 ${showDispensasDropdown ? 'rotate-180' : ''}`} />
               </button>
               {showDispensasDropdown && (
                 <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fade-in">
-                  {isLoadingLookups ? (<p className="text-xs text-gray-400 col-span-2 text-center py-4 flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> A carregar dispensas...</p>) : (
+                  {isLoadingLookups ? (<p className="text-xs text-ink-3 col-span-2 text-center py-4 flex items-center justify-center gap-2"><Loader2 size={16} className="animate-spin" /> A carregar dispensas...</p>) : (
                     dispensasDisponiveis.map((disp, idx) => {
                       const isTodas = disp === 'TODAS AS ATIVIDADES';
                       const isSelected = selectedDispensas.includes(disp);
                       const isDisabled = (isTodas && selectedDispensas.length > 0 && !isSelected) || (!isTodas && selectedDispensas.includes('TODAS AS ATIVIDADES'));
                       return (
-                        <button key={idx} onClick={() => handleDispensaToggle(disp)} disabled={isDisabled} type="button" className={`flex items-center text-left p-3 rounded-xl border text-xs transition-all ${isSelected ? 'bg-blue-50 border-blue-200 text-[#050F41] font-bold' : isDisabled ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed opacity-60' : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'}`}>
+                        <button key={idx} onClick={() => handleDispensaToggle(disp)} disabled={isDisabled} type="button" className={`flex items-center text-left p-3 rounded-xl border text-xs transition-all ${isSelected ? 'bg-blue-50 border-blue-200 text-[#050F41] font-bold' : isDisabled ? 'bg-gray-50 border-gray-100 text-ink-3 cursor-not-allowed opacity-60' : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'}`}>
                           <div className={`w-4 h-4 rounded-md shrink-0 mr-3 flex items-center justify-center border ${isSelected ? 'bg-[#050F41] border-[#050F41]' : 'border-gray-300 bg-white'}`}>{isSelected && <CheckCircle2 size={12} strokeWidth={3} className="text-white" />}</div>
                           <span>{disp}</span>
                         </button>
@@ -510,15 +512,15 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
               )}
             </div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-2 uppercase">VDF *</label><div className="flex space-x-2"><button type="button" onClick={() => setVdf(true)} className={`flex-1 py-2.5 rounded-xl font-bold border ${vdf === true ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>SIM</button><button type="button" onClick={() => setVdf(false)} className={`flex-1 py-2.5 rounded-xl font-bold border ${vdf === false ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>NÃO</button></div></div>
-            <div><label className="block text-xs font-semibold text-gray-600 mb-2 uppercase">Perito *</label><div className="flex space-x-2">{isLoadingLookups ? (<p className="text-xs text-gray-400 flex items-center gap-2"><Loader2 size={14} className="animate-spin"/> A carregar peritos...</p>) : (peritosDisponiveis.map((p, idx) => (<button type="button" key={idx} onClick={() => setSelectedPerito(p.PERITO)} className={`flex-1 px-2 py-2.5 rounded-xl text-sm font-bold border ${selectedPerito === p.PERITO ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-200'}`}>{p.PERITO}</button>)))}</div></div>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-2 uppercase">Perito *</label><div className="flex space-x-2">{isLoadingLookups ? (<p className="text-xs text-ink-3 flex items-center gap-2"><Loader2 size={14} className="animate-spin"/> A carregar peritos...</p>) : (peritosDisponiveis.map((p, idx) => (<button type="button" key={idx} onClick={() => setSelectedPerito(p.PERITO)} className={`flex-1 px-2 py-2.5 rounded-xl text-sm font-bold border ${selectedPerito === p.PERITO ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-white text-gray-600 border-gray-200'}`}>{p.PERITO}</button>)))}</div></div>
           </div>
         </section>
         </div>
         </div>
 
-        <div className="flex justify-end items-center gap-4 pt-4 pb-8">
-          <button type="button" onClick={handleReset} className="w-14 h-14 bg-white text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full flex items-center justify-center shadow-md border border-gray-200 active:scale-95" title="Limpar"><span className="material-symbols-outlined text-[26px]">delete</span></button>
-          <button type="button" onClick={handleSubmit} disabled={isSubmitting} className="w-14 h-14 bg-[#079551] text-white rounded-full flex items-center justify-center shadow-md hover:shadow-xl active:scale-95 disabled:opacity-50" title="Gerar Perícia Menor">{isSubmitting ? <Loader2 size={24} className="animate-spin" /> : <span className="material-symbols-outlined text-[26px]">send</span>}</button>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-between items-stretch gap-3 pt-4 pb-8">
+          <Button variant="destructive" icon="delete" onClick={handleReset}>Limpar</Button>
+          <Button icon="send" loading={isSubmitting} onClick={handleSubmit}>Gerar perícia menor</Button>
         </div>
       </div>
       )}
@@ -527,10 +529,10 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
       {showPesquisarNomeModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setShowPesquisarNomeModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white z-10"><span className="material-symbols-outlined">close</span></button>
+            <button onClick={() => setShowPesquisarNomeModal(false)} className="absolute top-4 right-4 text-ink-3 hover:text-white z-10"><span className="material-symbols-outlined">close</span></button>
             <div className="p-6 bg-[#050F41] text-white shrink-0"><h2 className="text-xl font-bold">Pesquisar Militar</h2><p className="text-blue-100 text-sm mt-1">Busque pelo nome completo</p></div>
             <div className="p-6 flex-1 flex flex-col min-h-0">
-              <div className="relative shrink-0 mb-4"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400"><span className="material-symbols-outlined">search</span></div><input type="text" value={pesquisarNomeTerm} onChange={(e) => setPesquisarNomeTerm(e.target.value)} placeholder="Ex: João da Silva..." className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-10 p-2.5 md:text-base" autoFocus /></div>
+              <div className="relative shrink-0 mb-4"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-ink-3"><span className="material-symbols-outlined">search</span></div><input type="text" value={pesquisarNomeTerm} onChange={(e) => setPesquisarNomeTerm(e.target.value)} placeholder="Ex: João da Silva..." className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-10 p-2.5 md:text-base" autoFocus /></div>
               <div className="flex-1 overflow-y-auto min-h-[50px] border border-gray-100 rounded-lg bg-gray-50/50">
                 {isCarregandoMilitares ? (<div className="p-8 text-center flex flex-col items-center"><div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mb-2"></div><p className="text-sm md:text-base">Carregando...</p></div>) : (
                   <div className="flex flex-col">
@@ -547,9 +549,9 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
       {/* Crop Modal */}
       {showCropModal && (
         <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col animate-fade-in backdrop-blur-sm">
-          <div className="p-4 bg-black flex justify-between items-center text-white shrink-0 border-b border-gray-800"><h3 className="font-bold flex items-center gap-2"><CropIcon size={20} className="text-[#FAB932]" /> Recortar Atestado</h3><button onClick={() => { setShowCropModal(false); setImgSrc(''); }} className="p-2 text-gray-400 hover:text-white"><X size={24} /></button></div>
+          <div className="p-4 bg-black flex justify-between items-center text-white shrink-0 border-b border-gray-800"><h3 className="font-bold flex items-center gap-2"><CropIcon size={20} className="text-[#FAB932]" /> Recortar Atestado</h3><button onClick={() => { setShowCropModal(false); setImgSrc(''); }} className="p-2 text-white/70 hover:text-white"><X size={24} /></button></div>
           <div className="flex-1 overflow-auto flex items-center justify-center p-4">{imgSrc && (<ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)}><img ref={imgRef} src={imgSrc} alt="Crop" style={{ maxHeight: '70vh', objectFit: 'contain' }} /></ReactCrop>)}</div>
-          <div className="p-4 bg-black shrink-0 pb-10"><p className="text-gray-400 text-xs md:text-sm text-center mb-4">Arraste os cantos para selecionar nome, datas e o CID.</p><button onClick={handleCropComplete} className="w-full py-4 bg-[#079551] hover:bg-green-600 text-white font-bold rounded-xl flex justify-center items-center gap-2"><CheckCircle2 size={20} /> Confirmar Recorte</button></div>
+          <div className="p-4 bg-black shrink-0 pb-10"><p className="text-white/70 text-xs md:text-sm text-center mb-4">Arraste os cantos para selecionar nome, datas e o CID.</p><button onClick={handleCropComplete} className="w-full py-4 bg-[#079551] hover:bg-green-600 text-white font-bold rounded-xl flex justify-center items-center gap-2"><CheckCircle2 size={20} /> Confirmar Recorte</button></div>
         </div>
       )}
 
@@ -577,22 +579,22 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
         <div className="md:grid md:grid-cols-[280px_1fr] md:gap-6 md:items-start">
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-4 md:mb-0 space-y-3">
             <div className="relative" ref={searchRef}>
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-[18px]">search</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-ink-3 text-[18px]">search</span>
               <input type="text" placeholder="Buscar por inspecionado..." value={historySearch} onChange={e => { setHistorySearch(e.target.value); setShowSearchDropdown(true); }} onFocus={() => setShowSearchDropdown(true)} className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#050F41] bg-gray-50" />
               {showSearchDropdown && searchSuggestions.length > 0 && (<div className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg mt-1 overflow-hidden">{searchSuggestions.map((name, i) => (<button key={i} type="button" onMouseDown={() => { setHistorySearch(name); setShowSearchDropdown(false); }} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-50 last:border-0">{name}</button>))}</div>)}
             </div>
             <div className="flex gap-2 flex-wrap">
-              <button type="button" onClick={() => { setFilterVigente(v => { const next = !v; if (next) setFilterConcluido(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterVigente ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300'}`}>{filterVigente && <span className="material-symbols-outlined text-[13px]">check</span>}Vigentes{vigentesTotal > 0 && (<span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterVigente ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>{vigentesTotal}</span>)}</button>
-              <button type="button" onClick={() => { setFilterConcluido(v => { const next = !v; if (next) setFilterVigente(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterConcluido ? 'bg-[#079551] text-white border-[#079551]' : 'bg-white text-gray-600 border-gray-300'}`}>{filterConcluido && <span className="material-symbols-outlined text-[13px]">check</span>}Concluídos{concluidosTotal > 0 && (<span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterConcluido ? 'bg-white/25 text-white' : 'bg-green-100 text-green-700'}`}>{concluidosTotal}</span>)}</button>
+              <button type="button" onClick={() => { setFilterVigente(v => { const next = !v; if (next) setFilterConcluido(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterVigente ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300'}`}>{filterVigente && <span className="material-symbols-outlined text-[13px]">check</span>}Vigentes{vigentesTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterVigente ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>{vigentesTotal}</span>)}</button>
+              <button type="button" onClick={() => { setFilterConcluido(v => { const next = !v; if (next) setFilterVigente(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterConcluido ? 'bg-[#079551] text-white border-[#079551]' : 'bg-white text-gray-600 border-gray-300'}`}>{filterConcluido && <span className="material-symbols-outlined text-[13px]">check</span>}Concluídos{concluidosTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterConcluido ? 'bg-white/25 text-white' : 'bg-green-100 text-green-700'}`}>{concluidosTotal}</span>)}</button>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <button type="button" onClick={() => { setFilterLts(v => { const next = !v; if (next) setFilterRestricoes(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterLts ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300'}`}>{filterLts && <span className="material-symbols-outlined text-[13px]">check</span>}LTS{ltsTotal > 0 && (<span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterLts ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>{ltsTotal}</span>)}</button>
-              <button type="button" onClick={() => { setFilterRestricoes(v => { const next = !v; if (next) setFilterLts(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterRestricoes ? 'bg-amber-400 text-white border-amber-400' : 'bg-white text-gray-600 border-gray-300'}`}>{filterRestricoes && <span className="material-symbols-outlined text-[13px]">check</span>}Restrições{restricoesTotal > 0 && (<span className={`text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${filterRestricoes ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'}`}>{restricoesTotal}</span>)}</button>
+              <button type="button" onClick={() => { setFilterLts(v => { const next = !v; if (next) setFilterRestricoes(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterLts ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300'}`}>{filterLts && <span className="material-symbols-outlined text-[13px]">check</span>}LTS{ltsTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterLts ? 'bg-white/25 text-white' : 'bg-red-100 text-red-600'}`}>{ltsTotal}</span>)}</button>
+              <button type="button" onClick={() => { setFilterRestricoes(v => { const next = !v; if (next) setFilterLts(false); return next; }); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${filterRestricoes ? 'bg-amber-400 text-white border-amber-400' : 'bg-white text-gray-600 border-gray-300'}`}>{filterRestricoes && <span className="material-symbols-outlined text-[13px]">check</span>}Restrições{restricoesTotal > 0 && (<span className={`text-xs font-bold rounded-full px-1.5 py-0.5 leading-none ${filterRestricoes ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'}`}>{restricoesTotal}</span>)}</button>
             </div>
           </div>
           <div>
           {filteredHistory.length > 0 && (<div className="flex justify-end mb-3 px-1"><span className="bg-gray-100 text-gray-600 text-xs font-bold px-2.5 py-1 rounded-full">{filteredHistory.length} registro{filteredHistory.length !== 1 ? 's' : ''}</span></div>)}
-          {isFetchingHistory ? (<div className="flex items-center justify-center py-12 gap-3 text-gray-400"><span className="w-5 h-5 border-2 border-gray-300 border-t-[#050F41] rounded-full animate-spin" /><span className="text-sm">Carregando histórico...</span></div>) : filteredHistory.length === 0 ? (<div className="text-center py-12 text-gray-400 text-sm">Nenhum registro encontrado.</div>) : (
+          {isFetchingHistory ? (<div className="flex items-center justify-center py-12 gap-3 text-ink-3"><span className="w-5 h-5 border-2 border-gray-300 border-t-[#050F41] rounded-full animate-spin" /><span className="text-sm">Carregando histórico...</span></div>) : filteredHistory.length === 0 ? (<div className="text-center py-12 text-ink-3 text-sm">Nenhum registro encontrado.</div>) : (
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <table className="w-full text-xs">
                 <thead>
@@ -600,7 +602,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
                     <th className="text-left px-3 py-2.5 font-bold text-[#050F41] w-[30%] cursor-pointer select-none" onClick={() => handleSort('data')}>
                       <span className="flex items-center gap-1">
                         Data
-                        <span className="material-symbols-outlined text-[13px] text-gray-400">
+                        <span className="material-symbols-outlined text-[13px] text-ink-3">
                           {sortCol === 'data' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
                         </span>
                       </span>
@@ -608,7 +610,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
                     <th className="text-left px-3 py-2.5 font-bold text-[#050F41] cursor-pointer select-none" onClick={() => handleSort('inspecionado')}>
                       <span className="flex items-center gap-1">
                         Inspecionado
-                        <span className="material-symbols-outlined text-[13px] text-gray-400">
+                        <span className="material-symbols-outlined text-[13px] text-ink-3">
                           {sortCol === 'inspecionado' ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
                         </span>
                       </span>
@@ -621,16 +623,9 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
                       <td className="px-3 py-2.5 align-top">
                         <span className="font-semibold text-gray-800 block">{rec.dataAtestado}</span>
                         {rec.tempoHomolog && (
-                          <span className="text-[10px] text-gray-400 mt-0.5 block">{String(rec.tempoHomolog).replace(/^(\d+)$/, '$1 dias')}</span>
+                          <span className="text-xs text-ink-3 mt-0.5 block">{String(rec.tempoHomolog).replace(/^(\d+)$/, '$1 dias')}</span>
                         )}
-                        <div className="flex gap-1 mt-1 flex-wrap">
-                          {rec.vigente && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">V</span>}
-                          {rec.concluido && !rec.vigente && <span className="bg-green-100 text-green-700 text-[9px] font-bold px-1.5 py-0.5 rounded-full">C</span>}
-                          {rec.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES') && <span className="bg-red-100 text-red-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">LTS</span>}
-                          {(rec.dispensas.trim() !== '' && !rec.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES')) && (
-                            <span className="bg-amber-100 text-amber-600 text-[9px] font-bold px-1.5 py-0.5 rounded-full">R</span>
-                          )}
-                        </div>
+                        <div className="mt-1.5"><PericiaStatusTags registro={rec} /></div>
                       </td>
                       <td className="px-3 py-2.5 align-top">
                         <button
@@ -639,10 +634,10 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
                           className="font-semibold text-[#050F41] hover:text-[#079551] transition-colors flex items-start gap-1 text-left w-full"
                         >
                           <span className="flex-1">{rec.inspecionado}</span>
-                          <span className="material-symbols-outlined text-[13px] text-gray-400 shrink-0 mt-0.5">chevron_right</span>
+                          <span className="material-symbols-outlined text-[13px] text-ink-3 shrink-0 mt-0.5">chevron_right</span>
                         </button>
                         {rec.cid && (
-                          <span className="text-[10px] text-gray-400 mt-0.5 block">{rec.cid}</span>
+                          <span className="text-xs text-ink-3 mt-0.5 block">{rec.cid}</span>
                         )}
                       </td>
                     </tr>

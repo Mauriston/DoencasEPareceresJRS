@@ -132,7 +132,7 @@ export const LawReference: React.FC<LawReferenceProps> = ({ onBack }) => {
       
       <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-5xl mx-auto w-full">
         <div className="mb-4 bg-white p-6 rounded-2xl shadow-md border border-gray-200/80 text-center">
-          <h2 className="text-xl font-heading font-black text-[#050F41] tracking-wide uppercase">
+          <h2 className="text-xl font-heading font-black text-[#050F41] tracking-wide">
             LEGISLAÇÃO MÉDICO-PERICIAL
           </h2>
         </div>
@@ -163,7 +163,7 @@ export const LawReference: React.FC<LawReferenceProps> = ({ onBack }) => {
                     <h3 className="text-[#050F41] font-heading font-bold text-[14px] leading-snug mb-0.5 group-hover:text-[#079551] transition-colors">
                       {law.legislation}
                     </h3>
-                    <p className="text-gray-500 font-body text-[11px] font-medium leading-relaxed line-clamp-2">
+                    <p className="text-gray-500 font-body text-xs font-medium leading-relaxed line-clamp-2">
                       {law.title}
                     </p>
                   </div>
@@ -173,7 +173,7 @@ export const LawReference: React.FC<LawReferenceProps> = ({ onBack }) => {
                   type="button"
                   onClick={() => alert(law.provisions)}
                   title={law.provisions}
-                  className="text-gray-400 hover:text-[#050F41] transition-colors flex-shrink-0 focus:outline-none p-1.5 mr-3"
+                  className="text-ink-3 hover:text-[#050F41] transition-colors flex-shrink-0 focus:outline-none p-1.5 mr-3"
                 >
                   <Info size={18} />
                 </button>

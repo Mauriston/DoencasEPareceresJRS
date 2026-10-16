@@ -156,7 +156,7 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
 
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
           <h2 className="font-heading font-bold text-navy text-base flex items-center gap-2 border-b border-gray-100 pb-2">
-            <span className="material-symbols-outlined text-gold">add_photo_alternate</span>
+            <span className="material-symbols-outlined text-navy">add_photo_alternate</span>
             Imagens da IS
           </h2>
 
@@ -168,7 +168,7 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-gray-200 rounded-xl py-8 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[#050F41] hover:text-[#050F41] transition-colors bg-gray-50/50 active:scale-[0.98]"
+            className="w-full border-2 border-dashed border-gray-200 rounded-xl py-8 flex flex-col items-center justify-center gap-2 text-ink-3 hover:border-[#050F41] hover:text-[#050F41] transition-colors bg-gray-50/50 active:scale-[0.98]"
           >
             <span className="material-symbols-outlined text-[40px]">photo_camera</span>
             <span className="text-sm font-semibold">Tirar foto ou selecionar imagem</span>
@@ -192,7 +192,7 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
                 const img2 = images[isIdx * 2 + 1];
                 return (
                   <div key={isIdx} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                    <p className="text-[10px] font-bold text-[#050F41]/50 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <p className="text-xs font-bold text-[#050F41]/50 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[12px]">assignment</span>
                       IS {isIdx + 1}
                       {!img2 && <span className="text-amber-500 font-semibold">· aguardando Img 2</span>}
@@ -207,21 +207,22 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
                                 alt={`IS ${isIdx + 1} Imagem ${offset + 1}`}
                                 className="w-full aspect-video object-cover rounded-lg border border-gray-200 bg-gray-100"
                               />
-                              <span className="absolute top-1.5 left-1.5 bg-[#050F41]/75 text-white text-[9px] font-bold px-1.5 py-0.5 rounded backdrop-blur-sm">
+                              <span className="absolute top-1.5 left-1.5 bg-[#050F41]/75 text-white text-xs font-bold px-1.5 py-0.5 rounded backdrop-blur-sm">
                                 Img {offset + 1}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => removeImage(isIdx * 2 + offset)}
-                                className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity shadow-sm"
+                                aria-label="Remover imagem" title="Remover imagem"
+                                className="absolute top-1 right-1 bg-wine text-white rounded-full w-11 h-11 flex items-center justify-center hover:bg-wine-dark transition-colors shadow-sm"
                               >
-                                <span className="material-symbols-outlined text-[13px]">close</span>
+                                <span className="material-symbols-outlined text-[20px]">close</span>
                               </button>
                             </>
                           ) : (
                             <div className="w-full aspect-video border-2 border-dashed border-amber-200 rounded-lg flex flex-col items-center justify-center gap-1 bg-amber-50/50 text-amber-400">
                               <span className="material-symbols-outlined text-[20px]">image</span>
-                              <span className="text-[10px] font-medium">Img 2 pendente</span>
+                              <span className="text-xs font-medium">Img 2 pendente</span>
                             </div>
                           )}
                         </div>
@@ -281,7 +282,7 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
         )}
 
         {isLoading && (
-          <p className="text-center text-xs text-gray-400 animate-pulse -mt-2">
+          <p className="text-center text-xs text-ink-3 animate-pulse -mt-2">
             O Gemini AI está analisando as imagens e redigindo a minuta. Pode levar alguns segundos...
           </p>
         )}

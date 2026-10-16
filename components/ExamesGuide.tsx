@@ -87,7 +87,7 @@ const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => 
         className="w-full flex items-center justify-between gap-3 bg-gray-50 border border-gray-200 text-gray-800 text-sm md:text-base font-semibold rounded-lg p-3 text-left focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy transition-all font-body shadow-inner"
       >
         <span className="min-w-0">
-          {grupoDoValor && <span className="block text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">{grupoDoValor}</span>}
+          {grupoDoValor && <span className="block text-xs font-bold text-ink-3 uppercase tracking-wider">{grupoDoValor}</span>}
           <span className="block leading-snug">{value}</span>
         </span>
         <ChevronDown size={18} className={`text-navy flex-shrink-0 transition-transform ${aberto ? 'rotate-180' : ''}`} />
@@ -200,7 +200,7 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
       <div className="flex-1 overflow-auto pb-24">
         <div className="p-4 md:p-6 space-y-4 md:space-y-5 animate-fade-in max-w-3xl mx-auto w-full">
         <div className="text-center mb-1">
-          <h2 className="text-xl md:text-2xl font-bold text-navy font-heading leading-tight uppercase">EXAMES MÍNIMOS</h2>
+          <h2 className="text-xl md:text-2xl font-bold text-navy font-heading leading-tight">Exames mínimos</h2>
           <p className="text-sm md:text-base text-gray-600 font-body mt-2 leading-snug">
             Exames mínimos por finalidade de IS observando o sexo e a idade de acordo com o Anexo O da DGPM-406.
           </p>
@@ -210,7 +210,7 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
           <div className="grid grid-cols-1 md:grid-cols-[1fr_140px] md:gap-4 space-y-4 md:space-y-0">
             <div className="flex flex-col space-y-2">
               <span className="text-xs md:text-sm font-bold text-navy uppercase tracking-wider flex items-center gap-1">
-                <User size={15} className="text-gold" /> Sexo Biológico:
+                <User size={15} className="text-navy" /> Sexo Biológico:
               </span>
               <div className="grid grid-cols-2 gap-2">
                 {(['Masculino', 'Feminino'] as const).map(g => (
@@ -231,7 +231,7 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
 
             <div className="flex flex-col space-y-2">
               <label htmlFor="age-input" className="text-xs md:text-sm font-bold text-navy uppercase tracking-wider flex items-center gap-1">
-                <Calendar size={15} className="text-gold" /> Idade (Anos):
+                <Calendar size={15} className="text-navy" /> Idade (Anos):
               </label>
               <input
                 id="age-input"
@@ -248,7 +248,7 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
 
           <div className="flex flex-col space-y-2">
             <label className="text-xs md:text-sm font-bold text-navy uppercase tracking-wider flex items-center gap-1">
-              <FileText size={15} className="text-gold" /> Finalidade da Inspeção:
+              <FileText size={15} className="text-navy" /> Finalidade da Inspeção:
             </label>
             <FinalidadeDropdown value={selectedFinalidade} onChange={setSelectedFinalidade} />
           </div>
@@ -256,8 +256,8 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
 
         <div id="exams-card" className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col space-y-4">
           <div className="flex items-center justify-between border-b border-gray-100 pb-3 flex-wrap gap-2">
-            <h3 className="font-heading font-bold text-navy text-sm md:text-base uppercase tracking-wider flex items-center gap-2">
-              <span className="material-symbols-outlined text-gold" style={{ fontSize: '22px' }}>
+            <h3 className="font-heading font-bold text-navy text-sm md:text-base tracking-wider flex items-center gap-2">
+              <span className="material-symbols-outlined text-navy" style={{ fontSize: '22px' }}>
                 medical_information
               </span>
               Relação de Exames Mínimos
@@ -271,7 +271,7 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
             <div className="flex flex-col space-y-5" id="exams-display-list">
               {gruposFiltrados.map(grupo => (
                 <section key={grupo.nome}>
-                  <h4 className="text-[11px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">
+                  <h4 className="text-xs font-bold text-ink-3 tracking-wider mb-1 px-1">
                     {grupo.nome}
                   </h4>
                   <div className="flex flex-col divide-y divide-gray-100">
@@ -280,12 +280,12 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
                       return (
                         <div key={ex.Exame} className="flex items-center justify-between gap-3 py-2.5 px-1 hover:bg-gray-50 transition-all">
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <CheckCircle2 size={18} className="text-gold flex-shrink-0" />
+                            <CheckCircle2 size={18} className="text-navy flex-shrink-0" />
                             <span className="text-sm md:text-base font-semibold text-navy font-body">{ex.Exame}</span>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             {(ex.Condicao_Genero || ex.Condicao_Idade_Minima !== null) && (
-                              <span className="text-[10px] md:text-xs text-navy bg-navy/5 font-bold px-2 py-0.5 rounded">
+                              <span className="text-xs text-navy bg-navy/5 font-bold px-2 py-0.5 rounded">
                                 {ex.Condicao_Genero ?? ''}
                                 {ex.Condicao_Genero && ex.Condicao_Idade_Minima !== null ? ' • ' : ''}
                                 {ex.Condicao_Idade_Minima !== null ? `≥ ${ex.Condicao_Idade_Minima} anos` : ''}
@@ -325,14 +325,14 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
             <div className="p-4 bg-[#050F41] text-white flex items-center justify-between gap-2">
               <div className="flex items-center space-x-2 min-w-0">
                 <Info size={20} className="text-[#FAB932] flex-shrink-0" />
-                <h3 className="font-heading font-bold text-sm uppercase truncate">{obsModal.exame}</h3>
+                <h3 className="font-heading font-bold text-sm truncate">{obsModal.exame}</h3>
               </div>
               <button type="button" onClick={() => setObsModal(null)} aria-label="Fechar" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
                 <X size={18} />
               </button>
             </div>
             <div className="p-5 space-y-4">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Observações</p>
+              <p className="text-xs font-bold text-ink-3 uppercase tracking-wider">Observações</p>
               <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{obsModal.texto}</p>
               <div className="flex justify-end">
                 <button type="button" onClick={() => setObsModal(null)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Fechar</button>

@@ -4,8 +4,8 @@ import { listUsuariosPublicos, UsuarioPublico } from '../services/firestoreUsuar
 
 const loginBg = 'https://i.imgur.com/c2aHsZU.png';
 
-const inputClass = 'w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/25 text-sm focus:outline-none focus:border-[#079551] focus:bg-white/15 transition-all';
-const labelClass = 'text-white/60 text-[11px] font-bold uppercase tracking-widest block mb-1.5';
+const inputClass = 'w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/50 text-sm focus:outline-none focus:border-[#079551] focus:bg-white/15 transition-all';
+const labelClass = 'text-white/60 text-xs font-bold uppercase tracking-widest block mb-1.5';
 
 // Não há mais cadastro próprio nesta tela — todo usuário novo é criado pelo
 // Admin em Usuários (ver UsuariosManagement.tsx), que já define o perfil de
@@ -55,7 +55,7 @@ export const Login: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setEntradaManual(prev => !prev)}
-                className="text-white/40 hover:text-white/70 text-[10px] font-semibold uppercase tracking-wider transition-colors"
+                className="text-white/70 hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors"
               >
                 {entradaManual ? 'Ver lista' : 'Não achou seu usuário?'}
               </button>

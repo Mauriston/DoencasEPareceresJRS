@@ -70,7 +70,7 @@ export const IdmPicker: React.FC<IdmPickerProps> = ({ candidatoNome, observacoes
         onClick={() => setAberto(a => !a)}
         className="w-full flex items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-left rounded-xl border border-gray-300 bg-white hover:border-[#050F41] focus:outline-none focus:border-[#050F41] transition-colors"
       >
-        <span className={`min-w-0 truncate ${ordenados.length === 0 ? 'text-gray-400' : 'text-[#050F41]'}`}>{resumo}</span>
+        <span className={`min-w-0 truncate ${ordenados.length === 0 ? 'text-ink-3' : 'text-[#050F41]'}`}>{resumo}</span>
         <span className={`material-symbols-outlined text-[20px] text-gray-500 shrink-0 transition-transform ${aberto ? 'rotate-180' : ''}`}>expand_more</span>
       </button>
 
@@ -78,7 +78,7 @@ export const IdmPicker: React.FC<IdmPickerProps> = ({ candidatoNome, observacoes
         <div className="max-h-[40vh] overflow-y-auto rounded-xl border border-gray-200 bg-white">
           {GRUPOS_EXAMES.map(g => (
             <div key={g.grupo}>
-              <p className="px-4 pt-3 pb-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider sticky top-0 bg-white">{g.grupo}</p>
+              <p className="px-4 pt-3 pb-1 text-xs font-bold text-ink-3 uppercase tracking-wider sticky top-0 bg-white">{g.grupo}</p>
               {g.exames.map(exame => {
                 const marcado = selecionados.includes(exame);
                 return (
@@ -130,7 +130,7 @@ export const MotivoIdmModal: React.FC<MotivoIdmModalProps> = ({ obrigatorio, onC
       <div className="p-4 bg-[#050F41] text-white flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center space-x-2">
           <span className="material-symbols-outlined text-[20px] text-[#FAB932]">assignment_late</span>
-          <h3 className="font-heading font-bold text-sm uppercase">Motivo da IDM</h3>
+          <h3 className="font-heading font-bold text-sm">Motivo da IDM</h3>
         </div>
         {!obrigatorio && (
           <button type="button" onClick={onClose} aria-label="Fechar" className="p-1 rounded-lg hover:bg-white/10 transition-colors">

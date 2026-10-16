@@ -5,6 +5,7 @@ import { Disease, Diagnosis } from '../types';
 import { ChevronRight, Info, Brain, HeartPulse, EyeOff, Radiation, Accessibility, Stethoscope, Ribbon, X, Download, ArrowLeft } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { Header } from './Header';
+import { Button } from './ui/Button';
 
 const cdrData = [
   { id: 'M', nome: 'Memória', sigla: '(M)', opcoes: [
@@ -138,8 +139,8 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <span className="text-sm text-gray-200">pontos</span>
               <button onClick={() => setIsModalOpen(true)} className="ml-1 text-white hover:text-gray-300"><span className="material-symbols-outlined text-[20px]">info</span></button>
             </div>
-            <div className="text-xs text-gray-300 mt-1">Escore Global CDR</div>
-            <div className="text-xs text-gray-400 mt-0.5">CDR-SB: <span className="text-white font-semibold">{sbScore}</span> pontos</div>
+            <div className="text-xs text-white/80 mt-1">Escore Global CDR</div>
+            <div className="text-xs text-ink-3 mt-0.5">CDR-SB: <span className="text-white font-semibold">{sbScore}</span> pontos</div>
           </div>
           <div className="flex items-center">
             <button onClick={handleCopy} disabled={isCopied} className="mr-4 flex items-center justify-center p-2 rounded-full text-white hover:bg-white/10">
@@ -147,7 +148,7 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </button>
             <div className={`border-l-2 ${isGrave ? 'border-red-400' : 'border-blue-400'} pl-4 flex flex-col`}>
               <div className="text-xl font-bold uppercase">{stage.titulo}</div>
-              <div className="text-sm text-gray-300">({stage.sub})</div>
+              <div className="text-sm text-white/80">({stage.sub})</div>
             </div>
           </div>
         </div>
@@ -157,7 +158,7 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-4 border-b border-gray-100">
               <h3 className="text-lg font-bold text-[#050F41]">Interpretação dos Resultados</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1"><X size={20} /></button>
+              <button onClick={() => setIsModalOpen(false)} className="text-ink-3 hover:text-gray-600 p-1"><X size={20} /></button>
             </div>
             <div className="p-4 overflow-x-auto scroll-x-visible">
               <table className="w-full text-left text-sm md:text-base text-gray-600 border-collapse">
@@ -343,8 +344,8 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
         <Header title={getShortDiseaseName(selectedDisease.name)} onBack={() => setSelectedDisease(null)} />
         <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto w-full flex-1 pb-24 md:pb-12">
           <div className="px-1">
-            <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase">{selectedDisease.name}</h2>
-            <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5">Selecione o diagnóstico pericial associado:</p>
+            <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41]">{selectedDisease.name}</h2>
+            <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5">Selecione o diagnóstico pericial associado</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -364,7 +365,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
                     </h3>
                   </div>
                 </div>
-                <ChevronRight size={20} className="text-gray-400 group-hover:text-[#050F41] group-hover:translate-x-0.5 transition-all shrink-0" />
+                <ChevronRight size={20} className="text-ink-3 group-hover:text-[#050F41] group-hover:translate-x-0.5 transition-all shrink-0" />
               </div>
             ))}
           </div>
@@ -382,8 +383,8 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
         <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full pb-24 md:pb-12">
           <div className="px-1 flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase truncate">{selectedDisease.name}</h2>
-              {selectedDisease.diagnoses.length > 1 && <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5 truncate">Diagnóstico Pericial: {selectedDiagnosis.name}</p>}
+              <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] truncate">{selectedDisease.name}</h2>
+              {selectedDisease.diagnoses.length > 1 && <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5 truncate">Diagnóstico pericial: {selectedDiagnosis.name}</p>}
             </div>
 
             {/* Desktop side-by-side action buttons */}
@@ -414,16 +415,16 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
 
           <div className="space-y-6 w-full">
             <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
-                <span className="material-symbols-outlined mr-2 text-[#FAB932]">menu_book</span>DEFINIÇÃO
+              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center">
+                <span className="material-symbols-outlined mr-2 text-navy">menu_book</span>Definição
               </h3>
-              <p className="font-body text-gray-800 text-sm md:text-base leading-relaxed text-justify font-medium">{selectedDisease.definition}</p>
+              <p className="font-body text-gray-800 text-sm md:text-base leading-relaxed font-medium">{selectedDisease.definition}</p>
             </div>
 
             {selectedDisease.name === "SIDA/AIDS" && (
               <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-                <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-4 border-b border-gray-100 pb-2 flex items-center uppercase">
-                  <span className="material-symbols-outlined mr-2 text-[#FAB932]">grid_on</span>CLASSIFICAÇÃO
+                <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-4 border-b border-gray-100 pb-2 flex items-center">
+                  <span className="material-symbols-outlined mr-2 text-navy">grid_on</span>Classificação
                 </h3>
                 <p className="text-xs md:text-sm text-gray-600 font-medium">Grupos I (CD4 ≥500), II (200-499), III (&lt;200) / Classes A, B, C por sintomas e condições definidoras.</p>
               </div>
@@ -431,8 +432,8 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
 
             {isDemencia && (
               <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm w-full">
-                <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 flex items-center uppercase">
-                  <span className="material-symbols-outlined mr-2 text-red-700">psychology</span>AVALIAÇÃO DE COGNIÇÃO
+                <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 flex items-center">
+                  <span className="material-symbols-outlined mr-2 text-red-700">psychology</span>Avaliação de cognição
                 </h3>
                 <p className="text-xs text-gray-600 mb-4">A avaliação do escore CDR é fundamental para quantificar a gravidade do comprometimento cognitivo.</p>
                 <button onClick={() => setIsCalculatorOpen(true)} className="w-full py-3 bg-red-800 text-white rounded-xl font-bold flex items-center justify-center hover:bg-red-900 transition-colors shadow-sm text-sm">
@@ -442,28 +443,28 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
             )}
 
             <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
-                <span className="material-symbols-outlined mr-2 text-[#FAB932]">verified</span>CRITÉRIOS DE GRAVIDADE
+              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center">
+                <span className="material-symbols-outlined mr-2 text-navy">verified</span>Critérios de gravidade
               </h3>
               <ul className="space-y-3.5">
                 {selectedDiagnosis.criteria.map((item, idx) => (
                   <li key={idx} className="flex items-start gap-3 text-sm md:text-base text-gray-700 font-body">
                     <span className="w-2 h-2 rounded-full bg-[#079551] shrink-0 mt-2" />
-                    <span className="leading-relaxed text-justify flex-1">{item}</span>
+                    <span className="leading-relaxed flex-1">{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
             <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
-                <span className="material-symbols-outlined mr-2 text-[#FAB932]">folder_open</span>DOCUMENTOS NECESSÁRIOS
+              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center">
+                <span className="material-symbols-outlined mr-2 text-navy">folder_open</span>Documentos necessários
               </h3>
               <ul className="space-y-3">
                 {selectedDisease.documents.map((item, idx) => (
                   <li key={idx} className="flex items-start gap-3 text-sm md:text-base text-gray-700 font-body">
                     <span className="w-2 h-2 rounded-full bg-[#050F41] shrink-0 mt-2" />
-                    <span className="leading-relaxed text-justify flex-1 font-medium">{item}</span>
+                    <span className="leading-relaxed flex-1 font-medium">{item}</span>
                   </li>
                 ))}
               </ul>
@@ -471,13 +472,10 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
           </div>
         </div>
 
-        <div className="fixed bottom-20 right-6 md:hidden flex flex-col gap-3 z-40">
-          <button onClick={handleCopy} disabled={isCopied} className={`w-12 h-12 rounded-full shadow-2xl flex items-center justify-center transition-all border ${isCopied ? 'bg-gray-300 text-gray-100 border-gray-300 cursor-not-allowed' : 'bg-blue-100 text-[#050F41] border-blue-200 hover:scale-105 active:scale-95'}`} title="Copiar texto">
-            <span className="material-symbols-outlined text-[24px]">{isCopied ? 'done_all' : 'content_copy'}</span>
-          </button>
-          <button onClick={handleDownloadPDF} className="w-12 h-12 bg-[#050F41] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all border border-slate-700" title="Baixar PDF">
-            <Download size={22} />
-          </button>
+        {/* Mobile: barra de ações rotulada (antes, dois botões circulares só com ícone). */}
+        <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-[#E3E6ED] p-3 flex gap-2" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+          <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} onClick={handleCopy} className="flex-1">{isCopied ? 'Copiado' : 'Copiar'}</Button>
+          <Button icon="download" onClick={handleDownloadPDF} className="flex-1">Baixar PDF</Button>
         </div>
       </div>
     );
@@ -489,8 +487,8 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
       <Header title="Doenças de Lei" onBack={onBack} />
       <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full flex-1 pb-24 md:pb-12">
         <div className="px-1">
-          <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase">
-            Doenças Previstas em Lei:
+          <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41]">
+            Doenças previstas em lei
           </h2>
           <p className="text-xs md:text-sm font-semibold text-gray-500 mt-1">
             Verifique as definições, os critérios clínicos e os documentos necessários para o enquadramento
@@ -506,7 +504,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
                     {disease.name.toLowerCase().includes("paget") ? "Doença de Paget" : disease.name}
                   </h3>
                 </div>
-                <ChevronRight size={16} className="text-gray-400 shrink-0" />
+                <ChevronRight size={16} className="text-ink-3 shrink-0" />
               </div>
             </div>
           ))}

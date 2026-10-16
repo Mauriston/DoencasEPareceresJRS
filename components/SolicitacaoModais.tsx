@@ -17,7 +17,7 @@ const Shell: React.FC<{ titulo: string; icone: string; onClose: () => void; chil
       <div className="p-4 bg-[#050F41] text-white flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center space-x-2">
           <span className="material-symbols-outlined text-[20px] text-[#FAB932]">{icone}</span>
-          <h3 className="font-heading font-bold text-sm uppercase">{titulo}</h3>
+          <h3 className="font-heading font-bold text-sm">{titulo}</h3>
         </div>
         <button type="button" onClick={onClose} aria-label="Fechar" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
           <span className="material-symbols-outlined text-[20px]">close</span>
@@ -29,7 +29,7 @@ const Shell: React.FC<{ titulo: string; icone: string; onClose: () => void; chil
 );
 
 const campoTexto = 'w-full px-4 py-3 text-sm rounded-xl border border-gray-300 bg-white focus:outline-none focus:border-[#050F41] transition-colors';
-const rotulo = 'block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5';
+const rotulo = 'block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5';
 
 const BotaoGerar: React.FC<{ habilitado: boolean; onClick: () => void }> = ({ habilitado, onClick }) => (
   <div className="flex items-center justify-end pt-1">
@@ -87,7 +87,7 @@ export const SolicitarParecerModal: React.FC<ParecerModalProps> = ({ candidatoNo
         {aberto && (
           <div className="absolute z-10 left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
             {sugestoes.length === 0 ? (
-              <p className="px-4 py-3 text-sm text-gray-400">Nenhuma especialidade encontrada.</p>
+              <p className="px-4 py-3 text-sm text-ink-3">Nenhuma especialidade encontrada.</p>
             ) : sugestoes.map(e => (
               <button
                 key={e}

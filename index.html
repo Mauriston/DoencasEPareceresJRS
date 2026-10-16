@@ -40,6 +40,8 @@
               navy: {
                 DEFAULT: '#050F41',
                 light: '#1a2a6c',
+                hover: '#01002B',
+                pressed: '#020020',
               },
               gold: {
                 DEFAULT: '#FAB932',
@@ -51,7 +53,18 @@
               gray: {
                 light: '#F3F5F7',
                 text: '#1F2937',
-              }
+              },
+              // Texto secundário do DS (ink-3 = rótulos/metadados, 6:1 sobre branco)
+              ink: {
+                DEFAULT: '#3D4460',
+                3: '#5A627A',
+                4: '#8A93AC',
+              },
+              wine: {
+                DEFAULT: '#85200C',
+                dark: '#6B1A0A',
+              },
+              'gold-ink': '#8A6100',
             },
             fontFamily: {
               heading: ['Montserrat', 'sans-serif'],
@@ -70,7 +83,6 @@
       }
       h1, h2, h3, h4, h5, h6 {
         font-family: 'Montserrat', sans-serif;
-        text-transform: uppercase;
       }
       @keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
       @keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }

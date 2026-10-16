@@ -88,7 +88,7 @@ export const TemplatesGuide: React.FC<TemplatesGuideProps> = ({ onBack }) => {
 
       <div className="flex-1 overflow-y-auto w-full max-w-5xl mx-auto px-4 py-6">
         {isLoading && templates === DEFAULT_TEMPLATES ? (
-          <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+          <div className="flex flex-col items-center justify-center py-10 text-ink-3">
             <span className="material-symbols-outlined animate-spin mb-2" style={{ fontSize: "32px" }}>sync</span>
             <p className="text-sm">Buscando da planilha...</p>
           </div>

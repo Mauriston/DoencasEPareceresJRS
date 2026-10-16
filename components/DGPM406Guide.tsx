@@ -139,7 +139,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
   // o documento aberto), para navegar entre eles sem voltar à grade.
   const navCard = (heading: string, children: React.ReactNode) => (
     <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm p-3 max-h-[calc(100vh-140px)] overflow-y-auto">
-      <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider px-2 pb-2 mb-1 border-b border-gray-100">
+      <h3 className="text-xs font-bold text-ink-3 tracking-wider px-2 pb-2 mb-1 border-b border-gray-100">
         {heading}
       </h3>
       <nav className="space-y-0.5">{children}</nav>
@@ -237,7 +237,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
                     <td className="py-3 px-4 text-sm font-heading font-bold text-[#050F41] group-hover:text-[#079551] whitespace-nowrap transition-colors">{item.chapter}</td>
                     <td className="py-3 px-4 text-xs font-medium text-gray-500 uppercase">{item.title}</td>
                     <td className="py-3 px-4 text-right">
-                      <span className="material-symbols-outlined text-[20px] text-gray-400 group-hover:text-[#050F41] transition-colors align-middle">
+                      <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-[#050F41] transition-colors align-middle">
                         {item.mdKey ? 'chevron_right' : 'file_open'}
                       </span>
                     </td>
@@ -263,7 +263,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
                     <td className="py-3 px-4 text-sm font-heading font-bold text-[#050F41] group-hover:text-[#079551] whitespace-nowrap transition-colors">{item.anexo}</td>
                     <td className="py-3 px-4 text-xs font-medium text-gray-500 uppercase">{item.title}</td>
                     <td className="py-3 px-4 text-right">
-                      <span className="material-symbols-outlined text-[20px] text-gray-400 group-hover:text-[#050F41] transition-colors align-middle">
+                      <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-[#050F41] transition-colors align-middle">
                         {item.mdKey ? 'chevron_right' : 'file_open'}
                       </span>
                     </td>
@@ -282,7 +282,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
                 onClick={() => handleChapterClick(item)}
                 className="group flex items-center gap-3 bg-white rounded-xl border border-gray-200/60 px-4 py-3 hover:shadow-md hover:border-[#079551] transition-all duration-200 cursor-pointer text-left"
               >
-                <span className="material-symbols-outlined text-[20px] text-gray-400 group-hover:text-[#050F41] transition-colors shrink-0">
+                <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-[#050F41] transition-colors shrink-0">
                   {item.mdKey ? 'single_arrow' : 'file_open'}
                 </span>
                 <div className="flex flex-col min-w-0 flex-1">
@@ -303,7 +303,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
                 onClick={() => handleAnexoClick(item)}
                 className="group flex items-center gap-3 bg-white rounded-xl border border-gray-200/60 px-4 py-3 hover:shadow-md hover:border-[#079551] transition-all duration-200 cursor-pointer text-left"
               >
-                <span className="material-symbols-outlined text-[20px] text-gray-400 group-hover:text-[#050F41] transition-colors shrink-0">
+                <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-[#050F41] transition-colors shrink-0">
                   {item.mdKey ? 'single_arrow' : 'file_open'}
                 </span>
                 <div className="flex flex-col min-w-0 flex-1">

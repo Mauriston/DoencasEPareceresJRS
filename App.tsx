@@ -21,6 +21,8 @@ import { PericiaMenor } from './components/PericiaMenor';
 import { Mensagens } from './components/Mensagens';
 import { RoteiroJRS } from './components/RoteiroJRS';
 import { UsuariosManagement } from './components/UsuariosManagement';
+import { AccessDenied } from './components/ui/AccessDenied';
+import { PAGE_DEFS } from './config/permissions';
 import { NavItem } from './types';
 import { NavContext, AuthUser, getPrimeiroNome } from './context/NavContext';
 import { canAccessPage, setPermissoesCache } from './config/permissions';
@@ -229,31 +231,32 @@ const App: React.FC = () => {
   };
 
   const can = (pageId: string) => canAccessPage(pageId, authUser?.perfil);
+  const paginaLabel = (pageId: string) => PAGE_DEFS.find(p => p.id === pageId)?.label;
 
   const renderView = () => {
     switch (currentView) {
       case 'home': return <Home />;
       case 'perfil': return <Perfil />;
       case 'guide': return <DiseaseGuide onBack={() => setCurrentView('home')} />;
-      case 'laws': return can('laws') ? <LawReference onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
-      case 'dgpm406': return can('dgpm406') ? <DGPM406Guide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
-      case 'concursos': return can('concursos') ? <ConcursosGuide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
-      case 'portaria': return can('portaria') ? <PortariaGuide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
-      case 'exames': return can('exames') ? <ExamesGuide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
-      case 'templates': return can('templates') ? <TemplatesGuide onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'laws': return can('laws') ? <LawReference onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('laws')} />;
+      case 'dgpm406': return can('dgpm406') ? <DGPM406Guide onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('dgpm406')} />;
+      case 'concursos': return can('concursos') ? <ConcursosGuide onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('concursos')} />;
+      case 'portaria': return can('portaria') ? <PortariaGuide onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('portaria')} />;
+      case 'exames': return can('exames') ? <ExamesGuide onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('exames')} />;
+      case 'templates': return can('templates') ? <TemplatesGuide onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('templates')} />;
 
       // PÁGINAS RESTRITAS POR PERFIL (config/permissions.ts, editável em Usuários)
-      case 'pareceres': return can('pareceres') ? <Pareceres onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
-      case 'concursosJRS': return can('concursosJRS') ? <ConcursosJRS onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
-      case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
-      case 'mensagens': return can('mensagens') ? <Mensagens onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
-      case 'infograficos': return can('infograficos') ? <Infograficos onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
-      case 'casos': return can('casos') ? <CasosPericiais onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
-      case 'videos': return can('videos') ? <Videos onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
-      case 'roteiro': return can('roteiro') ? <RoteiroJRS onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'pareceres': return can('pareceres') ? <Pareceres onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('pareceres')} />;
+      case 'concursosJRS': return can('concursosJRS') ? <ConcursosJRS onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('concursosJRS')} />;
+      case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('pericia-menor')} />;
+      case 'mensagens': return can('mensagens') ? <Mensagens onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('mensagens')} />;
+      case 'infograficos': return can('infograficos') ? <Infograficos onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('infograficos')} />;
+      case 'casos': return can('casos') ? <CasosPericiais onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('casos')} />;
+      case 'videos': return can('videos') ? <Videos onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('videos')} />;
+      case 'roteiro': return can('roteiro') ? <RoteiroJRS onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('roteiro')} />;
 
       // USUÁRIOS PAGE - Restricted for non-admin
-      case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement onBack={() => setCurrentView('home')} /> : <DiseaseGuide />;
+      case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement onBack={() => setCurrentView('home')} /> : <AccessDenied pagina="Usuários" />;
 
       default: return <Home />;
     }
@@ -316,7 +319,7 @@ const App: React.FC = () => {
         setIsAvatarMenuOpen,
       }}
     >
-      <div className="fixed inset-0 flex bg-[#F3F5F7] text-[#1F2937] overflow-hidden antialiased select-none">
+      <div className="fixed inset-0 flex bg-[#F3F5F7] text-[#1F2937] overflow-hidden antialiased">
         <Sidebar />
         <div className="flex-1 flex flex-col h-full min-w-0 overflow-y-auto relative bg-[#F3F5F7]">
           <main className="flex-grow w-full flex flex-col pb-8">
@@ -396,7 +399,7 @@ const App: React.FC = () => {
                 um bloco de 24 questões comentadas de múltipla escolha sobre os pontos mais importantes na prática
                 da DGPM-406. Não deixe de fazer essa auto-avaliação!
               </p>
-              <p className="text-xs md:text-sm text-gray-400 italic mb-5">CT Mauriston.</p>
+              <p className="text-xs md:text-sm text-ink-3 italic mb-5">CT Mauriston.</p>
               <div className="flex items-center gap-2 w-full">
                 <button
                   type="button"
