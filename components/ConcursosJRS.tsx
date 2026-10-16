@@ -2392,12 +2392,25 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     }
   };
 
+  // Indicador de salvamento por linha (F52): salvando → salvo (some em 3 s) ou falhou (fica até a próxima tentativa).
+  const [estadoSalvar, setEstadoSalvar] = useState<Record<string, 'salvando' | 'salvo' | 'falhou'>>({});
+  const marcarSalvar = (id: string, estado: 'salvando' | 'salvo' | 'falhou' | null) =>
+    setEstadoSalvar(prev => {
+      const proximo = { ...prev };
+      if (estado) proximo[id] = estado; else delete proximo[id];
+      return proximo;
+    });
+
   const salvarCampoCandidato = async (candidato: CandidatoRecord, patch: { status?: string; observacoes?: string; numTIS?: string }) => {
+    marcarSalvar(candidato.id, 'salvando');
     try {
       const atualizado = await atualizarCandidato(concursoId, candidato.id, patch);
       setCandidatos(prev => prev.map(c => (c.id === atualizado.id ? atualizado : c)));
+      marcarSalvar(candidato.id, 'salvo');
+      window.setTimeout(() => setEstadoSalvar(prev => (prev[candidato.id] === 'salvo' ? (({ [candidato.id]: _omit, ...resto }) => resto)(prev) : prev)), 3000);
       return atualizado;
     } catch (e: any) {
+      marcarSalvar(candidato.id, 'falhou');
       showToast(e?.message || 'Erro ao salvar alterações.');
       return null;
     }
@@ -2741,6 +2754,20 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     return grupos;
   }, [filteredCandidatos]);
 
+  // F57: resumo do dia ("8 aptos · 1 inapto · 1 falta") e F59: próximo candidato a atender.
+  const resumoDoGrupo = (itens: { status: string; finalizado: boolean }[]) => {
+    const n = (st: string) => itens.filter(c => c.status === st).length;
+    const partes: string[] = [];
+    const add = (q: number, um: string, varios: string) => { if (q > 0) partes.push(`${q} ${q === 1 ? um : varios}`); };
+    add(n('APTO'), 'apto', 'aptos');
+    add(n('INAPTO'), 'inapto', 'inaptos');
+    add(n('INSUF DOCUMENTAL'), 'IDM', 'IDM');
+    add(n('FALTOU'), 'falta', 'faltas');
+    add(itens.filter(c => !c.finalizado).length, 'pendente', 'pendentes');
+    return partes.join(' · ');
+  };
+  const proximoCandidatoId = filteredCandidatos.find(c => !c.finalizado)?.id ?? null;
+
   const toggleDateGroup = (dataBR: string) => {
     setOpenDateGroups(prev => {
       const next = new Set(prev);
@@ -3007,7 +3034,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               <div className="hidden md:block">
                 <table className="w-full text-left border-collapse table-fixed">
                   <colgroup>
-                    <col style={{ width: '44px' }} />
+                    <col style={{ width: '56px' }} />
                     <col style={{ width: '26%' }} />
                     <col style={{ width: '20%' }} />
                     <col />
@@ -3043,28 +3070,44 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                           >
                             <td colSpan={6} className="py-2.5 px-4">
                               <div className="flex items-center gap-2">
-                                <span className="text-base font-extrabold text-navy uppercase tracking-wider">
-                                  {grupo.dataBR} <span className="text-ink-3 font-bold">({grupo.itens.length})</span>
-                                </span>
+                                <span className="text-sm font-bold text-navy">{grupo.dataBR}</span>
+                                <span className="text-xs text-ink-3">{grupo.itens.length} candidato{grupo.itens.length === 1 ? '' : 's'}{resumoDoGrupo(grupo.itens) ? ` · ${resumoDoGrupo(grupo.itens)}` : ''}</span>
                                 {grupoAccordion && (
                                   <span className={`material-symbols-outlined text-[20px] text-ink-3 ml-auto transition-transform duration-200 ${expandidoGrupo ? 'rotate-180' : ''}`}>expand_more</span>
                                 )}
                               </div>
                             </td>
                           </tr>
-                          {expandidoGrupo && grupo.itens.map(c => {
+                          {expandidoGrupo && grupo.itens.map((c, ordem) => {
                             const editavel = podeEditar && !c.finalizado;
                             const numTisHabilitado = editavel && statusTemLaudo(c.status);
+                            const proximo = c.id === proximoCandidatoId;
                             return (
-                              <tr key={c.id} className="hover:bg-gray-50/80 transition-colors">
-                                <td className="py-3.5 pl-4 pr-0 w-8">
-                                  {c.finalizado && (
-                                    <span className="material-symbols-outlined text-[20px] text-green-700" style={{ fontVariationSettings: "'FILL' 1" }} title="Finalizado">check_circle</span>
-                                  )}
+                              <tr key={c.id} className={`hover:bg-thead transition-colors ${proximo ? 'bg-gold/10 shadow-[inset_4px_0_0_0_#FAB932]' : ''}`} aria-current={proximo ? 'true' : undefined}>
+                                <td className="py-3.5 pl-4 pr-0">
+                                  <span className="flex items-center gap-1">
+                                    <span className="text-xs font-semibold text-ink-3 w-5 text-right" title="Ordem no dia">{ordem + 1}</span>
+                                    {c.finalizado && (
+                                      <span className="material-symbols-outlined text-[20px] text-green-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-label="Finalizado">check_circle</span>
+                                    )}
+                                  </span>
                                 </td>
-                                <td className="py-3.5 pl-2 pr-4 cursor-pointer" onClick={() => handleCopiarNomeCandidato(c.nome)} title="Clique para copiar o nome do candidato">
-                                  <p className="font-semibold text-gray-800">{c.nome}</p>
-                                  <p className="text-xs font-mono text-ink-3">{c.id}</p>
+                                <td className="py-3.5 pl-2 pr-4">
+                                  <p className="font-semibold text-ink flex items-center gap-2 flex-wrap">
+                                    <span>{c.nome}</span>
+                                    {proximo && <StatusTag tone="navyOutline" dot={false}>Próximo</StatusTag>}
+                                  </p>
+                                  <p className="text-xs font-mono text-ink-3 flex items-center gap-2">
+                                    <span>{c.id}</span>
+                                    <button type="button" onClick={() => handleCopiarNomeCandidato(c.nome)} className="inline-flex items-center gap-1 min-h-[24px] text-xs font-sans font-semibold text-navy hover:underline">
+                                      <span className="material-symbols-outlined text-[14px]" aria-hidden="true">content_copy</span>Copiar nome
+                                    </button>
+                                    {estadoSalvar[c.id] && (
+                                      <span role="status" className={`font-sans font-semibold ${estadoSalvar[c.id] === 'falhou' ? 'text-wine' : 'text-ink-3'}`}>
+                                        {estadoSalvar[c.id] === 'salvando' ? 'Salvando…' : estadoSalvar[c.id] === 'salvo' ? 'Salvo' : 'Falha ao salvar'}
+                                      </span>
+                                    )}
+                                  </p>
                                 </td>
                                 <td className="py-3.5 px-4">
                                   {editavel ? (
@@ -3150,8 +3193,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                         onClick={grupoAccordion ? () => toggleDateGroup(grupo.dataBR) : undefined}
                         className="w-full flex items-center gap-2 px-4 py-2.5 bg-gray-50/60 text-left"
                       >
-                        <span className="text-sm font-extrabold text-navy uppercase tracking-wider">
-                          {grupo.dataBR} <span className="text-ink-3 font-bold">({grupo.itens.length})</span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-bold text-navy">{grupo.dataBR}</span>
+                          <span className="block text-xs text-ink-3">{grupo.itens.length} candidato{grupo.itens.length === 1 ? '' : 's'}{resumoDoGrupo(grupo.itens) ? ` · ${resumoDoGrupo(grupo.itens)}` : ''}</span>
                         </span>
                         {grupoAccordion && (
                           <span className={`material-symbols-outlined text-[20px] text-ink-3 ml-auto transition-transform duration-200 ${expandidoGrupo ? 'rotate-180' : ''}`}>expand_more</span>
