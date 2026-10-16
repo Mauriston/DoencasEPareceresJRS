@@ -47,7 +47,7 @@ export const Login: React.FC = () => {
       <div className="w-full max-w-sm">
         <div className="bg-navy text-white rounded-t-xl px-6 py-5 border-b-4 border-gold text-center">
           <span className="material-symbols-outlined text-[36px] text-gold" aria-hidden="true">medical_services</span>
-          <h1 className="font-heading font-extrabold text-xl mt-1">Junta Regular de Saúde</h1>
+          <h1 className="font-heading font-extrabold text-xl mt-1 !text-white">Junta Regular de Saúde</h1>
           <p className="text-sm text-white/80">Hospital Naval de Recife · Doenças e Pareceres</p>
         </div>
 

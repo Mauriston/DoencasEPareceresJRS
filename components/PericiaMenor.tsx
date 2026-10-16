@@ -140,9 +140,9 @@ export const PericiaMenor: React.FC = () => {
         const res = await fetch(`${GAS_URL}?action=getLookups`);
         const json = await res.json();
         if (json.success) {
-          setDispensasDisponiveis(json.data.DISPENSAS.filter(Boolean) || []);
+          setDispensasDisponiveis((json.data.DISPENSAS || []).filter(Boolean));
           setPeritosDisponiveis(json.data.PERITOS || []);
-          setOmsOptions(json.data.OM.filter(Boolean) || []);
+          setOmsOptions((json.data.OM || []).filter(Boolean));
         }
       } catch (err) { console.error(err); } finally { setIsLoadingLookups(false); }
     };
@@ -700,7 +700,7 @@ export const PericiaMenor: React.FC = () => {
                 onChange={definirStatusFiltro}
                 options={[
                   { value: 'vigentes', label: 'Vigentes', badge: vigentesTotal },
-                  { value: 'concluidas', label: 'Concluídas', badge: concluidosTotal },
+                  { value: 'concluidas', label: 'Concluídas', badge: concluidosTotal, badgeTone: 'neutro' },
                   { value: 'todas', label: 'Todas' },
                 ]}
               />
@@ -711,8 +711,8 @@ export const PericiaMenor: React.FC = () => {
                 onChange={definirTipoFiltro}
                 options={[
                   { value: 'todos', label: 'Todos os tipos' },
-                  { value: 'lts', label: 'LTS', badge: ltsTotal },
-                  { value: 'restricoes', label: 'Restrições', badge: restricoesTotal },
+                  { value: 'lts', label: 'LTS', badge: ltsTotal, badgeTone: 'neutro' },
+                  { value: 'restricoes', label: 'Restrições', badge: restricoesTotal, badgeTone: 'neutro' },
                 ]}
               />
             </div>

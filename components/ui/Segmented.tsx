@@ -12,6 +12,8 @@ export interface SegmentedOption<T extends string> {
   icon?: string;
   /** Contagem/indicador após o rótulo. */
   badge?: number;
+  /** 'alerta' (vinho, exige atenção) é o padrão; 'neutro' é só contagem. */
+  badgeTone?: 'alerta' | 'neutro';
 }
 
 interface SegmentedProps<T extends string> {
@@ -46,7 +48,7 @@ export function Segmented<T extends string>({ options, value, onChange, ariaLabe
             {o.icon && <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{o.icon}</span>}
             {o.label}
             {o.badge !== undefined && o.badge > 0 && (
-              <span className={`min-w-5 h-5 px-1 rounded-full text-xs font-bold flex items-center justify-center ${ativo ? 'bg-white text-navy' : 'bg-wine text-white'}`}>{o.badge}</span>
+              <span className={`min-w-5 h-5 px-1 rounded-full text-xs font-bold flex items-center justify-center ${ativo ? 'bg-white text-navy' : o.badgeTone === 'neutro' ? 'bg-line text-ink-2' : 'bg-wine text-white'}`}>{o.badge}</span>
             )}
           </button>
         );

@@ -1938,7 +1938,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
                   className="overflow-x-auto"
                   value={statusAtivo}
                   onChange={v => setStatusSel(v)}
-                  options={GRUPOS_STATUS_ORDEM.map(g => ({ value: g.status, label: g.titulo, badge: contagemPorStatus[g.status] }))}
+                  options={GRUPOS_STATUS_ORDEM.map(g => ({ value: g.status, label: g.titulo, badge: contagemPorStatus[g.status], badgeTone: 'neutro' as const }))}
                 />
                 {podeVisualizarTabela && !tabelaTravadaSecretaria && (
                   <div className="flex items-center gap-2">
@@ -2918,7 +2918,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         <Container size="data">
         <div className="bg-white p-2 rounded-xl border border-line">
         <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 md:gap-3">
-          <div className="relative md:w-56 md:shrink-0">
+          <div className="relative md:w-72 md:shrink-0">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-ink-3 text-[20px]">search</span>
             <input
               type="text"
@@ -2926,7 +2926,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               onChange={e => setSearch(e.target.value)}
               onFocus={() => setMostrarSugestoes(true)}
               onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
-              placeholder="Buscar por matrícula ou nome..."
+              placeholder="Buscar por matrícula ou nome"
               autoComplete="off"
               className="w-full pl-11 pr-11 h-11 md:h-10 text-sm font-body rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-navy transition-all"
             />
