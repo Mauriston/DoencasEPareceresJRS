@@ -4,7 +4,10 @@ import { ResponsavelTermoModal } from './ResponsavelTermoModal';
 import type { UsuarioRecord } from '../services/firestoreUsuarios';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
+import { useParams } from 'react-router-dom';
+import { useBreadcrumbs } from '../context/BreadcrumbContext';
+import { concursoPath } from '../config/routes';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
 import {
@@ -1519,7 +1522,6 @@ interface ConcursosListaProps {
   onNovoConcursoClick: () => void;
   onImportarCsvClick: () => void;
   onRecarregar: () => void;
-  onBack?: () => void;
 }
 
 const GRUPOS_STATUS: { status: ConcursoRecord['status']; titulo: string }[] = [
@@ -1533,7 +1535,7 @@ const GRUPOS_STATUS: { status: ConcursoRecord['status']; titulo: string }[] = [
 const celulaNumericaTabela = (valor: number, status: ConcursoRecord['status']): React.ReactNode =>
   valor === 0 && status === 'em_breve' ? '' : valor;
 
-const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, perfil, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeVisualizarTabela, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar, onBack }) => {
+const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, perfil, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeVisualizarTabela, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
   const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number; temLancamento: boolean }>>({});
   // Contagem de mensagens arquivadas por concurso — usada tanto para saber
   // se "Listar Mensagens" deve aparecer no menu quanto para o badge do
@@ -1724,8 +1726,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
   ] : [];
 
   return (
-    <div className="flex flex-col h-full bg-canvas animate-fade-in">
-      <Header title="Planilhas de Controle" onBack={onBack} />
+    <div className="flex flex-col flex-1 animate-fade-in">
 
       <Toast message={toastMessage} />
 
@@ -1826,20 +1827,18 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
         />
       )}
 
-      <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1200px] mx-auto w-full flex-1 space-y-6">
-        {/* Ações da lista: visíveis em todas as larguras (antes viviam dentro
-            do bloco de KPIs, que some abaixo de 768px — sem celular, sem criar
-            concurso). */}
-        {(podeRegistrarMensagem || podeImportarCsv) && (
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-            {podeImportarCsv && (
-              <Button variant="secondary" icon="upload_file" onClick={onImportarCsvClick}>Importar CSV</Button>
-            )}
-            {podeRegistrarMensagem && (
-              <Button icon="add" onClick={onNovoConcursoClick}>Novo concurso</Button>
-            )}
-          </div>
-        )}
+      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
+        <PageHeader
+          title="Concursos"
+          description="Planilhas de controle dos candidatos de cada concurso."
+          actions={(podeRegistrarMensagem || podeImportarCsv) ? (
+            <>
+              {podeImportarCsv && <Button variant="secondary" icon="upload_file" onClick={onImportarCsvClick}>Importar CSV</Button>}
+              {podeRegistrarMensagem && <Button icon="add" onClick={onNovoConcursoClick}>Novo concurso</Button>}
+            </>
+          ) : undefined}
+        />
+
         {!loadingEstatisticas && estatisticas && (
           <div className="hidden md:grid grid-cols-4 gap-4">
             {kpiDefs.map(def => (
@@ -2066,7 +2065,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
             )}
           </>
         )}
-      </div>
+            </Container>
     </div>
   );
 };
@@ -2102,6 +2101,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   const [concurso, setConcurso] = useState<ConcursoRecord | null>(null);
   const [candidatos, setCandidatos] = useState<CandidatoRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  useBreadcrumbs([{ label: concurso?.nome || 'Concurso' }]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
@@ -2774,11 +2774,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   };
 
   return (
-    <div className="flex flex-col h-full bg-canvas animate-fade-in relative">
-      {/* No mobile o botão de voltar da topbar (sticky, flutua sobre a
-          tabela ao rolar) assume essa função; no desktop o botão próprio
-          desta página (dentro do título) continua como estava. */}
-      <Header title={concurso?.nome || 'Planilhas de Controle'} desktopTitle={concurso?.nome} onBack={!isDesktop ? onVoltar : undefined} />
+    <div className="flex flex-col flex-1 animate-fade-in relative">
 
       <Toast message={toastMessage} />
 
@@ -2885,46 +2881,29 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         </button>
       )}
 
-      <div ref={scrollContainerRef} style={{ '--toolbar-h': `${toolbarAltura}px` } as React.CSSProperties} className="pb-24 w-full flex-1">
-        <div className="max-w-[1600px] mx-auto w-full px-4 sm:px-6 pt-4 sm:pt-6 space-y-4">
-        <div className="relative flex flex-col items-center gap-1.5 min-h-[40px] md:flex-row md:justify-center md:gap-0 px-2 md:px-16">
-          {/* Desktop: botão de voltar próprio desta página (some no mobile
-              — lá quem flutua sobre a tabela é o botão sticky do Header). */}
-          <button
-            type="button"
-            onClick={onVoltar}
-            className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 shrink-0 items-center justify-center w-11 h-11 rounded-full bg-white text-navy shadow-sm border border-gray-200/70 hover:bg-gray-50 active:scale-95 transition-all"
-            aria-label="Voltar"
-            title="Voltar"
-          >
-            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-          </button>
-          {/* Mobile: nome e contagem em linhas separadas (sem o hífen, que
-              estourava sem espaço) e chip de status centralizado abaixo. */}
-          <h1 className="md:hidden font-heading font-bold text-xl text-navy text-center truncate w-full px-10">
-            {concurso?.nome || 'Concurso'}<br />
-            {total} Candidato{total === 1 ? '' : 's'}
-          </h1>
-          {concurso && (
-            <ConcursoStatusTag status={concurso.status} className="md:hidden shrink-0" />
-          )}
-          {/* Desktop: layout original, em uma linha só com o chip à direita. */}
-          <h1 className="hidden md:block font-heading font-bold text-xl  text-navy text-center truncate">
-            {concurso?.nome || 'Concurso'} <span className="text-ink-3 font-semibold">-</span> {total} Candidato{total === 1 ? '' : 's'}
-          </h1>
-          {concurso && (
-            <ConcursoStatusTag status={concurso.status} className="hidden md:inline-flex absolute right-0 top-1/2 -translate-y-1/2 shrink-0" />
-          )}
-        </div>
-        </div>
+      <div ref={scrollContainerRef} style={{ '--toolbar-h': `${toolbarAltura}px` } as React.CSSProperties} className="pb-10 w-full flex-1">
+        <Container size="data" className="pt-6 md:pt-8">
+          {/* F49: título à esquerda, status por extenso e andamento escritos; sem hífen nem elementos absolutos. */}
+          <PageHeader
+            title={concurso?.nome || 'Concurso'}
+            description={(
+              <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+                {concurso && <ConcursoStatusTag status={concurso.status} />}
+                <span>{total} candidato{total === 1 ? '' : 's'}</span>
+                <span aria-hidden="true">·</span>
+                <span>{candidatos.filter(c => c.finalizado).length} de {total} finalizados</span>
+              </span>
+            )}
+          />
+        </Container>
 
         {/* Toolbar compacta e fixa no desktop: o título rola junto com a
             planilha, a busca e os filtros ficam. */}
-        <div ref={toolbarRef} className="md:sticky md:top-[var(--topbar-h)] md:z-20 bg-canvas py-2 mt-2">
-        <div className="max-w-[1600px] mx-auto w-full px-4 sm:px-6">
-        <div className="bg-white p-2 md:p-2 rounded-2xl shadow-sm border border-gray-200/60">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-3 lg:flex-nowrap">
-          <div className="relative lg:w-72 lg:shrink-0">
+        <div ref={toolbarRef} className="md:sticky md:top-0 md:z-20 bg-canvas py-2">
+        <Container size="data">
+        <div className="bg-white p-2 rounded-xl border border-line">
+        <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 md:gap-3">
+          <div className="relative md:w-56 md:shrink-0">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-ink-3 text-[20px]">search</span>
             <input
               type="text"
@@ -2960,7 +2939,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
           {/* Chip filters: só no desktop (tabela) — na lista mobile ficam só
               a busca por nome e o filtro de data. */}
-          <div className="hidden md:flex flex-wrap items-center gap-2 lg:flex-1 lg:flex-nowrap">
+          <div className="hidden md:flex flex-wrap items-center gap-2 md:flex-1">
             {chipFilters.map(chip => {
               const isActive = statusKpiFilter === chip.filterValue;
               return (
@@ -2968,7 +2947,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                   key={chip.key}
                   type="button"
                   onClick={() => toggleStatusKpiFilter(chip.filterValue)}
-                  className={`px-3 min-h-[44px] md:min-h-[40px] rounded-full text-sm font-bold border transition-all flex items-center gap-2 ${isActive ? chip.corAtivo : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
+                  className={`px-3 min-h-[44px] md:min-h-[40px] rounded-full text-sm font-bold border transition-all flex items-center gap-2 whitespace-nowrap ${isActive ? chip.corAtivo : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
                 >
                   <span>{chip.label}</span>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-black ${isActive ? 'bg-white/25' : 'bg-gray-100'}`}>{chip.value}</span>
@@ -2977,7 +2956,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             })}
           </div>
 
-          <div className="relative shrink-0 md:w-44 lg:ml-auto">
+          <div className="relative shrink-0 md:w-40 md:ml-auto">
             <button
               type="button"
               onClick={() => setShowDateMenu(prev => !prev)}
@@ -3000,10 +2979,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
           </div>
         </div>
         </div>
-        </div>
+        </Container>
         </div>
 
-        <div className="max-w-[1600px] mx-auto w-full px-4 sm:px-6 pt-2 space-y-4">
+        <Container size="data" className="pt-2 space-y-4">
         {showDateCalendar && (
           <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
             <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden flex flex-col">
@@ -3054,7 +3033,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                   <colgroup>
                     <col style={{ width: '44px' }} />
                     <col style={{ width: '26%' }} />
-                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '20%' }} />
                     <col />
                     <col style={{ width: '14%' }} />
                     <col style={{ width: '176px' }} />
@@ -3069,7 +3048,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                         { rotulo: 'Nº TIS', colSpan: 1, alinhamento: '' },
                         { rotulo: 'Ações', colSpan: 1, alinhamento: 'text-right' },
                       ].map(col => (
-                        <th key={col.rotulo} colSpan={col.colSpan} className={`md:sticky md:top-[calc(var(--topbar-h)+var(--toolbar-h))] z-10 bg-thead border-b border-line py-3 px-4 ${col.alinhamento}`}>{col.rotulo}</th>
+                        <th key={col.rotulo} colSpan={col.colSpan} className={`md:sticky md:top-[var(--toolbar-h)] z-10 bg-thead border-b border-line py-3 px-4 ${col.alinhamento}`}>{col.rotulo}</th>
                       ))}
                     </tr>
                   </thead>
@@ -3129,7 +3108,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                   {numTisHabilitado ? (
                                     <input key={`tis-${c.id}-${numTisResetKey}`} type="text" defaultValue={c.numTIS} onBlur={e => handleNumTisBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-navy focus:bg-white" placeholder="-" />
                                   ) : editavel ? (
-                                    <input type="text" value={c.numTIS} disabled placeholder="Defina o resultado primeiro" aria-label="Nº TIS — defina o resultado (Apto, Inapto, Faltou ou Insuf. Documental) para habilitar este campo" title="Defina o Status (Apto, Inapto, Faltou ou Insuf. Documental) para habilitar este campo." className="w-full px-2 py-1.5 text-xs rounded-lg border border-gray-200 bg-gray-100 text-ink-3 placeholder:text-ink-3 cursor-not-allowed" />
+                                    <span className="block text-xs leading-snug text-ink-3">{c.numTIS || 'Defina o resultado primeiro'}</span>
                                   ) : (c.numTIS || '-')}
                                 </td>
                                 <td className="py-3.5 px-4 text-right whitespace-nowrap">
@@ -3232,7 +3211,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             </>
           )}
         </div>
-        </div>
+        </Container>
       </div>
 
       {reagendandoCandidato && (
@@ -3464,12 +3443,12 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 // COMPONENTE PRINCIPAL — alterna entre a lista de concursos e o detalhe
 // =========================================================================
 
-interface ConcursosJRSProps {
-  onBack?: () => void;
-}
-
-export const ConcursosJRS: React.FC<ConcursosJRSProps> = ({ onBack }) => {
+export const ConcursosJRS: React.FC = () => {
   const nav = useNav();
+  // O concurso aberto é um nível da URL: /concursos/:concursoId (deep link e botão voltar).
+  const { concursoId: concursoParam } = useParams();
+  const selectedConcursoId = concursoParam ? decodeURIComponent(concursoParam) : null;
+  const setSelectedConcursoId = (id: string | null) => nav?.navigate(id ? concursoPath(id) : '/concursos');
   const perfil = nav?.authUser?.perfil;
   const isAdmin = perfil === 'admin';
   const podeRegistrarMensagem = canUseFeature('concursosJRS.registrarMensagemPDF', perfil);
@@ -3483,7 +3462,6 @@ export const ConcursosJRS: React.FC<ConcursosJRSProps> = ({ onBack }) => {
 
   const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
   const [loadingConcursos, setLoadingConcursos] = useState(true);
-  const [selectedConcursoId, setSelectedConcursoId] = useState<string | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showImportarCsvModal, setShowImportarCsvModal] = useState(false);
 
@@ -3543,7 +3521,6 @@ export const ConcursosJRS: React.FC<ConcursosJRSProps> = ({ onBack }) => {
         onNovoConcursoClick={() => setShowUploadModal(true)}
         onImportarCsvClick={() => setShowImportarCsvModal(true)}
         onRecarregar={carregarConcursos}
-        onBack={onBack}
       />
       {showUploadModal && <ModalRegistrarMensagem onClose={handleFecharModalUpload} isAdmin={isAdmin} />}
       {showImportarCsvModal && <ModalImportarCsv onClose={handleFecharModalImportarCsv} />}

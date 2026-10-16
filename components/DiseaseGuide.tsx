@@ -4,7 +4,10 @@ import { DISEASES } from '../constants';
 import { Disease, Diagnosis } from '../types';
 import { ChevronRight, Info, Brain, HeartPulse, EyeOff, Radiation, Accessibility, Stethoscope, Ribbon, X, Download, ArrowLeft } from './ui/icons';
 import { jsPDF } from 'jspdf';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useBreadcrumbs } from '../context/BreadcrumbContext';
+import { doencaPath } from '../config/routes';
 import { Button } from './ui/Button';
 
 const cdrData = [
@@ -228,15 +231,22 @@ const getShortDiseaseName = (name: string) => {
   return name.toUpperCase();
 };
 
-interface DiseaseGuideProps {
-  onBack?: () => void;
-}
-
-export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
+export const DiseaseGuide: React.FC = () => {
+  // Os três níveis são rotas: /beneficios/doencas · /:doencaId · /:doencaId/:diagnosticoIdx
+  const navigate = useNavigate();
+  const { doencaId, diagnosticoIdx } = useParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [selectedDisease, setSelectedDisease] = useState<Disease | null>(null);
-  const [selectedDiagnosis, setSelectedDiagnosis] = useState<Diagnosis | null>(null);
+  const selectedDisease: Disease | null = DISEASES.find(d => d.id === doencaId) ?? null;
+  // Doença com um único diagnóstico abre direto o detalhe (sem o nível intermediário).
+  const diagIdx = diagnosticoIdx !== undefined ? Number(diagnosticoIdx) : (selectedDisease?.diagnoses.length === 1 ? 0 : -1);
+  const selectedDiagnosis: Diagnosis | null = selectedDisease?.diagnoses[diagIdx] ?? null;
+  useBreadcrumbs(
+    !selectedDisease ? [] :
+    selectedDiagnosis && selectedDisease.diagnoses.length > 1
+      ? [{ label: selectedDisease.name, to: doencaPath(selectedDisease.id) }, { label: selectedDiagnosis.name }]
+      : [{ label: selectedDisease.name }]
+  );
   const [expandedDiseaseId, setExpandedDiseaseId] = useState<string | null>(null);
   const [isPragmatismModalOpen, setIsPragmatismModalOpen] = useState(false);
   const [isPersonalityModalOpen, setIsPersonalityModalOpen] = useState(false);
@@ -253,23 +263,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
 
   useEffect(() => { setIsCopied(false); }, [selectedDiagnosis]);
 
-  const handleDiseaseClick = (disease: Disease) => {
-    setSelectedDisease(disease);
-    if (disease.diagnoses.length === 1) {
-      setSelectedDiagnosis(disease.diagnoses[0]);
-    } else {
-      setSelectedDiagnosis(null);
-    }
-  };
-
-  const handleBackClick = () => {
-    if (selectedDisease && selectedDiagnosis && selectedDisease.diagnoses.length > 1) {
-      setSelectedDiagnosis(null);
-    } else {
-      setSelectedDisease(null);
-      setSelectedDiagnosis(null);
-    }
-  };
+  const handleDiseaseClick = (disease: Disease) => navigate(doencaPath(disease.id));
 
   const handleCopy = async () => {
     if (!selectedDisease || !selectedDiagnosis) return;
@@ -321,17 +315,11 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
   }
 
   const handleSearchResultClick = (result: any) => {
-    if (result.diagnosis) { 
-      setSelectedDisease(result.disease); 
-      setSelectedDiagnosis(result.diagnosis); 
-    } else { 
-      setSelectedDisease(result.disease);
-      if (result.disease.diagnoses.length === 1) {
-        setSelectedDiagnosis(result.disease.diagnoses[0]);
-      } else {
-        setSelectedDiagnosis(null);
-      }
-      setSearchQuery(""); 
+    if (result.diagnosis) {
+      navigate(doencaPath(result.disease.id, result.disease.diagnoses.indexOf(result.diagnosis)));
+    } else {
+      navigate(doencaPath(result.disease.id));
+      setSearchQuery("");
     }
   };
 
@@ -340,19 +328,15 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
   // PAGE LEVEL 2: Diagnoses List for a specific disease
   if (selectedDisease && !selectedDiagnosis) {
     return (
-      <div className="animate-fade-in flex flex-col h-full bg-canvas relative">
-        <Header title={getShortDiseaseName(selectedDisease.name)} onBack={() => setSelectedDisease(null)} />
-        <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto w-full flex-1 pb-24 md:pb-12">
-          <div className="px-1">
-            <h2 className="text-2xl font-heading font-bold text-navy">{selectedDisease.name}</h2>
-            <p className="text-sm font-semibold text-gray-500 mt-0.5">Selecione o diagnóstico pericial associado</p>
-          </div>
+      <div className="animate-fade-in flex flex-col flex-1 relative">
+        <Container size="reading" className="py-6 md:py-8 pb-10 space-y-6">
+          <PageHeader title={selectedDisease.name} description="Selecione o diagnóstico pericial associado" />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {selectedDisease.diagnoses.map((diagnosis, idx) => (
               <div 
                 key={idx}
-                onClick={() => setSelectedDiagnosis(diagnosis)}
+                onClick={() => navigate(doencaPath(selectedDisease.id, idx))}
                 className="bg-white rounded-2xl p-4 md:p-5 border border-gray-200/60 shadow-sm hover:shadow-md hover:border-gray-300 transition-all cursor-pointer flex items-center justify-between group"
               >
                 <div className="flex items-center space-x-3.5 pr-2">
@@ -369,7 +353,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
               </div>
             ))}
           </div>
-        </div>
+        </Container>
       </div>
     );
   }
@@ -378,40 +362,19 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
   if (selectedDisease && selectedDiagnosis) {
     const isDemencia = selectedDisease.name === "Alienação Mental" && selectedDiagnosis.name === "Demência";
     return (
-      <div className="animate-fade-in flex flex-col h-full bg-canvas relative">
-        <Header title={getShortDiseaseName(selectedDisease.name)} onBack={handleBackClick} />
-        <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full pb-24 md:pb-12">
-          <div className="px-1 flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <h2 className="text-2xl font-heading font-bold text-navy truncate">{selectedDisease.name}</h2>
-              {selectedDisease.diagnoses.length > 1 && <p className="text-sm font-semibold text-gray-500 mt-0.5 truncate">Diagnóstico pericial: {selectedDiagnosis.name}</p>}
-            </div>
+      <div className="animate-fade-in flex flex-col flex-1 relative">
+        <Container size="data" className="py-6 md:py-8 pb-28 md:pb-10 space-y-6">
+          <PageHeader
+            title={selectedDisease.name}
+            description={selectedDisease.diagnoses.length > 1 ? `Diagnóstico pericial: ${selectedDiagnosis.name}` : undefined}
+            actions={(
+              <div className="hidden md:flex gap-2">
+                <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} onClick={handleCopy}>{isCopied ? 'Copiado' : 'Copiar'}</Button>
+                <Button icon="download" onClick={handleDownloadPDF}>Baixar PDF</Button>
+              </div>
+            )}
+          />
 
-            {/* Desktop side-by-side action buttons */}
-            <div className="hidden md:flex items-center gap-2.5 shrink-0">
-              <button 
-                onClick={handleCopy} 
-                disabled={isCopied} 
-                className={`px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all border cursor-pointer shadow-2xs ${
-                  isCopied 
-                    ? 'bg-green-50 text-green-700 border-green-200 cursor-not-allowed' 
-                    : 'bg-white text-navy border-gray-200 hover:bg-gray-50 active:scale-95'
-                }`}
-                title="Copiar texto"
-              >
-                <span className="material-symbols-outlined text-lg">{isCopied ? 'done_all' : 'content_copy'}</span>
-                <span>{isCopied ? 'Copiado' : 'Copiar'}</span>
-              </button>
-              <button 
-                onClick={handleDownloadPDF} 
-                className="px-3.5 py-2 bg-navy text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-navy-hover active:scale-95 transition-all border border-navy cursor-pointer shadow-2xs" 
-                title="Baixar PDF"
-              >
-                <Download size={18} />
-                <span>Baixar PDF</span>
-              </button>
-            </div>
-          </div>
 
           <div className="space-y-6 w-full">
             <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
@@ -470,7 +433,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
               </ul>
             </div>
           </div>
-        </div>
+                </Container>
 
         {/* Mobile: barra de ações rotulada (antes, dois botões circulares só com ícone). */}
         <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-line p-3 flex gap-2" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
@@ -483,17 +446,9 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
 
   // PAGE LEVEL 1: Main Diseases Grid
   return (
-    <div className="flex flex-col h-full bg-canvas">
-      <Header title="Doenças de Lei" onBack={onBack} />
-      <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full flex-1 pb-24 md:pb-12">
-        <div className="px-1">
-          <h2 className="text-2xl font-heading font-bold text-navy">
-            Doenças previstas em lei
-          </h2>
-          <p className="text-sm font-semibold text-gray-500 mt-1">
-            Verifique as definições, os critérios clínicos e os documentos necessários para o enquadramento
-          </p>
-        </div>
+    <div className="flex flex-col flex-1 animate-fade-in">
+      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
+        <PageHeader title="Doenças previstas em lei" description="Verifique as definições, os critérios clínicos e os documentos necessários para o enquadramento." />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {DISEASES.map((disease) => (
             <div key={disease.id} className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md hover:border-gray-300">
@@ -509,7 +464,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
             </div>
           ))}
         </div>
-      </div>
+      </Container>
     </div>
   );
 };

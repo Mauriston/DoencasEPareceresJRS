@@ -21,7 +21,8 @@
     "qrcode": "^1.5.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-image-crop": "^11.0.5"
+    "react-image-crop": "^11.0.5",
+    "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

@@ -9,3 +9,6 @@ export const getScrollParent = (el: HTMLElement | null): HTMLElement | null => {
   }
   return null;
 };
+
+/** Container de rolagem único do app (o <main id="conteudo"> do shell). */
+export const getMainScroller = (): HTMLElement | null => document.getElementById('conteudo');

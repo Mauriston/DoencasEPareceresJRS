@@ -1,9 +1,10 @@
 // Ficheiro: components/CasosPericiais.tsx
 import React, { useContext, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Header } from './Header';
+import { Page, Container, PageHeader } from './ui/Page';
+import { Button } from './ui/Button';
 import { NavContext } from '../context/NavContext';
-import { useIsDesktop } from '../hooks/useIsDesktop';
+import { useBackToTop } from '../hooks/useBackToTop';
 import { getCasosResultado, saveCasosResultado } from '../services/firestoreCasos';
 import { ChevronRight, RotateCcw, Download, CheckCircle, XCircle, ArrowUp, Play, Smartphone, Eye } from './ui/icons';
 
@@ -299,23 +300,18 @@ const CASOS_DATA = [
   }
 ];
 
-interface Props {
-  onBack: () => void;
-}
+type Phase = 'loading' | 'intro' | 'quiz' | 'results';
 
-type Phase = 'loading' | 'mobile-only' | 'intro' | 'quiz' | 'results';
-
-export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
+export const CasosPericiais: React.FC = () => {
   const nav = useContext(NavContext);
   const uid = nav?.authUser?.uid;
-  const isDesktop = useIsDesktop();
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [userAnswers, setUserAnswers] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [showScrollTop, setShowScrollTop] = useState(false);
+  const { visivel: showScrollTop, irAoTopo: scrollToTop } = useBackToTop(250);
   const [saving, setSaving] = useState(false);
 
   const currentCase = CASOS_DATA[currentIndex];
@@ -330,10 +326,8 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   const gradeNum = Number(gradeStr);
   const displayGrade = gradeStr.replace('.', ',');
 
-  // Esta funcionalidade só existe no mobile; no desktop mostra um aviso.
   // Se já houver um resultado salvo no Firestore, abre direto na revisão.
   useEffect(() => {
-    if (isDesktop) { setPhase('mobile-only'); return; }
     if (!uid) { setPhase('intro'); return; }
     let active = true;
     getCasosResultado(uid)
@@ -348,20 +342,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
       })
       .catch(() => { if (active) setPhase('intro'); });
     return () => { active = false; };
-  }, [uid, isDesktop]);
-
-  useEffect(() => {
-    const scrollContainer = document.querySelector('main');
-    if (!scrollContainer || phase !== 'results') return;
-    const handleScroll = () => { setShowScrollTop(scrollContainer.scrollTop > 250); };
-    scrollContainer.addEventListener('scroll', handleScroll);
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
-  }, [phase]);
-
-  const scrollToTop = () => {
-    const scrollContainer = document.querySelector('main');
-    if (scrollContainer) { scrollContainer.scrollTo({ top: 0, behavior: 'smooth' }); }
-  };
+  }, [uid]);
 
   const handleSelect = (key: string) => {
     if (selectedAnswer !== null) return;
@@ -429,57 +410,28 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
 
   if (phase === 'loading') {
     return (
-      <div className="flex flex-col h-full bg-canvas">
-        <Header title="CASOS PERICIAIS" onBack={onBack} />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-gray-200 border-t-navy rounded-full animate-spin" />
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === 'mobile-only') {
-    return (
-      <div className="flex flex-col h-full bg-canvas">
-        <Header title="CASOS PERICIAIS" onBack={onBack} />
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 max-w-sm mx-auto">
-          <div className="w-16 h-16 rounded-2xl bg-navy/5 flex items-center justify-center mb-4 text-navy">
-            <Smartphone size={28} />
-          </div>
-          <h2 className="font-heading font-bold text-navy text-base mb-2">Disponível só no mobile</h2>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            O teste de Casos Periciais foi desenhado para a visualização mobile do aplicativo. Acesse esta página pelo seu celular para realizá-lo.
-          </p>
-        </div>
+      <div className="flex flex-1 items-center justify-center py-20">
+        <div className="w-8 h-8 border-2 border-line border-t-navy rounded-full animate-spin" role="status" aria-label="Carregando" />
       </div>
     );
   }
 
   if (phase === 'intro') {
     return (
-      <div className="flex flex-col h-full bg-canvas animate-fade-in">
-        <Header title="CASOS PERICIAIS" onBack={onBack} />
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 max-w-sm mx-auto w-full">
-          <div className="w-16 h-16 rounded-2xl bg-navy/5 flex items-center justify-center mb-5 text-navy">
-            <span className="material-symbols-outlined text-[32px]">quiz</span>
+      <Page size="form" title="Casos periciais" description="Teste seus conhecimentos com casos comentados, fundamentados na DGPM-406.">
+        <div className="bg-white border border-line rounded-xl p-6 flex flex-col items-center text-center">
+          <div className="w-16 h-16 rounded-xl bg-thead flex items-center justify-center mb-5 text-navy">
+            <span className="material-symbols-outlined text-[32px]" aria-hidden="true">quiz</span>
           </div>
-          <h1 className="font-heading text-xl font-black text-navy mb-3">Teste seus conhecimentos</h1>
-          <p className="text-sm text-gray-600 leading-relaxed mb-3">
+          <p className="text-sm text-ink leading-relaxed mb-3">
             Este teste reúne <strong>{totalCases} casos periciais comentados</strong>, baseados em situações práticas da rotina das Juntas de Inspeção de Saúde e fundamentados na DGPM-406.
           </p>
-          <p className="text-sm text-gray-600 leading-relaxed mb-8">
+          <p className="text-sm text-ink leading-relaxed mb-6">
             Resolvê-los ajuda a fixar os principais critérios e procedimentos médico-periciais, sendo uma ótima revisão antes de atuar em uma Junta. Depois de iniciado, é preciso concluir todos os casos para ver o resultado, que fica salvo no seu perfil.
           </p>
-          <button
-            type="button"
-            onClick={() => setPhase('quiz')}
-            className="w-full py-4 bg-navy hover:bg-navy-hover text-white font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md"
-          >
-            <Play size={20} fill="currentColor" />
-            Iniciar
-          </button>
+          <Button icon="play_arrow" fullWidth onClick={() => setPhase('quiz')}>Iniciar</Button>
         </div>
-      </div>
+      </Page>
     );
   }
 
@@ -536,11 +488,12 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
 
         {selectedAnswer !== null && (
           <button
+            type="button"
             onClick={handleNext}
-            className="fixed bottom-8 right-6 bg-navy text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-10 flex items-center justify-center border border-slate-700 animate-fade-in"
-            title={currentIndex < totalCases - 1 ? "Próximo Caso" : "Finalizar Casos"}
+            className="fixed bottom-6 right-4 bg-navy text-white shadow-lg rounded-full min-h-[44px] pl-4 pr-3 gap-2 hover:bg-navy-hover active:scale-95 transition-all z-10 flex items-center justify-center text-sm font-bold animate-fade-in"
           >
-            {currentIndex < totalCases - 1 ? <ChevronRight size={24} /> : <CheckCircle size={24} />}
+            {currentIndex < totalCases - 1 ? 'Próximo caso' : 'Finalizar'}
+            {currentIndex < totalCases - 1 ? <ChevronRight size={22} /> : <CheckCircle size={22} />}
           </button>
         )}
 
@@ -581,17 +534,10 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-canvas animate-fade-in relative">
-      <Header
-        title="REVISÃO DOS CASOS"
-        onBack={onBack}
-        rightAction={
-          <button onClick={handleRestart} className="text-white p-2 rounded-full hover:bg-white/10 transition-colors" title="Refazer casos">
-            <RotateCcw size={18} />
-          </button>
-        }
-      />
-      <div className="p-4 space-y-6 max-w-3xl mx-auto w-full flex-1 pb-32">
+    <div className="flex flex-col flex-1 animate-fade-in relative">
+      <Container size="form" className="py-6 md:py-8 pb-10 space-y-6">
+        <PageHeader title="Revisão dos casos" description="Seu resultado nos casos periciais comentados." actions={<Button variant="secondary" icon="restart_alt" onClick={handleRestart}>Refazer casos</Button>} />
+
         <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm text-center flex flex-col items-center">
           <h2 className="text-sm font-bold text-gray-500 tracking-wider mb-2">Nota Final</h2>
           <div className={`text-6xl font-black ${gradeNum >= 7 ? 'text-green-700' : gradeNum >= 5 ? 'text-amber-600' : 'text-red-500'}`}>{displayGrade}</div>
@@ -638,10 +584,11 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
             </div>
           );
         })}
-      </div>
+            </Container>
       {showScrollTop && (
-        <button onClick={scrollToTop} className="fixed bottom-24 right-6 bg-navy text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center border border-slate-700 animate-fade-in" title="Voltar ao topo">
+        <button type="button" onClick={scrollToTop} className="fixed bottom-6 right-4 bg-navy text-white shadow-lg rounded-full min-h-[44px] pl-3 pr-4 gap-2 hover:bg-navy-hover active:scale-95 transition-all z-50 flex items-center justify-center text-sm font-bold animate-fade-in">
           <ArrowUp size={20} />
+          Topo
         </button>
       )}
     </div>

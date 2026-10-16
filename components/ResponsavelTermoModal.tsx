@@ -4,7 +4,7 @@
 // o termo, então o MPI escolhe quem é o responsável pela IS. Cada botão traz o
 // avatar e o campo "usuario" do cadastro (ex.: "CT MAURISTON").
 import React, { useEffect, useState } from 'react';
-import { Avatar } from './Header';
+import { Avatar } from './shell/UserMenu';
 import { listUsuarios, UsuarioRecord } from '../services/firestoreUsuarios';
 
 // Ordem de antiguidade dos médicos da JRS (do mais antigo ao mais moderno), pelo campo

@@ -26,11 +26,12 @@ export interface NavCategory {
   subitems: NavSubItem[];
 }
 
-// "Casos Periciais" e "Vídeos" só aparecem no menu (Sidebar/Home) na
-// visualização mobile — a própria página já trata o acesso via desktop
-// (ex.: CasosPericiais mostra um aviso "só no mobile"), mas o item nem
-// precisa aparecer no menu nesse caso.
-const MOBILE_ONLY_PAGES: NavItem[] = ['casos', 'videos'];
+// Páginas que só aparecem no menu em telas pequenas. Antes: "Casos Periciais" e
+// "Vídeos" (['casos', 'videos']). A auditoria de frontend (F28) recomenda não
+// condicionar funcionalidade ao tamanho da tela — por isso a lista agora está
+// vazia e as duas páginas aparecem em qualquer largura. Para voltar ao
+// comportamento antigo, basta repor os dois ids aqui.
+const MOBILE_ONLY_PAGES: NavItem[] = [];
 
 const CATEGORY_DEFS: { id: string; label: string; icon: string; subtitle: string; pages: NavItem[] }[] = [
   { id: 'concursos', label: 'Concursos', icon: 'checklist', subtitle: 'Acesse as planilhas de acompanhamento.', pages: ['concursosJRS', 'concursos', 'exames'] },

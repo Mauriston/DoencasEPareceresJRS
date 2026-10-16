@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Header } from './Header';
+import { Page } from './ui/Page';
 import { NavContext, getPrimeiroNome } from '../context/NavContext';
 import { getNavCategories, NavCategory } from '../config/navigation';
 import { observarConcursos } from '../services/firestoreConcursos';
@@ -39,19 +39,12 @@ export const Home: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-canvas animate-fade-in">
-      <Header title="JRS/HNRe" desktopTitle="Hospital Naval de Recife - Junta Regular de Saúde" />
-
-      <div className="p-4 sm:p-6 lg:p-8 w-full flex-1">
-        <div className="mb-6">
-          <h1 className="font-heading text-2xl font-extrabold text-navy">
-            Olá, {primeiroNome || 'Perito'}!
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {selectedCategory ? `Escolha uma opção de ${selectedCategory.label}` : 'O que pretende fazer agora?'}
-          </p>
-        </div>
-
+    <Page
+      size="data"
+      title={`Olá, ${primeiroNome || 'Perito'}!`}
+      description={selectedCategory ? `Escolha uma opção de ${selectedCategory.label}` : 'O que pretende fazer agora?'}
+    >
+      <div>
         <div className="flex flex-col md:flex-row items-start gap-4 sm:gap-6">
           <div
             className={`w-full gap-3 sm:gap-4 ${
@@ -153,6 +146,6 @@ export const Home: React.FC = () => {
           </AnimatePresence>
         </div>
       </div>
-    </div>
+    </Page>
   );
 };

@@ -1,6 +1,8 @@
 // Ficheiro: components/PericiaMenorDetalhe.tsx
 import React, { useMemo } from 'react';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
+import { useBreadcrumbs } from '../context/BreadcrumbContext';
+import { periciaMenorPath } from '../config/routes';
 import { PericiaStatusTags } from './ui/PericiaStatusTags';
 
 interface PericiaMenorRecord {
@@ -21,7 +23,6 @@ interface PericiaMenorRecord {
 interface Props {
   person: string;
   records: PericiaMenorRecord[];
-  onBack: () => void;
 }
 
 const parseDias = (val: string): number => {
@@ -29,7 +30,8 @@ const parseDias = (val: string): number => {
   return isNaN(n) ? 0 : n;
 };
 
-export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }) => {
+export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records }) => {
+  useBreadcrumbs([{ label: 'Histórico', to: periciaMenorPath('historico') }, { label: person }]);
   const now = Date.now();
   const startOfYear = new Date(new Date().getFullYear(), 0, 1).getTime();
   const last30 = now - 30 * 24 * 60 * 60 * 1000;
@@ -63,16 +65,10 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
   const om = records[0]?.om || '';
 
   return (
-    <div className="flex flex-col bg-gray-50 min-h-full">
-      <Header onBack={onBack} />
+    <div className="flex flex-col flex-1 animate-fade-in">
+      <Container size="reading" className="py-6 md:py-8 pb-10 space-y-4">
+        <PageHeader title={person} description={om ? `Histórico de perícias menores · OM: ${om}` : 'Histórico de perícias menores'} />
 
-      <div className="px-4 pb-3 pt-3 border-b border-gray-200 bg-white">
-        <p className="eyebrow">Histórico de Perícias Menores</p>
-        <h2 className="text-navy font-bold text-sm leading-snug mt-0.5">{person}</h2>
-        {om && <p className="text-gray-500 text-xs mt-0.5">OM: {om}</p>}
-      </div>
-
-      <div className="px-4 pt-4 pb-28 w-full max-w-2xl mx-auto space-y-4">
 
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
           <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2">
@@ -181,7 +177,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, onBack }
           ))}
         </div>
 
-      </div>
+            </Container>
     </div>
   );
 };

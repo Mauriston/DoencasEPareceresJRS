@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
+import { Toast } from './ui/Toast';
 import { StatusTag } from './ui/StatusTag';
 import {
   ROLES,
@@ -26,11 +27,7 @@ const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-
 const labelClass = 'text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1';
 const featureGroups = [...new Set(FEATURE_DEFS.map(f => f.group))];
 
-interface UsuariosManagementProps {
-  onBack?: () => void;
-}
-
-export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }) => {
+export const UsuariosManagement: React.FC = () => {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -254,17 +251,13 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
   };
 
   return (
-    <div className="flex flex-col h-full bg-canvas animate-fade-in relative">
-      <Header title="Gestão de Usuários" onBack={onBack} />
+    <div className="flex flex-col flex-1 animate-fade-in relative">
 
-      {toastMessage && (
-        <div className="fixed top-20 right-4 z-[100] bg-navy text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in">
-          <span className="material-symbols-outlined text-[18px] text-gold">check_circle</span>
-          <span className="font-semibold">{toastMessage}</span>
-        </div>
-      )}
+      <Toast message={toastMessage} />
 
-      <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1600px] mx-auto w-full flex-1 space-y-4">
+      <Container size="data" className="py-6 md:py-8 pb-10 space-y-4">
+        <PageHeader title="Usuários" description="Gerencie usuários e as permissões de acesso por perfil." />
+
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="relative flex-1">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-ink-3 text-[20px]">search</span>
@@ -414,7 +407,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
                             <button
                               type="button"
                               onClick={() => handleToggleStatus(user)}
-                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${user.ativo ? 'text-ink-3 hover:text-red-600 hover:bg-red-50' : 'text-ink-3 hover:text-green-700 hover:bg-green-50'}`}
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${user.ativo ? 'text-ink-3 hover:text-red-600 hover:bg-red-50' : 'text-ink-3 hover:text-navy hover:bg-green-50'}`}
                               title={user.ativo ? 'Desativar usuário' : 'Ativar usuário'}
                             >
                               <span className="material-symbols-outlined text-[18px]">{user.ativo ? 'block' : 'check_circle'}</span>
@@ -576,7 +569,7 @@ export const UsuariosManagement: React.FC<UsuariosManagementProps> = ({ onBack }
             ))}
           </div>
         </div>
-      </div>
+            </Container>
 
       {/* NOVO USUÁRIO MODAL */}
       {showNewUserModal && (

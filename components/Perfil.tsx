@@ -1,5 +1,6 @@
 import React, { useContext, useRef, useState } from 'react';
-import { Header } from './Header';
+import { Page } from './ui/Page';
+import { Toast } from './ui/Toast';
 import { NavContext } from '../context/NavContext';
 import { uploadProfileImage } from '../services/profileImage';
 import { formatNip, formatCelular } from '../utils/format';
@@ -96,21 +97,10 @@ export const Perfil: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-canvas animate-fade-in relative">
-      <Header title="Meu Perfil" onBack={() => setCurrentView('home')} />
+    <Page size="form" title="Meu perfil" description="Seus dados de contato, foto e senha de acesso.">
+      <Toast message={toast?.msg ?? null} tone={toast?.type === 'error' ? 'error' : 'success'} />
 
-      {toast && (
-        <div className={`fixed top-20 right-4 z-[100] px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border animate-fade-in ${
-          toast.type === 'success' ? 'bg-navy text-white border-white/20' : 'bg-red-50 text-red-700 border-red-200'
-        }`}>
-          <span className={`material-symbols-outlined text-[18px] ${toast.type === 'success' ? 'text-gold' : 'text-red-600'}`}>
-            {toast.type === 'success' ? 'check_circle' : 'error'}
-          </span>
-          <span className="font-semibold">{toast.msg}</span>
-        </div>
-      )}
-
-      <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-3xl mx-auto w-full flex-1 space-y-5">
+      <div className="space-y-5">
         {/* FOTO DE PERFIL EM DESTAQUE */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-6 flex flex-col items-center">
           <div className="relative">
@@ -224,6 +214,6 @@ export const Perfil: React.FC = () => {
           </div>
         </form>
       </div>
-    </div>
+    </Page>
   );
 };

@@ -1,6 +1,7 @@
 // Ficheiro: components/DGPM406Guide.tsx
-import React, { useState } from 'react';
-import { Header } from './Header';
+import React, { useMemo } from 'react';
+import { Container, PageHeader } from './ui/Page';
+import { useQueryParam } from '../hooks/useQueryParam';
 import { Segmented } from './ui/Segmented';
 import { MarkdownDocPage } from './MarkdownDocPage';
 import { StoragePdfIconButton, StoragePdfFab } from './StoragePdfButtons';
@@ -98,20 +99,36 @@ const ANEXOS: Anexo[] = [
 
 type SelectedDoc = { kind: 'markdown'; source: 'capitulo' | 'anexo'; id: string; title: string; subtitle: string; markdown: string; pdfPath?: string };
 
-interface DGPM406GuideProps {
-  onBack?: () => void;
-}
+// Documento aberto = nível de navegação na URL (?doc=capitulo-c4 / ?doc=anexo-a10);
+// a aba também (?aba=anexos) — deep link, botão voltar e refresh funcionam.
+const montarDocumento = (param: string | null): SelectedDoc | null => {
+  const m = param?.match(/^(capitulo|anexo)-(.+)$/);
+  if (!m) return null;
+  if (m[1] === 'capitulo') {
+    const item = CHAPTERS.find(c => c.id === m[2]);
+    const md = item?.mdKey && getModule(chapterModules, item.mdKey);
+    if (!item || !md) return null;
+    const numero = item.chapter.match(/^Capítulo (\d+)$/)?.[1];
+    return { kind: 'markdown', source: 'capitulo', id: item.id, title: item.chapter, subtitle: item.title, markdown: md, pdfPath: numero ? capituloPdfPath(Number(numero)) : undefined };
+  }
+  const item = ANEXOS.find(a => a.id === m[2]);
+  const md = item?.mdKey && getModule(anexoModules, item.mdKey);
+  if (!item || !md) return null;
+  return { kind: 'markdown', source: 'anexo', id: item.id, title: item.anexo, subtitle: item.title, markdown: md, pdfPath: anexoPdfPath(item.anexo.replace(/^ANEXO\s+/i, '')) };
+};
 
-export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
-  const [activeTab, setActiveTab] = useState<'capitulos' | 'anexos'>('capitulos');
-  const [selectedDoc, setSelectedDoc] = useState<SelectedDoc | null>(null);
+export const DGPM406Guide: React.FC = () => {
+  const [abaParam, setAbaParam] = useQueryParam('aba');
+  const activeTab: 'capitulos' | 'anexos' = abaParam === 'anexos' ? 'anexos' : 'capitulos';
+  const setActiveTab = (aba: 'capitulos' | 'anexos') => setAbaParam(aba === 'capitulos' ? null : aba, { replace: true });
+  const [docParam, setDocParam] = useQueryParam('doc');
+  const selectedDoc = useMemo(() => montarDocumento(docParam), [docParam]);
   const { open: openPdf, busy: baixandoPdf, modalElement } = useStoragePdf();
 
   const handleChapterClick = (item: Chapter) => {
     const md = item.mdKey && getModule(chapterModules, item.mdKey);
     if (md) {
-      const numero = item.chapter.match(/^Capítulo (\d+)$/)?.[1];
-      setSelectedDoc({ kind: 'markdown', source: 'capitulo', id: item.id, title: item.chapter, subtitle: item.title, markdown: md, pdfPath: numero ? capituloPdfPath(Number(numero)) : undefined });
+      setDocParam(`capitulo-${item.id}`);
       return;
     }
     // Primeiro item (DGPM-406 na íntegra): abre o PDF salvo no Storage —
@@ -127,7 +144,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
   const handleAnexoClick = (item: Anexo) => {
     const md = item.mdKey && getModule(anexoModules, item.mdKey);
     if (md) {
-      setSelectedDoc({ kind: 'markdown', source: 'anexo', id: item.id, title: item.anexo, subtitle: item.title, markdown: md, pdfPath: anexoPdfPath(item.anexo.replace(/^ANEXO\s+/i, '')) });
+      setDocParam(`anexo-${item.id}`);
       return;
     }
     // Anexo sem página renderizada: abre o PDF salvo no Storage (modal
@@ -181,8 +198,8 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
       <>
         <MarkdownDocPage
           title={selectedDoc.title}
+          subtitle={selectedDoc.subtitle}
           markdown={selectedDoc.markdown}
-          onBack={() => setSelectedDoc(null)}
           sidebar={selectedDoc.source === 'capitulo' ? chapterNav : anexoNav}
           actions={baixar ? <StoragePdfIconButton busy={baixandoPdf} onClick={baixar} /> : undefined}
         />
@@ -195,11 +212,12 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 animate-fade-in relative">
-      {modalElement}
-      <Header title="DGPM-406" onBack={onBack} />
+    <div className="flex flex-col flex-1 animate-fade-in relative">
 
-      <div className="px-4 md:px-6 lg:px-8 pt-4 max-w-[1600px] mx-auto w-full">
+      {modalElement}
+      <Container size="data" className="py-6 md:py-8 pb-10">
+        <PageHeader title="DGPM-406" description="Normas Reguladoras para Inspeções de Saúde na Marinha — capítulos e anexos." />
+        <div className="mb-6">
         <Segmented
           ariaLabel="Seção da DGPM-406"
           fullWidth
@@ -208,9 +226,9 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
           value={activeTab}
           onChange={setActiveTab}
         />
-      </div>
+        </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto w-full pb-24 md:pb-12">
+
         {/* Capítulos: tabela no desktop e lista de itens no mobile. O ícone
             indica o que o clique faz: abre o PDF (file_open) ou navega para a
             página renderizada (chevron). Anexos: mesma tabela no desktop. */}
@@ -227,7 +245,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
               <tbody className="divide-y divide-gray-100">
                 {CHAPTERS.map(item => (
                   <tr key={item.id} onClick={() => handleChapterClick(item)} className="group hover:bg-gray-50 cursor-pointer transition-colors">
-                    <td className="py-3 px-4 text-sm font-heading font-bold text-navy group-hover:text-green-700 whitespace-nowrap transition-colors">{item.chapter}</td>
+                    <td className="py-3 px-4 text-sm font-heading font-bold text-navy group-hover:text-navy whitespace-nowrap transition-colors">{item.chapter}</td>
                     <td className="py-3 px-4 text-xs font-medium text-gray-500 uppercase">{item.title}</td>
                     <td className="py-3 px-4 text-right">
                       <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors align-middle">
@@ -253,7 +271,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
               <tbody className="divide-y divide-gray-100">
                 {ANEXOS.map(item => (
                   <tr key={item.id} onClick={() => handleAnexoClick(item)} className="group hover:bg-gray-50 cursor-pointer transition-colors">
-                    <td className="py-3 px-4 text-sm font-heading font-bold text-navy group-hover:text-green-700 whitespace-nowrap transition-colors">{item.anexo}</td>
+                    <td className="py-3 px-4 text-sm font-heading font-bold text-navy group-hover:text-navy whitespace-nowrap transition-colors">{item.anexo}</td>
                     <td className="py-3 px-4 text-xs font-medium text-gray-500 uppercase">{item.title}</td>
                     <td className="py-3 px-4 text-right">
                       <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors align-middle">
@@ -273,13 +291,13 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
                 key={item.id}
                 type="button"
                 onClick={() => handleChapterClick(item)}
-                className="group flex items-center gap-3 bg-white rounded-xl border border-gray-200/60 px-4 py-3 hover:shadow-md hover:border-green transition-all duration-200 cursor-pointer text-left"
+                className="group flex items-center gap-3 bg-white rounded-xl border border-gray-200/60 px-4 py-3 hover:shadow-md hover:border-navy transition-all duration-200 cursor-pointer text-left"
               >
                 <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors shrink-0">
                   {item.mdKey ? 'single_arrow' : 'file_open'}
                 </span>
                 <div className="flex flex-col min-w-0 flex-1">
-                  <h3 className="text-navy font-heading font-bold text-sm leading-snug group-hover:text-green-700 transition-colors">
+                  <h3 className="text-navy font-heading font-bold text-sm leading-snug group-hover:text-navy transition-colors">
                     {item.chapter}
                   </h3>
                   <p className="text-gray-500 font-body text-xs font-medium leading-relaxed line-clamp-2">
@@ -294,13 +312,13 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
                 key={item.id}
                 type="button"
                 onClick={() => handleAnexoClick(item)}
-                className="group flex items-center gap-3 bg-white rounded-xl border border-gray-200/60 px-4 py-3 hover:shadow-md hover:border-green transition-all duration-200 cursor-pointer text-left"
+                className="group flex items-center gap-3 bg-white rounded-xl border border-gray-200/60 px-4 py-3 hover:shadow-md hover:border-navy transition-all duration-200 cursor-pointer text-left"
               >
                 <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors shrink-0">
                   {item.mdKey ? 'single_arrow' : 'file_open'}
                 </span>
                 <div className="flex flex-col min-w-0 flex-1">
-                  <h3 className="text-navy font-heading font-bold text-sm leading-snug group-hover:text-green-700 transition-colors">
+                  <h3 className="text-navy font-heading font-bold text-sm leading-snug group-hover:text-navy transition-colors">
                     {item.anexo}
                   </h3>
                   <p className="text-gray-500 font-body text-xs font-medium leading-relaxed line-clamp-2">
@@ -311,7 +329,7 @@ export const DGPM406Guide: React.FC<DGPM406GuideProps> = ({ onBack }) => {
             ))
           )}
         </div>
-      </div>
+            </Container>
     </div>
   );
 };

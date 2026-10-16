@@ -1,6 +1,7 @@
 // Ficheiro: components/Pareceres.tsx
 import React, { useState, useEffect, useRef } from "react";
-import { Header } from "./Header";
+import { Container, PageHeader } from "./ui/Page";
+import { useQueryParam } from "../hooks/useQueryParam";
 import { Button } from "./ui/Button";
 import { Segmented } from "./ui/Segmented";
 
@@ -9,12 +10,11 @@ const extractNameFromInspecionado = (text: string) => {
   return match.length > 1 ? match[1].trim() : text.trim();
 };
 
-interface PareceresProps {
-  onBack?: () => void;
-}
-
-export const Pareceres: React.FC<PareceresProps> = ({ onBack }) => {
-  const [activeTab, setActiveTab] = useState<'novo' | 'historico'>('novo');
+export const Pareceres: React.FC = () => {
+  // A aba é um nível da URL (?aba=historico).
+  const [abaParam, setAbaParam] = useQueryParam('aba');
+  const activeTab: 'novo' | 'historico' = abaParam === 'historico' ? 'historico' : 'novo';
+  const setActiveTab = (tab: 'novo' | 'historico') => setAbaParam(tab === 'novo' ? null : tab, { replace: true });
   const [peritoSelecionado, setPeritoSelecionado] = useState("");
   const [finalidade, setFinalidade] = useState("");
   const [especialidade, setEspecialidade] = useState("");
@@ -75,7 +75,10 @@ export const Pareceres: React.FC<PareceresProps> = ({ onBack }) => {
     finally { setIsFetchingHistory(false); }
   };
 
-  const handleTabChange = (tab: 'novo' | 'historico') => { setActiveTab(tab); if (tab === 'historico') fetchHistory(); };
+  const handleTabChange = (tab: 'novo' | 'historico') => { setActiveTab(tab); };
+  // Abrir direto em ?aba=historico (deep link) também carrega o histórico.
+  useEffect(() => { if (activeTab === 'historico') fetchHistory(); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const handleNipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
@@ -221,9 +224,11 @@ export const Pareceres: React.FC<PareceresProps> = ({ onBack }) => {
     });
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 relative">
-      <Header title="PARECERES" onBack={onBack} />
-      <div className="px-4 pt-4 w-full max-w-form mx-auto">
+    <div className="flex flex-col flex-1 relative">
+      <Container size="form" className="pt-6 md:pt-8">
+        <PageHeader title="Pareceres" description="Gere pedidos de parecer em PDF por especialidade." />
+      </Container>
+      <Container size="form" className="pb-4">
         <Segmented
           ariaLabel="Seção de Pareceres"
           fullWidth
@@ -231,10 +236,10 @@ export const Pareceres: React.FC<PareceresProps> = ({ onBack }) => {
           value={activeTab}
           onChange={handleTabChange}
         />
-      </div>
+      </Container>
 
       {activeTab === 'historico' && (
-        <div className="flex-1 overflow-y-auto px-4 pt-5 pb-28 w-full max-w-2xl mx-auto space-y-4">
+        <Container size="form" className="pb-10 space-y-4">
           <div className="flex gap-2 items-center">
             <div className="relative flex-1" ref={searchRef}>
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-ink-3"><span className="material-symbols-outlined text-[18px]">search</span></div>
@@ -268,11 +273,11 @@ export const Pareceres: React.FC<PareceresProps> = ({ onBack }) => {
             )}
           </div>
           {filteredHistory.length > 0 && (<p className="text-center text-xs text-ink-3">{filteredHistory.length} registro{filteredHistory.length !== 1 ? 's' : ''} encontrado{filteredHistory.length !== 1 ? 's' : ''}</p>)}
-        </div>
+                </Container>
       )}
 
       {activeTab === 'novo' && (
-        <div className="flex-1 overflow-y-auto px-4 pt-6 pb-28 w-full max-w-2xl mx-auto space-y-6">
+        <Container size="form" className="pb-10 space-y-6">
           <button type="button" onClick={() => setShowHelpModal(true)} className="fixed bottom-6 right-6 min-h-[44px] pl-3 pr-4 gap-2 bg-navy text-white rounded-full shadow-lg flex items-center justify-center hover:bg-navy-hover active:scale-95 transition-all z-40 text-sm font-bold" title="Ajuda"><span className="material-symbols-outlined text-[22px]" aria-hidden="true">help</span>Ajuda</button>
 
           {showHelpModal && (<div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in"><div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-md flex flex-col items-center text-center max-h-[90vh]"><span className="material-symbols-outlined text-4xl text-navy mb-4 shrink-0">info</span><div className="text-gray-600 mb-6 text-base text-left space-y-4 w-full overflow-y-auto pr-2"><p>Preencha os dados da inspeção e do militar e gere um pedido de parecer a partir de templates com perguntas padrão para as especialidades:</p><div className="grid grid-cols-2 gap-2 pl-4"><ul className="list-disc space-y-1"><li>CARDIOLOGIA</li><li>HEPATOLOGIA</li><li>NEUROLOGIA</li></ul><ul className="list-disc space-y-1"><li>ONCOLOGIA</li><li>PSICOLOGIA</li><li>PSIQUIATRIA</li></ul></div><p>No final receba o parecer no seu zimbra em PDF e editável no formato .odt</p></div><button onClick={() => setShowHelpModal(false)} className="w-full px-4 py-2 bg-navy text-white font-medium rounded-lg hover:bg-navy/90 transition-colors shrink-0">Entendi</button></div></div>)}
@@ -297,7 +302,7 @@ export const Pareceres: React.FC<PareceresProps> = ({ onBack }) => {
             </div>
             <div className="flex flex-col-reverse sm:flex-row sm:justify-between items-stretch gap-3 pt-2"><Button variant="destructive" icon="delete" onClick={resetForm}>Limpar</Button><Button type="submit" icon="send">Gerar parecer</Button></div>
           </form>
-        </div>
+                </Container>
       )}
 
       {showPesquisarNomeModal && (

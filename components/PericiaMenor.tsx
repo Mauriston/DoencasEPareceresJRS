@@ -1,6 +1,9 @@
 // Ficheiro: components/PericiaMenor.tsx
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
+import { useParams } from 'react-router-dom';
+import { periciaMenorPath } from '../config/routes';
+import { EmptyState } from './ui/EmptyState';
 import { PericiaMenorDetalhe } from './PericiaMenorDetalhe';
 import { PericiaStatusTags } from './ui/PericiaStatusTags';
 import { Button } from './ui/Button';
@@ -42,11 +45,7 @@ const removeAcentos = (str: string) => str.normalize("NFD").replace(/[̀-ͯ]/g, 
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
 
-interface PericiaMenorProps {
-  onBack?: () => void;
-}
-
-export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
+export const PericiaMenor: React.FC = () => {
   const nav = useContext(NavContext);
   const perfil = nav?.authUser?.perfil;
   const canNovo = canUseFeature('pericia-menor.novo', perfil);
@@ -106,7 +105,14 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successPdfUrl, setSuccessPdfUrl] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'novo' | 'historico'>(canNovo ? 'novo' : 'historico');
+  // Aba e pessoa são níveis da URL: /pericia-menor/novo · /historico · /historico/:pessoa.
+  const { aba: abaParam, pessoa: pessoaParam } = useParams();
+  // A aba pedida na URL respeita as permissões por aba (pericia-menor.novo / .historico):
+  // sem permissão para ela, cai na aba liberada (como o estado inicial já fazia).
+  const abaPedida = abaParam === 'historico' || pessoaParam ? 'historico' : abaParam === 'novo' ? 'novo' : null;
+  const activeTab: 'novo' | 'historico' =
+    abaPedida === 'novo' && canNovo ? 'novo' : abaPedida === 'historico' && canHistorico ? 'historico' : (canNovo ? 'novo' : 'historico');
+  const setActiveTab = (tab: 'novo' | 'historico') => nav?.navigate(periciaMenorPath(tab), { replace: true });
   const [history, setHistory] = useState<PericiaMenorRecord[]>([]);
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
@@ -117,7 +123,8 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
   const [filterRestricoes, setFilterRestricoes] = useState(false);
   const [sortCol, setSortCol] = useState<'data' | 'inspecionado'>('data');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
+  const selectedPerson: string | null = pessoaParam ? decodeURIComponent(pessoaParam) : null;
+  const setSelectedPerson = (nome: string | null) => nav?.navigate(nome ? periciaMenorPath('historico', nome) : periciaMenorPath('historico'));
   const [vigentesCount, setVigentesCount] = useState(0);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -348,9 +355,9 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
   // Se o perfil não tiver acesso à aba "Novo", a página já abre em
   // "Histórico" (ver activeTab acima) — carrega os dados de uma vez.
   useEffect(() => {
-    if (!canNovo && canHistorico) fetchHistory();
+    if (activeTab === 'historico' && canHistorico) fetchHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeTab, canHistorico]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => { if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSearchDropdown(false); };
@@ -379,29 +386,37 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
     ? Array.from(new Set<string>(history.map(r => r.inspecionado))).filter(n => n.toLowerCase().includes(historySearch.toLowerCase())).slice(0, 8)
     : [];
 
-  if (selectedPerson !== null) {
+  if (selectedPerson !== null && canHistorico) {
     const personRecords = history.filter(r => r.inspecionado === selectedPerson);
-    return <PericiaMenorDetalhe person={selectedPerson} records={personRecords} onBack={() => setSelectedPerson(null)} />;
+    if (isFetchingHistory || (history.length === 0 && personRecords.length === 0)) {
+      return <div className="flex flex-1 items-center justify-center py-20"><span className="w-6 h-6 border-2 border-line border-t-navy rounded-full animate-spin" role="status" aria-label="Carregando histórico" /></div>;
+    }
+    if (personRecords.length === 0) {
+      return <Container size="reading" className="py-8"><EmptyState icon="person_search" title="Nenhum registro encontrado" description={`Não há perícias menores registradas para ${selectedPerson}.`} /></Container>;
+    }
+    return <PericiaMenorDetalhe person={selectedPerson} records={personRecords} />;
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 relative">
-      <Header title="Perícia Menor" onBack={onBack} />
+    <div className="flex flex-col flex-1 relative">
+      <Container size="data" className="pt-6 md:pt-8">
+        <PageHeader title="Perícia Menor" description="Registre e consulte as Perícias Menores dos militares de bordo." />
+      </Container>
       {canNovo && canHistorico && (
-      <div className="px-4 pt-4 w-full max-w-2xl md:max-w-5xl mx-auto">
+      <Container size="data" className="pb-4">
         <Segmented
           ariaLabel="Seção de Perícia Menor"
           fullWidth
           className="md:w-auto md:inline-flex"
           options={[{ value: 'novo', label: 'Novo', icon: 'add_circle' }, { value: 'historico', label: 'Histórico', icon: 'history', badge: vigentesCount }]}
           value={activeTab}
-          onChange={tab => { setActiveTab(tab); if (tab === 'historico') fetchHistory(); }}
+          onChange={setActiveTab}
         />
-      </div>
+      </Container>
       )}
 
       {activeTab === 'novo' && canNovo && (
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-32 w-full max-w-2xl md:max-w-5xl mx-auto space-y-6">
+      <Container size="data" className="pb-10 space-y-6">
         {/* IA Section */}
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 animate-fade-in shadow-inner">
           <div className="flex items-center justify-between mb-3">
@@ -524,7 +539,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
           <Button variant="destructive" icon="delete" onClick={handleReset}>Limpar</Button>
           <Button icon="send" loading={isSubmitting} onClick={handleSubmit}>Gerar perícia menor</Button>
         </div>
-      </div>
+            </Container>
       )}
 
       {/* Name search modal */}
@@ -577,7 +592,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
       )}
 
       {activeTab === 'historico' && canHistorico && (
-        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-28 w-full max-w-2xl md:max-w-6xl mx-auto">
+        <Container size="data" className="pb-10">
         <div className="md:grid md:grid-cols-[280px_1fr] md:gap-6 md:items-start">
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-4 md:mb-0 space-y-3">
             <div className="relative" ref={searchRef}>
@@ -633,7 +648,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
                         <button
                           type="button"
                           onClick={() => setSelectedPerson(rec.inspecionado)}
-                          className="font-semibold text-navy hover:text-green-700 transition-colors flex items-start gap-1 text-left w-full"
+                          className="font-semibold text-navy hover:text-navy transition-colors flex items-start gap-1 text-left w-full"
                         >
                           <span className="flex-1">{rec.inspecionado}</span>
                           <span className="material-symbols-outlined text-sm text-ink-3 shrink-0 mt-0.5">chevron_right</span>
@@ -650,7 +665,7 @@ export const PericiaMenor: React.FC<PericiaMenorProps> = ({ onBack }) => {
           )}
           </div>
         </div>
-        </div>
+                </Container>
       )}
     </div>
   );

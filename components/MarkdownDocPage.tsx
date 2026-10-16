@@ -1,40 +1,40 @@
 // Ficheiro: components/MarkdownDocPage.tsx
 // Página genérica para exibir um documento (capítulo/anexo da DGPM-406, etc.)
-// renderizado a partir de Markdown, com botão de voltar próprio (não altera a
-// navegação global — quem usa controla a própria view interna de "detalhe").
+// renderizado a partir de Markdown. O nível "documento" é uma rota da página que
+// o usa (ex.: ?doc=capitulo-c4) e aparece na trilha de navegação da topbar.
 import React from 'react';
-import { Header } from './Header';
 import { MarkdownContent } from './MarkdownContent';
+import { Container, PageHeader } from './ui/Page';
+import { useBreadcrumbs } from '../context/BreadcrumbContext';
 
 interface MarkdownDocPageProps {
   title: string;
+  subtitle?: string;
   markdown: string;
-  onBack: () => void;
   /** Card fixo à esquerda no desktop (ex.: menu de navegação entre capítulos). */
   sidebar?: React.ReactNode;
-  /** Ações no canto superior direito do card do texto, na linha do título (ex.: botão de download do PDF). */
+  /** Ações no canto superior direito do título (ex.: botão de download do PDF). */
   actions?: React.ReactNode;
 }
 
-export const MarkdownDocPage: React.FC<MarkdownDocPageProps> = ({ title, markdown, onBack, sidebar, actions }) => (
-  <div className="flex flex-col h-full bg-canvas animate-fade-in">
-    <Header title={title} onBack={onBack} />
-    <div className={`p-4 md:p-6 lg:p-8 w-full flex-1 ${sidebar ? '' : 'max-w-3xl md:max-w-5xl mx-auto'}`}>
-      <div className={sidebar ? 'md:grid md:grid-cols-[220px_1fr] md:gap-5 md:items-start' : ''}>
-        {sidebar && (
-          <div className="hidden md:block sticky top-[104px]">
-            {sidebar}
-          </div>
-        )}
-        <div>
-          <div className="relative bg-white p-6 md:p-8 rounded-2xl border border-gray-200/60 shadow-sm">
-            {actions && <div className="absolute right-4 top-5 md:right-6 md:top-7 flex items-center">{actions}</div>}
-            <div className={actions ? 'md:pr-12' : ''}>
-              <MarkdownContent markdown={markdown} />
+export const MarkdownDocPage: React.FC<MarkdownDocPageProps> = ({ title, subtitle, markdown, sidebar, actions }) => {
+  useBreadcrumbs([{ label: title }]);
+  return (
+    <div className="flex flex-col flex-1 animate-fade-in py-6 md:py-8 pb-10">
+      <Container size={sidebar ? 'data' : 'reading'}>
+        <PageHeader title={title} description={subtitle} actions={actions} />
+        <div className={sidebar ? 'md:grid md:grid-cols-[240px_minmax(0,1fr)] md:gap-6 md:items-start' : ''}>
+          {sidebar && (
+            <div className="hidden md:block sticky top-6">
+              {sidebar}
             </div>
+          )}
+          {/* Coluna de leitura: ~70 caracteres por linha. */}
+          <div className="bg-white p-6 md:p-8 rounded-xl border border-line max-w-reading w-full">
+            <MarkdownContent markdown={markdown} />
           </div>
         </div>
-      </div>
+      </Container>
     </div>
-  </div>
-);
+  );
+};

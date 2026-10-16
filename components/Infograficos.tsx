@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, RefreshCw, AlertCircle, ArrowLeft, Download, Share2, ChevronRight } from './ui/icons';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
 import { fetchExtras, ExtraItem } from '../services/extrasService';
 
-interface InfograficosProps {
-  onBack?: () => void;
-}
-
-export const Infograficos: React.FC<InfograficosProps> = ({ onBack }) => {
+export const Infograficos: React.FC = () => {
   const [infograficos, setInfograficos] = useState<ExtraItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,9 +101,10 @@ export const Infograficos: React.FC<InfograficosProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-canvas animate-fade-in">
-      <Header title="Infográficos" onBack={onBack} />
-      <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full flex-1 pb-24 md:pb-12">
+    <div className="flex flex-col flex-1 animate-fade-in">
+      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
+        <PageHeader title="Infográficos" description="Resumos ilustrados para consultas rápidas." />
+
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
             <Loader2 className="animate-spin text-navy" size={40} />
@@ -132,10 +129,10 @@ export const Infograficos: React.FC<InfograficosProps> = ({ onBack }) => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {infograficos.map((item) => (
-                  <button key={item.id} onClick={() => setSelectedItem(item)} className="group bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col w-full hover:shadow-md hover:border-green transition-all duration-300 text-left p-4 md:p-5">
+                  <button key={item.id} onClick={() => setSelectedItem(item)} className="group bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col w-full hover:shadow-md hover:border-navy transition-all duration-300 text-left p-4 md:p-5">
                     <div className="flex justify-between items-start gap-4 w-full">
-                      <h3 className="text-base font-bold text-navy font-heading leading-snug group-hover:text-green-700 transition-colors">{item.title}</h3>
-                      <ChevronRight className="text-ink-3 group-hover:text-green-700 transform group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" size={18} />
+                      <h3 className="text-base font-bold text-navy font-heading leading-snug group-hover:text-navy transition-colors">{item.title}</h3>
+                      <ChevronRight className="text-ink-3 group-hover:text-navy transform group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" size={18} />
                     </div>
                     {item.description && (
                       <p className="text-sm text-gray-500 font-body leading-relaxed line-clamp-3 mt-2">{item.description}</p>
@@ -146,7 +143,7 @@ export const Infograficos: React.FC<InfograficosProps> = ({ onBack }) => {
             )}
           </>
         )}
-      </div>
+      </Container>
     </div>
   );
 };

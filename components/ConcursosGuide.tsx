@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
+import { Segmented } from './ui/Segmented';
+import { Button } from './ui/Button';
+import { useQueryParam } from '../hooks/useQueryParam';
 import { MarkdownDocPage } from './MarkdownDocPage';
 import { StoragePdfIconButton, StoragePdfFab } from './StoragePdfButtons';
 import { useStoragePdf } from '../hooks/useStoragePdf';
@@ -396,15 +399,13 @@ const BlocoIndice: React.FC<{ bloco: Bloco }> = ({ bloco }) => {
   );
 };
 
-interface ConcursosGuideProps {
-  onBack?: () => void;
-}
-
-export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
+export const ConcursosGuide: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'indices' | 'inaptidao'>('indices');
   const [activeIndice, setActiveIndice] = useState<string>("altura");
   const [activeInaptidao, setActiveInaptidao] = useState<string>(inaptidaoCategories[0].id);
-  const [verAnexo, setVerAnexo] = useState(false);
+  // O Anexo N completo é um nível de navegação: ?anexo=n
+  const [anexoParam, setAnexoParam] = useQueryParam('anexo');
+  const verAnexo = anexoParam === 'n';
   const { open: openPdf, busy: baixandoPdf, modalElement } = useStoragePdf();
 
   const currentIndice = indicesList.find(i => i.id === activeIndice);
@@ -417,8 +418,8 @@ export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
       <>
         <MarkdownDocPage
           title="ANEXO N"
+          subtitle="Padrões psicofísicos admissionais"
           markdown={anexoNMarkdown}
-          onBack={() => setVerAnexo(false)}
           actions={<StoragePdfIconButton busy={baixandoPdf} onClick={baixarAnexoN} />}
         />
         <StoragePdfFab busy={baixandoPdf} onClick={baixarAnexoN} />
@@ -427,31 +428,13 @@ export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
     );
   }
 
-    return (
-    <div className="flex flex-col h-full bg-canvas">
+  return (
+    <div className="flex flex-col flex-1 animate-fade-in">
       {modalElement}
-      <Header title="Índices Mínimos - ANEXO N" onBack={onBack} />
-      <div className="flex-1 overflow-y-auto pb-24 md:pb-10">
-        <div className="p-4 md:p-6 space-y-4 md:space-y-5 max-w-2xl md:max-w-4xl mx-auto w-full">
-          <div className="text-center mb-1">
-            <h2 className="text-2xl font-heading font-bold text-navy">Padrões psicofísicos admissionais</h2>
-            <p className="text-base text-gray-500 font-body mt-1">Índices mínimos e condições incapacitantes para ingresso.</p>
-          </div>
 
-          <div className="bg-gray-200/60 p-1 rounded-xl flex shadow-inner border border-transparent">
-            <button
-              className={`flex-1 py-2 md:py-3 text-base font-bold rounded-lg transition-all ${activeTab === 'indices' ? 'bg-navy text-white shadow-sm' : 'text-gray-600 hover:bg-white/30'}`}
-              onClick={() => setActiveTab('indices')}
-            >
-              Índices Mínimos
-            </button>
-            <button
-              className={`flex-1 py-2 md:py-3 text-base font-bold rounded-lg transition-all ${activeTab === 'inaptidao' ? 'bg-red-700 text-white shadow-sm' : 'text-gray-600 hover:bg-white/30'}`}
-              onClick={() => setActiveTab('inaptidao')}
-            >
-              Inaptidão
-            </button>
-          </div>
+      <Container size="reading" className="py-6 md:py-8 pb-10 space-y-5">
+          <PageHeader title="Índices mínimos" description="Padrões psicofísicos admissionais (Anexo N): índices mínimos e condições incapacitantes para ingresso." actions={<Button variant="secondary" icon="menu_book" onClick={() => setAnexoParam('n')}>Ver Anexo N completo</Button>} />
+          <Segmented ariaLabel="Seção" fullWidth options={[{ value: 'indices', label: 'Índices mínimos' }, { value: 'inaptidao', label: 'Inaptidão' }]} value={activeTab} onChange={setActiveTab} />
 
           {activeTab === 'indices' && (
             <div className="space-y-3.5 md:space-y-4 animate-fade-in">
@@ -495,7 +478,7 @@ export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setVerAnexo(true)}
+                onClick={() => setAnexoParam('n')}
                 className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-100 text-navy hover:bg-navy hover:text-white transition-colors text-left"
               >
                 <span className="material-symbols-outlined text-[26px]">menu_book</span>
@@ -512,8 +495,8 @@ export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
               </button>
             </div>
           </div>
-        </div>
-      </div>
+              </Container>
+      
     </div>
   );
 };

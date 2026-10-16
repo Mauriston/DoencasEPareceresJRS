@@ -1,9 +1,17 @@
 // Ficheiro: App.tsx
-import React, { useState, useEffect, useReducer } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useReducer, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { useLocation, useNavigate, useNavigationType, useRoutes } from 'react-router-dom';
 import { Login } from './components/Login';
 import { Home } from './components/Home';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar } from './components/shell/Sidebar';
+import { Topbar } from './components/shell/Topbar';
+import { BreadcrumbProvider } from './context/BreadcrumbContext';
+import { ROUTES, pathForView, viewForPath } from './config/routes';
+import { Dialog } from './components/ui/Dialog';
+import { Button } from './components/ui/Button';
+import { EmptyState } from './components/ui/EmptyState';
+import { Page } from './components/ui/Page';
 import { Perfil } from './components/Perfil';
 import { DiseaseGuide } from './components/DiseaseGuide';
 import { LawReference } from './components/LawReference';
@@ -29,7 +37,7 @@ import { canAccessPage, setPermissoesCache } from './config/permissions';
 import { InstallAppTutorial } from './components/InstallAppTutorial';
 import { InstallAppQrDialog } from './components/InstallAppQrDialog';
 import { onAuthChange, logoutUsuario } from './services/firebaseAuth';
-import { consumirTokenDaUrl, entrarComToken } from './services/handoff';
+import { entrarComToken } from './services/handoff';
 import {
   detectarPlataformaTutorial, isMobileDevice, isStandalone,
   marcarTutorialConcluidoLocal, tutorialConcluidoLocal,
@@ -78,8 +86,18 @@ const buildAuthUser = (profile: UsuarioRecord): AuthUser => ({
   pwaTutorialConcluido: !!profile.pwaTutorialConcluido,
 });
 
-const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<NavItem>('home');
+interface AppProps {
+  /** Token do login por QR code (#h=…), lido em index.tsx ANTES de o roteador ler o hash. */
+  handoffToken?: string | null;
+}
+
+const App: React.FC<AppProps> = ({ handoffToken = null }) => {
+  // A página atual vem da URL (HashRouter); `currentView` continua sendo o
+  // identificador usado pelas permissões, pela sidebar e pela Home.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const navigationType = useNavigationType();
+  const currentView: NavItem = viewForPath(location.pathname) ?? 'home';
   const [periciaMenorVigentes, setPericiaMenorVigentes] = useState(0);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -87,11 +105,13 @@ const App: React.FC = () => {
   const [senhaAlertDismissed, setSenhaAlertDismissed] = useState(false);
   const [casosAlertDismissed, setCasosAlertDismissed] = useState(false);
   const [pwaAlertDismissed, setPwaAlertDismissed] = useState(false);
-  // Login vindo do QR code do desktop (#h=<custom token>): lido uma única vez
-  // e removido da barra de endereço; enquanto a troca por sessão acontece,
-  // mantemos a tela de carregamento em vez de piscar o Login.
-  const [handoffToken] = useState<string | null>(() => consumirTokenDaUrl());
+  // Login vindo do QR code do desktop (#h=<custom token>): o token é lido e
+  // removido da barra de endereço em index.tsx; enquanto a troca por sessão
+  // acontece, mantemos a tela de carregamento em vez de piscar o Login.
   const [handoffPendente, setHandoffPendente] = useState(!!handoffToken);
+  const mainRef = useRef<HTMLElement>(null);
+  const sentinelaRef = useRef<HTMLDivElement>(null);
+  const [rolou, setRolou] = useState(false);
   // null enquanto ainda não verificamos; depois, true/false conforme já
   // existe (ou não) um resultado salvo para este usuário.
   const [casosRespondido, setCasosRespondido] = useState<boolean | null>(null);
@@ -179,7 +199,8 @@ const App: React.FC = () => {
         setSenhaAlertDismissed(false);
         setCasosAlertDismissed(false);
         setPwaAlertDismissed(false);
-        setCurrentView('home');
+        // (Sem navegar para a Home aqui: com URL por tela, recarregar a página ou
+        // abrir um link direto precisa manter a tela — o logout já volta ao início.)
         // Auto-cura do espelho público (menu suspenso de login): garante que
         // este usuário sempre apareça na lista, mesmo se o registro em
         // "usuarios_publicos" nunca tiver sido criado/estiver desatualizado.
@@ -218,49 +239,85 @@ const App: React.FC = () => {
 
   const handleLogout = () => {
     logoutUsuario();
-    setCurrentView('home');
+    navigate('/', { replace: true });
   };
 
   const updateAuthUser = (patch: Partial<AuthUser>) => {
     setAuthUser(prev => (prev ? { ...prev, ...patch } : prev));
   };
 
-  const navigateTo = (view: NavItem) => {
-    setCurrentView(view);
-    setIsMobileMenuOpen(false);
+  const setCurrentView = (view: NavItem) => {
+    navigate(pathForView(view));
   };
+
+  // O drawer mobile fecha a cada navegação; a nova página volta ao topo e
+  // recebe o foco (leitores de tela e teclado começam no conteúdo).
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setIsAvatarMenuOpen(false);
+    // POP (botão voltar/avançar) preserva a rolagem natural do navegador não — mas aqui o
+    // container de rolagem é único e simples: sempre começa no topo.
+    mainRef.current?.scrollTo({ top: 0 });
+    if (navigationType !== 'POP') mainRef.current?.focus({ preventScroll: true });
+  }, [location.pathname]);
+
+  // F31: a topbar ganha sombra quando o conteúdo rola por baixo dela
+  // (o container que rola é o <main>, não a janela).
+  useEffect(() => {
+    const main = mainRef.current;
+    const sentinela = sentinelaRef.current;
+    if (!main || !sentinela) return;
+    const obs = new IntersectionObserver(([entrada]) => setRolou(!entrada.isIntersecting), { root: main, threshold: 0 });
+    obs.observe(sentinela);
+    return () => obs.disconnect();
+  }, [authUser?.uid, permissoesLoading, authLoading, handoffPendente]);
 
   const can = (pageId: string) => canAccessPage(pageId, authUser?.perfil);
   const paginaLabel = (pageId: string) => PAGE_DEFS.find(p => p.id === pageId)?.label;
 
-  const renderView = () => {
-    switch (currentView) {
+  // As permissões continuam sendo checadas página a página (can) — a URL só
+  // escolhe a página; sem permissão, o estado explícito de acesso negado.
+  const renderView = (view: NavItem) => {
+    switch (view) {
       case 'home': return <Home />;
       case 'perfil': return <Perfil />;
-      case 'guide': return <DiseaseGuide onBack={() => setCurrentView('home')} />;
-      case 'laws': return can('laws') ? <LawReference onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('laws')} />;
-      case 'dgpm406': return can('dgpm406') ? <DGPM406Guide onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('dgpm406')} />;
-      case 'concursos': return can('concursos') ? <ConcursosGuide onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('concursos')} />;
-      case 'portaria': return can('portaria') ? <PortariaGuide onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('portaria')} />;
-      case 'exames': return can('exames') ? <ExamesGuide onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('exames')} />;
-      case 'templates': return can('templates') ? <TemplatesGuide onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('templates')} />;
+      case 'guide': return <DiseaseGuide />;
+      case 'laws': return can('laws') ? <LawReference /> : <AccessDenied pagina={paginaLabel('laws')} />;
+      case 'dgpm406': return can('dgpm406') ? <DGPM406Guide /> : <AccessDenied pagina={paginaLabel('dgpm406')} />;
+      case 'concursos': return can('concursos') ? <ConcursosGuide /> : <AccessDenied pagina={paginaLabel('concursos')} />;
+      case 'portaria': return can('portaria') ? <PortariaGuide /> : <AccessDenied pagina={paginaLabel('portaria')} />;
+      case 'exames': return can('exames') ? <ExamesGuide /> : <AccessDenied pagina={paginaLabel('exames')} />;
+      case 'templates': return can('templates') ? <TemplatesGuide /> : <AccessDenied pagina={paginaLabel('templates')} />;
 
       // PÁGINAS RESTRITAS POR PERFIL (config/permissions.ts, editável em Usuários)
-      case 'pareceres': return can('pareceres') ? <Pareceres onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('pareceres')} />;
-      case 'concursosJRS': return can('concursosJRS') ? <ConcursosJRS onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('concursosJRS')} />;
-      case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('pericia-menor')} />;
-      case 'mensagens': return can('mensagens') ? <Mensagens onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('mensagens')} />;
-      case 'infograficos': return can('infograficos') ? <Infograficos onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('infograficos')} />;
-      case 'casos': return can('casos') ? <CasosPericiais onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('casos')} />;
-      case 'videos': return can('videos') ? <Videos onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('videos')} />;
-      case 'roteiro': return can('roteiro') ? <RoteiroJRS onBack={() => setCurrentView('home')} /> : <AccessDenied pagina={paginaLabel('roteiro')} />;
+      case 'pareceres': return can('pareceres') ? <Pareceres /> : <AccessDenied pagina={paginaLabel('pareceres')} />;
+      case 'concursosJRS': return can('concursosJRS') ? <ConcursosJRS /> : <AccessDenied pagina={paginaLabel('concursosJRS')} />;
+      case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor /> : <AccessDenied pagina={paginaLabel('pericia-menor')} />;
+      case 'mensagens': return can('mensagens') ? <Mensagens /> : <AccessDenied pagina={paginaLabel('mensagens')} />;
+      case 'infograficos': return can('infograficos') ? <Infograficos /> : <AccessDenied pagina={paginaLabel('infograficos')} />;
+      case 'casos': return can('casos') ? <CasosPericiais /> : <AccessDenied pagina={paginaLabel('casos')} />;
+      case 'videos': return can('videos') ? <Videos /> : <AccessDenied pagina={paginaLabel('videos')} />;
+      case 'roteiro': return can('roteiro') ? <RoteiroJRS /> : <AccessDenied pagina={paginaLabel('roteiro')} />;
 
       // USUÁRIOS PAGE - Restricted for non-admin
-      case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement onBack={() => setCurrentView('home')} /> : <AccessDenied pagina="Usuários" />;
+      case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement /> : <AccessDenied pagina="Usuários" />;
 
       default: return <Home />;
     }
   };
+
+  // Hook antes de qualquer retorno antecipado (ordem de hooks estável).
+  const rotas = useRoutes([
+    ...ROUTES.map(r => ({ path: r.path, element: renderView(r.view) })),
+    {
+      path: '*',
+      element: (
+        <Page title="Página não encontrada" size="form">
+          <EmptyState icon="travel_explore" title="Esse endereço não existe" description="A página pode ter sido movida. Volte à Página Inicial ou use a busca no topo." action={<Button icon="home" onClick={() => navigate('/')}>Ir para a Página Inicial</Button>} />
+        </Page>
+      ),
+    },
+  ]);
 
   if (authLoading || handoffPendente) {
     return (
@@ -308,7 +365,8 @@ const App: React.FC = () => {
     <NavContext.Provider
       value={{
         currentView,
-        setCurrentView: navigateTo,
+        setCurrentView,
+        navigate: (to, opcoes) => navigate(to, opcoes),
         authUser,
         updateAuthUser,
         handleLogout,
@@ -319,56 +377,52 @@ const App: React.FC = () => {
         setIsAvatarMenuOpen,
       }}
     >
+      <BreadcrumbProvider>
       <div className="fixed inset-0 flex bg-canvas text-ink overflow-hidden antialiased">
+        <button
+          type="button"
+          onClick={() => mainRef.current?.focus()}
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[300] focus:bg-navy focus:text-white focus:px-4 focus:py-2 focus:rounded-lg"
+        >
+          Pular para o conteúdo
+        </button>
         <Sidebar />
-        <div className="flex-1 flex flex-col h-full min-w-0 overflow-y-auto relative bg-canvas">
-          <main className="flex-grow w-full flex flex-col pb-8">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentView}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -16 }}
-                transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
-                className="flex flex-col flex-1 min-h-0 w-full"
-              >
-                {renderView()}
-              </motion.div>
-            </AnimatePresence>
+        <div className="flex-1 flex flex-col h-full min-w-0">
+          <Topbar rolou={rolou} />
+          {/* Único container de rolagem do app: as telas só crescem; toolbars e
+              cabeçalhos de tabela usam `sticky` dentro dele. */}
+          <main id="conteudo" ref={mainRef} tabIndex={-1} className="flex-1 min-h-0 overflow-y-auto focus:outline-none">
+            <div ref={sentinelaRef} className="h-px -mb-px" aria-hidden="true" />
+            <motion.div
+              key={currentView}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.15 }}
+              className="flex flex-col min-h-full w-full"
+            >
+              {rotas}
+            </motion.div>
           </main>
         </div>
       </div>
+      </BreadcrumbProvider>
 
       {mostrarAlertaSenha && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
-            <div className="p-5 flex flex-col items-center text-center">
-              <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mb-3">
-                <span className="material-symbols-outlined text-[28px] text-amber-600">warning</span>
-              </div>
-              <h3 className="font-heading font-bold text-sm text-navy mb-1.5">Altere sua senha inicial</h3>
-              <p className="text-sm text-gray-500 mb-5">
-                Você ainda está usando a senha temporária (seu NIP). Por segurança, altere sua senha de acesso.
-              </p>
-              <div className="flex items-center gap-2 w-full">
-                <button
-                  type="button"
-                  onClick={() => setSenhaAlertDismissed(true)}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  Depois
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setSenhaAlertDismissed(true); setCurrentView('perfil'); }}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-navy hover:bg-navy-hover text-white text-sm font-bold transition-colors"
-                >
-                  Alterar Senha
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Dialog
+          title="Altere sua senha inicial"
+          icon="warning"
+          onClose={() => setSenhaAlertDismissed(true)}
+          footer={(
+            <>
+              <Button variant="secondary" onClick={() => setSenhaAlertDismissed(true)}>Depois</Button>
+              <Button onClick={() => { setSenhaAlertDismissed(true); setCurrentView('perfil'); }}>Alterar senha</Button>
+            </>
+          )}
+        >
+          <p className="text-ink-3 leading-relaxed">
+            Você ainda está usando a senha temporária (seu NIP). Por segurança, altere sua senha de acesso.
+          </p>
+        </Dialog>
       )}
 
       {mostrarTutorialPwa && (
@@ -387,38 +441,24 @@ const App: React.FC = () => {
       )}
 
       {mostrarAlertaCasos && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
-            <div className="p-5 flex flex-col items-center text-center">
-              <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mb-3">
-                <span className="material-symbols-outlined text-[28px] text-navy">quiz</span>
-              </div>
-              <h3 className="font-heading font-bold text-sm text-navy mb-1.5">{getPrimeiroNome(authUser)},</h3>
-              <p className="text-sm text-gray-500 mb-1">
-                Você ainda não respondeu os <strong className="text-gray-700">Casos Periciais</strong>. Trata-se de
-                um bloco de 24 questões comentadas de múltipla escolha sobre os pontos mais importantes na prática
-                da DGPM-406. Não deixe de fazer essa auto-avaliação!
-              </p>
-              <p className="text-sm text-ink-3 italic mb-5">CT Mauriston.</p>
-              <div className="flex items-center gap-2 w-full">
-                <button
-                  type="button"
-                  onClick={() => setCasosAlertDismissed(true)}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  Responder depois
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setCasosAlertDismissed(true); setCurrentView('casos'); }}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-navy hover:bg-navy-hover text-white text-sm font-bold transition-colors"
-                >
-                  Responder
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Dialog
+          title={`${getPrimeiroNome(authUser)},`}
+          icon="quiz"
+          onClose={() => setCasosAlertDismissed(true)}
+          footer={(
+            <>
+              <Button variant="secondary" onClick={() => setCasosAlertDismissed(true)}>Responder depois</Button>
+              <Button onClick={() => { setCasosAlertDismissed(true); setCurrentView('casos'); }}>Responder</Button>
+            </>
+          )}
+        >
+          <p className="text-ink-3 leading-relaxed mb-2">
+            Você ainda não respondeu os <strong className="text-navy">Casos Periciais</strong>. Trata-se de
+            um bloco de 24 questões comentadas de múltipla escolha sobre os pontos mais importantes na prática
+            da DGPM-406. Não deixe de fazer essa auto-avaliação!
+          </p>
+          <p className="text-ink-3 italic">CT Mauriston.</p>
+        </Dialog>
       )}
     </NavContext.Provider>
   );

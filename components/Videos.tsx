@@ -1,14 +1,10 @@
 // Ficheiro: components/Videos.tsx
 import React, { useState, useEffect } from 'react';
 import { Loader2, RefreshCw, AlertCircle, Play, X } from './ui/icons';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
 import { fetchExtras, ExtraItem } from '../services/extrasService';
 
-interface VideosProps {
-  onBack?: () => void;
-}
-
-export const Videos: React.FC<VideosProps> = ({ onBack }) => {
+export const Videos: React.FC = () => {
   const [videos, setVideos] = useState<ExtraItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,9 +51,10 @@ export const Videos: React.FC<VideosProps> = ({ onBack }) => {
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 animate-fade-in relative">
-      <Header title="Vídeos" onBack={onBack} />
-      <div className="p-4 space-y-6 overflow-y-auto w-full max-w-full flex-1 pb-24">
+    <div className="flex flex-col flex-1 animate-fade-in relative">
+      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
+        <PageHeader title="Vídeos" description="Vídeos sobre os processos das IS." />
+
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
             <Loader2 className="animate-spin text-navy" size={40} />
@@ -94,7 +91,7 @@ export const Videos: React.FC<VideosProps> = ({ onBack }) => {
                   return (
                     <button 
                       key={video.id} 
-                      className="group bg-white rounded-lg shadow-sm border border-gray-200/60 overflow-hidden flex flex-col w-full text-left focus:outline-none hover:shadow-md hover:border-green active:scale-[0.98] transition-all animate-fade-in"
+                      className="group bg-white rounded-lg shadow-sm border border-gray-200/60 overflow-hidden flex flex-col w-full text-left focus:outline-none hover:shadow-md hover:border-navy active:scale-[0.98] transition-all animate-fade-in"
                       onClick={() => {
                         if (hasYoutube) {
                           setSelectedVideo(video.youtubeId!);
@@ -125,7 +122,7 @@ export const Videos: React.FC<VideosProps> = ({ onBack }) => {
                       </div>
 
                       <div className="flex-1 p-3 flex flex-col items-center justify-center min-w-0 bg-white">
-                        <h3 className="text-xs font-heading font-bold text-navy leading-snug line-clamp-3 text-center group-hover:text-green-700 transition-colors">
+                        <h3 className="text-xs font-heading font-bold text-navy leading-snug line-clamp-3 text-center group-hover:text-navy transition-colors">
                           {video.title}
                         </h3>
                       </div>
@@ -136,7 +133,7 @@ export const Videos: React.FC<VideosProps> = ({ onBack }) => {
             )}
           </>
         )}
-      </div>
+      </Container>
 
       {selectedVideo && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fade-in">

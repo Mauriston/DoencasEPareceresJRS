@@ -1,6 +1,6 @@
 // Ficheiro: components/Mensagens.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
@@ -12,11 +12,7 @@ interface ImageItem {
   mimeType: string;
 }
 
-interface MensagensProps {
-  onBack?: () => void;
-}
-
-export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
+export const Mensagens: React.FC = () => {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [minuta, setMinuta] = useState<string | null>(null);
@@ -149,10 +145,11 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
   const hasOddImage = images.length % 2 !== 0;
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 relative">
-      <Header title="MENSAGENS" onBack={onBack} />
+    <div className="flex flex-col flex-1 relative">
 
-      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-28 w-full max-w-2xl mx-auto space-y-5">
+      <Container size="form" className="py-6 md:py-8 pb-10 space-y-5">
+        <PageHeader title="Mensagens" description="Minutas das mensagens de IS auxiliadas por IA." />
+
 
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
           <h2 className="font-heading font-bold text-navy text-base flex items-center gap-2 border-b border-gray-100 pb-2">
@@ -325,7 +322,7 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
             </div>
           </div>
         )}
-      </div>
+      </Container>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
 import { ChevronDown, ChevronRight, CheckCircle2, User, Calendar, FileText, Info, X } from './ui/icons';
 import examesData from '../data/anexoOExamesMinimos.json';
 
@@ -162,11 +162,7 @@ const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => 
   );
 };
 
-interface ExamesGuideProps {
-  onBack?: () => void;
-}
-
-export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
+export const ExamesGuide: React.FC = () => {
   const [genero, setGenero] = useState<'Masculino' | 'Feminino'>('Masculino');
   const [idade, setIdade] = useState<string>('30');
   const [selectedFinalidade, setSelectedFinalidade] = useState<string>(
@@ -194,17 +190,11 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
   const totalExames = gruposFiltrados.reduce((n, g) => n + g.exames.length, 0);
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      <Header title="Exames Mínimos" onBack={onBack} />
+    <div className="flex flex-col flex-1 animate-fade-in">
 
-      <div className="flex-1 overflow-auto pb-24">
-        <div className="p-4 md:p-6 space-y-4 md:space-y-5 animate-fade-in max-w-3xl mx-auto w-full">
-        <div className="text-center mb-1">
-          <h2 className="text-2xl font-bold text-navy font-heading leading-tight">Exames mínimos</h2>
-          <p className="text-base text-gray-600 font-body mt-2 leading-snug">
-            Exames mínimos por finalidade de IS observando o sexo e a idade de acordo com o Anexo O da DGPM-406.
-          </p>
-        </div>
+
+      <Container size="reading" className="py-6 md:py-8 pb-10 space-y-5">
+        <PageHeader title="Exames mínimos" description="Exames mínimos por finalidade de IS observando o sexo e a idade, de acordo com o Anexo O da DGPM-406." />
 
         <div id="exames-config-card" className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-[1fr_140px] md:gap-4 space-y-4 md:space-y-0">
@@ -316,8 +306,8 @@ export const ExamesGuide: React.FC<ExamesGuideProps> = ({ onBack }) => {
             </div>
           )}
         </div>
-        </div>
-      </div>
+              </Container>
+      
 
       {obsModal && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setObsModal(null)}>

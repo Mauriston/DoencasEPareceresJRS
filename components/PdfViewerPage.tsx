@@ -1,34 +1,35 @@
 // Ficheiro: components/PdfViewerPage.tsx
 // Página genérica para exibir um documento do Google Drive (PDF, na maioria
 // dos casos) num Viewer embutido (iframe), sem precisar abrir outra aba ou
-// o app do Drive. Usa a mesma URL de preview do Drive em todas as telas que
-// hoje abririam o link diretamente.
+// o app do Drive. O nível "documento" é uma rota (?doc=…) da página que o usa.
 import React from 'react';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
+import { useBreadcrumbs } from '../context/BreadcrumbContext';
 
 interface PdfViewerPageProps {
   title: string;
   subtitle?: string;
   embedUrl: string;
-  onBack: () => void;
   /** Card fixo à esquerda no desktop (ex.: menu de navegação entre capítulos). */
   sidebar?: React.ReactNode;
 }
 
-export const PdfViewerPage: React.FC<PdfViewerPageProps> = ({ title, subtitle, embedUrl, onBack, sidebar }) => (
-  <div className="flex flex-col h-full bg-canvas">
-    <Header title={title} onBack={onBack} />
-    {subtitle && (
-      <p className="px-4 pt-3 text-sm text-gray-500 text-center truncate">{subtitle}</p>
-    )}
-    <div className={`flex-1 min-h-0 p-2 md:p-4 w-full ${sidebar ? 'md:grid md:grid-cols-[220px_1fr] md:gap-4' : 'flex'}`}>
-      {sidebar && <div className="hidden md:block overflow-y-auto">{sidebar}</div>}
-      <iframe
-        src={embedUrl}
-        title={title}
-        className="w-full h-full rounded-xl border border-gray-200/60 bg-white shadow-sm"
-        allow="autoplay"
-      />
+export const PdfViewerPage: React.FC<PdfViewerPageProps> = ({ title, subtitle, embedUrl, sidebar }) => {
+  useBreadcrumbs([{ label: title }]);
+  return (
+    <div className="flex flex-col flex-1 animate-fade-in py-6 md:py-8 pb-6">
+      <Container size="data" className="flex flex-col flex-1">
+        <PageHeader title={title} description={subtitle} />
+        <div className={`flex-1 min-h-[480px] h-[calc(100dvh-13rem)] ${sidebar ? 'md:grid md:grid-cols-[240px_minmax(0,1fr)] md:gap-4' : 'flex'}`}>
+          {sidebar && <div className="hidden md:block overflow-y-auto">{sidebar}</div>}
+          <iframe
+            src={embedUrl}
+            title={title}
+            className="w-full h-full rounded-xl border border-line bg-white"
+            allow="autoplay"
+          />
+        </div>
+      </Container>
     </div>
-  </div>
-);
+  );
+};

@@ -1,6 +1,6 @@
 // Ficheiro: components/RoteiroJRS.tsx
 import React, { useState } from 'react';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
 import { getDriveEmbedUrl, isGoogleDriveUrl } from '../utils/googleDrive';
 import { 
   MonitorPlay, FileText, Image as ImageIcon, PlayCircle, 
@@ -189,11 +189,7 @@ const getIconForFormat = (formato: string) => {
   return <Book size={18} />;
 };
 
-interface RoteiroJRSProps {
-  onBack?: () => void;
-}
-
-export const RoteiroJRS: React.FC<RoteiroJRSProps> = ({ onBack }) => {
+export const RoteiroJRS: React.FC = () => {
   const [expandedModule, setExpandedModule] = useState<number | null>(null);
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
@@ -219,15 +215,15 @@ export const RoteiroJRS: React.FC<RoteiroJRSProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      <Header title="Roteiro JRS" onBack={onBack} />
+    <div className="flex flex-col flex-1">
       
-      <div className="p-4 animate-fade-in overflow-auto pb-24 max-w-5xl mx-auto w-full">
+      <Container size="reading" className="py-6 md:py-8 pb-10 ">
+        <PageHeader title="Roteiro JRS" description="Trilha de estudos para capacitação dos AMP." />
+
         <div className="mb-4 bg-white p-5 rounded-2xl shadow-sm border border-gray-200/60">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-heading font-bold text-navy">{ROTEIRO_DATA.curso}</h2>
-              <p className="text-sm text-gray-600 font-body mt-2 leading-relaxed">
+              <p className="text-sm text-gray-600 font-body leading-relaxed">
                 Trilha estruturada de aprendizagem e consulta rápida para capacitação dos Agentes Médico-Periciais.
               </p>
             </div>
@@ -248,14 +244,14 @@ export const RoteiroJRS: React.FC<RoteiroJRSProps> = ({ onBack }) => {
                   className={`w-full group flex items-center justify-between p-4 transition-colors focus:outline-none cursor-pointer ${isExpanded ? 'bg-gray-50/50' : 'hover:bg-gray-50/80'}`}
                 >
                   <div className="flex flex-col pr-4 flex-1 text-left">
-                    <h3 className={`font-heading font-bold text-sm leading-snug mb-1 transition-colors ${isExpanded ? 'text-green-700' : 'text-navy group-hover:text-green-700'}`}>
+                    <h3 className={`font-heading font-bold text-sm leading-snug mb-1 transition-colors ${isExpanded ? 'text-navy' : 'text-navy group-hover:text-navy'}`}>
                       {mod.modulo}
                     </h3>
                     <p className="text-gray-500 font-body text-xs font-medium leading-relaxed uppercase">
                       Módulo {mod.modulo_id}
                     </p>
                   </div>
-                  <div className={`text-ink-3 p-2 rounded-full transition-transform duration-300 ${isExpanded ? 'rotate-180 text-green-700' : 'group-hover:text-navy group-hover:bg-gray-100'}`}>
+                  <div className={`text-ink-3 p-2 rounded-full transition-transform duration-300 ${isExpanded ? 'rotate-180 text-navy' : 'group-hover:text-navy group-hover:bg-gray-100'}`}>
                     <ChevronDown size={18} />
                   </div>
                 </button>
@@ -287,7 +283,7 @@ export const RoteiroJRS: React.FC<RoteiroJRSProps> = ({ onBack }) => {
             );
           })}
         </div>
-      </div>
+      </Container>
 
       {activeVideoUrl && (
         <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col items-center justify-center p-4 animate-fade-in backdrop-blur-sm">

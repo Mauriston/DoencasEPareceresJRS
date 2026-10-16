@@ -26,6 +26,4 @@
   --radius-card: 14px;
   --shadow-overlay: 0 3px 12px rgba(18, 28, 75, 0.08);
 
-  /* Altura da topbar fixa do shell — referência dos elementos sticky. */
-  --topbar-h: 56px;
 }
