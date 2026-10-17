@@ -10,7 +10,7 @@ import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
-import { FinalidadeDropdown } from '../ExamesGuide';
+import { FinalidadeDropdown, type GrupoFinalidadeExtra } from '../ExamesGuide';
 import { MilitarCadastroForm } from '../militares/MilitarCadastroForm';
 import { QuesitosEditor } from './QuesitosEditor';
 import { useNav } from '../../context/NavContext';
@@ -27,6 +27,11 @@ interface Props {
 }
 
 type Erros = Record<string, string>;
+
+// Além das finalidades do Anexo O (menu de Exames mínimos), o pedido de parecer também serve a estas.
+const GRUPOS_EXTRAS: GrupoFinalidadeExtra[] = [
+  { nome: 'Verificações e Términos', finalidades: ['Verificação de Deficiências Funcionais', 'Término de Incapacidade', 'Término de Restrições'] },
+];
 
 export const NovoParecerForm: React.FC<Props> = ({ onClose, onGerado }) => {
   const nav = useNav();
@@ -152,7 +157,7 @@ export const NovoParecerForm: React.FC<Props> = ({ onClose, onGerado }) => {
 
           <div>
             <label htmlFor="finalidade-select" className="block text-xs font-semibold text-ink-3 mb-1">Finalidade<span className="text-wine ml-0.5" aria-hidden="true">*</span></label>
-            <FinalidadeDropdown value={finalidade} onChange={v => { setFinalidade(v); limpar('finalidade'); }} placeholder="Selecione a finalidade da IS" erro={!!erros.finalidade} />
+            <FinalidadeDropdown value={finalidade} onChange={v => { setFinalidade(v); limpar('finalidade'); }} placeholder="Selecione a finalidade da IS" gruposExtras={GRUPOS_EXTRAS} erro={!!erros.finalidade} />
             {erros.finalidade && <p role="alert" className="mt-1 text-xs font-semibold text-wine">{erros.finalidade}</p>}
           </div>
 
