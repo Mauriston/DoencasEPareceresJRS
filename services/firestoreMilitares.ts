@@ -3,7 +3,7 @@
 // migrada da aba "Militares" da planilha). Id do documento = NIP só com
 // dígitos. Leitura: qualquer usuário autenticado; escrita: só Admin (ver
 // firestore.rules).
-import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { app } from './firebaseAuth';
 
 const db = getFirestore(app);
@@ -42,6 +42,9 @@ export const criarMilitar = async (dados: MilitarDoc): Promise<string> => {
   await setDoc(ref, { ...dados, criadoEm: serverTimestamp(), atualizadoEm: serverTimestamp() });
   return id;
 };
+
+/** Apaga o cadastro (definitivo). Para só tirar o acesso, prefira inativar. */
+export const apagarMilitar = (id: string) => deleteDoc(doc(db, COL, id));
 
 export const atualizarMilitar = (id: string, patch: Partial<MilitarDoc>) =>
   updateDoc(doc(db, COL, id), { ...patch, atualizadoEm: serverTimestamp() } as Record<string, unknown>);

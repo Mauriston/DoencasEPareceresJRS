@@ -6,7 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
 import { Segmented } from './ui/Segmented';
-import { Dialog } from './ui/Dialog';
+import { Dialog, ConfirmDialog } from './ui/Dialog';
 import { Field, controlClass } from './ui/Field';
 import { ChoiceGroup } from './ui/ChoiceGroup';
 import { StatusTag } from './ui/StatusTag';
@@ -14,7 +14,7 @@ import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
 import { Autocomplete, type OpcaoAutocomplete } from './ui/Autocomplete';
 import { MilitarCadastroForm } from './militares/MilitarCadastroForm';
-import { observarMilitares, atualizarMilitar, type MilitarRecord } from '../services/firestoreMilitares';
+import { observarMilitares, atualizarMilitar, apagarMilitar, type MilitarRecord } from '../services/firestoreMilitares';
 import { carregarOms, carregarCorposQuadros, normalizarBusca, montarInspecionado, type OrganizacaoMilitar, type CorposQuadros } from '../utils/corposQuadros';
 import { formatNip } from '../utils/format';
 
@@ -42,6 +42,7 @@ export const Militares: React.FC = () => {
   const [limite, setLimite] = useState(PAGINA);
   const [novo, setNovo] = useState(false);
   const [editando, setEditando] = useState<MilitarRecord | null>(null);
+  const [apagando, setApagando] = useState<MilitarRecord | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
   const [oms, setOms] = useState<OrganizacaoMilitar[]>([]);
   const [postos, setPostos] = useState<CorposQuadros['postos']>();
@@ -85,6 +86,18 @@ export const Militares: React.FC = () => {
       avisar(`${m.nome} agora está ${m.ativo ? 'inativo' : 'ativo'}.`);
     } catch (e: any) {
       avisar(e?.message || 'Não foi possível alterar o status.', 'error');
+    }
+  };
+
+  const confirmarApagar = async () => {
+    const m = apagando;
+    if (!m) return;
+    setApagando(null);
+    try {
+      await apagarMilitar(m.id);
+      avisar(`${m.nome} apagado.`);
+    } catch (e: any) {
+      avisar(e?.message || 'Não foi possível apagar o cadastro.', 'error');
     }
   };
 
@@ -153,7 +166,10 @@ export const Militares: React.FC = () => {
                         <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
                       </button>
                     </div>
-                    <div className="mt-1"><Button variant="ghost" icon="edit" onClick={() => setEditando(m)}>Editar</Button></div>
+                    <div className="mt-1 flex items-center gap-1">
+                      <Button variant="ghost" icon="edit" onClick={() => setEditando(m)}>Editar</Button>
+                      <Button variant="ghost" icon="delete" className="!text-wine" onClick={() => setApagando(m)}>Apagar</Button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -191,8 +207,9 @@ export const Militares: React.FC = () => {
                             <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
                           </button>
                         </td>
-                        <td className="px-4 py-1 text-right">
+                        <td className="px-4 py-1 text-right whitespace-nowrap">
                           <Button variant="ghost" icon="edit" onClick={() => setEditando(m)}>Editar</Button>
+                          <Button variant="ghost" icon="delete" className="!text-wine" aria-label={`Apagar ${m.nome}`} onClick={() => setApagando(m)}>Apagar</Button>
                         </td>
                       </tr>
                     ))}
@@ -208,6 +225,16 @@ export const Militares: React.FC = () => {
         </div>
       </Container>
 
+      {apagando && (
+        <ConfirmDialog
+          title="Apagar militar"
+          message={<>Apagar definitivamente o cadastro de <strong>{apagando.nome}</strong> ({apagando.pgq})? Esta ação não pode ser desfeita. Se a intenção é só tirar o acesso ao appweb, use <strong>Inativar</strong>.</>}
+          confirmLabel="Apagar"
+          destructive
+          onConfirm={confirmarApagar}
+          onCancel={() => setApagando(null)}
+        />
+      )}
       {novo && <MilitarCadastroForm onClose={() => setNovo(false)} onCriado={nome => { setNovo(false); avisar(`${nome} cadastrado.`); }} />}
       {editando && <MilitarEdicao militar={editando} oms={oms} onClose={() => setEditando(null)} onSalvo={nome => { setEditando(null); avisar(`Dados de ${nome} atualizados.`); }} />}
     </div>
