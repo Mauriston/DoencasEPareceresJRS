@@ -15,10 +15,23 @@ import { Toast } from './ui/Toast';
 import { Autocomplete, type OpcaoAutocomplete } from './ui/Autocomplete';
 import { MilitarCadastroForm } from './militares/MilitarCadastroForm';
 import { observarMilitares, atualizarMilitar, type MilitarRecord } from '../services/firestoreMilitares';
-import { carregarOms, normalizarBusca, montarInspecionado, type OrganizacaoMilitar } from '../utils/corposQuadros';
+import { carregarOms, carregarCorposQuadros, normalizarBusca, montarInspecionado, type OrganizacaoMilitar, type CorposQuadros } from '../utils/corposQuadros';
 import { formatNip } from '../utils/format';
 
 type Filtro = 'todos' | 'ativos' | 'inativos';
+type ColunaOrdem = 'nome' | 'pgq' | 'om';
+
+/** Posição hierárquica do posto/graduação dentro do P/G/Q (ex.: "CT (Md)" → CT; "CB-RM2-EF" → CB). Desconhecidos vão para o fim. */
+const posicaoHierarquica = (pgq: string, postos: CorposQuadros['postos'] | undefined): number => {
+  if (!postos) return 999;
+  const texto = pgq.trim().toUpperCase();
+  let melhor = '';
+  for (const sigla of Object.keys(postos)) {
+    const u = sigla.toUpperCase();
+    if ((texto === u || /^[\s(-]/.test(texto.slice(u.length))) && texto.startsWith(u) && u.length > melhor.length) melhor = sigla;
+  }
+  return melhor ? postos[melhor].ordem : 999;
+};
 const PAGINA = 100;
 
 export const Militares: React.FC = () => {
@@ -31,12 +44,18 @@ export const Militares: React.FC = () => {
   const [editando, setEditando] = useState<MilitarRecord | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
   const [oms, setOms] = useState<OrganizacaoMilitar[]>([]);
+  const [postos, setPostos] = useState<CorposQuadros['postos']>();
+  const [soHnre, setSoHnre] = useState(false);
+  const [ordem, setOrdem] = useState<{ col: ColunaOrdem; dir: 'asc' | 'desc' }>({ col: 'nome', dir: 'asc' });
 
   const avisar = (msg: string, tone: 'success' | 'error' = 'success') => { setToast({ msg, tone }); window.setTimeout(() => setToast(null), 4000); };
 
   useEffect(() => observarMilitares(setLista, e => setErroCarga(e.message || 'Não foi possível carregar os militares.')), []);
   useEffect(() => { carregarOms().then(setOms).catch(() => { /* sem lista, a edição mantém a OM atual */ }); }, []);
-  useEffect(() => { setLimite(PAGINA); }, [filtro, busca]);
+  useEffect(() => { carregarCorposQuadros().then(d => setPostos(d.postos)).catch(() => { /* sem hierarquia, P/G/Q fica no fim */ }); }, []);
+  useEffect(() => { setLimite(PAGINA); }, [filtro, busca, soHnre, ordem]);
+
+  const ordenarPor = (col: ColunaOrdem) => setOrdem(o => (o.col === col ? { col, dir: o.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'asc' }));
 
   const totais = useMemo(() => ({
     todos: lista?.length ?? 0,
@@ -48,8 +67,17 @@ export const Militares: React.FC = () => {
     const termos = normalizarBusca(busca).split(/\s+/).filter(Boolean);
     return (lista ?? [])
       .filter(m => (filtro === 'todos' ? true : filtro === 'ativos' ? m.ativo : !m.ativo))
-      .filter(m => { const alvo = normalizarBusca(`${m.inspecionado} ${m.om} ${m.email}`); return termos.every(t => alvo.includes(t)); });
-  }, [lista, filtro, busca]);
+      .filter(m => (soHnre ? m.om.trim().toUpperCase() === 'HNRE' : true))
+      .filter(m => { const alvo = normalizarBusca(`${m.inspecionado} ${m.om} ${m.email}`); return termos.every(t => alvo.includes(t)); })
+      .sort((a, b) => {
+        const porNome = a.nome.localeCompare(b.nome, 'pt-BR');
+        let cmp = 0;
+        if (ordem.col === 'nome') cmp = porNome;
+        else if (ordem.col === 'om') cmp = a.om.localeCompare(b.om, 'pt-BR', { sensitivity: 'base' }) || porNome;
+        else cmp = posicaoHierarquica(a.pgq, postos) - posicaoHierarquica(b.pgq, postos) || a.pgq.localeCompare(b.pgq, 'pt-BR') || porNome;
+        return ordem.dir === 'asc' ? cmp : -cmp;
+      });
+  }, [lista, filtro, busca, soHnre, ordem, postos]);
 
   const alternarAtivo = async (m: MilitarRecord) => {
     try {
@@ -61,6 +89,8 @@ export const Militares: React.FC = () => {
   };
 
   const visiveis = filtrada.slice(0, limite);
+  const iconeOrdem = (c: ColunaOrdem) => (ordem.col === c ? (ordem.dir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more');
+  const ariaSort = (c: ColunaOrdem) => (ordem.col === c ? (ordem.dir === 'asc' ? 'ascending' as const : 'descending' as const) : 'none' as const);
 
   return (
     <div className="flex flex-col flex-1">
@@ -88,6 +118,17 @@ export const Militares: React.FC = () => {
               { value: 'todos', label: 'Todos', badge: totais.todos, badgeTone: 'neutro' },
             ]}
           />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant={soHnre ? 'primary' : 'secondary'} icon="local_hospital" aria-pressed={soHnre} onClick={() => setSoHnre(v => !v)}>Somente HNRe</Button>
+            <div className="flex items-center gap-2 md:hidden">
+              <select aria-label="Ordenar por" value={ordem.col} onChange={e => setOrdem(o => ({ ...o, col: e.target.value as ColunaOrdem }))} className={`${controlClass} w-auto`}>
+                <option value="nome">Ordenar: Nome</option>
+                <option value="pgq">Ordenar: P/G/Q</option>
+                <option value="om">Ordenar: OM</option>
+              </select>
+              <Button variant="secondary" icon={ordem.dir === 'asc' ? 'arrow_upward' : 'arrow_downward'} aria-label={ordem.dir === 'asc' ? 'Ordem crescente' : 'Ordem decrescente'} onClick={() => setOrdem(o => ({ ...o, dir: o.dir === 'asc' ? 'desc' : 'asc' }))} />
+            </div>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl border border-line overflow-clip">
@@ -120,10 +161,16 @@ export const Militares: React.FC = () => {
                 <table className="w-full text-sm">
                   <thead className="bg-thead text-ink-3 text-xs border-b border-line">
                     <tr>
-                      <th scope="col" className="px-4 py-3 text-left font-semibold">Nome</th>
-                      <th scope="col" className="px-4 py-3 text-left font-semibold">P/G/Q</th>
+                                            <th scope="col" aria-sort={ariaSort('nome')} className="px-4 py-3 text-left font-semibold">
+                        <button type="button" onClick={() => ordenarPor('nome')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">Nome<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('nome')}</span></button>
+                      </th>
+                                            <th scope="col" aria-sort={ariaSort('pgq')} className="px-4 py-3 text-left font-semibold">
+                        <button type="button" onClick={() => ordenarPor('pgq')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">P/G/Q<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('pgq')}</span></button>
+                      </th>
                       <th scope="col" className="px-4 py-3 text-left font-semibold">NIP</th>
-                      <th scope="col" className="px-4 py-3 text-left font-semibold">OM</th>
+                                            <th scope="col" aria-sort={ariaSort('om')} className="px-4 py-3 text-left font-semibold">
+                        <button type="button" onClick={() => ordenarPor('om')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">OM<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('om')}</span></button>
+                      </th>
                       <th scope="col" className="px-4 py-3 text-left font-semibold">Vínculo</th>
                       <th scope="col" className="px-4 py-3 text-left font-semibold">E-mail</th>
                       <th scope="col" className="px-4 py-3 text-left font-semibold">Status</th>
