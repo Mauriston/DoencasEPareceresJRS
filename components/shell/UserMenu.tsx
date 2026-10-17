@@ -124,8 +124,8 @@ export const UserMenu: React.FC = () => {
       </button>
       {aberto && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} />
-          <div className="absolute right-0 top-12 z-50">
+          <div className="fixed inset-0 z-dropdown" onClick={() => setAberto(false)} />
+          <div className="absolute right-0 top-12 z-dropdown">
             <UserDropdownContent
               authUser={authUser}
               onPerfilClick={() => { setAberto(false); nav?.setCurrentView('perfil'); }}

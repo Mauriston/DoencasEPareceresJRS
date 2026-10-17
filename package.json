@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
+    "check:ds": "node scripts/verificar-ds.mjs",
+    "prebuild": "node scripts/verificar-ds.mjs",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview"
@@ -15,7 +17,6 @@
     "express": "^5.2.1",
     "firebase": "^12.14.0",
     "firebase-admin": "^14.5.0",
-    "framer-motion": "^13.4.4",
     "jspdf": "^4.2.1",
     "marked": "^18.0.14",
     "pdf-lib": "^1.17.1",
@@ -26,6 +27,7 @@
     "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
+    "@tailwindcss/container-queries": "^0.1.1",
     "@types/express": "^5.0.6",
     "@types/node": "^22.14.0",
     "@types/qrcode": "^1.5.6",

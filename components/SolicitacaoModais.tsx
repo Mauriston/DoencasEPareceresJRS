@@ -9,9 +9,9 @@ import { ESPECIALIDADES_MEDICAS } from '../data/especialidadesMedicas';
 const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 const Shell: React.FC<{ titulo: string; icone: string; onClose: () => void; children: React.ReactNode }> = ({ titulo, icone, onClose, children }) => (
-  <div className="fixed inset-0 z-[210] bg-black/60 backdrop-blur-sm flex items-end md:items-start justify-center md:p-4 md:pt-[8vh] animate-fade-in" onClick={onClose}>
+  <div className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-end md:items-start justify-center md:p-4 md:pt-[8vh] animate-fade-in" onClick={onClose}>
     <div
-      className="bg-white rounded-t-3xl md:rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg max-h-[92dvh] md:max-h-[84vh] flex flex-col overflow-hidden animate-sheet-up md:animate-none"
+      className="bg-white rounded-t-3xl md:rounded-2xl shadow-2xl border border-line w-full max-w-lg max-h-[92dvh] md:max-h-[84vh] flex flex-col overflow-hidden animate-sheet-up md:animate-none"
       onClick={e => e.stopPropagation()}
     >
       <div className="p-4 bg-navy text-white flex items-center justify-between gap-2 shrink-0">
@@ -28,8 +28,8 @@ const Shell: React.FC<{ titulo: string; icone: string; onClose: () => void; chil
   </div>
 );
 
-const campoTexto = 'w-full px-4 py-3 text-sm rounded-xl border border-gray-300 bg-white focus:outline-none focus:border-navy transition-colors';
-const rotulo = 'block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5';
+const campoTexto = 'w-full px-4 py-3 text-sm rounded-xl border border-ink-5 bg-white focus:outline-none focus:border-navy transition-colors';
+const rotulo = 'block text-xs font-bold text-ink-3 uppercase tracking-wider mb-1.5';
 
 const BotaoGerar: React.FC<{ habilitado: boolean; onClick: () => void }> = ({ habilitado, onClick }) => (
   <div className="flex items-center justify-end pt-1">
@@ -69,7 +69,7 @@ export const SolicitarParecerModal: React.FC<ParecerModalProps> = ({ candidatoNo
 
   return (
     <Shell titulo="Pedido de Parecer Médico" icone="stethoscope" onClose={onClose}>
-      <p className="text-sm text-gray-700 leading-relaxed">
+      <p className="text-sm text-ink leading-relaxed">
         Candidato (a) <strong>{candidatoNome}</strong>
       </p>
 
@@ -85,7 +85,7 @@ export const SolicitarParecerModal: React.FC<ParecerModalProps> = ({ candidatoNo
           autoComplete="off"
         />
         {aberto && (
-          <div className="absolute z-10 left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg">
+          <div className="absolute z-10 left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-xl border border-line bg-white shadow-lg">
             {sugestoes.length === 0 ? (
               <p className="px-4 py-3 text-sm text-ink-3">Nenhuma especialidade encontrada.</p>
             ) : sugestoes.map(e => (
@@ -93,7 +93,7 @@ export const SolicitarParecerModal: React.FC<ParecerModalProps> = ({ candidatoNo
                 key={e}
                 type="button"
                 onClick={() => escolher(e)}
-                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${e === especialidade ? 'font-bold text-navy' : 'text-gray-700'}`}
+                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-paper ${e === especialidade ? 'font-bold text-navy' : 'text-ink'}`}
               >
                 {e}
               </button>
@@ -129,7 +129,7 @@ export const SolicitarExamesModal: React.FC<ExamesModalProps> = ({ candidatoNome
 
   return (
     <Shell titulo="Solicitação de Exames" icone="lab_research" onClose={onClose}>
-      <p className="text-sm text-gray-700 leading-relaxed">
+      <p className="text-sm text-ink leading-relaxed">
         Candidato (a) <strong>{candidatoNome}</strong>
       </p>
 

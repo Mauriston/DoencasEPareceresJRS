@@ -32,12 +32,15 @@
   }
 }
 
+/* Leitor de normas: só tokens do DS (var(--ink-*), var(--line)…); links em azul de apoio
+   sublinhados (verde é só estado) e medida de ~68 caracteres. */
 .md-content {
-  color: #1F2937;
+  color: var(--ink-2);
   font-family: 'Montserrat', system-ui, sans-serif;
   font-size: 1rem; /* corpo e texto normativo: 16/400 em todos os breakpoints */
   line-height: 1.7;
   text-align: left;
+  max-width: 68ch;
 }
 
 .md-content > *:first-child {
@@ -51,7 +54,7 @@
 .md-content h5,
 .md-content h6 {
   font-family: 'Montserrat', sans-serif;
-  color: #050F41;
+  color: var(--ink-1);
   font-weight: 700;
   text-align: left;
   line-height: 1.35;
@@ -61,14 +64,14 @@
   font-size: 1.75rem;
   margin: 0 0 1rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid #E5E7EB;
+  border-bottom: 1px solid var(--line);
 }
 
 .md-content h2 {
   font-size: 1.25rem;
   margin: 1.75rem 0 0.75rem;
   padding-bottom: 0.4rem;
-  border-bottom: 1px solid #F3F4F6;
+  border-bottom: 1px solid var(--line);
 }
 
 .md-content h3 {
@@ -88,7 +91,7 @@
 }
 
 .md-content strong {
-  color: #050F41;
+  color: var(--ink-1);
   font-weight: 700;
 }
 
@@ -123,28 +126,33 @@
 .md-content blockquote {
   margin: 0 0 0.85rem;
   padding: 0.5rem 0.9rem;
-  border-left: 3px solid #079551;
-  background: rgba(7, 149, 81, 0.05);
+  border-left: 3px solid var(--ink-4);
+  background: var(--paper);
   border-radius: 0 0.5rem 0.5rem 0;
-  color: #374151;
-  font-style: italic;
+  color: var(--ink-2);
+  font-style: normal;
 }
 
 .md-content hr {
   margin: 1.5rem 0;
   border: none;
-  border-top: 1px solid #E5E7EB;
+  border-top: 1px solid var(--line);
 }
 
 .md-content a {
-  color: #079551;
+  color: var(--blue);
   font-weight: 600;
   text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.md-content a:hover {
+  color: var(--navy);
 }
 
 .md-content code {
-  background: #F3F4F6;
-  color: #050F41;
+  background: var(--thead);
+  color: var(--ink-1);
   border-radius: 0.25rem;
   padding: 0.1rem 0.35rem;
   font-size: 0.875rem;
@@ -159,24 +167,24 @@
 }
 
 .md-content thead {
-  background: #F9FAFB;
+  background: var(--thead);
 }
 
 .md-content th,
 .md-content td {
-  border: 1px solid #E5E7EB;
+  border: 1px solid var(--line);
   padding: 0.5rem 0.6rem;
   vertical-align: top;
 }
 
 .md-content th {
-  color: #050F41;
+  color: var(--ink-1);
   font-weight: 700;
   text-transform: none;
 }
 
 .md-content tbody tr:nth-child(even) {
-  background: #FAFAFA;
+  background: var(--paper);
 }
 
 /* Barra de rolagem horizontal sempre visível e estilizada — usada em
@@ -185,7 +193,7 @@
    fina padrão até o toque, o que esconde a pista de que há mais colunas). */
 .scroll-x-visible {
   scrollbar-width: thin;
-  scrollbar-color: #050F41 #E5E7EB;
+  scrollbar-color: var(--navy) var(--line);
 }
 
 .scroll-x-visible::-webkit-scrollbar {
@@ -193,12 +201,12 @@
 }
 
 .scroll-x-visible::-webkit-scrollbar-track {
-  background: #E5E7EB;
+  background: var(--line);
   border-radius: 9999px;
 }
 
 .scroll-x-visible::-webkit-scrollbar-thumb {
-  background: #050F41;
+  background: var(--navy);
   border-radius: 9999px;
 }
 
@@ -208,6 +216,7 @@
 button,
 [role="button"],
 [role="tab"],
+[role="radio"],
 summary,
 th[role="button"],
 .no-select {

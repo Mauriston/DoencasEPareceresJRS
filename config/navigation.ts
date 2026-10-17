@@ -1,12 +1,9 @@
 // Ficheiro: config/navigation.ts
-// Estrutura de navegação em 2 níveis: os menus principais (Concursos,
-// Consultas, Benefícios, Crie Documentos, Mensagens, Normas, Extras) + Usuários
-// (admin) são usados nos cards da Página Inicial e como itens da barra
-// lateral. Um menu principal com mais de um subitem expande em accordion na
-// barra lateral (e, na Home/desktop, abre os cards de subitem ao lado); um
-// menu com um único subitem navega direto para ele. A visibilidade de cada
-// subitem respeita a mesma matriz de permissões por perfil já usada em toda
-// a app.
+// Menu agrupado por TAREFA (auditoria v2, N1/N2): Trabalho · Consulta · Formação ·
+// Administração. Cada página é um link direto (sem accordion); o grupo é só um
+// rótulo de seção na barra lateral. A visibilidade de cada página respeita a mesma
+// matriz de permissões por perfil usada em toda a app (canAccessPage) — o
+// agrupamento muda, as permissões não. Um grupo sem páginas visíveis não aparece.
 import { NavItem } from '../types';
 import { PAGE_DEFS, canAccessPage } from './permissions';
 
@@ -34,13 +31,9 @@ export interface NavCategory {
 const MOBILE_ONLY_PAGES: NavItem[] = [];
 
 const CATEGORY_DEFS: { id: string; label: string; icon: string; subtitle: string; pages: NavItem[] }[] = [
-  { id: 'concursos', label: 'Concursos', icon: 'checklist', subtitle: 'Acesse as planilhas de acompanhamento.', pages: ['concursosJRS'] },
-  { id: 'consultas', label: 'Consultas', icon: 'manage_search', subtitle: 'Consulte os exames por finalidade, índices dos concursos e outros', pages: ['exames', 'concursos'] },
-  { id: 'beneficios', label: 'Benefícios', icon: 'stethoscope', subtitle: 'Verifique os critérios de enquadramento das Doenças de Lei.', pages: ['guide', 'portaria'] },
-  { id: 'documentos', label: 'Crie Documentos', icon: 'note_add', subtitle: 'Crie pareceres e outros documentos em PDF', pages: ['pareceres', 'pericia-menor'] },
-  { id: 'mensagens', label: 'Mensagens', icon: 'chat', subtitle: 'Faça minutas das MSG de IS auxiliado por IA.', pages: ['mensagens'] },
-  { id: 'normas', label: 'Normas', icon: 'gavel', subtitle: 'DGPM-406 e Legislação.', pages: ['dgpm406', 'laws', 'templates'] },
-  { id: 'extras', label: 'Extras', icon: 'widgets', subtitle: 'Acesse materiais para estudar.', pages: ['casos', 'videos', 'infograficos', 'roteiro'] },
+  { id: 'trabalho', label: 'Trabalho', icon: 'work', subtitle: 'Concursos, perícias menores, pareceres e mensagens.', pages: ['concursosJRS', 'pericia-menor', 'pareceres', 'mensagens'] },
+  { id: 'consulta', label: 'Consulta', icon: 'manage_search', subtitle: 'Doenças de Lei, exames, índices, normas e modelos.', pages: ['guide', 'exames', 'concursos', 'dgpm406', 'portaria', 'laws', 'templates'] },
+  { id: 'formacao', label: 'Formação', icon: 'school', subtitle: 'Casos periciais, vídeos, infográficos e roteiro.', pages: ['casos', 'videos', 'infograficos', 'roteiro'] },
 ];
 
 export const getNavCategories = (
@@ -71,18 +64,14 @@ export const getNavCategories = (
 
   if (perfil === 'admin') {
     categories.push({
-      id: 'militares',
-      label: 'Militares',
-      icon: 'military_tech',
-      subtitle: 'Cadastro de militares da ativa e servidores civis.',
-      subitems: [{ id: 'militares', label: 'Militares', icon: 'military_tech', subtitle: 'Cadastro de militares da ativa e servidores civis.' }],
-    });
-    categories.push({
-      id: 'usuarios',
-      label: 'Usuários',
-      icon: 'group',
-      subtitle: 'Gerencie usuários e permissões de acesso.',
-      subitems: [{ id: 'usuarios', label: 'Usuários', icon: 'group', subtitle: 'Gerencie usuários e permissões de acesso.' }],
+      id: 'administracao',
+      label: 'Administração',
+      icon: 'admin_panel_settings',
+      subtitle: 'Cadastro de militares e gestão de usuários.',
+      subitems: [
+        { id: 'militares', label: 'Militares', icon: 'military_tech', subtitle: 'Cadastro de militares da ativa e servidores civis.' },
+        { id: 'usuarios', label: 'Usuários', icon: 'group', subtitle: 'Gerencie usuários e permissões de acesso.' },
+      ],
     });
   }
 

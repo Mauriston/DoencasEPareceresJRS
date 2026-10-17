@@ -82,7 +82,7 @@ export const TemplatesGuide: React.FC = () => {
     <div className="flex flex-col flex-1 relative">
 
       <Container size="reading" className="py-6 md:py-8 pb-10 ">
-        <PageHeader title="Templates" description="Modelos para laudos e documentos." />
+        <PageHeader title="Modelos de documentos" description="Modelos para laudos e documentos." />
 
         {isLoading && templates === DEFAULT_TEMPLATES ? (
           <div className="flex flex-col items-center justify-center py-10 text-ink-3">
@@ -93,10 +93,10 @@ export const TemplatesGuide: React.FC = () => {
           // Lista simples (não mais cards soltos) — 1 coluna no mobile, 2 no desktop.
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {templates.map((tpl, idx) => (
-              <div key={idx} className="bg-white rounded-xl border border-gray-200/60 hover:border-navy hover:shadow-md transition-all p-4 flex items-center justify-between">
+              <div key={idx} className="bg-white rounded-xl border border-line/60 hover:border-navy hover:shadow-md transition-all p-4 flex items-center justify-between">
                 <div className="flex flex-col pr-4 flex-1 min-w-0">
                   <h3 className="font-heading font-medium text-navy text-base mb-1">{tpl.Template_Documento}</h3>
-                  <p className="text-gray-600 text-sm font-body">{tpl.Descrição}</p>
+                  <p className="text-ink text-sm font-body">{tpl.Descrição}</p>
                 </div>
                 <a
                   href={tpl.Link_Copia}

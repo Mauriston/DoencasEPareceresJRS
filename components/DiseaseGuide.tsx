@@ -13,6 +13,8 @@ import { EmptyState } from './ui/EmptyState';
 import { useBreadcrumbs } from '../context/BreadcrumbContext';
 import { doencaPath } from '../config/routes';
 import { Button } from './ui/Button';
+import { Dialog } from './ui/Dialog';
+import { StatusTag, type StatusTone } from './ui/StatusTag';
 
 const cdrData = [
   { id: 'M', nome: 'Memória', sigla: '(M)', opcoes: [
@@ -89,12 +91,16 @@ function getStageText(globalScore: number) {
     case 0: return { titulo: "Normal", sub: "sem demência" };
     case 0.5: return { titulo: "Questionável", sub: "a muito leve" };
     case 1: return { titulo: "Leve", sub: "demência" };
-    case 2: return { titulo: "MODERADA", sub: "demência" };
-    case 3: return { titulo: "GRAVE", sub: "demência" };
+    case 2: return { titulo: "Moderada", sub: "demência" };
+    case 3: return { titulo: "Grave", sub: "demência" };
     default: return { titulo: "", sub: "" };
   }
 }
 
+const TOM_ESTAGIO: Record<number, StatusTone> = { 0: 'success', 0.5: 'neutral', 1: 'attention', 2: 'danger', 3: 'danger' };
+
+// Calculadora CDR dentro do shell (auditoria v2, C1): página com Page/Card, cada domínio um grupo de
+// rádios de 44 px acessível por teclado e leitor de tela, resultado num painel fixo no fim do fluxo.
 const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [scores, setScores] = useState({ M: 0, O: 0, JSP: 0, RC: 0, LP: 0, CP: 0 });
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -103,86 +109,81 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const globalScore = calcularGlobalCDR(scores.M, secScores);
   const sbScore = scores.M + secScores.reduce((acc, val) => acc + val, 0);
   const stage = getStageText(globalScore);
-  const isGrave = globalScore === 3;
 
   const handleCopy = async () => {
-    const text = `CLINICAL DEMENTIA RATING:\n\n- M = ${scores.M}\n- O = ${scores.O}\n- JSP = ${scores.JSP}\n- RC = ${scores.RC}\n- LP = ${scores.LP}\n- CP = ${scores.CP}\n-------------------------------\n- Global CDR = ${globalScore}\n- CDR-SB = ${sbScore}\n\n- RESULTADO: ${stage.titulo} (${stage.sub})`;
+    const text = `CLINICAL DEMENTIA RATING:\n\n- M = ${scores.M}\n- O = ${scores.O}\n- JSP = ${scores.JSP}\n- RC = ${scores.RC}\n- LP = ${scores.LP}\n- CP = ${scores.CP}\n-------------------------------\n- Global CDR = ${globalScore}\n- CDR-SB = ${sbScore}\n\n- RESULTADO: ${stage.titulo.toUpperCase()} (${stage.sub})`;
     try { await navigator.clipboard.writeText(text); setIsCopied(true); if (navigator.share) await navigator.share({ title: 'Avaliação CDR Score', text }); } catch (err) { if ((err as Error).name !== 'AbortError') console.error(err); }
   };
 
+  const escolher = (id: string, pt: number) => { setScores(sc => ({ ...sc, [id]: pt })); setIsCopied(false); };
+
   return (
-    <div className="fixed inset-0 z-[100] bg-gray-50 flex flex-col animate-fade-in font-body pb-28">
-      <header className="bg-white shadow-sm sticky top-0 z-40 flex items-center px-4 py-4">
-        <button onClick={onClose} className="mr-4 text-gray-500 hover:text-navy transition-colors p-1"><ArrowLeft size={24} /></button>
-        <div>
-          <h1 className="text-xl font-bold text-navy font-heading leading-none">CDR Score</h1>
-          <p className="text-xs text-gray-500 mt-1">Calculadora validada em português</p>
-        </div>
-      </header>
-      <main className="flex-1 overflow-y-auto max-w-3xl mx-auto p-4 w-full custom-scrollbar">
+    <div className="flex flex-col flex-1">
+      <Container size="form" className="py-6 md:py-8 pb-6 space-y-5">
+        <PageHeader
+          title="CDR Score"
+          description="Calculadora do Clinical Dementia Rating, validada em português."
+          actions={<Button variant="secondary" icon="arrow_back" onClick={onClose}>Voltar à doença</Button>}
+        />
         {cdrData.map(cat => (
-          <div key={cat.id} className="mb-8">
-            <h2 className="text-base font-bold text-navy mb-3">{cat.nome} <span className="text-gray-500 font-normal">{cat.sigla}</span></h2>
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
+          <div key={cat.id} role="radiogroup" aria-labelledby={`cdr-${cat.id}`} className="bg-white border border-line rounded-xl overflow-hidden">
+            <h2 id={`cdr-${cat.id}`} className="text-h3 font-bold text-navy px-4 pt-4 pb-2">{cat.nome} <span className="text-ink-3 font-normal">{cat.sigla}</span></h2>
+            <div className="flex flex-col">
               {cat.opcoes.map(opt => {
-                const isSelected = scores[cat.id as keyof typeof scores] === opt.pt;
+                const marcado = scores[cat.id as keyof typeof scores] === opt.pt;
                 return (
-                  <div key={opt.pt} onClick={() => { setScores({...scores, [cat.id]: opt.pt}); setIsCopied(false); }}
-                    className={`flex items-center p-3 cursor-pointer select-none transition-colors border-b border-gray-100 last:border-0 ${isSelected ? 'bg-navy text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>
-                    <div className="flex-1 pr-4 text-sm leading-snug">{opt.desc}</div>
-                    <div className={`font-bold text-sm px-2 py-1 rounded bg-black/5 ${isSelected ? 'text-white' : 'text-gray-500'}`}>{opt.pt === 0 ? '0' : '+' + opt.pt}</div>
-                  </div>
+                  <label
+                    key={opt.pt}
+                    className={`relative flex items-center gap-3 min-h-[44px] px-4 py-3 cursor-pointer border-t border-line transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-gold ${marcado ? 'bg-navy text-white' : 'bg-white text-ink hover:bg-thead'}`}
+                  >
+                    <input type="radio" name={`cdr-${cat.id}`} checked={marcado} onChange={() => escolher(cat.id, opt.pt)} className="sr-only" />
+                    <span className="flex-1 text-sm leading-snug">{opt.desc}</span>
+                    <span className={`shrink-0 text-xs font-bold px-2 py-1 rounded tabular-nums ${marcado ? 'bg-white/20 text-white' : 'bg-thead text-ink-3'}`}>{opt.pt === 0 ? '0' : '+' + opt.pt}</span>
+                  </label>
                 );
               })}
             </div>
           </div>
         ))}
-      </main>
-      <div className={`fixed bottom-0 left-0 w-full text-white shadow-lg z-50 transition-colors duration-300 ${isGrave ? 'bg-red-900' : 'bg-navy'}`}>
-        <div className="max-w-3xl mx-auto flex flex-row items-center justify-between p-4">
-          <div className="flex flex-col justify-center">
-            <div className="flex items-baseline gap-1">
-              <span className="text-4xl font-bold">{globalScore}</span>
-              <span className="text-sm text-gray-200">pontos</span>
-              <button onClick={() => setIsModalOpen(true)} className="ml-1 text-white hover:text-gray-300"><span className="material-symbols-outlined text-[20px]">info</span></button>
+      </Container>
+
+      <div className="sticky bottom-0 mt-auto z-sticky bg-white border-t border-line" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="mx-auto w-full max-w-form px-4 py-3 flex flex-wrap items-center justify-between gap-3" role="status" aria-live="polite">
+          <div className="flex items-center gap-4">
+            <div>
+              <p className="text-xs font-semibold text-ink-3">Escore global CDR</p>
+              <p className="text-kpi font-extrabold text-navy tabular-nums">{globalScore}</p>
             </div>
-            <div className="text-xs text-white/80 mt-1">Escore Global CDR</div>
-            <div className="text-xs text-ink-3 mt-0.5">CDR-SB: <span className="text-white font-semibold">{sbScore}</span> pontos</div>
+            <div>
+              <p className="text-xs font-semibold text-ink-3">CDR-SB</p>
+              <p className="text-h2 font-bold text-ink tabular-nums">{sbScore}</p>
+            </div>
+            <StatusTag tone={TOM_ESTAGIO[globalScore] ?? 'neutral'}>{stage.titulo} ({stage.sub})</StatusTag>
           </div>
-          <div className="flex items-center">
-            <button onClick={handleCopy} disabled={isCopied} className="mr-4 flex items-center justify-center p-2 rounded-full text-white hover:bg-white/10">
-              <span className="material-symbols-outlined text-[24px]">{isCopied ? 'done_all' : 'content_copy'}</span>
-            </button>
-            <div className={`border-l-2 ${isGrave ? 'border-red-400' : 'border-blue-400'} pl-4 flex flex-col`}>
-              <div className="text-xl font-bold uppercase">{stage.titulo}</div>
-              <div className="text-sm text-white/80">({stage.sub})</div>
-            </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" icon="info" onClick={() => setIsModalOpen(true)}>Interpretação</Button>
+            <Button icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} onClick={handleCopy}>{isCopied ? 'Copiado' : 'Copiar resultado'}</Button>
           </div>
         </div>
       </div>
+
       {isModalOpen && (
-        <div className="fixed inset-0 z-[110] bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}>
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-4 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-navy">Interpretação dos Resultados</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-ink-3 hover:text-gray-600 p-1"><X size={20} /></button>
-            </div>
-            <div className="p-4 overflow-x-auto scroll-x-visible">
-              <table className="w-full text-left text-base text-gray-600 border-collapse">
-                <thead className="bg-gray-50 text-gray-700 text-sm uppercase">
-                  <tr><th className="px-4 py-3 border-b border-gray-200">Global CDR</th><th className="px-4 py-3 border-b border-gray-200">CDR-SB</th><th className="px-4 py-3 border-b border-gray-200">Demência</th></tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  <tr><td className="px-4 py-3 font-medium">0</td><td className="px-4 py-3">0</td><td className="px-4 py-3">Normal (sem demência)</td></tr>
-                  <tr><td className="px-4 py-3 font-medium">0.5</td><td className="px-4 py-3">0.5-4.0</td><td className="px-4 py-3">Questionável a muito leve</td></tr>
-                  <tr><td className="px-4 py-3 font-medium">1</td><td className="px-4 py-3">4.5-9.0</td><td className="px-4 py-3">Leve</td></tr>
-                  <tr className="bg-red-50"><td className="px-4 py-3 font-medium">2</td><td className="px-4 py-3">9.5-15.5</td><td className="px-4 py-3 font-medium text-navy">MODERADA</td></tr>
-                  <tr className="bg-red-100"><td className="px-4 py-3 font-bold text-red-800">3</td><td className="px-4 py-3">16.0-18.0</td><td className="px-4 py-3 font-bold text-red-800">GRAVE</td></tr>
-                </tbody>
-              </table>
-            </div>
+        <Dialog title="Interpretação dos resultados" icon="info" size="md" onClose={() => setIsModalOpen(false)} footer={<Button variant="secondary" onClick={() => setIsModalOpen(false)}>Fechar</Button>}>
+          <div className="overflow-x-auto scroll-x-visible">
+            <table className="w-full text-left text-sm text-ink border-collapse">
+              <thead className="bg-thead text-ink-3 text-xs">
+                <tr><th scope="col" className="px-3 py-2 border-b border-line">Global CDR</th><th scope="col" className="px-3 py-2 border-b border-line">CDR-SB</th><th scope="col" className="px-3 py-2 border-b border-line">Demência</th></tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                <tr><td className="px-3 py-2 font-medium">0</td><td className="px-3 py-2">0</td><td className="px-3 py-2">Normal (sem demência)</td></tr>
+                <tr><td className="px-3 py-2 font-medium">0.5</td><td className="px-3 py-2">0.5-4.0</td><td className="px-3 py-2">Questionável a muito leve</td></tr>
+                <tr><td className="px-3 py-2 font-medium">1</td><td className="px-3 py-2">4.5-9.0</td><td className="px-3 py-2">Leve</td></tr>
+                <tr className="bg-wine-50"><td className="px-3 py-2 font-medium">2</td><td className="px-3 py-2">9.5-15.5</td><td className="px-3 py-2 font-medium text-navy">Moderada</td></tr>
+                <tr className="bg-wine-100"><td className="px-3 py-2 font-bold text-wine-800">3</td><td className="px-3 py-2">16.0-18.0</td><td className="px-3 py-2 font-bold text-wine-800">Grave</td></tr>
+              </tbody>
+            </table>
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   );
@@ -265,11 +266,20 @@ export const DiseaseGuide: React.FC = () => {
   const [isBavImageExpanded, setIsBavImageExpanded] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  // Checklist de documentos reunidos (apenas visual; zera ao trocar de diagnóstico).
+  // Checklist de documentos reunidos: guardado neste aparelho, por doença/diagnóstico.
   const [docsMarcados, setDocsMarcados] = useState<Set<number>>(new Set());
+  const chaveDocs = `jrs_docs_${selectedDisease?.id ?? ''}_${selectedDiagnosis?.name ?? ''}`;
+  const alterarDocs = (atualiza: (s: Set<number>) => Set<number>) => setDocsMarcados(prev => {
+    const proximo = atualiza(prev);
+    try { localStorage.setItem(chaveDocs, JSON.stringify(Array.from(proximo))); } catch { /* sem localStorage */ }
+    return proximo;
+  });
   const podeVerPortaria = canAccessPage('portaria', nav?.authUser?.perfil);
 
-  useEffect(() => { setIsCopied(false); setDocsMarcados(new Set()); }, [selectedDiagnosis]);
+  useEffect(() => {
+    setIsCopied(false);
+    try { setDocsMarcados(new Set(JSON.parse(localStorage.getItem(chaveDocs) || '[]'))); } catch { setDocsMarcados(new Set()); }
+  }, [chaveDocs]);
 
   const handleDiseaseClick = (disease: Disease) => navigate(doencaPath(disease.id));
 
@@ -336,7 +346,7 @@ export const DiseaseGuide: React.FC = () => {
   // PAGE LEVEL 2: Diagnoses List for a specific disease
   if (selectedDisease && !selectedDiagnosis) {
     return (
-      <div className="animate-fade-in flex flex-col flex-1 relative">
+      <div className="flex flex-col flex-1 relative">
         <Container size="reading" className="py-6 md:py-8 pb-10 space-y-6">
           <PageHeader title={selectedDisease.name} description="Selecione o diagnóstico pericial associado" />
 
@@ -368,28 +378,26 @@ export const DiseaseGuide: React.FC = () => {
     const isDemencia = selectedDisease.name === "Alienação Mental" && selectedDiagnosis.name === "Demência";
     const totalDocs = selectedDisease.documents.length;
     const secao = 'bg-white rounded-xl p-5 md:p-6 border border-line';
-    const tituloSecao = 'font-heading font-bold text-lg text-navy mb-3 pb-2 border-b border-line flex items-center gap-2';
+    const tituloSecao = 'font-heading font-bold text-h2 text-navy mb-3 pb-2 border-b border-line';
     return (
-      <div className="animate-fade-in flex flex-col flex-1 relative">
-        <Container size="data" className="py-6 md:py-8 pb-28 md:pb-10">
+      <div className="flex flex-col flex-1 relative">
+        <Container size="data" className="@container py-6 md:py-8 pb-6 md:pb-10">
           <PageHeader
             title={selectedDisease.name}
             description={selectedDisease.diagnoses.length > 1 ? `Diagnóstico pericial: ${selectedDiagnosis.name}` : undefined}
           />
 
-          <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start space-y-6 lg:space-y-0">
-            <div className="lg:col-span-8 space-y-6 min-w-0">
+          <div className="@split:grid @split:grid-cols-12 @split:gap-8 @split:items-start space-y-6 @split:space-y-0">
+            <div className="@split:col-span-8 space-y-6 min-w-0">
               <section className={secao}>
-                <h2 className={tituloSecao}>
-                  <span className="material-symbols-outlined text-navy" aria-hidden="true">menu_book</span>Definição
+                <h2 className={tituloSecao}>Definição
                 </h2>
                 <p className="text-base text-ink leading-relaxed">{selectedDisease.definition}</p>
               </section>
 
               {selectedDisease.name === "SIDA/AIDS" && (
                 <section className={secao}>
-                  <h2 className={tituloSecao}>
-                    <span className="material-symbols-outlined text-navy" aria-hidden="true">grid_on</span>Classificação
+                  <h2 className={tituloSecao}>Classificação
                   </h2>
                   <p className="text-base text-ink leading-relaxed">Grupos I (CD4 ≥500), II (200-499), III (&lt;200) / Classes A, B, C por sintomas e condições definidoras.</p>
                 </section>
@@ -397,8 +405,7 @@ export const DiseaseGuide: React.FC = () => {
 
               {isDemencia && (
                 <section className={secao}>
-                  <h2 className={tituloSecao}>
-                    <span className="material-symbols-outlined text-navy" aria-hidden="true">psychology</span>Avaliação de cognição
+                  <h2 className={tituloSecao}>Avaliação de cognição
                   </h2>
                   <p className="text-sm text-ink-3 mb-4">A avaliação do escore CDR é fundamental para quantificar a gravidade do comprometimento cognitivo.</p>
                   <Button icon="calculate" fullWidth onClick={() => setIsCalculatorOpen(true)}>CDR Score Calculator</Button>
@@ -406,8 +413,7 @@ export const DiseaseGuide: React.FC = () => {
               )}
 
               <section className={secao}>
-                <h2 className={tituloSecao}>
-                  <span className="material-symbols-outlined text-navy" aria-hidden="true">verified</span>Critérios de gravidade
+                <h2 className={tituloSecao}>Critérios de gravidade
                 </h2>
                 <ol className="space-y-4">
                   {selectedDiagnosis.criteria.map((item, idx) => (
@@ -420,10 +426,9 @@ export const DiseaseGuide: React.FC = () => {
               </section>
             </div>
 
-            <aside className="lg:col-span-4 lg:sticky lg:top-6 space-y-4 min-w-0" aria-label="Documentos e ações">
+            <aside className="@split:col-span-4 @split:sticky @split:top-6 space-y-4 min-w-0" aria-label="Documentos e ações">
               <section className={secao}>
-                <h2 className={tituloSecao}>
-                  <span className="material-symbols-outlined text-navy" aria-hidden="true">folder_open</span>Documentos necessários
+                <h2 className={tituloSecao}>Documentos necessários
                 </h2>
                 <p className="text-xs font-semibold text-ink-3 mb-2" aria-live="polite">{docsMarcados.size} de {totalDocs} reunidos</p>
                 <ul className="space-y-1">
@@ -433,7 +438,7 @@ export const DiseaseGuide: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={docsMarcados.has(idx)}
-                          onChange={() => setDocsMarcados(prev => { const proximo = new Set(prev); if (proximo.has(idx)) proximo.delete(idx); else proximo.add(idx); return proximo; })}
+                          onChange={() => alterarDocs(prev => { const proximo = new Set(prev); if (proximo.has(idx)) proximo.delete(idx); else proximo.add(idx); return proximo; })}
                           className="mt-1 w-5 h-5 shrink-0 accent-navy"
                         />
                         <span className={`text-sm leading-snug ${docsMarcados.has(idx) ? 'text-ink-3 line-through' : 'text-ink'}`}>{item}</span>
@@ -457,8 +462,8 @@ export const DiseaseGuide: React.FC = () => {
           </div>
         </Container>
 
-        {/* Mobile: barra de ações rotulada. */}
-        <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-line p-3 flex gap-2" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+        {/* Mobile: barra de ações rotulada, sticky no fim do fluxo (sem padding compensatório). */}
+        <div className="md:hidden sticky bottom-0 mt-auto z-10 bg-white border-t border-line p-3 flex gap-2" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
           <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} onClick={handleCopy} className="flex-1">{isCopied ? 'Copiado' : 'Copiar'}</Button>
           <Button icon="download" onClick={handleDownloadPDF} className="flex-1">Baixar PDF</Button>
         </div>
@@ -470,8 +475,8 @@ export const DiseaseGuide: React.FC = () => {
   const consultaAtiva = searchQuery.trim().length > 0;
   const tituloTipo: Record<string, string> = { disease: 'Doenças', diagnosis: 'Diagnósticos', criterion: 'Critérios' };
   return (
-    <div className="flex flex-col flex-1 animate-fade-in">
-      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
+    <div className="flex flex-col flex-1">
+      <Container size="data" className="@container py-6 md:py-8 pb-10 space-y-6">
         <PageHeader title="Doenças previstas em lei" description="Verifique as definições, os critérios clínicos e os documentos necessários para o enquadramento." />
 
         <div className="relative max-w-form">
@@ -512,7 +517,7 @@ export const DiseaseGuide: React.FC = () => {
             })}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 @2xl:grid-cols-2 @4xl:grid-cols-3 gap-4">
             {DISEASES.map((disease) => (
               <Link key={disease.id} to={doencaPath(disease.id)} className="bg-white rounded-xl border border-line hover:border-navy transition-colors p-4 flex items-center justify-between gap-2 min-h-[64px]">
                 <span className="flex items-center gap-3 min-w-0">

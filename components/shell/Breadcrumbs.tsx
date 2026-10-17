@@ -1,5 +1,5 @@
 // Ficheiro: components/shell/Breadcrumbs.tsx
-// Trilha de navegação da topbar: Início › Categoria › Página › (níveis extras
+// Trilha de navegação da topbar: Início › Página › (níveis extras
 // declarados pela página). Substitui o título centralizado "Categoria - Subitem"
 // e o botão circular flutuante de voltar — cada nível é um link/rota. No
 // celular, mostra só o nível pai (‹ Pai) e o nível atual para caber na barra.
@@ -26,8 +26,8 @@ export const Breadcrumbs: React.FC<{ className?: string }> = ({ className = '' }
     const categoria = findCategoryForView(categorias, view);
     const subitem = categoria?.subitems.find(s => s.id === view);
     if (categoria && subitem) {
-      // Mesmo nome na categoria e na página (ex.: "Concursos"): uma migalha só.
-      if (categoria.label !== subitem.label) crumbs.push({ label: categoria.label });
+      // O grupo do menu (Trabalho, Consulta…) é só um rótulo de seção: não entra na trilha
+      // (migalha morta — não existe página de grupo). Trilha: Início › Página › subnível.
       crumbs.push({ label: subitem.label, to: pathForView(view) });
     } else if (view === 'perfil') {
       crumbs.push({ label: 'Meu perfil', to: '/perfil' });

@@ -65,10 +65,10 @@ export const ImageScanner: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-dialog flex items-center justify-center p-4 bg-navy/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
             <div className="p-4 border-b border-navy/15 flex justify-between items-center bg-navy text-white">
-              <h3 className="font-heading font-bold text-lg flex items-center">
+              <h3 className="font-heading font-bold text-h2 flex items-center">
                 <span className="material-symbols-outlined mr-2">document_scanner</span>
                 Extrair informações
               </h3>
@@ -86,7 +86,7 @@ export const ImageScanner: React.FC = () => {
                   className="border-2 border-dashed border-navy/30 rounded-xl p-8 flex flex-col items-center justify-center bg-white cursor-pointer hover:bg-navy/5 transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <span className="material-symbols-outlined text-4xl text-navy/50 mb-2">add_a_photo</span>
+                  <span className="material-symbols-outlined text-[28px] text-navy/50 mb-2">add_a_photo</span>
                   <p className="text-navy/70 font-medium">Toque para selecionar uma imagem</p>
                   <p className="text-base text-navy/50 mt-1">JPEG ou PNG</p>
                 </div>

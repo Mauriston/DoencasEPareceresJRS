@@ -7,13 +7,13 @@ import { formatNip, formatCelular } from '../utils/format';
 import { trocarSenha, mapAuthErrorMessage } from '../services/firebaseAuth';
 import { updateUsuarioProfile } from '../services/firestoreUsuarios';
 
-const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-navy transition-colors';
-const labelClass = 'text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1';
+const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-xs font-semibold text-navy focus:outline-none focus:border-navy transition-colors';
+const labelClass = 'text-xs font-bold text-ink-3 uppercase tracking-wider block mb-1';
 
 const InfoField: React.FC<{ label: string; value?: string }> = ({ label, value }) => (
   <div>
     <span className="text-xs font-bold text-ink-3 uppercase tracking-wider block">{label}</span>
-    <span className="text-sm font-semibold text-gray-800">{value || '—'}</span>
+    <span className="text-sm font-semibold text-navy">{value || '—'}</span>
   </div>
 );
 
@@ -102,16 +102,16 @@ export const Perfil: React.FC = () => {
 
       <div className="space-y-5">
         {/* FOTO DE PERFIL EM DESTAQUE */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-6 flex flex-col items-center">
+        <div className="bg-white rounded-2xl shadow-sm border border-line/60 p-6 flex flex-col items-center">
           <div className="relative">
             {authUser?.imageProfile ? (
               <img
                 src={authUser.imageProfile}
                 alt={authUser?.nome}
-                className="w-28 h-28 rounded-full object-cover border-4 border-gray-100 shadow-sm"
+                className="w-28 h-28 rounded-full object-cover border-4 border-line shadow-sm"
               />
             ) : (
-              <div className="w-28 h-28 rounded-full bg-gray-100 border-4 border-gray-100 shadow-sm flex items-center justify-center">
+              <div className="w-28 h-28 rounded-full bg-thead border-4 border-line shadow-sm flex items-center justify-center">
                 <span className="material-symbols-outlined text-[56px] text-ink-3">person</span>
               </div>
             )}
@@ -129,11 +129,11 @@ export const Perfil: React.FC = () => {
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
           </div>
           <h2 className="mt-4 font-heading font-bold text-base text-navy text-center">{authUser?.nome}</h2>
-          <p className="text-xs text-gray-500 font-semibold">{authUser?.postoGraduacao || authUser?.usuario}</p>
+          <p className="text-xs text-ink-3 font-semibold">{authUser?.postoGraduacao || authUser?.usuario}</p>
         </div>
 
         {/* DADOS FUNCIONAIS (SOMENTE LEITURA) */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-5">
+        <div className="bg-white rounded-2xl shadow-sm border border-line/60 p-5">
           <h3 className="font-heading font-bold text-sm text-navy mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">badge</span>
             Dados Funcionais
@@ -149,7 +149,7 @@ export const Perfil: React.FC = () => {
         </div>
 
         {/* CONTATO (EDITÁVEL) */}
-        <form onSubmit={handleSalvarContato} className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-5 space-y-4">
+        <form onSubmit={handleSalvarContato} className="bg-white rounded-2xl shadow-sm border border-line/60 p-5 space-y-4">
           <h3 className="font-heading font-bold text-sm text-navy flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">contact_mail</span>
             Informações de Contato
@@ -181,7 +181,7 @@ export const Perfil: React.FC = () => {
         </form>
 
         {/* ALTERAR SENHA (SOMENTE O PRÓPRIO USUÁRIO) */}
-        <form onSubmit={handleSalvarSenha} className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-5 space-y-4">
+        <form onSubmit={handleSalvarSenha} className="bg-white rounded-2xl shadow-sm border border-line/60 p-5 space-y-4">
           <h3 className="font-heading font-bold text-sm text-navy flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">lock</span>
             Alterar Senha

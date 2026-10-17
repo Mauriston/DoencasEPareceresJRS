@@ -69,8 +69,8 @@ export const Infograficos: React.FC = () => {
 
   if (selectedItem) {
     return (
-      <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-fade-in pb-env-safe">
-        <div className="flex-shrink-0 w-full sticky top-0 z-50 shadow-sm bg-navy text-white h-[56px] flex items-center justify-between px-4 border-b border-transparent">
+      <div className="fixed inset-0 z-dialog bg-white flex flex-col animate-fade-in pb-env-safe">
+        <div className="flex-shrink-0 w-full sticky top-0 z-sticky bg-navy text-white h-[56px] flex items-center justify-between px-4 border-b border-transparent">
           <div className="flex-1 text-center font-heading text-[16px] font-semibold truncate pr-4 text-white uppercase tracking-wide">
             {selectedItem.title}
           </div>
@@ -83,16 +83,16 @@ export const Infograficos: React.FC = () => {
             </button>
           </div>
         </div>
-        <div className="flex-1 overflow-auto w-full bg-gray-900 flex flex-col items-center justify-center relative p-4">
+        <div className="flex-1 overflow-auto w-full bg-navy flex flex-col items-center justify-center relative p-4">
           {selectedItem.imageUrl ? (
             <img src={selectedItem.imageUrl} alt={selectedItem.title} className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl block" referrerPolicy="no-referrer" />
           ) : (
             <div className="flex flex-col items-center justify-center p-10 text-ink-3 h-full">
-              <span className="material-symbols-outlined text-4xl mb-4 opacity-50">broken_image</span>
+              <span className="material-symbols-outlined text-[28px] mb-4 opacity-50">broken_image</span>
               <p>Imagem não disponível</p>
             </div>
           )}
-          <button onClick={() => setSelectedItem(null)} className="absolute bottom-6 right-6 bg-gold text-navy shadow-2xl rounded-2xl p-4 hover:scale-105 active:scale-95 transition-all border border-amber-400 flex items-center justify-center z-50" title="Voltar para a lista">
+          <button onClick={() => setSelectedItem(null)} className="absolute bottom-6 right-6 bg-gold text-navy shadow-2xl rounded-2xl p-4 hover:scale-105 active:scale-95 transition-all border border-gold-400 flex items-center justify-center z-50" title="Voltar para a lista">
             <ArrowLeft size={22} />
           </button>
         </div>
@@ -101,41 +101,41 @@ export const Infograficos: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in">
+    <div className="flex flex-col flex-1">
       <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
         <PageHeader title="Infográficos" description="Resumos ilustrados para consultas rápidas." />
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
             <Loader2 className="animate-spin text-navy" size={40} />
-            <p className="text-sm font-semibold text-gray-500 font-body">Carregando infográficos...</p>
+            <p className="text-sm font-semibold text-ink-3 font-body">Carregando infográficos...</p>
           </div>
         ) : (
           <>
             {error && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm p-4 rounded-xl flex items-start gap-2.5 shadow-sm">
-                <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={18} />
+              <div className="bg-gold-50 border border-gold-200 text-gold-800 text-sm p-4 rounded-xl flex items-start gap-2.5 shadow-sm">
+                <AlertCircle className="text-gold-600 flex-shrink-0 mt-0.5" size={18} />
                 <div className="flex-1">
                   <p className="font-semibold">Sincronização Offline</p>
                   <p className="mt-0.5 opacity-90">{error}</p>
                 </div>
-                <button onClick={loadData} className="p-1 hover:bg-amber-100 rounded-lg text-amber-900 flex items-center justify-center transition-colors self-center">
+                <button onClick={loadData} className="p-1 hover:bg-gold-100 rounded-lg text-gold-900 flex items-center justify-center transition-colors self-center">
                   <RefreshCw size={16} />
                 </button>
               </div>
             )}
             {infograficos.length === 0 ? (
-              <div className="text-center py-16 text-gray-500 font-body">Nenhum infográfico disponível no momento.</div>
+              <div className="text-center py-16 text-ink-3 font-body">Nenhum infográfico disponível no momento.</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {infograficos.map((item) => (
-                  <button key={item.id} onClick={() => setSelectedItem(item)} className="group bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col w-full hover:shadow-md hover:border-navy transition-all duration-300 text-left p-4 md:p-5">
+                  <button key={item.id} onClick={() => setSelectedItem(item)} className="group bg-white rounded-2xl border border-line/60 shadow-sm overflow-hidden flex flex-col w-full hover:shadow-md hover:border-navy transition-all duration-300 text-left p-4 md:p-5">
                     <div className="flex justify-between items-start gap-4 w-full">
                       <h3 className="text-base font-bold text-navy font-heading leading-snug group-hover:text-navy transition-colors">{item.title}</h3>
                       <ChevronRight className="text-ink-3 group-hover:text-navy transform group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" size={18} />
                     </div>
                     {item.description && (
-                      <p className="text-sm text-gray-500 font-body leading-relaxed line-clamp-3 mt-2">{item.description}</p>
+                      <p className="text-sm text-ink-3 font-body leading-relaxed line-clamp-3 mt-2">{item.description}</p>
                     )}
                   </button>
                 ))}

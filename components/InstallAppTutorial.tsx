@@ -6,7 +6,9 @@
 import React, { useState } from 'react';
 import { PlataformaTutorial } from '../utils/pwa';
 
-const APP_ICON = 'https://i.imgur.com/8HeAdv4.png';
+import iconeJrs from '../assets/icone-jrs.png';
+
+const APP_ICON = iconeJrs;
 
 const PLATAFORMAS: { id: PlataformaTutorial; label: string }[] = [
   { id: 'iphone-safari', label: 'iPhone · Safari' },
@@ -30,7 +32,7 @@ const Alvo: React.FC<{ children: React.ReactNode; className?: string }> = ({ chi
 );
 
 const Moldura: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="relative mx-auto w-[210px] h-[330px] rounded-[26px] border-[5px] border-gray-800 bg-white overflow-hidden shadow-xl">
+  <div className="relative mx-auto w-[210px] h-[330px] rounded-[26px] border-[5px] border-navy bg-white overflow-hidden shadow-xl">
     {children}
   </div>
 );
@@ -44,15 +46,15 @@ const PaginaFalsa: React.FC = () => (
     </div>
     <div className="p-3 space-y-2">
       {[80, 100, 65, 90, 55].map((w, i) => (
-        <div key={i} className="h-3 rounded bg-gray-300/70" style={{ width: `${w}%` }} />
+        <div key={i} className="h-3 rounded bg-ink-5/70" style={{ width: `${w}%` }} />
       ))}
     </div>
   </div>
 );
 
 const BarraEndereco: React.FC<{ children?: React.ReactNode; direita?: React.ReactNode }> = ({ direita }) => (
-  <div className="absolute top-0 inset-x-0 h-10 bg-gray-100 border-b border-gray-300 flex items-center gap-1.5 px-2 z-10">
-    <div className="flex-1 h-5 rounded-full bg-white border border-gray-300 text-xs text-gray-500 flex items-center px-2">
+  <div className="absolute top-0 inset-x-0 h-10 bg-thead border-b border-ink-5 flex items-center gap-1.5 px-2 z-10">
+    <div className="flex-1 h-5 rounded-full bg-white border border-ink-5 text-xs text-ink-3 flex items-center px-2">
       mauriston.github.io
     </div>
     {direita}
@@ -60,7 +62,7 @@ const BarraEndereco: React.FC<{ children?: React.ReactNode; direita?: React.Reac
 );
 
 const BarraInferiorSafari: React.FC<{ destacarCompartilhar?: boolean }> = ({ destacarCompartilhar }) => (
-  <div className="absolute bottom-0 inset-x-0 h-12 bg-gray-100 border-t border-gray-300 flex items-center justify-around px-1 z-10">
+  <div className="absolute bottom-0 inset-x-0 h-12 bg-thead border-t border-ink-5 flex items-center justify-around px-1 z-10">
     <Icon name="chevron_left" className="text-[20px] text-ink-3" />
     <Icon name="chevron_right" className="text-[20px] text-ink-3" />
     {destacarCompartilhar ? (
@@ -102,15 +104,15 @@ const CenaIosLista: React.FC = () => (
   <Moldura>
     <PaginaFalsa />
     <div className="absolute inset-0 bg-black/40 z-10" />
-    <div className="absolute bottom-0 inset-x-0 h-[78%] rounded-t-2xl bg-gray-100 z-20 p-2.5 overflow-hidden">
-      <div className="flex items-center gap-2 pb-2 border-b border-gray-300">
+    <div className="absolute bottom-0 inset-x-0 h-[78%] rounded-t-2xl bg-thead z-20 p-2.5 overflow-hidden">
+      <div className="flex items-center gap-2 pb-2 border-b border-ink-5">
         <img src={APP_ICON} alt="" className="w-7 h-7 rounded-lg" />
         <div className="leading-tight">
-          <div className="text-xs font-bold text-gray-800">JRS/HNRe</div>
-          <div className="text-xs text-gray-500">mauriston.github.io</div>
+          <div className="text-xs font-bold text-navy">JRS/HNRe</div>
+          <div className="text-xs text-ink-3">mauriston.github.io</div>
         </div>
       </div>
-      <div className="mt-2 rounded-xl bg-white divide-y divide-gray-200 text-xs text-gray-800">
+      <div className="mt-2 rounded-xl bg-white divide-y divide-line text-xs text-navy">
         <div className="flex items-center justify-between px-2.5 py-2">Copiar <Icon name="content_copy" className="text-sm" /></div>
         <div className="flex items-center justify-between px-2.5 py-2">Adicionar aos Favoritos <Icon name="star" className="text-sm" /></div>
         <div className="flex items-center justify-between px-2.5 py-2 relative">
@@ -131,17 +133,17 @@ const CenaIosConfirmar: React.FC = () => (
   <Moldura>
     <PaginaFalsa />
     <div className="absolute inset-0 bg-black/40 z-10" />
-    <div className="absolute bottom-0 inset-x-0 h-[88%] rounded-t-2xl bg-gray-100 z-20 p-2.5">
+    <div className="absolute bottom-0 inset-x-0 h-[88%] rounded-t-2xl bg-thead z-20 p-2.5">
       <div className="flex items-center justify-between text-xs">
         <span className="text-blue-600">Cancelar</span>
-        <span className="font-bold text-gray-800">Adicionar à Tela…</span>
+        <span className="font-bold text-navy">Adicionar à Tela…</span>
         <Alvo><span className="text-blue-600 font-bold px-1">Adicionar</span></Alvo>
       </div>
       <div className="mt-3 rounded-xl bg-white p-2.5 flex items-center gap-2">
         <img src={APP_ICON} alt="" className="w-10 h-10 rounded-xl" />
-        <div className="flex-1 text-xs font-bold text-gray-800 border-b border-gray-200 pb-1">JRS/HNRe</div>
+        <div className="flex-1 text-xs font-bold text-navy border-b border-line pb-1">JRS/HNRe</div>
       </div>
-      <p className="mt-2 px-1 text-xs text-gray-500 leading-snug">
+      <p className="mt-2 px-1 text-xs text-ink-3 leading-snug">
         Um ícone será adicionado à sua tela de início para que você possa acessar rapidamente este site.
       </p>
     </div>
@@ -152,7 +154,7 @@ const CenaIosConfirmar: React.FC = () => (
 const CenaAndroidMenu: React.FC = () => (
   <Moldura>
     <PaginaFalsa />
-    <BarraEndereco direita={<Alvo><Icon name="more_vert" className="text-[18px] text-gray-700" /></Alvo>} />
+    <BarraEndereco direita={<Alvo><Icon name="more_vert" className="text-[18px] text-ink" /></Alvo>} />
     <Dica className="top-12 right-2">Toque nos 3 pontinhos</Dica>
   </Moldura>
 );
@@ -160,8 +162,8 @@ const CenaAndroidMenu: React.FC = () => (
 const CenaAndroidOpcao: React.FC = () => (
   <Moldura>
     <PaginaFalsa />
-    <BarraEndereco direita={<Icon name="more_vert" className="text-[18px] text-gray-700" />} />
-    <div className="absolute top-9 right-2 w-[150px] rounded-lg bg-white shadow-2xl border border-gray-200 z-20 text-xs text-gray-800 divide-y divide-gray-100">
+    <BarraEndereco direita={<Icon name="more_vert" className="text-[18px] text-ink" />} />
+    <div className="absolute top-9 right-2 w-[150px] rounded-lg bg-white shadow-2xl border border-line z-20 text-xs text-navy divide-y divide-line">
       <div className="px-2.5 py-2">Nova guia</div>
       <div className="px-2.5 py-2">Favoritos</div>
       <div className="px-2.5 py-2">
@@ -169,7 +171,7 @@ const CenaAndroidOpcao: React.FC = () => (
           <span className="w-full text-left font-bold text-navy">Adicionar à tela inicial</span>
         </Alvo>
       </div>
-      <div className="px-2.5 py-2 text-gray-500">Instalar app (se aparecer)</div>
+      <div className="px-2.5 py-2 text-ink-3">Instalar app (se aparecer)</div>
       <div className="px-2.5 py-2">Compartilhar…</div>
     </div>
   </Moldura>
@@ -180,13 +182,13 @@ const CenaAndroidConfirmar: React.FC = () => (
     <PaginaFalsa />
     <div className="absolute inset-0 bg-black/45 z-10" />
     <div className="absolute z-20 left-3 right-3 top-1/2 -translate-y-1/2 rounded-2xl bg-white p-3 shadow-2xl">
-      <div className="text-xs font-bold text-gray-800 mb-2">Adicionar à tela inicial</div>
+      <div className="text-xs font-bold text-navy mb-2">Adicionar à tela inicial</div>
       <div className="flex items-center gap-2 mb-3">
         <img src={APP_ICON} alt="" className="w-9 h-9 rounded-xl" />
-        <div className="flex-1 text-xs text-gray-800 border-b border-gray-300 pb-0.5">JRS/HNRe</div>
+        <div className="flex-1 text-xs text-navy border-b border-ink-5 pb-0.5">JRS/HNRe</div>
       </div>
       <div className="flex justify-end gap-3 text-xs font-bold">
-        <span className="text-gray-500">Cancelar</span>
+        <span className="text-ink-3">Cancelar</span>
         <Alvo><span className="text-green-700 px-1">Adicionar</span></Alvo>
       </div>
     </div>
@@ -259,20 +261,20 @@ export const InstallAppTutorial: React.FC<Props> = ({ plataformaInicial, onClose
   const ultimo = indice === passos.length - 1;
 
   return (
-    <div className="fixed inset-0 z-[210] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
       <div role="dialog" aria-modal="true" aria-label="Como adicionar o ícone à tela inicial"
-        className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm max-h-full overflow-y-auto">
+        className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-sm max-h-full overflow-y-auto">
         <div className="p-4 flex flex-col items-center text-center">
           <h3 className="font-heading font-bold text-sm text-navy mb-2">Ícone na tela inicial</h3>
 
-          <div className="flex items-center gap-1 mb-3 p-0.5 rounded-full bg-gray-100">
+          <div className="flex items-center gap-1 mb-3 p-0.5 rounded-full bg-thead">
             {PLATAFORMAS.map(p => (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => { setPlataforma(p.id); setIndice(0); }}
                 className={`px-2.5 py-1 rounded-full text-xs font-bold transition-colors ${
-                  plataforma === p.id ? 'bg-navy text-white' : 'text-gray-500'
+                  plataforma === p.id ? 'bg-navy text-white' : 'text-ink-3'
                 }`}
               >
                 {p.label}
@@ -286,23 +288,23 @@ export const InstallAppTutorial: React.FC<Props> = ({ plataformaInicial, onClose
             Passo {indice + 1} de {passos.length}
           </p>
           <h4 className="font-heading font-bold text-sm text-navy mb-1">{passo.titulo}</h4>
-          <p className="text-xs text-gray-500 mb-3 min-h-[48px]">{passo.texto}</p>
+          <p className="text-xs text-ink-3 mb-3 min-h-[48px]">{passo.texto}</p>
 
           <div className="flex items-center gap-1.5 mb-3">
             {passos.map((_, i) => (
-              <span key={i} className={`h-1.5 rounded-full transition-all ${i === indice ? 'w-5 bg-green' : 'w-1.5 bg-gray-300'}`} />
+              <span key={i} className={`h-1.5 rounded-full transition-all ${i === indice ? 'w-5 bg-green' : 'w-1.5 bg-ink-5'}`} />
             ))}
           </div>
 
           <div className="flex items-center gap-2 w-full">
             {indice === 0 ? (
               <button type="button" onClick={onClose}
-                className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors">
+                className="flex-1 px-4 py-2.5 rounded-lg border border-line text-sm font-bold text-ink hover:bg-paper transition-colors">
                 Depois
               </button>
             ) : (
               <button type="button" onClick={() => setIndice(indice - 1)}
-                className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors">
+                className="flex-1 px-4 py-2.5 rounded-xl border border-line text-sm font-bold text-ink hover:bg-paper transition-colors">
                 Voltar
               </button>
             )}

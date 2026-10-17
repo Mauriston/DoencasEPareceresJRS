@@ -151,13 +151,13 @@ export const Mensagens: React.FC = () => {
         <PageHeader title="Mensagens" description="Minutas das mensagens de IS auxiliadas por IA." />
 
 
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
-          <h2 className="font-heading font-bold text-navy text-base flex items-center gap-2 border-b border-gray-100 pb-2">
+        <div className="bg-white rounded-2xl border border-line shadow-sm p-5 space-y-4">
+          <h2 className="font-heading font-bold text-navy text-base flex items-center gap-2 border-b border-line pb-2">
             <span className="material-symbols-outlined text-navy">add_photo_alternate</span>
             Imagens da IS
           </h2>
 
-          <p className="text-xs text-gray-500 leading-relaxed">
+          <p className="text-xs text-ink-3 leading-relaxed">
             Adicione <strong>2 imagens por IS</strong>: a 1ª com os <strong>dados da inspeção</strong> e a 2ª com o <strong>resultado/laudo</strong>.
             Para múltiplas IS, adicione sempre em pares na ordem correta.
           </p>
@@ -165,7 +165,7 @@ export const Mensagens: React.FC = () => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-gray-200 rounded-xl py-8 flex flex-col items-center justify-center gap-2 text-ink-3 hover:border-navy hover:text-navy transition-colors bg-gray-50/50 active:scale-[0.98]"
+            className="w-full border-2 border-dashed border-line rounded-xl py-8 flex flex-col items-center justify-center gap-2 text-ink-3 hover:border-navy hover:text-navy transition-colors bg-paper/50 active:scale-[0.98]"
           >
             <span className="material-symbols-outlined text-[40px]">photo_camera</span>
             <span className="text-sm font-semibold">Tirar foto ou selecionar imagem</span>
@@ -188,11 +188,11 @@ export const Mensagens: React.FC = () => {
                 const img1 = images[isIdx * 2];
                 const img2 = images[isIdx * 2 + 1];
                 return (
-                  <div key={isIdx} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                  <div key={isIdx} className="bg-paper rounded-xl p-3 border border-line">
                     <p className="text-xs font-bold text-navy/50 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-xs">assignment</span>
                       IS {isIdx + 1}
-                      {!img2 && <span className="text-amber-600 font-semibold">· aguardando Img 2</span>}
+                      {!img2 && <span className="text-gold-600 font-semibold">· aguardando Img 2</span>}
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       {[img1, img2].map((img, offset) => (
@@ -202,7 +202,7 @@ export const Mensagens: React.FC = () => {
                               <img
                                 src={img.preview}
                                 alt={`IS ${isIdx + 1} Imagem ${offset + 1}`}
-                                className="w-full aspect-video object-cover rounded-lg border border-gray-200 bg-gray-100"
+                                className="w-full aspect-video object-cover rounded-lg border border-line bg-thead"
                               />
                               <span className="absolute top-1.5 left-1.5 bg-navy/75 text-white text-xs font-bold px-1.5 py-0.5 rounded backdrop-blur-sm">
                                 Img {offset + 1}
@@ -217,7 +217,7 @@ export const Mensagens: React.FC = () => {
                               </button>
                             </>
                           ) : (
-                            <div className="w-full aspect-video border-2 border-dashed border-amber-200 rounded-lg flex flex-col items-center justify-center gap-1 bg-amber-50/50 text-amber-400">
+                            <div className="w-full aspect-video border-2 border-dashed border-gold-200 rounded-lg flex flex-col items-center justify-center gap-1 bg-gold-50/50 text-gold-400">
                               <span className="material-symbols-outlined text-[20px]">image</span>
                               <span className="text-xs font-medium">Img 2 pendente</span>
                             </div>
@@ -230,17 +230,17 @@ export const Mensagens: React.FC = () => {
               })}
 
               <div className="flex items-center justify-between pt-1 px-1">
-                <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                <span className="text-xs text-ink-3 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-sm">photo_library</span>
                   {images.length} imagem{images.length !== 1 ? 's' : ''} · {numIS} IS completa{numIS !== 1 ? 's' : ''}
                   {hasOddImage && (
-                    <span className="text-amber-600 font-semibold">· par incompleto</span>
+                    <span className="text-gold-600 font-semibold">· par incompleto</span>
                   )}
                 </span>
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="text-xs text-red-500 hover:text-red-600 font-semibold flex items-center gap-1 transition-colors"
+                  className="text-xs text-wine-500 hover:text-wine-600 font-semibold flex items-center gap-1 transition-colors"
                 >
                   <span className="material-symbols-outlined text-sm">delete</span>
                   Limpar tudo
@@ -251,8 +251,8 @@ export const Mensagens: React.FC = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-4 rounded-xl flex items-start gap-2.5">
-            <span className="material-symbols-outlined text-red-500 text-[18px] shrink-0 mt-0.5">error</span>
+          <div className="bg-wine-50 border border-wine-200 text-wine-700 text-sm p-4 rounded-xl flex items-start gap-2.5">
+            <span className="material-symbols-outlined text-wine-500 text-[18px] shrink-0 mt-0.5">error</span>
             <p className="leading-relaxed">{error}</p>
           </div>
         )}
@@ -285,7 +285,7 @@ export const Mensagens: React.FC = () => {
         )}
 
         {minuta && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-fade-in">
+          <div className="bg-white rounded-2xl border border-line shadow-sm overflow-hidden animate-fade-in">
             <div className="bg-navy px-5 py-3.5 flex items-center justify-between">
               <div className="flex items-center gap-2 text-white">
                 <span className="material-symbols-outlined text-[18px] text-gold">task_alt</span>
@@ -303,7 +303,7 @@ export const Mensagens: React.FC = () => {
               </div>
             </div>
 
-            <pre className="p-5 text-sm text-gray-800 whitespace-pre-wrap font-body leading-relaxed border-b border-gray-100">{minuta}</pre>
+            <pre className="p-5 text-sm text-navy whitespace-pre-wrap font-body leading-relaxed border-b border-line">{minuta}</pre>
 
             <div className="px-5 py-4 flex gap-2.5">
               {docUrl && (
@@ -312,11 +312,11 @@ export const Mensagens: React.FC = () => {
                   Abrir no Drive
                 </a>
               )}
-              <button type="button" onClick={handleCopy} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-gray-200 transition-colors active:scale-[0.97]">
+              <button type="button" onClick={handleCopy} className="flex-1 py-2.5 bg-thead text-ink rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-line transition-colors active:scale-[0.97]">
                 <span className="material-symbols-outlined text-[16px]">{copied ? 'check' : 'content_copy'}</span>
                 {copied ? 'Copiado!' : 'Copiar'}
               </button>
-              <button type="button" onClick={handleReset} className="py-2.5 px-4 bg-gray-100 text-gray-500 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors active:scale-[0.97]" title="Nova minuta">
+              <button type="button" onClick={handleReset} className="py-2.5 px-4 bg-thead text-ink-3 rounded-lg text-sm font-semibold hover:bg-line transition-colors active:scale-[0.97]" title="Nova minuta">
                 <span className="material-symbols-outlined text-[16px]">refresh</span>
               </button>
             </div>

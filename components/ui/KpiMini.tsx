@@ -17,7 +17,7 @@ export const KpiMini: React.FC<KpiMiniProps> = ({ label, value, valueClass = 'te
   const corpo = (
     <>
       <p className="text-xs font-semibold text-ink-3">{label}</p>
-      <p className={`text-2xl font-extrabold font-heading mt-1 leading-none ${valueClass}`}>{value}</p>
+      <p className={`text-kpi tabular-nums font-extrabold font-heading mt-1 leading-none ${valueClass}`}>{value}</p>
       {hint && <p className="text-xs text-ink-3 mt-1">{hint}</p>}
     </>
   );

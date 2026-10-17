@@ -92,7 +92,7 @@ export const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: stri
         aria-expanded={aberto}
         onClick={alternar}
         aria-invalid={erro || undefined}
-        className={`w-full flex items-center justify-between gap-3 bg-gray-50 border ${erro ? 'border-wine' : 'border-gray-200'} text-gray-800 text-base font-semibold rounded-lg p-3 text-left focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy transition-all font-body shadow-inner`}
+        className={`w-full flex items-center justify-between gap-3 bg-paper border ${erro ? 'border-wine' : 'border-line'} text-navy text-base font-semibold rounded-lg p-3 text-left focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy transition-all font-body shadow-inner`}
       >
         <span className="min-w-0">
           {grupoDoValor && <span className="block text-xs font-bold text-ink-3 uppercase tracking-wider">{grupoDoValor}</span>}
@@ -117,7 +117,7 @@ export const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: stri
                 onClick={(e) => {
                   setGrupoAberto({ nome: grupo.Grupo_Finalidade_Inspecao, topo: e.currentTarget.offsetTop });
                 }}
-                className={`w-full flex items-center justify-between gap-3 px-6 py-4 text-lg font-medium text-left ${i > 0 ? 'border-t border-white/10' : ''} ${grupo.Grupo_Finalidade_Inspecao === grupoDoValor ? 'text-white' : 'text-white/90'}`}
+                className={`w-full flex items-center justify-between gap-3 px-6 py-4 text-h2 font-medium text-left ${i > 0 ? 'border-t border-white/10' : ''} ${grupo.Grupo_Finalidade_Inspecao === grupoDoValor ? 'text-white' : 'text-white/90'}`}
               >
                 <span>{grupo.Grupo_Finalidade_Inspecao}</span>
                 <ChevronRight size={20} className="flex-shrink-0 text-white/70" />
@@ -137,7 +137,7 @@ export const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: stri
                   type="button"
                   aria-expanded
                   onClick={() => setGrupoAberto(null)}
-                  className="w-full flex items-center justify-between gap-3 px-6 py-4 text-lg font-semibold text-left border-b border-white/10"
+                  className="w-full flex items-center justify-between gap-3 px-6 py-4 text-h2 font-semibold text-left border-b border-white/10"
                 >
                   <span>{grupoSelecionado.Grupo_Finalidade_Inspecao}</span>
                   <ChevronDown size={20} className="flex-shrink-0 text-white/80" />
@@ -153,7 +153,7 @@ export const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: stri
                         role="option"
                         aria-selected={ativo}
                         onClick={() => { onChange(nome); setAberto(false); setGrupoAberto(null); }}
-                        className={`w-full flex items-center justify-between gap-3 px-6 py-3.5 text-left text-lg leading-snug hover:bg-white/5 ${i > 0 ? 'border-t border-white/5' : ''} ${ativo ? 'font-bold text-white' : 'text-white/85'}`}
+                        className={`w-full flex items-center justify-between gap-3 px-6 py-3.5 text-left text-h2 leading-snug hover:bg-white/5 ${i > 0 ? 'border-t border-white/5' : ''} ${ativo ? 'font-bold text-white' : 'text-white/85'}`}
                       >
                         <span>{nome}</span>
                         {ativo && <CheckCircle2 size={18} className="flex-shrink-0 text-gold" />}
@@ -198,13 +198,13 @@ export const ExamesGuide: React.FC = () => {
   const totalExames = gruposFiltrados.reduce((n, g) => n + g.exames.length, 0);
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in">
+    <div className="flex flex-col flex-1">
 
 
       <Container size="reading" className="py-6 md:py-8 pb-10 space-y-5">
         <PageHeader title="Exames mínimos" description="Exames mínimos por finalidade de IS observando o sexo e a idade, de acordo com o Anexo O da DGPM-406." />
 
-        <div id="exames-config-card" className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col space-y-4">
+        <div id="exames-config-card" className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-line flex flex-col space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-[1fr_140px] md:gap-4 space-y-4 md:space-y-0">
             <div className="flex flex-col space-y-2">
               <span className="text-sm font-bold text-navy uppercase tracking-wider flex items-center gap-1">
@@ -217,7 +217,7 @@ export const ExamesGuide: React.FC = () => {
                     id={`gender-btn-${g.toLowerCase()}`}
                     type="button"
                     className={`py-2.5 md:py-3 text-base font-bold rounded-lg transition-all flex items-center justify-center gap-1 focus:outline-none ${
-                      genero === g ? 'bg-navy text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      genero === g ? 'bg-navy text-white shadow-md' : 'bg-thead text-ink hover:bg-line'
                     }`}
                     onClick={() => setGenero(g)}
                   >
@@ -239,7 +239,7 @@ export const ExamesGuide: React.FC = () => {
                 value={idade}
                 onChange={(e) => setIdade(e.target.value)}
                 placeholder="Idade"
-                className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-base font-semibold rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy font-body shadow-inner"
+                className="w-full bg-paper border border-line text-navy text-base font-semibold rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy font-body shadow-inner"
               />
             </div>
           </div>
@@ -252,8 +252,8 @@ export const ExamesGuide: React.FC = () => {
           </div>
         </div>
 
-        <div id="exams-card" className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-3 flex-wrap gap-2">
+        <div id="exams-card" className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-line flex flex-col space-y-4">
+          <div className="flex items-center justify-between border-b border-line pb-3 flex-wrap gap-2">
             <h3 className="font-heading font-bold text-navy text-base tracking-wider flex items-center gap-2">
               <span className="material-symbols-outlined text-navy" style={{ fontSize: '22px' }}>
                 medical_information
@@ -272,11 +272,11 @@ export const ExamesGuide: React.FC = () => {
                   <h4 className="text-xs font-bold text-ink-3 tracking-wider mb-1 px-1">
                     {grupo.nome}
                   </h4>
-                  <div className="flex flex-col divide-y divide-gray-100">
+                  <div className="flex flex-col divide-y divide-line">
                     {grupo.exames.map(ex => {
                       const obs = ex.Observacoes?.trim();
                       return (
-                        <div key={ex.Exame} className="flex items-center justify-between gap-3 py-2.5 px-1 hover:bg-gray-50 transition-all">
+                        <div key={ex.Exame} className="flex items-center justify-between gap-3 py-2.5 px-1 hover:bg-paper transition-all">
                           <div className="flex items-center gap-2.5 min-w-0">
                             <CheckCircle2 size={18} className="text-navy flex-shrink-0" />
                             <span className="text-base font-semibold text-navy font-body">{ex.Exame}</span>
@@ -295,7 +295,7 @@ export const ExamesGuide: React.FC = () => {
                                 title="Ver observações"
                                 aria-label={`Observações sobre ${ex.Exame}`}
                                 onClick={() => setObsModal({ exame: ex.Exame, texto: obs })}
-                                className="p-1.5 rounded-lg text-navy bg-gray-100 hover:bg-navy hover:text-white transition-colors"
+                                className="p-1.5 rounded-lg text-navy bg-thead hover:bg-navy hover:text-white transition-colors"
                               >
                                 <Info size={18} />
                               </button>
@@ -309,7 +309,7 @@ export const ExamesGuide: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500 font-body text-sm font-medium" id="no-exams-placeholder">
+            <div className="text-center py-8 text-ink-3 font-body text-sm font-medium" id="no-exams-placeholder">
               Nenhum exame mínimo correspondente aos filtros estabelecidos.
             </div>
           )}
@@ -318,8 +318,8 @@ export const ExamesGuide: React.FC = () => {
       
 
       {obsModal && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setObsModal(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={() => setObsModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="p-4 bg-navy text-white flex items-center justify-between gap-2">
               <div className="flex items-center space-x-2 min-w-0">
                 <Info size={20} className="text-gold flex-shrink-0" />
@@ -331,7 +331,7 @@ export const ExamesGuide: React.FC = () => {
             </div>
             <div className="p-5 space-y-4">
               <p className="text-xs font-bold text-ink-3 uppercase tracking-wider">Observações</p>
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{obsModal.texto}</p>
+              <p className="text-sm text-ink leading-relaxed whitespace-pre-line">{obsModal.texto}</p>
               <div className="flex justify-end">
                 <button type="button" onClick={() => setObsModal(null)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Fechar</button>
               </div>

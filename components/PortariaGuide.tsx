@@ -30,7 +30,7 @@ export const PortariaGuide: React.FC = () => {
   const markdown = useMemo(() => portariaMarkdown, []);
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in relative">
+    <div className="flex flex-col flex-1 relative">
       <Container size="reading" className="py-6 md:py-8 pb-10">
         <PageHeader
           title="Portaria GM-MD nº 3.551/2021"

@@ -32,6 +32,10 @@ export interface NavContextType {
   /** Perfil que o Admin está apenas visualizando; null = vendo como ele mesmo. */
   verComo: string | null;
   setVerComo: (perfil: string | null) => void;
+  /** Avisos não bloqueantes mostrados na Início (antes eram diálogos em sequência no login). */
+  avisos: { casosPendente: boolean; pwaPendente: boolean };
+  /** Abre o tutorial (celular) ou o QR code (desktop) de instalação do app. */
+  abrirInstalacaoApp: () => void;
   updateAuthUser: (patch: Partial<AuthUser>) => void;
   handleLogout: () => void;
   periciaMenorVigentes: number;

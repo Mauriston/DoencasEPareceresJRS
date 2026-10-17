@@ -30,7 +30,7 @@ interface PageHeaderProps {
 export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, actions, className = '' }) => (
   <div className={`flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6 ${className}`}>
     <div className="min-w-0">
-      <h1 className="text-2xl font-extrabold text-navy leading-tight">{title}</h1>
+      <h1 className="text-h1 font-extrabold text-navy leading-tight">{title}</h1>
       {description && <p className="text-sm text-ink-3 mt-1">{description}</p>}
     </div>
     {actions && <div className="flex flex-col-reverse sm:flex-row gap-2 shrink-0">{actions}</div>}
@@ -43,7 +43,7 @@ interface PageProps extends PageHeaderProps {
 }
 
 export const Page: React.FC<PageProps> = ({ size = 'data', title, description, actions, children }) => (
-  <div className="py-6 md:py-8 pb-10 animate-fade-in">
+  <div className="py-6 md:py-8 pb-10">
     <Container size={size}>
       <PageHeader title={title} description={description} actions={actions} />
       {children}

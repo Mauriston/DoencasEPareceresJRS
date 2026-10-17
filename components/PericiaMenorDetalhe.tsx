@@ -65,12 +65,12 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records }) => {
   const om = records[0]?.om || '';
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in">
+    <div className="flex flex-col flex-1">
       <Container size="reading" className="py-6 md:py-8 pb-10 space-y-4">
         <PageHeader title={person} description={om ? `Histórico de perícias menores · OM: ${om}` : 'Histórico de perícias menores'} />
 
 
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
+        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 space-y-3">
           <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-navy">assignment</span>
             Perícias Menores Realizadas
@@ -82,14 +82,14 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records }) => {
               { label: 'VDF', value: stats.vdfCount, color: stats.vdfCount > 0 ? 'text-gold-ink' : 'text-ink-3', filete: 'border-t-gold' },
             ].map(k => (
               <div key={k.label} className={`bg-white rounded-xl border border-line border-t-4 ${k.filete} p-2.5 text-center`}>
-                <p className={`text-xl font-bold ${k.color}`}>{k.value}</p>
+                <p className={`text-kpi tabular-nums font-bold ${k.color}`}>{k.value}</p>
                 <p className="text-xs text-ink-3 font-semibold mt-0.5">{k.label}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
+        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 space-y-3">
           <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-navy">event_busy</span>
             Dias Afastados
@@ -101,14 +101,14 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records }) => {
               { label: 'Últimos 30d', value: stats.diasAfastado30 },
             ].map(k => (
               <div key={k.label} className="bg-white rounded-xl border border-line border-t-4 border-t-wine p-2.5 text-center">
-                <p className="text-xl font-bold text-wine">{k.value}</p>
+                <p className="text-kpi tabular-nums font-bold text-wine">{k.value}</p>
                 <p className="text-xs text-ink-3 font-semibold mt-0.5">{k.label}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
+        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 space-y-3">
           <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-navy">warning</span>
             Dias em Restrições
@@ -120,7 +120,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records }) => {
               { label: 'Últimos 30d', value: stats.diasRestricao30 },
             ].map(k => (
               <div key={k.label} className="bg-white rounded-xl border border-line border-t-4 border-t-gold p-2.5 text-center">
-                <p className="text-xl font-bold text-gold-ink">{k.value}</p>
+                <p className="text-kpi tabular-nums font-bold text-gold-ink">{k.value}</p>
                 <p className="text-xs text-ink-3 font-semibold mt-0.5">{k.label}</p>
               </div>
             ))}
@@ -128,7 +128,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records }) => {
         </div>
 
         {stats.topCids.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-line shadow-sm p-4">
             <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2 mb-3">
               <span className="material-symbols-outlined text-[16px] text-green-700">diagnosis</span>
               Principais CID
@@ -137,37 +137,37 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records }) => {
               {stats.topCids.map(([cid, count]) => (
                 <div key={cid} className="flex items-center gap-2">
                   <span className="font-mono text-xs font-bold text-navy w-20 shrink-0">{cid}</span>
-                  <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                  <div className="flex-1 bg-thead rounded-full h-1.5">
                     <div className="bg-green h-1.5 rounded-full" style={{ width: `${(count / stats.topCids[0][1]) * 100}%` }} />
                   </div>
-                  <span className="text-xs text-gray-500 w-6 text-right">{count}x</span>
+                  <span className="text-xs text-ink-3 w-6 text-right">{count}x</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="bg-navy/5 px-4 py-2.5 border-b border-gray-100">
+        <div className="bg-white rounded-2xl border border-line shadow-sm overflow-hidden">
+          <div className="bg-navy/5 px-4 py-2.5 border-b border-line">
             <h3 className="text-xs font-bold text-navy tracking-wider">Histórico de Perícias</h3>
           </div>
           {sorted.map((rec, i) => (
-            <div key={i} className={`px-4 py-3 border-b border-gray-50 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/40'}`}>
+            <div key={i} className={`px-4 py-3 border-b border-line last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-paper/40'}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-bold text-gray-800">{rec.dataAtestado}</span>
+                    <span className="text-xs font-bold text-navy">{rec.dataAtestado}</span>
                     {rec.tempoHomolog && (
                       <span className="text-xs text-ink-3">{String(rec.tempoHomolog).replace(/^(\d+)$/, '$1 dias')}</span>
                     )}
                   </div>
                   <div className="mt-1.5"><PericiaStatusTags registro={rec} mostrarVdf /></div>
-                  {rec.cid && <p className="text-xs text-gray-500 mt-0.5">{rec.cid}</p>}
+                  {rec.cid && <p className="text-xs text-ink-3 mt-0.5">{rec.cid}</p>}
                   {rec.dispensas && <p className="text-xs text-ink-3 mt-0.5">{rec.dispensas}</p>}
                 </div>
                 {rec.link && (
                   <a href={rec.link} target="_blank" rel="noopener noreferrer"
-                    className="shrink-0 w-11 h-11 bg-gray-100 hover:bg-navy text-ink-3 hover:text-white rounded-full flex items-center justify-center transition-colors"
+                    className="shrink-0 w-11 h-11 bg-thead hover:bg-navy text-ink-3 hover:text-white rounded-full flex items-center justify-center transition-colors"
                     title="Abrir documento" aria-label="Abrir documento">
                     <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                   </a>

@@ -1,6 +1,5 @@
 // Ficheiro: App.tsx
 import React, { useState, useEffect, useReducer, useRef, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { useLocation, useNavigate, useNavigationType, useRoutes } from 'react-router-dom';
 import { Login } from './components/Login';
 import { Home } from './components/Home';
@@ -117,8 +116,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   const [authLoading, setAuthLoading] = useState(true);
   const [permissoesLoading, setPermissoesLoading] = useState(true);
   const [senhaAlertDismissed, setSenhaAlertDismissed] = useState(false);
-  const [casosAlertDismissed, setCasosAlertDismissed] = useState(false);
-  const [pwaAlertDismissed, setPwaAlertDismissed] = useState(false);
+  const [pwaDialogAberto, setPwaDialogAberto] = useState(false);
   // Login vindo do QR code do desktop (#h=<custom token>): o token é lido e
   // removido da barra de endereço em index.tsx; enquanto a troca por sessão
   // acontece, mantemos a tela de carregamento em vez de piscar o Login.
@@ -216,8 +214,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
         }
         setAuthUser(buildAuthUser(profile));
         setSenhaAlertDismissed(false);
-        setCasosAlertDismissed(false);
-        setPwaAlertDismissed(false);
+        setPwaDialogAberto(false);
         // (Sem navegar para a Home aqui: com URL por tela, recarregar a página ou
         // abrir um link direto precisa manter a tela — o logout já volta ao início.)
         // Auto-cura do espelho público (menu suspenso de login): garante que
@@ -361,26 +358,17 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   }
 
   const mostrarAlertaSenha = !!authUser.senhaTemporaria && currentView !== 'perfil' && !senhaAlertDismissed;
-  // Só mobile, só depois do alerta de senha (se houver), só quem tem
-  // permissão para a página e ainda não respondeu.
-  const mostrarAlertaCasos =
-    !isDesktop &&
-    !mostrarAlertaSenha &&
-    !casosAlertDismissed &&
-    casosRespondido === false &&
-    currentView !== 'casos' &&
-    canAccessPage('casos', authUser.perfil);
-  // Ícone na tela inicial: só para usuários comuns (não admin) que ainda não
-  // concluíram o tutorial nem abriram o app pelo ícone. No celular abre o
-  // passo a passo; no desktop, o QR code que leva o app (e o login) ao celular.
+  // Fila de avisos pós-login (auditoria v2, L4): só a senha temporária é diálogo. O convite
+  // aos Casos Periciais e a instalação do app viram avisos não bloqueantes na Início; o
+  // tutorial (celular) ou o QR code (desktop) só abre quando o usuário pede.
+  const casosPendente = casosRespondido === false && canAccessPage('casos', authUser.perfil);
   const pwaPendente =
-    authUser.perfil !== 'admin' &&
+    authUserReal?.perfil !== 'admin' &&
     !authUser.pwaTutorialConcluido &&
     !tutorialConcluidoLocal() &&
-    !isStandalone() &&
-    !pwaAlertDismissed;
-  const mostrarTutorialPwa = pwaPendente && isMobileDevice() && !mostrarAlertaSenha && !mostrarAlertaCasos;
-  const mostrarQrPwa = pwaPendente && !isMobileDevice() && !mostrarAlertaSenha;
+    !isStandalone();
+  const mostrarTutorialPwa = pwaDialogAberto && isMobileDevice();
+  const mostrarQrPwa = pwaDialogAberto && !isMobileDevice();
 
   return (
     <NavContext.Provider
@@ -389,6 +377,8 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
         setCurrentView,
         navigate: (to, opcoes) => navigate(to, opcoes),
         authUser,
+        avisos: { casosPendente, pwaPendente },
+        abrirInstalacaoApp: () => setPwaDialogAberto(true),
         perfilReal: authUserReal?.perfil,
         verComo: authUserReal?.perfil === 'admin' ? verComo : null,
         setVerComo,
@@ -417,15 +407,10 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
               cabeçalhos de tabela usam `sticky` dentro dele. */}
           <main id="conteudo" ref={mainRef} tabIndex={-1} className="flex-1 min-h-0 overflow-y-auto focus:outline-none">
             <div ref={sentinelaRef} className="h-px -mb-px" aria-hidden="true" />
-            <motion.div
-              key={currentView}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.15 }}
-              className="flex flex-col min-h-full w-full"
-            >
+            {/* Única transição de troca de tela (CSS, 150 ms); Page e as telas não repetem o fade. */}
+            <div key={currentView} className="flex flex-col min-h-full w-full animate-fade-in">
               {rotas}
-            </motion.div>
+            </div>
           </main>
         </div>
       </div>
@@ -452,38 +437,18 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       {mostrarTutorialPwa && (
         <InstallAppTutorial
           plataformaInicial={detectarPlataformaTutorial()}
-          onClose={() => setPwaAlertDismissed(true)}
-          onComplete={concluirTutorialPwa}
+          onClose={() => setPwaDialogAberto(false)}
+          onComplete={() => { setPwaDialogAberto(false); concluirTutorialPwa(); }}
         />
       )}
 
       {mostrarQrPwa && (
         <InstallAppQrDialog
-          onClose={() => setPwaAlertDismissed(true)}
-          onAlreadyInstalled={concluirTutorialPwa}
+          onClose={() => setPwaDialogAberto(false)}
+          onAlreadyInstalled={() => { setPwaDialogAberto(false); concluirTutorialPwa(); }}
         />
       )}
 
-      {mostrarAlertaCasos && (
-        <Dialog
-          title={`${getPrimeiroNome(authUser)},`}
-          icon="quiz"
-          onClose={() => setCasosAlertDismissed(true)}
-          footer={(
-            <>
-              <Button variant="secondary" onClick={() => setCasosAlertDismissed(true)}>Responder depois</Button>
-              <Button onClick={() => { setCasosAlertDismissed(true); setCurrentView('casos'); }}>Responder</Button>
-            </>
-          )}
-        >
-          <p className="text-ink-3 leading-relaxed mb-2">
-            Você ainda não respondeu os <strong className="text-navy">Casos Periciais</strong>. Trata-se de
-            um bloco de 24 questões comentadas de múltipla escolha sobre os pontos mais importantes na prática
-            da DGPM-406. Não deixe de fazer essa auto-avaliação!
-          </p>
-          <p className="text-ink-3 italic">CT Mauriston.</p>
-        </Dialog>
-      )}
     </NavContext.Provider>
   );
 };

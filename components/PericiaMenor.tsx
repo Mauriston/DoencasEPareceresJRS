@@ -461,7 +461,7 @@ export const PericiaMenor: React.FC = () => {
         <Container size="form" className="pb-10">
           <div className="bg-white rounded-xl border border-line p-6 md:p-8 text-center flex flex-col items-center gap-3">
             <span className="material-symbols-outlined text-[48px] text-green-700" aria-hidden="true">check_circle</span>
-            <h2 className="font-heading text-xl font-bold text-navy">Perícia menor gerada</h2>
+            <h2 className="font-heading text-h2 font-bold text-navy">Perícia menor gerada</h2>
             <p className="text-sm text-ink-2 max-w-sm">O PDF foi salvo no Google Drive e a planilha foi atualizada.</p>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2">
               <a href={successPdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover">
@@ -496,7 +496,7 @@ export const PericiaMenor: React.FC = () => {
         <div className="md:grid md:grid-cols-2 md:gap-5 md:items-start space-y-5 md:space-y-0">
           <section className={card} aria-labelledby="pm-militar">
             <h2 id="pm-militar" className="font-heading font-bold text-navy text-base">Dados do militar</h2>
-            <div className="relative z-[100]">
+            <div className="relative z-30">
               <Field label="Serviço" required error={erros.servico}>
                 {a => (
                   <input {...a} type="text" role="combobox" aria-expanded={showServicoDropdown} aria-autocomplete="list" autoComplete="off" value={selectedServico ? selectedServico.servico_label : servicoQuery}
@@ -504,7 +504,7 @@ export const PericiaMenor: React.FC = () => {
                 )}
               </Field>
               {showServicoDropdown && filteredServicos.length > 0 && (
-                <ul role="listbox" className="absolute z-[110] w-full mt-1 bg-white border border-line rounded-lg shadow-lg max-h-56 overflow-y-auto divide-y divide-line">
+                <ul role="listbox" className="absolute z-dropdown w-full mt-1 bg-white border border-line rounded-lg shadow-lg max-h-56 overflow-y-auto divide-y divide-line">
                   {filteredServicos.map((s, idx) => (
                     <li key={idx} role="option" aria-selected={false}>
                       <button type="button" onClick={() => { setSelectedServico(s); setShowServicoDropdown(false); setServicoQuery(''); }} className="w-full text-left px-4 py-2 min-h-[44px] hover:bg-thead">
@@ -573,7 +573,7 @@ export const PericiaMenor: React.FC = () => {
                   {a => <input {...a} type="text" inputMode="numeric" value={tempoAtestado} onChange={e => { handleTempoInput(e.target.value, setTempoAtestado); limparErro('tempoAtestado'); }} onBlur={() => formatTempoBlur(tempoAtestado, setTempoAtestado)} onFocus={() => formatTempoFocus(tempoAtestado, setTempoAtestado)} placeholder="Ex.: 5 dias" />}
                 </Field>
               </div>
-              <div className="relative z-[90]">
+              <div className="relative z-20">
                 <Field label="CID" required error={erros.cid}>
                   {a => <input {...a} type="text" role="combobox" aria-expanded={showCidDropdown} aria-autocomplete="list" autoComplete="off" value={selectedCid ? selectedCid.DESCRABREV : cidQuery} onChange={e => { handleCidSearch(e.target.value); limparErro('cid'); }} placeholder="Busque por código ou doença…" />}
                 </Field>
@@ -596,7 +596,7 @@ export const PericiaMenor: React.FC = () => {
               <Field label="Tempo homologado" required error={erros.tempoHomolog} help="Máximo de 20 dias.">
                 {a => <input {...a} type="text" inputMode="numeric" value={tempoHomologacao} onChange={e => { handleTempoInput(e.target.value, setTempoHomologacao, 20); limparErro('tempoHomolog'); }} onBlur={() => formatTempoBlur(tempoHomologacao, setTempoHomologacao)} onFocus={() => formatTempoFocus(tempoHomologacao, setTempoHomologacao)} placeholder="Ex.: 5 dias" className={`${a.className} sm:w-1/2`} />}
               </Field>
-              <div className="relative z-[80]">
+              <div className="relative z-10">
                 <Field label="Dispensas" required error={erros.dispensas}>
                   {a => (
                     <button id={a.id} type="button" aria-haspopup="listbox" aria-expanded={showDispensasDropdown} aria-invalid={a['aria-invalid']} aria-describedby={a['aria-describedby']} onClick={() => setShowDispensasDropdown(!showDispensasDropdown)} className={`${a.className} flex justify-between items-center text-left`}>
@@ -678,7 +678,7 @@ export const PericiaMenor: React.FC = () => {
 
       {/* Recorte do atestado */}
       {showCropModal && (
-        <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col animate-fade-in" role="dialog" aria-modal="true" aria-label="Recortar atestado">
+        <div className="fixed inset-0 z-dialog bg-black/90 flex flex-col animate-fade-in" role="dialog" aria-modal="true" aria-label="Recortar atestado">
           <div className="p-4 bg-black flex justify-between items-center text-white shrink-0 border-b border-white/20"><h2 className="font-bold flex items-center gap-2 text-sm"><CropIcon size={20} className="text-gold" aria-hidden="true" /> Recortar atestado</h2><button type="button" aria-label="Fechar" onClick={() => { setShowCropModal(false); setImgSrc(''); }} className="w-11 h-11 flex items-center justify-center text-white/80 hover:text-white"><X size={24} /></button></div>
           <div className="flex-1 overflow-auto flex items-center justify-center p-4">{imgSrc && (<ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)}><img ref={imgRef} src={imgSrc} alt="Atestado a recortar" style={{ maxHeight: '70vh', objectFit: 'contain' }} /></ReactCrop>)}</div>
           <div className="p-4 bg-black shrink-0 pb-10"><p className="text-white/70 text-sm text-center mb-4">Arraste os cantos para selecionar nome, datas e o CID.</p><Button fullWidth icon="check" onClick={handleCropComplete}>Confirmar recorte</Button></div>
