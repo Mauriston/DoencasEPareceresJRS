@@ -2,10 +2,11 @@
 // Busca global da topbar: páginas que o perfil pode acessar (a mesma matriz de
 // permissões do menu) e doenças/diagnósticos de Doenças de Lei. Combobox
 // acessível: setas, Enter e Esc; atalho "/" ou Ctrl+K foca o campo.
-import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { NavContext } from '../../context/NavContext';
 import { getNavCategories } from '../../config/navigation';
+import { canAccessPage } from '../../config/permissions';
 import { doencaPath, pathForView } from '../../config/routes';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { DISEASES } from '../../constants';
@@ -31,28 +32,31 @@ export const GlobalSearch: React.FC<{ className?: string }> = ({ className = '' 
   const inputRef = useRef<HTMLInputElement>(null);
   const raizRef = useRef<HTMLDivElement>(null);
 
-  const indice = useMemo<Resultado[]>(() => {
+  // Sem useMemo de propósito: a matriz de permissões (canAccessPage) é lida de um cache que o
+  // Firestore atualiza depois do 1º render; memoizar congelava o índice com permissões antigas.
+  const montarIndice = (): Resultado[] => {
     const paginas = getNavCategories(nav?.authUser?.perfil, nav?.periciaMenorVigentes || 0, isDesktop)
       .flatMap(cat => cat.subitems.map(s => ({
         id: `p-${s.id}`, rotulo: s.label, contexto: cat.label === s.label ? 'Página' : cat.label, icone: s.icon, to: pathForView(s.id),
       })));
-    // Doenças de Lei não tem permissão própria (acesso liberado a todos os perfis).
-    const doencas = DISEASES.flatMap(d => [
+    // Doenças de Lei só entram na busca para quem pode acessar a página (mesma matriz de permissões do menu).
+    const perfil = nav?.authUser?.perfil;
+    const doencas = !canAccessPage('guide', perfil) ? [] : DISEASES.flatMap(d => [
       { id: `d-${d.id}`, rotulo: d.name, contexto: 'Doenças de Lei', icone: 'medical_information', to: doencaPath(d.id) },
       ...(d.diagnoses.length > 1 ? d.diagnoses.map((g, i) => ({
         id: `g-${d.id}-${i}`, rotulo: g.name, contexto: `em ${d.name}`, icone: 'diagnosis', to: doencaPath(d.id, i),
       })) : []),
     ]);
     return [...paginas, ...doencas];
-  }, [nav?.authUser?.perfil, nav?.periciaMenorVigentes, isDesktop]);
+  };
 
-  const resultados = useMemo(() => {
+  const resultados = (() => {
     const termos = normalizar(consulta).split(/\s+/).filter(Boolean);
     if (termos.length === 0) return [];
-    return indice
+    return montarIndice()
       .filter(r => { const alvo = normalizar(`${r.rotulo} ${r.contexto}`); return termos.every(t => alvo.includes(t)); })
       .slice(0, 10);
-  }, [consulta, indice]);
+  })();
 
   useEffect(() => { setAtivo(0); }, [consulta]);
 
