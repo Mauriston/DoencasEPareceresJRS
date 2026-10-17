@@ -16,12 +16,14 @@ import { QuesitosEditor } from './QuesitosEditor';
 import { useNav } from '../../context/NavContext';
 import { observarMilitares, type MilitarRecord } from '../../services/firestoreMilitares';
 import { observarQuesitos, type QuesitosEspecialidade } from '../../services/firestoreQuesitos';
-import { novoIdParecer, registrarParecer } from '../../services/firestorePareceres';
+import { novoIdParecer, registrarParecer, type ParecerRecord } from '../../services/firestorePareceres';
 import { gerarPdfPedidoParecer, enviarPdfParecer } from '../../services/firebaseStoragePareceres';
 import { normalizarBusca } from '../../utils/corposQuadros';
 import { formatNip } from '../../utils/format';
 
 interface Props {
+  /** Pedido a duplicar: militar, especialidade, finalidade, histórico e quesitos vêm preenchidos. */
+  inicial?: ParecerRecord | null;
   onClose: () => void;
   onGerado: (nome: string, pdfUrl: string) => void;
 }
@@ -33,7 +35,7 @@ const GRUPOS_EXTRAS: GrupoFinalidadeExtra[] = [
   { nome: 'Verificações e Términos', finalidades: ['Verificação de Deficiências Funcionais', 'Término de Incapacidade', 'Término de Restrições'] },
 ];
 
-export const NovoParecerForm: React.FC<Props> = ({ onClose, onGerado }) => {
+export const NovoParecerForm: React.FC<Props> = ({ inicial, onClose, onGerado }) => {
   const nav = useNav();
   const usuario = nav?.authUser;
 
@@ -42,12 +44,12 @@ export const NovoParecerForm: React.FC<Props> = ({ onClose, onGerado }) => {
   const [militar, setMilitar] = useState<MilitarRecord | null>(null);
   const [militarTexto, setMilitarTexto] = useState('');
   const [especialidadeId, setEspecialidadeId] = useState('');
-  const [finalidade, setFinalidade] = useState('');
-  const [historico, setHistorico] = useState('');
-  const [quesitos, setQuesitos] = useState<string[]>([]);
+  const [finalidade, setFinalidade] = useState(inicial?.finalidade ?? '');
+  const [historico, setHistorico] = useState(inicial?.historico ?? '');
+  const [quesitos, setQuesitos] = useState<string[]>(inicial?.quesitos ?? []);
   const [editandoQuesitos, setEditandoQuesitos] = useState(false);
   const [cadastrando, setCadastrando] = useState(false);
-  const [recemCadastradoId, setRecemCadastradoId] = useState('');
+  const [recemCadastradoId, setRecemCadastradoId] = useState(inicial?.militarId ?? '');
   const [erros, setErros] = useState<Erros>({});
   const [gerando, setGerando] = useState(false);
 
@@ -67,6 +69,13 @@ export const NovoParecerForm: React.FC<Props> = ({ onClose, onGerado }) => {
     chave: m.id, principal: m.nome, secundaria: `${m.pgq} · ${formatNip(m.nip)} · ${m.om}`,
     busca: normalizarBusca(`${m.inspecionado} ${m.om} ${m.id}`), // m.id = NIP só com dígitos: dá para buscar sem os pontos
   })), [militares]);
+
+  // Duplicar: seleciona a especialidade do pedido original quando os modelos chegam (os quesitos já vêm do original).
+  useEffect(() => {
+    if (!inicial || especialidadeId) return;
+    const m = modelos.find(x => x.especialidade === inicial.especialidade);
+    if (m) setEspecialidadeId(m.id);
+  }, [inicial, modelos, especialidadeId]);
 
   const modelo = modelos.find(m => m.id === especialidadeId);
 

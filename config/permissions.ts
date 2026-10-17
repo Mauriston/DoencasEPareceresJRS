@@ -26,8 +26,8 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'guide', label: 'Doenças de Lei', icon: 'medical_information', subtitle: 'Critérios clínicos e documentos por doença prevista em lei.' },
   { id: 'portaria', label: 'Portaria', icon: 'article', subtitle: 'Leia a Portaria GM-MD nº 3.551/2021 na íntegra.' },
   { id: 'concursosJRS', label: 'Concursos', icon: 'fact_check', subtitle: 'Acompanhe as planilhas de controle dos candidatos em concurso.' },
-  { id: 'concursos', label: 'Índices Mínimos', icon: 'emoji_events', subtitle: 'Consulte os índices mínimos exigidos por concurso.' },
-  { id: 'exames', label: 'Exames Mínimos', icon: 'science', subtitle: 'Veja os exames mínimos exigidos por finalidade de IS.' },
+  { id: 'concursos', label: 'Índices mínimos', icon: 'emoji_events', subtitle: 'Consulte os índices mínimos exigidos por concurso.' },
+  { id: 'exames', label: 'Exames mínimos', icon: 'science', subtitle: 'Veja os exames mínimos exigidos por finalidade de IS.' },
   { id: 'pareceres', label: 'Pareceres', icon: 'assignment', subtitle: 'Acompanhe e gere pedidos de parecer médico em PDF por especialidade.' },
   // "Perícia Menor" não tem permissão de página própria: é controlada pelas
   // duas sub-permissões (features) "pericia-menor.novo"/"pericia-menor.historico"
@@ -38,7 +38,7 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'mensagens', label: 'Mensagens', icon: 'chat', subtitle: 'Faça minutas das MSG de IS auxiliado por IA.' },
   { id: 'dgpm406', label: 'DGPM-406', icon: 'anchor', subtitle: 'Consulte capítulos e anexos da DGPM-406.' },
   { id: 'laws', label: 'Legislação', icon: 'balance', subtitle: 'Pesquise as leis que fundamentam as IS.' },
-  { id: 'templates', label: 'Templates', icon: 'edit_document', subtitle: 'Baixe modelos e templates para laudos e documentos.' },
+  { id: 'templates', label: 'Modelos', icon: 'edit_document', subtitle: 'Baixe modelos e templates para laudos e documentos.' },
   { id: 'casos', label: 'Casos Periciais', icon: 'quiz', subtitle: 'Teste seus conhecimentos em casos comentados.' },
   { id: 'videos', label: 'Vídeos', icon: 'smart_display', subtitle: 'Assista vídeos sobre os processos das IS.' },
   { id: 'infograficos', label: 'Infográficos', icon: 'image', subtitle: 'Resumos ilustrados para consultas rápidas.' },

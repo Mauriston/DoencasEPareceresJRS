@@ -82,7 +82,7 @@ export const TemplatesGuide: React.FC = () => {
     <div className="flex flex-col flex-1 relative">
 
       <Container size="reading" className="py-6 md:py-8 pb-10 ">
-        <PageHeader title="Templates" description="Modelos para laudos e documentos." />
+        <PageHeader title="Modelos de documentos" description="Modelos para laudos e documentos." />
 
         {isLoading && templates === DEFAULT_TEMPLATES ? (
           <div className="flex flex-col items-center justify-center py-10 text-ink-3">

@@ -39,14 +39,14 @@ export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, 
             : 'left-0 right-0 bottom-0 rounded-t-2xl max-h-[92dvh] animate-sheet-up'
         }`}
       >
-        {!isDesktop && <div className="pt-2.5 pb-1 flex justify-center shrink-0 bg-navy" aria-hidden="true"><span className="w-10 h-1 rounded-full bg-white/40" /></div>}
-        <div className="px-4 py-3 bg-navy text-white flex items-center justify-between gap-2 shrink-0">
+        {!isDesktop && <div className="pt-2.5 pb-1 flex justify-center shrink-0 bg-white" aria-hidden="true"><span className="w-10 h-1 rounded-full bg-line" /></div>}
+        <div className="px-5 py-3 bg-white border-b border-line flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            {icon && <span className="material-symbols-outlined text-[20px] text-gold shrink-0" aria-hidden="true">{icon}</span>}
-            <h2 id={titleId} className="font-heading font-bold text-sm text-white truncate">{title}</h2>
+            {icon && <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">{icon}</span>}
+            <h2 id={titleId} className="font-heading font-extrabold text-h2 text-navy truncate">{title}</h2>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0 w-11 h-11 -mr-2 flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors">
-            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0 w-11 h-11 -mr-2 flex items-center justify-center rounded-lg text-ink-3 hover:text-navy hover:bg-thead transition-colors">
+            <span className="material-symbols-outlined text-[24px]" aria-hidden="true">close</span>
           </button>
         </div>
         <div className="p-5 overflow-y-auto flex-1 text-sm text-ink">{children}</div>

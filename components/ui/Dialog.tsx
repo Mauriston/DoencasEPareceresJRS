@@ -46,7 +46,7 @@ export const Dialog: React.FC<DialogProps> = ({ title, icon, onClose, travado = 
         <div className="px-4 py-3 bg-navy text-white flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             {icon && <span className="material-symbols-outlined text-[20px] text-gold shrink-0" aria-hidden="true">{icon}</span>}
-            <h2 id={titleId} className="font-heading font-bold text-sm text-white truncate">{title}</h2>
+            <h2 id={titleId} className="font-heading font-bold text-base text-white truncate">{title}</h2>
           </div>
           {!travado && (
             <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0 w-11 h-11 -mr-2 flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors">
