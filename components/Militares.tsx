@@ -149,14 +149,6 @@ export const Militares: React.FC = () => {
             />
             <Button variant={soHnre ? 'primary' : 'secondary'} icon="local_hospital" aria-pressed={soHnre} onClick={() => setSoHnre(v => !v)}>Somente HNRe</Button>
           </div>
-          <div className="flex items-center gap-2">
-            <select aria-label="Ordenar por" value={ordem.col} onChange={e => setOrdem(o => ({ ...o, col: e.target.value as ColunaOrdem }))} className={`${controlClass} w-auto`}>
-              <option value="nome">Ordenar: Nome</option>
-              <option value="pgq">Ordenar: P/G/Q</option>
-              <option value="om">Ordenar: OM</option>
-            </select>
-            <Button variant="secondary" icon={ordem.dir === 'asc' ? 'arrow_upward' : 'arrow_downward'} aria-label={ordem.dir === 'asc' ? 'Ordem crescente' : 'Ordem decrescente'} onClick={() => setOrdem(o => ({ ...o, dir: o.dir === 'asc' ? 'desc' : 'asc' }))} />
-          </div>
         </div>
 
         {selecionavel && escolhidos.length > 0 && (
