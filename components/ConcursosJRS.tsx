@@ -32,6 +32,8 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 import { useStoragePdf } from '../hooks/useStoragePdf';
 import { Button } from './ui/Button';
 import { Segmented } from './ui/Segmented';
+import { Dialog } from './ui/Dialog';
+import { listarEventos, type EventoIS } from '../services/auditoriaIS';
 import { EmptyState } from './ui/EmptyState';
 import { AccessDenied } from './ui/AccessDenied';
 import { controlClass } from './ui/Field';
@@ -2062,6 +2064,52 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
 // DETALHE DO CONCURSO (tabela de candidatos)
 // =========================================================================
 
+// =========================================================================
+// REGISTRO DE EVENTOS (log de auditoria da IS) — exclusivo do Admin
+// =========================================================================
+
+const formatarDataHora = (d: Date | null) =>
+  d ? d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+
+const ModalRegistroEventos: React.FC<{ concursoId: string; candidato: { id: string; nome: string }; onClose: () => void }> = ({ concursoId, candidato, onClose }) => {
+  const [eventos, setEventos] = useState<EventoIS[] | null>(null);
+  const [erro, setErro] = useState('');
+
+  useEffect(() => {
+    let ativo = true;
+    listarEventos(concursoId, candidato.id)
+      .then(l => { if (ativo) setEventos(l); })
+      .catch(() => { if (ativo) setErro('Não foi possível carregar o registro de eventos.'); });
+    return () => { ativo = false; };
+  }, [concursoId, candidato.id]);
+
+  return (
+    <Dialog title={`Registro de Eventos — ${candidato.nome}`} icon="history" size="lg" onClose={onClose} footer={<Button variant="secondary" onClick={onClose}>Fechar</Button>}>
+      <p className="text-xs text-ink-3 mb-3">Matrícula {candidato.id}. Cada ação da IS é registrada com a data, a hora e o usuário.</p>
+      {erro ? (
+        <p role="alert" className="text-sm font-semibold text-wine">{erro}</p>
+      ) : eventos === null ? (
+        <p className="py-6 text-center text-ink-3" role="status">Carregando…</p>
+      ) : eventos.length === 0 ? (
+        <EmptyState icon="history" title="Nenhum evento registrado" description="As ações feitas a partir de agora nesta IS aparecerão aqui." />
+      ) : (
+        <ul className="divide-y divide-line border border-line rounded-lg">
+          {eventos.map(ev => (
+            <li key={ev.id} className="px-3 py-2.5">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                <span className="text-sm font-bold text-navy">{ev.acao}</span>
+                <span className="text-xs text-ink-3 whitespace-nowrap">{formatarDataHora(ev.em)}</span>
+              </div>
+              {ev.detalhe && <p className="text-sm text-ink-2 break-words mt-0.5">{ev.detalhe}</p>}
+              <p className="text-xs text-ink-3 mt-0.5">por {ev.usuario || ev.nome || '—'}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Dialog>
+  );
+};
+
 interface ConcursoDetalheProps {
   concursoId: string;
   onVoltar: () => void;
@@ -2266,6 +2314,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   const [solicitacaoModal, setSolicitacaoModal] = useState<{ tipo: 'parecer' | 'exames'; candidato: CandidatoRecord } | null>(null);
   const [gerandoSolicitacaoIds, setGerandoSolicitacaoIds] = useState<Set<string>>(new Set());
   const [menuAcoes, setMenuAcoes] = useState<{ id: string; top: number; right: number } | null>(null);
+  const [eventosAlvo, setEventosAlvo] = useState<{ id: string; nome: string } | null>(null);
   const statusPermiteSolicitacao = (c: CandidatoRecord) =>
     !c.finalizado && STATUS_PERMITEM_SOLICITACAO.includes(String(c.status || '').trim().toUpperCase());
 
@@ -2839,7 +2888,12 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               )}
               {mostrarAdmin && (
                 <>
-                  {(podeSolicitarBase || docsVer.length > 0) && (c.finalizado || temDocumentoGerado(c)) && <div className="my-1 border-t border-gray-300" />}
+                  {(podeSolicitarBase || docsVer.length > 0) && <div className="my-1 border-t border-gray-300" />}
+                  <button type="button" role="menuitem" onClick={() => { setMenuAcoes(null); setEventosAlvo({ id: c.id, nome: c.nome }); }} className={classeItem}>
+                    <span className="material-symbols-outlined text-[20px]">history</span>
+                    <span>Registro de Eventos</span>
+                  </button>
+                  {(c.finalizado || temDocumentoGerado(c)) && <div className="my-1 border-t border-gray-300" />}
                   {c.finalizado && (
                     <button type="button" role="menuitem" onClick={() => handleEditarIS(c)} className={classeItem}>
                       <span className="material-symbols-outlined text-[20px]">edit</span>
@@ -2858,6 +2912,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
           </>
         );
       })()}
+
+      {eventosAlvo && ehAdmin && (
+        <ModalRegistroEventos concursoId={concursoId} candidato={eventosAlvo} onClose={() => setEventosAlvo(null)} />
+      )}
 
       {solicitacaoModal?.tipo === 'parecer' && (
         <SolicitarParecerModal candidatoNome={solicitacaoModal.candidato.nome} onClose={() => setSolicitacaoModal(null)} onGerar={d => gerarSolicitacao('parecer', solicitacaoModal.candidato, d)} />
@@ -3443,6 +3501,12 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                         <span className="min-w-0 truncate">{tipo === 'parecer' ? 'Ver Parecer' : 'Ver Exames'} · {d.rotulo}</span>
                       </button>
                     ))}
+                    {ehAdmin && (
+                      <button type="button" onClick={() => { setCandidatoModalMobile(null); setEventosAlvo({ id: c.id, nome: c.nome }); }} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-navy border border-gray-200">
+                        <span className="material-symbols-outlined text-[20px]">history</span>
+                        <span>Registro de Eventos</span>
+                      </button>
+                    )}
                     {ehAdmin && c.finalizado && (
                       <button type="button" onClick={() => handleEditarIS(c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-navy border border-gray-200">
                         <span className="material-symbols-outlined text-[20px]">edit</span>
