@@ -2954,7 +2954,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
           {/* Chip filters: só no desktop (tabela) — na lista mobile ficam só
               a busca por nome e o filtro de data. */}
-          <div className="hidden md:flex flex-wrap items-center gap-2 md:flex-1">
+          <div className="flex items-center gap-2 overflow-x-auto md:overflow-visible md:flex-wrap md:flex-1">
             {chipFilters.map(chip => {
               const isActive = statusKpiFilter === chip.filterValue;
               return (
