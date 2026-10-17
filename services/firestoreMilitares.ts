@@ -3,7 +3,7 @@
 // migrada da aba "Militares" da planilha). Id do documento = NIP só com
 // dígitos. Leitura: qualquer usuário autenticado; escrita: só Admin (ver
 // firestore.rules).
-import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { app } from './firebaseAuth';
 
 const db = getFirestore(app);
@@ -20,6 +20,20 @@ export interface MilitarDoc {
   inspecionado: string;
   email: string;
   ativo: boolean;
+  /** Só HNRe: setor onde serve, "Nome (HNRe-00.0)". */
+  servico_label?: string;
+  /** Só oficiais médicos do HNRe: */
+  nomeGuerra?: string;
+  especialidade?: string;
+  emailPessoal?: string;
+  celular?: string;
+  /** AAAA-MM-DD */
+  dataNascimento?: string;
+  cpf?: string;
+  identidadeMilitar?: string;
+  crm?: string;
+  rqe?: string;
+  fotoUrl?: string;
 }
 export type MilitarRecord = MilitarDoc & { id: string };
 
@@ -48,3 +62,13 @@ export const apagarMilitar = (id: string) => deleteDoc(doc(db, COL, id));
 
 export const atualizarMilitar = (id: string, patch: Partial<MilitarDoc>) =>
   updateDoc(doc(db, COL, id), { ...patch, atualizadoEm: serverTimestamp() } as Record<string, unknown>);
+
+/** Atualiza vários cadastros de uma vez (ex.: promoção em lote). Lotes de até 400 gravações. */
+export const atualizarMilitaresEmLote = async (itens: { id: string; patch: Partial<MilitarDoc> }[]): Promise<void> => {
+  for (let i = 0; i < itens.length; i += 400) {
+    const lote = writeBatch(db);
+    itens.slice(i, i + 400).forEach(({ id, patch }) =>
+      lote.update(doc(db, COL, id), { ...patch, atualizadoEm: serverTimestamp() } as Record<string, unknown>));
+    await lote.commit();
+  }
+};

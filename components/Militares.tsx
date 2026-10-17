@@ -13,9 +13,13 @@ import { StatusTag } from './ui/StatusTag';
 import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
 import { Autocomplete, type OpcaoAutocomplete } from './ui/Autocomplete';
+import { MenuAcoes } from './ui/MenuAcoes';
 import { MilitarCadastroForm } from './militares/MilitarCadastroForm';
-import { observarMilitares, atualizarMilitar, apagarMilitar, type MilitarRecord } from '../services/firestoreMilitares';
-import { carregarOms, carregarCorposQuadros, normalizarBusca, montarInspecionado, type OrganizacaoMilitar, type CorposQuadros } from '../utils/corposQuadros';
+import { MilitarDetalhe } from './militares/MilitarDetalhe';
+import { InformacoesAdicionais, adicionaisDoMilitar, adicionaisParaPatch, validarAdicionais, type Adicionais } from './militares/InformacoesAdicionais';
+import { enviarFotoMilitar } from '../services/militarFoto';
+import { observarMilitares, atualizarMilitar, atualizarMilitaresEmLote, apagarMilitar, type MilitarRecord } from '../services/firestoreMilitares';
+import { carregarOms, carregarCorposQuadros, normalizarBusca, montarInspecionado, separarPosto, ehOficialMedico, omEhHnre, type OrganizacaoMilitar, type CorposQuadros, type PostoInfo } from '../utils/corposQuadros';
 import { formatNip } from '../utils/format';
 
 type Filtro = 'todos' | 'ativos' | 'inativos';
@@ -23,14 +27,8 @@ type ColunaOrdem = 'nome' | 'pgq' | 'om';
 
 /** Posição hierárquica do posto/graduação dentro do P/G/Q (ex.: "CT (Md)" → CT; "CB-RM2-EF" → CB). Desconhecidos vão para o fim. */
 const posicaoHierarquica = (pgq: string, postos: CorposQuadros['postos'] | undefined): number => {
-  if (!postos) return 999;
-  const texto = pgq.trim().toUpperCase();
-  let melhor = '';
-  for (const sigla of Object.keys(postos)) {
-    const u = sigla.toUpperCase();
-    if ((texto === u || /^[\s(-]/.test(texto.slice(u.length))) && texto.startsWith(u) && u.length > melhor.length) melhor = sigla;
-  }
-  return melhor ? postos[melhor].ordem : 999;
+  const sep = postos ? separarPosto(pgq, postos) : null;
+  return sep && postos ? postos[sep.posto].ordem : 999;
 };
 const PAGINA = 100;
 
@@ -42,11 +40,14 @@ export const Militares: React.FC = () => {
   const [limite, setLimite] = useState(PAGINA);
   const [novo, setNovo] = useState(false);
   const [editando, setEditando] = useState<MilitarRecord | null>(null);
+  const [detalhe, setDetalhe] = useState<MilitarRecord | null>(null);
   const [apagando, setApagando] = useState<MilitarRecord | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
   const [oms, setOms] = useState<OrganizacaoMilitar[]>([]);
   const [postos, setPostos] = useState<CorposQuadros['postos']>();
   const [soHnre, setSoHnre] = useState(false);
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [lote, setLote] = useState(false);
   const [ordem, setOrdem] = useState<{ col: ColunaOrdem; dir: 'asc' | 'desc' }>({ col: 'nome', dir: 'asc' });
 
   const avisar = (msg: string, tone: 'success' | 'error' = 'success') => { setToast({ msg, tone }); window.setTimeout(() => setToast(null), 4000); };
@@ -55,6 +56,8 @@ export const Militares: React.FC = () => {
   useEffect(() => { carregarOms().then(setOms).catch(() => { /* sem lista, a edição mantém a OM atual */ }); }, []);
   useEffect(() => { carregarCorposQuadros().then(d => setPostos(d.postos)).catch(() => { /* sem hierarquia, P/G/Q fica no fim */ }); }, []);
   useEffect(() => { setLimite(PAGINA); }, [filtro, busca, soHnre, ordem]);
+  // A seleção vale só para o que está listado: mudou o filtro/busca, recomeça.
+  useEffect(() => { setSelecionados(new Set()); }, [filtro, busca, soHnre]);
 
   const ordenarPor = (col: ColunaOrdem) => setOrdem(o => (o.col === col ? { col, dir: o.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'asc' }));
 
@@ -101,7 +104,17 @@ export const Militares: React.FC = () => {
     }
   };
 
+  const itensDe = (m: MilitarRecord) => [
+    { rotulo: 'Detalhes', icone: 'badge', onClick: () => setDetalhe(m) },
+    { rotulo: 'Editar', icone: 'edit', onClick: () => setEditando(m) },
+    { rotulo: 'Apagar', icone: 'delete', perigo: true, onClick: () => setApagando(m) },
+  ];
+
   const visiveis = filtrada.slice(0, limite);
+  const escolhidos = useMemo(() => filtrada.filter(m => selecionados.has(m.id)), [filtrada, selecionados]);
+  const todosMarcados = filtrada.length > 0 && escolhidos.length === filtrada.length;
+  const alternarSelecao = (id: string) => setSelecionados(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const alternarTodos = () => setSelecionados(todosMarcados ? new Set() : new Set(filtrada.map(m => m.id)));
   const iconeOrdem = (c: ColunaOrdem) => (ordem.col === c ? (ordem.dir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more');
   const ariaSort = (c: ColunaOrdem) => (ordem.col === c ? (ordem.dir === 'asc' ? 'ascending' as const : 'descending' as const) : 'none' as const);
 
@@ -134,7 +147,7 @@ export const Militares: React.FC = () => {
             />
             <Button variant={soHnre ? 'primary' : 'secondary'} icon="local_hospital" aria-pressed={soHnre} onClick={() => setSoHnre(v => !v)}>Somente HNRe</Button>
           </div>
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="flex items-center gap-2">
             <select aria-label="Ordenar por" value={ordem.col} onChange={e => setOrdem(o => ({ ...o, col: e.target.value as ColunaOrdem }))} className={`${controlClass} w-auto`}>
               <option value="nome">Ordenar: Nome</option>
               <option value="pgq">Ordenar: P/G/Q</option>
@@ -143,6 +156,16 @@ export const Militares: React.FC = () => {
             <Button variant="secondary" icon={ordem.dir === 'asc' ? 'arrow_upward' : 'arrow_downward'} aria-label={ordem.dir === 'asc' ? 'Ordem crescente' : 'Ordem decrescente'} onClick={() => setOrdem(o => ({ ...o, dir: o.dir === 'asc' ? 'desc' : 'asc' }))} />
           </div>
         </div>
+
+        {escolhidos.length > 0 && (
+          <div role="region" aria-label="Ações em lote" className="sticky top-2 z-10 bg-navy text-white rounded-xl px-4 py-2 flex flex-wrap items-center justify-between gap-2 shadow-lg">
+            <span className="text-sm font-bold" role="status">{escolhidos.length} selecionado{escolhidos.length !== 1 ? 's' : ''}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="secondary" icon="military_tech" onClick={() => setLote(true)}>Alterar posto (promoção)</Button>
+              <Button variant="ghost" icon="close" className="!text-white hover:!bg-white/10" onClick={() => setSelecionados(new Set())}>Limpar</Button>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-xl border border-line overflow-clip">
           {erroCarga ? (
@@ -154,21 +177,23 @@ export const Militares: React.FC = () => {
           ) : (
             <>
               {/* Mobile: duas linhas por militar */}
+              <label className="md:hidden flex items-center gap-2 px-4 py-1 border-b border-line text-xs font-semibold text-ink-3 min-h-[44px]">
+                <input type="checkbox" checked={todosMarcados} onChange={alternarTodos} className="w-5 h-5 accent-navy" />
+                Selecionar todos ({filtrada.length})
+              </label>
               <ul className="md:hidden divide-y divide-line">
                 {visiveis.map(m => (
-                  <li key={m.id} className="px-4 py-3">
+                  <li key={m.id} className={`px-4 py-3 ${selecionados.has(m.id) ? 'bg-thead' : ''}`}>
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
+                      <label className="shrink-0 -ml-2 w-11 h-11 flex items-center justify-center"><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy" /></label>
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-navy break-words">{m.nome}</p>
-                        <p className="text-xs text-ink-3">{m.pgq} · {formatNip(m.nip)} · {m.om}</p>
+                        <p className="text-xs text-ink-3">{m.pgq} · {formatNip(m.nip)}</p>
                       </div>
                       <button type="button" onClick={() => alternarAtivo(m)} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="shrink-0 min-h-[44px] flex items-center">
                         <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
                       </button>
-                    </div>
-                    <div className="mt-1 flex items-center gap-1">
-                      <Button variant="ghost" icon="edit" onClick={() => setEditando(m)}>Editar</Button>
-                      <Button variant="ghost" icon="delete" className="!text-wine" onClick={() => setApagando(m)}>Apagar</Button>
+                      <div className="shrink-0 -mr-2"><MenuAcoes rotulo={`Ações para ${m.nome}`} itens={itensDe(m)} /></div>
                     </div>
                   </li>
                 ))}
@@ -177,40 +202,33 @@ export const Militares: React.FC = () => {
                 <table className="w-full text-sm">
                   <thead className="bg-thead text-ink-3 text-xs border-b border-line">
                     <tr>
-                                            <th scope="col" aria-sort={ariaSort('nome')} className="px-4 py-3 text-left font-semibold">
+                      <th scope="col" className="pl-4 pr-0 py-3 w-10">
+                        <input type="checkbox" checked={todosMarcados} onChange={alternarTodos} aria-label={`Selecionar todos os ${filtrada.length} militares da lista`} title="Selecionar todos da lista" className="w-5 h-5 accent-navy align-middle" />
+                      </th>
+                      <th scope="col" aria-sort={ariaSort('nome')} className="px-4 py-3 text-left font-semibold">
                         <button type="button" onClick={() => ordenarPor('nome')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">Nome<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('nome')}</span></button>
                       </th>
                                             <th scope="col" aria-sort={ariaSort('pgq')} className="px-4 py-3 text-left font-semibold">
                         <button type="button" onClick={() => ordenarPor('pgq')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">P/G/Q<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('pgq')}</span></button>
                       </th>
                       <th scope="col" className="px-4 py-3 text-left font-semibold">NIP</th>
-                                            <th scope="col" aria-sort={ariaSort('om')} className="px-4 py-3 text-left font-semibold">
-                        <button type="button" onClick={() => ordenarPor('om')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">OM<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('om')}</span></button>
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-left font-semibold">Vínculo</th>
-                      <th scope="col" className="px-4 py-3 text-left font-semibold">E-mail</th>
                       <th scope="col" className="px-4 py-3 text-left font-semibold">Status</th>
-                      <th scope="col" className="px-4 py-3 text-right font-semibold"><span className="sr-only">Ações</span></th>
+                      <th scope="col" className="pr-2 py-3 w-14 text-right font-semibold"><span className="sr-only">Ações</span></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
                     {visiveis.map(m => (
-                      <tr key={m.id} className={`hover:bg-thead transition-colors ${m.ativo ? '' : 'text-ink-3'}`}>
+                      <tr key={m.id} className={`hover:bg-thead transition-colors ${selecionados.has(m.id) ? 'bg-thead' : ''} ${m.ativo ? '' : 'text-ink-3'}`}>
+                        <td className="pl-4 pr-0 py-2"><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy align-middle" /></td>
                         <td className="px-4 py-2 font-semibold text-navy">{m.nome}</td>
                         <td className="px-4 py-2 whitespace-nowrap">{m.pgq}</td>
                         <td className="px-4 py-2 font-mono whitespace-nowrap">{formatNip(m.nip)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap">{m.om}</td>
-                        <td className="px-4 py-2 whitespace-nowrap">{m.temporario ? 'Temporário' : 'Carreira'}</td>
-                        <td className="px-4 py-2 max-w-[220px] truncate" title={m.email}>{m.email || '—'}</td>
                         <td className="px-4 py-2">
                           <button type="button" onClick={() => alternarAtivo(m)} title={m.ativo ? 'Clique para inativar' : 'Clique para ativar'} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="min-h-[44px] flex items-center">
                             <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
                           </button>
                         </td>
-                        <td className="px-4 py-1 text-right whitespace-nowrap">
-                          <Button variant="ghost" icon="edit" onClick={() => setEditando(m)}>Editar</Button>
-                          <Button variant="ghost" icon="delete" className="!text-wine" aria-label={`Apagar ${m.nome}`} onClick={() => setApagando(m)}>Apagar</Button>
-                        </td>
+                        <td className="pr-2 py-1 text-right"><MenuAcoes rotulo={`Ações para ${m.nome}`} itens={itensDe(m)} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -236,6 +254,8 @@ export const Militares: React.FC = () => {
         />
       )}
       {novo && <MilitarCadastroForm onClose={() => setNovo(false)} onCriado={nome => { setNovo(false); avisar(`${nome} cadastrado.`); }} />}
+      {lote && postos && <PromocaoEmLote militares={escolhidos} postos={postos} onClose={() => setLote(false)} onAplicado={n => { setLote(false); setSelecionados(new Set()); avisar(`Posto atualizado em ${n} militar${n !== 1 ? 'es' : ''}.`); }} onErro={m => avisar(m, 'error')} />}
+      {detalhe && <MilitarDetalhe militar={detalhe} onClose={() => setDetalhe(null)} onEditar={() => { setEditando(detalhe); setDetalhe(null); }} />}
       {editando && <MilitarEdicao militar={editando} oms={oms} onClose={() => setEditando(null)} onSalvo={nome => { setEditando(null); avisar(`Dados de ${nome} atualizados.`); }} />}
     </div>
   );
@@ -252,8 +272,11 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
   const [ativo, setAtivo] = useState<'Ativo' | 'Inativo'>(militar.ativo ? 'Ativo' : 'Inativo');
   const [omTexto, setOmTexto] = useState(militar.om);
   const [omSigla, setOmSigla] = useState(militar.om);
+  const [adicionais, setAdicionais] = useState<Adicionais>(() => adicionaisDoMilitar(militar));
   const [erros, setErros] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
+  const hnre = omEhHnre(omSigla);
+  const medico = hnre && ehOficialMedico(pgq);
 
   const opcoesOm: OpcaoAutocomplete[] = useMemo(() => oms.map(o => ({ chave: `${o.sigla}|${o.nome}`, principal: o.sigla, secundaria: o.nome, busca: o.busca })), [oms]);
 
@@ -264,13 +287,17 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
     if (nip.length !== 10) e.nip = 'O NIP tem o formato 00.0000.00.';
     if (!pgq.trim()) e.pgq = 'Informe o posto/graduação/quadro.';
     if (!omSigla) e.om = 'Escolha a OM na lista.';
+    if (hnre) Object.assign(e, validarAdicionais(adicionais, medico));
     setErros(e);
     if (Object.keys(e).length > 0) return;
     setSalvando(true);
     try {
       const nomeFinal = nome.trim().toUpperCase();
       const pgqFinal = pgq.trim();
+      const extras = hnre ? adicionaisParaPatch(adicionais, medico) : {};
+      if (medico && adicionais.fotoNova) extras.fotoUrl = await enviarFotoMilitar(militar.id, adicionais.fotoNova);
       await atualizarMilitar(militar.id, {
+        ...extras,
         nome: nomeFinal, nip, pgq: pgqFinal, om: omSigla, email: email.trim().toLowerCase(),
         temporario: temporario === 'Temporário', ativo: ativo === 'Ativo',
         inspecionado: montarInspecionado(pgqFinal, nip, nomeFinal),
@@ -310,7 +337,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
           </Field>
         </div>
         <Autocomplete
-          label="OM" required error={erros.om} help="Busque pela sigla ou pelo nome. Só a sigla é gravada."
+          label="OM" required error={erros.om}
           valor={omTexto} opcoes={opcoesOm}
           onDigitar={t => { setOmTexto(t); setOmSigla(t === militar.om ? militar.om : ''); }}
           onSelecionar={o => { setOmTexto(`${o.principal} — ${o.secundaria}`); setOmSigla(o.principal); }}
@@ -319,8 +346,96 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
           {a => <input {...a} type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="off" />}
         </Field>
         <ChoiceGroup<'Carreira' | 'Temporário'> label="Vínculo" value={temporario} onChange={setTemporario} options={[{ value: 'Carreira', label: 'Carreira' }, { value: 'Temporário', label: 'Temporário' }]} />
+        {hnre && <InformacoesAdicionais valor={adicionais} onChange={setAdicionais} medico={medico} erros={erros} />}
         <ChoiceGroup<'Ativo' | 'Inativo'> label="Situação no appweb" value={ativo} onChange={setAtivo} options={[{ value: 'Ativo', label: 'Ativo' }, { value: 'Inativo', label: 'Inativo' }]} />
       </form>
+    </Dialog>
+  );
+};
+
+// ---------------------------------------------------------------------------
+
+/** Troca o posto/graduação dos militares selecionados, preservando quadro/especialidade, e regrava o INSPECIONADO. */
+const PromocaoEmLote: React.FC<{ militares: MilitarRecord[]; postos: CorposQuadros['postos']; onClose: () => void; onAplicado: (n: number) => void; onErro: (msg: string) => void }> = ({ militares, postos, onClose, onAplicado, onErro }) => {
+  const [novoPosto, setNovoPosto] = useState('');
+  const [salvando, setSalvando] = useState(false);
+
+  const opcoes = useMemo(() => (Object.entries(postos) as [string, PostoInfo][]).sort((a, b) => a[1].ordem - b[1].ordem).map(([sigla, info]) => ({ sigla, ...info })), [postos]);
+
+  const plano = useMemo(() => {
+    if (!novoPosto) return { aplicar: [], iguais: 0, semPosto: [] as MilitarRecord[] };
+    const aplicar: { m: MilitarRecord; pgq: string }[] = [];
+    const semPosto: MilitarRecord[] = [];
+    let iguais = 0;
+    militares.forEach(m => {
+      const sep = separarPosto(m.pgq, postos);
+      if (!sep) { semPosto.push(m); return; }
+      if (sep.posto === novoPosto) { iguais++; return; }
+      aplicar.push({ m, pgq: `${novoPosto}${sep.resto}` });
+    });
+    return { aplicar, iguais, semPosto };
+  }, [novoPosto, militares, postos]);
+
+  const aplicar = async () => {
+    setSalvando(true);
+    try {
+      await atualizarMilitaresEmLote(plano.aplicar.map(({ m, pgq }) => ({ id: m.id, patch: { pgq, inspecionado: montarInspecionado(pgq, m.nip, m.nome) } })));
+      onAplicado(plano.aplicar.length);
+    } catch (e: any) {
+      onErro(e?.message || 'Não foi possível aplicar a alteração em lote.');
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <Dialog
+      title="Alterar posto em lote"
+      icon="military_tech"
+      size="lg"
+      onClose={onClose}
+      footer={(
+        <>
+          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button icon="check" loading={salvando} disabled={plano.aplicar.length === 0} onClick={aplicar}>
+            {plano.aplicar.length > 0 ? `Aplicar a ${plano.aplicar.length} militar${plano.aplicar.length !== 1 ? 'es' : ''}` : 'Aplicar'}
+          </Button>
+        </>
+      )}
+    >
+      <div className="space-y-4">
+        <p>Novo posto/graduação para os <strong>{militares.length}</strong> militares selecionados. O quadro e a especialidade de cada um são mantidos; o INSPECIONADO é recalculado.</p>
+        <Field label="Novo posto/graduação" required>
+          {a => (
+            <select {...a} value={novoPosto} onChange={e => setNovoPosto(e.target.value)} className={`${a.className}`}>
+              <option value="">Escolha…</option>
+              {['Oficial', 'Praça', 'Servidor Civil'].map(cat => (
+                <optgroup key={cat} label={cat}>
+                  {opcoes.filter(o => o.categoria === cat).map(o => <option key={o.sigla} value={o.sigla}>{o.sigla} — {o.nome}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          )}
+        </Field>
+        {novoPosto && (
+          <>
+            {plano.aplicar.length > 0 && (
+              <div className="border border-line rounded-lg max-h-64 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-thead text-ink-3 sticky top-0"><tr><th scope="col" className="px-3 py-2 text-left font-semibold">Militar</th><th scope="col" className="px-3 py-2 text-left font-semibold">Antes</th><th scope="col" className="px-3 py-2 text-left font-semibold">Depois</th></tr></thead>
+                  <tbody className="divide-y divide-line">
+                    {plano.aplicar.map(({ m, pgq }) => (
+                      <tr key={m.id}><td className="px-3 py-1.5 font-semibold text-navy">{m.nome}</td><td className="px-3 py-1.5 whitespace-nowrap">{m.pgq}</td><td className="px-3 py-1.5 whitespace-nowrap font-bold">{pgq}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {plano.iguais > 0 && <p className="text-xs text-ink-3">{plano.iguais} já {plano.iguais !== 1 ? 'estão' : 'está'} com este posto e {plano.iguais !== 1 ? 'serão ignorados' : 'será ignorado'}.</p>}
+            {plano.semPosto.length > 0 && <p role="alert" className="text-xs font-semibold text-wine">Não foi possível identificar o posto de {plano.semPosto.map(m => m.nome).join(', ')}; edite {plano.semPosto.length !== 1 ? 'esses cadastros' : 'esse cadastro'} individualmente.</p>}
+            {plano.aplicar.length === 0 && <p className="text-xs text-ink-3">Nenhuma alteração a aplicar.</p>}
+          </>
+        )}
+      </div>
     </Dialog>
   );
 };

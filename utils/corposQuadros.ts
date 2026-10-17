@@ -75,3 +75,29 @@ export const montarPgq = (categoria: CategoriaMilitar, posto: string, quadroSigl
 };
 
 export const montarInspecionado = (pgq: string, nip: string, nome: string): string => `${pgq} ${nip} ${nome}`.replace(/\s+/g, ' ').trim();
+
+/** Separa o posto/graduação do restante do P/G/Q (ex.: "GM(RM2-Md)" → { posto: "GM", resto: "(RM2-Md)" }). Null se não reconhecer. */
+export const separarPosto = (pgq: string, postos: CorposQuadros['postos']): { posto: string; resto: string } | null => {
+  const texto = pgq.trim();
+  let melhor = '';
+  for (const sigla of Object.keys(postos)) {
+    if (!texto.toUpperCase().startsWith(sigla.toUpperCase())) continue;
+    const resto = texto.slice(sigla.length);
+    if ((resto === '' || /^[\s(-]/.test(resto)) && sigla.length > melhor.length) melhor = sigla;
+  }
+  return melhor ? { posto: melhor, resto: texto.slice(melhor.length) } : null;
+};
+
+export interface ServicoHnre { servico_id: string; servico: string; servico_label: string; superior_direto?: string }
+
+let cacheServicos: Promise<ServicoHnre[]> | null = null;
+/** Serviços/setores do HNRe (public/servicosHNRe.json). */
+export const carregarServicosHnre = (): Promise<ServicoHnre[]> => {
+  if (!cacheServicos) cacheServicos = carregarJson<ServicoHnre[]>('servicosHNRe.json').catch(e => { cacheServicos = null; throw e; });
+  return cacheServicos;
+};
+
+/** Oficial do quadro de médicos (Md, RM2-Md ou RM3-Md), a partir do P/G/Q. */
+export const ehOficialMedico = (pgq: string): boolean => /\((?:RM\d-)?Md\)/i.test(pgq);
+
+export const omEhHnre = (om: string): boolean => om.trim().toUpperCase() === 'HNRE';
