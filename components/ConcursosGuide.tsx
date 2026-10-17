@@ -472,29 +472,6 @@ export const ConcursosGuide: React.FC = () => {
               )}
             </div>
           )}
-
-          <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-200/60">
-            <h3 className="text-sm font-bold text-ink-3 tracking-wider mb-3">Veja também</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setAnexoParam('n')}
-                className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-100 text-navy hover:bg-navy hover:text-white transition-colors text-left"
-              >
-                <span className="material-symbols-outlined text-[26px]">menu_book</span>
-                <span className="text-base font-bold leading-snug">Anexo N completo<span className="block text-sm font-medium opacity-70">Página renderizada</span></span>
-              </button>
-              <button
-                type="button"
-                disabled={baixandoPdf}
-                onClick={baixarAnexoN}
-                className="flex items-center gap-3 p-3.5 rounded-lg bg-gray-100 text-navy hover:bg-navy hover:text-white transition-colors text-left disabled:opacity-50"
-              >
-                <span className={`material-symbols-outlined text-[26px] ${baixandoPdf ? 'animate-spin' : ''}`}>{baixandoPdf ? 'progress_activity' : 'download'}</span>
-                <span className="text-base font-bold leading-snug">Anexo N em PDF<span className="block text-sm font-medium opacity-70">Abrir o arquivo original</span></span>
-              </button>
-            </div>
-          </div>
               </Container>
       
     </div>
