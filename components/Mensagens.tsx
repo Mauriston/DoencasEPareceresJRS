@@ -1,6 +1,6 @@
 // Ficheiro: components/Mensagens.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 
 const GAS_URL = "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
@@ -12,11 +12,7 @@ interface ImageItem {
   mimeType: string;
 }
 
-interface MensagensProps {
-  onBack?: () => void;
-}
-
-export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
+export const Mensagens: React.FC = () => {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [minuta, setMinuta] = useState<string | null>(null);
@@ -149,14 +145,15 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
   const hasOddImage = images.length % 2 !== 0;
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 relative">
-      <Header title="MENSAGENS" onBack={onBack} />
+    <div className="flex flex-col flex-1 relative">
 
-      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-28 w-full max-w-2xl mx-auto space-y-5">
+      <Container size="form" className="py-6 md:py-8 pb-10 space-y-5">
+        <PageHeader title="Mensagens" description="Minutas das mensagens de IS auxiliadas por IA." />
+
 
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
           <h2 className="font-heading font-bold text-navy text-base flex items-center gap-2 border-b border-gray-100 pb-2">
-            <span className="material-symbols-outlined text-gold">add_photo_alternate</span>
+            <span className="material-symbols-outlined text-navy">add_photo_alternate</span>
             Imagens da IS
           </h2>
 
@@ -168,7 +165,7 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-gray-200 rounded-xl py-8 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[#050F41] hover:text-[#050F41] transition-colors bg-gray-50/50 active:scale-[0.98]"
+            className="w-full border-2 border-dashed border-gray-200 rounded-xl py-8 flex flex-col items-center justify-center gap-2 text-ink-3 hover:border-navy hover:text-navy transition-colors bg-gray-50/50 active:scale-[0.98]"
           >
             <span className="material-symbols-outlined text-[40px]">photo_camera</span>
             <span className="text-sm font-semibold">Tirar foto ou selecionar imagem</span>
@@ -192,10 +189,10 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
                 const img2 = images[isIdx * 2 + 1];
                 return (
                   <div key={isIdx} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                    <p className="text-[10px] font-bold text-[#050F41]/50 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[12px]">assignment</span>
+                    <p className="text-xs font-bold text-navy/50 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-xs">assignment</span>
                       IS {isIdx + 1}
-                      {!img2 && <span className="text-amber-500 font-semibold">· aguardando Img 2</span>}
+                      {!img2 && <span className="text-amber-600 font-semibold">· aguardando Img 2</span>}
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       {[img1, img2].map((img, offset) => (
@@ -207,21 +204,22 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
                                 alt={`IS ${isIdx + 1} Imagem ${offset + 1}`}
                                 className="w-full aspect-video object-cover rounded-lg border border-gray-200 bg-gray-100"
                               />
-                              <span className="absolute top-1.5 left-1.5 bg-[#050F41]/75 text-white text-[9px] font-bold px-1.5 py-0.5 rounded backdrop-blur-sm">
+                              <span className="absolute top-1.5 left-1.5 bg-navy/75 text-white text-xs font-bold px-1.5 py-0.5 rounded backdrop-blur-sm">
                                 Img {offset + 1}
                               </span>
                               <button
                                 type="button"
                                 onClick={() => removeImage(isIdx * 2 + offset)}
-                                className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity shadow-sm"
+                                aria-label="Remover imagem" title="Remover imagem"
+                                className="absolute top-1 right-1 bg-wine text-white rounded-full w-11 h-11 flex items-center justify-center hover:bg-wine-dark transition-colors shadow-sm"
                               >
-                                <span className="material-symbols-outlined text-[13px]">close</span>
+                                <span className="material-symbols-outlined text-[20px]">close</span>
                               </button>
                             </>
                           ) : (
                             <div className="w-full aspect-video border-2 border-dashed border-amber-200 rounded-lg flex flex-col items-center justify-center gap-1 bg-amber-50/50 text-amber-400">
                               <span className="material-symbols-outlined text-[20px]">image</span>
-                              <span className="text-[10px] font-medium">Img 2 pendente</span>
+                              <span className="text-xs font-medium">Img 2 pendente</span>
                             </div>
                           )}
                         </div>
@@ -233,7 +231,7 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
 
               <div className="flex items-center justify-between pt-1 px-1">
                 <span className="text-xs text-gray-500 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[14px]">photo_library</span>
+                  <span className="material-symbols-outlined text-sm">photo_library</span>
                   {images.length} imagem{images.length !== 1 ? 's' : ''} · {numIS} IS completa{numIS !== 1 ? 's' : ''}
                   {hasOddImage && (
                     <span className="text-amber-600 font-semibold">· par incompleto</span>
@@ -242,9 +240,9 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="text-xs text-red-400 hover:text-red-600 font-semibold flex items-center gap-1 transition-colors"
+                  className="text-xs text-red-500 hover:text-red-600 font-semibold flex items-center gap-1 transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[14px]">delete</span>
+                  <span className="material-symbols-outlined text-sm">delete</span>
                   Limpar tudo
                 </button>
               </div>
@@ -264,7 +262,7 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
             type="button"
             onClick={handleGenerate}
             disabled={isLoading || images.length === 0 || hasOddImage}
-            className="w-full py-4 bg-[#050F41] text-white font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-[#050F41]/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md text-sm"
+            className="w-full py-4 bg-navy text-white font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-navy/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md text-sm"
           >
             {isLoading ? (
               <>
@@ -281,16 +279,16 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
         )}
 
         {isLoading && (
-          <p className="text-center text-xs text-gray-400 animate-pulse -mt-2">
+          <p className="text-center text-xs text-ink-3 animate-pulse -mt-2">
             O Gemini AI está analisando as imagens e redigindo a minuta. Pode levar alguns segundos...
           </p>
         )}
 
         {minuta && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-fade-in">
-            <div className="bg-[#050F41] px-5 py-3.5 flex items-center justify-between">
+            <div className="bg-navy px-5 py-3.5 flex items-center justify-between">
               <div className="flex items-center gap-2 text-white">
-                <span className="material-symbols-outlined text-[18px] text-[#079551]">task_alt</span>
+                <span className="material-symbols-outlined text-[18px] text-gold">task_alt</span>
                 <span className="font-heading font-bold text-sm uppercase tracking-wide">Minuta Gerada</span>
               </div>
               <div className="flex items-center gap-3">
@@ -309,22 +307,22 @@ export const Mensagens: React.FC<MensagensProps> = ({ onBack }) => {
 
             <div className="px-5 py-4 flex gap-2.5">
               {docUrl && (
-                <a href={docUrl} target="_blank" rel="noopener noreferrer" className="flex-1 py-2.5 bg-[#079551] text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-green-700 transition-colors active:scale-[0.97]">
+                <a href={docUrl} target="_blank" rel="noopener noreferrer" className="flex-1 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-green-700 transition-colors active:scale-[0.97]">
                   <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                   Abrir no Drive
                 </a>
               )}
-              <button type="button" onClick={handleCopy} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-gray-200 transition-colors active:scale-[0.97]">
+              <button type="button" onClick={handleCopy} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-gray-200 transition-colors active:scale-[0.97]">
                 <span className="material-symbols-outlined text-[16px]">{copied ? 'check' : 'content_copy'}</span>
                 {copied ? 'Copiado!' : 'Copiar'}
               </button>
-              <button type="button" onClick={handleReset} className="py-2.5 px-4 bg-gray-100 text-gray-500 rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors active:scale-[0.97]" title="Nova minuta">
+              <button type="button" onClick={handleReset} className="py-2.5 px-4 bg-gray-100 text-gray-500 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors active:scale-[0.97]" title="Nova minuta">
                 <span className="material-symbols-outlined text-[16px]">refresh</span>
               </button>
             </div>
           </div>
         )}
-      </div>
+      </Container>
     </div>
   );
 };

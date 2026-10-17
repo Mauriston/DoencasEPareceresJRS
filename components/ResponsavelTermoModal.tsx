@@ -4,7 +4,7 @@
 // o termo, então o MPI escolhe quem é o responsável pela IS. Cada botão traz o
 // avatar e o campo "usuario" do cadastro (ex.: "CT MAURISTON").
 import React, { useEffect, useState } from 'react';
-import { Avatar } from './Header';
+import { Avatar } from './shell/UserMenu';
 import { listUsuarios, UsuarioRecord } from '../services/firestoreUsuarios';
 
 // Ordem de antiguidade dos médicos da JRS (do mais antigo ao mais moderno), pelo campo
@@ -53,21 +53,21 @@ export const ResponsavelTermoModal: React.FC<ResponsavelTermoModalProps> = ({ ca
   return (
     <div className="fixed inset-0 z-[220] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="p-4 bg-[#050F41] text-white flex items-center space-x-2">
-          <span className="material-symbols-outlined text-[20px] text-[#FAB932]">stethoscope</span>
-          <h3 className="font-heading font-bold text-sm uppercase">Médico responsável pela IS</h3>
+        <div className="p-4 bg-navy text-white flex items-center space-x-2">
+          <span className="material-symbols-outlined text-[20px] text-gold">stethoscope</span>
+          <h3 className="font-heading font-bold text-sm">Médico responsável pela IS</h3>
         </div>
         <div className="p-5 space-y-4">
-          <p className="text-xs md:text-sm text-gray-700 leading-relaxed">
+          <p className="text-sm text-gray-700 leading-relaxed">
             Quem é o médico responsável pela IS de <strong>{candidatoNome}</strong>?
           </p>
 
           {erro ? (
-            <p className="text-xs md:text-sm text-red-700 font-semibold">{erro}</p>
+            <p className="text-sm text-red-700 font-semibold">{erro}</p>
           ) : !medicos ? (
-            <p className="text-xs md:text-sm text-gray-500">Carregando...</p>
+            <p className="text-sm text-gray-500">Carregando...</p>
           ) : medicos.length === 0 ? (
-            <p className="text-xs md:text-sm text-gray-500">Nenhum médico da JRS encontrado.</p>
+            <p className="text-sm text-gray-500">Nenhum médico da JRS encontrado.</p>
           ) : (
             <div className="space-y-2">
               {medicos.map(m => (
@@ -75,18 +75,18 @@ export const ResponsavelTermoModal: React.FC<ResponsavelTermoModalProps> = ({ ca
                   key={m.id}
                   type="button"
                   onClick={() => onSelect(m)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-[#050F41] hover:text-white hover:border-[#050F41] text-[#050F41] transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-navy hover:text-white hover:border-navy text-navy transition-colors text-left"
                 >
                   {/* Avatar maior que a linha (margem negativa) para não aumentar a altura do botão. */}
                   <span className="-my-1.5 shrink-0 flex"><Avatar nome={m.nome} imageProfile={m.imageProfile} size={48} /></span>
-                  <span className="text-sm md:text-base font-bold">{m.usuario}</span>
+                  <span className="text-base font-bold">{m.usuario}</span>
                 </button>
               ))}
             </div>
           )}
 
           <div className="flex justify-end">
-            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
           </div>
         </div>
       </div>

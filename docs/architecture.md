@@ -58,9 +58,9 @@ Características observadas:
 - componentes funcionais e Hooks;
 - estado predominantemente local com `useState` e `useEffect`;
 - ausência de gerenciador de estado global;
-- ausência de camada formal de rotas;
-- estilos utilitários Tailwind carregados por CDN;
-- uso complementar de Material Symbols e Lucide React;
+- roteamento por URL com `react-router-dom` (`HashRouter`; tabela em `config/routes.ts`; `NavItem` segue como identificador das permissões e a `currentView` é derivada da URL);
+- estilos utilitários Tailwind compilados no build (PostCSS) com tokens do design system;
+- ícones Material Symbols (shim `components/ui/icons.tsx`);
 - conteúdo médico e normativo embutido em componentes e em `constants.ts`;
 - dados auxiliares estáticos em `public/*.json`.
 
@@ -103,7 +103,7 @@ A aplicação integra-se diretamente com:
 
 | Componente | Responsabilidade | Tecnologia |
 |---|---|---|
-| `index.html` | Documento HTML base, fontes, Tailwind CDN, import map e montagem da aplicação | HTML |
+| `index.html` | Documento HTML base e montagem da aplicação (sem Tailwind CDN nem import map; estilos em `styles/*.css`) | HTML |
 | `index.tsx` | Ponto de entrada e montagem do React | React DOM |
 | `App.tsx` | Shell da aplicação, autenticação local, navegação e controle de acesso por perfil | React + TypeScript |
 | `components/` | Telas, módulos funcionais e conteúdo da aplicação | React + TypeScript |
@@ -184,7 +184,7 @@ sequenceDiagram
     participant A as App.tsx
 
     B->>H: Carrega documento
-    H->>H: Carrega Tailwind, fontes e ícones
+    H->>H: Carrega CSS compilado, fontes e ícones
     H->>I: Importa módulo principal
     I->>A: Monta <App /> em #root
     A->>A: Verifica autenticação persistida
@@ -663,14 +663,7 @@ As configurações públicas de cliente Firebase não são segredos, mas as regr
 
 ### 12.2 Dependências carregadas externamente
 
-O `index.html` carrega por CDN:
-
-- Tailwind CSS;
-- Google Fonts;
-- Google Material Symbols;
-- módulos via `esm.sh` em um `importmap`.
-
-O uso simultâneo de dependências NPM e `importmap` é redundante no contexto de uma aplicação Vite e pode dificultar a previsibilidade das versões realmente utilizadas.
+O `index.html` carrega externamente apenas o Google Material Symbols. Tailwind e a fonte Montserrat (`assets/fonts`) são empacotados no build; o antigo `importmap`/`esm.sh` foi removido e todas as dependências vêm do NPM.
 
 ### 12.3 Serviços externos
 
@@ -711,11 +704,9 @@ O uso simultâneo de dependências NPM e `importmap` é redundante no contexto d
 - ausência de validação de schemas;
 - ausência de observabilidade estruturada;
 - autenticação personalizada com riscos de sessão;
-- ausência de roteamento por URL;
 - ausência de *code splitting* explícito;
 - contratos de API implícitos;
 - componentes extensos com regras de UI, negócio e integração combinadas;
-- Tailwind executado por CDN em produção;
 - ausência de manifesto e *service worker* para caracterização como PWA completa.
 
 ---
@@ -731,8 +722,8 @@ O uso simultâneo de dependências NPM e `importmap` é redundante no contexto d
 | Contratos frontend/backend não tipados | Médio | Alta | Definir DTOs e schemas compartilhados |
 | Falha ou limite de cota do Apps Script | Alto | Média | Tratamento de retries, filas e monitoramento |
 | Dependência de IDs fixos | Médio | Média | Centralizar configuração em Script Properties |
-| Dependências por CDN | Médio | Média | Instalar e empacotar no build Vite |
-| Bundle crescente | Médio | Média | React Router e lazy loading por rota |
+| Dependências por CDN | Baixo (mitigado: só Material Symbols) | Baixa | Autohospedar o Material Symbols |
+| Bundle crescente | Médio | Média | Lazy loading por rota (React Router já adotado) |
 | Ausência de testes | Alto | Alta | Adicionar testes unitários, integração e E2E |
 | Dados médico-administrativos em serviços externos | Alto | Média | Revisar LGPD, acesso, retenção e auditoria |
 

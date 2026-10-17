@@ -132,7 +132,12 @@ function doGet(e) {
             data: String(dataVal),
             especialidade: String(data[i][3]),
             inspecionado: String(data[i][4]),
-            link: String(data[i][6])
+            link: String(data[i][6]),
+            // Colunas adicionais exibidas na tabela do Histórico (campos novos: o
+            // front antigo simplesmente os ignora).
+            perito: String(data[i][1] || ''),
+            finalidade: String(data[i][2] || ''),
+            om: String(data[i][5] || '')
           });
         }
       }

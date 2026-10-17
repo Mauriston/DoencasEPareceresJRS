@@ -25,7 +25,7 @@ export interface PageDef {
 export const PAGE_DEFS: PageDef[] = [
   { id: 'guide', label: 'Doenças de Lei', icon: 'medical_information', subtitle: 'Critérios clínicos e documentos por doença prevista em lei.' },
   { id: 'portaria', label: 'Portaria', icon: 'article', subtitle: 'Leia a Portaria GM-MD nº 3.551/2021 na íntegra.' },
-  { id: 'concursosJRS', label: 'Planilhas de Controle', icon: 'fact_check', subtitle: 'Acompanhe o andamento dos candidatos em concurso.' },
+  { id: 'concursosJRS', label: 'Concursos', icon: 'fact_check', subtitle: 'Acompanhe as planilhas de controle dos candidatos em concurso.' },
   { id: 'concursos', label: 'Índices Mínimos', icon: 'emoji_events', subtitle: 'Consulte os índices mínimos exigidos por concurso.' },
   { id: 'exames', label: 'Exames Mínimos', icon: 'science', subtitle: 'Veja os exames mínimos exigidos por finalidade de IS.' },
   { id: 'pareceres', label: 'Pareceres', icon: 'assignment', subtitle: 'Gere solicitações de Pareceres em PDF por especialidade.' },
@@ -87,18 +87,18 @@ export interface FeatureDef {
 }
 
 export const FEATURE_DEFS: FeatureDef[] = [
-  { id: 'concursosJRS.editarDadosTabela', label: 'Editar Status/Observações/Nº TIS na tabela', group: 'Concursos (Planilhas de Controle)' },
-  { id: 'concursosJRS.registrarMensagemPDF', label: 'Registrar Mensagem (PDF): criar concurso, candidatos e agendamento', group: 'Concursos (Planilhas de Controle)' },
-  { id: 'concursosJRS.reagendar', label: 'Reagendar candidato', group: 'Concursos (Planilhas de Controle)' },
-  { id: 'concursosJRS.gerarMinutaResultados', label: 'Gerar Minuta de Resultados', group: 'Concursos (Planilhas de Controle)' },
-  { id: 'concursosJRS.importarCsv', label: 'Importar Concurso (CSV)', group: 'Concursos (Planilhas de Controle)' },
-  { id: 'concursosJRS.abrirEncerrarConcurso', label: 'Alterar Status do Concurso (Abrir/Encerrar/Em Breve)', group: 'Concursos (Planilhas de Controle)' },
-  { id: 'concursosJRS.registrarMensagemArquivo', label: 'Registrar Mensagem: arquivar mensagem em concurso existente', group: 'Concursos (Planilhas de Controle)' },
-  { id: 'concursosJRS.listarMensagens', label: 'Listar Mensagens arquivadas do concurso', group: 'Concursos (Planilhas de Controle)' },
-  { id: 'concursosJRS.adicionarCandidato', label: 'Adicionar Candidato manualmente (concurso Em Andamento/Em Breve)', group: 'Concursos (Planilhas de Controle)' },
-  { id: 'concursosJRS.visualizarTabela', label: 'Alternar para visão em tabela (lista de concursos, desktop)', group: 'Concursos (Planilhas de Controle)' },
-  { id: 'concursosJRS.gerarTermoRecurso', label: 'Gerar Termo de Recurso (a visualização do termo já gerado é liberada a todos)', group: 'Concursos (Planilhas de Controle)' },
-  { id: 'concursosJRS.solicitarParecerExames', label: 'Solicitar Parecer / Exames (menu ⋮ da planilha; a visualização é só de quem tem o menu)', group: 'Concursos (Planilhas de Controle)' },
+  { id: 'concursosJRS.editarDadosTabela', label: 'Editar Status/Observações/Nº TIS na tabela', group: 'Concursos' },
+  { id: 'concursosJRS.registrarMensagemPDF', label: 'Registrar Mensagem (PDF): criar concurso, candidatos e agendamento', group: 'Concursos' },
+  { id: 'concursosJRS.reagendar', label: 'Reagendar candidato', group: 'Concursos' },
+  { id: 'concursosJRS.gerarMinutaResultados', label: 'Gerar Minuta de Resultados', group: 'Concursos' },
+  { id: 'concursosJRS.importarCsv', label: 'Importar Concurso (CSV)', group: 'Concursos' },
+  { id: 'concursosJRS.abrirEncerrarConcurso', label: 'Alterar Status do Concurso (Abrir/Encerrar/Em Breve)', group: 'Concursos' },
+  { id: 'concursosJRS.registrarMensagemArquivo', label: 'Registrar Mensagem: arquivar mensagem em concurso existente', group: 'Concursos' },
+  { id: 'concursosJRS.listarMensagens', label: 'Listar Mensagens arquivadas do concurso', group: 'Concursos' },
+  { id: 'concursosJRS.adicionarCandidato', label: 'Adicionar Candidato manualmente (concurso Em Andamento/Em Breve)', group: 'Concursos' },
+  { id: 'concursosJRS.visualizarTabela', label: 'Alternar para visão em tabela (lista de concursos, desktop)', group: 'Concursos' },
+  { id: 'concursosJRS.gerarTermoRecurso', label: 'Gerar Termo de Recurso (a visualização do termo já gerado é liberada a todos)', group: 'Concursos' },
+  { id: 'concursosJRS.solicitarParecerExames', label: 'Solicitar Parecer / Exames (menu ⋮ da planilha; a visualização é só de quem tem o menu)', group: 'Concursos' },
   // Substituem a antiga permissão única de página "Perícia Menor": cada aba
   // (Novo/Histórico) é liberada separadamente por perfil.
   { id: 'pericia-menor.novo', label: 'Perícia Menor - Novo', group: 'Perícia Menor' },

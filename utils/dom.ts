@@ -1,0 +1,14 @@
+// Ficheiro: utils/dom.ts
+
+/** Primeiro ancestral que realmente rola na vertical (ou null → a própria janela). */
+export const getScrollParent = (el: HTMLElement | null): HTMLElement | null => {
+  let atual = el?.parentElement ?? null;
+  while (atual) {
+    if (/(auto|scroll)/.test(getComputedStyle(atual).overflowY)) return atual;
+    atual = atual.parentElement;
+  }
+  return null;
+};
+
+/** Container de rolagem único do app (o <main id="conteudo"> do shell). */
+export const getMainScroller = (): HTMLElement | null => document.getElementById('conteudo');

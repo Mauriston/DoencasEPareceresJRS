@@ -1,161 +1,191 @@
+// Ficheiro: components/Home.tsx
+// Página Inicial como PAINEL (auditoria F17/F26): o que precisa de atenção
+// (perícias vigentes, concurso em andamento, senha temporária), os atalhos por
+// área — com os subitens sempre visíveis, sem reorganizar o layout ao clicar —
+// e os últimos documentos gerados. Tudo respeita a matriz de permissões do
+// perfil: cada bloco só aparece para quem tem acesso à página correspondente.
 import React, { useContext, useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Header } from './Header';
+import { Link } from 'react-router-dom';
+import { Page } from './ui/Page';
 import { NavContext, getPrimeiroNome } from '../context/NavContext';
-import { getNavCategories, NavCategory } from '../config/navigation';
-import { observarConcursos } from '../services/firestoreConcursos';
+import { getNavCategories, type NavCategory } from '../config/navigation';
+import { canAccessPage } from '../config/permissions';
+import { pathForView, concursoPath } from '../config/routes';
+import { observarConcursos, type ConcursoRecord } from '../services/firestoreConcursos';
+import { buscarDocumentosRecentes, type DocumentoRecente } from '../services/documentosRecentes';
 import { useIsDesktop } from '../hooks/useIsDesktop';
+import { StatusTag } from './ui/StatusTag';
+import { EmptyState } from './ui/EmptyState';
+
+interface Pendencia {
+  id: string;
+  icone: string;
+  rotulo: string;
+  valor: string | number;
+  detalhe: string;
+  to: string;
+  /** Cor do número: vinho = exige ação com prazo. */
+  tom: 'wine' | 'navy';
+}
+
+const CartaoPendencia: React.FC<{ p: Pendencia }> = ({ p }) => (
+  <Link
+    to={p.to}
+    className="group flex items-start gap-3 bg-white border border-line rounded-xl p-4 hover:border-navy transition-colors"
+  >
+    <span className="material-symbols-outlined text-[28px] text-navy shrink-0" aria-hidden="true">{p.icone}</span>
+    <span className="min-w-0 flex-1">
+      <span className="block text-xs font-semibold text-ink-3">{p.rotulo}</span>
+      <span className={`block text-2xl font-extrabold leading-tight ${p.tom === 'wine' ? 'text-wine' : 'text-navy'}`}>{p.valor}</span>
+      <span className="block text-sm text-ink mt-0.5">{p.detalhe}</span>
+    </span>
+    <span className="material-symbols-outlined text-[20px] text-ink-4 group-hover:text-navy self-center" aria-hidden="true">chevron_right</span>
+  </Link>
+);
+
+const CartaoArea: React.FC<{ cat: NavCategory; emAndamento: boolean }> = ({ cat, emAndamento }) => {
+  const badge = cat.subitems.reduce((acc, s) => acc + (s.badge || 0), 0);
+  const unico = cat.subitems.length === 1;
+  const corpo = (
+    <>
+      <span className="flex items-center gap-3">
+        <span className="material-symbols-outlined text-[28px] text-navy shrink-0" aria-hidden="true">{cat.icon}</span>
+        <span className="text-base font-bold text-navy leading-tight">{cat.label}</span>
+        {emAndamento && <StatusTag tone="navy" className="ml-auto">Em andamento</StatusTag>}
+        {badge > 0 && <span className="ml-auto min-w-5 h-5 px-1 rounded-full bg-wine text-white text-xs font-bold flex items-center justify-center">{badge}</span>}
+      </span>
+      <span className="block text-sm text-ink-3 mt-1.5">{cat.subtitle}</span>
+    </>
+  );
+
+  if (unico) {
+    return (
+      <Link to={pathForView(cat.subitems[0].id)} className="block bg-white border border-line rounded-xl p-4 hover:border-navy transition-colors">
+        {corpo}
+      </Link>
+    );
+  }
+  return (
+    <div className="bg-white border border-line rounded-xl p-4">
+      {corpo}
+      <ul className="mt-3 border-t border-line pt-2 -mx-1">
+        {cat.subitems.map(sub => (
+          <li key={sub.id}>
+            <Link to={pathForView(sub.id)} className="flex items-center gap-2 min-h-[44px] px-2 rounded-lg text-sm font-semibold text-navy hover:bg-thead transition-colors">
+              <span className="material-symbols-outlined text-[20px] text-ink-3" aria-hidden="true">{sub.icon}</span>
+              <span className="truncate">{sub.label}</span>
+              {sub.badge ? <span className="ml-auto min-w-5 h-5 px-1 rounded-full bg-wine text-white text-xs font-bold flex items-center justify-center">{sub.badge}</span> : null}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
 
 export const Home: React.FC = () => {
   const nav = useContext(NavContext);
-  const setCurrentView = nav?.setCurrentView || (() => {});
   const authUser = nav?.authUser || null;
+  const perfil = authUser?.perfil;
   const periciaMenorVigentes = nav?.periciaMenorVigentes || 0;
   const isDesktop = useIsDesktop();
 
-  const categories = getNavCategories(authUser?.perfil, periciaMenorVigentes, isDesktop);
+  const categories = getNavCategories(perfil, periciaMenorVigentes, isDesktop);
   const primeiroNome = getPrimeiroNome(authUser);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [temConcursoEmAndamento, setTemConcursoEmAndamento] = useState(false);
 
+  const podeConcursos = canAccessPage('concursosJRS', perfil);
+  const podePareceres = canAccessPage('pareceres', perfil);
+  const podePericiaMenor = canAccessPage('pericia-menor', perfil);
+
+  const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
   useEffect(() => observarConcursos(
-    lista => setTemConcursoEmAndamento(lista.some(c => c.status === 'em_andamento')),
+    lista => setConcursos(lista),
     () => { /* silencioso: não bloqueia a Home se a checagem falhar */ },
   ), []);
+  const emAndamento = concursos.filter(c => c.status === 'em_andamento');
 
-  const selectedCategory: NavCategory | null = categories.find(c => c.id === selectedId) || null;
+  const [recentes, setRecentes] = useState<DocumentoRecente[] | null>(null);
+  useEffect(() => {
+    if (!podePareceres && !podePericiaMenor) { setRecentes([]); return; }
+    let ativo = true;
+    buscarDocumentosRecentes({ pareceres: podePareceres, periciaMenor: podePericiaMenor })
+      .then(lista => { if (ativo) setRecentes(lista); })
+      .catch(() => { if (ativo) setRecentes([]); });
+    return () => { ativo = false; };
+  }, [podePareceres, podePericiaMenor]);
 
-  // Categorias com mais de um subitem mostram os cards de subitem (mobile e
-  // desktop); no desktop os cards principais também se reorganizam numa
-  // coluna à esquerda (motion), no mobile eles simplesmente somem, sem
-  // precisar reagrupar.
-  const handleCardClick = (cat: NavCategory) => {
-    if (cat.subitems.length > 1) {
-      setSelectedId(prev => (prev === cat.id ? null : cat.id));
-      return;
-    }
-    setCurrentView(cat.subitems[0].id);
-  };
+  const pendencias: Pendencia[] = [];
+  if (authUser?.senhaTemporaria) {
+    pendencias.push({ id: 'senha', icone: 'key', rotulo: 'Segurança', valor: 'Senha temporária', detalhe: 'Altere a senha inicial (seu NIP).', to: '/perfil', tom: 'wine' });
+  }
+  if (podePericiaMenor && periciaMenorVigentes > 0) {
+    pendencias.push({ id: 'pm', icone: 'personal_injury', rotulo: 'Perícias menores vigentes', valor: periciaMenorVigentes, detalhe: periciaMenorVigentes === 1 ? 'militar com dispensa em curso' : 'militares com dispensa em curso', to: '/pericia-menor/historico', tom: 'wine' });
+  }
+  if (podeConcursos && emAndamento.length > 0) {
+    pendencias.push({
+      id: 'concurso', icone: 'fact_check', rotulo: emAndamento.length === 1 ? 'Concurso em andamento' : 'Concursos em andamento', valor: emAndamento.length,
+      detalhe: emAndamento.length === 1 ? emAndamento[0].nome : emAndamento.map(c => c.nome).join(' · '),
+      to: emAndamento.length === 1 ? concursoPath(emAndamento[0].id) : '/concursos', tom: 'navy',
+    });
+  }
 
   return (
-    <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
-      <Header title="JRS/HNRe" desktopTitle="Hospital Naval de Recife - Junta Regular de Saúde" />
+    <Page size="data" title={`Olá, ${primeiroNome || 'Perito'}!`} description="Resumo do que precisa da sua atenção e atalhos para o seu trabalho.">
+      <div className="space-y-8">
+        <section aria-labelledby="home-pendencias">
+          <h2 id="home-pendencias" className="eyebrow mb-3">Pendências</h2>
+          {pendencias.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {pendencias.map(p => <CartaoPendencia key={p.id} p={p} />)}
+            </div>
+          ) : (
+            <div className="bg-white border border-line rounded-xl">
+              <EmptyState icon="task_alt" title="Nada pendente" description="Não há perícias vigentes, concurso em andamento ou avisos de segurança para você agora." />
+            </div>
+          )}
+        </section>
 
-      <div className="p-4 sm:p-6 lg:p-8 w-full flex-1">
-        <div className="mb-6">
-          <h1 className="font-heading text-xl sm:text-2xl font-bold text-[#050F41]">
-            Olá, {primeiroNome || 'Perito'}!
-          </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {selectedCategory ? `Escolha uma opção de ${selectedCategory.label}` : 'O que pretende fazer agora?'}
-          </p>
-        </div>
-
-        <div className="flex flex-col md:flex-row items-start gap-4 sm:gap-6">
-          <div
-            className={`w-full gap-3 sm:gap-4 ${
-              selectedCategory ? 'hidden md:grid md:grid-cols-1 md:w-60 md:shrink-0' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-            }`}
-          >
-            {categories.map(cat => {
-              const badge = cat.subitems.reduce((acc, s) => acc + (s.badge || 0), 0);
-              const isSelected = selectedCategory?.id === cat.id;
-              const isDimmed = !!selectedCategory && !isSelected;
-              const isConcursosEmAndamento = cat.id === 'concursos' && temConcursoEmAndamento;
-
-              return (
-                <motion.button
-                  key={cat.id}
-                  layout
-                  transition={{ type: 'spring', stiffness: 90, damping: 22, mass: 1 }}
-                  type="button"
-                  onClick={() => handleCardClick(cat)}
-                  className={`relative flex rounded-2xl shadow-sm transition-colors duration-700 text-left ${
-                    selectedCategory ? 'flex-row items-center gap-2.5 py-3.5 px-4' : 'flex-col gap-1.5 py-4 px-4 md:py-5 md:px-5'
-                  } ${
-                    isDimmed
-                      ? 'bg-gray-200 text-gray-400 hover:bg-gray-200'
-                      : isConcursosEmAndamento
-                      ? 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white hover:shadow-md'
-                      : 'bg-[#079551] hover:bg-[#067a43] active:bg-[#056635] text-white hover:shadow-md'
-                  }`}
-                >
-                  {badge > 0 ? (
-                    <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white/30">
-                      {badge}
-                    </span>
-                  ) : null}
-                  <span className={`flex items-center gap-2.5 ${selectedCategory ? '' : 'w-full'}`}>
-                    <span className={`material-symbols-outlined shrink-0 ${selectedCategory ? 'text-[22px] md:text-[24px]' : 'text-[26px] md:text-[34px]'}`}>
-                      {cat.icon}
-                    </span>
-                    <span className={`font-bold leading-tight ${selectedCategory ? 'text-sm md:text-base' : 'text-sm sm:text-base md:text-lg'}`}>
-                      {cat.label}
-                    </span>
-                  </span>
-                  {!selectedCategory && (
-                    <span className="text-[11px] sm:text-xs md:text-sm font-medium leading-snug text-white/85">
-                      {cat.subtitle}
-                    </span>
-                  )}
-                </motion.button>
-              );
-            })}
+        <section aria-labelledby="home-atalhos">
+          <h2 id="home-atalhos" className="eyebrow mb-3">Atalhos</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+            {categories.map(cat => <CartaoArea key={cat.id} cat={cat} emAndamento={cat.id === 'concursos' && emAndamento.length > 0} />)}
           </div>
+        </section>
 
-          <AnimatePresence mode="wait">
-            {selectedCategory && (
-              <motion.div
-                key={selectedCategory.id}
-                initial={{ opacity: 0, x: 24 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 24 }}
-                transition={{ duration: 0.55, delay: 0.15, ease: [0.4, 0, 0.2, 1] }}
-                className="w-full flex-1"
-              >
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(null)}
-                  className="md:hidden flex items-center gap-1.5 text-sm font-bold text-[#050F41] mb-4"
-                >
-                  <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-                  Voltar
-                </button>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 w-full">
-                {selectedCategory.subitems.map(sub => {
-                  const isPlanilhasEmAndamento = sub.id === 'concursosJRS' && temConcursoEmAndamento;
-                  return (
-                  <button
-                    key={sub.id}
-                    type="button"
-                    onClick={() => setCurrentView(sub.id)}
-                    className={`relative flex flex-col gap-1.5 rounded-2xl shadow-sm hover:shadow-md transition-all py-4 px-4 md:py-5 md:px-5 text-left ${
-                      isPlanilhasEmAndamento
-                        ? 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white border border-red-600'
-                        : 'bg-white hover:bg-gray-50 active:bg-gray-100 text-[#050F41] border border-gray-200/60'
-                    }`}
-                  >
-                    {sub.badge ? (
-                      <span className="absolute top-2.5 right-2.5 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white">
-                        {sub.badge}
-                      </span>
-                    ) : null}
-                    <span className="flex items-center gap-2.5 w-full">
-                      <span className={`material-symbols-outlined text-[24px] md:text-[30px] shrink-0 ${isPlanilhasEmAndamento ? 'text-white' : 'text-[#079551]'}`}>{sub.icon}</span>
-                      <span className="text-sm sm:text-base md:text-lg font-bold leading-tight">{sub.label}</span>
-                    </span>
-                    <span className={`text-[11px] sm:text-xs md:text-sm font-medium leading-snug ${isPlanilhasEmAndamento ? 'text-white/85' : 'text-gray-500'}`}>
-                      {sub.subtitle}
-                    </span>
-                  </button>
-                  );
-                })}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        {(podePareceres || podePericiaMenor) && (
+          <section aria-labelledby="home-recentes">
+            <h2 id="home-recentes" className="eyebrow mb-3">Últimos documentos gerados</h2>
+            <div className="bg-white border border-line rounded-xl overflow-clip">
+              {recentes === null ? (
+                <p className="p-5 text-sm text-ink-3" role="status">Carregando documentos…</p>
+              ) : recentes.length === 0 ? (
+                <EmptyState icon="description" title="Nenhum documento recente" description="Os pareceres e as perícias menores gerados aparecem aqui." />
+              ) : (
+                <ul className="divide-y divide-line">
+                  {recentes.map((d, i) => (
+                    <li key={`${d.tipo}-${i}`}>
+                      <a
+                        href={d.link || undefined}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`flex items-center gap-3 px-4 min-h-[56px] py-2 ${d.link ? 'hover:bg-thead' : 'pointer-events-none'} transition-colors`}
+                      >
+                        <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">{d.tipo === 'parecer' ? 'description' : 'personal_injury'}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold text-navy truncate">{d.titulo}</span>
+                          <span className="block text-xs text-ink-3 truncate">{d.tipo === 'parecer' ? 'Parecer' : 'Perícia Menor'}{d.detalhe ? ` · ${d.detalhe}` : ''}</span>
+                        </span>
+                        <span className="text-xs text-ink-3 shrink-0">{d.data}</span>
+                        {d.link && <span className="material-symbols-outlined text-[20px] text-ink-4" aria-hidden="true">open_in_new</span>}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
+        )}
       </div>
-    </div>
+    </Page>
   );
 };

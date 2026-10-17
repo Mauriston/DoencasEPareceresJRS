@@ -54,15 +54,16 @@ A navegação ocorre em substituição de rotas através do Hook `currentView` n
 
 A interface do usuário foi desenhada com estrita observância à Identidade Visual da Marinha do Brasil, focando em *"Soberania Institucional, Precisão Médica e Clareza Operacional"*:
 * **Cores:** Azul Marinho Institucional (`#050F41`), Destaque Dourado (`#FAB932`), Verde Sucesso (`#079551`) e Superfícies Cinza-Gelo (`#F3F5F7`).
-* **Design:** Layout mobile-first, componentes em formato "Cards" arredondados (`rounded-2xl`), sombras suaves, divisores discretos (`divide-y`) e ícones minimalistas da biblioteca Lucide React.
+* **Design:** sistema de design único (ver `docs/auditoria-frontend.md`): Montserrat autohospedada em escala fixa (28/20/16/14/12), dois raios (8 controles · 14 cards), uma só sombra (sobreposições), ouro apenas como indicador/foco e verde apenas como estado. Layout com sidebar fixa de 240 px (recolhível), topbar com breadcrumb e busca global, e conteúdo em larguras `reading` 720 / `form` 640 / `data` 1200.
 
 ---
 
 ## 💻 Tecnologias e Dependências
 
 * **Framework Web:** React 19 + TypeScript + Vite.
-* **Estilização:** CSS utilitário com Tailwind CSS.
-* **Ícones:** Lucide React e Google Material Symbols.
+* **Estilização:** Tailwind CSS 3.4 compilado pelo Vite/PostCSS (`tailwind.config.js` com paleta fechada e `styles/tokens.css`).
+* **Navegação:** `react-router-dom` v7 com `HashRouter` (GitHub Pages) — cada tela e subnível tem URL própria.
+* **Ícones:** Google Material Symbols (shim `components/ui/icons.tsx`).
 * **Processamento de Imagens:** `react-image-crop` para interações de recorte na web, manipulado com a API Canvas nativa do HTML5.
 * **Exportação Local:** `jspdf` para geração de relatórios instantâneos.
 * **Backend Autônomo (Google Apps Script):** Orquestração no `Code.gs` utilizando Google Sheets como base de dados relacional, Google Docs para manipulação de *templates* e GmailApp para envio seguro de e-mails.

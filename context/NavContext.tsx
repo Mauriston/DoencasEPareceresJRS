@@ -21,7 +21,10 @@ export interface AuthUser {
 
 export interface NavContextType {
   currentView: NavItem;
+  /** Navega para a página (rota base). Mantido pela API original — agora muda a URL. */
   setCurrentView: (view: NavItem) => void;
+  /** Navega para qualquer rota do app (subníveis com parâmetros). */
+  navigate: (to: string, opcoes?: { replace?: boolean }) => void;
   authUser: AuthUser | null;
   updateAuthUser: (patch: Partial<AuthUser>) => void;
   handleLogout: () => void;

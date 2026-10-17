@@ -38,10 +38,10 @@ export const InstallAppQrDialog: React.FC<Props> = ({ onClose, onAlreadyInstalle
         className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
         <div className="p-5 flex flex-col items-center text-center">
           <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mb-3">
-            <span className="material-symbols-outlined text-[28px] text-[#079551]">install_mobile</span>
+            <span className="material-symbols-outlined text-[28px] text-green-700">install_mobile</span>
           </div>
-          <h3 className="font-heading font-bold text-sm text-[#050F41] mb-1.5">Leve o app para o seu celular</h3>
-          <p className="text-xs md:text-sm text-gray-500 mb-3">
+          <h3 className="font-heading font-bold text-sm text-navy mb-1.5">Leve o app para o seu celular</h3>
+          <p className="text-sm text-gray-500 mb-3">
             Aponte a câmera do celular para o QR code. O app abrirá
             {comLogin ? ' já com o seu login' : ' no navegador'} e um passo a passo mostrará como colocar o
             ícone na tela inicial.
@@ -51,31 +51,31 @@ export const InstallAppQrDialog: React.FC<Props> = ({ onClose, onAlreadyInstalle
             {qr ? (
               <img src={qr} alt="QR code para abrir o app no celular" className="w-full h-full rounded-xl" />
             ) : erro ? (
-              <button type="button" onClick={gerar} className="text-xs font-bold text-[#079551]">Tentar de novo</button>
+              <button type="button" onClick={gerar} className="text-xs font-bold text-green-700">Tentar de novo</button>
             ) : (
-              <div className="w-6 h-6 border-2 border-gray-200 border-t-[#079551] rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-gray-200 border-t-green rounded-full animate-spin" />
             )}
           </div>
 
           {qr && !comLogin && (
-            <p className="text-[11px] text-amber-600 mb-2">
+            <p className="text-xs text-amber-600 mb-2">
               Não foi possível enviar o login: você precisará entrar normalmente no celular.
             </p>
           )}
-          <p className="text-[11px] text-gray-400 mb-4">
+          <p className="text-xs text-ink-3 mb-4">
             Este QR code dá acesso à sua conta — não o compartilhe nem mostre a tela a terceiros.
             {qr && comLogin && (
-              <> <button type="button" onClick={gerar} className="font-bold text-[#079551]">Gerar novo QR</button></>
+              <> <button type="button" onClick={gerar} className="font-bold text-green-700">Gerar novo QR</button></>
             )}
           </p>
 
           <div className="flex items-center gap-2 w-full">
             <button type="button" onClick={onClose}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors">
+              className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors">
               Agora não
             </button>
             <button type="button" onClick={onAlreadyInstalled}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-[#079551] hover:bg-[#067a43] text-white text-xs md:text-sm font-bold transition-colors">
+              className="flex-1 px-4 py-2.5 rounded-lg bg-navy hover:bg-navy-hover text-white text-sm font-bold transition-colors">
               Já instalei
             </button>
           </div>

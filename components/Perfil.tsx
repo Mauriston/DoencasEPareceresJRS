@@ -1,17 +1,18 @@
 import React, { useContext, useRef, useState } from 'react';
-import { Header } from './Header';
+import { Page } from './ui/Page';
+import { Toast } from './ui/Toast';
 import { NavContext } from '../context/NavContext';
 import { uploadProfileImage } from '../services/profileImage';
 import { formatNip, formatCelular } from '../utils/format';
 import { trocarSenha, mapAuthErrorMessage } from '../services/firebaseAuth';
 import { updateUsuarioProfile } from '../services/firestoreUsuarios';
 
-const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#050F41] transition-colors';
-const labelClass = 'text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1';
+const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 focus:outline-none focus:border-navy transition-colors';
+const labelClass = 'text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1';
 
 const InfoField: React.FC<{ label: string; value?: string }> = ({ label, value }) => (
   <div>
-    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">{label}</span>
+    <span className="text-xs font-bold text-ink-3 uppercase tracking-wider block">{label}</span>
     <span className="text-sm font-semibold text-gray-800">{value || '—'}</span>
   </div>
 );
@@ -96,21 +97,10 @@ export const Perfil: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
-      <Header title="Meu Perfil" onBack={() => setCurrentView('home')} />
+    <Page size="form" title="Meu perfil" description="Seus dados de contato, foto e senha de acesso.">
+      <Toast message={toast?.msg ?? null} tone={toast?.type === 'error' ? 'error' : 'success'} />
 
-      {toast && (
-        <div className={`fixed top-20 right-4 z-[100] px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border animate-fade-in ${
-          toast.type === 'success' ? 'bg-[#050F41] text-white border-white/20' : 'bg-red-50 text-red-700 border-red-200'
-        }`}>
-          <span className={`material-symbols-outlined text-[18px] ${toast.type === 'success' ? 'text-[#079551]' : 'text-red-600'}`}>
-            {toast.type === 'success' ? 'check_circle' : 'error'}
-          </span>
-          <span className="font-semibold">{toast.msg}</span>
-        </div>
-      )}
-
-      <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-3xl mx-auto w-full flex-1 space-y-5">
+      <div className="space-y-5">
         {/* FOTO DE PERFIL EM DESTAQUE */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-6 flex flex-col items-center">
           <div className="relative">
@@ -122,14 +112,14 @@ export const Perfil: React.FC = () => {
               />
             ) : (
               <div className="w-28 h-28 rounded-full bg-gray-100 border-4 border-gray-100 shadow-sm flex items-center justify-center">
-                <span className="material-symbols-outlined text-[56px] text-gray-400">person</span>
+                <span className="material-symbols-outlined text-[56px] text-ink-3">person</span>
               </div>
             )}
             <button
               type="button"
               onClick={handleImageClick}
               disabled={uploading}
-              className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-[#050F41] hover:bg-[#079551] text-white flex items-center justify-center shadow-md border-2 border-white transition-colors disabled:opacity-50"
+              className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-navy hover:bg-navy-hover text-white flex items-center justify-center shadow-md border-2 border-white transition-colors disabled:opacity-50"
               title="Alterar foto de perfil"
             >
               <span className="material-symbols-outlined text-[18px]">
@@ -138,13 +128,13 @@ export const Perfil: React.FC = () => {
             </button>
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
           </div>
-          <h2 className="mt-4 font-heading font-bold text-base text-[#050F41] text-center">{authUser?.nome}</h2>
+          <h2 className="mt-4 font-heading font-bold text-base text-navy text-center">{authUser?.nome}</h2>
           <p className="text-xs text-gray-500 font-semibold">{authUser?.postoGraduacao || authUser?.usuario}</p>
         </div>
 
         {/* DADOS FUNCIONAIS (SOMENTE LEITURA) */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-5">
-          <h3 className="font-heading font-bold text-sm text-[#050F41] mb-4 flex items-center gap-2">
+          <h3 className="font-heading font-bold text-sm text-navy mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">badge</span>
             Dados Funcionais
           </h3>
@@ -160,7 +150,7 @@ export const Perfil: React.FC = () => {
 
         {/* CONTATO (EDITÁVEL) */}
         <form onSubmit={handleSalvarContato} className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-5 space-y-4">
-          <h3 className="font-heading font-bold text-sm text-[#050F41] flex items-center gap-2">
+          <h3 className="font-heading font-bold text-sm text-navy flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">contact_mail</span>
             Informações de Contato
           </h3>
@@ -182,7 +172,7 @@ export const Perfil: React.FC = () => {
             <button
               type="submit"
               disabled={savingContato}
-              className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5"
+              className="px-5 py-2.5 bg-navy hover:bg-navy-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5"
             >
               <span className="material-symbols-outlined text-[16px]">save</span>
               <span>{savingContato ? 'Salvando...' : 'Salvar Contato'}</span>
@@ -192,7 +182,7 @@ export const Perfil: React.FC = () => {
 
         {/* ALTERAR SENHA (SOMENTE O PRÓPRIO USUÁRIO) */}
         <form onSubmit={handleSalvarSenha} className="bg-white rounded-2xl shadow-sm border border-gray-200/60 p-5 space-y-4">
-          <h3 className="font-heading font-bold text-sm text-[#050F41] flex items-center gap-2">
+          <h3 className="font-heading font-bold text-sm text-navy flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">lock</span>
             Alterar Senha
           </h3>
@@ -216,7 +206,7 @@ export const Perfil: React.FC = () => {
             <button
               type="submit"
               disabled={savingSenha}
-              className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5"
+              className="px-5 py-2.5 bg-navy hover:bg-navy-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5"
             >
               <span className="material-symbols-outlined text-[16px]">key</span>
               <span>{savingSenha ? 'Salvando...' : 'Alterar Senha'}</span>
@@ -224,6 +214,6 @@ export const Perfil: React.FC = () => {
           </div>
         </form>
       </div>
-    </div>
+    </Page>
   );
 };

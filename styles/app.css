@@ -1,14 +1,43 @@
-/* Ficheiro: public/index.css
-   Estilos globais que não cabem em classes utilitárias do Tailwind (CDN).
+/* Ficheiro: styles/app.css
+   Ponto de entrada do CSS: Tailwind compilado (tokens em tailwind.config.js),
+   Montserrat autohospedada e os poucos estilos que não cabem em utilitárias.
    .md-content estiliza o HTML gerado a partir de Markdown (marked) nas
    páginas da Portaria e dos capítulos/anexos da DGPM-406. */
+@import './fonts.css';
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+    background-color: #f2f4f8;
+    color: #3d4460;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', system-ui, sans-serif;
+    color: #050f41;
+  }
+  /* Foco visível e consistente em toda a interface (ouro = foco). */
+  :focus-visible {
+    outline: 2px solid #fab932;
+    outline-offset: 2px;
+  }
+}
 
 .md-content {
   color: #1F2937;
-  font-family: 'Carlito', sans-serif;
-  font-size: 0.8125rem;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 1rem; /* corpo e texto normativo: 16/400 em todos os breakpoints */
   line-height: 1.7;
-  text-align: justify;
+  text-align: left;
 }
 
 .md-content > *:first-child {
@@ -29,28 +58,28 @@
 }
 
 .md-content h1 {
-  font-size: 1.05rem;
+  font-size: 1.75rem;
   margin: 0 0 1rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid #E5E7EB;
 }
 
 .md-content h2 {
-  font-size: 0.95rem;
+  font-size: 1.25rem;
   margin: 1.75rem 0 0.75rem;
   padding-bottom: 0.4rem;
   border-bottom: 1px solid #F3F4F6;
 }
 
 .md-content h3 {
-  font-size: 0.85rem;
+  font-size: 1rem;
   margin: 1.25rem 0 0.5rem;
 }
 
 .md-content h4,
 .md-content h5,
 .md-content h6 {
-  font-size: 0.8125rem;
+  font-size: 1rem;
   margin: 1rem 0 0.5rem;
 }
 
@@ -118,14 +147,14 @@
   color: #050F41;
   border-radius: 0.25rem;
   padding: 0.1rem 0.35rem;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
 }
 
 .md-content table {
   width: 100%;
   border-collapse: collapse;
   margin: 0 0 1rem;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   text-align: left;
 }
 
@@ -150,37 +179,6 @@
   background: #FAFAFA;
 }
 
-/* Desktop: fontes um pouco maiores, já que o container também é mais largo. */
-@media (min-width: 768px) {
-  .md-content {
-    font-size: 0.9375rem;
-    line-height: 1.75;
-  }
-
-  .md-content h1 {
-    font-size: 1.375rem;
-  }
-
-  .md-content h2 {
-    font-size: 1.15rem;
-  }
-
-  .md-content h3 {
-    font-size: 1.0125rem;
-  }
-
-  .md-content h4,
-  .md-content h5,
-  .md-content h6 {
-    font-size: 0.9375rem;
-  }
-
-  .md-content table,
-  .md-content code {
-    font-size: 0.85rem;
-  }
-}
-
 /* Barra de rolagem horizontal sempre visível e estilizada — usada em
    modais/tabelas mais largos que a tela, para o usuário perceber que dá
    para rolar para os lados (muitos navegadores mobile escondem a barra
@@ -203,3 +201,45 @@
   background: #050F41;
   border-radius: 9999px;
 }
+
+/* O texto de normas, critérios e minutas precisa ser selecionável e copiável
+   (o app já não bloqueia a seleção globalmente); só os controles de
+   interface — que não têm texto a copiar — impedem a seleção ao toque. */
+button,
+[role="button"],
+[role="tab"],
+summary,
+th[role="button"],
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Eyebrow / rótulo de seção: único uso de caixa alta do app (DS JRS/HNRe). */
+.eyebrow {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #1c4587;
+}
+
+/* Alvo de toque mínimo de 44px (WCAG 2.5.5 / DS): só em telas de toque, para
+   não inflar a densidade de tabelas e barras no desktop. Botões só com ícone
+   também ganham 44px de largura. Use .touch-exempt para exceções raras. */
+@media (pointer: coarse) {
+  button:not(.touch-exempt),
+  [role="button"]:not(.touch-exempt),
+  select:not(.touch-exempt),
+  summary {
+    min-height: 44px;
+  }
+  button:not(.touch-exempt):has(> .material-symbols-outlined:only-child) {
+    min-width: 44px;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]):not([type="file"]):not(.touch-exempt) {
+    min-height: 44px;
+  }
+}
+

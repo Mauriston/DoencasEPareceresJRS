@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, RefreshCw, AlertCircle, ArrowLeft, Download, Share2, ChevronRight } from 'lucide-react';
-import { Header } from './Header';
+import { Loader2, RefreshCw, AlertCircle, ArrowLeft, Download, Share2, ChevronRight } from './ui/icons';
+import { Container, PageHeader } from './ui/Page';
 import { fetchExtras, ExtraItem } from '../services/extrasService';
 
-interface InfograficosProps {
-  onBack?: () => void;
-}
-
-export const Infograficos: React.FC<InfograficosProps> = ({ onBack }) => {
+export const Infograficos: React.FC = () => {
   const [infograficos, setInfograficos] = useState<ExtraItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +70,7 @@ export const Infograficos: React.FC<InfograficosProps> = ({ onBack }) => {
   if (selectedItem) {
     return (
       <div className="fixed inset-0 z-[100] bg-white flex flex-col animate-fade-in pb-env-safe">
-        <div className="flex-shrink-0 w-full sticky top-0 z-50 shadow-sm bg-[#050F41] text-white h-[56px] flex items-center justify-between px-4 border-b border-transparent">
+        <div className="flex-shrink-0 w-full sticky top-0 z-50 shadow-sm bg-navy text-white h-[56px] flex items-center justify-between px-4 border-b border-transparent">
           <div className="flex-1 text-center font-heading text-[16px] font-semibold truncate pr-4 text-white uppercase tracking-wide">
             {selectedItem.title}
           </div>
@@ -91,12 +87,12 @@ export const Infograficos: React.FC<InfograficosProps> = ({ onBack }) => {
           {selectedItem.imageUrl ? (
             <img src={selectedItem.imageUrl} alt={selectedItem.title} className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl block" referrerPolicy="no-referrer" />
           ) : (
-            <div className="flex flex-col items-center justify-center p-10 text-gray-400 h-full">
+            <div className="flex flex-col items-center justify-center p-10 text-ink-3 h-full">
               <span className="material-symbols-outlined text-4xl mb-4 opacity-50">broken_image</span>
               <p>Imagem não disponível</p>
             </div>
           )}
-          <button onClick={() => setSelectedItem(null)} className="absolute bottom-6 right-6 bg-[#FAB932] text-[#050F41] shadow-2xl rounded-2xl p-4 hover:scale-105 active:scale-95 transition-all border border-amber-400 flex items-center justify-center z-50" title="Voltar para a lista">
+          <button onClick={() => setSelectedItem(null)} className="absolute bottom-6 right-6 bg-gold text-navy shadow-2xl rounded-2xl p-4 hover:scale-105 active:scale-95 transition-all border border-amber-400 flex items-center justify-center z-50" title="Voltar para a lista">
             <ArrowLeft size={22} />
           </button>
         </div>
@@ -105,18 +101,19 @@ export const Infograficos: React.FC<InfograficosProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
-      <Header title="Infográficos" onBack={onBack} />
-      <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full flex-1 pb-24 md:pb-12">
+    <div className="flex flex-col flex-1 animate-fade-in">
+      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
+        <PageHeader title="Infográficos" description="Resumos ilustrados para consultas rápidas." />
+
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
-            <Loader2 className="animate-spin text-[#050F41]" size={40} />
+            <Loader2 className="animate-spin text-navy" size={40} />
             <p className="text-sm font-semibold text-gray-500 font-body">Carregando infográficos...</p>
           </div>
         ) : (
           <>
             {error && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs md:text-sm p-4 rounded-xl flex items-start gap-2.5 shadow-sm">
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm p-4 rounded-xl flex items-start gap-2.5 shadow-sm">
                 <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={18} />
                 <div className="flex-1">
                   <p className="font-semibold">Sincronização Offline</p>
@@ -132,13 +129,13 @@ export const Infograficos: React.FC<InfograficosProps> = ({ onBack }) => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {infograficos.map((item) => (
-                  <button key={item.id} onClick={() => setSelectedItem(item)} className="group bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col w-full hover:shadow-md hover:border-[#079551] transition-all duration-300 text-left p-4 md:p-5">
+                  <button key={item.id} onClick={() => setSelectedItem(item)} className="group bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col w-full hover:shadow-md hover:border-navy transition-all duration-300 text-left p-4 md:p-5">
                     <div className="flex justify-between items-start gap-4 w-full">
-                      <h3 className="text-sm md:text-base font-bold text-[#050F41] font-heading leading-snug group-hover:text-[#079551] transition-colors">{item.title}</h3>
-                      <ChevronRight className="text-gray-400 group-hover:text-[#079551] transform group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" size={18} />
+                      <h3 className="text-base font-bold text-navy font-heading leading-snug group-hover:text-navy transition-colors">{item.title}</h3>
+                      <ChevronRight className="text-ink-3 group-hover:text-navy transform group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" size={18} />
                     </div>
                     {item.description && (
-                      <p className="text-xs md:text-sm text-gray-500 font-body leading-relaxed line-clamp-3 mt-2">{item.description}</p>
+                      <p className="text-sm text-gray-500 font-body leading-relaxed line-clamp-3 mt-2">{item.description}</p>
                     )}
                   </button>
                 ))}
@@ -146,7 +143,7 @@ export const Infograficos: React.FC<InfograficosProps> = ({ onBack }) => {
             )}
           </>
         )}
-      </div>
+      </Container>
     </div>
   );
 };

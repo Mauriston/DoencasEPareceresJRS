@@ -4,7 +4,10 @@ import { ResponsavelTermoModal } from './ResponsavelTermoModal';
 import type { UsuarioRecord } from '../services/firestoreUsuarios';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
+import { useParams } from 'react-router-dom';
+import { useBreadcrumbs } from '../context/BreadcrumbContext';
+import { concursoPath } from '../config/routes';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
 import {
@@ -27,6 +30,18 @@ import {
 import { apiUrl } from '../utils/apiBase';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { useStoragePdf } from '../hooks/useStoragePdf';
+import { Button } from './ui/Button';
+import { Segmented } from './ui/Segmented';
+import { EmptyState } from './ui/EmptyState';
+import { AccessDenied } from './ui/AccessDenied';
+import { controlClass } from './ui/Field';
+import { ConfirmDialog } from './ui/Dialog';
+import { Toast } from './ui/Toast';
+import { KpiMini } from './ui/KpiMini';
+import { ProgressBar } from './ui/ProgressBar';
+import { CandidatoStatusTag, ConcursoStatusTag, StatusSelect } from './ui/statusTheme';
+import { StatusTag } from './ui/StatusTag';
+import { getScrollParent } from '../utils/dom';
 
 // URL de implantação (aplicativo da web) do projeto Apps Script standalone
 // mínimo "CodeConcursos.gs" (código-fonte também versionado neste
@@ -44,45 +59,6 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'INSUF DOCUMENTAL', label: 'Insuf. Documental' },
   { value: 'Reagendado', label: 'Reagendado' },
 ];
-
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case 'APTO':
-      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-green-100 text-green-800 border border-green-200 whitespace-nowrap">APTO</span>;
-    case 'INAPTO':
-      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-red-100 text-red-800 border border-red-200 whitespace-nowrap">INAPTO</span>;
-    case 'FALTOU':
-      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-amber-100 text-amber-800 border border-amber-200 whitespace-nowrap">FALTOU</span>;
-    case 'INSUF DOCUMENTAL':
-      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-purple-100 text-purple-800 border border-purple-200 whitespace-nowrap">INSUF. DOC.</span>;
-    case 'Pendente':
-      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-blue-100 text-blue-800 border border-blue-200 whitespace-nowrap">PENDENTE</span>;
-    case 'Reagendado':
-      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 whitespace-nowrap">REAGENDADO</span>;
-    default:
-      return <span className="px-2.5 py-1 rounded-full text-[12px] font-bold bg-gray-100 text-gray-500 border border-gray-200 border-dashed whitespace-nowrap">SEM STATUS</span>;
-  }
-};
-
-const getStatusSelectClasses = (status: string) => {
-  switch (status) {
-    case 'APTO': return 'bg-green-100 text-green-800 border-green-200';
-    case 'INAPTO': return 'bg-red-100 text-red-800 border-red-200';
-    case 'FALTOU': return 'bg-amber-100 text-amber-800 border-amber-200';
-    case 'INSUF DOCUMENTAL': return 'bg-purple-100 text-purple-800 border-purple-200';
-    case 'Pendente': return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'Reagendado': return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-    default: return 'bg-white text-gray-500 border-gray-200';
-  }
-};
-
-const getConcursoStatusClasses = (status: ConcursoRecord['status']) => {
-  switch (status) {
-    case 'em_andamento': return 'bg-green-100 text-green-800 border-green-200';
-    case 'encerrado': return 'bg-gray-200 text-gray-600 border-gray-300';
-    default: return 'bg-amber-100 text-amber-800 border-amber-200';
-  }
-};
 
 const parseDataBR = (str: string): Date | null => {
   if (!str) return null;
@@ -161,6 +137,8 @@ interface ConfirmDialogState {
   confirmLabel?: string;
   onConfirm: () => void;
   onCancel?: () => void;
+  /** Ação destrutiva: confirmação contornada em vinho. */
+  destrutivo?: boolean;
 }
 
 interface CalendarioAgendamentoProps {
@@ -191,7 +169,7 @@ const CalendarioAgendamento: React.FC<CalendarioAgendamentoProps> = ({ datas, on
   if (loading) {
     return (
       <div className="text-center py-8 text-gray-500">
-        <span className="material-symbols-outlined animate-spin text-[28px] text-[#050F41]">progress_activity</span>
+        <span className="material-symbols-outlined animate-spin text-[28px] text-navy">progress_activity</span>
       </div>
     );
   }
@@ -199,20 +177,20 @@ const CalendarioAgendamento: React.FC<CalendarioAgendamentoProps> = ({ datas, on
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <button type="button" onClick={() => setMesAtual(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
-          <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+        <button type="button" onClick={() => setMesAtual(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))} aria-label="Mês anterior" className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-gray-100 text-ink-3">
+          <span className="material-symbols-outlined text-[20px]">chevron_left</span>
         </button>
-        <span className="text-xs md:text-sm font-bold text-[#050F41] uppercase">
+        <span className="text-sm font-bold text-navy uppercase">
           {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
         </span>
-        <button type="button" onClick={() => setMesAtual(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
-          <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+        <button type="button" onClick={() => setMesAtual(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))} aria-label="Próximo mês" className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-gray-100 text-ink-3">
+          <span className="material-symbols-outlined text-[20px]">chevron_right</span>
         </button>
       </div>
 
       <div className="grid grid-cols-7 gap-1 mb-1">
-        {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
-          <div key={i} className="text-center text-[10px] md:text-xs font-bold text-gray-400">{d}</div>
+        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((d) => (
+          <div key={d} className="text-center text-xs font-bold text-ink-3">{d}</div>
         ))}
       </div>
 
@@ -222,7 +200,7 @@ const CalendarioAgendamento: React.FC<CalendarioAgendamentoProps> = ({ datas, on
           const info = mapaDatas[iso];
           const dia = Number(iso.split('-')[2]);
           if (!info) {
-            return <div key={i} className="aspect-square flex items-center justify-center text-[11px] md:text-sm text-gray-300 rounded-lg">{dia}</div>;
+            return <div key={i} className="aspect-square flex items-center justify-center text-sm text-ink-4 rounded-lg">{dia}</div>;
           }
           return (
             <button
@@ -230,16 +208,16 @@ const CalendarioAgendamento: React.FC<CalendarioAgendamentoProps> = ({ datas, on
               type="button"
               onClick={() => onSelect(iso)}
               title={`${info.dataFormatada} — ${info.quantidadeAgendados} agendado(s)`}
-              className="aspect-square flex flex-col items-center justify-center rounded-lg text-[11px] md:text-sm font-bold bg-[#050F41]/5 text-[#050F41] border border-[#050F41]/20 hover:bg-[#050F41] hover:text-white transition-colors cursor-pointer"
+              className="aspect-square min-h-[44px] flex flex-col items-center justify-center rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover transition-colors cursor-pointer"
             >
               <span>{dia}</span>
-              <span className="text-[8px] md:text-[10px] font-semibold opacity-70">{info.quantidadeAgendados}</span>
+              <span className="text-xs font-semibold">{info.quantidadeAgendados}</span>
             </button>
           );
         })}
       </div>
 
-      {datas.length === 0 && <p className="text-xs md:text-sm text-gray-400 text-center py-4">Nenhuma data de agendamento configurada.</p>}
+      {datas.length === 0 && <p className="text-sm text-ink-3 text-center py-4">Nenhuma data de agendamento configurada.</p>}
     </div>
   );
 };
@@ -415,44 +393,55 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
   };
 
   return (
-    <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-2">
-            <span className="material-symbols-outlined text-[22px] text-[#079551]">upload_file</span>
-            <h3 className="font-heading font-bold text-sm uppercase">Registrar Mensagem (PDF) — Novo Concurso</h3>
-          </div>
-          <button onClick={() => onClose(step === 'concluido' ? concursoId || undefined : undefined)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
-
-        <div className="p-5 overflow-y-auto space-y-4 flex-1">
+    <Container size="form" className="py-6 md:py-8 pb-10 animate-fade-in">
+      <PageHeader title="Novo concurso" description="Registre a mensagem em PDF; o concurso nasce com os candidatos identificados." />
+      {/* F60: etapas numeradas e escritas — 1 Mensagem · 2 Revisão · 3 Agendamento. */}
+      <ol className="flex items-center gap-2 mb-5" aria-label="Etapas do novo concurso">
+        {[
+          { n: 1, rotulo: 'Mensagem', ativa: step === 'select' || step === 'processando' },
+          { n: 2, rotulo: 'Revisão', ativa: step === 'revisao' },
+          { n: 3, rotulo: 'Agendamento', ativa: step === 'agendamento' || step === 'concluido' },
+        ].map((e, i, arr) => {
+          const indiceAtual = arr.findIndex(x => x.ativa);
+          const feita = i < indiceAtual;
+          return (
+            <li key={e.n} className="flex items-center gap-2 flex-1 last:flex-none" aria-current={e.ativa ? 'step' : undefined}>
+              <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 border ${e.ativa ? 'bg-navy text-white border-navy' : feita ? 'bg-white text-green-700 border-green-700' : 'bg-white text-ink-3 border-line'}`}>
+                {feita ? <span className="material-symbols-outlined text-[18px]" aria-label="concluída">check</span> : e.n}
+              </span>
+              <span className={`text-sm font-semibold ${e.ativa ? 'text-navy' : 'text-ink-3'}`}>{e.rotulo}</span>
+              {i < arr.length - 1 && <span className="flex-1 h-px bg-line" aria-hidden="true" />}
+            </li>
+          );
+        })}
+      </ol>
+      <div className="bg-white rounded-xl border border-line">
+        <div className="p-5 space-y-4">
           {erro && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs md:text-sm text-red-700 font-semibold">{erro}</div>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 font-semibold">{erro}</div>
           )}
 
           {step === 'select' && (
             <>
-              <p className="text-xs md:text-sm text-gray-500">
+              <p className="text-sm text-gray-500">
                 Envie o PDF (ou fotografe/escaneie) da mensagem administrativa de apresentação dos candidatos
                 ou a mensagem de agendamento enviada pelo HNRe (candidatos agrupados por dia).
                 O texto será transcrito por IA, os candidatos, as datas de agendamento (quando houver) e o período
                 da JRS identificados automaticamente — você poderá revisar e corrigir tudo antes de criar o concurso.
               </p>
-              <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
-                <span className="material-symbols-outlined text-[32px] text-gray-400">picture_as_pdf</span>
-                <span className="text-xs md:text-sm font-bold text-gray-600">{file ? file.name : 'Clique para selecionar o PDF ou escanear um documento'}</span>
-                <span className="text-[10px] md:text-xs text-gray-400">Máx. 15 MB</span>
+              <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-navy transition-colors">
+                <span className="material-symbols-outlined text-[32px] text-ink-3">picture_as_pdf</span>
+                <span className="text-sm font-bold text-gray-600">{file ? file.name : 'Clique para selecionar o PDF ou escanear um documento'}</span>
+                <span className="text-xs text-ink-3">Máx. 15 MB</span>
                 <input type="file" accept="application/pdf,image/*" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
               </label>
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
                 <button
                   type="button"
                   disabled={!file || processando}
                   onClick={handleProcessar}
-                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm flex items-center space-x-1 disabled:opacity-50"
+                  className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center space-x-1 disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[16px]">upload</span>
                   <span>Processar Mensagem</span>
@@ -463,52 +452,52 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
 
           {step === 'processando' && (
             <div className="text-center py-8 text-gray-500 space-y-2">
-              <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
-              <p className="text-xs md:text-sm font-semibold">Transcrevendo o documento e identificando os candidatos...</p>
+              <span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span>
+              <p className="text-sm font-semibold">Transcrevendo o documento e identificando os candidatos...</p>
             </div>
           )}
 
           {step === 'revisao' && (
             <>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs md:text-sm text-blue-800">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800">
                 Confira e corrija os dados extraídos antes de criar o concurso — a matrícula de cada candidato precisa estar correta.
               </div>
               {modoAgendamento && (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-xs md:text-sm text-green-800">
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-800">
                   <span className="font-bold">Mensagem de agendamento identificada:</span> os candidatos serão criados já agendados nas datas abaixo (ajuste a data de qualquer um, se necessário).
                 </div>
               )}
 
               <div>
-                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do concurso</label>
+                <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do concurso</label>
                 <input
                   type="text"
                   value={nomeConcurso}
                   onChange={e => setNomeConcurso(e.target.value)}
                   placeholder="Ex.: CPAEM/2026"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm md:text-base font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-base font-bold text-navy focus:outline-none focus:border-navy"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Período JRS — início</label>
-                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm focus:outline-none focus:border-[#050F41]" />
+                  <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Período JRS — início</label>
+                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:border-navy" />
                 </div>
                 <div>
-                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Período JRS — fim</label>
-                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm focus:outline-none focus:border-[#050F41]" />
+                  <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Período JRS — fim</label>
+                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:border-navy" />
                 </div>
               </div>
               {!periodoInicio && (
-                <p className="text-[11px] md:text-sm text-amber-700">Período não identificado automaticamente — informe manualmente para já configurar o agendamento, ou deixe em branco para agendar depois.</p>
+                <p className="text-sm text-amber-700">Período não identificado automaticamente — informe manualmente para já configurar o agendamento, ou deixe em branco para agendar depois.</p>
               )}
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider">Candidatos ({candidatos.length})</label>
-                  <button type="button" onClick={adicionarCandidatoEditavel} className="text-[11px] md:text-sm font-bold text-[#050F41] flex items-center space-x-1">
-                    <span className="material-symbols-outlined text-[14px]">add</span>
+                  <label className="text-sm font-bold text-gray-500 uppercase tracking-wider">Candidatos ({candidatos.length})</label>
+                  <button type="button" onClick={adicionarCandidatoEditavel} className="text-sm font-bold text-navy flex items-center space-x-1">
+                    <span className="material-symbols-outlined text-sm">add</span>
                     <span>Adicionar</span>
                   </button>
                 </div>
@@ -520,14 +509,14 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
                         value={c.id}
                         onChange={e => atualizarCandidatoEditavel(i, 'id', e.target.value)}
                         placeholder="Matrícula"
-                        className="w-28 shrink-0 px-2 py-1.5 text-[12px] font-mono rounded-lg border border-gray-200 focus:outline-none focus:border-[#050F41]"
+                        className="w-28 shrink-0 px-2 py-1.5 text-xs font-mono rounded-lg border border-gray-200 focus:outline-none focus:border-navy"
                       />
                       <input
                         type="text"
                         value={c.nome}
                         onChange={e => atualizarCandidatoEditavel(i, 'nome', e.target.value)}
                         placeholder="Nome do candidato"
-                        className="flex-1 min-w-[140px] px-2 py-1.5 text-[12px] rounded-lg border border-gray-200 focus:outline-none focus:border-[#050F41]"
+                        className="flex-1 min-w-[140px] px-2 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:border-navy"
                       />
                       {modoAgendamento && (
                         <input
@@ -535,19 +524,19 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
                           value={c.dataAgendamento || ''}
                           onChange={e => atualizarCandidatoEditavel(i, 'dataAgendamento', e.target.value)}
                           aria-label="Data de agendamento"
-                          className="w-[9.5rem] shrink-0 px-2 py-1.5 text-[12px] rounded-lg border border-gray-200 focus:outline-none focus:border-[#050F41]"
+                          className="w-[9.5rem] shrink-0 px-2 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:border-navy"
                         />
                       )}
-                      <button type="button" onClick={() => removerCandidatoEditavel(i)} className="p-1.5 text-gray-400 hover:text-red-600 shrink-0">
+                      <button type="button" onClick={() => removerCandidatoEditavel(i)} className="p-1.5 text-ink-3 hover:text-red-600 shrink-0">
                         <span className="material-symbols-outlined text-[18px]">delete</span>
                       </button>
                     </div>
                   ))}
                   {candidatos.length === 0 && (
                     <div className="py-3 space-y-2">
-                      <p className="text-xs md:text-sm text-gray-400 text-center">Nenhum candidato identificado.</p>
+                      <p className="text-sm text-ink-3 text-center">Nenhum candidato identificado.</p>
                       {textoTranscrito && (
-                        <details className="text-[11px] text-gray-500">
+                        <details className="text-xs text-gray-500">
                           <summary className="cursor-pointer font-semibold text-center">Ver texto transcrito do PDF</summary>
                           <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-gray-50 border border-gray-200 p-2 font-mono">{textoTranscrito}</pre>
                         </details>
@@ -558,12 +547,12 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
               </div>
 
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
                 <button
                   type="button"
                   disabled={processando}
                   onClick={handleConfirmarCriacao}
-                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
+                  className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
                 >
                   {processando ? 'Criando concurso...' : 'Confirmar e Criar Concurso'}
                 </button>
@@ -573,58 +562,58 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
 
           {step === 'agendamento' && (
             <>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs md:text-sm text-gray-700">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-gray-700">
                 <span className="font-bold">Candidatos a agendar:</span> {totalPendentes}
               </div>
 
               <div>
-                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Quantidade de IS por dia</label>
+                <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Quantidade de IS por dia</label>
                 <input
                   type="number"
                   min={1}
                   value={quantidadePorDia}
                   onChange={e => setQuantidadePorDia(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm font-bold text-navy focus:outline-none focus:border-navy"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-2">Datas disponíveis (marque as que serão usadas)</label>
+                <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-2">Datas disponíveis (marque as que serão usadas)</label>
                 <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-56 overflow-y-auto">
                   {datasDisponiveis.length > 0 && (
-                    <label className="flex items-center gap-2 p-2 text-xs md:text-sm font-bold text-[#050F41] cursor-pointer hover:bg-gray-50 bg-gray-50/60">
+                    <label className="flex items-center gap-2 p-2 text-sm font-bold text-navy cursor-pointer hover:bg-gray-50 bg-gray-50/60">
                       <input
                         type="checkbox"
                         checked={todasDatasSelecionadas}
                         ref={el => { if (el) el.indeterminate = !todasDatasSelecionadas && datasSelecionadas.size > 0; }}
                         onChange={toggleTodasDatas}
-                        className="accent-[#050F41]"
+                        className="accent-navy"
                       />
                       <span>{todasDatasSelecionadas ? 'Desmarcar todas' : 'Selecionar todas'}</span>
                     </label>
                   )}
                   {datasDisponiveis.map(d => (
-                    <label key={d.data} className="flex items-center gap-2 p-2 text-xs md:text-sm cursor-pointer hover:bg-gray-50">
-                      <input type="checkbox" checked={datasSelecionadas.has(d.data)} onChange={() => toggleData(d.data)} className="accent-[#050F41]" />
-                      <span className="font-bold text-[#050F41]">{d.dataFormatada}</span>
+                    <label key={d.data} className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-gray-50">
+                      <input type="checkbox" checked={datasSelecionadas.has(d.data)} onChange={() => toggleData(d.data)} className="accent-navy" />
+                      <span className="font-bold text-navy">{d.dataFormatada}</span>
                       <span className="text-gray-500">({d.diaSemana})</span>
                     </label>
                   ))}
-                  {datasDisponiveis.length === 0 && <p className="text-xs md:text-sm text-gray-400 text-center py-4">Nenhuma data útil no período informado.</p>}
+                  {datasDisponiveis.length === 0 && <p className="text-sm text-ink-3 text-center py-4">Nenhuma data útil no período informado.</p>}
                 </div>
               </div>
 
-              <div className={`rounded-xl p-3 text-xs md:text-sm font-bold ${agendamentoViavel ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-amber-50 border border-amber-200 text-amber-800'}`}>
+              <div className={`rounded-xl p-3 text-sm font-bold ${agendamentoViavel ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-amber-50 border border-amber-200 text-amber-800'}`}>
                 {quantidadeCoberta} / {totalPendentes} candidatos cobertos com {datasSelecionadas.size} data(s) × {quantidadePorDia || 0} por dia
               </div>
 
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Agendar Depois</button>
+                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Agendar Depois</button>
                 <button
                   type="button"
                   disabled={!agendamentoViavel || processando}
                   onClick={handleConfirmarAgendamento}
-                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
+                  className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
                 >
                   {processando ? 'Confirmando...' : 'Confirmar Agendamento e Gerar Minuta'}
                 </button>
@@ -635,30 +624,30 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
           {step === 'concluido' && (
             <>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                <p className="text-xs md:text-sm font-bold text-green-800">
+                <p className="text-sm font-bold text-green-800">
                   Concurso "{nomeConcurso}" criado com sucesso{modoAgendamento ? ` com os ${candidatos.filter(c => c.id.trim() && c.nome.trim()).length} candidatos já agendados nas datas da mensagem${semPeriodo ? ' (defina o período de agendamento depois, se precisar reagendar).' : '.'}` : semPeriodo ? '.' : ' e agendamento confirmado.'}
                 </p>
               </div>
               {minuta && (
                 <>
-                  <textarea readOnly value={minuta} rows={12} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-[11px] md:text-sm font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap" />
-                  <button type="button" onClick={() => handleCopiarTexto(minuta)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1">
+                  <textarea readOnly value={minuta} rows={12} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap" />
+                  <button type="button" onClick={() => handleCopiarTexto(minuta)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1">
                     <span className="material-symbols-outlined text-[16px]">content_copy</span>
                     <span>Copiar Minuta</span>
                   </button>
                 </>
               )}
               {!isAdmin && (
-                <p className="text-[11px] md:text-sm text-gray-500">O concurso ficará com status "Em Breve" até um Admin abri-lo.</p>
+                <p className="text-sm text-gray-500">O concurso ficará com status "Em Breve" até um Admin abri-lo.</p>
               )}
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Concluir</button>
+                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Concluir</button>
               </div>
             </>
           )}
         </div>
       </div>
-    </div>
+    </Container>
   );
 };
 
@@ -728,10 +717,10 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
   return (
     <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+        <div className="p-4 bg-navy text-white flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2">
-            <span className="material-symbols-outlined text-[22px] text-[#079551]">table_view</span>
-            <h3 className="font-heading font-bold text-sm uppercase">Importar Concurso (CSV)</h3>
+            <span className="material-symbols-outlined text-[22px] text-gold">table_view</span>
+            <h3 className="font-heading font-bold text-sm">Importar Concurso (CSV)</h3>
           </div>
           <button onClick={() => onClose(concursoIdCriado || undefined)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -739,20 +728,20 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
         </div>
 
         <div className="p-5 overflow-y-auto space-y-4 flex-1">
-          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs md:text-sm text-red-700 font-semibold">{erro}</div>}
+          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 font-semibold">{erro}</div>}
 
           {concursoIdCriado ? (
             <>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                <p className="text-xs md:text-sm font-bold text-green-800">Concurso "{nomeConcurso}" importado com sucesso ({candidatos.length} candidato(s)).</p>
+                <p className="text-sm font-bold text-green-800">Concurso "{nomeConcurso}" importado com sucesso ({candidatos.length} candidato(s)).</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={() => onClose(concursoIdCriado)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Ver Concurso</button>
+                <button type="button" onClick={() => onClose(concursoIdCriado)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Ver Concurso</button>
               </div>
             </>
           ) : (
             <>
-              <p className="text-xs md:text-sm text-gray-500">
+              <p className="text-sm text-gray-500">
                 Importa um concurso direto de um CSV no formato da aba "candidatosDataBase" (com a coluna do nome do
                 candidato em qualquer posição). Não cria mensagem administrativa — se o concurso ainda terá
                 candidatos reagendados pelo app, informe o período de IS abaixo para liberar o calendário de
@@ -760,22 +749,22 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
               </p>
 
               <div>
-                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do concurso</label>
+                <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do concurso</label>
                 <input
                   type="text"
                   value={nomeConcurso}
                   onChange={e => setNomeConcurso(e.target.value)}
                   placeholder="Ex.: CPAEAM/2026"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm md:text-base font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-base font-bold text-navy focus:outline-none focus:border-navy"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Status inicial</label>
+                <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Status inicial</label>
                 <select
                   value={status}
                   onChange={e => setStatus(e.target.value as ConcursoRecord['status'])}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm font-bold text-navy focus:outline-none focus:border-navy"
                 >
                   {STATUS_IMPORTACAO_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -783,35 +772,35 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Período IS — início (opcional)</label>
-                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm focus:outline-none focus:border-[#050F41]" />
+                  <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Período IS — início (opcional)</label>
+                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:border-navy" />
                 </div>
                 <div>
-                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Período IS — fim (opcional)</label>
-                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm focus:outline-none focus:border-[#050F41]" />
+                  <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Período IS — fim (opcional)</label>
+                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:border-navy" />
                 </div>
               </div>
-              <p className="text-[11px] md:text-sm text-gray-400 -mt-2">Informe o período para liberar o calendário de reagendamento (gera os dias úteis automaticamente).</p>
+              <p className="text-sm text-ink-3 -mt-2">Informe o período para liberar o calendário de reagendamento (gera os dias úteis automaticamente).</p>
 
               <div>
-                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Arquivo CSV</label>
-                <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
-                  <span className="material-symbols-outlined text-[32px] text-gray-400">table_view</span>
-                  <span className="text-xs md:text-sm font-bold text-gray-600">{fileName || 'Clique para selecionar o CSV'}</span>
+                <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Arquivo CSV</label>
+                <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-navy transition-colors">
+                  <span className="material-symbols-outlined text-[32px] text-ink-3">table_view</span>
+                  <span className="text-sm font-bold text-gray-600">{fileName || 'Clique para selecionar o CSV'}</span>
                   <input type="file" accept=".csv,text/csv" className="hidden" onChange={e => handleSelecionarArquivo(e.target.files?.[0] || null)} />
                 </label>
                 {candidatos.length > 0 && (
-                  <p className="text-[11px] md:text-sm text-green-700 font-bold mt-1.5">{candidatos.length} candidato(s) identificado(s).</p>
+                  <p className="text-sm text-green-700 font-bold mt-1.5">{candidatos.length} candidato(s) identificado(s).</p>
                 )}
               </div>
 
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
                 <button
                   type="button"
                   disabled={processando || candidatos.length === 0}
                   onClick={handleImportar}
-                  className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
+                  className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
                 >
                   {processando ? 'Importando...' : 'Importar Concurso'}
                 </button>
@@ -827,31 +816,6 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
 // =========================================================================
 // LISTA DE CONCURSOS
 // =========================================================================
-
-const getConcursoCardBg = (status: ConcursoRecord['status']) => {
-  switch (status) {
-    case 'encerrado': return 'bg-green-100';
-    case 'em_andamento': return 'bg-red-100';
-    default: return 'bg-amber-100';
-  }
-};
-
-const CircularMini: React.FC<{ pct: number }> = ({ pct }) => {
-  const r = 26;
-  const c = 2 * Math.PI * r;
-  const offset = c - (Math.max(0, Math.min(100, pct)) / 100) * c;
-  return (
-    <div className="relative w-16 h-16 shrink-0">
-      <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
-        <circle cx="32" cy="32" r={r} fill="none" stroke="#FFFFFF" strokeWidth="6" />
-        <circle cx="32" cy="32" r={r} fill="none" stroke="#079551" strokeWidth="6" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} className="transition-all duration-500" />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-base font-black text-[#050F41]">{pct}%</span>
-      </div>
-    </div>
-  );
-};
 
 // -------------------------------------------------------------------------
 // Modal do gráfico de barras (clique nos KPIs anuais de Faltas/Inaptos/IDM)
@@ -869,20 +833,20 @@ const ModalKpiBarChart: React.FC<ModalKpiBarChartProps> = ({ titulo, corBarra, i
   return (
     <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
-          <h3 className="font-heading font-bold text-sm uppercase">{titulo} — Top 4 Concursos</h3>
+        <div className="p-4 bg-navy text-white flex items-center justify-between shrink-0">
+          <h3 className="font-heading font-bold text-sm">{titulo} — Top 4 Concursos</h3>
           <button onClick={onClose} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
         <div className="p-5 space-y-4 overflow-y-auto">
           {itens.length === 0 ? (
-            <p className="text-xs md:text-sm text-gray-400 text-center py-6">Nenhuma ocorrência no ano corrente.</p>
+            <p className="text-sm text-ink-3 text-center py-6">Nenhuma ocorrência no ano corrente.</p>
           ) : itens.map(item => (
             <button key={item.concursoId} type="button" onClick={() => { onSelecionarConcurso(item.concursoId); onClose(); }} className="w-full text-left group">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs md:text-sm font-bold text-[#050F41] group-hover:underline truncate pr-2">{item.concursoNome}</span>
-                <span className="text-xs md:text-sm font-black text-gray-700 shrink-0">{item.quantidade}</span>
+                <span className="text-sm font-bold text-navy group-hover:underline truncate pr-2">{item.concursoNome}</span>
+                <span className="text-sm font-black text-gray-700 shrink-0">{item.quantidade}</span>
               </div>
               <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                 <div className={`h-full rounded-full ${corBarra}`} style={{ width: `${(item.quantidade / max) * 100}%` }} />
@@ -955,10 +919,10 @@ const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps
   return (
     <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+        <div className="p-4 bg-navy text-white flex items-center justify-between shrink-0">
           <div className="min-w-0">
-            <h3 className="font-heading font-bold text-sm uppercase truncate">Registrar Mensagem</h3>
-            <p className="text-[11px] text-white/70 truncate">{concursoNome}</p>
+            <h3 className="font-heading font-bold text-sm truncate">Registrar Mensagem</h3>
+            <p className="text-xs text-white/70 truncate">{concursoNome}</p>
           </div>
           <button onClick={onClose} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0">
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -966,59 +930,59 @@ const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps
         </div>
 
         <div className="p-5 overflow-y-auto space-y-4 flex-1">
-          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs md:text-sm text-red-700 font-semibold">{erro}</div>}
+          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 font-semibold">{erro}</div>}
 
           {step === 'select' && (
             <>
-              <p className="text-xs md:text-sm text-gray-500">
+              <p className="text-sm text-gray-500">
                 Envie o PDF de uma mensagem administrativa referente a este concurso (ex.: solicitação de
                 reagendamento, resultado de recurso). Será arquivada com data-hora, remetente e assunto
                 identificados automaticamente.
               </p>
-              <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-[#050F41] transition-colors">
-                <span className="material-symbols-outlined text-[32px] text-gray-400">picture_as_pdf</span>
-                <span className="text-xs md:text-sm font-bold text-gray-600">{file ? file.name : 'Clique para selecionar o PDF'}</span>
-                <span className="text-[10px] md:text-xs text-gray-400">Máx. 15 MB</span>
+              <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-navy transition-colors">
+                <span className="material-symbols-outlined text-[32px] text-ink-3">picture_as_pdf</span>
+                <span className="text-sm font-bold text-gray-600">{file ? file.name : 'Clique para selecionar o PDF'}</span>
+                <span className="text-xs text-ink-3">Máx. 15 MB</span>
                 <input type="file" accept="application/pdf,image/*" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
               </label>
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-                <button type="button" disabled={!file || processando} onClick={handleProcessar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50">Processar Mensagem</button>
+                <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" disabled={!file || processando} onClick={handleProcessar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50">Processar Mensagem</button>
               </div>
             </>
           )}
 
           {step === 'processando' && (
             <div className="text-center py-8 text-gray-500 space-y-2">
-              <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
-              <p className="text-xs md:text-sm font-semibold">Transcrevendo o documento...</p>
+              <span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span>
+              <p className="text-sm font-semibold">Transcrevendo o documento...</p>
             </div>
           )}
 
           {step === 'revisao' && cabecalho && (
             <>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs md:text-sm text-blue-800">Confira os dados extraídos antes de arquivar a mensagem.</div>
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800">Confira os dados extraídos antes de arquivar a mensagem.</div>
               <div>
-                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Data-Hora</label>
-                <input type="text" value={cabecalho.dataHora} onChange={e => setCabecalho({ ...cabecalho, dataHora: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-mono text-[#050F41] focus:outline-none focus:border-[#050F41]" />
+                <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Data-Hora</label>
+                <input type="text" value={cabecalho.dataHora} onChange={e => setCabecalho({ ...cabecalho, dataHora: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm font-mono text-navy focus:outline-none focus:border-navy" />
               </div>
               <div>
-                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Remetente</label>
-                <input type="text" value={cabecalho.sender} onChange={e => setCabecalho({ ...cabecalho, sender: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm text-[#050F41] focus:outline-none focus:border-[#050F41]" />
+                <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Remetente</label>
+                <input type="text" value={cabecalho.sender} onChange={e => setCabecalho({ ...cabecalho, sender: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-navy focus:outline-none focus:border-navy" />
               </div>
               <div>
-                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Assunto</label>
-                <input type="text" value={cabecalho.subject} onChange={e => setCabecalho({ ...cabecalho, subject: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm text-[#050F41] focus:outline-none focus:border-[#050F41]" />
+                <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Assunto</label>
+                <input type="text" value={cabecalho.subject} onChange={e => setCabecalho({ ...cabecalho, subject: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-navy focus:outline-none focus:border-navy" />
               </div>
               <div>
-                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Tipo</label>
-                <select value={cabecalho.purpose || 'Outros'} onChange={e => setCabecalho({ ...cabecalho, purpose: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]">
+                <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Tipo</label>
+                <select value={cabecalho.purpose || 'Outros'} onChange={e => setCabecalho({ ...cabecalho, purpose: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm font-bold text-navy focus:outline-none focus:border-navy">
                   {PROPOSITO_MENSAGEM_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
+                <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
                   {processando ? 'Arquivando...' : 'Arquivar Mensagem'}
                 </button>
               </div>
@@ -1028,10 +992,10 @@ const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps
           {step === 'concluido' && (
             <>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                <p className="text-xs md:text-sm font-bold text-green-800">Mensagem arquivada com sucesso.</p>
+                <p className="text-sm font-bold text-green-800">Mensagem arquivada com sucesso.</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={onClose} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Concluir</button>
+                <button type="button" onClick={onClose} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm">Concluir</button>
               </div>
             </>
           )}
@@ -1084,7 +1048,7 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
   return (
     <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+        <div className="p-4 bg-navy text-white flex items-center justify-between shrink-0">
           <div className="min-w-0 flex items-center gap-2">
             {selecionada && (
               <button onClick={() => setSelecionada(null)} className="p-1 rounded-lg hover:bg-white/10 shrink-0">
@@ -1092,8 +1056,8 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
               </button>
             )}
             <div className="min-w-0">
-              <h3 className="font-heading font-bold text-sm uppercase truncate">Mensagens Arquivadas</h3>
-              <p className="text-[11px] text-white/70 truncate">{concursoNome}</p>
+              <h3 className="font-heading font-bold text-sm truncate">Mensagens Arquivadas</h3>
+              <p className="text-xs text-white/70 truncate">{concursoNome}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0">
@@ -1106,8 +1070,8 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
             <div className="p-5 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-xs md:text-sm font-bold text-[#050F41] truncate">{selecionada.subject || 'Sem assunto'}</p>
-                  <p className="text-[11px] md:text-sm text-gray-500">{selecionada.sender} — {selecionada.dataHora}</p>
+                  <p className="text-sm font-bold text-navy truncate">{selecionada.subject || 'Sem assunto'}</p>
+                  <p className="text-sm text-gray-500">{selecionada.sender} — {selecionada.dataHora}</p>
                 </div>
                 {selecionada.fileUrl && (
                   <a
@@ -1115,7 +1079,7 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
                     download
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-3 py-2 bg-[#079551] hover:bg-[#067a43] text-white rounded-xl text-[11px] md:text-sm font-bold transition-colors shadow-sm flex items-center space-x-1.5 shrink-0"
+                    className="px-3 py-2 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center space-x-1.5 shrink-0"
                   >
                     <span className="material-symbols-outlined text-[16px]">download</span>
                     <span>Download Mensagem</span>
@@ -1125,26 +1089,26 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
               {selecionada.texto ? (
                 <>
                   <div className="w-full max-h-[60vh] overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-4">
-                    <p className="text-xs md:text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{selecionada.texto}</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{selecionada.texto}</p>
                   </div>
                   <div className="flex items-center justify-end">
                     <button
                       type="button"
                       onClick={handleCopiarTexto}
                       title="Copiar texto da mensagem"
-                      className="p-2 rounded-lg text-gray-500 hover:text-[#050F41] hover:bg-gray-100 transition-colors flex items-center justify-center"
+                      className="p-2 rounded-lg text-gray-500 hover:text-navy hover:bg-gray-100 transition-colors flex items-center justify-center"
                     >
                       <span className="material-symbols-outlined text-[18px]">{textoCopiado ? 'check' : 'content_copy'}</span>
                     </button>
                   </div>
                 </>
               ) : (
-                <p className="text-xs md:text-sm text-gray-400 text-center py-8">Texto da mensagem não disponível.</p>
+                <p className="text-sm text-ink-3 text-center py-8">Texto da mensagem não disponível.</p>
               )}
             </div>
           ) : loading ? (
             <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
-              <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
+              <span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span>
             </div>
           ) : mensagens.length === 0 ? (
             <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
@@ -1155,7 +1119,7 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
             <div className="overflow-x-auto scroll-x-visible">
             <table className="w-full min-w-[520px] text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] md:text-sm font-bold text-[#050F41] uppercase tracking-wider">
+                <tr className="bg-gray-50/80 border-b border-gray-100 text-sm font-bold text-navy uppercase tracking-wider">
                   <th className="py-3 px-4">Data-Hora</th>
                   <th className="py-3 px-4">Tipo</th>
                   <th className="py-3 px-4">Remetente</th>
@@ -1163,7 +1127,7 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
                   <th className="py-3 px-4 w-10"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-xs md:text-sm">
+              <tbody className="divide-y divide-gray-100 text-sm">
                 {mensagens.map(m => (
                   <tr key={m.id} onClick={() => setSelecionada(m)} className="hover:bg-gray-50 cursor-pointer transition-colors">
                     <td className="py-3 px-4 font-mono text-gray-600 whitespace-nowrap">{m.dataHora}</td>
@@ -1171,7 +1135,7 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
                     <td className="py-3 px-4 text-gray-700 font-semibold">{m.sender || '-'}</td>
                     <td className="py-3 px-4 text-gray-700">{m.subject || '-'}</td>
                     <td className="py-3 px-4 text-right">
-                      <span className="material-symbols-outlined text-[18px] text-[#050F41]" title="Ver mensagem">
+                      <span className="material-symbols-outlined text-[18px] text-navy" title="Ver mensagem">
                         visibility
                       </span>
                     </td>
@@ -1222,10 +1186,10 @@ const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendamentoPro
   return (
     <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+        <div className="p-4 bg-navy text-white flex items-center justify-between shrink-0">
           <div className="min-w-0">
-            <h3 className="font-heading font-bold text-sm uppercase truncate">Definir Período de Agendamento</h3>
-            <p className="text-[11px] text-white/70 truncate">{concursoNome}</p>
+            <h3 className="font-heading font-bold text-sm truncate">Definir Período de Agendamento</h3>
+            <p className="text-xs text-white/70 truncate">{concursoNome}</p>
           </div>
           <button onClick={() => onClose(concluido)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0">
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -1233,36 +1197,36 @@ const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendamentoPro
         </div>
 
         <div className="p-5 overflow-y-auto space-y-4 flex-1">
-          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs md:text-sm text-red-700 font-semibold">{erro}</div>}
+          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 font-semibold">{erro}</div>}
 
           {concluido ? (
             <>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                <p className="text-xs md:text-sm font-bold text-green-800">Período definido com sucesso. O calendário de reagendamento já está liberado.</p>
+                <p className="text-sm font-bold text-green-800">Período definido com sucesso. O calendário de reagendamento já está liberado.</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={() => onClose(true)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Concluir</button>
+                <button type="button" onClick={() => onClose(true)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Concluir</button>
               </div>
             </>
           ) : (
             <>
-              <p className="text-xs md:text-sm text-gray-500">
+              <p className="text-sm text-gray-500">
                 Informe o período das IS deste concurso para gerar os dias úteis disponíveis para reagendamento. Se o
                 concurso já tiver um calendário configurado, ele será substituído pelo novo período.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Início</label>
-                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm focus:outline-none focus:border-[#050F41]" />
+                  <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Início</label>
+                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:border-navy" />
                 </div>
                 <div>
-                  <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Fim</label>
-                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm focus:outline-none focus:border-[#050F41]" />
+                  <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Fim</label>
+                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:border-navy" />
                 </div>
               </div>
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
                   {processando ? 'Salvando...' : 'Confirmar'}
                 </button>
               </div>
@@ -1326,10 +1290,10 @@ const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = ({ concu
   return (
     <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 bg-[#050F41] text-white flex items-center justify-between shrink-0">
+        <div className="p-4 bg-navy text-white flex items-center justify-between shrink-0">
           <div className="min-w-0">
-            <h3 className="font-heading font-bold text-sm uppercase truncate">Adicionar Candidato</h3>
-            <p className="text-[11px] text-white/70 truncate">{concursoNome}</p>
+            <h3 className="font-heading font-bold text-sm truncate">Adicionar Candidato</h3>
+            <p className="text-xs text-white/70 truncate">{concursoNome}</p>
           </div>
           <button onClick={() => onClose(concluido)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0">
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -1337,50 +1301,50 @@ const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = ({ concu
         </div>
 
         <div className="p-5 overflow-y-auto space-y-4 flex-1">
-          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-xs md:text-sm text-red-700 font-semibold">{erro}</div>}
+          {erro && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 font-semibold">{erro}</div>}
 
           {concluido ? (
             <>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                <p className="text-xs md:text-sm font-bold text-green-800">Candidato "{nome.trim().toUpperCase()}" adicionado com sucesso.</p>
+                <p className="text-sm font-bold text-green-800">Candidato "{nome.trim().toUpperCase()}" adicionado com sucesso.</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={() => onClose(true)} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Concluir</button>
+                <button type="button" onClick={() => onClose(true)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Concluir</button>
               </div>
             </>
           ) : (
             <>
               <div>
-                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Matrícula</label>
+                <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Matrícula</label>
                 <input
                   type="text"
                   value={matricula}
                   onChange={e => setMatricula(e.target.value)}
                   placeholder="Ex.: 550039-7"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-mono text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm font-mono text-navy focus:outline-none focus:border-navy"
                 />
               </div>
               <div>
-                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do candidato</label>
+                <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Nome do candidato</label>
                 <input
                   type="text"
                   value={nome}
                   onChange={e => setNome(e.target.value.toUpperCase())}
                   placeholder="NOME COMPLETO"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm font-bold text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm font-bold text-navy focus:outline-none focus:border-navy"
                 />
               </div>
               <div>
-                <label className="text-[11px] md:text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Data de agendamento</label>
+                <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1">Data de agendamento</label>
                 {loadingDatas ? (
-                  <p className="text-xs md:text-sm text-gray-400">Carregando datas...</p>
+                  <p className="text-sm text-ink-3">Carregando datas...</p>
                 ) : datas.length === 0 ? (
-                  <p className="text-[11px] md:text-sm text-amber-700">Este concurso ainda não tem datas configuradas — o candidato será adicionado sem agendamento (pode ser agendado depois).</p>
+                  <p className="text-sm text-amber-700">Este concurso ainda não tem datas configuradas — o candidato será adicionado sem agendamento (pode ser agendado depois).</p>
                 ) : (
                   <select
                     value={dataAgendamento}
                     onChange={e => setDataAgendamento(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs md:text-sm text-[#050F41] focus:outline-none focus:border-[#050F41]"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-navy focus:outline-none focus:border-navy"
                   >
                     <option value="">Agendar depois</option>
                     {datas.map(d => (
@@ -1390,8 +1354,8 @@ const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = ({ concu
                 )}
               </div>
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-                <button type="button" disabled={salvando} onClick={handleSalvar} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
+                <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+                <button type="button" disabled={salvando} onClick={handleSalvar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
                   {salvando ? 'Adicionando...' : 'Adicionar Candidato'}
                 </button>
               </div>
@@ -1523,8 +1487,8 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = (props) => {
 
   return (
     <div className="relative shrink-0" onClick={e => e.stopPropagation()}>
-      <button ref={btnRef} type="button" onClick={() => (aberto ? setAberto(false) : abrirMenu())} className="p-1 rounded-lg text-gray-400 hover:text-[#050F41] hover:bg-black/5 transition-colors">
-        <span className="material-symbols-outlined text-[20px]">more_vert</span>
+      <button ref={btnRef} type="button" aria-label="Ações do concurso" aria-haspopup="menu" aria-expanded={aberto} onClick={() => (aberto ? setAberto(false) : abrirMenu())} className="w-11 h-11 -m-2 flex items-center justify-center rounded-lg text-ink-3 hover:text-navy hover:bg-thead transition-colors">
+        <span className="material-symbols-outlined text-[22px]" aria-hidden="true">more_vert</span>
       </button>
       {aberto && pos && createPortal(
         <>
@@ -1533,7 +1497,7 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = (props) => {
               senão o menu era cortado pela borda do próprio card. */}
           <div className="fixed inset-0 z-40" onClick={() => setAberto(false)} />
           <div
-            className="fixed w-52 md:w-64 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 z-50 animate-fade-in space-y-0.5"
+            role="menu" className="fixed w-64 bg-white rounded-xl shadow-xl border border-line p-1.5 z-50 animate-fade-in space-y-0.5"
             style={{ top: pos.top, right: pos.right }}
           >
             {itens.map(item => (
@@ -1543,9 +1507,9 @@ const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = (props) => {
                 disabled={item.disabled}
                 title={item.title}
                 onClick={() => { setAberto(false); item.onClick(); }}
-                className="w-full text-left px-3 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold text-gray-700 hover:bg-gray-100 flex items-center space-x-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                role="menuitem" className="w-full text-left px-3 min-h-[44px] rounded-lg text-sm font-semibold text-navy hover:bg-thead flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               >
-                <span className="material-symbols-outlined text-[16px] md:text-[20px]">{item.icon}</span>
+                <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{item.icon}</span>
                 <span>{item.label}</span>
               </button>
             ))}
@@ -1573,7 +1537,6 @@ interface ConcursosListaProps {
   onNovoConcursoClick: () => void;
   onImportarCsvClick: () => void;
   onRecarregar: () => void;
-  onBack?: () => void;
 }
 
 const GRUPOS_STATUS: { status: ConcursoRecord['status']; titulo: string }[] = [
@@ -1582,33 +1545,29 @@ const GRUPOS_STATUS: { status: ConcursoRecord['status']; titulo: string }[] = [
   { status: 'em_breve', titulo: 'Em Breve' },
 ];
 
-const ICONE_STATUS_CONCURSO: Record<ConcursoRecord['status'], string> = {
-  encerrado: 'select_check_box',
-  em_andamento: 'patient_list',
-  em_breve: 'event_upcoming',
-};
-
-// Cores dos ícones de status na visão em tabela (pedido específico do
-// usuário — não seguem o padrão semântico usual de verde/vermelho).
-const COR_ICONE_STATUS_CONCURSO: Record<ConcursoRecord['status'], string> = {
-  encerrado: 'text-[#079551]',
-  em_andamento: 'text-red-700',
-  em_breve: 'text-amber-700',
-};
-
 // Concursos "Em Breve" ainda não têm movimentação — zero nessas colunas é
 // apenas ausência de dado, então a célula fica em branco em vez de "0".
 const celulaNumericaTabela = (valor: number, status: ConcursoRecord['status']): React.ReactNode =>
   valor === 0 && status === 'em_breve' ? '' : valor;
 
-const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, perfil, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeVisualizarTabela, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar, onBack }) => {
+const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, perfil, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeVisualizarTabela, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
   const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number; temLancamento: boolean }>>({});
   // Contagem de mensagens arquivadas por concurso — usada tanto para saber
   // se "Listar Mensagens" deve aparecer no menu quanto para o badge do
   // ícone na coluna Ações da visão em tabela (mobile).
   const [mensagensCount, setMensagensCount] = useState<Record<string, number>>({});
-  const [openGroups, setOpenGroups] = useState<Set<ConcursoRecord['status']>>(new Set(['em_andamento', 'em_breve']));
-  const [viewMode, setViewMode] = useState<'cards' | 'tabela'>('cards');
+  // Filtros da lista: situação (padrão = em andamento, ou a primeira com itens),
+  // ano e busca. A vista (cards × tabela) é preferência persistida, com rótulo.
+  const [statusSel, setStatusSel] = useState<ConcursoRecord['status'] | null>(null);
+  const [anoFiltro, setAnoFiltro] = useState('');
+  const [busca, setBusca] = useState('');
+  const [viewMode, setViewMode] = useState<'cards' | 'tabela'>(() => {
+    try { return localStorage.getItem('jrs.concursos.vista') === 'tabela' ? 'tabela' : 'cards'; } catch { return 'cards'; }
+  });
+  const definirViewMode = (v: 'cards' | 'tabela') => {
+    setViewMode(v);
+    try { localStorage.setItem('jrs.concursos.vista', v); } catch { /* preferência é opcional */ }
+  };
   const [statusCounts, setStatusCounts] = useState<Record<string, { apto: number; inapto: number; faltou: number; idm: number }>>({});
   const [loadingStatusCounts, setLoadingStatusCounts] = useState(false);
   const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches);
@@ -1784,49 +1743,78 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
     }
   };
 
+  const GRUPOS_STATUS_ORDEM: { status: ConcursoRecord['status']; titulo: string }[] = [
+    { status: 'em_andamento', titulo: 'Em andamento' },
+    { status: 'em_breve', titulo: 'Em breve' },
+    { status: 'encerrado', titulo: 'Encerrados' },
+  ];
+  const contagemPorStatus = {
+    em_andamento: concursos.filter(c => c.status === 'em_andamento').length,
+    em_breve: concursos.filter(c => c.status === 'em_breve').length,
+    encerrado: concursos.filter(c => c.status === 'encerrado').length,
+  } as Record<ConcursoRecord['status'], number>;
+  const statusPadrao: ConcursoRecord['status'] = contagemPorStatus.em_andamento ? 'em_andamento' : contagemPorStatus.em_breve ? 'em_breve' : 'encerrado';
+  const statusAtivo = statusSel ?? statusPadrao;
+  const anoDe = (c: ConcursoRecord) => (c.periodoInicioISO ? c.periodoInicioISO.slice(0, 4) : '');
+  const anosDisponiveis = Array.from(new Set(concursos.map(anoDe).filter(Boolean))).sort().reverse();
+  const itensFiltrados = concursos
+    .filter(c => c.status === statusAtivo)
+    .filter(c => !anoFiltro || anoDe(c) === anoFiltro)
+    .filter(c => !busca.trim() || c.nome.toLowerCase().includes(busca.trim().toLowerCase()))
+    .sort((a, b) => (a.periodoInicioISO || '9999-99-99').localeCompare(b.periodoInicioISO || '9999-99-99'));
+
+  const montarMenuProps = (c: ConcursoRecord): MenuAcoesConcursoProps => {
+    const contagem = contadores[c.id];
+    const podeEncerrar = !!contagem && contagem.total > 0 && contagem.finalizados === contagem.total;
+    const podeVoltarParaEmBreve = !contagem?.temLancamento;
+    return {
+      status: c.status,
+      podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato,
+      podeEncerrar, podeVoltarParaEmBreve,
+      minutaHabilitada: c.status === 'encerrado' || podeEncerrar,
+      temPeriodoConfigurado: !!c.periodoInicioISO,
+      temMensagensRegistradas: !!mensagensCount[c.id],
+      onAbrir: () => handleAbrir(c.id, c.nome),
+      onVoltarParaEmBreve: () => handleVoltarParaEmBreve(c.id, c.nome),
+      onEncerrar: () => handleEncerrar(c.id, c.nome),
+      onMinutaResultados: () => handleMinutaResultados(c.id),
+      onRegistrarMensagem: () => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome }),
+      onListarMensagens: () => setListarMensagensAlvo({ id: c.id, nome: c.nome }),
+      onDefinirPeriodoAgendamento: () => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome }),
+      onAdicionarCandidato: () => setAdicionarCandidatoAlvo({ id: c.id, nome: c.nome }),
+    };
+  };
+
   const kpiDefs = estatisticas ? [
-    { key: 'finalizadas', label: 'IS Ingresso Finalizadas', value: String(estatisticas.totalFinalizadas), corBorda: 'border-l-[#079551]', corTexto: 'text-[#079551]', corBarra: 'bg-[#079551]', itens: null as EstatisticaConcursoStatus[] | null },
-    { key: 'faltas', label: '% de Faltas', value: `${estatisticas.percentualFaltas}%`, corBorda: 'border-l-amber-400', corTexto: 'text-amber-600', corBarra: 'bg-amber-400', itens: estatisticas.topFaltas },
-    { key: 'inaptos', label: '% de Inaptos', value: `${estatisticas.percentualInaptos}%`, corBorda: 'border-l-red-500', corTexto: 'text-red-600', corBarra: 'bg-red-500', itens: estatisticas.topInaptos },
-    { key: 'idm', label: '% de IDM', value: `${estatisticas.percentualIdm}%`, corBorda: 'border-l-gray-500', corTexto: 'text-gray-600', corBarra: 'bg-gray-500', itens: estatisticas.topIdm },
+    { key: 'finalizadas', label: 'IS Ingresso Finalizadas', value: String(estatisticas.totalFinalizadas), corTexto: 'text-green-700', corBarra: 'bg-green', itens: null as EstatisticaConcursoStatus[] | null },
+    { key: 'faltas', label: '% de Faltas', value: `${estatisticas.percentualFaltas}%`, corTexto: 'text-gold-ink', corBarra: 'bg-gold', itens: estatisticas.topFaltas },
+    { key: 'inaptos', label: '% de Inaptos', value: `${estatisticas.percentualInaptos}%`, corTexto: 'text-wine', corBarra: 'bg-wine', itens: estatisticas.topInaptos },
+    { key: 'idm', label: '% de IDM', value: `${estatisticas.percentualIdm}%`, corTexto: 'text-ink-3', corBarra: 'bg-ink-3', itens: estatisticas.topIdm },
   ] : [];
 
   return (
-    <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
-      <Header title="Planilhas de Controle" onBack={onBack} />
+    <div className="flex flex-col flex-1 animate-fade-in">
 
-      {toastMessage && (
-        <div className="fixed top-20 right-4 z-[300] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in max-w-[90vw]">
-          <span className="material-symbols-outlined text-[18px] text-[#079551] shrink-0">check_circle</span>
-          <span className="font-semibold">{toastMessage}</span>
-        </div>
-      )}
+      <Toast message={toastMessage} />
 
       {confirmDialog && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
-            <div className="p-4 bg-[#050F41] text-white flex items-center space-x-2">
-              <span className="material-symbols-outlined text-[20px] text-[#FAB932]">help</span>
-              <h3 className="font-heading font-bold text-sm uppercase">{confirmDialog.title}</h3>
-            </div>
-            <div className="p-5 space-y-4">
-              <p className="text-xs md:text-sm text-gray-700 leading-relaxed">{confirmDialog.message}</p>
-              <div className="flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => { setConfirmDialog(null); confirmDialog.onCancel?.(); }} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-                <button type="button" onClick={confirmDialog.onConfirm} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">{confirmDialog.confirmLabel || 'Confirmar'}</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          destructive={confirmDialog.destrutivo}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => { setConfirmDialog(null); confirmDialog.onCancel?.(); }}
+        />
       )}
 
       {(minutaResultados !== null || pendentesFinalizacao !== null || gerandoMinuta) && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-4 bg-[#050F41] text-white flex items-center justify-between">
+            <div className="p-4 bg-navy text-white flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <span className="material-symbols-outlined text-[22px] text-[#079551]">summarize</span>
-                <h3 className="font-heading font-bold text-sm uppercase">Minuta de Resultados da IS</h3>
+                <span className="material-symbols-outlined text-[22px] text-gold">summarize</span>
+                <h3 className="font-heading font-bold text-sm">Minuta de Resultados da IS</h3>
               </div>
               <button onClick={() => { setMinutaResultados(null); setPendentesFinalizacao(null); }} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
                 <span className="material-symbols-outlined text-[20px]">close</span>
@@ -1835,33 +1823,33 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
             <div className="p-5 overflow-y-auto space-y-4 flex-1">
               {gerandoMinuta ? (
                 <div className="text-center py-8 text-gray-500">
-                  <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
+                  <span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span>
                 </div>
               ) : pendentesFinalizacao && pendentesFinalizacao.length > 0 ? (
                 <>
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                    <p className="text-xs md:text-sm font-bold text-amber-800">Ainda há {pendentesFinalizacao.length} candidato(s) não finalizado(s). Finalize todos antes de gerar a minuta de resultados.</p>
+                    <p className="text-sm font-bold text-amber-800">Ainda há {pendentesFinalizacao.length} candidato(s) não finalizado(s). Finalize todos antes de gerar a minuta de resultados.</p>
                   </div>
                   <div className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
                     {pendentesFinalizacao.map(p => (
-                      <div key={p.id} className="p-2.5 text-xs md:text-sm flex items-center justify-between">
-                        <span className="font-mono font-bold text-[#050F41]">{p.id}</span>
+                      <div key={p.id} className="p-2.5 text-sm flex items-center justify-between">
+                        <span className="font-mono font-bold text-navy">{p.id}</span>
                         <span className="text-gray-600">{p.nome}</span>
                       </div>
                     ))}
                   </div>
                 </>
               ) : (
-                <textarea readOnly value={minutaResultados ?? ''} rows={16} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-[11px] md:text-sm font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap" />
+                <textarea readOnly value={minutaResultados ?? ''} rows={16} className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 text-sm font-mono text-gray-800 focus:outline-none resize-none whitespace-pre-wrap" />
               )}
               <div className="pt-2 flex items-center justify-end space-x-2">
                 {minutaResultados && (
-                  <button type="button" onClick={() => handleCopiarTexto(minutaResultados)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1">
+                  <button type="button" onClick={() => handleCopiarTexto(minutaResultados)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors flex items-center space-x-1">
                     <span className="material-symbols-outlined text-[16px]">content_copy</span>
                     <span>Copiar Minuta</span>
                   </button>
                 )}
-                <button type="button" onClick={() => { setMinutaResultados(null); setPendentesFinalizacao(null); }} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">Fechar</button>
+                <button type="button" onClick={() => { setMinutaResultados(null); setPendentesFinalizacao(null); }} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Fechar</button>
               </div>
             </div>
           </div>
@@ -1906,271 +1894,166 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
         />
       )}
 
-      <div className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1200px] mx-auto w-full flex-1 space-y-6">
+      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
+        <PageHeader
+          title="Concursos"
+          description="Planilhas de controle dos candidatos de cada concurso."
+          actions={(podeRegistrarMensagem || podeImportarCsv) ? (
+            <>
+              {podeImportarCsv && <Button variant="secondary" icon="upload_file" onClick={onImportarCsvClick}>Importar CSV</Button>}
+              {podeRegistrarMensagem && <Button icon="add" onClick={onNovoConcursoClick}>Novo concurso</Button>}
+            </>
+          ) : undefined}
+        />
+
         {!loadingEstatisticas && estatisticas && (
-          <div className="hidden md:flex bg-gray-100 border border-gray-200/80 rounded-2xl p-4 gap-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
-              {kpiDefs.map(def => (
-                <button
-                  key={def.key}
-                  type="button"
-                  disabled={def.itens === null}
-                  onClick={() => def.itens !== null && setKpiModal({ titulo: def.label, corBarra: def.corBarra, itens: def.itens })}
-                  className={`text-left bg-white rounded-xl border-l-4 ${def.corBorda} border-t border-r border-b border-gray-200 p-3.5 shadow-sm transition-all ${def.itens !== null ? 'hover:shadow-md cursor-pointer' : 'cursor-default'}`}
-                >
-                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{def.label}</p>
-                  <p className={`text-2xl font-black font-heading mt-1 ${def.corTexto}`}>{def.value}</p>
-                </button>
-              ))}
-            </div>
-            {(podeRegistrarMensagem || podeImportarCsv) && (
-              <div className="flex md:flex-col gap-2 md:w-44 shrink-0">
-                {podeRegistrarMensagem && (
-                  <button
-                    type="button"
-                    onClick={onNovoConcursoClick}
-                    className="flex-1 px-4 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center justify-center space-x-1.5"
-                  >
-                    <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}>add</span>
-                    <span>Concurso</span>
-                  </button>
-                )}
-                {podeImportarCsv && (
-                  <button
-                    type="button"
-                    onClick={onImportarCsvClick}
-                    className="flex-1 px-4 py-2.5 bg-white hover:bg-gray-50 text-[#050F41] rounded-xl text-xs font-bold transition-colors shadow-sm border border-gray-200 flex items-center justify-center space-x-1.5"
-                  >
-                    <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'wght' 700" }}>arrow_upward</span>
-                    <span>CSV</span>
-                  </button>
-                )}
-              </div>
-            )}
+          <div className="hidden md:grid grid-cols-4 gap-4">
+            {kpiDefs.map(def => (
+              <KpiMini
+                key={def.key}
+                label={def.label}
+                value={def.value}
+                valueClass={def.corTexto}
+                onClick={def.itens !== null ? () => setKpiModal({ titulo: def.label, corBarra: def.corBarra, itens: def.itens }) : undefined}
+              />
+            ))}
           </div>
         )}
 
         {loading ? (
           <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
-            <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
+            <span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span>
           </div>
         ) : concursos.length === 0 ? (
-          <div className="bg-white p-10 rounded-2xl border border-gray-200/60 shadow-sm text-center text-gray-500">
-            <span className="material-symbols-outlined text-[36px] text-gray-300">fact_check</span>
-            <p className="text-sm font-bold text-gray-700 mt-2">Nenhum concurso cadastrado</p>
-            {podeRegistrarMensagem && <p className="text-xs text-gray-400 mt-1">Registre a mensagem administrativa inicial para criar o primeiro.</p>}
+          <div className="bg-white rounded-xl border border-line">
+            <EmptyState icon="fact_check" title="Nenhum concurso cadastrado" description={podeRegistrarMensagem ? 'Registre a mensagem administrativa inicial para criar o primeiro.' : undefined} />
           </div>
         ) : (
           <>
-            {/* Perfil User Secretaria no mobile fica travado na tabela — sem
-                botão para alternar. Os demais perfis mantêm os cards como
-                padrão, com o botão de alternar agora disponível também no
-                mobile (antes era um recurso só de desktop). */}
-            {podeVisualizarTabela && !tabelaTravadaSecretaria && (
-              <div className="flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={() => setViewMode(v => (v === 'cards' ? 'tabela' : 'cards'))}
-                  title={viewMode === 'cards' ? 'Ver em modo tabela' : 'Ver em modo cards'}
-                  className="p-2 rounded-xl bg-white border border-gray-200 shadow-sm text-gray-500 hover:text-[#050F41] hover:bg-gray-50 transition-colors"
-                >
-                  <span className="material-symbols-outlined text-[20px]">{viewMode === 'cards' ? 'table_rows' : 'grid_view'}</span>
-                </button>
+            {/* Filtros (F43/F46): status em Segmented (padrão: em andamento), ano e busca. */}
+            <div className="bg-white rounded-xl border border-line p-4 space-y-3">
+              <div className="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+                <Segmented
+                  ariaLabel="Situação do concurso"
+                  className="overflow-x-auto"
+                  value={statusAtivo}
+                  onChange={v => setStatusSel(v)}
+                  options={GRUPOS_STATUS_ORDEM.map(g => ({ value: g.status, label: g.titulo, badge: contagemPorStatus[g.status], badgeTone: 'neutro' as const }))}
+                />
+                {podeVisualizarTabela && !tabelaTravadaSecretaria && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-ink-3">Visualização</span>
+                    <Segmented
+                      ariaLabel="Modo de visualização"
+                      value={viewMode}
+                      onChange={definirViewMode}
+                      options={[{ value: 'cards', label: 'Cards', icon: 'grid_view' }, { value: 'tabela', label: 'Tabela', icon: 'table_rows' }]}
+                    />
+                  </div>
+                )}
               </div>
-            )}
-            {efetivoViewMode === 'tabela' ? (
-              <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden overflow-x-auto scroll-x-visible">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
+                  <input type="search" aria-label="Buscar concurso" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar concurso…" className={`${controlClass} pl-10`} autoComplete="off" />
+                </div>
+                <select aria-label="Filtrar por ano" value={anoFiltro} onChange={e => setAnoFiltro(e.target.value)} className={`${controlClass} sm:w-44`}>
+                  <option value="">Todos os anos</option>
+                  {anosDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {itensFiltrados.length === 0 ? (
+              <div className="bg-white rounded-xl border border-line">
+                <EmptyState icon="fact_check" title="Nenhum concurso neste filtro" description="Troque a situação, o ano ou a busca para ver outros concursos." />
+              </div>
+            ) : efetivoViewMode === 'tabela' ? (
+              <div className="bg-white rounded-xl border border-line overflow-clip overflow-x-auto scroll-x-visible">
                 <table className="w-full text-left border-collapse min-w-[860px]">
                   <thead>
-                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[13px] font-bold text-[#050F41] uppercase tracking-wider">
-                      <th className="py-3 px-4">Concurso</th>
-                      <th className="py-3 px-4">Período</th>
-                      <th className="py-3 px-4 text-center">Candidatos</th>
-                      <th className="py-3 px-4 text-center">Aptos</th>
-                      <th className="py-3 px-4 text-center">Inaptos</th>
-                      <th className="py-3 px-4 text-center">IDM</th>
-                      <th className="py-3 px-4 text-center">Faltas</th>
-                      <th className="py-3 px-4 text-right">Ações</th>
+                    <tr className="bg-thead border-b border-line text-xs font-semibold text-ink-3">
+                      <th scope="col" className="py-3 px-4">Concurso</th>
+                      <th scope="col" className="py-3 px-4">Situação</th>
+                      <th scope="col" className="py-3 px-4">Período</th>
+                      <th scope="col" className="py-3 px-4 text-center">Candidatos</th>
+                      <th scope="col" className="py-3 px-4 text-center">Aptos</th>
+                      <th scope="col" className="py-3 px-4 text-center">Inaptos</th>
+                      <th scope="col" className="py-3 px-4 text-center">IDM</th>
+                      <th scope="col" className="py-3 px-4 text-center">Faltas</th>
+                      <th scope="col" className="py-3 px-4 text-right"><span className="sr-only">Ações</span></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-xs md:text-sm">
-                    {GRUPOS_STATUS.map(grupo => {
-                      const itensGrupo = concursos
-                        .filter(c => c.status === grupo.status)
-                        .sort((a, b) => (a.periodoInicioISO || '9999-99-99').localeCompare(b.periodoInicioISO || '9999-99-99'));
-                      if (itensGrupo.length === 0) return null;
+                  <tbody className="divide-y divide-line text-sm">
+                    {itensFiltrados.map(c => {
+                      const sc = statusCounts[c.id];
                       return (
-                        <React.Fragment key={grupo.status}>
-                          <tr className="bg-gray-100/70">
-                            <td colSpan={8} className="py-2 px-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider">{grupo.titulo} ({itensGrupo.length})</td>
-                          </tr>
-                          {itensGrupo.map(c => {
-                            const contagem = contadores[c.id];
-                            const podeEncerrar = !!contagem && contagem.total > 0 && contagem.finalizados === contagem.total;
-                            const podeVoltarParaEmBreve = !contagem?.temLancamento;
-                            const minutaHabilitada = c.status === 'encerrado' || podeEncerrar;
-                            const temPeriodoConfigurado = !!c.periodoInicioISO;
-                            const temMensagensRegistradas = !!mensagensCount[c.id];
-                            const sc = statusCounts[c.id];
-                            const itensAcoes = construirItensMenuConcurso({
-                              status: c.status,
-                              podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato,
-                              podeEncerrar, podeVoltarParaEmBreve, minutaHabilitada, temPeriodoConfigurado, temMensagensRegistradas,
-                              onAbrir: () => handleAbrir(c.id, c.nome),
-                              onVoltarParaEmBreve: () => handleVoltarParaEmBreve(c.id, c.nome),
-                              onEncerrar: () => handleEncerrar(c.id, c.nome),
-                              onMinutaResultados: () => handleMinutaResultados(c.id),
-                              onRegistrarMensagem: () => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome }),
-                              onListarMensagens: () => setListarMensagensAlvo({ id: c.id, nome: c.nome }),
-                              onDefinirPeriodoAgendamento: () => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome }),
-                              onAdicionarCandidato: () => setAdicionarCandidatoAlvo({ id: c.id, nome: c.nome }),
-                            }).filter(item => !item.disabled);
-                            return (
-                              <tr key={c.id} onClick={() => onSelecionar(c.id)} className="hover:bg-gray-50 cursor-pointer transition-colors">
-                                <td className="py-3 px-4 font-bold text-[#050F41]">
-                                  <span
-                                    className={`material-symbols-outlined text-[20px] align-middle mr-1.5 ${COR_ICONE_STATUS_CONCURSO[c.status]}`}
-                                    style={{ fontVariationSettings: "'FILL' 1, 'wght' 700, 'GRAD' 200, 'opsz' 24" }}
-                                  >
-                                    {ICONE_STATUS_CONCURSO[c.status]}
-                                  </span>
-                                  {c.nome}
-                                </td>
-                                <td className="py-3 px-4 text-gray-500 whitespace-nowrap">{c.periodoInicioISO ? `${isoParaBR(c.periodoInicioISO)} a ${isoParaBR(c.periodoFimISO)}` : '-'}</td>
-                                <td className="py-3 px-4 text-center font-bold text-[#050F41]">{celulaNumericaTabela(c.totalCandidatos, c.status)}</td>
-                                <td className="py-3 px-4 text-center font-bold text-[#079551]">{sc ? celulaNumericaTabela(sc.apto, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4 text-center font-bold text-red-800">{sc ? celulaNumericaTabela(sc.inapto, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4 text-center font-bold text-[#050F41]">{sc ? celulaNumericaTabela(sc.idm, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4 text-center font-bold text-[#050F41]">{sc ? celulaNumericaTabela(sc.faltou, c.status) : (loadingStatusCounts ? '…' : '-')}</td>
-                                <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
-                                  <div className="flex items-center justify-end gap-1.5">
-                                    {itensAcoes.map(item => {
-                                      // Exceções vermelhas: Minuta Resultados (só aparece com o
-                                      // concurso em andamento) e Encerrar Concurso (sempre).
-                                      const vermelho = item.key === 'minuta' || item.key === 'encerrar';
-                                      const mostrarBadgeMensagens = item.key === 'listar-msg' && (c.status === 'em_andamento' || c.status === 'em_breve');
-                                      return (
-                                        <button
-                                          key={item.key}
-                                          type="button"
-                                          title={item.label}
-                                          onClick={item.onClick}
-                                          className={`relative p-2 rounded-xl transition-colors cursor-pointer ${vermelho ? 'text-red-700 bg-red-50 hover:bg-red-600 hover:text-white' : 'text-[#050F41] bg-gray-100 hover:bg-[#050F41] hover:text-white'}`}
-                                        >
-                                          <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'wght' 600" }}>{item.icon}</span>
-                                          {mostrarBadgeMensagens && mensagensCount[c.id] > 0 && (
-                                            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-[#079551] text-white text-[10px] font-bold flex items-center justify-center">
-                                              {mensagensCount[c.id]}
-                                            </span>
-                                          )}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </React.Fragment>
+                        <tr key={c.id} onClick={() => onSelecionar(c.id)} className="hover:bg-thead cursor-pointer transition-colors">
+                          <td className="py-2 px-4 font-bold text-navy">
+                            <button type="button" onClick={e => { e.stopPropagation(); onSelecionar(c.id); }} className="text-left font-bold text-navy hover:underline min-h-[44px]">{c.nome}</button>
+                          </td>
+                          <td className="py-2 px-4"><ConcursoStatusTag status={c.status} /></td>
+                          <td className="py-2 px-4 text-ink-2 whitespace-nowrap">{c.periodoInicioISO ? `${isoParaBR(c.periodoInicioISO)} a ${isoParaBR(c.periodoFimISO)}` : '—'}</td>
+                          <td className="py-2 px-4 text-center font-bold text-navy">{celulaNumericaTabela(c.totalCandidatos, c.status)}</td>
+                          <td className="py-2 px-4 text-center font-bold text-green-700">{sc ? celulaNumericaTabela(sc.apto, c.status) : (loadingStatusCounts ? '…' : '—')}</td>
+                          <td className="py-2 px-4 text-center font-bold text-wine">{sc ? celulaNumericaTabela(sc.inapto, c.status) : (loadingStatusCounts ? '…' : '—')}</td>
+                          <td className="py-2 px-4 text-center font-bold text-navy">{sc ? celulaNumericaTabela(sc.idm, c.status) : (loadingStatusCounts ? '…' : '—')}</td>
+                          <td className="py-2 px-4 text-center font-bold text-navy">{sc ? celulaNumericaTabela(sc.faltou, c.status) : (loadingStatusCounts ? '…' : '—')}</td>
+                          <td className="py-2 px-4 text-right" onClick={e => e.stopPropagation()}>
+                            <MenuAcoesConcurso {...montarMenuProps(c)} />
+                          </td>
+                        </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
             ) : (
-              GRUPOS_STATUS.map(grupo => {
-            const itens = concursos
-              .filter(c => c.status === grupo.status)
-              .sort((a, b) => (a.periodoInicioISO || '9999-99-99').localeCompare(b.periodoInicioISO || '9999-99-99'));
-            if (itens.length === 0) return null;
-            const expandido = openGroups.has(grupo.status);
-            return (
-              <div key={grupo.status}>
-                <button
-                  type="button"
-                  onClick={() => setOpenGroups(new Set([grupo.status]))}
-                  className="w-full flex items-center justify-between mb-2 py-1 group"
-                >
-                  <h2 className="text-sm font-bold text-gray-600 uppercase tracking-wider">{grupo.titulo} ({itens.length})</h2>
-                  <span className={`material-symbols-outlined text-[22px] text-gray-400 group-hover:text-[#050F41] transition-transform ${expandido ? 'rotate-180' : ''}`}>expand_more</span>
-                </button>
-                {expandido && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {itens.map(c => {
-                      const contagem = contadores[c.id];
-                      const pct = contagem && contagem.total > 0 ? Math.round((contagem.finalizados / contagem.total) * 100) : null;
-                      const podeEncerrar = !!contagem && contagem.total > 0 && contagem.finalizados === contagem.total;
-                      const podeVoltarParaEmBreve = !contagem?.temLancamento;
-                      const minutaHabilitada = c.status === 'encerrado' || podeEncerrar;
-                      const temPeriodoConfigurado = !!c.periodoInicioISO;
-                      const temMensagensRegistradas = !!mensagensCount[c.id];
-                      return (
-                        <div key={c.id} className={`rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden flex flex-col ${getConcursoCardBg(c.status)}`}>
-                          <div className="flex items-stretch flex-1">
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => onSelecionar(c.id)}
-                              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onSelecionar(c.id); }}
-                              className="text-left p-4 flex-1 min-w-0 hover:bg-black/[0.03] transition-colors cursor-pointer"
-                            >
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <h3 className="font-heading font-bold text-lg text-[#050F41] truncate">{c.nome}</h3>
-                                <MenuAcoesConcurso
-                                  status={c.status}
-                                  podeAbrirEncerrar={podeAbrirEncerrar}
-                                  podeGerarMinutaResultados={podeGerarMinutaResultados}
-                                  podeRegistrarMensagemArquivo={podeRegistrarMensagemArquivo}
-                                  podeListarMensagens={podeListarMensagens}
-                                  podeAdicionarCandidato={podeAdicionarCandidato}
-                                  podeEncerrar={podeEncerrar}
-                                  podeVoltarParaEmBreve={podeVoltarParaEmBreve}
-                                  minutaHabilitada={minutaHabilitada}
-                                  temPeriodoConfigurado={temPeriodoConfigurado}
-                                  temMensagensRegistradas={temMensagensRegistradas}
-                                  onAbrir={() => handleAbrir(c.id, c.nome)}
-                                  onVoltarParaEmBreve={() => handleVoltarParaEmBreve(c.id, c.nome)}
-                                  onEncerrar={() => handleEncerrar(c.id, c.nome)}
-                                  onMinutaResultados={() => handleMinutaResultados(c.id)}
-                                  onRegistrarMensagem={() => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome })}
-                                  onListarMensagens={() => setListarMensagensAlvo({ id: c.id, nome: c.nome })}
-                                  onDefinirPeriodoAgendamento={() => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome })}
-                                  onAdicionarCandidato={() => setAdicionarCandidatoAlvo({ id: c.id, nome: c.nome })}
-                                />
-                              </div>
-                              <p className="text-base font-bold text-[#050F41]">{c.totalCandidatos} candidato(s)</p>
-                              {c.periodoInicioISO && (
-                                <p className="text-sm text-gray-500">{isoParaBR(c.periodoInicioISO)} a {isoParaBR(c.periodoFimISO)}</p>
-                              )}
-                            </div>
-                            {c.status === 'em_andamento' && pct !== null && (
-                              <div className="flex items-center justify-center pr-4 pl-1 shrink-0">
-                                <CircularMini pct={pct} />
-                              </div>
-                            )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {itensFiltrados.map(c => {
+                  const contagem = contadores[c.id];
+                  return (
+                    <div key={c.id} className="rounded-xl border border-line bg-white overflow-clip flex flex-col">
+                      <div className="flex items-stretch flex-1">
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => onSelecionar(c.id)}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onSelecionar(c.id); }}
+                          className="text-left p-4 flex-1 min-w-0 hover:bg-thead transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h3 className="font-heading font-bold text-lg text-navy truncate">{c.nome}</h3>
+                            <MenuAcoesConcurso {...montarMenuProps(c)} />
                           </div>
-                          {podeAbrirEncerrar && c.status === 'em_breve' && (
-                            <button
-                              type="button"
-                              onClick={() => handleAbrir(c.id, c.nome)}
-                              className="px-4 py-2.5 border-t border-black/5 text-xs font-bold text-[#079551] hover:bg-black/[0.03] transition-colors flex items-center justify-center space-x-1.5"
-                            >
-                              <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}>play_circle</span>
-                              <span>Abrir Concurso</span>
-                            </button>
+                          <div className="mb-2"><ConcursoStatusTag status={c.status} /></div>
+                          <p className="text-base font-bold text-navy">{c.totalCandidatos} candidato(s)</p>
+                          {c.status === 'em_andamento' && contagem && contagem.total > 0 && (
+                            <ProgressBar className="mt-2" atual={contagem.finalizados} total={contagem.total} unidade="finalizados" />
+                          )}
+                          {c.periodoInicioISO && (
+                            <p className="text-sm text-ink-2 mt-1">{isoParaBR(c.periodoInicioISO)} a {isoParaBR(c.periodoFimISO)}</p>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                      </div>
+                      {podeAbrirEncerrar && c.status === 'em_breve' && (
+                        <button
+                          type="button"
+                          onClick={() => handleAbrir(c.id, c.nome)}
+                          className="px-4 min-h-[44px] border-t border-line text-sm font-bold text-navy hover:bg-thead transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <span className="material-symbols-outlined text-[20px]" aria-hidden="true">play_circle</span>
+                          <span>Abrir concurso</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })
             )}
           </>
         )}
-      </div>
+            </Container>
     </div>
   );
 };
@@ -2206,6 +2089,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   const [concurso, setConcurso] = useState<ConcursoRecord | null>(null);
   const [candidatos, setCandidatos] = useState<CandidatoRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  useBreadcrumbs([{ label: concurso?.nome || 'Concurso' }]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
@@ -2239,18 +2123,39 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   const { openUrl: abrirPdfUrl, modalElement: pdfModalElement } = useStoragePdf();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [mostrarBotaoTopo, setMostrarBotaoTopo] = useState(false);
+  // Toolbar (busca + filtros) e cabeçalho de colunas ficam fixos ao rolar a
+  // planilha; o cabeçalho precisa saber a altura da toolbar para encostar
+  // logo abaixo dela, mesmo quando os filtros quebram de linha.
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [toolbarAltura, setToolbarAltura] = useState(0);
+  useEffect(() => {
+    const el = toolbarRef.current;
+    if (!el) return;
+    const medir = () => setToolbarAltura(el.offsetHeight);
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Accordion por data: uma data só vira accordion (recolhida por padrão)
   // quando todas as IS daquele dia estão finalizadas — e isso é desprezado
   // enquanto houver algum filtro ativo (busca, status ou data).
   const [openDateGroups, setOpenDateGroups] = useState<Set<string>>(new Set());
 
+  // Quem rola a planilha é o ancestral de rolagem do app (o shell), não este
+  // contêiner — por isso a toolbar e o cabeçalho de colunas usam `sticky`.
+  const rolarAoTopo = () => {
+    const el = getScrollParent(scrollContainerRef.current);
+    if (el) el.scrollTo({ top: 0, behavior: 'smooth' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    const handleScroll = () => setMostrarBotaoTopo(el.scrollTop > 300);
-    el.addEventListener('scroll', handleScroll);
-    return () => el.removeEventListener('scroll', handleScroll);
+    const el = getScrollParent(scrollContainerRef.current);
+    const alvo: HTMLElement | Window = el ?? window;
+    const handleScroll = () => setMostrarBotaoTopo((el ? el.scrollTop : window.scrollY) > 300);
+    alvo.addEventListener('scroll', handleScroll);
+    return () => alvo.removeEventListener('scroll', handleScroll);
   }, []);
 
   const podeEditar = podeEditarInlineBase && concurso?.status === 'em_andamento';
@@ -2499,12 +2404,25 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     }
   };
 
+  // Indicador de salvamento por linha (F52): salvando → salvo (some em 3 s) ou falhou (fica até a próxima tentativa).
+  const [estadoSalvar, setEstadoSalvar] = useState<Record<string, 'salvando' | 'salvo' | 'falhou'>>({});
+  const marcarSalvar = (id: string, estado: 'salvando' | 'salvo' | 'falhou' | null) =>
+    setEstadoSalvar(prev => {
+      const proximo = { ...prev };
+      if (estado) proximo[id] = estado; else delete proximo[id];
+      return proximo;
+    });
+
   const salvarCampoCandidato = async (candidato: CandidatoRecord, patch: { status?: string; observacoes?: string; numTIS?: string }) => {
+    marcarSalvar(candidato.id, 'salvando');
     try {
       const atualizado = await atualizarCandidato(concursoId, candidato.id, patch);
       setCandidatos(prev => prev.map(c => (c.id === atualizado.id ? atualizado : c)));
+      marcarSalvar(candidato.id, 'salvo');
+      window.setTimeout(() => setEstadoSalvar(prev => (prev[candidato.id] === 'salvo' ? (({ [candidato.id]: _omit, ...resto }) => resto)(prev) : prev)), 3000);
       return atualizado;
     } catch (e: any) {
+      marcarSalvar(candidato.id, 'falhou');
       showToast(e?.message || 'Erro ao salvar alterações.');
       return null;
     }
@@ -2817,11 +2735,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     'Data: Todos';
 
   const chipFilters: { key: string; label: string; value: number; filterValue: string; corAtivo: string }[] = [
-    { key: 'apto', label: 'Aptos', value: countApto, filterValue: 'APTO', corAtivo: 'bg-[#079551] border-[#079551] text-white' },
-    { key: 'inapto', label: 'Inaptos', value: countInapto, filterValue: 'INAPTO', corAtivo: 'bg-red-600 border-red-600 text-white' },
-    { key: 'insuf', label: 'IDM', value: countInsuf, filterValue: 'INSUF DOCUMENTAL', corAtivo: 'bg-purple-600 border-purple-600 text-white' },
-    { key: 'faltou', label: 'Faltas', value: countFaltou, filterValue: 'FALTOU', corAtivo: 'bg-amber-500 border-amber-500 text-white' },
-    { key: 'nao-finalizados', label: 'Não Finalizados', value: countNaoFinalizados, filterValue: 'nao-finalizados', corAtivo: 'bg-blue-600 border-blue-600 text-white' },
+    { key: 'apto', label: 'Aptos', value: countApto, filterValue: 'APTO', corAtivo: 'bg-navy border-navy text-white' },
+    { key: 'inapto', label: 'Inaptos', value: countInapto, filterValue: 'INAPTO', corAtivo: 'bg-navy border-navy text-white' },
+    { key: 'insuf', label: 'IDM', value: countInsuf, filterValue: 'INSUF DOCUMENTAL', corAtivo: 'bg-navy border-navy text-white' },
+    { key: 'faltou', label: 'Faltas', value: countFaltou, filterValue: 'FALTOU', corAtivo: 'bg-navy border-navy text-white' },
+    { key: 'nao-finalizados', label: 'Não Finalizados', value: countNaoFinalizados, filterValue: 'nao-finalizados', corAtivo: 'bg-navy border-navy text-white' },
   ];
 
   const sugestoesCandidatos = useMemo(() => {
@@ -2848,6 +2766,20 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     return grupos;
   }, [filteredCandidatos]);
 
+  // F57: resumo do dia ("8 aptos · 1 inapto · 1 falta") e F59: próximo candidato a atender.
+  const resumoDoGrupo = (itens: { status: string; finalizado: boolean }[]) => {
+    const n = (st: string) => itens.filter(c => c.status === st).length;
+    const partes: string[] = [];
+    const add = (q: number, um: string, varios: string) => { if (q > 0) partes.push(`${q} ${q === 1 ? um : varios}`); };
+    add(n('APTO'), 'apto', 'aptos');
+    add(n('INAPTO'), 'inapto', 'inaptos');
+    add(n('INSUF DOCUMENTAL'), 'IDM', 'IDM');
+    add(n('FALTOU'), 'falta', 'faltas');
+    add(itens.filter(c => !c.finalizado).length, 'pendente', 'pendentes');
+    return partes.join(' · ');
+  };
+  const proximoCandidatoId = filteredCandidatos.find(c => !c.finalizado)?.id ?? null;
+
   const toggleDateGroup = (dataBR: string) => {
     setOpenDateGroups(prev => {
       const next = new Set(prev);
@@ -2857,18 +2789,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
-      {/* No mobile o botão de voltar da topbar (sticky, flutua sobre a
-          tabela ao rolar) assume essa função; no desktop o botão próprio
-          desta página (dentro do título) continua como estava. */}
-      <Header title={concurso?.nome || 'Planilhas de Controle'} desktopTitle={concurso?.nome} onBack={!isDesktop ? onVoltar : undefined} />
+    <div className="flex flex-col flex-1 animate-fade-in relative">
 
-      {toastMessage && (
-        <div className="fixed top-20 right-4 z-[300] bg-[#050F41] text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 text-xs border border-white/20 animate-fade-in max-w-[90vw]">
-          <span className="material-symbols-outlined text-[18px] text-[#079551] shrink-0">check_circle</span>
-          <span className="font-semibold">{toastMessage}</span>
-        </div>
-      )}
+      <Toast message={toastMessage} />
 
       {pdfModalElement}
 
@@ -2880,7 +2803,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         const c = candidatos.find(x => x.id === menuAcoes.id);
         if (!c) return null;
         const gerando = gerandoSolicitacaoIds.has(c.id);
-        const classeItem = 'w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-left text-[#050F41] hover:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:bg-transparent';
+        const classeItem = 'w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-left text-navy hover:bg-gray-50 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:bg-transparent';
         const habilitadoGerar = statusPermiteSolicitacao(c) && !gerando;
         const docsVer = [
           ...c.solicitacoesParecer.map((d, i) => ({ tipo: 'parecer' as const, d, chave: `p${i}` })),
@@ -2908,7 +2831,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                   {podeSolicitarBase && <div className="my-1 border-t border-gray-300" />}
                   {docsVer.map(({ tipo, d, chave }) => (
                     <button key={chave} type="button" role="menuitem" onClick={() => handleVerSolicitacao(tipo, d, c)} className={classeItem}>
-                      <span className="material-symbols-outlined text-[20px] text-[#079551]">{tipo === 'parecer' ? 'clinical_notes' : 'lab_panel'}</span>
+                      <span className="material-symbols-outlined text-[20px] text-green-700">{tipo === 'parecer' ? 'clinical_notes' : 'lab_panel'}</span>
                       <span className="min-w-0 truncate">{tipo === 'parecer' ? 'Ver Parecer' : 'Ver Exames'} · {d.rotulo}</span>
                     </button>
                   ))}
@@ -2951,28 +2874,21 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       )}
 
       {confirmDialog && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden">
-            <div className="p-4 bg-[#050F41] text-white flex items-center space-x-2">
-              <span className="material-symbols-outlined text-[20px] text-[#FAB932]">help</span>
-              <h3 className="font-heading font-bold text-sm uppercase">{confirmDialog.title}</h3>
-            </div>
-            <div className="p-5 space-y-4">
-              <p className="text-xs md:text-sm text-gray-700 leading-relaxed">{confirmDialog.message}</p>
-              <div className="flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => { setConfirmDialog(null); confirmDialog.onCancel?.(); }} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs md:text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-                <button type="button" onClick={confirmDialog.onConfirm} className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm">{confirmDialog.confirmLabel || 'Confirmar'}</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          destructive={confirmDialog.destrutivo}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => { setConfirmDialog(null); confirmDialog.onCancel?.(); }}
+        />
       )}
 
       {!isDesktop && mostrarBotaoTopo && (
         <button
           type="button"
-          onClick={() => scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="md:hidden fixed bottom-6 right-4 z-[90] w-11 h-11 rounded-full bg-[#050F41] text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+          onClick={rolarAoTopo}
+          className="md:hidden fixed bottom-6 right-4 z-[90] w-11 h-11 rounded-full bg-navy text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform"
           aria-label="Voltar ao topo"
           title="Voltar ao topo"
         >
@@ -2980,60 +2896,42 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         </button>
       )}
 
-      <div ref={scrollContainerRef} className="p-4 sm:p-6 overflow-y-auto pb-24 max-w-[1600px] mx-auto w-full flex-1 space-y-4">
-        {/* Desktop: título + busca/filtros ficam fixos no topo ao rolar a tabela
-            (o fundo cobre o espaço para as linhas passarem por baixo). */}
-        <div className="md:sticky md:top-0 md:z-20 md:-mt-6 md:pt-6 md:pb-2 md:bg-[#F3F5F7] space-y-4">
-        <div className="relative flex flex-col items-center gap-1.5 min-h-[40px] md:flex-row md:justify-center md:gap-0 px-2 md:px-16">
-          {/* Desktop: botão de voltar próprio desta página (some no mobile
-              — lá quem flutua sobre a tabela é o botão sticky do Header). */}
-          <button
-            type="button"
-            onClick={onVoltar}
-            className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 shrink-0 items-center justify-center w-9 h-9 rounded-full bg-white text-[#050F41] shadow-sm border border-gray-200/70 hover:bg-gray-50 active:scale-95 transition-all"
-            aria-label="Voltar"
-            title="Voltar"
-          >
-            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-          </button>
-          {/* Mobile: nome e contagem em linhas separadas (sem o hífen, que
-              estourava sem espaço) e chip de status centralizado abaixo. */}
-          <h1 className="md:hidden font-heading font-bold text-xl text-[#050F41] text-center truncate w-full px-10">
-            {concurso?.nome || 'Concurso'}<br />
-            {total} Candidato{total === 1 ? '' : 's'}
-          </h1>
-          {concurso && (
-            <span className={`md:hidden shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(concurso.status)}`}>
-              {STATUS_LABELS[concurso.status]}
-            </span>
-          )}
-          {/* Desktop: layout original, em uma linha só com o chip à direita. */}
-          <h1 className="hidden md:block font-heading font-bold text-xl sm:text-2xl text-[#050F41] text-center truncate">
-            {concurso?.nome || 'Concurso'} <span className="text-gray-400 font-semibold">-</span> {total} Candidato{total === 1 ? '' : 's'}
-          </h1>
-          {concurso && (
-            <span className={`hidden md:inline-block absolute right-0 top-1/2 -translate-y-1/2 shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap ${getConcursoStatusClasses(concurso.status)}`}>
-              {STATUS_LABELS[concurso.status]}
-            </span>
-          )}
-        </div>
+      <div ref={scrollContainerRef} style={{ '--toolbar-h': `${toolbarAltura}px` } as React.CSSProperties} className="pb-10 w-full flex-1">
+        <Container size="data" className="pt-6 md:pt-8">
+          {/* F49: título à esquerda, status por extenso e andamento escritos; sem hífen nem elementos absolutos. */}
+          <PageHeader
+            title={concurso?.nome || 'Concurso'}
+            description={(
+              <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+                {concurso && <ConcursoStatusTag status={concurso.status} />}
+                <span>{total} candidato{total === 1 ? '' : 's'}</span>
+                <span aria-hidden="true">·</span>
+                <span>{candidatos.filter(c => c.finalizado).length} de {total} finalizados</span>
+              </span>
+            )}
+          />
+        </Container>
 
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3 flex-wrap">
-          <div className="relative lg:flex-1 lg:max-w-md min-w-[220px]">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-[24px]">search</span>
+        {/* Toolbar compacta e fixa no desktop: o título rola junto com a
+            planilha, a busca e os filtros ficam. */}
+        <div ref={toolbarRef} className="md:sticky md:top-0 md:z-20 bg-canvas py-2">
+        <Container size="data">
+        <div className="bg-white p-2 rounded-xl border border-line">
+        <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 md:gap-3">
+          <div className="relative md:w-72 md:shrink-0">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-ink-3 text-[20px]">search</span>
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               onFocus={() => setMostrarSugestoes(true)}
               onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
-              placeholder="Buscar por matrícula ou nome..."
+              placeholder="Buscar por matrícula ou nome"
               autoComplete="off"
-              className="w-full pl-12 pr-10 py-3.5 text-base font-body rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-[#050F41] transition-all"
+              className="w-full pl-11 pr-11 h-11 md:h-10 text-sm font-body rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-navy transition-all"
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <button onClick={() => setSearch('')} aria-label="Limpar busca" className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 md:w-10 md:h-10 flex items-center justify-center text-ink-3 hover:text-navy">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             )}
@@ -3047,7 +2945,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                     className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center justify-between gap-2"
                   >
                     <span className="text-sm font-semibold text-gray-800 truncate">{c.nome}</span>
-                    <span className="text-xs font-mono text-gray-400 shrink-0">{c.id}</span>
+                    <span className="text-xs font-mono text-ink-3 shrink-0">{c.id}</span>
                   </button>
                 ))}
               </div>
@@ -3056,7 +2954,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
           {/* Chip filters: só no desktop (tabela) — na lista mobile ficam só
               a busca por nome e o filtro de data. */}
-          <div className="hidden md:flex flex-wrap items-center gap-2 lg:flex-1">
+          <div className="flex items-center gap-2 overflow-x-auto md:overflow-visible md:flex-wrap md:flex-1">
             {chipFilters.map(chip => {
               const isActive = statusKpiFilter === chip.filterValue;
               return (
@@ -3064,7 +2962,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                   key={chip.key}
                   type="button"
                   onClick={() => toggleStatusKpiFilter(chip.filterValue)}
-                  className={`px-4 py-2 rounded-full text-sm font-bold border transition-all flex items-center gap-2 ${isActive ? chip.corAtivo : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
+                  className={`px-3 min-h-[44px] md:min-h-[40px] rounded-full text-sm font-bold border transition-all flex items-center gap-2 whitespace-nowrap ${isActive ? chip.corAtivo : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
                 >
                   <span>{chip.label}</span>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-black ${isActive ? 'bg-white/25' : 'bg-gray-100'}`}>{chip.value}</span>
@@ -3073,11 +2971,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             })}
           </div>
 
-          <div className="relative shrink-0 md:w-56">
+          <div className="relative shrink-0 md:w-40 md:ml-auto">
             <button
               type="button"
               onClick={() => setShowDateMenu(prev => !prev)}
-              className={`w-full px-4 py-3.5 text-sm font-bold rounded-xl border flex items-center justify-center space-x-2 whitespace-nowrap ${dateFilterMode !== 'todos' ? 'bg-[#050F41] text-white border-[#050F41]' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
+              className={`w-full px-4 h-11 md:h-10 text-sm font-bold rounded-lg border flex items-center justify-center space-x-2 whitespace-nowrap ${dateFilterMode !== 'todos' ? 'bg-navy text-white border-navy' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'}`}
             >
               <span className="material-symbols-outlined text-[20px]">event</span>
               <span>{dateFilterLabel}</span>
@@ -3096,15 +2994,17 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
           </div>
         </div>
         </div>
+        </Container>
         </div>
 
+        <Container size="data" className="pt-2 space-y-4">
         {showDateCalendar && (
           <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
             <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden flex flex-col">
-              <div className="p-4 bg-[#050F41] text-white flex items-center justify-between">
+              <div className="p-4 bg-navy text-white flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <span className="material-symbols-outlined text-[20px] text-[#079551]">event</span>
-                  <h3 className="font-heading font-bold text-sm uppercase">Escolher Data</h3>
+                  <span className="material-symbols-outlined text-[20px] text-gold">event</span>
+                  <h3 className="font-heading font-bold text-sm">Escolher Data</h3>
                 </div>
                 <button onClick={() => setShowDateCalendar(false)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10">
                   <span className="material-symbols-outlined text-[20px]">close</span>
@@ -3121,48 +3021,53 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-clip">
           {loading ? (
             <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
-              <span className="material-symbols-outlined animate-spin text-[32px] text-[#050F41]">progress_activity</span>
+              <span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span>
               <p className="text-xs font-semibold">Carregando candidatos...</p>
             </div>
           ) : loadError ? (
             <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
-              <span className="material-symbols-outlined text-[36px] text-red-400">error</span>
+              <span className="material-symbols-outlined text-[36px] text-red-500">error</span>
               <p className="text-sm font-bold text-gray-700">Não foi possível carregar os candidatos</p>
-              <p className="text-xs text-gray-400 max-w-sm">{loadError}</p>
-              <button type="button" onClick={carregarTudo} className="mt-2 px-4 py-2 bg-[#050F41] text-white rounded-xl text-xs font-bold">Tentar novamente</button>
+              <p className="text-xs text-ink-3 max-w-sm">{loadError}</p>
+              <button type="button" onClick={carregarTudo} className="mt-2 px-4 py-2 bg-navy text-white rounded-lg text-xs font-bold">Tentar novamente</button>
             </div>
           ) : filteredCandidatos.length === 0 ? (
             <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
               <span className="material-symbols-outlined text-[36px] text-gray-300">person_off</span>
               <p className="text-sm font-bold text-gray-700">Nenhum candidato encontrado</p>
-              <p className="text-xs text-gray-400">Tente ajustar seus termos de pesquisa ou filtros.</p>
+              <p className="text-xs text-ink-3">Tente ajustar seus termos de pesquisa ou filtros.</p>
             </div>
           ) : (
             <>
               {/* DESKTOP: tabela, como sempre foi. */}
-              <div className="hidden md:block overflow-x-auto pb-2 scroll-x-visible">
-                <table className="w-full min-w-[780px] text-left border-collapse table-fixed">
+              <div className="hidden md:block">
+                <table className="w-full text-left border-collapse table-fixed">
                   <colgroup>
-                    <col style={{ width: '3%' }} />
-                    <col style={{ width: '18%' }} />
-                    <col style={{ width: '12%' }} />
-                    <col style={{ width: '40%' }} />
-                    <col style={{ width: '12%' }} />
-                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '56px' }} />
+                    <col style={{ width: '26%' }} />
+                    <col style={{ width: '20%' }} />
+                    <col />
+                    <col style={{ width: '14%' }} />
+                    <col style={{ width: '176px' }} />
                   </colgroup>
                   <thead>
-                    <tr className="bg-gray-50/80 border-b border-gray-100 text-[15px] font-bold text-[#050F41] uppercase tracking-wider">
-                      <th className="py-3.5 px-4" colSpan={2}>Candidato</th>
-                      <th className="py-3.5 px-4">Status</th>
-                      <th className="py-3.5 px-4">Observações</th>
-                      <th className="py-3.5 px-4">Nº TIS</th>
-                      <th className="py-3.5 px-4 text-right">Ações</th>
+                    {/* Cabeçalho de colunas fixo logo abaixo da toolbar. */}
+                    <tr className="text-xs font-bold text-navy uppercase tracking-wider">
+                      {[
+                        { rotulo: 'Candidato', colSpan: 2, alinhamento: '' },
+                        { rotulo: 'Status', colSpan: 1, alinhamento: '' },
+                        { rotulo: 'Observações', colSpan: 1, alinhamento: '' },
+                        { rotulo: 'Nº TIS', colSpan: 1, alinhamento: '' },
+                        { rotulo: 'Ações', colSpan: 1, alinhamento: 'text-right' },
+                      ].map(col => (
+                        <th key={col.rotulo} colSpan={col.colSpan} className={`md:sticky md:top-[var(--toolbar-h)] z-10 bg-thead border-b border-line py-3 px-4 ${col.alinhamento}`}>{col.rotulo}</th>
+                      ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-[14px]">
+                  <tbody className="divide-y divide-gray-100 text-sm">
                     {gruposPorData.map(grupo => {
                       // Um grupo só vira accordion (recolhido por padrão) quando
                       // todas as IS do dia já estão finalizadas — e isso é
@@ -3177,55 +3082,69 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                           >
                             <td colSpan={6} className="py-2.5 px-4">
                               <div className="flex items-center gap-2">
-                                <span className="text-base font-extrabold text-[#050F41] uppercase tracking-wider">
-                                  {grupo.dataBR} <span className="text-gray-400 font-bold">({grupo.itens.length})</span>
-                                </span>
+                                <span className="text-sm font-bold text-navy">{grupo.dataBR}</span>
+                                <span className="text-xs text-ink-3">{grupo.itens.length} candidato{grupo.itens.length === 1 ? '' : 's'}{resumoDoGrupo(grupo.itens) ? ` · ${resumoDoGrupo(grupo.itens)}` : ''}</span>
                                 {grupoAccordion && (
-                                  <span className={`material-symbols-outlined text-[20px] text-gray-400 ml-auto transition-transform duration-200 ${expandidoGrupo ? 'rotate-180' : ''}`}>expand_more</span>
+                                  <span className={`material-symbols-outlined text-[20px] text-ink-3 ml-auto transition-transform duration-200 ${expandidoGrupo ? 'rotate-180' : ''}`}>expand_more</span>
                                 )}
                               </div>
                             </td>
                           </tr>
-                          {expandidoGrupo && grupo.itens.map(c => {
+                          {expandidoGrupo && grupo.itens.map((c, ordem) => {
                             const editavel = podeEditar && !c.finalizado;
                             const numTisHabilitado = editavel && statusTemLaudo(c.status);
+                            const proximo = c.id === proximoCandidatoId;
                             return (
-                              <tr key={c.id} className="hover:bg-gray-50/80 transition-colors">
-                                <td className="py-3.5 pl-4 pr-0 w-8">
-                                  {c.finalizado && (
-                                    <span className="material-symbols-outlined text-[20px] text-[#079551]" style={{ fontVariationSettings: "'FILL' 1" }} title="Finalizado">check_circle</span>
-                                  )}
+                              <tr key={c.id} className={`hover:bg-thead transition-colors ${proximo ? 'bg-gold/10 shadow-[inset_4px_0_0_0_#FAB932]' : ''}`} aria-current={proximo ? 'true' : undefined}>
+                                <td className="py-3.5 pl-4 pr-0">
+                                  <span className="flex items-center gap-1">
+                                    <span className="text-xs font-semibold text-ink-3 w-5 text-right" title="Ordem no dia">{ordem + 1}</span>
+                                    {c.finalizado && (
+                                      <span className="material-symbols-outlined text-[20px] text-green-700" style={{ fontVariationSettings: "'FILL' 1" }} aria-label="Finalizado">check_circle</span>
+                                    )}
+                                  </span>
                                 </td>
-                                <td className="py-3.5 pl-2 pr-4 cursor-pointer" onClick={() => handleCopiarNomeCandidato(c.nome)} title="Clique para copiar o nome do candidato">
-                                  <p className="font-semibold text-gray-800">{c.nome}</p>
-                                  <p className="text-[12px] font-mono text-gray-400">{c.id}</p>
+                                <td className="py-3.5 pl-2 pr-4">
+                                  <p className="font-semibold text-ink flex items-center gap-2 flex-wrap">
+                                    <span>{c.nome}</span>
+                                    {proximo && <StatusTag tone="navyOutline" dot={false}>Próximo</StatusTag>}
+                                  </p>
+                                  <p className="text-xs font-mono text-ink-3 flex items-center gap-2">
+                                    <span>{c.id}</span>
+                                    <button type="button" onClick={() => handleCopiarNomeCandidato(c.nome)} className="inline-flex items-center gap-1 min-h-[24px] text-xs font-sans font-semibold text-navy hover:underline">
+                                      <span className="material-symbols-outlined text-[14px]" aria-hidden="true">content_copy</span>Copiar nome
+                                    </button>
+                                    {estadoSalvar[c.id] && (
+                                      <span role="status" className={`font-sans font-semibold ${estadoSalvar[c.id] === 'falhou' ? 'text-wine' : 'text-ink-3'}`}>
+                                        {estadoSalvar[c.id] === 'salvando' ? 'Salvando…' : estadoSalvar[c.id] === 'salvo' ? 'Salvo' : 'Falha ao salvar'}
+                                      </span>
+                                    )}
+                                  </p>
                                 </td>
                                 <td className="py-3.5 px-4">
                                   {editavel ? (
-                                    <select value={c.status || ''} onChange={e => handleStatusChange(c, e.target.value)} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg border focus:outline-none focus:border-[#050F41] cursor-pointer ${getStatusSelectClasses(c.status)}`}>
-                                      {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                                    </select>
-                                  ) : getStatusBadge(c.status)}
+                                    <StatusSelect value={c.status || ''} options={STATUS_OPTIONS} onChange={v => handleStatusChange(c, v)} className="w-full" />
+                                  ) : <CandidatoStatusTag status={c.status} />}
                                 </td>
                                 <td className="py-3.5 px-4 text-gray-600">
                                   {editavel && (c.status === 'INAPTO' || c.status === 'INSUF DOCUMENTAL') ? (
-                                    <button type="button" onClick={() => setMotivoModal({ candidato: c, tipo: c.status === 'INAPTO' ? 'CID' : 'IDM', obrigatorio: false })} title={c.status === 'INAPTO' ? 'Clique para escolher/trocar o CID da inaptidão' : 'Clique para escolher/trocar o motivo da IDM'} className="w-full text-left truncate px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 hover:bg-white hover:border-[#050F41] cursor-pointer transition-colors">
-                                      {c.observacoes || <span className="text-gray-400">{c.status === 'INAPTO' ? 'Selecionar CID...' : 'Selecionar motivo...'}</span>}
+                                    <button type="button" onClick={() => setMotivoModal({ candidato: c, tipo: c.status === 'INAPTO' ? 'CID' : 'IDM', obrigatorio: false })} title={c.status === 'INAPTO' ? 'Clique para escolher/trocar o CID da inaptidão' : 'Clique para escolher/trocar o motivo da IDM'} className="w-full text-left truncate px-2 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 hover:bg-white hover:border-navy cursor-pointer transition-colors">
+                                      {c.observacoes || <span className="text-ink-3">{c.status === 'INAPTO' ? 'Selecionar CID...' : 'Selecionar motivo...'}</span>}
                                     </button>
                                   ) : editavel ? (
-                                    <input key={`obs-${c.id}-${c.observacoes}`} type="text" defaultValue={c.observacoes} onBlur={e => handleObservacoesBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
+                                    <input key={`obs-${c.id}-${c.observacoes}`} type="text" defaultValue={c.observacoes} onBlur={e => handleObservacoesBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-navy focus:bg-white" placeholder="-" />
                                   ) : <span className="truncate block" title={c.observacoes}>{c.observacoes || '-'}</span>}
                                 </td>
                                 <td className="py-3.5 px-4 text-gray-600">
                                   {numTisHabilitado ? (
-                                    <input key={`tis-${c.id}-${numTisResetKey}`} type="text" defaultValue={c.numTIS} onBlur={e => handleNumTisBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-[#050F41] focus:bg-white" placeholder="-" />
+                                    <input key={`tis-${c.id}-${numTisResetKey}`} type="text" defaultValue={c.numTIS} onBlur={e => handleNumTisBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-navy focus:bg-white" placeholder="-" />
                                   ) : editavel ? (
-                                    <input type="text" value={c.numTIS} disabled title="Defina o Status (Apto, Inapto, Faltou ou Insuf. Documental) para habilitar este campo." className="w-full px-2 py-1.5 text-[13px] rounded-lg border border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed" />
+                                    <span className="block text-xs leading-snug text-ink-3">{c.numTIS || 'Defina o resultado primeiro'}</span>
                                   ) : (c.numTIS || '-')}
                                 </td>
                                 <td className="py-3.5 px-4 text-right whitespace-nowrap">
                                   {c.termoRecursoUrl ? (
-                                    <button type="button" onClick={() => abrirPdfUrl(c.termoRecursoUrl!, `Termo de Recurso e Cientificação — ${c.nome}`)} className="p-2 text-green-800 bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Recurso e Cientificação">
+                                    <button type="button" onClick={() => abrirPdfUrl(c.termoRecursoUrl!, `Termo de Recurso e Cientificação — ${c.nome}`)} className="p-2 text-green-800 bg-green-50 hover:bg-green-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Recurso e Cientificação">
                                       <span className="material-symbols-outlined text-[22px]">description</span>
                                     </button>
                                   ) : c.status === 'INAPTO' && podeGerarTermoBase ? (
@@ -3235,7 +3154,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                   ) : null}
 
                                   {c.termoCientificacaoUrl ? (
-                                    <button type="button" onClick={() => abrirPdfUrl(c.termoCientificacaoUrl, `Termo de Cientificação — ${c.nome}`)} className="p-2 ml-1 text-green-800 bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Cientificação de Resultado">
+                                    <button type="button" onClick={() => abrirPdfUrl(c.termoCientificacaoUrl, `Termo de Cientificação — ${c.nome}`)} className="p-2 ml-1 text-green-800 bg-green-50 hover:bg-green-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Cientificação de Resultado">
                                       <span className="material-symbols-outlined text-[22px]">assignment_turned_in</span>
                                     </button>
                                   ) : gerandoCientIds.has(c.id) ? (
@@ -3249,16 +3168,16 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                   ) : null}
 
                                   {podeReagendarCandidato(c) && (
-                                    <button type="button" onClick={() => handleOpenReagendamento(c)} className="p-2 ml-1 text-[#079551] bg-green-50 hover:bg-[#079551] hover:text-white rounded-xl transition-colors cursor-pointer" title="Reagendar">
+                                    <button type="button" onClick={() => handleOpenReagendamento(c)} className="p-2 ml-1 text-green-700 bg-green-50 hover:bg-green-700 hover:text-white rounded-xl transition-colors cursor-pointer" title="Reagendar">
                                       <span className="material-symbols-outlined text-[22px]">event_repeat</span>
                                     </button>
                                   )}
 
                                   {mostrarMenuAcoes(c) && (
-                                    <button type="button" onClick={e => abrirMenuAcoes(e, c.id)} className="relative p-2 ml-1 text-gray-600 bg-gray-100 hover:bg-[#050F41] hover:text-white rounded-xl transition-colors cursor-pointer" title={qtdSolicitacoes(c) ? `Mais ações — ${qtdSolicitacoes(c)} documento(s) gerado(s)` : 'Mais ações'} aria-haspopup="menu" aria-expanded={menuAcoes?.id === c.id}>
+                                    <button type="button" onClick={e => abrirMenuAcoes(e, c.id)} className="relative p-2 ml-1 text-gray-600 bg-gray-100 hover:bg-navy hover:text-white rounded-xl transition-colors cursor-pointer" title={qtdSolicitacoes(c) ? `Mais ações — ${qtdSolicitacoes(c)} documento(s) gerado(s)` : 'Mais ações'} aria-haspopup="menu" aria-expanded={menuAcoes?.id === c.id}>
                                       <span className={`material-symbols-outlined text-[22px] ${gerandoSolicitacaoIds.has(c.id) ? 'animate-spin' : ''}`}>{gerandoSolicitacaoIds.has(c.id) ? 'progress_activity' : 'more_vert'}</span>
                                       {qtdSolicitacoes(c) > 0 && (
-                                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#079551] text-white text-[10px] font-bold leading-none flex items-center justify-center ring-2 ring-white">{qtdSolicitacoes(c)}</span>
+                                        <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-green-700 text-white text-xs font-bold leading-none flex items-center justify-center ring-2 ring-white">{qtdSolicitacoes(c)}</span>
                                       )}
                                     </button>
                                   )}
@@ -3286,11 +3205,12 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                         onClick={grupoAccordion ? () => toggleDateGroup(grupo.dataBR) : undefined}
                         className="w-full flex items-center gap-2 px-4 py-2.5 bg-gray-50/60 text-left"
                       >
-                        <span className="text-sm font-extrabold text-[#050F41] uppercase tracking-wider">
-                          {grupo.dataBR} <span className="text-gray-400 font-bold">({grupo.itens.length})</span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-bold text-navy">{grupo.dataBR}</span>
+                          <span className="block text-xs text-ink-3">{grupo.itens.length} candidato{grupo.itens.length === 1 ? '' : 's'}{resumoDoGrupo(grupo.itens) ? ` · ${resumoDoGrupo(grupo.itens)}` : ''}</span>
                         </span>
                         {grupoAccordion && (
-                          <span className={`material-symbols-outlined text-[20px] text-gray-400 ml-auto transition-transform duration-200 ${expandidoGrupo ? 'rotate-180' : ''}`}>expand_more</span>
+                          <span className={`material-symbols-outlined text-[20px] text-ink-3 ml-auto transition-transform duration-200 ${expandidoGrupo ? 'rotate-180' : ''}`}>expand_more</span>
                         )}
                       </button>
                       {expandidoGrupo && grupo.itens.map(c => (
@@ -3302,18 +3222,21 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                         >
                           <span className="w-6 h-6 shrink-0 flex items-center justify-center">
                             {c.finalizado ? (
-                              <span className="material-symbols-outlined text-[20px] text-[#079551]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                              <span className="material-symbols-outlined text-[20px] text-green-700" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                             ) : c.status === 'Reagendado' ? (
-                              <span className="material-symbols-outlined text-[20px] text-indigo-500">event_repeat</span>
+                              <span className="material-symbols-outlined text-[20px] text-ink-3">event_repeat</span>
                             ) : null}
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-semibold text-gray-800 truncate">{c.nome}</span>
+                            <span className="flex items-center gap-2 min-w-0">
+                              <span className="text-sm font-semibold text-ink truncate">{c.nome}</span>
+                              {c.id === proximoCandidatoId && <StatusTag tone="navyOutline" dot={false}>Próximo</StatusTag>}
+                            </span>
                             {c.observacoes && (
                               <span className="block text-xs text-gray-500 truncate">{c.observacoes}</span>
                             )}
                           </span>
-                          <span className="shrink-0">{c.status ? getStatusBadge(c.status) : null}</span>
+                          <span className="shrink-0">{c.status ? <CandidatoStatusTag status={c.status} /> : null}</span>
                         </button>
                       ))}
                     </div>
@@ -3323,15 +3246,16 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             </>
           )}
         </div>
+        </Container>
       </div>
 
       {reagendandoCandidato && (
         <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden flex flex-col">
-            <div className="p-4 bg-[#050F41] text-white flex items-center justify-between">
+            <div className="p-4 bg-navy text-white flex items-center justify-between">
               <div className="flex items-center space-x-2 min-w-0">
-                <span className="material-symbols-outlined text-[20px] text-[#079551] shrink-0">event_repeat</span>
-                <h3 className="font-heading font-bold text-sm uppercase truncate">Reagendar {reagendandoCandidato.nome}</h3>
+                <span className="material-symbols-outlined text-[20px] text-gold shrink-0">event_repeat</span>
+                <h3 className="font-heading font-bold text-sm truncate">Reagendar {reagendandoCandidato.nome}</h3>
               </div>
               <button onClick={() => setReagendandoCandidato(null)} disabled={confirmandoReagendamento} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 shrink-0">
                 <span className="material-symbols-outlined text-[20px]">close</span>
@@ -3340,20 +3264,20 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
             <div className="p-4">
               {!loadingDatasAgendamento && datasAgendamento.length === 0 ? (
                 <div className="text-center py-4 space-y-3">
-                  <p className="text-xs md:text-sm text-gray-500">
+                  <p className="text-sm text-gray-500">
                     Este concurso ainda não tem um período de IS configurado, por isso não há datas disponíveis para reagendamento.
                   </p>
                   {podeAbrirEncerrar ? (
                     <button
                       type="button"
                       onClick={() => setShowDefinirPeriodoModal(true)}
-                      className="px-4 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm inline-flex items-center space-x-1.5"
+                      className="px-4 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm inline-flex items-center space-x-1.5"
                     >
                       <span className="material-symbols-outlined text-[16px]">event</span>
                       <span>Definir Período de Agendamento</span>
                     </button>
                   ) : (
-                    <p className="text-[11px] md:text-sm text-gray-400">Peça a um Admin para configurar o período deste concurso.</p>
+                    <p className="text-sm text-ink-3">Peça a um Admin para configurar o período deste concurso.</p>
                   )}
                 </div>
               ) : (
@@ -3398,17 +3322,17 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         return (
           <div className="md:hidden fixed inset-0 z-[150] flex flex-col justify-end">
             <div className="absolute inset-0 bg-black/50 animate-backdrop-in" onClick={fecharSheet} />
-            <div className="relative bg-[#F3F5F7] rounded-t-3xl shadow-2xl flex flex-col animate-sheet-up" style={{ maxHeight: '92dvh' }}>
+            <div className="relative bg-canvas rounded-t-3xl shadow-2xl flex flex-col animate-sheet-up" style={{ maxHeight: '92dvh' }}>
               <div className="pt-2.5 pb-1 flex justify-center shrink-0" onClick={fecharSheet}>
                 <span className="w-10 h-1.5 rounded-full bg-gray-300" />
               </div>
               <div className="px-5 py-3 flex items-center justify-between gap-3 shrink-0 border-b border-gray-200/70">
                 <div className="min-w-0">
-                  <h3 className="font-heading font-bold text-base text-[#050F41] truncate">{c.nome}</h3>
-                  <p className="text-[11px] text-gray-500 font-mono truncate">{c.id}{c.dataAgendamento ? ` · ${isoParaBR(c.dataAgendamento)}` : ''}</p>
+                  <h3 className="font-heading font-bold text-base text-navy truncate">{c.nome}</h3>
+                  <p className="text-xs text-gray-500 font-mono truncate">{c.id}{c.dataAgendamento ? ` · ${isoParaBR(c.dataAgendamento)}` : ''}</p>
                 </div>
                 {!sheetTravado && (
-                  <button onClick={fecharSheet} aria-label="Fechar" className="text-gray-500 hover:text-[#050F41] p-1.5 rounded-lg hover:bg-gray-200/60 transition-colors shrink-0">
+                  <button onClick={fecharSheet} aria-label="Fechar" className="text-gray-500 hover:text-navy p-1.5 rounded-lg hover:bg-gray-200/60 transition-colors shrink-0">
                     <span className="material-symbols-outlined text-[24px]">close</span>
                   </button>
                 )}
@@ -3417,7 +3341,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
               {motivoNoSheet ? (
                 <div className="flex-1 overflow-y-auto p-5 pb-8 space-y-4">
                   {!motivoNoSheet.obrigatorio && (
-                    <button type="button" onClick={handleMotivoFechado} className="flex items-center gap-1 text-sm font-bold text-[#050F41]">
+                    <button type="button" onClick={handleMotivoFechado} className="flex items-center gap-1 text-sm font-bold text-navy">
                       <span className="material-symbols-outlined text-[20px]">arrow_back</span>
                       Voltar
                     </button>
@@ -3432,27 +3356,25 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                 <div className="flex-1 overflow-y-auto p-5 pb-8 space-y-5">
                 {c.finalizado && (
                   <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[20px] text-[#079551]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                    <span className="material-symbols-outlined text-[20px] text-green-700" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                     <p className="text-xs font-bold text-green-800">IS finalizada — os dados não podem mais ser alterados.</p>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
                   {editavel ? (
-                    <select value={c.status || ''} onChange={e => handleStatusChange(c, e.target.value)} className={`w-full px-3 py-2.5 text-sm font-bold rounded-xl border focus:outline-none focus:border-[#050F41] ${getStatusSelectClasses(c.status)}`}>
-                      {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
+                    <StatusSelect value={c.status || ''} options={STATUS_OPTIONS} onChange={v => handleStatusChange(c, v)} className="w-full" />
                   ) : (
-                    <div>{getStatusBadge(c.status)}</div>
+                    <div>{<CandidatoStatusTag status={c.status} />}</div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Observações</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Observações</label>
                   {editavel && (c.status === 'INAPTO' || c.status === 'INSUF DOCUMENTAL') ? (
                     <button type="button" onClick={() => setMotivoModal({ candidato: c, tipo: c.status === 'INAPTO' ? 'CID' : 'IDM', obrigatorio: false })} className="w-full text-left px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-700 bg-white">
-                      {c.observacoes || <span className="text-gray-400">{c.status === 'INAPTO' ? 'Selecionar CID...' : 'Selecionar motivo...'}</span>}
+                      {c.observacoes || <span className="text-ink-3">{c.status === 'INAPTO' ? 'Selecionar CID...' : 'Selecionar motivo...'}</span>}
                     </button>
                   ) : editavel ? (
                     <textarea
@@ -3461,7 +3383,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                       onBlur={e => handleObservacoesBlur(c, e.target.value)}
                       rows={5}
                       placeholder="Sem observações."
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-700 focus:outline-none focus:border-[#050F41] resize-none"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm text-gray-700 focus:outline-none focus:border-navy resize-none"
                     />
                   ) : (
                     <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{c.observacoes || 'Sem observações.'}</p>
@@ -3469,7 +3391,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Nº TIS</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Nº TIS</label>
                   {/* Nunca editável no mobile — só é lançado na visão desktop. */}
                   <p className="text-sm font-semibold text-gray-700">{c.numTIS || '-'}</p>
                 </div>
@@ -3477,7 +3399,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                 {(podeGerarTermo || c.termoRecursoUrl || c.termoCientificacaoUrl || gerandoCientIds.has(c.id) || podeGerarCientificacao(c) || mostrarMenuAcoes(c) || podeReagendarCandidato(c)) && (
                   <div className="pt-2 space-y-2">
                     {c.termoRecursoUrl ? (
-                      <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                      <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[20px]">description</span>
                         <span>Visualizar Termo de Recurso e Cientificação</span>
                       </a>
@@ -3488,7 +3410,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                       </button>
                     ) : null}
                     {c.termoCientificacaoUrl ? (
-                      <a href={c.termoCientificacaoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                      <a href={c.termoCientificacaoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[20px]">assignment_turned_in</span>
                         <span>Visualizar Termo de Cientificação</span>
                       </a>
@@ -3506,7 +3428,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                     {podeSolicitarBase && (['parecer', 'exames'] as const).map(tipo => {
                       const habilitado = statusPermiteSolicitacao(c) && !gerandoSolicitacaoIds.has(c.id);
                       return (
-                        <button key={tipo} type="button" disabled={!habilitado} onClick={() => { setCandidatoModalMobile(null); handleGerarSolicitacao(tipo, c); }} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-[#050F41] border border-gray-200 disabled:opacity-40 disabled:cursor-not-allowed">
+                        <button key={tipo} type="button" disabled={!habilitado} onClick={() => { setCandidatoModalMobile(null); handleGerarSolicitacao(tipo, c); }} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-navy border border-gray-200 disabled:opacity-40 disabled:cursor-not-allowed">
                           <span className="material-symbols-outlined text-[20px]">{tipo === 'parecer' ? 'stethoscope' : 'lab_research'}</span>
                           <span>{tipo === 'parecer' ? 'Gerar Parecer' : 'Gerar Exames'}</span>
                         </button>
@@ -3522,7 +3444,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                       </button>
                     ))}
                     {ehAdmin && c.finalizado && (
-                      <button type="button" onClick={() => handleEditarIS(c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-[#050F41] border border-gray-200">
+                      <button type="button" onClick={() => handleEditarIS(c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-navy border border-gray-200">
                         <span className="material-symbols-outlined text-[20px]">edit</span>
                         <span>Editar</span>
                       </button>
@@ -3534,7 +3456,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                       </button>
                     )}
                     {podeReagendarCandidato(c) && (
-                      <button type="button" onClick={() => { setCandidatoModalMobile(null); handleOpenReagendamento(c); }} className="w-full px-4 py-3 bg-green-50 text-[#079551] rounded-xl text-sm font-bold flex items-center justify-center gap-2">
+                      <button type="button" onClick={() => { setCandidatoModalMobile(null); handleOpenReagendamento(c); }} className="w-full px-4 py-3 bg-green-50 text-green-700 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[20px]">event_repeat</span>
                         <span>Reagendar</span>
                       </button>
@@ -3556,12 +3478,12 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 // COMPONENTE PRINCIPAL — alterna entre a lista de concursos e o detalhe
 // =========================================================================
 
-interface ConcursosJRSProps {
-  onBack?: () => void;
-}
-
-export const ConcursosJRS: React.FC<ConcursosJRSProps> = ({ onBack }) => {
+export const ConcursosJRS: React.FC = () => {
   const nav = useNav();
+  // O concurso aberto é um nível da URL: /concursos/:concursoId (deep link e botão voltar).
+  const { concursoId: concursoParam } = useParams();
+  const selectedConcursoId = concursoParam ? decodeURIComponent(concursoParam) : null;
+  const setSelectedConcursoId = (id: string | null) => nav?.navigate(id ? concursoPath(id) : '/concursos');
   const perfil = nav?.authUser?.perfil;
   const isAdmin = perfil === 'admin';
   const podeRegistrarMensagem = canUseFeature('concursosJRS.registrarMensagemPDF', perfil);
@@ -3575,8 +3497,6 @@ export const ConcursosJRS: React.FC<ConcursosJRSProps> = ({ onBack }) => {
 
   const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
   const [loadingConcursos, setLoadingConcursos] = useState(true);
-  const [selectedConcursoId, setSelectedConcursoId] = useState<string | null>(null);
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [showImportarCsvModal, setShowImportarCsvModal] = useState(false);
 
   const carregarConcursos = async () => {
@@ -3597,9 +3517,8 @@ export const ConcursosJRS: React.FC<ConcursosJRSProps> = ({ onBack }) => {
   }, []);
 
   const handleFecharModalUpload = (concursoIdCriado?: string) => {
-    setShowUploadModal(false);
     carregarConcursos();
-    if (concursoIdCriado) setSelectedConcursoId(concursoIdCriado);
+    setSelectedConcursoId(concursoIdCriado ?? null);
   };
 
   const handleFecharModalImportarCsv = (concursoIdCriado?: string) => {
@@ -3607,6 +3526,13 @@ export const ConcursosJRS: React.FC<ConcursosJRSProps> = ({ onBack }) => {
     carregarConcursos();
     if (concursoIdCriado) setSelectedConcursoId(concursoIdCriado);
   };
+
+  // /concursos/novo: criação do concurso como página própria (F60), com a mesma permissão do botão.
+  if (selectedConcursoId === 'novo') {
+    return podeRegistrarMensagem
+      ? <ModalRegistrarMensagem onClose={handleFecharModalUpload} isAdmin={isAdmin} />
+      : <AccessDenied pagina="Novo concurso" />;
+  }
 
   if (selectedConcursoId) {
     return (
@@ -3632,12 +3558,10 @@ export const ConcursosJRS: React.FC<ConcursosJRSProps> = ({ onBack }) => {
         podeAdicionarCandidato={podeAdicionarCandidato}
         podeVisualizarTabela={podeVisualizarTabela}
         onSelecionar={setSelectedConcursoId}
-        onNovoConcursoClick={() => setShowUploadModal(true)}
+        onNovoConcursoClick={() => nav?.navigate('/concursos/novo')}
         onImportarCsvClick={() => setShowImportarCsvModal(true)}
         onRecarregar={carregarConcursos}
-        onBack={onBack}
       />
-      {showUploadModal && <ModalRegistrarMensagem onClose={handleFecharModalUpload} isAdmin={isAdmin} />}
       {showImportarCsvModal && <ModalImportarCsv onClose={handleFecharModalImportarCsv} />}
     </>
   );

@@ -1,8 +1,9 @@
 // Ficheiro: components/PortariaGuide.tsx
-import React, { useMemo, useState, useEffect } from 'react';
-import { Header } from './Header';
+import React, { useMemo } from 'react';
+import { Container, PageHeader } from './ui/Page';
+import { useBackToTop } from '../hooks/useBackToTop';
 import { MarkdownContent } from './MarkdownContent';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp } from './ui/icons';
 import { StoragePdfIconButton, StoragePdfFab } from './StoragePdfButtons';
 import { useStoragePdf } from '../hooks/useStoragePdf';
 import { PORTARIA_PDF_PATH } from '../services/firebaseStorageNormas';
@@ -21,55 +22,38 @@ const portariaMarkdown = Object.keys(portariaModules)
   .map(key => portariaModules[key])
   .join('\n\n---\n\n');
 
-interface PortariaGuideProps {
-  onBack?: () => void;
-}
-
-export const PortariaGuide: React.FC<PortariaGuideProps> = ({ onBack }) => {
-  const [showScrollTop, setShowScrollTop] = useState(false);
+export const PortariaGuide: React.FC = () => {
+  const { visivel: showScrollTop, irAoTopo } = useBackToTop(250);
   const { open: openPdf, busy: baixandoPdf, modalElement } = useStoragePdf();
   const baixar = () => openPdf(PORTARIA_PDF_PATH, 'Portaria GM-MD nº 3.551/2021');
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 250) setShowScrollTop(true);
-      else setShowScrollTop(false);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   const markdown = useMemo(() => portariaMarkdown, []);
 
   return (
-    <div className="flex flex-col h-full bg-[#F3F5F7] relative">
-      <Header title="Portaria na Integra" onBack={onBack} />
-
-      <div className="p-4 md:p-6 space-y-4 max-w-2xl md:max-w-4xl lg:max-w-5xl mx-auto w-full flex-1">
-        <div className="relative text-center bg-white p-5 md:p-6 rounded-2xl border border-gray-200/60 shadow-sm">
-          <h2 className="text-sm md:text-base font-heading font-bold text-[#050F41] md:px-10">PORTARIA GM-MD Nº 3.551, DE 26 DE AGOSTO DE 2021</h2>
-          <p className="text-xs md:text-sm text-gray-500 font-body mt-1 md:px-10">Diretrizes e Normas Técnicas Periciais Oficiais das Forças Armadas.</p>
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
-            <StoragePdfIconButton busy={baixandoPdf} onClick={baixar} />
-          </div>
-        </div>
-
-        <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-200/60 shadow-sm">
+    <div className="flex flex-col flex-1 animate-fade-in relative">
+      <Container size="reading" className="py-6 md:py-8 pb-10">
+        <PageHeader
+          title="Portaria GM-MD nº 3.551/2021"
+          description="Diretrizes e Normas Técnicas Periciais Oficiais das Forças Armadas, de 26 de agosto de 2021."
+          actions={<StoragePdfIconButton busy={baixandoPdf} onClick={baixar} />}
+        />
+        <div className="bg-white p-6 md:p-8 rounded-xl border border-line">
           <MarkdownContent markdown={markdown} />
         </div>
-      </div>
+      </Container>
 
       {/* Mobile: botão flutuante de download, acima do "voltar ao topo". */}
-      <StoragePdfFab busy={baixandoPdf} onClick={baixar} bottomClass="bottom-40" />
+      <StoragePdfFab busy={baixandoPdf} onClick={baixar} bottomClass="bottom-[5.5rem]" />
       {modalElement}
 
       {showScrollTop && (
         <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-24 right-6 bg-[#050F41] text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center border border-slate-700"
-          title="Voltar ao topo"
+          type="button"
+          onClick={irAoTopo}
+          className="fixed bottom-6 right-4 bg-navy text-white shadow-lg rounded-full min-h-[44px] pl-3 pr-4 gap-2 hover:bg-navy-hover active:scale-95 transition-all z-50 flex items-center justify-center text-sm font-bold"
         >
           <ArrowUp size={20} />
+          Topo
         </button>
       )}
     </div>

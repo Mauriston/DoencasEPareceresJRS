@@ -1,10 +1,18 @@
 // Ficheiro: components/DiseaseGuide.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { DISEASES } from '../constants';
 import { Disease, Diagnosis } from '../types';
-import { ChevronRight, Info, Brain, HeartPulse, EyeOff, Radiation, Accessibility, Stethoscope, Ribbon, X, Download, ArrowLeft } from 'lucide-react';
+import { ChevronRight, Info, Brain, HeartPulse, EyeOff, Radiation, Accessibility, Stethoscope, Ribbon, X, Download, ArrowLeft } from './ui/icons';
 import { jsPDF } from 'jspdf';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { NavContext } from '../context/NavContext';
+import { canAccessPage } from '../config/permissions';
+import { pathForView } from '../config/routes';
+import { EmptyState } from './ui/EmptyState';
+import { useBreadcrumbs } from '../context/BreadcrumbContext';
+import { doencaPath } from '../config/routes';
+import { Button } from './ui/Button';
 
 const cdrData = [
   { id: 'M', nome: 'Memória', sigla: '(M)', opcoes: [
@@ -105,22 +113,22 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <div className="fixed inset-0 z-[100] bg-gray-50 flex flex-col animate-fade-in font-body pb-28">
       <header className="bg-white shadow-sm sticky top-0 z-40 flex items-center px-4 py-4">
-        <button onClick={onClose} className="mr-4 text-gray-500 hover:text-[#050F41] transition-colors p-1"><ArrowLeft size={24} /></button>
+        <button onClick={onClose} className="mr-4 text-gray-500 hover:text-navy transition-colors p-1"><ArrowLeft size={24} /></button>
         <div>
-          <h1 className="text-xl font-bold text-[#050F41] font-heading leading-none">CDR Score</h1>
+          <h1 className="text-xl font-bold text-navy font-heading leading-none">CDR Score</h1>
           <p className="text-xs text-gray-500 mt-1">Calculadora validada em português</p>
         </div>
       </header>
       <main className="flex-1 overflow-y-auto max-w-3xl mx-auto p-4 w-full custom-scrollbar">
         {cdrData.map(cat => (
           <div key={cat.id} className="mb-8">
-            <h2 className="text-base font-bold text-[#050F41] mb-3">{cat.nome} <span className="text-gray-500 font-normal">{cat.sigla}</span></h2>
+            <h2 className="text-base font-bold text-navy mb-3">{cat.nome} <span className="text-gray-500 font-normal">{cat.sigla}</span></h2>
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
               {cat.opcoes.map(opt => {
                 const isSelected = scores[cat.id as keyof typeof scores] === opt.pt;
                 return (
                   <div key={opt.pt} onClick={() => { setScores({...scores, [cat.id]: opt.pt}); setIsCopied(false); }}
-                    className={`flex items-center p-3 cursor-pointer select-none transition-colors border-b border-gray-100 last:border-0 ${isSelected ? 'bg-[#050F41] text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>
+                    className={`flex items-center p-3 cursor-pointer select-none transition-colors border-b border-gray-100 last:border-0 ${isSelected ? 'bg-navy text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}>
                     <div className="flex-1 pr-4 text-sm leading-snug">{opt.desc}</div>
                     <div className={`font-bold text-sm px-2 py-1 rounded bg-black/5 ${isSelected ? 'text-white' : 'text-gray-500'}`}>{opt.pt === 0 ? '0' : '+' + opt.pt}</div>
                   </div>
@@ -130,7 +138,7 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </div>
         ))}
       </main>
-      <div className={`fixed bottom-0 left-0 w-full text-white shadow-lg z-50 transition-colors duration-300 ${isGrave ? 'bg-red-900' : 'bg-[#050F41]'}`}>
+      <div className={`fixed bottom-0 left-0 w-full text-white shadow-lg z-50 transition-colors duration-300 ${isGrave ? 'bg-red-900' : 'bg-navy'}`}>
         <div className="max-w-3xl mx-auto flex flex-row items-center justify-between p-4">
           <div className="flex flex-col justify-center">
             <div className="flex items-baseline gap-1">
@@ -138,8 +146,8 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               <span className="text-sm text-gray-200">pontos</span>
               <button onClick={() => setIsModalOpen(true)} className="ml-1 text-white hover:text-gray-300"><span className="material-symbols-outlined text-[20px]">info</span></button>
             </div>
-            <div className="text-xs text-gray-300 mt-1">Escore Global CDR</div>
-            <div className="text-xs text-gray-400 mt-0.5">CDR-SB: <span className="text-white font-semibold">{sbScore}</span> pontos</div>
+            <div className="text-xs text-white/80 mt-1">Escore Global CDR</div>
+            <div className="text-xs text-ink-3 mt-0.5">CDR-SB: <span className="text-white font-semibold">{sbScore}</span> pontos</div>
           </div>
           <div className="flex items-center">
             <button onClick={handleCopy} disabled={isCopied} className="mr-4 flex items-center justify-center p-2 rounded-full text-white hover:bg-white/10">
@@ -147,7 +155,7 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             </button>
             <div className={`border-l-2 ${isGrave ? 'border-red-400' : 'border-blue-400'} pl-4 flex flex-col`}>
               <div className="text-xl font-bold uppercase">{stage.titulo}</div>
-              <div className="text-sm text-gray-300">({stage.sub})</div>
+              <div className="text-sm text-white/80">({stage.sub})</div>
             </div>
           </div>
         </div>
@@ -156,19 +164,19 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         <div className="fixed inset-0 z-[110] bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}>
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-4 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-[#050F41]">Interpretação dos Resultados</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1"><X size={20} /></button>
+              <h3 className="text-lg font-bold text-navy">Interpretação dos Resultados</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-ink-3 hover:text-gray-600 p-1"><X size={20} /></button>
             </div>
             <div className="p-4 overflow-x-auto scroll-x-visible">
-              <table className="w-full text-left text-sm md:text-base text-gray-600 border-collapse">
-                <thead className="bg-gray-50 text-gray-700 text-xs md:text-sm uppercase">
+              <table className="w-full text-left text-base text-gray-600 border-collapse">
+                <thead className="bg-gray-50 text-gray-700 text-sm uppercase">
                   <tr><th className="px-4 py-3 border-b border-gray-200">Global CDR</th><th className="px-4 py-3 border-b border-gray-200">CDR-SB</th><th className="px-4 py-3 border-b border-gray-200">Demência</th></tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   <tr><td className="px-4 py-3 font-medium">0</td><td className="px-4 py-3">0</td><td className="px-4 py-3">Normal (sem demência)</td></tr>
                   <tr><td className="px-4 py-3 font-medium">0.5</td><td className="px-4 py-3">0.5-4.0</td><td className="px-4 py-3">Questionável a muito leve</td></tr>
                   <tr><td className="px-4 py-3 font-medium">1</td><td className="px-4 py-3">4.5-9.0</td><td className="px-4 py-3">Leve</td></tr>
-                  <tr className="bg-red-50"><td className="px-4 py-3 font-medium">2</td><td className="px-4 py-3">9.5-15.5</td><td className="px-4 py-3 font-medium text-[#050F41]">MODERADA</td></tr>
+                  <tr className="bg-red-50"><td className="px-4 py-3 font-medium">2</td><td className="px-4 py-3">9.5-15.5</td><td className="px-4 py-3 font-medium text-navy">MODERADA</td></tr>
                   <tr className="bg-red-100"><td className="px-4 py-3 font-bold text-red-800">3</td><td className="px-4 py-3">16.0-18.0</td><td className="px-4 py-3 font-bold text-red-800">GRAVE</td></tr>
                 </tbody>
               </table>
@@ -182,26 +190,26 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
 const getDiseaseIcon = (name: string) => {
   const lower = name.toLowerCase();
-  if (lower.includes("espondilite")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">orthopedics</span>;
-  if (lower.includes("neoplasia")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">oncology</span>;
-  if (lower.includes("pênfigo") || lower.includes("penfigo")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">dermatology</span>;
-  if (lower.includes("hanseníase") || lower.includes("hanseniase")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">dermatology</span>;
-  if (lower.includes("fibrose")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">pulmonology</span>;
-  if (lower.includes("tuberculose")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">pulmonology</span>;
-  if (lower.includes("nefropatia")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">nephrology</span>;
-  if (lower.includes("paget")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">skeleton</span>;
-  if (lower.includes("alienação") || lower.includes("alienacao")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">psychology</span>;
-  if (lower.includes("parkinson")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">neurology</span>;
-  if (lower.includes("esclerose")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">neurology</span>;
-  if (lower.includes("hepatopatia")) return <span className="material-symbols-outlined text-[22px] text-[#050F41]">gastroenterology</span>;
+  if (lower.includes("espondilite")) return <span className="material-symbols-outlined text-[22px] text-navy">orthopedics</span>;
+  if (lower.includes("neoplasia")) return <span className="material-symbols-outlined text-[22px] text-navy">oncology</span>;
+  if (lower.includes("pênfigo") || lower.includes("penfigo")) return <span className="material-symbols-outlined text-[22px] text-navy">dermatology</span>;
+  if (lower.includes("hanseníase") || lower.includes("hanseniase")) return <span className="material-symbols-outlined text-[22px] text-navy">dermatology</span>;
+  if (lower.includes("fibrose")) return <span className="material-symbols-outlined text-[22px] text-navy">pulmonology</span>;
+  if (lower.includes("tuberculose")) return <span className="material-symbols-outlined text-[22px] text-navy">pulmonology</span>;
+  if (lower.includes("nefropatia")) return <span className="material-symbols-outlined text-[22px] text-navy">nephrology</span>;
+  if (lower.includes("paget")) return <span className="material-symbols-outlined text-[22px] text-navy">skeleton</span>;
+  if (lower.includes("alienação") || lower.includes("alienacao")) return <span className="material-symbols-outlined text-[22px] text-navy">psychology</span>;
+  if (lower.includes("parkinson")) return <span className="material-symbols-outlined text-[22px] text-navy">neurology</span>;
+  if (lower.includes("esclerose")) return <span className="material-symbols-outlined text-[22px] text-navy">neurology</span>;
+  if (lower.includes("hepatopatia")) return <span className="material-symbols-outlined text-[22px] text-navy">gastroenterology</span>;
 
   switch(name) {
-    case "Cardiopatia Grave": return <HeartPulse className="text-[#050F41]" size={22} />;
-    case "Cegueira": return <EyeOff className="text-[#050F41]" size={22} />;
-    case "Contaminação por Radiação": return <Radiation className="text-[#050F41]" size={22} />;
-    case "Paralisia Irreversível e Incapacitante": return <Accessibility className="text-[#050F41]" size={22} />;
-    case "SIDA/AIDS": return <Ribbon className="text-[#050F41]" size={22} />;
-    default: return <span className="material-symbols-outlined text-[22px] text-[#050F41]">stethoscope</span>;
+    case "Cardiopatia Grave": return <HeartPulse className="text-navy" size={22} />;
+    case "Cegueira": return <EyeOff className="text-navy" size={22} />;
+    case "Contaminação por Radiação": return <Radiation className="text-navy" size={22} />;
+    case "Paralisia Irreversível e Incapacitante": return <Accessibility className="text-navy" size={22} />;
+    case "SIDA/AIDS": return <Ribbon className="text-navy" size={22} />;
+    default: return <span className="material-symbols-outlined text-[22px] text-navy">stethoscope</span>;
   }
 };
 
@@ -227,15 +235,23 @@ const getShortDiseaseName = (name: string) => {
   return name.toUpperCase();
 };
 
-interface DiseaseGuideProps {
-  onBack?: () => void;
-}
-
-export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
+export const DiseaseGuide: React.FC = () => {
+  // Os três níveis são rotas: /beneficios/doencas · /:doencaId · /:doencaId/:diagnosticoIdx
+  const navigate = useNavigate();
+  const nav = useContext(NavContext);
+  const { doencaId, diagnosticoIdx } = useParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [selectedDisease, setSelectedDisease] = useState<Disease | null>(null);
-  const [selectedDiagnosis, setSelectedDiagnosis] = useState<Diagnosis | null>(null);
+  const selectedDisease: Disease | null = DISEASES.find(d => d.id === doencaId) ?? null;
+  // Doença com um único diagnóstico abre direto o detalhe (sem o nível intermediário).
+  const diagIdx = diagnosticoIdx !== undefined ? Number(diagnosticoIdx) : (selectedDisease?.diagnoses.length === 1 ? 0 : -1);
+  const selectedDiagnosis: Diagnosis | null = selectedDisease?.diagnoses[diagIdx] ?? null;
+  useBreadcrumbs(
+    !selectedDisease ? [] :
+    selectedDiagnosis && selectedDisease.diagnoses.length > 1
+      ? [{ label: selectedDisease.name, to: doencaPath(selectedDisease.id) }, { label: selectedDiagnosis.name }]
+      : [{ label: selectedDisease.name }]
+  );
   const [expandedDiseaseId, setExpandedDiseaseId] = useState<string | null>(null);
   const [isPragmatismModalOpen, setIsPragmatismModalOpen] = useState(false);
   const [isPersonalityModalOpen, setIsPersonalityModalOpen] = useState(false);
@@ -249,26 +265,13 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
   const [isBavImageExpanded, setIsBavImageExpanded] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  // Checklist de documentos reunidos (apenas visual; zera ao trocar de diagnóstico).
+  const [docsMarcados, setDocsMarcados] = useState<Set<number>>(new Set());
+  const podeVerPortaria = canAccessPage('portaria', nav?.authUser?.perfil);
 
-  useEffect(() => { setIsCopied(false); }, [selectedDiagnosis]);
+  useEffect(() => { setIsCopied(false); setDocsMarcados(new Set()); }, [selectedDiagnosis]);
 
-  const handleDiseaseClick = (disease: Disease) => {
-    setSelectedDisease(disease);
-    if (disease.diagnoses.length === 1) {
-      setSelectedDiagnosis(disease.diagnoses[0]);
-    } else {
-      setSelectedDiagnosis(null);
-    }
-  };
-
-  const handleBackClick = () => {
-    if (selectedDisease && selectedDiagnosis && selectedDisease.diagnoses.length > 1) {
-      setSelectedDiagnosis(null);
-    } else {
-      setSelectedDisease(null);
-      setSelectedDiagnosis(null);
-    }
-  };
+  const handleDiseaseClick = (disease: Disease) => navigate(doencaPath(disease.id));
 
   const handleCopy = async () => {
     if (!selectedDisease || !selectedDiagnosis) return;
@@ -320,17 +323,11 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
   }
 
   const handleSearchResultClick = (result: any) => {
-    if (result.diagnosis) { 
-      setSelectedDisease(result.disease); 
-      setSelectedDiagnosis(result.diagnosis); 
-    } else { 
-      setSelectedDisease(result.disease);
-      if (result.disease.diagnoses.length === 1) {
-        setSelectedDiagnosis(result.disease.diagnoses[0]);
-      } else {
-        setSelectedDiagnosis(null);
-      }
-      setSearchQuery(""); 
+    if (result.diagnosis) {
+      navigate(doencaPath(result.disease.id, result.disease.diagnoses.indexOf(result.diagnosis)));
+    } else {
+      navigate(doencaPath(result.disease.id));
+      setSearchQuery("");
     }
   };
 
@@ -339,179 +336,197 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ onBack }) => {
   // PAGE LEVEL 2: Diagnoses List for a specific disease
   if (selectedDisease && !selectedDiagnosis) {
     return (
-      <div className="animate-fade-in flex flex-col h-full bg-[#F3F5F7] relative">
-        <Header title={getShortDiseaseName(selectedDisease.name)} onBack={() => setSelectedDisease(null)} />
-        <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto w-full flex-1 pb-24 md:pb-12">
-          <div className="px-1">
-            <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase">{selectedDisease.name}</h2>
-            <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5">Selecione o diagnóstico pericial associado:</p>
-          </div>
+      <div className="animate-fade-in flex flex-col flex-1 relative">
+        <Container size="reading" className="py-6 md:py-8 pb-10 space-y-6">
+          <PageHeader title={selectedDisease.name} description="Selecione o diagnóstico pericial associado" />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-3">
             {selectedDisease.diagnoses.map((diagnosis, idx) => (
-              <div 
+              <Link
                 key={idx}
-                onClick={() => setSelectedDiagnosis(diagnosis)}
-                className="bg-white rounded-2xl p-4 md:p-5 border border-gray-200/60 shadow-sm hover:shadow-md hover:border-gray-300 transition-all cursor-pointer flex items-center justify-between group"
+                to={doencaPath(selectedDisease.id, idx)}
+                className="bg-white rounded-xl p-4 border border-line hover:border-navy transition-colors flex items-center justify-between gap-3 min-h-[64px] group"
               >
-                <div className="flex items-center space-x-3.5 pr-2">
-                  <div className="w-10 h-10 rounded-xl bg-[#050F41]/5 flex items-center justify-center shrink-0 [&>svg]:text-[#050F41]">
+                <span className="flex items-center gap-3.5 min-w-0">
+                  <span className="w-10 h-10 rounded-lg bg-thead flex items-center justify-center shrink-0 [&>svg]:text-navy">
                     {getDiseaseIcon(selectedDisease.name)}
-                  </div>
-                  <div>
-                    <h3 className="text-sm md:text-base font-bold text-gray-800 group-hover:text-[#050F41] transition-colors font-body">
-                      {diagnosis.name}
-                    </h3>
-                  </div>
-                </div>
-                <ChevronRight size={20} className="text-gray-400 group-hover:text-[#050F41] group-hover:translate-x-0.5 transition-all shrink-0" />
-              </div>
+                  </span>
+                  <span className="text-base font-bold text-navy">{diagnosis.name}</span>
+                </span>
+                <ChevronRight size={20} className="text-ink-4 group-hover:text-navy shrink-0" />
+              </Link>
             ))}
           </div>
-        </div>
+        </Container>
       </div>
     );
   }
 
-  // PAGE LEVEL 3: Final Detail (Definition, Criteria, Documents)
+  // PAGE LEVEL 3: Final Detail — leitura em 8 colunas (≈70 caracteres por linha)
+  // + aside de 4 com os documentos necessários (checklist) e as ações rotuladas.
   if (selectedDisease && selectedDiagnosis) {
     const isDemencia = selectedDisease.name === "Alienação Mental" && selectedDiagnosis.name === "Demência";
+    const totalDocs = selectedDisease.documents.length;
+    const secao = 'bg-white rounded-xl p-5 md:p-6 border border-line';
+    const tituloSecao = 'font-heading font-bold text-lg text-navy mb-3 pb-2 border-b border-line flex items-center gap-2';
     return (
-      <div className="animate-fade-in flex flex-col h-full bg-[#F3F5F7] relative">
-        <Header title={getShortDiseaseName(selectedDisease.name)} onBack={handleBackClick} />
-        <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full pb-24 md:pb-12">
-          <div className="px-1 flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase truncate">{selectedDisease.name}</h2>
-              {selectedDisease.diagnoses.length > 1 && <p className="text-xs md:text-sm font-semibold text-gray-500 mt-0.5 truncate">Diagnóstico Pericial: {selectedDiagnosis.name}</p>}
+      <div className="animate-fade-in flex flex-col flex-1 relative">
+        <Container size="data" className="py-6 md:py-8 pb-28 md:pb-10">
+          <PageHeader
+            title={selectedDisease.name}
+            description={selectedDisease.diagnoses.length > 1 ? `Diagnóstico pericial: ${selectedDiagnosis.name}` : undefined}
+          />
+
+          <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start space-y-6 lg:space-y-0">
+            <div className="lg:col-span-8 space-y-6 min-w-0">
+              <section className={secao}>
+                <h2 className={tituloSecao}>
+                  <span className="material-symbols-outlined text-navy" aria-hidden="true">menu_book</span>Definição
+                </h2>
+                <p className="text-base text-ink leading-relaxed">{selectedDisease.definition}</p>
+              </section>
+
+              {selectedDisease.name === "SIDA/AIDS" && (
+                <section className={secao}>
+                  <h2 className={tituloSecao}>
+                    <span className="material-symbols-outlined text-navy" aria-hidden="true">grid_on</span>Classificação
+                  </h2>
+                  <p className="text-base text-ink leading-relaxed">Grupos I (CD4 ≥500), II (200-499), III (&lt;200) / Classes A, B, C por sintomas e condições definidoras.</p>
+                </section>
+              )}
+
+              {isDemencia && (
+                <section className={secao}>
+                  <h2 className={tituloSecao}>
+                    <span className="material-symbols-outlined text-navy" aria-hidden="true">psychology</span>Avaliação de cognição
+                  </h2>
+                  <p className="text-sm text-ink-3 mb-4">A avaliação do escore CDR é fundamental para quantificar a gravidade do comprometimento cognitivo.</p>
+                  <Button icon="calculate" fullWidth onClick={() => setIsCalculatorOpen(true)}>CDR Score Calculator</Button>
+                </section>
+              )}
+
+              <section className={secao}>
+                <h2 className={tituloSecao}>
+                  <span className="material-symbols-outlined text-navy" aria-hidden="true">verified</span>Critérios de gravidade
+                </h2>
+                <ol className="space-y-4">
+                  {selectedDiagnosis.criteria.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-3 text-base text-ink">
+                      <span className="w-7 h-7 rounded-full bg-navy text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5" aria-hidden="true">{idx + 1}</span>
+                      <span className="leading-relaxed flex-1">{item}</span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
             </div>
 
-            {/* Desktop side-by-side action buttons */}
-            <div className="hidden md:flex items-center gap-2.5 shrink-0">
-              <button 
-                onClick={handleCopy} 
-                disabled={isCopied} 
-                className={`px-3.5 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all border cursor-pointer shadow-2xs ${
-                  isCopied 
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 cursor-not-allowed' 
-                    : 'bg-white text-[#050F41] border-gray-200 hover:bg-gray-50 active:scale-95'
-                }`}
-                title="Copiar texto"
-              >
-                <span className="material-symbols-outlined text-lg">{isCopied ? 'done_all' : 'content_copy'}</span>
-                <span>{isCopied ? 'Copiado' : 'Copiar'}</span>
-              </button>
-              <button 
-                onClick={handleDownloadPDF} 
-                className="px-3.5 py-2 bg-[#050F41] text-white rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-[#0a1b66] active:scale-95 transition-all border border-[#050F41] cursor-pointer shadow-2xs" 
-                title="Baixar PDF"
-              >
-                <Download size={18} />
-                <span>Baixar PDF</span>
-              </button>
-            </div>
-          </div>
+            <aside className="lg:col-span-4 lg:sticky lg:top-6 space-y-4 min-w-0" aria-label="Documentos e ações">
+              <section className={secao}>
+                <h2 className={tituloSecao}>
+                  <span className="material-symbols-outlined text-navy" aria-hidden="true">folder_open</span>Documentos necessários
+                </h2>
+                <p className="text-xs font-semibold text-ink-3 mb-2" aria-live="polite">{docsMarcados.size} de {totalDocs} reunidos</p>
+                <ul className="space-y-1">
+                  {selectedDisease.documents.map((item, idx) => (
+                    <li key={idx}>
+                      <label className="flex items-start gap-3 min-h-[44px] py-2 cursor-pointer rounded-lg hover:bg-thead px-1">
+                        <input
+                          type="checkbox"
+                          checked={docsMarcados.has(idx)}
+                          onChange={() => setDocsMarcados(prev => { const proximo = new Set(prev); if (proximo.has(idx)) proximo.delete(idx); else proximo.add(idx); return proximo; })}
+                          className="mt-1 w-5 h-5 shrink-0 accent-navy"
+                        />
+                        <span className={`text-sm leading-snug ${docsMarcados.has(idx) ? 'text-ink-3 line-through' : 'text-ink'}`}>{item}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </section>
 
-          <div className="space-y-6 w-full">
-            <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
-                <span className="material-symbols-outlined mr-2 text-[#FAB932]">menu_book</span>DEFINIÇÃO
-              </h3>
-              <p className="font-body text-gray-800 text-sm md:text-base leading-relaxed text-justify font-medium">{selectedDisease.definition}</p>
-            </div>
-
-            {selectedDisease.name === "SIDA/AIDS" && (
-              <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-                <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-4 border-b border-gray-100 pb-2 flex items-center uppercase">
-                  <span className="material-symbols-outlined mr-2 text-[#FAB932]">grid_on</span>CLASSIFICAÇÃO
-                </h3>
-                <p className="text-xs md:text-sm text-gray-600 font-medium">Grupos I (CD4 ≥500), II (200-499), III (&lt;200) / Classes A, B, C por sintomas e condições definidoras.</p>
+              <div className="hidden md:flex flex-col gap-2">
+                <Button icon="download" fullWidth onClick={handleDownloadPDF}>Baixar PDF</Button>
+                <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} fullWidth onClick={handleCopy}>{isCopied ? 'Copiado' : 'Copiar texto'}</Button>
+                {podeVerPortaria && (
+                  <Link to={pathForView('portaria')} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold text-navy hover:bg-thead transition-colors">
+                    <span className="material-symbols-outlined text-[20px]" aria-hidden="true">article</span>
+                    Ler a Portaria GM-MD nº 3.551/2021
+                  </Link>
+                )}
               </div>
-            )}
-
-            {isDemencia && (
-              <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm w-full">
-                <h3 className="font-heading font-bold text-base text-[#050F41] mb-3 flex items-center uppercase">
-                  <span className="material-symbols-outlined mr-2 text-red-700">psychology</span>AVALIAÇÃO DE COGNIÇÃO
-                </h3>
-                <p className="text-xs text-gray-600 mb-4">A avaliação do escore CDR é fundamental para quantificar a gravidade do comprometimento cognitivo.</p>
-                <button onClick={() => setIsCalculatorOpen(true)} className="w-full py-3 bg-red-800 text-white rounded-xl font-bold flex items-center justify-center hover:bg-red-900 transition-colors shadow-sm text-sm">
-                  <span className="material-symbols-outlined mr-2">calculate</span>CDR Score Calculator
-                </button>
-              </div>
-            )}
-
-            <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
-                <span className="material-symbols-outlined mr-2 text-[#FAB932]">verified</span>CRITÉRIOS DE GRAVIDADE
-              </h3>
-              <ul className="space-y-3.5">
-                {selectedDiagnosis.criteria.map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-sm md:text-base text-gray-700 font-body">
-                    <span className="w-2 h-2 rounded-full bg-[#079551] shrink-0 mt-2" />
-                    <span className="leading-relaxed text-justify flex-1">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200/60 shadow-sm w-full">
-              <h3 className="font-heading font-bold text-base md:text-lg text-[#050F41] mb-3 border-b border-gray-100 pb-2 flex items-center uppercase">
-                <span className="material-symbols-outlined mr-2 text-[#FAB932]">folder_open</span>DOCUMENTOS NECESSÁRIOS
-              </h3>
-              <ul className="space-y-3">
-                {selectedDisease.documents.map((item, idx) => (
-                  <li key={idx} className="flex items-start gap-3 text-sm md:text-base text-gray-700 font-body">
-                    <span className="w-2 h-2 rounded-full bg-[#050F41] shrink-0 mt-2" />
-                    <span className="leading-relaxed text-justify flex-1 font-medium">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            </aside>
           </div>
-        </div>
+        </Container>
 
-        <div className="fixed bottom-20 right-6 md:hidden flex flex-col gap-3 z-40">
-          <button onClick={handleCopy} disabled={isCopied} className={`w-12 h-12 rounded-full shadow-2xl flex items-center justify-center transition-all border ${isCopied ? 'bg-gray-300 text-gray-100 border-gray-300 cursor-not-allowed' : 'bg-blue-100 text-[#050F41] border-blue-200 hover:scale-105 active:scale-95'}`} title="Copiar texto">
-            <span className="material-symbols-outlined text-[24px]">{isCopied ? 'done_all' : 'content_copy'}</span>
-          </button>
-          <button onClick={handleDownloadPDF} className="w-12 h-12 bg-[#050F41] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all border border-slate-700" title="Baixar PDF">
-            <Download size={22} />
-          </button>
+        {/* Mobile: barra de ações rotulada. */}
+        <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-line p-3 flex gap-2" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+          <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} onClick={handleCopy} className="flex-1">{isCopied ? 'Copiado' : 'Copiar'}</Button>
+          <Button icon="download" onClick={handleDownloadPDF} className="flex-1">Baixar PDF</Button>
         </div>
       </div>
     );
   }
 
-  // PAGE LEVEL 1: Main Diseases Grid
+  // PAGE LEVEL 1: lista de doenças com busca no topo (nome, diagnóstico e critério).
+  const consultaAtiva = searchQuery.trim().length > 0;
+  const tituloTipo: Record<string, string> = { disease: 'Doenças', diagnosis: 'Diagnósticos', criterion: 'Critérios' };
   return (
-    <div className="flex flex-col h-full bg-[#F3F5F7]">
-      <Header title="Doenças de Lei" onBack={onBack} />
-      <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto w-full flex-1 pb-24 md:pb-12">
-        <div className="px-1">
-          <h2 className="text-xl md:text-2xl font-heading font-bold text-[#050F41] uppercase">
-            Doenças Previstas em Lei:
-          </h2>
-          <p className="text-xs md:text-sm font-semibold text-gray-500 mt-1">
-            Verifique as definições, os critérios clínicos e os documentos necessários para o enquadramento
-          </p>
+    <div className="flex flex-col flex-1 animate-fade-in">
+      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
+        <PageHeader title="Doenças previstas em lei" description="Verifique as definições, os critérios clínicos e os documentos necessários para o enquadramento." />
+
+        <div className="relative max-w-form">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            aria-label="Buscar doença, diagnóstico ou critério"
+            placeholder="Buscar por doença, diagnóstico ou critério…"
+            autoComplete="off"
+            className="w-full min-h-[44px] pl-10 pr-4 rounded-lg border border-line bg-white text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+          />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {DISEASES.map((disease) => (
-            <div key={disease.id} className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md hover:border-gray-300">
-              <div onClick={() => handleDiseaseClick(disease)} className="p-4 cursor-pointer flex items-center justify-between hover:bg-gray-50/50 transition-colors">
-                <div className="flex items-center space-x-3 truncate pr-2">
+
+        {consultaAtiva ? (
+          <div className="space-y-5" role="region" aria-label="Resultados da busca" aria-live="polite">
+            {searchResults.length === 0 ? (
+              <div className="bg-white border border-line rounded-xl"><EmptyState icon="search_off" title="Nenhum resultado" description={`Nada encontrado para “${searchQuery}”.`} /></div>
+            ) : (['disease', 'diagnosis', 'criterion'] as const).map(tipo => {
+              const itens = searchResults.filter(r => r.type === tipo).slice(0, 12);
+              if (itens.length === 0) return null;
+              return (
+                <section key={tipo}>
+                  <h2 className="eyebrow mb-2">{tituloTipo[tipo]} ({searchResults.filter(r => r.type === tipo).length})</h2>
+                  <ul className="bg-white border border-line rounded-xl divide-y divide-line overflow-clip">
+                    {itens.map(r => (
+                      <li key={r.id}>
+                        <button type="button" onClick={() => handleSearchResultClick(r)} className="w-full text-left px-4 min-h-[52px] py-2.5 hover:bg-thead transition-colors">
+                          <span className="block text-sm font-bold text-navy">{r.name}</span>
+                          {r.sub && <span className="block text-xs text-ink-3 mt-0.5">{r.sub}</span>}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {DISEASES.map((disease) => (
+              <Link key={disease.id} to={doencaPath(disease.id)} className="bg-white rounded-xl border border-line hover:border-navy transition-colors p-4 flex items-center justify-between gap-2 min-h-[64px]">
+                <span className="flex items-center gap-3 min-w-0">
                   {getDiseaseIcon(disease.name)}
-                  <h3 className="text-[#050F41] font-heading text-sm md:text-base font-semibold truncate m-0">
+                  <span className="text-navy font-heading text-base font-semibold truncate">
                     {disease.name.toLowerCase().includes("paget") ? "Doença de Paget" : disease.name}
-                  </h3>
-                </div>
-                <ChevronRight size={16} className="text-gray-400 shrink-0" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+                  </span>
+                </span>
+                <ChevronRight size={20} className="text-ink-4 shrink-0" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </Container>
     </div>
   );
 };

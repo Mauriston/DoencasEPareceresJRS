@@ -1,11 +1,12 @@
 // Ficheiro: components/CasosPericiais.tsx
 import React, { useContext, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Header } from './Header';
+import { Page, Container, PageHeader } from './ui/Page';
+import { Button } from './ui/Button';
 import { NavContext } from '../context/NavContext';
-import { useIsDesktop } from '../hooks/useIsDesktop';
+import { useBackToTop } from '../hooks/useBackToTop';
 import { getCasosResultado, saveCasosResultado } from '../services/firestoreCasos';
-import { ChevronRight, RotateCcw, Download, CheckCircle, XCircle, ArrowUp, Play, Smartphone, Eye } from 'lucide-react';
+import { ChevronRight, RotateCcw, Download, CheckCircle, XCircle, ArrowUp, Play, Smartphone, Eye } from './ui/icons';
 
 const CASOS_DATA = [
   {
@@ -299,23 +300,18 @@ const CASOS_DATA = [
   }
 ];
 
-interface Props {
-  onBack: () => void;
-}
+type Phase = 'loading' | 'intro' | 'quiz' | 'results';
 
-type Phase = 'loading' | 'mobile-only' | 'intro' | 'quiz' | 'results';
-
-export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
+export const CasosPericiais: React.FC = () => {
   const nav = useContext(NavContext);
   const uid = nav?.authUser?.uid;
-  const isDesktop = useIsDesktop();
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [userAnswers, setUserAnswers] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [showScrollTop, setShowScrollTop] = useState(false);
+  const { visivel: showScrollTop, irAoTopo: scrollToTop } = useBackToTop(250);
   const [saving, setSaving] = useState(false);
 
   const currentCase = CASOS_DATA[currentIndex];
@@ -330,10 +326,8 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   const gradeNum = Number(gradeStr);
   const displayGrade = gradeStr.replace('.', ',');
 
-  // Esta funcionalidade só existe no mobile; no desktop mostra um aviso.
   // Se já houver um resultado salvo no Firestore, abre direto na revisão.
   useEffect(() => {
-    if (isDesktop) { setPhase('mobile-only'); return; }
     if (!uid) { setPhase('intro'); return; }
     let active = true;
     getCasosResultado(uid)
@@ -348,20 +342,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
       })
       .catch(() => { if (active) setPhase('intro'); });
     return () => { active = false; };
-  }, [uid, isDesktop]);
-
-  useEffect(() => {
-    const scrollContainer = document.querySelector('main');
-    if (!scrollContainer || phase !== 'results') return;
-    const handleScroll = () => { setShowScrollTop(scrollContainer.scrollTop > 250); };
-    scrollContainer.addEventListener('scroll', handleScroll);
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
-  }, [phase]);
-
-  const scrollToTop = () => {
-    const scrollContainer = document.querySelector('main');
-    if (scrollContainer) { scrollContainer.scrollTo({ top: 0, behavior: 'smooth' }); }
-  };
+  }, [uid]);
 
   const handleSelect = (key: string) => {
     if (selectedAnswer !== null) return;
@@ -419,7 +400,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   };
 
   const getOptionStyle = (key: string, savedAnswer: string | null = selectedAnswer) => {
-    if (savedAnswer === null) return "bg-white border-gray-200 hover:border-[#050F41] hover:shadow-md cursor-pointer font-normal text-gray-700";
+    if (savedAnswer === null) return "bg-white border-gray-200 hover:border-navy hover:shadow-md cursor-pointer font-normal text-gray-700";
     const isCorrect = key.toUpperCase() === currentCase.gabarito.toUpperCase();
     const isSelected = key.toUpperCase() === savedAnswer.toUpperCase();
     if (isCorrect) return "bg-green-100 border-green-500 text-green-900 font-bold shadow-sm";
@@ -429,78 +410,49 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
 
   if (phase === 'loading') {
     return (
-      <div className="flex flex-col h-full bg-[#F3F5F7]">
-        <Header title="CASOS PERICIAIS" onBack={onBack} />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-gray-200 border-t-[#050F41] rounded-full animate-spin" />
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === 'mobile-only') {
-    return (
-      <div className="flex flex-col h-full bg-[#F3F5F7]">
-        <Header title="CASOS PERICIAIS" onBack={onBack} />
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 max-w-sm mx-auto">
-          <div className="w-16 h-16 rounded-2xl bg-[#050F41]/5 flex items-center justify-center mb-4 text-[#050F41]">
-            <Smartphone size={28} />
-          </div>
-          <h2 className="font-heading font-bold text-[#050F41] text-base uppercase mb-2">Disponível só no mobile</h2>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            O teste de Casos Periciais foi desenhado para a visualização mobile do aplicativo. Acesse esta página pelo seu celular para realizá-lo.
-          </p>
-        </div>
+      <div className="flex flex-1 items-center justify-center py-20">
+        <div className="w-8 h-8 border-2 border-line border-t-navy rounded-full animate-spin" role="status" aria-label="Carregando" />
       </div>
     );
   }
 
   if (phase === 'intro') {
     return (
-      <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in">
-        <Header title="CASOS PERICIAIS" onBack={onBack} />
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 max-w-sm mx-auto w-full">
-          <div className="w-16 h-16 rounded-2xl bg-[#050F41]/5 flex items-center justify-center mb-5 text-[#050F41]">
-            <span className="material-symbols-outlined text-[32px]">quiz</span>
+      <Page size="form" title="Casos periciais" description="Teste seus conhecimentos com casos comentados, fundamentados na DGPM-406.">
+        <div className="bg-white border border-line rounded-xl p-6 flex flex-col items-center text-center">
+          <div className="w-16 h-16 rounded-xl bg-thead flex items-center justify-center mb-5 text-navy">
+            <span className="material-symbols-outlined text-[32px]" aria-hidden="true">quiz</span>
           </div>
-          <h1 className="font-heading text-xl font-black text-[#050F41] uppercase mb-3">Teste seus conhecimentos</h1>
-          <p className="text-sm text-gray-600 leading-relaxed mb-3">
+          <p className="text-sm text-ink leading-relaxed mb-3">
             Este teste reúne <strong>{totalCases} casos periciais comentados</strong>, baseados em situações práticas da rotina das Juntas de Inspeção de Saúde e fundamentados na DGPM-406.
           </p>
-          <p className="text-sm text-gray-600 leading-relaxed mb-8">
+          <p className="text-sm text-ink leading-relaxed mb-6">
             Resolvê-los ajuda a fixar os principais critérios e procedimentos médico-periciais, sendo uma ótima revisão antes de atuar em uma Junta. Depois de iniciado, é preciso concluir todos os casos para ver o resultado, que fica salvo no seu perfil.
           </p>
-          <button
-            type="button"
-            onClick={() => setPhase('quiz')}
-            className="w-full py-4 bg-[#079551] hover:bg-[#067a43] text-white font-bold rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md"
-          >
-            <Play size={20} fill="currentColor" />
-            Iniciar
-          </button>
+          <Button icon="play_arrow" fullWidth onClick={() => setPhase('quiz')}>Iniciar</Button>
         </div>
-      </div>
+      </Page>
     );
   }
 
   if (phase === 'quiz') {
     return createPortal(
-      <div className="fixed inset-0 z-[300] bg-[#F3F5F7] flex flex-col">
-        <div className="h-14 shrink-0 bg-[#050F41] flex items-center justify-center px-4">
-          <h1 className="text-white font-heading font-bold text-sm uppercase tracking-wide truncate">Teste seus conhecimentos</h1>
+      <div className="fixed inset-0 z-[300] bg-canvas flex flex-col">
+        <div className="h-14 shrink-0 bg-navy flex items-center justify-center px-4">
+          <h1 className="text-white font-heading font-bold text-sm tracking-wide truncate">Teste seus conhecimentos</h1>
         </div>
         <div className="w-full h-1.5 bg-gray-200 shrink-0">
-          <div className="h-full bg-[#079551] transition-all duration-500 ease-out" style={{ width: `${progressPercentage}%` }} />
+          <div className="h-full bg-green transition-all duration-500 ease-out" style={{ width: `${progressPercentage}%` }} />
         </div>
 
         <div className="flex-1 overflow-y-auto">
           <div className="p-4 space-y-6 max-w-3xl mx-auto w-full pb-32">
             <div className="flex items-center justify-between mt-2">
-              <span className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider">Caso {currentIndex + 1} de {totalCases}</span>
+              <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Caso {currentIndex + 1} de {totalCases}</span>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm">
-              <p className="text-[#050F41] font-heading text-[16px] md:text-lg leading-relaxed font-semibold">{currentCase.enunciado}</p>
+              <p className="text-navy font-heading text-[16px]  leading-relaxed font-semibold">{currentCase.enunciado}</p>
             </div>
 
             <div className="space-y-3">
@@ -509,7 +461,7 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
                   key={key}
                   onClick={() => handleSelect(key)}
                   disabled={selectedAnswer !== null}
-                  className={`w-full text-left p-4 rounded-xl border transition-all duration-300 text-sm md:text-base font-body leading-relaxed flex items-start gap-3 focus:outline-none ${getOptionStyle(key)}`}
+                  className={`w-full text-left p-4 rounded-xl border transition-all duration-300 text-base font-body leading-relaxed flex items-start gap-3 focus:outline-none ${getOptionStyle(key)}`}
                 >
                   <div className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5 ${
                     selectedAnswer === null ? 'border-gray-300 text-gray-500 bg-gray-50' :
@@ -522,13 +474,13 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
             </div>
 
             {selectedAnswer !== null && (
-              <div className="animate-fade-in bg-yellow-50/80 border border-yellow-200 p-5 rounded-2xl mt-6 relative overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
-                <h3 className="text-sm md:text-base font-bold font-heading text-[#050F41] mb-2 uppercase flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px] text-yellow-600">lightbulb</span>
+              <div className="animate-fade-in bg-amber-50/80 border border-amber-200 p-5 rounded-2xl mt-6 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400"></div>
+                <h3 className="text-base font-bold font-heading text-navy mb-2 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-amber-600">lightbulb</span>
                   Análise Pericial
                 </h3>
-                <p className="text-sm md:text-base text-gray-800 font-body leading-relaxed text-justify">{currentCase.explicacao}</p>
+                <p className="text-base text-gray-800 font-body leading-relaxed">{currentCase.explicacao}</p>
               </div>
             )}
           </div>
@@ -536,42 +488,43 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
 
         {selectedAnswer !== null && (
           <button
+            type="button"
             onClick={handleNext}
-            className="fixed bottom-8 right-6 bg-[#050F41] text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-10 flex items-center justify-center border border-slate-700 animate-fade-in"
-            title={currentIndex < totalCases - 1 ? "Próximo Caso" : "Finalizar Casos"}
+            className="fixed bottom-6 right-4 bg-navy text-white shadow-lg rounded-full min-h-[44px] pl-4 pr-3 gap-2 hover:bg-navy-hover active:scale-95 transition-all z-10 flex items-center justify-center text-sm font-bold animate-fade-in"
           >
-            {currentIndex < totalCases - 1 ? <ChevronRight size={24} /> : <CheckCircle size={24} />}
+            {currentIndex < totalCases - 1 ? 'Próximo caso' : 'Finalizar'}
+            {currentIndex < totalCases - 1 ? <ChevronRight size={22} /> : <CheckCircle size={22} />}
           </button>
         )}
 
         {showModal && (
-          <div className="fixed inset-0 z-20 flex items-center justify-center bg-[#050F41]/70 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="fixed inset-0 z-20 flex items-center justify-center bg-navy/70 backdrop-blur-sm p-4 animate-fade-in">
             <div className="bg-white rounded-[32px] shadow-2xl p-8 w-full max-w-sm flex flex-col items-center text-center relative overflow-hidden">
               <div className={`absolute -top-16 -right-16 w-32 h-32 rounded-full opacity-20 blur-2xl ${gradeNum >= 7 ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-[#050F41] shadow-inner">
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-navy shadow-inner">
                 <span className="material-symbols-outlined text-3xl">workspace_premium</span>
               </div>
-              <h2 className="text-2xl font-heading font-black text-[#050F41] mb-1">Desempenho</h2>
-              <p className="text-gray-500 font-medium font-body text-sm md:text-base mb-6">Você completou todos os casos!</p>
+              <h2 className="text-2xl font-heading font-black text-navy mb-1">Desempenho</h2>
+              <p className="text-gray-500 font-medium font-body text-base mb-6">Você completou todos os casos!</p>
               <div className="relative mb-8">
                 <svg className="w-32 h-32 transform -rotate-90">
                   <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-100" />
-                  <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="377" strokeDashoffset={377 - (377 * gradeNum) / 10} className={`${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'} transition-all duration-1000 ease-out`} strokeLinecap="round" />
+                  <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="377" strokeDashoffset={377 - (377 * gradeNum) / 10} className={`${gradeNum >= 7 ? 'text-green-700' : gradeNum >= 5 ? 'text-amber-600' : 'text-red-500'} transition-all duration-1000 ease-out`} strokeLinecap="round" />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className={`text-5xl font-black ${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>{displayGrade}</span>
+                  <span className={`text-5xl font-black ${gradeNum >= 7 ? 'text-green-700' : gradeNum >= 5 ? 'text-amber-600' : 'text-red-500'}`}>{displayGrade}</span>
                 </div>
               </div>
               <p className="text-gray-600 font-body mb-6">Você acertou <strong>{correctCount}</strong> de <strong>{totalCases}</strong> questões.</p>
               <button
                 type="button"
                 onClick={() => { setShowModal(false); setPhase('results'); }}
-                className="w-full py-3.5 bg-[#050F41] hover:bg-[#0a1b66] text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                className="w-full py-3.5 bg-navy hover:bg-navy-hover text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
               >
                 <Eye size={18} />
                 Ver Resultado
               </button>
-              {saving && <p className="text-[11px] md:text-sm text-gray-400 mt-3">Salvando resultado...</p>}
+              {saving && <p className="text-sm text-ink-3 mt-3">Salvando resultado...</p>}
             </div>
           </div>
         )}
@@ -581,22 +534,15 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#F3F5F7] animate-fade-in relative">
-      <Header
-        title="REVISÃO DOS CASOS"
-        onBack={onBack}
-        rightAction={
-          <button onClick={handleRestart} className="text-white p-2 rounded-full hover:bg-white/10 transition-colors" title="Refazer casos">
-            <RotateCcw size={18} />
-          </button>
-        }
-      />
-      <div className="p-4 space-y-6 max-w-3xl mx-auto w-full flex-1 pb-32">
+    <div className="flex flex-col flex-1 animate-fade-in relative">
+      <Container size="form" className="py-6 md:py-8 pb-10 space-y-6">
+        <PageHeader title="Revisão dos casos" description="Seu resultado nos casos periciais comentados." actions={<Button variant="secondary" icon="restart_alt" onClick={handleRestart}>Refazer casos</Button>} />
+
         <div className="bg-white p-6 rounded-2xl border border-gray-200/60 shadow-sm text-center flex flex-col items-center">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Nota Final</h2>
-          <div className={`text-6xl font-black ${gradeNum >= 7 ? 'text-[#079551]' : gradeNum >= 5 ? 'text-yellow-500' : 'text-red-500'}`}>{displayGrade}</div>
+          <h2 className="text-sm font-bold text-gray-500 tracking-wider mb-2">Nota Final</h2>
+          <div className={`text-6xl font-black ${gradeNum >= 7 ? 'text-green-700' : gradeNum >= 5 ? 'text-amber-600' : 'text-red-500'}`}>{displayGrade}</div>
           <p className="text-gray-500 mt-3 font-medium font-body">Você acertou <strong className="text-gray-800">{correctCount}</strong> de {totalCases} questões.</p>
-          <button onClick={handleDownloadPDF} className="mt-6 flex items-center gap-2 bg-[#050F41] text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md hover:scale-105 transition-transform">
+          <button onClick={handleDownloadPDF} className="mt-6 flex items-center gap-2 bg-navy text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md hover:scale-105 transition-transform">
             <Download size={18} />
             Baixar PDF
           </button>
@@ -608,13 +554,13 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
           return (
             <div key={index} className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-[#050F41] font-heading">Caso {caso.caso}</h3>
+                <h3 className="font-bold text-navy font-heading">Caso {caso.caso}</h3>
                 {isUserCorrect
-                  ? <div className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-md text-xs font-bold"><CheckCircle size={14} /> Acertou</div>
+                  ? <div className="flex items-center gap-1 text-green-700 bg-green-50 px-2 py-1 rounded-md text-xs font-bold"><CheckCircle size={14} /> Acertou</div>
                   : <div className="flex items-center gap-1 text-red-600 bg-red-50 px-2 py-1 rounded-md text-xs font-bold"><XCircle size={14} /> Errou</div>
                 }
               </div>
-              <p className="text-[#050F41] font-heading text-[15px] leading-relaxed font-semibold mb-4">{caso.enunciado}</p>
+              <p className="text-navy font-heading text-base leading-relaxed font-semibold mb-4">{caso.enunciado}</p>
               <div className="space-y-2">
                 {Object.entries(caso.alternativas).map(([key, text]) => {
                   const isGab = key.toUpperCase() === caso.gabarito.toUpperCase();
@@ -630,18 +576,19 @@ export const CasosPericiais: React.FC<Props> = ({ onBack }) => {
                   );
                 })}
               </div>
-              <div className="bg-yellow-50/80 border border-yellow-200 p-4 rounded-xl mt-5 relative overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400"></div>
-                <h4 className="text-xs font-bold font-heading text-yellow-800 mb-1 uppercase">Análise Pericial</h4>
-                <p className="text-sm text-gray-800 font-body leading-relaxed text-justify">{caso.explicacao}</p>
+              <div className="bg-amber-50/80 border border-amber-200 p-4 rounded-xl mt-5 relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400"></div>
+                <h4 className="text-xs font-bold font-heading text-amber-800 mb-1">Análise Pericial</h4>
+                <p className="text-sm text-gray-800 font-body leading-relaxed">{caso.explicacao}</p>
               </div>
             </div>
           );
         })}
-      </div>
+            </Container>
       {showScrollTop && (
-        <button onClick={scrollToTop} className="fixed bottom-24 right-6 bg-[#050F41] text-white shadow-2xl rounded-full p-4 hover:scale-110 active:scale-95 transition-all z-50 flex items-center justify-center border border-slate-700 animate-fade-in" title="Voltar ao topo">
+        <button type="button" onClick={scrollToTop} className="fixed bottom-6 right-4 bg-navy text-white shadow-lg rounded-full min-h-[44px] pl-3 pr-4 gap-2 hover:bg-navy-hover active:scale-95 transition-all z-50 flex items-center justify-center text-sm font-bold animate-fade-in">
           <ArrowUp size={20} />
+          Topo
         </button>
       )}
     </div>

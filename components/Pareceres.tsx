@@ -1,66 +1,84 @@
 // Ficheiro: components/Pareceres.tsx
-import React, { useState, useEffect, useRef } from "react";
-import { Header } from "./Header";
+// Pedido de parecer por especialidade. Auditoria F24/F25/F27: validação inline
+// (sem modal de erro), avisos em Toast, busca por nome e ajuda inline, página de
+// resultado com as ações do PDF, um único diálogo de confirmação e barra de
+// ações fixa. A lógica de montagem do "inspecionado"/PGQ e o payload do GAS
+// seguem idênticos.
+import React, { useState, useEffect, useMemo } from 'react';
+import { Container, PageHeader } from './ui/Page';
+import { useQueryParam } from '../hooks/useQueryParam';
+import { Button } from './ui/Button';
+import { Segmented } from './ui/Segmented';
+import { Field, controlClass } from './ui/Field';
+import { ChoiceGroup } from './ui/ChoiceGroup';
+import { ConfirmDialog } from './ui/Dialog';
+import { Toast } from './ui/Toast';
+import { EmptyState } from './ui/EmptyState';
+import { extrairNomeInspecionado } from '../utils/format';
+import { GAS_URL } from '../config/endpoints';
 
-const extractNameFromInspecionado = (text: string) => {
-  const match = text.split(/\d{2}\.\d{4}\.\d{2}/);
-  return match.length > 1 ? match[1].trim() : text.trim();
+const PERITOS = {
+  CT_MAURISTON: { perito: 'CT MAURISTON', nomePerito: 'MAURISTON RENAN MARTINS SILVA', posto: 'Capitão-Tenente (Md)', cargo: 'Presidente', email: 'mauriston.martins@marinha.mil.br' },
+  CT_JULIO: { perito: 'CT JÚLIO CÉSAR', nomePerito: 'JÚLIO CÉSAR XAVIER FILHO', posto: 'Capitão-Tenente (RM2-Md)', cargo: 'Membro', email: 'julio.xavier@marinha.mil.br' },
 };
+const FINALIDADES = ['Verificação de Deficiência Funcional', 'Término de Incapacidade', 'Término de Restrições', 'Missão no exterior (> 3m)', 'Deixar o SMV', 'Deixar o SAM', 'Engajamento', 'Reengajamento'];
+const ESPECIALIDADES = ['CARDIOLOGIA', 'HEPATOLOGIA', 'NEUROLOGIA', 'ONCOLOGIA', 'PSICOLOGIA', 'PSIQUIATRIA'];
+const PG_OPTIONS = ['CMG', 'CF', 'CC', 'CT', '1T', '2T', 'GM', 'SO', '1SG', '2SG', '3SG', 'CB', 'MN', 'MN-RC', 'SD', 'GR', 'ALUNO', 'SCNS'];
+const QUADROS = ['AA', 'AFN', 'CA', 'CD', 'CN', 'EN', 'FN', 'IM', 'Md', 'QC-CA', 'QC-FN', 'QC-IM', 'S', 'T'];
+const ESP_PRACAS = ['AD', 'AH', 'AM', 'AR', 'MC', 'MT', 'AT', 'AV', 'BA', 'CA', 'CP', 'CI', 'CN', 'CL', 'CT', 'CO', 'DA', 'DM', 'DT', 'ED', 'EP', 'EL', 'ET', 'TE', 'EF', 'EG', 'ES', 'AE', 'EN', 'FR', 'GC', 'GR', 'HN', 'HD', 'IF', 'MR', 'MA', 'NA', 'MI', 'MG', 'ML', 'ME', 'MO', 'MS', 'MU', 'ND', 'OR', 'OS', 'PL', 'PC', 'PD', 'PT', 'QI', 'RM', 'RB', 'SC', 'SI', 'TC'];
 
-interface PareceresProps {
-  onBack?: () => void;
-}
+type Erros = Record<string, string>;
 
-export const Pareceres: React.FC<PareceresProps> = ({ onBack }) => {
-  const [activeTab, setActiveTab] = useState<'novo' | 'historico'>('novo');
-  const [peritoSelecionado, setPeritoSelecionado] = useState("");
-  const [finalidade, setFinalidade] = useState("");
-  const [especialidade, setEspecialidade] = useState("");
-  const [historico, setHistorico] = useState("");
-  const [nip, setNip] = useState("");
-  const [militarStatus, setMilitarStatus] = useState<"" | "loading" | "found" | "not_found">("" );
-  const [inspecionado, setInspecionado] = useState("");
-  const [omLeitura, setOmLeitura] = useState("");
-  const [om, setOm] = useState("");
-  const [pg, setPg] = useState("");
-  const [circulo, setCirculo] = useState("");
-  const [quadro, setQuadro] = useState("");
-  const [espPraca, setEspPraca] = useState("");
-  const [nome, setNome] = useState("");
-  const [situacao, setSituacao] = useState("");
+export const Pareceres: React.FC = () => {
+  // A aba é um nível da URL (?aba=historico).
+  const [abaParam, setAbaParam] = useQueryParam('aba');
+  const activeTab: 'novo' | 'historico' = abaParam === 'historico' ? 'historico' : 'novo';
+  const setActiveTab = (tab: 'novo' | 'historico') => setAbaParam(tab === 'novo' ? null : tab, { replace: true });
+
+  const [peritoSelecionado, setPeritoSelecionado] = useState<'' | 'MAURISTON' | 'JULIO'>('');
+  const [finalidade, setFinalidade] = useState('');
+  const [especialidade, setEspecialidade] = useState('');
+  const [historico, setHistorico] = useState('');
+  const [nip, setNip] = useState('');
+  const [militarStatus, setMilitarStatus] = useState<'' | 'loading' | 'found' | 'not_found'>('');
+  const [inspecionado, setInspecionado] = useState('');
+  const [omLeitura, setOmLeitura] = useState('');
+  const [om, setOm] = useState('');
+  const [pg, setPg] = useState('');
+  const [circulo, setCirculo] = useState('');
+  const [quadro, setQuadro] = useState('');
+  const [espPraca, setEspPraca] = useState('');
+  const [nome, setNome] = useState('');
+  const [situacao, setSituacao] = useState<'' | 'Carreira' | 'Temporário'>('');
   const [omsOptions, setOmsOptions] = useState<string[]>([]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [successPdfUrl, setSuccessPdfUrl] = useState<string | null>(null);
   const [successPdfId, setSuccessPdfId] = useState<string | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
-  const [showPesquisarNomeModal, setShowPesquisarNomeModal] = useState(false);
-  const [pesquisarNomeTerm, setPesquisarNomeTerm] = useState("");
-  const [militaresInfoList, setMilitaresInfoList] = useState<{nome: string, nip: string}[]>([]);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [erros, setErros] = useState<Erros>({});
+  const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
+
+  // Busca por nome (inline, abaixo do NIP)
+  const [buscaNomeAberta, setBuscaNomeAberta] = useState(false);
+  const [pesquisarNomeTerm, setPesquisarNomeTerm] = useState('');
+  const [militaresInfoList, setMilitaresInfoList] = useState<{ nome: string; nip: string }[]>([]);
   const [isCarregandoMilitares, setIsCarregandoMilitares] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
-  const [alertMessage, setAlertMessage] = useState("");
+
+  // Histórico
   const [pareceresHistory, setPareceresHistory] = useState<any[]>([]);
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
-  const [historySearch, setHistorySearch] = useState("");
-  const [historyEspFilter, setHistoryEspFilter] = useState("");
-  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyEspFilter, setHistoryEspFilter] = useState('');
   const [sortCol, setSortCol] = useState<'data' | 'inspecionado'>('data');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const searchRef = useRef<HTMLDivElement>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const PERITOS = {
-    CT_MAURISTON: { perito: "CT MAURISTON", nomePerito: "MAURISTON RENAN MARTINS SILVA", posto: "Capitão-Tenente (Md)", cargo: "Presidente", email: "mauriston.martins@marinha.mil.br" },
-    CT_JULIO: { perito: "CT JÚLIO CÉSAR", nomePerito: "JÚLIO CÉSAR XAVIER FILHO", posto: "Capitão-Tenente (RM2-Md)", cargo: "Membro", email: "julio.xavier@marinha.mil.br" },
+  const avisar = (msg: string, tone: 'success' | 'error' = 'error') => {
+    setToast({ msg, tone });
+    window.setTimeout(() => setToast(null), 5000);
   };
-
-  const FINALIDADES = ["Verificação de Deficiência Funcional", "Término de Incapacidade", "Término de Restrições", "Missão no exterior (> 3m)", "Deixar o SMV", "Deixar o SAM", "Engajamento", "Reengajamento"];
-  const ESPECIALIDADES = ["CARDIOLOGIA", "HEPATOLOGIA", "NEUROLOGIA", "ONCOLOGIA", "PSICOLOGIA", "PSIQUIATRIA"];
-  const PG_OPTIONS = ["CMG", "CF", "CC", "CT", "1T", "2T", "GM", "SO", "1SG", "2SG", "3SG", "CB", "MN", "MN-RC", "SD", "GR", "ALUNO", "SCNS"];
-  const QUADROS = ["AA", "AFN", "CA", "CD", "CN", "EN", "FN", "IM", "Md", "QC-CA", "QC-FN", "QC-IM", "S", "T"];
-  const ESP_PRACAS = ["AD", "AH", "AM", "AR", "MC", "MT", "AT", "AV", "BA", "CA", "CP", "CI", "CN", "CL", "CT", "CO", "DA", "DM", "DT", "ED", "EP", "EL", "ET", "TE", "EF", "EG", "ES", "AE", "EN", "FR", "GC", "GR", "HN", "HD", "IF", "MR", "MA", "NA", "MI", "MG", "ML", "ME", "MO", "MS", "MU", "ND", "OR", "OS", "PL", "PC", "PD", "PT", "QI", "RM", "RB", "SC", "SI", "TC"];
-
-  const GAS_URL = "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
 
   const fetchHistory = async () => {
     if (pareceresHistory.length > 0) return;
@@ -69,120 +87,152 @@ export const Pareceres: React.FC<PareceresProps> = ({ onBack }) => {
       const resp = await fetch(`${GAS_URL}?action=getPareceresList`);
       const json = await resp.json();
       if (json.success && json.data) setPareceresHistory(json.data);
-    } catch (err) { console.error(err); setAlertMessage("Erro ao buscar histórico."); }
+    } catch (err) { console.error(err); avisar('Erro ao buscar histórico.'); }
     finally { setIsFetchingHistory(false); }
   };
 
-  const handleTabChange = (tab: 'novo' | 'historico') => { setActiveTab(tab); if (tab === 'historico') fetchHistory(); };
+  // Abrir direto em ?aba=historico (deep link) também carrega o histórico.
+  useEffect(() => { if (activeTab === 'historico') fetchHistory(); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const handleNipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, "");
+    let value = e.target.value.replace(/\D/g, '');
     if (value.length > 8) value = value.slice(0, 8);
-    if (value.length > 6) value = `${value.slice(0,2)}.${value.slice(2,6)}.${value.slice(6)}`;
-    else if (value.length > 2) value = `${value.slice(0,2)}.${value.slice(2)}`;
+    if (value.length > 6) value = `${value.slice(0, 2)}.${value.slice(2, 6)}.${value.slice(6)}`;
+    else if (value.length > 2) value = `${value.slice(0, 2)}.${value.slice(2)}`;
     setNip(value);
+    setErros(er => ({ ...er, nip: '' }));
     if (value.length === 10) searchNip(value);
-    else setMilitarStatus("");
+    else setMilitarStatus('');
   };
 
-  const searchNip = async (searchNip: string) => {
-    setMilitarStatus("loading");
+  const searchNip = async (nipBusca: string) => {
+    setMilitarStatus('loading');
     try {
-      const resp = await fetch(`${GAS_URL}?action=getMilitar&nip=${searchNip}`);
+      const resp = await fetch(`${GAS_URL}?action=getMilitar&nip=${nipBusca}`);
       const data = await resp.json();
-      if (data.success) { setInspecionado(data.data.INSPECIONADO); setOmLeitura(data.data.OM); setMilitarStatus("found"); }
-      else setMilitarStatus("not_found");
-    } catch (err) { console.error(err); setMilitarStatus("not_found"); }
+      if (data.success) { setInspecionado(data.data.INSPECIONADO); setOmLeitura(data.data.OM); setMilitarStatus('found'); }
+      else setMilitarStatus('not_found');
+    } catch (err) { console.error(err); setMilitarStatus('not_found'); }
   };
 
-  const abrirModalPesquisaNome = async () => {
-    setShowPesquisarNomeModal(true);
-    setPesquisarNomeTerm("");
-    if (militaresInfoList.length === 0) {
+  const alternarBuscaNome = async () => {
+    const abrir = !buscaNomeAberta;
+    setBuscaNomeAberta(abrir);
+    setPesquisarNomeTerm('');
+    if (abrir && militaresInfoList.length === 0) {
       setIsCarregandoMilitares(true);
       try {
         const resp = await fetch(`${GAS_URL}?action=getMilitaresList`);
         const data = await resp.json();
         if (data.success && data.data) setMilitaresInfoList(data.data);
-      } catch (err) { console.error(err); } finally { setIsCarregandoMilitares(false); }
+      } catch (err) { console.error(err); avisar('Não foi possível carregar a base de militares.'); }
+      finally { setIsCarregandoMilitares(false); }
     }
   };
 
-  const selecionarNomeNip = (selectedNip: string) => { setNip(selectedNip); setShowPesquisarNomeModal(false); searchNip(selectedNip); };
+  const selecionarNomeNip = (selectedNip: string) => {
+    setNip(selectedNip);
+    setErros(er => ({ ...er, nip: '' }));
+    setBuscaNomeAberta(false);
+    searchNip(selectedNip);
+  };
+
+  const resultadosNome = useMemo(() => {
+    const termo = pesquisarNomeTerm.trim().toLowerCase();
+    if (!termo) return [];
+    return militaresInfoList.filter(m => m.nome.toLowerCase().includes(termo));
+  }, [militaresInfoList, pesquisarNomeTerm]);
 
   useEffect(() => {
     fetch(`${GAS_URL}?action=getLookups`).then(res => res.json()).then(data => {
-      if (data.success && data.data && data.data.OM) setOmsOptions(data.data.OM.filter((o: string) => o.trim() !== ""));
+      if (data.success && data.data && data.data.OM) setOmsOptions(data.data.OM.filter((o: string) => o.trim() !== ''));
     }).catch(err => console.error(err));
   }, []);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) setShowSearchDropdown(false);
-    }
-    if (showSearchDropdown) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showSearchDropdown]);
-
-  useEffect(() => {
-    if (militarStatus !== "not_found" || !pg) return;
-    if (["CMG", "CF", "SO", "1SG", "2SG"].includes(pg)) setSituacao("Carreira");
-    else if (["2T", "GM"].includes(pg)) setSituacao("Temporário");
-    else setSituacao("");
-    if (["CMG", "CF", "CC", "CT", "1T", "2T", "GM"].includes(pg)) setCirculo("Oficial");
-    else if (["SO", "1SG", "2SG", "3SG", "CB", "MN", "MN-RC", "SD", "GR"].includes(pg)) setCirculo("Praça");
-    else setCirculo("");
+    if (militarStatus !== 'not_found' || !pg) return;
+    if (['CMG', 'CF', 'SO', '1SG', '2SG'].includes(pg)) setSituacao('Carreira');
+    else if (['2T', 'GM'].includes(pg)) setSituacao('Temporário');
+    else setSituacao('');
+    if (['CMG', 'CF', 'CC', 'CT', '1T', '2T', 'GM'].includes(pg)) setCirculo('Oficial');
+    else if (['SO', '1SG', '2SG', '3SG', 'CB', 'MN', 'MN-RC', 'SD', 'GR'].includes(pg)) setCirculo('Praça');
+    else setCirculo('');
   }, [pg, militarStatus]);
 
   const generateInspecionado = () => {
-    if (militarStatus === "found") return inspecionado;
-    let result = "";
+    if (militarStatus === 'found') return inspecionado;
+    let result = '';
     const upperNome = nome.toUpperCase();
-    if (pg === "CC" && situacao === "Temporário") result = `CC (RM3-${quadro}) ${nip} ${upperNome}`;
-    else if (pg === "CC" && situacao === "Carreira") result = `CC (${quadro}) ${nip} ${upperNome}`;
-    else if (["CT", "1T", "2T", "GM"].includes(pg) && situacao === "Temporário") result = `${pg} (RM2-${quadro}) ${nip} ${upperNome}`;
-    else if (["CT", "1T", "CMG", "CF"].includes(pg) && situacao === "Carreira") result = `${pg} (${quadro}) ${nip} ${upperNome}`;
-    else if (["SO", "1SG", "2SG"].includes(pg) && situacao === "Carreira") result = `${pg}-${espPraca} ${nip} ${upperNome}`;
-    else if (["3SG", "CB", "MN"].includes(pg) && situacao === "Temporário") result = `${pg}-RM2-${espPraca} ${nip} ${upperNome}`;
-    else if (["3SG", "CB", "MN"].includes(pg) && situacao === "Carreira") result = `${pg}-${espPraca} ${nip} ${upperNome}`;
-    else if (["MN-RC", "SD", "GR", "ALUNO", "SCNS"].includes(pg)) result = `${pg} ${nip} ${upperNome}`;
+    if (pg === 'CC' && situacao === 'Temporário') result = `CC (RM3-${quadro}) ${nip} ${upperNome}`;
+    else if (pg === 'CC' && situacao === 'Carreira') result = `CC (${quadro}) ${nip} ${upperNome}`;
+    else if (['CT', '1T', '2T', 'GM'].includes(pg) && situacao === 'Temporário') result = `${pg} (RM2-${quadro}) ${nip} ${upperNome}`;
+    else if (['CT', '1T', 'CMG', 'CF'].includes(pg) && situacao === 'Carreira') result = `${pg} (${quadro}) ${nip} ${upperNome}`;
+    else if (['SO', '1SG', '2SG'].includes(pg) && situacao === 'Carreira') result = `${pg}-${espPraca} ${nip} ${upperNome}`;
+    else if (['3SG', 'CB', 'MN'].includes(pg) && situacao === 'Temporário') result = `${pg}-RM2-${espPraca} ${nip} ${upperNome}`;
+    else if (['3SG', 'CB', 'MN'].includes(pg) && situacao === 'Carreira') result = `${pg}-${espPraca} ${nip} ${upperNome}`;
+    else if (['MN-RC', 'SD', 'GR', 'ALUNO', 'SCNS'].includes(pg)) result = `${pg} ${nip} ${upperNome}`;
     return result;
   };
 
   const resetForm = () => {
-    setPeritoSelecionado(""); setFinalidade(""); setEspecialidade(""); setHistorico("");
-    setNip(""); setMilitarStatus(""); setInspecionado(""); setOmLeitura("");
-    setOm(""); setPg(""); setCirculo(""); setQuadro(""); setEspPraca(""); setNome(""); setSituacao("");
-    setSuccessPdfUrl(null);
+    setPeritoSelecionado(''); setFinalidade(''); setEspecialidade(''); setHistorico('');
+    setNip(''); setMilitarStatus(''); setInspecionado(''); setOmLeitura('');
+    setOm(''); setPg(''); setCirculo(''); setQuadro(''); setEspPraca(''); setNome(''); setSituacao('');
+    setSuccessPdfUrl(null); setSuccessPdfId(null); setErros({}); setBuscaNomeAberta(false);
   };
 
   const getPgq = () => {
-    if (pg === "CC" && situacao === "Temporário") return `CC (RM3-${quadro})`;
-    if (["CT", "1T", "2T", "GM"].includes(pg) && situacao === "Temporário") return `${pg} (RM2-${quadro})`;
-    if (["3SG", "CB", "MN"].includes(pg) && situacao === "Temporário") return `${pg}-RM2-${espPraca}`;
-    if (circulo === "Oficial") return `${pg} (${quadro})`;
-    if (circulo === "Praça") return `${pg}-${espPraca}`;
+    if (pg === 'CC' && situacao === 'Temporário') return `CC (RM3-${quadro})`;
+    if (['CT', '1T', '2T', 'GM'].includes(pg) && situacao === 'Temporário') return `${pg} (RM2-${quadro})`;
+    if (['3SG', 'CB', 'MN'].includes(pg) && situacao === 'Temporário') return `${pg}-RM2-${espPraca}`;
+    if (circulo === 'Oficial') return `${pg} (${quadro})`;
+    if (circulo === 'Praça') return `${pg}-${espPraca}`;
     return pg;
+  };
+
+  const validar = (): Erros => {
+    const e: Erros = {};
+    if (!peritoSelecionado) e.perito = 'Selecione o perito.';
+    if (!finalidade) e.finalidade = 'Selecione a finalidade.';
+    if (!especialidade) e.especialidade = 'Selecione a especialidade.';
+    if (!nip) e.nip = 'Informe o NIP do militar.';
+    else if (nip.length < 10) e.nip = 'O NIP tem o formato 00.0000.00.';
+    if (militarStatus === 'not_found') {
+      if (!pg) e.pg = 'Selecione o posto/graduação.';
+      if (!om.trim()) e.om = 'Informe a OM.';
+      if (!nome.trim()) e.nome = 'Informe o nome completo.';
+      if (circulo === 'Oficial' && !quadro) e.quadro = 'Selecione o quadro.';
+      if (circulo === 'Praça' && !espPraca) e.espPraca = 'Selecione a especialidade.';
+      if (['CC', 'CT', '1T', 'MN', 'CB', '3SG'].includes(pg) && !situacao) e.situacao = 'Selecione a situação.';
+    }
+    return e;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!peritoSelecionado || !finalidade || !especialidade || !nip) { setAlertMessage("Preencha todos os campos obrigatórios."); return; }
-    setShowConfirmModal(true);
+    const novos = validar();
+    setErros(novos);
+    if (Object.keys(novos).length > 0) {
+      avisar('Revise os campos destacados.');
+      requestAnimationFrame(() => document.querySelector<HTMLElement>('[aria-invalid="true"], [role="radiogroup"][aria-invalid="true"]')?.focus());
+      return;
+    }
+    setShowConfirm(true);
   };
 
   const executeSubmit = async () => {
-    setShowConfirmModal(false);
-    const peritoInfo = peritoSelecionado === "MAURISTON" ? PERITOS["CT_MAURISTON"] : PERITOS["CT_JULIO"];
+    setShowConfirm(false);
+    const peritoInfo = peritoSelecionado === 'MAURISTON' ? PERITOS.CT_MAURISTON : PERITOS.CT_JULIO;
     const generatedInspecionado = generateInspecionado();
     setIsLoading(true); setSuccessPdfUrl(null);
-    const payload = { isNewMilitar: militarStatus === "not_found", nip, om: militarStatus === "found" ? omLeitura : om, pgq: getPgq(), nomeMilitar: nome.toUpperCase(), situacao, inspecionado: generatedInspecionado, finalidade, especialidade, historico, peritoIdentifier: peritoInfo.perito, emailPerito: peritoInfo.email, nomePerito: peritoInfo.nomePerito, postoPerito: peritoInfo.posto, cargoPerito: peritoInfo.cargo };
+    const payload = { isNewMilitar: militarStatus === 'not_found', nip, om: militarStatus === 'found' ? omLeitura : om, pgq: getPgq(), nomeMilitar: nome.toUpperCase(), situacao, inspecionado: generatedInspecionado, finalidade, especialidade, historico, peritoIdentifier: peritoInfo.perito, emailPerito: peritoInfo.email, nomePerito: peritoInfo.nomePerito, postoPerito: peritoInfo.posto, cargoPerito: peritoInfo.cargo };
     try {
-      const response = await fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) });
+      const response = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
       const data = await response.json();
-      if (data.success) { setSuccessPdfUrl(data.pdfUrl); setSuccessPdfId(data.pdfFileId); }
-      else setAlertMessage("Erro ao gerar parecer: " + data.message);
-    } catch (error) { console.error(error); setAlertMessage("Falha na comunicação com o servidor Google."); }
+      if (data.success) { setSuccessPdfUrl(data.pdfUrl); setSuccessPdfId(data.pdfFileId); setPareceresHistory([]); }
+      else avisar('Erro ao gerar parecer: ' + data.message);
+    } catch (error) { console.error(error); avisar('Falha na comunicação com o servidor Google.'); }
     finally { setIsLoading(false); }
   };
 
@@ -190,131 +240,297 @@ export const Pareceres: React.FC<PareceresProps> = ({ onBack }) => {
     if (!successPdfId) return;
     setIsPrinting(true);
     try {
-      const response = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: "imprimir", pdfId: successPdfId }) });
+      const response = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'imprimir', pdfId: successPdfId }) });
       const data = await response.json();
-      if (data.success) setAlertMessage("Pedido de impressão enviado com sucesso.");
-      else setAlertMessage("Erro ao solicitar impressão: " + data.message);
-    } catch (error) { console.error(error); setAlertMessage("Falha na comunicação com o servidor Google ao imprimir."); }
+      if (data.success) avisar('Pedido de impressão enviado com sucesso.', 'success');
+      else avisar('Erro ao solicitar impressão: ' + data.message);
+    } catch (error) { console.error(error); avisar('Falha na comunicação com o servidor Google ao imprimir.'); }
     finally { setIsPrinting(false); }
   };
 
-  const espOptions = Array.from(new Set(pareceresHistory.map(p => p.especialidade).filter(Boolean))).sort();
-
+  const espOptions = Array.from(new Set<string>(pareceresHistory.map(p => p.especialidade).filter(Boolean))).sort();
   const handleSort = (col: 'data' | 'inspecionado') => {
-    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortCol(col); setSortDir('asc'); }
+    if (sortCol === col) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortCol(col); setSortDir(col === 'data' ? 'desc' : 'asc'); }
   };
-
-  const parseDate = (str: string) => { const [d, m, y] = str.split('/'); return new Date(`${y}-${m}-${d}`).getTime(); };
-
+  const parseDate = (str: string) => { const [d, m, y] = String(str).split('/'); return new Date(`${y}-${m}-${d}`).getTime() || 0; };
   const filteredHistory = pareceresHistory
     .filter(p => {
-      const nameMatch = historySearch.trim() === "" || extractNameFromInspecionado(p.inspecionado).toLowerCase().includes(historySearch.toLowerCase());
-      const espMatch = historyEspFilter === "" || p.especialidade === historyEspFilter;
+      const nameMatch = historySearch.trim() === '' || extrairNomeInspecionado(p.inspecionado).toLowerCase().includes(historySearch.toLowerCase());
+      const espMatch = historyEspFilter === '' || p.especialidade === historyEspFilter;
       return nameMatch && espMatch;
     })
     .sort((a, b) => {
-      let cmp = sortCol === 'data' ? parseDate(a.data) - parseDate(b.data) : extractNameFromInspecionado(a.inspecionado).localeCompare(extractNameFromInspecionado(b.inspecionado), 'pt-BR');
+      const cmp = sortCol === 'data' ? parseDate(a.data) - parseDate(b.data) : extrairNomeInspecionado(a.inspecionado).localeCompare(extrairNomeInspecionado(b.inspecionado), 'pt-BR');
       return sortDir === 'asc' ? cmp : -cmp;
     });
 
+  const limparErro = (k: string) => setErros(er => (er[k] ? { ...er, [k]: '' } : er));
+  const iconeOrdem = (col: 'data' | 'inspecionado') => (sortCol === col ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more');
+  const ariaSort = (col: 'data' | 'inspecionado') => (sortCol === col ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
+
+  const card = 'bg-white rounded-xl border border-line p-5 space-y-4';
+
   return (
-    <div className="flex flex-col h-full bg-gray-50 relative">
-      <Header title="PARECERES" onBack={onBack} />
-      <div className="bg-[#050F41] px-2 pt-1 flex justify-around z-10 flex-shrink-0">
-        <button onClick={() => handleTabChange('novo')} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'novo' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-          <span className="material-symbols-outlined text-[18px]">add_circle</span><span>Novo</span>
-        </button>
-        <button onClick={() => handleTabChange('historico')} className={`flex items-center justify-center gap-2 flex-1 pb-3 pt-2 mx-0.5 text-sm font-bold transition-all focus:outline-none rounded-t-2xl ${activeTab === 'historico' ? 'bg-[#079551] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-          <span className="material-symbols-outlined text-[18px]">history</span><span>Histórico</span>
-        </button>
-      </div>
+    <div className="flex flex-col flex-1 relative">
+      <Toast message={toast?.msg ?? null} tone={toast?.tone} />
+      <Container size={activeTab === 'historico' ? 'data' : 'form'} className="pt-6 md:pt-8">
+        <PageHeader
+          title="Pareceres"
+          description="Gere pedidos de parecer em PDF por especialidade."
+          actions={activeTab === 'novo' && !successPdfUrl ? (
+            <Button variant="secondary" icon="help" aria-expanded={showHelp} onClick={() => setShowHelp(v => !v)}>Ajuda</Button>
+          ) : undefined}
+        />
+      </Container>
+      <Container size={activeTab === 'historico' ? 'data' : 'form'} className="pb-4">
+        <Segmented
+          ariaLabel="Seção de Pareceres"
+          fullWidth
+          options={[{ value: 'novo', label: 'Novo', icon: 'add_circle' }, { value: 'historico', label: 'Histórico', icon: 'history' }]}
+          value={activeTab}
+          onChange={setActiveTab}
+        />
+      </Container>
 
       {activeTab === 'historico' && (
-        <div className="flex-1 overflow-y-auto px-4 pt-5 pb-28 w-full max-w-2xl mx-auto space-y-4">
-          <div className="flex gap-2 items-center">
-            <div className="relative flex-1" ref={searchRef}>
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400"><span className="material-symbols-outlined text-[18px]">search</span></div>
-              <input type="text" value={historySearch} onChange={(e) => { setHistorySearch(e.target.value); setShowSearchDropdown(true); }} onFocus={() => setShowSearchDropdown(true)} placeholder="Buscar por inspecionado..." className="w-full bg-white border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-9 pr-8 p-2.5 transition-colors shadow-sm" autoComplete="off" />
-              {historySearch && (<button type="button" onClick={() => { setHistorySearch(""); setShowSearchDropdown(false); }} className="absolute inset-y-0 right-2 flex items-center text-gray-400 hover:text-gray-600"><span className="material-symbols-outlined text-[16px]">close</span></button>)}
+        <Container size="data" className="pb-10 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
+              <input type="search" aria-label="Buscar por inspecionado" value={historySearch} onChange={e => setHistorySearch(e.target.value)} placeholder="Buscar por inspecionado…" className={`${controlClass} pl-10`} autoComplete="off" />
             </div>
-            <div className="relative">
-              <select value={historyEspFilter} onChange={(e) => setHistoryEspFilter(e.target.value)} className="appearance-none bg-white border border-gray-200 text-gray-700 text-sm rounded-lg pl-3 pr-8 py-2.5 shadow-sm cursor-pointer">
-                <option value="">Especialidade</option>
-                {espOptions.map(esp => (<option key={esp} value={esp}>{esp}</option>))}
-              </select>
-            </div>
+            <select aria-label="Filtrar por especialidade" value={historyEspFilter} onChange={e => setHistoryEspFilter(e.target.value)} className={`${controlClass} sm:w-56`}>
+              <option value="">Todas as especialidades</option>
+              {espOptions.map(esp => <option key={esp} value={esp}>{esp}</option>)}
+            </select>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-line overflow-clip">
             {isFetchingHistory ? (
-              <div className="p-10 flex flex-col items-center justify-center text-navy gap-3"><div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin"></div><p className="text-sm text-gray-500 animate-pulse">Carregando histórico...</p></div>
+              <p className="p-10 text-center text-sm text-ink-3" role="status">Carregando histórico…</p>
+            ) : filteredHistory.length === 0 ? (
+              <EmptyState icon="description" title={pareceresHistory.length === 0 ? 'Nenhum parecer registrado' : 'Nenhum resultado'} description={pareceresHistory.length === 0 ? 'Os pareceres gerados aparecem aqui.' : 'Ajuste a busca ou o filtro de especialidade.'} />
             ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-navy font-heading text-xs uppercase border-b border-gray-200">
-                  <tr>{(['data', 'inspecionado'] as const).map(col => (<th key={col} onClick={() => handleSort(col)} className="px-4 py-3 text-left whitespace-nowrap cursor-pointer select-none hover:bg-gray-100"><span className="inline-flex items-center gap-1">{col === 'data' ? 'Data' : 'Inspecionado'}<span className="material-symbols-outlined text-[14px] text-navy/50">{sortCol === col ? (sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}</span></span></th>))}</tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredHistory.length > 0 ? filteredHistory.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-gray-600 text-xs whitespace-nowrap align-top pt-4">{item.data}</td>
-                      <td className="px-4 py-3"><a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 font-medium flex items-start gap-1 hover:underline"><span className="break-words">{extractNameFromInspecionado(item.inspecionado)}</span><span className="material-symbols-outlined text-[13px] shrink-0 mt-0.5">open_in_new</span></a>{item.especialidade && (<span className="block mt-1 text-[11px] text-gray-400 font-normal uppercase tracking-wide">{item.especialidade}</span>)}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-thead text-ink-3 text-xs border-b border-line">
+                    <tr>
+                      <th scope="col" aria-sort={ariaSort('data')} className="px-4 py-3 text-left font-semibold whitespace-nowrap">
+                        <button type="button" onClick={() => handleSort('data')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">Data<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('data')}</span></button>
+                      </th>
+                      <th scope="col" aria-sort={ariaSort('inspecionado')} className="px-4 py-3 text-left font-semibold">
+                        <button type="button" onClick={() => handleSort('inspecionado')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">Inspecionado<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('inspecionado')}</span></button>
+                      </th>
+                      <th scope="col" className="px-4 py-3 text-left font-semibold hidden md:table-cell">Especialidade</th>
+                      <th scope="col" className="px-4 py-3 text-left font-semibold hidden lg:table-cell">Finalidade</th>
+                      <th scope="col" className="px-4 py-3 text-left font-semibold hidden lg:table-cell">Perito</th>
+                      <th scope="col" className="px-4 py-3 text-right font-semibold">Ação</th>
                     </tr>
-                  )) : (<tr><td colSpan={2} className="px-4 py-10 text-center text-gray-400 text-sm">{pareceresHistory.length === 0 ? "Nenhum parecer registrado." : "Nenhum resultado para o filtro aplicado."}</td></tr>)}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {filteredHistory.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-thead transition-colors">
+                        <td className="px-4 py-3 text-ink-2 whitespace-nowrap align-top">{item.data}</td>
+                        <td className="px-4 py-3 align-top">
+                          <span className="block font-semibold text-navy break-words">{extrairNomeInspecionado(item.inspecionado)}</span>
+                          <span className="block md:hidden text-xs text-ink-3 mt-0.5">{item.especialidade}</span>
+                        </td>
+                        <td className="px-4 py-3 text-ink-2 align-top hidden md:table-cell">{item.especialidade || '—'}</td>
+                        <td className="px-4 py-3 text-ink-2 align-top hidden lg:table-cell">{item.finalidade || '—'}</td>
+                        <td className="px-4 py-3 text-ink-2 align-top hidden lg:table-cell">{item.perito || '—'}</td>
+                        <td className="px-4 py-2 text-right align-top">
+                          {item.link ? (
+                            <a href={item.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 min-h-[44px] px-2 text-sm font-bold text-navy hover:underline">
+                              Abrir PDF<span className="material-symbols-outlined text-[18px]" aria-hidden="true">open_in_new</span>
+                            </a>
+                          ) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
-          {filteredHistory.length > 0 && (<p className="text-center text-xs text-gray-400">{filteredHistory.length} registro{filteredHistory.length !== 1 ? 's' : ''} encontrado{filteredHistory.length !== 1 ? 's' : ''}</p>)}
-        </div>
+          {filteredHistory.length > 0 && (
+            <p className="text-center text-xs text-ink-3" role="status">{filteredHistory.length} registro{filteredHistory.length !== 1 ? 's' : ''}</p>
+          )}
+        </Container>
       )}
 
-      {activeTab === 'novo' && (
-        <div className="flex-1 overflow-y-auto px-4 pt-6 pb-28 w-full max-w-2xl mx-auto space-y-6">
-          <button type="button" onClick={() => setShowHelpModal(true)} className="fixed bottom-24 right-6 w-14 h-14 bg-[#050F41] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40 border border-slate-700" title="Ajuda"><span className="material-symbols-outlined text-[28px]">help</span></button>
-
-          {showHelpModal && (<div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in"><div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-md flex flex-col items-center text-center max-h-[90vh]"><span className="material-symbols-outlined text-4xl text-navy mb-4 shrink-0">info</span><div className="text-gray-600 mb-6 text-sm md:text-base text-left space-y-4 w-full overflow-y-auto pr-2"><p>Preencha os dados da inspeção e do militar e gere um pedido de parecer a partir de templates com perguntas padrão para as especialidades:</p><div className="grid grid-cols-2 gap-2 pl-4"><ul className="list-disc space-y-1"><li>CARDIOLOGIA</li><li>HEPATOLOGIA</li><li>NEUROLOGIA</li></ul><ul className="list-disc space-y-1"><li>ONCOLOGIA</li><li>PSICOLOGIA</li><li>PSIQUIATRIA</li></ul></div><p>No final receba o parecer no seu zimbra em PDF e editável no formato .odt</p></div><button onClick={() => setShowHelpModal(false)} className="w-full px-4 py-2 bg-navy text-white font-medium rounded-lg hover:bg-navy/90 transition-colors shrink-0">Entendi</button></div></div>)}
-          {alertMessage && (<div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in"><div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-sm flex flex-col items-center justify-center text-center"><span className="material-symbols-outlined text-4xl text-red-500 mb-4">error</span><p className="text-gray-800 font-medium mb-6">{alertMessage}</p><button onClick={() => setAlertMessage("")} className="w-full px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200">Voltar</button></div></div>)}
-          {showConfirmModal && (<div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in"><div className="bg-white rounded-xl shadow-xl border border-gray-100 p-6 w-full max-w-sm flex flex-col items-center justify-center text-center"><span className="material-symbols-outlined text-4xl text-gold mb-4">help_center</span><h2 className="font-heading text-lg font-bold text-navy mb-2">Confirmação</h2><p className="text-gray-600 mb-6 font-medium">Confirma o envio e a geração do parecer pericial?</p><div className="flex w-full gap-3"><button onClick={() => setShowConfirmModal(false)} className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50">Cancelar</button><button onClick={executeSubmit} className="flex-1 px-4 py-2 bg-navy text-white font-medium rounded-lg hover:bg-navy/90">Confirmar</button></div></div></div>)}
-          {successPdfUrl && (<div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in"><div className="bg-white rounded-xl shadow-xl border border-gray-100 p-8 w-full max-w-sm flex flex-col items-center text-center"><div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4"><span className="material-symbols-outlined text-4xl">check_circle</span></div><h2 className="font-heading text-xl font-bold text-navy mb-2">SUCESSO!</h2><p className="text-sm md:text-base text-gray-600 mb-8 font-medium">Parecer gerado e enviado para o seu e-mail.</p><div className="flex justify-center items-center gap-6 w-full mt-2"><button onClick={resetForm} className="w-12 h-12 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center hover:bg-gray-200" title="Fechar"><span className="material-symbols-outlined text-[20px]">close</span></button><button onClick={handleImprimir} disabled={isPrinting} className="w-12 h-12 rounded-full bg-navy text-white flex items-center justify-center hover:bg-navy/90 disabled:opacity-50 shadow-sm" title="Imprimir Colorido na Secretaria">{isPrinting ? (<span className="material-symbols-outlined animate-spin text-[24px]">sync</span>) : (<span className="material-symbols-outlined text-[24px]">print</span>)}</button><a href={successPdfUrl} target="_blank" rel="noopener noreferrer" onClick={resetForm} className="w-16 h-16 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center hover:bg-blue-200" title="Abrir PDF no Drive"><span className="material-symbols-outlined text-[28px]">open_in_new</span></a></div></div></div>)}
-          {isLoading && (<div className="fixed inset-0 bg-white/70 backdrop-blur-sm z-[100] flex flex-col items-center justify-center"><div className="w-10 h-10 border-4 border-gold border-t-transparent rounded-full animate-spin"></div><p className="mt-4 text-navy font-medium animate-pulse">Gerando Parecer...</p></div>)}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-5">
-              <h2 className="font-heading font-bold text-navy text-lg flex items-center border-b border-gray-100 pb-2"><span className="material-symbols-outlined mr-2 text-gold">person</span>DADOS DA INSPEÇÃO</h2>
-              <div><label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Perito <span className="text-red-500">*</span></label><div className="flex space-x-2"><button type="button" onClick={() => setPeritoSelecionado("MAURISTON")} className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${peritoSelecionado === "MAURISTON" ? "bg-navy text-white border-navy shadow-sm" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}>CT Mauriston</button><button type="button" onClick={() => setPeritoSelecionado("JULIO")} className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all ${peritoSelecionado === "JULIO" ? "bg-navy text-white border-navy shadow-sm" : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"}`}>CT Júlio César</button></div></div>
-              <div><label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">Finalidade <span className="text-red-500">*</span></label><select value={finalidade} onChange={(e) => setFinalidade(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5" required><option value="">Selecione...</option>{FINALIDADES.map(f => (<option key={f} value={f}>{f}</option>))}</select></div>
-              <div><label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">Especialidade <span className="text-red-500">*</span></label><select value={especialidade} onChange={(e) => setEspecialidade(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5" required><option value="">Selecione...</option>{ESPECIALIDADES.map(e => (<option key={e} value={e}>{e}</option>))}</select></div>
-              <div><label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">Histórico</label><textarea value={historico} onChange={(e) => setHistorico(e.target.value)} placeholder="Militar em LTS há xx dias pelo CID X00.0..." className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5 min-h-[100px]" /></div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-5">
-              <h2 className="font-heading font-bold text-navy text-lg flex items-center border-b border-gray-100 pb-2"><span className="material-symbols-outlined mr-2 text-gold">badge</span>DADOS DO MILITAR</h2>
-              <div><label className="block text-xs font-bold text-gray-700 mb-1 uppercase tracking-wider">NIP <span className="text-red-500">*</span></label><div className="relative"><input type="text" value={nip} onChange={handleNipChange} placeholder="00.0000.00" className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block p-2.5 font-mono" required />{militarStatus === "loading" && (<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none"><div className="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin"></div></div>)}{militarStatus === "found" && (<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-green-500"><span className="material-symbols-outlined text-lg">check_circle</span></div>)}</div><div className="mt-1 text-right"><button type="button" onClick={() => abrirModalPesquisaNome()} className="text-[10px] text-blue-600 underline hover:text-blue-800">Pesquisar pelo nome</button></div></div>
-              {militarStatus === "found" && (<div className="bg-blue-50 border-l-4 border-navy p-3 rounded-r-lg space-y-2 animate-fade-in"><div><label className="block text-xs font-bold text-navy/70 uppercase">Inspecionado</label><p className="text-sm font-medium text-navy">{inspecionado}</p></div><div><label className="block text-xs font-bold text-navy/70 uppercase">OM</label><p className="text-sm font-medium text-navy">{omLeitura}</p></div></div>)}
-              {militarStatus === "not_found" && (<div className="space-y-4 animate-fade-in border-t border-dashed border-gray-200 pt-4"><div className="grid grid-cols-2 gap-4"><div><label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Posto/Graduação <span className="text-red-500">*</span></label><select value={pg} onChange={(e) => setPg(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg p-2.5" required><option value="">Sel...</option>{PG_OPTIONS.map(o => (<option key={o} value={o}>{o}</option>))}</select></div><div><label className="block text-xs font-bold text-gray-700 mb-1 uppercase">OM <span className="text-red-500">*</span></label><input type="text" list="om-options" value={om} onChange={(e) => setOm(e.target.value)} placeholder="Ex: HNRe" className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg p-2.5" required /><datalist id="om-options">{omsOptions.map(opt => (<option key={opt} value={opt} />))}</datalist></div></div>{circulo === "Oficial" && (<div><label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Quadro <span className="text-red-500">*</span></label><select value={quadro} onChange={(e) => setQuadro(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg p-2.5" required><option value="">Sel...</option>{QUADROS.map(q => (<option key={q} value={q}>{q}</option>))}</select></div>)}{circulo === "Praça" && (<div><label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Especialidade <span className="text-red-500">*</span></label><select value={espPraca} onChange={(e) => setEspPraca(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg p-2.5" required><option value="">Sel...</option>{ESP_PRACAS.map(p => (<option key={p} value={p}>{p}</option>))}</select></div>)}<div><label className="block text-xs font-bold text-gray-700 mb-1 uppercase">Nome Completo <span className="text-red-500">*</span></label><input type="text" value={nome} onChange={(e) => setNome(e.target.value.toUpperCase())} className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg p-2.5 uppercase" required /></div>{["CC", "CT", "1T", "MN", "CB", "3SG"].includes(pg) && (<div><label className="block text-xs font-bold text-gray-700 mb-2 uppercase">Situação <span className="text-red-500">*</span></label><div className="flex space-x-2"><button type="button" onClick={() => setSituacao("Carreira")} className={`flex-1 py-1.5 px-3 rounded-lg border text-sm font-medium ${situacao === "Carreira" ? "bg-navy/10 text-navy border-navy" : "bg-white text-gray-600 border-gray-300"}`}>Carreira</button><button type="button" onClick={() => setSituacao("Temporário")} className={`flex-1 py-1.5 px-3 rounded-lg border text-sm font-medium ${situacao === "Temporário" ? "bg-navy/10 text-navy border-navy" : "bg-white text-gray-600 border-gray-300"}`}>Temporário</button></div></div>)}</div>)}
-            </div>
-            <div className="flex justify-end items-center gap-4 pt-2"><button type="button" onClick={resetForm} className="w-14 h-14 bg-gray-100 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full flex items-center justify-center transition-all shadow-sm border border-gray-200" title="Limpar"><span className="material-symbols-outlined">delete</span></button><button type="submit" className="w-14 h-14 bg-[#079551] text-white rounded-full flex items-center justify-center transition-all hover:bg-green-700 shadow-md active:scale-95" title="Gerar Parecer Pericial"><span className="material-symbols-outlined">send</span></button></div>
-          </form>
-        </div>
-      )}
-
-      {showPesquisarNomeModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh] shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setShowPesquisarNomeModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><span className="material-symbols-outlined">close</span></button>
-            <div className="p-6 bg-navy text-white shrink-0"><h2 className="text-xl font-bold">Pesquisar Militar</h2><p className="text-navy-100 text-sm mt-1">Busque pelo nome completo</p></div>
-            <div className="p-6 flex-1 flex flex-col min-h-0">
-              <div className="relative shrink-0 mb-4"><div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400"><span className="material-symbols-outlined">search</span></div><input type="text" value={pesquisarNomeTerm} onChange={(e) => setPesquisarNomeTerm(e.target.value)} placeholder="Ex: João da Silva..." className="w-full bg-gray-50 border border-gray-200 text-gray-800 text-sm rounded-lg focus:ring-navy focus:border-navy block pl-10 p-2.5 md:text-base" autoFocus /></div>
-              <div className="flex-1 overflow-y-auto min-h-[50px] border border-gray-100 rounded-lg bg-gray-50/50">
-                {isCarregandoMilitares ? (<div className="p-8 text-center text-gray-500 flex flex-col items-center"><div className="w-6 h-6 border-2 border-navy border-t-transparent rounded-full animate-spin mb-2"></div><p className="text-sm md:text-base">Carregando base de dados...</p></div>) : (
-                  <div className="flex flex-col">
-                    {militaresInfoList.filter(m => pesquisarNomeTerm && m.nome.toLowerCase().includes(pesquisarNomeTerm.toLowerCase())).slice(0, 50).map((m, idx) => (<div key={idx} onClick={() => selecionarNomeNip(m.nip)} className="px-4 py-3 border-b border-gray-100 hover:bg-blue-50 cursor-pointer"><div className="font-bold text-navy text-sm md:text-base">{m.nome}</div><div className="text-xs md:text-sm text-gray-500 font-mono mt-0.5">{m.nip}</div></div>))}
-                    {pesquisarNomeTerm && militaresInfoList.filter(m => m.nome.toLowerCase().includes(pesquisarNomeTerm.toLowerCase())).length === 0 && (<div className="p-8 text-center text-gray-500 text-sm md:text-base">Nenhum militar encontrado com esse nome.</div>)}
-                  </div>
-                )}
-              </div>
+      {activeTab === 'novo' && successPdfUrl && (
+        <Container size="form" className="pb-10">
+          <div className="bg-white rounded-xl border border-line p-6 md:p-8 text-center flex flex-col items-center gap-3">
+            <span className="material-symbols-outlined text-[48px] text-green-700" aria-hidden="true">check_circle</span>
+            <h2 className="font-heading text-xl font-bold text-navy">Parecer gerado</h2>
+            <p className="text-sm text-ink-2 max-w-sm">O PDF foi salvo no Drive e enviado para o seu e-mail, com a versão editável em .odt.</p>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2">
+              <a href={successPdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover">
+                <span className="material-symbols-outlined text-[20px]" aria-hidden="true">open_in_new</span>Abrir PDF
+              </a>
+              <Button variant="secondary" icon="print" loading={isPrinting} onClick={handleImprimir}>Imprimir na Secretaria</Button>
+              <Button variant="ghost" icon="add" onClick={resetForm}>Novo pedido</Button>
             </div>
           </div>
-        </div>
+        </Container>
+      )}
+
+      {activeTab === 'novo' && !successPdfUrl && (
+        <Container size="form" className="pb-0">
+          {showHelp && (
+            <div className="mb-4 bg-white border border-line border-l-4 border-l-gold rounded-xl p-4 text-sm text-ink-2 space-y-2">
+              <p>Preencha os dados da inspeção e do militar e gere um pedido de parecer a partir de templates com perguntas padrão para: <strong>{ESPECIALIDADES.join(', ')}</strong>.</p>
+              <p>No final você recebe o parecer no seu Zimbra em PDF, e editável no formato .odt.</p>
+            </div>
+          )}
+          <form onSubmit={handleSubmit} noValidate>
+            <div className="space-y-5 pb-6">
+              <section className={card} aria-labelledby="pareceres-inspecao">
+                <h2 id="pareceres-inspecao" className="font-heading font-bold text-navy text-base">Dados da inspeção</h2>
+                <ChoiceGroup<'MAURISTON' | 'JULIO'>
+                  label="Perito" required error={erros.perito} value={peritoSelecionado}
+                  onChange={v => { setPeritoSelecionado(v); limparErro('perito'); }}
+                  options={[{ value: 'MAURISTON', label: 'CT Mauriston' }, { value: 'JULIO', label: 'CT Júlio César' }]}
+                />
+                <Field label="Finalidade" required error={erros.finalidade}>
+                  {a => (
+                    <select {...a} value={finalidade} onChange={e => { setFinalidade(e.target.value); limparErro('finalidade'); }}>
+                      <option value="">Selecione…</option>
+                      {FINALIDADES.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  )}
+                </Field>
+                <Field label="Especialidade" required error={erros.especialidade}>
+                  {a => (
+                    <select {...a} value={especialidade} onChange={e => { setEspecialidade(e.target.value); limparErro('especialidade'); }}>
+                      <option value="">Selecione…</option>
+                      {ESPECIALIDADES.map(x => <option key={x} value={x}>{x}</option>)}
+                    </select>
+                  )}
+                </Field>
+                <Field label="Histórico" help="Opcional. Entra no corpo do pedido de parecer.">
+                  {a => <textarea {...a} value={historico} onChange={e => setHistorico(e.target.value)} placeholder="Militar em LTS há xx dias pelo CID X00.0…" className={`${a.className} min-h-[100px]`} />}
+                </Field>
+              </section>
+
+              <section className={card} aria-labelledby="pareceres-militar">
+                <h2 id="pareceres-militar" className="font-heading font-bold text-navy text-base">Dados do militar</h2>
+                <div>
+                  <Field label="NIP" required error={erros.nip} help={militarStatus === 'found' ? undefined : 'Formato 00.0000.00. Ao completar, o militar é buscado na base.'}>
+                    {a => (
+                      <div className="relative">
+                        <input {...a} type="text" inputMode="numeric" value={nip} onChange={handleNipChange} placeholder="00.0000.00" className={`${a.className} font-mono pr-10`} />
+                        {militarStatus === 'loading' && <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-navy animate-spin" aria-label="Buscando militar">progress_activity</span>}
+                        {militarStatus === 'found' && <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-green-700" aria-label="Militar encontrado">check_circle</span>}
+                      </div>
+                    )}
+                  </Field>
+                  <div className="mt-1">
+                    <button type="button" onClick={alternarBuscaNome} aria-expanded={buscaNomeAberta} className="inline-flex items-center gap-1 min-h-[44px] text-sm font-bold text-navy underline underline-offset-2">
+                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">{buscaNomeAberta ? 'expand_less' : 'person_search'}</span>
+                      {buscaNomeAberta ? 'Fechar busca por nome' : 'Pesquisar pelo nome'}
+                    </button>
+                  </div>
+                  {buscaNomeAberta && (
+                    <div className="mt-1 border border-line rounded-lg p-3 bg-thead space-y-2">
+                      <input type="search" aria-label="Nome do militar" autoFocus value={pesquisarNomeTerm} onChange={e => setPesquisarNomeTerm(e.target.value)} placeholder="Digite parte do nome…" className={controlClass} autoComplete="off" />
+                      <div className="max-h-60 overflow-y-auto bg-white border border-line rounded-lg" role="listbox" aria-label="Militares encontrados">
+                        {isCarregandoMilitares ? (
+                          <p className="p-4 text-sm text-ink-3 text-center" role="status">Carregando base de dados…</p>
+                        ) : !pesquisarNomeTerm.trim() ? (
+                          <p className="p-4 text-sm text-ink-3 text-center">Digite para buscar.</p>
+                        ) : resultadosNome.length === 0 ? (
+                          <p className="p-4 text-sm text-ink-3 text-center">Nenhum militar encontrado com esse nome.</p>
+                        ) : resultadosNome.slice(0, 50).map((m, idx) => (
+                          <button key={idx} type="button" role="option" aria-selected={false} onClick={() => selecionarNomeNip(m.nip)} className="w-full text-left px-4 py-2 min-h-[44px] border-b border-line last:border-b-0 hover:bg-thead">
+                            <span className="block font-bold text-navy text-sm">{m.nome}</span>
+                            <span className="block text-xs text-ink-3 font-mono">{m.nip}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {militarStatus === 'found' && (
+                  <dl className="bg-thead border border-line border-l-4 border-l-navy rounded-lg p-3 space-y-2">
+                    <div><dt className="text-xs font-semibold text-ink-3">Inspecionado</dt><dd className="text-sm font-bold text-navy">{inspecionado}</dd></div>
+                    <div><dt className="text-xs font-semibold text-ink-3">OM</dt><dd className="text-sm font-bold text-navy">{omLeitura}</dd></div>
+                  </dl>
+                )}
+
+                {militarStatus === 'not_found' && (
+                  <div className="space-y-4 border-t border-dashed border-line pt-4">
+                    <p className="text-xs text-ink-3">Militar não encontrado na base. Preencha os dados para cadastrá-lo.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Field label="Posto/Graduação" required error={erros.pg}>
+                        {a => (
+                          <select {...a} value={pg} onChange={e => { setPg(e.target.value); limparErro('pg'); }}>
+                            <option value="">Selecione…</option>
+                            {PG_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        )}
+                      </Field>
+                      <Field label="OM" required error={erros.om}>
+                        {a => (
+                          <>
+                            <input {...a} type="text" list="om-options" value={om} onChange={e => { setOm(e.target.value); limparErro('om'); }} placeholder="Ex.: HNRe" />
+                            <datalist id="om-options">{omsOptions.map(opt => <option key={opt} value={opt} />)}</datalist>
+                          </>
+                        )}
+                      </Field>
+                    </div>
+                    {circulo === 'Oficial' && (
+                      <Field label="Quadro" required error={erros.quadro}>
+                        {a => (
+                          <select {...a} value={quadro} onChange={e => { setQuadro(e.target.value); limparErro('quadro'); }}>
+                            <option value="">Selecione…</option>
+                            {QUADROS.map(q => <option key={q} value={q}>{q}</option>)}
+                          </select>
+                        )}
+                      </Field>
+                    )}
+                    {circulo === 'Praça' && (
+                      <Field label="Especialidade (praça)" required error={erros.espPraca}>
+                        {a => (
+                          <select {...a} value={espPraca} onChange={e => { setEspPraca(e.target.value); limparErro('espPraca'); }}>
+                            <option value="">Selecione…</option>
+                            {ESP_PRACAS.map(p => <option key={p} value={p}>{p}</option>)}
+                          </select>
+                        )}
+                      </Field>
+                    )}
+                    <Field label="Nome completo" required error={erros.nome}>
+                      {a => <input {...a} type="text" value={nome} onChange={e => { setNome(e.target.value.toUpperCase()); limparErro('nome'); }} className={`${a.className} uppercase`} />}
+                    </Field>
+                    {['CC', 'CT', '1T', 'MN', 'CB', '3SG'].includes(pg) && (
+                      <ChoiceGroup<'Carreira' | 'Temporário'>
+                        label="Situação" required error={erros.situacao} value={situacao}
+                        onChange={v => { setSituacao(v); limparErro('situacao'); }}
+                        options={[{ value: 'Carreira', label: 'Carreira' }, { value: 'Temporário', label: 'Temporário' }]}
+                      />
+                    )}
+                  </div>
+                )}
+              </section>
+            </div>
+
+            <div className="sticky bottom-0 -mx-4 md:-mx-8 px-4 md:px-8 py-3 bg-canvas/95 backdrop-blur border-t border-line flex flex-col-reverse sm:flex-row sm:justify-between gap-2 z-10">
+              <Button variant="secondary" icon="restart_alt" onClick={resetForm}>Limpar</Button>
+              <Button type="submit" icon="send" loading={isLoading}>{isLoading ? 'Gerando parecer…' : 'Gerar parecer'}</Button>
+            </div>
+          </form>
+        </Container>
+      )}
+
+      {showConfirm && (
+        <ConfirmDialog
+          title="Gerar parecer"
+          message="Confirma o envio e a geração do pedido de parecer pericial?"
+          confirmLabel="Gerar parecer"
+          onConfirm={executeSubmit}
+          onCancel={() => setShowConfirm(false)}
+        />
       )}
     </div>
   );

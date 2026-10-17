@@ -60,7 +60,7 @@ export const IdmPicker: React.FC<IdmPickerProps> = ({ candidatoNome, observacoes
 
   return (
     <div className="space-y-3">
-      <p className="text-xs md:text-sm text-gray-700 leading-relaxed">
+      <p className="text-sm text-gray-700 leading-relaxed">
         Informe o motivo da insuficiência documental do candidato (a) <strong>{candidatoNome}</strong>
       </p>
 
@@ -68,9 +68,9 @@ export const IdmPicker: React.FC<IdmPickerProps> = ({ candidatoNome, observacoes
         type="button"
         aria-expanded={aberto}
         onClick={() => setAberto(a => !a)}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-left rounded-xl border border-gray-300 bg-white hover:border-[#050F41] focus:outline-none focus:border-[#050F41] transition-colors"
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-left rounded-xl border border-gray-300 bg-white hover:border-navy focus:outline-none focus:border-navy transition-colors"
       >
-        <span className={`min-w-0 truncate ${ordenados.length === 0 ? 'text-gray-400' : 'text-[#050F41]'}`}>{resumo}</span>
+        <span className={`min-w-0 truncate ${ordenados.length === 0 ? 'text-ink-3' : 'text-navy'}`}>{resumo}</span>
         <span className={`material-symbols-outlined text-[20px] text-gray-500 shrink-0 transition-transform ${aberto ? 'rotate-180' : ''}`}>expand_more</span>
       </button>
 
@@ -78,7 +78,7 @@ export const IdmPicker: React.FC<IdmPickerProps> = ({ candidatoNome, observacoes
         <div className="max-h-[40vh] overflow-y-auto rounded-xl border border-gray-200 bg-white">
           {GRUPOS_EXAMES.map(g => (
             <div key={g.grupo}>
-              <p className="px-4 pt-3 pb-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider sticky top-0 bg-white">{g.grupo}</p>
+              <p className="px-4 pt-3 pb-1 text-xs font-bold text-ink-3 uppercase tracking-wider sticky top-0 bg-white">{g.grupo}</p>
               {g.exames.map(exame => {
                 const marcado = selecionados.includes(exame);
                 return (
@@ -87,9 +87,9 @@ export const IdmPicker: React.FC<IdmPickerProps> = ({ candidatoNome, observacoes
                       type="checkbox"
                       checked={marcado}
                       onChange={() => alternar(exame)}
-                      className="mt-0.5 w-4 h-4 accent-[#050F41] shrink-0"
+                      className="mt-0.5 w-4 h-4 accent-navy shrink-0"
                     />
-                    <span className={`text-sm leading-snug ${marcado ? 'font-bold text-[#050F41]' : 'text-gray-700'}`}>{exame}</span>
+                    <span className={`text-sm leading-snug ${marcado ? 'font-bold text-navy' : 'text-gray-700'}`}>{exame}</span>
                   </label>
                 );
               })}
@@ -103,7 +103,7 @@ export const IdmPicker: React.FC<IdmPickerProps> = ({ candidatoNome, observacoes
           type="button"
           disabled={ordenados.length === 0}
           onClick={() => onConfirm(ordenados.join(SEPARADOR))}
-          className="px-5 py-2.5 bg-[#050F41] hover:bg-[#079551] text-white rounded-xl text-xs md:text-sm font-bold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#050F41]"
+          className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-navy"
         >
           Confirmar
         </button>
@@ -127,10 +127,10 @@ export const MotivoIdmModal: React.FC<MotivoIdmModalProps> = ({ obrigatorio, onC
       className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg max-h-[84vh] flex flex-col overflow-hidden"
       onClick={e => e.stopPropagation()}
     >
-      <div className="p-4 bg-[#050F41] text-white flex items-center justify-between gap-2 shrink-0">
+      <div className="p-4 bg-navy text-white flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center space-x-2">
-          <span className="material-symbols-outlined text-[20px] text-[#FAB932]">assignment_late</span>
-          <h3 className="font-heading font-bold text-sm uppercase">Motivo da IDM</h3>
+          <span className="material-symbols-outlined text-[20px] text-gold">assignment_late</span>
+          <h3 className="font-heading font-bold text-sm">Motivo da IDM</h3>
         </div>
         {!obrigatorio && (
           <button type="button" onClick={onClose} aria-label="Fechar" className="p-1 rounded-lg hover:bg-white/10 transition-colors">

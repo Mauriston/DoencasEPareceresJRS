@@ -1,5 +1,7 @@
 # Design System
 
+> **Nota:** a identidade visual vigente é a do sistema de design JRS/HNRe implementado a partir da *Auditoria Frontend* (tokens em `styles/tokens.css`, paleta em `tailwind.config.js`, primitivos em `components/ui`). Onde este documento divergir (raios, sombras, tipografia, ouro/verde), prevalece o `docs/auditoria-frontend.md`.
+
 ## 1. Visão geral
 
 ### Personalidade visual

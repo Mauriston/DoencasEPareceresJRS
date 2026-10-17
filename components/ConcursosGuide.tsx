@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Header } from './Header';
+import { Container, PageHeader } from './ui/Page';
+import { Segmented } from './ui/Segmented';
+import { Button } from './ui/Button';
+import { useQueryParam } from '../hooks/useQueryParam';
 import { MarkdownDocPage } from './MarkdownDocPage';
 import { StoragePdfIconButton, StoragePdfFab } from './StoragePdfButtons';
 import { useStoragePdf } from '../hooks/useStoragePdf';
 import { anexoPdfPath } from '../services/firebaseStorageNormas';
 import anexoNMarkdown from '../content/dgpm-406/anexos/anexo-n.md?raw';
-import { Ruler, Eye, FileText, Accessibility, Heart, Ear, ChevronDown } from 'lucide-react';
+import { Ruler, Eye, FileText, Accessibility, Heart, Ear, ChevronDown } from './ui/icons';
 
 type Bloco =
   | { tipo: 'lista'; itens: string[] }
@@ -19,7 +22,7 @@ interface Indice {
   blocos: Bloco[];
 }
 
-const iconCls = 'text-[#050F41]';
+const iconCls = 'text-navy';
 
 // Índices mínimos — Anexo N (DGPM-406, 9ª Revisão).
 const indicesList: Indice[] = [
@@ -316,16 +319,16 @@ const FiltroSelect: React.FC<{
 }> = ({ value, onChange, options, accent }) => {
   const cor = accent === 'red'
     ? { borda: 'border-red-700/70 focus-within:border-red-700', texto: 'text-red-700', botao: 'bg-red-700' }
-    : { borda: 'border-[#050F41]/70 focus-within:border-[#050F41]', texto: 'text-[#050F41]', botao: 'bg-[#050F41]' };
+    : { borda: 'border-navy/70 focus-within:border-navy', texto: 'text-navy', botao: 'bg-navy' };
   return (
     <div>
-      <label className={`flex items-center gap-1.5 text-xs md:text-sm font-bold uppercase tracking-wider mb-1.5 ml-1 ${cor.texto}`}>
+      <label className={`flex items-center gap-1.5 text-sm font-bold uppercase tracking-wider mb-1.5 ml-1 ${cor.texto}`}>
         <span className="material-symbols-outlined text-[18px] md:text-[20px]">filter_list</span>
         Filtrar por
       </label>
       <div className={`relative flex items-center bg-white border-2 ${cor.borda} rounded-xl shadow-sm transition-colors`}>
         <select
-          className="w-full bg-transparent text-gray-800 py-3 md:py-4 pl-4 md:pl-5 pr-14 rounded-xl font-bold focus:outline-none text-sm md:text-base appearance-none cursor-pointer font-body"
+          className="w-full bg-transparent text-gray-800 py-3 md:py-4 pl-4 md:pl-5 pr-14 rounded-lg font-bold focus:outline-none text-base appearance-none cursor-pointer font-body"
           value={value}
           onChange={(e) => onChange(e.target.value)}
         >
@@ -341,13 +344,13 @@ const FiltroSelect: React.FC<{
 
 const TabelaIndice: React.FC<{ bloco: Extract<Bloco, { tipo: 'tabela' }> }> = ({ bloco }) => (
   <div>
-    {bloco.titulo && <h4 className="text-sm md:text-base font-bold text-[#050F41] mb-2">{bloco.titulo}</h4>}
+    {bloco.titulo && <h4 className="text-base font-bold text-navy mb-2">{bloco.titulo}</h4>}
     <div className="overflow-x-auto rounded-xl border border-gray-200">
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-gray-50 text-[#050F41]">
+          <tr className="bg-gray-50 text-navy">
             {bloco.colunas.map(col => (
-              <th key={col} className="py-2.5 px-4 text-xs md:text-sm font-bold uppercase tracking-wider border-b border-gray-200">{col}</th>
+              <th key={col} className="py-2.5 px-4 text-sm font-bold uppercase tracking-wider border-b border-gray-200">{col}</th>
             ))}
           </tr>
         </thead>
@@ -355,7 +358,7 @@ const TabelaIndice: React.FC<{ bloco: Extract<Bloco, { tipo: 'tabela' }> }> = ({
           {bloco.linhas.map((linha, i) => (
             <tr key={i}>
               {linha.map((cel, j) => (
-                <td key={j} className={`py-3 px-4 text-sm md:text-base align-top ${j === 0 ? 'font-semibold text-[#050F41]' : 'text-gray-700'}`}>{cel}</td>
+                <td key={j} className={`py-3 px-4 text-base align-top ${j === 0 ? 'font-semibold text-navy' : 'text-gray-700'}`}>{cel}</td>
               ))}
             </tr>
           ))}
@@ -371,8 +374,8 @@ const BlocoIndice: React.FC<{ bloco: Bloco }> = ({ bloco }) => {
     return (
       <ul className="space-y-3">
         {bloco.itens.map((item, i) => (
-          <li key={i} className="flex gap-3 text-gray-700 font-body text-sm md:text-base">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#050F41] shrink-0 mt-2.5" />
+          <li key={i} className="flex gap-3 text-gray-700 font-body text-base">
+            <span className="w-1.5 h-1.5 rounded-full bg-navy shrink-0 mt-2.5" />
             <span className="leading-relaxed flex-1">{item}</span>
           </li>
         ))}
@@ -381,12 +384,12 @@ const BlocoIndice: React.FC<{ bloco: Bloco }> = ({ bloco }) => {
   }
   return (
     <div className="space-y-2">
-      <p className="text-gray-700 font-body text-sm md:text-base leading-relaxed">{bloco.texto}</p>
+      <p className="text-gray-700 font-body text-base leading-relaxed">{bloco.texto}</p>
       {bloco.condicoes && (
         <ul className="space-y-1.5 pl-1">
           {bloco.condicoes.map((c, i) => (
-            <li key={i} className="flex gap-3 text-gray-700 font-body text-sm md:text-base">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#050F41] shrink-0 mt-2.5" />
+            <li key={i} className="flex gap-3 text-gray-700 font-body text-base">
+              <span className="w-1.5 h-1.5 rounded-full bg-navy shrink-0 mt-2.5" />
               <span className="leading-relaxed flex-1">{c}</span>
             </li>
           ))}
@@ -396,15 +399,13 @@ const BlocoIndice: React.FC<{ bloco: Bloco }> = ({ bloco }) => {
   );
 };
 
-interface ConcursosGuideProps {
-  onBack?: () => void;
-}
-
-export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
+export const ConcursosGuide: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'indices' | 'inaptidao'>('indices');
   const [activeIndice, setActiveIndice] = useState<string>("altura");
   const [activeInaptidao, setActiveInaptidao] = useState<string>(inaptidaoCategories[0].id);
-  const [verAnexo, setVerAnexo] = useState(false);
+  // O Anexo N completo é um nível de navegação: ?anexo=n
+  const [anexoParam, setAnexoParam] = useQueryParam('anexo');
+  const verAnexo = anexoParam === 'n';
   const { open: openPdf, busy: baixandoPdf, modalElement } = useStoragePdf();
 
   const currentIndice = indicesList.find(i => i.id === activeIndice);
@@ -417,8 +418,8 @@ export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
       <>
         <MarkdownDocPage
           title="ANEXO N"
+          subtitle="Padrões psicofísicos admissionais"
           markdown={anexoNMarkdown}
-          onBack={() => setVerAnexo(false)}
           actions={<StoragePdfIconButton busy={baixandoPdf} onClick={baixarAnexoN} />}
         />
         <StoragePdfFab busy={baixandoPdf} onClick={baixarAnexoN} />
@@ -427,38 +428,20 @@ export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
     );
   }
 
-    return (
-    <div className="flex flex-col h-full bg-[#F3F5F7]">
+  return (
+    <div className="flex flex-col flex-1 animate-fade-in">
       {modalElement}
-      <Header title="Índices Mínimos - ANEXO N" onBack={onBack} />
-      <div className="flex-1 overflow-y-auto pb-24 md:pb-10">
-        <div className="p-4 md:p-6 space-y-4 md:space-y-5 max-w-2xl md:max-w-4xl mx-auto w-full">
-          <div className="text-center mb-1">
-            <h2 className="text-base md:text-2xl font-heading font-bold text-[#050F41]">PADRÕES PSICOFÍSICOS ADMISSIONAIS</h2>
-            <p className="text-xs md:text-base text-gray-500 font-body mt-1">Índices mínimos e condições incapacitantes para ingresso.</p>
-          </div>
 
-          <div className="bg-gray-200/60 p-1 rounded-xl flex shadow-inner border border-transparent">
-            <button
-              className={`flex-1 py-2 md:py-3 text-xs md:text-base font-bold rounded-lg transition-all ${activeTab === 'indices' ? 'bg-[#050F41] text-white shadow-sm' : 'text-gray-600 hover:bg-white/30'}`}
-              onClick={() => setActiveTab('indices')}
-            >
-              Índices Mínimos
-            </button>
-            <button
-              className={`flex-1 py-2 md:py-3 text-xs md:text-base font-bold rounded-lg transition-all ${activeTab === 'inaptidao' ? 'bg-red-700 text-white shadow-sm' : 'text-gray-600 hover:bg-white/30'}`}
-              onClick={() => setActiveTab('inaptidao')}
-            >
-              Inaptidão
-            </button>
-          </div>
+      <Container size="reading" className="py-6 md:py-8 pb-10 space-y-5">
+          <PageHeader title="Índices mínimos" description="Padrões psicofísicos admissionais (Anexo N): índices mínimos e condições incapacitantes para ingresso." actions={<Button variant="secondary" icon="menu_book" onClick={() => setAnexoParam('n')}>Ver Anexo N completo</Button>} />
+          <Segmented ariaLabel="Seção" fullWidth options={[{ value: 'indices', label: 'Índices mínimos' }, { value: 'inaptidao', label: 'Inaptidão' }]} value={activeTab} onChange={setActiveTab} />
 
           {activeTab === 'indices' && (
             <div className="space-y-3.5 md:space-y-4 animate-fade-in">
               <FiltroSelect accent="navy" value={activeIndice} onChange={setActiveIndice} options={indicesList} />
               {currentIndice && (
                 <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-200/60 space-y-5">
-                  <h3 className="flex items-center gap-2.5 text-base md:text-xl font-heading font-bold text-[#050F41] pb-3 border-b border-gray-100">
+                  <h3 className="flex items-center gap-2.5 text-xl font-heading font-bold text-navy pb-3 border-b border-gray-100">
                     {currentIndice.icon}
                     {currentIndice.title}
                   </h3>
@@ -473,13 +456,13 @@ export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
               <FiltroSelect accent="red" value={activeInaptidao} onChange={setActiveInaptidao} options={inaptidaoCategories} />
               {currentInaptidao && (
                 <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-200/60">
-                  <h3 className="flex items-center gap-2.5 text-base md:text-xl font-heading font-bold text-red-700 pb-3 mb-4 border-b border-gray-100">
+                  <h3 className="flex items-center gap-2.5 text-xl font-heading font-bold text-red-700 pb-3 mb-4 border-b border-gray-100">
                     <span className="material-symbols-outlined text-[26px] md:text-[30px] shrink-0">{currentInaptidao.icon}</span>
                     {currentInaptidao.title}
                   </h3>
                   <ul className="space-y-3.5">
                     {currentInaptidao.items.map((item, idx) => (
-                      <li key={idx} className="flex gap-3 text-gray-700 font-body text-sm md:text-base">
+                      <li key={idx} className="flex gap-3 text-gray-700 font-body text-base">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-700 shrink-0 mt-2.5" />
                         <span className="leading-relaxed flex-1">{item}</span>
                       </li>
@@ -491,29 +474,29 @@ export const ConcursosGuide: React.FC<ConcursosGuideProps> = ({ onBack }) => {
           )}
 
           <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-200/60">
-            <h3 className="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">Veja também</h3>
+            <h3 className="text-sm font-bold text-ink-3 tracking-wider mb-3">Veja também</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setVerAnexo(true)}
-                className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-100 text-[#050F41] hover:bg-[#050F41] hover:text-white transition-colors text-left"
+                onClick={() => setAnexoParam('n')}
+                className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-100 text-navy hover:bg-navy hover:text-white transition-colors text-left"
               >
                 <span className="material-symbols-outlined text-[26px]">menu_book</span>
-                <span className="text-sm md:text-base font-bold leading-snug">Anexo N completo<span className="block text-xs md:text-sm font-medium opacity-70">Página renderizada</span></span>
+                <span className="text-base font-bold leading-snug">Anexo N completo<span className="block text-sm font-medium opacity-70">Página renderizada</span></span>
               </button>
               <button
                 type="button"
                 disabled={baixandoPdf}
                 onClick={baixarAnexoN}
-                className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-100 text-[#050F41] hover:bg-[#050F41] hover:text-white transition-colors text-left disabled:opacity-50"
+                className="flex items-center gap-3 p-3.5 rounded-lg bg-gray-100 text-navy hover:bg-navy hover:text-white transition-colors text-left disabled:opacity-50"
               >
                 <span className={`material-symbols-outlined text-[26px] ${baixandoPdf ? 'animate-spin' : ''}`}>{baixandoPdf ? 'progress_activity' : 'download'}</span>
-                <span className="text-sm md:text-base font-bold leading-snug">Anexo N em PDF<span className="block text-xs md:text-sm font-medium opacity-70">Abrir o arquivo original</span></span>
+                <span className="text-base font-bold leading-snug">Anexo N em PDF<span className="block text-sm font-medium opacity-70">Abrir o arquivo original</span></span>
               </button>
             </div>
           </div>
-        </div>
-      </div>
+              </Container>
+      
     </div>
   );
 };
