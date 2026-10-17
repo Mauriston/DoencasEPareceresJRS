@@ -6,7 +6,9 @@
 import React, { useState } from 'react';
 import { PlataformaTutorial } from '../utils/pwa';
 
-const APP_ICON = 'https://i.imgur.com/8HeAdv4.png';
+import iconeJrs from '../assets/icone-jrs.png';
+
+const APP_ICON = iconeJrs;
 
 const PLATAFORMAS: { id: PlataformaTutorial; label: string }[] = [
   { id: 'iphone-safari', label: 'iPhone · Safari' },

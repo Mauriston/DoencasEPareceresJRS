@@ -131,6 +131,15 @@ export const GlobalSearch: React.FC<{ className?: string }> = ({ className = '' 
             className="w-full min-h-[40px] md:min-h-[40px] pl-10 pr-3 rounded-lg border border-line bg-thead text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:bg-white focus:border-navy [&::-webkit-search-cancel-button]:hidden"
           />
         </div>
+        {expandidoMobile && (
+          <button
+            type="button"
+            onClick={() => { setExpandidoMobile(false); setAberto(false); setConsulta(''); inputRef.current?.blur(); }}
+            className="md:hidden shrink-0 ml-2 px-2 min-h-[44px] text-sm font-bold text-navy"
+          >
+            Cancelar
+          </button>
+        )}
 
         {mostrarLista && (
           <ul

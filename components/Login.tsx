@@ -14,10 +14,23 @@ import fachadaHnre from '../assets/hnre-fachada.jpg';
 const EASE = 'cubic-bezier(.22,1,.36,1)';
 const BOUNCE = 'cubic-bezier(.34,1.56,.64,1)';
 
+// Contraste (auditoria v2, L2): placeholder ≥ 60% de branco, rótulos de 12 px, foco em ouro.
 const campoClass =
-  'w-full box-border bg-white/[.18] border border-white/20 rounded-xl px-4 py-3 text-white text-sm font-[inherit] outline-none transition-all ' +
-  'placeholder:text-white/25 focus:border-green focus:bg-white/[.24]';
-const rotuloClass = 'block text-[11px] font-bold uppercase tracking-[.1em] text-white/60';
+  'w-full box-border bg-white/[.18] border border-white/30 rounded-xl px-4 py-3 text-white text-sm font-[inherit] outline-none transition-all ' +
+  'placeholder:text-white/60 focus:border-gold focus:bg-white/[.24]';
+const rotuloClass = 'block text-xs font-bold uppercase tracking-[.1em] text-white/70';
+
+// O splash (brasão + "Toque para continuar") aparece só no 1º acesso do aparelho e nunca com
+// movimento reduzido; depois disso o formulário já vem visível (auditoria v2, L1).
+const CHAVE_SPLASH = 'jrs_splash_visto';
+const deveMostrarSplash = (): boolean => {
+  try {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
+    return localStorage.getItem(CHAVE_SPLASH) !== '1';
+  } catch {
+    return true;
+  }
+};
 
 // Não há mais cadastro próprio nesta tela — todo usuário novo é criado pelo
 // Admin em Usuários (ver UsuariosManagement.tsx), que já define o perfil de
@@ -30,18 +43,20 @@ export const Login: React.FC = () => {
   // Orientação após senha errada: dica da senha inicial ou contato para redefinição.
   const [ajudaSenha, setAjudaSenha] = useState<null | { tipo: 'inicial' } | { tipo: 'redefinir'; usuario: string }>(null);
 
-  const [splash, setSplash] = useState(true);
-  const [montado, setMontado] = useState(false);
-  const [formVisivel, setFormVisivel] = useState(false);
+  const [splash, setSplash] = useState(deveMostrarSplash);
+  const [montado, setMontado] = useState(!splash);
+  const [formVisivel, setFormVisivel] = useState(!splash);
   const usuarioRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
+    if (montado) { window.setTimeout(() => usuarioRef.current?.focus(), 0); return; }
     const t = window.setTimeout(() => setMontado(true), 60);
     return () => window.clearTimeout(t);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const avancar = () => {
     if (!splash) return;
+    try { localStorage.setItem(CHAVE_SPLASH, '1'); } catch { /* sem localStorage: o splash volta no próximo acesso */ }
     setSplash(false);
     window.setTimeout(() => { setFormVisivel(true); window.setTimeout(() => usuarioRef.current?.focus(), 700); }, 120);
   };
@@ -176,14 +191,14 @@ export const Login: React.FC = () => {
                 />
               </div>
 
-              {loginError && <p role="alert" className="text-xs text-center pt-1 m-0 text-red-300 font-semibold">{loginError}</p>}
+              {loginError && <p role="alert" className="text-xs text-center m-0 bg-white text-wine font-semibold rounded-lg px-3 py-2">{loginError}</p>}
               {ajudaSenha?.tipo === 'inicial' && (
                 <p className="text-xs text-center m-0 text-gold font-semibold">Senha inicial: {SENHA_INICIAL_PADRAO}</p>
               )}
               {ajudaSenha?.tipo === 'redefinir' && (
-                <p role="alert" className="text-xs text-center m-0 text-white/80">
+                <p role="alert" className="text-xs text-center m-0 bg-white text-wine font-semibold rounded-lg px-3 py-2">
                   Senha errada. Contacte o CT Mauriston{' '}
-                  <a href={linkWhatsappRedefinicao(ajudaSenha.usuario)} target="_blank" rel="noopener noreferrer" className="font-bold text-gold underline underline-offset-2">clicando aqui</a>.
+                  <a href={linkWhatsappRedefinicao(ajudaSenha.usuario)} target="_blank" rel="noopener noreferrer" className="font-bold text-navy underline underline-offset-2">clicando aqui</a>.
                 </p>
               )}
 
@@ -191,12 +206,12 @@ export const Login: React.FC = () => {
                 type="submit"
                 disabled={desabilitado}
                 aria-busy={loginLoading || undefined}
-                className="w-full min-h-[44px] bg-green text-white font-bold text-sm rounded-xl px-4 py-3.5 border-0 transition-colors hover:bg-[#067a43] active:bg-[#056635] disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full min-h-[44px] bg-white text-navy font-bold text-sm rounded-xl px-4 py-3.5 border-0 transition-colors hover:bg-white/90 active:bg-white/80 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loginLoading ? 'Verificando…' : 'Entrar'}
               </button>
 
-              <p className="text-xs text-center text-white/60 m-0">
+              <p className="text-xs text-center text-white/70 m-0">
                 Entre com o seu NIP. Sem acesso? Solicite ao administrador do sistema (Presidente da JRS).
               </p>
             </form>

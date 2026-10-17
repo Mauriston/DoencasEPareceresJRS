@@ -101,7 +101,7 @@ export const Infograficos: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in">
+    <div className="flex flex-col flex-1">
       <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
         <PageHeader title="Infográficos" description="Resumos ilustrados para consultas rápidas." />
 

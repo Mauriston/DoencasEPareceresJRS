@@ -273,7 +273,7 @@ export const UsuariosManagement: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in relative">
+    <div className="flex flex-col flex-1 relative">
 
       <Toast message={toastMessage} />
 

@@ -43,7 +43,7 @@ interface PageProps extends PageHeaderProps {
 }
 
 export const Page: React.FC<PageProps> = ({ size = 'data', title, description, actions, children }) => (
-  <div className="py-6 md:py-8 pb-10 animate-fade-in">
+  <div className="py-6 md:py-8 pb-10">
     <Container size={size}>
       <PageHeader title={title} description={description} actions={actions} />
       {children}

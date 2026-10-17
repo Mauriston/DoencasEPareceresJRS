@@ -11,6 +11,7 @@ import { getNavCategories, findCategoryForView, type NavCategory } from '../../c
 import { pathForView } from '../../config/routes';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { Avatar, UserDropdownContent, PERFIL_LABELS } from './UserMenu';
+import iconeJrs from '../../assets/icone-jrs.png';
 
 const CHAVE_RECOLHIDA = 'jrs_sidebar_recolhida';
 
@@ -138,7 +139,7 @@ export const Sidebar: React.FC = () => {
   const Marca: React.FC<{ rail?: boolean }> = ({ rail = false }) => (
     <Link to="/" title="Página Inicial" className="flex flex-col items-center justify-center gap-1.5 py-4 shrink-0 border-b border-white/10">
       <span className="w-9 h-9 bg-white rounded-lg p-1 flex items-center justify-center shrink-0">
-        <img src="https://i.imgur.com/8HeAdv4.png" alt="JRS/HNRe" className="h-full w-full object-contain" />
+        <img src={iconeJrs} alt="JRS/HNRe" className="h-full w-full object-contain" />
       </span>
       {!rail && <span className="text-xs font-bold tracking-[0.16em] uppercase text-white whitespace-nowrap">JRS/HNRe</span>}
     </Link>

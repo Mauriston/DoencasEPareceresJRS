@@ -1,6 +1,5 @@
 // Ficheiro: App.tsx
 import React, { useState, useEffect, useReducer, useRef, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import { useLocation, useNavigate, useNavigationType, useRoutes } from 'react-router-dom';
 import { Login } from './components/Login';
 import { Home } from './components/Home';
@@ -417,15 +416,10 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
               cabeçalhos de tabela usam `sticky` dentro dele. */}
           <main id="conteudo" ref={mainRef} tabIndex={-1} className="flex-1 min-h-0 overflow-y-auto focus:outline-none">
             <div ref={sentinelaRef} className="h-px -mb-px" aria-hidden="true" />
-            <motion.div
-              key={currentView}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.15 }}
-              className="flex flex-col min-h-full w-full"
-            >
+            {/* Única transição de troca de tela (CSS, 150 ms); Page e as telas não repetem o fade. */}
+            <div key={currentView} className="flex flex-col min-h-full w-full animate-fade-in">
               {rotas}
-            </motion.div>
+            </div>
           </main>
         </div>
       </div>

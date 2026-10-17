@@ -534,7 +534,7 @@ export const CasosPericiais: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in relative">
+    <div className="flex flex-col flex-1 relative">
       <Container size="form" className="py-6 md:py-8 pb-10 space-y-6">
         <PageHeader title="Revisão dos casos" description="Seu resultado nos casos periciais comentados." actions={<Button variant="secondary" icon="restart_alt" onClick={handleRestart}>Refazer casos</Button>} />
 

@@ -80,7 +80,8 @@ export default {
       heading: ['Montserrat', 'system-ui', 'sans-serif'],
       body: ['Montserrat', 'system-ui', 'sans-serif'],
       slogan: ['Montserrat', 'system-ui', 'sans-serif'],
-      mono: ['"Roboto Mono"', 'ui-monospace', 'monospace'],
+      // Sem webfont: a Roboto Mono nunca foi carregada e caía sempre no monoespaçado do sistema.
+      mono: ['ui-monospace', '"SF Mono"', 'Menlo', 'Consolas', 'monospace'],
     },
     // Cinco degraus fixos (28/20/16/14/12), iguais em todos os breakpoints.
     fontSize: {
@@ -140,7 +141,7 @@ export default {
         'drawer-in': { from: { transform: 'translateX(100%)' }, to: { transform: 'translateX(0)' } },
       },
       animation: {
-        'fade-in': 'fade-in 0.2s ease-out',
+        'fade-in': 'fade-in 0.15s ease-out',
         'sheet-up': 'sheet-up 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
         'backdrop-in': 'backdrop-in 0.2s ease-out',
         'drawer-in': 'drawer-in 0.28s cubic-bezier(0.32, 0.72, 0, 1)',

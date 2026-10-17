@@ -20,7 +20,7 @@ interface MarkdownDocPageProps {
 export const MarkdownDocPage: React.FC<MarkdownDocPageProps> = ({ title, subtitle, markdown, sidebar, actions }) => {
   useBreadcrumbs([{ label: title }]);
   return (
-    <div className="flex flex-col flex-1 animate-fade-in py-6 md:py-8 pb-10">
+    <div className="flex flex-col flex-1 py-6 md:py-8 pb-10">
       <Container size={sidebar ? 'data' : 'reading'}>
         <PageHeader title={title} description={subtitle} actions={actions} />
         <div className={sidebar ? 'md:grid md:grid-cols-[240px_minmax(0,1fr)] md:gap-6 md:items-start' : ''}>

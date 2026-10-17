@@ -395,7 +395,7 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
   };
 
   return (
-    <Container size="form" className="py-6 md:py-8 pb-10 animate-fade-in">
+    <Container size="form" className="py-6 md:py-8 pb-10">
       <PageHeader title="Novo concurso" description="Registre a mensagem em PDF; o concurso nasce com os candidatos identificados." />
       {/* F60: etapas numeradas e escritas — 1 Mensagem · 2 Revisão · 3 Agendamento. */}
       <ol className="flex items-center gap-2 mb-5" aria-label="Etapas do novo concurso">
@@ -1795,7 +1795,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
   ] : [];
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in">
+    <div className="flex flex-col flex-1">
 
       <Toast message={toastMessage} />
 
@@ -2838,7 +2838,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   };
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in relative">
+    <div className="flex flex-col flex-1 relative">
 
       <Toast message={toastMessage} />
 

@@ -265,11 +265,20 @@ export const DiseaseGuide: React.FC = () => {
   const [isBavImageExpanded, setIsBavImageExpanded] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  // Checklist de documentos reunidos (apenas visual; zera ao trocar de diagnóstico).
+  // Checklist de documentos reunidos: guardado neste aparelho, por doença/diagnóstico.
   const [docsMarcados, setDocsMarcados] = useState<Set<number>>(new Set());
+  const chaveDocs = `jrs_docs_${selectedDisease?.id ?? ''}_${selectedDiagnosis?.name ?? ''}`;
+  const alterarDocs = (atualiza: (s: Set<number>) => Set<number>) => setDocsMarcados(prev => {
+    const proximo = atualiza(prev);
+    try { localStorage.setItem(chaveDocs, JSON.stringify(Array.from(proximo))); } catch { /* sem localStorage */ }
+    return proximo;
+  });
   const podeVerPortaria = canAccessPage('portaria', nav?.authUser?.perfil);
 
-  useEffect(() => { setIsCopied(false); setDocsMarcados(new Set()); }, [selectedDiagnosis]);
+  useEffect(() => {
+    setIsCopied(false);
+    try { setDocsMarcados(new Set(JSON.parse(localStorage.getItem(chaveDocs) || '[]'))); } catch { setDocsMarcados(new Set()); }
+  }, [chaveDocs]);
 
   const handleDiseaseClick = (disease: Disease) => navigate(doencaPath(disease.id));
 
@@ -336,7 +345,7 @@ export const DiseaseGuide: React.FC = () => {
   // PAGE LEVEL 2: Diagnoses List for a specific disease
   if (selectedDisease && !selectedDiagnosis) {
     return (
-      <div className="animate-fade-in flex flex-col flex-1 relative">
+      <div className="flex flex-col flex-1 relative">
         <Container size="reading" className="py-6 md:py-8 pb-10 space-y-6">
           <PageHeader title={selectedDisease.name} description="Selecione o diagnóstico pericial associado" />
 
@@ -368,10 +377,10 @@ export const DiseaseGuide: React.FC = () => {
     const isDemencia = selectedDisease.name === "Alienação Mental" && selectedDiagnosis.name === "Demência";
     const totalDocs = selectedDisease.documents.length;
     const secao = 'bg-white rounded-xl p-5 md:p-6 border border-line';
-    const tituloSecao = 'font-heading font-bold text-lg text-navy mb-3 pb-2 border-b border-line flex items-center gap-2';
+    const tituloSecao = 'font-heading font-bold text-lg text-navy mb-3 pb-2 border-b border-line';
     return (
-      <div className="animate-fade-in flex flex-col flex-1 relative">
-        <Container size="data" className="py-6 md:py-8 pb-28 md:pb-10">
+      <div className="flex flex-col flex-1 relative">
+        <Container size="data" className="py-6 md:py-8 pb-6 md:pb-10">
           <PageHeader
             title={selectedDisease.name}
             description={selectedDisease.diagnoses.length > 1 ? `Diagnóstico pericial: ${selectedDiagnosis.name}` : undefined}
@@ -380,16 +389,14 @@ export const DiseaseGuide: React.FC = () => {
           <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start space-y-6 lg:space-y-0">
             <div className="lg:col-span-8 space-y-6 min-w-0">
               <section className={secao}>
-                <h2 className={tituloSecao}>
-                  <span className="material-symbols-outlined text-navy" aria-hidden="true">menu_book</span>Definição
+                <h2 className={tituloSecao}>Definição
                 </h2>
                 <p className="text-base text-ink leading-relaxed">{selectedDisease.definition}</p>
               </section>
 
               {selectedDisease.name === "SIDA/AIDS" && (
                 <section className={secao}>
-                  <h2 className={tituloSecao}>
-                    <span className="material-symbols-outlined text-navy" aria-hidden="true">grid_on</span>Classificação
+                  <h2 className={tituloSecao}>Classificação
                   </h2>
                   <p className="text-base text-ink leading-relaxed">Grupos I (CD4 ≥500), II (200-499), III (&lt;200) / Classes A, B, C por sintomas e condições definidoras.</p>
                 </section>
@@ -397,8 +404,7 @@ export const DiseaseGuide: React.FC = () => {
 
               {isDemencia && (
                 <section className={secao}>
-                  <h2 className={tituloSecao}>
-                    <span className="material-symbols-outlined text-navy" aria-hidden="true">psychology</span>Avaliação de cognição
+                  <h2 className={tituloSecao}>Avaliação de cognição
                   </h2>
                   <p className="text-sm text-ink-3 mb-4">A avaliação do escore CDR é fundamental para quantificar a gravidade do comprometimento cognitivo.</p>
                   <Button icon="calculate" fullWidth onClick={() => setIsCalculatorOpen(true)}>CDR Score Calculator</Button>
@@ -406,8 +412,7 @@ export const DiseaseGuide: React.FC = () => {
               )}
 
               <section className={secao}>
-                <h2 className={tituloSecao}>
-                  <span className="material-symbols-outlined text-navy" aria-hidden="true">verified</span>Critérios de gravidade
+                <h2 className={tituloSecao}>Critérios de gravidade
                 </h2>
                 <ol className="space-y-4">
                   {selectedDiagnosis.criteria.map((item, idx) => (
@@ -422,8 +427,7 @@ export const DiseaseGuide: React.FC = () => {
 
             <aside className="lg:col-span-4 lg:sticky lg:top-6 space-y-4 min-w-0" aria-label="Documentos e ações">
               <section className={secao}>
-                <h2 className={tituloSecao}>
-                  <span className="material-symbols-outlined text-navy" aria-hidden="true">folder_open</span>Documentos necessários
+                <h2 className={tituloSecao}>Documentos necessários
                 </h2>
                 <p className="text-xs font-semibold text-ink-3 mb-2" aria-live="polite">{docsMarcados.size} de {totalDocs} reunidos</p>
                 <ul className="space-y-1">
@@ -433,7 +437,7 @@ export const DiseaseGuide: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={docsMarcados.has(idx)}
-                          onChange={() => setDocsMarcados(prev => { const proximo = new Set(prev); if (proximo.has(idx)) proximo.delete(idx); else proximo.add(idx); return proximo; })}
+                          onChange={() => alterarDocs(prev => { const proximo = new Set(prev); if (proximo.has(idx)) proximo.delete(idx); else proximo.add(idx); return proximo; })}
                           className="mt-1 w-5 h-5 shrink-0 accent-navy"
                         />
                         <span className={`text-sm leading-snug ${docsMarcados.has(idx) ? 'text-ink-3 line-through' : 'text-ink'}`}>{item}</span>
@@ -457,8 +461,8 @@ export const DiseaseGuide: React.FC = () => {
           </div>
         </Container>
 
-        {/* Mobile: barra de ações rotulada. */}
-        <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-line p-3 flex gap-2" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+        {/* Mobile: barra de ações rotulada, sticky no fim do fluxo (sem padding compensatório). */}
+        <div className="md:hidden sticky bottom-0 mt-auto z-10 bg-white border-t border-line p-3 flex gap-2" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
           <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} onClick={handleCopy} className="flex-1">{isCopied ? 'Copiado' : 'Copiar'}</Button>
           <Button icon="download" onClick={handleDownloadPDF} className="flex-1">Baixar PDF</Button>
         </div>
@@ -470,7 +474,7 @@ export const DiseaseGuide: React.FC = () => {
   const consultaAtiva = searchQuery.trim().length > 0;
   const tituloTipo: Record<string, string> = { disease: 'Doenças', diagnosis: 'Diagnósticos', criterion: 'Critérios' };
   return (
-    <div className="flex flex-col flex-1 animate-fade-in">
+    <div className="flex flex-col flex-1">
       <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
         <PageHeader title="Doenças previstas em lei" description="Verifique as definições, os critérios clínicos e os documentos necessários para o enquadramento." />
 

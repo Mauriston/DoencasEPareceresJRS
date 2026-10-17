@@ -65,7 +65,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records }) => {
   const om = records[0]?.om || '';
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in">
+    <div className="flex flex-col flex-1">
       <Container size="reading" className="py-6 md:py-8 pb-10 space-y-4">
         <PageHeader title={person} description={om ? `Histórico de perícias menores · OM: ${om}` : 'Histórico de perícias menores'} />
 

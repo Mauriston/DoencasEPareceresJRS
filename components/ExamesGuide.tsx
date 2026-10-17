@@ -198,7 +198,7 @@ export const ExamesGuide: React.FC = () => {
   const totalExames = gruposFiltrados.reduce((n, g) => n + g.exames.length, 0);
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in">
+    <div className="flex flex-col flex-1">
 
 
       <Container size="reading" className="py-6 md:py-8 pb-10 space-y-5">

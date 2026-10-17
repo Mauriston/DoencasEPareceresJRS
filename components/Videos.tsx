@@ -51,7 +51,7 @@ export const Videos: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in relative">
+    <div className="flex flex-col flex-1 relative">
       <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
         <PageHeader title="Vídeos" description="Vídeos sobre os processos das IS." />
 

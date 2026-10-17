@@ -212,7 +212,7 @@ export const DGPM406Guide: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in relative">
+    <div className="flex flex-col flex-1 relative">
 
       {modalElement}
       <Container size="data" className="py-6 md:py-8 pb-10">

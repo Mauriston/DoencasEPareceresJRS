@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
 import { Segmented } from './ui/Segmented';
+import { FilterChip } from './ui/FilterChip';
 import { StatusTag, type StatusTone } from './ui/StatusTag';
 import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
@@ -133,11 +134,11 @@ export const Pareceres: React.FC = () => {
               options={[
                 { value: 'todos', label: 'Todos', badge: totais.todos, badgeTone: 'neutro' },
                 { value: 'solicitado', label: 'Solicitados', badge: totais.solicitado, badgeTone: 'neutro' },
-                { value: 'atrasado', label: 'Atrasados', badge: totais.atrasado, badgeTone: 'neutro' },
+                { value: 'atrasado', label: 'Atrasados', badge: totais.atrasado, badgeTone: 'alerta' },
                 { value: 'concluido', label: 'Concluídos', badge: totais.concluido, badgeTone: 'neutro' },
               ]}
             />
-            {podeGerar && <Button variant={soMeus ? 'primary' : 'secondary'} icon="person" aria-pressed={soMeus} onClick={() => setSoMeus(v => !v)}>Minhas solicitações</Button>}
+            {podeGerar && <FilterChip ativo={soMeus} icon="person" onAlternar={() => setSoMeus(v => !v)}>Minhas solicitações</FilterChip>}
           </div>
         </div>
 

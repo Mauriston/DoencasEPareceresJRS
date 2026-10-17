@@ -3,7 +3,7 @@
 // página (Novo · Histórico, Capítulos · Anexos, Cards · Tabela, filtros de
 // status). Antes havia três padrões de aba — abas verdes sobre faixa navy,
 // chips e cards. Abas (Tabs) ficam só para seções da mesma entidade.
-import React from 'react';
+import React, { useRef } from 'react';
 
 export interface SegmentedOption<T extends string> {
   value: T;
@@ -26,9 +26,22 @@ interface SegmentedProps<T extends string> {
 }
 
 export function Segmented<T extends string>({ options, value, onChange, ariaLabel, fullWidth = false, className = '' }: SegmentedProps<T>) {
+  const raiz = useRef<HTMLDivElement>(null);
+  // Radiogroup: setas movem a seleção; só a opção ativa entra na ordem do Tab (roving tabindex).
+  const aoTecla = (e: React.KeyboardEvent) => {
+    const passo = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+    if (!passo) return;
+    e.preventDefault();
+    const i = options.findIndex(o => o.value === value);
+    const proximo = options[(i + passo + options.length) % options.length];
+    onChange(proximo.value);
+    requestAnimationFrame(() => raiz.current?.querySelectorAll<HTMLElement>('[role="radio"]')[options.indexOf(proximo)]?.focus());
+  };
   return (
     <div
-      role="tablist"
+      ref={raiz}
+      onKeyDown={aoTecla}
+      role="radiogroup"
       aria-label={ariaLabel}
       className={`${fullWidth ? 'flex w-full' : 'inline-flex'} gap-1 p-1 rounded-lg bg-thead border border-line ${className}`}
     >
@@ -38,8 +51,9 @@ export function Segmented<T extends string>({ options, value, onChange, ariaLabe
           <button
             key={o.value}
             type="button"
-            role="tab"
-            aria-selected={ativo}
+            role="radio"
+            aria-checked={ativo}
+            tabIndex={ativo ? 0 : -1}
             onClick={() => onChange(o.value)}
             className={`${fullWidth ? 'flex-1' : ''} inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-md text-sm font-bold whitespace-nowrap transition-colors ${
               ativo ? 'bg-navy text-white' : 'text-ink-3 hover:bg-white hover:text-navy'

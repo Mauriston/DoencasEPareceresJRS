@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
 import { Segmented } from './ui/Segmented';
+import { FilterChip } from './ui/FilterChip';
 import { Dialog, ConfirmDialog } from './ui/Dialog';
 import { Field, controlClass } from './ui/Field';
 import { ChoiceGroup } from './ui/ChoiceGroup';
@@ -147,7 +148,7 @@ export const Militares: React.FC = () => {
                 { value: 'todos', label: 'Todos', badge: totais.todos, badgeTone: 'neutro' },
               ]}
             />
-            <Button variant={soHnre ? 'primary' : 'secondary'} icon="local_hospital" aria-pressed={soHnre} onClick={() => setSoHnre(v => !v)}>Somente HNRe</Button>
+            <FilterChip ativo={soHnre} icon="local_hospital" onAlternar={() => setSoHnre(v => !v)}>Somente HNRe</FilterChip>
           </div>
         </div>
 

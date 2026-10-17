@@ -429,7 +429,7 @@ export const ConcursosGuide: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col flex-1 animate-fade-in">
+    <div className="flex flex-col flex-1">
       {modalElement}
 
       <Container size="reading" className="py-6 md:py-8 pb-10 space-y-5">
@@ -437,7 +437,7 @@ export const ConcursosGuide: React.FC = () => {
           <Segmented ariaLabel="Seção" fullWidth options={[{ value: 'indices', label: 'Índices mínimos' }, { value: 'inaptidao', label: 'Inaptidão' }]} value={activeTab} onChange={setActiveTab} />
 
           {activeTab === 'indices' && (
-            <div className="space-y-3.5 md:space-y-4 animate-fade-in">
+            <div className="space-y-3.5 md:space-y-4">
               <FiltroSelect accent="navy" value={activeIndice} onChange={setActiveIndice} options={indicesList} />
               {currentIndice && (
                 <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-200/60 space-y-5">
@@ -452,7 +452,7 @@ export const ConcursosGuide: React.FC = () => {
           )}
 
           {activeTab === 'inaptidao' && (
-            <div className="space-y-3.5 md:space-y-4 animate-fade-in">
+            <div className="space-y-3.5 md:space-y-4">
               <FiltroSelect accent="red" value={activeInaptidao} onChange={setActiveInaptidao} options={inaptidaoCategories} />
               {currentInaptidao && (
                 <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-200/60">

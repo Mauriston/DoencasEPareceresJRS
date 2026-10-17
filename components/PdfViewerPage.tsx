@@ -17,7 +17,7 @@ interface PdfViewerPageProps {
 export const PdfViewerPage: React.FC<PdfViewerPageProps> = ({ title, subtitle, embedUrl, sidebar }) => {
   useBreadcrumbs([{ label: title }]);
   return (
-    <div className="flex flex-col flex-1 animate-fade-in py-6 md:py-8 pb-6">
+    <div className="flex flex-col flex-1 py-6 md:py-8 pb-6">
       <Container size="data" className="flex flex-col flex-1">
         <PageHeader title={title} description={subtitle} />
         <div className={`flex-1 min-h-[480px] h-[calc(100dvh-13rem)] ${sidebar ? 'md:grid md:grid-cols-[240px_minmax(0,1fr)] md:gap-4' : 'flex'}`}>
