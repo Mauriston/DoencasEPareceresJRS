@@ -75,3 +75,15 @@ export const montarPgq = (categoria: CategoriaMilitar, posto: string, quadroSigl
 };
 
 export const montarInspecionado = (pgq: string, nip: string, nome: string): string => `${pgq} ${nip} ${nome}`.replace(/\s+/g, ' ').trim();
+
+/** Separa o posto/graduação do restante do P/G/Q (ex.: "GM(RM2-Md)" → { posto: "GM", resto: "(RM2-Md)" }). Null se não reconhecer. */
+export const separarPosto = (pgq: string, postos: CorposQuadros['postos']): { posto: string; resto: string } | null => {
+  const texto = pgq.trim();
+  let melhor = '';
+  for (const sigla of Object.keys(postos)) {
+    if (!texto.toUpperCase().startsWith(sigla.toUpperCase())) continue;
+    const resto = texto.slice(sigla.length);
+    if ((resto === '' || /^[\s(-]/.test(resto)) && sigla.length > melhor.length) melhor = sigla;
+  }
+  return melhor ? { posto: melhor, resto: texto.slice(melhor.length) } : null;
+};
