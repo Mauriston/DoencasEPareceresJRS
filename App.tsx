@@ -29,6 +29,7 @@ import { PericiaMenor } from './components/PericiaMenor';
 import { Mensagens } from './components/Mensagens';
 import { RoteiroJRS } from './components/RoteiroJRS';
 import { UsuariosManagement } from './components/UsuariosManagement';
+import { Militares } from './components/Militares';
 import { AccessDenied } from './components/ui/AccessDenied';
 import { PAGE_DEFS } from './config/permissions';
 import { NavItem } from './types';
@@ -306,6 +307,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       case 'roteiro': return can('roteiro') ? <RoteiroJRS /> : <AccessDenied pagina={paginaLabel('roteiro')} />;
 
       // USUÁRIOS PAGE - Restricted for non-admin
+      case 'militares': return authUser?.perfil === 'admin' ? <Militares /> : <AccessDenied pagina="Militares" />;
       case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement /> : <AccessDenied pagina="Usuários" />;
 
       default: return <Home />;
