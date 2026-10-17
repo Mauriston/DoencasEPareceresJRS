@@ -107,7 +107,7 @@ export const NovoParecerForm: React.FC<Props> = ({ onClose, onGerado }) => {
       await registrarParecer(id, {
         militarId: militar.id, inspecionado: militar.inspecionado, especialidade: modelo.especialidade, finalidade,
         historico: historico.trim(), quesitos: lista, pdfUrl,
-        solicitanteUid: usuario.uid, solicitanteNome: usuario.nome, solicitantePosto: usuario.postoGraduacao || '',
+        solicitanteUid: usuario.uid, solicitanteNome: usuario.nome, solicitanteUsuario: usuario.usuario, solicitantePosto: usuario.postoGraduacao || '',
       });
       onGerado(militar.nome, pdfUrl);
     } catch (err: any) {
