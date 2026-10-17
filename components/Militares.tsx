@@ -107,27 +107,27 @@ export const Militares: React.FC = () => {
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
             <input type="search" aria-label="Buscar militar" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome, NIP, posto, OM ou e-mail…" className={`${controlClass} pl-10`} autoComplete="off" />
           </div>
-          <Segmented
-            ariaLabel="Situação do cadastro"
-            className="overflow-x-auto"
-            value={filtro}
-            onChange={setFiltro}
-            options={[
-              { value: 'ativos', label: 'Ativos', badge: totais.ativos, badgeTone: 'neutro' },
-              { value: 'inativos', label: 'Inativos', badge: totais.inativos, badgeTone: 'neutro' },
-              { value: 'todos', label: 'Todos', badge: totais.todos, badgeTone: 'neutro' },
-            ]}
-          />
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Segmented
+              ariaLabel="Situação do cadastro"
+              className="overflow-x-auto"
+              value={filtro}
+              onChange={setFiltro}
+              options={[
+                { value: 'ativos', label: 'Ativos', badge: totais.ativos, badgeTone: 'neutro' },
+                { value: 'inativos', label: 'Inativos', badge: totais.inativos, badgeTone: 'neutro' },
+                { value: 'todos', label: 'Todos', badge: totais.todos, badgeTone: 'neutro' },
+              ]}
+            />
             <Button variant={soHnre ? 'primary' : 'secondary'} icon="local_hospital" aria-pressed={soHnre} onClick={() => setSoHnre(v => !v)}>Somente HNRe</Button>
-            <div className="flex items-center gap-2 md:hidden">
-              <select aria-label="Ordenar por" value={ordem.col} onChange={e => setOrdem(o => ({ ...o, col: e.target.value as ColunaOrdem }))} className={`${controlClass} w-auto`}>
-                <option value="nome">Ordenar: Nome</option>
-                <option value="pgq">Ordenar: P/G/Q</option>
-                <option value="om">Ordenar: OM</option>
-              </select>
-              <Button variant="secondary" icon={ordem.dir === 'asc' ? 'arrow_upward' : 'arrow_downward'} aria-label={ordem.dir === 'asc' ? 'Ordem crescente' : 'Ordem decrescente'} onClick={() => setOrdem(o => ({ ...o, dir: o.dir === 'asc' ? 'desc' : 'asc' }))} />
-            </div>
+          </div>
+          <div className="flex items-center gap-2 md:hidden">
+            <select aria-label="Ordenar por" value={ordem.col} onChange={e => setOrdem(o => ({ ...o, col: e.target.value as ColunaOrdem }))} className={`${controlClass} w-auto`}>
+              <option value="nome">Ordenar: Nome</option>
+              <option value="pgq">Ordenar: P/G/Q</option>
+              <option value="om">Ordenar: OM</option>
+            </select>
+            <Button variant="secondary" icon={ordem.dir === 'asc' ? 'arrow_upward' : 'arrow_downward'} aria-label={ordem.dir === 'asc' ? 'Ordem crescente' : 'Ordem decrescente'} onClick={() => setOrdem(o => ({ ...o, dir: o.dir === 'asc' ? 'desc' : 'asc' }))} />
           </div>
         </div>
 
