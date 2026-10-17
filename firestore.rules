@@ -83,6 +83,14 @@ service cloud.firestore {
 
       match /candidatos/{candidatoId} {
         allow read, write: if isSignedIn();
+
+        // Registro de eventos (auditoria) da IS: qualquer usuário autenticado
+        // grava um evento em SEU nome; só o Admin lê; ninguém edita nem apaga.
+        match /eventos/{eventoId} {
+          allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+          allow read: if isAdmin();
+          allow update, delete: if false;
+        }
       }
       match /mensagens/{mensagemId} {
         allow read, write: if isSignedIn();

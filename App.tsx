@@ -45,6 +45,7 @@ import {
 import { getUsuarioProfile, setUsuarioPublico, updateUsuarioProfile, UsuarioRecord } from './services/firestoreUsuarios';
 import { observarPermissoes, salvarPermissoesRemoto, type PermissoesArmazenadas } from './services/firestorePermissions';
 import { getCasosResultado } from './services/firestoreCasos';
+import { definirAtorAuditoria } from './services/auditoriaIS';
 import { useIsDesktop } from './hooks/useIsDesktop';
 
 // Chave do antigo armazenamento (localStorage, só neste navegador) das
@@ -128,6 +129,11 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   // síncronos (lêem um cache em memória), forçamos um novo render do app
   // a cada atualização para que as páginas já montadas releiam o cache.
   const [, forcarRerenderPermissoes] = useReducer(x => x + 1, 0);
+
+  // Ator do log de auditoria das IS (ver services/auditoriaIS.ts).
+  useEffect(() => {
+    definirAtorAuditoria(authUser ? { uid: authUser.uid, usuario: authUser.usuario, nome: authUser.nome } : null);
+  }, [authUser?.uid]);
 
   useEffect(() => {
     if (!authUser) {

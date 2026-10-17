@@ -17,6 +17,7 @@ import {
   writeBatch, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { app } from './firebaseAuth';
+import { registrarEvento } from './auditoriaIS';
 import { removerTermoCientificacaoPdf, removerTermoRecursoPdf, removerPdfPorUrl } from './firebaseStorageConcursos';
 import {
   MAPA_LAUDO_POR_STATUS, candidatoEstaFinalizado, formatarDataSimples, formatarDataMilitar,
@@ -375,6 +376,7 @@ export const criarCandidato = async (concursoId: string, id: string, nome: strin
   };
   await setDoc(candidatoRef(concursoId, id), dados);
   await updateDoc(concursoRef(concursoId), { totalCandidatos: (await listarCandidatos(concursoId)).length });
+  await registrarEvento(concursoId, id, 'Candidato adicionado', dataAgendamento ? `Agendado para ${formatarDataSimples(new Date(`${dataAgendamento}T12:00:00`))}` : '');
   return toCandidatoRecord(id, dados);
 };
 
@@ -448,6 +450,21 @@ export const atualizarCandidato = async (
   proximo.finalizado = candidatoEstaFinalizado(statusFinal, numTisFinal, observacoesFinal);
 
   await updateDoc(candidatoRef(concursoId, id), proximo as any);
+
+  // Auditoria: um evento por campo alterado (e a finalização, se ocorreu).
+  const rot = (v: string) => v || '(vazio)';
+  if (proximo.status !== undefined && proximo.status !== atual.status) {
+    await registrarEvento(concursoId, id, 'Status alterado', `${rot(atual.status)} → ${rot(proximo.status)}`);
+  }
+  if (proximo.observacoes !== undefined && proximo.observacoes !== atual.observacoes) {
+    await registrarEvento(concursoId, id, 'Observações alteradas', `${rot(atual.observacoes)} → ${rot(proximo.observacoes)}`);
+  }
+  if (proximo.numTIS !== undefined && proximo.numTIS !== atual.numTIS) {
+    await registrarEvento(concursoId, id, 'Nº TIS alterado', `${rot(atual.numTIS)} → ${rot(proximo.numTIS)}`);
+  }
+  if (proximo.finalizado && !atual.finalizado) {
+    await registrarEvento(concursoId, id, 'IS finalizada', `Status: ${rot(statusFinal)}`);
+  }
   return { ...atual, ...proximo };
 };
 
@@ -469,6 +486,7 @@ export const reagendarCandidato = async (concursoId: string, id: string, dataISO
   if (atual.termoCientificacaoUrl) await removerTermoCientificacaoPdf(concursoId, id);
   if (atual.termoRecursoUrl) await removerTermoRecursoPdf(concursoId, id);
   await updateDoc(candidatoRef(concursoId, id), proximo);
+  await registrarEvento(concursoId, id, 'IS reagendada', `${atual.dataAgendamento ? formatarDataSimples(new Date(`${atual.dataAgendamento}T12:00:00`)) : '(sem data)'} → ${formatarDataSimples(new Date(`${dataISO}T12:00:00`))}`);
   return { ...atual, ...proximo };
 };
 
@@ -691,8 +709,10 @@ export const encerrarConcurso = async (concursoId: string) => {
   await updateDoc(concursoRef(concursoId), { status: 'encerrado' as ConcursoStatus });
 };
 
-export const salvarTermoCientificacao = (concursoId: string, candidatoId: string, url: string) =>
-  updateDoc(candidatoRef(concursoId, candidatoId), { termoCientificacaoUrl: url });
+export const salvarTermoCientificacao = async (concursoId: string, candidatoId: string, url: string) => {
+  await updateDoc(candidatoRef(concursoId, candidatoId), { termoCientificacaoUrl: url });
+  await registrarEvento(concursoId, candidatoId, 'Termo de Cientificação gerado');
+};
 
 /**
  * Registra um Pedido de Parecer / Solicitação de Exames já gerado: grava o link,
@@ -727,6 +747,7 @@ export const registrarSolicitacao = async (
     finalizado: false,
   };
   await updateDoc(candidatoRef(concursoId, id), proximo);
+  await registrarEvento(concursoId, id, tipo === 'parecer' ? 'Pedido de Parecer gerado' : 'Solicitação de Exames gerada', doc.rotulo);
   return { ...atual, ...proximo };
 };
 
@@ -740,6 +761,7 @@ export const reabrirIS = async (concursoId: string, id: string): Promise<Candida
   const atual = toCandidatoRecord(id, snap.data());
   const proximo = { numTIS: '', finalizado: false };
   await updateDoc(candidatoRef(concursoId, id), proximo);
+  await registrarEvento(concursoId, id, 'IS reaberta para edição (Admin)', atual.numTIS ? `Nº TIS apagado: ${atual.numTIS}` : '');
   return { ...atual, ...proximo };
 };
 
@@ -765,11 +787,14 @@ export const limparIS = async (concursoId: string, id: string): Promise<Candidat
     ...atual.solicitacoesParecer.map(d => d.url), ...atual.solicitacoesExames.map(d => d.url),
   ].filter(Boolean);
   await Promise.all(urls.map(removerPdfPorUrl));
+  await registrarEvento(concursoId, id, 'IS limpa (Admin)', `Status anterior: ${atual.status || '(vazio)'}`);
   return { ...atual, ...proximo };
 };
 
-export const salvarTermoRecurso = (concursoId: string, candidatoId: string, url: string) =>
-  updateDoc(candidatoRef(concursoId, candidatoId), { recurso: true, termoRecursoUrl: url });
+export const salvarTermoRecurso = async (concursoId: string, candidatoId: string, url: string) => {
+  await updateDoc(candidatoRef(concursoId, candidatoId), { recurso: true, termoRecursoUrl: url });
+  await registrarEvento(concursoId, candidatoId, 'Termo de Recurso gerado');
+};
 
 /**
  * Lista as mensagens arquivadas de um concurso (a de criação — "Apresentação"
