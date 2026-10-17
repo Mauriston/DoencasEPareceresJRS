@@ -72,7 +72,7 @@ export const Militares: React.FC = () => {
     return (lista ?? [])
       .filter(m => (filtro === 'todos' ? true : filtro === 'ativos' ? m.ativo : !m.ativo))
       .filter(m => (soHnre ? m.om.trim().toUpperCase() === 'HNRE' : true))
-      .filter(m => { const alvo = normalizarBusca(`${m.inspecionado} ${m.om} ${m.email}`); return termos.every(t => alvo.includes(t)); })
+      .filter(m => { const alvo = normalizarBusca(`${m.inspecionado} ${m.om} ${m.email} ${m.id}`); return termos.every(t => alvo.includes(t)); })
       .sort((a, b) => {
         const porNome = a.nome.localeCompare(b.nome, 'pt-BR');
         let cmp = 0;

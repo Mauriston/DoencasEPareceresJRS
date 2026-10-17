@@ -45,6 +45,7 @@ export const Pareceres: React.FC = () => {
   const [filtro, setFiltro] = useState<Filtro>('todos');
   const [busca, setBusca] = useState('');
   const [especialidade, setEspecialidade] = useState('');
+  const [soMeus, setSoMeus] = useState(false);
   const [novo, setNovo] = useState(false);
   const [config, setConfig] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
@@ -68,8 +69,9 @@ export const Pareceres: React.FC = () => {
     return comStatus
       .filter(x => filtro === 'todos' || x.status === filtro)
       .filter(x => !especialidade || x.p.especialidade === especialidade)
+      .filter(x => !soMeus || x.p.solicitanteUid === nav?.authUser?.uid)
       .filter(x => { const alvo = normalizarBusca(`${x.p.inspecionado} ${x.p.especialidade} ${x.p.finalidade} ${x.p.solicitanteNome}`); return termos.every(t => alvo.includes(t)); });
-  }, [comStatus, filtro, especialidade, busca]);
+  }, [comStatus, filtro, especialidade, busca, soMeus, nav?.authUser?.uid]);
 
   const alternarConcluido = async (p: ParecerRecord, concluido: boolean) => {
     try {
@@ -120,18 +122,21 @@ export const Pareceres: React.FC = () => {
               {especialidades.map(e => <option key={e} value={e}>{e}</option>)}
             </select>
           </div>
-          <Segmented
-            ariaLabel="Situação do parecer"
-            className="overflow-x-auto"
-            value={filtro}
-            onChange={setFiltro}
-            options={[
-              { value: 'todos', label: 'Todos', badge: totais.todos, badgeTone: 'neutro' },
-              { value: 'solicitado', label: 'Solicitados', badge: totais.solicitado, badgeTone: 'neutro' },
-              { value: 'atrasado', label: 'Atrasados', badge: totais.atrasado, badgeTone: 'neutro' },
-              { value: 'concluido', label: 'Concluídos', badge: totais.concluido, badgeTone: 'neutro' },
-            ]}
-          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Segmented
+              ariaLabel="Situação do parecer"
+              className="overflow-x-auto"
+              value={filtro}
+              onChange={setFiltro}
+              options={[
+                { value: 'todos', label: 'Todos', badge: totais.todos, badgeTone: 'neutro' },
+                { value: 'solicitado', label: 'Solicitados', badge: totais.solicitado, badgeTone: 'neutro' },
+                { value: 'atrasado', label: 'Atrasados', badge: totais.atrasado, badgeTone: 'neutro' },
+                { value: 'concluido', label: 'Concluídos', badge: totais.concluido, badgeTone: 'neutro' },
+              ]}
+            />
+            {podeGerar && <Button variant={soMeus ? 'primary' : 'secondary'} icon="person" aria-pressed={soMeus} onClick={() => setSoMeus(v => !v)}>Minhas solicitações</Button>}
+          </div>
         </div>
 
         <div className="bg-white rounded-xl border border-line overflow-clip">
@@ -171,7 +176,7 @@ export const Pareceres: React.FC = () => {
                       <th scope="col" className="px-4 py-3 text-left font-semibold">Inspecionado</th>
                       <th scope="col" className="px-4 py-3 text-left font-semibold">Especialidade</th>
                       <th scope="col" className="px-4 py-3 text-left font-semibold hidden 2xl:table-cell">Finalidade</th>
-                      <th scope="col" className="px-4 py-3 text-left font-semibold hidden 2xl:table-cell">Solicitante</th>
+                      <th scope="col" className="px-4 py-3 text-left font-semibold">Solicitante</th>
                       <th scope="col" className="px-4 py-3 text-left font-semibold">Status</th>
                       <th scope="col" className="px-4 py-3 text-right font-semibold"><span className="sr-only">PDF</span></th>
                       {podeGerar && <th scope="col" className="px-4 py-3 text-center font-semibold">Concluído</th>}
@@ -184,7 +189,7 @@ export const Pareceres: React.FC = () => {
                         <td className="px-4 py-3 align-top">{nomeDe(p)}</td>
                         <td className="px-4 py-3 text-ink-2 align-top">{p.especialidade}<span className="block text-xs text-ink-3 2xl:hidden">{p.finalidade}</span></td>
                         <td className="px-4 py-3 text-ink-2 align-top hidden 2xl:table-cell">{p.finalidade}</td>
-                        <td className="px-4 py-3 text-ink-2 align-top hidden 2xl:table-cell">{p.solicitanteNome}</td>
+                        <td className="px-4 py-3 text-ink-2 align-top">{p.solicitanteNome}</td>
                         <td className="px-4 py-3 align-top whitespace-nowrap"><StatusTag tone={STATUS[status].tom}>{STATUS[status].rotulo}</StatusTag></td>
                         <td className="px-4 py-1 text-right align-top whitespace-nowrap"><Button variant="ghost" icon="picture_as_pdf" disabled={!p.pdfUrl} onClick={() => abrir(p)}>Ver PDF</Button></td>
                         {podeGerar && <td className="px-4 py-1 text-center align-top">{caixa(p, status)}</td>}
