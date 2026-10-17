@@ -60,7 +60,7 @@ export const NovoParecerForm: React.FC<Props> = ({ onClose, onGerado }) => {
 
   const opcoesMilitar: OpcaoAutocomplete[] = useMemo(() => militares.map(m => ({
     chave: m.id, principal: m.nome, secundaria: `${m.pgq} · ${formatNip(m.nip)} · ${m.om}`,
-    busca: normalizarBusca(`${m.inspecionado} ${m.om}`),
+    busca: normalizarBusca(`${m.inspecionado} ${m.om} ${m.id}`), // m.id = NIP só com dígitos: dá para buscar sem os pontos
   })), [militares]);
 
   const modelo = modelos.find(m => m.id === especialidadeId);
