@@ -25,7 +25,13 @@ export interface NavContextType {
   setCurrentView: (view: NavItem) => void;
   /** Navega para qualquer rota do app (subníveis com parâmetros). */
   navigate: (to: string, opcoes?: { replace?: boolean }) => void;
+  /** Usuário logado. Com o Admin em "ver como", `perfil` é o perfil visualizado (a identidade é a do próprio Admin). */
   authUser: AuthUser | null;
+  /** Perfil de verdade do usuário logado (não muda com o "ver como"). */
+  perfilReal?: string;
+  /** Perfil que o Admin está apenas visualizando; null = vendo como ele mesmo. */
+  verComo: string | null;
+  setVerComo: (perfil: string | null) => void;
   updateAuthUser: (patch: Partial<AuthUser>) => void;
   handleLogout: () => void;
   periciaMenorVigentes: number;

@@ -1,5 +1,5 @@
 // Ficheiro: App.tsx
-import React, { useState, useEffect, useReducer, useRef } from 'react';
+import React, { useState, useEffect, useReducer, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation, useNavigate, useNavigationType, useRoutes } from 'react-router-dom';
 import { Login } from './components/Login';
@@ -101,7 +101,19 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   const navigationType = useNavigationType();
   const currentView: NavItem = viewForPath(location.pathname) ?? 'home';
   const [periciaMenorVigentes, setPericiaMenorVigentes] = useState(0);
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authUserReal, setAuthUser] = useState<AuthUser | null>(null);
+  // "Ver como" (só Admin): troca a visualização do app para outro perfil, sem alterar o perfil de fato.
+  const [verComo, setVerComoState] = useState<string | null>(() => {
+    try { return sessionStorage.getItem('jrs_ver_como'); } catch { return null; }
+  });
+  const setVerComo = (perfil: string | null) => {
+    setVerComoState(perfil);
+    try { if (perfil) sessionStorage.setItem('jrs_ver_como', perfil); else sessionStorage.removeItem('jrs_ver_como'); } catch { /* sem sessionStorage */ }
+  };
+  const authUser = useMemo<AuthUser | null>(
+    () => (authUserReal && authUserReal.perfil === 'admin' && verComo ? { ...authUserReal, perfil: verComo } : authUserReal),
+    [authUserReal, verComo],
+  );
   const [authLoading, setAuthLoading] = useState(true);
   const [permissoesLoading, setPermissoesLoading] = useState(true);
   const [senhaAlertDismissed, setSenhaAlertDismissed] = useState(false);
@@ -146,7 +158,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
     }
     setPermissoesLoading(true);
     const unsubscribe = observarPermissoes(dados => {
-      if (dados === null && authUser.perfil === 'admin') {
+      if (dados === null && authUserReal?.perfil === 'admin') {
         const legado = lerPermissoesLegadoLocalStorage();
         if (legado) {
           // Doc remoto ainda não existe: promove a configuração que este
@@ -245,6 +257,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   };
 
   const handleLogout = () => {
+    setVerComo(null);
     logoutUsuario();
     navigate('/', { replace: true });
   };
@@ -376,6 +389,9 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
         setCurrentView,
         navigate: (to, opcoes) => navigate(to, opcoes),
         authUser,
+        perfilReal: authUserReal?.perfil,
+        verComo: authUserReal?.perfil === 'admin' ? verComo : null,
+        setVerComo,
         updateAuthUser,
         handleLogout,
         periciaMenorVigentes,
