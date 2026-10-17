@@ -17,7 +17,7 @@ export const Topbar: React.FC<TopbarProps> = ({ rolou }) => {
   const nav = useContext(NavContext);
   return (
     <header
-      className={`relative z-30 shrink-0 h-14 bg-white border-b border-line flex items-center gap-2 md:gap-4 px-2 md:px-6 transition-shadow duration-200 ${rolou ? 'shadow-lg' : ''}`}
+      className={`relative z-topbar shrink-0 h-14 bg-white border-b border-line flex items-center gap-2 md:gap-4 px-2 md:px-6 transition-shadow duration-200 ${rolou ? 'shadow-lg' : ''}`}
     >
       <button
         type="button"

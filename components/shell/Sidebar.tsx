@@ -150,7 +150,7 @@ export const Sidebar: React.FC = () => {
       {/* DESKTOP: sidebar fixa (240) ou trilho (64) — só muda pelo botão. */}
       <aside
         aria-label="Menu principal"
-        className={`hidden md:flex flex-col shrink-0 h-full bg-navy text-white z-30 transition-[width] duration-200 ${recolhida ? 'w-16' : 'w-60'}`}
+        className={`hidden md:flex flex-col shrink-0 h-full bg-navy text-white z-topbar transition-[width] duration-200 ${recolhida ? 'w-16' : 'w-60'}`}
       >
         <Marca rail={recolhida} />
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3">
@@ -170,11 +170,11 @@ export const Sidebar: React.FC = () => {
 
       {/* MOBILE: overlay + drawer aberto pelo botão da topbar. */}
       {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-[110] bg-navy/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsMobileMenuOpen(false)} />
+        <div className="md:hidden fixed inset-0 z-drawer bg-navy/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsMobileMenuOpen(false)} />
       )}
       <aside
         aria-label="Menu principal"
-        className={`md:hidden fixed top-0 left-0 h-full w-[280px] bg-navy text-white z-[120] shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
+        className={`md:hidden fixed top-0 left-0 h-full w-[280px] bg-navy text-white z-drawer shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -195,8 +195,8 @@ export const Sidebar: React.FC = () => {
         <div className="relative shrink-0">
           {isAvatarMenuOpen && (
             <>
-              <div className="fixed inset-0 z-[125]" onClick={() => setIsAvatarMenuOpen(false)} />
-              <div className="absolute left-3 right-3 bottom-full mb-2 z-[130]">
+              <div className="fixed inset-0 z-dropdown" onClick={() => setIsAvatarMenuOpen(false)} />
+              <div className="absolute left-3 right-3 bottom-full mb-2 z-dropdown">
                 <UserDropdownContent
                   authUser={authUser}
                   onPerfilClick={() => { setIsAvatarMenuOpen(false); setCurrentView('perfil'); }}

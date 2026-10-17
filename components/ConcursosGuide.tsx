@@ -318,7 +318,7 @@ const FiltroSelect: React.FC<{
   accent: 'navy' | 'red';
 }> = ({ value, onChange, options, accent }) => {
   const cor = accent === 'red'
-    ? { borda: 'border-red-700/70 focus-within:border-red-700', texto: 'text-red-700', botao: 'bg-red-700' }
+    ? { borda: 'border-wine-700/70 focus-within:border-wine-700', texto: 'text-wine-700', botao: 'bg-wine-700' }
     : { borda: 'border-navy/70 focus-within:border-navy', texto: 'text-navy', botao: 'bg-navy' };
   return (
     <div>
@@ -328,7 +328,7 @@ const FiltroSelect: React.FC<{
       </label>
       <div className={`relative flex items-center bg-white border-2 ${cor.borda} rounded-xl shadow-sm transition-colors`}>
         <select
-          className="w-full bg-transparent text-gray-800 py-3 md:py-4 pl-4 md:pl-5 pr-14 rounded-lg font-bold focus:outline-none text-base appearance-none cursor-pointer font-body"
+          className="w-full bg-transparent text-navy py-3 md:py-4 pl-4 md:pl-5 pr-14 rounded-lg font-bold focus:outline-none text-base appearance-none cursor-pointer font-body"
           value={value}
           onChange={(e) => onChange(e.target.value)}
         >
@@ -345,20 +345,20 @@ const FiltroSelect: React.FC<{
 const TabelaIndice: React.FC<{ bloco: Extract<Bloco, { tipo: 'tabela' }> }> = ({ bloco }) => (
   <div>
     {bloco.titulo && <h4 className="text-base font-bold text-navy mb-2">{bloco.titulo}</h4>}
-    <div className="overflow-x-auto rounded-xl border border-gray-200">
+    <div className="overflow-x-auto rounded-xl border border-line">
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-gray-50 text-navy">
+          <tr className="bg-paper text-navy">
             {bloco.colunas.map(col => (
-              <th key={col} className="py-2.5 px-4 text-sm font-bold uppercase tracking-wider border-b border-gray-200">{col}</th>
+              <th key={col} className="py-2.5 px-4 text-sm font-bold uppercase tracking-wider border-b border-line">{col}</th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody className="divide-y divide-line">
           {bloco.linhas.map((linha, i) => (
             <tr key={i}>
               {linha.map((cel, j) => (
-                <td key={j} className={`py-3 px-4 text-base align-top ${j === 0 ? 'font-semibold text-navy' : 'text-gray-700'}`}>{cel}</td>
+                <td key={j} className={`py-3 px-4 text-base align-top ${j === 0 ? 'font-semibold text-navy' : 'text-ink'}`}>{cel}</td>
               ))}
             </tr>
           ))}
@@ -374,7 +374,7 @@ const BlocoIndice: React.FC<{ bloco: Bloco }> = ({ bloco }) => {
     return (
       <ul className="space-y-3">
         {bloco.itens.map((item, i) => (
-          <li key={i} className="flex gap-3 text-gray-700 font-body text-base">
+          <li key={i} className="flex gap-3 text-ink font-body text-base">
             <span className="w-1.5 h-1.5 rounded-full bg-navy shrink-0 mt-2.5" />
             <span className="leading-relaxed flex-1">{item}</span>
           </li>
@@ -384,11 +384,11 @@ const BlocoIndice: React.FC<{ bloco: Bloco }> = ({ bloco }) => {
   }
   return (
     <div className="space-y-2">
-      <p className="text-gray-700 font-body text-base leading-relaxed">{bloco.texto}</p>
+      <p className="text-ink font-body text-base leading-relaxed">{bloco.texto}</p>
       {bloco.condicoes && (
         <ul className="space-y-1.5 pl-1">
           {bloco.condicoes.map((c, i) => (
-            <li key={i} className="flex gap-3 text-gray-700 font-body text-base">
+            <li key={i} className="flex gap-3 text-ink font-body text-base">
               <span className="w-1.5 h-1.5 rounded-full bg-navy shrink-0 mt-2.5" />
               <span className="leading-relaxed flex-1">{c}</span>
             </li>
@@ -440,8 +440,8 @@ export const ConcursosGuide: React.FC = () => {
             <div className="space-y-3.5 md:space-y-4">
               <FiltroSelect accent="navy" value={activeIndice} onChange={setActiveIndice} options={indicesList} />
               {currentIndice && (
-                <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-200/60 space-y-5">
-                  <h3 className="flex items-center gap-2.5 text-xl font-heading font-bold text-navy pb-3 border-b border-gray-100">
+                <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-line/60 space-y-5">
+                  <h3 className="flex items-center gap-2.5 text-h2 font-heading font-bold text-navy pb-3 border-b border-line">
                     {currentIndice.icon}
                     {currentIndice.title}
                   </h3>
@@ -455,15 +455,15 @@ export const ConcursosGuide: React.FC = () => {
             <div className="space-y-3.5 md:space-y-4">
               <FiltroSelect accent="red" value={activeInaptidao} onChange={setActiveInaptidao} options={inaptidaoCategories} />
               {currentInaptidao && (
-                <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-gray-200/60">
-                  <h3 className="flex items-center gap-2.5 text-xl font-heading font-bold text-red-700 pb-3 mb-4 border-b border-gray-100">
+                <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-line/60">
+                  <h3 className="flex items-center gap-2.5 text-h2 font-heading font-bold text-wine-700 pb-3 mb-4 border-b border-line">
                     <span className="material-symbols-outlined text-[26px] md:text-[30px] shrink-0">{currentInaptidao.icon}</span>
                     {currentInaptidao.title}
                   </h3>
                   <ul className="space-y-3.5">
                     {currentInaptidao.items.map((item, idx) => (
-                      <li key={idx} className="flex gap-3 text-gray-700 font-body text-base">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-700 shrink-0 mt-2.5" />
+                      <li key={idx} className="flex gap-3 text-ink font-body text-base">
+                        <span className="w-1.5 h-1.5 rounded-full bg-wine-700 shrink-0 mt-2.5" />
                         <span className="leading-relaxed flex-1">{item}</span>
                       </li>
                     ))}

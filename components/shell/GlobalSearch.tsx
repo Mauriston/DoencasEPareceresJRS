@@ -110,7 +110,7 @@ export const GlobalSearch: React.FC<{ className?: string }> = ({ className = '' 
         <span className="material-symbols-outlined text-[24px]" aria-hidden="true">search</span>
       </button>
 
-      <div className={`${expandidoMobile ? 'fixed left-0 right-0 top-0 h-14 z-50 bg-white px-3 flex items-center border-b border-line' : 'hidden md:block'} md:static md:h-auto md:px-0 md:border-0 md:bg-transparent`}>
+      <div className={`${expandidoMobile ? 'fixed left-0 right-0 top-0 h-14 z-dropdown bg-white px-3 flex items-center border-b border-line' : 'hidden md:block'} md:static md:h-auto md:px-0 md:border-0 md:bg-transparent`}>
         <div className="relative w-full">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
           <input
@@ -145,7 +145,7 @@ export const GlobalSearch: React.FC<{ className?: string }> = ({ className = '' 
           <ul
             id="busca-global-lista"
             role="listbox"
-            className="absolute left-3 right-3 md:left-0 md:right-0 top-[52px] md:top-11 bg-white border border-line rounded-xl shadow-lg py-1.5 max-h-[70vh] overflow-y-auto z-50"
+            className="absolute left-3 right-3 md:left-0 md:right-0 top-[52px] md:top-11 bg-white border border-line rounded-xl shadow-lg py-1.5 max-h-[70vh] overflow-y-auto z-dropdown"
           >
             {resultados.length === 0 ? (
               <li className="px-4 py-3 text-sm text-ink-3">Nada encontrado para “{consulta}”.</li>

@@ -60,7 +60,7 @@ export const IdmPicker: React.FC<IdmPickerProps> = ({ candidatoNome, observacoes
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-gray-700 leading-relaxed">
+      <p className="text-sm text-ink leading-relaxed">
         Informe o motivo da insuficiência documental do candidato (a) <strong>{candidatoNome}</strong>
       </p>
 
@@ -68,28 +68,28 @@ export const IdmPicker: React.FC<IdmPickerProps> = ({ candidatoNome, observacoes
         type="button"
         aria-expanded={aberto}
         onClick={() => setAberto(a => !a)}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-left rounded-xl border border-gray-300 bg-white hover:border-navy focus:outline-none focus:border-navy transition-colors"
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-left rounded-xl border border-ink-5 bg-white hover:border-navy focus:outline-none focus:border-navy transition-colors"
       >
         <span className={`min-w-0 truncate ${ordenados.length === 0 ? 'text-ink-3' : 'text-navy'}`}>{resumo}</span>
-        <span className={`material-symbols-outlined text-[20px] text-gray-500 shrink-0 transition-transform ${aberto ? 'rotate-180' : ''}`}>expand_more</span>
+        <span className={`material-symbols-outlined text-[20px] text-ink-3 shrink-0 transition-transform ${aberto ? 'rotate-180' : ''}`}>expand_more</span>
       </button>
 
       {aberto && (
-        <div className="max-h-[40vh] overflow-y-auto rounded-xl border border-gray-200 bg-white">
+        <div className="max-h-[40vh] overflow-y-auto rounded-xl border border-line bg-white">
           {GRUPOS_EXAMES.map(g => (
             <div key={g.grupo}>
               <p className="px-4 pt-3 pb-1 text-xs font-bold text-ink-3 uppercase tracking-wider sticky top-0 bg-white">{g.grupo}</p>
               {g.exames.map(exame => {
                 const marcado = selecionados.includes(exame);
                 return (
-                  <label key={exame} className="flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
+                  <label key={exame} className="flex items-start gap-3 px-4 py-2.5 hover:bg-paper cursor-pointer">
                     <input
                       type="checkbox"
                       checked={marcado}
                       onChange={() => alternar(exame)}
                       className="mt-0.5 w-4 h-4 accent-navy shrink-0"
                     />
-                    <span className={`text-sm leading-snug ${marcado ? 'font-bold text-navy' : 'text-gray-700'}`}>{exame}</span>
+                    <span className={`text-sm leading-snug ${marcado ? 'font-bold text-navy' : 'text-ink'}`}>{exame}</span>
                   </label>
                 );
               })}
@@ -120,11 +120,11 @@ interface MotivoIdmModalProps extends IdmPickerProps {
 
 export const MotivoIdmModal: React.FC<MotivoIdmModalProps> = ({ obrigatorio, onClose, ...picker }) => (
   <div
-    className="fixed inset-0 z-[210] bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 pt-[8vh] animate-fade-in"
+    className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 pt-[8vh] animate-fade-in"
     onClick={obrigatorio ? undefined : onClose}
   >
     <div
-      className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg max-h-[84vh] flex flex-col overflow-hidden"
+      className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-lg max-h-[84vh] flex flex-col overflow-hidden"
       onClick={e => e.stopPropagation()}
     >
       <div className="p-4 bg-navy text-white flex items-center justify-between gap-2 shrink-0">

@@ -58,20 +58,20 @@ export const Videos: React.FC = () => {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
             <Loader2 className="animate-spin text-navy" size={40} />
-            <p className="text-sm font-semibold text-gray-500 font-body">Carregando os vídeos da planilha do Google...</p>
+            <p className="text-sm font-semibold text-ink-3 font-body">Carregando os vídeos da planilha do Google...</p>
           </div>
         ) : (
           <>
             {error && (
-              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs p-3.5 rounded-xl flex items-start gap-2.5 shadow-sm">
-                <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={16} />
+              <div className="bg-gold-50 border border-gold-200 text-gold-800 text-xs p-3.5 rounded-xl flex items-start gap-2.5 shadow-sm">
+                <AlertCircle className="text-gold-600 flex-shrink-0 mt-0.5" size={16} />
                 <div className="flex-1">
                   <p className="font-semibold">Sincronização Offline</p>
                   <p className="mt-0.5 opacity-90">{error}</p>
                 </div>
                 <button 
                   onClick={loadData}
-                  className="p-1 hover:bg-amber-100 rounded-lg text-amber-900 flex items-center justify-center transition-colors self-center"
+                  className="p-1 hover:bg-gold-100 rounded-lg text-gold-900 flex items-center justify-center transition-colors self-center"
                   title="Tentar recarregar"
                 >
                   <RefreshCw size={14} />
@@ -80,7 +80,7 @@ export const Videos: React.FC = () => {
             )}
 
             {videos.length === 0 ? (
-              <div className="text-center py-16 text-gray-500">
+              <div className="text-center py-16 text-ink-3">
                 Nenhum vídeo disponível no momento.
               </div>
             ) : (
@@ -91,7 +91,7 @@ export const Videos: React.FC = () => {
                   return (
                     <button 
                       key={video.id} 
-                      className="group bg-white rounded-lg shadow-sm border border-gray-200/60 overflow-hidden flex flex-col w-full text-left focus:outline-none hover:shadow-md hover:border-navy active:scale-[0.98] transition-all animate-fade-in"
+                      className="group bg-white rounded-lg shadow-sm border border-line/60 overflow-hidden flex flex-col w-full text-left focus:outline-none hover:shadow-md hover:border-navy active:scale-[0.98] transition-all animate-fade-in"
                       onClick={() => {
                         if (hasYoutube) {
                           setSelectedVideo(video.youtubeId!);
@@ -108,7 +108,7 @@ export const Videos: React.FC = () => {
                             className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
                           />
                         ) : (
-                          <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-gray-500 font-medium text-xs p-2 leading-relaxed text-center">
+                          <div className="absolute inset-0 flex items-center justify-center bg-navy text-ink-3 font-medium text-xs p-2 leading-relaxed text-center">
                             Link direto indisponível
                           </div>
                         )}
@@ -136,7 +136,7 @@ export const Videos: React.FC = () => {
       </Container>
 
       {selectedVideo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fade-in">
+        <div className="fixed inset-0 z-dialog flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fade-in">
           <button 
             onClick={() => setSelectedVideo(null)} 
             className="absolute top-6 right-6 text-white p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors z-50 focus:outline-none"
@@ -144,7 +144,7 @@ export const Videos: React.FC = () => {
             <X size={24} />
           </button>
           
-          <div className="w-full max-w-4xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative border border-gray-800">
+          <div className="w-full max-w-4xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative border border-navy">
             <iframe
               className="absolute inset-0 w-full h-full"
               src={`https://www.youtube.com/embed/${selectedVideo}?autoplay=1&rel=0`}

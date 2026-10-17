@@ -37,7 +37,7 @@ export const StoragePdfFab: React.FC<StoragePdfButtonProps & { bottomClass?: str
     disabled={busy}
     onClick={onClick}
     title="Baixar em PDF"
-    className={`md:hidden fixed ${bottomClass} right-4 z-40 min-h-[44px] pl-3 pr-4 gap-2 rounded-full bg-navy text-white text-sm font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center disabled:opacity-60`}
+    className={`md:hidden fixed ${bottomClass} right-4 z-sticky min-h-[44px] pl-3 pr-4 gap-2 rounded-full bg-navy text-white text-sm font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center disabled:opacity-60`}
   >
     {icon(busy, 'text-[22px]')}
     Baixar PDF

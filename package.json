@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
+    "check:ds": "node scripts/verificar-ds.mjs",
+    "prebuild": "node scripts/verificar-ds.mjs",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview"
@@ -25,6 +27,7 @@
     "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
+    "@tailwindcss/container-queries": "^0.1.1",
     "@types/express": "^5.0.6",
     "@types/node": "^22.14.0",
     "@types/qrcode": "^1.5.6",

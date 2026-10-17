@@ -32,7 +32,7 @@ export const Dialog: React.FC<DialogProps> = ({ title, icon, onClose, travado = 
 
   return (
     <div
-      className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+      className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
       onMouseDown={e => { if (e.target === e.currentTarget && !travado) onClose(); }}
     >
       <div

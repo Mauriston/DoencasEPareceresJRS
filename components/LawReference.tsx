@@ -134,13 +134,13 @@ export const LawReference: React.FC = () => {
             const isBrasao = law.imageUrl.includes('brasao-da-republica');
 
             return (
-              <div key={law.id} className="relative group bg-white rounded-xl border border-gray-200/60 hover:border-navy hover:shadow-md transition-all overflow-hidden flex items-center justify-between">
+              <div key={law.id} className="relative group bg-white rounded-xl border border-line/60 hover:border-navy hover:shadow-md transition-all overflow-hidden flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => setDocId(law.id)}
-                  className="flex-1 min-w-0 flex items-center gap-3 p-4 active:bg-gray-50 transition-colors focus:outline-none cursor-pointer text-left"
+                  className="flex-1 min-w-0 flex items-center gap-3 p-4 active:bg-paper transition-colors focus:outline-none cursor-pointer text-left"
                 >
-                  <div className="w-10 h-10 flex-shrink-0 bg-gray-50 rounded-full overflow-hidden border border-gray-100 flex items-center justify-center p-0.5">
+                  <div className="w-10 h-10 flex-shrink-0 bg-paper rounded-full overflow-hidden border border-line flex items-center justify-center p-0.5">
                     <img
                       src={law.imageUrl}
                       alt={law.legislation}
@@ -155,7 +155,7 @@ export const LawReference: React.FC = () => {
                     <h3 className="text-navy font-heading font-bold text-sm leading-snug mb-0.5 group-hover:text-navy transition-colors">
                       {law.legislation}
                     </h3>
-                    <p className="text-gray-500 font-body text-xs font-medium leading-relaxed line-clamp-2">
+                    <p className="text-ink-3 font-body text-xs font-medium leading-relaxed line-clamp-2">
                       {law.title}
                     </p>
                   </div>

@@ -26,8 +26,8 @@ const emptyUserForm = {
   crmPe: '', rqe: '', email: '', gmail: '', celular: '', perfil: 'user_secretaria',
 };
 
-const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm font-semibold text-gray-800 focus:outline-none focus:border-navy transition-colors';
-const labelClass = 'text-sm font-bold text-gray-500 uppercase tracking-wider block mb-1';
+const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm font-semibold text-navy focus:outline-none focus:border-navy transition-colors';
+const labelClass = 'text-sm font-bold text-ink-3 uppercase tracking-wider block mb-1';
 const featureGroups = [...new Set(FEATURE_DEFS.map(f => f.group))];
 
 export const UsuariosManagement: React.FC = () => {
@@ -280,7 +280,7 @@ export const UsuariosManagement: React.FC = () => {
       <Container size="data" className="py-6 md:py-8 pb-10 space-y-4">
         <PageHeader title="Usuários" description="Gerencie usuários e as permissões de acesso por perfil." />
 
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-line/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="relative flex-1">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-ink-3 text-[20px]">search</span>
             <input
@@ -288,23 +288,23 @@ export const UsuariosManagement: React.FC = () => {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por usuário, nome, NIP ou e-mail..."
-              className="w-full pl-10 pr-4 py-2.5 text-xs font-body rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:border-navy transition-all"
+              className="w-full pl-10 pr-4 py-2.5 text-xs font-body rounded-xl border border-line bg-paper focus:bg-white focus:outline-none focus:border-navy transition-all"
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 hover:text-gray-600">
+              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink">
                 <span className="material-symbols-outlined text-[16px]">close</span>
               </button>
             )}
           </div>
 
           <div className="flex items-center gap-2">
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="px-3 py-2.5 text-xs font-semibold rounded-xl border border-gray-200 bg-gray-50 text-gray-700 focus:outline-none focus:border-navy">
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="px-3 py-2.5 text-xs font-semibold rounded-xl border border-line bg-paper text-ink focus:outline-none focus:border-navy">
               <option value="todos">Status: Todos</option>
               <option value="ativos">Status: Ativos</option>
               <option value="inativos">Status: Inativos</option>
             </select>
 
-            <select value={perfilFilter} onChange={e => setPerfilFilter(e.target.value)} className="px-3 py-2.5 text-xs font-semibold rounded-xl border border-gray-200 bg-gray-50 text-gray-700 focus:outline-none focus:border-navy">
+            <select value={perfilFilter} onChange={e => setPerfilFilter(e.target.value)} className="px-3 py-2.5 text-xs font-semibold rounded-xl border border-line bg-paper text-ink focus:outline-none focus:border-navy">
               <option value="todos">Perfil: Todos</option>
               <option value="admin">Perfil: Admin</option>
               <option value="user_medicos">Perfil: User Médicos</option>
@@ -324,52 +324,52 @@ export const UsuariosManagement: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-white p-3.5 rounded-2xl border border-gray-200/60 shadow-sm flex items-center justify-between">
+          <div className="bg-white p-3.5 rounded-2xl border border-line/60 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-ink-3 uppercase tracking-wider">Total</p>
-              <p className="text-xl font-bold text-navy font-heading">{users.length}</p>
+              <p className="text-kpi tabular-nums font-bold text-navy font-heading">{users.length}</p>
             </div>
-            <span className="material-symbols-outlined text-[24px] text-ink-3 bg-gray-50 p-2 rounded-xl">group</span>
+            <span className="material-symbols-outlined text-[24px] text-ink-3 bg-paper p-2 rounded-xl">group</span>
           </div>
-          <div className="bg-white p-3.5 rounded-2xl border border-gray-200/60 shadow-sm flex items-center justify-between">
+          <div className="bg-white p-3.5 rounded-2xl border border-line/60 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-ink-3 uppercase tracking-wider">Ativos</p>
-              <p className="text-xl font-bold text-green-700 font-heading">{users.filter(u => u.ativo).length}</p>
+              <p className="text-kpi tabular-nums font-bold text-green-700 font-heading">{users.filter(u => u.ativo).length}</p>
             </div>
             <span className="material-symbols-outlined text-[24px] text-green-700 bg-green-50 p-2 rounded-xl">check_circle</span>
           </div>
-          <div className="bg-white p-3.5 rounded-2xl border border-gray-200/60 shadow-sm flex items-center justify-between">
+          <div className="bg-white p-3.5 rounded-2xl border border-line/60 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-ink-3 uppercase tracking-wider">Inativos</p>
-              <p className="text-xl font-bold text-red-600 font-heading">{users.filter(u => !u.ativo).length}</p>
+              <p className="text-kpi tabular-nums font-bold text-wine-600 font-heading">{users.filter(u => !u.ativo).length}</p>
             </div>
-            <span className="material-symbols-outlined text-[24px] text-red-500 bg-red-50 p-2 rounded-xl">block</span>
+            <span className="material-symbols-outlined text-[24px] text-wine-500 bg-wine-50 p-2 rounded-xl">block</span>
           </div>
-          <div className="bg-white p-3.5 rounded-2xl border border-gray-200/60 shadow-sm flex items-center justify-between">
+          <div className="bg-white p-3.5 rounded-2xl border border-line/60 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-ink-3 uppercase tracking-wider">Admins</p>
-              <p className="text-xl font-bold text-navy font-heading">{users.filter(u => u.perfil === 'admin').length}</p>
+              <p className="text-kpi tabular-nums font-bold text-navy font-heading">{users.filter(u => u.perfil === 'admin').length}</p>
             </div>
             <span className="material-symbols-outlined text-[24px] text-navy bg-thead p-2 rounded-xl">admin_panel_settings</span>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-line/60 overflow-hidden">
           {loading ? (
-            <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
+            <div className="p-12 text-center text-ink-3 flex flex-col items-center space-y-2">
               <span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span>
               <p className="text-xs font-semibold">Carregando usuários...</p>
             </div>
           ) : loadError ? (
-            <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
-              <span className="material-symbols-outlined text-[36px] text-red-500">error</span>
-              <p className="text-sm font-bold text-gray-700">Não foi possível carregar os usuários</p>
+            <div className="p-12 text-center text-ink-3 flex flex-col items-center space-y-2">
+              <span className="material-symbols-outlined text-[36px] text-wine-500">error</span>
+              <p className="text-sm font-bold text-ink">Não foi possível carregar os usuários</p>
               <button onClick={loadUsers} className="mt-2 px-4 py-2 bg-navy text-white rounded-lg text-xs font-bold">Tentar novamente</button>
             </div>
           ) : filteredUsers.length === 0 ? (
-            <div className="p-12 text-center text-gray-500 flex flex-col items-center space-y-2">
-              <span className="material-symbols-outlined text-[36px] text-gray-300">person_off</span>
-              <p className="text-sm font-bold text-gray-700">Nenhum usuário encontrado</p>
+            <div className="p-12 text-center text-ink-3 flex flex-col items-center space-y-2">
+              <span className="material-symbols-outlined text-[36px] text-ink-5">person_off</span>
+              <p className="text-sm font-bold text-ink">Nenhum usuário encontrado</p>
               <p className="text-xs text-ink-3">Tente ajustar seus termos de pesquisa ou filtros.</p>
             </div>
           ) : (
@@ -377,7 +377,7 @@ export const UsuariosManagement: React.FC = () => {
               <div className="hidden md:block overflow-x-auto scroll-x-visible">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    <tr className="bg-paper/80 border-b border-line text-xs font-bold text-ink-3 uppercase tracking-wider">
                       <th className="py-3.5 px-4 whitespace-nowrap">Usuário</th>
                       <th className="py-3.5 px-4 whitespace-nowrap">Nome Completo</th>
                       <th className="py-3.5 px-4 whitespace-nowrap">Cargo</th>
@@ -388,9 +388,9 @@ export const UsuariosManagement: React.FC = () => {
                       <th className="py-3.5 px-4 whitespace-nowrap text-right">Ações</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-xs">
+                  <tbody className="divide-y divide-line text-xs">
                     {filteredUsers.map(user => (
-                      <tr key={user.id} className={`hover:bg-gray-50/80 transition-colors ${!user.ativo ? 'opacity-60 bg-gray-50/40' : ''}`}>
+                      <tr key={user.id} className={`hover:bg-paper/80 transition-colors ${!user.ativo ? 'opacity-60 bg-paper/40' : ''}`}>
                         <td className="py-3.5 px-4 font-bold text-navy">
                           <div className="flex items-center space-x-2">
                             {user.imageProfile ? (
@@ -403,36 +403,36 @@ export const UsuariosManagement: React.FC = () => {
                             <span className="truncate max-w-[140px]">{user.usuario}</span>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 font-semibold text-gray-800">{user.nome}</td>
-                        <td className="py-3.5 px-4 text-gray-600">{user.cargo || '-'}</td>
-                        <td className="py-3.5 px-4 font-mono text-gray-600">{formatNip(user.nip) || '-'}</td>
-                        <td className="py-3.5 px-4 text-gray-600 truncate max-w-[180px]">{user.email || '-'}</td>
+                        <td className="py-3.5 px-4 font-semibold text-navy">{user.nome}</td>
+                        <td className="py-3.5 px-4 text-ink">{user.cargo || '-'}</td>
+                        <td className="py-3.5 px-4 font-mono text-ink">{formatNip(user.nip) || '-'}</td>
+                        <td className="py-3.5 px-4 text-ink truncate max-w-[180px]">{user.email || '-'}</td>
                         <td className="py-3.5 px-4">{getPerfilBadge(user.perfil)}</td>
                         <td className="py-3.5 px-4 text-center">
                           <button
                             type="button"
                             onClick={() => handleToggleStatus(user)}
                             className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                              user.ativo ? 'bg-green-100 text-green-800 hover:bg-green-200 border border-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200 border border-red-200'
+                              user.ativo ? 'bg-green-100 text-green-800 hover:bg-green-200 border border-green-200' : 'bg-wine-100 text-wine-800 hover:bg-wine-200 border border-wine-200'
                             }`}
                             title={user.ativo ? 'Clique para desativar' : 'Clique para ativar'}
                           >
-                            <span className={`w-1.5 h-1.5 rounded-full ${user.ativo ? 'bg-green-600' : 'bg-red-600'}`} />
+                            <span className={`w-1.5 h-1.5 rounded-full ${user.ativo ? 'bg-green-600' : 'bg-wine-600'}`} />
                             <span>{user.ativo ? 'ATIVO' : 'INATIVO'}</span>
                           </button>
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end space-x-1">
-                            <button type="button" onClick={() => handleOpenEdit(user)} className="p-1.5 text-gray-500 hover:text-navy hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Editar dados do usuário">
+                            <button type="button" onClick={() => handleOpenEdit(user)} className="p-1.5 text-ink-3 hover:text-navy hover:bg-thead rounded-lg transition-colors cursor-pointer" title="Editar dados do usuário">
                               <span className="material-symbols-outlined text-[18px]">edit</span>
                             </button>
-                            <button type="button" onClick={() => setResetAlvo(user)} className="p-1.5 text-gray-500 hover:text-navy hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Redefinir senha para a inicial" aria-label={`Redefinir senha de ${user.usuario}`}>
+                            <button type="button" onClick={() => setResetAlvo(user)} className="p-1.5 text-ink-3 hover:text-navy hover:bg-thead rounded-lg transition-colors cursor-pointer" title="Redefinir senha para a inicial" aria-label={`Redefinir senha de ${user.usuario}`}>
                               <span className="material-symbols-outlined text-[18px]">lock_reset</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => handleToggleStatus(user)}
-                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${user.ativo ? 'text-ink-3 hover:text-red-600 hover:bg-red-50' : 'text-ink-3 hover:text-navy hover:bg-green-50'}`}
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${user.ativo ? 'text-ink-3 hover:text-wine-600 hover:bg-wine-50' : 'text-ink-3 hover:text-navy hover:bg-green-50'}`}
                               title={user.ativo ? 'Desativar usuário' : 'Ativar usuário'}
                             >
                               <span className="material-symbols-outlined text-[18px]">{user.ativo ? 'block' : 'check_circle'}</span>
@@ -445,9 +445,9 @@ export const UsuariosManagement: React.FC = () => {
                 </table>
               </div>
 
-              <div className="block md:hidden divide-y divide-gray-100">
+              <div className="block md:hidden divide-y divide-line">
                 {filteredUsers.map(user => (
-                  <div key={user.id} className={`p-4 flex flex-col space-y-2.5 ${!user.ativo ? 'bg-gray-50/50 opacity-70' : ''}`}>
+                  <div key={user.id} className={`p-4 flex flex-col space-y-2.5 ${!user.ativo ? 'bg-paper/50 opacity-70' : ''}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center space-x-2 min-w-0">
                         {user.imageProfile ? (
@@ -459,13 +459,13 @@ export const UsuariosManagement: React.FC = () => {
                         )}
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-navy truncate">{user.usuario}</p>
-                          <p className="text-xs text-gray-700 font-semibold truncate">{user.nome}</p>
+                          <p className="text-xs text-ink font-semibold truncate">{user.nome}</p>
                         </div>
                       </div>
                       <div className="shrink-0 flex items-center space-x-1">{getPerfilBadge(user.perfil)}</div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                    <div className="grid grid-cols-2 gap-2 text-xs text-ink bg-paper p-2.5 rounded-xl border border-line">
                       <div>
                         <span className="text-xs font-bold text-ink-3 uppercase block">NIP</span>
                         <span className="font-mono font-medium">{formatNip(user.nip) || '-'}</span>
@@ -481,10 +481,10 @@ export const UsuariosManagement: React.FC = () => {
                         type="button"
                         onClick={() => handleToggleStatus(user)}
                         className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                          user.ativo ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'
+                          user.ativo ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-wine-100 text-wine-800 border border-wine-200'
                         }`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full ${user.ativo ? 'bg-green-600' : 'bg-red-600'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${user.ativo ? 'bg-green-600' : 'bg-wine-600'}`} />
                         <span>{user.ativo ? 'ATIVO' : 'INATIVO'}</span>
                       </button>
 
@@ -501,13 +501,13 @@ export const UsuariosManagement: React.FC = () => {
         </div>
 
         {/* PERMISSÕES: PÁGINAS E FUNCIONALIDADES POR PERFIL */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200/60 overflow-hidden">
-          <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
+        <div className="bg-white rounded-2xl shadow-sm border border-line/60 overflow-hidden">
+          <div className="p-4 sm:p-5 border-b border-line flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center space-x-2">
               <span className="material-symbols-outlined text-[20px] text-navy">tune</span>
               <div>
                 <h3 className="font-heading font-bold text-sm text-navy">Permissões por Perfil</h3>
-                <p className="text-xs text-gray-500">Define quais páginas e funcionalidades cada perfil pode acessar. O perfil Admin sempre tem acesso total.</p>
+                <p className="text-xs text-ink-3">Define quais páginas e funcionalidades cada perfil pode acessar. O perfil Admin sempre tem acesso total.</p>
               </div>
             </div>
             <button
@@ -527,20 +527,20 @@ export const UsuariosManagement: React.FC = () => {
               <div className="overflow-x-auto scroll-x-visible">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    <tr className="bg-paper/80 border-b border-line text-xs font-bold text-ink-3 uppercase tracking-wider">
                       <th className="py-2.5 px-3">Página</th>
                       {ROLES.map(role => (
                         <th key={role.id} className="py-2.5 px-3 text-center">{role.label}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-xs">
+                  <tbody className="divide-y divide-line text-xs">
                     {/* "Perícia Menor" não entra aqui: é controlada pelas duas
                         features (Novo/Histórico) na tabela de Funcionalidades
                         abaixo — ver canAccessPage em config/permissions.ts. */}
                     {PAGE_DEFS.filter(page => page.id !== 'pericia-menor').map(page => (
-                      <tr key={page.id} className="hover:bg-gray-50/60">
-                        <td className="py-2 px-3 font-semibold text-gray-800">{page.label}</td>
+                      <tr key={page.id} className="hover:bg-paper/60">
+                        <td className="py-2 px-3 font-semibold text-navy">{page.label}</td>
                         {ROLES.map(role => (
                           <td key={role.id} className="py-2 px-3 text-center">
                             <input
@@ -564,17 +564,17 @@ export const UsuariosManagement: React.FC = () => {
                 <div className="overflow-x-auto scroll-x-visible">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-gray-50/80 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      <tr className="bg-paper/80 border-b border-line text-xs font-bold text-ink-3 uppercase tracking-wider">
                         <th className="py-2.5 px-3">Funcionalidade</th>
                         {ROLES.map(role => (
                           <th key={role.id} className="py-2.5 px-3 text-center">{role.label}</th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 text-xs">
+                    <tbody className="divide-y divide-line text-xs">
                       {FEATURE_DEFS.filter(feature => feature.group === group).map(feature => (
-                        <tr key={feature.id} className="hover:bg-gray-50/60">
-                          <td className="py-2 px-3 font-semibold text-gray-800">{feature.label}</td>
+                        <tr key={feature.id} className="hover:bg-paper/60">
+                          <td className="py-2 px-3 font-semibold text-navy">{feature.label}</td>
                           {ROLES.map(role => (
                             <td key={role.id} className="py-2 px-3 text-center">
                               <input
@@ -598,21 +598,21 @@ export const UsuariosManagement: React.FC = () => {
 
       {/* NOVO USUÁRIO MODAL */}
       {showNewUserModal && (
-        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 bg-navy text-white flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className="material-symbols-outlined text-[22px] text-gold">person_add</span>
                 <h3 className="font-heading font-bold text-sm">Adicionar Usuário</h3>
               </div>
-              <button onClick={() => setShowNewUserModal(false)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+              <button onClick={() => setShowNewUserModal(false)} className="text-ink-5 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
             <form onSubmit={handleCreateUser} className="p-5 overflow-y-auto space-y-4 flex-1">
               {newUserError && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm font-semibold text-red-700">{newUserError}</div>
+                <div className="bg-wine-50 border border-wine-200 rounded-xl p-3 text-sm font-semibold text-wine-700">{newUserError}</div>
               )}
 
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm font-semibold text-blue-800 flex items-start gap-2">
@@ -684,8 +684,8 @@ export const UsuariosManagement: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-gray-100 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => setShowNewUserModal(false)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+              <div className="pt-4 border-t border-line flex items-center justify-end space-x-2">
+                <button type="button" onClick={() => setShowNewUserModal(false)} className="px-4 py-2.5 rounded-xl border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">
                   Cancelar
                 </button>
                 <button type="submit" disabled={creatingUser} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center space-x-1">
@@ -699,14 +699,14 @@ export const UsuariosManagement: React.FC = () => {
 
       {/* EDIT USER MODAL */}
       {editingUser && (
-        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-4 bg-navy text-white flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className="material-symbols-outlined text-[22px] text-gold">manage_accounts</span>
                 <h3 className="font-heading font-bold text-sm">Editar Dados do Usuário</h3>
               </div>
-              <button onClick={() => setEditingUser(null)} className="text-gray-300 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+              <button onClick={() => setEditingUser(null)} className="text-ink-5 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
@@ -714,7 +714,7 @@ export const UsuariosManagement: React.FC = () => {
             <form onSubmit={handleSaveEdit} className="p-5 overflow-y-auto space-y-4 flex-1">
               <div>
                 <label className={labelClass}>Nome de Usuário (Login)</label>
-                <input type="text" disabled value={editForm.usuario || ''} className={`${inputClass} bg-gray-100 text-gray-500 cursor-not-allowed`} />
+                <input type="text" disabled value={editForm.usuario || ''} className={`${inputClass} bg-thead text-ink-3 cursor-not-allowed`} />
                 <p className="text-xs text-ink-3 mt-1">Não pode ser alterado após a criação (é a identidade de login).</p>
               </div>
 
@@ -778,33 +778,33 @@ export const UsuariosManagement: React.FC = () => {
               </div>
 
               {editingUser && (
-                <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-3">
+                <div className="pt-2 border-t border-line flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-bold text-navy">Senha</p>
-                    <p className="text-sm text-gray-500">Volta para a senha inicial ({SENHA_INICIAL_PADRAO}); o usuário será orientado a trocá-la.</p>
+                    <p className="text-sm text-ink-3">Volta para a senha inicial ({SENHA_INICIAL_PADRAO}); o usuário será orientado a trocá-la.</p>
                   </div>
-                  <button type="button" onClick={() => setResetAlvo(editingUser)} className="shrink-0 min-h-[44px] px-4 rounded-lg border border-navy text-navy text-sm font-bold hover:bg-gray-50 inline-flex items-center gap-1.5">
+                  <button type="button" onClick={() => setResetAlvo(editingUser)} className="shrink-0 min-h-[44px] px-4 rounded-lg border border-navy text-navy text-sm font-bold hover:bg-paper inline-flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[18px]" aria-hidden="true">lock_reset</span>Redefinir senha
                   </button>
                 </div>
               )}
 
-              <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+              <div className="pt-2 border-t border-line flex items-center justify-between">
                 <div>
                   <p className="text-sm font-bold text-navy">Status da Conta</p>
-                  <p className="text-sm text-gray-500">{editForm.ativo ? 'Usuário ativo e autorizado no sistema.' : 'Usuário desativado (sem acesso).'}</p>
+                  <p className="text-sm text-ink-3">{editForm.ativo ? 'Usuário ativo e autorizado no sistema.' : 'Usuário desativado (sem acesso).'}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setEditForm(prev => ({ ...prev, ativo: !prev.ativo }))}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${editForm.ativo ? 'bg-green' : 'bg-gray-300'}`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${editForm.ativo ? 'bg-green' : 'bg-ink-5'}`}
                 >
                   <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${editForm.ativo ? 'translate-x-5' : 'translate-x-0'}`} />
                 </button>
               </div>
 
-              <div className="pt-4 border-t border-gray-100 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => setEditingUser(null)} className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+              <div className="pt-4 border-t border-line flex items-center justify-end space-x-2">
+                <button type="button" onClick={() => setEditingUser(null)} className="px-4 py-2.5 rounded-xl border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">
                   Cancelar
                 </button>
                 <button type="submit" disabled={saving} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center space-x-1">

@@ -101,12 +101,12 @@ export const CidPicker: React.FC<CidPickerProps> = ({ candidatoNome, onSelect, o
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-gray-700 leading-relaxed">
+      <p className="text-sm text-ink leading-relaxed">
         Informe o CID da inaptidão do candidato (a) <strong>{candidatoNome}</strong>
       </p>
 
       {erro ? (
-        <p className="text-sm text-red-700 font-semibold">{erro}</p>
+        <p className="text-sm text-wine-700 font-semibold">{erro}</p>
       ) : (
         <>
           <div className="relative">
@@ -118,25 +118,25 @@ export const CidPicker: React.FC<CidPickerProps> = ({ candidatoNome, onSelect, o
               disabled={!cids}
               onChange={e => setBusca(e.target.value)}
               placeholder={cids ? 'Digite o código ou a descrição do CID...' : 'Carregando tabela de CID...'}
-              className="w-full pl-10 pr-3 py-3 text-sm font-semibold rounded-xl border border-gray-300 focus:outline-none focus:border-navy disabled:bg-gray-50"
+              className="w-full pl-10 pr-3 py-3 text-sm font-semibold rounded-xl border border-ink-5 focus:outline-none focus:border-navy disabled:bg-paper"
             />
           </div>
 
           {tabela?.incompleta && (
-            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            <p className="text-xs text-gold-800 bg-gold-50 border border-gold-200 rounded-lg px-3 py-2">
               A tabela de CID está incompleta (arquivo truncado): alguns códigos, como os do capítulo Z, podem não aparecer na busca.
             </p>
           )}
 
           {mostrarLista && (
-            <ul className="max-h-[40vh] overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 bg-white">
+            <ul className="max-h-[40vh] overflow-y-auto rounded-xl border border-line divide-y divide-line bg-white">
               {resultados.length === 0 ? (
-                <li className="px-4 py-3 text-xs text-gray-500">Nenhum CID encontrado.</li>
+                <li className="px-4 py-3 text-xs text-ink-3">Nenhum CID encontrado.</li>
               ) : resultados.map(c => (
                 <li key={c.SUBCAT}>
-                  <button type="button" onClick={() => onSelect(c.DESCRABREV)} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none">
+                  <button type="button" onClick={() => onSelect(c.DESCRABREV)} className="w-full text-left px-4 py-2.5 hover:bg-paper focus:bg-paper focus:outline-none">
                     <span className="block text-sm font-bold text-navy">{c.SUBCAT}</span>
-                    <span className="block text-xs text-gray-500 leading-snug">{c.DESCRICAO}</span>
+                    <span className="block text-xs text-ink-3 leading-snug">{c.DESCRICAO}</span>
                   </button>
                 </li>
               ))}
@@ -147,7 +147,7 @@ export const CidPicker: React.FC<CidPickerProps> = ({ candidatoNome, onSelect, o
 
       {erro && (
         <div className="flex justify-end">
-          <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Fechar</button>
+          <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">Fechar</button>
         </div>
       )}
     </div>
@@ -164,11 +164,11 @@ interface CidInaptidaoModalProps {
 
 export const CidInaptidaoModal: React.FC<CidInaptidaoModalProps> = ({ candidatoNome, onSelect, obrigatorio, onClose }) => (
   <div
-    className="fixed inset-0 z-[210] bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 pt-[8vh] animate-fade-in"
+    className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-start justify-center p-4 pt-[8vh] animate-fade-in"
     onClick={obrigatorio ? undefined : onClose}
   >
     <div
-      className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-lg max-h-[84vh] flex flex-col overflow-hidden"
+      className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-lg max-h-[84vh] flex flex-col overflow-hidden"
       onClick={e => e.stopPropagation()}
     >
       <div className="p-4 bg-navy text-white flex items-center justify-between gap-2 shrink-0">

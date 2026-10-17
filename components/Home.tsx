@@ -36,7 +36,7 @@ const CartaoPendencia: React.FC<{ p: Pendencia }> = ({ p }) => (
     <span className="material-symbols-outlined text-[28px] text-navy shrink-0" aria-hidden="true">{p.icone}</span>
     <span className="min-w-0 flex-1">
       <span className="block text-xs font-semibold text-ink-3">{p.rotulo}</span>
-      <span className={`block text-2xl font-extrabold leading-tight ${p.tom === 'wine' ? 'text-wine' : 'text-navy'}`}>{p.valor}</span>
+      <span className={`block text-kpi tabular-nums font-extrabold leading-tight ${p.tom === 'wine' ? 'text-wine' : 'text-navy'}`}>{p.valor}</span>
       {p.detalhe && <span className="block text-sm text-ink mt-0.5">{p.detalhe}</span>}
     </span>
     <span className="material-symbols-outlined text-[20px] text-ink-4 group-hover:text-navy self-center" aria-hidden="true">chevron_right</span>

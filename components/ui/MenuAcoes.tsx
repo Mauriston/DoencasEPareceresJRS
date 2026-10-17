@@ -59,7 +59,7 @@ export const MenuAcoes: React.FC<{ rotulo: string; itens: ItemMenu[] }> = ({ rot
         <span className="material-symbols-outlined text-[22px]" aria-hidden="true">more_vert</span>
       </button>
       {pos && (
-        <div ref={menu} role="menu" aria-label={rotulo} style={{ position: 'fixed', top: pos.top, right: pos.right }} className="z-[150] min-w-[180px] bg-white border border-line rounded-lg shadow-xl py-1">
+        <div ref={menu} role="menu" aria-label={rotulo} style={{ position: 'fixed', top: pos.top, right: pos.right }} className="z-dialog min-w-[180px] bg-white border border-line rounded-lg shadow-xl py-1">
           {itens.map(i => (
             <button
               key={i.rotulo} type="button" role="menuitem"

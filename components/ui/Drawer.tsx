@@ -25,7 +25,7 @@ export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, 
   useEscapeEmpilhado(onClose);
 
   return (
-    <div className="fixed inset-0 z-[200]">
+    <div className="fixed inset-0 z-drawer">
       <div className="absolute inset-0 bg-black/50 animate-backdrop-in" onMouseDown={onClose} aria-hidden="true" />
       <div
         ref={painel}

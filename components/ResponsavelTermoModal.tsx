@@ -51,23 +51,23 @@ export const ResponsavelTermoModal: React.FC<ResponsavelTermoModalProps> = ({ ca
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[220] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="p-4 bg-navy text-white flex items-center space-x-2">
           <span className="material-symbols-outlined text-[20px] text-gold">stethoscope</span>
           <h3 className="font-heading font-bold text-sm">Médico responsável pela IS</h3>
         </div>
         <div className="p-5 space-y-4">
-          <p className="text-sm text-gray-700 leading-relaxed">
+          <p className="text-sm text-ink leading-relaxed">
             Quem é o médico responsável pela IS de <strong>{candidatoNome}</strong>?
           </p>
 
           {erro ? (
-            <p className="text-sm text-red-700 font-semibold">{erro}</p>
+            <p className="text-sm text-wine-700 font-semibold">{erro}</p>
           ) : !medicos ? (
-            <p className="text-sm text-gray-500">Carregando...</p>
+            <p className="text-sm text-ink-3">Carregando...</p>
           ) : medicos.length === 0 ? (
-            <p className="text-sm text-gray-500">Nenhum médico da JRS encontrado.</p>
+            <p className="text-sm text-ink-3">Nenhum médico da JRS encontrado.</p>
           ) : (
             <div className="space-y-2">
               {medicos.map(m => (
@@ -75,7 +75,7 @@ export const ResponsavelTermoModal: React.FC<ResponsavelTermoModalProps> = ({ ca
                   key={m.id}
                   type="button"
                   onClick={() => onSelect(m)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-navy hover:text-white hover:border-navy text-navy transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-line bg-paper hover:bg-navy hover:text-white hover:border-navy text-navy transition-colors text-left"
                 >
                   {/* Avatar maior que a linha (margem negativa) para não aumentar a altura do botão. */}
                   <span className="-my-1.5 shrink-0 flex"><Avatar nome={m.nome} imageProfile={m.imageProfile} size={48} /></span>
@@ -86,7 +86,7 @@ export const ResponsavelTermoModal: React.FC<ResponsavelTermoModalProps> = ({ ca
           )}
 
           <div className="flex justify-end">
-            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">Cancelar</button>
           </div>
         </div>
       </div>
