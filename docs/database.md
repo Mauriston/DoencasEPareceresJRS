@@ -1542,3 +1542,20 @@ Antes de alterar uma aba, cabeçalho, coluna ou integração:
 8. **Manter o Drive como repositório documental**, mesmo após eventual migração do banco transacional.
 9. **Substituir o login em planilha** por identidade gerenciada e autorização validada no servidor.
 10. **Adotar política formal de retenção, backup e conformidade**, devido à natureza médico-pericial dos dados.
+
+---
+
+## 32. Pareceres no Firestore (substitui o histórico em planilha)
+
+A página **Pareceres** deixou de usar a planilha/Apps Script principal. Os dados ficam no Firestore:
+
+| Coleção | Documento | Conteúdo |
+|---|---|---|
+| `pareceres` | id automático, um por pedido | `militarId` (NIP só dígitos = id em `militares`), `inspecionado` (cópia do texto usado no pedido), `especialidade`, `finalidade`, `historico`, `quesitos[]`, `pdfUrl`, `status` (`solicitado` \| `concluido`), `solicitanteUid/Nome/Posto`, `criadoEm`, `concluidoEm`, `concluidoPor` |
+| `quesitosParecer` | slug da especialidade (ex.: `psiquiatria`) | `especialidade` (maiúsculas) e `quesitos[]` — modelos sugeridos; edição só do Admin |
+
+Decisões:
+- **Coleção na raiz**, e não subcoleção do militar: permite listar/filtrar todos os pedidos (status, especialidade) sem `collectionGroup`, e o pedido (documento histórico) sobrevive à exclusão do cadastro. O vínculo é `militarId`, que a Perícia Menor também poderá usar.
+- **Status "atrasado" é derivado**: `solicitado` há 20 dias ou mais (`PRAZO_ATRASO_DIAS` em `services/firestorePareceres.ts`). Nada gravado precisaria de rotina agendada para virar "atrasado".
+- **PDF**: gerado pelo Apps Script standalone (`CodeConcursos.gs`, ação `gerarPedidoParecer`, template Google Docs `ID_TEMPLATE_PEDIDO_PARECER`) e guardado no Storage em `pareceres/{id}.pdf`.
+- Carga inicial dos quesitos: `scripts/migrar-quesitos-parecer.mjs` (dados em `scripts/quesitos-parecer.json`).

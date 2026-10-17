@@ -28,7 +28,7 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'concursosJRS', label: 'Concursos', icon: 'fact_check', subtitle: 'Acompanhe as planilhas de controle dos candidatos em concurso.' },
   { id: 'concursos', label: 'Índices Mínimos', icon: 'emoji_events', subtitle: 'Consulte os índices mínimos exigidos por concurso.' },
   { id: 'exames', label: 'Exames Mínimos', icon: 'science', subtitle: 'Veja os exames mínimos exigidos por finalidade de IS.' },
-  { id: 'pareceres', label: 'Pareceres', icon: 'assignment', subtitle: 'Gere solicitações de Pareceres em PDF por especialidade.' },
+  { id: 'pareceres', label: 'Pareceres', icon: 'assignment', subtitle: 'Acompanhe e gere pedidos de parecer médico em PDF por especialidade.' },
   // "Perícia Menor" não tem permissão de página própria: é controlada pelas
   // duas sub-permissões (features) "pericia-menor.novo"/"pericia-menor.historico"
   // abaixo — uma por aba —, editáveis na tabela de Páginas do App (ver
@@ -77,6 +77,7 @@ export type FeatureKey =
   | 'concursosJRS.visualizarTabela'
   | 'concursosJRS.gerarTermoRecurso'
   | 'concursosJRS.solicitarParecerExames'
+  | 'pareceres.gerar'
   | 'pericia-menor.novo'
   | 'pericia-menor.historico';
 
@@ -99,6 +100,7 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'concursosJRS.visualizarTabela', label: 'Alternar para visão em tabela (lista de concursos, desktop)', group: 'Concursos' },
   { id: 'concursosJRS.gerarTermoRecurso', label: 'Gerar Termo de Recurso (a visualização do termo já gerado é liberada a todos)', group: 'Concursos' },
   { id: 'concursosJRS.solicitarParecerExames', label: 'Solicitar Parecer / Exames (menu ⋮ da planilha; a visualização é só de quem tem o menu)', group: 'Concursos' },
+  { id: 'pareceres.gerar', label: 'Gerar Pedido de Parecer e marcar como concluído (a lista de pareceres é vista por quem acessa a página)', group: 'Pareceres' },
   // Substituem a antiga permissão única de página "Perícia Menor": cada aba
   // (Novo/Histórico) é liberada separadamente por perfil.
   { id: 'pericia-menor.novo', label: 'Perícia Menor - Novo', group: 'Perícia Menor' },
@@ -118,6 +120,7 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'concursosJRS.visualizarTabela': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
   'concursosJRS.gerarTermoRecurso': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
   'concursosJRS.solicitarParecerExames': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  'pareceres.gerar': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
   'pericia-menor.novo': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
   'pericia-menor.historico': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
 };

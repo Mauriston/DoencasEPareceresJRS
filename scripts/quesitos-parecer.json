@@ -1,0 +1,54 @@
+{
+  "PSIQUIATRIA": [
+    "Apresenta alguma condição clínica psiquiátrica? Caso afirmativo, qual o código nosográfico segundo o CID-X?",
+    "Descreva as queixas atuais e o exame psicopatológico no momento da resposta ao parecer.",
+    "Qual a data de início de acompanhamento?",
+    "O inspecionado realiza acompanhamento de forma regular? O inspecionado adere adequadamente ao tratamento proposto?",
+    "Qual foi a data e o motivo do último ajuste medicamentoso?",
+    "Há registro de internações psiquiátricas prévias? Caso afirmativo, em qual período?",
+    "Há registro médico de auto ou heteroagressividade? Caso afirmativo, em que data?",
+    "Há registro médico de ideação ou tentativa de suicídio? Caso afirmativo, em que data?",
+    "Informar como se deu a evolução do quadro e se ocorreu alteração recente do curso da patologia (caso afirmativo, qual)?",
+    "Há indicação de acompanhamento médico no momento? Há indicação de tratamento médico no momento? Em caso afirmativo, favor detalhar a proposta terapêutica atual e as próximas condutas previstas.",
+    "De acordo com a literatura especializada, qual a estimativa de tempo para a melhora das queixas clínicas do inspecionado com o tratamento proposto?",
+    "Qual o prognóstico atual?",
+    "Em relação ao estado de saúde atual:\nA) É grave?\nB) É persistente?\nC) É refratário aos meios habituais de tratamento?\nD) Compromete gravemente os juízos de valor e realidade, com destruição da autodeterminação e do pragmatismo?"
+  ],
+  "PSICOLOGIA": [
+    "Apresenta alguma condição clínica relativa à saúde mental? Qual?",
+    "Descreva o exame psicopatológico no momento da resposta ao parecer e cite eventuais queixas.",
+    "Qual a data de início de acompanhamento?",
+    "O inspecionado realiza acompanhamento de forma regular? Com que frequência semanal os atendimentos são realizados?",
+    "Qual tipo de psicoterapia foi adotada (TCC, sistêmica breve, psicanálise, Gestalt…)?",
+    "Há registro de auto ou heteroagressividade? Caso afirmativo, em que data?",
+    "Há registro de ideação ou tentativa de suicídio? Caso afirmativo, em que data?",
+    "Informar como se deu a evolução do quadro e se ocorreu alteração do recente do curso da patologia (caso afirmativo, qual)?"
+  ],
+  "CARDIOLOGIA": [
+    "Apresenta alguma condição cardiológica? Caso afirmativo, qual o código nosográfico segundo o CID-X?",
+    "Caso afirmativo no quesito 1, a patologia em tela algum agente etiológico, fator de risco, desencadeante ou agravante? O (A) paciente teve contato com algum desses fatores?",
+    "Qual o quadro clínico apresentado no momento?",
+    "O diagnóstico foi baseado em exames complementares? Quais?",
+    "A patologia em tela possui alguma classificação de estratificação por gravidade (Ex.: NYHA)? Se afirmativo, qual a classificação no momento atual?",
+    "À luz das evidências científicas atuais, a patologia em tela pode ser considerada uma doença ocupacional ou uma doença do trabalho?",
+    "Qual o tratamento proposto? Já é possível observar alguma resposta clínica?",
+    "Qual foi a data do último ajuste medicamentoso? Que ajuste foi feito?",
+    "Há previsão de procedimentos cirúrgicos ou invasivos?",
+    "Qual o prognóstico frente ao tratamento instituído e qual a estimativa de tempo para melhora das queixas clínicas apresentadas?",
+    "Em relação ao estado de saúde atual:\nA) É grave?\nB) É persistente?\nC) É refratária aos meios de tratamento habituais?",
+    "Em quanto tempo está prevista uma nova consulta de acompanhamento?"
+  ],
+  "HEPATOLOGIA": [
+    "Apresenta alguma condição clínica hepática? Caso afirmativo, qual o código nosográfico segundo o CID-X?",
+    "Caso afirmativo no quesito 1, a patologia em tela tem algum agente etiológico, fator de risco, desencadeante ou agravante? O (A) paciente teve contato com algum desses fatores?",
+    "Qual o quadro clínico apresentado no momento?",
+    "O diagnóstico foi baseado em exames complementares? Quais?",
+    "À luz das evidências científicas atuais, a patologia em tela pode ser considerada uma doença ocupacional ou uma doença do trabalho?",
+    "Qual o tratamento proposto? Há previsão de tratamento imunossupressor ou com imunobiológicos?",
+    "Qual foi a data do último ajuste medicamentoso? Que ajuste foi feito?",
+    "Há previsão de procedimentos cirúrgicos ou invasivos?",
+    "Qual o prognóstico frente ao tratamento instituído e qual a estimativa de tempo para melhora das queixas clínicas apresentadas?",
+    "Em relação ao estado de saúde atual:\nA) É grave?\nB) É persistente?\nC) É refratária aos meios de tratamento habituais?",
+    "Em quanto tempo está prevista uma nova consulta de acompanhamento?"
+  ]
+}
