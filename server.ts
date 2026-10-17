@@ -2,6 +2,32 @@ import express from "express";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
 
+// Firebase Admin (credenciais padrão do Cloud Run), inicializado sob demanda.
+async function getFirebaseAdmin() {
+  const { initializeApp, applicationDefault, getApps } = await import("firebase-admin/app");
+  const { getAuth } = await import("firebase-admin/auth");
+  const { getFirestore } = await import("firebase-admin/firestore");
+  const adminApp = getApps()[0] || initializeApp({
+    credential: applicationDefault(),
+    projectId: process.env.FIREBASE_PROJECT_ID || "jrs-app-web",
+    serviceAccountId: process.env.FIREBASE_SERVICE_ACCOUNT_EMAIL || undefined,
+  });
+  return { adminAuth: getAuth(adminApp), adminDb: getFirestore(adminApp) };
+}
+
+// Senha inicial padrão (ver config/senha.ts no frontend).
+const SENHA_INICIAL_PADRAO = "123456";
+
+// Limitação simples de tentativas por IP para a consulta de NIP (anônima).
+const consultasNip = new Map<string, { n: number; desde: number }>();
+const limitarConsultaNip = (ip: string): boolean => {
+  const agora = Date.now();
+  const reg = consultasNip.get(ip);
+  if (!reg || agora - reg.desde > 60_000) { consultasNip.set(ip, { n: 1, desde: agora }); return true; }
+  reg.n += 1;
+  return reg.n <= 30;
+};
+
 async function startServer() {
   const app = express();
   // Cloud Run injeta a porta via a variável de ambiente PORT (normalmente
@@ -44,20 +70,81 @@ async function startServer() {
         res.status(401).json({ success: false, error: "Token ausente." });
         return;
       }
-      const { initializeApp, applicationDefault, getApps } = await import("firebase-admin/app");
-      const { getAuth } = await import("firebase-admin/auth");
-      const adminApp = getApps()[0] || initializeApp({
-        credential: applicationDefault(),
-        projectId: process.env.FIREBASE_PROJECT_ID || "jrs-app-web",
-        serviceAccountId: process.env.FIREBASE_SERVICE_ACCOUNT_EMAIL || undefined,
-      });
-      const adminAuth = getAuth(adminApp);
+      const { adminAuth } = await getFirebaseAdmin();
       const decoded = await adminAuth.verifyIdToken(idToken, true);
       const token = await adminAuth.createCustomToken(decoded.uid);
       res.json({ success: true, token });
     } catch (error: any) {
       console.error("Handoff token error:", error);
       res.status(401).json({ success: false, error: "Não foi possível gerar o acesso para o celular." });
+    }
+  });
+
+  // Login por NIP: devolve o usuário (login) e se ainda usa a senha inicial,
+  // para o frontend autenticar no Firebase e orientar quem errou a senha.
+  // Não expõe nenhum outro dado do cadastro.
+  app.post("/api/auth/resolver-nip", async (req, res) => {
+    try {
+      if (!limitarConsultaNip(String(req.ip || "?"))) {
+        res.status(429).json({ success: false, error: "Muitas tentativas. Aguarde um pouco." });
+        return;
+      }
+      const digitos = String(req.body?.nip || "").replace(/\D/g, "");
+      if (digitos.length !== 8) {
+        res.status(400).json({ success: false, error: "NIP inválido." });
+        return;
+      }
+      const formatado = `${digitos.slice(0, 2)}.${digitos.slice(2, 6)}.${digitos.slice(6)}`;
+      const { adminDb } = await getFirebaseAdmin();
+      let doc = (await adminDb.collection("usuarios").where("nip", "==", formatado).limit(1).get()).docs[0];
+      if (!doc) doc = (await adminDb.collection("usuarios").where("nip", "==", digitos).limit(1).get()).docs[0];
+      if (!doc) {
+        res.status(404).json({ success: false, error: "NIP não encontrado." });
+        return;
+      }
+      const d = doc.data();
+      res.json({ success: true, usuario: d.usuario, ativo: d.ativo !== false, senhaTemporaria: !!d.senhaTemporaria });
+    } catch (error: any) {
+      console.error("Resolver NIP error:", error);
+      res.status(500).json({ success: false, error: "Não foi possível consultar o NIP. Tente novamente." });
+    }
+  });
+
+  // Admin redefine a senha de um usuário para a senha inicial padrão. O ID
+  // token do solicitante é verificado e o perfil "admin" é conferido no
+  // Firestore; a senha é trocada via Admin SDK e a flag senhaTemporaria volta
+  // a true (o app volta a orientar a troca no próximo acesso).
+  app.post("/api/admin/resetar-senha", async (req, res) => {
+    try {
+      const authHeader = String(req.headers.authorization || "");
+      const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+      if (!idToken) {
+        res.status(401).json({ success: false, error: "Token ausente." });
+        return;
+      }
+      const { adminAuth, adminDb } = await getFirebaseAdmin();
+      const decoded = await adminAuth.verifyIdToken(idToken, true);
+      const solicitante = await adminDb.collection("usuarios").doc(decoded.uid).get();
+      if (!solicitante.exists || solicitante.data()?.perfil !== "admin") {
+        res.status(403).json({ success: false, error: "Apenas o Admin pode redefinir senhas." });
+        return;
+      }
+      const uid = String(req.body?.uid || "");
+      if (!uid) {
+        res.status(400).json({ success: false, error: "Usuário não informado." });
+        return;
+      }
+      const alvo = await adminDb.collection("usuarios").doc(uid).get();
+      if (!alvo.exists) {
+        res.status(404).json({ success: false, error: "Usuário não encontrado." });
+        return;
+      }
+      await adminAuth.updateUser(uid, { password: SENHA_INICIAL_PADRAO });
+      await adminDb.collection("usuarios").doc(uid).update({ senhaTemporaria: true });
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Resetar senha error:", error);
+      res.status(500).json({ success: false, error: "Não foi possível redefinir a senha." });
     }
   });
 
