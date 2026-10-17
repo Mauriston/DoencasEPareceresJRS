@@ -42,7 +42,7 @@ const FINALIDADE_PADRAO = 'Ingresso SAM / SMV (oriundos do meio civil)';
 // Menu suspenso no estilo dos menus nativos do iOS: lista escura de grupos com
 // seta ">"; ao tocar num grupo, a lista esmaece e o grupo sobe como um cartão
 // (título com seta "v") listando as finalidades. Tocar no título volta à lista.
-const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => void }> = ({ value, onChange }) => {
+export const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => void; placeholder?: string; erro?: boolean }> = ({ value, onChange, placeholder, erro }) => {
   const [aberto, setAberto] = useState(false);
   const [grupoAberto, setGrupoAberto] = useState<{ nome: string; topo: number } | null>(null);
   const raiz = useRef<HTMLDivElement>(null);
@@ -84,11 +84,12 @@ const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => 
         aria-haspopup="listbox"
         aria-expanded={aberto}
         onClick={alternar}
-        className="w-full flex items-center justify-between gap-3 bg-gray-50 border border-gray-200 text-gray-800 text-base font-semibold rounded-lg p-3 text-left focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy transition-all font-body shadow-inner"
+        aria-invalid={erro || undefined}
+        className={`w-full flex items-center justify-between gap-3 bg-gray-50 border ${erro ? 'border-wine' : 'border-gray-200'} text-gray-800 text-base font-semibold rounded-lg p-3 text-left focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy transition-all font-body shadow-inner`}
       >
         <span className="min-w-0">
           {grupoDoValor && <span className="block text-xs font-bold text-ink-3 uppercase tracking-wider">{grupoDoValor}</span>}
-          <span className="block leading-snug">{value}</span>
+          <span className={`block leading-snug ${value ? '' : 'text-ink-4 font-normal'}`}>{value || placeholder}</span>
         </span>
         <ChevronDown size={18} className={`text-navy flex-shrink-0 transition-transform ${aberto ? 'rotate-180' : ''}`} />
       </button>

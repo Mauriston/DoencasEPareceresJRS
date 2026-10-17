@@ -5,6 +5,7 @@
 // avisos vão em Toast; sucesso vira página de resultado.
 import React, { useEffect, useId, useRef } from 'react';
 import { Button } from './Button';
+import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
 
 interface DialogProps {
   title: string;
@@ -13,12 +14,12 @@ interface DialogProps {
   onClose: () => void;
   /** Impede fechar por Esc/fora/botão (ex.: etapa obrigatória). */
   travado?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   children: React.ReactNode;
   footer?: React.ReactNode;
 }
 
-const LARGURA = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-2xl' };
+const LARGURA = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-2xl', xl: 'max-w-4xl' };
 
 export const Dialog: React.FC<DialogProps> = ({ title, icon, onClose, travado = false, size = 'sm', children, footer }) => {
   const titleId = useId();
@@ -26,10 +27,8 @@ export const Dialog: React.FC<DialogProps> = ({ title, icon, onClose, travado = 
 
   useEffect(() => {
     painel.current?.focus();
-    const aoTecla = (e: KeyboardEvent) => { if (e.key === 'Escape' && !travado) onClose(); };
-    window.addEventListener('keydown', aoTecla);
-    return () => window.removeEventListener('keydown', aoTecla);
-  }, [onClose, travado]);
+  }, []);
+  useEscapeEmpilhado(onClose, !travado);
 
   return (
     <div

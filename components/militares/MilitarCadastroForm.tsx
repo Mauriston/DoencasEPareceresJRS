@@ -21,7 +21,7 @@ import { enviarFotoMilitar } from '../../services/militarFoto';
 
 interface Props {
   onClose: () => void;
-  onCriado: (nome: string) => void;
+  onCriado: (nome: string, id: string) => void;
 }
 
 type Erros = Record<string, string>;
@@ -113,7 +113,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
         om: omSigla, temporario: vinculo === 'Temporário', pgq, nip, nome: nomeFinal,
         inspecionado: montarInspecionado(pgq, nip, nomeFinal), email: email.trim().toLowerCase(), ativo: true, ...extras,
       });
-      onCriado(nomeFinal);
+      onCriado(nomeFinal, id);
       if (medico && adicionais.fotoNova) {
         // O cadastro já existe; se a foto falhar, dá para enviá-la depois pela edição.
         enviarFotoMilitar(id, adicionais.fotoNova).then(url => atualizarMilitar(id, { fotoUrl: url })).catch(() => { /* foto pode ser reenviada na edição */ });

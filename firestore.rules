@@ -25,6 +25,12 @@ service cloud.firestore {
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil == 'admin';
     }
 
+    // Médicos: perfis habilitados a gerar Pedidos de Parecer (Admin e user_medicos/_mpi).
+    function isMedico() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi'];
+    }
+
     match /usuarios/{uid} {
       allow read: if isSignedIn();
       allow create: if isAdmin() ||
@@ -53,8 +59,29 @@ service cloud.firestore {
     // Coleção "militares": cadastro de militares da ativa e servidores civis
     // (migrado da aba "Militares" da planilha). Id do documento = NIP só com
     // dígitos. Qualquer usuário autenticado lê (usada por páginas/funções
-    // futuras); só o Admin cria, edita ou apaga.
+    // futuras); o Admin cria, edita ou apaga; os médicos só CRIAM (cadastro
+    // rápido a partir do "Novo parecer").
     match /militares/{nip} {
+      allow read: if isSignedIn();
+      allow create: if isMedico();
+      allow update, delete: if isAdmin();
+    }
+
+    // Coleção "pareceres": Pedidos de Parecer Médico (um doc por pedido, id
+    // automático; liga ao militar por "militarId" = NIP só dígitos). Lê quem
+    // está autenticado; só médicos criam e atualizam (marcar concluído).
+    // Quem não é Admin só pode alterar "status"/"concluidoEm"/"concluidoPor".
+    match /pareceres/{id} {
+      allow read: if isSignedIn();
+      allow create: if isMedico();
+      allow update: if isAdmin() || (isMedico() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'concluidoEm', 'concluidoPor']));
+      allow delete: if isAdmin();
+    }
+
+    // Coleção "quesitosParecer": modelos de quesitos por especialidade
+    // (id = slug da especialidade). Lê quem está autenticado; só o Admin edita.
+    match /quesitosParecer/{id} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }

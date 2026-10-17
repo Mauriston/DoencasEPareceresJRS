@@ -18,6 +18,16 @@ service firebase.storage {
         && request.resource.contentType.matches('image/.*');
     }
 
+    // PDFs dos Pedidos de Parecer Médico (página Pareceres), gerados pelo Apps
+    // Script a partir do template e enviados pelo app (pareceres/{id}.pdf).
+    match /pareceres/{arquivo} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+      allow delete: if request.auth != null;
+    }
+
     // PDFs do menu Concursos ("Planilhas de Controle"): cópia da mensagem
     // administrativa original (concursos/{id}/mensagens/...) e o Termo de
     // Cientificação de Recurso de cada candidato

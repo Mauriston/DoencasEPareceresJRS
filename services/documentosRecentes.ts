@@ -1,9 +1,11 @@
 // Ficheiro: services/documentosRecentes.ts
 // "Últimos documentos gerados" da Página Inicial: junta os pareceres e as
-// perícias menores mais recentes (listas já expostas pelo Apps Script) — só dos
-// tipos a que o perfil tem acesso (a checagem de permissão é de quem chama).
+// perícias menores mais recentes — pareceres vêm do Firestore (coleção "pareceres"),
+// perícias menores da lista do Apps Script — só dos tipos a que o perfil tem acesso
+// (a checagem de permissão é de quem chama).
 import { GAS_URL } from '../config/endpoints';
 import { extrairNomeInspecionado } from '../utils/format';
+import { observarPareceres } from './firestorePareceres';
 
 export interface DocumentoRecente {
   tipo: 'parecer' | 'pericia-menor';
@@ -22,6 +24,17 @@ const parseDataBR = (s: string): number => {
   return d && m && a ? new Date(a, m - 1, d).getTime() : 0;
 };
 
+/** Lê os pareceres mais recentes do Firestore (uma leitura única). */
+const lerPareceres = (limite: number): Promise<DocumentoRecente[]> => new Promise(resolve => {
+  const parar = observarPareceres(lista => {
+    parar();
+    resolve(lista.slice(0, limite).map((p): DocumentoRecente => ({
+      tipo: 'parecer', titulo: extrairNomeInspecionado(p.inspecionado), detalhe: p.especialidade,
+      data: p.criadoEm?.toDate?.().toLocaleDateString('pt-BR') ?? '', ts: p.criadoEm?.toMillis?.() ?? Date.now(), link: p.pdfUrl,
+    })));
+  }, () => { resolve([]); }, limite);
+});
+
 const lerLista = async (action: string): Promise<any[]> => {
   const resp = await fetch(`${GAS_URL}?action=${action}`);
   const json = await resp.json();
@@ -30,14 +43,11 @@ const lerLista = async (action: string): Promise<any[]> => {
 
 export const buscarDocumentosRecentes = async (tipos: { pareceres: boolean; periciaMenor: boolean }, limite = 6): Promise<DocumentoRecente[]> => {
   const [pareceres, pericias] = await Promise.all([
-    tipos.pareceres ? lerLista('getPareceresList').catch(() => []) : Promise.resolve([]),
+    tipos.pareceres ? lerPareceres(limite) : Promise.resolve([] as DocumentoRecente[]),
     tipos.periciaMenor ? lerLista('getPericiaMenorList').catch(() => []) : Promise.resolve([]),
   ]);
   const docs: DocumentoRecente[] = [
-    ...pareceres.map((p): DocumentoRecente => ({
-      tipo: 'parecer', titulo: extrairNomeInspecionado(String(p.inspecionado || '')), detalhe: String(p.especialidade || ''),
-      data: String(p.data || ''), ts: parseDataBR(p.data), link: String(p.link || ''),
-    })),
+    ...pareceres,
     ...pericias.map((p): DocumentoRecente => ({
       tipo: 'pericia-menor', titulo: extrairNomeInspecionado(String(p.inspecionado || '')), detalhe: String(p.cid || ''),
       data: String(p.dataAtestado || ''), ts: parseDataBR(p.dataAtestado), link: String(p.link || ''),

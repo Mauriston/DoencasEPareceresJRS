@@ -4,6 +4,7 @@
 // ícone, corpo, rodapé de ações); fecha com Esc e ao tocar fora.
 import React, { useEffect, useId, useRef } from 'react';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
+import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
 
 interface DrawerProps {
   title: string;
@@ -20,10 +21,8 @@ export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, 
 
   useEffect(() => {
     painel.current?.focus();
-    const aoTecla = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', aoTecla);
-    return () => window.removeEventListener('keydown', aoTecla);
-  }, [onClose]);
+  }, []);
+  useEscapeEmpilhado(onClose);
 
   return (
     <div className="fixed inset-0 z-[200]">

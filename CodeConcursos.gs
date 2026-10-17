@@ -24,6 +24,7 @@
 var ID_TEMPLATE_TERMO_RECURSO = '1gVSaakcQJBrFJnF4umFbI_cjR9abCXPjfOyfSUFKnRo';
 var ID_TEMPLATE_TERMO_CIENTIFICACAO = '1uSdvvwxjPDkvGm7kjCrDGaGnPVF3_pDu4rN6C6tJFiI';
 var ID_TEMPLATE_SOLICITACAO_PARECER = '16KIcTgceHNdbTNRe8UeYPjJXn4r_d450Xy61conLO3Q';
+var ID_TEMPLATE_PEDIDO_PARECER = '1jE-3VQ8G2t4JQJ5B7ydedq6oupvsXwo7aPX_AVttMEM';
 var ID_TEMPLATE_SOLICITACAO_EXAMES = '1SSAzdWANvfQJx7Sip2-NbqDGAM0cgpVD6Q4Ci9UhGqQ';
 
 /** Ponto de entrada POST do aplicativo da web. Espera um corpo JSON com a propriedade "action". */
@@ -39,6 +40,7 @@ function doPost(e) {
     if (corpo.action === 'gerarTermoRecurso') return apiGerarTermoRecurso(corpo);
     if (corpo.action === 'gerarTermoCientificacao') return apiGerarTermoCientificacao(corpo);
     if (corpo.action === 'gerarSolicitacaoParecer') return apiGerarSolicitacaoParecer(corpo);
+    if (corpo.action === 'gerarPedidoParecer') return apiGerarPedidoParecer(corpo);
     if (corpo.action === 'gerarSolicitacaoExames') return apiGerarSolicitacaoExames(corpo);
     throw new Error('Ação POST desconhecida: "' + corpo.action + '".');
   });
@@ -283,4 +285,47 @@ function apiGerarSolicitacaoExames(corpo) {
     candidatoId: base.candidatoId,
     pdfBase64: gerarPdfDeTemplate(ID_TEMPLATE_SOLICITACAO_EXAMES, 'Temp_Exames_' + base.candidatoId, base.valores)
   };
+}
+
+/** Data por extenso no padrão do pedido de parecer: "1º de outubro de 2026". */
+function formatarDataPorExtenso(data) {
+  var meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  var dia = Number(Utilities.formatDate(data, 'America/Recife', 'd'));
+  var mes = Number(Utilities.formatDate(data, 'America/Recife', 'M'));
+  var ano = Utilities.formatDate(data, 'America/Recife', 'yyyy');
+  return (dia === 1 ? '1º' : String(dia)) + ' de ' + meses[mes - 1] + ' de ' + ano;
+}
+
+/**
+ * action=gerarPedidoParecer (POST): { inspecionado, especialidade, finalidade, historico,
+ * quesitos (lista de textos), nomeUsuario, postoGraduacao, cargo, crmPe } — Pedido de Parecer
+ * Médico da página Pareceres. Placeholders do template: {{dataHoje}} {{especialidadeParecer}}
+ * {{inspecionado}} {{finalidade}} {{historico}} {{quesitos}} (lista numerada) {{nomeUsuario}}
+ * {{postoGraduacao}} {{cargo}} {{crmPe}}.
+ */
+function apiGerarPedidoParecer(corpo) {
+  var campo = function(nome) { return String((corpo && corpo[nome]) || '').trim(); };
+  ['inspecionado', 'especialidade', 'finalidade', 'historico'].forEach(function(nome) {
+    if (!campo(nome)) throw new Error('"' + nome + '" é obrigatório.');
+  });
+  var quesitos = (corpo.quesitos || []).map(function(q) { return String(q).trim(); }).filter(Boolean);
+  if (!quesitos.length) throw new Error('Informe ao menos um quesito.');
+  // Lista numerada; linhas seguintes de um mesmo quesito (ex.: "A) ...") recuam sob o número.
+  var listaNumerada = quesitos.map(function(q, i) {
+    var linhas = q.split(/\r?\n/);
+    return (i + 1) + '. ' + linhas[0] + linhas.slice(1).map(function(l) { return '\n    ' + l.trim(); }).join('');
+  }).join('\n');
+  var valores = {
+    dataHoje: formatarDataPorExtenso(new Date()),
+    especialidadeParecer: campo('especialidade'),
+    inspecionado: campo('inspecionado'),
+    finalidade: campo('finalidade'),
+    historico: campo('historico'),
+    quesitos: listaNumerada,
+    nomeUsuario: campo('nomeUsuario'),
+    postoGraduacao: campo('postoGraduacao'),
+    cargo: campo('cargo'),
+    crmPe: campo('crmPe')
+  };
+  return { pdfBase64: gerarPdfDeTemplate(ID_TEMPLATE_PEDIDO_PARECER, 'Temp_PedidoParecer_' + Date.now(), valores) };
 }
