@@ -1,6 +1,7 @@
 // Ficheiro: services/militarFoto.ts
 // Foto (avatar) do cadastro de militares no Firebase Storage
-// (militares/{nip}/foto-<timestamp>.jpg; regra em storage.rules). A imagem é
+// (perfil/militar-{nip}/<timestamp>.jpg, o mesmo caminho das fotos de perfil dos
+// usuários: a regra de perfil/{usuario}/{arquivo} em storage.rules já cobre). A imagem é
 // recortada ao centro em quadrado e reduzida a 512 px antes do envio.
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { app } from './firebaseAuth';
@@ -23,7 +24,7 @@ export const prepararFoto = async (arquivo: Blob): Promise<Blob> => {
 };
 
 export const enviarFotoMilitar = async (idNip: string, foto: Blob): Promise<string> => {
-  const r = ref(getStorage(app), `militares/${idNip}/foto-${Date.now()}.jpg`);
+  const r = ref(getStorage(app), `perfil/militar-${idNip}/${Date.now()}.jpg`);
   await uploadBytes(r, foto, { contentType: 'image/jpeg' });
   return getDownloadURL(r);
 };
