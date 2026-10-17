@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { Toast } from './ui/Toast';
+import { ConfirmDialog } from './ui/Dialog';
+import { resetarSenhaUsuario } from '../services/loginNip';
+import { SENHA_INICIAL_PADRAO } from '../config/senha';
 import { StatusTag } from './ui/StatusTag';
 import {
   ROLES,
@@ -150,6 +153,25 @@ export const UsuariosManagement: React.FC = () => {
     setShowNewUserModal(true);
   };
 
+  const [resetAlvo, setResetAlvo] = useState<UserRecord | null>(null);
+  const [resetando, setResetando] = useState(false);
+
+  const handleConfirmarReset = async () => {
+    if (!resetAlvo) return;
+    const alvo = resetAlvo;
+    setResetando(true);
+    try {
+      await resetarSenhaUsuario(alvo.id);
+      setUsers(prev => prev.map(u => (u.id === alvo.id ? { ...u, senhaTemporaria: true } : u)));
+      showToast(`Senha de "${alvo.usuario}" redefinida para a inicial (${SENHA_INICIAL_PADRAO}).`);
+    } catch (err: any) {
+      showToast(err?.message || 'Não foi possível redefinir a senha.');
+    } finally {
+      setResetando(false);
+      setResetAlvo(null);
+    }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setNewUserError('');
@@ -159,7 +181,7 @@ export const UsuariosManagement: React.FC = () => {
       return;
     }
     if (!newUserForm.nip.trim()) {
-      setNewUserError('Informe o NIP — ele será usado como senha inicial do usuário.');
+      setNewUserError('Informe o NIP — é com ele que o usuário faz login.');
       return;
     }
 
@@ -171,7 +193,7 @@ export const UsuariosManagement: React.FC = () => {
 
     setCreatingUser(true);
     try {
-      const senhaInicial = newUserForm.nip.replace(/\D/g, '');
+      const senhaInicial = SENHA_INICIAL_PADRAO;
       const perfilData = {
         postoGraduacao: newUserForm.postoGraduacao.trim(),
         cargo: newUserForm.cargo.trim(),
@@ -191,7 +213,7 @@ export const UsuariosManagement: React.FC = () => {
 
       const novoUsuario: UserRecord = { id: uid, usuario: usuarioUpper, ...perfilData };
       setUsers(prev => [...prev, novoUsuario]);
-      showToast(`Usuário "${usuarioUpper}" criado com sucesso! Senha inicial: NIP (sem pontos).`);
+      showToast(`Usuário "${usuarioUpper}" criado com sucesso! Senha inicial: ${SENHA_INICIAL_PADRAO}.`);
       setShowNewUserModal(false);
     } catch (err: any) {
       setNewUserError(mapAuthErrorMessage(err?.code, 'Erro ao criar usuário.'));
@@ -404,6 +426,9 @@ export const UsuariosManagement: React.FC = () => {
                             <button type="button" onClick={() => handleOpenEdit(user)} className="p-1.5 text-gray-500 hover:text-navy hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Editar dados do usuário">
                               <span className="material-symbols-outlined text-[18px]">edit</span>
                             </button>
+                            <button type="button" onClick={() => setResetAlvo(user)} className="p-1.5 text-gray-500 hover:text-navy hover:bg-gray-100 rounded-lg transition-colors cursor-pointer" title="Redefinir senha para a inicial" aria-label={`Redefinir senha de ${user.usuario}`}>
+                              <span className="material-symbols-outlined text-[18px]">lock_reset</span>
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleToggleStatus(user)}
@@ -592,7 +617,7 @@ export const UsuariosManagement: React.FC = () => {
 
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm font-semibold text-blue-800 flex items-start gap-2">
                 <span className="material-symbols-outlined text-[16px] shrink-0">info</span>
-                <span>A senha inicial do usuário será o NIP (somente números). Ele será orientado a alterá-la no primeiro acesso.</span>
+                <span>O login é feito com o NIP e a senha inicial do usuário será {SENHA_INICIAL_PADRAO}. Ele será orientado a alterá-la no primeiro acesso.</span>
               </div>
 
               <div>
@@ -752,6 +777,18 @@ export const UsuariosManagement: React.FC = () => {
                 </div>
               </div>
 
+              {editingUser && (
+                <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-navy">Senha</p>
+                    <p className="text-sm text-gray-500">Volta para a senha inicial ({SENHA_INICIAL_PADRAO}); o usuário será orientado a trocá-la.</p>
+                  </div>
+                  <button type="button" onClick={() => setResetAlvo(editingUser)} className="shrink-0 min-h-[44px] px-4 rounded-lg border border-navy text-navy text-sm font-bold hover:bg-gray-50 inline-flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[18px]" aria-hidden="true">lock_reset</span>Redefinir senha
+                  </button>
+                </div>
+              )}
+
               <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-bold text-navy">Status da Conta</p>
@@ -777,6 +814,15 @@ export const UsuariosManagement: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+      {resetAlvo && (
+        <ConfirmDialog
+          title="Redefinir senha"
+          message={<>Redefinir a senha de <strong>{resetAlvo.usuario}</strong> para a senha inicial (<strong>{SENHA_INICIAL_PADRAO}</strong>)? {resetando ? 'Aguarde…' : ''}</>}
+          confirmLabel="Redefinir senha"
+          onConfirm={handleConfirmarReset}
+          onCancel={() => { if (!resetando) setResetAlvo(null); }}
+        />
       )}
     </div>
   );

@@ -116,7 +116,7 @@ export const Home: React.FC = () => {
 
   const pendencias: Pendencia[] = [];
   if (authUser?.senhaTemporaria) {
-    pendencias.push({ id: 'senha', icone: 'key', rotulo: 'Segurança', valor: 'Senha temporária', detalhe: 'Altere a senha inicial (seu NIP).', to: '/perfil', tom: 'wine' });
+    pendencias.push({ id: 'senha', icone: 'key', rotulo: 'Segurança', valor: 'Senha temporária', detalhe: 'Altere a senha inicial.', to: '/perfil', tom: 'wine' });
   }
   if (podePericiaMenor && periciaMenorVigentes > 0) {
     pendencias.push({ id: 'pm', icone: 'personal_injury', rotulo: 'Perícias menores vigentes', valor: periciaMenorVigentes, detalhe: periciaMenorVigentes === 1 ? 'militar com dispensa em curso' : 'militares com dispensa em curso', to: '/pericia-menor/historico', tom: 'wine' });

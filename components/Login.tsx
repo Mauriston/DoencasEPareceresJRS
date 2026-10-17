@@ -5,7 +5,9 @@
 // mesma de antes — só a apresentação mudou.
 import React, { useEffect, useRef, useState } from 'react';
 import { loginUsuario, mapAuthErrorMessage } from '../services/firebaseAuth';
-import { listUsuariosPublicos, UsuarioPublico } from '../services/firestoreUsuarios';
+import { resolverNip, NipError } from '../services/loginNip';
+import { formatNip } from '../utils/format';
+import { SENHA_INICIAL_PADRAO, linkWhatsappRedefinicao } from '../config/senha';
 import iconeJrs from '../assets/icone-jrs.png';
 import fachadaHnre from '../assets/hnre-fachada.jpg';
 
@@ -21,13 +23,12 @@ const rotuloClass = 'block text-[11px] font-bold uppercase tracking-[.1em] text-
 // Admin em Usuários (ver UsuariosManagement.tsx), que já define o perfil de
 // acesso corretamente na criação.
 export const Login: React.FC = () => {
-  const [usuario, setUsuario] = useState('');
+  const [nip, setNip] = useState('');
   const [senha, setSenha] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const [usuariosLista, setUsuariosLista] = useState<UsuarioPublico[]>([]);
-  const [listaFalhou, setListaFalhou] = useState(false);
-  const [entradaManual, setEntradaManual] = useState(false);
+  // Orientação após senha errada: dica da senha inicial ou contato para redefinição.
+  const [ajudaSenha, setAjudaSenha] = useState<null | { tipo: 'inicial' } | { tipo: 'redefinir'; usuario: string }>(null);
 
   const [splash, setSplash] = useState(true);
   const [montado, setMontado] = useState(false);
@@ -39,12 +40,6 @@ export const Login: React.FC = () => {
     return () => window.clearTimeout(t);
   }, []);
 
-  useEffect(() => {
-    listUsuariosPublicos()
-      .then(lista => setUsuariosLista(lista.filter(u => u.ativo).sort((a, b) => a.usuario.localeCompare(b.usuario))))
-      .catch(() => setListaFalhou(true));
-  }, []);
-
   const avancar = () => {
     if (!splash) return;
     setSplash(false);
@@ -53,21 +48,36 @@ export const Login: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!usuario || !senha) return;
+    if (nip.length < 10 || !senha) return;
     setLoginLoading(true);
     setLoginError('');
+    setAjudaSenha(null);
     try {
-      await loginUsuario(usuario.trim().toUpperCase(), senha);
-      // Sucesso: o listener onAuthStateChanged em App.tsx assume o resto.
+      const alvo = await resolverNip(nip);
+      if (!alvo.ativo) {
+        setLoginError(mapAuthErrorMessage('auth/user-disabled', 'Usuário desativado.'));
+        return;
+      }
+      try {
+        await loginUsuario(alvo.usuario, senha);
+        // Sucesso: o listener onAuthStateChanged em App.tsx assume o resto.
+      } catch (err: any) {
+        const senhaErrada = err?.code === 'auth/invalid-credential' || err?.code === 'auth/wrong-password';
+        if (senhaErrada) {
+          if (alvo.senhaTemporaria) { setLoginError('Senha incorreta.'); setAjudaSenha({ tipo: 'inicial' }); }
+          else setAjudaSenha({ tipo: 'redefinir', usuario: alvo.usuario });
+        } else {
+          setLoginError(mapAuthErrorMessage(err?.code, 'Erro de conexão. Tente novamente.'));
+        }
+      }
     } catch (err: any) {
-      setLoginError(mapAuthErrorMessage(err?.code, 'Erro de conexão. Tente novamente.'));
+      setLoginError(err instanceof NipError ? err.message : 'Erro de conexão. Tente novamente.');
     } finally {
       setLoginLoading(false);
     }
   };
 
-  const usarCampoTexto = entradaManual || listaFalhou || usuariosLista.length === 0;
-  const desabilitado = loginLoading || !usuario || !senha;
+  const desabilitado = loginLoading || nip.length < 10 || !senha;
   const entrada = (atraso: number): React.CSSProperties => ({
     opacity: montado ? 1 : 0,
     transform: montado ? 'translateY(0) scale(1)' : 'translateY(40px) scale(.6)',
@@ -138,43 +148,19 @@ export const Login: React.FC = () => {
           >
             <form onSubmit={handleLogin} className="w-full max-w-sm mx-auto flex flex-col gap-4">
               <div>
-                <div className="flex items-center justify-between mb-1.5 gap-2">
-                  <label htmlFor="login-usuario" className={rotuloClass}>Usuário</label>
-                  {!listaFalhou && usuariosLista.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setEntradaManual(prev => !prev)}
-                      className="shrink-0 whitespace-nowrap min-h-[44px] -my-3 text-[11px] font-semibold uppercase tracking-[.05em] text-white/60 hover:text-white transition-colors"
-                    >
-                      {entradaManual ? 'Ver lista' : 'Não achou seu usuário?'}
-                    </button>
-                  )}
-                </div>
-                {usarCampoTexto ? (
-                  <input
-                    id="login-usuario"
-                    ref={el => { usuarioRef.current = el; }}
-                    type="text"
-                    value={usuario}
-                    onChange={e => setUsuario(e.target.value.toUpperCase())}
-                    className={campoClass}
-                    placeholder="Ex.: CT MAURISTON"
-                    autoCapitalize="characters"
-                    autoCorrect="off"
-                    autoComplete="username"
-                  />
-                ) : (
-                  <select
-                    id="login-usuario"
-                    ref={el => { usuarioRef.current = el; }}
-                    value={usuario}
-                    onChange={e => setUsuario(e.target.value)}
-                    className={`${campoClass} appearance-none cursor-pointer ${usuario ? '' : '!text-white/50'}`}
-                  >
-                    <option value="" className="text-gray-500">Selecione seu usuário</option>
-                    {usuariosLista.map(u => <option key={u.usuario} value={u.usuario} className="text-gray-900">{u.usuario}</option>)}
-                  </select>
-                )}
+                <label htmlFor="login-nip" className={`${rotuloClass} mb-1.5`}>NIP</label>
+                <input
+                  id="login-nip"
+                  ref={el => { usuarioRef.current = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  value={nip}
+                  onChange={e => { setNip(formatNip(e.target.value)); setLoginError(''); setAjudaSenha(null); }}
+                  className={`${campoClass} font-mono`}
+                  placeholder="00.0000.00"
+                  maxLength={10}
+                  autoComplete="username"
+                />
               </div>
 
               <div>
@@ -191,6 +177,15 @@ export const Login: React.FC = () => {
               </div>
 
               {loginError && <p role="alert" className="text-xs text-center pt-1 m-0 text-red-300 font-semibold">{loginError}</p>}
+              {ajudaSenha?.tipo === 'inicial' && (
+                <p className="text-xs text-center m-0 text-gold font-semibold">Senha inicial: {SENHA_INICIAL_PADRAO}</p>
+              )}
+              {ajudaSenha?.tipo === 'redefinir' && (
+                <p role="alert" className="text-xs text-center m-0 text-white/80">
+                  Senha errada. Contacte o CT Mauriston{' '}
+                  <a href={linkWhatsappRedefinicao(ajudaSenha.usuario)} target="_blank" rel="noopener noreferrer" className="font-bold text-gold underline underline-offset-2">clicando aqui</a>.
+                </p>
+              )}
 
               <button
                 type="submit"
@@ -202,7 +197,7 @@ export const Login: React.FC = () => {
               </button>
 
               <p className="text-xs text-center text-white/60 m-0">
-                Esqueceu a senha ou não tem acesso? Solicite ao administrador do sistema (Presidente da JRS).
+                Entre com o seu NIP. Sem acesso? Solicite ao administrador do sistema (Presidente da JRS).
               </p>
             </form>
           </div>
