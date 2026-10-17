@@ -13,9 +13,13 @@ import { StatusTag } from './ui/StatusTag';
 import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
 import { Autocomplete, type OpcaoAutocomplete } from './ui/Autocomplete';
+import { MenuAcoes } from './ui/MenuAcoes';
 import { MilitarCadastroForm } from './militares/MilitarCadastroForm';
+import { MilitarDetalhe } from './militares/MilitarDetalhe';
+import { InformacoesAdicionais, adicionaisDoMilitar, adicionaisParaPatch, validarAdicionais, type Adicionais } from './militares/InformacoesAdicionais';
+import { enviarFotoMilitar } from '../services/militarFoto';
 import { observarMilitares, atualizarMilitar, atualizarMilitaresEmLote, apagarMilitar, type MilitarRecord } from '../services/firestoreMilitares';
-import { carregarOms, carregarCorposQuadros, normalizarBusca, montarInspecionado, separarPosto, type OrganizacaoMilitar, type CorposQuadros, type PostoInfo } from '../utils/corposQuadros';
+import { carregarOms, carregarCorposQuadros, normalizarBusca, montarInspecionado, separarPosto, ehOficialMedico, omEhHnre, type OrganizacaoMilitar, type CorposQuadros, type PostoInfo } from '../utils/corposQuadros';
 import { formatNip } from '../utils/format';
 
 type Filtro = 'todos' | 'ativos' | 'inativos';
@@ -36,6 +40,7 @@ export const Militares: React.FC = () => {
   const [limite, setLimite] = useState(PAGINA);
   const [novo, setNovo] = useState(false);
   const [editando, setEditando] = useState<MilitarRecord | null>(null);
+  const [detalhe, setDetalhe] = useState<MilitarRecord | null>(null);
   const [apagando, setApagando] = useState<MilitarRecord | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
   const [oms, setOms] = useState<OrganizacaoMilitar[]>([]);
@@ -99,6 +104,12 @@ export const Militares: React.FC = () => {
     }
   };
 
+  const itensDe = (m: MilitarRecord) => [
+    { rotulo: 'Detalhes', icone: 'badge', onClick: () => setDetalhe(m) },
+    { rotulo: 'Editar', icone: 'edit', onClick: () => setEditando(m) },
+    { rotulo: 'Apagar', icone: 'delete', perigo: true, onClick: () => setApagando(m) },
+  ];
+
   const visiveis = filtrada.slice(0, limite);
   const escolhidos = useMemo(() => filtrada.filter(m => selecionados.has(m.id)), [filtrada, selecionados]);
   const todosMarcados = filtrada.length > 0 && escolhidos.length === filtrada.length;
@@ -136,7 +147,7 @@ export const Militares: React.FC = () => {
             />
             <Button variant={soHnre ? 'primary' : 'secondary'} icon="local_hospital" aria-pressed={soHnre} onClick={() => setSoHnre(v => !v)}>Somente HNRe</Button>
           </div>
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="flex items-center gap-2">
             <select aria-label="Ordenar por" value={ordem.col} onChange={e => setOrdem(o => ({ ...o, col: e.target.value as ColunaOrdem }))} className={`${controlClass} w-auto`}>
               <option value="nome">Ordenar: Nome</option>
               <option value="pgq">Ordenar: P/G/Q</option>
@@ -177,15 +188,12 @@ export const Militares: React.FC = () => {
                       <label className="shrink-0 -ml-2 w-11 h-11 flex items-center justify-center"><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy" /></label>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-navy break-words">{m.nome}</p>
-                        <p className="text-xs text-ink-3">{m.pgq} · {formatNip(m.nip)} · {m.om}</p>
+                        <p className="text-xs text-ink-3">{m.pgq} · {formatNip(m.nip)}</p>
                       </div>
                       <button type="button" onClick={() => alternarAtivo(m)} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="shrink-0 min-h-[44px] flex items-center">
                         <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
                       </button>
-                    </div>
-                    <div className="mt-1 flex items-center gap-1">
-                      <Button variant="ghost" icon="edit" onClick={() => setEditando(m)}>Editar</Button>
-                      <Button variant="ghost" icon="delete" className="!text-wine" onClick={() => setApagando(m)}>Apagar</Button>
+                      <div className="shrink-0 -mr-2"><MenuAcoes rotulo={`Ações para ${m.nome}`} itens={itensDe(m)} /></div>
                     </div>
                   </li>
                 ))}
@@ -204,13 +212,8 @@ export const Militares: React.FC = () => {
                         <button type="button" onClick={() => ordenarPor('pgq')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">P/G/Q<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('pgq')}</span></button>
                       </th>
                       <th scope="col" className="px-4 py-3 text-left font-semibold">NIP</th>
-                                            <th scope="col" aria-sort={ariaSort('om')} className="px-4 py-3 text-left font-semibold">
-                        <button type="button" onClick={() => ordenarPor('om')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">OM<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('om')}</span></button>
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-left font-semibold">Vínculo</th>
-                      <th scope="col" className="px-4 py-3 text-left font-semibold">E-mail</th>
                       <th scope="col" className="px-4 py-3 text-left font-semibold">Status</th>
-                      <th scope="col" className="px-4 py-3 text-right font-semibold"><span className="sr-only">Ações</span></th>
+                      <th scope="col" className="pr-2 py-3 w-14 text-right font-semibold"><span className="sr-only">Ações</span></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
@@ -220,18 +223,12 @@ export const Militares: React.FC = () => {
                         <td className="px-4 py-2 font-semibold text-navy">{m.nome}</td>
                         <td className="px-4 py-2 whitespace-nowrap">{m.pgq}</td>
                         <td className="px-4 py-2 font-mono whitespace-nowrap">{formatNip(m.nip)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap">{m.om}</td>
-                        <td className="px-4 py-2 whitespace-nowrap">{m.temporario ? 'Temporário' : 'Carreira'}</td>
-                        <td className="px-4 py-2 max-w-[220px] truncate" title={m.email}>{m.email || '—'}</td>
                         <td className="px-4 py-2">
                           <button type="button" onClick={() => alternarAtivo(m)} title={m.ativo ? 'Clique para inativar' : 'Clique para ativar'} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="min-h-[44px] flex items-center">
                             <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
                           </button>
                         </td>
-                        <td className="px-4 py-1 text-right whitespace-nowrap">
-                          <Button variant="ghost" icon="edit" onClick={() => setEditando(m)}>Editar</Button>
-                          <Button variant="ghost" icon="delete" className="!text-wine" aria-label={`Apagar ${m.nome}`} onClick={() => setApagando(m)}>Apagar</Button>
-                        </td>
+                        <td className="pr-2 py-1 text-right"><MenuAcoes rotulo={`Ações para ${m.nome}`} itens={itensDe(m)} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -258,6 +255,7 @@ export const Militares: React.FC = () => {
       )}
       {novo && <MilitarCadastroForm onClose={() => setNovo(false)} onCriado={nome => { setNovo(false); avisar(`${nome} cadastrado.`); }} />}
       {lote && postos && <PromocaoEmLote militares={escolhidos} postos={postos} onClose={() => setLote(false)} onAplicado={n => { setLote(false); setSelecionados(new Set()); avisar(`Posto atualizado em ${n} militar${n !== 1 ? 'es' : ''}.`); }} onErro={m => avisar(m, 'error')} />}
+      {detalhe && <MilitarDetalhe militar={detalhe} onClose={() => setDetalhe(null)} onEditar={() => { setEditando(detalhe); setDetalhe(null); }} />}
       {editando && <MilitarEdicao militar={editando} oms={oms} onClose={() => setEditando(null)} onSalvo={nome => { setEditando(null); avisar(`Dados de ${nome} atualizados.`); }} />}
     </div>
   );
@@ -274,8 +272,11 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
   const [ativo, setAtivo] = useState<'Ativo' | 'Inativo'>(militar.ativo ? 'Ativo' : 'Inativo');
   const [omTexto, setOmTexto] = useState(militar.om);
   const [omSigla, setOmSigla] = useState(militar.om);
+  const [adicionais, setAdicionais] = useState<Adicionais>(() => adicionaisDoMilitar(militar));
   const [erros, setErros] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
+  const hnre = omEhHnre(omSigla);
+  const medico = hnre && ehOficialMedico(pgq);
 
   const opcoesOm: OpcaoAutocomplete[] = useMemo(() => oms.map(o => ({ chave: `${o.sigla}|${o.nome}`, principal: o.sigla, secundaria: o.nome, busca: o.busca })), [oms]);
 
@@ -286,13 +287,17 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
     if (nip.length !== 10) e.nip = 'O NIP tem o formato 00.0000.00.';
     if (!pgq.trim()) e.pgq = 'Informe o posto/graduação/quadro.';
     if (!omSigla) e.om = 'Escolha a OM na lista.';
+    if (hnre) Object.assign(e, validarAdicionais(adicionais, medico));
     setErros(e);
     if (Object.keys(e).length > 0) return;
     setSalvando(true);
     try {
       const nomeFinal = nome.trim().toUpperCase();
       const pgqFinal = pgq.trim();
+      const extras = hnre ? adicionaisParaPatch(adicionais, medico) : {};
+      if (medico && adicionais.fotoNova) extras.fotoUrl = await enviarFotoMilitar(militar.id, adicionais.fotoNova);
       await atualizarMilitar(militar.id, {
+        ...extras,
         nome: nomeFinal, nip, pgq: pgqFinal, om: omSigla, email: email.trim().toLowerCase(),
         temporario: temporario === 'Temporário', ativo: ativo === 'Ativo',
         inspecionado: montarInspecionado(pgqFinal, nip, nomeFinal),
@@ -332,7 +337,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
           </Field>
         </div>
         <Autocomplete
-          label="OM" required error={erros.om} help="Busque pela sigla ou pelo nome. Só a sigla é gravada."
+          label="OM" required error={erros.om}
           valor={omTexto} opcoes={opcoesOm}
           onDigitar={t => { setOmTexto(t); setOmSigla(t === militar.om ? militar.om : ''); }}
           onSelecionar={o => { setOmTexto(`${o.principal} — ${o.secundaria}`); setOmSigla(o.principal); }}
@@ -341,6 +346,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
           {a => <input {...a} type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="off" />}
         </Field>
         <ChoiceGroup<'Carreira' | 'Temporário'> label="Vínculo" value={temporario} onChange={setTemporario} options={[{ value: 'Carreira', label: 'Carreira' }, { value: 'Temporário', label: 'Temporário' }]} />
+        {hnre && <InformacoesAdicionais valor={adicionais} onChange={setAdicionais} medico={medico} erros={erros} />}
         <ChoiceGroup<'Ativo' | 'Inativo'> label="Situação no appweb" value={ativo} onChange={setAtivo} options={[{ value: 'Ativo', label: 'Ativo' }, { value: 'Inativo', label: 'Inativo' }]} />
       </form>
     </Dialog>

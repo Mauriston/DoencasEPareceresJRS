@@ -20,6 +20,20 @@ export interface MilitarDoc {
   inspecionado: string;
   email: string;
   ativo: boolean;
+  /** Só HNRe: setor onde serve, "Nome (HNRe-00.0)". */
+  servico_label?: string;
+  /** Só oficiais médicos do HNRe: */
+  nomeGuerra?: string;
+  especialidade?: string;
+  emailPessoal?: string;
+  celular?: string;
+  /** AAAA-MM-DD */
+  dataNascimento?: string;
+  cpf?: string;
+  identidadeMilitar?: string;
+  crm?: string;
+  rqe?: string;
+  fotoUrl?: string;
 }
 export type MilitarRecord = MilitarDoc & { id: string };
 

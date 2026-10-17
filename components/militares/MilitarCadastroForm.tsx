@@ -12,10 +12,12 @@ import { ChoiceGroup } from '../ui/ChoiceGroup';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { formatNip } from '../../utils/format';
 import {
-  carregarCorposQuadros, carregarOms, postosDoVinculo, quadrosDoOficial, especialidadesDaPraca, montarPgq, montarInspecionado,
+  carregarCorposQuadros, carregarOms, postosDoVinculo, quadrosDoOficial, especialidadesDaPraca, montarPgq, montarInspecionado, ehOficialMedico, omEhHnre,
   type CorposQuadros, type OrganizacaoMilitar, type Vinculo,
 } from '../../utils/corposQuadros';
-import { criarMilitar } from '../../services/firestoreMilitares';
+import { InformacoesAdicionais, ADICIONAIS_VAZIO, adicionaisParaPatch, validarAdicionais, type Adicionais } from './InformacoesAdicionais';
+import { criarMilitar, atualizarMilitar } from '../../services/firestoreMilitares';
+import { enviarFotoMilitar } from '../../services/militarFoto';
 
 interface Props {
   onClose: () => void;
@@ -40,6 +42,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
   const [omTexto, setOmTexto] = useState('');
   const [omSigla, setOmSigla] = useState('');
   const [email, setEmail] = useState('');
+  const [adicionais, setAdicionais] = useState<Adicionais>(ADICIONAIS_VAZIO);
   const [erros, setErros] = useState<Erros>({});
   const [salvando, setSalvando] = useState(false);
 
@@ -77,6 +80,8 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
     ? montarPgq(categoria, posto, quadroEscolhido?.quadro.sigla ?? '', quadroEscolhido?.corpo.sigla ?? '', espSigla)
     : '';
   const nipCompleto = nip.length === 10;
+  const hnre = omEhHnre(omSigla);
+  const medico = hnre && ehOficialMedico(pgq);
   const inspecionado = pgq && nome.trim() ? montarInspecionado(pgq, nipCompleto ? nip : '', nome.trim().toUpperCase()) : '';
 
   const validar = (): Erros => {
@@ -88,6 +93,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
     if (!nome.trim()) e.nome = 'Informe o nome completo.';
     if (!nipCompleto) e.nip = 'Informe o NIP no formato 00.0000.00.';
     if (!omSigla) e.om = 'Escolha a OM na lista.';
+    if (hnre) Object.assign(e, validarAdicionais(adicionais, medico));
     return e;
   };
 
@@ -102,11 +108,16 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
     setSalvando(true);
     try {
       const nomeFinal = nome.trim().toUpperCase();
-      await criarMilitar({
+      const extras = hnre ? adicionaisParaPatch(adicionais, medico) : {};
+      const id = await criarMilitar({
         om: omSigla, temporario: vinculo === 'Temporário', pgq, nip, nome: nomeFinal,
-        inspecionado: montarInspecionado(pgq, nip, nomeFinal), email: email.trim().toLowerCase(), ativo: true,
+        inspecionado: montarInspecionado(pgq, nip, nomeFinal), email: email.trim().toLowerCase(), ativo: true, ...extras,
       });
       onCriado(nomeFinal);
+      if (medico && adicionais.fotoNova) {
+        // O cadastro já existe; se a foto falhar, dá para enviá-la depois pela edição.
+        enviarFotoMilitar(id, adicionais.fotoNova).then(url => atualizarMilitar(id, { fotoUrl: url })).catch(() => { /* foto pode ser reenviada na edição */ });
+      }
     } catch (err: any) {
       setErros({ geral: err?.message || 'Não foi possível cadastrar o militar.' });
     } finally {
@@ -163,10 +174,16 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
 
           {categoria === 'Praça' && (
             <>
-              <label className="flex items-center gap-3 min-h-[44px] cursor-pointer">
-                <input type="checkbox" checked={cpfn} onChange={e => { setCpfn(e.target.checked); setEspTexto(''); setEspSigla(''); }} className="w-5 h-5 accent-navy" />
-                <span className="text-sm font-semibold text-ink">CPFN — Quadro de Praças de Fuzileiros Navais</span>
-              </label>
+              {vinculo === 'Carreira' && (
+                <label className="flex items-center gap-3 min-h-[44px] cursor-pointer">
+                  <input type="checkbox" checked={cpfn} onChange={e => { setCpfn(e.target.checked); setEspTexto(''); setEspSigla(''); }} className="w-5 h-5 accent-navy" />
+                  <span className="text-sm font-semibold text-ink">CPFN</span>
+                  <span className="relative group inline-flex" tabIndex={0} aria-label="CPFN: Quadro de Praças Fuzileiros Navais">
+                    <span className="material-symbols-outlined text-[18px] text-ink-3" aria-hidden="true">help</span>
+                    <span role="tooltip" className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-1 hidden group-hover:block group-focus:block whitespace-nowrap rounded bg-navy px-2 py-1 text-xs font-semibold text-white shadow-lg">Quadro de Praças Fuzileiros Navais</span>
+                  </span>
+                </label>
+              )}
               {especialidades.length > 0 ? (
                 <Autocomplete
                   label="Especialidade" required error={erros.especialidade}
@@ -190,16 +207,18 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
           </Field>
 
           <Autocomplete
-            label="OM" required error={erros.om} help="Busque pela sigla ou pelo nome. Só a sigla é gravada."
+            label="OM" required error={erros.om}
             placeholder="Ex.: HNRe"
             valor={omTexto} opcoes={opcoesOm}
             onDigitar={t => { setOmTexto(t); setOmSigla(''); limpar('om'); }}
             onSelecionar={o => { setOmTexto(`${o.principal} — ${o.secundaria}`); setOmSigla(o.principal); limpar('om'); }}
           />
 
-          <Field label="E-mail" help="Opcional.">
+          <Field label="E-mail">
             {a => <input {...a} type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="off" />}
           </Field>
+
+          {hnre && <InformacoesAdicionais valor={adicionais} onChange={setAdicionais} medico={medico} erros={erros} />}
 
           {inspecionado && (
             <div className="bg-thead border border-line border-l-4 border-l-navy rounded-lg p-3">

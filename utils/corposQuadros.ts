@@ -87,3 +87,17 @@ export const separarPosto = (pgq: string, postos: CorposQuadros['postos']): { po
   }
   return melhor ? { posto: melhor, resto: texto.slice(melhor.length) } : null;
 };
+
+export interface ServicoHnre { servico_id: string; servico: string; servico_label: string; superior_direto?: string }
+
+let cacheServicos: Promise<ServicoHnre[]> | null = null;
+/** Serviços/setores do HNRe (public/servicosHNRe.json). */
+export const carregarServicosHnre = (): Promise<ServicoHnre[]> => {
+  if (!cacheServicos) cacheServicos = carregarJson<ServicoHnre[]>('servicosHNRe.json').catch(e => { cacheServicos = null; throw e; });
+  return cacheServicos;
+};
+
+/** Oficial do quadro de médicos (Md, RM2-Md ou RM3-Md), a partir do P/G/Q. */
+export const ehOficialMedico = (pgq: string): boolean => /\((?:RM\d-)?Md\)/i.test(pgq);
+
+export const omEhHnre = (om: string): boolean => om.trim().toUpperCase() === 'HNRE';
