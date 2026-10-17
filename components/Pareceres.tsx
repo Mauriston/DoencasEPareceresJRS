@@ -30,6 +30,8 @@ const STATUS: Record<StatusParecer, { rotulo: string; tom: StatusTone }> = {
   concluido: { rotulo: 'Concluído', tom: 'success' },
 };
 
+const solicitanteDe = (p: ParecerRecord): string => p.solicitanteUsuario || p.solicitanteNome;
+
 const formatarData = (p: ParecerRecord): string => p.criadoEm?.toDate?.().toLocaleDateString('pt-BR') ?? 'agora';
 
 export const Pareceres: React.FC = () => {
@@ -70,7 +72,7 @@ export const Pareceres: React.FC = () => {
       .filter(x => filtro === 'todos' || x.status === filtro)
       .filter(x => !especialidade || x.p.especialidade === especialidade)
       .filter(x => !soMeus || x.p.solicitanteUid === nav?.authUser?.uid)
-      .filter(x => { const alvo = normalizarBusca(`${x.p.inspecionado} ${x.p.especialidade} ${x.p.finalidade} ${x.p.solicitanteNome}`); return termos.every(t => alvo.includes(t)); });
+      .filter(x => { const alvo = normalizarBusca(`${x.p.inspecionado} ${x.p.especialidade} ${x.p.finalidade} ${solicitanteDe(x.p)}`); return termos.every(t => alvo.includes(t)); });
   }, [comStatus, filtro, especialidade, busca, soMeus, nav?.authUser?.uid]);
 
   const alternarConcluido = async (p: ParecerRecord, concluido: boolean) => {
@@ -157,7 +159,7 @@ export const Pareceres: React.FC = () => {
                       <StatusTag tone={STATUS[status].tom}>{STATUS[status].rotulo}</StatusTag>
                     </div>
                     <p className="text-xs text-ink-2">{p.especialidade} · {p.finalidade}</p>
-                    <p className="text-xs text-ink-3">{formatarData(p)} · {p.solicitanteNome}</p>
+                    <p className="text-xs text-ink-3">{formatarData(p)} · {solicitanteDe(p)}</p>
                     <div className="flex items-center justify-between">
                       <Button variant="ghost" icon="picture_as_pdf" disabled={!p.pdfUrl} onClick={() => abrir(p)}>Ver PDF</Button>
                       {podeGerar && (
@@ -189,7 +191,7 @@ export const Pareceres: React.FC = () => {
                         <td className="px-4 py-3 align-top">{nomeDe(p)}</td>
                         <td className="px-4 py-3 text-ink-2 align-top">{p.especialidade}<span className="block text-xs text-ink-3 2xl:hidden">{p.finalidade}</span></td>
                         <td className="px-4 py-3 text-ink-2 align-top hidden 2xl:table-cell">{p.finalidade}</td>
-                        <td className="px-4 py-3 text-ink-2 align-top">{p.solicitanteNome}</td>
+                        <td className="px-4 py-3 text-ink-2 align-top">{solicitanteDe(p)}</td>
                         <td className="px-4 py-3 align-top whitespace-nowrap"><StatusTag tone={STATUS[status].tom}>{STATUS[status].rotulo}</StatusTag></td>
                         <td className="px-4 py-1 text-right align-top whitespace-nowrap"><Button variant="ghost" icon="picture_as_pdf" disabled={!p.pdfUrl} onClick={() => abrir(p)}>Ver PDF</Button></td>
                         {podeGerar && <td className="px-4 py-1 text-center align-top">{caixa(p, status)}</td>}

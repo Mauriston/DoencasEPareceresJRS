@@ -30,6 +30,8 @@ export interface ParecerDoc {
   status: 'solicitado' | 'concluido';
   solicitanteUid: string;
   solicitanteNome: string;
+  /** Login do solicitante (ex.: "CT MAURISTON") — o que a tabela mostra. Pedidos antigos podem não ter. */
+  solicitanteUsuario?: string;
   solicitantePosto: string;
   criadoEm: Timestamp | null;
   concluidoEm?: Timestamp | null;
