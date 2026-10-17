@@ -71,6 +71,13 @@ export const getNavCategories = (
 
   if (perfil === 'admin') {
     categories.push({
+      id: 'militares',
+      label: 'Militares',
+      icon: 'military_tech',
+      subtitle: 'Cadastro de militares da ativa e servidores civis.',
+      subitems: [{ id: 'militares', label: 'Militares', icon: 'military_tech', subtitle: 'Cadastro de militares da ativa e servidores civis.' }],
+    });
+    categories.push({
       id: 'usuarios',
       label: 'Usuários',
       icon: 'group',

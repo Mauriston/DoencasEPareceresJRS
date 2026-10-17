@@ -50,6 +50,15 @@ service cloud.firestore {
       allow write: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
     }
 
+    // Coleção "militares": cadastro de militares da ativa e servidores civis
+    // (migrado da aba "Militares" da planilha). Id do documento = NIP só com
+    // dígitos. Qualquer usuário autenticado lê (usada por páginas/funções
+    // futuras); só o Admin cria, edita ou apaga.
+    match /militares/{nip} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // Coleção "config": documentos de configuração global do app. O único
     // doc hoje é "permissoes" (config/permissoes), a matriz de páginas e
     // funcionalidades por perfil editada em Usuários (Admin) — antes só

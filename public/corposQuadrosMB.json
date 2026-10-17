@@ -1,0 +1,1373 @@
+{
+ "fonte": "Planilha \"CORPOS, QUADROS, ESPECIALIDADES MB\" (Google Sheets 1D5o_I-7_6y_12iVFSUS0dZnULURHmV81DybZ96zGa_4)",
+ "observacoes": [
+  "Siglas de sargento normalizadas (1ºSG/2ºSG → 1SG/2SG/3SG, pelo nome do posto).",
+  "O Corpo de Praças da Reserva da Marinha (CPRM, especialidades RM2-) é classificado como Temporário (a planilha o marca como Carreira).",
+  "Quadro \"CA\" do Corpo da Armada não entra na sigla do INSPECIONADO."
+ ],
+ "postos": {
+  "AE": {
+   "nome": "Almirante de Esquadra",
+   "categoria": "Oficial",
+   "ordem": 0
+  },
+  "VA": {
+   "nome": "Vice-Almirante",
+   "categoria": "Oficial",
+   "ordem": 1
+  },
+  "CA": {
+   "nome": "Contra-Almirante",
+   "categoria": "Oficial",
+   "ordem": 2
+  },
+  "CMG": {
+   "nome": "Capitão de Mar e Guerra",
+   "categoria": "Oficial",
+   "ordem": 3
+  },
+  "CF": {
+   "nome": "Capitão de Fragata",
+   "categoria": "Oficial",
+   "ordem": 4
+  },
+  "CC": {
+   "nome": "Capitão de Corveta",
+   "categoria": "Oficial",
+   "ordem": 5
+  },
+  "CT": {
+   "nome": "Capitão-Tenente",
+   "categoria": "Oficial",
+   "ordem": 6
+  },
+  "1T": {
+   "nome": "1º Tenente",
+   "categoria": "Oficial",
+   "ordem": 7
+  },
+  "2T": {
+   "nome": "2º Tenente",
+   "categoria": "Oficial",
+   "ordem": 8
+  },
+  "GM": {
+   "nome": "Guarda-Marinha",
+   "categoria": "Oficial",
+   "ordem": 9
+  },
+  "SCNS": {
+   "nome": "Servidor Civil",
+   "categoria": "Servidor Civil",
+   "ordem": 10
+  },
+  "SO": {
+   "nome": "Suboficial",
+   "categoria": "Praça",
+   "ordem": 11
+  },
+  "1SG": {
+   "nome": "Primeiro-Sargento",
+   "categoria": "Praça",
+   "ordem": 12
+  },
+  "2SG": {
+   "nome": "Segundo-Sargento",
+   "categoria": "Praça",
+   "ordem": 13
+  },
+  "3SG": {
+   "nome": "Terceiro-Sargento",
+   "categoria": "Praça",
+   "ordem": 14
+  },
+  "CB": {
+   "nome": "Cabo",
+   "categoria": "Praça",
+   "ordem": 15
+  },
+  "MN": {
+   "nome": "Marinheiro",
+   "categoria": "Praça",
+   "ordem": 16
+  },
+  "MN-RC": {
+   "nome": "Marinheiro Recruta",
+   "categoria": "Praça",
+   "ordem": 17
+  },
+  "SD-FN": {
+   "nome": "Soldado Fuzileiro Naval",
+   "categoria": "Praça",
+   "ordem": 18
+  },
+  "SD-RC": {
+   "nome": "Soldado Recruta",
+   "categoria": "Praça",
+   "ordem": 19
+  },
+  "A-FN": {
+   "nome": "Aluno Fuzileiro Naval",
+   "categoria": "Praça",
+   "ordem": 20
+  },
+  "AM": {
+   "nome": "Aprendiz-Marinheiro",
+   "categoria": "Praça",
+   "ordem": 21
+  },
+  "GR": {
+   "nome": "Grumete",
+   "categoria": "Praça",
+   "ordem": 22
+  }
+ },
+ "corpos": [
+  {
+   "sigla": "CA",
+   "nome": "Corpo da Armada",
+   "categoria": "Oficial",
+   "quadros": [
+    {
+     "sigla": "CA",
+     "nome": "Quadro de Oficiais da Armada",
+     "vinculo": "Carreira",
+     "postos": [
+      "AE",
+      "VA",
+      "CA",
+      "CMG",
+      "CF",
+      "CC",
+      "CT",
+      "1T",
+      "2T"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "QC-CA",
+     "nome": "Quadro Complementar de Oficiais da Armada",
+     "vinculo": "Carreira",
+     "postos": [
+      "CT",
+      "1T",
+      "2T"
+     ],
+     "especialidades": []
+    }
+   ]
+  },
+  {
+   "sigla": "CFN",
+   "nome": "Corpo de Fuzileiros Navais",
+   "categoria": "Oficial",
+   "quadros": [
+    {
+     "sigla": "FN",
+     "nome": "Quadro de Oficiais Fuzileiros Navais",
+     "vinculo": "Carreira",
+     "postos": [
+      "AE",
+      "VA",
+      "CA",
+      "CMG",
+      "CF",
+      "CC",
+      "CT",
+      "1T",
+      "2T"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "QC-FN",
+     "nome": "Quadro Complementar de Oficiais Fuzileiros Navais",
+     "vinculo": "Carreira",
+     "postos": [
+      "CT",
+      "1T",
+      "2T"
+     ],
+     "especialidades": []
+    }
+   ]
+  },
+  {
+   "sigla": "CIM",
+   "nome": "Corpo de Intendentes da Marinha",
+   "categoria": "Oficial",
+   "quadros": [
+    {
+     "sigla": "IM",
+     "nome": "Quadro de Oficiais Intendentes da Marinha",
+     "vinculo": "Carreira",
+     "postos": [
+      "VA",
+      "CA",
+      "CMG",
+      "CF",
+      "CC",
+      "CT",
+      "1T",
+      "2T"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "QC-IM",
+     "nome": "Quadro Complementar de Oficiais Intendentes da Marinha",
+     "vinculo": "Carreira",
+     "postos": [
+      "CT",
+      "1T",
+      "2T"
+     ],
+     "especialidades": []
+    }
+   ]
+  },
+  {
+   "sigla": "CEM",
+   "nome": "Corpo de Engenheiros da Marinha",
+   "categoria": "Oficial",
+   "quadros": [
+    {
+     "sigla": "EN",
+     "nome": "Quadro de Engenheiros Navais",
+     "vinculo": "Carreira",
+     "postos": [
+      "VA",
+      "CA",
+      "CMG",
+      "CF",
+      "CC",
+      "CT",
+      "1T"
+     ],
+     "especialidades": []
+    }
+   ]
+  },
+  {
+   "sigla": "CSM",
+   "nome": "Corpo de Saúde da Marinha",
+   "categoria": "Oficial",
+   "quadros": [
+    {
+     "sigla": "Md",
+     "nome": "Quadro de Médicos",
+     "vinculo": "Carreira",
+     "postos": [
+      "VA",
+      "CA",
+      "CMG",
+      "CF",
+      "CC",
+      "CT",
+      "1T"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "CD",
+     "nome": "Quadro de Cirurgiões-Dentistas",
+     "vinculo": "Carreira",
+     "postos": [
+      "CMG",
+      "CF",
+      "CC",
+      "CT",
+      "1T"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "S",
+     "nome": "Quadro de Apoio à Saúde",
+     "vinculo": "Carreira",
+     "postos": [
+      "CMG",
+      "CF",
+      "CC",
+      "CT",
+      "1T"
+     ],
+     "especialidades": []
+    }
+   ]
+  },
+  {
+   "sigla": "CAM",
+   "nome": "Corpo Auxiliar da Marinha",
+   "categoria": "Oficial",
+   "quadros": [
+    {
+     "sigla": "T",
+     "nome": "Quadro Técnico",
+     "vinculo": "Carreira",
+     "postos": [
+      "CMG",
+      "CF",
+      "CC",
+      "CT",
+      "1T"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "CN",
+     "nome": "Quadro de Capelães Navais",
+     "vinculo": "Carreira",
+     "postos": [
+      "CMG",
+      "CF",
+      "CC",
+      "CT",
+      "1T"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "AA",
+     "nome": "Quadro Auxiliar da Armada",
+     "vinculo": "Carreira",
+     "postos": [
+      "CT",
+      "1T",
+      "2T"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "AFN",
+     "nome": "Quadro Auxiliar de Fuzileiros Navais",
+     "vinculo": "Carreira",
+     "postos": [
+      "CT",
+      "1T",
+      "2T"
+     ],
+     "especialidades": []
+    }
+   ]
+  },
+  {
+   "sigla": "CORM",
+   "nome": "Corpo de Oficiais da Reserva da Marinha",
+   "categoria": "Oficial",
+   "quadros": [
+    {
+     "sigla": "RM2-EN",
+     "nome": "Corpo de Engenheiros da Marinha (Quadro Único)",
+     "vinculo": "Temporário",
+     "postos": [
+      "CT",
+      "1T",
+      "2T",
+      "GM"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "RM3-Md",
+     "nome": "Quadro de Médicos",
+     "vinculo": "Temporário",
+     "postos": [
+      "CC"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "RM2-Md",
+     "nome": "Quadro de Médicos",
+     "vinculo": "Temporário",
+     "postos": [
+      "CT",
+      "1T",
+      "2T",
+      "GM"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "RM2-CD",
+     "nome": "Quadro de Cirurgiões-Dentistas",
+     "vinculo": "Temporário",
+     "postos": [
+      "CT",
+      "1T",
+      "2T",
+      "GM"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "RM2-S",
+     "nome": "Quadro de Apoio à Saúde",
+     "vinculo": "Temporário",
+     "postos": [
+      "CT",
+      "1T",
+      "2T",
+      "GM"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "RM2-T",
+     "nome": "Quadro Técnico",
+     "vinculo": "Temporário",
+     "postos": [
+      "CT",
+      "1T",
+      "2T"
+     ],
+     "especialidades": []
+    }
+   ]
+  },
+  {
+   "sigla": "CPFN",
+   "nome": "Corpo de Praças de Fuzileiros Navais",
+   "categoria": "Praça",
+   "quadros": [
+    {
+     "sigla": "QMU",
+     "nome": "Quadro de Músicos",
+     "vinculo": "Carreira",
+     "postos": [
+      "SO",
+      "1SG",
+      "2SG",
+      "3SG"
+     ],
+     "especialidades": [
+      {
+       "sigla": "FN-MU",
+       "nome": "Música"
+      }
+     ]
+    },
+    {
+     "sigla": "QPFN",
+     "nome": "Quadro de Praças de Fuzileiros Navais",
+     "vinculo": "Carreira",
+     "postos": [
+      "SO",
+      "1SG",
+      "2SG",
+      "3SG",
+      "CB",
+      "SD-FN",
+      "SD-RC",
+      "A-FN"
+     ],
+     "especialidades": [
+      {
+       "sigla": "AL",
+       "nome": "Aluno"
+      },
+      {
+       "sigla": "AT",
+       "nome": "Artilharia"
+      },
+      {
+       "sigla": "AV",
+       "nome": "Aviação"
+      },
+      {
+       "sigla": "BD",
+       "nome": "Blindados"
+      },
+      {
+       "sigla": "CN",
+       "nome": "Comunicações Navais"
+      },
+      {
+       "sigla": "CT",
+       "nome": "Corneta-Tambor"
+      },
+      {
+       "sigla": "EF",
+       "nome": "Enfermagem"
+      },
+      {
+       "sigla": "EG",
+       "nome": "Engenharia"
+      },
+      {
+       "sigla": "ES",
+       "nome": "Escrita"
+      },
+      {
+       "sigla": "ET",
+       "nome": "Eletrônica"
+      },
+      {
+       "sigla": "IF",
+       "nome": "Infantaria"
+      },
+      {
+       "sigla": "MO",
+       "nome": "Motores e Máquinas"
+      },
+      {
+       "sigla": "MU",
+       "nome": "Música"
+      },
+      {
+       "sigla": "RC",
+       "nome": "Recruta"
+      }
+     ]
+    },
+    {
+     "sigla": "QEFN",
+     "nome": "Quadro Especial de Praças de Fuzileiros Navais",
+     "vinculo": "Carreira",
+     "postos": [
+      "2SG",
+      "3SG",
+      "CB"
+     ],
+     "especialidades": [
+      {
+       "sigla": "AT",
+       "nome": "Artilharia"
+      },
+      {
+       "sigla": "AV",
+       "nome": "Aviação"
+      },
+      {
+       "sigla": "BD",
+       "nome": "Blindados"
+      },
+      {
+       "sigla": "CN",
+       "nome": "Comunicações Navais"
+      },
+      {
+       "sigla": "CT",
+       "nome": "Corneta-Tambor"
+      },
+      {
+       "sigla": "EF",
+       "nome": "Enfermagem"
+      },
+      {
+       "sigla": "EG",
+       "nome": "Engenharia"
+      },
+      {
+       "sigla": "ES",
+       "nome": "Escrita"
+      },
+      {
+       "sigla": "ET",
+       "nome": "Eletrônica"
+      },
+      {
+       "sigla": "IF",
+       "nome": "Infantaria"
+      },
+      {
+       "sigla": "MO",
+       "nome": "Motores e Máquinas"
+      },
+      {
+       "sigla": "MU",
+       "nome": "Música"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "sigla": "CPA",
+   "nome": "Corpo de Praças da Armada",
+   "categoria": "Praça",
+   "quadros": [
+    {
+     "sigla": "QPA",
+     "nome": "Quadro de Praças da Armada",
+     "vinculo": "Carreira",
+     "postos": [
+      "SO",
+      "1SG",
+      "2SG",
+      "3SG",
+      "CB",
+      "MN"
+     ],
+     "especialidades": [
+      {
+       "sigla": "AM",
+       "nome": "Armamento"
+      },
+      {
+       "sigla": "AR",
+       "nome": "Arrumador"
+      },
+      {
+       "sigla": "AV",
+       "nome": "Aviação"
+      },
+      {
+       "sigla": "CA",
+       "nome": "Caldeiras"
+      },
+      {
+       "sigla": "CE",
+       "nome": "Sistema de Controle e Eletricidade"
+      },
+      {
+       "sigla": "CI",
+       "nome": "Comunicações Interiores"
+      },
+      {
+       "sigla": "CN",
+       "nome": "Comunicações Navais"
+      },
+      {
+       "sigla": "CO",
+       "nome": "Cozinheiro"
+      },
+      {
+       "sigla": "CP",
+       "nome": "Carpintaria"
+      },
+      {
+       "sigla": "CV",
+       "nome": "Controle de Tráfego Aéreo"
+      },
+      {
+       "sigla": "DT",
+       "nome": "Direção de Tiro"
+      },
+      {
+       "sigla": "EL",
+       "nome": "Eletricidade"
+      },
+      {
+       "sigla": "ET",
+       "nome": "Eletrônica"
+      },
+      {
+       "sigla": "HN",
+       "nome": "Hidrografia e Navegação"
+      },
+      {
+       "sigla": "MA",
+       "nome": "Máquinas"
+      },
+      {
+       "sigla": "MC",
+       "nome": "Artífice de Mecânica"
+      },
+      {
+       "sigla": "MG",
+       "nome": "Mergulho"
+      },
+      {
+       "sigla": "MO",
+       "nome": "Motores"
+      },
+      {
+       "sigla": "MP",
+       "nome": "Sistema e Máquinas de Propulsão"
+      },
+      {
+       "sigla": "MR",
+       "nome": "Manobras e Reparos"
+      },
+      {
+       "sigla": "MT",
+       "nome": "Artífice de Metalurgia"
+      },
+      {
+       "sigla": "MV",
+       "nome": "Motores de Aviação"
+      },
+      {
+       "sigla": "OR",
+       "nome": "Operador de Radar"
+      },
+      {
+       "sigla": "OS",
+       "nome": "Operador de Sonar"
+      },
+      {
+       "sigla": "RV",
+       "nome": "Manobras e Equipagem de Aviação"
+      },
+      {
+       "sigla": "SI",
+       "nome": "Sinais"
+      },
+      {
+       "sigla": "SV",
+       "nome": "Estruturas e Metalurgia de Aviação"
+      },
+      {
+       "sigla": "VN",
+       "nome": "Aviônica"
+      }
+     ]
+    },
+    {
+     "sigla": "AL",
+     "nome": "Aluno",
+     "vinculo": "Carreira",
+     "postos": [
+      "AM",
+      "GR"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "QEPA",
+     "nome": "Quadro Especial de Praças da Armada",
+     "vinculo": "Carreira",
+     "postos": [
+      "2SG",
+      "3SG",
+      "CB"
+     ],
+     "especialidades": [
+      {
+       "sigla": "AM",
+       "nome": "Armamento"
+      },
+      {
+       "sigla": "AR",
+       "nome": "Arrumador"
+      },
+      {
+       "sigla": "AV",
+       "nome": "Aviação"
+      },
+      {
+       "sigla": "CA",
+       "nome": "Caldeiras"
+      },
+      {
+       "sigla": "CE",
+       "nome": "Sistema de Controle e Eletricidade"
+      },
+      {
+       "sigla": "CI",
+       "nome": "Comunicações Interiores"
+      },
+      {
+       "sigla": "CN",
+       "nome": "Comunicações Navais"
+      },
+      {
+       "sigla": "CO",
+       "nome": "Cozinheiro"
+      },
+      {
+       "sigla": "CP",
+       "nome": "Carpintaria"
+      },
+      {
+       "sigla": "CV",
+       "nome": "Controle de Tráfego Aéreo"
+      },
+      {
+       "sigla": "DT",
+       "nome": "Direção de Tiro"
+      },
+      {
+       "sigla": "EL",
+       "nome": "Eletricidade"
+      },
+      {
+       "sigla": "ET",
+       "nome": "Eletrônica"
+      },
+      {
+       "sigla": "HN",
+       "nome": "Hidrografia e Navegação"
+      },
+      {
+       "sigla": "MA",
+       "nome": "Máquinas"
+      },
+      {
+       "sigla": "MC",
+       "nome": "Artífice de Mecânica"
+      },
+      {
+       "sigla": "MG",
+       "nome": "Mergulho"
+      },
+      {
+       "sigla": "MO",
+       "nome": "Motores"
+      },
+      {
+       "sigla": "MP",
+       "nome": "Sistema e Máquinas de Propulsão"
+      },
+      {
+       "sigla": "MR",
+       "nome": "Manobras e Reparos"
+      },
+      {
+       "sigla": "MT",
+       "nome": "Artífice de Metalurgia"
+      },
+      {
+       "sigla": "MV",
+       "nome": "Motores de Aviação"
+      },
+      {
+       "sigla": "OR",
+       "nome": "Operador de Radar"
+      },
+      {
+       "sigla": "OS",
+       "nome": "Operador de Sonar"
+      },
+      {
+       "sigla": "RV",
+       "nome": "Manobras e Equipagem de Aviação"
+      },
+      {
+       "sigla": "SI",
+       "nome": "Sinais"
+      },
+      {
+       "sigla": "SV",
+       "nome": "Estruturas e Metalurgia de Aviação"
+      },
+      {
+       "sigla": "VN",
+       "nome": "Aviônica"
+      }
+     ]
+    },
+    {
+     "sigla": "QPAS",
+     "nome": "Quadro de Praças da Armada Submarinistas",
+     "vinculo": "Carreira",
+     "postos": [
+      "SO",
+      "1SG",
+      "2SG",
+      "3SG",
+      "CB"
+     ],
+     "especialidades": [
+      {
+       "sigla": "AM",
+       "nome": "Armamento"
+      },
+      {
+       "sigla": "AR",
+       "nome": "Arrumador"
+      },
+      {
+       "sigla": "CA",
+       "nome": "Caldeiras"
+      },
+      {
+       "sigla": "CE",
+       "nome": "Sistemas de Controle e Eletricidade"
+      },
+      {
+       "sigla": "CI",
+       "nome": "Comunicações Interiores"
+      },
+      {
+       "sigla": "CN",
+       "nome": "Comunicações Navais"
+      },
+      {
+       "sigla": "CO",
+       "nome": "Cozinheiro"
+      },
+      {
+       "sigla": "DT",
+       "nome": "Direção de Tiro"
+      },
+      {
+       "sigla": "EF",
+       "nome": "Enfermagem"
+      },
+      {
+       "sigla": "EL",
+       "nome": "Eletricidade"
+      },
+      {
+       "sigla": "ES",
+       "nome": "Escrita"
+      },
+      {
+       "sigla": "ET",
+       "nome": "Eletrônica"
+      },
+      {
+       "sigla": "MA",
+       "nome": "Máquinas"
+      },
+      {
+       "sigla": "MO",
+       "nome": "Motores"
+      },
+      {
+       "sigla": "MP",
+       "nome": "Sistemas de Máquinas e Propulsão"
+      },
+      {
+       "sigla": "MR",
+       "nome": "Manobras e Reparos"
+      },
+      {
+       "sigla": "OR",
+       "nome": "Operador de Radar"
+      },
+      {
+       "sigla": "OS",
+       "nome": "Operador de Sonar"
+      },
+      {
+       "sigla": "PL",
+       "nome": "Paiol"
+      }
+     ]
+    },
+    {
+     "sigla": "QAP",
+     "nome": "Quadro Auxiliar de Praças",
+     "vinculo": "Carreira",
+     "postos": [
+      "SO",
+      "1SG",
+      "2SG",
+      "3SG",
+      "CB",
+      "MN"
+     ],
+     "especialidades": [
+      {
+       "sigla": "BA",
+       "nome": "Barbeiro"
+      },
+      {
+       "sigla": "EF",
+       "nome": "Enfermagem"
+      },
+      {
+       "sigla": "EP",
+       "nome": "Educação Física"
+      },
+      {
+       "sigla": "ES",
+       "nome": "Escrita"
+      },
+      {
+       "sigla": "FR",
+       "nome": "Faroleiro"
+      },
+      {
+       "sigla": "PL",
+       "nome": "Paiol"
+      }
+     ]
+    },
+    {
+     "sigla": "QATP",
+     "nome": "Quadro Auxiliar Técnico de Praças",
+     "vinculo": "Carreira",
+     "postos": [
+      "SO",
+      "1SG",
+      "2SG",
+      "3SG",
+      "CB"
+     ],
+     "especialidades": [
+      {
+       "sigla": "AD",
+       "nome": "Administração"
+      },
+      {
+       "sigla": "AE",
+       "nome": "Estatística"
+      },
+      {
+       "sigla": "AH",
+       "nome": "Administração Hospitalar"
+      },
+      {
+       "sigla": "CL",
+       "nome": "Contabilidade"
+      },
+      {
+       "sigla": "DA",
+       "nome": "Desenho de Arquitetura"
+      },
+      {
+       "sigla": "DM",
+       "nome": "Desenho Mecânico"
+      },
+      {
+       "sigla": "ED",
+       "nome": "Edificações"
+      },
+      {
+       "sigla": "EF",
+       "nome": "Enfermagem"
+      },
+      {
+       "sigla": "EN",
+       "nome": "Estruturas Navais"
+      },
+      {
+       "sigla": "EO",
+       "nome": "Eletrônica"
+      },
+      {
+       "sigla": "GC",
+       "nome": "Geodésia e Cartografia"
+      },
+      {
+       "sigla": "GR",
+       "nome": "Gráfica"
+      },
+      {
+       "sigla": "HD",
+       "nome": "Higiene Dental"
+      },
+      {
+       "sigla": "ME",
+       "nome": "Meteorologia"
+      },
+      {
+       "sigla": "MI",
+       "nome": "Mecânica"
+      },
+      {
+       "sigla": "ML",
+       "nome": "Metalurgia"
+      },
+      {
+       "sigla": "MS",
+       "nome": "Motores"
+      },
+      {
+       "sigla": "NA",
+       "nome": "Marcenaria"
+      },
+      {
+       "sigla": "ND",
+       "nome": "Nutrição e Dietética"
+      },
+      {
+       "sigla": "PC",
+       "nome": "Patologia Clínica"
+      },
+      {
+       "sigla": "PD",
+       "nome": "Processamento de Dados"
+      },
+      {
+       "sigla": "PT",
+       "nome": "Prótese Dentária"
+      },
+      {
+       "sigla": "QI",
+       "nome": "Química"
+      },
+      {
+       "sigla": "RB",
+       "nome": "Reabilitação"
+      },
+      {
+       "sigla": "RM",
+       "nome": "Radiologia Médica"
+      },
+      {
+       "sigla": "SC",
+       "nome": "Secretariado"
+      },
+      {
+       "sigla": "TC",
+       "nome": "Telecomunicações"
+      },
+      {
+       "sigla": "TE",
+       "nome": "Eletrotécnica"
+      }
+     ]
+    },
+    {
+     "sigla": "QTP",
+     "nome": "Quadro Técnico de Praças",
+     "vinculo": "Carreira",
+     "postos": [
+      "SO",
+      "1SG",
+      "2SG",
+      "3SG"
+     ],
+     "especialidades": [
+      {
+       "sigla": "AD",
+       "nome": "Administração"
+      },
+      {
+       "sigla": "AE",
+       "nome": "Estatística"
+      },
+      {
+       "sigla": "AH",
+       "nome": "Administração Hospitalar"
+      },
+      {
+       "sigla": "CL",
+       "nome": "Contabilidade"
+      },
+      {
+       "sigla": "DA",
+       "nome": "Desenho de Arquitetura"
+      },
+      {
+       "sigla": "DM",
+       "nome": "Desenho Mecânico"
+      },
+      {
+       "sigla": "ED",
+       "nome": "Edificações"
+      },
+      {
+       "sigla": "EF",
+       "nome": "Enfermagem"
+      },
+      {
+       "sigla": "EN",
+       "nome": "Estruturas Navais"
+      },
+      {
+       "sigla": "EO",
+       "nome": "Eletrônica"
+      },
+      {
+       "sigla": "GC",
+       "nome": "Geodésia e Cartografia"
+      },
+      {
+       "sigla": "GR",
+       "nome": "Gráfica"
+      },
+      {
+       "sigla": "HD",
+       "nome": "Higiene Dental"
+      },
+      {
+       "sigla": "ME",
+       "nome": "Meteorologia"
+      },
+      {
+       "sigla": "MI",
+       "nome": "Mecânica"
+      },
+      {
+       "sigla": "ML",
+       "nome": "Metalurgia"
+      },
+      {
+       "sigla": "MS",
+       "nome": "Motores"
+      },
+      {
+       "sigla": "NA",
+       "nome": "Marcenaria"
+      },
+      {
+       "sigla": "ND",
+       "nome": "Nutrição e Dietética"
+      },
+      {
+       "sigla": "PC",
+       "nome": "Patologia Clínica"
+      },
+      {
+       "sigla": "PD",
+       "nome": "Processamento de Dados"
+      },
+      {
+       "sigla": "PT",
+       "nome": "Prótese Dentária"
+      },
+      {
+       "sigla": "QI",
+       "nome": "Química"
+      },
+      {
+       "sigla": "RB",
+       "nome": "Reabilitação"
+      },
+      {
+       "sigla": "RM",
+       "nome": "Radiologia Médica"
+      },
+      {
+       "sigla": "SC",
+       "nome": "Secretariado"
+      },
+      {
+       "sigla": "TC",
+       "nome": "Telecomunicações"
+      },
+      {
+       "sigla": "TE",
+       "nome": "Eletrotécnica"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "sigla": "CPRM",
+   "nome": "Corpo de Praças da Reserva da Marinha",
+   "categoria": "Praça",
+   "quadros": [
+    {
+     "sigla": "QPRM",
+     "nome": "Quadro de Praças da Reserva da Marinha",
+     "vinculo": "Temporário",
+     "postos": [
+      "3SG",
+      "CB",
+      "MN"
+     ],
+     "especialidades": [
+      {
+       "sigla": "RM2-AD",
+       "nome": "Administração"
+      },
+      {
+       "sigla": "RM2-AH",
+       "nome": "Administração Hospitalar"
+      },
+      {
+       "sigla": "RM2-CL",
+       "nome": "Contabilidade"
+      },
+      {
+       "sigla": "RM2-ED",
+       "nome": "Edificações"
+      },
+      {
+       "sigla": "RM2-EF",
+       "nome": "Enfermagem"
+      },
+      {
+       "sigla": "RM2-EN",
+       "nome": "Estruturas Navais"
+      },
+      {
+       "sigla": "RM2-ET",
+       "nome": "Eletrônica"
+      },
+      {
+       "sigla": "RM2-HD",
+       "nome": "Higiene Dental"
+      },
+      {
+       "sigla": "RM2-MC",
+       "nome": "Mecânica"
+      },
+      {
+       "sigla": "RM2-ML",
+       "nome": "Metalúrgica"
+      },
+      {
+       "sigla": "RM2-MO",
+       "nome": "Motores"
+      },
+      {
+       "sigla": "RM2-MT",
+       "nome": "Motorista"
+      },
+      {
+       "sigla": "RM2-NA",
+       "nome": "Marcenaria"
+      },
+      {
+       "sigla": "RM2-ND",
+       "nome": "Nutrição e Dietética"
+      },
+      {
+       "sigla": "RM2-PC",
+       "nome": "Patologia Clínica"
+      },
+      {
+       "sigla": "RM2-PD",
+       "nome": "Processamento de Dados"
+      },
+      {
+       "sigla": "RM2-PT",
+       "nome": "Prótese Dentária"
+      },
+      {
+       "sigla": "RM2-QI",
+       "nome": "Química"
+      },
+      {
+       "sigla": "RM2-RM",
+       "nome": "Radiologia Médica"
+      },
+      {
+       "sigla": "RM2-TE",
+       "nome": "Eletrotécnica"
+      },
+      {
+       "sigla": "RM2-TF",
+       "nome": "Técnico em Farmácia"
+      }
+     ]
+    },
+    {
+     "sigla": "AL",
+     "nome": "Aluno",
+     "vinculo": "Temporário",
+     "postos": [
+      "AM"
+     ],
+     "especialidades": []
+    },
+    {
+     "sigla": "RC",
+     "nome": "Recruta",
+     "vinculo": "Temporário",
+     "postos": [
+      "MN-RC"
+     ],
+     "especialidades": []
+    }
+   ]
+  },
+  {
+   "sigla": "CSCM",
+   "nome": "Corpo de Servidores Civis da Marinha",
+   "categoria": "Servidor Civil",
+   "quadros": [
+    {
+     "sigla": "",
+     "nome": "",
+     "vinculo": "Carreira",
+     "postos": [
+      "SCNS"
+     ],
+     "especialidades": []
+    }
+   ]
+  }
+ ]
+}

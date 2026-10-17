@@ -36,6 +36,7 @@ export const ROUTES: RouteDef[] = [
   { view: 'infograficos', path: '/extras/infograficos' },
   { view: 'roteiro', path: '/extras/roteiro' },
   { view: 'usuarios', path: '/usuarios' },
+  { view: 'militares', path: '/militares' },
 ];
 
 const BASE_PATHS: Record<NavItem, string> = {
@@ -59,6 +60,7 @@ const BASE_PATHS: Record<NavItem, string> = {
   infograficos: '/extras/infograficos',
   roteiro: '/extras/roteiro',
   usuarios: '/usuarios',
+  militares: '/militares',
 };
 
 /** Rota base (sem subníveis) de uma página. */
