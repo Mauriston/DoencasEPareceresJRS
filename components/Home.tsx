@@ -37,7 +37,7 @@ const CartaoPendencia: React.FC<{ p: Pendencia }> = ({ p }) => (
     <span className="min-w-0 flex-1">
       <span className="block text-xs font-semibold text-ink-3">{p.rotulo}</span>
       <span className={`block text-2xl font-extrabold leading-tight ${p.tom === 'wine' ? 'text-wine' : 'text-navy'}`}>{p.valor}</span>
-      <span className="block text-sm text-ink mt-0.5">{p.detalhe}</span>
+      {p.detalhe && <span className="block text-sm text-ink mt-0.5">{p.detalhe}</span>}
     </span>
     <span className="material-symbols-outlined text-[20px] text-ink-4 group-hover:text-navy self-center" aria-hidden="true">chevron_right</span>
   </Link>
@@ -124,7 +124,7 @@ export const Home: React.FC = () => {
   if (podeConcursos && emAndamento.length > 0) {
     pendencias.push({
       id: 'concurso', icone: 'fact_check', rotulo: emAndamento.length === 1 ? 'Concurso em andamento' : 'Concursos em andamento', valor: emAndamento.length,
-      detalhe: emAndamento.length === 1 ? emAndamento[0].nome : emAndamento.map(c => c.nome).join(' · '),
+      detalhe: emAndamento.length === 1 ? emAndamento[0].nome : '',
       to: emAndamento.length === 1 ? concursoPath(emAndamento[0].id) : '/concursos', tom: 'navy',
     });
   }

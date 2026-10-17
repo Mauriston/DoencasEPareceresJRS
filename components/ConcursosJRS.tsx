@@ -3111,8 +3111,8 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                   </p>
                                   <p className="text-xs font-mono text-ink-3 flex items-center gap-2">
                                     <span>{c.id}</span>
-                                    <button type="button" onClick={() => handleCopiarNomeCandidato(c.nome)} className="inline-flex items-center gap-1 min-h-[24px] text-xs font-sans font-semibold text-navy hover:underline">
-                                      <span className="material-symbols-outlined text-[14px]" aria-hidden="true">content_copy</span>Copiar nome
+                                    <button type="button" onClick={() => handleCopiarNomeCandidato(c.nome)} aria-label={`Copiar nome de ${c.nome}`} title="Copiar nome" className="inline-flex items-center justify-center w-6 h-6 rounded text-navy hover:bg-thead">
+                                      <span className="material-symbols-outlined text-[16px]" aria-hidden="true">content_copy</span>
                                     </button>
                                     {estadoSalvar[c.id] && (
                                       <span role="status" className={`font-sans font-semibold ${estadoSalvar[c.id] === 'falhou' ? 'text-wine' : 'text-ink-3'}`}>
@@ -3139,7 +3139,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                   {numTisHabilitado ? (
                                     <input key={`tis-${c.id}-${numTisResetKey}`} type="text" defaultValue={c.numTIS} onBlur={e => handleNumTisBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-200 bg-gray-50 focus:outline-none focus:border-navy focus:bg-white" placeholder="-" />
                                   ) : editavel ? (
-                                    <span className="block text-xs leading-snug text-ink-3">{c.numTIS || 'Defina o resultado primeiro'}</span>
+                                    c.numTIS ? <span className="block text-sm text-ink-2">{c.numTIS}</span> : null
                                   ) : (c.numTIS || '-')}
                                 </td>
                                 <td className="py-3.5 px-4 text-right whitespace-nowrap">

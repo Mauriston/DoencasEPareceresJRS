@@ -46,9 +46,11 @@ export const Login: React.FC = () => {
     <main className="min-h-dvh bg-canvas flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
         <div className="bg-navy text-white rounded-t-xl px-6 py-5 border-b-4 border-gold text-center">
-          <span className="material-symbols-outlined text-[36px] text-gold" aria-hidden="true">medical_services</span>
+          <span className="w-14 h-14 mx-auto bg-white rounded-xl p-1.5 flex items-center justify-center">
+            <img src="https://i.imgur.com/8HeAdv4.png" alt="JRS/HNRe" className="h-full w-full object-contain" />
+          </span>
           <h1 className="font-heading font-extrabold text-xl mt-1 !text-white">Junta Regular de Saúde</h1>
-          <p className="text-sm text-white/80">Hospital Naval de Recife · Doenças e Pareceres</p>
+          <p className="text-sm text-white/80">Hospital Naval de Recife</p>
         </div>
 
         <form onSubmit={handleLogin} className="bg-white rounded-b-xl border border-line border-t-0 p-6 space-y-4">
