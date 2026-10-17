@@ -243,3 +243,10 @@ th[role="button"],
   }
 }
 
+
+/* Splash de login (Splash Login JRS): brasão flutuante e dica pulsante. */
+@keyframes icone-flutuar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes dica-pulsar { 0%, 100% { opacity: .35; } 50% { opacity: .85; } }
+@media (prefers-reduced-motion: reduce) {
+  .splash-animado { animation: none !important; transition: none !important; }
+}
