@@ -622,7 +622,10 @@ export const gerarMinutaResultados = async (
   const nomeConcurso = extrairNomeConcursoDoAssunto(concurso.assuntoMensagemInicial || concurso.nome);
 
   const aptos: string[] = [], inaptos: string[] = [], faltosos: string[] = [], idm: string[] = [], recursos: string[] = [];
-  candidatos.forEach(c => {
+  // Em cada item da minuta, os candidatos seguem a ordem alfabética crescente pelo primeiro nome
+  // (o nome completo começa pelo primeiro nome; sobrenomes desempatam; acentos não pesam).
+  const ordenadosPorNome = [...candidatos].sort((x, y) => x.nome.trim().localeCompare(y.nome.trim(), 'pt-BR', { sensitivity: 'base' }));
+  ordenadosPorNome.forEach(c => {
     const item = `- ${c.id}  ${c.nome}`;
     const status = String(c.status).trim().toUpperCase();
     if (status === 'APTO') aptos.push(item);

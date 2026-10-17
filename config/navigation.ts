@@ -1,6 +1,6 @@
 // Ficheiro: config/navigation.ts
 // Estrutura de navegação em 2 níveis: os menus principais (Concursos,
-// Benefícios, Pareceres, Perícia Menor, Mensagens, Normas, Extras) + Usuários
+// Consultas, Benefícios, Crie Documentos, Mensagens, Normas, Extras) + Usuários
 // (admin) são usados nos cards da Página Inicial e como itens da barra
 // lateral. Um menu principal com mais de um subitem expande em accordion na
 // barra lateral (e, na Home/desktop, abre os cards de subitem ao lado); um
@@ -34,10 +34,10 @@ export interface NavCategory {
 const MOBILE_ONLY_PAGES: NavItem[] = [];
 
 const CATEGORY_DEFS: { id: string; label: string; icon: string; subtitle: string; pages: NavItem[] }[] = [
-  { id: 'concursos', label: 'Concursos', icon: 'checklist', subtitle: 'Acesse as planilhas de acompanhamento.', pages: ['concursosJRS', 'concursos', 'exames'] },
+  { id: 'concursos', label: 'Concursos', icon: 'checklist', subtitle: 'Acesse as planilhas de acompanhamento.', pages: ['concursosJRS'] },
+  { id: 'consultas', label: 'Consultas', icon: 'manage_search', subtitle: 'Consulte os exames por finalidade, índices dos concursos e outros', pages: ['exames', 'concursos'] },
   { id: 'beneficios', label: 'Benefícios', icon: 'stethoscope', subtitle: 'Verifique os critérios de enquadramento das Doenças de Lei.', pages: ['guide', 'portaria'] },
-  { id: 'pareceres', label: 'Pareceres', icon: 'description', subtitle: 'Gere solicitações de Pareceres em PDF por especialidade.', pages: ['pareceres'] },
-  { id: 'pericia-menor', label: 'Perícia Menor', icon: 'personal_injury', subtitle: 'Registre as Perícias Menores dos militares de bordo.', pages: ['pericia-menor'] },
+  { id: 'documentos', label: 'Crie Documentos', icon: 'note_add', subtitle: 'Crie pareceres e outros documentos em PDF', pages: ['pareceres', 'pericia-menor'] },
   { id: 'mensagens', label: 'Mensagens', icon: 'chat', subtitle: 'Faça minutas das MSG de IS auxiliado por IA.', pages: ['mensagens'] },
   { id: 'normas', label: 'Normas', icon: 'gavel', subtitle: 'DGPM-406 e Legislação.', pages: ['dgpm406', 'laws', 'templates'] },
   { id: 'extras', label: 'Extras', icon: 'widgets', subtitle: 'Acesse materiais para estudar.', pages: ['casos', 'videos', 'infograficos', 'roteiro'] },
