@@ -10,7 +10,7 @@ import { NavContext } from '../../context/NavContext';
 import { getNavCategories, findCategoryForView, type NavCategory } from '../../config/navigation';
 import { pathForView } from '../../config/routes';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
-import { Avatar, UserDropdownContent } from './UserMenu';
+import { Avatar, UserDropdownContent, PERFIL_LABELS } from './UserMenu';
 
 const CHAVE_RECOLHIDA = 'jrs_sidebar_recolhida';
 
@@ -200,6 +200,9 @@ export const Sidebar: React.FC = () => {
                   authUser={authUser}
                   onPerfilClick={() => { setIsAvatarMenuOpen(false); setCurrentView('perfil'); }}
                   onLogoutClick={() => { setIsAvatarMenuOpen(false); handleLogout(); }}
+                  perfilReal={nav?.perfilReal}
+                  verComo={nav?.verComo}
+                  onVerComo={perfil => { setIsAvatarMenuOpen(false); nav?.setVerComo(perfil); }}
                 />
               </div>
             </>
@@ -211,7 +214,7 @@ export const Sidebar: React.FC = () => {
           >
             <span className="min-w-0 flex flex-col items-end leading-tight">
               <span className="text-sm font-bold text-white truncate max-w-[170px]">{authUser?.usuario || 'Usuário'}</span>
-              <span className="text-xs font-medium text-white/70 truncate max-w-[170px]">{authUser?.cargo || ' '}</span>
+              <span className={`text-xs truncate max-w-[170px] ${nav?.verComo ? 'font-bold text-gold' : 'font-medium text-white/70'}`}>{nav?.verComo ? `Vendo como ${PERFIL_LABELS[nav.verComo] || nav.verComo}` : (authUser?.cargo || ' ')}</span>
             </span>
             <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} />
           </button>
