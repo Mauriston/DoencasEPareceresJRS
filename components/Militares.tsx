@@ -6,7 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
 import { Segmented } from './ui/Segmented';
-import { Dialog } from './ui/Dialog';
+import { Dialog, ConfirmDialog } from './ui/Dialog';
 import { Field, controlClass } from './ui/Field';
 import { ChoiceGroup } from './ui/ChoiceGroup';
 import { StatusTag } from './ui/StatusTag';
@@ -14,7 +14,7 @@ import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
 import { Autocomplete, type OpcaoAutocomplete } from './ui/Autocomplete';
 import { MilitarCadastroForm } from './militares/MilitarCadastroForm';
-import { observarMilitares, atualizarMilitar, type MilitarRecord } from '../services/firestoreMilitares';
+import { observarMilitares, atualizarMilitar, apagarMilitar, type MilitarRecord } from '../services/firestoreMilitares';
 import { carregarOms, carregarCorposQuadros, normalizarBusca, montarInspecionado, type OrganizacaoMilitar, type CorposQuadros } from '../utils/corposQuadros';
 import { formatNip } from '../utils/format';
 
@@ -42,6 +42,7 @@ export const Militares: React.FC = () => {
   const [limite, setLimite] = useState(PAGINA);
   const [novo, setNovo] = useState(false);
   const [editando, setEditando] = useState<MilitarRecord | null>(null);
+  const [apagando, setApagando] = useState<MilitarRecord | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
   const [oms, setOms] = useState<OrganizacaoMilitar[]>([]);
   const [postos, setPostos] = useState<CorposQuadros['postos']>();
@@ -88,6 +89,18 @@ export const Militares: React.FC = () => {
     }
   };
 
+  const confirmarApagar = async () => {
+    const m = apagando;
+    if (!m) return;
+    setApagando(null);
+    try {
+      await apagarMilitar(m.id);
+      avisar(`${m.nome} apagado.`);
+    } catch (e: any) {
+      avisar(e?.message || 'Não foi possível apagar o cadastro.', 'error');
+    }
+  };
+
   const visiveis = filtrada.slice(0, limite);
   const iconeOrdem = (c: ColunaOrdem) => (ordem.col === c ? (ordem.dir === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more');
   const ariaSort = (c: ColunaOrdem) => (ordem.col === c ? (ordem.dir === 'asc' ? 'ascending' as const : 'descending' as const) : 'none' as const);
@@ -107,27 +120,27 @@ export const Militares: React.FC = () => {
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
             <input type="search" aria-label="Buscar militar" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome, NIP, posto, OM ou e-mail…" className={`${controlClass} pl-10`} autoComplete="off" />
           </div>
-          <Segmented
-            ariaLabel="Situação do cadastro"
-            className="overflow-x-auto"
-            value={filtro}
-            onChange={setFiltro}
-            options={[
-              { value: 'ativos', label: 'Ativos', badge: totais.ativos, badgeTone: 'neutro' },
-              { value: 'inativos', label: 'Inativos', badge: totais.inativos, badgeTone: 'neutro' },
-              { value: 'todos', label: 'Todos', badge: totais.todos, badgeTone: 'neutro' },
-            ]}
-          />
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Segmented
+              ariaLabel="Situação do cadastro"
+              className="overflow-x-auto"
+              value={filtro}
+              onChange={setFiltro}
+              options={[
+                { value: 'ativos', label: 'Ativos', badge: totais.ativos, badgeTone: 'neutro' },
+                { value: 'inativos', label: 'Inativos', badge: totais.inativos, badgeTone: 'neutro' },
+                { value: 'todos', label: 'Todos', badge: totais.todos, badgeTone: 'neutro' },
+              ]}
+            />
             <Button variant={soHnre ? 'primary' : 'secondary'} icon="local_hospital" aria-pressed={soHnre} onClick={() => setSoHnre(v => !v)}>Somente HNRe</Button>
-            <div className="flex items-center gap-2 md:hidden">
-              <select aria-label="Ordenar por" value={ordem.col} onChange={e => setOrdem(o => ({ ...o, col: e.target.value as ColunaOrdem }))} className={`${controlClass} w-auto`}>
-                <option value="nome">Ordenar: Nome</option>
-                <option value="pgq">Ordenar: P/G/Q</option>
-                <option value="om">Ordenar: OM</option>
-              </select>
-              <Button variant="secondary" icon={ordem.dir === 'asc' ? 'arrow_upward' : 'arrow_downward'} aria-label={ordem.dir === 'asc' ? 'Ordem crescente' : 'Ordem decrescente'} onClick={() => setOrdem(o => ({ ...o, dir: o.dir === 'asc' ? 'desc' : 'asc' }))} />
-            </div>
+          </div>
+          <div className="flex items-center gap-2 md:hidden">
+            <select aria-label="Ordenar por" value={ordem.col} onChange={e => setOrdem(o => ({ ...o, col: e.target.value as ColunaOrdem }))} className={`${controlClass} w-auto`}>
+              <option value="nome">Ordenar: Nome</option>
+              <option value="pgq">Ordenar: P/G/Q</option>
+              <option value="om">Ordenar: OM</option>
+            </select>
+            <Button variant="secondary" icon={ordem.dir === 'asc' ? 'arrow_upward' : 'arrow_downward'} aria-label={ordem.dir === 'asc' ? 'Ordem crescente' : 'Ordem decrescente'} onClick={() => setOrdem(o => ({ ...o, dir: o.dir === 'asc' ? 'desc' : 'asc' }))} />
           </div>
         </div>
 
@@ -153,7 +166,10 @@ export const Militares: React.FC = () => {
                         <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
                       </button>
                     </div>
-                    <div className="mt-1"><Button variant="ghost" icon="edit" onClick={() => setEditando(m)}>Editar</Button></div>
+                    <div className="mt-1 flex items-center gap-1">
+                      <Button variant="ghost" icon="edit" onClick={() => setEditando(m)}>Editar</Button>
+                      <Button variant="ghost" icon="delete" className="!text-wine" onClick={() => setApagando(m)}>Apagar</Button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -191,8 +207,9 @@ export const Militares: React.FC = () => {
                             <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
                           </button>
                         </td>
-                        <td className="px-4 py-1 text-right">
+                        <td className="px-4 py-1 text-right whitespace-nowrap">
                           <Button variant="ghost" icon="edit" onClick={() => setEditando(m)}>Editar</Button>
+                          <Button variant="ghost" icon="delete" className="!text-wine" aria-label={`Apagar ${m.nome}`} onClick={() => setApagando(m)}>Apagar</Button>
                         </td>
                       </tr>
                     ))}
@@ -208,6 +225,16 @@ export const Militares: React.FC = () => {
         </div>
       </Container>
 
+      {apagando && (
+        <ConfirmDialog
+          title="Apagar militar"
+          message={<>Apagar definitivamente o cadastro de <strong>{apagando.nome}</strong> ({apagando.pgq})? Esta ação não pode ser desfeita. Se a intenção é só tirar o acesso ao appweb, use <strong>Inativar</strong>.</>}
+          confirmLabel="Apagar"
+          destructive
+          onConfirm={confirmarApagar}
+          onCancel={() => setApagando(null)}
+        />
+      )}
       {novo && <MilitarCadastroForm onClose={() => setNovo(false)} onCriado={nome => { setNovo(false); avisar(`${nome} cadastrado.`); }} />}
       {editando && <MilitarEdicao militar={editando} oms={oms} onClose={() => setEditando(null)} onSalvo={nome => { setEditando(null); avisar(`Dados de ${nome} atualizados.`); }} />}
     </div>
