@@ -110,6 +110,8 @@ export const Militares: React.FC = () => {
     { rotulo: 'Apagar', icone: 'delete', perigo: true, onClick: () => setApagando(m) },
   ];
 
+  // Seleção (promoção em lote) só com uma busca digitada, ex.: "GM" ou "CT".
+  const selecionavel = busca.trim().length > 0;
   const visiveis = filtrada.slice(0, limite);
   const escolhidos = useMemo(() => filtrada.filter(m => selecionados.has(m.id)), [filtrada, selecionados]);
   const todosMarcados = filtrada.length > 0 && escolhidos.length === filtrada.length;
@@ -157,7 +159,7 @@ export const Militares: React.FC = () => {
           </div>
         </div>
 
-        {escolhidos.length > 0 && (
+        {selecionavel && escolhidos.length > 0 && (
           <div role="region" aria-label="Ações em lote" className="sticky top-2 z-10 bg-navy text-white rounded-xl px-4 py-2 flex flex-wrap items-center justify-between gap-2 shadow-lg">
             <span className="text-sm font-bold" role="status">{escolhidos.length} selecionado{escolhidos.length !== 1 ? 's' : ''}</span>
             <div className="flex flex-wrap items-center gap-2">
@@ -177,15 +179,15 @@ export const Militares: React.FC = () => {
           ) : (
             <>
               {/* Mobile: duas linhas por militar */}
-              <label className="md:hidden flex items-center gap-2 px-4 py-1 border-b border-line text-xs font-semibold text-ink-3 min-h-[44px]">
+              {selecionavel && <label className="md:hidden flex items-center gap-2 px-4 py-1 border-b border-line text-xs font-semibold text-ink-3 min-h-[44px]">
                 <input type="checkbox" checked={todosMarcados} onChange={alternarTodos} className="w-5 h-5 accent-navy" />
                 Selecionar todos ({filtrada.length})
-              </label>
+              </label>}
               <ul className="md:hidden divide-y divide-line">
                 {visiveis.map(m => (
                   <li key={m.id} className={`px-4 py-3 ${selecionados.has(m.id) ? 'bg-thead' : ''}`}>
                     <div className="flex items-start justify-between gap-2">
-                      <label className="shrink-0 -ml-2 w-11 h-11 flex items-center justify-center"><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy" /></label>
+                      {selecionavel && <label className="shrink-0 -ml-2 w-11 h-11 flex items-center justify-center"><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy" /></label>}
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-navy break-words">{m.nome}</p>
                         <p className="text-xs text-ink-3">{m.pgq} · {formatNip(m.nip)}</p>
@@ -202,9 +204,9 @@ export const Militares: React.FC = () => {
                 <table className="w-full text-sm">
                   <thead className="bg-thead text-ink-3 text-xs border-b border-line">
                     <tr>
-                      <th scope="col" className="pl-4 pr-0 py-3 w-10">
+                      {selecionavel && (<th scope="col" className="pl-4 pr-0 py-3 w-10">
                         <input type="checkbox" checked={todosMarcados} onChange={alternarTodos} aria-label={`Selecionar todos os ${filtrada.length} militares da lista`} title="Selecionar todos da lista" className="w-5 h-5 accent-navy align-middle" />
-                      </th>
+                      </th>)}
                       <th scope="col" aria-sort={ariaSort('nome')} className="px-4 py-3 text-left font-semibold">
                         <button type="button" onClick={() => ordenarPor('nome')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">Nome<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('nome')}</span></button>
                       </th>
@@ -219,7 +221,7 @@ export const Militares: React.FC = () => {
                   <tbody className="divide-y divide-line">
                     {visiveis.map(m => (
                       <tr key={m.id} className={`hover:bg-thead transition-colors ${selecionados.has(m.id) ? 'bg-thead' : ''} ${m.ativo ? '' : 'text-ink-3'}`}>
-                        <td className="pl-4 pr-0 py-2"><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy align-middle" /></td>
+                        {selecionavel && <td className="pl-4 pr-0 py-2"><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy align-middle" /></td>}
                         <td className="px-4 py-2 font-semibold text-navy">{m.nome}</td>
                         <td className="px-4 py-2 whitespace-nowrap">{m.pgq}</td>
                         <td className="px-4 py-2 font-mono whitespace-nowrap">{formatNip(m.nip)}</td>
