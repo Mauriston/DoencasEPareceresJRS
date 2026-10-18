@@ -20,14 +20,18 @@ export interface MilitarDoc {
   inspecionado: string;
   email: string;
   ativo: boolean;
+  /** Carreira: já foi para a Reserva da Marinha de 1ª Classe (RM1). */
+  rm1?: boolean;
+  /** Carreira: reformado por idade-limite ou invalidez (Refº). */
+  refo?: boolean;
   /** Só HNRe: setor onde serve, "Nome (HNRe-00.0)". */
   servico_label?: string;
   /** Só oficiais médicos do HNRe: */
   nomeGuerra?: string;
   especialidade?: string;
   emailPessoal?: string;
+  /** Celular e data de nascimento (AAAA-MM-DD) agora são campos do cadastro, não da seção "+ informações". */
   celular?: string;
-  /** AAAA-MM-DD */
   dataNascimento?: string;
   cpf?: string;
   identidadeMilitar?: string;

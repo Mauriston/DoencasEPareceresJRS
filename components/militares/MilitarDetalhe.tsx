@@ -1,11 +1,32 @@
 // Ficheiro: components/militares/MilitarDetalhe.tsx
 // Ficha completa do militar em barra lateral à direita (bottom sheet no mobile).
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { StatusTag } from '../ui/StatusTag';
 import { formatNip, formatCelular, formatCpf, formatIdentidadeMilitar, formatDataBr } from '../../utils/format';
 import type { MilitarRecord } from '../../services/firestoreMilitares';
+import { observarPareceres, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
+import { periciasMenoresDoMilitar, type PericiaMenorHist } from '../../services/historicoMilitar';
+
+const TOM_PARECER = { solicitado: 'navyOutline', atrasado: 'danger', concluido: 'success' } as const;
+const ROTULO_PARECER = { solicitado: 'Solicitado', atrasado: 'Atrasado', concluido: 'Concluído' } as const;
+
+const ItemHistorico: React.FC<{ titulo: string; detalhe: string; data: string; tag: React.ReactNode; link?: string }> = ({ titulo, detalhe, data, tag, link }) => {
+  const corpo = (
+    <>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold text-navy break-words">{titulo}</span>
+        <span className="block text-xs text-ink-3 break-words">{detalhe}</span>
+        <span className="block text-xs text-ink-3">{data}</span>
+      </span>
+      <span className="shrink-0 flex items-center gap-2">{tag}{link && <span className="material-symbols-outlined text-[20px] text-ink-4" aria-hidden="true">open_in_new</span>}</span>
+    </>
+  );
+  return link
+    ? <a href={link} target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 px-3 py-2 rounded-lg border border-line hover:border-navy transition-colors">{corpo}</a>
+    : <div className="flex items-start gap-3 px-3 py-2 rounded-lg border border-line">{corpo}</div>;
+};
 
 const Linha: React.FC<{ rotulo: string; valor?: string | null; mono?: boolean }> = ({ rotulo, valor, mono }) => {
   if (!valor) return null;
@@ -17,19 +38,25 @@ const Linha: React.FC<{ rotulo: string; valor?: string | null; mono?: boolean }>
   );
 };
 
-export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => void; onEditar: () => void }> = ({ militar: m, onClose, onEditar }) => {
+export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => void }> = ({ militar: m, onClose }) => {
+  const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
+  const [pericias, setPericias] = useState<PericiaMenorHist[]>([]);
+  useEffect(() => observarPareceres(lista => setPareceres(lista.filter(p => p.militarId === m.id)), () => { /* sem histórico de pareceres */ }), [m.id]);
+  useEffect(() => {
+    let ativo = true;
+    periciasMenoresDoMilitar(m.nip).then(l => { if (ativo) setPericias(l); }).catch(() => { /* sem histórico de perícias */ });
+    return () => { ativo = false; };
+  }, [m.nip]);
+  const temHistorico = pareceres.length > 0 || pericias.length > 0;
+  const agora = useMemo(() => Date.now(), []);
+
   const extras = [m.nomeGuerra, m.especialidade, m.emailPessoal, m.celular, m.dataNascimento, m.cpf, m.identidadeMilitar, m.crm, m.rqe].some(Boolean);
   return (
     <Drawer
       title="Detalhes do militar"
       icon="badge"
       onClose={onClose}
-      footer={(
-        <>
-          <Button variant="secondary" onClick={onClose}>Fechar</Button>
-          <Button icon="edit" onClick={onEditar}>Editar</Button>
-        </>
-      )}
+      footer={<Button variant="secondary" onClick={onClose}>Fechar</Button>}
     >
       <div className="space-y-5">
         <div className="flex items-center gap-4">
@@ -66,6 +93,51 @@ export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => v
               <Linha rotulo="CPF" valor={formatCpf(m.cpf)} mono />
               <Linha rotulo="Identidade militar" valor={formatIdentidadeMilitar(m.identidadeMilitar)} mono />
             </dl>
+          </div>
+        )}
+
+        {temHistorico && (
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-ink-3 border-t border-line pt-4 mb-3">Histórico</h3>
+            <div className="space-y-4">
+              {pareceres.length > 0 && (
+                <section aria-label="Pareceres solicitados">
+                  <h4 className="text-h3 font-bold text-navy mb-2">Pareceres <span className="text-xs font-bold text-ink-3 bg-thead rounded-full px-2 py-0.5 align-middle">{pareceres.length}</span></h4>
+                  <ul className="space-y-2">
+                    {pareceres.map(p => {
+                      const st = statusEfetivo(p, agora);
+                      return (
+                        <li key={p.id}>
+                          <ItemHistorico
+                            titulo={p.especialidade} detalhe={p.finalidade}
+                            data={`Pedido em ${p.criadoEm?.toDate?.().toLocaleDateString('pt-BR') ?? 'agora'}`}
+                            tag={<StatusTag tone={TOM_PARECER[st]}>{ROTULO_PARECER[st]}</StatusTag>}
+                            link={p.pdfUrl || undefined}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              )}
+              {pericias.length > 0 && (
+                <section aria-label="Perícias menores">
+                  <h4 className="text-h3 font-bold text-navy mb-2">Perícias menores <span className="text-xs font-bold text-ink-3 bg-thead rounded-full px-2 py-0.5 align-middle">{pericias.length}</span></h4>
+                  <ul className="space-y-2">
+                    {pericias.map((p, i) => (
+                      <li key={`${p.dataAtestado}-${i}`}>
+                        <ItemHistorico
+                          titulo={p.cid || 'Perícia menor'} detalhe={p.dispensas || 'Sem dispensas registradas'}
+                          data={p.dataAtestado ? `Atestado em ${p.dataAtestado}` : ''}
+                          tag={p.vigente ? <StatusTag tone="danger">Vigente</StatusTag> : p.concluido ? <StatusTag tone="success">Concluída</StatusTag> : null}
+                          link={p.link || undefined}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </div>
           </div>
         )}
       </div>

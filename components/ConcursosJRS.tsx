@@ -32,6 +32,7 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 import { useStoragePdf } from '../hooks/useStoragePdf';
 import { Button } from './ui/Button';
 import { Segmented } from './ui/Segmented';
+import { SheetArrastavel } from './ui/SheetArrastavel';
 import { Dialog } from './ui/Dialog';
 import { listarEventos, type EventoIS } from '../services/auditoriaIS';
 import { EmptyState } from './ui/EmptyState';
@@ -3380,7 +3381,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         return (
           <div className="md:hidden fixed inset-0 z-dialog flex flex-col justify-end">
             <div className="absolute inset-0 bg-black/50 animate-backdrop-in" onClick={fecharSheet} />
-            <div className="relative bg-canvas rounded-t-3xl shadow-2xl flex flex-col animate-sheet-up" style={{ maxHeight: '92dvh' }}>
+            <SheetArrastavel onClose={fecharSheet} ativo={!sheetTravado} className="relative bg-canvas rounded-t-3xl shadow-2xl flex flex-col animate-sheet-up" style={{ maxHeight: '92dvh' }}>
               <div className="pt-2.5 pb-1 flex justify-center shrink-0" onClick={fecharSheet}>
                 <span className="w-10 h-1.5 rounded-full bg-ink-5" />
               </div>
@@ -3529,7 +3530,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                 )}
                 </div>
               )}
-            </div>
+            </SheetArrastavel>
           </div>
         );
       })()}
