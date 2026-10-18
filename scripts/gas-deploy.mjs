@@ -31,6 +31,8 @@ for (const nome of nomes) {
   const { scriptId, deploymentId } = projetos[nome];
   const dir = join(RAIZ, 'apps-script', nome);
   if (!mudou(nome)) { console.log(`• ${nome}: sem mudanças em apps-script/${nome}, nada a publicar.`); continue; }
+  // Projeto ainda não configurado (sem scriptId): em "todos" é só ignorado; pedido pelo nome, é erro.
+  if (!scriptId && alvo === 'todos') { console.log(`• ${nome}: sem scriptId em apps-script/projetos.json, ignorado.`); continue; }
   if (!scriptId || !deploymentId) { console.error(`✖ ${nome}: preencha scriptId e deploymentId em apps-script/projetos.json.`); erros++; continue; }
   if (!existsSync(join(dir, 'appsscript.json'))) {
     console.error(`✖ ${nome}: falta apps-script/${nome}/appsscript.json (manifesto). Rode "clasp pull" uma vez nesse projeto e comite o arquivo.`);
