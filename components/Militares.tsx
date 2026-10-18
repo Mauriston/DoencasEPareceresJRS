@@ -20,8 +20,8 @@ import { MilitarDetalhe } from './militares/MilitarDetalhe';
 import { InformacoesAdicionais, adicionaisDoMilitar, adicionaisParaPatch, validarAdicionais, type Adicionais } from './militares/InformacoesAdicionais';
 import { enviarFotoMilitar } from '../services/militarFoto';
 import { observarMilitares, atualizarMilitar, atualizarMilitaresEmLote, apagarMilitar, type MilitarRecord } from '../services/firestoreMilitares';
-import { carregarOms, carregarCorposQuadros, normalizarBusca, montarInspecionado, separarPosto, ehOficialMedico, omEhHnre, type OrganizacaoMilitar, type CorposQuadros, type PostoInfo } from '../utils/corposQuadros';
-import { formatNip } from '../utils/format';
+import { carregarOms, carregarCorposQuadros, carregarServicosHnre, normalizarBusca, montarInspecionado, separarPosto, aplicarSituacaoAoPgq, ehOficialMedico, omEhHnre, type OrganizacaoMilitar, type CorposQuadros, type PostoInfo, type ServicoHnre, type SituacaoMilitar } from '../utils/corposQuadros';
+import { formatNip, formatCelular } from '../utils/format';
 
 type Filtro = 'todos' | 'ativos' | 'inativos';
 type ColunaOrdem = 'nome' | 'pgq' | 'om';
@@ -48,7 +48,7 @@ export const Militares: React.FC = () => {
   const [postos, setPostos] = useState<CorposQuadros['postos']>();
   const [soHnre, setSoHnre] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
-  const [lote, setLote] = useState(false);
+  const [lote, setLote] = useState<null | 'posto' | 'servico' | 'inativar'>(null);
   const [ordem, setOrdem] = useState<{ col: ColunaOrdem; dir: 'asc' | 'desc' }>({ col: 'nome', dir: 'asc' });
 
   const avisar = (msg: string, tone: 'success' | 'error' = 'success') => { setToast({ msg, tone }); window.setTimeout(() => setToast(null), 4000); };
@@ -106,13 +106,12 @@ export const Militares: React.FC = () => {
   };
 
   const itensDe = (m: MilitarRecord) => [
-    { rotulo: 'Detalhes', icone: 'badge', onClick: () => setDetalhe(m) },
     { rotulo: 'Editar', icone: 'edit', onClick: () => setEditando(m) },
     { rotulo: 'Apagar', icone: 'delete', perigo: true, onClick: () => setApagando(m) },
   ];
 
-  // Seleção (promoção em lote) só com uma busca digitada, ex.: "GM" ou "CT".
-  const selecionavel = busca.trim().length > 0;
+  // Seleção para ações em lote (posto, serviço, inativar) só quando a busca contém "HNRe".
+  const selecionavel = normalizarBusca(busca).includes('hnre');
   const visiveis = filtrada.slice(0, limite);
   const escolhidos = useMemo(() => filtrada.filter(m => selecionados.has(m.id)), [filtrada, selecionados]);
   const todosMarcados = filtrada.length > 0 && escolhidos.length === filtrada.length;
@@ -156,7 +155,9 @@ export const Militares: React.FC = () => {
           <div role="region" aria-label="Ações em lote" className="sticky top-2 z-10 bg-navy text-white rounded-xl px-4 py-2 flex flex-wrap items-center justify-between gap-2 shadow-lg">
             <span className="text-sm font-bold" role="status">{escolhidos.length} selecionado{escolhidos.length !== 1 ? 's' : ''}</span>
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="secondary" icon="military_tech" onClick={() => setLote(true)}>Alterar posto (promoção)</Button>
+              <Button variant="secondary" icon="military_tech" onClick={() => setLote('posto')}>Alterar posto (promoção)</Button>
+              <Button variant="secondary" icon="apartment" onClick={() => setLote('servico')}>Alterar serviço do HNRe</Button>
+              <Button variant="secondary" icon="person_off" onClick={() => setLote('inativar')}>Inativar</Button>
               <Button variant="ghost" icon="close" className="!text-white hover:!bg-white/10" onClick={() => setSelecionados(new Set())}>Limpar</Button>
             </div>
           </div>
@@ -181,10 +182,10 @@ export const Militares: React.FC = () => {
                   <li key={m.id} className={`px-4 py-3 ${selecionados.has(m.id) ? 'bg-thead' : ''}`}>
                     <div className="flex items-start justify-between gap-2">
                       {selecionavel && <label className="shrink-0 -ml-2 w-11 h-11 flex items-center justify-center"><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy" /></label>}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-navy break-words">{m.nome}</p>
-                        <p className="text-xs text-ink-3">{m.pgq} · {formatNip(m.nip)}</p>
-                      </div>
+                      <button type="button" onClick={() => setDetalhe(m)} className="min-w-0 flex-1 text-left" aria-label={`Abrir detalhes de ${m.nome}`}>
+                        <span className="block text-sm font-bold text-navy break-words">{m.nome}</span>
+                        <span className="block text-xs text-ink-3">{m.pgq} · {formatNip(m.nip)}</span>
+                      </button>
                       <button type="button" onClick={() => alternarAtivo(m)} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="shrink-0 min-h-[44px] flex items-center">
                         <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
                       </button>
@@ -213,17 +214,17 @@ export const Militares: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-line">
                     {visiveis.map(m => (
-                      <tr key={m.id} className={`hover:bg-thead transition-colors ${selecionados.has(m.id) ? 'bg-thead' : ''} ${m.ativo ? '' : 'text-ink-3'}`}>
-                        {selecionavel && <td className="pl-4 pr-0 py-2"><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy align-middle" /></td>}
-                        <td className="px-4 py-2 font-semibold text-navy">{m.nome}</td>
+                      <tr key={m.id} onClick={() => setDetalhe(m)} className={`cursor-pointer hover:bg-thead transition-colors ${selecionados.has(m.id) ? 'bg-thead' : ''} ${m.ativo ? '' : 'text-ink-3'}`}>
+                        {selecionavel && <td className="pl-4 pr-0 py-2" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy align-middle" /></td>}
+                        <td className="px-4 py-2 font-semibold text-navy"><button type="button" onClick={e => { e.stopPropagation(); setDetalhe(m); }} className="text-left" aria-label={`Abrir detalhes de ${m.nome}`}>{m.nome}</button></td>
                         <td className="px-4 py-2 whitespace-nowrap">{m.pgq}</td>
                         <td className="px-4 py-2 font-mono whitespace-nowrap">{formatNip(m.nip)}</td>
-                        <td className="px-4 py-2">
+                        <td className="px-4 py-2" onClick={e => e.stopPropagation()}>
                           <button type="button" onClick={() => alternarAtivo(m)} title={m.ativo ? 'Clique para inativar' : 'Clique para ativar'} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="min-h-[44px] flex items-center">
                             <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
                           </button>
                         </td>
-                        <td className="pr-2 py-1 text-right"><MenuAcoes rotulo={`Ações para ${m.nome}`} itens={itensDe(m)} /></td>
+                        <td className="pr-2 py-1 text-right" onClick={e => e.stopPropagation()}><MenuAcoes rotulo={`Ações para ${m.nome}`} itens={itensDe(m)} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -249,20 +250,42 @@ export const Militares: React.FC = () => {
         />
       )}
       {novo && <MilitarCadastroForm onClose={() => setNovo(false)} onCriado={nome => { setNovo(false); avisar(`${nome} cadastrado.`); }} />}
-      {lote && postos && <PromocaoEmLote militares={escolhidos} postos={postos} onClose={() => setLote(false)} onAplicado={n => { setLote(false); setSelecionados(new Set()); avisar(`Posto atualizado em ${n} militar${n !== 1 ? 'es' : ''}.`); }} onErro={m => avisar(m, 'error')} />}
-      {detalhe && <MilitarDetalhe militar={detalhe} onClose={() => setDetalhe(null)} onEditar={() => { setEditando(detalhe); setDetalhe(null); }} />}
-      {editando && <MilitarEdicao militar={editando} oms={oms} onClose={() => setEditando(null)} onSalvo={nome => { setEditando(null); avisar(`Dados de ${nome} atualizados.`); }} />}
+      {lote === 'posto' && postos && <PromocaoEmLote militares={escolhidos} postos={postos} onClose={() => setLote(null)} onAplicado={n => { setLote(null); setSelecionados(new Set()); avisar(`Posto atualizado em ${n} militar${n !== 1 ? 'es' : ''}.`); }} onErro={m => avisar(m, 'error')} />}
+      {lote === 'servico' && <ServicoEmLote militares={escolhidos} onClose={() => setLote(null)} onAplicado={n => { setLote(null); setSelecionados(new Set()); avisar(`Serviço do HNRe atualizado em ${n} militar${n !== 1 ? 'es' : ''}.`); }} onErro={m => avisar(m, 'error')} />}
+      {lote === 'inativar' && (
+        <ConfirmDialog
+          title="Inativar militares"
+          message={<>Inativar <strong>{escolhidos.filter(m => m.ativo).length}</strong> militar{escolhidos.filter(m => m.ativo).length !== 1 ? 'es' : ''} no appweb? Eles deixam de aparecer como ativos; os cadastros são mantidos e podem ser reativados depois.</>}
+          confirmLabel="Inativar"
+          destructive
+          onConfirm={async () => {
+            const alvos = escolhidos.filter(m => m.ativo);
+            setLote(null);
+            try {
+              await atualizarMilitaresEmLote(alvos.map(m => ({ id: m.id, patch: { ativo: false } })));
+              setSelecionados(new Set());
+              avisar(`${alvos.length} militar${alvos.length !== 1 ? 'es' : ''} inativado${alvos.length !== 1 ? 's' : ''}.`);
+            } catch (e: any) { avisar(e?.message || 'Não foi possível inativar.', 'error'); }
+          }}
+          onCancel={() => setLote(null)}
+        />
+      )}
+      {detalhe && <MilitarDetalhe militar={detalhe} onClose={() => setDetalhe(null)} />}
+      {editando && <MilitarEdicao militar={editando} oms={oms} postos={postos} onClose={() => setEditando(null)} onSalvo={nome => { setEditando(null); avisar(`Dados de ${nome} atualizados.`); }} />}
     </div>
   );
 };
 
 // ---------------------------------------------------------------------------
 
-const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[]; onClose: () => void; onSalvo: (nome: string) => void }> = ({ militar, oms, onClose, onSalvo }) => {
+const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[]; postos?: CorposQuadros['postos']; onClose: () => void; onSalvo: (nome: string) => void }> = ({ militar, oms, postos, onClose, onSalvo }) => {
   const [nome, setNome] = useState(militar.nome);
   const [nip, setNip] = useState(formatNip(militar.nip));
   const [pgq, setPgq] = useState(militar.pgq);
   const [email, setEmail] = useState(militar.email);
+  const [celular, setCelular] = useState(formatCelular(militar.celular));
+  const [dataNascimento, setDataNascimento] = useState(militar.dataNascimento ?? '');
+  const [situacao, setSituacao] = useState<SituacaoMilitar>(militar.rm1 ? 'RM1' : militar.refo ? 'Refº' : '');
   const [temporario, setTemporario] = useState<'Carreira' | 'Temporário'>(militar.temporario ? 'Temporário' : 'Carreira');
   const [ativo, setAtivo] = useState<'Ativo' | 'Inativo'>(militar.ativo ? 'Ativo' : 'Inativo');
   const [omTexto, setOmTexto] = useState(militar.om);
@@ -281,7 +304,9 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
     if (!nome.trim()) e.nome = 'Informe o nome completo.';
     if (nip.length !== 10) e.nip = 'O NIP tem o formato 00.0000.00.';
     if (!pgq.trim()) e.pgq = 'Informe o posto/graduação/quadro.';
-    if (!omSigla) e.om = 'Escolha a OM na lista.';
+    if (!omSigla && !situacao) e.om = 'Escolha a OM na lista.';
+    if (celular && celular.replace(/\D/g, '').length < 10) e.celular = 'Informe o DDD e o número.';
+    if (dataNascimento && dataNascimento > new Date().toISOString().slice(0, 10)) e.dataNascimento = 'A data não pode ser futura.';
     if (hnre) Object.assign(e, validarAdicionais(adicionais, medico));
     setErros(e);
     if (Object.keys(e).length > 0) return;
@@ -295,6 +320,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
         ...extras,
         nome: nomeFinal, nip, pgq: pgqFinal, om: omSigla, email: email.trim().toLowerCase(),
         temporario: temporario === 'Temporário', ativo: ativo === 'Ativo',
+        celular: celular.replace(/\D/g, ''), dataNascimento, rm1: situacao === 'RM1', refo: situacao === 'Refº',
         inspecionado: montarInspecionado(pgqFinal, nip, nomeFinal),
       });
       onSalvo(nomeFinal);
@@ -332,7 +358,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
           </Field>
         </div>
         <Autocomplete
-          label="OM" required error={erros.om}
+          label="OM" required={!situacao} error={erros.om}
           valor={omTexto} opcoes={opcoesOm}
           onDigitar={t => { setOmTexto(t); setOmSigla(t === militar.om ? militar.om : ''); }}
           onSelecionar={o => { setOmTexto(`${o.principal} — ${o.secundaria}`); setOmSigla(o.principal); }}
@@ -340,7 +366,29 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
         <Field label="E-mail">
           {a => <input {...a} type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="off" />}
         </Field>
-        <ChoiceGroup<'Carreira' | 'Temporário'> label="Vínculo" value={temporario} onChange={setTemporario} options={[{ value: 'Carreira', label: 'Carreira' }, { value: 'Temporário', label: 'Temporário' }]} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Data de nascimento" error={erros.dataNascimento}>
+            {a => <input {...a} type="date" value={dataNascimento} onChange={e => setDataNascimento(e.target.value)} />}
+          </Field>
+          <Field label="Celular" error={erros.celular}>
+            {a => <input {...a} type="tel" inputMode="numeric" placeholder="(00) 00000-0000" value={celular} onChange={e => setCelular(formatCelular(e.target.value))} maxLength={15} autoComplete="off" />}
+          </Field>
+        </div>
+        <ChoiceGroup<'Carreira' | 'Temporário'> label="Vínculo" value={temporario} onChange={v => { setTemporario(v); if (v === 'Temporário') { setSituacao(''); if (postos) setPgq(p => aplicarSituacaoAoPgq(p, '', postos)); } }} options={[{ value: 'Carreira', label: 'Carreira' }, { value: 'Temporário', label: 'Temporário' }]} />
+        {temporario === 'Carreira' && (
+          <div className="flex flex-wrap items-center gap-x-6" role="group" aria-label="Situação na carreira">
+            {(['RM1', 'Refº'] as const).map(v => (
+              <label key={v} className={`flex items-center gap-3 min-h-[44px] ${situacao && situacao !== v ? 'opacity-50' : 'cursor-pointer'}`}>
+                <input
+                  type="checkbox" checked={situacao === v} disabled={!!situacao && situacao !== v} className="w-5 h-5 accent-navy"
+                  onChange={() => { const novo = situacao === v ? '' : v; setSituacao(novo); if (postos) setPgq(p => aplicarSituacaoAoPgq(p, novo, postos)); }}
+                />
+                <span className="text-sm font-semibold text-ink">{v}</span>
+                <span className="text-xs text-ink-3">{v === 'RM1' ? 'Reserva da Marinha de 1ª Classe' : 'Reformado (idade-limite ou invalidez)'}</span>
+              </label>
+            ))}
+          </div>
+        )}
         {hnre && <InformacoesAdicionais valor={adicionais} onChange={setAdicionais} medico={medico} erros={erros} />}
         <ChoiceGroup<'Ativo' | 'Inativo'> label="Situação no appweb" value={ativo} onChange={setAtivo} options={[{ value: 'Ativo', label: 'Ativo' }, { value: 'Inativo', label: 'Inativo' }]} />
       </form>
@@ -430,6 +478,65 @@ const PromocaoEmLote: React.FC<{ militares: MilitarRecord[]; postos: CorposQuadr
             {plano.aplicar.length === 0 && <p className="text-xs text-ink-3">Nenhuma alteração a aplicar.</p>}
           </>
         )}
+      </div>
+    </Dialog>
+  );
+};
+
+// ---------------------------------------------------------------------------
+
+/** Define o Serviço do HNRe (servico_label) dos militares selecionados que servem no HNRe. */
+const ServicoEmLote: React.FC<{ militares: MilitarRecord[]; onClose: () => void; onAplicado: (n: number) => void; onErro: (msg: string) => void }> = ({ militares, onClose, onAplicado, onErro }) => {
+  const [servicos, setServicos] = useState<ServicoHnre[]>([]);
+  const [texto, setTexto] = useState('');
+  const [escolhido, setEscolhido] = useState<ServicoHnre | null>(null);
+  const [erro, setErro] = useState('');
+  const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => { carregarServicosHnre().then(setServicos).catch(() => setErro('Não foi possível carregar os serviços do HNRe.')); }, []);
+  const alvos = militares.filter(m => omEhHnre(m.om));
+  const opcoes: OpcaoAutocomplete[] = useMemo(() => servicos.map(s => ({ chave: s.servico_id, principal: s.servico, secundaria: s.servico_id, busca: normalizarBusca(`${s.servico_id} ${s.servico}`) })), [servicos]);
+
+  const aplicar = async () => {
+    if (!escolhido) { setErro('Escolha o serviço na lista.'); return; }
+    setSalvando(true);
+    try {
+      await atualizarMilitaresEmLote(alvos.map(m => ({ id: m.id, patch: { servico_label: escolhido.servico_label } })));
+      onAplicado(alvos.length);
+    } catch (e: any) {
+      onErro(e?.message || 'Não foi possível aplicar a alteração em lote.');
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <Dialog
+      title="Alterar serviço do HNRe"
+      icon="apartment"
+      size="md"
+      onClose={onClose}
+      footer={(
+        <>
+          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button icon="check" loading={salvando} disabled={alvos.length === 0} onClick={aplicar}>
+            {alvos.length > 0 ? `Aplicar a ${alvos.length} militar${alvos.length !== 1 ? 'es' : ''}` : 'Aplicar'}
+          </Button>
+        </>
+      )}
+    >
+      <div className="space-y-4">
+        <p>Novo serviço (setor) para os militares selecionados que servem no HNRe.</p>
+        {erro && <p role="alert" className="text-sm font-semibold text-wine">{erro}</p>}
+        <Autocomplete
+          label="Serviço do HNRe" required placeholder="Digite o nome ou o código do serviço"
+          valor={texto} opcoes={opcoes}
+          onDigitar={t => { setTexto(t); setEscolhido(null); setErro(''); }}
+          onSelecionar={o => { const s = servicos.find(x => x.servico_id === o.chave); if (s) { setEscolhido(s); setTexto(s.servico_label); setErro(''); } }}
+        />
+        {militares.length > alvos.length && (
+          <p className="text-xs text-ink-3">{militares.length - alvos.length} selecionado{militares.length - alvos.length !== 1 ? 's' : ''} não serve{militares.length - alvos.length !== 1 ? 'm' : ''} no HNRe e {militares.length - alvos.length !== 1 ? 'serão ignorados' : 'será ignorado'}.</p>
+        )}
+        {alvos.length === 0 && <p role="alert" className="text-xs font-semibold text-wine">Nenhum dos selecionados serve no HNRe.</p>}
       </div>
     </Dialog>
   );

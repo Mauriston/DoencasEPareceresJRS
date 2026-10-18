@@ -5,12 +5,18 @@
 // mobile: bottom sheet.
 import React, { useMemo, useState } from 'react';
 import { ESPECIALIDADES_MEDICAS } from '../data/especialidadesMedicas';
+import { SheetArrastavel } from './ui/SheetArrastavel';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-const Shell: React.FC<{ titulo: string; icone: string; onClose: () => void; children: React.ReactNode }> = ({ titulo, icone, onClose, children }) => (
+const Shell: React.FC<{ titulo: string; icone: string; onClose: () => void; children: React.ReactNode }> = ({ titulo, icone, onClose, children }) => {
+  const isDesktop = useIsDesktop();
+  return (
   <div className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-end md:items-start justify-center md:p-4 md:pt-[8vh] animate-fade-in" onClick={onClose}>
-    <div
+    <SheetArrastavel
+      onClose={onClose}
+      ativo={!isDesktop}
       className="bg-white rounded-t-3xl md:rounded-2xl shadow-2xl border border-line w-full max-w-lg max-h-[92dvh] md:max-h-[84vh] flex flex-col overflow-hidden animate-sheet-up md:animate-none"
       onClick={e => e.stopPropagation()}
     >
@@ -24,9 +30,10 @@ const Shell: React.FC<{ titulo: string; icone: string; onClose: () => void; chil
         </button>
       </div>
       <div className="p-5 overflow-y-auto space-y-3">{children}</div>
-    </div>
+    </SheetArrastavel>
   </div>
-);
+  );
+};
 
 const campoTexto = 'w-full px-4 py-3 text-sm rounded-xl border border-ink-5 bg-white focus:outline-none focus:border-navy transition-colors';
 const rotulo = 'block text-xs font-bold text-ink-3 uppercase tracking-wider mb-1.5';

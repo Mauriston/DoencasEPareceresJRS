@@ -68,10 +68,32 @@ export const especialidadesDaPraca = (d: CorposQuadros, vinculo: Vinculo, posto:
  *  Oficial: POSTO (QUADRO) — o quadro "CA" (Corpo da Armada) não entra na sigla.
  *  Praça:   POSTO-ESPECIALIDADE.   Servidor civil: só a sigla.
  */
-export const montarPgq = (categoria: CategoriaMilitar, posto: string, quadroSigla: string, corpoSigla: string, especialidade: string): string => {
-  if (categoria === 'Oficial') return quadroSigla && !(corpoSigla === 'CA' && quadroSigla === 'CA') ? `${posto} (${quadroSigla})` : posto;
-  if (categoria === 'Praça') return especialidade ? `${posto}-${especialidade}` : posto;
+export type SituacaoMilitar = '' | 'RM1' | 'Refº';
+
+export const montarPgq = (categoria: CategoriaMilitar, posto: string, quadroSigla: string, corpoSigla: string, especialidade: string, situacao: SituacaoMilitar = ''): string => {
+  // RM1 (reserva) e Refº (reformado) entram antes do quadro (oficial) ou da especialidade (praça).
+  if (categoria === 'Oficial') {
+    const quadro = quadroSigla && !(corpoSigla === 'CA' && quadroSigla === 'CA') ? quadroSigla : '';
+    const dentro = [situacao, quadro].filter(Boolean).join('-');
+    return dentro ? `${posto} (${dentro})` : posto;
+  }
+  if (categoria === 'Praça') return [posto, situacao, especialidade].filter(Boolean).join('-');
   return posto;
+};
+
+/** Reescreve o P/G/Q com (ou sem) RM1/Refº: "CF (Md)" ↔ "CF (RM1-Md)", "SO-EF" ↔ "SO-Refº-EF". */
+export const aplicarSituacaoAoPgq = (pgq: string, situacao: SituacaoMilitar, postos: CorposQuadros['postos']): string => {
+  const sep = separarPosto(pgq, postos);
+  if (!sep) return pgq;
+  const oficial = postos[sep.posto]?.categoria === 'Oficial';
+  let resto = sep.resto;
+  // remove a marca anterior
+  resto = resto.replace(/\((?:RM1|Refº|Ref)-?/i, '(').replace(/^\(\)$/, '').replace(/-(?:RM1|Refº|Ref)(?=-|$)/i, '');
+  if (situacao) {
+    if (oficial) resto = resto.startsWith('(') ? `(${situacao}-${resto.slice(1)}` : `(${situacao})`;
+    else if (!resto.startsWith('(')) resto = `-${situacao}${resto}`;
+  }
+  return `${sep.posto}${resto}`;
 };
 
 export const montarInspecionado = (pgq: string, nip: string, nome: string): string => `${pgq} ${nip} ${nome}`.replace(/\s+/g, ' ').trim();
@@ -98,6 +120,6 @@ export const carregarServicosHnre = (): Promise<ServicoHnre[]> => {
 };
 
 /** Oficial do quadro de médicos (Md, RM2-Md ou RM3-Md), a partir do P/G/Q. */
-export const ehOficialMedico = (pgq: string): boolean => /\((?:RM\d-)?Md\)/i.test(pgq);
+export const ehOficialMedico = (pgq: string): boolean => /\((?:(?:RM\d|Refº|Ref)-)?Md\)/i.test(pgq);
 
 export const omEhHnre = (om: string): boolean => om.trim().toUpperCase() === 'HNRE';

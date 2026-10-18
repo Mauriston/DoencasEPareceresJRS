@@ -7,7 +7,7 @@ import { Field } from '../ui/Field';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { ESPECIALIDADES_MEDICAS } from '../../data/especialidadesMedicas';
 import { carregarServicosHnre, normalizarBusca, type ServicoHnre } from '../../utils/corposQuadros';
-import { formatCelular, formatCpf, formatIdentidadeMilitar, cpfValido } from '../../utils/format';
+import { formatCpf, formatIdentidadeMilitar, cpfValido } from '../../utils/format';
 import { prepararFoto } from '../../services/militarFoto';
 import type { MilitarDoc } from '../../services/firestoreMilitares';
 
@@ -16,8 +16,6 @@ export interface Adicionais {
   nomeGuerra: string;
   especialidade: string;
   emailPessoal: string;
-  celular: string;
-  dataNascimento: string;
   cpf: string;
   identidadeMilitar: string;
   crm: string;
@@ -28,13 +26,13 @@ export interface Adicionais {
 }
 
 export const ADICIONAIS_VAZIO: Adicionais = {
-  servicoLabel: '', nomeGuerra: '', especialidade: '', emailPessoal: '', celular: '', dataNascimento: '',
+  servicoLabel: '', nomeGuerra: '', especialidade: '', emailPessoal: '',
   cpf: '', identidadeMilitar: '', crm: '', rqe: '', fotoUrl: '', fotoNova: null,
 };
 
 export const adicionaisDoMilitar = (m: Partial<MilitarDoc>): Adicionais => ({
   servicoLabel: m.servico_label ?? '', nomeGuerra: m.nomeGuerra ?? '', especialidade: m.especialidade ?? '',
-  emailPessoal: m.emailPessoal ?? '', celular: formatCelular(m.celular), dataNascimento: m.dataNascimento ?? '',
+  emailPessoal: m.emailPessoal ?? '',
   cpf: formatCpf(m.cpf), identidadeMilitar: formatIdentidadeMilitar(m.identidadeMilitar), crm: m.crm ?? '', rqe: m.rqe ?? '',
   fotoUrl: m.fotoUrl ?? '', fotoNova: null,
 });
@@ -45,8 +43,8 @@ export const adicionaisParaPatch = (a: Adicionais, medico: boolean): Partial<Mil
   if (medico) {
     Object.assign(patch, {
       nomeGuerra: a.nomeGuerra.trim().toUpperCase(), especialidade: a.especialidade,
-      emailPessoal: a.emailPessoal.trim().toLowerCase(), celular: a.celular.replace(/\D/g, ''),
-      dataNascimento: a.dataNascimento, cpf: a.cpf.replace(/\D/g, ''), identidadeMilitar: a.identidadeMilitar.replace(/\D/g, ''),
+      emailPessoal: a.emailPessoal.trim().toLowerCase(),
+      cpf: a.cpf.replace(/\D/g, ''), identidadeMilitar: a.identidadeMilitar.replace(/\D/g, ''),
       crm: a.crm.replace(/\D/g, ''), rqe: a.especialidade ? a.rqe.replace(/\D/g, '') : '',
     });
   }
@@ -56,12 +54,9 @@ export const adicionaisParaPatch = (a: Adicionais, medico: boolean): Partial<Mil
 export const validarAdicionais = (a: Adicionais, medico: boolean): Record<string, string> => {
   const e: Record<string, string> = {};
   if (!medico) return e;
-  const cel = a.celular.replace(/\D/g, '');
-  if (cel && cel.length < 10) e.celular = 'Informe o DDD e o número.';
   if (a.cpf && !cpfValido(a.cpf)) e.cpf = 'CPF inválido.';
   if (a.identidadeMilitar && a.identidadeMilitar.replace(/\D/g, '').length !== 7) e.identidadeMilitar = 'Use o formato 000000-0.';
   if (a.emailPessoal && !/^\S+@\S+\.\S+$/.test(a.emailPessoal.trim())) e.emailPessoal = 'E-mail inválido.';
-  if (a.dataNascimento && a.dataNascimento > new Date().toISOString().slice(0, 10)) e.dataNascimento = 'A data não pode ser futura.';
   return e;
 };
 
@@ -144,12 +139,6 @@ export const InformacoesAdicionais: React.FC<Props> = ({ valor, onChange, medico
               />
               <Field label="E-mail pessoal" error={erros.emailPessoal}>
                 {a => <input {...a} type="email" value={valor.emailPessoal} onChange={e => set({ emailPessoal: e.target.value })} autoComplete="off" />}
-              </Field>
-              <Field label="Celular" error={erros.celular}>
-                {a => <input {...a} type="tel" inputMode="numeric" placeholder="(00) 00000-0000" value={valor.celular} onChange={e => set({ celular: formatCelular(e.target.value) })} maxLength={15} autoComplete="off" />}
-              </Field>
-              <Field label="Data de nascimento" error={erros.dataNascimento}>
-                {a => <input {...a} type="date" value={valor.dataNascimento} onChange={e => set({ dataNascimento: e.target.value })} />}
               </Field>
               <Field label="CPF" error={erros.cpf}>
                 {a => <input {...a} type="text" inputMode="numeric" placeholder="000.000.000-00" value={valor.cpf} onChange={e => set({ cpf: formatCpf(e.target.value) })} maxLength={14} className={`${a.className} font-mono`} autoComplete="off" />}

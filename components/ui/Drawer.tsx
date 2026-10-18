@@ -5,6 +5,7 @@
 import React, { useEffect, useId, useRef } from 'react';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
+import { SheetArrastavel } from './SheetArrastavel';
 
 interface DrawerProps {
   title: string;
@@ -27,8 +28,10 @@ export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, 
   return (
     <div className="fixed inset-0 z-drawer">
       <div className="absolute inset-0 bg-black/50 animate-backdrop-in" onMouseDown={onClose} aria-hidden="true" />
-      <div
+      <SheetArrastavel
         ref={painel}
+        onClose={onClose}
+        ativo={!isDesktop}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -51,7 +54,7 @@ export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, 
         </div>
         <div className="p-5 overflow-y-auto flex-1 text-sm text-ink">{children}</div>
         {footer && <div className="px-5 py-3 border-t border-line flex flex-col-reverse sm:flex-row sm:justify-end gap-2 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{footer}</div>}
-      </div>
+      </SheetArrastavel>
     </div>
   );
 };
