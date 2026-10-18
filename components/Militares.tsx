@@ -286,7 +286,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
   const [celular, setCelular] = useState(formatCelular(militar.celular));
   const [dataNascimento, setDataNascimento] = useState(militar.dataNascimento ?? '');
   const [situacao, setSituacao] = useState<SituacaoMilitar>(militar.rm1 ? 'RM1' : militar.refo ? 'Refº' : '');
-  const [temporario, setTemporario] = useState<'Carreira' | 'Temporário'>(militar.temporario ? 'Temporário' : 'Carreira');
+  const [vinculo, setVinculo] = useState<'Carreira' | 'Temporário' | 'Inativo'>(militar.temporario ? 'Temporário' : (militar.rm1 || militar.refo) ? 'Inativo' : 'Carreira');
   const [ativo, setAtivo] = useState<'Ativo' | 'Inativo'>(militar.ativo ? 'Ativo' : 'Inativo');
   const [omTexto, setOmTexto] = useState(militar.om);
   const [omSigla, setOmSigla] = useState(militar.om);
@@ -304,6 +304,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
     if (!nome.trim()) e.nome = 'Informe o nome completo.';
     if (nip.length !== 10) e.nip = 'O NIP tem o formato 00.0000.00.';
     if (!pgq.trim()) e.pgq = 'Informe o posto/graduação/quadro.';
+    if (vinculo === 'Inativo' && !situacao) e.situacao = 'Marque RM1 ou Refº.';
     if (!omSigla && !situacao) e.om = 'Escolha a OM na lista.';
     if (celular && celular.replace(/\D/g, '').length < 10) e.celular = 'Informe o DDD e o número.';
     if (dataNascimento && dataNascimento > new Date().toISOString().slice(0, 10)) e.dataNascimento = 'A data não pode ser futura.';
@@ -319,7 +320,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
       await atualizarMilitar(militar.id, {
         ...extras,
         nome: nomeFinal, nip, pgq: pgqFinal, om: omSigla, email: email.trim().toLowerCase(),
-        temporario: temporario === 'Temporário', ativo: ativo === 'Ativo',
+        temporario: vinculo === 'Temporário', ativo: ativo === 'Ativo',
         celular: celular.replace(/\D/g, ''), dataNascimento, rm1: situacao === 'RM1', refo: situacao === 'Refº',
         inspecionado: montarInspecionado(pgqFinal, nip, nomeFinal),
       });
@@ -374,19 +375,20 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
             {a => <input {...a} type="tel" inputMode="numeric" placeholder="(00) 00000-0000" value={celular} onChange={e => setCelular(formatCelular(e.target.value))} maxLength={15} autoComplete="off" />}
           </Field>
         </div>
-        <ChoiceGroup<'Carreira' | 'Temporário'> label="Vínculo" value={temporario} onChange={v => { setTemporario(v); if (v === 'Temporário') { setSituacao(''); if (postos) setPgq(p => aplicarSituacaoAoPgq(p, '', postos)); } }} options={[{ value: 'Carreira', label: 'Carreira' }, { value: 'Temporário', label: 'Temporário' }]} />
-        {temporario === 'Carreira' && (
+        <ChoiceGroup<'Carreira' | 'Temporário' | 'Inativo'> label="Vínculo" value={vinculo} onChange={v => { setVinculo(v); if (v !== 'Inativo') { setSituacao(''); if (postos) setPgq(p => aplicarSituacaoAoPgq(p, '', postos)); } }} options={[{ value: 'Carreira', label: 'Carreira' }, { value: 'Temporário', label: 'Temporário' }, { value: 'Inativo', label: 'Inativo' }]} />
+        {vinculo === 'Inativo' && (
           <div className="flex flex-wrap items-center gap-x-6" role="group" aria-label="Situação na carreira">
             {(['RM1', 'Refº'] as const).map(v => (
               <label key={v} className={`flex items-center gap-3 min-h-[44px] ${situacao && situacao !== v ? 'opacity-50' : 'cursor-pointer'}`}>
                 <input
                   type="checkbox" checked={situacao === v} disabled={!!situacao && situacao !== v} className="w-5 h-5 accent-navy"
-                  onChange={() => { const novo = situacao === v ? '' : v; setSituacao(novo); if (postos) setPgq(p => aplicarSituacaoAoPgq(p, novo, postos)); }}
+                  onChange={() => { const novo = situacao === v ? '' : v; setSituacao(novo); setErros(x => ({ ...x, situacao: '' })); if (postos) setPgq(p => aplicarSituacaoAoPgq(p, novo, postos)); }}
                 />
                 <span className="text-sm font-semibold text-ink">{v}</span>
                 <span className="text-xs text-ink-3">{v === 'RM1' ? 'Reserva da Marinha de 1ª Classe' : 'Reformado (idade-limite ou invalidez)'}</span>
               </label>
             ))}
+            {erros.situacao && <p role="alert" className="w-full text-sm font-semibold text-wine">{erros.situacao}</p>}
           </div>
         )}
         {hnre && <InformacoesAdicionais valor={adicionais} onChange={setAdicionais} medico={medico} erros={erros} />}
