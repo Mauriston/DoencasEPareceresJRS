@@ -415,11 +415,6 @@ function garantirEstruturaConcurso(ano, nomeConcurso) {
   }
 }
 
-/** URL de download direto de um arquivo do Drive. */
-function urlDownloadDrive(idArquivo) {
-  return 'https://drive.google.com/uc?export=download&id=' + idArquivo;
-}
-
 /** URL de visualização (abre no navegador) de um arquivo do Drive. */
 function urlVisualizacaoDrive(idArquivo) {
   return 'https://drive.google.com/file/d/' + idArquivo + '/view';
@@ -458,7 +453,7 @@ function apiSalvarMensagemPdf(corpo) {
  * action=salvarPdfCandidato (POST): { idToken, ano, nomeConcurso, candidatoId, candidatoNome, tipoDocumento, pdfBase64 }
  * — guarda o PDF (termoRecurso, termoCientificacao, solicitacaoParecer, solicitacaoExames) na pasta do candidato,
  * dentro de CANDIDATOS (a pasta do candidato é criada na primeira vez). Nome do arquivo:
- * {tipoDocumento}_{candidatoId}_{AAAAMMDD-HHMMSS}.pdf. Devolve a URL de download direto.
+ * {tipoDocumento}_{candidatoId}_{AAAAMMDD-HHMMSS}.pdf. Devolve a URL de visualização ("view").
  */
 function apiSalvarPdfCandidato(corpo) {
   exigirUsuarioFirebase(corpo);
@@ -480,7 +475,7 @@ function apiSalvarPdfCandidato(corpo) {
   }
   var carimbo = Utilities.formatDate(new Date(), 'America/Recife', 'yyyyMMdd-HHmmss');
   var arquivo = criarPdfNaPasta(pastaCandidato, tipo + '_' + candidatoId + '_' + carimbo + '.pdf', corpo.pdfBase64);
-  return { fileId: arquivo.getId(), url: urlDownloadDrive(arquivo.getId()) };
+  return { fileId: arquivo.getId(), url: urlVisualizacaoDrive(arquivo.getId()) };
 }
 
 /** Remove os acentos (ex.: "Ortopedia e Traumatologia" fica igual; "Clínica Médica" → "Clinica Medica"). */
