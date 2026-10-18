@@ -18,7 +18,7 @@ import { QuesitosConfig } from './pareceres/QuesitosConfig';
 import { ParecerDetalhe, STATUS_PARECER, diasDesde } from './pareceres/ParecerDetalhe';
 import { useQueryParam } from '../hooks/useQueryParam';
 import { useNav } from '../context/NavContext';
-import { useStoragePdf } from '../hooks/useStoragePdf';
+import { baixarPdf } from '../services/driveConcursos';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { canUseFeature } from '../config/permissions';
 import { observarPareceres, marcarConcluido, statusEfetivo, type ParecerRecord, type StatusParecer } from '../services/firestorePareceres';
@@ -36,7 +36,6 @@ export const Pareceres: React.FC = () => {
   const perfil = nav?.authUser?.perfil;
   const podeGerar = canUseFeature('pareceres.gerar', perfil);
   const ehAdmin = perfil === 'admin';
-  const { openUrl: abrirPdf, modalElement: pdfModal } = useStoragePdf();
   const isDesktop = useIsDesktop();
 
   const [lista, setLista] = useState<ParecerRecord[] | null>(null);
@@ -101,7 +100,7 @@ export const Pareceres: React.FC = () => {
     }
   };
 
-  const abrir = (p: ParecerRecord) => abrirPdf(p.pdfUrl, `Pedido de Parecer — ${p.especialidade} — ${extrairNomeInspecionado(p.inspecionado)}`);
+  const abrir = (p: ParecerRecord) => baixarPdf(p.pdfUrl);
 
   const nomeDe = (p: ParecerRecord) => {
     const nome = extrairNomeInspecionado(p.inspecionado);
@@ -231,15 +230,13 @@ export const Pareceres: React.FC = () => {
         <NovoParecerForm
           inicial={duplicando}
           onClose={() => { setNovo(false); setDuplicando(null); }}
-          onGerado={(nome, url) => {
+          onGerado={nome => {
             setNovo(false); setDuplicando(null);
             avisar(`Pedido de parecer gerado para ${nome}.`);
-            if (isDesktop) abrirPdf(url, `Pedido de Parecer — ${nome}`); // no mobile, o PDF abre pelo detalhe (pop-up bloqueado após o envio)
           }}
         />
       )}
       {config && ehAdmin && <QuesitosConfig onClose={() => setConfig(false)} onAviso={avisar} />}
-      {pdfModal}
     </div>
   );
 };

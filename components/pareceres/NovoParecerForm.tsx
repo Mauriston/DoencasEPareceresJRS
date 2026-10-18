@@ -18,7 +18,7 @@ import { useNav } from '../../context/NavContext';
 import { observarMilitares, type MilitarRecord } from '../../services/firestoreMilitares';
 import { observarQuesitos, type QuesitosEspecialidade } from '../../services/firestoreQuesitos';
 import { novoIdParecer, registrarParecer, type ParecerRecord } from '../../services/firestorePareceres';
-import { gerarPdfPedidoParecer, enviarPdfParecer } from '../../services/firebaseStoragePareceres';
+import { gerarPdfPedidoParecer, salvarPdfParecerNoDrive } from '../../services/drivePareceres';
 import { normalizarBusca } from '../../utils/corposQuadros';
 import { formatNip } from '../../utils/format';
 
@@ -126,7 +126,7 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, onClose, onGerado })
         nomeUsuario: usuario.nome, postoGraduacao: usuario.postoGraduacao || '', cargo: usuario.cargo || '', crmPe: usuario.crmPe || '',
       });
       const id = novoIdParecer();
-      const pdfUrl = await enviarPdfParecer(id, pdfBase64);
+      const pdfUrl = await salvarPdfParecerNoDrive({ nomeInspecionado: militar.nome, especialidade: modelo.especialidade, pdfBase64 });
       await registrarParecer(id, {
         militarId: militar.id, inspecionado: militar.inspecionado, especialidade: modelo.especialidade, finalidade,
         historico: historico.trim(), quesitos: lista, pdfUrl,
