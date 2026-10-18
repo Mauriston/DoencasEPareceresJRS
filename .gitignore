@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 .claude/
+
+# clasp (gerado por scripts/gas-deploy.mjs)
+apps-script/**/.clasp.json
+.clasprc.json

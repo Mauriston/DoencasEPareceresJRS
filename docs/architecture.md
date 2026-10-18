@@ -147,7 +147,9 @@ A aplicação integra-se diretamente com:
 │   ├── extrasService.ts
 │   └── firebaseAuth.ts
 ├── App.tsx
-├── Code.gs
+├── apps-script/
+│   ├── principal/Code.gs
+│   └── concursos/CodeConcursos.gs
 ├── constants.ts
 ├── firebase-applet-config.json
 ├── index.html

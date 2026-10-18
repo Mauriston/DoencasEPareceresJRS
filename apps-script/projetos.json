@@ -1,0 +1,12 @@
+{
+  "principal": {
+    "descricao": "Apps Script principal (Code.gs): pareceres, perícia menor, militares, lookups. URL em GAS_URL (config/endpoints.ts).",
+    "scriptId": null,
+    "deploymentId": null
+  },
+  "concursos": {
+    "descricao": "Apps Script standalone (CodeConcursos.gs): PDFs de concursos/pareceres, Drive e Gemini. URL em GAS_URL_CONCURSOS (config/endpoints.ts).",
+    "scriptId": null,
+    "deploymentId": null
+  }
+}
