@@ -19,14 +19,16 @@ Para um novo projeto: crie a pasta `apps-script/<nome>/` e adicione uma entrada 
 1. **Ativar a API do Apps Script** na conta dona dos projetos: https://script.google.com/home/usersettings → "API Google Apps Script" → Ativada.
 2. **IDs dos projetos** (preencher em `apps-script/projetos.json`):
    - `scriptId`: no editor do projeto → Configurações do projeto (engrenagem) → "ID do script".
-   - `deploymentId`: Implantar → Gerenciar implantações → a implantação do app da web → "ID da implantação" (começa com `AKfycb…`; é o mesmo trecho que aparece na URL `…/macros/s/<id>/exec`).
-3. **Manifesto**: o `appsscript.json` guarda fuso, permissões e a configuração do web app (executar como, quem acessa). Para não sobrescrever o que já está no projeto, baixe o atual uma vez e comite:
+   - `deploymentId`: é o trecho `AKfycb…` da URL do web app (`…/macros/s/<deploymentId>/exec`, as mesmas URLs de `config/endpoints.ts`); também aparece em Implantar → Gerenciar implantações → "ID da implantação".
+3. **Manifesto**: o `appsscript.json` guarda fuso, permissões e a configuração do web app (executar como, quem acessa). Para não sobrescrever o que já está no projeto, traga o atual para o repositório uma vez.
+   - **Pelo editor (mais simples)**: no projeto, Configurações do projeto (engrenagem) → marque "Mostrar arquivo de manifesto "appsscript.json" no editor" → volte ao editor, abra `appsscript.json`, copie o conteúdo e salve em `apps-script/<projeto>/appsscript.json`.
+   - **Pelo clasp**:
    ```bash
    npm i -g @google/clasp && clasp login
    cd apps-script/concursos && echo '{"scriptId":"<scriptId>"}' > .clasp.json && clasp pull && rm .clasp.json
    ```
    (repita em `apps-script/principal/`). O `clasp pull` pode trazer arquivos de código; mantenha só o `appsscript.json` e deixe o `.gs` do repositório como está.
-4. **Credenciais no GitHub**: depois do `clasp login`, copie o conteúdo de `~/.clasprc.json` para um secret do repositório chamado `CLASPRC_JSON` (Settings → Secrets and variables → Actions). É a credencial da sua conta Google: não a cole em issues, PRs ou chats.
+4. **Credenciais no GitHub**: depois do `clasp login` (abre o navegador para você autorizar), o clasp cria o arquivo oculto `.clasprc.json` na sua pasta pessoal (`~/.clasprc.json`; no Windows, `C:\Users\<você>\.clasprc.json`). Copie o conteúdo dele para um secret do repositório chamado `CLASPRC_JSON` (Settings → Secrets and variables → Actions → New repository secret). Para copiar sem exibir na tela: macOS `pbcopy < ~/.clasprc.json`; Windows (prompt) `clip < %USERPROFILE%\.clasprc.json`; Linux `xclip -selection clipboard < ~/.clasprc.json`. É a credencial da sua conta Google: não a cole em issues, PRs ou chats.
 
 ## Cuidados
 - **Novas permissões**: se uma versão passar a usar um serviço novo (ex.: Drive), o dono do projeto precisa autorizar uma vez — abra o projeto no editor, rode qualquer função e aceite as permissões. Até lá o web app responde com erro de autorização.
