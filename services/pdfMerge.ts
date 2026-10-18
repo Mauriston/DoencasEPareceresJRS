@@ -4,7 +4,13 @@
 
 /** Concatena os PDFs na ordem recebida e devolve o resultado em base64. */
 export const juntarPdfsBase64 = async (pdfsBase64: string[]): Promise<string> => {
-  const { PDFDocument } = await import('pdf-lib');
+  let PDFDocument: typeof import('pdf-lib').PDFDocument;
+  try {
+    ({ PDFDocument } = await import('pdf-lib'));
+  } catch {
+    // Aba aberta com uma versão antiga do app: o arquivo do módulo já não existe no servidor.
+    throw new Error('O app foi atualizado desde que esta página foi aberta. Recarregue a página (Ctrl+F5) e tente de novo.');
+  }
   const destino = await PDFDocument.create();
   for (const b64 of pdfsBase64) {
     const origem = await PDFDocument.load(b64);

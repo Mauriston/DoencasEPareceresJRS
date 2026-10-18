@@ -20,16 +20,17 @@ import {
 } from '../services/firestoreConcursos';
 import { SolicitarParecerModal, SolicitarExamesModal } from './SolicitacaoModais';
 import { juntarPdfsBase64 } from '../services/pdfMerge';
-import { uploadMensagemPdf, uploadTermoRecursoPdf, uploadTermoCientificacaoPdf, uploadSolicitacaoPdf } from '../services/firebaseStorageConcursos';
+import {
+  extrairMensagemComGemini, salvarMensagemNoDrive, salvarPdfCandidatoNoDrive, criarEstruturaConcursoNoDrive, baixarPdf, anoDoConcurso,
+  type PastaConcurso, type MensagemExtraida,
+} from '../services/driveConcursos';
 import {
   limparRuidoPaginacao, extrairCabecalhoMensagem, extrairCandidatosComAgendamento, extrairPeriodoJRS,
   extrairNomeConcurso, formatarChaveData, parseChaveData, interpretarCsvCandidatosDataBase,
   MAPA_LAUDO_POR_STATUS,
   type CabecalhoMensagem, type CandidatoBasico, type CandidatoImportadoCsv,
 } from '../utils/concursosUtils';
-import { apiUrl } from '../utils/apiBase';
 import { useIsDesktop } from '../hooks/useIsDesktop';
-import { useStoragePdf } from '../hooks/useStoragePdf';
 import { Button } from './ui/Button';
 import { Segmented } from './ui/Segmented';
 import { SheetArrastavel } from './ui/SheetArrastavel';
@@ -77,61 +78,44 @@ const isoParaBR = (iso: string) => {
   return `${d}/${m}/${y}`;
 };
 
-const fileParaBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload = () => {
-    const resultado = reader.result as string;
-    resolve(resultado.split(',')[1] || '');
-  };
-  reader.onerror = reject;
-  reader.readAsDataURL(file);
-});
-
-// Acima disso o arquivo costuma estourar o limite de tamanho de requisição
-// do servidor/infra antes mesmo de chegar à IA, retornando uma página de
-// erro em HTML em vez de JSON (ver transcreverPdfViaOcr).
-const TAMANHO_MAXIMO_PDF_OCR = 15 * 1024 * 1024; // 15 MB
-
 /**
- * Envia um PDF (ou foto/scan) ao endpoint de transcrição por IA e devolve o
- * texto transcrito. Centraliza a checagem de tamanho do arquivo e o
- * tratamento de respostas que não são JSON — isso acontece quando a
- * requisição é grande demais e a infra devolve uma página de erro em HTML
- * (o sintoma típico é "Unexpected token '<' ... is not valid JSON").
+ * Converte o JSON lido pelo Gemini nas estruturas do app. A lista de candidatos vem do Gemini; se ele não
+ * devolver nenhuma (PDF ilegível, formato fora do comum), cai na extração por regras sobre o texto transcrito.
  */
-const transcreverPdfViaOcr = async (file: File): Promise<string> => {
-  if (file.size > TAMANHO_MAXIMO_PDF_OCR) {
-    const tamanhoMB = (file.size / (1024 * 1024)).toFixed(1);
-    throw new Error(
-      `O arquivo tem ${tamanhoMB} MB — acima do limite de ${TAMANHO_MAXIMO_PDF_OCR / (1024 * 1024)} MB aceito para transcrição automática. ` +
-      'Tente um PDF menor (reduza a resolução do scan ou separe-o em partes), ou use a importação por CSV para concursos já encerrados.'
-    );
-  }
+const interpretarMensagem = (m: MensagemExtraida): {
+  cabecalho: CabecalhoMensagem; nomeConcurso: string; candidatos: CandidatoBasico[];
+  modoAgendamento: boolean; periodo: { inicio: string; fim: string } | null; texto: string;
+} => {
+  const textoLimpo = limparRuidoPaginacao(m.texto);
+  const cabecalho: CabecalhoMensagem = {
+    dataHora: m.dataHora, sender: m.remetente, recipient: m.destinatario, info: m.info, subject: m.assunto,
+    texto: textoLimpo,
+    purpose: m.mensagemDeAgendamento ? 'Agendamento' : (/candidatos\s+abaixo\s+relacionados/i.test(textoLimpo) || m.candidatos.length > 0 ? 'Apresentação' : 'Outros'),
+  };
 
-  const fileBase64 = await fileParaBase64(file);
-  let res: Response;
-  try {
-    res = await fetch(apiUrl('/api/concursos/ocr-pdf'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileBase64, mimeType: file.type || 'application/pdf' }),
-    });
-  } catch {
-    throw new Error('Não foi possível conectar ao servidor para transcrever o PDF. Verifique sua conexão e tente novamente.');
-  }
+  let candidatos: CandidatoBasico[] = m.candidatos
+    .filter(c => /^\d{5,7}-\d$/.test(c.matricula) && c.nome)
+    .map(c => ({ id: c.matricula, nome: c.nome, ...(c.dataAgendamento ? { dataAgendamento: c.dataAgendamento } : {}) }));
+  let modoAgendamento = m.mensagemDeAgendamento && candidatos.some(c => c.dataAgendamento);
+  let periodo = m.periodoJRS;
 
-  const contentType = res.headers.get('content-type') || '';
-  if (!contentType.includes('application/json')) {
-    throw new Error(
-      res.ok
-        ? 'O servidor respondeu em um formato inesperado ao transcrever o PDF.'
-        : `O servidor retornou um erro inesperado (código ${res.status}) ao transcrever o PDF — isso costuma acontecer quando o arquivo é grande demais. Tente um PDF menor.`
-    );
+  if (candidatos.length === 0 && textoLimpo) {
+    const mDtg = m.dataHora.match(/\/([A-ZÇ]{3})\/(\d{2,4})$/);
+    const anoMsg = mDtg ? (mDtg[2].length === 2 ? 2000 + parseInt(mDtg[2], 10) : parseInt(mDtg[2], 10)) : undefined;
+    const mesMsg = mDtg ? ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'].indexOf(mDtg[1]) : -1;
+    const extraido = extrairCandidatosComAgendamento(textoLimpo, { remetente: m.remetente, anoPadrao: anoMsg, mesReferencia: mesMsg >= 0 ? mesMsg : undefined });
+    candidatos = extraido.candidatos;
+    modoAgendamento = extraido.modoAgendamento;
+    if (modoAgendamento) cabecalho.purpose = 'Agendamento';
   }
+  if (!periodo && textoLimpo) {
+    const p = extrairPeriodoJRS(textoLimpo);
+    if (p) periodo = { inicio: formatarChaveData(p.inicio), fim: formatarChaveData(p.fim) };
+  }
+  // Apresentação: ordem alfabética (o agendamento automático distribui os candidatos nessa ordem).
+  if (!modoAgendamento) candidatos = [...candidatos].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
 
-  const json = await res.json();
-  if (!json.success) throw new Error(json.error || 'Erro ao transcrever o documento.');
-  return json.texto || '';
+  return { cabecalho, nomeConcurso: m.nomeConcurso || extrairNomeConcurso(m.assunto), candidatos, modoAgendamento, periodo, texto: textoLimpo };
 };
 
 interface ConfirmDialogState {
@@ -267,29 +251,17 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
     setProcessando(true);
     setStep('processando');
     try {
-      const texto = await transcreverPdfViaOcr(file);
-      const textoLimpo = limparRuidoPaginacao(texto);
-      setTextoTranscrito(textoLimpo);
-      const cab = extrairCabecalhoMensagem(textoLimpo);
-      if (!cab.dataHora) {
+      const lida = interpretarMensagem(await extrairMensagemComGemini(file));
+      setTextoTranscrito(lida.texto);
+      if (!lida.cabecalho.dataHora) {
         throw new Error('Não foi possível localizar o código Data-Hora (ID único) da mensagem no documento. Confira o arquivo e tente novamente.');
       }
-
-      const mDtg = cab.dataHora.match(/\/([A-ZÇ]{3})\/(\d{2,4})$/);
-      const anoMsg = mDtg ? (mDtg[2].length === 2 ? 2000 + parseInt(mDtg[2], 10) : parseInt(mDtg[2], 10)) : undefined;
-      const mesMsg = mDtg ? ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'].indexOf(mDtg[1]) : -1;
-      const { candidatos: candidatosExtraidos, modoAgendamento: agendamentoIdentificado } = extrairCandidatosComAgendamento(
-        cab.texto || textoLimpo,
-        { remetente: cab.sender, anoPadrao: anoMsg, mesReferencia: mesMsg >= 0 ? mesMsg : undefined },
-      );
-      const periodo = extrairPeriodoJRS(cab.texto || textoLimpo);
-      setModoAgendamento(agendamentoIdentificado);
-
-      setCabecalho(cab);
-      setNomeConcurso(extrairNomeConcurso(cab.subject));
-      setCandidatos(candidatosExtraidos);
-      setPeriodoInicio(periodo ? formatarChaveData(periodo.inicio) : '');
-      setPeriodoFim(periodo ? formatarChaveData(periodo.fim) : '');
+      setModoAgendamento(lida.modoAgendamento);
+      setCabecalho(lida.cabecalho);
+      setNomeConcurso(lida.nomeConcurso);
+      setCandidatos(lida.candidatos);
+      setPeriodoInicio(lida.periodo?.inicio ?? '');
+      setPeriodoFim(lida.periodo?.fim ?? '');
       setStep('revisao');
     } catch (e: any) {
       setErro(e?.message || 'Erro ao processar o documento.');
@@ -321,12 +293,10 @@ const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ onClose
     setProcessando(true);
     try {
       const periodo = periodoInicio && periodoFim ? { inicio: parseChaveData(periodoInicio), fim: parseChaveData(periodoFim) } : null;
-      // O Storage exige o ID do concurso no caminho do arquivo, então o ID é
-      // gerado antes e o upload é aguardado aqui — se não, o registro da
-      // mensagem ficava com fileUrl vazio para sempre (o upload rodava em
-      // paralelo com o resultado descartado), e o PDF nunca aparecia depois.
+      // O PDF vai para o Drive (CONCURSOS > ano atual > concurso > MENSAGENS; a estrutura de pastas é criada
+      // aqui) e o upload é aguardado: o registro da mensagem precisa nascer já com a URL do arquivo.
       const novoId = novoConcursoId();
-      const fileUrl = await uploadMensagemPdf(novoId, file!);
+      const fileUrl = await salvarMensagemNoDrive({ nome: nomeConcurso.trim(), ano: new Date().getFullYear() }, file!);
       // A mensagem que cria o concurso é sempre do tipo "Apresentação",
       // independente do que a heurística de extração tenha identificado.
       await criarConcursoDaMensagem({
@@ -706,6 +676,7 @@ const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
     setProcessando(true);
     try {
       const { concursoId } = await importarConcursoDeCsv(nomeConcurso.trim(), status, candidatos);
+      void criarEstruturaConcursoNoDrive({ nome: nomeConcurso.trim(), ano: new Date().getFullYear() });
       if (periodoInicio && periodoFim) {
         await definirPeriodoAgendamento(concursoId, parseChaveData(periodoInicio), parseChaveData(periodoFim));
       }
@@ -872,10 +843,12 @@ const PROPOSITO_MENSAGEM_OPTIONS = ['Agendamento', 'Reagendamento', 'Solicitaç�
 interface ModalRegistrarMensagemArquivoProps {
   concursoId: string;
   concursoNome: string;
+  concursoAno: number;
   onClose: () => void;
 }
 
-const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps> = ({ concursoId, concursoNome, onClose }) => {
+const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps> = ({ concursoId, concursoNome, concursoAno, onClose }) => {
+  const pastaConcurso: PastaConcurso = { nome: concursoNome, ano: concursoAno };
   const [step, setStep] = useState<'select' | 'processando' | 'revisao' | 'concluido'>('select');
   const [file, setFile] = useState<File | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -888,9 +861,7 @@ const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps
     setProcessando(true);
     setStep('processando');
     try {
-      const texto = await transcreverPdfViaOcr(file);
-      const textoLimpo = limparRuidoPaginacao(texto);
-      const cab = extrairCabecalhoMensagem(textoLimpo);
+      const cab = interpretarMensagem(await extrairMensagemComGemini(file)).cabecalho;
       if (!cab.dataHora) {
         throw new Error('Não foi possível localizar o código Data-Hora (ID único) da mensagem no documento.');
       }
@@ -909,7 +880,7 @@ const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps
     setErro(null);
     setProcessando(true);
     try {
-      const fileUrl = await uploadMensagemPdf(concursoId, file);
+      const fileUrl = await salvarMensagemNoDrive(pastaConcurso, file);
       await arquivarMensagem(concursoId, cabecalho, fileUrl);
       setStep('concluido');
     } catch (e: any) {
@@ -1079,13 +1050,12 @@ const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ concursoId,
                 {selecionada.fileUrl && (
                   <a
                     href={selecionada.fileUrl}
-                    download
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-3 py-2 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center space-x-1.5 shrink-0"
                   >
-                    <span className="material-symbols-outlined text-[16px]">download</span>
-                    <span>Download Mensagem</span>
+                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                    <span>Abrir Mensagem</span>
                   </a>
                 )}
               </div>
@@ -1597,7 +1567,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
   const [minutaResultados, setMinutaResultados] = useState<string | null>(null);
   const [pendentesFinalizacao, setPendentesFinalizacao] = useState<{ id: string; nome: string }[] | null>(null);
   const [gerandoMinuta, setGerandoMinuta] = useState(false);
-  const [registrarMensagemAlvo, setRegistrarMensagemAlvo] = useState<{ id: string; nome: string } | null>(null);
+  const [registrarMensagemAlvo, setRegistrarMensagemAlvo] = useState<{ id: string; nome: string; criadoEm?: string } | null>(null);
   const [listarMensagensAlvo, setListarMensagensAlvo] = useState<{ id: string; nome: string } | null>(null);
   const [periodoAgendamentoAlvo, setPeriodoAgendamentoAlvo] = useState<{ id: string; nome: string } | null>(null);
   const [adicionarCandidatoAlvo, setAdicionarCandidatoAlvo] = useState<{ id: string; nome: string } | null>(null);
@@ -1781,7 +1751,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
       onVoltarParaEmBreve: () => handleVoltarParaEmBreve(c.id, c.nome),
       onEncerrar: () => handleEncerrar(c.id, c.nome),
       onMinutaResultados: () => handleMinutaResultados(c.id),
-      onRegistrarMensagem: () => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome }),
+      onRegistrarMensagem: () => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome, criadoEm: c.criadoEm }),
       onListarMensagens: () => setListarMensagensAlvo({ id: c.id, nome: c.nome }),
       onDefinirPeriodoAgendamento: () => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome }),
       onAdicionarCandidato: () => setAdicionarCandidatoAlvo({ id: c.id, nome: c.nome }),
@@ -1863,6 +1833,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
         <ModalRegistrarMensagemArquivo
           concursoId={registrarMensagemAlvo.id}
           concursoNome={registrarMensagemAlvo.nome}
+          concursoAno={anoDoConcurso(registrarMensagemAlvo.criadoEm)}
           onClose={() => setRegistrarMensagemAlvo(null)}
         />
       )}
@@ -2169,7 +2140,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   // Mobile: botão de voltar flutuante sobre a lista ao rolar + botão de
   // voltar ao topo (ver JSX mais abaixo).
   const isDesktop = useIsDesktop();
-  const { openUrl: abrirPdfUrl, modalElement: pdfModalElement } = useStoragePdf();
+  // Pasta do concurso no Drive (CONCURSOS > ano > concurso): onde ficam os PDFs gerados.
+  const pastaDrive = (): PastaConcurso => {
+    if (!concurso) throw new Error('Concurso ainda não carregado. Aguarde um instante e tente de novo.');
+    return { nome: concurso.nome, ano: anoDoConcurso(concurso.criadoEm) };
+  };
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [mostrarBotaoTopo, setMostrarBotaoTopo] = useState(false);
   // Toolbar (busca + filtros) e cabeçalho de colunas ficam fixos ao rolar a
@@ -2297,11 +2272,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     marcarGerandoCient(id, true);
     try {
       const pdfBase64 = await pedirPdfCientificacao(id, nome, status);
-      const url = await uploadTermoCientificacaoPdf(concursoId, id, pdfBase64);
+      const url = await salvarPdfCandidatoNoDrive({ pasta: pastaDrive(), candidatoId: id, candidatoNome: nome, tipo: 'termoCientificacao', pdfBase64 });
       await salvarTermoCientificacao(concursoId, id, url);
       setCandidatos(prev => prev.map(c => (c.id === id ? { ...c, termoCientificacaoUrl: url } : c)));
       showToast(`Termo de Cientificação gerado para ${nome}.`);
-      if (abrir && isDesktop) abrirPdfUrl(url, `Termo de Cientificação — ${nome}`);
+      if (abrir) baixarPdf(url);
     } catch (e: any) {
       showToast(e?.message || 'Erro ao gerar o Termo de Cientificação.');
     } finally {
@@ -2355,10 +2330,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
     setSolicitacaoModal({ tipo, candidato: c });
   };
 
-  const handleVerSolicitacao = (tipo: 'parecer' | 'exames', doc: SolicitacaoDoc, c: CandidatoRecord) => {
+  const handleVerSolicitacao = (doc: SolicitacaoDoc) => {
     setMenuAcoes(null);
-    const titulo = tipo === 'parecer' ? 'Pedido de Parecer' : 'Solicitação de Exames';
-    abrirPdfUrl(doc.url, `${titulo} — ${doc.rotulo} — ${c.nome}`);
+    baixarPdf(doc.url);
   };
 
   // Admin — Editar: reabre a IS finalizada (apaga o Nº TIS).
@@ -2431,7 +2405,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       const json = await res.json();
       if (!json.sucesso) throw new Error(json.erro || 'Erro ao gerar o documento.');
 
-      const url = await uploadSolicitacaoPdf(concursoId, id, tipo, json.dados.pdfBase64);
+      const url = await salvarPdfCandidatoNoDrive({ pasta: pastaDrive(), candidatoId: id, candidatoNome: candidato.nome, tipo: tipo === 'parecer' ? 'solicitacaoParecer' : 'solicitacaoExames', pdfBase64: json.dados.pdfBase64 });
       const observacao = tipo === 'parecer'
         ? `SOLICITADO PARECER ${(dados.especialidade || '').toUpperCase()}`
         : `SOLICITADO ${(dados.exames || '').split(/\s*\n\s*/).filter(Boolean).join('; ')}`;
@@ -2442,7 +2416,6 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       setCandidatos(prev => prev.map(c => (c.id === id ? atualizado : c)));
       const titulo = tipo === 'parecer' ? 'Pedido de Parecer' : 'Solicitação de Exames';
       showToast(`${titulo} gerado para ${candidato.nome}.`);
-      if (isDesktop) abrirPdfUrl(url, `${titulo} — ${rotulo} — ${candidato.nome}`);
     } catch (e: any) {
       showToast(e?.message || 'Erro ao gerar o documento.');
     } finally {
@@ -2529,13 +2502,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       if (!json.sucesso) throw new Error(json.erro || 'Erro ao gerar o Termo de Recurso.');
 
       const pdfUnico = await juntarPdfsBase64([json.dados.pdfBase64, await cientificacaoPromise]);
-      const url = await uploadTermoRecursoPdf(concursoId, id, pdfUnico);
+      const url = await salvarPdfCandidatoNoDrive({ pasta: pastaDrive(), candidatoId: id, candidatoNome: nome, tipo: 'termoRecurso', pdfBase64: pdfUnico });
       await salvarTermoRecurso(concursoId, id, url);
       setCandidatos(prev => prev.map(c => (c.id === id ? { ...c, recurso: true, termoRecursoUrl: url } : c)));
       showToast(`Termo de Recurso e Cientificação gerados para ${nome}.`);
-      // No desktop abre no próprio app (modal); no mobile o navegador bloquearia
-      // uma nova aba aberta após o await — o termo fica disponível pelo botão.
-      if (isDesktop) abrirPdfUrl(url, `Termo de Recurso e Cientificação — ${nome}`);
     } catch (e: any) {
       showToast(e?.message || 'Erro ao gerar o Termo de Recurso.');
     } finally {
@@ -2843,8 +2813,6 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
       <Toast message={toastMessage} />
 
-      {pdfModalElement}
-
       {responsavelModal && (
         <ResponsavelTermoModal candidatoNome={responsavelModal.nome} onSelect={handleResponsavelEscolhido} onClose={() => setResponsavelModal(null)} />
       )}
@@ -2884,7 +2852,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                 <>
                   {mostrarGerar && <div className="my-1 border-t border-ink-5" />}
                   {docsVer.map(({ tipo, d, chave }) => (
-                    <button key={chave} type="button" role="menuitem" onClick={() => handleVerSolicitacao(tipo, d, c)} className={classeItem}>
+                    <button key={chave} type="button" role="menuitem" onClick={() => handleVerSolicitacao(d)} className={classeItem}>
                       <span className="material-symbols-outlined text-[20px] text-green-700">{tipo === 'parecer' ? 'clinical_notes' : 'lab_panel'}</span>
                       <span className="min-w-0 truncate">{tipo === 'parecer' ? 'Ver Parecer' : 'Ver Exames'} · {d.rotulo}</span>
                     </button>
@@ -3207,7 +3175,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                 </td>
                                 <td className="py-3.5 px-4 text-right whitespace-nowrap">
                                   {c.termoRecursoUrl ? (
-                                    <button type="button" onClick={() => abrirPdfUrl(c.termoRecursoUrl!, `Termo de Recurso e Cientificação — ${c.nome}`)} className="p-2 text-green-800 bg-green-50 hover:bg-green-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Recurso e Cientificação">
+                                    <button type="button" onClick={() => baixarPdf(c.termoRecursoUrl!)} className="p-2 text-green-800 bg-green-50 hover:bg-green-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Recurso e Cientificação">
                                       <span className="material-symbols-outlined text-[22px]">description</span>
                                     </button>
                                   ) : c.status === 'INAPTO' && podeGerarTermoBase ? (
@@ -3217,7 +3185,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                   ) : null}
 
                                   {c.termoCientificacaoUrl ? (
-                                    <button type="button" onClick={() => abrirPdfUrl(c.termoCientificacaoUrl, `Termo de Cientificação — ${c.nome}`)} className="p-2 ml-1 text-green-800 bg-green-50 hover:bg-green-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Cientificação de Resultado">
+                                    <button type="button" onClick={() => baixarPdf(c.termoCientificacaoUrl)} className="p-2 ml-1 text-green-800 bg-green-50 hover:bg-green-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Cientificação de Resultado">
                                       <span className="material-symbols-outlined text-[22px]">assignment_turned_in</span>
                                     </button>
                                   ) : gerandoCientIds.has(c.id) ? (
@@ -3500,7 +3468,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                       ...c.solicitacoesParecer.map((d, i) => ({ tipo: 'parecer' as const, d, chave: `p${i}` })),
                       ...c.solicitacoesExames.map((d, i) => ({ tipo: 'exames' as const, d, chave: `e${i}` })),
                     ].map(({ tipo, d, chave }) => (
-                      <button key={chave} type="button" onClick={() => handleVerSolicitacao(tipo, d, c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-green-50 text-green-800">
+                      <button key={chave} type="button" onClick={() => handleVerSolicitacao(d)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-green-50 text-green-800">
                         <span className="material-symbols-outlined text-[20px]">{tipo === 'parecer' ? 'clinical_notes' : 'lab_panel'}</span>
                         <span className="min-w-0 truncate">{tipo === 'parecer' ? 'Ver Parecer' : 'Ver Exames'} · {d.rotulo}</span>
                       </button>

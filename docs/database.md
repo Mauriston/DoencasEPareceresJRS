@@ -1559,3 +1559,22 @@ Decisões:
 - **Status "atrasado" é derivado**: `solicitado` há 20 dias ou mais (`PRAZO_ATRASO_DIAS` em `services/firestorePareceres.ts`). Nada gravado precisaria de rotina agendada para virar "atrasado".
 - **PDF**: gerado pelo Apps Script standalone (`CodeConcursos.gs`, ação `gerarPedidoParecer`, template Google Docs `ID_TEMPLATE_PEDIDO_PARECER`) e guardado no Storage em `pareceres/{id}.pdf`.
 - Carga inicial dos quesitos: `scripts/migrar-quesitos-parecer.mjs` (dados em `scripts/quesitos-parecer.json`).
+
+## 33. PDFs dos concursos no Google Drive
+
+Os PDFs ligados aos concursos (mensagens, termos de recurso/cientificação, pedidos de parecer e solicitações de exames) **não ficam mais no Firebase Storage**: são gravados no drive compartilhado, pasta raiz `CONCURSOS` (id `1eBTehJDTOPjsgOeP3DjWKbE-iXdIKGos`), pelo Apps Script standalone (`CodeConcursos.gs`) via `services/driveConcursos.ts`:
+
+```
+CONCURSOS/
+  {ano}/                       ano da criação do concurso
+    {nome do concurso}/
+      CANDIDATOS/{nome do candidato}/{tipoDocumento}_{matrícula}_{AAAAMMDD-HHMMSS}.pdf
+      MENSAGENS/{timestamp}_{arquivo}.pdf
+```
+
+- As pastas são criadas à medida que são necessárias (ano, concurso, CANDIDATOS e MENSAGENS na criação do concurso; a pasta do candidato ao gerar o primeiro documento).
+- `tipoDocumento`: `termoRecurso`, `termoCientificacao`, `solicitacaoParecer`, `solicitacaoExames`.
+- No Firestore continuam as mesmas URLs (`termoRecursoUrl`, `termoCientificacaoUrl`, `solicitacoesParecer[].url`, `solicitacoesExames[].url`, `mensagens/{id}.fileUrl`), agora do Drive: download direto (`https://drive.google.com/uc?export=download&id=…`) para os documentos do candidato e visualização (`https://drive.google.com/file/d/…/view`) para as mensagens. URLs antigas do Storage continuam válidas.
+- Ao apagar/regerar um termo, o arquivo do Drive vai para a lixeira (só arquivos sob a pasta raiz); URLs antigas do Storage são apagadas do Storage.
+- As ações do script que gravam no Drive ou usam o Gemini exigem o `idToken` do Firebase (validado em `exigirUsuarioFirebase`).
+- A transcrição e os dados da mensagem (cabeçalho, texto, período, candidatos) são lidos pelo Gemini (`extrairMensagemConcurso`, chave `GEMINI_API_KEY` nas propriedades do script) e gravados no Firestore como antes.
