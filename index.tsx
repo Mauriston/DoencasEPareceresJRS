@@ -5,6 +5,22 @@ import App from './App';
 import { consumirTokenDaUrl } from './services/handoff';
 import './styles/app.css';
 
+// Depois de uma nova publicação, uma aba aberta com a versão anterior não encontra mais os arquivos
+// (com hash no nome) dos módulos carregados sob demanda ("Failed to fetch dynamically imported module").
+// Recarrega uma vez para pegar a versão nova; a trava evita laço de recarregamentos.
+const CHAVE_RECARGA = 'app:recarga-por-versao';
+window.addEventListener('vite:preloadError', evento => {
+  evento.preventDefault();
+  try {
+    if (sessionStorage.getItem(CHAVE_RECARGA)) return;
+    sessionStorage.setItem(CHAVE_RECARGA, '1');
+  } catch { /* sem sessionStorage: recarrega mesmo assim */ }
+  window.location.reload();
+});
+window.addEventListener('load', () => {
+  window.setTimeout(() => { try { sessionStorage.removeItem(CHAVE_RECARGA); } catch { /* ignora */ } }, 10000);
+});
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");

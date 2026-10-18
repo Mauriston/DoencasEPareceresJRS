@@ -18,7 +18,7 @@ import {
 } from 'firebase/firestore';
 import { app } from './firebaseAuth';
 import { registrarEvento } from './auditoriaIS';
-import { removerTermoCientificacaoPdf, removerTermoRecursoPdf, removerPdfPorUrl } from './firebaseStorageConcursos';
+import { removerPdfPorUrl } from './driveConcursos';
 import {
   MAPA_LAUDO_POR_STATUS, candidatoEstaFinalizado, formatarDataSimples, formatarDataMilitar,
   formatarChaveData, parseChaveData, calcularDiasUteis, distribuirCandidatosNasDatas,
@@ -422,13 +422,13 @@ export const atualizarCandidato = async (
   // Mudou o Status: o Termo de Cientificação gerado para o status anterior perde o sentido.
   if (proximo.status !== undefined && proximo.status !== atual.status && atual.termoCientificacaoUrl) {
     proximo.termoCientificacaoUrl = '';
-    await removerTermoCientificacaoPdf(concursoId, id);
+    void removerPdfPorUrl(atual.termoCientificacaoUrl);
   }
   // Inapto: o Termo de Recurso (que leva junto o de Cientificação) também perde o sentido.
   if (proximo.status !== undefined && proximo.status !== atual.status && atual.termoRecursoUrl) {
     proximo.termoRecursoUrl = '';
     proximo.recurso = false;
-    await removerTermoRecursoPdf(concursoId, id);
+    void removerPdfPorUrl(atual.termoRecursoUrl);
   }
 
   const statusFinal = proximo.status !== undefined ? proximo.status : atual.status;
@@ -483,8 +483,8 @@ export const reagendarCandidato = async (concursoId: string, id: string, dataISO
     termoRecursoUrl: '',
     recurso: false,
   };
-  if (atual.termoCientificacaoUrl) await removerTermoCientificacaoPdf(concursoId, id);
-  if (atual.termoRecursoUrl) await removerTermoRecursoPdf(concursoId, id);
+  if (atual.termoCientificacaoUrl) void removerPdfPorUrl(atual.termoCientificacaoUrl);
+  if (atual.termoRecursoUrl) void removerPdfPorUrl(atual.termoRecursoUrl);
   await updateDoc(candidatoRef(concursoId, id), proximo);
   await registrarEvento(concursoId, id, 'IS reagendada', `${atual.dataAgendamento ? formatarDataSimples(new Date(`${atual.dataAgendamento}T12:00:00`)) : '(sem data)'} → ${formatarDataSimples(new Date(`${dataISO}T12:00:00`))}`);
   return { ...atual, ...proximo };
