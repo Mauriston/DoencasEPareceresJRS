@@ -38,6 +38,3 @@ export const salvarPdfParecerNoDrive = async (params: { nomeInspecionado: string
   const d = await chamarScript<{ url: string }>('salvarPdfParecer', params);
   return d.url;
 };
-
-/** URL que pode ser embutida num iframe: o Drive só permite o modo "preview" (o "view" bloqueia a incorporação). */
-export const urlIncorporavel = (url: string): string => url.replace(/^(https:\/\/drive\.google\.com\/file\/d\/[\w-]+)\/view(\?.*)?$/, '$1/preview');
