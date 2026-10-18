@@ -10,6 +10,7 @@ import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
+import { carregarFinalidadesIS, filtrarFinalidadesPorVinculo, type GrupoFinalidadeIS, type VinculoFinalidade } from '../../utils/corposQuadros';
 import { FinalidadeDropdown, type GrupoFinalidadeExtra } from '../ExamesGuide';
 import { MilitarCadastroForm } from '../militares/MilitarCadastroForm';
 import { QuesitosEditor } from './QuesitosEditor';
@@ -30,10 +31,7 @@ interface Props {
 
 type Erros = Record<string, string>;
 
-// Além das finalidades do Anexo O (menu de Exames mínimos), o pedido de parecer também serve a estas.
-const GRUPOS_EXTRAS: GrupoFinalidadeExtra[] = [
-  { nome: 'Verificações e Términos', finalidades: ['Verificação de Deficiências Funcionais', 'Término de Incapacidade', 'Término de Restrições'] },
-];
+const vinculoDoMilitar = (m: MilitarRecord): VinculoFinalidade => (m.temporario ? 'Temporário' : (m.rm1 || m.refo) ? 'Inativo' : 'Carreira');
 
 export const NovoParecerForm: React.FC<Props> = ({ inicial, onClose, onGerado }) => {
   const nav = useNav();
@@ -52,9 +50,19 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, onClose, onGerado })
   const [recemCadastradoId, setRecemCadastradoId] = useState(inicial?.militarId ?? '');
   const [erros, setErros] = useState<Erros>({});
   const [gerando, setGerando] = useState(false);
+  const [finalidadesIS, setFinalidadesIS] = useState<GrupoFinalidadeIS[]>([]);
+  const [verTodasFinalidades, setVerTodasFinalidades] = useState(false);
 
   useEffect(() => observarMilitares(setMilitares), []);
   useEffect(() => observarQuesitos(setModelos), []);
+  useEffect(() => { carregarFinalidadesIS().then(setFinalidadesIS).catch(() => setFinalidadesIS([])); }, []);
+
+  // Finalidades de acordo com o vínculo do inspecionado (public/finalidadesIS.json); sem militar escolhido, todas.
+  const vinculoFiltro = militar && !verTodasFinalidades ? vinculoDoMilitar(militar) : '';
+  const gruposFinalidade: GrupoFinalidadeExtra[] = useMemo(
+    () => filtrarFinalidadesPorVinculo(finalidadesIS, vinculoFiltro).map(g => ({ nome: g.grupo, finalidades: g.finalidades.map(f => f.nome) })),
+    [finalidadesIS, vinculoFiltro],
+  );
 
   // Militar recém-cadastrado: assim que aparece na lista, já vem preenchido.
   useEffect(() => {
@@ -166,7 +174,15 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, onClose, onGerado })
 
           <div>
             <label htmlFor="finalidade-select" className="block text-xs font-semibold text-ink-3 mb-1">Finalidade<span className="text-wine ml-0.5" aria-hidden="true">*</span></label>
-            <FinalidadeDropdown value={finalidade} onChange={v => { setFinalidade(v); limpar('finalidade'); }} placeholder="Selecione a finalidade da IS" gruposExtras={GRUPOS_EXTRAS} erro={!!erros.finalidade} />
+            <FinalidadeDropdown value={finalidade} onChange={v => { setFinalidade(v); limpar('finalidade'); }} placeholder="Selecione a finalidade da IS" gruposProprios={gruposFinalidade} erro={!!erros.finalidade} />
+            {militar && (
+              <p className="mt-1 text-xs text-ink-3">
+                {verTodasFinalidades ? 'Mostrando todas as finalidades.' : `Finalidades disponíveis para o vínculo ${vinculoDoMilitar(militar)}.`}{' '}
+                <button type="button" onClick={() => setVerTodasFinalidades(v => !v)} className="font-semibold text-navy underline min-h-[24px]">
+                  {verTodasFinalidades ? 'Filtrar pelo vínculo' : 'Ver todas'}
+                </button>
+              </p>
+            )}
             {erros.finalidade && <p role="alert" className="mt-1 text-xs font-semibold text-wine">{erros.finalidade}</p>}
           </div>
 

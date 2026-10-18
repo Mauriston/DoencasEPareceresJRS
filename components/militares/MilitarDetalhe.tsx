@@ -74,7 +74,7 @@ export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => v
           <Linha rotulo="Inspecionado" valor={m.inspecionado} />
           <Linha rotulo="NIP" valor={formatNip(m.nip)} mono />
           <Linha rotulo="OM" valor={m.om} />
-          <Linha rotulo="Vínculo" valor={m.temporario ? 'Temporário' : 'Carreira'} />
+          <Linha rotulo="Vínculo" valor={m.temporario ? 'Temporário' : (m.rm1 || m.refo) ? 'Inativo' : 'Carreira'} />
           <Linha rotulo="E-mail" valor={m.email} />
           <Linha rotulo="Serviço do HNRe" valor={m.servico_label} />
         </dl>

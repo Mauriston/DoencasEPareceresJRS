@@ -42,14 +42,14 @@ const FINALIDADE_PADRAO = 'Ingresso SAM / SMV (oriundos do meio civil)';
 // Menu suspenso no estilo dos menus nativos do iOS: lista escura de grupos com
 // seta ">"; ao tocar num grupo, a lista esmaece e o grupo sobe como um cartão
 // (título com seta "v") listando as finalidades. Tocar no título volta à lista.
-/** Grupo de finalidades acrescentado ao menu por quem o usa (ex.: Pareceres), além dos do Anexo O. */
+/** Grupo de finalidades acrescentado ao menu por quem o usa (ex.: Pareceres), além dos do Anexo O. `gruposProprios` substitui o Anexo O por inteiro. */
 export interface GrupoFinalidadeExtra { nome: string; finalidades: string[] }
 
-export const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => void; placeholder?: string; erro?: boolean; gruposExtras?: GrupoFinalidadeExtra[] }> = ({ value, onChange, placeholder, erro, gruposExtras = [] }) => {
+export const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => void; placeholder?: string; erro?: boolean; gruposExtras?: GrupoFinalidadeExtra[]; gruposProprios?: GrupoFinalidadeExtra[] }> = ({ value, onChange, placeholder, erro, gruposExtras = [], gruposProprios }) => {
   const grupos: GrupoFinalidade[] = useMemo(() => [
-    ...GRUPOS_FINALIDADE,
-    ...gruposExtras.map(g => ({ Grupo_Finalidade_Inspecao: g.nome, Finalidades_Inspecao: g.finalidades.map(f => ({ Finalidade_Inspecao: f, Grupos_Exame: [] })) })),
-  ], [gruposExtras]);
+    ...(gruposProprios ? [] : GRUPOS_FINALIDADE),
+    ...(gruposProprios ?? gruposExtras).map(g => ({ Grupo_Finalidade_Inspecao: g.nome, Finalidades_Inspecao: g.finalidades.map(f => ({ Finalidade_Inspecao: f, Grupos_Exame: [] })) })),
+  ], [gruposExtras, gruposProprios]);
   const [aberto, setAberto] = useState(false);
   const [grupoAberto, setGrupoAberto] = useState<{ nome: string; topo: number } | null>(null);
   const raiz = useRef<HTMLDivElement>(null);

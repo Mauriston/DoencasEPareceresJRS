@@ -25,13 +25,17 @@ interface Props {
 }
 
 type Erros = Record<string, string>;
+type VinculoForm = Vinculo | 'Inativo';
 
 export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
   const [dados, setDados] = useState<CorposQuadros | null>(null);
   const [oms, setOms] = useState<OrganizacaoMilitar[]>([]);
   const [falhaCarga, setFalhaCarga] = useState('');
 
-  const [vinculo, setVinculo] = useState<Vinculo | ''>('');
+  const [vinculoSel, setVinculoSel] = useState<VinculoForm | ''>('');
+  // Inativo usa os mesmos quadros/postos da Carreira; muda só a caixa RM1/Refº e o INSPECIONADO.
+  const inativo = vinculoSel === 'Inativo';
+  const vinculo: Vinculo | '' = inativo ? 'Carreira' : vinculoSel;
   const [posto, setPosto] = useState('');
   const [quadroChave, setQuadroChave] = useState('');
   const [cpfn, setCpfn] = useState(false);
@@ -44,7 +48,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
   const [email, setEmail] = useState('');
   const [celular, setCelular] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
-  // RM1 (reserva) e Refº (reformado): só vínculo Carreira, depois do posto; um exclui o outro.
+  // RM1 (reserva) e Refº (reformado): só vínculo Inativo, depois do posto; um exclui o outro.
   const [situacao, setSituacao] = useState<SituacaoMilitar>('');
   const [adicionais, setAdicionais] = useState<Adicionais>(ADICIONAIS_VAZIO);
   const [erros, setErros] = useState<Erros>({});
@@ -73,8 +77,8 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
   const opcoesEsp: OpcaoAutocomplete[] = especialidades.map(e => ({ chave: e.sigla, principal: e.sigla, secundaria: e.nome }));
   const opcoesOm: OpcaoAutocomplete[] = useMemo(() => oms.map(o => ({ chave: `${o.sigla}|${o.nome}`, principal: o.sigla, secundaria: o.nome, busca: o.busca })), [oms]);
 
-  const escolherVinculo = (v: Vinculo) => {
-    setVinculo(v); setPosto(''); setQuadroChave(''); setCpfn(false); setEspTexto(''); setEspSigla(''); setSituacao(''); limpar('vinculo');
+  const escolherVinculo = (v: VinculoForm) => {
+    setVinculoSel(v); setPosto(''); setQuadroChave(''); setCpfn(false); setEspTexto(''); setEspSigla(''); setSituacao(''); limpar('vinculo');
   };
   const escolherPosto = (p: string) => {
     setPosto(p); setQuadroChave(''); setCpfn(false); setEspTexto(''); setEspSigla(''); limpar('posto');
@@ -92,7 +96,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
     <label key={valor} className={`flex items-center gap-3 min-h-[44px] ${situacao && situacao !== valor ? 'opacity-50' : 'cursor-pointer'}`}>
       <input
         type="checkbox" checked={situacao === valor} disabled={!!situacao && situacao !== valor}
-        onChange={() => { setSituacao(s => (s === valor ? '' : valor)); limpar('om'); }}
+        onChange={() => { setSituacao(s => (s === valor ? '' : valor)); limpar('om'); limpar('situacao'); }}
         className="w-5 h-5 accent-navy"
       />
       <span className="text-sm font-semibold text-ink">{valor}</span>
@@ -102,11 +106,12 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
       </span>
     </label>
   );
-  // RM1/Refº aparecem só para vínculo Carreira, depois de escolhido o posto/graduação.
-  const caixasSituacao = vinculo === 'Carreira' && posto ? (
+  // RM1/Refº aparecem só para vínculo Inativo, depois de escolhido o posto/graduação.
+  const caixasSituacao = inativo && posto ? (
     <>
       {caixaSituacao('RM1', 'Reserva da Marinha de 1ª Classe')}
       {caixaSituacao('Refº', 'Reformado por idade-limite ou invalidez')}
+      {erros.situacao && <p role="alert" className="w-full text-sm font-semibold text-wine">{erros.situacao}</p>}
     </>
   ) : null;
 
@@ -114,6 +119,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
     const e: Erros = {};
     if (!vinculo) e.vinculo = 'Escolha o vínculo.';
     if (vinculo && !posto) e.posto = 'Selecione o posto/graduação.';
+    if (inativo && posto && !situacao) e.situacao = 'Marque RM1 ou Refº.';
     if (categoria === 'Oficial' && !quadroEscolhido) e.quadro = 'Selecione o quadro.';
     if (categoria === 'Praça' && especialidades.length > 0 && !espSigla) e.especialidade = 'Escolha a especialidade na lista.';
     if (!nome.trim()) e.nome = 'Informe o nome completo.';
@@ -174,9 +180,9 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
         <form id="form-novo-militar" onSubmit={salvar} noValidate className="space-y-4">
           {erros.geral && <p role="alert" className="text-sm font-semibold text-wine">{erros.geral}</p>}
 
-          <ChoiceGroup<Vinculo>
+          <ChoiceGroup<VinculoForm>
             label="Vínculo" required error={erros.vinculo} value={vinculo} onChange={escolherVinculo}
-            options={[{ value: 'Carreira', label: 'Carreira' }, { value: 'Temporário', label: 'Temporário' }]}
+            options={[{ value: 'Carreira', label: 'Carreira' }, { value: 'Temporário', label: 'Temporário' }, { value: 'Inativo', label: 'Inativo' }]}
           />
 
           {vinculo && (
@@ -190,7 +196,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
             </Field>
           )}
 
-          {categoria === 'Oficial' && vinculo === 'Carreira' && <div className="-mt-2">{caixasSituacao}</div>}
+          {categoria === 'Oficial' && inativo && <div className="-mt-2">{caixasSituacao}</div>}
 
           {categoria === 'Oficial' && (
             <Field label="Quadro" required error={erros.quadro}>
