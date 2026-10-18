@@ -59,6 +59,12 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, onClose, onGerado })
 
   // Finalidades de acordo com o vínculo do inspecionado (public/finalidadesIS.json); sem militar escolhido, todas.
   const vinculoFiltro = militar && !verTodasFinalidades ? vinculoDoMilitar(militar) : '';
+  useEffect(() => {
+    // Trocou o militar (ou o filtro) e a finalidade escolhida deixou de valer: limpa.
+    if (!finalidade || finalidadesIS.length === 0 || !vinculoFiltro) return;
+    const vale = filtrarFinalidadesPorVinculo(finalidadesIS, vinculoFiltro).some(g => g.finalidades.some(f => f.nome === finalidade));
+    if (!vale) setFinalidade('');
+  }, [vinculoFiltro, finalidadesIS]); // eslint-disable-line react-hooks/exhaustive-deps
   const gruposFinalidade: GrupoFinalidadeExtra[] = useMemo(
     () => filtrarFinalidadesPorVinculo(finalidadesIS, vinculoFiltro).map(g => ({ nome: g.grupo, finalidades: g.finalidades.map(f => f.nome) })),
     [finalidadesIS, vinculoFiltro],
