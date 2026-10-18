@@ -19,7 +19,7 @@ import { MilitarCadastroForm } from './militares/MilitarCadastroForm';
 import { MilitarDetalhe } from './militares/MilitarDetalhe';
 import { InformacoesAdicionais, adicionaisDoMilitar, adicionaisParaPatch, validarAdicionais, type Adicionais } from './militares/InformacoesAdicionais';
 import { enviarFotoMilitar } from '../services/militarFoto';
-import { observarMilitares, atualizarMilitar, atualizarMilitaresEmLote, apagarMilitar, type MilitarRecord } from '../services/firestoreMilitares';
+import { observarMilitares, atualizarMilitar, renomearMilitar, atualizarMilitaresEmLote, apagarMilitar, type MilitarRecord } from '../services/firestoreMilitares';
 import { carregarOms, carregarCorposQuadros, carregarServicosHnre, normalizarBusca, montarInspecionado, separarPosto, aplicarSituacaoAoPgq, ehOficialMedico, omEhHnre, type OrganizacaoMilitar, type CorposQuadros, type PostoInfo, type ServicoHnre, type SituacaoMilitar } from '../utils/corposQuadros';
 import { formatNip, formatCelular } from '../utils/format';
 
@@ -317,13 +317,17 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
       const pgqFinal = pgq.trim();
       const extras = hnre ? adicionaisParaPatch(adicionais, medico) : {};
       if (medico && adicionais.fotoNova) extras.fotoUrl = await enviarFotoMilitar(militar.id, adicionais.fotoNova);
-      await atualizarMilitar(militar.id, {
+      const alteracoes = {
         ...extras,
         nome: nomeFinal, nip, pgq: pgqFinal, om: omSigla, email: email.trim().toLowerCase(),
         temporario: vinculo === 'Temporário', ativo: ativo === 'Ativo',
         celular: celular.replace(/\D/g, ''), dataNascimento, rm1: situacao === 'RM1', refo: situacao === 'Refº',
         inspecionado: montarInspecionado(pgqFinal, nip, nomeFinal),
-      });
+      };
+      // O id do cadastro é o NIP só com dígitos: NIP novo = documento movido para o id novo.
+      const idNovo = nip.replace(/\D/g, '');
+      if (idNovo !== militar.id) await renomearMilitar(militar.id, idNovo, alteracoes);
+      else await atualizarMilitar(militar.id, alteracoes);
       onSalvo(nomeFinal);
     } catch (err: any) {
       setErros({ geral: err?.message || 'Não foi possível salvar.' });

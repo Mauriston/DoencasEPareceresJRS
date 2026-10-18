@@ -3,7 +3,7 @@
 // migrada da aba "Militares" da planilha). Id do documento = NIP só com
 // dígitos. Leitura: qualquer usuário autenticado; escrita: só Admin (ver
 // firestore.rules).
-import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, writeBatch, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, doc, getDoc, getDocs, query, where, setDoc, updateDoc, deleteDoc, writeBatch, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { app } from './firebaseAuth';
 
 const db = getFirestore(app);
@@ -66,6 +66,25 @@ export const apagarMilitar = (id: string) => deleteDoc(doc(db, COL, id));
 
 export const atualizarMilitar = (id: string, patch: Partial<MilitarDoc>) =>
   updateDoc(doc(db, COL, id), { ...patch, atualizadoEm: serverTimestamp() } as Record<string, unknown>);
+
+/**
+ * Troca o NIP de um cadastro: o id do documento é o NIP só com dígitos, então mudar o NIP exige mover o
+ * documento (gravar com o id novo, apagar o antigo) e religar os pareceres que apontavam para o id antigo
+ * ("militarId"). Tudo numa única gravação em lote; recusa se já existir cadastro com o id novo.
+ */
+export const renomearMilitar = async (idAntigo: string, idNovo: string, patch: Partial<MilitarDoc>): Promise<void> => {
+  if (!idNovo) throw new Error('NIP inválido.');
+  const [antigo, novo] = await Promise.all([getDoc(doc(db, COL, idAntigo)), getDoc(doc(db, COL, idNovo))]);
+  if (!antigo.exists()) throw new Error('Cadastro não encontrado.');
+  if (novo.exists()) throw new Error('Já existe um cadastro com esse NIP.');
+  const pareceres = await getDocs(query(collection(db, 'pareceres'), where('militarId', '==', idAntigo)));
+
+  const lote = writeBatch(db);
+  lote.set(doc(db, COL, idNovo), { ...antigo.data(), ...patch, atualizadoEm: serverTimestamp() });
+  pareceres.forEach(p => lote.update(p.ref, { militarId: idNovo }));
+  lote.delete(antigo.ref);
+  await lote.commit();
+};
 
 /** Atualiza vários cadastros de uma vez (ex.: promoção em lote). Lotes de até 400 gravações. */
 export const atualizarMilitaresEmLote = async (itens: { id: string; patch: Partial<MilitarDoc> }[]): Promise<void> => {
