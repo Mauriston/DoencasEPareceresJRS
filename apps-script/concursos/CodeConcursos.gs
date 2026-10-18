@@ -492,7 +492,7 @@ function semAcentos(texto) {
  * action=salvarPdfParecer (POST): { idToken, nomeInspecionado, especialidade, pdfBase64 } — guarda o Pedido de
  * Parecer (PDF) em PARECERES > {nome completo do inspecionado} (a subpasta é criada na primeira vez), com o nome
  * SOL_PARECER_{especialidade sem acentos}_{DDMMMAAAA}.PDF (ex.: SOL_PARECER_Clinica Medica_12OUT2026.PDF).
- * Devolve a URL de download direto.
+ * Devolve a URL de visualização ("view"), que o app abre numa nova janela (desktop) ou dentro do app (mobile).
  */
 function apiSalvarPdfParecer(corpo) {
   exigirUsuarioFirebase(corpo);
@@ -511,7 +511,7 @@ function apiSalvarPdfParecer(corpo) {
   }
   var nomeArquivo = 'SOL_PARECER_' + especialidade + '_' + formatarDataMilitar(new Date()) + '.PDF';
   var arquivo = criarPdfNaPasta(pasta, nomeArquivo, corpo.pdfBase64);
-  return { fileId: arquivo.getId(), url: urlDownloadDrive(arquivo.getId()) };
+  return { fileId: arquivo.getId(), url: urlVisualizacaoDrive(arquivo.getId()) };
 }
 
 /** Verdadeiro se o arquivo está em algum lugar sob a pasta indicada (limite de profundidade por segurança). */
