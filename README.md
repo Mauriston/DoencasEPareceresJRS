@@ -77,7 +77,7 @@ Abaixo encontra-se a arquitetura atualizada de ficheiros e diretórios no reposi
 
 - `/` (Raiz)
   - `App.tsx` *(Componente de Roteamento Principal e Navigation Layout)*
-  - `Code.gs` *(Script do Backend em GAS)*
+  - `apps-script/` *(Código dos projetos Google Apps Script: `principal/Code.gs` e `concursos/CodeConcursos.gs`; deploy via clasp — ver `docs/apps-script-deploy.md`)*
   - `constants.ts` *(Banco de Dados Estático)*
   - `index.html` *(Index da aplicação PWA)*
   - `index.tsx` *(Arquivo de montagem React / Entry point)*

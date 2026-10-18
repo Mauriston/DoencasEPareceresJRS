@@ -1,0 +1,12 @@
+{
+  "principal": {
+    "descricao": "Apps Script principal (Code.gs): pareceres, perícia menor, militares, lookups. URL em GAS_URL (config/endpoints.ts).",
+    "scriptId": null,
+    "deploymentId": "AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs"
+  },
+  "concursos": {
+    "descricao": "Apps Script standalone (CodeConcursos.gs): PDFs de concursos/pareceres, Drive e Gemini. URL em GAS_URL_CONCURSOS (config/endpoints.ts).",
+    "scriptId": "1lq6ZLBBhO1FPKgEjBpuS1Nxfqs6nRwRqcOr5h0iPzIeU4z8ZHPU_GdfJ",
+    "deploymentId": "AKfycbx9FDjnQKRhu26z4VQRDRdHnAvKUaIfNaViEjHLHoX1St4sNyri6ppYTrgEg7ne869tnw"
+  }
+}
