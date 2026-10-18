@@ -167,14 +167,13 @@ export const removerPdfPorUrl = async (url: string): Promise<void> => {
   }
 };
 
-/** Baixa o PDF (URL de download direto do Drive) numa nova aba, sem sair do app nem abrir modal. */
-export const baixarPdf = (url: string): void => {
-  const link = document.createElement('a');
-  link.href = url;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  link.download = '';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+/** Converte uma URL de download direto do Drive (uc?export=download&id=…) em URL de visualização; as demais ficam como estão. */
+export const urlVisualizacao = (url: string): string => {
+  const id = url.match(/^https:\/\/drive\.google\.com\/uc\?(?:[^#]*&)?id=([\w-]+)/)?.[1];
+  return id ? `https://drive.google.com/file/d/${id}/view` : url;
+};
+
+/** Abre o PDF numa nova janela (URL "view" do Drive; PDFs antigos do Storage abrem como estão). */
+export const abrirPdf = (url: string): void => {
+  window.open(urlVisualizacao(url), '_blank', 'noopener,noreferrer');
 };

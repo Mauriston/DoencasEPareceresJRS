@@ -21,7 +21,7 @@ import {
 import { SolicitarParecerModal, SolicitarExamesModal } from './SolicitacaoModais';
 import { juntarPdfsBase64 } from '../services/pdfMerge';
 import {
-  extrairMensagemComGemini, salvarMensagemNoDrive, salvarPdfCandidatoNoDrive, criarEstruturaConcursoNoDrive, baixarPdf, anoDoConcurso,
+  extrairMensagemComGemini, salvarMensagemNoDrive, salvarPdfCandidatoNoDrive, criarEstruturaConcursoNoDrive, abrirPdf, urlVisualizacao, anoDoConcurso,
   type PastaConcurso, type MensagemExtraida,
 } from '../services/driveConcursos';
 import {
@@ -2276,7 +2276,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
       await salvarTermoCientificacao(concursoId, id, url);
       setCandidatos(prev => prev.map(c => (c.id === id ? { ...c, termoCientificacaoUrl: url } : c)));
       showToast(`Termo de Cientificação gerado para ${nome}.`);
-      if (abrir) baixarPdf(url);
+      if (abrir) abrirPdf(url);
     } catch (e: any) {
       showToast(e?.message || 'Erro ao gerar o Termo de Cientificação.');
     } finally {
@@ -2332,7 +2332,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
   const handleVerSolicitacao = (doc: SolicitacaoDoc) => {
     setMenuAcoes(null);
-    baixarPdf(doc.url);
+    abrirPdf(doc.url);
   };
 
   // Admin — Editar: reabre a IS finalizada (apaga o Nº TIS).
@@ -3175,7 +3175,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                 </td>
                                 <td className="py-3.5 px-4 text-right whitespace-nowrap">
                                   {c.termoRecursoUrl ? (
-                                    <button type="button" onClick={() => baixarPdf(c.termoRecursoUrl!)} className="p-2 text-green-800 bg-green-50 hover:bg-green-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Recurso e Cientificação">
+                                    <button type="button" onClick={() => abrirPdf(c.termoRecursoUrl!)} className="p-2 text-green-800 bg-green-50 hover:bg-green-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Recurso e Cientificação">
                                       <span className="material-symbols-outlined text-[22px]">description</span>
                                     </button>
                                   ) : c.status === 'INAPTO' && podeGerarTermoBase ? (
@@ -3185,7 +3185,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                   ) : null}
 
                                   {c.termoCientificacaoUrl ? (
-                                    <button type="button" onClick={() => baixarPdf(c.termoCientificacaoUrl)} className="p-2 ml-1 text-green-800 bg-green-50 hover:bg-green-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Cientificação de Resultado">
+                                    <button type="button" onClick={() => abrirPdf(c.termoCientificacaoUrl)} className="p-2 ml-1 text-green-800 bg-green-50 hover:bg-green-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title="Visualizar Termo de Cientificação de Resultado">
                                       <span className="material-symbols-outlined text-[22px]">assignment_turned_in</span>
                                     </button>
                                   ) : gerandoCientIds.has(c.id) ? (
@@ -3430,7 +3430,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                 {(podeGerarTermo || c.termoRecursoUrl || c.termoCientificacaoUrl || gerandoCientIds.has(c.id) || podeGerarCientificacao(c) || mostrarMenuAcoes(c) || podeReagendarCandidato(c)) && (
                   <div className="pt-2 space-y-2">
                     {c.termoRecursoUrl ? (
-                      <a href={c.termoRecursoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+                      <a href={urlVisualizacao(c.termoRecursoUrl)} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[20px]">description</span>
                         <span>Visualizar Termo de Recurso e Cientificação</span>
                       </a>
@@ -3441,7 +3441,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                       </button>
                     ) : null}
                     {c.termoCientificacaoUrl ? (
-                      <a href={c.termoCientificacaoUrl} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+                      <a href={urlVisualizacao(c.termoCientificacaoUrl)} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[20px]">assignment_turned_in</span>
                         <span>Visualizar Termo de Cientificação</span>
                       </a>
