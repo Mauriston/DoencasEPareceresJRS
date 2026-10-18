@@ -37,6 +37,8 @@ var ID_TEMPLATE_SOLICITACAO_EXAMES = '1SSAzdWANvfQJx7Sip2-NbqDGAM0cgpVD6Q4Ci9UhG
 
 /** Pasta raiz CONCURSOS (drive compartilhado): dentro dela ficam as pastas por ano. */
 var ID_PASTA_RAIZ_CONCURSOS = '1eBTehJDTOPjsgOeP3DjWKbE-iXdIKGos';
+/** Pasta PARECERES (Drive): uma subpasta por inspecionado (nome completo) com os pedidos de parecer em PDF. */
+var ID_PASTA_PARECERES = '176YQTOOWXuE78Xul49XYpJsVNyu-eZFi';
 /** Chave de API web do projeto Firebase (pública, a mesma de firebase-applet-config.json): só serve para validar o idToken. */
 var FIREBASE_API_KEY = 'AIzaSyAWBYm6iGQNQXeC5DO038lMSruxpRjoX2c';
 var MODELO_GEMINI = 'gemini-2.5-flash';
@@ -59,6 +61,7 @@ function doPost(e) {
     if (corpo.action === 'criarEstruturaConcurso') return apiCriarEstruturaConcurso(corpo);
     if (corpo.action === 'salvarMensagemPdf') return apiSalvarMensagemPdf(corpo);
     if (corpo.action === 'salvarPdfCandidato') return apiSalvarPdfCandidato(corpo);
+    if (corpo.action === 'salvarPdfParecer') return apiSalvarPdfParecer(corpo);
     if (corpo.action === 'removerArquivoDrive') return apiRemoverArquivoDrive(corpo);
     if (corpo.action === 'extrairMensagemConcurso') return apiExtrairMensagemConcurso(corpo);
     throw new Error('Ação POST desconhecida: "' + corpo.action + '".');
@@ -480,8 +483,39 @@ function apiSalvarPdfCandidato(corpo) {
   return { fileId: arquivo.getId(), url: urlDownloadDrive(arquivo.getId()) };
 }
 
-/** Verdadeiro se o arquivo está em algum lugar sob a pasta raiz dos concursos (limite de profundidade por segurança). */
-function estaSobRaizConcursos(arquivo) {
+/** Remove os acentos (ex.: "Ortopedia e Traumatologia" fica igual; "Clínica Médica" → "Clinica Medica"). */
+function semAcentos(texto) {
+  return String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * action=salvarPdfParecer (POST): { idToken, nomeInspecionado, especialidade, pdfBase64 } — guarda o Pedido de
+ * Parecer (PDF) em PARECERES > {nome completo do inspecionado} (a subpasta é criada na primeira vez), com o nome
+ * SOL_PARECER_{especialidade sem acentos}_{DDMMMAAAA}.PDF (ex.: SOL_PARECER_Clinica Medica_12OUT2026.PDF).
+ * Devolve a URL de visualização ("view"), que o app abre numa nova janela (desktop) ou dentro do app (mobile).
+ */
+function apiSalvarPdfParecer(corpo) {
+  exigirUsuarioFirebase(corpo);
+  var nomeInspecionado = limparNomeDrive(corpo.nomeInspecionado);
+  var especialidade = limparNomeDrive(semAcentos(corpo.especialidade)).replace(/[\\/]+/g, '-');
+  if (!nomeInspecionado) throw new Error('"nomeInspecionado" é obrigatório.');
+  if (!especialidade) throw new Error('"especialidade" é obrigatória.');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  var pasta;
+  try {
+    pasta = obterOuCriarSubpasta(DriveApp.getFolderById(ID_PASTA_PARECERES), nomeInspecionado);
+  } finally {
+    lock.releaseLock();
+  }
+  var nomeArquivo = 'SOL_PARECER_' + especialidade + '_' + formatarDataMilitar(new Date()) + '.PDF';
+  var arquivo = criarPdfNaPasta(pasta, nomeArquivo, corpo.pdfBase64);
+  return { fileId: arquivo.getId(), url: urlVisualizacaoDrive(arquivo.getId()) };
+}
+
+/** Verdadeiro se o arquivo está em algum lugar sob a pasta indicada (limite de profundidade por segurança). */
+function estaSobPasta(arquivo, idPastaRaiz) {
   var fila = [arquivo];
   for (var nivel = 0; nivel < 8 && fila.length; nivel++) {
     var proxima = [];
@@ -489,7 +523,7 @@ function estaSobRaizConcursos(arquivo) {
       var pais = fila[i].getParents();
       while (pais.hasNext()) {
         var pai = pais.next();
-        if (pai.getId() === ID_PASTA_RAIZ_CONCURSOS) return true;
+        if (pai.getId() === idPastaRaiz) return true;
         proxima.push(pai);
       }
     }
@@ -500,7 +534,7 @@ function estaSobRaizConcursos(arquivo) {
 
 /**
  * action=removerArquivoDrive (POST): { idToken, fileId } — manda para a lixeira um PDF de concurso que perdeu o sentido
- * (ex.: termo apagado ao mudar o Status). Só mexe em arquivos que estão sob a pasta raiz CONCURSOS.
+ * (ex.: termo apagado ao mudar o Status). Só mexe em arquivos que estão sob as pastas CONCURSOS ou PARECERES.
  */
 function apiRemoverArquivoDrive(corpo) {
   exigirUsuarioFirebase(corpo);
@@ -508,7 +542,7 @@ function apiRemoverArquivoDrive(corpo) {
   if (!fileId) throw new Error('"fileId" é obrigatório.');
   var arquivo;
   try { arquivo = DriveApp.getFileById(fileId); } catch (e) { return { removido: false }; }
-  if (!estaSobRaizConcursos(arquivo)) throw new Error('Arquivo fora da pasta de concursos.');
+  if (!estaSobPasta(arquivo, ID_PASTA_RAIZ_CONCURSOS) && !estaSobPasta(arquivo, ID_PASTA_PARECERES)) throw new Error('Arquivo fora das pastas de concursos e pareceres.');
   arquivo.setTrashed(true);
   return { removido: true };
 }

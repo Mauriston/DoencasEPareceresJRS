@@ -24,7 +24,7 @@ export const anoDoConcurso = (criadoEm?: string): number => {
   return ano >= 2000 ? ano : new Date().getFullYear();
 };
 
-const chamarScript = async <T>(action: string, dados: Record<string, unknown>): Promise<T> => {
+export const chamarScript = async <T>(action: string, dados: Record<string, unknown>): Promise<T> => {
   const usuario = getAuth(app).currentUser;
   if (!usuario) throw new Error('Sessão expirada. Faça login novamente.');
   const idToken = await usuario.getIdToken();
