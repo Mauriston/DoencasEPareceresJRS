@@ -1,0 +1,408 @@
+{
+  "fonte": "Planilha FINALIDADES IS (1Ns1ynx-HPVTsD44PRQXYvx4St7c8RlAy1PPyI5Ck0yY)",
+  "grupos": [
+    {
+      "grupo": "Controle Periódico",
+      "finalidades": [
+        {
+          "nome": "Controle anual de praça de máquinas",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Controle semestral Raios-X",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Controle trienal",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Manipulação e admin Terapia Antineoplásica",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Prorrogação do Tempo de Serviço",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Reengajamento",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Serviço com explosivos",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Serviço com OTTO FUELL II",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Tarefa por Tempo Certo e prorrogações",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Controle Anual de Mergulho",
+          "amp": "MPIQ",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        }
+      ]
+    },
+    {
+      "grupo": "Ingresso",
+      "finalidades": [
+        {
+          "nome": "Ingresso no SMV (oriundos do SMI)",
+          "amp": "JRS",
+          "vinculos": [
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Engajamento",
+          "amp": "JRS",
+          "vinculos": [
+            "Temporário"
+          ]
+        }
+      ]
+    },
+    {
+      "grupo": "Licenciamento",
+      "finalidades": [
+        {
+          "nome": "Deixar o SAM",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira"
+          ]
+        },
+        {
+          "nome": "Deixar o SMV",
+          "amp": "JRS",
+          "vinculos": [
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Deixar o SMI",
+          "amp": "JRS",
+          "vinculos": [
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Deixar o SPG",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        }
+      ]
+    },
+    {
+      "grupo": "Missões",
+      "finalidades": [
+        {
+          "nome": "Localidade com deficiência em assistência sanitária (LDAS)",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira"
+          ]
+        },
+        {
+          "nome": "Missão Antártica",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira"
+          ]
+        },
+        {
+          "nome": "Missão no exterior (< 3m c/ trienal OK)",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira"
+          ]
+        },
+        {
+          "nome": "Missão no exterior (> 3m)",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira"
+          ]
+        }
+      ]
+    },
+    {
+      "grupo": "Outros",
+      "finalidades": [
+        {
+          "nome": "Designação de militares RM1",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira"
+          ]
+        },
+        {
+          "nome": "IS para conclusão de Curso de Formação",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira"
+          ]
+        },
+        {
+          "nome": "IS inopinada de avaliação toxicológica preventiva direcionada",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Reversão ou Reintegração ao SPG",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Seleção para Cursos de carreira (🚫 AE)",
+          "amp": "MPI",
+          "vinculos": [
+            "Carreira"
+          ]
+        },
+        {
+          "nome": "LTSPF",
+          "amp": "JRS",
+          "vinculos": [
+            "Dependente"
+          ]
+        }
+      ]
+    },
+    {
+      "grupo": "Verificações e Términos",
+      "finalidades": [
+        {
+          "nome": "Verificação de Deficiência Funcional",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Verificação de Deficiência Funcional - Fato novo",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Verificação de Deficiência Funcional - SMI",
+          "amp": "JRS",
+          "vinculos": [
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Verificação de Deficiência Funcional - SC",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira"
+          ]
+        },
+        {
+          "nome": "Término de Incapacidade",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Término de Restrições",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        }
+      ]
+    },
+    {
+      "grupo": "Justiça e Disciplina",
+      "finalidades": [
+        {
+          "nome": "Exame de Sanidade em IPM",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Reintegração de Militar",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira",
+            "Temporário"
+          ]
+        },
+        {
+          "nome": "Reintegração de Candidato",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira"
+          ]
+        }
+      ]
+    },
+    {
+      "grupo": "Benefícios",
+      "finalidades": [
+        {
+          "nome": "Auxílio invalidez de militar inativo",
+          "amp": "JRS",
+          "vinculos": [
+            "Inativo"
+          ]
+        },
+        {
+          "nome": "Isenção de pagamento de imposto de renda",
+          "amp": "JRS",
+          "vinculos": [
+            "Inativo",
+            "Pensionista"
+          ]
+        },
+        {
+          "nome": "Pensão militar para beneficiário inválido",
+          "amp": "JRS",
+          "vinculos": [
+            "Dependente"
+          ]
+        },
+        {
+          "nome": "Pensão de ex-combatente para beneficiário inválido",
+          "amp": "JRS",
+          "vinculos": [
+            "Dependente"
+          ]
+        },
+        {
+          "nome": "Pensão especial à viúva de militar",
+          "amp": "JRS",
+          "vinculos": [
+            "Dependente"
+          ]
+        },
+        {
+          "nome": "Revisão de reforma relacionada ao serviço",
+          "amp": "JRS",
+          "vinculos": [
+            "Inativo"
+          ]
+        },
+        {
+          "nome": "Revisão de reforma para portadores de SIDA/AIDS",
+          "amp": "JRS",
+          "vinculos": [
+            "Inativo"
+          ]
+        },
+        {
+          "nome": "Revisão de reforma por idade-limite",
+          "amp": "JRS",
+          "vinculos": [
+            "Inativo"
+          ]
+        },
+        {
+          "nome": "Reforma de militar RM1",
+          "amp": "JRS",
+          "vinculos": [
+            "Inativo"
+          ]
+        },
+        {
+          "nome": "Dependência de familiar de militar",
+          "amp": "JRS",
+          "vinculos": [
+            "Dependente"
+          ]
+        },
+        {
+          "nome": "Verificação Post-mortem de ex-militar",
+          "amp": "JRS",
+          "vinculos": [
+            "Carreira"
+          ]
+        },
+        {
+          "nome": "IS para verificação de preexistência de invalidez",
+          "amp": "JRS",
+          "vinculos": [
+            "Inativo"
+          ]
+        },
+        {
+          "nome": "IS para verificação de preexistência de doença especificada em Lei",
+          "amp": "JRS",
+          "vinculos": [
+            "Inativo"
+          ]
+        },
+        {
+          "nome": "IS para verificação de preexistência de incapacidade definitiva para o SAM",
+          "amp": "JRS",
+          "vinculos": [
+            "Inativo"
+          ]
+        }
+      ]
+    }
+  ]
+}

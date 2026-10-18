@@ -119,6 +119,23 @@ export const carregarServicosHnre = (): Promise<ServicoHnre[]> => {
   return cacheServicos;
 };
 
+export type VinculoFinalidade = 'Carreira' | 'Temporário' | 'Inativo' | 'Pensionista' | 'Dependente';
+export interface FinalidadeIS { nome: string; amp: string; vinculos: VinculoFinalidade[] }
+export interface GrupoFinalidadeIS { grupo: string; finalidades: FinalidadeIS[] }
+
+let cacheFinalidades: Promise<GrupoFinalidadeIS[]> | null = null;
+/** Finalidades de IS por grupo, com AMP competente e vínculos aplicáveis (public/finalidadesIS.json). */
+export const carregarFinalidadesIS = (): Promise<GrupoFinalidadeIS[]> => {
+  if (!cacheFinalidades) cacheFinalidades = carregarJson<{ grupos: GrupoFinalidadeIS[] }>('finalidadesIS.json').then(j => j.grupos).catch(e => { cacheFinalidades = null; throw e; });
+  return cacheFinalidades;
+};
+
+/** Mantém só as finalidades disponíveis ao vínculo; grupos vazios saem. Sem vínculo, devolve tudo. */
+export const filtrarFinalidadesPorVinculo = (grupos: GrupoFinalidadeIS[], vinculo: VinculoFinalidade | ''): GrupoFinalidadeIS[] =>
+  !vinculo ? grupos : grupos
+    .map(g => ({ ...g, finalidades: g.finalidades.filter(f => f.vinculos.includes(vinculo)) }))
+    .filter(g => g.finalidades.length > 0);
+
 /** Oficial do quadro de médicos (Md, RM2-Md ou RM3-Md), a partir do P/G/Q. */
 export const ehOficialMedico = (pgq: string): boolean => /\((?:(?:RM\d|Refº|Ref)-)?Md\)/i.test(pgq);
 
