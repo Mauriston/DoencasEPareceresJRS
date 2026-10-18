@@ -18,9 +18,6 @@ import { QuesitosConfig } from './pareceres/QuesitosConfig';
 import { ParecerDetalhe, STATUS_PARECER, diasDesde } from './pareceres/ParecerDetalhe';
 import { useQueryParam } from '../hooks/useQueryParam';
 import { useNav } from '../context/NavContext';
-import { urlIncorporavel } from '../services/drivePareceres';
-import { PdfFullscreenModal } from './PdfFullscreenModal';
-import { useIsDesktop } from '../hooks/useIsDesktop';
 import { canUseFeature } from '../config/permissions';
 import { observarPareceres, marcarConcluido, statusEfetivo, type ParecerRecord, type StatusParecer } from '../services/firestorePareceres';
 import { normalizarBusca } from '../utils/corposQuadros';
@@ -37,7 +34,6 @@ export const Pareceres: React.FC = () => {
   const perfil = nav?.authUser?.perfil;
   const podeGerar = canUseFeature('pareceres.gerar', perfil);
   const ehAdmin = perfil === 'admin';
-  const isDesktop = useIsDesktop();
 
   const [lista, setLista] = useState<ParecerRecord[] | null>(null);
   const [erroCarga, setErroCarga] = useState('');
@@ -101,12 +97,8 @@ export const Pareceres: React.FC = () => {
     }
   };
 
-  // Desktop: o PDF do Drive abre numa nova janela; mobile: abre dentro do app (tela cheia).
-  const [pdfAberto, setPdfAberto] = useState<{ title: string; url: string } | null>(null);
-  const abrir = (p: ParecerRecord) => {
-    if (isDesktop) window.open(p.pdfUrl, '_blank', 'noopener,noreferrer');
-    else setPdfAberto({ title: `Pedido de Parecer — ${p.especialidade} — ${extrairNomeInspecionado(p.inspecionado)}`, url: urlIncorporavel(p.pdfUrl) });
-  };
+  // O PDF (Drive ou, nos mais antigos, Storage) abre sempre numa nova janela, no desktop e no mobile.
+  const abrir = (p: ParecerRecord) => { window.open(p.pdfUrl, '_blank', 'noopener,noreferrer'); };
 
   const nomeDe = (p: ParecerRecord) => {
     const nome = extrairNomeInspecionado(p.inspecionado);
@@ -242,7 +234,6 @@ export const Pareceres: React.FC = () => {
           }}
         />
       )}
-      {pdfAberto && <PdfFullscreenModal title={pdfAberto.title} url={pdfAberto.url} onClose={() => setPdfAberto(null)} />}
       {config && ehAdmin && <QuesitosConfig onClose={() => setConfig(false)} onAviso={avisar} />}
     </div>
   );
