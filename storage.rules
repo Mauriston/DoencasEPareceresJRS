@@ -43,6 +43,13 @@ service firebase.storage {
       allow delete: if request.auth != null;
     }
 
+    // PDFs da página Legislação (legislacao/{id}.pdf), carregados do Drive
+    // pelo script de migração (Admin SDK ignora regras).
+    match /legislacao/{arquivo} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     // PDFs dos capítulos da DGPM-406 (dgpm406/capitulos/capitulo-NN.pdf),
     // exibidos/baixados na página Normas > DGPM-406. Leitura para usuários
     // autenticados; escrita só pelo script de carga (Admin SDK ignora regras).

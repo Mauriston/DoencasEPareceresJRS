@@ -1579,3 +1579,22 @@ CONCURSOS/
 - Ao apagar/regerar um termo, o arquivo do Drive vai para a lixeira (só arquivos sob a pasta raiz); URLs antigas do Storage são apagadas do Storage.
 - As ações do script que gravam no Drive ou usam o Gemini exigem o `idToken` do Firebase (validado em `exigirUsuarioFirebase`).
 - A transcrição e os dados da mensagem (cabeçalho, texto, período, candidatos) são lidos pelo Gemini (`extrairMensagemConcurso`, chave `GEMINI_API_KEY` nas propriedades do script) e gravados no Firestore como antes.
+
+---
+
+## 34. Legislação no Firestore + PDFs no Storage
+
+A página **Legislação** lê a coleção `legislacao` (migrada da aba `NORMAS` da planilha `17Dl5d3C…`) e abre o PDF de cada norma, do Firebase Storage, num modal em tela cheia.
+
+| Campo | Descrição |
+| --- | --- |
+| id do documento | slug da norma (ex.: `lei-6880-1980`) |
+| `ordem` | posição na lista |
+| `legislacao` | identificação curta (ex.: `LEI nº 6.880/1980`) |
+| `titulo` | título amigável |
+| `providencias` | ementa (botão ⓘ) |
+| `imageUrl` | brasão/logotipo exibido no card |
+| `pdfPath` | caminho no Storage (`legislacao/{id}.pdf`) ou `null` se ainda não enviado |
+| `arquivo`, `driveId` | nome e id do arquivo de origem no Drive (rastreabilidade) |
+
+Regras: Firestore — leitura autenticada, escrita só Admin; Storage (`legislacao/*`) — leitura autenticada, escrita só via Admin SDK. Para trocar/adicionar um PDF, envie o arquivo para `legislacao/{id}.pdf` (console do Firebase) e ajuste `pdfPath` no documento.
