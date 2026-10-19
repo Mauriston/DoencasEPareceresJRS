@@ -44,7 +44,7 @@ export const PericiaMenorDrawer: React.FC<Props> = ({ pericia: p, onClose, onHis
 
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
           <Linha rotulo="OM" valor={p.om} />
-          <Linha rotulo="Serviço do HNRe" valor={p.servico} />
+          {p.servico && <Linha rotulo="Serviço do HNRe" valor={p.servico} />}
           <Linha rotulo="Data do atestado" valor={dataBR(p.dataAtestado)} />
           <Linha rotulo="Tempo do atestado" valor={dias(p.tempoAtestado)} />
           <Linha rotulo="Tempo homologado" valor={dias(p.tempoHomologado)} />

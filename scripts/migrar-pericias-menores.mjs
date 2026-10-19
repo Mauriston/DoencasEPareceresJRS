@@ -48,7 +48,7 @@ for (const r of linhas) {
     militarId: militar?.id ?? nip,
     inspecionado: militar?.inspecionado ?? r.INSPECIONADO,
     om: r.OM,
-    servico: r.SERVICO,
+    ...(r.SERVICO && r.OM.trim().toUpperCase() === 'HNRE' ? { servico: r.SERVICO } : {}),
     cid: r.CID,
     dispensas: r.DISPENSAS.split(',').map(s => s.trim()).filter(Boolean),
     dataAtestado,
