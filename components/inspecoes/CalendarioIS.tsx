@@ -347,7 +347,7 @@ const ColunaDia: React.FC<{
       )}
 
       {/* concursos: um evento ocupa o turno da manhã inteiro */}
-      {concursosDoDia.map(c => {
+      {concursosDoDia.map((c, idx) => {
         const clicavel = !!onAbrirConcurso;
         return (
           <button
@@ -356,8 +356,9 @@ const ColunaDia: React.FC<{
             disabled={!clicavel}
             onClick={e => { e.stopPropagation(); onAbrirConcurso?.(c.concursoId); }}
             title={`${tituloDiaConcurso(c)}${c.encerrado ? ' · dia encerrado' : ''}${clicavel ? ' · abrir a tabela do concurso' : ''}`}
-            className={`absolute inset-x-0.5 z-[5] rounded border px-1.5 py-1 text-left overflow-hidden text-xs font-bold leading-tight flex flex-col items-start justify-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${clicavel ? 'cursor-pointer hover:shadow-md' : 'cursor-default'} ${corConcurso(c)}`}
-            style={{ top: topo(minutosDe('07:30')) + 1, height: (minutosDe('12:00') - minutosDe('07:30')) * PX_POR_MIN - 2 }}
+            className={`absolute z-[5] rounded border px-1.5 py-1 text-left overflow-hidden text-xs font-bold leading-tight flex flex-col items-start justify-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${clicavel ? 'cursor-pointer hover:shadow-md' : 'cursor-default'} ${corConcurso(c)}`}
+            // Dois ou mais concursos no mesmo dia ficam lado a lado, dividindo a largura (como no Google Agenda).
+            style={{ top: topo(minutosDe('07:30')) + 1, height: (minutosDe('12:00') - minutosDe('07:30')) * PX_POR_MIN - 2, left: `calc(${(idx / concursosDoDia.length) * 100}% + 2px)`, width: `calc(${100 / concursosDoDia.length}% - 4px)` }}
           >
             <span className="inline-flex items-start gap-1"><span className="material-symbols-outlined text-[16px]" aria-hidden="true">{c.encerrado ? 'check_circle' : 'fact_check'}</span><span>{tituloDiaConcurso(c)}</span></span>
             <span className="block font-normal opacity-90">{c.encerrado ? 'Dia encerrado' : 'Turno da manhã reservado'}</span>
