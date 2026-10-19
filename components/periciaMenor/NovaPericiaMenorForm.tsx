@@ -48,7 +48,6 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado })
 
   const [militares, setMilitares] = useState<MilitarRecord[]>([]);
   const [cids, setCids] = useState<CidItem[]>([]);
-  const [dispensasLista, setDispensasLista] = useState<string[] | null>(null);
 
   const [militarId, setMilitarId] = useState('');
   const [militarTexto, setMilitarTexto] = useState('');
@@ -78,14 +77,9 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado })
 
   useEffect(() => observarMilitares(setMilitares), []);
   useEffect(() => { carregarCid().then(setCids).catch(() => setCids([])); }, []);
-  useEffect(() => {
-    fetch(`${GAS_URL}?action=getLookups`)
-      .then(r => r.json())
-      .then(j => setDispensasLista(j.success ? (j.data.DISPENSAS || []).filter(Boolean) : []))
-      .catch(() => setDispensasLista([]));
-  }, []);
-
   const militar = militares.find(m => m.id === militarId) ?? null;
+  // O Serviço do HNRe só existe para militares da OM HNRe; para as demais OMs o campo some e nada é gravado.
+  const servicoAplicavel = !!militar && omEhHnre(militar.om);
   const selecionarMilitar = (m: MilitarRecord) => { setMilitarId(m.id); setMilitarTexto(m.inspecionado); limpar('militar'); };
 
   // Militar recém-cadastrado: assim que aparece na lista, já vem preenchido.
@@ -174,7 +168,8 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado })
       const id = novoIdPericiaMenor();
       const pdfUrl = imagemRecortada ? await enviarPdfPericiaMenor(id, await imagemParaPdf(imagemRecortada)) : '';
       await registrarPericiaMenor(id, {
-        militarId: militar.id, inspecionado: militar.inspecionado, om: militar.om, servico: militar.servico_label || '',
+        militarId: militar.id, inspecionado: militar.inspecionado, om: militar.om,
+        ...(servicoAplicavel && militar.servico_label ? { servico: militar.servico_label } : {}),
         cid: rotuloCid(cid), dispensas, dataAtestado, tempoAtestado: Number(soDigitos(tempoAtestado)), tempoHomologado: Number(soDigitos(tempoHomologado)),
         vdf, peritoUsuario: usuario.usuario, peritoNome: usuario.nome, peritoUid: usuario.uid, pdfUrl,
       });
@@ -238,17 +233,19 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado })
                 </button>
               )}
             </div>
-            <div>
-              <Field label="Serviço do HNRe" help={militar && !militar.servico_label && !omEhHnre(militar.om) ? `Não se aplica: o militar serve na OM ${militar.om}.` : undefined}>
-                {a => <input {...a} type="text" readOnly disabled value={militar?.servico_label || ''} placeholder={militar ? 'Sem serviço cadastrado' : 'Preenchido a partir do militar'} />}
-              </Field>
-              {militar && !militar.servico_label && omEhHnre(militar.om) && (
-                <button type="button" onClick={() => setEditandoServico(true)} className="mt-1 min-h-[44px] inline-flex items-center gap-1 text-sm font-bold text-navy underline underline-offset-2 hover:text-navy-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded">
-                  <span className="material-symbols-outlined text-[18px]" aria-hidden="true">apartment</span>
-                  Cadastrar Serviço
-                </button>
-              )}
-            </div>
+            {servicoAplicavel && (
+              <div>
+                <Field label="Serviço do HNRe">
+                  {a => <input {...a} type="text" readOnly disabled value={militar?.servico_label || ''} placeholder="Sem serviço cadastrado" />}
+                </Field>
+                {!militar?.servico_label && (
+                  <button type="button" onClick={() => setEditandoServico(true)} className="mt-1 min-h-[44px] inline-flex items-center gap-1 text-sm font-bold text-navy underline underline-offset-2 hover:text-navy-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded">
+                    <span className="material-symbols-outlined text-[18px]" aria-hidden="true">apartment</span>
+                    Cadastrar Serviço
+                  </button>
+                )}
+              </div>
+            )}
           </section>
 
           <section className="space-y-4" aria-labelledby="pm-atestado">
@@ -313,7 +310,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado })
       )}
       {escolhendoDispensas && (
         <DispensasModal
-          opcoes={dispensasLista} inicial={dispensas}
+          inicial={dispensas}
           onCancelar={() => setEscolhendoDispensas(false)}
           onConfirmar={lista => { setDispensas(lista); limpar('dispensas'); setEscolhendoDispensas(false); }}
         />

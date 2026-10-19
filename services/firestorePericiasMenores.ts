@@ -19,8 +19,8 @@ export interface PericiaMenorDoc {
   /** "POSTO (QUADRO) NIP NOME". */
   inspecionado: string;
   om: string;
-  /** Serviço do HNRe do militar no momento do registro ("Nome (HNRe-00.0)"). */
-  servico: string;
+  /** Serviço do HNRe do militar no momento do registro ("Nome (HNRe-00.0)"); só para militares da OM HNRe. */
+  servico?: string;
   /** "G432 - Estado de mal enxaquecoso". */
   cid: string;
   dispensas: string[];

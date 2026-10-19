@@ -7,14 +7,33 @@ import { Button } from '../ui/Button';
 
 export const TODAS_ATIVIDADES = 'TODAS AS ATIVIDADES';
 
+/** Dispensas possíveis numa Perícia Menor (lista fixa). */
+export const DISPENSAS = [
+  TODAS_ATIVIDADES,
+  'Carregar peso',
+  'Dirigir ou manobrar veículos Automotores',
+  'Embarque',
+  'Esforços físicos intensos e extenuantes',
+  'Formatura',
+  'Manobras Operativas',
+  'Marchas',
+  'Serviço Armado',
+  'Serviço Noturno',
+  'Serviços em locais elevados',
+  'Subir e descer escadas repetidamente',
+  'TAF/TFM',
+  'TAF/TFM (Exceto caminhadas)',
+  'TAF/TFM (Exceto natação)',
+  'TAF/TFM(Exceto Caminhadas e Natação)',
+];
+
 interface Props {
-  opcoes: string[] | null;
   inicial: string[];
   onConfirmar: (dispensas: string[]) => void;
   onCancelar: () => void;
 }
 
-export const DispensasModal: React.FC<Props> = ({ opcoes, inicial, onConfirmar, onCancelar }) => {
+export const DispensasModal: React.FC<Props> = ({ inicial, onConfirmar, onCancelar }) => {
   const [marcadas, setMarcadas] = useState<string[]>(inicial);
 
   const alternar = (d: string) => setMarcadas(atual => {
@@ -36,27 +55,21 @@ export const DispensasModal: React.FC<Props> = ({ opcoes, inicial, onConfirmar, 
         </>
       )}
     >
-      {opcoes === null ? (
-        <p className="py-6 text-center text-sm text-ink-3" role="status">Carregando dispensas…</p>
-      ) : opcoes.length === 0 ? (
-        <p role="alert" className="py-6 text-center text-sm font-semibold text-wine">Não foi possível carregar a lista de dispensas.</p>
-      ) : (
-        <div role="group" aria-label="Dispensas" className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {opcoes.map(d => {
-            const selecionada = marcadas.includes(d);
-            const desabilitada = d === TODAS_ATIVIDADES ? marcadas.length > 0 && !selecionada : marcadas.includes(TODAS_ATIVIDADES);
-            return (
-              <label
-                key={d}
-                className={`flex items-center gap-3 px-3 min-h-[44px] rounded-lg border text-sm ${selecionada ? 'border-navy bg-thead font-semibold text-navy' : 'border-line text-ink'} ${desabilitada ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-thead'}`}
-              >
-                <input type="checkbox" className="w-5 h-5 shrink-0 accent-navy" checked={selecionada} disabled={desabilitada} onChange={() => alternar(d)} />
-                <span className="break-words min-w-0">{d}</span>
-              </label>
-            );
-          })}
-        </div>
-      )}
+      <div role="group" aria-label="Dispensas" className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {DISPENSAS.map(d => {
+          const selecionada = marcadas.includes(d);
+          const desabilitada = d === TODAS_ATIVIDADES ? marcadas.length > 0 && !selecionada : marcadas.includes(TODAS_ATIVIDADES);
+          return (
+            <label
+              key={d}
+              className={`flex items-center gap-3 px-3 min-h-[44px] rounded-lg border text-sm ${selecionada ? 'border-navy bg-thead font-semibold text-navy' : 'border-line text-ink'} ${desabilitada ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-thead'}`}
+            >
+              <input type="checkbox" className="w-5 h-5 shrink-0 accent-navy" checked={selecionada} disabled={desabilitada} onChange={() => alternar(d)} />
+              <span className="break-words min-w-0">{d}</span>
+            </label>
+          );
+        })}
+      </div>
     </Dialog>
   );
 };

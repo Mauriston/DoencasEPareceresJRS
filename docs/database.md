@@ -1573,7 +1573,7 @@ Decisões:
 - **`dataTermino`** = `dataAtestado` + `tempoHomologado` − 1 (o dia do atestado conta como o 1º), calculada ao gravar.
 - **Status derivado**, não gravado: **Vigente** enquanto hoje ≤ `dataTermino`; depois, **Concluída** (`statusPericia` em `services/firestorePericiasMenores.ts`).
 - **PDF do atestado**: a foto recortada vira PDF no navegador (`utils/imagemParaPdf.ts`) e vai ao Storage em `periciasMenores/{id}.pdf`. A leitura por IA continua na ação `extrair_dados_atestado` (Gemini, Apps Script).
-- **Serviço do HNRe** vem de `militares.servico_label`; médicos podem gravar só esse campo no cadastro (regra do Firestore).
+- **Serviço do HNRe** vem de `militares.servico_label` e só é exibido e gravado (`servico`) para militares da OM HNRe; médicos podem gravar só esse campo no cadastro (regra do Firestore).
 - Carga do histórico: `scripts/migrar-pericias-menores.mjs` (dados em `scripts/pericias-menores.json`).
 
 ## 33. PDFs dos concursos no Google Drive
