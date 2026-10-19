@@ -81,8 +81,8 @@ export const atualizarMilitar = (id: string, patch: Partial<MilitarDoc>) =>
 
 /**
  * Troca o NIP de um cadastro: o id do documento é o NIP só com dígitos, então mudar o NIP exige mover o
- * documento (gravar com o id novo, apagar o antigo) e religar os pareceres que apontavam para o id antigo
- * ("militarId"). Tudo numa única gravação em lote; recusa se já existir cadastro com o id novo.
+ * documento (gravar com o id novo, apagar o antigo) e religar os pareceres ("militarId") e as IS ("inspecionadoId") que apontavam para o id antigo
+ *. Tudo numa única gravação em lote; recusa se já existir cadastro com o id novo.
  */
 export const renomearMilitar = async (idAntigo: string, idNovo: string, patch: Partial<MilitarDoc>): Promise<void> => {
   if (!idNovo) throw new Error('NIP inválido.');
@@ -90,10 +90,12 @@ export const renomearMilitar = async (idAntigo: string, idNovo: string, patch: P
   if (!antigo.exists()) throw new Error('Cadastro não encontrado.');
   if (novo.exists()) throw new Error('Já existe um cadastro com esse NIP.');
   const pareceres = await getDocs(query(collection(db, 'pareceres'), where('militarId', '==', idAntigo)));
+  const inspecoes = await getDocs(query(collection(db, 'inspecoes'), where('inspecionadoId', '==', idAntigo)));
 
   const lote = writeBatch(db);
   lote.set(doc(db, COL, idNovo), { ...antigo.data(), ...patch, atualizadoEm: serverTimestamp() });
   pareceres.forEach(p => lote.update(p.ref, { militarId: idNovo }));
+  inspecoes.forEach(i => lote.update(i.ref, { inspecionadoId: idNovo }));
   lote.delete(antigo.ref);
   await lote.commit();
 };

@@ -9,7 +9,7 @@
 //  - "bloqueiosAgenda": bloqueios de horário/turno (de todos os peritos ou de um perito).
 //  - config/agendaIS: turnos em que cada perito atende, por dia da semana (só o Admin grava).
 import {
-  getFirestore, collection, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, runTransaction, serverTimestamp, Timestamp,
+  getFirestore, collection, doc, query, where, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, runTransaction, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { app } from './firebaseAuth';
 import {
@@ -68,6 +68,14 @@ export type InspecaoRecord = InspecaoDoc & { id: string };
 export const observarInspecoes = (onData: (lista: InspecaoRecord[]) => void, onError?: (e: Error) => void) =>
   onSnapshot(
     collection(db, COL),
+    snap => onData(snap.docs.map(d => ({ id: d.id, ...(d.data() as InspecaoDoc) })).sort((a, b) => b.is - a.is)),
+    err => onError?.(err),
+  );
+
+/** IS de um inspecionado (id = NIP só dígitos), da mais recente para a mais antiga — histórico da ficha em Inspecionados. */
+export const observarInspecoesDoInspecionado = (inspecionadoId: string, onData: (lista: InspecaoRecord[]) => void, onError?: (e: Error) => void) =>
+  onSnapshot(
+    query(collection(db, COL), where('inspecionadoId', '==', inspecionadoId)),
     snap => onData(snap.docs.map(d => ({ id: d.id, ...(d.data() as InspecaoDoc) })).sort((a, b) => b.is - a.is)),
     err => onError?.(err),
   );
