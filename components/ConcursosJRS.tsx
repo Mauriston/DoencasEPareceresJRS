@@ -7,7 +7,9 @@ import { createPortal } from 'react-dom';
 import { Container, PageHeader } from './ui/Page';
 import { useParams } from 'react-router-dom';
 import { useBreadcrumbs } from '../context/BreadcrumbContext';
-import { concursoPath } from '../config/routes';
+import { concursoPath, concursosDiaPath } from '../config/routes';
+import { useDiasConcursos } from '../hooks/useDiasConcursos';
+import { CalendarioConcursos } from './concursos/CalendarioConcursos';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
 import {
@@ -1526,6 +1528,8 @@ const celulaNumericaTabela = (valor: number, status: ConcursoRecord['status']): 
 
 const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, perfil, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeVisualizarTabela, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
   const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number; temLancamento: boolean }>>({});
+  const navLista = useNav();
+  const { dias: diasConcursos } = useDiasConcursos();
   // Contagem de mensagens arquivadas por concurso — usada tanto para saber
   // se "Listar Mensagens" deve aparecer no menu quanto para o badge do
   // ícone na coluna Ações da visão em tabela (mobile).
@@ -1984,7 +1988,8 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
                 </table>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:items-start">
+              <div className="grid grid-cols-1 gap-3">
                 {itensFiltrados.map(c => {
                   const contagem = contadores[c.id];
                   return (
@@ -2024,6 +2029,10 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
                     </div>
                   );
                 })}
+              </div>
+              <div className="hidden lg:block lg:sticky lg:top-4">
+                <CalendarioConcursos dias={diasConcursos} onSelecionarDia={d => navLista?.navigate(concursosDiaPath(d))} />
+              </div>
               </div>
             )}
           </>
@@ -2086,9 +2095,13 @@ const ModalRegistroEventos: React.FC<{ concursoId: string; candidato: { id: stri
 interface ConcursoDetalheProps {
   concursoId: string;
   onVoltar: () => void;
+  /** Abre já filtrado neste dia (AAAA-MM-DD). */
+  dataFixa?: string;
+  /** Dentro da página do dia: sem migalha própria nem toolbar fixa (várias tabelas empilhadas). */
+  embutido?: boolean;
 }
 
-const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar }) => {
+const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar, dataFixa, embutido = false }) => {
   const nav = useNav();
   const perfil = nav?.authUser?.perfil;
   const podeEditarInlineBase = canUseFeature('concursosJRS.editarDadosTabela', perfil);
@@ -2110,14 +2123,14 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   const [concurso, setConcurso] = useState<ConcursoRecord | null>(null);
   const [candidatos, setCandidatos] = useState<CandidatoRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  useBreadcrumbs([{ label: concurso?.nome || 'Concurso' }]);
+  useBreadcrumbs(embutido ? null : [{ label: concurso?.nome || 'Concurso' }]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
 
   const [statusKpiFilter, setStatusKpiFilter] = useState<string>('');
-  const [dateFilterMode, setDateFilterMode] = useState<'todos' | 'hoje' | 'semana' | 'personalizado'>('todos');
-  const [dateFilterCustom, setDateFilterCustom] = useState<string | null>(null);
+  const [dateFilterMode, setDateFilterMode] = useState<'todos' | 'hoje' | 'semana' | 'personalizado'>(dataFixa ? 'personalizado' : 'todos');
+  const [dateFilterCustom, setDateFilterCustom] = useState<string | null>(dataFixa ?? null);
   const [showDateMenu, setShowDateMenu] = useState(false);
   const [showDateCalendar, setShowDateCalendar] = useState(false);
 
@@ -2960,7 +2973,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 
         {/* Toolbar compacta e fixa no desktop: o título rola junto com a
             planilha, a busca e os filtros ficam. */}
-        <div ref={toolbarRef} className="md:sticky md:top-0 md:z-sticky bg-canvas py-2">
+        <div ref={toolbarRef} className={`${embutido ? '' : 'md:sticky md:top-0 md:z-sticky '}bg-canvas py-2`}>
         <Container size="data">
         <div className="bg-white p-2 rounded-xl border border-line">
         <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 md:gap-3">
@@ -3109,7 +3122,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                         { rotulo: 'Nº TIS', colSpan: 1, alinhamento: '' },
                         { rotulo: 'Ações', colSpan: 1, alinhamento: 'text-right' },
                       ].map(col => (
-                        <th key={col.rotulo} colSpan={col.colSpan} className={`md:sticky md:top-[var(--toolbar-h)] z-10 bg-thead border-b border-line py-3 px-4 ${col.alinhamento}`}>{col.rotulo}</th>
+                        <th key={col.rotulo} colSpan={col.colSpan} className={`${embutido ? '' : 'md:sticky md:top-[var(--toolbar-h)] '}z-10 bg-thead border-b border-line py-3 px-4 ${col.alinhamento}`}>{col.rotulo}</th>
                       ))}
                     </tr>
                   </thead>
@@ -3526,6 +3539,34 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
 };
 
 // =========================================================================
+// DIA DE CONCURSO — candidatos agendados no dia, uma tabela por concurso (linhas agrupadas por concurso)
+// =========================================================================
+
+const ConcursosDia: React.FC<{ data: string }> = ({ data }) => {
+  const nav = useNav();
+  const { dias, concursosAtivos } = useDiasConcursos();
+  useBreadcrumbs([{ label: isoParaBR(data) }]);
+  const doDia = dias.filter(d => d.data === data);
+  return (
+    <div>
+      {concursosAtivos === null ? (
+        <div className="flex justify-center py-16" role="status" aria-label="Carregando"><span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span></div>
+      ) : doDia.length === 0 ? (
+        <Container size="data" className="pt-6 md:pt-8">
+          <div className="bg-white rounded-xl border border-line">
+            <EmptyState icon="event_busy" title={`Nenhum concurso agendado em ${isoParaBR(data)}`} description="Volte à lista e escolha um dia marcado no calendário." />
+          </div>
+        </Container>
+      ) : (
+        doDia.map(d => (
+          <ConcursoDetalhe key={d.concursoId} concursoId={d.concursoId} dataFixa={data} embutido onVoltar={() => nav?.navigate('/concursos')} />
+        ))
+      )}
+    </div>
+  );
+};
+
+// =========================================================================
 // COMPONENTE PRINCIPAL — alterna entre a lista de concursos e o detalhe
 // =========================================================================
 
@@ -3533,6 +3574,7 @@ export const ConcursosJRS: React.FC = () => {
   const nav = useNav();
   // O concurso aberto é um nível da URL: /concursos/:concursoId (deep link e botão voltar).
   const { concursoId: concursoParam } = useParams();
+  const { data: diaParam } = useParams();
   const selectedConcursoId = concursoParam ? decodeURIComponent(concursoParam) : null;
   const setSelectedConcursoId = (id: string | null) => nav?.navigate(id ? concursoPath(id) : '/concursos');
   const perfil = nav?.authUser?.perfil;
@@ -3579,6 +3621,8 @@ export const ConcursosJRS: React.FC = () => {
   };
 
   // /concursos/novo: criação do concurso como página própria (F60), com a mesma permissão do botão.
+  if (diaParam) return <ConcursosDia data={diaParam} />;
+
   if (selectedConcursoId === 'novo') {
     return podeRegistrarMensagem
       ? <ModalRegistrarMensagem onClose={handleFecharModalUpload} isAdmin={isAdmin} />

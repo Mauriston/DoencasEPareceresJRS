@@ -25,10 +25,11 @@ export const BreadcrumbProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 export const useBreadcrumbExtras = () => useContext(BreadcrumbContext).extras;
 
 /** A página declara suas migalhas extras; são removidas ao sair dela. */
-export const useBreadcrumbs = (crumbs: Crumb[]) => {
+export const useBreadcrumbs = (crumbs: Crumb[] | null) => {
   const { setExtras } = useContext(BreadcrumbContext);
   const chave = JSON.stringify(crumbs);
   useEffect(() => {
+    if (!crumbs) return;
     setExtras(crumbs);
     return () => setExtras([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps

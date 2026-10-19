@@ -24,6 +24,7 @@ export const ROUTES: RouteDef[] = [
   { view: 'portaria', path: '/beneficios/portaria' },
   { view: 'concursos', path: '/concursos/indices' },
   { view: 'exames', path: '/concursos/exames' },
+  { view: 'concursosJRS', path: '/concursos/dia/:data' },
   { view: 'concursosJRS', path: '/concursos/:concursoId?' },
   { view: 'inspecoes', path: '/inspecoes' },
   { view: 'pareceres', path: '/pareceres' },
@@ -75,6 +76,8 @@ export const viewForPath = (pathname: string): NavItem | undefined =>
 // Subníveis com nome próprio
 export const doencaPath = (doencaId: string, diagnosticoIdx?: number): string =>
   `/beneficios/doencas/${encodeURIComponent(doencaId)}${diagnosticoIdx === undefined ? '' : `/${diagnosticoIdx}`}`;
+/** Tabela dos candidatos agendados de todos os concursos num dia (AAAA-MM-DD). */
+export const concursosDiaPath = (dataISO: string): string => `/concursos/dia/${dataISO}`;
 export const concursoPath = (concursoId: string): string => `/concursos/${encodeURIComponent(concursoId)}`;
 export const periciaMenorPath = (aba: 'novo' | 'historico', pessoa?: string): string =>
   `/pericia-menor/${aba}${pessoa ? `/${encodeURIComponent(pessoa)}` : ''}`;
