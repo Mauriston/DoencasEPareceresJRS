@@ -26,7 +26,7 @@ Um verdadeiro sistema interativo Fullstack Integrado.
 Módulo avançado de emissão de atestados e dispensas de serviço com tecnologia de reconhecimento de imagem e tratamento de imagem estilo *Scanner*.
 * **Visão Computacional:** O perito pode utilizar a câmara do dispositivo para fotografar um atestado médico físico. A imagem é recortada pelo utilizador (`react-image-crop`) e recebe filtros automáticos de preto e branco e alto contraste para otimização da leitura.
 * **Integração com Gemini:** A imagem tratada é enviada via API para o modelo **Google Gemini 2.5 Flash**, que extrai com alta precisão o Nome do Paciente, a Data do Atestado, o Tempo de Afastamento e o código CID.
-* **Automação:** O sistema pré-preenche o formulário automaticamente, executa uma busca inclusiva para identificar o NIP do militar e, ao gerar a perícia final no Google Docs, centraliza e anexa a imagem do atestado original na última página do documento PDF.
+* **Automação:** O formulário "Novo" (barra lateral/bottom sheet) é pré-preenchido: o nome é buscado na base de militares (por nome ou NIP, com cadastro rápido se não existir), o CID por autocomplete e o Serviço do HNRe vem do cadastro. A foto do atestado é guardada em PDF no Firebase Storage e a perícia no Firestore (coleção `periciasMenores`), com status Vigente/Concluída calculado pela data de término.
 
 ### 5. Roteiro JRS e Material de Estudo (`/components/RoteiroJRS.tsx` e `Estudo.tsx`)
 Ambiente de capacitação contínua e trilhas de aprendizagem.

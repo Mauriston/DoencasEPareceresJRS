@@ -3,65 +3,46 @@ import React, { useMemo } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { useBreadcrumbs } from '../context/BreadcrumbContext';
 import { periciaMenorPath } from '../config/routes';
-import { PericiaStatusTags } from './ui/PericiaStatusTags';
-
-interface PericiaMenorRecord {
-  inspecionado: string;
-  om: string;
-  cid: string;
-  dispensas: string;
-  dataAtestado: string;
-  dataAtestadoTs: number;
-  tempoAtestado: string;
-  tempoHomolog: string;
-  vigente: boolean;
-  concluido: boolean;
-  vdf: boolean;
-  link: string;
-}
+import { PericiaStatusTags, isAfastamentoLts, isRestricaoPericia, registroPericia } from './ui/PericiaStatusTags';
+import { dataBR, statusPericia, type PericiaMenorRecord } from '../services/firestorePericiasMenores';
+import { extrairNomeInspecionado } from '../utils/format';
 
 interface Props {
   person: string;
   records: PericiaMenorRecord[];
+  /** Hoje (AAAA-MM-DD), para o status Vigente/Concluída. */
+  hoje: string;
 }
 
-const parseDias = (val: string): number => {
-  const n = parseInt(val, 10);
-  return isNaN(n) ? 0 : n;
-};
+const tsDe = (r: PericiaMenorRecord): number => { const [a, m, d] = r.dataAtestado.split('-').map(Number); return new Date(a, m - 1, d).getTime(); };
 
-export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records }) => {
-  useBreadcrumbs([{ label: 'Histórico', to: periciaMenorPath('historico') }, { label: person }]);
+export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, hoje }) => {
+  useBreadcrumbs([{ label: 'Perícias menores', to: periciaMenorPath('historico') }, { label: extrairNomeInspecionado(person) }]);
   const now = Date.now();
   const startOfYear = new Date(new Date().getFullYear(), 0, 1).getTime();
   const last30 = now - 30 * 24 * 60 * 60 * 1000;
 
   const stats = useMemo(() => {
     const total = records.length;
-    const vigentes = records.filter(r => r.vigente).length;
+    const vigentes = records.filter(r => statusPericia(r, hoje) === 'vigente').length;
     const vdfCount = records.filter(r => r.vdf).length;
 
-    const isAfastado = (r: PericiaMenorRecord) =>
-      r.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES');
-    const isRestricao = (r: PericiaMenorRecord) =>
-      r.dispensas.trim() !== '' && !r.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES');
-
-    const diasAfastadoTotal = records.filter(isAfastado).reduce((s, r) => s + parseDias(r.tempoHomolog), 0);
-    const diasAfastadoAno   = records.filter(r => isAfastado(r) && r.dataAtestadoTs >= startOfYear).reduce((s, r) => s + parseDias(r.tempoHomolog), 0);
-    const diasAfastado30    = records.filter(r => isAfastado(r) && r.dataAtestadoTs >= last30).reduce((s, r) => s + parseDias(r.tempoHomolog), 0);
-
-    const diasRestricaoTotal = records.filter(isRestricao).reduce((s, r) => s + parseDias(r.tempoHomolog), 0);
-    const diasRestricaoAno   = records.filter(r => isRestricao(r) && r.dataAtestadoTs >= startOfYear).reduce((s, r) => s + parseDias(r.tempoHomolog), 0);
-    const diasRestricao30    = records.filter(r => isRestricao(r) && r.dataAtestadoTs >= last30).reduce((s, r) => s + parseDias(r.tempoHomolog), 0);
+    const afastados = records.filter(r => isAfastamentoLts(registroPericia(r, hoje)));
+    const restricoes = records.filter(r => isRestricaoPericia(registroPericia(r, hoje)));
+    const soma = (lista: PericiaMenorRecord[], desde = 0) => lista.filter(r => tsDe(r) >= desde).reduce((s, r) => s + (r.tempoHomologado || 0), 0);
 
     const cidMap: Record<string, number> = {};
     records.forEach(r => { if (r.cid) cidMap[r.cid] = (cidMap[r.cid] || 0) + 1; });
     const topCids = Object.entries(cidMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-    return { total, vigentes, vdfCount, diasAfastadoTotal, diasAfastadoAno, diasAfastado30, diasRestricaoTotal, diasRestricaoAno, diasRestricao30, topCids };
-  }, [records]);
+    return {
+      total, vigentes, vdfCount, topCids,
+      diasAfastadoTotal: soma(afastados), diasAfastadoAno: soma(afastados, startOfYear), diasAfastado30: soma(afastados, last30),
+      diasRestricaoTotal: soma(restricoes), diasRestricaoAno: soma(restricoes, startOfYear), diasRestricao30: soma(restricoes, last30),
+    };
+  }, [records, hoje]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const sorted = [...records].sort((a, b) => b.dataAtestadoTs - a.dataAtestadoTs);
+  const sorted = [...records].sort((a, b) => b.dataAtestado.localeCompare(a.dataAtestado));
   const om = records[0]?.om || '';
 
   return (
@@ -156,17 +137,17 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records }) => {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-bold text-navy">{rec.dataAtestado}</span>
-                    {rec.tempoHomolog && (
-                      <span className="text-xs text-ink-3">{String(rec.tempoHomolog).replace(/^(\d+)$/, '$1 dias')}</span>
+                    <span className="text-xs font-bold text-navy">{dataBR(rec.dataAtestado)}</span>
+                    {rec.tempoHomologado > 0 && (
+                      <span className="text-xs text-ink-3">{rec.tempoHomologado} dia{rec.tempoHomologado !== 1 ? 's' : ''} · até {dataBR(rec.dataTermino)}</span>
                     )}
                   </div>
-                  <div className="mt-1.5"><PericiaStatusTags registro={rec} mostrarVdf /></div>
+                  <div className="mt-1.5"><PericiaStatusTags registro={registroPericia(rec, hoje)} mostrarVdf /></div>
                   {rec.cid && <p className="text-xs text-ink-3 mt-0.5">{rec.cid}</p>}
-                  {rec.dispensas && <p className="text-xs text-ink-3 mt-0.5">{rec.dispensas}</p>}
+                  {rec.dispensas?.length > 0 && <p className="text-xs text-ink-3 mt-0.5">{rec.dispensas.join(', ')}</p>}
                 </div>
-                {rec.link && (
-                  <a href={rec.link} target="_blank" rel="noopener noreferrer"
+                {rec.pdfUrl && (
+                  <a href={rec.pdfUrl} target="_blank" rel="noopener noreferrer"
                     className="shrink-0 w-11 h-11 bg-thead hover:bg-navy text-ink-3 hover:text-white rounded-full flex items-center justify-center transition-colors"
                     title="Abrir documento" aria-label="Abrir documento">
                     <span className="material-symbols-outlined text-[16px]">open_in_new</span>

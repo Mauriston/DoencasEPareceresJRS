@@ -60,8 +60,21 @@ service cloud.firestore {
     // (migrado da aba "Militares" da planilha). Id do documento = NIP só com
     // dígitos. Qualquer usuário autenticado lê (usada por páginas/funções
     // futuras); o Admin cria, edita ou apaga; os médicos só CRIAM (cadastro
-    // rápido a partir do "Novo parecer").
+    // rápido a partir do "Novo parecer") e podem definir só o Serviço do HNRe
+    // ("servico_label", a partir da "Nova perícia menor").
     match /militares/{nip} {
+      allow read: if isSignedIn();
+      allow create: if isMedico();
+      allow update: if isAdmin() || (isMedico() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['servico_label', 'atualizadoEm']));
+      allow delete: if isAdmin();
+    }
+
+    // Coleção "periciasMenores": Perícias Menores (um doc por perícia, id
+    // automático; liga ao militar por "militarId" = NIP só dígitos; o status
+    // Vigente/Concluída é derivado de "dataTermino"). Lê quem está autenticado;
+    // só médicos registram; o Admin corrige ou apaga.
+    match /periciasMenores/{id} {
       allow read: if isSignedIn();
       allow create: if isMedico();
       allow update, delete: if isAdmin();

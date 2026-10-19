@@ -119,6 +119,15 @@ export const carregarServicosHnre = (): Promise<ServicoHnre[]> => {
   return cacheServicos;
 };
 
+export interface CidItem { SUBCAT: string; DESCRICAO: string; DESCRABREV: string }
+
+let cacheCid: Promise<CidItem[]> | null = null;
+/** Lista de CID-10 (public/cid.json). */
+export const carregarCid = (): Promise<CidItem[]> => {
+  if (!cacheCid) cacheCid = carregarJson<CidItem[]>('cid.json').catch(e => { cacheCid = null; throw e; });
+  return cacheCid;
+};
+
 export type VinculoFinalidade = 'Carreira' | 'Temporário' | 'Inativo' | 'Pensionista' | 'Dependente';
 export interface FinalidadeIS { nome: string; amp: string; vinculos: VinculoFinalidade[] }
 export interface GrupoFinalidadeIS { grupo: string; finalidades: FinalidadeIS[] }

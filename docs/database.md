@@ -1028,7 +1028,7 @@ Persistir na base:
 | `extrair_dados_atestado` | Não persiste; retorna JSON extraído pelo Gemini |
 | `gerar_minuta_is` ou fluxo equivalente | Cria Google Doc no Drive |
 | `isNewMilitar = true` | Acrescenta linha em `Militares` |
-| `gerar_pericia_menor` | Cria PDF e acrescenta linha em `Pericia_Menor` |
+| `gerar_pericia_menor` | **Removida**: a Perícia Menor agora é gravada no Firestore (seção 34) |
 | POST sem `action`, com `especialidade` | Cria parecer e acrescenta linha em `Pareceres` |
 | `imprimir` | Acessa PDF existente; persistência adicional depende do fluxo completo |
 
@@ -1560,6 +1560,21 @@ Decisões:
 - **Status "atrasado" é derivado**: `solicitado` há 20 dias ou mais (`PRAZO_ATRASO_DIAS` em `services/firestorePareceres.ts`). Nada gravado precisaria de rotina agendada para virar "atrasado".
 - **PDF**: gerado pelo Apps Script standalone (`CodeConcursos.gs`, ação `gerarPedidoParecer`, template Google Docs `ID_TEMPLATE_PEDIDO_PARECER`) e guardado no **Google Drive** (pasta `PARECERES`, id `176YQTOO…`, subpasta com o nome completo do inspecionado, arquivo `SOL_PARECER_{especialidade sem acentos}_{DDMMMAAAA}.PDF`) pela ação `salvarPdfParecer`; o `pdfUrl` no Firestore é a URL de visualização (`/view`) do Drive, aberta numa nova janela (desktop e mobile) (pareceres antigos mantêm a URL do Storage `pareceres/{id}.pdf`).
 - Carga inicial dos quesitos: `scripts/migrar-quesitos-parecer.mjs` (dados em `scripts/quesitos-parecer.json`).
+
+## 34. Perícias Menores no Firestore
+
+A página **Perícia Menor** deixou de usar a aba `Pericia_Menor` e a Guia de Encaminhamento (Google Docs). Os dados ficam no Firestore:
+
+| Coleção | Documento | Conteúdo |
+|---|---|---|
+| `periciasMenores` | id automático (as migradas: `planilha-LINHA`) | `militarId` (NIP só dígitos = id em `militares`), `inspecionado`, `om`, `servico`, `cid`, `dispensas[]`, `dataAtestado` (AAAA-MM-DD), `tempoAtestado`, `tempoHomologado`, `dataTermino`, `vdf` (boolean), `peritoUsuario/Nome/Uid` (médico que registrou), `pdfUrl`, `criadoEm` |
+
+Decisões:
+- **`dataTermino`** = `dataAtestado` + `tempoHomologado` − 1 (o dia do atestado conta como o 1º), calculada ao gravar.
+- **Status derivado**, não gravado: **Vigente** enquanto hoje ≤ `dataTermino`; depois, **Concluída** (`statusPericia` em `services/firestorePericiasMenores.ts`).
+- **PDF do atestado**: a foto recortada vira PDF no navegador (`utils/imagemParaPdf.ts`) e vai ao Storage em `periciasMenores/{id}.pdf`. A leitura por IA continua na ação `extrair_dados_atestado` (Gemini, Apps Script).
+- **Serviço do HNRe** vem de `militares.servico_label`; médicos podem gravar só esse campo no cadastro (regra do Firestore).
+- Carga do histórico: `scripts/migrar-pericias-menores.mjs` (dados em `scripts/pericias-menores.json`).
 
 ## 33. PDFs dos concursos no Google Drive
 
