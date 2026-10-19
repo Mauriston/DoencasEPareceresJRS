@@ -184,6 +184,10 @@ export const observarBloqueios = (onData: (lista: BloqueioAgenda[]) => void, onE
 
 export interface NovoBloqueio {
   data: string;
+  /** Bloqueio de período: último dia. */
+  dataFim?: string;
+  /** Evento de dia inteiro já criado no Google Agenda (só período). */
+  eventoAgendaId?: string;
   turno: Turno | 'dia';
   hora?: string;
   peritoUid: string;
