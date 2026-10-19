@@ -1595,6 +1595,5 @@ A página **Legislação** lê a coleção `legislacao` (migrada da aba `NORMAS`
 | `providencias` | ementa (botão ⓘ) |
 | `imageUrl` | brasão/logotipo exibido no card |
 | `pdfPath` | caminho no Storage (`legislacao/{id}.pdf`) ou `null` se ainda não enviado |
-| `arquivo`, `driveId` | nome e id do arquivo de origem no Drive (rastreabilidade) |
 
 Regras: Firestore — leitura autenticada, escrita só Admin; Storage (`legislacao/*`) — leitura autenticada, escrita só do Admin (perfil lido do Firestore), PDF até 25 MB. O botão **Novo** da página (só Admin) abre uma sidebar que envia o PDF para `legislacao/{id}.pdf` e cria o documento (id = slug da identificação).

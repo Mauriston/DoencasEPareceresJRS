@@ -66,7 +66,7 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
                   <div className="w-10 h-10 flex-shrink-0 bg-paper rounded-full overflow-hidden border border-line flex items-center justify-center p-0.5">
                     <img
                       src={law.imageUrl}
-                      alt={law.legislation}
+                      alt={law.legislacao}
                       className={`w-full h-full object-contain transition-transform duration-300 ${
                         isBrasao ? 'scale-[1.5]' : ''
                       }`}
@@ -76,9 +76,9 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
 
                   <div className="flex flex-col flex-1 min-w-0">
                     <h3 className="text-navy font-heading font-bold text-sm leading-snug mb-0.5 group-hover:text-navy transition-colors">
-                      {law.legislation}
+                      {law.legislacao}
                     </h3>
-                    <p className="text-ink-3 font-body text-xs font-medium leading-relaxed line-clamp-2">
+                    <p className="text-ink-3 font-body text-xs font-medium leading-relaxed">
                       {law.titulo}
                     </p>
                   </div>
