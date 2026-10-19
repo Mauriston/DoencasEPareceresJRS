@@ -13,6 +13,7 @@ import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
 import { ConfirmDialog } from './ui/Dialog';
 import { controlClass } from './ui/Field';
+import { MenuAcoes, type ItemMenu } from './ui/MenuAcoes';
 import { InspecaoForm } from './inspecoes/InspecaoForm';
 import { InspecaoDetalhe } from './inspecoes/InspecaoDetalhe';
 import { AgendarDialog } from './inspecoes/AgendarDialog';
@@ -32,7 +33,7 @@ import { sincronizarAgendaIS, removerEventoAgendaIS } from '../services/agendaGo
 import { minutaCancelamento, minutaResultado } from '../utils/minutasIS';
 import { normalizarBusca } from '../utils/corposQuadros';
 import {
-  STATUS_IS, SITUACOES_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataBr, dataHoraBr, hojeISO,
+  STATUS_IS, SITUACOES_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataBr, dataHoraBr, hojeISO, dataDeEntrevista, horaDeEntrevista, nomeDiaSemana,
   type BloqueioAgenda, type ConfigAgenda, type SituacaoIS,
 } from '../utils/inspecoes';
 
@@ -44,9 +45,12 @@ const nomeCurto = (inspecionado: string): string => inspecionado.replace(/^.*?\d
 
 const ordenar = (situacao: SituacaoIS, a: InspecaoRecord, b: InspecaoRecord): number => {
   if (situacao === 'aberta') return a.dataAbertura.localeCompare(b.dataAbertura) || a.is - b.is;
-  if (situacao === 'andamento') return (a.dataEntrevista || '9').localeCompare(b.dataEntrevista || '9') || a.is - b.is;
-  return b.is - a.is;
+  // Em andamento e Finalizadas: agrupadas por data da entrevista, da mais antiga para a mais recente (sem data no fim).
+  return (a.dataEntrevista || '9').localeCompare(b.dataEntrevista || '9') || a.is - b.is;
 };
+
+/** Cabeçalho de grupo por data: "segunda-feira, 19/10/2026". */
+const rotuloData = (is: InspecaoRecord): string => (is.dataEntrevista ? `${nomeDiaSemana(dataDeEntrevista(is.dataEntrevista))}, ${dataBr(dataDeEntrevista(is.dataEntrevista))}` : 'Sem data de entrevista');
 
 export const Inspecoes: React.FC = () => {
   const nav = useNav();
@@ -157,6 +161,18 @@ export const Inspecoes: React.FC = () => {
   const omDe = (is: InspecaoRecord) => militares.find(m => m.id === is.inspecionadoId)?.om;
   const dadosMinuta = (is: InspecaoRecord) => ({ is: is.is, finalidade: is.finalidade, grupoFinalidade: is.grupoFinalidade, inspecionado: is.inspecionado, dataAbertura: is.dataAbertura, amp: is.amp, om: omDe(is) });
 
+  const itensDe = (is: InspecaoRecord): ItemMenu[] => {
+    const itens: ItemMenu[] = [{ rotulo: 'Ver detalhes', icone: 'visibility', onClick: () => setDetalheId(is.id) }];
+    const encerrada = is.situacao === 'finalizada';
+    if (podeAgendar && !encerrada) itens.push({ rotulo: is.dataEntrevista ? 'Reagendar' : 'Agendar', icone: 'event', onClick: () => setAgendando(is) });
+    if (podeMinuta && statusEfetivoIS(is, hoje) === 'atrasada') itens.push({ rotulo: 'Cancelar (minuta de cancelamento)', icone: 'cancel', perigo: true, onClick: () => setMinuta({ tipo: 'cancelamento', is }) });
+    if (podeMinuta && is.status !== 'cancelada' && (is.laudo || is.tis)) itens.push({ rotulo: 'Minuta de resultado', icone: 'mail', onClick: () => setMinuta({ tipo: 'resultado', is }) });
+    if (podeParecer && is.status !== 'cancelada') itens.push({ rotulo: 'Solicitar parecer', icone: 'assignment_add', onClick: () => setParecerPara(is) });
+    if (podeAgendar && is.dataEntrevista && !(is.agendaSincronizada && is.eventoAgendaId)) itens.push({ rotulo: 'Sincronizar com o Google Agenda', icone: 'sync', onClick: () => { sincronizar(is); } });
+    if (ehAdmin) itens.push({ rotulo: 'Apagar IS', icone: 'delete', perigo: true, onClick: () => setApagando(is) });
+    return itens;
+  };
+
   // ----- apresentação -----
 
   const tagStatus = (is: InspecaoRecord) => { const e = statusEfetivoIS(is, hoje); return <StatusTag tone={STATUS_IS[e].tom}>{STATUS_IS[e].rotulo}</StatusTag>; };
@@ -247,19 +263,25 @@ export const Inspecoes: React.FC = () => {
               </h2>
               {/* Mobile */}
               <ul className="md:hidden divide-y divide-line">
-                {g.itens.map(is => (
-                  <li key={is.id}>
-                    <button type="button" onClick={() => setDetalheId(is.id)} className="w-full text-left px-4 py-3 min-h-[44px] hover:bg-thead">
+                {g.itens.map((is, i) => (
+                  <React.Fragment key={is.id}>
+                  {g.id !== 'aberta' && (i === 0 || rotuloData(g.itens[i - 1]) !== rotuloData(is)) && (
+                    <li className="px-4 py-1.5 bg-thead text-xs font-bold text-ink-3 capitalize">{rotuloData(is)}</li>
+                  )}
+                  <li className="flex items-start">
+                    <button type="button" onClick={() => setDetalheId(is.id)} className="flex-1 min-w-0 text-left pl-4 py-3 min-h-[44px] hover:bg-thead">
                       <span className="flex items-start justify-between gap-2">
                         <span className="min-w-0">
-                          <span className="block text-sm font-bold text-navy break-words">IS {is.is} · {nomeCurto(is.inspecionado)}</span>
+                          <span className="block text-sm font-bold text-navy break-words">IS {is.is}{is.dataEntrevista ? ` · ${horaDeEntrevista(is.dataEntrevista)}` : ''} · {nomeCurto(is.inspecionado)}</span>
                           <span className="block text-xs text-ink-3 break-words">{is.finalidade}</span>
                           <span className="block text-xs text-ink-3">{is.dataEntrevista ? `${dataHoraBr(is.dataEntrevista)} · ${is.peritoNome}` : `Aberta em ${dataBr(is.dataAbertura)}${prazoTexto(is) ? ` · ${prazoTexto(is)}` : ''}`}</span>
                         </span>
                         <span className="shrink-0">{tagStatus(is)}</span>
                       </span>
                     </button>
+                    <div className="shrink-0 pr-2 pt-1"><MenuAcoes rotulo={`Ações da IS ${is.is}`} itens={itensDe(is)} /></div>
                   </li>
+                  </React.Fragment>
                 ))}
               </ul>
               {/* Desktop */}
@@ -269,26 +291,38 @@ export const Inspecoes: React.FC = () => {
                     <tr>
                       <th scope="col" className="px-4 py-2 text-left font-semibold">IS</th>
                       <th scope="col" className="px-4 py-2 text-left font-semibold">Inspecionado</th>
-                      <th scope="col" className="px-4 py-2 text-left font-semibold">Finalidade</th>
                       <th scope="col" className="px-4 py-2 text-left font-semibold">Perito</th>
                       <th scope="col" className="px-4 py-2 text-left font-semibold">Entrevista</th>
-                      <th scope="col" className="px-4 py-2 text-left font-semibold">Prazo</th>
                       <th scope="col" className="px-4 py-2 text-left font-semibold">Status</th>
+                      <th scope="col" className="pr-2 py-2 w-14 text-right font-semibold"><span className="sr-only">Ações</span></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
-                    {g.itens.map(is => (
-                      <tr key={is.id} onClick={() => setDetalheId(is.id)} className="cursor-pointer hover:bg-thead transition-colors">
-                        <td className="px-4 py-2 font-mono font-bold text-navy whitespace-nowrap">
-                          <button type="button" onClick={e => { e.stopPropagation(); setDetalheId(is.id); }} aria-label={`Abrir IS ${is.is}`} className="min-h-[44px]">{is.is}</button>
-                        </td>
-                        <td className="px-4 py-2 font-semibold text-navy">{nomeCurto(is.inspecionado)}</td>
-                        <td className="px-4 py-2 max-w-[260px]"><span className="block truncate" title={is.finalidade}>{is.finalidade}</span><span className="block text-xs text-ink-3">{is.amp}</span></td>
-                        <td className="px-4 py-2 whitespace-nowrap">{is.peritoNome || <span className="text-ink-4">—</span>}</td>
-                        <td className="px-4 py-2 whitespace-nowrap">{is.dataEntrevista ? dataHoraBr(is.dataEntrevista) : <span className="text-ink-4">Não agendada</span>}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-xs text-ink-3">{prazoTexto(is) ?? '—'}</td>
-                        <td className="px-4 py-2">{tagStatus(is)}</td>
-                      </tr>
+                    {g.itens.map((is, i) => (
+                      <React.Fragment key={is.id}>
+                        {g.id !== 'aberta' && (i === 0 || rotuloData(g.itens[i - 1]) !== rotuloData(is)) && (
+                          <tr className="bg-thead"><th scope="colgroup" colSpan={6} className="px-4 py-1.5 text-left text-xs font-bold text-ink-3 capitalize">{rotuloData(is)}</th></tr>
+                        )}
+                        <tr onClick={() => setDetalheId(is.id)} className="cursor-pointer hover:bg-thead transition-colors">
+                          <td className="px-4 py-2 font-mono whitespace-nowrap">
+                            <button type="button" onClick={e => { e.stopPropagation(); setDetalheId(is.id); }} aria-label={`Abrir IS ${is.is}`} className="min-h-[44px] text-left">
+                              <span className="block font-bold text-navy">{is.is}</span>
+                              {is.dataEntrevista && <span className="block text-xs font-normal text-ink-3">{horaDeEntrevista(is.dataEntrevista)}</span>}
+                            </button>
+                          </td>
+                          <td className="px-4 py-2 max-w-[320px]">
+                            <span className="block font-semibold text-navy truncate" title={nomeCurto(is.inspecionado)}>{nomeCurto(is.inspecionado)}</span>
+                            <span className="block text-xs text-ink-3 truncate" title={is.finalidade}>{is.finalidade}</span>
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap">
+                            {is.peritoNome || <span className="text-ink-4">—</span>}
+                            <span className="block text-xs text-ink-3">{is.amp}</span>
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap">{is.dataEntrevista ? dataHoraBr(is.dataEntrevista) : <span className="text-ink-4">Não agendada</span>}</td>
+                          <td className="px-4 py-2">{tagStatus(is)}</td>
+                          <td className="pr-2 py-1 text-right" onClick={e => e.stopPropagation()}><MenuAcoes rotulo={`Ações da IS ${is.is}`} itens={itensDe(is)} /></td>
+                        </tr>
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
