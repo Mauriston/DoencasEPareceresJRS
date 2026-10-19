@@ -37,6 +37,8 @@ var ID_TEMPLATE_SOLICITACAO_EXAMES = '1SSAzdWANvfQJx7Sip2-NbqDGAM0cgpVD6Q4Ci9UhG
 
 /** Pasta raiz CONCURSOS (drive compartilhado): dentro dela ficam as pastas por ano. */
 var ID_PASTA_RAIZ_CONCURSOS = '1eBTehJDTOPjsgOeP3DjWKbE-iXdIKGos';
+/** Agenda "JRS/HNRe" do Google Agenda (entrevistas das Inspeções de Saúde). */
+var ID_AGENDA_JRS_HNRE = 'c_b103c034ba38b68e447b1ea6ab97b0da658878ebc7daa7535d612f9f7eaed762@group.calendar.google.com';
 /** Pasta PARECERES (Drive): uma subpasta por inspecionado (nome completo) com os pedidos de parecer em PDF. */
 var ID_PASTA_PARECERES = '176YQTOOWXuE78Xul49XYpJsVNyu-eZFi';
 /** Chave de API web do projeto Firebase (pública, a mesma de firebase-applet-config.json): só serve para validar o idToken. */
@@ -563,6 +565,18 @@ function dataHoraAgenda(data, hhmm) {
 }
 
 /**
+ * Execute UMA VEZ no editor do Apps Script (selecione "autorizarAgenda" e clique em Executar) para conceder a
+ * permissão do Google Agenda ao script; sem essa autorização o app recebe erro ao sincronizar as IS. Também
+ * confirma que a agenda JRS/HNRe é acessível (veja o resultado em Execuções/Registros).
+ */
+function autorizarAgenda() {
+  var agenda = CalendarApp.getCalendarById(ID_AGENDA_JRS_HNRE);
+  if (!agenda) throw new Error('Agenda JRS/HNRe não encontrada para esta conta.');
+  Logger.log('Agenda OK: ' + agenda.getName());
+  return agenda.getName();
+}
+
+/**
  * action=sincronizarEventoIS (POST): { idToken, agenda, eventoId?, titulo, descricao, data, horaInicio, horaFim,
  * convidados[], remover? } — cria, atualiza ou remove o evento da entrevista de uma IS na agenda (padrão "JRS/HNRe")
  * do dono do script. O perito entra como convidado (e-mails em "convidados"). Devolve { eventoId }.
@@ -570,11 +584,16 @@ function dataHoraAgenda(data, hhmm) {
  */
 function apiSincronizarEventoIS(corpo) {
   exigirUsuarioFirebase(corpo);
-  var nomeAgenda = String(corpo.agenda || 'JRS/HNRe');
-  var agendas = CalendarApp.getOwnedCalendarsByName(nomeAgenda);
-  if (!agendas.length) agendas = CalendarApp.getCalendarsByName(nomeAgenda);
-  if (!agendas.length) throw new Error('Agenda "' + nomeAgenda + '" não encontrada no Google Agenda do dono do script.');
-  var agenda = agendas[0];
+  var agenda = null;
+  try { agenda = CalendarApp.getCalendarById(ID_AGENDA_JRS_HNRE); } catch (erroAgenda) { agenda = null; }
+  if (!agenda) {
+    // Plano B: procura pelo nome (agenda própria ou assinada).
+    var nomeAgenda = String(corpo.agenda || 'JRS/HNRe');
+    var agendas = CalendarApp.getOwnedCalendarsByName(nomeAgenda);
+    if (!agendas.length) agendas = CalendarApp.getCalendarsByName(nomeAgenda);
+    if (agendas.length) agenda = agendas[0];
+  }
+  if (!agenda) throw new Error('Agenda JRS/HNRe não encontrada: a conta que implantou o script precisa ser dona da agenda ou tê-la na lista de agendas (Google Agenda > Outras agendas).');
 
   var evento = null;
   var eventoId = String(corpo.eventoId || '');
