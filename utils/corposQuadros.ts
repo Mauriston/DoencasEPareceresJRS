@@ -145,6 +145,13 @@ export const filtrarFinalidadesPorVinculo = (grupos: GrupoFinalidadeIS[], vincul
     .map(g => ({ ...g, finalidades: g.finalidades.filter(f => f.vinculos.includes(vinculo)) }))
     .filter(g => g.finalidades.length > 0);
 
+let cacheRestricoes: Promise<string[]> | null = null;
+/** Opções do menu suspenso "Restrições" das Inspeções de Saúde (public/restricoesIS.json). */
+export const carregarRestricoesIS = (): Promise<string[]> => {
+  if (!cacheRestricoes) cacheRestricoes = carregarJson<{ restricoes: string[] }>('restricoesIS.json').then(j => j.restricoes).catch(e => { cacheRestricoes = null; throw e; });
+  return cacheRestricoes;
+};
+
 /** Oficial do quadro de médicos (Md, RM2-Md ou RM3-Md), a partir do P/G/Q. */
 export const ehOficialMedico = (pgq: string): boolean => /\((?:(?:RM\d|Refº|Ref)-)?Md\)/i.test(pgq);
 

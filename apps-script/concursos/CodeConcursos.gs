@@ -71,6 +71,7 @@ function doPost(e) {
     if (corpo.action === 'salvarPdfParecer') return apiSalvarPdfParecer(corpo);
     if (corpo.action === 'removerArquivoDrive') return apiRemoverArquivoDrive(corpo);
     if (corpo.action === 'extrairMensagemConcurso') return apiExtrairMensagemConcurso(corpo);
+    if (corpo.action === 'sincronizarEventoIS') return apiSincronizarEventoIS(corpo);
     throw new Error('Ação POST desconhecida: "' + corpo.action + '".');
   });
 }
@@ -547,6 +548,71 @@ function apiRemoverArquivoDrive(corpo) {
   if (!estaSobPasta(arquivo, ID_PASTA_RAIZ_CONCURSOS) && !estaSobPasta(arquivo, ID_PASTA_PARECERES)) throw new Error('Arquivo fora das pastas de concursos e pareceres.');
   arquivo.setTrashed(true);
   return { removido: true };
+}
+
+// =========================================================================
+// GOOGLE AGENDA — entrevistas das Inspeções de Saúde
+// =========================================================================
+
+/** Converte "AAAA-MM-DD" + "hh:mm" em Date no fuso do script (America/Recife, ver appsscript.json). */
+function dataHoraAgenda(data, hhmm) {
+  var d = String(data || '').split('-');
+  var h = String(hhmm || '').split(':');
+  if (d.length !== 3 || h.length < 2) throw new Error('Data ou hora do evento inválida.');
+  return new Date(Number(d[0]), Number(d[1]) - 1, Number(d[2]), Number(h[0]), Number(h[1]), 0);
+}
+
+/**
+ * action=sincronizarEventoIS (POST): { idToken, agenda, eventoId?, titulo, descricao, data, horaInicio, horaFim,
+ * convidados[], remover? } — cria, atualiza ou remove o evento da entrevista de uma IS na agenda (padrão "JRS/HNRe")
+ * do dono do script. O perito entra como convidado (e-mails em "convidados"). Devolve { eventoId }.
+ * A primeira execução pede autorização do serviço Google Agenda (CalendarApp): reimplante o script depois de colar este arquivo.
+ */
+function apiSincronizarEventoIS(corpo) {
+  exigirUsuarioFirebase(corpo);
+  var nomeAgenda = String(corpo.agenda || 'JRS/HNRe');
+  var agendas = CalendarApp.getOwnedCalendarsByName(nomeAgenda);
+  if (!agendas.length) agendas = CalendarApp.getCalendarsByName(nomeAgenda);
+  if (!agendas.length) throw new Error('Agenda "' + nomeAgenda + '" não encontrada no Google Agenda do dono do script.');
+  var agenda = agendas[0];
+
+  var evento = null;
+  var eventoId = String(corpo.eventoId || '');
+  if (eventoId) {
+    try { evento = agenda.getEventById(eventoId); } catch (erroEvento) { evento = null; }
+  }
+
+  if (corpo.remover) {
+    if (evento) evento.deleteEvent();
+    return { eventoId: '' };
+  }
+
+  var titulo = limparNomeDrive(corpo.titulo);
+  if (!titulo) throw new Error('"titulo" é obrigatório.');
+  var inicio = dataHoraAgenda(corpo.data, corpo.horaInicio);
+  var fim = dataHoraAgenda(corpo.data, corpo.horaFim);
+  var convidados = [];
+  (corpo.convidados || []).forEach(function(email) {
+    var limpo = String(email || '').trim().toLowerCase();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(limpo) && convidados.indexOf(limpo) === -1) convidados.push(limpo);
+  });
+
+  if (!evento) {
+    evento = agenda.createEvent(titulo, inicio, fim, {
+      description: String(corpo.descricao || ''),
+      guests: convidados.join(','),
+      sendInvites: true
+    });
+    return { eventoId: evento.getId() };
+  }
+
+  evento.setTitle(titulo);
+  evento.setDescription(String(corpo.descricao || ''));
+  evento.setTime(inicio, fim);
+  var atuais = evento.getGuestList().map(function(g) { return g.getEmail().toLowerCase(); });
+  atuais.forEach(function(email) { if (convidados.indexOf(email) === -1) evento.removeGuest(email); });
+  convidados.forEach(function(email) { if (atuais.indexOf(email) === -1) evento.addGuest(email); });
+  return { eventoId: evento.getId() };
 }
 
 // =========================================================================

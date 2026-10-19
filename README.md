@@ -23,6 +23,21 @@ Pedidos de parecer médico por especialidade, com acompanhamento do andamento de
 * **Novo parecer:** o militar é escolhido por autocomplete na base `militares`, com a finalidade da IS e os quesitos sugeridos por especialidade (editáveis; modelos mantidos pelo Admin em `quesitosParecer`).
 * **Output:** um Apps Script preenche o template do Google Docs, o PDF é guardado no Google Drive e o pedido é registrado no Firestore.
 
+### 3.1 Inspeções de Saúde (`/components/Inspecoes.tsx` e `/components/inspecoes/`)
+Cadastro das IS (exceto as de concursos), agendamento, acompanhamento de prazos e minutas de mensagem.
+* **Visões:** tabela agrupada em *Abertas / Em andamento / Finalizadas* (padrão) ou calendário no formato do Google Agenda (Dia · Semana · Mês), com filtro por perito.
+* **Campos (coleção `inspecoes`, id = nº da IS):** IS, data de abertura, data/hora da entrevista, finalidade (`public/finalidadesIS.json`), AMP (JRS ou MPI, definido pela finalidade), perito, inspecionado (autocomplete na base *Inspecionados*), situação, status, data do laudo, laudo, observações, restrições (`public/restricoesIS.json`), TIS (`000.000.#0`) e DS-1a.
+* **Status:** Aberta, Agendada, Reagendada, Faltou, Em auditoria, Em Revisão Ex-officio, Conclusão pendente, Votação pendente, Assinaturas pendentes e TIS assinado. **Atrasada** é dinâmico (IS aberta sem entrevista há mais de 7 dias; 60 dias para o grupo *Benefícios*) e permite a **Minuta de Mensagem de Cancelamento**, que muda o status para *Cancelada* (situação *Finalizada*). IS nova nasce *Aberta*, ou *Agendada* se já tem data de entrevista.
+* **Agendamento:** slots de 20 minutos (manhã 07:30–12:00, tarde 13:00–17:00, dias úteis), por perito, conforme a competência da finalidade (JRS → Admin e `user_medicos`; MPI → `user_medicos_mpi`). O Admin define os turnos de cada perito (*Turnos dos peritos*, `config/agendaIS`). Cada horário ocupado é reservado numa transação (`agendaSlots`), então não há dois agendamentos no mesmo horário. **Bloqueios** (`bloqueiosAgenda`): de um horário, de um turno ou do dia, para todos os peritos ou um perito — Admin e Secretaria bloqueiam qualquer perito; um perfil médico (se o Admin liberar a funcionalidade) só bloqueia os próprios turnos.
+* **Google Agenda:** IS com data de entrevista são sincronizadas com a agenda **JRS/HNRe** (Apps Script `CodeConcursos.gs`, ação `sincronizarEventoIS`), com o perito convidado pelo Gmail cadastrado em Usuários. Reagendar atualiza o evento; cancelar ou apagar a IS o remove. Depois de colar o `.gs` atualizado, reimplante o script e autorize o serviço Google Agenda.
+* **Documentos:** a partir da IS é possível solicitar Pedido de Parecer (formulário de Pareceres já preenchido) e gerar a minuta de resultado.
+
+### 3.2 Inspecionados (`/components/Militares.tsx`)
+Antiga página *Militares*; a base (coleção `militares`) agora reúne **militares, dependentes e pensionistas** (campo `tipo`). *Cadastrar novo* tem duas abas: **Militares** (formulário em cascata) e **Dep/Pens.** — *Dependente* (titular por autocomplete na base, com *Cadastrar novo* se não achar; OM herdada do titular; INSPECIONADO = `DEP-{posto do titular} {NIP} {NOME}`) ou *Pensionista* (nome, NIP e posto/graduação; INSPECIONADO = `PENS-{posto} {NIP} {NOME}`). O endereço antigo `#/militares` continua funcionando.
+
+### Permissões
+Em *Usuários → Permissões por Perfil* entram as páginas **Inspeções de Saúde** e **Inspecionados** e as funcionalidades de *Inspeções de Saúde* (cadastrar, agendar, editar, gerar minuta, bloquear agenda) e *Inspecionados* (cadastrar). A configuração de turnos dos peritos, apagar IS e editar/apagar/inativar inspecionados continuam exclusivos do Admin. Publique também as regras: `firebase deploy --only firestore:rules`.
+
 ### 4. Perícia Menor com Leitura Inteligente IA (`/components/PericiaMenor.tsx`)
 Registro e consulta das perícias menores dos militares de bordo, no mesmo padrão da página Pareceres.
 * **Lista:** tabela (Firestore, coleção `periciasMenores`) com busca por inspecionado, NIP ou CID, filtros de situação (*Todas / Vigentes / Concluídas*) e de tipo de dispensa (*LTS / Restrições*). O detalhe abre em barra lateral e leva ao histórico do militar. Status dinâmico: **Vigente** enquanto hoje ≤ data de término; depois, **Concluída**.

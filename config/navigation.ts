@@ -31,7 +31,7 @@ export interface NavCategory {
 const MOBILE_ONLY_PAGES: NavItem[] = [];
 
 const CATEGORY_DEFS: { id: string; label: string; icon: string; subtitle: string; pages: NavItem[] }[] = [
-  { id: 'trabalho', label: 'Trabalho', icon: 'work', subtitle: 'Concursos, perícias menores, pareceres e mensagens.', pages: ['concursosJRS', 'pericia-menor', 'pareceres', 'mensagens'] },
+  { id: 'trabalho', label: 'Trabalho', icon: 'work', subtitle: 'Inspeções de saúde, inspecionados, concursos, perícias menores, pareceres e mensagens.', pages: ['inspecoes', 'militares', 'concursosJRS', 'pericia-menor', 'pareceres', 'mensagens'] },
   { id: 'consulta', label: 'Consulta', icon: 'manage_search', subtitle: 'Doenças de Lei, exames, índices e normas.', pages: ['guide', 'exames', 'concursos', 'dgpm406', 'portaria', 'laws'] },
   { id: 'formacao', label: 'Formação', icon: 'school', subtitle: 'Casos periciais, vídeos, infográficos e roteiro.', pages: ['casos', 'videos', 'infograficos', 'roteiro'] },
 ];
@@ -67,9 +67,8 @@ export const getNavCategories = (
       id: 'administracao',
       label: 'Administração',
       icon: 'admin_panel_settings',
-      subtitle: 'Cadastro de militares e gestão de usuários.',
+      subtitle: 'Gestão de usuários e permissões.',
       subitems: [
-        { id: 'militares', label: 'Militares', icon: 'military_tech', subtitle: 'Cadastro de militares da ativa e servidores civis.' },
         { id: 'usuarios', label: 'Usuários', icon: 'group', subtitle: 'Gerencie usuários e permissões de acesso.' },
       ],
     });

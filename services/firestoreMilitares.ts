@@ -1,15 +1,27 @@
 // Ficheiro: services/firestoreMilitares.ts
-// Cadastro de militares da ativa e servidores civis (coleção "militares",
-// migrada da aba "Militares" da planilha). Id do documento = NIP só com
-// dígitos. Leitura: qualquer usuário autenticado; escrita: só Admin (ver
-// firestore.rules).
+// Base de INSPECIONADOS (coleção "militares", migrada da aba "Militares" da
+// planilha): militares da ativa, servidores civis, dependentes e pensionistas
+// (campo "tipo"; ausente = militar). Id do documento = NIP só com dígitos.
+// Leitura: qualquer usuário autenticado; escrita: ver firestore.rules.
 import { getFirestore, collection, doc, getDoc, getDocs, query, where, setDoc, updateDoc, deleteDoc, writeBatch, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { app } from './firebaseAuth';
+import type { VinculoFinalidade } from '../utils/corposQuadros';
 
 const db = getFirestore(app);
 const COL = 'militares';
 
+/** Tipo de inspecionado; documentos antigos não têm o campo e valem como 'militar'. */
+export type TipoInspecionado = 'militar' | 'dependente' | 'pensionista';
+
+export const tipoDoInspecionado = (m: { tipo?: TipoInspecionado }): TipoInspecionado => m.tipo ?? 'militar';
+
 export interface MilitarDoc {
+  /** Militar (padrão), dependente (liga-se a um titular) ou pensionista. */
+  tipo?: TipoInspecionado;
+  /** Só dependente: id (NIP só dígitos) do militar titular, seu nome e posto/graduação (usados no INSPECIONADO "DEP-…"). */
+  titularId?: string;
+  titularNome?: string;
+  titularPosto?: string;
   om: string;
   temporario: boolean;
   /** Posto/graduação/quadro, ex.: "CT (Md)", "1SG-EF". */
@@ -94,4 +106,12 @@ export const atualizarMilitaresEmLote = async (itens: { id: string; patch: Parti
       lote.update(doc(db, COL, id), { ...patch, atualizadoEm: serverTimestamp() } as Record<string, unknown>));
     await lote.commit();
   }
+};
+
+/** Vínculo do inspecionado para filtrar as finalidades de IS (public/finalidadesIS.json). */
+export const vinculoDoInspecionado = (m: Pick<MilitarDoc, 'tipo' | 'temporario' | 'rm1' | 'refo'>): VinculoFinalidade => {
+  const tipo = tipoDoInspecionado(m);
+  if (tipo === 'dependente') return 'Dependente';
+  if (tipo === 'pensionista') return 'Pensionista';
+  return m.temporario ? 'Temporário' : (m.rm1 || m.refo) ? 'Inativo' : 'Carreira';
 };

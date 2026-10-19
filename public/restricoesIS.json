@@ -1,0 +1,21 @@
+{
+  "fonte": "Opções do menu suspenso \"Restrições\" das Inspeções de Saúde (informadas pelo Presidente da JRS).",
+  "restricoes": [
+    "TODAS AS ATIVIDADES",
+    "Carregar peso",
+    "Dirigir ou manobrar veículos Automotores",
+    "Embarque",
+    "Esforços físicos intensos e extenuantes",
+    "Formatura",
+    "Manobras Operativas",
+    "Marchas",
+    "Serviço Armado",
+    "Serviço Noturno",
+    "Serviços em locais elevados",
+    "Subir e descer escadas repetidamente",
+    "TAF/TFM",
+    "TAF/TFM (Exceto caminhadas)",
+    "TAF/TFM (Exceto natação)",
+    "TAF/TFM(Exceto Caminhadas e Natação)"
+  ]
+}

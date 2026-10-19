@@ -28,6 +28,7 @@ import { Mensagens } from './components/Mensagens';
 import { RoteiroJRS } from './components/RoteiroJRS';
 import { UsuariosManagement } from './components/UsuariosManagement';
 import { Militares } from './components/Militares';
+import { Inspecoes } from './components/Inspecoes';
 import { AccessDenied } from './components/ui/AccessDenied';
 import { PAGE_DEFS } from './config/permissions';
 import { NavItem } from './types';
@@ -309,8 +310,10 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       case 'videos': return can('videos') ? <Videos /> : <AccessDenied pagina={paginaLabel('videos')} />;
       case 'roteiro': return can('roteiro') ? <RoteiroJRS /> : <AccessDenied pagina={paginaLabel('roteiro')} />;
 
+      case 'inspecoes': return can('inspecoes') ? <Inspecoes /> : <AccessDenied pagina={paginaLabel('inspecoes')} />;
+      case 'militares': return can('militares') ? <Militares /> : <AccessDenied pagina={paginaLabel('militares')} />;
+
       // USUÁRIOS PAGE - Restricted for non-admin
-      case 'militares': return authUser?.perfil === 'admin' ? <Militares /> : <AccessDenied pagina="Militares" />;
       case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement /> : <AccessDenied pagina="Usuários" />;
 
       default: return <Home />;

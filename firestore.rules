@@ -31,6 +31,17 @@ service cloud.firestore {
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi'];
     }
 
+    // Equipe da JRS: Admin, médicos (JRS e MPI) e Secretaria — quem registra e agenda as IS
+    // e cadastra inspecionados.
+    function isEquipe() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
+    }
+    function isSecretaria() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil == 'user_secretaria';
+    }
+
     match /usuarios/{uid} {
       allow read: if isSignedIn();
       allow create: if isAdmin() ||
@@ -56,15 +67,16 @@ service cloud.firestore {
       allow write: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
     }
 
-    // Coleção "militares": cadastro de militares da ativa e servidores civis
-    // (migrado da aba "Militares" da planilha). Id do documento = NIP só com
-    // dígitos. Qualquer usuário autenticado lê (usada por páginas/funções
-    // futuras); o Admin cria, edita ou apaga; os médicos só CRIAM (cadastro
-    // rápido a partir do "Novo parecer") e podem definir só o Serviço do HNRe
+    // Coleção "militares" (página Inspecionados): base de militares da ativa,
+    // servidores civis, dependentes e pensionistas (campo "tipo"; migrada da aba
+    // "Militares" da planilha). Id do documento = NIP só com dígitos. Qualquer
+    // usuário autenticado lê; o Admin cria, edita ou apaga; a equipe (médicos e
+    // Secretaria) só CRIA (cadastro rápido a partir do "Novo parecer" e das
+    // Inspeções de Saúde) e os médicos podem definir só o Serviço do HNRe
     // ("servico_label", a partir da "Nova perícia menor").
     match /militares/{nip} {
       allow read: if isSignedIn();
-      allow create: if isMedico();
+      allow create: if isEquipe();
       allow update: if isAdmin() || (isMedico() &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['servico_label', 'atualizadoEm']));
       allow delete: if isAdmin();
@@ -90,6 +102,34 @@ service cloud.firestore {
       allow update: if isAdmin() || (isMedico() &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'concluidoEm', 'concluidoPor']));
       allow delete: if isAdmin();
+    }
+
+    // Coleção "inspecoes": Inspeções de Saúde (um doc por IS; id = número da IS,
+    // o que garante número único; liga ao inspecionado por "inspecionadoId" = NIP
+    // só dígitos). Lê quem está autenticado; a equipe (Admin, médicos e Secretaria)
+    // cria e atualiza — o controle fino por funcionalidade está na UI
+    // (config/permissions.ts); só o Admin apaga.
+    match /inspecoes/{id} {
+      allow read: if isSignedIn();
+      allow create, update: if isEquipe();
+      allow delete: if isAdmin();
+    }
+
+    // Coleção "agendaSlots": horário ocupado de um perito ({peritoUid}__{data}T{hh-mm}),
+    // gravado na mesma transação do agendamento para impedir dois agendamentos no mesmo horário.
+    match /agendaSlots/{id} {
+      allow read: if isSignedIn();
+      allow write: if isEquipe();
+    }
+
+    // Coleção "bloqueiosAgenda": bloqueios de horário/turno da agenda das IS. Admin e
+    // Secretaria bloqueiam qualquer perito; um médico a quem o Admin liberou a funcionalidade
+    // só bloqueia os PRÓPRIOS horários (peritoUid = seu uid).
+    match /bloqueiosAgenda/{id} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() || isSecretaria() || (isMedico() && request.resource.data.peritoUid == request.auth.uid);
+      allow delete: if isAdmin() || isSecretaria() || (isMedico() && resource.data.peritoUid == request.auth.uid);
+      allow update: if false;
     }
 
     // Coleção "legislacao": itens da página Legislação (id = slug da norma;
