@@ -1,16 +1,19 @@
 // Ficheiro: components/inspecoes/MiniCalendarioIS.tsx
 // Mini calendário do mês para a Home: marca os dias com IS agendadas (ponto azul-marinho = JRS,
-// dourado = MPI) e lista, abaixo da grade, as IS do dia selecionado (começa em hoje).
+// dourado = MPI) e com concursos (ponto vinho; verde quando o dia é encerrado) e lista, abaixo da grade, o que
+// ocupa o dia selecionado (começa em hoje): os concursos (turno da manhã inteiro) e as IS.
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
+import { tituloDiaConcurso, type DiaConcurso } from '../../services/agendaConcursos';
+import { concursoPath } from '../../config/routes';
 import {
   hojeISO, somarDias, inicioDaSemana, inicioDoMes, nomeMes, nomeDiaSemana, deISO, paraISO, dataBr, dataDeEntrevista, horaDeEntrevista,
 } from '../../utils/inspecoes';
 
 const nomeCurto = (inspecionado: string): string => inspecionado.replace(/^.*?\d{2}\.\d{4}\.\d{2}\s*/, '') || inspecionado;
 
-export const MiniCalendarioIS: React.FC<{ inspecoes: InspecaoRecord[] }> = ({ inspecoes }) => {
+export const MiniCalendarioIS: React.FC<{ inspecoes: InspecaoRecord[]; diasConcursos?: DiaConcurso[]; concursosClicaveis?: boolean }> = ({ inspecoes, diasConcursos = [], concursosClicaveis = false }) => {
   const hoje = hojeISO();
   const [mes, setMes] = useState(inicioDoMes(hoje));
   const [selecionado, setSelecionado] = useState(hoje);
@@ -26,12 +29,19 @@ export const MiniCalendarioIS: React.FC<{ inspecoes: InspecaoRecord[] }> = ({ in
     return m;
   }, [inspecoes]);
 
+  const concursosPorDia = useMemo(() => {
+    const m = new Map<string, DiaConcurso[]>();
+    diasConcursos.forEach(d => m.set(d.data, [...(m.get(d.data) ?? []), d]));
+    return m;
+  }, [diasConcursos]);
+
   const inicio = inicioDaSemana(mes);
   const semanas = Array.from({ length: 6 }, (_, w) => Array.from({ length: 7 }, (_, d) => somarDias(inicio, w * 7 + d)))
     .filter((s, i) => i < 5 || s.some(d => d.slice(0, 7) === mes.slice(0, 7)));
 
   const mudarMes = (n: number) => { const d = deISO(mes); d.setMonth(d.getMonth() + n, 1); setMes(paraISO(d)); };
   const doDia = porDia.get(selecionado) ?? [];
+  const concursosDoDia = concursosPorDia.get(selecionado) ?? [];
 
   return (
     <div className="px-3 pb-3">
@@ -51,10 +61,11 @@ export const MiniCalendarioIS: React.FC<{ inspecoes: InspecaoRecord[] }> = ({ in
           const ativo = d === selecionado;
           const temJrs = lista.some(i => i.amp === 'JRS');
           const temMpi = lista.some(i => i.amp !== 'JRS');
+          const concursos = concursosPorDia.get(d) ?? [];
           return (
             <button
               key={d} type="button" role="gridcell" onClick={() => setSelecionado(d)} aria-pressed={ativo}
-              aria-label={`${Number(d.slice(8))} de ${nomeMes(d)}${lista.length ? `, ${lista.length} inspeç${lista.length !== 1 ? 'ões' : 'ão'}` : ''}`}
+              aria-label={`${Number(d.slice(8))} de ${nomeMes(d)}${lista.length ? `, ${lista.length} inspeç${lista.length !== 1 ? 'ões' : 'ão'}` : ''}${concursos.length ? `, ${concursos.length} concurso${concursos.length !== 1 ? 's' : ''}` : ''}`}
               className={`min-h-[40px] flex flex-col items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
                 ativo ? 'bg-navy text-white' : d === hoje ? 'border border-navy text-navy' : foraDoMes ? 'text-ink-4 hover:bg-thead' : 'text-ink hover:bg-thead'
               }`}
@@ -63,6 +74,7 @@ export const MiniCalendarioIS: React.FC<{ inspecoes: InspecaoRecord[] }> = ({ in
               <span className="flex gap-0.5 h-1.5 mt-0.5" aria-hidden="true">
                 {temJrs && <span className={`w-1.5 h-1.5 rounded-full ${ativo ? 'bg-white' : 'bg-navy'}`} />}
                 {temMpi && <span className="w-1.5 h-1.5 rounded-full bg-gold" />}
+                {concursos.length > 0 && <span className={`w-1.5 h-1.5 rounded-full ${concursos.every(c => c.encerrado) ? 'bg-green' : 'bg-wine'}`} />}
               </span>
             </button>
           );
@@ -71,8 +83,28 @@ export const MiniCalendarioIS: React.FC<{ inspecoes: InspecaoRecord[] }> = ({ in
 
       <div className="mt-3 border-t border-line pt-2">
         <p className="text-xs font-bold text-ink-3 capitalize mb-1">{nomeDiaSemana(selecionado)}, {dataBr(selecionado)}</p>
+        {concursosDoDia.length > 0 && (
+          <ul className="space-y-1 mb-1" aria-label="Concursos do dia">
+            {concursosDoDia.map(c => {
+              const corpo = (
+                <>
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${c.encerrado ? 'bg-green' : 'bg-wine'}`} aria-hidden="true" />
+                  <span className="font-mono font-bold text-navy shrink-0">07:30–12:00</span>
+                  <span className="text-ink min-w-0 break-words">{tituloDiaConcurso(c)}{c.encerrado ? ' · encerrado' : ''}</span>
+                </>
+              );
+              return (
+                <li key={c.chave}>
+                  {concursosClicaveis
+                    ? <Link to={concursoPath(c.concursoId)} className="flex items-center gap-2 min-h-[32px] text-sm hover:underline">{corpo}</Link>
+                    : <span className="flex items-center gap-2 min-h-[32px] text-sm">{corpo}</span>}
+                </li>
+              );
+            })}
+          </ul>
+        )}
         {doDia.length === 0 ? (
-          <p className="text-xs text-ink-3 py-1">Nenhuma IS agendada.</p>
+          concursosDoDia.length === 0 && <p className="text-xs text-ink-3 py-1">Nenhuma IS agendada.</p>
         ) : (
           <ul className="space-y-1">
             {doDia.slice(0, 5).map(i => (

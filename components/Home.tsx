@@ -21,6 +21,7 @@ import { observarConcursos, type ConcursoRecord } from '../services/firestoreCon
 import { observarPareceres, statusEfetivo, type ParecerRecord } from '../services/firestorePareceres';
 import { observarInspecoes, type InspecaoRecord } from '../services/firestoreInspecoes';
 import { MiniCalendarioIS } from './inspecoes/MiniCalendarioIS';
+import { useDiasConcursos } from '../hooks/useDiasConcursos';
 import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr } from '../utils/inspecoes';
 import { observarPericiasMenores, statusPericia, dataBR, type PericiaMenorRecord } from '../services/firestorePericiasMenores';
 import { extrairNomeInspecionado } from '../utils/format';
@@ -108,6 +109,7 @@ export const Home: React.FC = () => {
   // Inspeções de Saúde agendadas: "Próximas Inspeções", item de atenção (hoje) e mini calendário.
   const [inspecoes, setInspecoes] = useState<InspecaoRecord[]>([]);
   useEffect(() => (podeInspecoes ? observarInspecoes(setInspecoes, () => { /* silencioso */ }) : undefined), [podeInspecoes]);
+  const { dias: diasConcursos } = useDiasConcursos(podeInspecoes);
   const hoje = hojeISO();
   const proximas = useMemo(() => inspecoes
     .filter(i => i.dataEntrevista && i.status !== 'cancelada' && i.situacao !== 'finalizada' && dataDeEntrevista(i.dataEntrevista) >= hoje)
@@ -300,7 +302,7 @@ export const Home: React.FC = () => {
 
             {podeInspecoes && (
               <Secao id="home-agenda" titulo="Agenda de inspeções">
-                <MiniCalendarioIS inspecoes={inspecoes} />
+                <MiniCalendarioIS inspecoes={inspecoes} diasConcursos={diasConcursos} concursosClicaveis={podeConcursos} />
               </Secao>
             )}
 
