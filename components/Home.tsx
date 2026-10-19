@@ -1,6 +1,7 @@
 // Ficheiro: components/Home.tsx
 // Início como PAINEL DE TRABALHO (auditoria v2, N4/G3/L4): "Precisa de atenção" (pareceres
-// atrasados, perícias vigentes, concurso em andamento, senha temporária), "Continuar"
+// atrasados, perícias vigentes, concurso em andamento, IS marcadas para hoje, senha temporária),
+// "Próximas Inspeções", "Continuar"
 // (últimos documentos gerados), "Acesso rápido" (até 6 páginas, editável e guardado no
 // aparelho) e "Avisos" (Casos Periciais e instalação do app — antes eram diálogos em
 // sequência no login). O menu lateral já lista as páginas: a Home não o repete.
@@ -18,6 +19,9 @@ import { canAccessPage, canUseFeature } from '../config/permissions';
 import { pathForView, concursoPath } from '../config/routes';
 import { observarConcursos, type ConcursoRecord } from '../services/firestoreConcursos';
 import { observarPareceres, statusEfetivo, type ParecerRecord } from '../services/firestorePareceres';
+import { observarInspecoes, type InspecaoRecord } from '../services/firestoreInspecoes';
+import { MiniCalendarioIS } from './inspecoes/MiniCalendarioIS';
+import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr } from '../utils/inspecoes';
 import { buscarDocumentosRecentes, type DocumentoRecente } from '../services/documentosRecentes';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import type { NavItem } from '../types';
@@ -67,6 +71,7 @@ export const Home: React.FC = () => {
 
   const podeConcursos = canAccessPage('concursosJRS', perfil);
   const podePareceres = canAccessPage('pareceres', perfil);
+  const podeInspecoes = canAccessPage('inspecoes', perfil);
   const podePericiaMenor = canAccessPage('pericia-menor', perfil);
   const podeGerarParecer = podePareceres && canUseFeature('pareceres.gerar', perfil);
   const podeNovaPericia = canUseFeature('pericia-menor.novo', perfil);
@@ -78,6 +83,16 @@ export const Home: React.FC = () => {
   const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
   useEffect(() => (podePareceres ? observarPareceres(setPareceres, () => { /* silencioso */ }) : undefined), [podePareceres]);
   const atrasados = useMemo(() => pareceres.filter(p => statusEfetivo(p) === 'atrasado'), [pareceres]);
+
+  // Inspeções de Saúde agendadas: "Próximas Inspeções", item de atenção (hoje) e mini calendário.
+  const [inspecoes, setInspecoes] = useState<InspecaoRecord[]>([]);
+  useEffect(() => (podeInspecoes ? observarInspecoes(setInspecoes, () => { /* silencioso */ }) : undefined), [podeInspecoes]);
+  const hoje = hojeISO();
+  const proximas = useMemo(() => inspecoes
+    .filter(i => i.dataEntrevista && i.status !== 'cancelada' && i.situacao !== 'finalizada' && dataDeEntrevista(i.dataEntrevista) >= hoje)
+    .sort((a, b) => a.dataEntrevista.localeCompare(b.dataEntrevista) || a.is - b.is), [inspecoes, hoje]);
+  const deHoje = useMemo(() => proximas.filter(i => dataDeEntrevista(i.dataEntrevista) === hoje), [proximas, hoje]);
+  const nomeDe = (i: InspecaoRecord) => i.inspecionado.replace(/^.*?\d{2}\.\d{4}\.\d{2}\s*/, '') || i.inspecionado;
 
   const [recentes, setRecentes] = useState<DocumentoRecente[] | null>(null);
   useEffect(() => {
@@ -98,6 +113,14 @@ export const Home: React.FC = () => {
     atencao.push({
       id: 'pareceres', icone: 'assignment_late', titulo: `${atrasados.length} parecer${atrasados.length !== 1 ? 'es' : ''} atrasado${atrasados.length !== 1 ? 's' : ''}`,
       detalhe: `Sem conclusão há 20 dias ou mais${esps ? ` · ${esps}` : ''}`, tag: 'Atrasado', tom: 'danger', to: '/pareceres',
+    });
+  }
+  if (podeInspecoes && deHoje.length > 0) {
+    const agora = new Date().toTimeString().slice(0, 5);
+    const proxima = deHoje.find(i => horaDeEntrevista(i.dataEntrevista) >= agora) ?? deHoje[0];
+    atencao.push({
+      id: 'is-hoje', icone: 'event_available', titulo: `${deHoje.length} inspeç${deHoje.length !== 1 ? 'ões' : 'ão'} marcada${deHoje.length !== 1 ? 's' : ''} para hoje`,
+      detalhe: `${horaDeEntrevista(proxima.dataEntrevista)} · ${nomeDe(proxima)}${deHoje.length > 1 ? ` e mais ${deHoje.length - 1}` : ''}`, tag: 'Hoje', tom: 'attention', to: '/inspecoes',
     });
   }
   if (podePericiaMenor && periciaMenorVigentes > 0) {
@@ -170,9 +193,36 @@ export const Home: React.FC = () => {
                   ))}
                 </ul>
               ) : (
-                <EmptyState icon="task_alt" title="Nada pendente" description="Não há pareceres atrasados, perícias vigentes nem concurso em andamento para você agora." />
+                <EmptyState icon="task_alt" title="Nada pendente" description="Não há pareceres atrasados, perícias vigentes, inspeções de hoje nem concurso em andamento para você agora." />
               )}
             </Secao>
+
+            {podeInspecoes && (
+              <Secao id="home-proximas" titulo="Próximas Inspeções" acao={<Link to="/inspecoes" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver inspeções</Link>}>
+                {proximas.length === 0 ? (
+                  <EmptyState icon="event_available" title="Nenhuma inspeção agendada" description="As IS com entrevista marcada aparecem aqui." />
+                ) : (
+                  <ul className="divide-y divide-line">
+                    {proximas.slice(0, 6).map(i => {
+                      const ehHoje = dataDeEntrevista(i.dataEntrevista) === hoje;
+                      return (
+                        <li key={i.id}>
+                          <Link to="/inspecoes" className="flex items-center gap-3 px-4 min-h-[56px] py-2 hover:bg-thead transition-colors">
+                            <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">event_available</span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-bold text-navy truncate">{nomeDe(i)}</span>
+                              <span className="block text-xs text-ink-3 truncate">IS {i.is} · {i.finalidade} · {i.amp}{i.peritoNome ? ` · ${i.peritoNome}` : ''}</span>
+                            </span>
+                            <span className="text-xs text-ink-3 shrink-0 text-right">{ehHoje ? <strong className="text-navy">Hoje</strong> : dataBr(dataDeEntrevista(i.dataEntrevista)).slice(0, 5)} · {horaDeEntrevista(i.dataEntrevista)}</span>
+                            <span className="material-symbols-outlined text-[20px] text-ink-4" aria-hidden="true">chevron_right</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </Secao>
+            )}
 
             {(podePareceres || podePericiaMenor) && (
               <Secao id="home-continuar" titulo="Continuar" acao={podePareceres ? <Link to="/pareceres" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver pareceres</Link> : undefined}>
@@ -218,6 +268,12 @@ export const Home: React.FC = () => {
                 ))}
               </div>
             </Secao>
+
+            {podeInspecoes && (
+              <Secao id="home-agenda" titulo="Agenda de inspeções">
+                <MiniCalendarioIS inspecoes={inspecoes} />
+              </Secao>
+            )}
 
             {mostrarAvisos && (
               <Secao id="home-avisos" titulo="Avisos">
