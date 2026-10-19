@@ -98,6 +98,8 @@ export const assinaturaDias = (dias: DiaConcurso[], concursosAtivos: string[], c
   return `${dias.length}.${(h >>> 0).toString(36)}`;
 };
 
+const escaparHtml = (t: string): string => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
 /** Envia ao Google Agenda "JRS/HNRe" os dias de concurso (cria, atualiza e remove eventos conforme o caso). */
 export const sincronizarConcursosNaAgenda = (dias: DiaConcurso[], concursosAtivos: string[], convidados: string[]) =>
   chamarScript<{ criados: number; atualizados: number; removidos: number }>('sincronizarEventosConcursos', {
@@ -108,7 +110,7 @@ export const sincronizarConcursosNaAgenda = (dias: DiaConcurso[], concursosAtivo
     dias: dias.map(d => ({
       chave: d.chave, concursoId: d.concursoId, data: d.data, encerrado: d.encerrado,
       titulo: `${d.encerrado ? '✅ ' : ''}${tituloDiaConcurso(d)}`,
-      // Lista não numerada (- NOME), só com os nomes dos candidatos do dia.
-      descricao: d.candidatos.map(c => `- ${c.nome}`).join('\n'),
+      // Lista não numerada (marcadores) só com os nomes dos candidatos do dia; o Google Agenda renderiza o HTML da descrição.
+      descricao: `<ul>${d.candidatos.map(c => `<li>${escaparHtml(c.nome)}</li>`).join('')}</ul>`,
     })),
   });
