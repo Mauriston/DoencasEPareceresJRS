@@ -106,7 +106,7 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
               <ChoiceGroup<string>
                 label="Perito" value={peritoUid}
                 onChange={v => { setPeritoUid(v); setHora(''); setErro(''); }}
-                options={peritosDoDia.map(p => ({ value: p.uid, label: p.usuario }))}
+                options={peritosDoDia.map(p => ({ value: p.uid, label: p.usuario, avatar: { nome: p.usuario, imageProfile: p.imageProfile } }))}
               />
             )}
 

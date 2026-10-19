@@ -215,7 +215,7 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
                   <ChoiceGroup<string>
                     label={`Perito (${ampCompetente === 'JRS' ? 'Admin e médicos JRS' : 'médicos MPI'})`} error={erros.perito}
                     value={peritoUid} onChange={v => { setPeritoUid(v); setHora(''); limpar('perito'); }}
-                    options={peritosDoAmpAtual.map(p => ({ value: p.uid, label: p.usuario }))}
+                    options={peritosDoAmpAtual.map(p => ({ value: p.uid, label: p.usuario, avatar: { nome: p.usuario, imageProfile: p.imageProfile } }))}
                   />
                 )}
             </div>

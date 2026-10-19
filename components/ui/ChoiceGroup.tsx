@@ -2,10 +2,13 @@
 // Escolha única entre poucas opções (perito, situação, VDF sim/não) como grupo
 // de rádio acessível com botões de 44px — o selecionado fica navy cheio.
 import React, { useId } from 'react';
+import { Avatar } from '../shell/UserMenu';
 
 export interface ChoiceOption<T extends string> {
   value: T;
   label: string;
+  /** Avatar (foto ou inicial) mostrado dentro do botão, à esquerda do rótulo. */
+  avatar?: { nome: string; imageProfile?: string };
 }
 
 interface ChoiceGroupProps<T extends string> {
@@ -36,10 +39,11 @@ export function ChoiceGroup<T extends string>({ label, options, value, onChange,
               role="radio"
               aria-checked={ativo}
               onClick={() => onChange(o.value)}
-              className={`flex-1 min-w-[120px] min-h-[44px] px-4 rounded-lg border text-sm font-bold transition-colors ${
+              className={`flex-1 min-w-[120px] min-h-[44px] px-4 rounded-lg border text-sm font-bold transition-colors ${o.avatar ? 'inline-flex items-center justify-center gap-2 ' : ''}${
                 ativo ? 'bg-navy text-white border-navy' : `bg-white text-navy hover:bg-thead ${error ? 'border-wine' : 'border-line'}`
               }`}
             >
+              {o.avatar && <Avatar nome={o.avatar.nome} imageProfile={o.avatar.imageProfile} size={28} tone="light" />}
               {o.label}
             </button>
           );
