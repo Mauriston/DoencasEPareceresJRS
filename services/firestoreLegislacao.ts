@@ -56,8 +56,6 @@ export const criarLegislacao = async (dados: NovaLegislacao, arquivo: File, orde
     titulo: dados.titulo.trim(),
     providencias: dados.providencias.trim(),
     imageUrl: dados.imageUrl?.trim() || IMAGEM_PADRAO_LEGISLACAO,
-    arquivo: arquivo.name,
-    driveId: null,
     pdfPath,
   });
   return id;
