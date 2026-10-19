@@ -210,7 +210,7 @@ export const Inspecoes: React.FC = () => {
           description="Cadastre IS, agende as entrevistas em slots de 20 minutos, acompanhe os prazos e gere as minutas de mensagem."
           actions={(
             <>
-              {ehAdmin && <Button variant="secondary" icon="schedule" onClick={() => setTurnosAberto(true)}>Turnos dos peritos</Button>}
+              {ehAdmin && <Button variant="secondary" icon="tune" title="Turnos dos peritos" onClick={() => setTurnosAberto(true)}>Horários</Button>}
               {podeBloquear && <Button variant="secondary" icon="block" onClick={() => setBloqueiosAberto(true)}>Bloqueios</Button>}
               {podeCadastrar && <Button icon="add" onClick={() => setNovo({})}>Cadastrar IS</Button>}
             </>
