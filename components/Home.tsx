@@ -1,8 +1,8 @@
 // Ficheiro: components/Home.tsx
 // Início como PAINEL DE TRABALHO (auditoria v2, N4/G3/L4): "Precisa de atenção" (pareceres
 // atrasados, perícias vigentes, concurso em andamento, IS marcadas para hoje, senha temporária),
-// "Próximas Inspeções", "Continuar"
-// (últimos documentos gerados), "Acesso rápido" (até 6 páginas, editável e guardado no
+// "Próximas Inspeções", "Pareceres não concluídos" e "Perícias Menores Vigentes" (cada um só aparece
+// quando há itens), "Acesso rápido" (até 6 páginas, editável e guardado no
 // aparelho) e "Avisos" (Casos Periciais e instalação do app — antes eram diálogos em
 // sequência no login). O menu lateral já lista as páginas: a Home não o repete.
 // Tudo respeita a matriz de permissões: cada bloco só aparece para quem tem acesso.
@@ -22,7 +22,8 @@ import { observarPareceres, statusEfetivo, type ParecerRecord } from '../service
 import { observarInspecoes, type InspecaoRecord } from '../services/firestoreInspecoes';
 import { MiniCalendarioIS } from './inspecoes/MiniCalendarioIS';
 import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr } from '../utils/inspecoes';
-import { buscarDocumentosRecentes, type DocumentoRecente } from '../services/documentosRecentes';
+import { observarPericiasMenores, statusPericia, dataBR, type PericiaMenorRecord } from '../services/firestorePericiasMenores';
+import { extrairNomeInspecionado } from '../utils/format';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import type { NavItem } from '../types';
 
@@ -57,6 +58,26 @@ const Secao: React.FC<{ id: string; titulo: string; acao?: React.ReactNode; chil
     {children}
   </section>
 );
+
+/** Linha de documento: abre o PDF (nova aba) quando existe; senão leva à página do assunto. */
+const LinhaDocumento: React.FC<{ icone: string; titulo: string; detalhe: string; data: string; link: string; to: string; tag: React.ReactNode }> = ({ icone, titulo, detalhe, data, link, to, tag }) => {
+  const corpo = (
+    <>
+      <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">{icone}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold text-navy truncate">{titulo}</span>
+        <span className="block text-xs text-ink-3 truncate">{detalhe}</span>
+      </span>
+      <span className="text-xs text-ink-3 shrink-0">{data}</span>
+      {tag}
+      <span className="material-symbols-outlined text-[20px] text-ink-4 shrink-0" aria-hidden="true">{link ? 'open_in_new' : 'chevron_right'}</span>
+    </>
+  );
+  const classe = 'flex items-center gap-3 px-4 min-h-[56px] py-2 hover:bg-thead transition-colors';
+  return link
+    ? <a href={link} target="_blank" rel="noopener noreferrer" className={classe}>{corpo}</a>
+    : <Link to={to} className={classe}>{corpo}</Link>;
+};
 
 export const Home: React.FC = () => {
   const nav = useContext(NavContext);
@@ -94,15 +115,15 @@ export const Home: React.FC = () => {
   const deHoje = useMemo(() => proximas.filter(i => dataDeEntrevista(i.dataEntrevista) === hoje), [proximas, hoje]);
   const nomeDe = (i: InspecaoRecord) => i.inspecionado.replace(/^.*?\d{2}\.\d{4}\.\d{2}\s*/, '') || i.inspecionado;
 
-  const [recentes, setRecentes] = useState<DocumentoRecente[] | null>(null);
-  useEffect(() => {
-    if (!podePareceres && !podePericiaMenor) { setRecentes([]); return; }
-    let ativo = true;
-    buscarDocumentosRecentes({ pareceres: podePareceres, periciaMenor: podePericiaMenor })
-      .then(lista => { if (ativo) setRecentes(lista); })
-      .catch(() => { if (ativo) setRecentes([]); });
-    return () => { ativo = false; };
-  }, [podePareceres, podePericiaMenor]);
+  // Pareceres ainda não concluídos (solicitados e atrasados), os mais antigos primeiro.
+  const naoConcluidos = useMemo(() => pareceres
+    .filter(p => p.status !== 'concluido')
+    .sort((a, b) => (a.criadoEm?.toMillis?.() ?? 0) - (b.criadoEm?.toMillis?.() ?? 0)), [pareceres]);
+
+  // Perícias menores vigentes (dispensa em curso), as que terminam primeiro no topo.
+  const [pericias, setPericias] = useState<PericiaMenorRecord[]>([]);
+  useEffect(() => (podePericiaMenor ? observarPericiasMenores(setPericias, () => { /* silencioso */ }) : undefined), [podePericiaMenor]);
+  const vigentes = useMemo(() => pericias.filter(p => statusPericia(p) === 'vigente').sort((a, b) => a.dataTermino.localeCompare(b.dataTermino)), [pericias]);
 
   const atencao: Atencao[] = [];
   if (authUser?.senhaTemporaria) {
@@ -224,32 +245,40 @@ export const Home: React.FC = () => {
               </Secao>
             )}
 
-            {(podePareceres || podePericiaMenor) && (
-              <Secao id="home-continuar" titulo="Continuar" acao={podePareceres ? <Link to="/pareceres" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver pareceres</Link> : undefined}>
-                {recentes === null ? (
-                  <p className="px-4 pb-4 text-sm text-ink-3" role="status">Carregando documentos…</p>
-                ) : recentes.length === 0 ? (
-                  <EmptyState icon="description" title="Nenhum documento recente" description="Os pareceres e as perícias menores gerados aparecem aqui." />
-                ) : (
-                  <ul className="divide-y divide-line">
-                    {recentes.map((d, i) => (
-                      <li key={`${d.tipo}-${i}`}>
-                        <a
-                          href={d.link || undefined} target="_blank" rel="noopener noreferrer"
-                          className={`flex items-center gap-3 px-4 min-h-[56px] py-2 ${d.link ? 'hover:bg-thead' : 'pointer-events-none'} transition-colors`}
-                        >
-                          <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">{d.tipo === 'parecer' ? 'description' : 'personal_injury'}</span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-bold text-navy truncate">{d.titulo}</span>
-                            <span className="block text-xs text-ink-3 truncate">{d.tipo === 'parecer' ? 'Parecer' : 'Perícia Menor'}{d.detalhe ? ` · ${d.detalhe}` : ''}</span>
-                          </span>
-                          <span className="text-xs text-ink-3 shrink-0">{d.data}</span>
-                          {d.link && <span className="material-symbols-outlined text-[20px] text-ink-4" aria-hidden="true">open_in_new</span>}
-                        </a>
+            {podePareceres && naoConcluidos.length > 0 && (
+              <Secao id="home-pareceres" titulo={`Pareceres não concluídos (${naoConcluidos.length})`} acao={<Link to="/pareceres" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver pareceres</Link>}>
+                <ul className="divide-y divide-line">
+                  {naoConcluidos.slice(0, 6).map(p => {
+                    const atrasado = statusEfetivo(p) === 'atrasado';
+                    return (
+                      <li key={p.id}>
+                        <LinhaDocumento
+                          icone="description" titulo={extrairNomeInspecionado(p.inspecionado)} detalhe={`Parecer · ${p.especialidade}`}
+                          data={p.criadoEm?.toDate?.().toLocaleDateString('pt-BR') ?? ''} link={p.pdfUrl} to="/pareceres"
+                          tag={<StatusTag tone={atrasado ? 'danger' : 'navyOutline'} className="shrink-0">{atrasado ? 'Atrasado' : 'Solicitado'}</StatusTag>}
+                        />
                       </li>
-                    ))}
-                  </ul>
-                )}
+                    );
+                  })}
+                </ul>
+                {naoConcluidos.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{naoConcluidos.length - 6} em Pareceres.</p>}
+              </Secao>
+            )}
+
+            {podePericiaMenor && vigentes.length > 0 && (
+              <Secao id="home-pericias" titulo={`Perícias Menores Vigentes (${vigentes.length})`} acao={<Link to="/pericia-menor/historico" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver perícias</Link>}>
+                <ul className="divide-y divide-line">
+                  {vigentes.slice(0, 6).map(p => (
+                    <li key={p.id}>
+                      <LinhaDocumento
+                        icone="personal_injury" titulo={extrairNomeInspecionado(p.inspecionado)} detalhe={`Perícia Menor · ${p.cid}`}
+                        data={`até ${dataBR(p.dataTermino)}`} link={p.pdfUrl} to="/pericia-menor/historico"
+                        tag={<StatusTag tone="danger" className="shrink-0">Vigente</StatusTag>}
+                      />
+                    </li>
+                  ))}
+                </ul>
+                {vigentes.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{vigentes.length - 6} em Perícia Menor.</p>}
               </Secao>
             )}
           </div>
