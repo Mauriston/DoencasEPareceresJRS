@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { app } from './firebaseAuth';
 import {
-  chaveSlot, situacaoDoStatus, TODOS_PERITOS,
+  chaveSlot, chavesOcupadas, duracaoDoGrupo, situacaoDoStatus, TODOS_PERITOS,
   type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS, type Turno,
 } from '../utils/inspecoes';
 
@@ -82,7 +82,9 @@ export const observarInspecoesDoInspecionado = (inspecionadoId: string, onData: 
 
 export const idDaIs = (numero: string | number): string => String(numero).replace(/\D/g, '').replace(/^0+(?=\d)/, '');
 
-const refSlot = (peritoUid: string, dataEntrevista: string) => doc(db, COL_SLOTS, chaveSlot(peritoUid, dataEntrevista));
+type SlotReserva = { peritoUid: string; dataEntrevista: string; grupoFinalidade: string };
+/** Documentos de slot tocados por uma entrevista (30 min = 2 slots; 60 min = 3). */
+const refsSlots = (r: SlotReserva) => chavesOcupadas(r.peritoUid, r.dataEntrevista, duracaoDoGrupo(r.grupoFinalidade)).map(k => doc(db, COL_SLOTS, k));
 
 /**
  * Grava a IS (criação ou alteração) reservando o slot novo e liberando o antigo, tudo numa transação.
@@ -91,8 +93,8 @@ const refSlot = (peritoUid: string, dataEntrevista: string) => doc(db, COL_SLOTS
 const gravarComSlot = async (
   id: string,
   dados: Record<string, unknown>,
-  slotNovo: { peritoUid: string; dataEntrevista: string } | null,
-  slotAntigo: { peritoUid: string; dataEntrevista: string } | null,
+  slotNovo: SlotReserva | null,
+  slotAntigo: SlotReserva | null,
   criar: boolean,
 ) => {
   const refIs = doc(db, COL, id);
@@ -100,13 +102,15 @@ const gravarComSlot = async (
     const existente = await tx.get(refIs);
     if (criar && existente.exists()) throw new Error(`Já existe a IS nº ${id}.`);
     if (!criar && !existente.exists()) throw new Error('IS não encontrada.');
-    const refNovo = slotNovo ? refSlot(slotNovo.peritoUid, slotNovo.dataEntrevista) : null;
-    const slotDoc = refNovo ? await tx.get(refNovo) : null;
-    if (refNovo && slotDoc?.exists() && slotDoc.data().inspecaoId !== id) throw new Error('Esse horário acabou de ser ocupado por outra IS. Escolha outro horário.');
+    // Todas as leituras antes das gravações: nenhum slot novo pode estar com outra IS.
+    const refsNovos = slotNovo ? refsSlots(slotNovo) : [];
+    const docsNovos = await Promise.all(refsNovos.map(r => tx.get(r)));
+    if (docsNovos.some(d => d.exists() && d.data().inspecaoId !== id)) throw new Error('Esse horário acabou de ser ocupado por outra IS. Escolha outro horário.');
 
-    const mudouSlot = !!slotAntigo && (!slotNovo || slotAntigo.peritoUid !== slotNovo.peritoUid || slotAntigo.dataEntrevista !== slotNovo.dataEntrevista);
-    if (refNovo && slotNovo) tx.set(refNovo, { inspecaoId: id, peritoUid: slotNovo.peritoUid, dataEntrevista: slotNovo.dataEntrevista, atualizadoEm: serverTimestamp() });
-    if (mudouSlot && slotAntigo) tx.delete(refSlot(slotAntigo.peritoUid, slotAntigo.dataEntrevista));
+    const idsNovos = new Set(refsNovos.map(r => r.id));
+    refsNovos.forEach(r => tx.set(r, { inspecaoId: id, peritoUid: slotNovo!.peritoUid, dataEntrevista: slotNovo!.dataEntrevista, atualizadoEm: serverTimestamp() }));
+    // Libera os slots da reserva anterior que a nova não usa mais.
+    if (slotAntigo) refsSlots(slotAntigo).filter(r => !idsNovos.has(r.id)).forEach(r => tx.delete(r));
     if (criar) tx.set(refIs, { ...dados, criadoEm: serverTimestamp(), atualizadoEm: serverTimestamp() });
     else tx.update(refIs, { ...dados, atualizadoEm: serverTimestamp() });
   });
@@ -120,7 +124,7 @@ export const criarInspecao = async (dados: NovaInspecao): Promise<string> => {
   if (!id) throw new Error('Informe o número da IS.');
   const status: StatusIS = dados.dataEntrevista ? 'agendada' : 'aberta';
   const completo = { ...dados, is: Number(id), status, situacao: situacaoDoStatus(status) };
-  await gravarComSlot(id, completo, dados.dataEntrevista ? { peritoUid: dados.peritoUid, dataEntrevista: dados.dataEntrevista } : null, null, true);
+  await gravarComSlot(id, completo, dados.dataEntrevista ? { peritoUid: dados.peritoUid, dataEntrevista: dados.dataEntrevista, grupoFinalidade: dados.grupoFinalidade } : null, null, true);
   return id;
 };
 
@@ -146,14 +150,14 @@ export interface Agendamento {
  */
 export const agendarInspecao = async (atual: InspecaoRecord, novo: Agendamento): Promise<StatusIS> => {
   const status: StatusIS = atual.dataEntrevista || atual.status === 'faltou' ? 'reagendada' : 'agendada';
-  const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista } : null;
-  await gravarComSlot(atual.id, { ...novo, status, situacao: situacaoDoStatus(status) }, { peritoUid: novo.peritoUid, dataEntrevista: novo.dataEntrevista }, slotAntigo, false);
+  const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
+  await gravarComSlot(atual.id, { ...novo, status, situacao: situacaoDoStatus(status) }, { peritoUid: novo.peritoUid, dataEntrevista: novo.dataEntrevista, grupoFinalidade: atual.grupoFinalidade }, slotAntigo, false);
   return status;
 };
 
 /** Cancela a IS (situação Finalizada) e libera o horário reservado. */
 export const cancelarInspecao = async (atual: InspecaoRecord, minuta: string): Promise<void> => {
-  const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista } : null;
+  const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(atual.id, {
     status: 'cancelada', situacao: situacaoDoStatus('cancelada'), minutaCancelamento: minuta,
   }, null, slotAntigo, false);
@@ -161,7 +165,7 @@ export const cancelarInspecao = async (atual: InspecaoRecord, minuta: string): P
 
 /** Apaga a IS (só Admin) e libera o horário. */
 export const apagarInspecao = async (atual: InspecaoRecord): Promise<void> => {
-  if (atual.dataEntrevista) await deleteDoc(refSlot(atual.peritoUid, atual.dataEntrevista)).catch(() => { /* slot já liberado */ });
+  if (atual.dataEntrevista) await Promise.all(refsSlots(atual).map(r => deleteDoc(r).catch(() => { /* slot já liberado */ })));
   await deleteDoc(doc(db, COL, atual.id));
 };
 

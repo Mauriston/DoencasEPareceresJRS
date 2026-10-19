@@ -10,7 +10,7 @@ import { agendarInspecao, type InspecaoRecord } from '../../services/firestoreIn
 import { sincronizarAgendaIS } from '../../services/agendaGoogleIS';
 import { peritosDoAmp, type PeritoIS } from '../../services/peritosIS';
 import {
-  chaveSlot, peritoAtendeNoTurno, turnoDoSlot, TURNOS, dataBr, dataDeEntrevista, horaDeEntrevista, nomeDiaSemana, dataHoraBr,
+  ocupadosDe, duracaoDaIS, peritoAtendeNoTurno, turnoDoSlot, TURNOS, dataBr, dataDeEntrevista, horaDeEntrevista, nomeDiaSemana, dataHoraBr,
   type BloqueioAgenda, type ConfigAgenda,
 } from '../../utils/inspecoes';
 
@@ -32,9 +32,9 @@ export const TrocarPeritoDialog: React.FC<Props> = ({ inspecao, dataHora, perito
   const turno = turnoDoSlot(hora);
   const rotuloTurno = TURNOS.find(t => t.id === turno)?.rotulo.toLowerCase() ?? 'turno';
 
-  const ocupados = useMemo(() => new Set<string>(inspecoes.filter(i => i.id !== inspecao.id && i.dataEntrevista && i.status !== 'cancelada').map(i => chaveSlot(i.peritoUid, i.dataEntrevista))), [inspecoes, inspecao.id]);
+  const ocupados = useMemo(() => ocupadosDe(inspecoes, inspecao.id), [inspecoes, inspecao.id]);
   const candidatos = useMemo(() => peritosDoAmp(peritos, inspecao.amp).filter(p =>
-    p.uid !== inspecao.peritoUid && estadoDoSlot(p.uid, data, hora, !!turno && peritoAtendeNoTurno(config, p.uid, data, turno), bloqueios, ocupados) === 'livre'),
+    p.uid !== inspecao.peritoUid && estadoDoSlot(p.uid, data, hora, !!turno && peritoAtendeNoTurno(config, p.uid, data, turno), bloqueios, ocupados, duracaoDaIS(inspecao)) === 'livre'),
   [peritos, inspecao, data, hora, turno, config, bloqueios, ocupados]);
 
   const [peritoUid, setPeritoUid] = useState(candidatos.length === 1 ? candidatos[0].uid : '');

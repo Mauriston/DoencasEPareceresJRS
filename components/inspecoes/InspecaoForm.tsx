@@ -15,7 +15,7 @@ import { CadastroInspecionado } from '../militares/CadastroInspecionado';
 import { SeletorHorario, estadoDoSlot } from './SeletorHorario';
 import { carregarFinalidadesIS, filtrarFinalidadesPorVinculo, normalizarBusca, type GrupoFinalidadeIS } from '../../utils/corposQuadros';
 import { formatNip } from '../../utils/format';
-import { hojeISO, chaveSlot, peritoAtendeNoTurno, turnoDoSlot, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
+import { hojeISO, ocupadosDe, duracaoDoGrupo, peritoAtendeNoTurno, turnoDoSlot, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
 import { vinculoDoInspecionado, type MilitarRecord } from '../../services/firestoreMilitares';
 import { criarInspecao, idDaIs, type AmpIS, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { peritosDoAmp, ampDaFinalidade, type PeritoIS } from '../../services/peritosIS';
@@ -102,7 +102,9 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
   }, [ampCompetente, peritosDoAmpAtual]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const perito = peritos.find(p => p.uid === peritoUid);
-  const ocupados = useMemo(() => new Set(inspecoes.filter(i => i.dataEntrevista && i.status !== 'cancelada').map(i => chaveSlot(i.peritoUid, i.dataEntrevista))), [inspecoes]);
+  const ocupados = useMemo(() => ocupadosDe(inspecoes), [inspecoes]);
+  // Entrevista de 20 min (padrão), 30 (Verificações e Términos) ou 60 (Benefícios), conforme a finalidade.
+  const duracao = duracaoDoGrupo(achada?.grupo);
 
   const validar = (): Erros => {
     const e: Erros = {};
@@ -116,8 +118,8 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
     if (hora && !data) e.hora = 'Escolha a data da entrevista.';
     if (perito && data && hora) {
       const t = turnoDoSlot(hora);
-      const estado = estadoDoSlot(perito.uid, data, hora, !!t && peritoAtendeNoTurno(config, perito.uid, data, t), bloqueios, ocupados);
-      if (estado !== 'livre') e.hora = estado === 'ocupado' ? `${perito.usuario} já tem IS neste horário.` : estado === 'bloqueado' ? 'Esse horário está bloqueado.' : `${perito.usuario} não atende neste turno; escolha outro perito ou horário.`;
+      const estado = estadoDoSlot(perito.uid, data, hora, !!t && peritoAtendeNoTurno(config, perito.uid, data, t), bloqueios, ocupados, duracao);
+      if (estado !== 'livre') e.hora = estado === 'ocupado' ? `${perito.usuario} já tem IS neste horário.` : estado === 'bloqueado' ? 'Esse horário está bloqueado.' : estado === 'nao_cabe' ? `A entrevista (${duracao} min) não cabe no turno a partir deste horário.` : `${perito.usuario} não atende neste turno; escolha outro perito ou horário.`;
     }
     return e;
   };
@@ -225,7 +227,7 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
             <fieldset className="border border-line rounded-xl p-3 space-y-3">
               <legend className="px-1 text-xs font-bold text-ink-3">Entrevista (opcional — pode ser agendada depois)</legend>
               <SeletorHorario
-                peritoUid={peritoUid} data={data} onData={d => { setData(d); limpar('hora'); }} hora={hora} onHora={h => { setHora(h); limpar('hora'); }}
+                duracao={duracao} peritoUid={peritoUid} data={data} onData={d => { setData(d); limpar('hora'); }} hora={hora} onHora={h => { setHora(h); limpar('hora'); }}
                 config={config} bloqueios={bloqueios} ocupados={ocupados} erro={erros.hora}
               />
               {hora && data && <p className="text-xs font-semibold text-green-700">A IS será cadastrada já como Agendada.</p>}

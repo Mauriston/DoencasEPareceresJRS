@@ -29,11 +29,12 @@ import { RoteiroJRS } from './components/RoteiroJRS';
 import { UsuariosManagement } from './components/UsuariosManagement';
 import { Militares } from './components/Militares';
 import { Inspecoes } from './components/Inspecoes';
+import { SincronizadorAgendaConcursos } from './components/inspecoes/SincronizadorAgendaConcursos';
 import { AccessDenied } from './components/ui/AccessDenied';
 import { PAGE_DEFS } from './config/permissions';
 import { NavItem } from './types';
 import { NavContext, AuthUser, getPrimeiroNome } from './context/NavContext';
-import { canAccessPage, setPermissoesCache } from './config/permissions';
+import { canAccessPage, canUseFeature, setPermissoesCache } from './config/permissions';
 import { InstallAppTutorial } from './components/InstallAppTutorial';
 import { InstallAppQrDialog } from './components/InstallAppQrDialog';
 import { onAuthChange, logoutUsuario } from './services/firebaseAuth';
@@ -387,6 +388,8 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
         setIsAvatarMenuOpen,
       }}
     >
+      {/* Mantém o Google Agenda em dia com os dias de concurso, em qualquer página (a de Inspeções faz a sua própria). */}
+      <SincronizadorAgendaConcursos ativo={canAccessPage('inspecoes', authUser.perfil) && canUseFeature('inspecoes.agendar', authUser.perfil) && currentView !== 'inspecoes'} />
       <BreadcrumbProvider>
       <div className="fixed inset-0 flex bg-canvas text-ink overflow-hidden antialiased">
         <button

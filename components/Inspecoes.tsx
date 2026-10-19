@@ -25,11 +25,14 @@ import { BloqueiosDialog } from './inspecoes/BloqueiosDialog';
 import { AgendaConfigDialog } from './inspecoes/AgendaConfigDialog';
 import { NovoParecerForm } from './pareceres/NovoParecerForm';
 import { useNav } from '../context/NavContext';
-import { canUseFeature } from '../config/permissions';
+import { canUseFeature, canAccessPage } from '../config/permissions';
 import { observarMilitares, type MilitarRecord } from '../services/firestoreMilitares';
 import {
   observarInspecoes, observarBloqueios, observarConfigAgenda, cancelarInspecao, apagarInspecao, agendarInspecao, type InspecaoRecord,
 } from '../services/firestoreInspecoes';
+import { bloqueiosDeConcursos } from '../services/agendaConcursos';
+import { useDiasConcursos, useSincronizarAgendaConcursos } from '../hooks/useDiasConcursos';
+import { concursoPath } from '../config/routes';
 import { carregarPeritos, type PeritoIS } from '../services/peritosIS';
 import { sincronizarAgendaIS, removerEventoAgendaIS } from '../services/agendaGoogleIS';
 import { minutaCancelamento, minutaResultado } from '../utils/minutasIS';
@@ -72,6 +75,7 @@ export const Inspecoes: React.FC = () => {
   const [erroCarga, setErroCarga] = useState('');
   const [bloqueios, setBloqueios] = useState<BloqueioAgenda[]>([]);
   const [config, setConfig] = useState<ConfigAgenda>({});
+  const { dias: diasConcursos, concursosAtivos } = useDiasConcursos();
   const [militares, setMilitares] = useState<MilitarRecord[]>([]);
   const [peritos, setPeritos] = useState<PeritoIS[]>([]);
 
@@ -101,6 +105,13 @@ export const Inspecoes: React.FC = () => {
   useEffect(() => { carregarPeritos().then(setPeritos).catch(() => setPeritos([])); }, []);
 
   const hoje = hojeISO();
+  // Dias de concurso bloqueiam o turno da manhã inteiro para todos os peritos (além dos bloqueios cadastrados).
+  const bloqueiosTodos = useMemo(() => [...bloqueios, ...bloqueiosDeConcursos(diasConcursos)], [bloqueios, diasConcursos]);
+  const podeVerConcursos = canAccessPage('concursosJRS', perfil);
+
+  // Google Agenda: quem agenda mantém os eventos dos dias de concurso (com aviso de erro nesta página).
+  useSincronizarAgendaConcursos(podeAgendar, diasConcursos, concursosAtivos, msg => avisar(msg, 'error'));
+
   // Sigla da OM do inspecionado (dependente herda a do titular; pensionista não tem).
   const omPorId = useMemo(() => new Map(militares.map(m => [m.id, m.om])), [militares]);
   const detalhe = detalheId ? lista?.find(i => i.id === detalheId) ?? null : null;
@@ -210,7 +221,7 @@ export const Inspecoes: React.FC = () => {
           description="Cadastre IS, agende as entrevistas em slots de 20 minutos, acompanhe os prazos e gere as minutas de mensagem."
           actions={(
             <>
-              {ehAdmin && <Button variant="secondary" icon="schedule" onClick={() => setTurnosAberto(true)}>Turnos dos peritos</Button>}
+              {ehAdmin && <Button variant="secondary" icon="tune" title="Turnos dos peritos" onClick={() => setTurnosAberto(true)}>Horários</Button>}
               {podeBloquear && <Button variant="secondary" icon="block" onClick={() => setBloqueiosAberto(true)}>Bloqueios</Button>}
               {podeCadastrar && <Button icon="add" onClick={() => setNovo({})}>Cadastrar IS</Button>}
             </>
@@ -264,7 +275,8 @@ export const Inspecoes: React.FC = () => {
           <p className="bg-white rounded-xl border border-line p-10 text-center text-sm text-ink-3" role="status">Carregando inspeções…</p>
         ) : visao === 'calendario' ? (
           <CalendarioIS
-            inspecoes={lista} bloqueios={bloqueios} config={config} peritoUid={peritoFiltro}
+            inspecoes={lista} bloqueios={bloqueiosTodos} config={config} peritoUid={peritoFiltro} diasConcursos={diasConcursos}
+            onAbrirConcurso={podeVerConcursos ? id => nav?.navigate(concursoPath(id)) : undefined}
             onAbrir={is => setDetalheId(is.id)}
             onNovoNoHorario={podeAgendar ? setHorarioVazio : undefined}
             onReagendar={podeAgendar ? reagendarArrastando : undefined}
@@ -358,7 +370,7 @@ export const Inspecoes: React.FC = () => {
 
       {novo && usuario && (
         <InspecaoForm
-          militares={militares} peritos={peritos} config={config} bloqueios={bloqueios} inspecoes={lista ?? []}
+          militares={militares} peritos={peritos} config={config} bloqueios={bloqueiosTodos} inspecoes={lista ?? []}
           usuario={{ uid: usuario.uid, usuario: usuario.usuario, perfil: usuario.perfil }}
           podeCadastrarInspecionado={podeCadastrarInspecionado} podeAgendar={podeAgendar}
           inicial={novo} onClose={() => setNovo(null)} onCriada={aoCriada}
@@ -383,14 +395,14 @@ export const Inspecoes: React.FC = () => {
 
       {trocandoPerito && (
         <TrocarPeritoDialog
-          inspecao={trocandoPerito.is} dataHora={trocandoPerito.dataHora} peritos={peritos} config={config} bloqueios={bloqueios} inspecoes={lista ?? []}
+          inspecao={trocandoPerito.is} dataHora={trocandoPerito.dataHora} peritos={peritos} config={config} bloqueios={bloqueiosTodos} inspecoes={lista ?? []}
           onClose={() => setTrocandoPerito(null)} onConcluido={(msg, tom) => { setTrocandoPerito(null); avisar(msg, tom); }}
         />
       )}
 
       {horarioVazio && (
         <AgendarNoHorarioDialog
-          dataHora={horarioVazio} peritoFiltro={peritoFiltro} inspecoes={lista ?? []} peritos={peritos} config={config} bloqueios={bloqueios}
+          dataHora={horarioVazio} peritoFiltro={peritoFiltro} inspecoes={lista ?? []} peritos={peritos} config={config} bloqueios={bloqueiosTodos}
           podeCadastrar={podeCadastrar}
           onNova={() => { setNovo({ dataEntrevista: horarioVazio, peritoUid: peritoFiltro || undefined }); setHorarioVazio(null); }}
           onClose={() => setHorarioVazio(null)}
@@ -400,7 +412,7 @@ export const Inspecoes: React.FC = () => {
 
       {agendando && (
         <AgendarDialog
-          inspecao={agendando} peritos={peritos} config={config} bloqueios={bloqueios} inspecoes={lista ?? []}
+          inspecao={agendando} peritos={peritos} config={config} bloqueios={bloqueiosTodos} inspecoes={lista ?? []}
           onClose={() => setAgendando(null)} onAgendada={(msg, tom) => { setAgendando(null); avisar(msg, tom); }}
         />
       )}

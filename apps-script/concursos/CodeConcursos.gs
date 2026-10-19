@@ -74,6 +74,7 @@ function doPost(e) {
     if (corpo.action === 'removerArquivoDrive') return apiRemoverArquivoDrive(corpo);
     if (corpo.action === 'extrairMensagemConcurso') return apiExtrairMensagemConcurso(corpo);
     if (corpo.action === 'sincronizarEventoIS') return apiSincronizarEventoIS(corpo);
+    if (corpo.action === 'sincronizarEventosConcursos') return apiSincronizarEventosConcursos(corpo);
     throw new Error('Ação POST desconhecida: "' + corpo.action + '".');
   });
 }
@@ -576,6 +577,21 @@ function autorizarAgenda() {
   return agenda.getName();
 }
 
+/** Abre a agenda "JRS/HNRe" (pelo id; plano B: pelo nome) ou falha com uma mensagem clara. */
+function abrirAgendaJrs(corpo) {
+  var agenda = null;
+  try { agenda = CalendarApp.getCalendarById(ID_AGENDA_JRS_HNRE); } catch (erroAgenda) { agenda = null; }
+  if (!agenda) {
+    // Plano B: procura pelo nome (agenda própria ou assinada).
+    var nomeAgenda = String(corpo.agenda || 'JRS/HNRe');
+    var agendas = CalendarApp.getOwnedCalendarsByName(nomeAgenda);
+    if (!agendas.length) agendas = CalendarApp.getCalendarsByName(nomeAgenda);
+    if (agendas.length) agenda = agendas[0];
+  }
+  if (!agenda) throw new Error('Agenda JRS/HNRe não encontrada: a conta que implantou o script precisa ser dona da agenda ou tê-la na lista de agendas (Google Agenda > Outras agendas).');
+  return agenda;
+}
+
 /** Cor do evento conforme a situação da IS: Em andamento = amarelo; Finalizada = verde. */
 function aplicarCorEventoIS(evento, situacao) {
   if (situacao === 'finalizada') evento.setColor(CalendarApp.EventColor.GREEN);
@@ -590,16 +606,7 @@ function aplicarCorEventoIS(evento, situacao) {
  */
 function apiSincronizarEventoIS(corpo) {
   exigirUsuarioFirebase(corpo);
-  var agenda = null;
-  try { agenda = CalendarApp.getCalendarById(ID_AGENDA_JRS_HNRE); } catch (erroAgenda) { agenda = null; }
-  if (!agenda) {
-    // Plano B: procura pelo nome (agenda própria ou assinada).
-    var nomeAgenda = String(corpo.agenda || 'JRS/HNRe');
-    var agendas = CalendarApp.getOwnedCalendarsByName(nomeAgenda);
-    if (!agendas.length) agendas = CalendarApp.getCalendarsByName(nomeAgenda);
-    if (agendas.length) agenda = agendas[0];
-  }
-  if (!agenda) throw new Error('Agenda JRS/HNRe não encontrada: a conta que implantou o script precisa ser dona da agenda ou tê-la na lista de agendas (Google Agenda > Outras agendas).');
+  var agenda = abrirAgendaJrs(corpo);
 
   var evento = null;
   var eventoId = String(corpo.eventoId || '');
@@ -640,6 +647,79 @@ function apiSincronizarEventoIS(corpo) {
   atuais.forEach(function(email) { if (convidados.indexOf(email) === -1) evento.removeGuest(email); });
   convidados.forEach(function(email) { if (atuais.indexOf(email) === -1) evento.addGuest(email); });
   return { eventoId: evento.getId() };
+}
+
+/**
+ * action=sincronizarEventosConcursos (POST): { idToken, dias[], concursosAtivos[] } — mantém na agenda "JRS/HNRe" UM evento por
+ * dia de concurso agendado (07:30–12:00, o turno da manhã inteiro), sem convidados. Cada item de "dias":
+ * { chave ("{concursoId}|{AAAA-MM-DD}"), concursoId, data, titulo, descricao, encerrado }. Evento vermelho enquanto o dia está
+ * aberto; verde (e título com ✅ na frente, já enviado em "titulo") quando o dia é encerrado. Os eventos são marcados com tags
+ * privadas, então a sincronização é idempotente: cria o que falta, atualiza o que mudou e remove os dias que deixaram de existir
+ * nos concursos listados em "concursosAtivos" (concursos encerrados não são tocados). Devolve { criados, atualizados, removidos }.
+ */
+function apiSincronizarEventosConcursos(corpo) {
+  exigirUsuarioFirebase(corpo);
+  var agenda = abrirAgendaJrs(corpo);
+  var dias = corpo.dias || [];
+  var ativos = corpo.concursosAtivos || [];
+  var desejados = {};
+  dias.forEach(function(d) { desejados[String(d.chave)] = d; });
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var hoje = new Date();
+    var inicio = new Date(hoje.getTime() - 400 * 86400000);
+    var fim = new Date(hoje.getTime() + 500 * 86400000);
+    dias.forEach(function(d) {
+      var dd = dataHoraAgenda(d.data, '00:00');
+      if (dd < inicio) inicio = dd;
+      if (dd > fim) fim = new Date(dd.getTime() + 86400000);
+    });
+
+    // Eventos já marcados (tag jrsConcurso), por chave; repetidos (corrida entre duas sincronizações) são removidos.
+    var existentes = {};
+    var removidos = 0;
+    agenda.getEvents(inicio, fim).forEach(function(ev) {
+      var chave = ev.getTag('jrsConcurso');
+      if (!chave) return;
+      if (existentes[chave]) { ev.deleteEvent(); removidos++; return; }
+      existentes[chave] = ev;
+    });
+
+    var criados = 0, atualizados = 0;
+    Object.keys(desejados).forEach(function(chave) {
+      var d = desejados[chave];
+      var ini = dataHoraAgenda(d.data, '07:30');
+      var term = dataHoraAgenda(d.data, '12:00');
+      var ev = existentes[chave];
+      if (ev) {
+        ev.setTitle(String(d.titulo));
+        ev.setDescription(String(d.descricao || ''));
+        ev.setTime(ini, term);
+        atualizados++;
+      } else {
+        ev = agenda.createEvent(String(d.titulo), ini, term, { description: String(d.descricao || '') });
+        ev.setTag('jrsConcurso', chave);
+        ev.setTag('jrsConcursoId', String(d.concursoId));
+        criados++;
+      }
+      ev.setColor(d.encerrado ? CalendarApp.EventColor.GREEN : CalendarApp.EventColor.RED);
+    });
+
+    // Dias que deixaram de existir (candidatos reagendados, concurso sem candidatos no dia) — só dos concursos ativos.
+    Object.keys(existentes).forEach(function(chave) {
+      if (desejados[chave]) return;
+      var ev = existentes[chave];
+      if (ativos.indexOf(ev.getTag('jrsConcursoId')) === -1) return;
+      ev.deleteEvent();
+      removidos++;
+    });
+
+    return { criados: criados, atualizados: atualizados, removidos: removidos };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // =========================================================================

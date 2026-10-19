@@ -15,7 +15,7 @@ import { sincronizarAgendaIS } from '../../services/agendaGoogleIS';
 import { peritosDoAmp, type PeritoIS } from '../../services/peritosIS';
 import { normalizarBusca } from '../../utils/corposQuadros';
 import {
-  STATUS_IS, statusEfetivoIS, chaveSlot, peritoAtendeNoTurno, turnoDoSlot, dataBr, dataDeEntrevista, horaDeEntrevista, nomeDiaSemana, dataHoraBr,
+  STATUS_IS, statusEfetivoIS, ocupadosDe, duracaoDaIS, peritoAtendeNoTurno, turnoDoSlot, dataBr, dataDeEntrevista, horaDeEntrevista, nomeDiaSemana, dataHoraBr,
   type BloqueioAgenda, type ConfigAgenda,
 } from '../../utils/inspecoes';
 
@@ -50,10 +50,11 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
   const [erro, setErro] = useState('');
   const [salvando, setSalvando] = useState(false);
 
-  const ocupados = useMemo(() => new Set<string>(inspecoes.filter(i => i.dataEntrevista && i.status !== 'cancelada').map(i => chaveSlot(i.peritoUid, i.dataEntrevista))), [inspecoes]);
-  const livre = (p: PeritoIS) => {
+  const ocupados = useMemo(() => ocupadosDe(inspecoes), [inspecoes]);
+  // Livre para a IS (que dura 20, 30 ou 60 min conforme a finalidade); sem IS escolhida, vale 1 slot.
+  const livre = (p: PeritoIS, is: InspecaoRecord | null = escolhida) => {
     const t = turnoDoSlot(hora);
-    return estadoDoSlot(p.uid, data, hora, !!t && peritoAtendeNoTurno(config, p.uid, data, t), bloqueios, ocupados) === 'livre';
+    return estadoDoSlot(p.uid, data, hora, !!t && peritoAtendeNoTurno(config, p.uid, data, t), bloqueios, ocupados, is ? duracaoDaIS(is) : 20) === 'livre';
   };
 
   const filtradas = useMemo(() => {
@@ -66,7 +67,7 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
 
   const escolher = (is: InspecaoRecord) => {
     setEscolhida(is); setErro('');
-    const possiveis = peritosDoAmp(peritos, is.amp).filter(p => (!peritoFiltro || p.uid === peritoFiltro) && livre(p));
+    const possiveis = peritosDoAmp(peritos, is.amp).filter(p => (!peritoFiltro || p.uid === peritoFiltro) && livre(p, is));
     setPeritoUid(possiveis.length === 1 ? possiveis[0].uid : possiveis.find(p => p.uid === is.peritoUid)?.uid ?? '');
   };
 
