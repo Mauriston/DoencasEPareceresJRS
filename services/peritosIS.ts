@@ -13,6 +13,8 @@ export interface PeritoIS {
   postoGraduacao: string;
   gmail: string;
   perfil: string;
+  /** Foto de perfil (URL), quando houver. */
+  imageProfile: string;
 }
 
 const PERFIS_PERITO = ['admin', 'user_medicos', 'user_medicos_mpi'];
@@ -20,7 +22,7 @@ const PERFIS_PERITO = ['admin', 'user_medicos', 'user_medicos_mpi'];
 export const carregarPeritos = async (): Promise<PeritoIS[]> =>
   (await listUsuarios())
     .filter(u => u.ativo && PERFIS_PERITO.includes(u.perfil))
-    .map(u => ({ uid: u.id, usuario: u.usuario, nome: u.nome, postoGraduacao: u.postoGraduacao, gmail: (u.gmail || '').trim().toLowerCase(), perfil: u.perfil }))
+    .map(u => ({ uid: u.id, usuario: u.usuario, nome: u.nome, postoGraduacao: u.postoGraduacao, gmail: (u.gmail || '').trim().toLowerCase(), perfil: u.perfil, imageProfile: u.imageProfile || '' }))
     .sort((a, b) => a.usuario.localeCompare(b.usuario, 'pt-BR'));
 
 export const perfilAtendeAmp = (perfil: string, amp: AmpIS): boolean =>

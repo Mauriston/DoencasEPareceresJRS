@@ -148,7 +148,7 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
               : (
                 <ChoiceGroup<string>
                   label="Perito" value={peritoUid} onChange={v => { setPeritoUid(v); setErro(''); }}
-                  options={candidatos.map(p => ({ value: p.uid, label: p.usuario }))}
+                  options={candidatos.map(p => ({ value: p.uid, label: p.usuario, avatar: { nome: p.usuario, imageProfile: p.imageProfile } }))}
                 />
               ))}
           </>

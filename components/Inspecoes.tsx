@@ -101,6 +101,8 @@ export const Inspecoes: React.FC = () => {
   useEffect(() => { carregarPeritos().then(setPeritos).catch(() => setPeritos([])); }, []);
 
   const hoje = hojeISO();
+  // Sigla da OM do inspecionado (dependente herda a do titular; pensionista não tem).
+  const omPorId = useMemo(() => new Map(militares.map(m => [m.id, m.om])), [militares]);
   const detalhe = detalheId ? lista?.find(i => i.id === detalheId) ?? null : null;
 
   const totais = useMemo(() => ({
@@ -330,12 +332,15 @@ export const Inspecoes: React.FC = () => {
                             </button>
                           </td>
                           <td className="px-4 py-2 max-w-[320px]">
-                            <span className="block font-semibold text-navy truncate" title={nomeCurto(is.inspecionado)}>{nomeCurto(is.inspecionado)}</span>
-                            <span className="block text-xs text-ink-3 truncate" title={is.finalidade}>{is.finalidade}</span>
+                            {(() => {
+                              const om = omPorId.get(is.inspecionadoId);
+                              const titulo = `${nomeCurto(is.inspecionado)}${om ? ` (${om})` : ''}`;
+                              return <span className="block font-semibold text-navy truncate" title={titulo}>{titulo}</span>;
+                            })()}
+                            <span className="block text-xs text-ink-3 truncate" title={`${is.amp} | ${is.finalidade}`}>{is.amp} | {is.finalidade}</span>
                           </td>
                           <td className="px-4 py-2 whitespace-nowrap">
                             {is.peritoNome || <span className="text-ink-4">—</span>}
-                            <span className="block text-xs text-ink-3">{is.amp}</span>
                           </td>
                           <td className="px-4 py-2 whitespace-nowrap">{is.dataEntrevista ? dataHoraBr(is.dataEntrevista) : <span className="text-ink-4">Não agendada</span>}</td>
                           <td className="px-4 py-2">{tagStatus(is)}</td>

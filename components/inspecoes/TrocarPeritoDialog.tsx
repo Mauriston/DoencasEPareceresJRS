@@ -76,7 +76,7 @@ export const TrocarPeritoDialog: React.FC<Props> = ({ inspecao, dataHora, perito
         {candidatos.length === 0 ? (
           <p role="alert" className="text-sm font-semibold text-wine">Nenhum outro perito do AMP {inspecao.amp} está disponível neste horário (turno não configurado, bloqueio ou horário ocupado). Cancele e escolha outro horário.</p>
         ) : (
-          <ChoiceGroup<string> label="Novo perito" value={peritoUid} onChange={v => { setPeritoUid(v); setErro(''); }} options={candidatos.map(p => ({ value: p.uid, label: p.usuario }))} />
+          <ChoiceGroup<string> label="Novo perito" value={peritoUid} onChange={v => { setPeritoUid(v); setErro(''); }} options={candidatos.map(p => ({ value: p.uid, label: p.usuario, avatar: { nome: p.usuario, imageProfile: p.imageProfile } }))} />
         )}
       </div>
     </Dialog>
