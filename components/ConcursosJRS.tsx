@@ -19,6 +19,7 @@ import {
   type ConcursoRecord, type CandidatoRecord, type DataAgendamentoInfo, type MensagemRecord, type EstatisticasAnuais, type EstatisticaConcursoStatus,
 } from '../services/firestoreConcursos';
 import { SolicitarParecerModal, SolicitarExamesModal } from './SolicitacaoModais';
+import { CandidatoDetalhe } from './concursos/CandidatoDetalhe';
 import { juntarPdfsBase64 } from '../services/pdfMerge';
 import {
   extrairMensagemComGemini, salvarMensagemNoDrive, salvarPdfCandidatoNoDrive, criarEstruturaConcursoNoDrive, abrirPdf, urlVisualizacao, anoDoConcurso,
@@ -2290,6 +2291,14 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
   const [solicitacaoModal, setSolicitacaoModal] = useState<{ tipo: 'parecer' | 'exames'; candidato: CandidatoRecord } | null>(null);
   const [gerandoSolicitacaoIds, setGerandoSolicitacaoIds] = useState<Set<string>>(new Set());
   const [menuAcoes, setMenuAcoes] = useState<{ id: string; top: number; right: number } | null>(null);
+  // Desktop: clicar na linha (fora dos campos editáveis e dos botões) abre o detalhamento da IS à direita.
+  const [detalheCandidatoId, setDetalheCandidatoId] = useState<string | null>(null);
+  const abrirDetalheDaLinha = (e: React.MouseEvent<HTMLElement>, id: string) => {
+    const alvo = e.target as HTMLElement;
+    // Ignora cliques nos controles (inclusive menus em portal, que borbulham pela árvore do React).
+    if (!e.currentTarget.contains(alvo) || alvo.closest('input, select, textarea, button, a, label, [role="combobox"], [role="listbox"], [role="option"], [role="menu"]')) return;
+    setDetalheCandidatoId(id);
+  };
   const [eventosAlvo, setEventosAlvo] = useState<{ id: string; nome: string } | null>(null);
   const statusPermiteSolicitacao = (c: CandidatoRecord) =>
     !c.finalizado && STATUS_PERMITEM_SOLICITACAO.includes(String(c.status || '').trim().toUpperCase());
@@ -2817,6 +2826,12 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
         <ResponsavelTermoModal candidatoNome={responsavelModal.nome} onSelect={handleResponsavelEscolhido} onClose={() => setResponsavelModal(null)} />
       )}
 
+      {detalheCandidatoId && isDesktop && (() => {
+        const c = candidatos.find(x => x.id === detalheCandidatoId);
+        if (!c) return null;
+        return <CandidatoDetalhe candidato={c} concursoNome={concurso?.nome || ''} statusTag={<CandidatoStatusTag status={c.status} />} onClose={() => setDetalheCandidatoId(null)} />;
+      })()}
+
       {menuAcoes && (() => {
         const c = candidatos.find(x => x.id === menuAcoes.id);
         if (!c) return null;
@@ -3126,7 +3141,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                             const numTisHabilitado = editavel && statusTemLaudo(c.status);
                             const proximo = c.id === proximoCandidatoId;
                             return (
-                              <tr key={c.id} className={`hover:bg-thead transition-colors ${proximo ? 'bg-gold/10 shadow-[inset_4px_0_0_0_#FAB932]' : ''}`} aria-current={proximo ? 'true' : undefined}>
+                              <tr key={c.id} onClick={e => abrirDetalheDaLinha(e, c.id)} className={`hover:bg-thead transition-colors cursor-pointer ${proximo ? 'bg-gold/10 shadow-[inset_4px_0_0_0_#FAB932]' : ''}`} aria-current={proximo ? 'true' : undefined}>
                                 <td className="py-3.5 pl-4 pr-0">
                                   <span className="flex items-center gap-1">
                                     <span className="text-xs font-semibold text-ink-3 w-5 text-right" title="Ordem no dia">{ordem + 1}</span>
@@ -3137,7 +3152,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar 
                                 </td>
                                 <td className="py-3.5 pl-2 pr-4">
                                   <p className="font-semibold text-ink flex items-center gap-2 flex-wrap">
-                                    <span>{c.nome}</span>
+                                    <button type="button" onClick={() => setDetalheCandidatoId(c.id)} className="text-left" title="Ver detalhes da IS">{c.nome}</button>
                                     {proximo && <StatusTag tone="navyOutline" dot={false}>Próximo</StatusTag>}
                                   </p>
                                   <p className="text-xs font-mono text-ink-3 flex items-center gap-2">
