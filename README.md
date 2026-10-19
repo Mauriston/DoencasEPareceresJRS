@@ -44,7 +44,7 @@ A navegação ocorre em substituição de rotas através do Hook `currentView` n
 
 1. **Benefícios** (*Ícone Estetoscópio*): Acesso a `Doenças de Lei`, verificação de `Finalidades` da perícia, e à `Portaria` do ministério da defesa (foco em direitos do inativo/ativo).
 2. **Avaliações** (*Ícone Prancheta*): Link direto aos vereditos dos critérios eliminatórios para `Concursos` e `Exames` obrigatórios.
-3. **Documentos** (*Ícone Arquivo*): Módulo de geração de `Pareceres` automatizados, formulário inteligente de `Perícia Menor` e consulta de `Templates`.
+3. **Documentos** (*Ícone Arquivo*): Módulo de geração de `Pareceres` automatizados, e formulário inteligente de `Perícia Menor`.
 4. **Normas** (*Ícone Martelo*): Agrupa o baluarte da MB (`DGPM-406`), a aba de normas internas (`HNRe`) e a `Legislação` pura.
 5. **Extras** (*Ícone Widgets*): Congrega utilidades como `Casos` interativos, ambiente de `Estudo`, `Infográficos`, `Resumos` e a trilha do `Roteiro JRS`.
 
@@ -97,7 +97,7 @@ Abaixo encontra-se a arquitetura atualizada de ficheiros e diretórios no reposi
   - `Header.tsx` / `Footer.tsx`
   - `Infograficos.tsx` / `Resumos.tsx` / `Artigos.tsx`
   - `LawReference.tsx` / `PortariaGuide.tsx`
-  - `Pareceres.tsx` / `TemplatesGuide.tsx` / `PericiaMenor.tsx`
+  - `Pareceres.tsx` / `PericiaMenor.tsx`
   - `ArtigoPericiaMedica.tsx`, `ArtigoPerfilPerito.tsx`, etc. *(Sub-páginas de artigos)*
 
 - `/components/sections`

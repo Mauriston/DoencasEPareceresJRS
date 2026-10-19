@@ -138,7 +138,6 @@ A aplicação integra-se diretamente com:
 │   ├── Mensagens.tsx
 │   ├── Pareceres.tsx
 │   ├── PericiaMenor.tsx
-│   ├── TemplatesGuide.tsx
 │   └── ...
 ├── public/
 │   ├── cid.json
@@ -433,7 +432,6 @@ Entre as operações implementadas ou consumidas pelo frontend estão:
 | `getMilitaresList` | Listar militares para busca/autocomplete |
 | `getPareceresList` | Listar pareceres gerados |
 | `getPericiaMenorList` | Listar perícias menores e calcular vigência |
-| `getTemplatesDocumentos` | Obter metadados de templates |
 | `getExtras` | Obter materiais extras de outra planilha |
 
 > Algumas ações aparecem no consumo do frontend e outras no backend. A tabela consolida o contrato observado entre ambos.

@@ -32,7 +32,7 @@ interface Atencao {
   to: string;
 }
 
-const PADRAO_RAPIDO: NavItem[] = ['guide', 'exames', 'dgpm406', 'concursosJRS', 'concursos', 'templates'];
+const PADRAO_RAPIDO: NavItem[] = ['guide', 'exames', 'dgpm406', 'concursosJRS', 'concursos'];
 const MAX_RAPIDO = 6;
 
 const saudacao = (): string => {
