@@ -102,14 +102,13 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
               )}
             </div>
 
-            {data && peritosDoDia.length > 1 && (
+            {data && peritosDoDia.length >= 1 && (
               <ChoiceGroup<string>
                 label="Perito" value={peritoUid}
                 onChange={v => { setPeritoUid(v); setHora(''); setErro(''); }}
                 options={peritosDoDia.map(p => ({ value: p.uid, label: p.usuario }))}
               />
             )}
-            {data && peritosDoDia.length === 1 && <p className="text-xs text-ink-3">Perito: <strong className="text-navy">{peritosDoDia[0].usuario}</strong> (único com horário livre neste dia).</p>}
 
             {data && peritoUid && (
               <SeletorHorario semCampoData peritoUid={peritoUid} data={data} onData={setData} hora={hora} onHora={h => { setHora(h); setErro(''); }} config={config} bloqueios={bloqueios} ocupados={ocupados} />
