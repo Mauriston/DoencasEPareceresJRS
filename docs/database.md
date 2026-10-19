@@ -528,6 +528,8 @@ if (templatesData[i][0] === payload.especialidade) {
 
 ## 13. Aba `Templates_Documentos`
 
+> **Removida do app:** a página "Modelos" (`TemplatesGuide.tsx`) e a ação `getTemplatesDocumentos` foram retiradas. A aba continua na planilha, sem uso pelo app. O texto abaixo é só histórico.
+
 ### 13.1 Finalidade
 
 Fornece ao frontend uma lista dinâmica de documentos-modelo apresentada pelo módulo de templates.
@@ -1012,7 +1014,6 @@ Persistir na base:
 | `getLookups` | `ListasRef`, `OM`, `Perito` | Listas de referência |
 | `getMilitaresList` | `Militares` | Nome e NIP |
 | `getMilitar` | `Militares` | Registro completo por NIP |
-| `getTemplatesDocumentos` | `Templates_Documentos` | Objetos dinâmicos por cabeçalho |
 | `getPareceresList` | `Pareceres` | Histórico resumido |
 | `getPericiaMenorList` | `Pericia_Menor` | Histórico com status calculado |
 | `getExtras` | planilha de extras | Conteúdos complementares |

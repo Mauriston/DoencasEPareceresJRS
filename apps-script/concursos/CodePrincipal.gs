@@ -1,7 +1,7 @@
 /**
  * CodePrincipal.gs — ações vindas do antigo projeto "principal" (Code.gs), agora neste projeto único.
  *
- * GET (doGet): getLookups, getMilitaresList, getMilitar, getTemplatesDocumentos, getPericiaMenorList, getExtras
+ * GET (doGet): getLookups, getMilitaresList, getMilitar, getPericiaMenorList, getExtras
  * POST (doPostPrincipal, chamado por doPost de CodeConcursos.gs): extrair_dados_atestado, gerarMinutaMensagem,
  *   gerar_pericia_menor
  * As respostas mantêm o formato antigo ({ success, data | message }), que o app já espera.
@@ -90,33 +90,6 @@ function doGet(e) {
         JSON.stringify({
           success: true,
           data: militares,
-        }),
-      ).setMimeType(ContentService.MimeType.JSON);
-
-    } else if (action === "getTemplatesDocumentos") {
-      const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-      const sheet = ss.getSheetByName("Templates_Documentos");
-      if (!sheet) {
-          return ContentService.createTextOutput(JSON.stringify({success: false, message: "Aba Templates_Documentos não encontrada"})).setMimeType(ContentService.MimeType.JSON);
-      }
-      const data = sheet.getDataRange().getValues();
-      const headers = data[0];
-      
-      const templates = [];
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][0]) {
-          const tpl = {};
-          headers.forEach((h, col) => {
-            tpl[h] = data[i][col];
-          });
-          templates.push(tpl);
-        }
-      }
-
-      return ContentService.createTextOutput(
-        JSON.stringify({
-          success: true,
-          data: templates,
         }),
       ).setMimeType(ContentService.MimeType.JSON);
 

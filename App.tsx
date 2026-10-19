@@ -21,7 +21,6 @@ import { PortariaGuide } from './components/PortariaGuide';
 import { ExamesGuide } from './components/ExamesGuide';
 import { Infograficos } from './components/Infograficos';
 import { Pareceres } from './components/Pareceres';
-import { TemplatesGuide } from './components/TemplatesGuide';
 import { CasosPericiais } from './components/CasosPericiais';
 import { Videos } from './components/Videos';
 import { PericiaMenor } from './components/PericiaMenor';
@@ -304,7 +303,6 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       case 'concursos': return can('concursos') ? <ConcursosGuide /> : <AccessDenied pagina={paginaLabel('concursos')} />;
       case 'portaria': return can('portaria') ? <PortariaGuide /> : <AccessDenied pagina={paginaLabel('portaria')} />;
       case 'exames': return can('exames') ? <ExamesGuide /> : <AccessDenied pagina={paginaLabel('exames')} />;
-      case 'templates': return can('templates') ? <TemplatesGuide /> : <AccessDenied pagina={paginaLabel('templates')} />;
 
       // PÁGINAS RESTRITAS POR PERFIL (config/permissions.ts, editável em Usuários)
       case 'pareceres': return can('pareceres') ? <Pareceres /> : <AccessDenied pagina={paginaLabel('pareceres')} />;
