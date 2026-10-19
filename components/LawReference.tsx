@@ -5,18 +5,27 @@ import React, { useEffect, useState } from 'react';
 import { Info } from './ui/icons';
 import { Container, PageHeader } from './ui/Page';
 import { PdfFullscreenModal } from './PdfFullscreenModal';
+import { Button } from './ui/Button';
+import { Toast } from './ui/Toast';
+import { LegislacaoForm } from './LegislacaoForm';
 import { listarLegislacao, LegislacaoDoc } from '../services/firestoreLegislacao';
 import { getStoragePdfUrl } from '../services/firebaseStorageNormas';
 
-export const LawReference: React.FC = () => {
+interface LawReferenceProps {
+  /** Só o Admin cadastra novas legislações. */
+  podeCadastrar?: boolean;
+}
+
+export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = false }) => {
   const [itens, setItens] = useState<LegislacaoDoc[] | null>(null);
   const [erro, setErro] = useState(false);
   const [abrindo, setAbrindo] = useState<string | null>(null);
+  const [novo, setNovo] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [modal, setModal] = useState<{ title: string; url: string } | null>(null);
 
-  useEffect(() => {
-    listarLegislacao().then(setItens).catch(() => setErro(true));
-  }, []);
+  const carregar = () => listarLegislacao().then(setItens).catch(() => setErro(true));
+  useEffect(() => { carregar(); }, []);
 
   const abrir = async (law: LegislacaoDoc) => {
     if (!law.pdfPath) { alert('O PDF desta norma ainda não está disponível.'); return; }
@@ -35,7 +44,9 @@ export const LawReference: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Container size="data" className="py-6 md:py-8 pb-10 ">
-        <PageHeader title="Legislação" description="Pesquise as leis que fundamentam as inspeções de saúde." />
+        <PageHeader title="Legislação" description="Pesquise as leis que fundamentam as inspeções de saúde."
+          actions={podeCadastrar ? <Button icon="add" onClick={() => setNovo(true)}>Novo</Button> : undefined}
+        />
 
         {erro && <p className="text-sm text-ink-3">Não foi possível carregar a legislação.</p>}
         {!erro && itens === null && <p className="text-sm text-ink-3">Carregando…</p>}
@@ -86,6 +97,19 @@ export const LawReference: React.FC = () => {
           })}
         </div>
       </Container>
+      <Toast message={aviso} />
+      {novo && (
+        <LegislacaoForm
+          proximaOrdem={Math.max(0, ...(itens ?? []).map(i => i.ordem ?? 0)) + 1}
+          onClose={() => setNovo(false)}
+          onCriada={nome => {
+            setNovo(false);
+            carregar();
+            setAviso(`${nome} cadastrada.`);
+            window.setTimeout(() => setAviso(null), 4000);
+          }}
+        />
+      )}
       {modal && <PdfFullscreenModal title={modal.title} url={modal.url} onClose={() => setModal(null)} />}
     </div>
   );

@@ -1597,4 +1597,4 @@ A página **Legislação** lê a coleção `legislacao` (migrada da aba `NORMAS`
 | `pdfPath` | caminho no Storage (`legislacao/{id}.pdf`) ou `null` se ainda não enviado |
 | `arquivo`, `driveId` | nome e id do arquivo de origem no Drive (rastreabilidade) |
 
-Regras: Firestore — leitura autenticada, escrita só Admin; Storage (`legislacao/*`) — leitura autenticada, escrita só via Admin SDK. Para trocar/adicionar um PDF, envie o arquivo para `legislacao/{id}.pdf` (console do Firebase) e ajuste `pdfPath` no documento.
+Regras: Firestore — leitura autenticada, escrita só Admin; Storage (`legislacao/*`) — leitura autenticada, escrita só do Admin (perfil lido do Firestore), PDF até 25 MB. O botão **Novo** da página (só Admin) abre uma sidebar que envia o PDF para `legislacao/{id}.pdf` e cria o documento (id = slug da identificação).
