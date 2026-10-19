@@ -7,7 +7,7 @@ import { StatusTag } from '../ui/StatusTag';
 import { formatNip, formatCelular, formatCpf, formatIdentidadeMilitar, formatDataBr } from '../../utils/format';
 import type { MilitarRecord } from '../../services/firestoreMilitares';
 import { observarPareceres, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
-import { periciasMenoresDoMilitar, type PericiaMenorHist } from '../../services/historicoMilitar';
+import { observarPericiasDoMilitar, dataBR, statusPericia, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
 
 const TOM_PARECER = { solicitado: 'navyOutline', atrasado: 'danger', concluido: 'success' } as const;
 const ROTULO_PARECER = { solicitado: 'Solicitado', atrasado: 'Atrasado', concluido: 'Concluído' } as const;
@@ -40,13 +40,9 @@ const Linha: React.FC<{ rotulo: string; valor?: string | null; mono?: boolean }>
 
 export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => void }> = ({ militar: m, onClose }) => {
   const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
-  const [pericias, setPericias] = useState<PericiaMenorHist[]>([]);
+  const [pericias, setPericias] = useState<PericiaMenorRecord[]>([]);
   useEffect(() => observarPareceres(lista => setPareceres(lista.filter(p => p.militarId === m.id)), () => { /* sem histórico de pareceres */ }), [m.id]);
-  useEffect(() => {
-    let ativo = true;
-    periciasMenoresDoMilitar(m.nip).then(l => { if (ativo) setPericias(l); }).catch(() => { /* sem histórico de perícias */ });
-    return () => { ativo = false; };
-  }, [m.nip]);
+  useEffect(() => observarPericiasDoMilitar(m.id, setPericias, () => { /* sem histórico de perícias */ }), [m.id]);
   const temHistorico = pareceres.length > 0 || pericias.length > 0;
   const agora = useMemo(() => Date.now(), []);
 
@@ -127,10 +123,10 @@ export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => v
                     {pericias.map((p, i) => (
                       <li key={`${p.dataAtestado}-${i}`}>
                         <ItemHistorico
-                          titulo={p.cid || 'Perícia menor'} detalhe={p.dispensas || 'Sem dispensas registradas'}
-                          data={p.dataAtestado ? `Atestado em ${p.dataAtestado}` : ''}
-                          tag={p.vigente ? <StatusTag tone="danger">Vigente</StatusTag> : p.concluido ? <StatusTag tone="success">Concluída</StatusTag> : null}
-                          link={p.link || undefined}
+                          titulo={p.cid || 'Perícia menor'} detalhe={p.dispensas.join(', ') || 'Sem dispensas registradas'}
+                          data={p.dataAtestado ? `Atestado em ${dataBR(p.dataAtestado)}` : ''}
+                          tag={statusPericia(p) === 'vigente' ? <StatusTag tone="danger">Vigente</StatusTag> : <StatusTag tone="success">Concluída</StatusTag>}
+                          link={p.pdfUrl || undefined}
                         />
                       </li>
                     ))}

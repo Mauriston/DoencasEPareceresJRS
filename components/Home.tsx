@@ -143,7 +143,7 @@ export const Home: React.FC = () => {
         </div>
         {(podeNovaPericia && podePericiaMenor || podeGerarParecer) && (
           <div className="flex flex-col-reverse sm:flex-row gap-2">
-            {podeNovaPericia && podePericiaMenor && <Link to={pathForView('pericia-menor')} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">personal_injury</span>Nova perícia menor</Link>}
+            {podeNovaPericia && podePericiaMenor && <Link to="/pericia-menor?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">personal_injury</span>Nova perícia menor</Link>}
             {podeGerarParecer && <Link to="/pareceres?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>Novo parecer</Link>}
           </div>
         )}

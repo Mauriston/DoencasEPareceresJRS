@@ -44,6 +44,7 @@ import {
 import { getUsuarioProfile, setUsuarioPublico, updateUsuarioProfile, UsuarioRecord } from './services/firestoreUsuarios';
 import { observarPermissoes, salvarPermissoesRemoto, type PermissoesArmazenadas } from './services/firestorePermissions';
 import { getCasosResultado } from './services/firestoreCasos';
+import { observarPericiasMenores, statusPericia } from './services/firestorePericiasMenores';
 import { definirAtorAuditoria } from './services/auditoriaIS';
 import { useIsDesktop } from './hooks/useIsDesktop';
 
@@ -65,8 +66,6 @@ const lerPermissoesLegadoLocalStorage = (): PermissoesArmazenadas | null => {
     return null;
   }
 };
-
-const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec';
 
 const buildAuthUser = (profile: UsuarioRecord): AuthUser => ({
   uid: profile.id,
@@ -231,15 +230,11 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   }, []);
 
   useEffect(() => {
-    if (authUser?.perfil === 'user_secretaria') return;
-    fetch(`${GAS_URL}?action=getPericiaMenorList`)
-      .then(r => r.json())
-      .then(json => {
-        if (json.success) {
-          setPericiaMenorVigentes(json.data.filter((r: { vigente: boolean }) => r.vigente).length);
-        }
-      })
-      .catch(() => {});
+    if (!authUser || authUser.perfil === 'user_secretaria') return;
+    return observarPericiasMenores(
+      lista => setPericiaMenorVigentes(lista.filter(p => statusPericia(p) === 'vigente').length),
+      () => {},
+    );
   }, [authUser]);
 
   // Tutorial do ícone na tela inicial concluído (ou "já instalei"): grava

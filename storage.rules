@@ -28,6 +28,16 @@ service firebase.storage {
       allow delete: if request.auth != null;
     }
 
+    // PDFs dos atestados das Perícias Menores (periciasMenores/{id}.pdf), gerados
+    // no navegador a partir da foto do atestado.
+    match /periciasMenores/{arquivo} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+      allow update, delete: if false;
+    }
+
     // PDFs do menu Concursos ("Planilhas de Controle"): cópia da mensagem
     // administrativa original (concursos/{id}/mensagens/...) e o Termo de
     // Cientificação de Recurso de cada candidato

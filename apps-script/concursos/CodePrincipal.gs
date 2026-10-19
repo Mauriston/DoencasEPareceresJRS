@@ -2,8 +2,7 @@
  * CodePrincipal.gs — ações vindas do antigo projeto "principal" (Code.gs), agora neste projeto único.
  *
  * GET (doGet): getLookups, getMilitaresList, getMilitar, getPericiaMenorList, getExtras
- * POST (doPostPrincipal, chamado por doPost de CodeConcursos.gs): extrair_dados_atestado, gerarMinutaMensagem,
- *   gerar_pericia_menor
+ * POST (doPostPrincipal, chamado por doPost de CodeConcursos.gs): extrair_dados_atestado, gerarMinutaMensagem
  * As respostas mantêm o formato antigo ({ success, data | message }), que o app já espera.
  * Não migrado por estar sem uso no app: getPareceresList, imprimir e o parecer "regular" por planilha
  * (substituído pelos pareceres no Firestore + gerarPedidoParecer).
@@ -375,122 +374,6 @@ function doPostPrincipal(e) {
       militaresSheet.appendRow(newRow);
     }
 
-    // ==========================================
-    // LÓGICA 2: GERAÇÃO DA PERÍCIA MENOR
-    // ==========================================
-    if (payload.action === "gerar_pericia_menor") {
-      
-      let templateId = "";
-      if (payload.perito && payload.perito.includes("MAURISTON")) {
-        templateId = "130zzSeDRw2nso-QgfwIjOzbyet67Uvy1FQzL-V5X6do";
-      } else if (payload.perito && (payload.perito.includes("JÚLIO") || payload.perito.includes("JULIO"))) {
-        templateId = "1qLXEBSNV1DpeChqKm-i_4uVFlvClZ6YmpE2W3KxyRRI";
-      } else {
-        throw new Error("Template não encontrado para o perito selecionado: " + payload.perito);
-      }
-
-      const templateDoc = DriveApp.getFileById(templateId);
-
-      const pmenorFolderId = "18_322EHraGIhfWXzh8ZgOFpnIw884Ox6";
-      const parentFolder = DriveApp.getFolderById(pmenorFolderId);
-      let subfolder = null;
-      
-      const folders = parentFolder.searchFolders('title = "' + payload.inspecionado + '"');
-      if (folders.hasNext()) {
-        subfolder = folders.next();
-      } else {
-        subfolder = parentFolder.createFolder(payload.inspecionado);
-      }
-
-      const dateObj = new Date();
-      const shortDate = Utilities.formatDate(dateObj, Session.getScriptTimeZone(), "yyyy-MM-dd");
-      const dataHojeBr = Utilities.formatDate(dateObj, Session.getScriptTimeZone(), "dd/MM/yyyy");
-      
-      let dataAtestadoBr = payload.dataAtestado;
-      if (dataAtestadoBr && dataAtestadoBr.includes("-")) {
-        const parts = dataAtestadoBr.split("-");
-        dataAtestadoBr = `${parts[2]}/${parts[1]}/${parts[0]}`;
-      }
-
-      const newFileName = "Perícia Menor - " + payload.inspecionado + " - " + dataHojeBr.replace(/\//g, ".");
-      const newFile = templateDoc.makeCopy(newFileName, subfolder);
-      const newDoc = DocumentApp.openById(newFile.getId());
-      const body = newDoc.getBody();
-
-      body.replaceText("{{INSPECIONADO}}", payload.inspecionado);
-      body.replaceText("{{SERVICO}}", payload.servico);
-      body.replaceText("{{DISPENSAS}}", payload.dispensas);
-      body.replaceText("{{TEMPO_EXTENSO}}", payload.tempoExtenso);
-      body.replaceText("{{TEMPO_HOMOLOG}}", payload.tempoHomolog.toString());
-      body.replaceText("{{DATA_ATESTADO}}", dataAtestadoBr);
-      body.replaceText("{{DATA_HOJE}}", dataHojeBr);
-      
-      let vdfText = payload.vdf ?
-        "Encaminhar para VDF:    ( X ) Sim \t (   ) Não" :
-        "Encaminhar para VDF:    (   ) Sim \t ( X ) Não";
-        
-      body.replaceText("{{VDF}}", vdfText);
-
-      if (payload.vdf) {
-        let searchResult = body.findText("Encaminhar para VDF.*Sim");
-        if (searchResult) {
-          let textElement = searchResult.getElement().asText();
-          let start = searchResult.getStartOffset();
-          let end = searchResult.getEndOffsetInclusive();
-          
-          textElement.setBold(start, end, true);
-          textElement.setBackgroundColor(start, end, "#FFFF00");
-        }
-      }
-
-      if (payload.base64Image) {
-        body.appendPageBreak(); 
-        const decodedImg = Utilities.base64Decode(payload.base64Image);
-        const blobImg = Utilities.newBlob(decodedImg, 'image/jpeg', 'atestado.jpg');
-        
-        const imgElement = body.appendImage(blobImg);
-        const pageWidth = newDoc.getBody().getPageWidth() - newDoc.getBody().getMarginLeft() - newDoc.getBody().getMarginRight();
-        const imgWidth = imgElement.getWidth();
-        const imgHeight = imgElement.getHeight();
-        const ratio = pageWidth / imgWidth;
-        
-        imgElement.setWidth(pageWidth);
-        imgElement.setHeight(imgHeight * ratio);
-      }
-
-      newDoc.saveAndClose();
-
-      const pdfBlob = newFile.getAs("application/pdf");
-      const pdfFile = subfolder.createFile(pdfBlob);
-      pdfFile.setName(newFileName + ".pdf");
-
-      newFile.setTrashed(true);
-
-      const periciaSheet = getSs().getSheetByName("Pericia_Menor");
-      if (!periciaSheet) throw new Error("Aba 'Pericia_Menor' não encontrada no Sheets.");
-
-      periciaSheet.appendRow([
-        shortDate,
-        payload.inspecionado,
-        payload.om,
-        payload.servico,
-        payload.cid,
-        payload.dispensas,
-        payload.dataAtestado,
-        payload.tempoAtestado,
-        payload.tempoHomolog,
-        "",
-        payload.vdf,
-        payload.perito,
-        pdfFile.getUrl()
-      ]);
-
-      return ContentService.createTextOutput(JSON.stringify({
-        success: true,
-        pdfUrl: pdfFile.getUrl()
-      })).setMimeType(ContentService.MimeType.JSON);
-    }
-    
     throw new Error("Ação não reconhecida.");
 
   } catch (err) {
