@@ -576,9 +576,15 @@ function autorizarAgenda() {
   return agenda.getName();
 }
 
+/** Cor do evento conforme a situação da IS: Em andamento = amarelo; Finalizada = verde. */
+function aplicarCorEventoIS(evento, situacao) {
+  if (situacao === 'finalizada') evento.setColor(CalendarApp.EventColor.GREEN);
+  else evento.setColor(CalendarApp.EventColor.YELLOW);
+}
+
 /**
  * action=sincronizarEventoIS (POST): { idToken, agenda, eventoId?, titulo, descricao, data, horaInicio, horaFim,
- * convidados[], remover? } — cria, atualiza ou remove o evento da entrevista de uma IS na agenda (padrão "JRS/HNRe")
+ * convidados[], situacao, remover? } — cria, atualiza ou remove o evento da entrevista de uma IS na agenda (padrão "JRS/HNRe")
  * do dono do script. O perito entra como convidado (e-mails em "convidados"). Devolve { eventoId }.
  * A primeira execução pede autorização do serviço Google Agenda (CalendarApp): reimplante o script depois de colar este arquivo.
  */
@@ -622,12 +628,14 @@ function apiSincronizarEventoIS(corpo) {
       guests: convidados.join(','),
       sendInvites: true
     });
+    aplicarCorEventoIS(evento, corpo.situacao);
     return { eventoId: evento.getId() };
   }
 
   evento.setTitle(titulo);
   evento.setDescription(String(corpo.descricao || ''));
   evento.setTime(inicio, fim);
+  aplicarCorEventoIS(evento, corpo.situacao);
   var atuais = evento.getGuestList().map(function(g) { return g.getEmail().toLowerCase(); });
   atuais.forEach(function(email) { if (convidados.indexOf(email) === -1) evento.removeGuest(email); });
   convidados.forEach(function(email) { if (atuais.indexOf(email) === -1) evento.addGuest(email); });

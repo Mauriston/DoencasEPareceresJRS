@@ -11,7 +11,7 @@ import { StatusTag } from '../ui/StatusTag';
 import { atualizarInspecao, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { carregarRestricoesIS } from '../../utils/corposQuadros';
 import {
-  STATUS_IS, STATUS_ESCOLHIVEIS, SITUACOES_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataBr, dataHoraBr, formatTis, tisValido, hojeISO,
+  STATUS_IS, STATUS_ESCOLHIVEIS, situacaoDoStatus, SITUACOES_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataBr, dataHoraBr, formatTis, tisValido, hojeISO,
   type StatusIS,
 } from '../../utils/inspecoes';
 
@@ -24,6 +24,8 @@ interface Props {
   onMinutaResultado: () => void;
   onSolicitarParecer: () => void;
   onSincronizar: () => void;
+  /** A situação (Em andamento/Finalizada) mudou: o evento do Google Agenda muda de título e cor. */
+  onSituacaoMudou: (is: InspecaoRecord) => void;
   onApagar: () => void;
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
 }
@@ -38,7 +40,7 @@ const Linha: React.FC<{ rotulo: string; children?: React.ReactNode }> = ({ rotul
   );
 };
 
-export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, permissoes, onClose, onAgendar, onMinutaCancelamento, onMinutaResultado, onSolicitarParecer, onSincronizar, onApagar, onAviso }) => {
+export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, permissoes, onClose, onAgendar, onMinutaCancelamento, onMinutaResultado, onSolicitarParecer, onSincronizar, onSituacaoMudou, onApagar, onAviso }) => {
   const efetivo = statusEfetivoIS(is);
   const info = STATUS_IS[efetivo];
   const finalizada = is.situacao === 'finalizada';
@@ -81,6 +83,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, permissoes, onC
     try {
       await atualizarInspecao(is.id, { status, dataLaudo, laudo: laudo.trim(), restricoes, tis, ds1a: ds1a.trim(), observacoes: observacoes.trim() });
       onAviso(`IS ${is.is} atualizada.`);
+      if (is.dataEntrevista && situacaoDoStatus(status) !== is.situacao) onSituacaoMudou({ ...is, status, situacao: situacaoDoStatus(status) });
     } catch (err: any) {
       setErros({ geral: err?.message || 'Não foi possível salvar.' });
     } finally {

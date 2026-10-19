@@ -6,17 +6,21 @@
 // reagendar atualize o mesmo evento e cancelar o remova.
 import { chamarScript } from './driveConcursos';
 import { registrarSincronizacaoAgenda, type InspecaoRecord } from './firestoreInspecoes';
+import { extrairNomeInspecionado } from '../utils/format';
 import { dataDeEntrevista, horaDeEntrevista, horaFimSlot } from '../utils/inspecoes';
 
 export const NOME_AGENDA_GOOGLE = 'JRS/HNRe';
 
-type DadosEvento = Pick<InspecaoRecord, 'is' | 'finalidade' | 'inspecionado' | 'amp' | 'peritoNome' | 'peritoGmail' | 'dataEntrevista' | 'eventoAgendaId'>;
+type DadosEvento = Pick<InspecaoRecord, 'is' | 'finalidade' | 'inspecionado' | 'amp' | 'peritoNome' | 'peritoGmail' | 'dataEntrevista' | 'eventoAgendaId' | 'situacao'>;
 
 const montar = (is: DadosEvento) => ({
   eventoId: is.eventoAgendaId || '',
   agenda: NOME_AGENDA_GOOGLE,
-  titulo: `IS ${is.is} — ${is.finalidade}`,
-  descricao: [`Inspecionado: ${is.inspecionado}`, `AMP: ${is.amp}`, `Perito: ${is.peritoNome}`, `Finalidade: ${is.finalidade}`].join('\n'),
+  // Título: {AMP}: {nome do inspecionado}, com ✅ na frente quando a IS está finalizada.
+  titulo: `${is.situacao === 'finalizada' ? '✅ ' : ''}${is.amp}: ${extrairNomeInspecionado(is.inspecionado)}`,
+  // Cor no Google Agenda: Em andamento = amarelo; Finalizada = verde.
+  situacao: is.situacao,
+  descricao: [`IS ${is.is}`, `Inspecionado: ${is.inspecionado}`, `AMP: ${is.amp}`, `Perito: ${is.peritoNome}`, `Finalidade: ${is.finalidade}`].join('\n'),
   data: dataDeEntrevista(is.dataEntrevista),
   horaInicio: horaDeEntrevista(is.dataEntrevista),
   horaFim: horaFimSlot(horaDeEntrevista(is.dataEntrevista)),
