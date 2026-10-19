@@ -317,6 +317,7 @@ export const Inspecoes: React.FC = () => {
           onMinutaResultado={() => setMinuta({ tipo: 'resultado', is: detalhe })}
           onSolicitarParecer={() => setParecerPara(detalhe)}
           onSincronizar={() => sincronizar(detalhe)}
+          onSituacaoMudou={is => { sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS atualizada, mas o Google Agenda não: ${r.erro}`, 'error'); }); }}
           onApagar={() => setApagando(detalhe)}
           onAviso={avisar}
         />
