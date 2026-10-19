@@ -92,7 +92,8 @@ export const carregarConvidadosAgenda = async (): Promise<string[]> => {
 
 /** Assinatura curta do conteúdo que vai para o Google Agenda (para só sincronizar quando algo mudou). */
 export const assinaturaDias = (dias: DiaConcurso[], concursosAtivos: string[], convidados: string[] = []): string => {
-  const texto = JSON.stringify([concursosAtivos.slice().sort(), convidados, dias.map(d => [d.chave, d.nome, d.encerrado, d.candidatos.map(c => `${c.id}:${c.nome}`)])]);
+  // "v2": versão do formato enviado (descrição em lista HTML) — mudar o formato força uma nova sincronização.
+  const texto = JSON.stringify(['v2', concursosAtivos.slice().sort(), convidados, dias.map(d => [d.chave, d.nome, d.encerrado, d.candidatos.map(c => `${c.id}:${c.nome}`)])]);
   let h = 5381;
   for (let i = 0; i < texto.length; i++) h = ((h << 5) + h + texto.charCodeAt(i)) | 0;
   return `${dias.length}.${(h >>> 0).toString(36)}`;
