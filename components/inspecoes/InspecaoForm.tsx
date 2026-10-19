@@ -12,10 +12,10 @@ import { ChoiceGroup } from '../ui/ChoiceGroup';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { FinalidadeDropdown, type GrupoFinalidadeExtra } from '../ExamesGuide';
 import { CadastroInspecionado } from '../militares/CadastroInspecionado';
-import { SeletorHorario } from './SeletorHorario';
+import { SeletorHorario, estadoDoSlot } from './SeletorHorario';
 import { carregarFinalidadesIS, filtrarFinalidadesPorVinculo, normalizarBusca, type GrupoFinalidadeIS } from '../../utils/corposQuadros';
 import { formatNip } from '../../utils/format';
-import { hojeISO, chaveSlot, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
+import { hojeISO, chaveSlot, peritoAtendeNoTurno, turnoDoSlot, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
 import { vinculoDoInspecionado, type MilitarRecord } from '../../services/firestoreMilitares';
 import { criarInspecao, idDaIs, type AmpIS, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { peritosDoAmp, ampDaFinalidade, type PeritoIS } from '../../services/peritosIS';
@@ -114,6 +114,11 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
     if ((data || hora) && !perito) e.perito = 'Escolha o perito para agendar a entrevista.';
     if (data && !hora) e.hora = 'Escolha o horário da entrevista.';
     if (hora && !data) e.hora = 'Escolha a data da entrevista.';
+    if (perito && data && hora) {
+      const t = turnoDoSlot(hora);
+      const estado = estadoDoSlot(perito.uid, data, hora, !!t && peritoAtendeNoTurno(config, perito.uid, data, t), bloqueios, ocupados);
+      if (estado !== 'livre') e.hora = estado === 'ocupado' ? `${perito.usuario} já tem IS neste horário.` : estado === 'bloqueado' ? 'Esse horário está bloqueado.' : `${perito.usuario} não atende neste turno; escolha outro perito ou horário.`;
+    }
     return e;
   };
 

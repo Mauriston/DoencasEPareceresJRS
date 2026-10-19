@@ -17,6 +17,7 @@ import { MenuAcoes, type ItemMenu } from './ui/MenuAcoes';
 import { InspecaoForm } from './inspecoes/InspecaoForm';
 import { InspecaoDetalhe } from './inspecoes/InspecaoDetalhe';
 import { AgendarDialog } from './inspecoes/AgendarDialog';
+import { AgendarNoHorarioDialog } from './inspecoes/AgendarNoHorarioDialog';
 import { MinutaDialog } from './inspecoes/MinutaDialog';
 import { CalendarioIS } from './inspecoes/CalendarioIS';
 import { BloqueiosDialog } from './inspecoes/BloqueiosDialog';
@@ -26,7 +27,7 @@ import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
 import { observarMilitares, type MilitarRecord } from '../services/firestoreMilitares';
 import {
-  observarInspecoes, observarBloqueios, observarConfigAgenda, cancelarInspecao, apagarInspecao, type InspecaoRecord,
+  observarInspecoes, observarBloqueios, observarConfigAgenda, cancelarInspecao, apagarInspecao, agendarInspecao, type InspecaoRecord,
 } from '../services/firestoreInspecoes';
 import { carregarPeritos, type PeritoIS } from '../services/peritosIS';
 import { sincronizarAgendaIS, removerEventoAgendaIS } from '../services/agendaGoogleIS';
@@ -81,6 +82,7 @@ export const Inspecoes: React.FC = () => {
   const [novo, setNovo] = useState<{ dataEntrevista?: string; peritoUid?: string } | null>(null);
   const [detalheId, setDetalheId] = useState<string | null>(null);
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
+  const [horarioVazio, setHorarioVazio] = useState<string | null>(null);
   const [minuta, setMinuta] = useState<{ tipo: 'cancelamento' | 'resultado'; is: InspecaoRecord } | null>(null);
   const [parecerPara, setParecerPara] = useState<InspecaoRecord | null>(null);
   const [apagando, setApagando] = useState<InspecaoRecord | null>(null);
@@ -155,6 +157,18 @@ export const Inspecoes: React.FC = () => {
       avisar(`IS ${is.is} apagada.`);
     } catch (e: any) {
       avisar(e?.message || 'Não foi possível apagar a IS.', 'error');
+    }
+  };
+
+  /** IS arrastada no calendário: reagenda no novo horário, com o mesmo perito, e atualiza o Google Agenda. */
+  const reagendarArrastando = async (is: InspecaoRecord, dataEntrevista: string) => {
+    try {
+      const novo = { peritoUid: is.peritoUid, peritoNome: is.peritoNome, peritoGmail: is.peritoGmail, amp: is.amp, dataEntrevista };
+      const status = await agendarInspecao(is, novo);
+      const r = await sincronizarAgendaIS({ ...is, ...novo, status, situacao: 'andamento' });
+      avisar(r.ok ? `IS ${is.is} reagendada para ${dataHoraBr(dataEntrevista)}.` : `IS ${is.is} reagendada, mas o Google Agenda não foi atualizado: ${r.erro}`, r.ok ? 'success' : 'error');
+    } catch (e: any) {
+      avisar(e?.message || 'Não foi possível reagendar.', 'error');
     }
   };
 
@@ -248,7 +262,9 @@ export const Inspecoes: React.FC = () => {
           <CalendarioIS
             inspecoes={lista} bloqueios={bloqueios} config={config} peritoUid={peritoFiltro}
             onAbrir={is => setDetalheId(is.id)}
-            onNovoNoHorario={podeCadastrar && podeAgendar ? dataHora => setNovo({ dataEntrevista: dataHora, peritoUid: peritoFiltro || undefined }) : undefined}
+            onNovoNoHorario={podeAgendar ? setHorarioVazio : undefined}
+            onReagendar={podeAgendar ? reagendarArrastando : undefined}
+            onAviso={avisar}
           />
         ) : grupos.length === 0 ? (
           <div className="bg-white rounded-xl border border-line">
@@ -354,6 +370,16 @@ export const Inspecoes: React.FC = () => {
           onSituacaoMudou={is => { sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS atualizada, mas o Google Agenda não: ${r.erro}`, 'error'); }); }}
           onApagar={() => setApagando(detalhe)}
           onAviso={avisar}
+        />
+      )}
+
+      {horarioVazio && (
+        <AgendarNoHorarioDialog
+          dataHora={horarioVazio} peritoFiltro={peritoFiltro} inspecoes={lista ?? []} peritos={peritos} config={config} bloqueios={bloqueios}
+          podeCadastrar={podeCadastrar}
+          onNova={() => { setNovo({ dataEntrevista: horarioVazio, peritoUid: peritoFiltro || undefined }); setHorarioVazio(null); }}
+          onClose={() => setHorarioVazio(null)}
+          onAgendada={(msg, tom) => { setHorarioVazio(null); avisar(msg, tom); }}
         />
       )}
 

@@ -3,14 +3,17 @@
 // período, e as visões Dia · Semana · Mês. Dia e Semana são grades de horário (07:00–17:00) com as
 // entrevistas nos slots de 20 min, os bloqueios hachurados e, quando há um perito filtrado, os
 // turnos em que ele não atende esmaecidos. Clicar numa IS abre os detalhes; clicar num horário
-// livre (quem pode agendar) abre o cadastro de nova IS já nesse horário.
+// livre (quem pode agendar) abre o agendamento nesse horário (IS aberta ou nova IS). Segurar e arrastar
+// uma IS para outro horário livre do mesmo perito a reagenda. Os cartões mostram só a hora e o nome do
+// inspecionado; a cor indica o AMP (JRS = azul-marinho, MPI = dourado).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { estadoDoSlot } from './SeletorHorario';
 import { Button } from '../ui/Button';
 import { Segmented } from '../ui/Segmented';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import {
-  STATUS_IS, statusEfetivoIS, hojeISO, somarDias, inicioDaSemana, inicioDoMes, nomeMes, nomeDiaCurto, nomeDiaSemana, ehDiaUtil, deISO, paraISO,
-  dataDeEntrevista, horaDeEntrevista, minutosDe, hhmmDe, ehSlotValido, bloqueioAtinge, peritoAtendeNoTurno, TURNOS, DURACAO_SLOT_MIN,
+  STATUS_IS, statusEfetivoIS, hojeISO, chaveSlot, somarDias, inicioDaSemana, inicioDoMes, nomeMes, nomeDiaCurto, nomeDiaSemana, ehDiaUtil, deISO, paraISO,
+  dataDeEntrevista, horaDeEntrevista, minutosDe, hhmmDe, ehSlotValido, bloqueioAtinge, peritoAtendeNoTurno, turnoDoSlot, TURNOS, DURACAO_SLOT_MIN,
   type BloqueioAgenda, type ConfigAgenda, type Turno,
 } from '../../utils/inspecoes';
 
@@ -22,15 +25,12 @@ const PX_POR_MIN = 1.6;
 const ALTURA_GRADE = (FIM_GRADE - INICIO_GRADE) * PX_POR_MIN;
 const HORAS = Array.from({ length: 11 }, (_, i) => 7 + i); // 07h … 17h
 
-const COR_TOM: Record<string, string> = {
-  navy: 'bg-navy text-white border-navy',
-  navyOutline: 'bg-white text-navy border-navy',
-  success: 'bg-green/15 text-green-700 border-green',
-  danger: 'bg-wine/10 text-wine border-wine',
-  attention: 'bg-gold/25 text-gold-ink border-gold',
-  neutral: 'bg-thead text-ink-3 border-line',
-  muted: 'bg-thead text-ink-3 border-line',
+/** Cor do cartão pelo AMP: JRS = azul-marinho; MPI = dourado. */
+const COR_AMP: Record<string, string> = {
+  JRS: 'bg-navy text-white border-navy',
+  MPI: 'bg-gold/30 text-gold-ink border-gold',
 };
+const corAmp = (amp: string) => COR_AMP[amp] ?? COR_AMP.JRS;
 
 interface Props {
   inspecoes: InspecaoRecord[];
@@ -41,6 +41,10 @@ interface Props {
   onAbrir: (is: InspecaoRecord) => void;
   /** Presente só para quem pode agendar: clique num horário livre (dataHora = AAAA-MM-DDThh:mm). */
   onNovoNoHorario?: (dataHora: string) => void;
+  /** Presente só para quem pode agendar: IS arrastada para outro horário (mesmo perito). */
+  onReagendar?: (is: InspecaoRecord, dataHora: string) => void;
+  /** Avisos do arraste (horário indisponível etc.). */
+  onAviso?: (msg: string, tom?: 'success' | 'error') => void;
 }
 
 const titulo = (modo: Modo, ancora: string): string => {
@@ -59,7 +63,7 @@ const nomeCurto = (inspecionado: string): string => {
   return nome || inspecionado;
 };
 
-export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario }) => {
+export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, onReagendar, onAviso }) => {
   const [modo, setModo] = useState<Modo>('semana');
   const [ancora, setAncora] = useState(() => { const h = hojeISO(); return ehDiaUtil(h) ? h : somarDias(h, deISO(h).getDay() === 6 ? 2 : 1); });
   const hoje = hojeISO();
@@ -76,6 +80,73 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
     m.forEach(l => l.sort((a, b) => a.dataEntrevista.localeCompare(b.dataEntrevista)));
     return m;
   }, [inspecoes, peritoUid]);
+
+  // ----- arrastar para reagendar -----
+  interface Arraste { is: InspecaoRecord; x: number; y: number; alvo: { data: string; hhmm: string; motivo: string | null } | null }
+  const [arraste, setArraste] = useState<Arraste | null>(null);
+
+  const podeArrastar = (is: InspecaoRecord) => !!onReagendar && is.situacao !== 'finalizada' && !!is.peritoUid;
+
+  /** Slot (data + hora alinhada a 20 min) sob o ponto da tela, ou null se fora das colunas/turnos. */
+  const slotDoPonto = (x: number, y: number): { data: string; hhmm: string } | null => {
+    const coluna = document.elementsFromPoint(x, y).map(el => (el as HTMLElement).closest?.('[data-coluna]')).find(Boolean) as HTMLElement | null | undefined;
+    if (!coluna) return null;
+    const min = INICIO_GRADE + Math.floor((y - coluna.getBoundingClientRect().top) / PX_POR_MIN);
+    const turno = TURNOS.find(t => min >= minutosDe(t.inicio) && min < minutosDe(t.fim));
+    if (!turno) return null;
+    const ini = minutosDe(turno.inicio);
+    const hhmm = hhmmDe(ini + Math.floor((min - ini) / DURACAO_SLOT_MIN) * DURACAO_SLOT_MIN);
+    return ehSlotValido(hhmm) ? { data: coluna.dataset.coluna!, hhmm } : null;
+  };
+
+  /** Motivo pelo qual a IS não pode ir para o slot (null = pode). */
+  const motivoRecusa = (is: InspecaoRecord, data: string, hhmm: string): string | null => {
+    if (!ehDiaUtil(data)) return 'Sem expediente neste dia.';
+    const turno = turnoDoSlot(hhmm);
+    const ocupados = new Set<string>(inspecoes.filter(i => i.id !== is.id && i.dataEntrevista && i.status !== 'cancelada').map(i => chaveSlot(i.peritoUid, i.dataEntrevista)));
+    const estado = estadoDoSlot(is.peritoUid, data, hhmm, !!turno && peritoAtendeNoTurno(config, is.peritoUid, data, turno), bloqueios, ocupados);
+    if (estado === 'fora') return `${is.peritoNome} não atende neste turno.`;
+    if (estado === 'bloqueado') return 'Horário bloqueado.';
+    if (estado === 'ocupado') return `${is.peritoNome} já tem outra IS neste horário.`;
+    return null;
+  };
+
+  const iniciarArraste = (is: InspecaoRecord, e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!podeArrastar(is) || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const botao = e.currentTarget;
+    const x0 = e.clientX; const y0 = e.clientY;
+    let movendo = false;
+    botao.setPointerCapture(e.pointerId);
+    const mover = (ev: PointerEvent) => {
+      if (!movendo && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6) return;
+      movendo = true;
+      const ponto = slotDoPonto(ev.clientX, ev.clientY);
+      setArraste({ is, x: ev.clientX, y: ev.clientY, alvo: ponto ? { ...ponto, motivo: motivoRecusa(is, ponto.data, ponto.hhmm) } : null });
+    };
+    const soltar = (ev: PointerEvent) => {
+      botao.removeEventListener('pointermove', mover);
+      botao.removeEventListener('pointerup', soltar);
+      botao.removeEventListener('pointercancel', cancelar);
+      botao.releasePointerCapture?.(ev.pointerId);
+      setArraste(null);
+      if (!movendo) return;
+      // O clique que se segue ao arraste não deve abrir a ficha.
+      const engolir = (ce: Event) => ce.stopImmediatePropagation();
+      botao.addEventListener('click', engolir, { once: true, capture: true });
+      window.setTimeout(() => botao.removeEventListener('click', engolir, true), 100);
+      const ponto = slotDoPonto(ev.clientX, ev.clientY);
+      if (!ponto) { onAviso?.('Solte a IS sobre um horário do calendário.', 'error'); return; }
+      const destino = `${ponto.data}T${ponto.hhmm}`;
+      if (destino === is.dataEntrevista) return;
+      const motivo = motivoRecusa(is, ponto.data, ponto.hhmm);
+      if (motivo) { onAviso?.(`Não foi possível reagendar: ${motivo}`, 'error'); return; }
+      onReagendar?.(is, destino);
+    };
+    const cancelar = () => { botao.removeEventListener('pointermove', mover); botao.removeEventListener('pointerup', soltar); botao.removeEventListener('pointercancel', cancelar); setArraste(null); };
+    botao.addEventListener('pointermove', mover);
+    botao.addEventListener('pointerup', soltar);
+    botao.addEventListener('pointercancel', cancelar);
+  };
 
   const navegar = (sentido: -1 | 1) => {
     if (modo === 'dia') {
@@ -107,6 +178,12 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
         />
       </div>
 
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 border-b border-line text-xs text-ink-3" aria-label="Legenda de cores por AMP">
+        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-navy" aria-hidden="true" />JRS</span>
+        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-gold" aria-hidden="true" />MPI</span>
+        {onReagendar && <span className="ml-auto hidden sm:inline">Segure e arraste uma IS para reagendar.</span>}
+      </div>
+
       {modo === 'mes'
         ? <VisaoMes ancora={ancora} hoje={hoje} porDia={porDia} bloqueios={bloqueios} peritoUid={peritoUid} onAbrir={onAbrir} onDia={d => { setAncora(d); setModo('dia'); }} />
         : (
@@ -128,12 +205,20 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
                   ))}
                 </div>
                 {dias.map(d => (
-                  <ColunaDia key={d} data={d} hoje={hoje} inspecoes={porDia.get(d) ?? []} bloqueios={bloqueios} config={config} peritoUid={peritoUid} onAbrir={onAbrir} onNovoNoHorario={onNovoNoHorario} />
+                  <ColunaDia key={d} data={d} hoje={hoje} inspecoes={porDia.get(d) ?? []} bloqueios={bloqueios} config={config} peritoUid={peritoUid} onAbrir={onAbrir} onNovoNoHorario={onNovoNoHorario} podeArrastar={podeArrastar} onIniciarArraste={iniciarArraste} arrastando={arraste} />
                 ))}
               </div>
             </div>
           </div>
         )}
+      {arraste && (
+        <div
+          className={`fixed z-toast pointer-events-none px-2 py-1 rounded border text-xs font-semibold shadow-lg opacity-90 ${corAmp(arraste.is.amp)}`}
+          style={{ left: arraste.x + 12, top: arraste.y + 12 }}
+        >
+          {arraste.alvo ? (arraste.alvo.motivo ? `✖ ${arraste.alvo.motivo}` : `${arraste.alvo.hhmm} · ${nomeCurto(arraste.is.inspecionado)}`) : nomeCurto(arraste.is.inspecionado)}
+        </div>
+      )}
     </div>
   );
 };
@@ -145,7 +230,10 @@ const topo = (min: number) => (min - INICIO_GRADE) * PX_POR_MIN;
 const ColunaDia: React.FC<{
   data: string; hoje: string; inspecoes: InspecaoRecord[]; bloqueios: BloqueioAgenda[]; config: ConfigAgenda; peritoUid: string;
   onAbrir: (is: InspecaoRecord) => void; onNovoNoHorario?: (dataHora: string) => void;
-}> = ({ data, hoje, inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario }) => {
+  podeArrastar: (is: InspecaoRecord) => boolean;
+  onIniciarArraste: (is: InspecaoRecord, e: React.PointerEvent<HTMLButtonElement>) => void;
+  arrastando: { is: InspecaoRecord; alvo: { data: string; hhmm: string; motivo: string | null } | null } | null;
+}> = ({ data, hoje, inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, podeArrastar, onIniciarArraste, arrastando }) => {
   const agora = new Date();
   const minAgora = agora.getHours() * 60 + agora.getMinutes();
   const diaBloqueios = bloqueios.filter(b => b.data === data && (!peritoUid || b.peritoUid === '*' || b.peritoUid === peritoUid));
@@ -174,8 +262,16 @@ const ColunaDia: React.FC<{
     <div
       className={`relative border-l border-line ${onNovoNoHorario ? 'cursor-cell' : ''}`}
       style={{ height: ALTURA_GRADE }}
+      data-coluna={data}
       onClick={aoClicarVazio}
     >
+      {/* destino do arraste */}
+      {arrastando?.alvo?.data === data && (
+        <div
+          className={`absolute inset-x-0 z-20 pointer-events-none border-2 rounded ${arrastando.alvo.motivo ? 'border-wine bg-wine/10' : 'border-green bg-green/15'}`}
+          style={{ top: topo(minutosDe(arrastando.alvo.hhmm)), height: DURACAO_SLOT_MIN * PX_POR_MIN }}
+        />
+      )}
       {/* fora do expediente: antes das 07:30, almoço e depois das 17:00 */}
       <div className="absolute inset-x-0 bg-thead/70 pointer-events-none" style={{ top: 0, height: topo(7 * 60 + 30) }} />
       <div className="absolute inset-x-0 bg-thead/70 pointer-events-none" style={{ top: topo(12 * 60), height: 60 * PX_POR_MIN }} />
@@ -214,16 +310,18 @@ const ColunaDia: React.FC<{
       {Array.from(grupos.values()).flatMap(grupo => grupo.map((is, idx) => {
         const min = minutosDe(horaDeEntrevista(is.dataEntrevista));
         const st = STATUS_IS[statusEfetivoIS(is)];
+        const arrastavel = podeArrastar(is);
         return (
           <button
             key={is.id}
             type="button"
             onClick={e => { e.stopPropagation(); onAbrir(is); }}
-            title={`${horaDeEntrevista(is.dataEntrevista)} · IS ${is.is} · ${is.inspecionado} · ${is.peritoNome} · ${st.rotulo}`}
-            className={`absolute z-10 px-1.5 rounded border text-left overflow-hidden text-xs leading-tight hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${COR_TOM[st.tom]}`}
+            onPointerDown={e => onIniciarArraste(is, e)}
+            title={`${horaDeEntrevista(is.dataEntrevista)} · IS ${is.is} · ${is.inspecionado} · ${is.amp} · ${is.peritoNome} · ${st.rotulo}${arrastavel ? ' · arraste para reagendar' : ''}`}
+            className={`absolute z-10 px-1.5 rounded border text-left overflow-hidden text-xs leading-tight hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold select-none ${arrastavel ? 'cursor-grab active:cursor-grabbing touch-none' : ''} ${arrastando?.is.id === is.id ? 'opacity-40' : ''} ${corAmp(is.amp)}`}
             style={{ top: topo(min) + 1, height: DURACAO_SLOT_MIN * PX_POR_MIN - 2, left: `calc(${(idx / grupo.length) * 100}% + 2px)`, width: `calc(${100 / grupo.length}% - 4px)` }}
           >
-            <span className="font-bold font-mono">{horaDeEntrevista(is.dataEntrevista)}</span> <span className="font-semibold">IS {is.is}</span> <span className="hidden xl:inline">· {nomeCurto(is.inspecionado)}</span>
+            <span className="font-bold font-mono">{horaDeEntrevista(is.dataEntrevista)}</span> <span className="font-semibold">{nomeCurto(is.inspecionado)}</span>
           </button>
         );
       }))}
@@ -264,7 +362,7 @@ const VisaoMes: React.FC<{
                     {lista.slice(0, 3).map(is => {
                       const st = STATUS_IS[statusEfetivoIS(is)];
                       return (
-                        <button key={is.id} type="button" onClick={() => onAbrir(is)} title={`${is.inspecionado} · ${st.rotulo}`} className={`block w-full text-left truncate rounded border px-1 text-xs ${COR_TOM[st.tom]}`}>
+                        <button key={is.id} type="button" onClick={() => onAbrir(is)} title={`${is.inspecionado} · ${is.amp} · ${st.rotulo}`} className={`block w-full text-left truncate rounded border px-1 text-xs ${corAmp(is.amp)}`}>
                           <span className="font-mono font-bold">{horaDeEntrevista(is.dataEntrevista)}</span> {nomeCurto(is.inspecionado)}
                         </button>
                       );
