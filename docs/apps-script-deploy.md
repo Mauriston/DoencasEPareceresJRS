@@ -5,7 +5,7 @@ O código dos dois projetos Apps Script fica no repositório e é publicado com 
 | Projeto | Pasta | URL no app |
 |---|---|---|
 | `principal` | `apps-script/principal/` (`Code.gs`) | `GAS_URL` em `config/endpoints.ts` |
-| `concursos` | `apps-script/concursos/` (`CodeConcursos.gs`) | `GAS_URL_CONCURSOS` em `config/endpoints.ts` |
+| `concursos` | `apps-script/concursos/` (`CodeConcursos.gs`, `CodePrincipal.gs`) | `GAS_URL_CONCURSOS` em `config/endpoints.ts` |
 
 Para um novo projeto: crie a pasta `apps-script/<nome>/` e adicione uma entrada em `apps-script/projetos.json`; o script e o workflow o reconhecem (inclua o nome na lista `options` do workflow para o disparo manual).
 
@@ -35,3 +35,6 @@ Para um novo projeto: crie a pasta `apps-script/<nome>/` e adicione uma entrada 
 - **Propriedades do script** (ex.: `GEMINI_API_KEY`) não vão no repositório e não são alteradas pelo deploy.
 - Um `clasp push` substitui o código remoto: edições feitas direto no editor e não comitadas se perdem. Daqui em diante, edite pelo repositório.
 - Se o workflow falhar com erro de autenticação, refaça o `clasp login` e atualize o secret `CLASPRC_JSON`.
+
+## Consolidação dos projetos
+`apps-script/concursos/CodePrincipal.gs` recebeu as ações em uso do antigo projeto `principal` (`getLookups`, `getMilitaresList`, `getMilitar`, `getTemplatesDocumentos`, `getPericiaMenorList`, `getExtras`, `extrair_dados_atestado`, `gerarMinutaMensagem`, `gerar_pericia_menor`), com o mesmo formato de resposta. O `doPost` de `CodeConcursos.gs` encaminha essas ações para `doPostPrincipal`. Ficaram de fora, por estarem sem uso: `getPareceresList`, `imprimir` e o parecer "regular" por planilha. Enquanto o app não migrar para a URL única, o projeto `principal` continua como está (reversão).
