@@ -298,7 +298,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       case 'home': return <Home />;
       case 'perfil': return <Perfil />;
       case 'guide': return <DiseaseGuide />;
-      case 'laws': return can('laws') ? <LawReference /> : <AccessDenied pagina={paginaLabel('laws')} />;
+      case 'laws': return can('laws') ? <LawReference podeCadastrar={authUser?.perfil === 'admin'} /> : <AccessDenied pagina={paginaLabel('laws')} />;
       case 'dgpm406': return can('dgpm406') ? <DGPM406Guide /> : <AccessDenied pagina={paginaLabel('dgpm406')} />;
       case 'concursos': return can('concursos') ? <ConcursosGuide /> : <AccessDenied pagina={paginaLabel('concursos')} />;
       case 'portaria': return can('portaria') ? <PortariaGuide /> : <AccessDenied pagina={paginaLabel('portaria')} />;
