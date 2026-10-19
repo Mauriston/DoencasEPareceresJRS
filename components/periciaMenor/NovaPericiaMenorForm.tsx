@@ -15,7 +15,7 @@ import { RecorteAtestado } from './RecorteAtestado';
 import { DispensasModal } from './DispensasModal';
 import { ServicoMilitarForm } from './ServicoMilitarForm';
 import { useNav } from '../../context/NavContext';
-import { GAS_URL } from '../../config/endpoints';
+import { extrairDadosAtestado } from '../../services/atestadoIA';
 import { observarMilitares, type MilitarRecord } from '../../services/firestoreMilitares';
 import { enviarPdfPericiaMenor, novoIdPericiaMenor, registrarPericiaMenor } from '../../services/firestorePericiasMenores';
 import { carregarCid, normalizarBusca, omEhHnre, type CidItem } from '../../utils/corposQuadros';
@@ -119,24 +119,22 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado })
     setExtraindo(true);
     setErros(e => ({ ...e, geral: '' }));
     try {
-      const resp = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'extrair_dados_atestado', base64Image: imagemRecortada.split(',')[1] }) });
-      const r = await resp.json();
-      if (!r.success || !r.data) { setErros(e => ({ ...e, geral: r.message || 'Não foi possível ler o atestado.' })); return; }
-      if (r.data.dataAtestado) { setDataAtestado(String(r.data.dataAtestado)); limpar('dataAtestado'); }
-      if (r.data.tempoAtestado) { setTempoAtestado(soDigitos(String(r.data.tempoAtestado))); limpar('tempoAtestado'); }
-      if (r.data.cid) {
-        const codigo = String(r.data.cid).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const dados = await extrairDadosAtestado(imagemRecortada.split(',')[1]);
+      if (dados.dataAtestado) { setDataAtestado(String(dados.dataAtestado)); limpar('dataAtestado'); }
+      if (dados.tempoAtestado) { setTempoAtestado(soDigitos(String(dados.tempoAtestado))); limpar('tempoAtestado'); }
+      if (dados.cid) {
+        const codigo = String(dados.cid).toLowerCase().replace(/[^a-z0-9]/g, '');
         const achado = cids.find(c => c.SUBCAT.toLowerCase() === codigo) ?? cids.find(c => c.SUBCAT.toLowerCase().startsWith(codigo));
-        if (achado) { setCid(achado); setCidTexto(rotuloCid(achado)); limpar('cid'); } else { setCid(null); setCidTexto(String(r.data.cid)); }
+        if (achado) { setCid(achado); setCidTexto(rotuloCid(achado)); limpar('cid'); } else { setCid(null); setCidTexto(String(dados.cid)); }
       }
-      if (r.data.nomeMilitar) {
-        const termos = normalizarBusca(String(r.data.nomeMilitar)).split(/\s+/).filter(Boolean);
+      if (dados.nomeMilitar) {
+        const termos = normalizarBusca(String(dados.nomeMilitar)).split(/\s+/).filter(Boolean);
         const achados = militares.filter(m => { const alvo = normalizarBusca(m.inspecionado); return termos.every(t => alvo.includes(t)); });
         if (achados.length === 1) selecionarMilitar(achados[0]);
-        else { setMilitarId(''); setMilitarTexto(String(r.data.nomeMilitar)); }
+        else { setMilitarId(''); setMilitarTexto(String(dados.nomeMilitar)); }
       }
-    } catch {
-      setErros(e => ({ ...e, geral: 'Erro de comunicação com o servidor ao ler o atestado.' }));
+    } catch (err: any) {
+      setErros(e => ({ ...e, geral: err?.message || 'Não foi possível ler o atestado.' }));
     } finally {
       setExtraindo(false);
     }
