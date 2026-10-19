@@ -38,7 +38,7 @@ export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, 
         tabIndex={-1}
         className={`absolute bg-white flex flex-col overflow-hidden focus:outline-none shadow-2xl ${
           isDesktop
-            ? 'right-0 top-0 h-full w-full max-w-[480px] border-l border-line animate-drawer-in'
+            ? 'right-0 top-0 h-full w-full max-w-[576px] border-l border-line animate-drawer-in'
             : 'left-0 right-0 bottom-0 rounded-t-2xl max-h-[92dvh] animate-sheet-up'
         }`}
       >
