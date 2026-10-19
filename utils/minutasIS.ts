@@ -38,5 +38,5 @@ export const minutaResultado = (d: DadosMinuta & { dataEntrevista?: string; data
   `1. Comunico o resultado da IS nº ${d.is}, finalidade "${d.finalidade}", de ${d.inspecionado}${d.dataEntrevista ? `, realizada em ${dataHoraBr(d.dataEntrevista)}` : ''}${d.tis ? `, TIS nº ${d.tis}` : ''}:`,
   '',
   `LAUDO${d.dataLaudo ? ` (${dataBr(d.dataLaudo)})` : ''}: ${d.laudo || '<laudo>'}`,
-  d.restricoes && d.restricoes !== 'Sem restrições' ? `RESTRIÇÕES: ${d.restricoes}` : '',
+  d.restricoes ? `RESTRIÇÕES: ${d.restricoes}` : '',
 ].filter((l, i, a) => l !== '' || a[i - 1] !== '').join('\n');
