@@ -50,7 +50,7 @@ export interface InspecaoDoc {
   laudo: string;
   observacoes: string;
   restricoes: string;
-  /** Nº do TIS, 000.000.#0 */
+  /** Nº do TIS: AAA.000.N… (AAA = 3 últimos dígitos do ano; depois do 2º ponto, 1 ou mais dígitos) */
   tis: string;
   ds1a: string;
   /** Texto da minuta de cancelamento (IS atrasada cancelada). */

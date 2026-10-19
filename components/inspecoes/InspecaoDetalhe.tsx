@@ -11,7 +11,7 @@ import { StatusTag } from '../ui/StatusTag';
 import { atualizarInspecao, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { carregarRestricoesIS } from '../../utils/corposQuadros';
 import {
-  STATUS_IS, STATUS_ESCOLHIVEIS, situacaoDoStatus, SITUACOES_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataBr, dataHoraBr, formatTis, tisValido, hojeISO,
+  STATUS_IS, STATUS_ESCOLHIVEIS, situacaoDoStatus, SITUACOES_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataBr, dataHoraBr, formatTis, tisValido, prefixoAnoTis, hojeISO,
   type StatusIS,
 } from '../../utils/inspecoes';
 
@@ -66,10 +66,11 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, permissoes, onC
 
   const validar = (): Record<string, string> => {
     const e: Record<string, string> = {};
-    if (tis && !tisValido(tis)) e.tis = 'O Nº do TIS tem o formato 000.000.00 (7 ou 8 dígitos).';
+    // Nº antigo, de outro formato, só é cobrado se for alterado.
+    if (tis && tis !== is.tis && !tisValido(tis)) e.tis = `O Nº do TIS tem o formato ${prefixoAnoTis()}.000.N (um ou mais dígitos depois do 2º ponto).`;
     if (is.dataEntrevista && status === 'aberta') e.status = 'A IS já tem entrevista marcada; use Agendada ou Reagendada.';
     if (!is.dataEntrevista && (status === 'agendada' || status === 'reagendada')) e.status = 'Para agendar, use o botão Agendar (escolhe perito, data e horário).';
-    if (status === 'tis_assinado' && !tisValido(tis)) e.tis = 'Informe o Nº do TIS para marcar "TIS assinado".';
+    if (status === 'tis_assinado' && !tis.trim()) e.tis = 'Informe o Nº do TIS para marcar "TIS assinado".';
     if (dataLaudo && dataLaudo > hojeISO()) e.dataLaudo = 'A data do laudo não pode ser futura.';
     return e;
   };
@@ -174,8 +175,8 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, permissoes, onC
               {a => <textarea {...a} value={laudo} onChange={e => setLaudo(e.target.value)} className={`${a.className} min-h-[88px]`} />}
             </Field>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Nº do TIS" error={erros.tis} help="Formato 000.000.00">
-                {a => <input {...a} type="text" inputMode="numeric" value={tis} onChange={e => { setTis(formatTis(e.target.value)); limpar('tis'); }} placeholder="000.000.00" maxLength={10} className={`${a.className} font-mono`} />}
+              <Field label="Nº do TIS" error={erros.tis} help={`Formato ${prefixoAnoTis()}.000.N — digite só o final`}>
+                {a => <input {...a} type="text" inputMode="numeric" value={tis} onChange={e => { setTis(formatTis(e.target.value, tis)); limpar('tis'); }} placeholder={`${prefixoAnoTis()}.000.0`} maxLength={14} className={`${a.className} font-mono`} />}
               </Field>
               <Field label="DS-1a">
                 {a => <input {...a} type="text" value={ds1a} onChange={e => setDs1a(e.target.value)} autoComplete="off" />}

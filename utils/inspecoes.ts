@@ -190,11 +190,24 @@ export const chaveSlot = (peritoUid: string, dataHora: string): string => `${per
 // TIS
 // ---------------------------------------------------------------------------
 
-/** Máscara do Nº do TIS: 000.000.#0 (7 ou 8 dígitos). */
-export const formatTis = (val: string | undefined | null): string => {
-  const d = String(val || '').replace(/\D/g, '').slice(0, 8);
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+/** Três últimos dígitos do ano atual (2026 → "026"): primeira parte do Nº do TIS. */
+export const prefixoAnoTis = (): string => String(new Date().getFullYear()).slice(-3);
+
+/**
+ * Máscara do Nº do TIS: AAA.000.N… — AAA = 3 últimos dígitos do ano atual; entre os pontos sempre 000;
+ * depois do segundo ponto, 1 ou mais dígitos (ex.: 026.000.123). Quem digita informa só o final: o início
+ * é preenchido. Uma colagem completa (com qualquer ano) também é aceita. `anterior` permite apagar até limpar.
+ */
+export const formatTis = (val: string | undefined | null, anterior: string = ''): string => {
+  const texto = String(val || '');
+  const d = texto.replace(/\D/g, '');
+  if (!d) return '';
+  const ano = prefixoAnoTis();
+  // Apagando: ao chegar no prefixo fixo, limpa o campo.
+  if (texto.length < anterior.length && d.length <= 6) return '';
+  const sufixo = d.length >= 6 && d.slice(3, 6) === '000' ? d.slice(6) : d;
+  return `${ano}.000.${sufixo.slice(0, 7)}`;
 };
-export const tisValido = (val: string): boolean => { const n = val.replace(/\D/g, '').length; return n === 7 || n === 8; };
+
+/** Nº do TIS válido: três dígitos, ".000." e 1 ou mais dígitos. */
+export const tisValido = (val: string): boolean => /^\d{3}\.000\.\d+$/.test(val);
