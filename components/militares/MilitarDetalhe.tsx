@@ -7,6 +7,10 @@ import { StatusTag } from '../ui/StatusTag';
 import { formatNip, formatCelular, formatCpf, formatIdentidadeMilitar, formatDataBr } from '../../utils/format';
 import { tipoDoInspecionado, type MilitarRecord } from '../../services/firestoreMilitares';
 import { observarPareceres, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
+import { observarInspecoesDoInspecionado, type InspecaoRecord } from '../../services/firestoreInspecoes';
+import { useNav } from '../../context/NavContext';
+import { canAccessPage } from '../../config/permissions';
+import { STATUS_IS, statusEfetivoIS, dataBr as dataBrIso, dataHoraBr } from '../../utils/inspecoes';
 import { observarPericiasDoMilitar, dataBR, statusPericia, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
 
 const TOM_PARECER = { solicitado: 'navyOutline', atrasado: 'danger', concluido: 'success' } as const;
@@ -43,7 +47,12 @@ export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => v
   const [pericias, setPericias] = useState<PericiaMenorRecord[]>([]);
   useEffect(() => observarPareceres(lista => setPareceres(lista.filter(p => p.militarId === m.id)), () => { /* sem histórico de pareceres */ }), [m.id]);
   useEffect(() => observarPericiasDoMilitar(m.id, setPericias, () => { /* sem histórico de perícias */ }), [m.id]);
-  const temHistorico = pareceres.length > 0 || pericias.length > 0;
+  // Inspeções de Saúde do inspecionado (só para quem acessa a página Inspeções de Saúde).
+  const nav = useNav();
+  const podeVerIS = canAccessPage('inspecoes', nav?.authUser?.perfil);
+  const [inspecoes, setInspecoes] = useState<InspecaoRecord[]>([]);
+  useEffect(() => (podeVerIS ? observarInspecoesDoInspecionado(m.id, setInspecoes, () => { /* sem histórico de IS */ }) : undefined), [m.id, podeVerIS]);
+  const temHistorico = pareceres.length > 0 || pericias.length > 0 || inspecoes.length > 0;
   const agora = useMemo(() => Date.now(), []);
 
   const extras = [m.nomeGuerra, m.especialidade, m.emailPessoal, m.celular, m.dataNascimento, m.cpf, m.identidadeMilitar, m.crm, m.rqe].some(Boolean);
@@ -98,6 +107,26 @@ export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => v
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wide text-ink-3 border-t border-line pt-4 mb-3">Histórico</h3>
             <div className="space-y-4">
+              {inspecoes.length > 0 && (
+                <section aria-label="Inspeções de Saúde">
+                  <h4 className="text-h3 font-bold text-navy mb-2">Inspeções de Saúde <span className="text-xs font-bold text-ink-3 bg-thead rounded-full px-2 py-0.5 align-middle">{inspecoes.length}</span></h4>
+                  <ul className="space-y-2">
+                    {inspecoes.map(i => {
+                      const st = STATUS_IS[statusEfetivoIS(i)];
+                      return (
+                        <li key={i.id}>
+                          <ItemHistorico
+                            titulo={i.finalidade}
+                            detalhe={`IS ${i.is} · ${i.amp}${i.peritoNome ? ` · ${i.peritoNome}` : ''}${i.tis ? ` · TIS ${i.tis}` : ''}`}
+                            data={i.dataEntrevista ? `Entrevista em ${dataHoraBr(i.dataEntrevista)}` : `Aberta em ${dataBrIso(i.dataAbertura)}`}
+                            tag={<StatusTag tone={st.tom}>{st.rotulo}</StatusTag>}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              )}
               {pareceres.length > 0 && (
                 <section aria-label="Pareceres solicitados">
                   <h4 className="text-h3 font-bold text-navy mb-2">Pareceres <span className="text-xs font-bold text-ink-3 bg-thead rounded-full px-2 py-0.5 align-middle">{pareceres.length}</span></h4>
