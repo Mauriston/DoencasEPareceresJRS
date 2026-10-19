@@ -1,6 +1,7 @@
 // Ficheiro: components/inspecoes/BloqueiosDialog.tsx
-// Bloqueios da agenda das IS: de um horário (slot de 20 min), de um turno completo ou do dia inteiro,
-// para todos os peritos ou para um perito. Admin e Secretaria bloqueiam qualquer perito; um perfil médico
+// Bloqueios da agenda das IS: de um horário (slot de 20 min), de um turno completo, do dia inteiro ou de um
+// período (data de início a data de término, dias inteiros), para todos os peritos ou para um perito. O bloqueio de
+// período também cria um evento de dia inteiro, cinza, no Google Agenda: "{usuário} - {motivo}". Admin e Secretaria bloqueiam qualquer perito; um perfil médico
 // (quando o Admin libera a funcionalidade) só bloqueia horários e turnos configurados para ele.
 import React, { useMemo, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
@@ -9,13 +10,16 @@ import { Field } from '../ui/Field';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
 import { StatusTag } from '../ui/StatusTag';
 import { criarBloqueio, apagarBloqueio } from '../../services/firestoreInspecoes';
+import { criarEventoBloqueioAgenda, removerEventoBloqueioAgenda } from '../../services/agendaGoogleIS';
 import type { PeritoIS } from '../../services/peritosIS';
 import {
-  TURNOS, slotsDoTurno, hojeISO, ehDiaUtil, dataBr, nomeDiaSemana, peritoAtendeNoTurno, TODOS_PERITOS,
+  TURNOS, slotsDoTurno, hojeISO, diasEntre, ehDiaUtil, dataBr, nomeDiaSemana, peritoAtendeNoTurno, TODOS_PERITOS,
   type BloqueioAgenda, type ConfigAgenda, type Turno,
 } from '../../utils/inspecoes';
 
-type TipoBloqueio = 'horario' | 'turno' | 'dia';
+type TipoBloqueio = 'horario' | 'turno' | 'dia' | 'periodo';
+
+const MAX_DIAS_PERIODO = 366;
 
 interface Props {
   peritos: PeritoIS[];
@@ -31,6 +35,7 @@ export const BloqueiosDialog: React.FC<Props> = ({ peritos, config, bloqueios, u
   const amplo = usuario.perfil === 'admin' || usuario.perfil === 'user_secretaria';
   const [tipo, setTipo] = useState<TipoBloqueio>('turno');
   const [data, setData] = useState('');
+  const [dataFim, setDataFim] = useState('');
   const [turno, setTurno] = useState<Turno>('manha');
   const [hora, setHora] = useState('');
   const [peritoUid, setPeritoUid] = useState(amplo ? TODOS_PERITOS : usuario.uid);
@@ -39,12 +44,20 @@ export const BloqueiosDialog: React.FC<Props> = ({ peritos, config, bloqueios, u
   const [salvando, setSalvando] = useState(false);
 
   const limpar = (k: string) => setErros(e => (e[k] ? { ...e, [k]: '' } : e));
-  const futuros = useMemo(() => bloqueios.filter(b => b.data >= hojeISO()), [bloqueios]);
+  const futuros = useMemo(() => bloqueios.filter(b => (b.dataFim || b.data) >= hojeISO()), [bloqueios]);
   const nomePerito = (uid: string) => (uid === TODOS_PERITOS ? 'Todos os peritos' : peritos.find(p => p.uid === uid)?.usuario ?? 'Perito');
   const podeApagar = (b: BloqueioAgenda) => amplo || b.peritoUid === usuario.uid;
 
   const validar = (): Record<string, string> => {
     const e: Record<string, string> = {};
+    if (tipo === 'periodo') {
+      if (!data) e.data = 'Escolha a data de início.';
+      if (!dataFim) e.dataFim = 'Escolha a data de término.';
+      else if (data && dataFim < data) e.dataFim = 'O término não pode ser anterior ao início.';
+      else if (data && diasEntre(data, dataFim) >= MAX_DIAS_PERIODO) e.dataFim = `O período pode ter no máximo ${MAX_DIAS_PERIODO} dias.`;
+      if (!motivo.trim()) e.motivo = 'Informe o motivo (ex.: férias, licença, missão).';
+      return e;
+    }
     if (!data) e.data = 'Escolha a data.';
     else if (!ehDiaUtil(data)) e.data = `${nomeDiaSemana(data)} não tem expediente de IS.`;
     if (tipo === 'horario' && !hora) e.hora = 'Escolha o horário.';
@@ -65,14 +78,26 @@ export const BloqueiosDialog: React.FC<Props> = ({ peritos, config, bloqueios, u
     if (Object.keys(novos).length) return;
     setSalvando(true);
     try {
+      const nomeDoPerito = peritoUid === TODOS_PERITOS ? undefined : peritoUid === usuario.uid ? usuario.usuario : nomePerito(peritoUid);
+      // Período: evento de dia inteiro, cinza, no Google Agenda ("{usuário} - {motivo}"); se falhar, o bloqueio é criado mesmo assim.
+      let eventoAgendaId = '';
+      let avisoAgenda = '';
+      if (tipo === 'periodo') {
+        try {
+          eventoAgendaId = await criarEventoBloqueioAgenda({ titulo: `${nomeDoPerito ?? 'Todos os peritos'} - ${motivo.trim()}`, dataInicio: data, dataFim });
+        } catch (errAgenda: any) {
+          avisoAgenda = ` Mas o Google Agenda não foi atualizado: ${errAgenda?.message || 'erro'}`;
+        }
+      }
       await criarBloqueio({
-        data, turno: tipo === 'dia' ? 'dia' : tipo === 'horario' ? (hora < '12:00' ? 'manha' : 'tarde') : turno,
+        data, turno: tipo === 'dia' || tipo === 'periodo' ? 'dia' : tipo === 'horario' ? (hora < '12:00' ? 'manha' : 'tarde') : turno,
         ...(tipo === 'horario' ? { hora } : {}),
-        peritoUid, peritoNome: peritoUid === TODOS_PERITOS ? undefined : peritoUid === usuario.uid ? usuario.usuario : nomePerito(peritoUid),
+        ...(tipo === 'periodo' ? { dataFim, ...(eventoAgendaId ? { eventoAgendaId } : {}) } : {}),
+        peritoUid, peritoNome: nomeDoPerito,
         motivo: motivo.trim(), criadoPor: usuario.usuario,
       });
-      onAviso('Bloqueio criado.');
-      setMotivo(''); setHora('');
+      onAviso(`Bloqueio criado.${avisoAgenda}`, avisoAgenda ? 'error' : 'success');
+      setMotivo(''); setHora(''); setDataFim('');
     } catch (err: any) {
       setErros({ geral: err?.message || 'Não foi possível criar o bloqueio.' });
     } finally {
@@ -81,11 +106,18 @@ export const BloqueiosDialog: React.FC<Props> = ({ peritos, config, bloqueios, u
   };
 
   const remover = async (b: BloqueioAgenda) => {
-    try { await apagarBloqueio(b.id); onAviso('Bloqueio removido.'); }
+    try {
+      let avisoAgenda = '';
+      if (b.eventoAgendaId) {
+        try { await removerEventoBloqueioAgenda(b.eventoAgendaId); } catch (errAgenda: any) { avisoAgenda = ` Mas o evento do Google Agenda não foi removido: ${errAgenda?.message || 'erro'}`; }
+      }
+      await apagarBloqueio(b.id);
+      onAviso(`Bloqueio removido.${avisoAgenda}`, avisoAgenda ? 'error' : 'success');
+    }
     catch (err: any) { onAviso(err?.message || 'Não foi possível remover o bloqueio.', 'error'); }
   };
 
-  const descricao = (b: BloqueioAgenda) => b.hora ? `Horário ${b.hora}` : b.turno === 'dia' ? 'Dia inteiro' : `Turno da ${TURNOS.find(t => t.id === b.turno)?.rotulo.toLowerCase()}`;
+  const descricao = (b: BloqueioAgenda) => b.dataFim ? 'Período (dias inteiros)' : b.hora ? `Horário ${b.hora}` : b.turno === 'dia' ? 'Dia inteiro' : `Turno da ${TURNOS.find(t => t.id === b.turno)?.rotulo.toLowerCase()}`;
 
   return (
     <Dialog title="Bloqueios da agenda" icon="block" size="lg" onClose={onClose} footer={<Button variant="secondary" onClick={onClose}>Fechar</Button>}>
@@ -95,12 +127,17 @@ export const BloqueiosDialog: React.FC<Props> = ({ peritos, config, bloqueios, u
           {erros.geral && <p role="alert" className="text-sm font-semibold text-wine">{erros.geral}</p>}
           <ChoiceGroup<TipoBloqueio>
             label="O que bloquear" value={tipo} onChange={v => { setTipo(v); limpar('hora'); }}
-            options={[{ value: 'horario', label: 'Um horário' }, { value: 'turno', label: 'Um turno' }, { value: 'dia', label: 'Dia inteiro' }]}
+            options={[{ value: 'horario', label: 'Um horário' }, { value: 'turno', label: 'Um turno' }, { value: 'dia', label: 'Dia inteiro' }, { value: 'periodo', label: 'Um período' }]}
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Data" required error={erros.data}>
-              {a => <input {...a} type="date" min={hojeISO()} value={data} onChange={e => { setData(e.target.value); limpar('data'); }} />}
+            <Field label={tipo === 'periodo' ? 'Início' : 'Data'} required error={erros.data}>
+              {a => <input {...a} type="date" min={hojeISO()} value={data} onChange={e => { setData(e.target.value); if (dataFim && e.target.value > dataFim) setDataFim(e.target.value); limpar('data'); }} />}
             </Field>
+            {tipo === 'periodo' && (
+              <Field label="Término" required error={erros.dataFim}>
+                {a => <input {...a} type="date" min={data || hojeISO()} value={dataFim} onChange={e => { setDataFim(e.target.value); limpar('dataFim'); }} />}
+              </Field>
+            )}
             {tipo === 'turno' && (
               <ChoiceGroup<Turno> label="Turno" value={turno} onChange={setTurno} options={TURNOS.map(t => ({ value: t.id, label: `${t.rotulo} (${t.inicio}–${t.fim})` }))} />
             )}
@@ -140,7 +177,7 @@ export const BloqueiosDialog: React.FC<Props> = ({ peritos, config, bloqueios, u
               {futuros.map(b => (
                 <li key={b.id} className="flex items-center justify-between gap-3 px-3 py-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-navy">{dataBr(b.data)} · {descricao(b)}</p>
+                    <p className="text-sm font-bold text-navy">{dataBr(b.data)}{b.dataFim && b.dataFim !== b.data ? ` a ${dataBr(b.dataFim)}` : ''} · {descricao(b)}</p>
                     <p className="text-xs text-ink-3 break-words">{b.motivo}</p>
                   </div>
                   <div className="shrink-0 flex items-center gap-2">

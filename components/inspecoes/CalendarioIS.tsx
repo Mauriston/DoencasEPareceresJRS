@@ -13,7 +13,7 @@ import { Segmented } from '../ui/Segmented';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import { tituloDiaConcurso, ehBloqueioDeConcurso, type DiaConcurso } from '../../services/agendaConcursos';
 import {
-  STATUS_IS, statusEfetivoIS, hojeISO, ocupadosDe, duracaoDaIS, horaFimEntrevista, somarDias, inicioDaSemana, inicioDoMes, nomeMes, nomeDiaCurto, nomeDiaSemana, ehDiaUtil, deISO, paraISO,
+  STATUS_IS, statusEfetivoIS, hojeISO, ocupadosDe, duracaoDaIS, horaFimEntrevista, somarDias, inicioDaSemana, inicioDoMes, nomeMes, nomeDiaCurto, nomeDiaSemana, ehDiaUtil, deISO, paraISO, bloqueioNoDia,
   dataDeEntrevista, horaDeEntrevista, minutosDe, hhmmDe, ehSlotValido, bloqueioAtinge, peritoAtendeNoTurno, turnoDoSlot, TURNOS, DURACAO_SLOT_MIN,
   type BloqueioAgenda, type ConfigAgenda, type Turno,
 } from '../../utils/inspecoes';
@@ -263,7 +263,7 @@ const ColunaDia: React.FC<{
   const agora = new Date();
   const minAgora = agora.getHours() * 60 + agora.getMinutes();
   // Os bloqueios gerados pelos dias de concurso aparecem como o próprio cartão do concurso (abaixo), não hachurados.
-  const diaBloqueios = bloqueios.filter(b => !ehBloqueioDeConcurso(b) && b.data === data && (!peritoUid || b.peritoUid === '*' || b.peritoUid === peritoUid));
+  const diaBloqueios = bloqueios.filter(b => !ehBloqueioDeConcurso(b) && bloqueioNoDia(b, data) && (!peritoUid || b.peritoUid === '*' || b.peritoUid === peritoUid));
 
   const aoClicarVazio = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!onNovoNoHorario) return;
@@ -413,7 +413,7 @@ const VisaoMes: React.FC<{
               const lista = porDia.get(d) ?? [];
               const foraDoMes = d.slice(0, 7) !== ancora.slice(0, 7);
               const concursosDoDia = concursosPorDia.get(d) ?? [];
-              const bloqueado = bloqueios.some(b => !ehBloqueioDeConcurso(b) && b.data === d && (!peritoUid || b.peritoUid === '*' || b.peritoUid === peritoUid));
+              const bloqueado = bloqueios.some(b => !ehBloqueioDeConcurso(b) && bloqueioNoDia(b, d) && (!peritoUid || b.peritoUid === '*' || b.peritoUid === peritoUid));
               return (
                 <div key={d} className={`min-h-[104px] p-1 border-l border-line first:border-l-0 ${foraDoMes ? 'bg-thead/60' : 'bg-white'} ${ehDiaUtil(d) ? '' : 'bg-thead/60'}`}>
                   <button type="button" onClick={() => onDia(d)} aria-label={`Abrir ${Number(d.slice(8))} de ${nomeMes(d)}`} className="flex items-center gap-1 w-full">

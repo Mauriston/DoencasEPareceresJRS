@@ -75,6 +75,7 @@ function doPost(e) {
     if (corpo.action === 'extrairMensagemConcurso') return apiExtrairMensagemConcurso(corpo);
     if (corpo.action === 'sincronizarEventoIS') return apiSincronizarEventoIS(corpo);
     if (corpo.action === 'sincronizarEventosConcursos') return apiSincronizarEventosConcursos(corpo);
+    if (corpo.action === 'sincronizarEventoBloqueio') return apiSincronizarEventoBloqueio(corpo);
     throw new Error('Ação POST desconhecida: "' + corpo.action + '".');
   });
 }
@@ -654,6 +655,32 @@ function apiSincronizarEventoIS(corpo) {
   var atuais = evento.getGuestList().map(function(g) { return g.getEmail().toLowerCase(); });
   atuais.forEach(function(email) { if (convidados.indexOf(email) === -1) evento.removeGuest(email); });
   convidados.forEach(function(email) { if (atuais.indexOf(email) === -1) evento.addGuest(email); });
+  return { eventoId: evento.getId() };
+}
+
+/**
+ * action=sincronizarEventoBloqueio (POST): { idToken, titulo, dataInicio, dataFim, eventoId?, remover? } — cria (ou remove, com
+ * "remover" + "eventoId") o evento de DIA INTEIRO cinza de um bloqueio de período da agenda das IS, de dataInicio até dataFim
+ * (inclusive). Título "{usuário} - {motivo}". Devolve { eventoId }.
+ */
+function apiSincronizarEventoBloqueio(corpo) {
+  exigirUsuarioFirebase(corpo);
+  var agenda = abrirAgendaJrs(corpo);
+  if (corpo.remover) {
+    var existente = null;
+    try { existente = agenda.getEventById(String(corpo.eventoId || '')); } catch (erroEvento) { existente = null; }
+    if (existente) existente.deleteEvent();
+    return { eventoId: '' };
+  }
+  var titulo = limparNomeDrive(corpo.titulo);
+  if (!titulo) throw new Error('"titulo" é obrigatório.');
+  var inicio = dataHoraAgenda(corpo.dataInicio, '00:00');
+  var fimInclusivo = dataHoraAgenda(corpo.dataFim, '00:00');
+  if (fimInclusivo < inicio) throw new Error('A data de término é anterior à de início.');
+  // Evento de dia inteiro: o término do Google Agenda é exclusivo (dia seguinte ao último dia do bloqueio).
+  var fimExclusivo = new Date(fimInclusivo.getFullYear(), fimInclusivo.getMonth(), fimInclusivo.getDate() + 1);
+  var evento = agenda.createAllDayEvent(titulo, inicio, fimExclusivo);
+  evento.setColor(CalendarApp.EventColor.GRAY);
   return { eventoId: evento.getId() };
 }
 

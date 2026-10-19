@@ -51,3 +51,14 @@ export const removerEventoAgendaIS = async (is: Pick<InspecaoRecord, 'id' | 'eve
     return false;
   }
 };
+
+/** Evento de dia inteiro (cinza) no Google Agenda para um bloqueio de período; título "{usuário} - {motivo}". Devolve o id do evento. */
+export const criarEventoBloqueioAgenda = async (p: { titulo: string; dataInicio: string; dataFim: string }): Promise<string> => {
+  const r = await chamarScript<{ eventoId: string }>('sincronizarEventoBloqueio', { agenda: NOME_AGENDA_GOOGLE, ...p });
+  return r.eventoId;
+};
+
+/** Remove do Google Agenda o evento de um bloqueio de período. */
+export const removerEventoBloqueioAgenda = async (eventoId: string): Promise<void> => {
+  await chamarScript('sincronizarEventoBloqueio', { agenda: NOME_AGENDA_GOOGLE, eventoId, remover: true });
+};

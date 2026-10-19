@@ -164,17 +164,24 @@ export type ConfigAgenda = Record<string, ConfigTurnosPerito>;
 export interface BloqueioAgenda {
   id: string;
   data: string;
+  /** Só bloqueio de período: último dia (AAAA-MM-DD); o bloqueio vale de `data` a `dataFim`, dia inteiro. */
+  dataFim?: string;
   turno: Turno | 'dia';
   hora?: string;
   peritoUid: string;
   peritoNome?: string;
   motivo: string;
+  /** Evento de dia inteiro no Google Agenda (só bloqueio de período). */
+  eventoAgendaId?: string;
 }
 
 export const TODOS_PERITOS = '*';
 
+/** O bloqueio cobre o dia (um dia só, ou de `data` a `dataFim` num período). */
+export const bloqueioNoDia = (b: Pick<BloqueioAgenda, 'data' | 'dataFim'>, dia: string): boolean => dia >= b.data && dia <= (b.dataFim || b.data);
+
 export const bloqueioAtinge = (b: BloqueioAgenda, peritoUid: string, data: string, hhmm: string): boolean => {
-  if (b.data !== data) return false;
+  if (!bloqueioNoDia(b, data)) return false;
   if (b.peritoUid !== TODOS_PERITOS && b.peritoUid !== peritoUid) return false;
   if (b.hora) return b.hora === hhmm;
   return b.turno === 'dia' || b.turno === turnoDoSlot(hhmm);
