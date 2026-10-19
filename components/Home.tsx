@@ -16,7 +16,7 @@ import { EmptyState } from './ui/EmptyState';
 import { NavContext, getPrimeiroNome } from '../context/NavContext';
 import { getNavCategories } from '../config/navigation';
 import { canAccessPage, canUseFeature } from '../config/permissions';
-import { pathForView, concursoPath } from '../config/routes';
+import { pathForView, concursoPath, concursosDiaPath } from '../config/routes';
 import { observarConcursos, type ConcursoRecord } from '../services/firestoreConcursos';
 import { observarPareceres, statusEfetivo, type ParecerRecord } from '../services/firestorePareceres';
 import { observarInspecoes, type InspecaoRecord } from '../services/firestoreInspecoes';
@@ -109,7 +109,7 @@ export const Home: React.FC = () => {
   // Inspeções de Saúde agendadas: "Próximas Inspeções", item de atenção (hoje) e mini calendário.
   const [inspecoes, setInspecoes] = useState<InspecaoRecord[]>([]);
   useEffect(() => (podeInspecoes ? observarInspecoes(setInspecoes, () => { /* silencioso */ }) : undefined), [podeInspecoes]);
-  const { dias: diasConcursos } = useDiasConcursos(podeInspecoes);
+  const { dias: diasConcursos } = useDiasConcursos(podeInspecoes || podeConcursos);
   const hoje = hojeISO();
   const proximas = useMemo(() => inspecoes
     .filter(i => i.dataEntrevista && i.status !== 'cancelada' && i.situacao !== 'finalizada' && dataDeEntrevista(i.dataEntrevista) >= hoje)
@@ -144,6 +144,17 @@ export const Home: React.FC = () => {
     atencao.push({
       id: 'is-hoje', icone: 'event_available', titulo: `${deHoje.length} inspeç${deHoje.length !== 1 ? 'ões' : 'ão'} marcada${deHoje.length !== 1 ? 's' : ''} para hoje`,
       detalhe: `${horaDeEntrevista(proxima.dataEntrevista)} · ${nomeDe(proxima)}${deHoje.length > 1 ? ` e mais ${deHoje.length - 1}` : ''}`, tag: 'Hoje', tom: 'attention', to: '/inspecoes',
+    });
+  }
+  // IS de concurso agendadas para hoje (todos os concursos do dia): abre a tabela do dia.
+  const concursosHoje = diasConcursos.filter(d => d.data === hoje);
+  if (podeConcursos && concursosHoje.length > 0) {
+    const totalHoje = concursosHoje.reduce((n, d) => n + d.total, 0);
+    const feitas = concursosHoje.reduce((n, d) => n + d.candidatos.filter(c => c.finalizado).length, 0);
+    atencao.push({
+      id: 'is-concurso-hoje', icone: 'groups', titulo: `${totalHoje} inspeç${totalHoje !== 1 ? 'ões' : 'ão'} de concurso para hoje`,
+      detalhe: `${concursosHoje.map(d => d.nome).join(' e ')} · ${feitas} de ${totalHoje} finalizada${feitas !== 1 ? 's' : ''}`,
+      tag: 'Hoje', tom: feitas === totalHoje ? 'success' : 'attention', to: concursosDiaPath(hoje),
     });
   }
   if (podePericiaMenor && periciaMenorVigentes > 0) {
@@ -216,7 +227,7 @@ export const Home: React.FC = () => {
                   ))}
                 </ul>
               ) : (
-                <EmptyState icon="task_alt" title="Nada pendente" description="Não há pareceres atrasados, perícias vigentes, inspeções de hoje nem concurso em andamento para você agora." />
+                <EmptyState icon="task_alt" title="Nada pendente" description="Não há pareceres atrasados, perícias vigentes, inspeções de hoje nem concursos em andamento ou de hoje para você agora." />
               )}
             </Secao>
 
