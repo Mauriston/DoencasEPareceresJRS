@@ -5,7 +5,7 @@ import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { StatusTag } from '../ui/StatusTag';
 import { formatNip, formatCelular, formatCpf, formatIdentidadeMilitar, formatDataBr } from '../../utils/format';
-import type { MilitarRecord } from '../../services/firestoreMilitares';
+import { tipoDoInspecionado, type MilitarRecord } from '../../services/firestoreMilitares';
 import { observarPareceres, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
 import { observarPericiasDoMilitar, dataBR, statusPericia, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
 
@@ -49,7 +49,7 @@ export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => v
   const extras = [m.nomeGuerra, m.especialidade, m.emailPessoal, m.celular, m.dataNascimento, m.cpf, m.identidadeMilitar, m.crm, m.rqe].some(Boolean);
   return (
     <Drawer
-      title="Detalhes do militar"
+      title={tipoDoInspecionado(m) === 'dependente' ? 'Detalhes do dependente' : tipoDoInspecionado(m) === 'pensionista' ? 'Detalhes do pensionista' : 'Detalhes do militar'}
       icon="badge"
       onClose={onClose}
       footer={<Button variant="secondary" onClick={onClose}>Fechar</Button>}
@@ -69,8 +69,10 @@ export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => v
         <dl className="space-y-3">
           <Linha rotulo="Inspecionado" valor={m.inspecionado} />
           <Linha rotulo="NIP" valor={formatNip(m.nip)} mono />
+          <Linha rotulo="Tipo" valor={tipoDoInspecionado(m) === 'dependente' ? 'Dependente' : tipoDoInspecionado(m) === 'pensionista' ? 'Pensionista' : undefined} />
+          <Linha rotulo="Titular" valor={m.titularNome ? `${m.titularPosto ?? ''} ${m.titularNome}`.trim() : undefined} />
           <Linha rotulo="OM" valor={m.om} />
-          <Linha rotulo="Vínculo" valor={m.temporario ? 'Temporário' : (m.rm1 || m.refo) ? 'Inativo' : 'Carreira'} />
+          {tipoDoInspecionado(m) === 'militar' && <Linha rotulo="Vínculo" valor={m.temporario ? 'Temporário' : (m.rm1 || m.refo) ? 'Inativo' : 'Carreira'} />}
           <Linha rotulo="E-mail" valor={m.email} />
           <Linha rotulo="Serviço do HNRe" valor={m.servico_label} />
         </dl>

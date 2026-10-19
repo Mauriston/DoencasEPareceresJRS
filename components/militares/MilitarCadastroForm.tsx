@@ -22,12 +22,14 @@ import { enviarFotoMilitar } from '../../services/militarFoto';
 interface Props {
   onClose: () => void;
   onCriado: (nome: string, id: string) => void;
+  /** Abas (Militares · Dep/Pens.) exibidas no topo quando o formulário é aberto pela página Inspecionados. */
+  tabs?: React.ReactNode;
 }
 
 type Erros = Record<string, string>;
 type VinculoForm = Vinculo | 'Inativo';
 
-export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
+export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs }) => {
   const [dados, setDados] = useState<CorposQuadros | null>(null);
   const [oms, setOms] = useState<OrganizacaoMilitar[]>([]);
   const [falhaCarga, setFalhaCarga] = useState('');
@@ -162,7 +164,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
 
   return (
     <Drawer
-      title="Cadastrar novo militar"
+      title={tabs ? 'Cadastrar novo inspecionado' : 'Cadastrar novo militar'}
       icon="person_add"
       onClose={onClose}
       footer={(
@@ -172,6 +174,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado }) => {
         </>
       )}
     >
+      {tabs && <div className="mb-4">{tabs}</div>}
       {falhaCarga ? (
         <p role="alert" className="text-sm font-semibold text-wine">{falhaCarga}</p>
       ) : !dados ? (

@@ -12,10 +12,10 @@ import { Field } from '../ui/Field';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { carregarFinalidadesIS, filtrarFinalidadesPorVinculo, type GrupoFinalidadeIS, type VinculoFinalidade } from '../../utils/corposQuadros';
 import { FinalidadeDropdown, type GrupoFinalidadeExtra } from '../ExamesGuide';
-import { MilitarCadastroForm } from '../militares/MilitarCadastroForm';
+import { CadastroInspecionado } from '../militares/CadastroInspecionado';
 import { QuesitosEditor } from './QuesitosEditor';
 import { useNav } from '../../context/NavContext';
-import { observarMilitares, type MilitarRecord } from '../../services/firestoreMilitares';
+import { observarMilitares, vinculoDoInspecionado, type MilitarRecord } from '../../services/firestoreMilitares';
 import { observarQuesitos, type QuesitosEspecialidade } from '../../services/firestoreQuesitos';
 import { novoIdParecer, registrarParecer, type ParecerRecord } from '../../services/firestorePareceres';
 import { gerarPdfPedidoParecer, salvarPdfParecerNoDrive } from '../../services/drivePareceres';
@@ -25,15 +25,17 @@ import { formatNip } from '../../utils/format';
 interface Props {
   /** Pedido a duplicar: militar, especialidade, finalidade, histórico e quesitos vêm preenchidos. */
   inicial?: ParecerRecord | null;
+  /** Pré-preenchimento a partir de uma Inspeção de Saúde: inspecionado (id = NIP só dígitos) e finalidade. */
+  prefill?: { militarId: string; finalidade: string };
   onClose: () => void;
   onGerado: (nome: string, pdfUrl: string) => void;
 }
 
 type Erros = Record<string, string>;
 
-const vinculoDoMilitar = (m: MilitarRecord): VinculoFinalidade => (m.temporario ? 'Temporário' : (m.rm1 || m.refo) ? 'Inativo' : 'Carreira');
+const vinculoDoMilitar = vinculoDoInspecionado;
 
-export const NovoParecerForm: React.FC<Props> = ({ inicial, onClose, onGerado }) => {
+export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, onClose, onGerado }) => {
   const nav = useNav();
   const usuario = nav?.authUser;
 
@@ -42,12 +44,12 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, onClose, onGerado })
   const [militar, setMilitar] = useState<MilitarRecord | null>(null);
   const [militarTexto, setMilitarTexto] = useState('');
   const [especialidadeId, setEspecialidadeId] = useState('');
-  const [finalidade, setFinalidade] = useState(inicial?.finalidade ?? '');
+  const [finalidade, setFinalidade] = useState(inicial?.finalidade ?? prefill?.finalidade ?? '');
   const [historico, setHistorico] = useState(inicial?.historico ?? '');
   const [quesitos, setQuesitos] = useState<string[]>(inicial?.quesitos ?? []);
   const [editandoQuesitos, setEditandoQuesitos] = useState(false);
   const [cadastrando, setCadastrando] = useState(false);
-  const [recemCadastradoId, setRecemCadastradoId] = useState(inicial?.militarId ?? '');
+  const [recemCadastradoId, setRecemCadastradoId] = useState(inicial?.militarId ?? prefill?.militarId ?? '');
   const [erros, setErros] = useState<Erros>({});
   const [gerando, setGerando] = useState(false);
   const [finalidadesIS, setFinalidadesIS] = useState<GrupoFinalidadeIS[]>([]);
@@ -165,7 +167,7 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, onClose, onGerado })
             />
             <button type="button" onClick={() => setCadastrando(true)} className="mt-1 min-h-[44px] inline-flex items-center gap-1 text-sm font-bold text-navy underline underline-offset-2 hover:text-navy-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded">
               <span className="material-symbols-outlined text-[18px]" aria-hidden="true">person_add</span>
-              Militar não cadastrado? Cadastrar novo militar
+              Inspecionado não cadastrado? Cadastrar novo inspecionado
             </button>
           </div>
 
@@ -230,7 +232,7 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, onClose, onGerado })
         />
       )}
       {cadastrando && (
-        <MilitarCadastroForm
+        <CadastroInspecionado
           onClose={() => setCadastrando(false)}
           onCriado={(_nome, id) => { setCadastrando(false); setRecemCadastradoId(id); }}
         />

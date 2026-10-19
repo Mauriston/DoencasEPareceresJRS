@@ -28,6 +28,9 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'concursosJRS', label: 'Concursos', icon: 'fact_check', subtitle: 'Acompanhe as planilhas de controle dos candidatos em concurso.' },
   { id: 'concursos', label: 'Índices mínimos', icon: 'emoji_events', subtitle: 'Consulte os índices mínimos exigidos por concurso.' },
   { id: 'exames', label: 'Exames mínimos', icon: 'science', subtitle: 'Veja os exames mínimos exigidos por finalidade de IS.' },
+  // Trabalho: Inspeções de Saúde (agenda, prazos e minutas) e a base de Inspecionados.
+  { id: 'inspecoes', label: 'Inspeções de Saúde', icon: 'event_available', subtitle: 'Cadastre IS, agende entrevistas, acompanhe prazos e gere minutas.' },
+  { id: 'militares', label: 'Inspecionados', icon: 'groups', subtitle: 'Base de militares, servidores civis, dependentes e pensionistas.' },
   { id: 'pareceres', label: 'Pareceres', icon: 'assignment', subtitle: 'Acompanhe e gere pedidos de parecer médico em PDF por especialidade.' },
   // "Perícia Menor" não tem permissão de página própria: é controlada pelas
   // duas sub-permissões (features) "pericia-menor.novo"/"pericia-menor.historico"
@@ -53,6 +56,9 @@ export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {
   concursos: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
   exames: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
   pareceres: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  inspecoes: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  // Inspecionados começa restrita ao Admin (como era "Militares"); o Admin libera por perfil.
+  militares: { user_medicos: false, user_secretaria: false, user_medicos_mpi: false },
   mensagens: { user_medicos: false, user_secretaria: false, user_medicos_mpi: false },
   dgpm406: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
   laws: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
@@ -75,6 +81,12 @@ export type FeatureKey =
   | 'concursosJRS.visualizarTabela'
   | 'concursosJRS.gerarTermoRecurso'
   | 'concursosJRS.solicitarParecerExames'
+  | 'inspecoes.cadastrar'
+  | 'inspecoes.agendar'
+  | 'inspecoes.editar'
+  | 'inspecoes.gerarMinuta'
+  | 'inspecoes.bloquearAgenda'
+  | 'militares.cadastrar'
   | 'pareceres.gerar'
   | 'pericia-menor.novo'
   | 'pericia-menor.historico';
@@ -98,6 +110,12 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'concursosJRS.visualizarTabela', label: 'Alternar para visão em tabela (lista de concursos, desktop)', group: 'Concursos' },
   { id: 'concursosJRS.gerarTermoRecurso', label: 'Gerar Termo de Recurso (a visualização do termo já gerado é liberada a todos)', group: 'Concursos' },
   { id: 'concursosJRS.solicitarParecerExames', label: 'Solicitar Parecer / Exames (menu ⋮ da planilha; a visualização é só de quem tem o menu)', group: 'Concursos' },
+  { id: 'inspecoes.cadastrar', label: 'Cadastrar nova IS (a lista e o calendário são vistos por quem acessa a página)', group: 'Inspeções de Saúde' },
+  { id: 'inspecoes.agendar', label: 'Agendar e reagendar IS (escolher perito, data e horário)', group: 'Inspeções de Saúde' },
+  { id: 'inspecoes.editar', label: 'Editar IS: status, laudo, restrições, TIS, DS-1a e observações', group: 'Inspeções de Saúde' },
+  { id: 'inspecoes.gerarMinuta', label: 'Gerar Minuta de Mensagem (cancelamento de IS atrasada)', group: 'Inspeções de Saúde' },
+  { id: 'inspecoes.bloquearAgenda', label: 'Bloquear horários e turnos da agenda (perfis médicos só bloqueiam os próprios turnos; a configuração de turnos dos peritos é só do Admin)', group: 'Inspeções de Saúde' },
+  { id: 'militares.cadastrar', label: 'Cadastrar novo inspecionado (Militares e Dep/Pens.); editar, apagar e inativar continuam só com o Admin', group: 'Inspecionados' },
   { id: 'pareceres.gerar', label: 'Gerar Pedido de Parecer e marcar como concluído (a lista de pareceres é vista por quem acessa a página)', group: 'Pareceres' },
   // Substituem a antiga permissão única de página "Perícia Menor": cada aba
   // (Novo/Histórico) é liberada separadamente por perfil.
@@ -118,6 +136,13 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'concursosJRS.visualizarTabela': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
   'concursosJRS.gerarTermoRecurso': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
   'concursosJRS.solicitarParecerExames': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  'inspecoes.cadastrar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  'inspecoes.agendar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  'inspecoes.editar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  'inspecoes.gerarMinuta': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  // Bloqueios: por padrão só Admin e Secretaria; se o Admin liberar a um perfil médico, ele só bloqueia os próprios turnos.
+  'inspecoes.bloquearAgenda': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false },
+  'militares.cadastrar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
   'pareceres.gerar': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
   'pericia-menor.novo': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
   'pericia-menor.historico': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },

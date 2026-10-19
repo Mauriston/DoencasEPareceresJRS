@@ -1,0 +1,16 @@
+{
+  "fonte": "Lista inicial editável das restrições lançadas no laudo da IS (menu suspenso da página Inspeções de Saúde). Ajuste os textos conforme a DGPM-406.",
+  "restricoes": [
+    "Sem restrições",
+    "Para embarque",
+    "Para serviço armado",
+    "Para atividades de mergulho",
+    "Para atividades aéreas",
+    "Para praça de máquinas",
+    "Para exposição a radiação ionizante",
+    "Para esforço físico / TAF",
+    "Para trabalho em altura",
+    "Para serviço de escala",
+    "Outras (descrever em Observações)"
+  ]
+}

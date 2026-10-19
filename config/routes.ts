@@ -25,6 +25,7 @@ export const ROUTES: RouteDef[] = [
   { view: 'concursos', path: '/concursos/indices' },
   { view: 'exames', path: '/concursos/exames' },
   { view: 'concursosJRS', path: '/concursos/:concursoId?' },
+  { view: 'inspecoes', path: '/inspecoes' },
   { view: 'pareceres', path: '/pareceres' },
   { view: 'pericia-menor', path: '/pericia-menor/:aba?/:pessoa?' },
   { view: 'mensagens', path: '/mensagens' },
@@ -35,6 +36,8 @@ export const ROUTES: RouteDef[] = [
   { view: 'infograficos', path: '/extras/infograficos' },
   { view: 'roteiro', path: '/extras/roteiro' },
   { view: 'usuarios', path: '/usuarios' },
+  { view: 'militares', path: '/inspecionados' },
+  // Endereço antigo da página (antes "Militares"): continua abrindo a mesma tela.
   { view: 'militares', path: '/militares' },
 ];
 
@@ -47,6 +50,7 @@ const BASE_PATHS: Record<NavItem, string> = {
   concursos: '/concursos/indices',
   exames: '/concursos/exames',
   concursosJRS: '/concursos',
+  inspecoes: '/inspecoes',
   pareceres: '/pareceres',
   'pericia-menor': '/pericia-menor',
   mensagens: '/mensagens',
@@ -58,7 +62,7 @@ const BASE_PATHS: Record<NavItem, string> = {
   infograficos: '/extras/infograficos',
   roteiro: '/extras/roteiro',
   usuarios: '/usuarios',
-  militares: '/militares',
+  militares: '/inspecionados',
 };
 
 /** Rota base (sem subníveis) de uma página. */

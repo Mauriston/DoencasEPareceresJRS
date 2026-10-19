@@ -1,7 +1,8 @@
 // Ficheiro: components/Militares.tsx
-// Cadastro de militares da ativa e servidores civis (coleção "militares").
-// Página exclusiva do Admin: busca, edição dos dados, ativar/inativar para o
-// appweb e "Cadastrar novo" (formulário em cascata com OM e quadros da MB).
+// Página INSPECIONADOS: base de militares da ativa, servidores civis, dependentes e
+// pensionistas (coleção "militares"). Busca, ficha, edição dos dados, ativar/inativar para o
+// appweb (só Admin) e "Cadastrar novo" com duas abas: Militares (formulário em cascata com OM e
+// quadros da MB) e Dep/Pens. (Dependente ou Pensionista).
 import React, { useEffect, useMemo, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
@@ -15,15 +16,20 @@ import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
 import { Autocomplete, type OpcaoAutocomplete } from './ui/Autocomplete';
 import { MenuAcoes } from './ui/MenuAcoes';
-import { MilitarCadastroForm } from './militares/MilitarCadastroForm';
+import { CadastroInspecionado } from './militares/CadastroInspecionado';
 import { MilitarDetalhe } from './militares/MilitarDetalhe';
 import { InformacoesAdicionais, adicionaisDoMilitar, adicionaisParaPatch, validarAdicionais, type Adicionais } from './militares/InformacoesAdicionais';
 import { enviarFotoMilitar } from '../services/militarFoto';
-import { observarMilitares, atualizarMilitar, renomearMilitar, atualizarMilitaresEmLote, apagarMilitar, type MilitarRecord } from '../services/firestoreMilitares';
+import { observarMilitares, atualizarMilitar, renomearMilitar, atualizarMilitaresEmLote, apagarMilitar, tipoDoInspecionado, type MilitarRecord, type TipoInspecionado } from '../services/firestoreMilitares';
+import { useNav } from '../context/NavContext';
+import { canUseFeature } from '../config/permissions';
 import { carregarOms, carregarCorposQuadros, carregarServicosHnre, normalizarBusca, montarInspecionado, separarPosto, aplicarSituacaoAoPgq, ehOficialMedico, omEhHnre, type OrganizacaoMilitar, type CorposQuadros, type PostoInfo, type ServicoHnre, type SituacaoMilitar } from '../utils/corposQuadros';
 import { formatNip, formatCelular } from '../utils/format';
 
 type Filtro = 'todos' | 'ativos' | 'inativos';
+type FiltroTipo = 'todos' | TipoInspecionado;
+
+const ROTULO_TIPO: Record<TipoInspecionado, string> = { militar: 'Militar', dependente: 'Dependente', pensionista: 'Pensionista' };
 type ColunaOrdem = 'nome' | 'pgq' | 'om';
 
 /** Posição hierárquica do posto/graduação dentro do P/G/Q (ex.: "CT (Md)" → CT; "CB-RM2-EF" → CB). Desconhecidos vão para o fim. */
@@ -34,12 +40,19 @@ const posicaoHierarquica = (pgq: string, postos: CorposQuadros['postos'] | undef
 const PAGINA = 100;
 
 export const Militares: React.FC = () => {
+  const nav = useNav();
+  const perfil = nav?.authUser?.perfil;
+  const ehAdmin = perfil === 'admin';
+  // Editar, apagar, ativar/inativar e ações em lote são só do Admin (firestore.rules); os demais perfis
+  // consultam a base e, com a permissão "Cadastrar inspecionados", criam novos cadastros.
+  const podeCadastrar = canUseFeature('militares.cadastrar', perfil);
   const [lista, setLista] = useState<MilitarRecord[] | null>(null);
   const [erroCarga, setErroCarga] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('ativos');
   const [busca, setBusca] = useState('');
   const [limite, setLimite] = useState(PAGINA);
   const [novo, setNovo] = useState(false);
+  const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
   const [editando, setEditando] = useState<MilitarRecord | null>(null);
   const [detalhe, setDetalhe] = useState<MilitarRecord | null>(null);
   const [apagando, setApagando] = useState<MilitarRecord | null>(null);
@@ -56,9 +69,9 @@ export const Militares: React.FC = () => {
   useEffect(() => observarMilitares(setLista, e => setErroCarga(e.message || 'Não foi possível carregar os militares.')), []);
   useEffect(() => { carregarOms().then(setOms).catch(() => { /* sem lista, a edição mantém a OM atual */ }); }, []);
   useEffect(() => { carregarCorposQuadros().then(d => setPostos(d.postos)).catch(() => { /* sem hierarquia, P/G/Q fica no fim */ }); }, []);
-  useEffect(() => { setLimite(PAGINA); }, [filtro, busca, soHnre, ordem]);
+  useEffect(() => { setLimite(PAGINA); }, [filtro, filtroTipo, busca, soHnre, ordem]);
   // A seleção vale só para o que está listado: mudou o filtro/busca, recomeça.
-  useEffect(() => { setSelecionados(new Set()); }, [filtro, busca, soHnre]);
+  useEffect(() => { setSelecionados(new Set()); }, [filtro, filtroTipo, busca, soHnre]);
 
   const ordenarPor = (col: ColunaOrdem) => setOrdem(o => (o.col === col ? { col, dir: o.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'asc' }));
 
@@ -67,11 +80,17 @@ export const Militares: React.FC = () => {
     ativos: lista?.filter(m => m.ativo).length ?? 0,
     inativos: lista?.filter(m => !m.ativo).length ?? 0,
   }), [lista]);
+  const totaisTipo = useMemo(() => ({
+    militar: lista?.filter(m => tipoDoInspecionado(m) === 'militar').length ?? 0,
+    dependente: lista?.filter(m => tipoDoInspecionado(m) === 'dependente').length ?? 0,
+    pensionista: lista?.filter(m => tipoDoInspecionado(m) === 'pensionista').length ?? 0,
+  }), [lista]);
 
   const filtrada = useMemo(() => {
     const termos = normalizarBusca(busca).split(/\s+/).filter(Boolean);
     return (lista ?? [])
       .filter(m => (filtro === 'todos' ? true : filtro === 'ativos' ? m.ativo : !m.ativo))
+      .filter(m => (filtroTipo === 'todos' ? true : tipoDoInspecionado(m) === filtroTipo))
       .filter(m => (soHnre ? m.om.trim().toUpperCase() === 'HNRE' : true))
       .filter(m => { const alvo = normalizarBusca(`${m.inspecionado} ${m.om} ${m.email} ${m.id}`); return termos.every(t => alvo.includes(t)); })
       .sort((a, b) => {
@@ -82,7 +101,7 @@ export const Militares: React.FC = () => {
         else cmp = posicaoHierarquica(a.pgq, postos) - posicaoHierarquica(b.pgq, postos) || a.pgq.localeCompare(b.pgq, 'pt-BR') || porNome;
         return ordem.dir === 'asc' ? cmp : -cmp;
       });
-  }, [lista, filtro, busca, soHnre, ordem, postos]);
+  }, [lista, filtro, filtroTipo, busca, soHnre, ordem, postos]);
 
   const alternarAtivo = async (m: MilitarRecord) => {
     try {
@@ -106,14 +125,18 @@ export const Militares: React.FC = () => {
   };
 
   const itensDe = (m: MilitarRecord) => [
-    { rotulo: 'Editar', icone: 'edit', onClick: () => setEditando(m) },
-    { rotulo: 'Apagar', icone: 'delete', perigo: true, onClick: () => setApagando(m) },
+    { rotulo: 'Ver detalhes', icone: 'badge', onClick: () => setDetalhe(m) },
+    ...(ehAdmin ? [
+      { rotulo: 'Editar', icone: 'edit', onClick: () => setEditando(m) },
+      { rotulo: 'Apagar', icone: 'delete', perigo: true, onClick: () => setApagando(m) },
+    ] : []),
   ];
 
   // Seleção para ações em lote (posto, serviço, inativar) só quando a busca contém "HNRe".
-  const selecionavel = normalizarBusca(busca).includes('hnre');
+  const selecionavel = ehAdmin && normalizarBusca(busca).includes('hnre');
   const visiveis = filtrada.slice(0, limite);
-  const escolhidos = useMemo(() => filtrada.filter(m => selecionados.has(m.id)), [filtrada, selecionados]);
+  // Promoção e serviço do HNRe só fazem sentido para militares; dependentes e pensionistas ficam de fora.
+  const escolhidos = useMemo(() => filtrada.filter(m => selecionados.has(m.id) && tipoDoInspecionado(m) === 'militar'), [filtrada, selecionados]);
   const todosMarcados = filtrada.length > 0 && escolhidos.length === filtrada.length;
   const alternarSelecao = (id: string) => setSelecionados(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const alternarTodos = () => setSelecionados(todosMarcados ? new Set() : new Set(filtrada.map(m => m.id)));
@@ -125,15 +148,15 @@ export const Militares: React.FC = () => {
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
       <Container size="data" className="py-6 md:py-8 pb-10 space-y-4">
         <PageHeader
-          title="Militares"
-          description="Cadastro de militares da ativa e servidores civis. Edite os dados e defina quem está ativo no appweb."
-          actions={<Button icon="person_add" onClick={() => setNovo(true)}>Cadastrar novo</Button>}
+          title="Inspecionados"
+          description="Cadastro de militares da ativa, servidores civis, dependentes e pensionistas. Edite os dados e defina quem está ativo no appweb."
+          actions={podeCadastrar ? <Button icon="person_add" onClick={() => setNovo(true)}>Cadastrar novo</Button> : undefined}
         />
 
         <div className="bg-white rounded-xl border border-line p-4 space-y-3">
           <div className="relative">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
-            <input type="search" aria-label="Buscar militar" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome, NIP, posto, OM ou e-mail…" className={`${controlClass} pl-10`} autoComplete="off" />
+            <input type="search" aria-label="Buscar inspecionado" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome, NIP, posto, OM ou e-mail…" className={`${controlClass} pl-10`} autoComplete="off" />
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Segmented
@@ -149,6 +172,18 @@ export const Militares: React.FC = () => {
             />
             <FilterChip ativo={soHnre} icon="local_hospital" onAlternar={() => setSoHnre(v => !v)}>Somente HNRe</FilterChip>
           </div>
+          <Segmented
+            ariaLabel="Tipo de inspecionado"
+            className="overflow-x-auto"
+            value={filtroTipo}
+            onChange={setFiltroTipo}
+            options={[
+              { value: 'todos', label: 'Todos os tipos' },
+              { value: 'militar', label: 'Militares', badge: totaisTipo.militar, badgeTone: 'neutro' },
+              { value: 'dependente', label: 'Dependentes', badge: totaisTipo.dependente, badgeTone: 'neutro' },
+              { value: 'pensionista', label: 'Pensionistas', badge: totaisTipo.pensionista, badgeTone: 'neutro' },
+            ]}
+          />
         </div>
 
         {selecionavel && escolhidos.length > 0 && (
@@ -167,9 +202,9 @@ export const Militares: React.FC = () => {
           {erroCarga ? (
             <p role="alert" className="p-6 text-sm font-semibold text-wine">{erroCarga}</p>
           ) : lista === null ? (
-            <p className="p-10 text-center text-sm text-ink-3" role="status">Carregando militares…</p>
+            <p className="p-10 text-center text-sm text-ink-3" role="status">Carregando inspecionados…</p>
           ) : filtrada.length === 0 ? (
-            <EmptyState icon="military_tech" title="Nenhum militar encontrado" description="Ajuste a busca ou o filtro de situação." />
+            <EmptyState icon="military_tech" title="Nenhum inspecionado encontrado" description="Ajuste a busca ou o filtro de situação." />
           ) : (
             <>
               {/* Mobile: duas linhas por militar */}
@@ -185,10 +220,15 @@ export const Militares: React.FC = () => {
                       <button type="button" onClick={() => setDetalhe(m)} className="min-w-0 flex-1 text-left" aria-label={`Abrir detalhes de ${m.nome}`}>
                         <span className="block text-sm font-bold text-navy break-words">{m.nome}</span>
                         <span className="block text-xs text-ink-3">{m.pgq} · {formatNip(m.nip)}</span>
+                        {tipoDoInspecionado(m) === 'dependente' && m.titularNome && <span className="block text-xs text-ink-3">Titular: {m.titularNome}</span>}
                       </button>
-                      <button type="button" onClick={() => alternarAtivo(m)} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="shrink-0 min-h-[44px] flex items-center">
-                        <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
-                      </button>
+                      {ehAdmin ? (
+                        <button type="button" onClick={() => alternarAtivo(m)} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="shrink-0 min-h-[44px] flex items-center">
+                          <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
+                        </button>
+                      ) : (
+                        <span className="shrink-0 min-h-[44px] flex items-center"><StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag></span>
+                      )}
                       <div className="shrink-0 -mr-2"><MenuAcoes rotulo={`Ações para ${m.nome}`} itens={itensDe(m)} /></div>
                     </div>
                   </li>
@@ -216,13 +256,17 @@ export const Militares: React.FC = () => {
                     {visiveis.map(m => (
                       <tr key={m.id} onClick={() => setDetalhe(m)} className={`cursor-pointer hover:bg-thead transition-colors ${selecionados.has(m.id) ? 'bg-thead' : ''} ${m.ativo ? '' : 'text-ink-3'}`}>
                         {selecionavel && <td className="pl-4 pr-0 py-2" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy align-middle" /></td>}
-                        <td className="px-4 py-2 font-semibold text-navy"><button type="button" onClick={e => { e.stopPropagation(); setDetalhe(m); }} className="text-left" aria-label={`Abrir detalhes de ${m.nome}`}>{m.nome}</button></td>
+                        <td className="px-4 py-2 font-semibold text-navy"><button type="button" onClick={e => { e.stopPropagation(); setDetalhe(m); }} className="text-left" aria-label={`Abrir detalhes de ${m.nome}`}>{m.nome}</button>{tipoDoInspecionado(m) === 'dependente' && m.titularNome && <span className="block text-xs font-normal text-ink-3">Titular: {m.titularNome}</span>}</td>
                         <td className="px-4 py-2 whitespace-nowrap">{m.pgq}</td>
                         <td className="px-4 py-2 font-mono whitespace-nowrap">{formatNip(m.nip)}</td>
                         <td className="px-4 py-2" onClick={e => e.stopPropagation()}>
-                          <button type="button" onClick={() => alternarAtivo(m)} title={m.ativo ? 'Clique para inativar' : 'Clique para ativar'} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="min-h-[44px] flex items-center">
-                            <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
-                          </button>
+                          {ehAdmin ? (
+                            <button type="button" onClick={() => alternarAtivo(m)} title={m.ativo ? 'Clique para inativar' : 'Clique para ativar'} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="min-h-[44px] flex items-center">
+                              <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
+                            </button>
+                          ) : (
+                            <span className="min-h-[44px] flex items-center"><StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag></span>
+                          )}
                         </td>
                         <td className="pr-2 py-1 text-right" onClick={e => e.stopPropagation()}><MenuAcoes rotulo={`Ações para ${m.nome}`} itens={itensDe(m)} /></td>
                       </tr>
@@ -231,7 +275,7 @@ export const Militares: React.FC = () => {
                 </table>
               </div>
               <div className="px-4 py-3 border-t border-line flex items-center justify-between gap-3 text-xs text-ink-3" role="status">
-                <span>{visiveis.length} de {filtrada.length} militar{filtrada.length !== 1 ? 'es' : ''}</span>
+                <span>{visiveis.length} de {filtrada.length} inspecionado{filtrada.length !== 1 ? 's' : ''}</span>
                 {filtrada.length > visiveis.length && <Button variant="secondary" onClick={() => setLimite(l => l + PAGINA)}>Mostrar mais</Button>}
               </div>
             </>
@@ -249,7 +293,7 @@ export const Militares: React.FC = () => {
           onCancel={() => setApagando(null)}
         />
       )}
-      {novo && <MilitarCadastroForm onClose={() => setNovo(false)} onCriado={nome => { setNovo(false); avisar(`${nome} cadastrado.`); }} />}
+      {novo && <CadastroInspecionado onClose={() => setNovo(false)} onCriado={nome => { setNovo(false); avisar(`${nome} cadastrado.`); }} />}
       {lote === 'posto' && postos && <PromocaoEmLote militares={escolhidos} postos={postos} onClose={() => setLote(null)} onAplicado={n => { setLote(null); setSelecionados(new Set()); avisar(`Posto atualizado em ${n} militar${n !== 1 ? 'es' : ''}.`); }} onErro={m => avisar(m, 'error')} />}
       {lote === 'servico' && <ServicoEmLote militares={escolhidos} onClose={() => setLote(null)} onAplicado={n => { setLote(null); setSelecionados(new Set()); avisar(`Serviço do HNRe atualizado em ${n} militar${n !== 1 ? 'es' : ''}.`); }} onErro={m => avisar(m, 'error')} />}
       {lote === 'inativar' && (
@@ -293,7 +337,11 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
   const [adicionais, setAdicionais] = useState<Adicionais>(() => adicionaisDoMilitar(militar));
   const [erros, setErros] = useState<Record<string, string>>({});
   const [salvando, setSalvando] = useState(false);
-  const hnre = omEhHnre(omSigla);
+  // Dependentes e pensionistas não têm OM própria, vínculo nem quadro: editam só os dados pessoais
+  // (o dependente herda a OM do titular; o INSPECIONADO mantém o prefixo DEP-/PENS-).
+  const tipo = tipoDoInspecionado(militar);
+  const ehMilitar = tipo === 'militar';
+  const hnre = ehMilitar && omEhHnre(omSigla);
   const medico = hnre && ehOficialMedico(pgq);
 
   const opcoesOm: OpcaoAutocomplete[] = useMemo(() => oms.map(o => ({ chave: `${o.sigla}|${o.nome}`, principal: o.sigla, secundaria: o.nome, busca: o.busca })), [oms]);
@@ -303,9 +351,9 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
     const e: Record<string, string> = {};
     if (!nome.trim()) e.nome = 'Informe o nome completo.';
     if (nip.length !== 10) e.nip = 'O NIP tem o formato 00.0000.00.';
-    if (!pgq.trim()) e.pgq = 'Informe o posto/graduação/quadro.';
-    if (vinculo === 'Inativo' && !situacao) e.situacao = 'Marque RM1 ou Refº.';
-    if (!omSigla && !situacao) e.om = 'Escolha a OM na lista.';
+    if (tipo !== 'dependente' && !pgq.trim()) e.pgq = 'Informe o posto/graduação/quadro.';
+    if (ehMilitar && vinculo === 'Inativo' && !situacao) e.situacao = 'Marque RM1 ou Refº.';
+    if (ehMilitar && !omSigla && !situacao) e.om = 'Escolha a OM na lista.';
     if (celular && celular.replace(/\D/g, '').length < 10) e.celular = 'Informe o DDD e o número.';
     if (dataNascimento && dataNascimento > new Date().toISOString().slice(0, 10)) e.dataNascimento = 'A data não pode ser futura.';
     if (hnre) Object.assign(e, validarAdicionais(adicionais, medico));
@@ -314,15 +362,15 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
     setSalvando(true);
     try {
       const nomeFinal = nome.trim().toUpperCase();
-      const pgqFinal = pgq.trim();
+      const pgqFinal = tipo === 'dependente' ? militar.pgq : pgq.trim();
       const extras = hnre ? adicionaisParaPatch(adicionais, medico) : {};
       if (medico && adicionais.fotoNova) extras.fotoUrl = await enviarFotoMilitar(militar.id, adicionais.fotoNova);
       const alteracoes = {
         ...extras,
-        nome: nomeFinal, nip, pgq: pgqFinal, om: omSigla, email: email.trim().toLowerCase(),
-        temporario: vinculo === 'Temporário', ativo: ativo === 'Ativo',
-        celular: celular.replace(/\D/g, ''), dataNascimento, rm1: situacao === 'RM1', refo: situacao === 'Refº',
+        nome: nomeFinal, nip, pgq: pgqFinal, email: email.trim().toLowerCase(), ativo: ativo === 'Ativo',
+        celular: celular.replace(/\D/g, ''), dataNascimento,
         inspecionado: montarInspecionado(pgqFinal, nip, nomeFinal),
+        ...(ehMilitar ? { om: omSigla, temporario: vinculo === 'Temporário', rm1: situacao === 'RM1', refo: situacao === 'Refº' } : {}),
       };
       // O id do cadastro é o NIP só com dígitos: NIP novo = documento movido para o id novo.
       const idNovo = nip.replace(/\D/g, '');
@@ -338,7 +386,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
 
   return (
     <Dialog
-      title={`Editar — ${militar.nome}`}
+      title={`Editar ${ROTULO_TIPO[tipo].toLowerCase()} — ${militar.nome}`}
       icon="edit"
       size="lg"
       onClose={onClose}
@@ -355,19 +403,27 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
           {a => <input {...a} type="text" value={nome} onChange={e => setNome(e.target.value.toUpperCase())} className={`${a.className} uppercase`} autoComplete="off" />}
         </Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Posto/Graduação/Quadro" required error={erros.pgq} help='Ex.: "CT (Md)", "1SG-EF".'>
-            {a => <input {...a} type="text" value={pgq} onChange={e => setPgq(e.target.value)} autoComplete="off" />}
-          </Field>
+          {tipo === 'dependente' ? (
+            <Field label="Titular" help="O titular não pode ser alterado; para trocar, cadastre um novo dependente.">
+              {a => <input {...a} type="text" value={`${militar.titularPosto ?? ''} ${militar.titularNome ?? ''}`.trim()} readOnly disabled />}
+            </Field>
+          ) : (
+            <Field label={ehMilitar ? 'Posto/Graduação/Quadro' : 'Posto/Graduação do pensionista'} required error={erros.pgq} help={ehMilitar ? 'Ex.: "CT (Md)", "1SG-EF".' : 'Ex.: "PENS-CMG".'}>
+              {a => <input {...a} type="text" value={pgq} onChange={e => setPgq(e.target.value)} autoComplete="off" />}
+            </Field>
+          )}
           <Field label="NIP" required error={erros.nip}>
             {a => <input {...a} type="text" inputMode="numeric" value={nip} onChange={e => setNip(formatNip(e.target.value))} maxLength={10} className={`${a.className} font-mono`} />}
           </Field>
         </div>
-        <Autocomplete
-          label="OM" required={!situacao} error={erros.om}
-          valor={omTexto} opcoes={opcoesOm}
-          onDigitar={t => { setOmTexto(t); setOmSigla(t === militar.om ? militar.om : ''); }}
-          onSelecionar={o => { setOmTexto(`${o.principal} — ${o.secundaria}`); setOmSigla(o.principal); }}
-        />
+        {ehMilitar && (
+          <Autocomplete
+            label="OM" required={!situacao} error={erros.om}
+            valor={omTexto} opcoes={opcoesOm}
+            onDigitar={t => { setOmTexto(t); setOmSigla(t === militar.om ? militar.om : ''); }}
+            onSelecionar={o => { setOmTexto(`${o.principal} — ${o.secundaria}`); setOmSigla(o.principal); }}
+          />
+        )}
         <Field label="E-mail">
           {a => <input {...a} type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="off" />}
         </Field>
@@ -379,8 +435,8 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
             {a => <input {...a} type="tel" inputMode="numeric" placeholder="(00) 00000-0000" value={celular} onChange={e => setCelular(formatCelular(e.target.value))} maxLength={15} autoComplete="off" />}
           </Field>
         </div>
-        <ChoiceGroup<'Carreira' | 'Temporário' | 'Inativo'> label="Vínculo" value={vinculo} onChange={v => { setVinculo(v); if (v !== 'Inativo') { setSituacao(''); if (postos) setPgq(p => aplicarSituacaoAoPgq(p, '', postos)); } }} options={[{ value: 'Carreira', label: 'Carreira' }, { value: 'Temporário', label: 'Temporário' }, { value: 'Inativo', label: 'Inativo' }]} />
-        {vinculo === 'Inativo' && (
+        {ehMilitar && <ChoiceGroup<'Carreira' | 'Temporário' | 'Inativo'> label="Vínculo" value={vinculo} onChange={v => { setVinculo(v); if (v !== 'Inativo') { setSituacao(''); if (postos) setPgq(p => aplicarSituacaoAoPgq(p, '', postos)); } }} options={[{ value: 'Carreira', label: 'Carreira' }, { value: 'Temporário', label: 'Temporário' }, { value: 'Inativo', label: 'Inativo' }]} />}
+        {ehMilitar && vinculo === 'Inativo' && (
           <div className="flex flex-wrap items-center gap-x-6" role="group" aria-label="Situação na carreira">
             {(['RM1', 'Refº'] as const).map(v => (
               <label key={v} className={`flex items-center gap-3 min-h-[44px] ${situacao && situacao !== v ? 'opacity-50' : 'cursor-pointer'}`}>
