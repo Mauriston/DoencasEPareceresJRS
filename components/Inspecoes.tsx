@@ -17,6 +17,7 @@ import { MenuAcoes, type ItemMenu } from './ui/MenuAcoes';
 import { InspecaoForm } from './inspecoes/InspecaoForm';
 import { InspecaoDetalhe } from './inspecoes/InspecaoDetalhe';
 import { AgendarDialog } from './inspecoes/AgendarDialog';
+import { TrocarPeritoDialog } from './inspecoes/TrocarPeritoDialog';
 import { AgendarNoHorarioDialog } from './inspecoes/AgendarNoHorarioDialog';
 import { MinutaDialog } from './inspecoes/MinutaDialog';
 import { CalendarioIS } from './inspecoes/CalendarioIS';
@@ -82,6 +83,7 @@ export const Inspecoes: React.FC = () => {
   const [novo, setNovo] = useState<{ dataEntrevista?: string; peritoUid?: string } | null>(null);
   const [detalheId, setDetalheId] = useState<string | null>(null);
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
+  const [trocandoPerito, setTrocandoPerito] = useState<{ is: InspecaoRecord; dataHora: string } | null>(null);
   const [horarioVazio, setHorarioVazio] = useState<string | null>(null);
   const [minuta, setMinuta] = useState<{ tipo: 'cancelamento' | 'resultado'; is: InspecaoRecord } | null>(null);
   const [parecerPara, setParecerPara] = useState<InspecaoRecord | null>(null);
@@ -264,6 +266,7 @@ export const Inspecoes: React.FC = () => {
             onAbrir={is => setDetalheId(is.id)}
             onNovoNoHorario={podeAgendar ? setHorarioVazio : undefined}
             onReagendar={podeAgendar ? reagendarArrastando : undefined}
+            onTrocarPerito={podeAgendar ? (is, dataHora) => setTrocandoPerito({ is, dataHora }) : undefined}
             onAviso={avisar}
           />
         ) : grupos.length === 0 ? (
@@ -370,6 +373,13 @@ export const Inspecoes: React.FC = () => {
           onSituacaoMudou={is => { sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS atualizada, mas o Google Agenda não: ${r.erro}`, 'error'); }); }}
           onApagar={() => setApagando(detalhe)}
           onAviso={avisar}
+        />
+      )}
+
+      {trocandoPerito && (
+        <TrocarPeritoDialog
+          inspecao={trocandoPerito.is} dataHora={trocandoPerito.dataHora} peritos={peritos} config={config} bloqueios={bloqueios} inspecoes={lista ?? []}
+          onClose={() => setTrocandoPerito(null)} onConcluido={(msg, tom) => { setTrocandoPerito(null); avisar(msg, tom); }}
         />
       )}
 

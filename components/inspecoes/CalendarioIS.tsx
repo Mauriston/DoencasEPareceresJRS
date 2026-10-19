@@ -43,6 +43,8 @@ interface Props {
   onNovoNoHorario?: (dataHora: string) => void;
   /** Presente só para quem pode agendar: IS arrastada para outro horário (mesmo perito). */
   onReagendar?: (is: InspecaoRecord, dataHora: string) => void;
+  /** IS solta num turno em que o perito dela não atende: o chamador oferece trocar o perito. */
+  onTrocarPerito?: (is: InspecaoRecord, dataHora: string) => void;
   /** Avisos do arraste (horário indisponível etc.). */
   onAviso?: (msg: string, tom?: 'success' | 'error') => void;
 }
@@ -63,7 +65,7 @@ const nomeCurto = (inspecionado: string): string => {
   return nome || inspecionado;
 };
 
-export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, onReagendar, onAviso }) => {
+export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, onReagendar, onTrocarPerito, onAviso }) => {
   const [modo, setModo] = useState<Modo>('semana');
   const [ancora, setAncora] = useState(() => { const h = hojeISO(); return ehDiaUtil(h) ? h : somarDias(h, deISO(h).getDay() === 6 ? 2 : 1); });
   const hoje = hojeISO();
@@ -82,7 +84,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
   }, [inspecoes, peritoUid]);
 
   // ----- arrastar para reagendar -----
-  interface Arraste { is: InspecaoRecord; x: number; y: number; alvo: { data: string; hhmm: string; motivo: string | null } | null }
+  interface Arraste { is: InspecaoRecord; x: number; y: number; alvo: { data: string; hhmm: string; motivo: string | null; trocar?: boolean } | null }
   const [arraste, setArraste] = useState<Arraste | null>(null);
 
   const podeArrastar = (is: InspecaoRecord) => !!onReagendar && is.situacao !== 'finalizada' && !!is.peritoUid;
@@ -97,6 +99,12 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
     const ini = minutosDe(turno.inicio);
     const hhmm = hhmmDe(ini + Math.floor((min - ini) / DURACAO_SLOT_MIN) * DURACAO_SLOT_MIN);
     return ehSlotValido(hhmm) ? { data: coluna.dataset.coluna!, hhmm } : null;
+  };
+
+  /** O perito da IS não atende no turno do slot (dia útil): dá para oferecer a troca de perito. */
+  const foraDoTurnoDoPerito = (is: InspecaoRecord, data: string, hhmm: string): boolean => {
+    const turno = turnoDoSlot(hhmm);
+    return !!onTrocarPerito && ehDiaUtil(data) && !!turno && !peritoAtendeNoTurno(config, is.peritoUid, data, turno);
   };
 
   /** Motivo pelo qual a IS não pode ir para o slot (null = pode). */
@@ -121,7 +129,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
       if (!movendo && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6) return;
       movendo = true;
       const ponto = slotDoPonto(ev.clientX, ev.clientY);
-      setArraste({ is, x: ev.clientX, y: ev.clientY, alvo: ponto ? { ...ponto, motivo: motivoRecusa(is, ponto.data, ponto.hhmm) } : null });
+      setArraste({ is, x: ev.clientX, y: ev.clientY, alvo: ponto ? { ...ponto, motivo: motivoRecusa(is, ponto.data, ponto.hhmm), trocar: foraDoTurnoDoPerito(is, ponto.data, ponto.hhmm) } : null });
     };
     const soltar = (ev: PointerEvent) => {
       botao.removeEventListener('pointermove', mover);
@@ -138,6 +146,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
       if (!ponto) { onAviso?.('Solte a IS sobre um horário do calendário.', 'error'); return; }
       const destino = `${ponto.data}T${ponto.hhmm}`;
       if (destino === is.dataEntrevista) return;
+      if (foraDoTurnoDoPerito(is, ponto.data, ponto.hhmm)) { onTrocarPerito?.(is, destino); return; }
       const motivo = motivoRecusa(is, ponto.data, ponto.hhmm);
       if (motivo) { onAviso?.(`Não foi possível reagendar: ${motivo}`, 'error'); return; }
       onReagendar?.(is, destino);
@@ -216,7 +225,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
           className={`fixed z-toast pointer-events-none px-2 py-1 rounded border text-xs font-semibold shadow-lg opacity-90 ${corAmp(arraste.is.amp)}`}
           style={{ left: arraste.x + 12, top: arraste.y + 12 }}
         >
-          {arraste.alvo ? (arraste.alvo.motivo ? `✖ ${arraste.alvo.motivo}` : `${arraste.alvo.hhmm} · ${nomeCurto(arraste.is.inspecionado)}`) : nomeCurto(arraste.is.inspecionado)}
+          {arraste.alvo ? (arraste.alvo.trocar ? `⚠ ${arraste.is.peritoNome} não atende: solte para trocar o perito` : arraste.alvo.motivo ? `✖ ${arraste.alvo.motivo}` : `${arraste.alvo.hhmm} · ${nomeCurto(arraste.is.inspecionado)}`) : nomeCurto(arraste.is.inspecionado)}
         </div>
       )}
     </div>
@@ -232,7 +241,7 @@ const ColunaDia: React.FC<{
   onAbrir: (is: InspecaoRecord) => void; onNovoNoHorario?: (dataHora: string) => void;
   podeArrastar: (is: InspecaoRecord) => boolean;
   onIniciarArraste: (is: InspecaoRecord, e: React.PointerEvent<HTMLButtonElement>) => void;
-  arrastando: { is: InspecaoRecord; alvo: { data: string; hhmm: string; motivo: string | null } | null } | null;
+  arrastando: { is: InspecaoRecord; alvo: { data: string; hhmm: string; motivo: string | null; trocar?: boolean } | null } | null;
 }> = ({ data, hoje, inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, podeArrastar, onIniciarArraste, arrastando }) => {
   const agora = new Date();
   const minAgora = agora.getHours() * 60 + agora.getMinutes();
@@ -268,7 +277,7 @@ const ColunaDia: React.FC<{
       {/* destino do arraste */}
       {arrastando?.alvo?.data === data && (
         <div
-          className={`absolute inset-x-0 z-20 pointer-events-none border-2 rounded ${arrastando.alvo.motivo ? 'border-wine bg-wine/10' : 'border-green bg-green/15'}`}
+          className={`absolute inset-x-0 z-20 pointer-events-none border-2 rounded ${arrastando.alvo.trocar ? 'border-gold bg-gold/20' : arrastando.alvo.motivo ? 'border-wine bg-wine/10' : 'border-green bg-green/15'}`}
           style={{ top: topo(minutosDe(arrastando.alvo.hhmm)), height: DURACAO_SLOT_MIN * PX_POR_MIN }}
         />
       )}
