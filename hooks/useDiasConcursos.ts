@@ -2,7 +2,7 @@
 // Dias agendados dos concursos Em andamento / Em breve (tempo real) e a sincronização deles com o Google Agenda
 // "JRS/HNRe". Ver services/agendaConcursos.ts.
 import { useEffect, useState } from 'react';
-import { observarDiasConcursos, assinaturaDias, sincronizarConcursosNaAgenda, type DiaConcurso } from '../services/agendaConcursos';
+import { observarDiasConcursos, assinaturaDias, sincronizarConcursosNaAgenda, carregarConvidadosAgenda, type DiaConcurso } from '../services/agendaConcursos';
 
 const CHAVE_ASSINATURA = 'jrs_agenda_concursos_assinatura';
 
@@ -24,17 +24,26 @@ export const useDiasConcursos = (ativo: boolean = true) => {
 export const useSincronizarAgendaConcursos = (
   habilitado: boolean, dias: DiaConcurso[], concursosAtivos: string[] | null, onErro?: (mensagem: string) => void,
 ) => {
+  // Convidados: usuários ativos do appweb (Gmail). Só sincroniza depois de carregados, para não remover convidados por engano.
+  const [convidados, setConvidados] = useState<string[] | null>(null);
   useEffect(() => {
-    if (!habilitado || concursosAtivos === null) return;
-    const assinatura = assinaturaDias(dias, concursosAtivos);
+    if (!habilitado) return;
+    let vivo = true;
+    carregarConvidadosAgenda().then(l => { if (vivo) setConvidados(l); }).catch(() => { /* sem convidados: não sincroniza */ });
+    return () => { vivo = false; };
+  }, [habilitado]);
+
+  useEffect(() => {
+    if (!habilitado || concursosAtivos === null || convidados === null) return;
+    const assinatura = assinaturaDias(dias, concursosAtivos, convidados);
     let anterior: string | null = null;
     try { anterior = localStorage.getItem(CHAVE_ASSINATURA); } catch { /* sem localStorage */ }
     if (anterior === assinatura) return;
     const t = window.setTimeout(() => {
-      sincronizarConcursosNaAgenda(dias, concursosAtivos)
+      sincronizarConcursosNaAgenda(dias, concursosAtivos, convidados)
         .then(() => { try { localStorage.setItem(CHAVE_ASSINATURA, assinatura); } catch { /* ignora */ } })
         .catch(e => onErro?.(`Google Agenda: não foi possível atualizar os dias de concurso (${e?.message || 'erro'}).`));
     }, 2500);
     return () => window.clearTimeout(t);
-  }, [habilitado, dias, concursosAtivos]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [habilitado, dias, concursosAtivos, convidados]); // eslint-disable-line react-hooks/exhaustive-deps
 };

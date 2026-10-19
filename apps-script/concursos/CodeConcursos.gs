@@ -651,7 +651,8 @@ function apiSincronizarEventoIS(corpo) {
 
 /**
  * action=sincronizarEventosConcursos (POST): { idToken, dias[], concursosAtivos[] } — mantém na agenda "JRS/HNRe" UM evento por
- * dia de concurso agendado (07:30–12:00, o turno da manhã inteiro), sem convidados. Cada item de "dias":
+ * dia de concurso agendado (07:30–12:00, o turno da manhã inteiro), com todos os usuários ativos do appweb como convidados
+ * ("convidados": e-mails Gmail; o convite é enviado por e-mail) e notificação 12 h antes. Cada item de "dias":
  * { chave ("{concursoId}|{AAAA-MM-DD}"), concursoId, data, titulo, descricao, encerrado }. Evento vermelho enquanto o dia está
  * aberto; verde (e título com ✅ na frente, já enviado em "titulo") quando o dia é encerrado. Os eventos são marcados com tags
  * privadas, então a sincronização é idempotente: cria o que falta, atualiza o que mudou e remove os dias que deixaram de existir
@@ -660,6 +661,11 @@ function apiSincronizarEventoIS(corpo) {
 function apiSincronizarEventosConcursos(corpo) {
   exigirUsuarioFirebase(corpo);
   var agenda = abrirAgendaJrs(corpo);
+  var convidados = [];
+  (corpo.convidados || []).forEach(function(email) {
+    var limpo = String(email || '').trim().toLowerCase();
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(limpo) && convidados.indexOf(limpo) === -1) convidados.push(limpo);
+  });
   var dias = corpo.dias || [];
   var ativos = corpo.concursosAtivos || [];
   var desejados = {};
@@ -697,14 +703,21 @@ function apiSincronizarEventosConcursos(corpo) {
         ev.setTitle(String(d.titulo));
         ev.setDescription(String(d.descricao || ''));
         ev.setTime(ini, term);
+        // Convidados = usuários ativos do appweb: remove quem saiu e convida (por e-mail) quem entrou.
+        var atuais = ev.getGuestList().map(function(g) { return g.getEmail().toLowerCase(); });
+        atuais.forEach(function(email) { if (convidados.indexOf(email) === -1) ev.removeGuest(email); });
+        convidados.forEach(function(email) { if (atuais.indexOf(email) === -1) ev.addGuest(email); });
         atualizados++;
       } else {
-        ev = agenda.createEvent(String(d.titulo), ini, term, { description: String(d.descricao || '') });
+        ev = agenda.createEvent(String(d.titulo), ini, term, { description: String(d.descricao || ''), guests: convidados.join(','), sendInvites: true });
         ev.setTag('jrsConcurso', chave);
         ev.setTag('jrsConcursoId', String(d.concursoId));
         criados++;
       }
       ev.setColor(d.encerrado ? CalendarApp.EventColor.GREEN : CalendarApp.EventColor.RED);
+      // Notificação padrão: 12 horas antes (720 min), no lugar das notificações da agenda.
+      ev.removeAllReminders();
+      ev.addPopupReminder(720);
     });
 
     // Dias que deixaram de existir (candidatos reagendados, concurso sem candidatos no dia) — só dos concursos ativos.
