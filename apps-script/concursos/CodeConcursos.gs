@@ -43,8 +43,15 @@ var ID_PASTA_PARECERES = '176YQTOOWXuE78Xul49XYpJsVNyu-eZFi';
 var FIREBASE_API_KEY = 'AIzaSyAWBYm6iGQNQXeC5DO038lMSruxpRjoX2c';
 var MODELO_GEMINI = 'gemini-2.5-flash';
 
+/** Ações POST que vieram do antigo projeto "principal" (CodePrincipal.gs): respondem no formato antigo ({ success, ... }). */
+var ACOES_POST_PRINCIPAL = ['extrair_dados_atestado', 'gerarMinutaMensagem', 'gerar_pericia_menor'];
+
 /** Ponto de entrada POST do aplicativo da web. Espera um corpo JSON com a propriedade "action". */
 function doPost(e) {
+  var acaoBruta = '';
+  try { acaoBruta = String(JSON.parse((e && e.postData && e.postData.contents) || '{}').action || ''); } catch (erroPeek) { /* tratado abaixo */ }
+  if (ACOES_POST_PRINCIPAL.indexOf(acaoBruta) !== -1) return doPostPrincipal(e);
+
   return apiResponder(function() {
     var corpo = {};
     try {
