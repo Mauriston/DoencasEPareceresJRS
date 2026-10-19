@@ -30,7 +30,8 @@ import { observarMilitares, type MilitarRecord } from '../services/firestoreMili
 import {
   observarInspecoes, observarBloqueios, observarConfigAgenda, cancelarInspecao, apagarInspecao, agendarInspecao, type InspecaoRecord,
 } from '../services/firestoreInspecoes';
-import { observarDiasConcursos, bloqueiosDeConcursos, assinaturaDias, sincronizarConcursosNaAgenda, type DiaConcurso } from '../services/agendaConcursos';
+import { bloqueiosDeConcursos } from '../services/agendaConcursos';
+import { useDiasConcursos, useSincronizarAgendaConcursos } from '../hooks/useDiasConcursos';
 import { concursoPath } from '../config/routes';
 import { carregarPeritos, type PeritoIS } from '../services/peritosIS';
 import { sincronizarAgendaIS, removerEventoAgendaIS } from '../services/agendaGoogleIS';
@@ -74,8 +75,7 @@ export const Inspecoes: React.FC = () => {
   const [erroCarga, setErroCarga] = useState('');
   const [bloqueios, setBloqueios] = useState<BloqueioAgenda[]>([]);
   const [config, setConfig] = useState<ConfigAgenda>({});
-  const [diasConcursos, setDiasConcursos] = useState<DiaConcurso[]>([]);
-  const [concursosAtivos, setConcursosAtivos] = useState<string[] | null>(null);
+  const { dias: diasConcursos, concursosAtivos } = useDiasConcursos();
   const [militares, setMilitares] = useState<MilitarRecord[]>([]);
   const [peritos, setPeritos] = useState<PeritoIS[]>([]);
 
@@ -101,7 +101,6 @@ export const Inspecoes: React.FC = () => {
   useEffect(() => observarInspecoes(setLista, e => setErroCarga(e.message || 'Não foi possível carregar as inspeções.')), []);
   useEffect(() => observarBloqueios(setBloqueios), []);
   useEffect(() => observarConfigAgenda(setConfig), []);
-  useEffect(() => observarDiasConcursos((dias, ativos) => { setDiasConcursos(dias); setConcursosAtivos(ativos); }), []);
   useEffect(() => observarMilitares(setMilitares), []);
   useEffect(() => { carregarPeritos().then(setPeritos).catch(() => setPeritos([])); }, []);
 
@@ -110,21 +109,8 @@ export const Inspecoes: React.FC = () => {
   const bloqueiosTodos = useMemo(() => [...bloqueios, ...bloqueiosDeConcursos(diasConcursos)], [bloqueios, diasConcursos]);
   const podeVerConcursos = canAccessPage('concursosJRS', perfil);
 
-  // Google Agenda: quem agenda mantém os eventos dos dias de concurso (cria/atualiza/remove). Só sincroniza quando o
-  // conteúdo mudou (assinatura guardada neste navegador) e depois de uma pausa, para juntar edições em sequência.
-  useEffect(() => {
-    if (!podeAgendar || concursosAtivos === null) return;
-    const assinatura = assinaturaDias(diasConcursos, concursosAtivos);
-    let anterior: string | null = null;
-    try { anterior = localStorage.getItem('jrs_agenda_concursos_assinatura'); } catch { /* sem localStorage */ }
-    if (anterior === assinatura) return;
-    const t = window.setTimeout(() => {
-      sincronizarConcursosNaAgenda(diasConcursos, concursosAtivos)
-        .then(() => { try { localStorage.setItem('jrs_agenda_concursos_assinatura', assinatura); } catch { /* ignora */ } })
-        .catch(e => avisar(`Google Agenda: não foi possível atualizar os dias de concurso (${e?.message || 'erro'}).`, 'error'));
-    }, 2500);
-    return () => window.clearTimeout(t);
-  }, [podeAgendar, diasConcursos, concursosAtivos]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Google Agenda: quem agenda mantém os eventos dos dias de concurso (com aviso de erro nesta página).
+  useSincronizarAgendaConcursos(podeAgendar, diasConcursos, concursosAtivos, msg => avisar(msg, 'error'));
 
   // Sigla da OM do inspecionado (dependente herda a do titular; pensionista não tem).
   const omPorId = useMemo(() => new Map(militares.map(m => [m.id, m.om])), [militares]);
