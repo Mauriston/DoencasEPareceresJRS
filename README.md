@@ -17,16 +17,22 @@ Esta página serve como um "Livro de Bolso" de acesso instantâneo ao rol de doe
 Projetada para os momentos atarefados de inspeção admissional e de rotina.
 * **Funcionalidade:** Filtra, a partir de objetos rígidos, os índices incapacitantes. Detalha ponto-a-ponto todos os quadros médicos, medidas antropométricas e acuidade visual que eliminam um candidato nos certames e concursos da Marinha do Brasil. Adicionalmente, mapeia os exames mandatórios exigidos por tipo de finalidade/engajamento.
 
-### 3. Geração de Pareceres Periciais (`/components/Pareceres.tsx`)
-Um verdadeiro sistema interativo Fullstack Integrado.
-* **Dinâmica / Lógica:** O front-end React coleta a identificação do perito, a Finalidade e a Especialidade, aplicando autocompletar via NIP. O sistema comunica-se com um serviço Google Apps Script (GAS) implementado como API Rest.
-* **Output:** O macro na web copia o template nativo do Google Docs específico, injeta os dados (data, histórico, tags textuais), converte em PDF, arquiva na nuvem e envia as cópias originais para o e-mail institucional do perito, mantendo um log centralizado.
+### 3. Pareceres (`/components/Pareceres.tsx`)
+Pedidos de parecer médico por especialidade, com acompanhamento do andamento de cada um.
+* **Lista:** tabela (Firestore, coleção `pareceres`) com busca por inspecionado/NIP, filtro por especialidade e situação *Solicitado / Atrasado (20 dias ou mais) / Concluído*; o detalhe abre em barra lateral (bottom sheet no mobile).
+* **Novo parecer:** o militar é escolhido por autocomplete na base `militares`, com a finalidade da IS e os quesitos sugeridos por especialidade (editáveis; modelos mantidos pelo Admin em `quesitosParecer`).
+* **Output:** um Apps Script preenche o template do Google Docs, o PDF é guardado no Google Drive e o pedido é registrado no Firestore.
 
 ### 4. Perícia Menor com Leitura Inteligente IA (`/components/PericiaMenor.tsx`)
-Módulo avançado de emissão de atestados e dispensas de serviço com tecnologia de reconhecimento de imagem e tratamento de imagem estilo *Scanner*.
-* **Visão Computacional:** O perito pode utilizar a câmara do dispositivo para fotografar um atestado médico físico. A imagem é recortada pelo utilizador (`react-image-crop`) e recebe filtros automáticos de preto e branco e alto contraste para otimização da leitura.
-* **Integração com Gemini:** A imagem tratada é enviada via API para o modelo **Google Gemini 2.5 Flash**, que extrai com alta precisão o Nome do Paciente, a Data do Atestado, o Tempo de Afastamento e o código CID.
-* **Automação:** O formulário "Novo" (barra lateral/bottom sheet) é pré-preenchido: o nome é buscado na base de militares (por nome ou NIP, com cadastro rápido se não existir), o CID por autocomplete e o Serviço do HNRe vem do cadastro. A foto do atestado é guardada em PDF no Firebase Storage e a perícia no Firestore (coleção `periciasMenores`), com status Vigente/Concluída calculado pela data de término.
+Registro e consulta das perícias menores dos militares de bordo, no mesmo padrão da página Pareceres.
+* **Lista:** tabela (Firestore, coleção `periciasMenores`) com busca por inspecionado, NIP ou CID, filtros de situação (*Todas / Vigentes / Concluídas*) e de tipo de dispensa (*LTS / Restrições*). O detalhe abre em barra lateral e leva ao histórico do militar. Status dinâmico: **Vigente** enquanto hoje ≤ data de término; depois, **Concluída**.
+* **Novo (barra lateral; bottom sheet no mobile):**
+  * **Fotografar atestado:** a foto é recortada (`react-image-crop`) e enviada ao **Google Gemini 2.5 Flash** (Apps Script, ação `extrair_dados_atestado`), que extrai nome, data, tempo e CID para preencher o formulário. A foto é convertida em PDF (`jspdf`) e guardada no Firebase Storage.
+  * **Dados do militar:** campo *Nome* com autocomplete por nome ou NIP (e cadastro rápido quando não encontra); *Serviço do HNRe* vem do cadastro do militar, com "Cadastrar Serviço" quando falta (só para a OM HNRe; nas demais o campo some e nada é gravado).
+  * **Atestado:** data, tempo e CID (autocomplete com `public/cid.json`).
+  * **Homologação:** tempo homologado (máx. 20 dias), dispensas em modal com caixas de seleção ("TODAS AS ATIVIDADES" é exclusiva) e VDF (caixa de seleção). O perito é o médico logado.
+* **Término:** `dataTermino` = data do atestado + tempo homologado − 1, calculada ao gravar.
+* **Histórico:** as perícias da antiga aba `Pericia_Menor` foram migradas (`scripts/migrar-pericias-menores.mjs`) e ligadas aos militares pelo NIP. A Guia de Encaminhamento (Google Docs) foi removida.
 
 ### 5. Roteiro JRS e Material de Estudo (`/components/RoteiroJRS.tsx` e `Estudo.tsx`)
 Ambiente de capacitação contínua e trilhas de aprendizagem.
@@ -66,7 +72,8 @@ A interface do usuário foi desenhada com estrita observância à Identidade Vis
 * **Ícones:** Google Material Symbols (shim `components/ui/icons.tsx`).
 * **Processamento de Imagens:** `react-image-crop` para interações de recorte na web, manipulado com a API Canvas nativa do HTML5.
 * **Exportação Local:** `jspdf` para geração de relatórios instantâneos.
-* **Backend Autônomo (Google Apps Script):** Orquestração no `Code.gs` utilizando Google Sheets como base de dados relacional, Google Docs para manipulação de *templates* e GmailApp para envio seguro de e-mails.
+* **Dados e Arquivos (Firebase):** Authentication, Firestore (`militares`, `pareceres`, `periciasMenores`, `legislacao`, `quesitosParecer`, `concursos`, entre outras) e Storage (PDFs); regras em `firestore.rules` e `storage.rules`.
+* **Backend Autônomo (Google Apps Script):** Geração de PDFs a partir de templates, leitura de atestados pelo Gemini e listas de apoio (planilhas), com Google Docs para *templates* e GmailApp para e-mails.
 * **Inteligência Artificial:** Integração via REST API com o modelo **Google Gemini 2.5 Flash** para leitura de documentos via Visão Computacional (OCR) estruturado em JSON.
 
 ---
@@ -77,7 +84,8 @@ Abaixo encontra-se a arquitetura atualizada de ficheiros e diretórios no reposi
 
 - `/` (Raiz)
   - `App.tsx` *(Componente de Roteamento Principal e Navigation Layout)*
-  - `apps-script/` *(Código dos projetos Google Apps Script: `principal/Code.gs` e `concursos/CodeConcursos.gs`; deploy via clasp — ver `docs/apps-script-deploy.md`)*
+  - `apps-script/` *(Código dos projetos Google Apps Script: `principal/Code.gs` e `concursos/CodeConcursos.gs`/`CodePrincipal.gs`; deploy via clasp — ver `docs/apps-script-deploy.md`)*
+  - `scripts/` *(Cargas e migrações para o Firebase, ex.: `migrar-pericias-menores.mjs`)*
   - `constants.ts` *(Banco de Dados Estático)*
   - `index.html` *(Index da aplicação PWA)*
   - `index.tsx` *(Arquivo de montagem React / Entry point)*
@@ -87,6 +95,8 @@ Abaixo encontra-se a arquitetura atualizada de ficheiros e diretórios no reposi
 - `/services`
   - `extrasService.ts` *(Serviços, extração de URLs e parsing de planilhas)*
   - `firebaseAuth.ts` *(Integrações de autenticação e permissões)*
+  - `firestoreMilitares.ts` / `firestorePareceres.ts` / `firestorePericiasMenores.ts` *(Coleções do Firestore; status e data de término da Perícia Menor)*
+  - `atestadoIA.ts` *(Leitura do atestado pelo Gemini via Apps Script)*
 
 - `/components` (Árvore de Componentes Renderizados)
   - `Aulas.tsx` / `Videos.tsx`
@@ -97,7 +107,8 @@ Abaixo encontra-se a arquitetura atualizada de ficheiros e diretórios no reposi
   - `Header.tsx` / `Footer.tsx`
   - `Infograficos.tsx` / `Resumos.tsx` / `Artigos.tsx`
   - `LawReference.tsx` / `PortariaGuide.tsx`
-  - `Pareceres.tsx` / `PericiaMenor.tsx`
+  - `Pareceres.tsx` / `PericiaMenor.tsx` / `PericiaMenorDetalhe.tsx`
+  - `pareceres/` / `periciaMenor/` *(Formulários em barra lateral, detalhes e modais de cada página)*
   - `ArtigoPericiaMedica.tsx`, `ArtigoPerfilPerito.tsx`, etc. *(Sub-páginas de artigos)*
 
 - `/components/sections`
