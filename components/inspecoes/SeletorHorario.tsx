@@ -22,6 +22,8 @@ interface Props {
   /** Chaves de slot ocupadas por outras IS (ver chaveSlot). */
   ocupados: Set<string>;
   erro?: string;
+  /** Esconde o campo de data (a data já foi escolhida, p.ex. num mini calendário). */
+  semCampoData?: boolean;
 }
 
 export const estadoDoSlot = (
@@ -34,7 +36,7 @@ export const estadoDoSlot = (
   return 'livre';
 };
 
-export const SeletorHorario: React.FC<Props> = ({ peritoUid, data, onData, hora, onHora, config, bloqueios, ocupados, erro }) => {
+export const SeletorHorario: React.FC<Props> = ({ peritoUid, data, onData, hora, onHora, config, bloqueios, ocupados, erro, semCampoData }) => {
   const diaUtil = !!data && ehDiaUtil(data);
   const turnos = useMemo(() => TURNOS.map(t => ({
     ...t,
@@ -47,9 +49,11 @@ export const SeletorHorario: React.FC<Props> = ({ peritoUid, data, onData, hora,
 
   return (
     <div className="space-y-3">
-      <Field label="Data da entrevista" error={!data ? erro : undefined}>
-        {a => <input {...a} type="date" min={hojeISO()} value={data} onChange={e => { onData(e.target.value); onHora(''); }} />}
-      </Field>
+      {!semCampoData && (
+        <Field label="Data da entrevista" error={!data ? erro : undefined}>
+          {a => <input {...a} type="date" min={hojeISO()} value={data} onChange={e => { onData(e.target.value); onHora(''); }} />}
+        </Field>
+      )}
 
       {data && !diaUtil && <p className="text-xs font-semibold text-wine" role="status">{nomeDiaSemana(data)} não tem expediente de IS. Escolha um dia útil.</p>}
       {data && diaUtil && !peritoUid && <p className="text-xs text-ink-3" role="status">Escolha o perito para ver os horários.</p>}
@@ -94,4 +98,13 @@ export const SeletorHorario: React.FC<Props> = ({ peritoUid, data, onData, hora,
       )}
     </div>
   );
+};
+
+/** Horários (hh:mm) livres de um perito num dia: turno configurado, sem bloqueio e sem outra IS. */
+export const slotsLivresDoDia = (peritoUid: string, data: string, config: ConfigAgenda, bloqueios: BloqueioAgenda[], ocupados: Set<string>): string[] => {
+  if (!ehDiaUtil(data)) return [];
+  return TURNOS.flatMap(t => {
+    const atende = peritoAtendeNoTurno(config, peritoUid, data, t.id);
+    return slotsDoTurno(t.id).filter(h => estadoDoSlot(peritoUid, data, h, atende, bloqueios, ocupados) === 'livre');
+  });
 };
