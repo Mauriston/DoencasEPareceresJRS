@@ -11,7 +11,7 @@ import { CalendarioDisponibilidade } from './CalendarioDisponibilidade';
 import { agendarInspecao, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { sincronizarAgendaIS } from '../../services/agendaGoogleIS';
 import { peritosDoAmp, type PeritoIS } from '../../services/peritosIS';
-import { chaveSlot, dataBr, dataHoraBr, hojeISO, somarDias, nomeDiaSemana, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
+import { ocupadosDe, duracaoDaIS, dataBr, dataHoraBr, hojeISO, somarDias, nomeDiaSemana, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
 
 interface Props {
   inspecao: InspecaoRecord;
@@ -32,11 +32,12 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
   const [salvando, setSalvando] = useState(false);
 
   // Ocupação por outras IS (a própria não conta: dá para repetir o mesmo horário ao trocar só o perito).
-  const ocupados = useMemo(() => new Set(inspecoes.filter(i => i.id !== inspecao.id && i.dataEntrevista && i.status !== 'cancelada').map(i => chaveSlot(i.peritoUid, i.dataEntrevista))), [inspecoes, inspecao.id]);
+  const ocupados = useMemo(() => ocupadosDe(inspecoes, inspecao.id), [inspecoes, inspecao.id]);
+  const duracao = duracaoDaIS(inspecao);
   const perito = candidatos.find(p => p.uid === peritoUid);
 
   // Disponibilidade por AMP: um dia está livre se algum perito do AMP tem horário livre nele.
-  const peritosLivresNoDia = (d: string) => candidatos.filter(p => slotsLivresDoDia(p.uid, d, config, bloqueios, ocupados).length > 0);
+  const peritosLivresNoDia = (d: string) => candidatos.filter(p => slotsLivresDoDia(p.uid, d, config, bloqueios, ocupados, duracao).length > 0);
   const diaDisponivel = (d: string) => peritosLivresNoDia(d).length > 0;
   const proximaLivre = useMemo(() => {
     const hoje = hojeISO();
@@ -48,7 +49,7 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
   const peritosDoDia = useMemo(() => (data ? peritosLivresNoDia(data) : []), [data, candidatos, config, bloqueios, ocupados]); // eslint-disable-line react-hooks/exhaustive-deps
   const escolherData = (d: string) => {
     setData(d); setHora(''); setErro('');
-    const livres = candidatos.filter(p => slotsLivresDoDia(p.uid, d, config, bloqueios, ocupados).length > 0);
+    const livres = candidatos.filter(p => slotsLivresDoDia(p.uid, d, config, bloqueios, ocupados, duracao).length > 0);
     setPeritoUid(livres.length === 1 ? livres[0].uid : livres.some(p => p.uid === peritoUid) ? peritoUid : '');
   };
   const reagendando = !!inspecao.dataEntrevista;
@@ -111,7 +112,7 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
             )}
 
             {data && peritoUid && (
-              <SeletorHorario semCampoData peritoUid={peritoUid} data={data} onData={setData} hora={hora} onHora={h => { setHora(h); setErro(''); }} config={config} bloqueios={bloqueios} ocupados={ocupados} />
+              <SeletorHorario semCampoData duracao={duracao} peritoUid={peritoUid} data={data} onData={setData} hora={hora} onHora={h => { setHora(h); setErro(''); }} config={config} bloqueios={bloqueios} ocupados={ocupados} />
             )}
           </>
         )}

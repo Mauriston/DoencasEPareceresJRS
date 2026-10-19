@@ -11,7 +11,7 @@ import { StatusTag } from '../ui/StatusTag';
 import { atualizarInspecao, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { carregarRestricoesIS } from '../../utils/corposQuadros';
 import {
-  STATUS_IS, STATUS_ESCOLHIVEIS, situacaoDoStatus, SITUACOES_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataBr, dataHoraBr, formatTis, tisValido, prefixoAnoTis, hojeISO,
+  STATUS_IS, STATUS_ESCOLHIVEIS, situacaoDoStatus, SITUACOES_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataBr, dataHoraBr, duracaoDaIS, horaFimEntrevista, horaDeEntrevista, formatTis, tisValido, prefixoAnoTis, hojeISO,
   type StatusIS,
 } from '../../utils/inspecoes';
 
@@ -127,7 +127,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, permissoes, onC
           <Linha rotulo="Inspecionado">{is.inspecionado}</Linha>
           <Linha rotulo="Finalidade">{is.finalidade}{is.grupoFinalidade ? ` — ${is.grupoFinalidade}` : ''}</Linha>
           <Linha rotulo="Data de abertura">{dataBr(is.dataAbertura)}</Linha>
-          <Linha rotulo="Entrevista">{is.dataEntrevista ? `${dataHoraBr(is.dataEntrevista)} — ${is.peritoNome}` : is.peritoNome ? `Não agendada — perito: ${is.peritoNome}` : 'Não agendada'}</Linha>
+          <Linha rotulo="Entrevista">{is.dataEntrevista ? `${dataHoraBr(is.dataEntrevista)}${duracaoDaIS(is) > 20 ? ` às ${horaFimEntrevista(horaDeEntrevista(is.dataEntrevista), duracaoDaIS(is))} (${duracaoDaIS(is)} min)` : ''} — ${is.peritoNome}` : is.peritoNome ? `Não agendada — perito: ${is.peritoNome}` : 'Não agendada'}</Linha>
           {is.dataEntrevista && (
             <Linha rotulo="Google Agenda (JRS/HNRe)">
               {is.agendaSincronizada && is.eventoAgendaId ? 'Sincronizado' : is.agendaSincronizada === false ? 'Falha na sincronização' : 'Ainda não sincronizado'}

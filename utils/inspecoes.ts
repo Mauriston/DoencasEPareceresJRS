@@ -49,6 +49,7 @@ export const situacaoDoStatus = (status: StatusIS): SituacaoIS => STATUS_IS[stat
 export const PRAZO_ATRASO_DIAS = 7;
 export const PRAZO_ATRASO_DIAS_BENEFICIOS = 60;
 export const GRUPO_BENEFICIOS = 'Benefícios';
+export const GRUPO_VERIFICACOES = 'Verificações e Términos';
 
 export interface DadosPrazoIS {
   status: StatusIS;
@@ -182,9 +183,42 @@ export const bloqueioAtinge = (b: BloqueioAgenda, peritoUid: string, data: strin
 export const peritoAtendeNoTurno = (config: ConfigAgenda, peritoUid: string, data: string, turno: Turno): boolean =>
   !!config[peritoUid]?.[String(diaDaSemana(data))]?.[turno];
 
-export type EstadoSlot = 'livre' | 'ocupado' | 'bloqueado' | 'fora';
+export type EstadoSlot = 'livre' | 'ocupado' | 'bloqueado' | 'fora' | 'nao_cabe';
+
+/** Duração da entrevista (min) conforme o grupo da finalidade: Benefícios 60; Verificações e Términos 30; demais 20 (1 slot). */
+export const duracaoDoGrupo = (grupo?: string): number => (grupo === GRUPO_BENEFICIOS ? 60 : grupo === GRUPO_VERIFICACOES ? 30 : DURACAO_SLOT_MIN);
+export const duracaoDaIS = (is: { grupoFinalidade?: string }): number => duracaoDoGrupo(is.grupoFinalidade);
+
+/** Horários de início dos slots de 20 min que a entrevista toca (30 min = 2 slots; 60 min = 3 slots). */
+export const slotsCobertos = (hhmm: string, duracao: number): string[] =>
+  Array.from({ length: Math.max(1, Math.ceil(duracao / DURACAO_SLOT_MIN)) }, (_, i) => hhmmDe(minutosDe(hhmm) + i * DURACAO_SLOT_MIN));
+
+/** Hora em que a entrevista termina. */
+export const horaFimEntrevista = (hhmm: string, duracao: number): string => hhmmDe(minutosDe(hhmm) + duracao);
+
+/** A entrevista começa e termina dentro do mesmo turno (não atravessa o almoço nem passa das 17:00). */
+export const cabeNoTurno = (hhmm: string, duracao: number): boolean => {
+  const t = turnoDoSlot(hhmm);
+  const turno = TURNOS.find(x => x.id === t);
+  return !!turno && minutosDe(hhmm) + duracao <= minutosDe(turno.fim);
+};
 
 export const chaveSlot = (peritoUid: string, dataHora: string): string => `${peritoUid}__${dataHora.replace(':', '-')}`;
+
+/** Chaves de todos os slots tocados por uma entrevista (AAAA-MM-DDThh:mm de início + duração). */
+export const chavesOcupadas = (peritoUid: string, dataEntrevista: string, duracao: number): string[] =>
+  slotsCobertos(dataEntrevista.slice(11, 16), duracao).map(h => chaveSlot(peritoUid, `${dataEntrevista.slice(0, 10)}T${h}`));
+
+interface IsOcupante { id: string; peritoUid: string; dataEntrevista: string; status: string; grupoFinalidade?: string }
+/** Slots ocupados por IS agendadas (ignora canceladas e, se informada, a IS `ignorarId`). */
+export const ocupadosDe = (inspecoes: IsOcupante[], ignorarId?: string): Set<string> => {
+  const s = new Set<string>();
+  inspecoes.forEach(i => {
+    if (i.id === ignorarId || !i.dataEntrevista || i.status === 'cancelada') return;
+    chavesOcupadas(i.peritoUid, i.dataEntrevista, duracaoDaIS(i)).forEach(k => s.add(k));
+  });
+  return s;
+};
 
 // ---------------------------------------------------------------------------
 // TIS

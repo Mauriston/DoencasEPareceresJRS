@@ -12,7 +12,7 @@ import { Button } from '../ui/Button';
 import { Segmented } from '../ui/Segmented';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import {
-  STATUS_IS, statusEfetivoIS, hojeISO, chaveSlot, somarDias, inicioDaSemana, inicioDoMes, nomeMes, nomeDiaCurto, nomeDiaSemana, ehDiaUtil, deISO, paraISO,
+  STATUS_IS, statusEfetivoIS, hojeISO, ocupadosDe, duracaoDaIS, horaFimEntrevista, somarDias, inicioDaSemana, inicioDoMes, nomeMes, nomeDiaCurto, nomeDiaSemana, ehDiaUtil, deISO, paraISO,
   dataDeEntrevista, horaDeEntrevista, minutosDe, hhmmDe, ehSlotValido, bloqueioAtinge, peritoAtendeNoTurno, turnoDoSlot, TURNOS, DURACAO_SLOT_MIN,
   type BloqueioAgenda, type ConfigAgenda, type Turno,
 } from '../../utils/inspecoes';
@@ -111,8 +111,9 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
   const motivoRecusa = (is: InspecaoRecord, data: string, hhmm: string): string | null => {
     if (!ehDiaUtil(data)) return 'Sem expediente neste dia.';
     const turno = turnoDoSlot(hhmm);
-    const ocupados = new Set<string>(inspecoes.filter(i => i.id !== is.id && i.dataEntrevista && i.status !== 'cancelada').map(i => chaveSlot(i.peritoUid, i.dataEntrevista)));
-    const estado = estadoDoSlot(is.peritoUid, data, hhmm, !!turno && peritoAtendeNoTurno(config, is.peritoUid, data, turno), bloqueios, ocupados);
+    const ocupados = ocupadosDe(inspecoes, is.id);
+    const estado = estadoDoSlot(is.peritoUid, data, hhmm, !!turno && peritoAtendeNoTurno(config, is.peritoUid, data, turno), bloqueios, ocupados, duracaoDaIS(is));
+    if (estado === 'nao_cabe') return `A entrevista (${duracaoDaIS(is)} min) não cabe no turno a partir das ${hhmm}.`;
     if (estado === 'fora') return `${is.peritoNome} não atende neste turno.`;
     if (estado === 'bloqueado') return 'Horário bloqueado.';
     if (estado === 'ocupado') return `${is.peritoNome} já tem outra IS neste horário.`;
@@ -264,8 +265,21 @@ const ColunaDia: React.FC<{
   };
 
   // IS no mesmo horário (peritos diferentes) dividem a largura da coluna.
-  const grupos = new Map<string, InspecaoRecord[]>();
-  inspecoes.forEach(i => grupos.set(i.dataEntrevista, [...(grupos.get(i.dataEntrevista) ?? []), i]));
+  // Posição lateral: IS que se sobrepõem no tempo (peritos diferentes, ou entrevistas longas) dividem a largura.
+  const posicoes = (() => {
+    const itens = inspecoes.map(i => { const ini = minutosDe(horaDeEntrevista(i.dataEntrevista)); return { is: i, ini, fim: ini + duracaoDaIS(i), col: 0, total: 1 }; });
+    let grupo: typeof itens = [];
+    let fimGrupo = -1;
+    const fechar = () => { const n = Math.max(...grupo.map(g => g.col)) + 1; grupo.forEach(g => { g.total = n; }); grupo = []; };
+    itens.forEach(it => {
+      if (grupo.length && it.ini >= fimGrupo) { fechar(); fimGrupo = -1; }
+      let col = 0;
+      while (grupo.some(g => g.col === col && g.fim > it.ini)) col++;
+      it.col = col; grupo.push(it); fimGrupo = Math.max(fimGrupo, it.fim);
+    });
+    if (grupo.length) fechar();
+    return itens;
+  })();
 
   return (
     <div
@@ -278,7 +292,7 @@ const ColunaDia: React.FC<{
       {arrastando?.alvo?.data === data && (
         <div
           className={`absolute inset-x-0 z-20 pointer-events-none border-2 rounded ${arrastando.alvo.trocar ? 'border-gold bg-gold/20' : arrastando.alvo.motivo ? 'border-wine bg-wine/10' : 'border-green bg-green/15'}`}
-          style={{ top: topo(minutosDe(arrastando.alvo.hhmm)), height: DURACAO_SLOT_MIN * PX_POR_MIN }}
+          style={{ top: topo(minutosDe(arrastando.alvo.hhmm)), height: duracaoDaIS(arrastando.is) * PX_POR_MIN }}
         />
       )}
       {/* fora do expediente: antes das 07:30, almoço e depois das 17:00 */}
@@ -316,8 +330,8 @@ const ColunaDia: React.FC<{
       )}
 
       {/* IS */}
-      {Array.from(grupos.values()).flatMap(grupo => grupo.map((is, idx) => {
-        const min = minutosDe(horaDeEntrevista(is.dataEntrevista));
+      {posicoes.map(({ is, ini: min, col, total }) => {
+        const duracao = duracaoDaIS(is);
         const st = STATUS_IS[statusEfetivoIS(is)];
         const arrastavel = podeArrastar(is);
         return (
@@ -326,14 +340,14 @@ const ColunaDia: React.FC<{
             type="button"
             onClick={e => { e.stopPropagation(); onAbrir(is); }}
             onPointerDown={e => onIniciarArraste(is, e)}
-            title={`${horaDeEntrevista(is.dataEntrevista)} · IS ${is.is} · ${is.inspecionado} · ${is.amp} · ${is.peritoNome} · ${st.rotulo}${arrastavel ? ' · arraste para reagendar' : ''}`}
+            title={`${horaDeEntrevista(is.dataEntrevista)}–${horaFimEntrevista(horaDeEntrevista(is.dataEntrevista), duracao)} · IS ${is.is} · ${is.inspecionado} · ${is.amp} · ${is.peritoNome} · ${st.rotulo}${arrastavel ? ' · arraste para reagendar' : ''}`}
             className={`absolute z-10 px-1.5 rounded border text-left overflow-hidden text-xs leading-tight hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold select-none ${arrastavel ? 'cursor-grab active:cursor-grabbing touch-none' : ''} ${arrastando?.is.id === is.id ? 'opacity-40' : ''} ${corAmp(is.amp)}`}
-            style={{ top: topo(min) + 1, height: DURACAO_SLOT_MIN * PX_POR_MIN - 2, left: `calc(${(idx / grupo.length) * 100}% + 2px)`, width: `calc(${100 / grupo.length}% - 4px)` }}
+            style={{ top: topo(min) + 1, height: duracao * PX_POR_MIN - 2, left: `calc(${(col / total) * 100}% + 2px)`, width: `calc(${100 / total}% - 4px)` }}
           >
             <span className="font-bold font-mono">{horaDeEntrevista(is.dataEntrevista)}</span> <span className="font-semibold">{nomeCurto(is.inspecionado)}</span>
           </button>
         );
-      }))}
+      })}
     </div>
   );
 };

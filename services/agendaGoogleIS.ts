@@ -7,11 +7,11 @@
 import { chamarScript } from './driveConcursos';
 import { registrarSincronizacaoAgenda, type InspecaoRecord } from './firestoreInspecoes';
 import { extrairNomeInspecionado } from '../utils/format';
-import { dataDeEntrevista, horaDeEntrevista, horaFimSlot } from '../utils/inspecoes';
+import { dataDeEntrevista, horaDeEntrevista, horaFimEntrevista, duracaoDaIS } from '../utils/inspecoes';
 
 export const NOME_AGENDA_GOOGLE = 'JRS/HNRe';
 
-type DadosEvento = Pick<InspecaoRecord, 'is' | 'finalidade' | 'inspecionado' | 'amp' | 'peritoNome' | 'peritoGmail' | 'dataEntrevista' | 'eventoAgendaId' | 'situacao'>;
+type DadosEvento = Pick<InspecaoRecord, 'is' | 'finalidade' | 'inspecionado' | 'amp' | 'peritoNome' | 'peritoGmail' | 'dataEntrevista' | 'eventoAgendaId' | 'situacao' | 'grupoFinalidade'>;
 
 const montar = (is: DadosEvento) => ({
   eventoId: is.eventoAgendaId || '',
@@ -23,7 +23,7 @@ const montar = (is: DadosEvento) => ({
   descricao: [`IS ${is.is}`, `Inspecionado: ${is.inspecionado}`, `AMP: ${is.amp}`, `Perito: ${is.peritoNome}`, `Finalidade: ${is.finalidade}`].join('\n'),
   data: dataDeEntrevista(is.dataEntrevista),
   horaInicio: horaDeEntrevista(is.dataEntrevista),
-  horaFim: horaFimSlot(horaDeEntrevista(is.dataEntrevista)),
+  horaFim: horaFimEntrevista(horaDeEntrevista(is.dataEntrevista), duracaoDaIS(is)),
   convidados: is.peritoGmail ? [is.peritoGmail] : [],
 });
 
