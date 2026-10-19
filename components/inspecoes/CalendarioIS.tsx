@@ -324,15 +324,31 @@ const ColunaDia: React.FC<{
       {HORAS.map(h => <div key={h} className="absolute inset-x-0 border-t border-line pointer-events-none" style={{ top: topo(h * 60) }} />)}
 
       {/* bloqueios */}
-      {diaBloqueios.map(b => {
+      {diaBloqueios.map((b, idx) => {
         const ini = b.hora ? minutosDe(b.hora) : b.turno === 'dia' ? minutosDe('07:30') : minutosDe(TURNOS.find(t => t.id === b.turno)!.inicio);
         const fim = b.hora ? ini + DURACAO_SLOT_MIN : b.turno === 'dia' ? minutosDe('17:00') : minutosDe(TURNOS.find(t => t.id === b.turno)!.fim);
+        const titulo = `Bloqueado${b.peritoNome ? ` · ${b.peritoNome}` : b.peritoUid === '*' ? ' · todos os peritos' : ''}${b.motivo ? ` · ${b.motivo}` : ''}`;
+        // Visão de todos os peritos: o bloqueio de um perito só vira uma etiqueta (motivo · nome), sem hachurar a coluna
+        // inteira, porque os demais peritos continuam atendendo.
+        if (!peritoUid && b.peritoUid !== '*') {
+          const antes = diaBloqueios.slice(0, idx).filter(o => o.peritoUid !== '*').length;
+          return (
+            <div
+              key={b.id}
+              className="absolute inset-x-0.5 z-10 h-[18px] rounded bg-wine/10 border border-wine/30 text-wine text-xs font-semibold px-1 truncate pointer-events-none"
+              style={{ top: topo(ini) + antes * 19 }}
+              title={titulo}
+            >
+              <span className="material-symbols-outlined text-[14px] align-middle" aria-hidden="true">block</span> {b.motivo || 'Bloqueado'}{b.peritoNome ? ` · ${b.peritoNome}` : ''}
+            </div>
+          );
+        }
         return (
           <div
             key={b.id}
             className="absolute inset-x-0 bg-wine/10 border-y border-wine/30 text-wine text-xs font-semibold px-1 overflow-hidden pointer-events-none"
             style={{ top: topo(ini), height: (fim - ini) * PX_POR_MIN, backgroundImage: 'repeating-linear-gradient(135deg, transparent 0 6px, rgba(0,0,0,0.04) 6px 12px)' }}
-            title={`Bloqueado${b.peritoNome ? ` · ${b.peritoNome}` : b.peritoUid === '*' ? ' · todos os peritos' : ''}${b.motivo ? ` · ${b.motivo}` : ''}`}
+            title={titulo}
           >
             <span className="material-symbols-outlined text-[14px] align-middle" aria-hidden="true">block</span> {b.motivo || 'Bloqueado'}
           </div>
