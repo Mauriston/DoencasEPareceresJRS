@@ -592,6 +592,12 @@ function abrirAgendaJrs(corpo) {
   return agenda;
 }
 
+/** Notificação padrão dos eventos (IS e concursos): 12 horas antes (720 min), no lugar das notificações padrão da agenda. */
+function aplicarNotificacaoPadrao(evento) {
+  evento.removeAllReminders();
+  evento.addPopupReminder(720);
+}
+
 /** Cor do evento conforme a situação da IS: Em andamento = amarelo; Finalizada = verde. */
 function aplicarCorEventoIS(evento, situacao) {
   if (situacao === 'finalizada') evento.setColor(CalendarApp.EventColor.GREEN);
@@ -636,6 +642,7 @@ function apiSincronizarEventoIS(corpo) {
       sendInvites: true
     });
     aplicarCorEventoIS(evento, corpo.situacao);
+    aplicarNotificacaoPadrao(evento);
     return { eventoId: evento.getId() };
   }
 
@@ -643,6 +650,7 @@ function apiSincronizarEventoIS(corpo) {
   evento.setDescription(String(corpo.descricao || ''));
   evento.setTime(inicio, fim);
   aplicarCorEventoIS(evento, corpo.situacao);
+  aplicarNotificacaoPadrao(evento);
   var atuais = evento.getGuestList().map(function(g) { return g.getEmail().toLowerCase(); });
   atuais.forEach(function(email) { if (convidados.indexOf(email) === -1) evento.removeGuest(email); });
   convidados.forEach(function(email) { if (atuais.indexOf(email) === -1) evento.addGuest(email); });
@@ -716,8 +724,7 @@ function apiSincronizarEventosConcursos(corpo) {
       }
       ev.setColor(d.encerrado ? CalendarApp.EventColor.GREEN : CalendarApp.EventColor.RED);
       // Notificação padrão: 12 horas antes (720 min), no lugar das notificações da agenda.
-      ev.removeAllReminders();
-      ev.addPopupReminder(720);
+      aplicarNotificacaoPadrao(ev);
     });
 
     // Dias que deixaram de existir (candidatos reagendados, concurso sem candidatos no dia) — só dos concursos ativos.

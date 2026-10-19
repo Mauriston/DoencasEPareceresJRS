@@ -92,11 +92,14 @@ export const carregarConvidadosAgenda = async (): Promise<string[]> => {
 
 /** Assinatura curta do conteúdo que vai para o Google Agenda (para só sincronizar quando algo mudou). */
 export const assinaturaDias = (dias: DiaConcurso[], concursosAtivos: string[], convidados: string[] = []): string => {
-  const texto = JSON.stringify([concursosAtivos.slice().sort(), convidados, dias.map(d => [d.chave, d.nome, d.encerrado, d.candidatos.map(c => `${c.id}:${c.nome}`)])]);
+  // "v2": versão do formato enviado (descrição em lista HTML) — mudar o formato força uma nova sincronização.
+  const texto = JSON.stringify(['v2', concursosAtivos.slice().sort(), convidados, dias.map(d => [d.chave, d.nome, d.encerrado, d.candidatos.map(c => `${c.id}:${c.nome}`)])]);
   let h = 5381;
   for (let i = 0; i < texto.length; i++) h = ((h << 5) + h + texto.charCodeAt(i)) | 0;
   return `${dias.length}.${(h >>> 0).toString(36)}`;
 };
+
+const escaparHtml = (t: string): string => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /** Envia ao Google Agenda "JRS/HNRe" os dias de concurso (cria, atualiza e remove eventos conforme o caso). */
 export const sincronizarConcursosNaAgenda = (dias: DiaConcurso[], concursosAtivos: string[], convidados: string[]) =>
@@ -108,7 +111,7 @@ export const sincronizarConcursosNaAgenda = (dias: DiaConcurso[], concursosAtivo
     dias: dias.map(d => ({
       chave: d.chave, concursoId: d.concursoId, data: d.data, encerrado: d.encerrado,
       titulo: `${d.encerrado ? '✅ ' : ''}${tituloDiaConcurso(d)}`,
-      // Lista não numerada (- NOME), só com os nomes dos candidatos do dia.
-      descricao: d.candidatos.map(c => `- ${c.nome}`).join('\n'),
+      // Lista não numerada (marcadores) só com os nomes dos candidatos do dia; o Google Agenda renderiza o HTML da descrição.
+      descricao: `<ul>${d.candidatos.map(c => `<li>${escaparHtml(c.nome)}</li>`).join('')}</ul>`,
     })),
   });
