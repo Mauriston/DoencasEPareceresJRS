@@ -460,9 +460,12 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                 </ul>
               </section>
 
-              <div className="hidden md:flex flex-col gap-2">
-                <Button icon="download" fullWidth onClick={handleDownloadPDF}>Baixar PDF</Button>
-                <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} fullWidth onClick={handleCopy}>{isCopied ? 'Copiado' : 'Copiar texto'}</Button>
+              {/* Na versão pública a coluna vale para todas as larguras (é onde o
+                  link da Portaria aparece no celular) e não traz PDF nem cópia,
+                  que são ferramentas de trabalho do perito. */}
+              <div className={`${publico ? 'flex' : 'hidden md:flex'} flex-col gap-2`}>
+                {!publico && <Button icon="download" fullWidth onClick={handleDownloadPDF}>Baixar PDF</Button>}
+                {!publico && <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} fullWidth onClick={handleCopy}>{isCopied ? 'Copiado' : 'Copiar texto'}</Button>}
                 {podeVerPortaria && (
                   <Link to={portariaPath} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold text-navy hover:bg-thead transition-colors">
                     <span className="material-symbols-outlined text-[20px]" aria-hidden="true">article</span>
@@ -474,11 +477,14 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
           </div>
         </Container>
 
-        {/* Mobile: barra de ações rotulada, sticky no fim do fluxo (sem padding compensatório). */}
-        <div className="md:hidden sticky bottom-0 mt-auto z-10 bg-white border-t border-line p-3 flex gap-2" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
-          <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} onClick={handleCopy} className="flex-1">{isCopied ? 'Copiado' : 'Copiar'}</Button>
-          <Button icon="download" onClick={handleDownloadPDF} className="flex-1">Baixar PDF</Button>
-        </div>
+        {/* Mobile: barra de ações rotulada, sticky no fim do fluxo (sem padding
+            compensatório). Só no app — as duas ações não existem na versão pública. */}
+        {!publico && (
+          <div className="md:hidden sticky bottom-0 mt-auto z-10 bg-white border-t border-line p-3 flex gap-2" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+            <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} onClick={handleCopy} className="flex-1">{isCopied ? 'Copiado' : 'Copiar'}</Button>
+            <Button icon="download" onClick={handleDownloadPDF} className="flex-1">Baixar PDF</Button>
+          </div>
+        )}
       </div>
     );
   }
