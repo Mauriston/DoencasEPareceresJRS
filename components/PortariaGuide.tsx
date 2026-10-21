@@ -22,7 +22,16 @@ const portariaMarkdown = Object.keys(portariaModules)
   .map(key => portariaModules[key])
   .join('\n\n---\n\n');
 
-export const PortariaGuide: React.FC = () => {
+interface PortariaGuideProps {
+  /**
+   * Versão pública (sem login): esconde o download do PDF, que vem do Firebase
+   * Storage e exige usuário autenticado (ver storage.rules). O texto integral
+   * da Portaria continua na tela — vem dos .md do próprio bundle.
+   */
+  publico?: boolean;
+}
+
+export const PortariaGuide: React.FC<PortariaGuideProps> = ({ publico = false }) => {
   const { visivel: showScrollTop, irAoTopo } = useBackToTop(250);
   const { open: openPdf, busy: baixandoPdf, modalElement } = useStoragePdf();
   const baixar = () => openPdf(PORTARIA_PDF_PATH, 'Portaria GM-MD nº 3.551/2021');
@@ -35,7 +44,7 @@ export const PortariaGuide: React.FC = () => {
         <PageHeader
           title="Portaria GM-MD nº 3.551/2021"
           description="Diretrizes e Normas Técnicas Periciais Oficiais das Forças Armadas, de 26 de agosto de 2021."
-          actions={<StoragePdfIconButton busy={baixandoPdf} onClick={baixar} />}
+          actions={publico ? undefined : <StoragePdfIconButton busy={baixandoPdf} onClick={baixar} />}
         />
         <div className="bg-white p-6 md:p-8 rounded-xl border border-line">
           <MarkdownContent markdown={markdown} />
@@ -43,7 +52,7 @@ export const PortariaGuide: React.FC = () => {
       </Container>
 
       {/* Mobile: botão flutuante de download, acima do "voltar ao topo". */}
-      <StoragePdfFab busy={baixandoPdf} onClick={baixar} bottomClass="bottom-[5.5rem]" />
+      {!publico && <StoragePdfFab busy={baixandoPdf} onClick={baixar} bottomClass="bottom-[5.5rem]" />}
       {modalElement}
 
       {showScrollTop && (
