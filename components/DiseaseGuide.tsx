@@ -8,7 +8,7 @@ import { Container, PageHeader } from './ui/Page';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { NavContext } from '../context/NavContext';
 import { canAccessPage } from '../config/permissions';
-import { pathForView } from '../config/routes';
+import { pathForView, PUBLICO_DOENCAS, PUBLICO_PORTARIA } from '../config/routes';
 import { EmptyState } from './ui/EmptyState';
 import { useBreadcrumbs } from '../context/BreadcrumbContext';
 import { doencaPath } from '../config/routes';
@@ -236,7 +236,16 @@ const getShortDiseaseName = (name: string) => {
   return name.toUpperCase();
 };
 
-export const DiseaseGuide: React.FC = () => {
+interface DiseaseGuideProps {
+  /**
+   * Versão pública (sem login, ver components/publico/AppPublico.tsx): os
+   * links passam a apontar para /publico/doencas e para a Portaria pública.
+   * O conteúdo é o mesmo — vem todo de constants.ts, sem Firestore.
+   */
+  publico?: boolean;
+}
+
+export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) => {
   // Os três níveis são rotas: /beneficios/doencas · /:doencaId · /:doencaId/:diagnosticoIdx
   const navigate = useNavigate();
   const nav = useContext(NavContext);
@@ -247,10 +256,12 @@ export const DiseaseGuide: React.FC = () => {
   // Doença com um único diagnóstico abre direto o detalhe (sem o nível intermediário).
   const diagIdx = diagnosticoIdx !== undefined ? Number(diagnosticoIdx) : (selectedDisease?.diagnoses.length === 1 ? 0 : -1);
   const selectedDiagnosis: Diagnosis | null = selectedDisease?.diagnoses[diagIdx] ?? null;
+  // Mesma tela em dois endereços: /beneficios/doencas (app) e /publico/doencas.
+  const dPath = (id: string, idx?: number) => doencaPath(id, idx, publico ? PUBLICO_DOENCAS : undefined);
   useBreadcrumbs(
     !selectedDisease ? [] :
     selectedDiagnosis && selectedDisease.diagnoses.length > 1
-      ? [{ label: selectedDisease.name, to: doencaPath(selectedDisease.id) }, { label: selectedDiagnosis.name }]
+      ? [{ label: selectedDisease.name, to: dPath(selectedDisease.id) }, { label: selectedDiagnosis.name }]
       : [{ label: selectedDisease.name }]
   );
   const [expandedDiseaseId, setExpandedDiseaseId] = useState<string | null>(null);
@@ -274,14 +285,15 @@ export const DiseaseGuide: React.FC = () => {
     try { localStorage.setItem(chaveDocs, JSON.stringify(Array.from(proximo))); } catch { /* sem localStorage */ }
     return proximo;
   });
-  const podeVerPortaria = canAccessPage('portaria', nav?.authUser?.perfil);
+  const podeVerPortaria = publico || canAccessPage('portaria', nav?.authUser?.perfil);
+  const portariaPath = publico ? PUBLICO_PORTARIA : pathForView('portaria');
 
   useEffect(() => {
     setIsCopied(false);
     try { setDocsMarcados(new Set(JSON.parse(localStorage.getItem(chaveDocs) || '[]'))); } catch { setDocsMarcados(new Set()); }
   }, [chaveDocs]);
 
-  const handleDiseaseClick = (disease: Disease) => navigate(doencaPath(disease.id));
+  const handleDiseaseClick = (disease: Disease) => navigate(dPath(disease.id));
 
   const handleCopy = async () => {
     if (!selectedDisease || !selectedDiagnosis) return;
@@ -334,9 +346,9 @@ export const DiseaseGuide: React.FC = () => {
 
   const handleSearchResultClick = (result: any) => {
     if (result.diagnosis) {
-      navigate(doencaPath(result.disease.id, result.disease.diagnoses.indexOf(result.diagnosis)));
+      navigate(dPath(result.disease.id, result.disease.diagnoses.indexOf(result.diagnosis)));
     } else {
-      navigate(doencaPath(result.disease.id));
+      navigate(dPath(result.disease.id));
       setSearchQuery("");
     }
   };
@@ -354,7 +366,7 @@ export const DiseaseGuide: React.FC = () => {
             {selectedDisease.diagnoses.map((diagnosis, idx) => (
               <Link
                 key={idx}
-                to={doencaPath(selectedDisease.id, idx)}
+                to={dPath(selectedDisease.id, idx)}
                 className="bg-white rounded-xl p-4 border border-line hover:border-navy transition-colors flex items-center justify-between gap-3 min-h-[64px] group"
               >
                 <span className="flex items-center gap-3.5 min-w-0">
@@ -452,7 +464,7 @@ export const DiseaseGuide: React.FC = () => {
                 <Button icon="download" fullWidth onClick={handleDownloadPDF}>Baixar PDF</Button>
                 <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} fullWidth onClick={handleCopy}>{isCopied ? 'Copiado' : 'Copiar texto'}</Button>
                 {podeVerPortaria && (
-                  <Link to={pathForView('portaria')} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold text-navy hover:bg-thead transition-colors">
+                  <Link to={portariaPath} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold text-navy hover:bg-thead transition-colors">
                     <span className="material-symbols-outlined text-[20px]" aria-hidden="true">article</span>
                     Ler a Portaria GM-MD nº 3.551/2021
                   </Link>
@@ -519,7 +531,7 @@ export const DiseaseGuide: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 @2xl:grid-cols-2 @4xl:grid-cols-3 gap-4">
             {DISEASES.map((disease) => (
-              <Link key={disease.id} to={doencaPath(disease.id)} className="bg-white rounded-xl border border-line hover:border-navy transition-colors p-4 flex items-center justify-between gap-2 min-h-[64px]">
+              <Link key={disease.id} to={dPath(disease.id)} className="bg-white rounded-xl border border-line hover:border-navy transition-colors p-4 flex items-center justify-between gap-2 min-h-[64px]">
                 <span className="flex items-center gap-3 min-w-0">
                   {getDiseaseIcon(disease.name)}
                   <span className="text-navy font-heading text-base font-semibold truncate">

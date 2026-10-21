@@ -73,9 +73,25 @@ export const pathForView = (view: NavItem): string => BASE_PATHS[view] ?? '/';
 export const viewForPath = (pathname: string): NavItem | undefined =>
   ROUTES.find(r => matchPath({ path: r.path, end: true }, pathname))?.view;
 
+// --- Rotas públicas (sem login) ---------------------------------------------
+// Duas telas de conteúdo exclusivamente normativo — Doenças Previstas em Lei e
+// a Portaria GM-MD nº 3.551/2021 — abertas sem autenticação para serem
+// compartilhadas por link com peritos de outras OM. Ficam FORA de ROUTES: quem
+// decide entre o app autenticado e o shell público é components/Raiz.tsx,
+// antes de o App montar. Nenhuma das duas lê Firestore ou Storage — todo o
+// conteúdo já vem estático no bundle (constants.ts e content/*.md).
+export const PUBLICO_DOENCAS = '/publico/doencas';
+export const PUBLICO_PORTARIA = '/publico/portaria';
+
+const PADROES_PUBLICOS = [`${PUBLICO_DOENCAS}/:doencaId?/:diagnosticoIdx?`, PUBLICO_PORTARIA];
+
+/** A URL é de uma das páginas públicas (não passa pela tela de login). */
+export const ehRotaPublica = (pathname: string): boolean =>
+  PADROES_PUBLICOS.some(path => matchPath({ path, end: true }, pathname) !== null);
+
 // Subníveis com nome próprio
-export const doencaPath = (doencaId: string, diagnosticoIdx?: number): string =>
-  `/beneficios/doencas/${encodeURIComponent(doencaId)}${diagnosticoIdx === undefined ? '' : `/${diagnosticoIdx}`}`;
+export const doencaPath = (doencaId: string, diagnosticoIdx?: number, base: string = BASE_PATHS.guide): string =>
+  `${base}/${encodeURIComponent(doencaId)}${diagnosticoIdx === undefined ? '' : `/${diagnosticoIdx}`}`;
 /** Tabela dos candidatos agendados de todos os concursos num dia (AAAA-MM-DD). */
 export const concursosDiaPath = (dataISO: string): string => `/concursos/dia/${dataISO}`;
 export const concursoPath = (concursoId: string): string => `/concursos/${encodeURIComponent(concursoId)}`;
