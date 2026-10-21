@@ -24,15 +24,17 @@ export const ShellPublico: React.FC<{ children: React.ReactNode }> = ({ children
     </a>
 
     <header className="shrink-0 bg-navy text-white">
-      <div className="mx-auto w-full max-w-data px-4 md:px-6 py-3 flex items-center gap-3 md:gap-4">
-        {/* Área de segurança da marca: o respiro é do contêiner (p-2), não do arquivo. */}
-        <span className="shrink-0 w-14 h-14 bg-white rounded-lg p-2 flex items-center justify-center">
+      <div className="mx-auto w-full max-w-data px-4 md:px-6 py-2 md:py-3 flex items-center gap-3 md:gap-4">
+        {/* Área de segurança da marca: o respiro é do contêiner (p-1.5/p-2), não do arquivo. */}
+        <span className="shrink-0 w-10 h-10 p-1.5 md:w-14 md:h-14 md:p-2 bg-white rounded-lg flex items-center justify-center">
           <img src={iconeJrs} alt="Hospital Naval de Recife" className="h-full w-full object-contain" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/70">Marinha do Brasil</p>
-          <p className="text-sm md:text-base font-bold leading-tight truncate">Hospital Naval de Recife</p>
-          <p className="text-xs text-white/70 truncate">Junta Regular de Saúde</p>
+          {/* Celular: barra enxuta, só a sigla ao lado da marca. */}
+          <p className="md:hidden text-sm font-bold tracking-[0.12em] truncate">JRS/HNRe</p>
+          <p className="hidden md:block text-xs font-bold uppercase tracking-[0.16em] text-white/70">Marinha do Brasil</p>
+          <p className="hidden md:block text-base font-bold leading-tight truncate">Hospital Naval de Recife</p>
+          <p className="hidden md:block text-xs text-white/70 truncate">Junta Regular de Saúde</p>
         </div>
         <Link
           to="/"
