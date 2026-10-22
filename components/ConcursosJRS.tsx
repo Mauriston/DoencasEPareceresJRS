@@ -48,7 +48,6 @@ import { Toast } from './ui/Toast';
 import { KpiMini } from './ui/KpiMini';
 import { ProgressBar } from './ui/ProgressBar';
 import { CandidatoStatusTag, ConcursoStatusTag, StatusSelect } from './ui/statusTheme';
-import { StatusTag } from './ui/StatusTag';
 import { getScrollParent } from '../utils/dom';
 
 // URL de implantação (aplicativo da web) do projeto Apps Script standalone
@@ -2869,7 +2868,18 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
     add(itens.filter(c => !c.finalizado).length, 'pendente', 'pendentes');
     return partes.join(' · ');
   };
-  const proximoCandidatoId = filteredCandidatos.find(c => !c.finalizado)?.id ?? null;
+  /**
+   * Fundo da linha por status, enquanto a IS não está finalizada: Pendente em
+   * amarelo claro e Inapto em vermelho claro, para saltarem aos olhos na
+   * planilha. Finalizada volta ao fundo normal.
+   */
+  const destaqueDaLinha = (c: CandidatoRecord): string => {
+    if (c.finalizado) return '';
+    const status = String(c.status || '').trim().toUpperCase();
+    if (status === 'PENDENTE') return 'bg-gold/10';
+    if (status === 'INAPTO') return 'bg-wine-50';
+    return '';
+  };
 
   const toggleDateGroup = (dataBR: string) => {
     setOpenDateGroups(prev => {
@@ -3236,9 +3246,8 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                           {expandidoGrupo && grupo.itens.map((c, ordem) => {
                             const editavel = podeEditar && !c.finalizado;
                             const numTisHabilitado = editavel && statusTemLaudo(c.status);
-                            const proximo = c.id === proximoCandidatoId;
                             return (
-                              <tr key={c.id} onClick={e => abrirDetalheDaLinha(e, c.id)} className={`hover:bg-thead transition-colors cursor-pointer ${proximo ? 'bg-gold/10 shadow-[inset_4px_0_0_0_#FAB932]' : ''}`} aria-current={proximo ? 'true' : undefined}>
+                              <tr key={c.id} onClick={e => abrirDetalheDaLinha(e, c.id)} className={`hover:bg-thead transition-colors cursor-pointer ${destaqueDaLinha(c)}`}>
                                 <td className="py-3.5 pl-4 pr-0">
                                   <span className="flex items-center gap-1">
                                     <span className="text-xs font-semibold text-ink-3 w-5 text-right" title="Ordem no dia">{ordem + 1}</span>
@@ -3250,7 +3259,6 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                                 <td className="py-3.5 pl-2 pr-4">
                                   <p className="font-semibold text-ink flex items-center gap-2 flex-wrap">
                                     <button type="button" onClick={() => setDetalheCandidatoId(c.id)} className="text-left" title="Ver detalhes da IS">{c.nome}</button>
-                                    {proximo && <StatusTag tone="navyOutline" dot={false}>Próximo</StatusTag>}
                                   </p>
                                   <p className="text-xs font-mono text-ink-3 flex items-center gap-2">
                                     <span>{c.id}</span>
@@ -3369,7 +3377,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                           key={c.id}
                           type="button"
                           onClick={() => setCandidatoModalMobile(c)}
-                          className="w-full flex items-center gap-3 px-4 py-3 border-t border-line text-left active:bg-paper transition-colors"
+                          className={`w-full flex items-center gap-3 px-4 py-3 border-t border-line text-left active:bg-paper transition-colors ${destaqueDaLinha(c)}`}
                         >
                           <span className="w-6 h-6 shrink-0 flex items-center justify-center">
                             {c.finalizado ? (
@@ -3381,7 +3389,6 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                           <span className="min-w-0 flex-1">
                             <span className="flex items-center gap-2 min-w-0">
                               <span className="text-sm font-semibold text-ink truncate">{c.nome}</span>
-                              {c.id === proximoCandidatoId && <StatusTag tone="navyOutline" dot={false}>Próximo</StatusTag>}
                             </span>
                             {c.observacoes && (
                               <span className="block text-xs text-ink-3 truncate">{c.observacoes}</span>
