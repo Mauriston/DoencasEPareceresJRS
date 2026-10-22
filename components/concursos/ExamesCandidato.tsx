@@ -15,7 +15,7 @@ import {
   listarCandidatos, listarExamesCandidato, salvarExamesCandidato,
   type CandidatoRecord, type ConcursoRecord, type ExamesEnvioRecord,
 } from '../../services/firestoreConcursos';
-import { anoDoConcurso, enviarExamesCandidatoParaDrive, urlVisualizacao, LIMITE_PDF_EXAMES_MB, type PastaConcurso } from '../../services/driveConcursos';
+import { anoDoConcurso, enviarExamesCandidatoParaDrive, urlDownload, urlVisualizacao, LIMITE_PDF_EXAMES_MB, type PastaConcurso } from '../../services/driveConcursos';
 import {
   ehExameBlocoUnico, ehExameDeValores, linhaEmissor, textoCopiaExame, textoItem,
   type ExameCandidato, type ExamesExtraidos,
@@ -169,19 +169,13 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
 
       {etapa === 'select' && (
         <>
-          <p className="text-sm text-ink-3">
-            Envie um PDF com os exames entregues pelo candidato. O arquivo é guardado na pasta dele no Drive
-            como <span className="font-mono font-bold">EXAMES_NOME_DO_CANDIDATO.pdf</span> e os laudos são
-            transcritos na íntegra para consulta e cópia.
-          </p>
-
           {precisaEscolher && (
             <Autocomplete
               label="Candidato"
               required
               placeholder={carregandoCandidatos ? 'Carregando candidatos...' : 'Digite o nome do candidato'}
               disabled={carregandoCandidatos}
-              help={escolhido ? `${escolhido.candidatoId} · ${escolhido.concursoNome}` : 'Somente candidatos dos concursos em andamento.'}
+              help={escolhido ? `${escolhido.candidatoId} · ${escolhido.concursoNome}` : undefined}
               valor={busca}
               onDigitar={texto => { setBusca(texto); setEscolhido(null); }}
               opcoes={opcoesAutocomplete}
@@ -194,7 +188,7 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
           )}
 
           <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-ink-5 rounded-xl p-6 cursor-pointer hover:border-navy transition-colors">
-            <span className="material-symbols-outlined text-[32px] text-ink-3" aria-hidden="true">lab_panel</span>
+            <span className="material-symbols-outlined text-[32px] text-ink-3" aria-hidden="true">lab_profile</span>
             <span className="text-sm font-bold text-ink text-center break-all">{file ? file.name : 'Clique para selecionar o PDF dos exames'}</span>
             <span className="text-xs text-ink-3">Máx. {LIMITE_PDF_EXAMES_MB} MB — acima disso, divida em dois PDFs</span>
             <input type="file" accept="application/pdf" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
@@ -292,7 +286,7 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
       <div role="dialog" aria-modal="true" className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
         <div className="px-4 py-3 bg-navy text-white flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="material-symbols-outlined text-[20px] text-gold shrink-0" aria-hidden="true">lab_panel</span>
+            <span className="material-symbols-outlined text-[20px] text-gold shrink-0" aria-hidden="true">lab_profile</span>
             <div className="min-w-0">
               <h3 className="font-heading font-bold text-base truncate">{titulo}</h3>
               <p className="text-xs text-white/70 truncate">{subtitulo}</p>
@@ -334,10 +328,11 @@ const BlocoExame: React.FC<{ exame: ExameCandidato }> = ({ exame }) => {
       <div className="p-4 space-y-3">
         {ehExameDeValores(exame.categoria) && exame.itens.length > 0 && (
           // Cada analito é copiado separadamente ("Hemoglobina: 15,4"), sem unidade de medida.
-          <ul className="divide-y divide-line/70 -my-1">
+          // Duas colunas a partir de sm: um hemograma com 16 analitos ocupa 8 linhas, não 16.
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
             {exame.itens.map((item, i) => (
-              <li key={`${item.nome}-${i}`} className="flex items-center gap-2 py-1">
-                <span className="min-w-0 flex-1 text-sm text-ink truncate">{item.nome}</span>
+              <li key={`${item.nome}-${i}`} className="flex items-center gap-2 py-1 border-b border-line/70">
+                <span className="min-w-0 flex-1 text-sm text-ink truncate" title={item.nome}>{item.nome}</span>
                 <span className="text-sm font-bold text-navy font-mono">{item.valor}</span>
                 <BotaoCopiar texto={textoItem(item)} titulo={`Copiar ${item.nome}`} />
               </li>
@@ -351,7 +346,9 @@ const BlocoExame: React.FC<{ exame: ExameCandidato }> = ({ exame }) => {
         )}
 
         {!ehExameDeValores(exame.categoria) && !ehExameBlocoUnico(exame.categoria) && exame.texto && (
-          <pre className="text-sm text-ink whitespace-pre-wrap break-words font-sans leading-relaxed">{exame.texto}</pre>
+          // Laudos longos (toxicológico, USG) rolam dentro do próprio card, para não
+          // esticar a coluna e desalinhar o grid.
+          <pre className="text-sm text-ink whitespace-pre-wrap break-words font-sans leading-relaxed max-h-80 overflow-y-auto overscroll-contain pr-1">{exame.texto}</pre>
         )}
 
         {emissor && !ehExameBlocoUnico(exame.categoria) && (
@@ -400,26 +397,19 @@ export const ExamesTranscritosModal: React.FC<ExamesTranscritosModalProps> = ({ 
     <div className="fixed inset-0 z-dialog bg-canvas flex flex-col animate-fade-in">
       <div className="px-4 py-3 bg-navy text-white flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="material-symbols-outlined text-[20px] text-gold shrink-0" aria-hidden="true">lab_panel</span>
+          <span className="material-symbols-outlined text-[20px] text-gold shrink-0" aria-hidden="true">lab_profile</span>
           <div className="min-w-0">
             <h2 className="font-heading font-bold text-base truncate">{candidatoNome}</h2>
             <p className="text-xs text-white/70 truncate">Exames transcritos · {concursoNome}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {pdfs.length === 1 && (
-            <a href={urlVisualizacao(pdfs[0].pdfUrl)} target="_blank" rel="noopener noreferrer" title="Abrir o PDF dos exames no Drive" className="w-11 h-11 flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors">
-              <span className="material-symbols-outlined text-[20px]" aria-hidden="true">picture_as_pdf</span>
-            </a>
-          )}
-          <button type="button" onClick={onClose} aria-label="Fechar" className="w-11 h-11 flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors">
-            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
-          </button>
-        </div>
+        <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+          <span className="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-3xl p-4 space-y-4">
+        <div className="mx-auto w-full max-w-[1700px] p-4 space-y-4">
           {erro && <div className="bg-wine-50 border border-wine-200 rounded-xl p-3 text-sm text-wine-700 font-semibold">{erro}</div>}
 
           {envios === null && !erro && (
@@ -442,25 +432,32 @@ export const ExamesTranscritosModal: React.FC<ExamesTranscritosModalProps> = ({ 
             </div>
           )}
 
-          {pdfs.length > 1 && (
+          {(exames.length > 0 || pdfs.length > 0) && (
             <div className="flex flex-wrap items-center gap-2">
-              {pdfs.map(envio => (
-                <a key={envio.id} href={urlVisualizacao(envio.pdfUrl)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 min-h-[36px] px-2 rounded-lg bg-white border border-line text-xs font-bold text-navy hover:bg-thead transition-colors">
-                  <span className="material-symbols-outlined text-[18px]" aria-hidden="true">picture_as_pdf</span>
-                  <span className="break-all">{envio.nomeArquivo || 'PDF'}</span>
+              {exames.length > 0 && <p className="text-sm text-ink-3 mr-auto">{exames.length} exame(s) transcrito(s).</p>}
+              {/* Um botão por PDF enviado — o candidato pode ter entregue os exames em mais de um. */}
+              {pdfs.map((envio, i) => (
+                <a
+                  key={envio.id}
+                  href={urlDownload(envio.pdfUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover transition-colors shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-[20px]" aria-hidden="true">download</span>
+                  {pdfs.length === 1 ? 'Download Exames PDF' : `Download PDF ${i + 1}`}
                 </a>
               ))}
+              {exames.length > 0 && (
+                <BotaoCopiar texto={textoTudo} rotulo="Copiar todos" titulo="Copiar todos os exames" className="min-h-[44px] px-3 bg-white border border-line" />
+              )}
             </div>
           )}
 
-          {exames.length > 0 && (
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm text-ink-3">{exames.length} exame(s) transcrito(s).</p>
-              <BotaoCopiar texto={textoTudo} rotulo="Copiar todos" titulo="Copiar todos os exames" className="bg-white border border-line" />
-            </div>
-          )}
-
-          {exames.map(({ exame, chave }) => <BlocoExame key={chave} exame={exame} />)}
+          {/* Duas colunas a partir de lg: aproveita a largura do desktop e corta pela metade a rolagem. */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            {exames.map(({ exame, chave }) => <BlocoExame key={chave} exame={exame} />)}
+          </div>
         </div>
       </div>
     </div>
