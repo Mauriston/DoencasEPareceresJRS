@@ -3050,8 +3050,14 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
         </Container>
 
         {/* Toolbar compacta e fixa no desktop: o título rola junto com a
-            planilha, a busca e os filtros ficam. */}
-        <div ref={toolbarRef} className={`${embutido ? '' : 'md:sticky md:top-0 md:z-sticky '}bg-canvas py-2`}>
+            planilha, a busca e os filtros ficam.
+            z-topbar (20), e não z-sticky (10): a toolbar cria um contexto de
+            empilhamento, então o z-dropdown das sugestões da busca só vale
+            dentro dela. Empatada em 10 com o cabeçalho de colunas, que vem
+            depois no DOM, a lista de sugestões ficava POR BAIXO do cabeçalho.
+            Não há risco de cobrir o Topbar do app: ele é irmão do <main> que
+            rola, e a toolbar nunca sai da caixa do <main>. */}
+        <div ref={toolbarRef} className={`${embutido ? '' : 'md:sticky md:top-0 md:z-topbar '}bg-canvas py-2`}>
         <Container size="data">
         <div className="bg-white p-2 rounded-xl border border-line">
         <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 md:gap-3">
