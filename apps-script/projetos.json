@@ -1,7 +1,7 @@
 {
   "principal": {
     "descricao": "Apps Script principal (Code.gs): pareceres, perícia menor, militares, lookups. URL em GAS_URL (config/endpoints.ts).",
-    "scriptId": null,
+    "scriptId": "1_SS0y9oQBnDl0SaP1Momnpgiz8E3e-yCQTqPzkIEaVavB90atqA2ozBb",
     "deploymentId": "AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs"
   },
   "concursos": {
