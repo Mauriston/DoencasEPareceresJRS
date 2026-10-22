@@ -69,6 +69,14 @@ export const ehExameDeValores = (categoria: CategoriaExame): boolean =>
 export const ehExameBlocoUnico = (categoria: CategoriaExame): boolean =>
   CATEGORIAS_BLOCO_UNICO.includes(categoria);
 
+/**
+ * Exames de laudo em texto corrido (imagem, colpocitologia, ECG, toxicológico e
+ * os fora do padrão): o texto copiado começa com "# NOME DO EXAME" e uma linha
+ * em branco, para identificar o laudo ao colar.
+ */
+export const ehExameNarrativo = (categoria: CategoriaExame): boolean =>
+  !ehExameDeValores(categoria) && !ehExameBlocoUnico(categoria);
+
 const texto = (v: unknown): string => (typeof v === 'string' ? v.trim() : typeof v === 'number' ? String(v) : '');
 
 /** Mantém as quebras de linha do laudo, mas sem espaços à direita nem mais de uma linha em branco seguida. */
@@ -132,13 +140,14 @@ export const textoItem = (i: ItemExame): string => `${i.nome}: ${i.valor}`;
  * Texto do bloco inteiro, para o botão "Copiar tudo":
  *  - exames de valores: um "Analito: valor" por linha e o emissor ao final;
  *  - Beta-HCG, VDRL e anti-HIV: resultado e emissor juntos;
- *  - imagem, colpocitologia, ECG e toxicológico: o laudo e o emissor ao final;
- *  - "outro": o mesmo, com "# NOME DO EXAME" no topo.
+ *  - imagem, colpocitologia, ECG, toxicológico e "outro": "# NOME DO EXAME",
+ *    linha em branco, o laudo e o emissor ao final.
  */
 export const textoCopiaExame = (e: ExameCandidato): string => {
   const emissor = linhaEmissor(e);
   const partes: string[] = [];
-  if (e.categoria === 'outro') partes.push(`# ${e.nome}`);
+  // As partes são unidas por "\n\n", então o título já sai seguido de linha em branco.
+  if (ehExameNarrativo(e.categoria)) partes.push(`# ${e.nome}`);
   if (ehExameDeValores(e.categoria)) partes.push(e.itens.map(textoItem).join('\n'));
   else if (ehExameBlocoUnico(e.categoria)) partes.push(e.resultado);
   else partes.push(e.texto);

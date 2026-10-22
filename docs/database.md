@@ -1612,8 +1612,7 @@ Cada item de `exames[]`: `ordem`, `categoria`, `nome`, `paciente`, `emissor`, `c
 
 - `hemograma`, `eas`, `bioquimica` — um objeto cada, com um item por analito, **só o valor, sem unidade de medida** (plaquetas em milhares); valores repetidos em laudos de datas diferentes usam o mais recente, e o emissor/data do bloco é o do laudo mais recente. Na tela, cada analito é copiado separadamente e o emissor fecha o bloco.
 - `betaHcg`, `vdrl`, `antiHiv` — resultado e emissor são copiados **juntos**; no anti-HIV o método entra no nome.
-- `imagem`, `colpocitologia`, `ecg`, `toxicologico` — laudo integral em `texto` (sem cabeçalho/rodapé da clínica), com o emissor ao final.
-- `outro` — qualquer exame fora dos padrões do concurso: laudo integral, com `# NOME DO EXAME` no topo do texto copiado.
+- `imagem`, `colpocitologia`, `ecg`, `toxicologico` e `outro` — laudo integral em `texto` (sem cabeçalho/rodapé da clínica). O texto copiado começa por `# NOME DO EXAME` e uma linha em branco, e termina com o emissor; o `#` fica só no texto copiado, não no título do card.
 
 No documento do candidato ficam só o resumo que a tabela usa (`examesQtd`, `examesPdfUrls[]`, `examesEnviadoEm`) — a transcrição inteira não é lida ao listar os candidatos. `examesQtd` é o badge do botão de exames na coluna *Ações*, que abre a tela cheia com os blocos. **Limpar IS** (Admin) apaga a subcoleção e manda os PDFs para a lixeira do Drive.
 

@@ -312,14 +312,14 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
 /** Um bloco de exame: título, identificação, conteúdo e os botões de copiar. */
 const BlocoExame: React.FC<{ exame: ExameCandidato }> = ({ exame }) => {
   const emissor = linhaEmissor(exame);
-  const titulo = exame.categoria === 'outro' ? `# ${exame.nome}` : exame.nome;
+  // O "#" vai no texto copiado (ver textoCopiaExame), não no título do card.
   const identificacao = [exame.paciente, exame.data].filter(Boolean).join(' · ');
 
   return (
     <section className="bg-white border border-line rounded-xl overflow-hidden">
       <header className="px-4 py-3 bg-thead border-b border-line flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="text-sm font-bold text-navy break-words">{titulo}</h3>
+          <h3 className="text-sm font-bold text-navy break-words">{exame.nome}</h3>
           {identificacao && <p className="text-xs text-ink-3 truncate">{identificacao}</p>}
         </div>
         <BotaoCopiar texto={textoCopiaExame(exame)} rotulo="Copiar bloco" titulo={`Copiar o bloco inteiro de ${exame.nome}`} className="bg-white border border-line" />
