@@ -630,7 +630,7 @@ Configurações relevantes:
 
 ### 11.2 Backend
 
-O backend precisa ser publicado separadamente como Web App do Google Apps Script. O repositório não contém automação de deploy do `Code.gs` por `clasp` ou GitHub Actions.
+O backend precisa ser publicado separadamente como Web App do Google Apps Script. O código fica versionado em `apps-script/`, mas o repositório não contém automação de deploy: a publicação é manual, colando no editor — ver `docs/apps-script-deploy.md`.
 
 Consequentemente, frontend e backend possuem ciclos de publicação independentes.
 
