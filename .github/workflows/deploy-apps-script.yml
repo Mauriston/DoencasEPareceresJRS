@@ -1,7 +1,9 @@
 name: Deploy Apps Script
 
-# Publica os projetos de apps-script/ (clasp) quando o código muda na main, mantendo a mesma URL do web app.
-# Precisa do secret CLASPRC_JSON (conteúdo de ~/.clasprc.json depois de "clasp login") — ver docs/apps-script-deploy.md.
+# Publica os projetos de apps-script/ quando o código muda na main, mantendo a mesma URL do web app.
+# Fala direto com a API do Apps Script usando uma conta de serviço com delegação em todo o domínio.
+# Precisa do secret GAS_SA_KEY (JSON da chave da conta de serviço) e de GAS_IMPERSONATE (e-mail do dono
+# dos projetos) — ver docs/apps-script-deploy.md.
 on:
   push:
     branches: [ "main" ]
@@ -38,15 +40,18 @@ jobs:
         with:
           node-version: 20
 
-      - name: Credenciais do clasp
+      - name: Conferir credenciais
         env:
-          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          GAS_SA_KEY: ${{ secrets.GAS_SA_KEY }}
+          GAS_IMPERSONATE: ${{ secrets.GAS_IMPERSONATE }}
         run: |
-          if [ -z "$CLASPRC_JSON" ]; then echo "::error::Secret CLASPRC_JSON não configurado (ver docs/apps-script-deploy.md)."; exit 1; fi
-          umask 077
-          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          if [ -z "$GAS_SA_KEY" ]; then echo "::error::Secret GAS_SA_KEY não configurado (ver docs/apps-script-deploy.md)."; exit 1; fi
+          if [ -z "$GAS_IMPERSONATE" ]; then echo "::error::Secret GAS_IMPERSONATE não configurado (ver docs/apps-script-deploy.md)."; exit 1; fi
 
       - name: Publicar
+        env:
+          GAS_SA_KEY: ${{ secrets.GAS_SA_KEY }}
+          GAS_IMPERSONATE: ${{ secrets.GAS_IMPERSONATE }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             node scripts/gas-deploy.mjs "${{ inputs.projeto }}"

@@ -102,7 +102,7 @@ Abaixo encontra-se a arquitetura atualizada de ficheiros e diretórios no reposi
 
 - `/` (Raiz)
   - `App.tsx` *(Componente de Roteamento Principal e Navigation Layout)*
-  - `apps-script/` *(Código dos projetos Google Apps Script: `principal/Code.gs` e `concursos/CodeConcursos.gs`/`CodePrincipal.gs`; deploy via clasp — ver `docs/apps-script-deploy.md`)*
+  - `apps-script/` *(Código dos projetos Google Apps Script: `principal/Code.gs` e `concursos/CodeConcursos.gs`/`CodePrincipal.gs`; deploy pela API do Apps Script, com conta de serviço — ver `docs/apps-script-deploy.md`)*
   - `scripts/` *(Cargas e migrações para o Firebase, ex.: `migrar-pericias-menores.mjs`)*
   - `constants.ts` *(Banco de Dados Estático)*
   - `index.html` *(Index da aplicação PWA)*
