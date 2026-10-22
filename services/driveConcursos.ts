@@ -232,6 +232,12 @@ export const urlVisualizacao = (url: string): string => {
   return id ? `https://drive.google.com/file/d/${id}/view` : url;
 };
 
+/** Converte uma URL do Drive na de download direto (uc?export=download); as demais ficam como estão. */
+export const urlDownload = (url: string): string => {
+  const id = idDoArquivoDrive(url);
+  return id ? `https://drive.google.com/uc?export=download&id=${id}` : url;
+};
+
 /** Abre o PDF numa nova janela (URL "view" do Drive; PDFs antigos do Storage abrem como estão). */
 export const abrirPdf = (url: string): void => {
   window.open(urlVisualizacao(url), '_blank', 'noopener,noreferrer');

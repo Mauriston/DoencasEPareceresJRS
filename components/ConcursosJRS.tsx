@@ -1430,7 +1430,7 @@ const construirItensMenuConcurso = ({
   // Exames do candidato: só enquanto o concurso recebe candidatos (não faz
   // sentido anexar exames a um concurso encerrado).
   if (podeEnviarExames && status === 'em_andamento') {
-    itens.push({ key: 'enviar-exames', label: 'Enviar Exames do Candidato', icon: 'lab_panel', onClick: onEnviarExames });
+    itens.push({ key: 'enviar-exames', label: 'Enviar Exames do Candidato', icon: 'lab_profile', onClick: onEnviarExames });
   }
   if (podeRegistrarMensagemArquivo && status !== 'encerrado') {
     itens.push({ key: 'registrar-msg', label: 'Registrar Mensagem', icon: 'upload', onClick: onRegistrarMensagem });
@@ -2906,28 +2906,20 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
           ...c.solicitacoesExames.map((d, i) => ({ tipo: 'exames' as const, d, chave: `e${i}` })),
         ];
         const mostrarAdmin = ehAdmin;
-        const temExames = c.examesQtd > 0;
         return (
           <>
             <div className="fixed inset-0 z-dropdown" onClick={() => setMenuAcoes(null)} />
             <div role="menu" className="fixed z-dropdown w-64 py-1 bg-white rounded-xl border border-line shadow-xl max-h-[70vh] overflow-y-auto" style={{ top: menuAcoes.top, right: menuAcoes.right }}>
-              {!mostrarGerar && docsVer.length === 0 && !mostrarAdmin && !podeEnviarExames && !temExames && (
+              {!mostrarGerar && docsVer.length === 0 && !mostrarAdmin && !podeEnviarExames && (
                 <p className="px-4 py-3 text-sm text-ink-3">Nenhuma ação disponível para este candidato agora.</p>
               )}
-              {(podeEnviarExames || temExames) && (
+              {/* Ver os exames transcritos não entra aqui: o botão com badge na coluna Ações já faz isso. */}
+              {podeEnviarExames && (
                 <>
-                  {podeEnviarExames && (
-                    <button type="button" role="menuitem" onClick={() => handleEnviarExames(c)} className={classeItem}>
-                      <span className="material-symbols-outlined text-[20px]">upload_file</span>
-                      <span>Enviar Exames (PDF)</span>
-                    </button>
-                  )}
-                  {temExames && (
-                    <button type="button" role="menuitem" onClick={() => handleVerExames(c)} className={classeItem}>
-                      <span className="material-symbols-outlined text-[20px] text-green-700">lab_panel</span>
-                      <span>Ver Exames Transcritos · {c.examesQtd}</span>
-                    </button>
-                  )}
+                  <button type="button" role="menuitem" onClick={() => handleEnviarExames(c)} className={classeItem}>
+                    <span className="material-symbols-outlined text-[20px]">lab_profile</span>
+                    <span>Enviar Exames (PDF)</span>
+                  </button>
                   {(mostrarGerar || docsVer.length > 0 || mostrarAdmin) && <div className="my-1 border-t border-ink-5" />}
                 </>
               )}
@@ -3321,7 +3313,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                                   {/* Exames entregues pelo candidato: só aparece depois do envio, com o badge da quantidade transcrita. */}
                                   {c.examesQtd > 0 && (
                                     <button type="button" onClick={() => handleVerExames(c)} className="relative p-2 ml-1 text-blue-700 bg-blue-50 hover:bg-blue-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title={`Ver os ${c.examesQtd} exame(s) transcrito(s)`}>
-                                      <span className="material-symbols-outlined text-[22px]">lab_panel</span>
+                                      <span className="material-symbols-outlined text-[22px]">lab_profile</span>
                                       <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-blue-700 text-white text-xs font-bold leading-none flex items-center justify-center ring-2 ring-white">{c.examesQtd}</span>
                                     </button>
                                   )}
@@ -3549,7 +3541,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                   <p className="text-sm font-semibold text-ink">{c.numTIS || '-'}</p>
                 </div>
 
-                {(podeGerarTermo || c.termoRecursoUrl || c.termoCientificacaoUrl || gerandoCientIds.has(c.id) || podeGerarCientificacao(c) || mostrarMenuAcoes(c) || podeReagendarCandidato(c) || c.examesQtd > 0) && (
+                {(podeGerarTermo || c.termoRecursoUrl || c.termoCientificacaoUrl || gerandoCientIds.has(c.id) || podeGerarCientificacao(c) || mostrarMenuAcoes(c) || podeReagendarCandidato(c)) && (
                   <div className="pt-2 space-y-2">
                     {c.termoRecursoUrl ? (
                       <a href={urlVisualizacao(c.termoRecursoUrl)} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
@@ -3595,15 +3587,10 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                         <span className="min-w-0 truncate">{tipo === 'parecer' ? 'Ver Parecer' : 'Ver Exames'} · {d.rotulo}</span>
                       </button>
                     ))}
-                    {c.examesQtd > 0 && (
-                      <button type="button" onClick={() => handleVerExames(c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-blue-50 text-blue-700">
-                        <span className="material-symbols-outlined text-[20px]">lab_panel</span>
-                        <span>Ver Exames Transcritos · {c.examesQtd}</span>
-                      </button>
-                    )}
+                    {/* Ler os exames transcritos é só no desktop (a tela cheia precisa da largura). */}
                     {podeEnviarExames && (
                       <button type="button" onClick={() => handleEnviarExames(c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-navy border border-line">
-                        <span className="material-symbols-outlined text-[20px]">upload_file</span>
+                        <span className="material-symbols-outlined text-[20px]">lab_profile</span>
                         <span>Enviar Exames (PDF)</span>
                       </button>
                     )}
