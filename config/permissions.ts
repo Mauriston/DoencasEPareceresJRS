@@ -81,6 +81,7 @@ export type FeatureKey =
   | 'concursosJRS.visualizarTabela'
   | 'concursosJRS.gerarTermoRecurso'
   | 'concursosJRS.solicitarParecerExames'
+  | 'concursosJRS.enviarExamesCandidato'
   | 'inspecoes.cadastrar'
   | 'inspecoes.agendar'
   | 'inspecoes.editar'
@@ -110,6 +111,7 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'concursosJRS.visualizarTabela', label: 'Alternar para visão em tabela (lista de concursos, desktop)', group: 'Concursos' },
   { id: 'concursosJRS.gerarTermoRecurso', label: 'Gerar Termo de Recurso (a visualização do termo já gerado é liberada a todos)', group: 'Concursos' },
   { id: 'concursosJRS.solicitarParecerExames', label: 'Solicitar Parecer / Exames (menu ⋮ da planilha; a visualização é só de quem tem o menu)', group: 'Concursos' },
+  { id: 'concursosJRS.enviarExamesCandidato', label: 'Enviar exames do candidato em PDF (salva no Drive e transcreve com IA; a leitura da transcrição é liberada a todos)', group: 'Concursos' },
   { id: 'inspecoes.cadastrar', label: 'Cadastrar nova IS (a lista e o calendário são vistos por quem acessa a página)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.agendar', label: 'Agendar e reagendar IS (escolher perito, data e horário)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.editar', label: 'Editar IS: status, laudo, restrições, TIS, DS-1a e observações', group: 'Inspeções de Saúde' },
@@ -136,6 +138,8 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'concursosJRS.visualizarTabela': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
   'concursosJRS.gerarTermoRecurso': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
   'concursosJRS.solicitarParecerExames': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  // Enviar os exames entregues pelo candidato é trabalho de recepção/secretaria tanto quanto dos médicos.
+  'concursosJRS.enviarExamesCandidato': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
   'inspecoes.cadastrar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
   'inspecoes.agendar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
   'inspecoes.editar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },

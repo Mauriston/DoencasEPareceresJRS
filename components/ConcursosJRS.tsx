@@ -22,6 +22,7 @@ import {
 } from '../services/firestoreConcursos';
 import { SolicitarParecerModal, SolicitarExamesModal } from './SolicitacaoModais';
 import { CandidatoDetalhe } from './concursos/CandidatoDetalhe';
+import { EnviarExamesModal, ExamesTranscritosModal, type AlvoExames } from './concursos/ExamesCandidato';
 import { juntarPdfsBase64 } from '../services/pdfMerge';
 import {
   extrairMensagemComGemini, salvarMensagemNoDrive, salvarPdfCandidatoNoDrive, criarEstruturaConcursoNoDrive, abrirPdf, urlVisualizacao, anoDoConcurso,
@@ -1365,6 +1366,7 @@ interface MenuAcoesConcursoProps {
   podeRegistrarMensagemArquivo: boolean;
   podeListarMensagens: boolean;
   podeAdicionarCandidato: boolean;
+  podeEnviarExames: boolean;
   podeEncerrar: boolean;
   podeVoltarParaEmBreve: boolean;
   minutaHabilitada: boolean;
@@ -1378,12 +1380,13 @@ interface MenuAcoesConcursoProps {
   onListarMensagens: () => void;
   onDefinirPeriodoAgendamento: () => void;
   onAdicionarCandidato: () => void;
+  onEnviarExames: () => void;
 }
 
 const construirItensMenuConcurso = ({
-  status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato,
+  status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeEnviarExames,
   podeEncerrar, podeVoltarParaEmBreve, minutaHabilitada, temPeriodoConfigurado, temMensagensRegistradas,
-  onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens, onDefinirPeriodoAgendamento, onAdicionarCandidato,
+  onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens, onDefinirPeriodoAgendamento, onAdicionarCandidato, onEnviarExames,
 }: MenuAcoesConcursoProps): ItemMenuAcao[] => {
   const itens: ItemMenuAcao[] = [];
   if (podeAbrirEncerrar && status === 'encerrado') {
@@ -1423,6 +1426,11 @@ const construirItensMenuConcurso = ({
   }
   if (podeAdicionarCandidato && (status === 'em_andamento' || status === 'em_breve')) {
     itens.push({ key: 'adicionar-candidato', label: 'Adicionar Candidato', icon: 'person_add', onClick: onAdicionarCandidato });
+  }
+  // Exames do candidato: só enquanto o concurso recebe candidatos (não faz
+  // sentido anexar exames a um concurso encerrado).
+  if (podeEnviarExames && status === 'em_andamento') {
+    itens.push({ key: 'enviar-exames', label: 'Enviar Exames do Candidato', icon: 'lab_panel', onClick: onEnviarExames });
   }
   if (podeRegistrarMensagemArquivo && status !== 'encerrado') {
     itens.push({ key: 'registrar-msg', label: 'Registrar Mensagem', icon: 'upload', onClick: onRegistrarMensagem });
@@ -1508,6 +1516,7 @@ interface ConcursosListaProps {
   podeRegistrarMensagemArquivo: boolean;
   podeListarMensagens: boolean;
   podeAdicionarCandidato: boolean;
+  podeEnviarExames: boolean;
   podeVisualizarTabela: boolean;
   onSelecionar: (id: string) => void;
   onNovoConcursoClick: () => void;
@@ -1526,7 +1535,7 @@ const GRUPOS_STATUS: { status: ConcursoRecord['status']; titulo: string }[] = [
 const celulaNumericaTabela = (valor: number, status: ConcursoRecord['status']): React.ReactNode =>
   valor === 0 && status === 'em_breve' ? '' : valor;
 
-const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, perfil, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeVisualizarTabela, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
+const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, perfil, podeRegistrarMensagem, podeGerarMinutaResultados, podeImportarCsv, podeAbrirEncerrar, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeEnviarExames, podeVisualizarTabela, onSelecionar, onNovoConcursoClick, onImportarCsvClick, onRecarregar }) => {
   const [contadores, setContadores] = useState<Record<string, { total: number; finalizados: number; temLancamento: boolean }>>({});
   const navLista = useNav();
   const { dias: diasConcursos } = useDiasConcursos();
@@ -1576,6 +1585,9 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
   const [listarMensagensAlvo, setListarMensagensAlvo] = useState<{ id: string; nome: string } | null>(null);
   const [periodoAgendamentoAlvo, setPeriodoAgendamentoAlvo] = useState<{ id: string; nome: string } | null>(null);
   const [adicionarCandidatoAlvo, setAdicionarCandidatoAlvo] = useState<{ id: string; nome: string } | null>(null);
+  // Envio dos exames de um candidato pelo menu ⋮ do concurso: o candidato é
+  // escolhido no próprio diálogo (autocomplete com os candidatos do concurso).
+  const [enviarExamesConcurso, setEnviarExamesConcurso] = useState<ConcursoRecord | null>(null);
 
   const anoCorrente = new Date().getFullYear();
 
@@ -1747,7 +1759,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
     const podeVoltarParaEmBreve = !contagem?.temLancamento;
     return {
       status: c.status,
-      podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato,
+      podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeEnviarExames,
       podeEncerrar, podeVoltarParaEmBreve,
       minutaHabilitada: c.status === 'encerrado' || podeEncerrar,
       temPeriodoConfigurado: !!c.periodoInicioISO,
@@ -1760,6 +1772,7 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
       onListarMensagens: () => setListarMensagensAlvo({ id: c.id, nome: c.nome }),
       onDefinirPeriodoAgendamento: () => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome }),
       onAdicionarCandidato: () => setAdicionarCandidatoAlvo({ id: c.id, nome: c.nome }),
+      onEnviarExames: () => setEnviarExamesConcurso(c),
     };
   };
 
@@ -1854,6 +1867,13 @@ const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loading, per
           concursoId={periodoAgendamentoAlvo.id}
           concursoNome={periodoAgendamentoAlvo.nome}
           onClose={() => setPeriodoAgendamentoAlvo(null)}
+        />
+      )}
+      {enviarExamesConcurso && (
+        <EnviarExamesModal
+          concursos={[enviarExamesConcurso]}
+          usuarioNome={navLista?.authUser?.nome}
+          onClose={() => setEnviarExamesConcurso(null)}
         />
       )}
       {adicionarCandidatoAlvo && (
@@ -2301,6 +2321,11 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
   // Pedido de Parecer / Solicitação de Exames (menu ⋮ da coluna Ações). Quem pode: admin,
   // user_medicos e user_medicos_mpi — o próprio usuário assina; secretaria não vê o menu.
   const podeSolicitarBase = canUseFeature('concursosJRS.solicitarParecerExames', perfil);
+  // Exames entregues pelo candidato (PDF no Drive + transcrição pelo Gemini): enviar
+  // depende de permissão; ler a transcrição já enviada é liberado a quem abre a planilha.
+  const podeEnviarExames = canUseFeature('concursosJRS.enviarExamesCandidato', perfil);
+  const [enviarExamesAlvo, setEnviarExamesAlvo] = useState<AlvoExames | null>(null);
+  const [verExamesAlvo, setVerExamesAlvo] = useState<CandidatoRecord | null>(null);
   const [solicitacaoModal, setSolicitacaoModal] = useState<{ tipo: 'parecer' | 'exames'; candidato: CandidatoRecord } | null>(null);
   const [gerandoSolicitacaoIds, setGerandoSolicitacaoIds] = useState<Set<string>>(new Set());
   const [menuAcoes, setMenuAcoes] = useState<{ id: string; top: number; right: number } | null>(null);
@@ -2322,9 +2347,33 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
   const ehAdmin = perfil === 'admin';
   // Limpar só faz sentido se há algum PDF gerado (termos, pareceres ou exames).
   const temDocumentoGerado = (c: CandidatoRecord) =>
-    !!(c.termoRecursoUrl || c.termoCientificacaoUrl) || qtdSolicitacoes(c) > 0;
+    !!(c.termoRecursoUrl || c.termoCientificacaoUrl) || qtdSolicitacoes(c) > 0 || c.examesQtd > 0;
   const temSolicitacaoGerada = (c: CandidatoRecord) => qtdSolicitacoes(c) > 0;
-  const mostrarMenuAcoes = (c: CandidatoRecord) => podeSolicitarBase || temSolicitacaoGerada(c) || ehAdmin;
+  const mostrarMenuAcoes = (c: CandidatoRecord) => podeSolicitarBase || temSolicitacaoGerada(c) || ehAdmin || podeEnviarExames;
+
+  // Exames do candidato: a pasta no Drive sai do concurso, igual aos termos.
+  const alvoExames = (c: CandidatoRecord): AlvoExames | null => {
+    if (!concurso) return null;
+    return {
+      concursoId,
+      concursoNome: concurso.nome,
+      concursoAno: anoDoConcurso(concurso.criadoEm),
+      candidatoId: c.id,
+      candidatoNome: c.nome,
+    };
+  };
+  const handleEnviarExames = (c: CandidatoRecord) => {
+    setMenuAcoes(null);
+    setCandidatoModalMobile(null);
+    const alvo = alvoExames(c);
+    if (!alvo) { showToast('Concurso ainda não carregado. Aguarde um instante e tente de novo.'); return; }
+    setEnviarExamesAlvo(alvo);
+  };
+  const handleVerExames = (c: CandidatoRecord) => {
+    setMenuAcoes(null);
+    setCandidatoModalMobile(null);
+    setVerExamesAlvo(c);
+  };
 
   useEffect(() => {
     if (!menuAcoes) return;
@@ -2384,7 +2433,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
     setCandidatoModalMobile(null);
     setConfirmDialog({
       title: 'Limpar IS',
-      message: `Limpar toda a IS de ${c.nome}? O Status volta a "Sem status" e serão apagados Observações, Nº TIS, laudo e todos os documentos gerados (termo de recurso, termo de cientificação, pareceres e pedidos de exames). Esta ação não pode ser desfeita.`,
+      message: `Limpar toda a IS de ${c.nome}? O Status volta a "Sem status" e serão apagados Observações, Nº TIS, laudo, todos os documentos gerados (termo de recurso, termo de cientificação, pareceres e pedidos de exames) e os exames entregues pelo candidato (PDF no Drive e transcrição). Esta ação não pode ser desfeita.`,
       confirmLabel: 'Limpar IS',
       onConfirm: async () => {
         setConfirmDialog(null);
@@ -2857,12 +2906,30 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
           ...c.solicitacoesExames.map((d, i) => ({ tipo: 'exames' as const, d, chave: `e${i}` })),
         ];
         const mostrarAdmin = ehAdmin;
+        const temExames = c.examesQtd > 0;
         return (
           <>
             <div className="fixed inset-0 z-dropdown" onClick={() => setMenuAcoes(null)} />
             <div role="menu" className="fixed z-dropdown w-64 py-1 bg-white rounded-xl border border-line shadow-xl max-h-[70vh] overflow-y-auto" style={{ top: menuAcoes.top, right: menuAcoes.right }}>
-              {!mostrarGerar && docsVer.length === 0 && !mostrarAdmin && (
+              {!mostrarGerar && docsVer.length === 0 && !mostrarAdmin && !podeEnviarExames && !temExames && (
                 <p className="px-4 py-3 text-sm text-ink-3">Nenhuma ação disponível para este candidato agora.</p>
+              )}
+              {(podeEnviarExames || temExames) && (
+                <>
+                  {podeEnviarExames && (
+                    <button type="button" role="menuitem" onClick={() => handleEnviarExames(c)} className={classeItem}>
+                      <span className="material-symbols-outlined text-[20px]">upload_file</span>
+                      <span>Enviar Exames (PDF)</span>
+                    </button>
+                  )}
+                  {temExames && (
+                    <button type="button" role="menuitem" onClick={() => handleVerExames(c)} className={classeItem}>
+                      <span className="material-symbols-outlined text-[20px] text-green-700">lab_panel</span>
+                      <span>Ver Exames Transcritos · {c.examesQtd}</span>
+                    </button>
+                  )}
+                  {(mostrarGerar || docsVer.length > 0 || mostrarAdmin) && <div className="my-1 border-t border-ink-5" />}
+                </>
               )}
               {mostrarGerar && (
                 <>
@@ -2916,6 +2983,25 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
 
       {eventosAlvo && ehAdmin && (
         <ModalRegistroEventos concursoId={concursoId} candidato={eventosAlvo} onClose={() => setEventosAlvo(null)} />
+      )}
+
+      {enviarExamesAlvo && (
+        <EnviarExamesModal
+          alvo={enviarExamesAlvo}
+          usuarioNome={nav?.authUser?.nome}
+          onClose={() => setEnviarExamesAlvo(null)}
+          onEnviado={atualizado => setCandidatos(prev => prev.map(x => (x.id === atualizado.id ? atualizado : x)))}
+        />
+      )}
+
+      {verExamesAlvo && (
+        <ExamesTranscritosModal
+          concursoId={concursoId}
+          concursoNome={concurso?.nome || ''}
+          candidatoId={verExamesAlvo.id}
+          candidatoNome={verExamesAlvo.nome}
+          onClose={() => setVerExamesAlvo(null)}
+        />
       )}
 
       {solicitacaoModal?.tipo === 'parecer' && (
@@ -3232,6 +3318,14 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                                     </button>
                                   )}
 
+                                  {/* Exames entregues pelo candidato: só aparece depois do envio, com o badge da quantidade transcrita. */}
+                                  {c.examesQtd > 0 && (
+                                    <button type="button" onClick={() => handleVerExames(c)} className="relative p-2 ml-1 text-blue-700 bg-blue-50 hover:bg-blue-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title={`Ver os ${c.examesQtd} exame(s) transcrito(s)`}>
+                                      <span className="material-symbols-outlined text-[22px]">lab_panel</span>
+                                      <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-blue-700 text-white text-xs font-bold leading-none flex items-center justify-center ring-2 ring-white">{c.examesQtd}</span>
+                                    </button>
+                                  )}
+
                                   {mostrarMenuAcoes(c) && (
                                     <button type="button" onClick={e => abrirMenuAcoes(e, c.id)} className="relative p-2 ml-1 text-ink bg-thead hover:bg-navy hover:text-white rounded-xl transition-colors cursor-pointer" title={qtdSolicitacoes(c) ? `Mais ações — ${qtdSolicitacoes(c)} documento(s) gerado(s)` : 'Mais ações'} aria-haspopup="menu" aria-expanded={menuAcoes?.id === c.id}>
                                       <span className={`material-symbols-outlined text-[22px] ${gerandoSolicitacaoIds.has(c.id) ? 'animate-spin' : ''}`}>{gerandoSolicitacaoIds.has(c.id) ? 'progress_activity' : 'more_vert'}</span>
@@ -3455,7 +3549,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                   <p className="text-sm font-semibold text-ink">{c.numTIS || '-'}</p>
                 </div>
 
-                {(podeGerarTermo || c.termoRecursoUrl || c.termoCientificacaoUrl || gerandoCientIds.has(c.id) || podeGerarCientificacao(c) || mostrarMenuAcoes(c) || podeReagendarCandidato(c)) && (
+                {(podeGerarTermo || c.termoRecursoUrl || c.termoCientificacaoUrl || gerandoCientIds.has(c.id) || podeGerarCientificacao(c) || mostrarMenuAcoes(c) || podeReagendarCandidato(c) || c.examesQtd > 0) && (
                   <div className="pt-2 space-y-2">
                     {c.termoRecursoUrl ? (
                       <a href={urlVisualizacao(c.termoRecursoUrl)} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
@@ -3501,6 +3595,18 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                         <span className="min-w-0 truncate">{tipo === 'parecer' ? 'Ver Parecer' : 'Ver Exames'} · {d.rotulo}</span>
                       </button>
                     ))}
+                    {c.examesQtd > 0 && (
+                      <button type="button" onClick={() => handleVerExames(c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-blue-50 text-blue-700">
+                        <span className="material-symbols-outlined text-[20px]">lab_panel</span>
+                        <span>Ver Exames Transcritos · {c.examesQtd}</span>
+                      </button>
+                    )}
+                    {podeEnviarExames && (
+                      <button type="button" onClick={() => handleEnviarExames(c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-navy border border-line">
+                        <span className="material-symbols-outlined text-[20px]">upload_file</span>
+                        <span>Enviar Exames (PDF)</span>
+                      </button>
+                    )}
                     {ehAdmin && (
                       <button type="button" onClick={() => { setCandidatoModalMobile(null); setEventosAlvo({ id: c.id, nome: c.nome }); }} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-navy border border-line">
                         <span className="material-symbols-outlined text-[20px]">history</span>
@@ -3586,6 +3692,7 @@ export const ConcursosJRS: React.FC = () => {
   const podeRegistrarMensagemArquivo = canUseFeature('concursosJRS.registrarMensagemArquivo', perfil);
   const podeListarMensagens = canUseFeature('concursosJRS.listarMensagens', perfil);
   const podeAdicionarCandidato = canUseFeature('concursosJRS.adicionarCandidato', perfil);
+  const podeEnviarExames = canUseFeature('concursosJRS.enviarExamesCandidato', perfil);
   const podeVisualizarTabela = canUseFeature('concursosJRS.visualizarTabela', perfil);
 
   const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
@@ -3651,6 +3758,7 @@ export const ConcursosJRS: React.FC = () => {
         podeRegistrarMensagemArquivo={podeRegistrarMensagemArquivo}
         podeListarMensagens={podeListarMensagens}
         podeAdicionarCandidato={podeAdicionarCandidato}
+        podeEnviarExames={podeEnviarExames}
         podeVisualizarTabela={podeVisualizarTabela}
         onSelecionar={setSelectedConcursoId}
         onNovoConcursoClick={() => nav?.navigate('/concursos/novo')}

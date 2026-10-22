@@ -21,6 +21,7 @@ import { observarConcursos, type ConcursoRecord } from '../services/firestoreCon
 import { observarPareceres, statusEfetivo, type ParecerRecord } from '../services/firestorePareceres';
 import { observarInspecoes, type InspecaoRecord } from '../services/firestoreInspecoes';
 import { MiniCalendarioIS } from './inspecoes/MiniCalendarioIS';
+import { EnviarExamesModal } from './concursos/ExamesCandidato';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
 import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr } from '../utils/inspecoes';
 import { observarPericiasMenores, statusPericia, dataBR, type PericiaMenorRecord } from '../services/firestorePericiasMenores';
@@ -97,10 +98,17 @@ export const Home: React.FC = () => {
   const podePericiaMenor = canAccessPage('pericia-menor', perfil);
   const podeGerarParecer = podePareceres && canUseFeature('pareceres.gerar', perfil);
   const podeNovaPericia = canUseFeature('pericia-menor.novo', perfil);
+  const podeEnviarExames = podeConcursos && canUseFeature('concursosJRS.enviarExamesCandidato', perfil);
+  // Envio dos exames de um candidato direto da Home: o candidato é escolhido no
+  // próprio sheet, entre os dos concursos em andamento (ver `enviarExames` abaixo).
+  const [enviarExames, setEnviarExames] = useState(false);
 
   const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
   useEffect(() => observarConcursos(setConcursos, () => { /* silencioso: não bloqueia a Home */ }), []);
   const emAndamento = concursos.filter(c => c.status === 'em_andamento');
+  // O botão de enviar exames só existe quando há concurso em andamento: fora disso
+  // não há candidato a quem anexar os laudos.
+  const mostrarEnviarExames = podeEnviarExames && emAndamento.length > 0;
 
   const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
   useEffect(() => (podePareceres ? observarPareceres(setPareceres, () => { /* silencioso */ }) : undefined), [podePareceres]);
@@ -198,8 +206,9 @@ export const Home: React.FC = () => {
           <p className="eyebrow">{dataPorExtenso()}</p>
           <h1 className="text-display font-extrabold text-navy">{saudacao()}, {primeiroNome || 'Perito'}</h1>
         </div>
-        {(podeNovaPericia && podePericiaMenor || podeGerarParecer) && (
+        {(podeNovaPericia && podePericiaMenor || podeGerarParecer || mostrarEnviarExames) && (
           <div className="flex flex-col-reverse sm:flex-row gap-2">
+            {mostrarEnviarExames && <button type="button" onClick={() => setEnviarExames(true)} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">lab_panel</span>Enviar exames de concurso</button>}
             {podeNovaPericia && podePericiaMenor && <Link to="/pericia-menor?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">personal_injury</span>Nova perícia menor</Link>}
             {podeGerarParecer && <Link to="/pareceres?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>Novo parecer</Link>}
           </div>
@@ -346,6 +355,14 @@ export const Home: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {enviarExames && (
+        <EnviarExamesModal
+          concursos={emAndamento}
+          usuarioNome={authUser?.nome}
+          onClose={() => setEnviarExames(false)}
+        />
+      )}
 
       {editandoRapido && (
         <Dialog

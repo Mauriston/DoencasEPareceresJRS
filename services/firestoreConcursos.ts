@@ -6,6 +6,7 @@
 // Modelo de dados:
 //   concursos/{concursoId}
 //     candidatos/{matricula}
+//       exames/{autoId}      (um documento por PDF de exames enviado)
 //     mensagens/{autoId}
 //     agendamentos/{AAAA-MM-DD}
 //
@@ -13,12 +14,13 @@
 // apresentaram, o que antes exigia uma planilha "TEMPLATE CONCURSOS"
 // separada por concurso — aqui é só mais um documento na mesma coleção.
 import {
-  getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, onSnapshot,
+  getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, onSnapshot,
   writeBatch, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { app } from './firebaseAuth';
 import { registrarEvento } from './auditoriaIS';
 import { removerPdfPorUrl } from './driveConcursos';
+import type { ExameCandidato, ExamesExtraidos, PacienteExames } from '../utils/examesCandidato';
 import {
   MAPA_LAUDO_POR_STATUS, candidatoEstaFinalizado, formatarDataSimples, formatarDataMilitar,
   formatarChaveData, parseChaveData, calcularDiasUteis, distribuirCandidatosNasDatas,
@@ -67,6 +69,15 @@ export interface CandidatoRecord {
   /** Pedidos de parecer / solicitações de exames gerados (uma IS pode ter vários de cada). */
   solicitacoesParecer: SolicitacaoDoc[];
   solicitacoesExames: SolicitacaoDoc[];
+  /**
+   * Resumo dos exames que o candidato entregou (o conteúdo fica na subcoleção
+   * "exames" — ver `listarExamesCandidato`). Aqui só o que a tabela precisa
+   * para mostrar o botão e o badge sem ler a transcrição inteira de todos.
+   */
+  examesQtd: number;
+  examesPdfUrls: string[];
+  /** Data/hora ISO do último envio. */
+  examesEnviadoEm: string;
 }
 
 export interface SolicitacaoDoc {
@@ -98,6 +109,8 @@ export interface DataAgendamentoInfo {
 const concursoRef = (concursoId: string) => doc(db, COL_CONCURSOS, concursoId);
 const candidatosCol = (concursoId: string) => collection(db, COL_CONCURSOS, concursoId, 'candidatos');
 const candidatoRef = (concursoId: string, id: string) => doc(db, COL_CONCURSOS, concursoId, 'candidatos', id);
+const examesCol = (concursoId: string, candidatoId: string) =>
+  collection(db, COL_CONCURSOS, concursoId, 'candidatos', candidatoId, 'exames');
 const mensagensCol = (concursoId: string) => collection(db, COL_CONCURSOS, concursoId, 'mensagens');
 const agendamentosCol = (concursoId: string) => collection(db, COL_CONCURSOS, concursoId, 'agendamentos');
 
@@ -138,6 +151,9 @@ const toCandidatoRecord = (id: string, data: any): CandidatoRecord => ({
   termoCientificacaoUrl: data.termoCientificacaoUrl || '',
   solicitacoesParecer: lerSolicitacoes(data.solicitacoesParecer, data.solicitacaoParecerUrl, 'Parecer'),
   solicitacoesExames: lerSolicitacoes(data.solicitacoesExames, data.solicitacaoExamesUrl, 'Exames'),
+  examesQtd: typeof data.examesQtd === 'number' ? data.examesQtd : 0,
+  examesPdfUrls: Array.isArray(data.examesPdfUrls) ? data.examesPdfUrls.filter((u: unknown) => typeof u === 'string' && u) : [],
+  examesEnviadoEm: data.examesEnviadoEm || '',
 });
 
 export const listarConcursos = async (): Promise<ConcursoRecord[]> => {
@@ -265,6 +281,9 @@ export const criarConcursoDaMensagem = async (params: {
       termoCientificacaoUrl: '',
       solicitacoesParecer: [],
       solicitacoesExames: [],
+      examesQtd: 0,
+      examesPdfUrls: [],
+      examesEnviadoEm: '',
     }));
   });
 
@@ -356,6 +375,9 @@ export const importarConcursoDeCsv = async (
       termoCientificacaoUrl: c.termoCientificacaoUrl || '',
       solicitacoesParecer: [],
       solicitacoesExames: [],
+      examesQtd: 0,
+      examesPdfUrls: [],
+      examesEnviadoEm: '',
     }));
   });
 
@@ -373,6 +395,7 @@ export const criarCandidato = async (concursoId: string, id: string, nome: strin
     nome, dataAgendamento, status: '', observacoes: '', finalizado: false,
     recurso: false, dataLaudo: '', laudo: '', numTIS: '', termoRecursoUrl: '', termoCientificacaoUrl: '',
     solicitacoesParecer: [], solicitacoesExames: [],
+    examesQtd: 0, examesPdfUrls: [], examesEnviadoEm: '',
   };
   await setDoc(candidatoRef(concursoId, id), dados);
   await updateDoc(concursoRef(concursoId), { totalCandidatos: (await listarCandidatos(concursoId)).length });
@@ -754,6 +777,95 @@ export const registrarSolicitacao = async (
   return { ...atual, ...proximo };
 };
 
+// -------------------------------------------------------------------------
+// EXAMES DO CANDIDATO — PDF no Drive + transcrição (Gemini) na subcoleção "exames"
+// -------------------------------------------------------------------------
+
+/** Um PDF de exames enviado para o candidato, com os laudos já transcritos. */
+export interface ExamesEnvioRecord {
+  id: string;
+  /** PDF guardado na pasta do candidato no Drive (EXAMES_NOME_DO_CANDIDATO.pdf). */
+  pdfUrl: string;
+  nomeArquivo: string;
+  paciente: PacienteExames;
+  exames: ExameCandidato[];
+  /** Pontos que o Gemini marcou para conferência humana. */
+  observacoes: string[];
+  criadoEm: string;
+  criadoPorNome: string;
+}
+
+const PACIENTE_VAZIO: PacienteExames = { nome: '', dataNascimento: '', cpf: '', identidade: '' };
+
+const toExamesEnvioRecord = (id: string, data: any): ExamesEnvioRecord => ({
+  id,
+  pdfUrl: data.pdfUrl || '',
+  nomeArquivo: data.nomeArquivo || '',
+  paciente: { ...PACIENTE_VAZIO, ...(data.paciente || {}) },
+  exames: Array.isArray(data.exames) ? data.exames : [],
+  observacoes: Array.isArray(data.observacoes) ? data.observacoes : [],
+  criadoEm: data.criadoEm || '',
+  criadoPorNome: data.criadoPorNome || '',
+});
+
+/**
+ * Registra um PDF de exames já enviado ao Drive: grava um documento na
+ * subcoleção "exames" do candidato com a transcrição estruturada e atualiza, no
+ * documento do candidato, o resumo que a tabela usa (quantidade e links dos
+ * PDFs). Vários envios se acumulam — o candidato pode entregar os exames em
+ * mais de um PDF.
+ */
+export const salvarExamesCandidato = async (
+  concursoId: string,
+  candidatoId: string,
+  envio: { pdfUrl: string; nomeArquivo: string; extraidos: ExamesExtraidos | null; criadoPorNome?: string },
+): Promise<CandidatoRecord> => {
+  const snap = await getDoc(candidatoRef(concursoId, candidatoId));
+  if (!snap.exists()) throw new Error(`Candidato com matrícula "${candidatoId}" não encontrado.`);
+  const atual = toCandidatoRecord(candidatoId, snap.data());
+
+  const criadoEm = new Date().toISOString();
+  const exames = envio.extraidos?.exames ?? [];
+  await addDoc(examesCol(concursoId, candidatoId), {
+    pdfUrl: envio.pdfUrl,
+    nomeArquivo: envio.nomeArquivo,
+    paciente: envio.extraidos?.paciente ?? PACIENTE_VAZIO,
+    exames,
+    observacoes: envio.extraidos?.observacoes ?? [],
+    quantidade: exames.length,
+    criadoEm,
+    criadoPorNome: envio.criadoPorNome || '',
+  });
+
+  const proximo = {
+    examesQtd: atual.examesQtd + exames.length,
+    examesPdfUrls: [...atual.examesPdfUrls, envio.pdfUrl].filter(Boolean),
+    examesEnviadoEm: criadoEm,
+  };
+  await updateDoc(candidatoRef(concursoId, candidatoId), proximo);
+  await registrarEvento(
+    concursoId, candidatoId, 'Exames do candidato enviados',
+    `${envio.nomeArquivo}${exames.length ? ` · ${exames.length} exame(s) transcrito(s)` : ' · sem transcrição'}`,
+  );
+  return { ...atual, ...proximo };
+};
+
+/** Envios de exames do candidato, do mais antigo para o mais recente. */
+export const listarExamesCandidato = async (concursoId: string, candidatoId: string): Promise<ExamesEnvioRecord[]> => {
+  const snap = await getDocs(examesCol(concursoId, candidatoId));
+  return snap.docs
+    .map(d => toExamesEnvioRecord(d.id, d.data()))
+    .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm));
+};
+
+/** Apaga a subcoleção "exames" do candidato e os PDFs correspondentes no Drive (usado por `limparIS`). */
+const apagarExamesCandidato = async (concursoId: string, candidatoId: string, pdfUrls: string[]): Promise<void> => {
+  const snap = await getDocs(examesCol(concursoId, candidatoId));
+  await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+  const urls = new Set([...pdfUrls, ...snap.docs.map(d => (d.data() as any).pdfUrl || '')].filter(Boolean));
+  await Promise.all([...urls].map(removerPdfPorUrl));
+};
+
 /**
  * Admin — "Editar": reabre uma IS finalizada para edição. O Nº TIS é apagado
  * (era ele que, junto com o status, finalizava a IS); o restante é mantido.
@@ -771,7 +883,8 @@ export const reabrirIS = async (concursoId: string, id: string): Promise<Candida
 /**
  * Admin — "Limpar": apaga todas as colunas da IS (volta a "Sem status") e todos
  * os documentos gerados (termos de recurso e de cientificação, pareceres e
- * exames), inclusive os PDFs no Storage. Nome, matrícula e data de agendamento
+ * pedidos de exames), inclusive os PDFs no Storage, e também os exames que o
+ * candidato entregou (PDF no Drive e transcrição na subcoleção "exames"). Nome, matrícula e data de agendamento
  * são mantidos.
  */
 export const limparIS = async (concursoId: string, id: string): Promise<CandidatoRecord> => {
@@ -783,8 +896,10 @@ export const limparIS = async (concursoId: string, id: string): Promise<Candidat
     dataLaudo: '', laudo: '', numTIS: '',
     termoRecursoUrl: '', termoCientificacaoUrl: '',
     solicitacoesParecer: [] as SolicitacaoDoc[], solicitacoesExames: [] as SolicitacaoDoc[],
+    examesQtd: 0, examesPdfUrls: [] as string[], examesEnviadoEm: '',
   };
   await updateDoc(candidatoRef(concursoId, id), proximo);
+  await apagarExamesCandidato(concursoId, id, atual.examesPdfUrls);
   const urls = [
     atual.termoRecursoUrl, atual.termoCientificacaoUrl,
     ...atual.solicitacoesParecer.map(d => d.url), ...atual.solicitacoesExames.map(d => d.url),
