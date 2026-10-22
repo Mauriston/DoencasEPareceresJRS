@@ -1585,6 +1585,7 @@ CONCURSOS/
   {ano}/                       ano da criação do concurso
     {nome do concurso}/
       CANDIDATOS/{nome do candidato}/{tipoDocumento}_{matrícula}_{AAAAMMDD-HHMMSS}.pdf
+      CANDIDATOS/{nome do candidato}/EXAMES_{NOME_DO_CANDIDATO}.pdf
       MENSAGENS/{timestamp}_{arquivo}.pdf
 ```
 
@@ -1594,6 +1595,29 @@ CONCURSOS/
 - Ao apagar/regerar um termo, o arquivo do Drive vai para a lixeira (só arquivos sob a pasta raiz); URLs antigas do Storage são apagadas do Storage.
 - As ações do script que gravam no Drive ou usam o Gemini exigem o `idToken` do Firebase (validado em `exigirUsuarioFirebase`).
 - A transcrição e os dados da mensagem (cabeçalho, texto, período, candidatos) são lidos pelo Gemini (`extrairMensagemConcurso`, chave `GEMINI_API_KEY` nas propriedades do script) e gravados no Firestore como antes.
+
+### Exames entregues pelo candidato
+
+Os exames que o candidato apresenta na IS de Ingresso são enviados em PDF pelo app e seguem a **mesma lógica de pasta** dos termos e das solicitações (pasta do candidato, dentro de `CANDIDATOS`), mas com nome próprio: `EXAMES_{NOME_COMPLETO_SEM_ACENTOS}.pdf` (ex.: `EXAMES_JOSE_DA_SILVA_JUNIOR.pdf`). Um segundo PDF do mesmo candidato ganha sufixo (`_2`, `_3`…) — nada é sobrescrito.
+
+A ação `salvarExamesCandidato` (`CodeConcursos.gs`) faz as duas coisas numa chamada só (o PDF escaneado sobe uma vez): grava o arquivo no Drive e manda o Gemini transcrever os laudos (`PROMPT_EXAMES_CANDIDATO`). Se a leitura falhar, o PDF continua salvo e a resposta traz `erroExtracao` — o app grava o link de qualquer forma.
+
+A transcrição estruturada vai para uma subcoleção, um documento por PDF enviado:
+
+| Coleção | Documento | Conteúdo |
+|---|---|---|
+| `concursos/{id}/candidatos/{matrícula}/exames` | id automático | `pdfUrl`, `nomeArquivo`, `paciente` (`nome`, `dataNascimento`, `cpf`, `identidade`), `exames[]`, `observacoes[]`, `quantidade`, `criadoEm` (ISO), `criadoPorNome` |
+
+Cada item de `exames[]`: `ordem`, `categoria`, `nome`, `paciente`, `emissor`, `conselho`, `data`, `itens[]` (`{ nome, valor }`), `resultado` e `texto`. As categorias e as regras de cópia ficam em `utils/examesCandidato.ts`:
+
+- `hemograma`, `eas`, `bioquimica` — um objeto cada, com um item por analito, **só o valor, sem unidade de medida** (plaquetas em milhares); valores repetidos em laudos de datas diferentes usam o mais recente, e o emissor/data do bloco é o do laudo mais recente. Na tela, cada analito é copiado separadamente e o emissor fecha o bloco.
+- `betaHcg`, `vdrl`, `antiHiv` — resultado e emissor são copiados **juntos**; no anti-HIV o método entra no nome.
+- `imagem`, `colpocitologia`, `ecg`, `toxicologico` — laudo integral em `texto` (sem cabeçalho/rodapé da clínica), com o emissor ao final.
+- `outro` — qualquer exame fora dos padrões do concurso: laudo integral, com `# NOME DO EXAME` no topo do texto copiado.
+
+No documento do candidato ficam só o resumo que a tabela usa (`examesQtd`, `examesPdfUrls[]`, `examesEnviadoEm`) — a transcrição inteira não é lida ao listar os candidatos. `examesQtd` é o badge do botão de exames na coluna *Ações*, que abre a tela cheia com os blocos. **Limpar IS** (Admin) apaga a subcoleção e manda os PDFs para a lixeira do Drive.
+
+Regras do Firestore: `concursos/{id}/candidatos/{matrícula}/exames/{id}` — leitura e escrita para qualquer usuário autenticado (o controle por perfil é na UI, pela funcionalidade `concursosJRS.enviarExamesCandidato`).
 
 ---
 

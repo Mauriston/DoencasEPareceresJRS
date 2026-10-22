@@ -9,8 +9,16 @@ import { getAuth } from 'firebase/auth';
 import { app } from './firebaseAuth';
 import { GAS_URL_CONCURSOS } from '../config/endpoints';
 import { removerPdfDoStorage } from './firebaseStorageConcursos';
+import { normalizarExamesExtraidos, type ExamesExtraidos } from '../utils/examesCandidato';
 
 const MAX_PDF_BYTES = 15 * 1024 * 1024;
+/**
+ * Exames: o PDF vai inteiro no corpo da chamada ao Gemini, em base64 (que
+ * cresce ~33%), e a requisição da API não passa de 20 MB. 12 MB de PDF é o
+ * maior tamanho que cabe com folga — acima disso é melhor dividir o PDF em
+ * dois (cada envio fica guardado, nada é sobrescrito).
+ */
+const MAX_PDF_EXAMES_BYTES = 12 * 1024 * 1024;
 
 /** Tipos de documento gravados na pasta do candidato (prefixo do nome do arquivo). */
 export type TipoDocumentoCandidato = 'termoRecurso' | 'termoCientificacao' | 'solicitacaoParecer' | 'solicitacaoExames';
@@ -61,6 +69,15 @@ const exigirTamanho = (bytes: number) => {
     throw new Error(`O arquivo tem ${(bytes / (1024 * 1024)).toFixed(1)} MB — acima do limite de ${MAX_PDF_BYTES / (1024 * 1024)} MB. Tente um PDF menor.`);
   }
 };
+
+const exigirTamanhoExames = (bytes: number) => {
+  if (bytes > MAX_PDF_EXAMES_BYTES) {
+    throw new Error(`O PDF tem ${(bytes / (1024 * 1024)).toFixed(1)} MB — acima do limite de ${MAX_PDF_EXAMES_BYTES / (1024 * 1024)} MB para leitura dos exames. Divida os exames em dois PDFs e envie um por vez.`);
+  }
+};
+
+/** Maior PDF de exames aceito, em MB (usado no texto da tela de envio). */
+export const LIMITE_PDF_EXAMES_MB = MAX_PDF_EXAMES_BYTES / (1024 * 1024);
 
 /** Dados da mensagem administrativa lidos pelo Gemini (ver PROMPT_MENSAGEM_CONCURSO em CodeConcursos.gs). */
 export interface MensagemExtraida {
@@ -145,6 +162,48 @@ export const salvarPdfCandidatoNoDrive = async (params: {
     pdfBase64: params.pdfBase64,
   });
   return d.url;
+};
+
+/** Resultado do envio do PDF de exames: o arquivo já está no Drive mesmo quando a leitura do Gemini falha. */
+export interface EnvioExamesResultado {
+  url: string;
+  fileId: string;
+  nomeArquivo: string;
+  dados: ExamesExtraidos | null;
+  /** Motivo da falha da transcrição (vazio quando deu tudo certo). */
+  erroExtracao: string;
+}
+
+/**
+ * Grava o PDF dos exames na pasta do candidato (CONCURSOS > ano > concurso >
+ * CANDIDATOS > candidato, a mesma lógica dos termos e das solicitações) com o
+ * nome EXAMES_NOME_DO_CANDIDATO.pdf e devolve, no mesmo passo, a transcrição
+ * dos laudos feita pelo Gemini. A leitura do PDF é demorada (é um documento
+ * escaneado com vários laudos), por isso tudo vai numa única chamada: o PDF
+ * sobe uma vez só.
+ */
+export const enviarExamesCandidatoParaDrive = async (params: {
+  pasta: PastaConcurso;
+  candidatoId: string;
+  candidatoNome: string;
+  file: File;
+}): Promise<EnvioExamesResultado> => {
+  exigirTamanhoExames(params.file.size);
+  const d = await chamarScript<{ url: string; fileId: string; nomeArquivo: string; dados: unknown; erroExtracao?: string }>('salvarExamesCandidato', {
+    ano: params.pasta.ano,
+    nomeConcurso: params.pasta.nome,
+    candidatoId: params.candidatoId,
+    candidatoNome: params.candidatoNome,
+    pdfBase64: await arquivoParaBase64(params.file),
+    mimeType: params.file.type || 'application/pdf',
+  });
+  return {
+    url: d.url || '',
+    fileId: d.fileId || '',
+    nomeArquivo: d.nomeArquivo || '',
+    dados: d.dados ? normalizarExamesExtraidos(d.dados) : null,
+    erroExtracao: typeof d.erroExtracao === 'string' ? d.erroExtracao : '',
+  };
 };
 
 const idDoArquivoDrive = (url: string): string | null => {

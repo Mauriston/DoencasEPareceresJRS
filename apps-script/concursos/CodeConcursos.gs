@@ -11,10 +11,14 @@
  *    pasta raiz CONCURSOS > ano > concurso > CANDIDATOS/MENSAGENS) e devolver
  *    as URLs, que o app grava no Firestore (services/driveConcursos.ts);
  *  - ler a mensagem administrativa (PDF) com o Gemini e devolver os dados
- *    estruturados em JSON.
+ *    estruturados em JSON;
+ *  - guardar o PDF dos exames de um candidato na pasta dele (como
+ *    EXAMES_NOME_DO_CANDIDATO.pdf) e devolver a transcrição dos laudos lida
+ *    pelo Gemini, em JSON, para o app gravar no Firestore.
  *
  * Propriedades do script (Configurações do projeto → Propriedades do script):
- *   GEMINI_API_KEY — chave da API Gemini (usada em "extrairMensagemConcurso").
+ *   GEMINI_API_KEY — chave da API Gemini (usada em "extrairMensagemConcurso"
+ *   e em "salvarExamesCandidato").
  * As ações que escrevem no Drive ou usam o Gemini exigem o token de login do
  * Firebase ("idToken") — ver "exigirUsuarioFirebase".
  *
@@ -73,6 +77,7 @@ function doPost(e) {
     if (corpo.action === 'salvarPdfParecer') return apiSalvarPdfParecer(corpo);
     if (corpo.action === 'removerArquivoDrive') return apiRemoverArquivoDrive(corpo);
     if (corpo.action === 'extrairMensagemConcurso') return apiExtrairMensagemConcurso(corpo);
+    if (corpo.action === 'salvarExamesCandidato') return apiSalvarExamesCandidato(corpo);
     if (corpo.action === 'sincronizarEventoIS') return apiSincronizarEventoIS(corpo);
     if (corpo.action === 'sincronizarEventosConcursos') return apiSincronizarEventosConcursos(corpo);
     if (corpo.action === 'sincronizarEventoBloqueio') return apiSincronizarEventoBloqueio(corpo);
@@ -825,4 +830,168 @@ function apiExtrairMensagemConcurso(corpo) {
   } catch (e) {
     throw new Error('O Gemini não conseguiu estruturar os dados da mensagem. Confira se o PDF está legível.');
   }
+}
+
+// =========================================================================
+// EXAMES DOS CANDIDATOS — PDF no Drive + transcrição pelo Gemini
+// =========================================================================
+
+/**
+ * Nome do arquivo de exames na pasta do candidato: a palavra EXAMES seguida do
+ * nome completo em maiúsculas, sem acentos e com "_" entre as palavras
+ * (ex.: "José da Silva Júnior" → "EXAMES_JOSE_DA_SILVA_JUNIOR.pdf").
+ */
+function nomeArquivoExames(candidatoNome) {
+  var limpo = semAcentos(limparNomeDrive(candidatoNome))
+    .toUpperCase()
+    .replace(/[^A-Z0-9 ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!limpo) throw new Error('"candidatoNome" é obrigatório.');
+  return 'EXAMES_' + limpo.replace(/ /g, '_') + '.pdf';
+}
+
+/**
+ * Nome livre na pasta: o primeiro envio fica "EXAMES_NOME.pdf" e os seguintes
+ * ganham sufixo ("EXAMES_NOME_2.pdf", "_3"...) — um candidato pode entregar os
+ * exames em mais de um PDF, e nenhum envio anterior é sobrescrito.
+ */
+function nomeArquivoExamesLivre(pasta, candidatoNome) {
+  var base = nomeArquivoExames(candidatoNome).replace(/\.pdf$/i, '');
+  var nome = base + '.pdf';
+  for (var n = 2; pasta.getFilesByName(nome).hasNext() && n <= 50; n++) {
+    nome = base + '_' + n + '.pdf';
+  }
+  return nome;
+}
+
+var PROMPT_EXAMES_CANDIDATO = [
+  'Você transcreve, na íntegra, os exames de um candidato de concurso da Marinha do Brasil a partir de um PDF (em geral escaneado), para a Inspeção de Saúde da Junta Regular de Saúde.',
+  'Responda estritamente em JSON válido, com exatamente estas chaves de primeiro nível: "paciente", "exames" e "observacoes".',
+  '',
+  'REGRAS GERAIS',
+  '- Transcreva TODOS os laudos do documento: um objeto do array "exames" por exame ou por grupo de exames (ver AGRUPAMENTO).',
+  '- Despreze textos fúteis de cabeçalho e de rodapé: numeração de páginas ("Página 1 de 4"), endereço, telefone, e-mail, site e redes sociais da clínica ou do laboratório, código de barras, protocolo de conferência na internet, avisos do tipo "laudo sem valor sem assinatura" e afins.',
+  '- NÃO transcreva a Folha de Anamnese Dirigida (Anexo W / DS-8), em geral a primeira página.',
+  '- Transcreva em texto puro: sem markdown, sem negrito, sem tabelas e sem numerar as listas do laudo. Preserve as quebras de linha e as linhas em branco do original.',
+  '- Não invente dados: use string vazia (ou lista vazia) quando a informação não estiver no documento.',
+  '',
+  'CAMPOS DE CADA EXAME',
+  '- "categoria": exatamente uma destas: "hemograma", "eas", "bioquimica", "betaHcg", "vdrl", "antiHiv", "imagem", "colpocitologia", "ecg", "toxicologico", "outro".',
+  '- "nome": título do bloco em MAIÚSCULAS e sem acentos (ex.: "HEMOGRAMA COMPLETO", "EAS", "BIOQUIMICA", "BETA-HCG", "VDRL", "ANTI-HIV 1+2 (QUIMIOLUMINESCENCIA)", "RADIOGRAFIA DE TORAX", "USG DE MAMAS", "USG TRANSVAGINAL", "COLPOCITOLOGIA ONCOTICA", "ELETROCARDIOGRAMA", "EXAME TOXICOLOGICO").',
+  '- "paciente": nome do paciente como consta naquele laudo.',
+  '- "emissor": nome do profissional que assina o laudo, com o título (Dr., Dra., Biomed., Farm. etc.).',
+  '- "conselho": conselho de classe e número (ex.: "CRM-PE 20674", "CRBio-5 012345", "CRF-PE 7890"); acrescente o RQE quando houver.',
+  '- "data": data do laudo em DD/MM/AAAA.',
+  '- "itens": lista de { "nome": "...", "valor": "..." } — só para "hemograma", "eas" e "bioquimica"; nos demais, lista vazia.',
+  '- "resultado": resultado curto — só para "betaHcg", "vdrl" e "antiHiv" (ex.: "Nao reagente", "Negativo", "Inferior a 1,20 mUI/mL"); nos demais, string vazia.',
+  '- "texto": o laudo na íntegra — para "imagem", "colpocitologia", "ecg", "toxicologico" e "outro"; nos exames de valores, string vazia.',
+  '',
+  'VALORES (hemograma, EAS e bioquímica)',
+  '- Cada analito é um item separado, com APENAS o valor, SEM unidade de medida e sem o valor de referência.',
+  '- Plaquetas em milhares (209, nunca 209.000).',
+  '- Hemograma: hemácias, hemoglobina, hematócrito, VCM, HCM, CHCM, RDW, leucócitos, basófilos, eosinófilos, mielócitos, metamielócitos, bastões, segmentados, linfócitos, monócitos e plaquetas. Mielócitos, metamielócitos e bastões que não constem do laudo entram com valor "0".',
+  '- EAS (urina): densidade, pH, proteínas, glicose, corpos cetônicos, hemoglobina, nitrito, urobilinogênio, bilirrubinas, leucócitos, hemácias, células epiteliais, cilindros, cristais, muco e flora bacteriana.',
+  '- Bioquímica: glicemia de jejum, ureia, creatinina, colesterol total e frações (HDL, LDL, VLDL), triglicerídeos, TGO e TGP.',
+  '',
+  'AGRUPAMENTO',
+  '- Hemograma, EAS e bioquímica formam UM ÚNICO objeto cada, com todos os seus analitos em "itens".',
+  '- Se o mesmo analito aparecer em laudos de datas diferentes, use o valor MAIS RECENTE; e use "emissor", "conselho" e "data" do laudo mais recente do grupo.',
+  '- Beta-HCG, VDRL e anti-HIV são objetos próprios, um para cada, com o "resultado". No anti-HIV, informe o método no "nome".',
+  '- Exames de imagem (radiografia de tórax, USG de mamas, USG transvaginal ou pélvica), colpocitologia oncótica, eletrocardiograma e exame toxicológico: um objeto por exame, com o laudo em "texto".',
+  '- Exame toxicológico: inclua no "texto" o número do laudo, o material, o comprimento da amostra, a janela de detecção, o método, a data da coleta e o resultado por classe de substância.',
+  '- Qualquer exame fora dessa relação entra com categoria "outro" e o laudo integral em "texto".',
+  '',
+  'OUTRAS CHAVES',
+  '- "paciente": objeto { "nome": "NOME COMPLETO EM MAIÚSCULAS", "dataNascimento": "DD/MM/AAAA", "cpf": "", "identidade": "" } com os dados do candidato.',
+  '- "observacoes": lista de avisos curtos para conferência humana — valores fora da referência do laboratório, carimbo ou registro pouco legível (diga a leitura feita), páginas faltando, divergência de nome ou de data de nascimento entre os laudos. Lista vazia se não houver.',
+].join('\n');
+
+/**
+ * Chama o Gemini com o PDF dos exames e devolve o JSON estruturado
+ * (ver PROMPT_EXAMES_CANDIDATO). Exige GEMINI_API_KEY nas propriedades do script.
+ */
+function extrairExamesComGemini(pdfBase64, mimeType) {
+  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  if (!apiKey) throw new Error('GEMINI_API_KEY não configurada nas propriedades do projeto Apps Script.');
+
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + MODELO_GEMINI + ':generateContent?key=' + apiKey;
+  var requisicao = {
+    contents: [{
+      parts: [
+        { text: PROMPT_EXAMES_CANDIDATO },
+        { inline_data: { mime_type: mimeType || 'application/pdf', data: pdfBase64 } }
+      ]
+    }],
+    // A transcrição integral de um PDF com muitos laudos é longa: sem teto alto
+    // o JSON vem cortado e não dá para interpretar.
+    generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 65536 }
+  };
+  var resp;
+  try {
+    resp = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(requisicao),
+      muteHttpExceptions: true
+    });
+  } catch (erroFetch) {
+    // A leitura de um PDF escaneado com muitos laudos pode estourar o tempo da chamada.
+    throw new Error('A leitura dos exames não terminou em tempo (' + erroFetch.message + '). Divida os exames em dois PDFs e envie um por vez.');
+  }
+  var json;
+  try { json = JSON.parse(resp.getContentText()); } catch (e) { throw new Error('Resposta inválida da API Gemini.'); }
+  if (json.error) throw new Error('Erro na API Gemini: ' + json.error.message);
+
+  var candidato = json.candidates && json.candidates[0];
+  if (candidato && candidato.finishReason === 'MAX_TOKENS') {
+    throw new Error('A transcrição ficou longa demais e foi cortada. Envie os exames em dois PDFs menores.');
+  }
+  try {
+    return JSON.parse(candidato.content.parts[0].text);
+  } catch (e) {
+    throw new Error('O Gemini não conseguiu estruturar os exames. Confira se o PDF está legível.');
+  }
+}
+
+/**
+ * action=salvarExamesCandidato (POST): { idToken, ano, nomeConcurso, candidatoId, candidatoNome, pdfBase64, mimeType }
+ * — guarda o PDF dos exames na pasta do candidato (dentro de CANDIDATOS, mesma lógica dos termos e das
+ * solicitações) com o nome EXAMES_NOME_DO_CANDIDATO.pdf e, em seguida, manda o Gemini transcrever os laudos.
+ * Devolve { fileId, url, nomeArquivo, dados, erroExtracao }: o PDF já está salvo mesmo quando a leitura falha,
+ * e nesse caso "erroExtracao" explica o motivo (o app grava o link e avisa o usuário).
+ */
+function apiSalvarExamesCandidato(corpo) {
+  exigirUsuarioFirebase(corpo);
+  var candidatoId = limparNomeDrive(corpo.candidatoId);
+  var candidatoNome = limparNomeDrive(corpo.candidatoNome);
+  if (!candidatoId) throw new Error('"candidatoId" (matrícula do candidato) é obrigatório.');
+  if (!candidatoNome) throw new Error('"candidatoNome" é obrigatório.');
+  if (!corpo.pdfBase64) throw new Error('"pdfBase64" é obrigatório.');
+
+  var pastas = garantirEstruturaConcurso(corpo.ano, corpo.nomeConcurso);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  var pastaCandidato, nomeArquivo;
+  try {
+    pastaCandidato = obterOuCriarSubpasta(pastas.candidatos, candidatoNome);
+    nomeArquivo = nomeArquivoExamesLivre(pastaCandidato, candidatoNome);
+  } finally {
+    lock.releaseLock();
+  }
+
+  var arquivo = criarPdfNaPasta(pastaCandidato, nomeArquivo, corpo.pdfBase64);
+  var resultado = {
+    fileId: arquivo.getId(),
+    url: urlVisualizacaoDrive(arquivo.getId()),
+    nomeArquivo: nomeArquivo,
+    dados: null,
+    erroExtracao: ''
+  };
+  try {
+    resultado.dados = extrairExamesComGemini(corpo.pdfBase64, corpo.mimeType);
+  } catch (e) {
+    resultado.erroExtracao = e.message;
+  }
+  return resultado;
 }

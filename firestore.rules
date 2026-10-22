@@ -181,6 +181,13 @@ service cloud.firestore {
       match /candidatos/{candidatoId} {
         allow read, write: if isSignedIn();
 
+        // Exames que o candidato entregou: um documento por PDF enviado, com a
+        // transcrição dos laudos lida pelo Gemini (ver salvarExamesCandidato em
+        // services/firestoreConcursos.ts). Mesmo acesso do candidato.
+        match /exames/{exameId} {
+          allow read, write: if isSignedIn();
+        }
+
         // Registro de eventos (auditoria) da IS: qualquer usuário autenticado
         // grava um evento em SEU nome; só o Admin lê; ninguém edita nem apaga.
         match /eventos/{eventoId} {
