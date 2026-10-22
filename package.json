@@ -9,8 +9,7 @@
     "prebuild": "node scripts/verificar-ds.mjs",
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
-    "preview": "vite preview",
-    "gas:deploy": "node scripts/gas-deploy.mjs"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@google-cloud/firestore": "^9.3.1",
