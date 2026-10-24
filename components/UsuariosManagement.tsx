@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { Toast } from './ui/Toast';
 import { ConfirmDialog } from './ui/Dialog';
-import { resetarSenhaUsuario } from '../services/loginNip';
+import { resetarSenhaUsuario, excluirUsuario } from '../services/loginNip';
 import { SENHA_INICIAL_PADRAO } from '../config/senha';
 import { StatusTag } from './ui/StatusTag';
 import {
@@ -169,6 +169,25 @@ export const UsuariosManagement: React.FC = () => {
     } finally {
       setResetando(false);
       setResetAlvo(null);
+    }
+  };
+
+  const [excluirAlvo, setExcluirAlvo] = useState<UserRecord | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+
+  const handleConfirmarExcluir = async () => {
+    if (!excluirAlvo) return;
+    const alvo = excluirAlvo;
+    setExcluindo(true);
+    try {
+      await excluirUsuario(alvo.id);
+      setUsers(prev => prev.filter(u => u.id !== alvo.id));
+      showToast(`Usuário "${alvo.usuario}" excluído definitivamente.`);
+    } catch (err: any) {
+      showToast(err?.message || 'Não foi possível excluir o usuário.');
+    } finally {
+      setExcluindo(false);
+      setExcluirAlvo(null);
     }
   };
 
@@ -437,6 +456,11 @@ export const UsuariosManagement: React.FC = () => {
                             >
                               <span className="material-symbols-outlined text-[18px]">{user.ativo ? 'block' : 'check_circle'}</span>
                             </button>
+                            {!user.ativo && (
+                              <button type="button" onClick={() => setExcluirAlvo(user)} className="p-1.5 text-ink-3 hover:text-wine-600 hover:bg-wine-50 rounded-lg transition-colors cursor-pointer" title="Excluir usuário definitivamente" aria-label={`Excluir ${user.usuario}`}>
+                                <span className="material-symbols-outlined text-[18px]">delete</span>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -488,10 +512,18 @@ export const UsuariosManagement: React.FC = () => {
                         <span>{user.ativo ? 'ATIVO' : 'INATIVO'}</span>
                       </button>
 
-                      <button type="button" onClick={() => handleOpenEdit(user)} className="px-3 py-1.5 bg-navy text-white rounded-lg text-xs font-bold flex items-center space-x-1 shadow-sm">
-                        <span className="material-symbols-outlined text-sm">edit</span>
-                        <span>Editar</span>
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        {!user.ativo && (
+                          <button type="button" onClick={() => setExcluirAlvo(user)} className="px-3 py-1.5 border border-wine-200 text-wine-700 rounded-lg text-xs font-bold flex items-center space-x-1" aria-label={`Excluir ${user.usuario}`}>
+                            <span className="material-symbols-outlined text-sm">delete</span>
+                            <span>Excluir</span>
+                          </button>
+                        )}
+                        <button type="button" onClick={() => handleOpenEdit(user)} className="px-3 py-1.5 bg-navy text-white rounded-lg text-xs font-bold flex items-center space-x-1 shadow-sm">
+                          <span className="material-symbols-outlined text-sm">edit</span>
+                          <span>Editar</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -814,6 +846,15 @@ export const UsuariosManagement: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+      {excluirAlvo && (
+        <ConfirmDialog
+          title="Excluir usuário"
+          message={<>Excluir definitivamente o usuário inativo <strong>{excluirAlvo.usuario}</strong> ({excluirAlvo.nome})? A conta de acesso e o cadastro serão apagados e isso não pode ser desfeito. {excluindo ? 'Aguarde…' : ''}</>}
+          confirmLabel="Excluir"
+          onConfirm={handleConfirmarExcluir}
+          onCancel={() => { if (!excluindo) setExcluirAlvo(null); }}
+        />
       )}
       {resetAlvo && (
         <ConfirmDialog
