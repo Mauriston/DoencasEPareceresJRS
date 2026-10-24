@@ -42,3 +42,16 @@ export const resetarSenhaUsuario = async (uid: string): Promise<void> => {
   const json = await resp.json().catch(() => ({}));
   if (!resp.ok || !json.success) throw new Error(json.error || 'Não foi possível redefinir a senha.');
 };
+
+export const excluirUsuario = async (uid: string): Promise<void> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sessão expirada. Faça login novamente.');
+  const idToken = await user.getIdToken();
+  const resp = await fetch(apiUrl('/api/admin/excluir-usuario'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify({ uid }),
+  });
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok || !json.success) throw new Error(json.error || 'Não foi possível excluir o usuário.');
+};

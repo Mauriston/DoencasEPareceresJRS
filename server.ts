@@ -148,6 +148,56 @@ async function startServer() {
     }
   });
 
+  // Admin apaga definitivamente um usuário INATIVO: remove a conta do Firebase
+  // Auth e os documentos "usuarios" e "usuarios_publicos". Perfil admin e
+  // status inativo são conferidos no servidor; ninguém apaga a própria conta.
+  app.post("/api/admin/excluir-usuario", async (req, res) => {
+    try {
+      const authHeader = String(req.headers.authorization || "");
+      const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+      if (!idToken) {
+        res.status(401).json({ success: false, error: "Token ausente." });
+        return;
+      }
+      const { adminAuth, adminDb } = await getFirebaseAdmin();
+      const decoded = await adminAuth.verifyIdToken(idToken, true);
+      const solicitante = await adminDb.collection("usuarios").doc(decoded.uid).get();
+      if (!solicitante.exists || solicitante.data()?.perfil !== "admin") {
+        res.status(403).json({ success: false, error: "Apenas o Admin pode excluir usuários." });
+        return;
+      }
+      const uid = String(req.body?.uid || "");
+      if (!uid) {
+        res.status(400).json({ success: false, error: "Usuário não informado." });
+        return;
+      }
+      if (uid === decoded.uid) {
+        res.status(400).json({ success: false, error: "Você não pode excluir a própria conta." });
+        return;
+      }
+      const alvo = await adminDb.collection("usuarios").doc(uid).get();
+      if (!alvo.exists) {
+        res.status(404).json({ success: false, error: "Usuário não encontrado." });
+        return;
+      }
+      if (alvo.data()?.ativo !== false) {
+        res.status(409).json({ success: false, error: "Só é possível excluir usuários inativos." });
+        return;
+      }
+      try {
+        await adminAuth.deleteUser(uid);
+      } catch (e: any) {
+        if (e?.code !== "auth/user-not-found") throw e;
+      }
+      await adminDb.collection("usuarios").doc(uid).delete();
+      await adminDb.collection("usuarios_publicos").doc(uid).delete();
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Excluir usuário error:", error);
+      res.status(500).json({ success: false, error: "Não foi possível excluir o usuário." });
+    }
+  });
+
   app.post("/api/gemini/analyze-image", async (req, res) => {
     try {
       const { image, prompt } = req.body; // image as base64 string
