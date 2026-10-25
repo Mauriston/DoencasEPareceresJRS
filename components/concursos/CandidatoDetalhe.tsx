@@ -87,8 +87,6 @@ export const CandidatoDetalhe: React.FC<Props> = ({ candidato: c, concursoId, co
     return () => { ativo = false; };
   }, [concursoId, c.id, c.examesQtd]);
 
-  const nomesDosExames = (envios ?? []).flatMap(e => e.exames.map(x => x.nome)).filter(Boolean);
-
   return (
     <Drawer
       title="Detalhes da IS"
@@ -174,13 +172,7 @@ export const CandidatoDetalhe: React.FC<Props> = ({ candidato: c, concursoId, co
                   Carregando os exames...
                 </p>
               )}
-              {erroExames && <p className="text-sm text-wine-700">Não foi possível carregar a lista de exames.</p>}
-
-              {nomesDosExames.length > 0 && (
-                <ul className="list-disc pl-5 space-y-0.5 text-sm text-ink marker:text-ink-4">
-                  {nomesDosExames.map((nome, i) => <li key={`${nome}-${i}`} className="break-words">{nome}</li>)}
-                </ul>
-              )}
+              {erroExames && <p className="text-sm text-wine-700">Não foi possível carregar os exames enviados.</p>}
             </div>
           )}
         </section>
