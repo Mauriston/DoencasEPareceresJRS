@@ -2901,7 +2901,16 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
       {detalheCandidatoId && isDesktop && (() => {
         const c = candidatos.find(x => x.id === detalheCandidatoId);
         if (!c) return null;
-        return <CandidatoDetalhe candidato={c} concursoNome={concurso?.nome || ''} statusTag={<CandidatoStatusTag status={c.status} />} onClose={() => setDetalheCandidatoId(null)} />;
+        return (
+          <CandidatoDetalhe
+            candidato={c}
+            concursoId={concursoId}
+            concursoNome={concurso?.nome || ''}
+            statusTag={<CandidatoStatusTag status={c.status} />}
+            onClose={() => setDetalheCandidatoId(null)}
+            onVerExames={c.examesQtd > 0 ? () => handleVerExames(c) : undefined}
+          />
+        );
       })()}
 
       {menuAcoes && (() => {
