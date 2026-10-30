@@ -3,9 +3,11 @@
 //  - "videos": vídeos do YouTube. O Admin informa só a URL; o título vem do oEmbed do
 //    YouTube e a thumbnail é a do próprio YouTube (i.ytimg.com).
 //  - "infograficos": título + imagem enviada ao Storage em infograficos/{id}.{ext}.
+//  - "visualizacoesExtras": quem abriu cada vídeo/infográfico (um doc por pessoa e item, com o
+//    número de vezes). Cada usuário grava só as próprias visualizações; só o Admin lê.
 // Leitura: usuário autenticado; escrita: Admin (ver firestore.rules e storage.rules).
 import {
-  getFirestore, collection, doc, onSnapshot, deleteDoc, setDoc, serverTimestamp, type Timestamp,
+  getFirestore, collection, doc, onSnapshot, deleteDoc, setDoc, serverTimestamp, increment, query, where, getDocs, type Timestamp,
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { app } from './firebaseAuth';
@@ -13,6 +15,7 @@ import { app } from './firebaseAuth';
 const db = getFirestore(app);
 const COL_VIDEOS = 'videos';
 const COL_INFOGRAFICOS = 'infograficos';
+const COL_VISUALIZACOES = 'visualizacoesExtras';
 
 export interface VideoRecord {
   id: string;
@@ -72,7 +75,10 @@ export const criarVideo = async (dados: { youtubeId: string; titulo: string; thu
   await setDoc(doc(db, COL_VIDEOS, dados.youtubeId), { ...dados, criadoEm: serverTimestamp() });
 };
 
-export const apagarVideo = (id: string) => deleteDoc(doc(db, COL_VIDEOS, id));
+export const apagarVideo = async (id: string): Promise<void> => {
+  await deleteDoc(doc(db, COL_VIDEOS, id));
+  await apagarVisualizacoes('video', id);
+};
 
 // ---------------------------------------------------------------------------
 // Infográficos
@@ -100,5 +106,50 @@ export const criarInfografico = async (titulo: string, arquivo: File, criadoPor:
 
 export const apagarInfografico = async (item: InfograficoRecord): Promise<void> => {
   await deleteDoc(doc(db, COL_INFOGRAFICOS, item.id));
+  await apagarVisualizacoes('infografico', item.id);
   if (item.imagePath) await deleteObject(ref(getStorage(app), item.imagePath)).catch(() => { /* imagem já removida */ });
+};
+
+// ---------------------------------------------------------------------------
+// Visualizações (registradas ao abrir o card; exibidas só ao Admin)
+// ---------------------------------------------------------------------------
+
+export type TipoExtra = 'video' | 'infografico';
+
+export interface VisualizacaoExtra {
+  id: string;
+  tipo: TipoExtra;
+  itemId: string;
+  uid: string;
+  nome: string;
+  vezes: number;
+  ultimaEm?: Timestamp;
+}
+
+/** Soma uma visualização do usuário no item (doc {tipo}__{itemId}__{uid}). */
+export const registrarVisualizacao = (tipo: TipoExtra, itemId: string, usuario: { uid: string; nome: string }) =>
+  setDoc(doc(db, COL_VISUALIZACOES, `${tipo}__${itemId}__${usuario.uid}`), {
+    tipo, itemId, uid: usuario.uid, nome: usuario.nome, vezes: increment(1), ultimaEm: serverTimestamp(),
+  }, { merge: true });
+
+/** Visualizações de todos os itens do tipo, agrupadas por item (mais recentes primeiro). Só o Admin pode ler. */
+export const observarVisualizacoes = (tipo: TipoExtra, onData: (porItem: Record<string, VisualizacaoExtra[]>) => void, onError?: (e: Error) => void) =>
+  onSnapshot(
+    query(collection(db, COL_VISUALIZACOES), where('tipo', '==', tipo)),
+    snap => {
+      const porItem: Record<string, VisualizacaoExtra[]> = {};
+      snap.docs.forEach(d => {
+        const v = { id: d.id, ...(d.data() as Omit<VisualizacaoExtra, 'id'>) };
+        (porItem[v.itemId] ??= []).push(v);
+      });
+      Object.values(porItem).forEach(l => l.sort((a, b) => (b.ultimaEm?.toMillis?.() ?? 0) - (a.ultimaEm?.toMillis?.() ?? 0)));
+      onData(porItem);
+    },
+    err => onError?.(err),
+  );
+
+/** Apaga as visualizações de um item removido (Admin). */
+const apagarVisualizacoes = async (tipo: TipoExtra, itemId: string): Promise<void> => {
+  const snap = await getDocs(query(collection(db, COL_VISUALIZACOES), where('tipo', '==', tipo), where('itemId', '==', itemId)));
+  await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
 };
