@@ -1,41 +1,91 @@
-import React, { useState, useEffect } from 'react';
-import { Loader2, RefreshCw, AlertCircle, ArrowLeft, Download, Share2, ChevronRight } from './ui/icons';
+// Ficheiro: components/Infograficos.tsx
+// Infográficos (resumos ilustrados), guardados no Firestore (coleção "infograficos"; antes vinham
+// da planilha) com a imagem no Firebase Storage. O Admin adiciona um infográfico com título e
+// imagem. Tocar no card abre a imagem num modal em tela cheia (baixar, compartilhar, fechar).
+import React, { useContext, useEffect, useState } from 'react';
+import { Loader2, Download, Share2, X } from './ui/icons';
 import { Container, PageHeader } from './ui/Page';
-import { fetchExtras, ExtraItem } from '../services/extrasService';
+import { Dialog } from './ui/Dialog';
+import { Button } from './ui/Button';
+import { Field } from './ui/Field';
+import { IconButton } from './ui/IconButton';
+import { Toast } from './ui/Toast';
+import { NavContext } from '../context/NavContext';
+import { useEscapeEmpilhado } from '../hooks/useEscapeEmpilhado';
+import {
+  observarInfograficos, criarInfografico, apagarInfografico, LIMITE_INFOGRAFICO_MB, type InfograficoRecord,
+} from '../services/firestoreExtras';
 
-export const Infograficos: React.FC = () => {
-  const [infograficos, setInfograficos] = useState<ExtraItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedItem, setSelectedItem] = useState<ExtraItem | null>(null);
+const NovoInfograficoDialog: React.FC<{ criadoPor: string; onClose: () => void; onCriado: () => void }> = ({ criadoPor, onClose, onCriado }) => {
+  const [titulo, setTitulo] = useState('');
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [previa, setPrevia] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState('');
+  const inputArquivo = React.useRef<HTMLInputElement>(null);
 
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
+  useEffect(() => {
+    if (!arquivo) { setPrevia(null); return; }
+    const url = URL.createObjectURL(arquivo);
+    setPrevia(url);
+    return () => URL.revokeObjectURL(url);
+  }, [arquivo]);
+
+  const erroArquivo = arquivo && !arquivo.type.startsWith('image/') ? 'Escolha um arquivo de imagem (JPG, PNG, WebP…).'
+    : arquivo && arquivo.size > LIMITE_INFOGRAFICO_MB * 1024 * 1024 ? `A imagem deve ter até ${LIMITE_INFOGRAFICO_MB} MB.` : '';
+  const valido = !!titulo.trim() && !!arquivo && !erroArquivo;
+
+  const salvar = async () => {
+    if (!valido || !arquivo) return;
+    setSalvando(true);
+    setErro('');
     try {
-      const data = await fetchExtras();
-      const filtered = data.filter(item => item.format === 'Infográficos');
-      const sorted = filtered.sort((a, b) => a.title.localeCompare(b.title));
-      setInfograficos(sorted);
-    } catch (err) {
-      console.error('Erro ao buscar infográficos:', err);
-      setError('Não foi possível sincronizar os dados com o Google Sheets. Carregando dados locais.');
-    } finally {
-      setLoading(false);
+      await criarInfografico(titulo, arquivo, criadoPor);
+      onCriado();
+    } catch {
+      setErro('Não foi possível salvar o infográfico.');
+      setSalvando(false);
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  return (
+    <Dialog
+      title="Novo infográfico" icon="image" size="md" onClose={onClose} travado={salvando}
+      footer={<><Button variant="secondary" onClick={onClose} disabled={salvando}>Cancelar</Button><Button icon="save" onClick={salvar} loading={salvando} disabled={!valido}>Salvar</Button></>}
+    >
+      <div className="space-y-4">
+        <Field label="Título do infográfico" required>
+          {a => (
+            <div className="flex gap-2">
+              <input {...a} autoFocus value={titulo} onChange={e => setTitulo(e.target.value)} maxLength={120} autoComplete="off" />
+              <IconButton icon="add_photo_alternate" label={arquivo ? 'Trocar imagem' : 'Adicionar imagem'} variant="secondary" onClick={() => inputArquivo.current?.click()} disabled={salvando} />
+              <input ref={inputArquivo} type="file" accept="image/*" className="hidden" onChange={e => setArquivo(e.target.files?.[0] ?? null)} />
+            </div>
+          )}
+        </Field>
+        <p className={`text-xs ${erroArquivo ? 'font-semibold text-wine' : 'text-ink-3'}`} role={erroArquivo ? 'alert' : undefined}>
+          {erroArquivo || (arquivo ? arquivo.name : `Imagem de até ${LIMITE_INFOGRAFICO_MB} MB.`)}
+        </p>
+        {previa && !erroArquivo && <img src={previa} alt="Prévia do infográfico" className="w-full max-h-64 object-contain rounded-lg border border-line bg-thead" />}
+        {erro && <p role="alert" className="text-xs font-semibold text-wine">{erro}</p>}
+      </div>
+    </Dialog>
+  );
+};
 
-  const handleDownload = async (item: ExtraItem) => {
-    if (!item.imageUrl) return;
+/** Infográfico em tela cheia: baixar, compartilhar e fechar (Esc também fecha). */
+const InfograficoFullscreen: React.FC<{ item: InfograficoRecord; onClose: () => void }> = ({ item, onClose }) => {
+  useEscapeEmpilhado(onClose);
+
+  const handleDownload = async () => {
     try {
       const response = await fetch(item.imageUrl);
       const blob = await response.blob();
-      const filename = `${item.title.replace(/[^a-zA-Z0-9 -]/g, '').trim()}.jpg`;
+      const ext = item.imagePath.split('.').pop() || 'jpg';
+      const filename = `${item.titulo.replace(/[^\p{L}\p{N} -]/gu, '').trim() || 'infografico'}.${ext}`;
       const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: item.title });
+        await navigator.share({ files: [file], title: item.titulo });
         return;
       }
       const url = window.URL.createObjectURL(blob);
@@ -47,19 +97,16 @@ export const Infograficos: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        window.open(item.imageUrl, '_blank');
-      }
+      if (err?.name !== 'AbortError') window.open(item.imageUrl, '_blank');
     }
   };
 
-  const handleShare = async (item: ExtraItem) => {
-    if (!item.imageUrl) return;
+  const handleShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: item.title, url: item.imageUrl });
+        await navigator.share({ title: item.titulo, url: item.imageUrl });
       } catch (err: any) {
-        if (err.name !== 'AbortError') console.error('Erro ao compartilhar:', err);
+        if (err?.name !== 'AbortError') console.error('Erro ao compartilhar:', err);
       }
     } else {
       navigator.clipboard.writeText(item.imageUrl);
@@ -67,83 +114,105 @@ export const Infograficos: React.FC = () => {
     }
   };
 
-  if (selectedItem) {
-    return (
-      <div className="fixed inset-0 z-dialog bg-white flex flex-col animate-fade-in pb-env-safe">
-        <div className="flex-shrink-0 w-full sticky top-0 z-sticky bg-navy text-white h-[56px] flex items-center justify-between px-4 border-b border-transparent">
-          <div className="flex-1 text-center font-heading text-[16px] font-semibold truncate pr-4 text-white uppercase tracking-wide">
-            {selectedItem.title}
-          </div>
-          <div className="flex items-center justify-end gap-1.5">
-            <button onClick={() => handleDownload(selectedItem)} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors" title="Baixar">
-              <Download size={18} />
-            </button>
-            <button onClick={() => handleShare(selectedItem)} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors" title="Compartilhar">
-              <Share2 size={18} />
-            </button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-auto w-full bg-navy flex flex-col items-center justify-center relative p-4">
-          {selectedItem.imageUrl ? (
-            <img src={selectedItem.imageUrl} alt={selectedItem.title} className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl block" referrerPolicy="no-referrer" />
-          ) : (
-            <div className="flex flex-col items-center justify-center p-10 text-ink-3 h-full">
-              <span className="material-symbols-outlined text-[28px] mb-4 opacity-50">broken_image</span>
-              <p>Imagem não disponível</p>
-            </div>
-          )}
-          <button onClick={() => setSelectedItem(null)} className="absolute bottom-6 right-6 bg-gold text-navy shadow-2xl rounded-2xl p-4 hover:scale-105 active:scale-95 transition-all border border-gold-400 flex items-center justify-center z-50" title="Voltar para a lista">
-            <ArrowLeft size={22} />
-          </button>
+  return (
+    <div role="dialog" aria-modal="true" aria-label={item.titulo} className="fixed inset-0 z-dialog bg-navy flex flex-col animate-fade-in pb-env-safe">
+      <div className="flex-shrink-0 w-full h-[56px] flex items-center justify-between gap-2 px-4 text-white">
+        <h2 className="flex-1 min-w-0 font-heading text-[16px] font-semibold truncate uppercase tracking-wide">{item.titulo}</h2>
+        <div className="flex items-center gap-1.5">
+          <button onClick={handleDownload} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors" title="Baixar" aria-label="Baixar"><Download size={18} /></button>
+          <button onClick={handleShare} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors" title="Compartilhar" aria-label="Compartilhar"><Share2 size={18} /></button>
+          <button onClick={onClose} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors" title="Fechar" aria-label="Fechar"><X size={20} /></button>
         </div>
       </div>
-    );
-  }
+      <div className="flex-1 overflow-auto w-full flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+        <img src={item.imageUrl} alt={item.titulo} className="max-w-full max-h-full object-contain rounded-xl shadow-2xl" />
+      </div>
+    </div>
+  );
+};
+
+export const Infograficos: React.FC = () => {
+  const nav = useContext(NavContext);
+  const ehAdmin = nav?.authUser?.perfil === 'admin';
+  const [infograficos, setInfograficos] = useState<InfograficoRecord[] | null>(null);
+  const [erro, setErro] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<InfograficoRecord | null>(null);
+  const [novo, setNovo] = useState(false);
+  const [apagando, setApagando] = useState<InfograficoRecord | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const [aviso, setAviso] = useState<{ msg: string; tom: 'success' | 'error' } | null>(null);
+
+  useEffect(() => observarInfograficos(l => { setInfograficos(l); setErro(false); }, () => setErro(true)), []);
+  useEffect(() => { if (!aviso) return; const t = setTimeout(() => setAviso(null), 3500); return () => clearTimeout(t); }, [aviso]);
+
+  const confirmarApagar = async () => {
+    if (!apagando) return;
+    setOcupado(true);
+    try {
+      await apagarInfografico(apagando);
+      setAviso({ msg: 'Infográfico removido.', tom: 'success' });
+    } catch {
+      setAviso({ msg: 'Não foi possível remover o infográfico.', tom: 'error' });
+    } finally {
+      setOcupado(false);
+      setApagando(null);
+    }
+  };
 
   return (
     <div className="flex flex-col flex-1">
       <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
-        <PageHeader title="Infográficos" description="Resumos ilustrados para consultas rápidas." />
+        <PageHeader
+          title="Infográficos" description="Resumos ilustrados para consultas rápidas."
+          actions={ehAdmin ? <IconButton icon="add_photo_alternate" label="Adicionar infográfico" onClick={() => setNovo(true)} /> : undefined}
+        />
 
-        {loading ? (
+        {infograficos === null && !erro ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
             <Loader2 className="animate-spin text-navy" size={40} />
-            <p className="text-sm font-semibold text-ink-3 font-body">Carregando infográficos...</p>
+            <p className="text-sm font-semibold text-ink-3 font-body">Carregando infográficos…</p>
           </div>
+        ) : erro ? (
+          <div className="text-center py-16 text-ink-3 font-body">Não foi possível carregar os infográficos. Verifique a conexão e tente novamente.</div>
+        ) : infograficos!.length === 0 ? (
+          <div className="text-center py-16 text-ink-3 font-body">Nenhum infográfico disponível no momento.</div>
         ) : (
-          <>
-            {error && (
-              <div className="bg-gold-50 border border-gold-200 text-gold-800 text-sm p-4 rounded-xl flex items-start gap-2.5 shadow-sm">
-                <AlertCircle className="text-gold-600 flex-shrink-0 mt-0.5" size={18} />
-                <div className="flex-1">
-                  <p className="font-semibold">Sincronização Offline</p>
-                  <p className="mt-0.5 opacity-90">{error}</p>
-                </div>
-                <button onClick={loadData} className="p-1 hover:bg-gold-100 rounded-lg text-gold-900 flex items-center justify-center transition-colors self-center">
-                  <RefreshCw size={16} />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+            {infograficos!.map(item => (
+              <div key={item.id} className="relative group bg-white rounded-xl border border-line/60 shadow-sm overflow-hidden flex flex-col hover:shadow-md hover:border-navy transition-all">
+                <button type="button" onClick={() => setSelectedItem(item)} className="flex flex-col w-full text-left focus:outline-none">
+                  <div className="w-full aspect-[4/5] bg-thead overflow-hidden">
+                    <img src={item.imageUrl} alt="" loading="lazy" className="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform" />
+                  </div>
+                  <h3 className="p-3 text-sm font-bold text-navy font-heading leading-snug line-clamp-3">{item.titulo}</h3>
                 </button>
+                {ehAdmin && <IconButton icon="delete" label={`Remover infográfico ${item.titulo}`} variant="overlay" className="absolute top-1.5 right-1.5" onClick={() => setApagando(item)} />}
               </div>
-            )}
-            {infograficos.length === 0 ? (
-              <div className="text-center py-16 text-ink-3 font-body">Nenhum infográfico disponível no momento.</div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {infograficos.map((item) => (
-                  <button key={item.id} onClick={() => setSelectedItem(item)} className="group bg-white rounded-2xl border border-line/60 shadow-sm overflow-hidden flex flex-col w-full hover:shadow-md hover:border-navy transition-all duration-300 text-left p-4 md:p-5">
-                    <div className="flex justify-between items-start gap-4 w-full">
-                      <h3 className="text-base font-bold text-navy font-heading leading-snug group-hover:text-navy transition-colors">{item.title}</h3>
-                      <ChevronRight className="text-ink-3 group-hover:text-navy transform group-hover:translate-x-1 transition-all flex-shrink-0 mt-0.5" size={18} />
-                    </div>
-                    {item.description && (
-                      <p className="text-sm text-ink-3 font-body leading-relaxed line-clamp-3 mt-2">{item.description}</p>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
+            ))}
+          </div>
         )}
       </Container>
+
+      {selectedItem && <InfograficoFullscreen item={selectedItem} onClose={() => setSelectedItem(null)} />}
+
+      {novo && (
+        <NovoInfograficoDialog
+          criadoPor={nav?.authUser?.usuario ?? ''}
+          onClose={() => setNovo(false)}
+          onCriado={() => { setNovo(false); setAviso({ msg: 'Infográfico adicionado.', tom: 'success' }); }}
+        />
+      )}
+
+      {apagando && (
+        <Dialog
+          title="Remover infográfico" icon="delete" onClose={() => !ocupado && setApagando(null)}
+          footer={<><Button variant="secondary" onClick={() => setApagando(null)} disabled={ocupado}>Cancelar</Button><Button variant="destructive" icon="delete" onClick={confirmarApagar} loading={ocupado}>Remover</Button></>}
+        >
+          <p>Remover <strong>{apagando.titulo}</strong> da página Infográficos? A imagem também será apagada.</p>
+        </Dialog>
+      )}
+
+      <Toast message={aviso?.msg ?? null} tone={aviso?.tom} />
     </div>
   );
 };
