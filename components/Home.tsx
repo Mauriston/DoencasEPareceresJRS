@@ -19,11 +19,11 @@ import { canAccessPage, canUseFeature } from '../config/permissions';
 import { pathForView, concursoPath, concursosDiaPath } from '../config/routes';
 import { observarConcursos, type ConcursoRecord } from '../services/firestoreConcursos';
 import { observarPareceres, statusEfetivo, type ParecerRecord } from '../services/firestorePareceres';
-import { observarInspecoes, type InspecaoRecord } from '../services/firestoreInspecoes';
+import { observarInspecoes, observarBloqueios, type InspecaoRecord } from '../services/firestoreInspecoes';
 import { MiniCalendarioIS } from './inspecoes/MiniCalendarioIS';
 import { EnviarExamesModal } from './concursos/ExamesCandidato';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
-import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr } from '../utils/inspecoes';
+import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, diasEntre, TODOS_PERITOS, type BloqueioAgenda } from '../utils/inspecoes';
 import { observarPericiasMenores, statusPericia, dataBR, type PericiaMenorRecord } from '../services/firestorePericiasMenores';
 import { extrairNomeInspecionado } from '../utils/format';
 import { useIsDesktop } from '../hooks/useIsDesktop';
@@ -135,6 +135,14 @@ export const Home: React.FC = () => {
   useEffect(() => (podePericiaMenor ? observarPericiasMenores(setPericias, () => { /* silencioso */ }) : undefined), [podePericiaMenor]);
   const vigentes = useMemo(() => pericias.filter(p => statusPericia(p) === 'vigente').sort((a, b) => a.dataTermino.localeCompare(b.dataTermino)), [pericias]);
 
+  // Próximas férias: bloqueios da agenda com motivo "FÉRIAS" (sem distinguir acento/caixa) ainda não
+  // terminados, os mais próximos primeiro. Visível a todos; o card só aparece quando há registro.
+  const [bloqueios, setBloqueios] = useState<BloqueioAgenda[]>([]);
+  useEffect(() => observarBloqueios(setBloqueios, () => { /* silencioso */ }), []);
+  const ferias = useMemo(() => bloqueios
+    .filter(b => /\bferias\b/.test(b.motivo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()) && (b.dataFim || b.data) >= hoje)
+    .sort((a, b) => a.data.localeCompare(b.data) || (a.peritoNome ?? '').localeCompare(b.peritoNome ?? '')), [bloqueios, hoje]);
+
   const atencao: Atencao[] = [];
   if (authUser?.senhaTemporaria) {
     atencao.push({ id: 'senha', icone: 'key', titulo: 'Senha temporária', detalhe: 'Altere a senha inicial por uma só sua.', tag: 'Segurança', tom: 'danger', to: '/perfil' });
@@ -239,6 +247,29 @@ export const Home: React.FC = () => {
                 <EmptyState icon="task_alt" title="Nada pendente" description="Não há pareceres atrasados, perícias vigentes, inspeções de hoje nem concursos em andamento ou de hoje para você agora." />
               )}
             </Secao>
+
+            {ferias.length > 0 && (
+              <Secao id="home-ferias" titulo="Próximas férias">
+                <ul className="divide-y divide-line">
+                  {ferias.slice(0, 6).map(f => {
+                    const fim = f.dataFim || f.data;
+                    const emCurso = f.data <= hoje;
+                    const dias = diasEntre(f.data, fim) + 1;
+                    return (
+                      <li key={f.id} className="flex items-center gap-3 px-4 min-h-[56px] py-2">
+                        <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">beach_access</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold text-navy truncate">{f.peritoUid === TODOS_PERITOS ? 'Todos os peritos' : (f.peritoNome || 'Perito')}</span>
+                          <span className="block text-xs text-ink-3 truncate">{fim === f.data ? dataBr(f.data) : `${dataBr(f.data)} a ${dataBr(fim)}`} · {dias} dia{dias !== 1 ? 's' : ''}</span>
+                        </span>
+                        <StatusTag tone={emCurso ? 'attention' : 'navyOutline'} className="shrink-0">{emCurso ? 'Em férias' : 'Programada'}</StatusTag>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {ferias.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{ferias.length - 6} período{ferias.length - 6 !== 1 ? 's' : ''} de férias.</p>}
+              </Secao>
+            )}
 
             {podeInspecoes && (
               <Secao id="home-proximas" titulo="Próximas Inspeções" acao={<Link to="/inspecoes" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver inspeções</Link>}>
