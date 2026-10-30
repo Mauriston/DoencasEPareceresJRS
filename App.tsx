@@ -20,6 +20,7 @@ import { ConcursosJRS } from './components/ConcursosJRS';
 import { PortariaGuide } from './components/PortariaGuide';
 import { ExamesGuide } from './components/ExamesGuide';
 import { Infograficos } from './components/Infograficos';
+import { Apresentacoes } from './components/Apresentacoes';
 import { Pareceres } from './components/Pareceres';
 import { CasosPericiais } from './components/CasosPericiais';
 import { Videos } from './components/Videos';
@@ -307,6 +308,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor /> : <AccessDenied pagina={paginaLabel('pericia-menor')} />;
       case 'mensagens': return can('mensagens') ? <Mensagens /> : <AccessDenied pagina={paginaLabel('mensagens')} />;
       case 'infograficos': return can('infograficos') ? <Infograficos /> : <AccessDenied pagina={paginaLabel('infograficos')} />;
+      case 'apresentacoes': return can('apresentacoes') ? <Apresentacoes /> : <AccessDenied pagina={paginaLabel('apresentacoes')} />;
       case 'casos': return can('casos') ? <CasosPericiais /> : <AccessDenied pagina={paginaLabel('casos')} />;
       case 'videos': return can('videos') ? <Videos /> : <AccessDenied pagina={paginaLabel('videos')} />;
       case 'roteiro': return can('roteiro') ? <RoteiroJRS /> : <AccessDenied pagina={paginaLabel('roteiro')} />;
