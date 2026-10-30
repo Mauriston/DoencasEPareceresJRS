@@ -1,7 +1,8 @@
 // Ficheiro: components/Videos.tsx
 // Vídeos sobre os processos das IS, guardados no Firestore (coleção "videos"; antes vinham da
 // planilha). O Admin adiciona um vídeo informando só a URL do YouTube: o título e a thumbnail
-// são obtidos do próprio YouTube. Tocar no card abre o player em tela cheia.
+// são obtidos do próprio YouTube. Tocar no card abre o player em tela cheia e registra a visualização;
+// o Admin vê no card o olho com o total e, ao passar o mouse, a lista de quem assistiu.
 import React, { useContext, useEffect, useState } from 'react';
 import { Loader2, Play, X } from './ui/icons';
 import { Container, PageHeader } from './ui/Page';
@@ -10,9 +11,11 @@ import { Button } from './ui/Button';
 import { Field } from './ui/Field';
 import { IconButton } from './ui/IconButton';
 import { Toast } from './ui/Toast';
+import { VisualizacoesBadge } from './ui/VisualizacoesBadge';
 import { NavContext } from '../context/NavContext';
 import {
-  observarVideos, criarVideo, apagarVideo, extrairYoutubeId, buscarDadosYoutube, type VideoRecord,
+  observarVideos, criarVideo, apagarVideo, extrairYoutubeId, buscarDadosYoutube, observarVisualizacoes, registrarVisualizacao,
+  type VideoRecord, type VisualizacaoExtra,
 } from '../services/firestoreExtras';
 
 const NovoVideoDialog: React.FC<{ existentes: VideoRecord[]; criadoPor: string; onClose: () => void; onCriado: (titulo: string) => void }> = ({ existentes, criadoPor, onClose, onCriado }) => {
@@ -86,6 +89,15 @@ export const Videos: React.FC = () => {
   const [aviso, setAviso] = useState<{ msg: string; tom: 'success' | 'error' } | null>(null);
 
   useEffect(() => observarVideos(v => { setVideos(v); setErro(false); }, () => setErro(true)), []);
+  const [visualizacoes, setVisualizacoes] = useState<Record<string, VisualizacaoExtra[]>>({});
+  useEffect(() => (ehAdmin ? observarVisualizacoes('video', setVisualizacoes, () => { /* silencioso */ }) : undefined), [ehAdmin]);
+
+  // Registra a visualização (o Admin, que audita, não entra na contagem).
+  const abrir = (video: VideoRecord) => {
+    setSelectedVideo(video.youtubeId);
+    const u = nav?.authUser;
+    if (u && nav?.perfilReal !== 'admin') registrarVisualizacao('video', video.id, { uid: u.uid, nome: u.usuario || u.nome }).catch(() => { /* silencioso */ });
+  };
   useEffect(() => { if (!aviso) return; const t = setTimeout(() => setAviso(null), 3500); return () => clearTimeout(t); }, [aviso]);
 
   const confirmarApagar = async () => {
@@ -122,9 +134,9 @@ export const Videos: React.FC = () => {
         ) : (
           <div className="grid grid-cols-2 gap-3 max-w-4xl mx-auto">
             {videos!.map(video => (
-              <div key={video.id} className="relative group bg-white rounded-lg shadow-sm border border-line/60 overflow-hidden flex flex-col hover:shadow-md hover:border-navy transition-all animate-fade-in">
-                <button type="button" className="flex flex-col w-full text-left focus:outline-none active:scale-[0.98] transition-transform" onClick={() => setSelectedVideo(video.youtubeId)}>
-                  <div className="w-full aspect-video bg-black relative flex-shrink-0">
+              <div key={video.id} className="relative group bg-white rounded-lg shadow-sm border border-line/60 flex flex-col hover:shadow-md hover:border-navy transition-all animate-fade-in">
+                <button type="button" className="flex flex-col w-full text-left focus:outline-none active:scale-[0.98] transition-transform" onClick={() => abrir(video)}>
+                  <div className="w-full aspect-video bg-black relative flex-shrink-0 rounded-t-lg overflow-hidden">
                     <img src={video.thumbnailUrl} alt={`Thumbnail de ${video.titulo}`} className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                       <div className="w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg pl-1 group-hover:scale-110 transition-transform">
@@ -132,10 +144,11 @@ export const Videos: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex-1 p-3 flex flex-col items-center justify-center min-w-0 bg-white">
+                  <div className="flex-1 p-3 flex flex-col items-center justify-center min-w-0 bg-white rounded-b-lg">
                     <h3 className="text-xs font-heading font-bold text-navy leading-snug line-clamp-3 text-center">{video.titulo}</h3>
                   </div>
                 </button>
+                {ehAdmin && <VisualizacoesBadge lista={visualizacoes[video.id] ?? []} className="absolute top-1.5 left-1.5" />}
                 {ehAdmin && <IconButton icon="delete" label={`Remover vídeo ${video.titulo}`} variant="overlay" className="absolute top-1.5 right-1.5" onClick={() => setApagando(video)} />}
               </div>
             ))}

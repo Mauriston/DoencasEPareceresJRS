@@ -1,7 +1,8 @@
 // Ficheiro: components/Infograficos.tsx
 // Infográficos (resumos ilustrados), guardados no Firestore (coleção "infograficos"; antes vinham
 // da planilha) com a imagem no Firebase Storage. O Admin adiciona um infográfico com título e
-// imagem. Tocar no card abre a imagem num modal em tela cheia (baixar, compartilhar, fechar).
+// imagem. Tocar no card abre a imagem num modal em tela cheia (baixar, compartilhar, fechar) e registra a
+// visualização; o Admin vê no card o olho com o total e, ao passar o mouse, a lista de quem viu.
 import React, { useContext, useEffect, useState } from 'react';
 import { Loader2, Download, Share2, X } from './ui/icons';
 import { Container, PageHeader } from './ui/Page';
@@ -10,10 +11,12 @@ import { Button } from './ui/Button';
 import { Field } from './ui/Field';
 import { IconButton } from './ui/IconButton';
 import { Toast } from './ui/Toast';
+import { VisualizacoesBadge } from './ui/VisualizacoesBadge';
 import { NavContext } from '../context/NavContext';
 import { useEscapeEmpilhado } from '../hooks/useEscapeEmpilhado';
 import {
-  observarInfograficos, criarInfografico, apagarInfografico, LIMITE_INFOGRAFICO_MB, type InfograficoRecord,
+  observarInfograficos, criarInfografico, apagarInfografico, LIMITE_INFOGRAFICO_MB, observarVisualizacoes, registrarVisualizacao,
+  type InfograficoRecord, type VisualizacaoExtra,
 } from '../services/firestoreExtras';
 
 const NovoInfograficoDialog: React.FC<{ criadoPor: string; onClose: () => void; onCriado: () => void }> = ({ criadoPor, onClose, onCriado }) => {
@@ -143,6 +146,15 @@ export const Infograficos: React.FC = () => {
   const [aviso, setAviso] = useState<{ msg: string; tom: 'success' | 'error' } | null>(null);
 
   useEffect(() => observarInfograficos(l => { setInfograficos(l); setErro(false); }, () => setErro(true)), []);
+  const [visualizacoes, setVisualizacoes] = useState<Record<string, VisualizacaoExtra[]>>({});
+  useEffect(() => (ehAdmin ? observarVisualizacoes('infografico', setVisualizacoes, () => { /* silencioso */ }) : undefined), [ehAdmin]);
+
+  // Registra a visualização (o Admin, que audita, não entra na contagem).
+  const abrir = (item: InfograficoRecord) => {
+    setSelectedItem(item);
+    const u = nav?.authUser;
+    if (u && nav?.perfilReal !== 'admin') registrarVisualizacao('infografico', item.id, { uid: u.uid, nome: u.usuario || u.nome }).catch(() => { /* silencioso */ });
+  };
   useEffect(() => { if (!aviso) return; const t = setTimeout(() => setAviso(null), 3500); return () => clearTimeout(t); }, [aviso]);
 
   const confirmarApagar = async () => {
@@ -179,13 +191,14 @@ export const Infograficos: React.FC = () => {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
             {infograficos!.map(item => (
-              <div key={item.id} className="relative group bg-white rounded-xl border border-line/60 shadow-sm overflow-hidden flex flex-col hover:shadow-md hover:border-navy transition-all">
-                <button type="button" onClick={() => setSelectedItem(item)} className="flex flex-col w-full text-left focus:outline-none">
-                  <div className="w-full aspect-[4/5] bg-thead overflow-hidden">
+              <div key={item.id} className="relative group bg-white rounded-xl border border-line/60 shadow-sm flex flex-col hover:shadow-md hover:border-navy transition-all">
+                <button type="button" onClick={() => abrir(item)} className="flex flex-col w-full text-left focus:outline-none">
+                  <div className="w-full aspect-[4/5] bg-thead overflow-hidden rounded-t-xl">
                     <img src={item.imageUrl} alt="" loading="lazy" className="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform" />
                   </div>
                   <h3 className="p-3 text-sm font-bold text-navy font-heading leading-snug line-clamp-3">{item.titulo}</h3>
                 </button>
+                {ehAdmin && <VisualizacoesBadge lista={visualizacoes[item.id] ?? []} className="absolute top-1.5 left-1.5" />}
                 {ehAdmin && <IconButton icon="delete" label={`Remover infográfico ${item.titulo}`} variant="overlay" className="absolute top-1.5 right-1.5" onClick={() => setApagando(item)} />}
               </div>
             ))}

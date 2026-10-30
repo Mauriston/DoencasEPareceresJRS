@@ -151,6 +151,17 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Coleção "visualizacoesExtras": quem abriu cada vídeo/infográfico (id = {tipo}__{itemId}__{uid}).
+    // Cada usuário grava só o PRÓPRIO registro (soma 1 em "vezes"); só o Admin lê.
+    match /visualizacoesExtras/{id} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid
+        && id == request.resource.data.tipo + '__' + request.resource.data.itemId + '__' + request.auth.uid;
+      allow update: if isSignedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vezes', 'ultimaEm', 'nome']);
+      allow delete: if isAdmin();
+    }
+
     // Coleção "quesitosParecer": modelos de quesitos por especialidade
     // (id = slug da especialidade). Lê quem está autenticado; só o Admin edita.
     match /quesitosParecer/{id} {
