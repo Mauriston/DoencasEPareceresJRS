@@ -140,6 +140,17 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Coleções "videos" (id = id do vídeo no YouTube) e "infograficos" (imagem no Storage em
+    // infograficos/): páginas Vídeos e Infográficos. Lê quem está autenticado; só o Admin edita.
+    match /videos/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /infograficos/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // Coleção "quesitosParecer": modelos de quesitos por especialidade
     // (id = slug da especialidade). Lê quem está autenticado; só o Admin edita.
     match /quesitosParecer/{id} {
