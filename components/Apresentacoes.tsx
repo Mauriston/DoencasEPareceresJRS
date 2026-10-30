@@ -3,7 +3,8 @@
 // "apresentacoes"). O Admin adiciona uma apresentação informando só a URL: o título e a capa são
 // lidos da própria URL pelo backend (og:title/og:image; miniatura do Drive no Google Slides;
 // screenshot da página quando não há imagem). URL do Google Slides é convertida para /present.
-// Tocar no card abre a apresentação em nova aba e registra a visualização; o Admin vê no card o
+// Tocar no card abre a apresentação num modal em tela cheia (iframe com a URL de incorporação; o link
+// original, em modo de apresentação, fica no botão "Abrir em nova aba") e registra a visualização; o Admin vê no card o
 // olho com o total e, ao passar o mouse, a lista de quem abriu.
 import React, { useContext, useEffect, useState } from 'react';
 import { Loader2 } from './ui/icons';
@@ -15,8 +16,9 @@ import { IconButton } from './ui/IconButton';
 import { Toast } from './ui/Toast';
 import { VisualizacoesBadge } from './ui/VisualizacoesBadge';
 import { NavContext } from '../context/NavContext';
+import { useEscapeEmpilhado } from '../hooks/useEscapeEmpilhado';
 import {
-  observarApresentacoes, criarApresentacao, apagarApresentacao, normalizarUrlApresentacao, buscarDadosApresentacao,
+  observarApresentacoes, criarApresentacao, apagarApresentacao, normalizarUrlApresentacao, buscarDadosApresentacao, urlEmbedApresentacao,
   observarVisualizacoes, registrarVisualizacao, type ApresentacaoRecord, type PlataformaApresentacao, type VisualizacaoExtra,
 } from '../services/firestoreExtras';
 
@@ -31,6 +33,45 @@ const Capa: React.FC<{ src: string; className?: string }> = ({ src, className = 
       {src && !falhou
         ? <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFalhou(true)} className="absolute inset-0 w-full h-full object-cover" />
         : <span className="absolute inset-0 flex items-center justify-center material-symbols-outlined text-[40px] text-white/60" aria-hidden="true">slideshow</span>}
+    </div>
+  );
+};
+
+/** Apresentação em tela cheia dentro do app: tela cheia nativa, abrir em nova aba e fechar (Esc também fecha). */
+const ApresentacaoFullscreen: React.FC<{ item: ApresentacaoRecord; onClose: () => void }> = ({ item, onClose }) => {
+  const quadro = React.useRef<HTMLDivElement>(null);
+  const [carregando, setCarregando] = useState(true);
+  useEscapeEmpilhado(onClose);
+  // Trava a rolagem da página por baixo do modal.
+  useEffect(() => {
+    const anterior = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = anterior; };
+  }, []);
+  const telaCheia = () => { quadro.current?.requestFullscreen?.().catch(() => { /* navegador sem suporte */ }); };
+  const botao = 'w-11 h-11 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors';
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label={item.titulo} className="fixed inset-0 z-dialog bg-navy flex flex-col animate-fade-in pb-env-safe">
+      <div className="flex-shrink-0 w-full h-[56px] flex items-center justify-between gap-2 px-4 text-white">
+        <h2 className="flex-1 min-w-0 font-heading text-[16px] font-semibold truncate">{item.titulo}</h2>
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={telaCheia} className={botao} title="Tela cheia" aria-label="Tela cheia"><span className="material-symbols-outlined text-[22px]" aria-hidden="true">fullscreen</span></button>
+          <a href={item.url} target="_blank" rel="noopener noreferrer" className={botao} title="Abrir em nova aba" aria-label="Abrir em nova aba"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">open_in_new</span></a>
+          <button type="button" onClick={onClose} className={botao} title="Fechar" aria-label="Fechar"><span className="material-symbols-outlined text-[22px]" aria-hidden="true">close</span></button>
+        </div>
+      </div>
+      <div ref={quadro} className="relative flex-1 w-full bg-black">
+        {carregando && <div className="absolute inset-0 flex items-center justify-center"><Loader2 className="animate-spin text-white/70" size={36} /></div>}
+        <iframe
+          src={urlEmbedApresentacao(item)}
+          title={item.titulo}
+          className="absolute inset-0 w-full h-full border-0"
+          allow="fullscreen; autoplay; clipboard-write"
+          allowFullScreen
+          onLoad={() => setCarregando(false)}
+        />
+      </div>
     </div>
   );
 };
@@ -108,6 +149,7 @@ export const Apresentacoes: React.FC = () => {
   const [itens, setItens] = useState<ApresentacaoRecord[] | null>(null);
   const [erro, setErro] = useState(false);
   const [novo, setNovo] = useState(false);
+  const [aberta, setAberta] = useState<ApresentacaoRecord | null>(null);
   const [apagando, setApagando] = useState<ApresentacaoRecord | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<{ msg: string; tom: 'success' | 'error' } | null>(null);
@@ -117,9 +159,9 @@ export const Apresentacoes: React.FC = () => {
   const [visualizacoes, setVisualizacoes] = useState<Record<string, VisualizacaoExtra[]>>({});
   useEffect(() => (ehAdmin ? observarVisualizacoes('apresentacao', setVisualizacoes, () => { /* silencioso */ }) : undefined), [ehAdmin]);
 
-  // Abre em nova aba e registra a visualização (o Admin, que audita, não entra na contagem).
+  // Abre no modal em tela cheia e registra a visualização (o Admin, que audita, não entra na contagem).
   const abrir = (item: ApresentacaoRecord) => {
-    window.open(item.url, '_blank', 'noopener,noreferrer');
+    setAberta(item);
     const u = nav?.authUser;
     if (u && nav?.perfilReal !== 'admin') registrarVisualizacao('apresentacao', item.id, { uid: u.uid, nome: u.usuario || u.nome }).catch(() => { /* silencioso */ });
   };
@@ -163,7 +205,7 @@ export const Apresentacoes: React.FC = () => {
                   <div className="relative w-full rounded-t-lg overflow-hidden">
                     <Capa src={item.thumbnailUrl} />
                     <span className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[36px] text-white opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true">open_in_new</span>
+                      <span className="material-symbols-outlined text-[40px] text-white opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true">play_circle</span>
                     </span>
                   </div>
                   <div className="flex-1 p-3 min-w-0 rounded-b-lg">
@@ -178,6 +220,8 @@ export const Apresentacoes: React.FC = () => {
           </div>
         )}
       </Container>
+
+      {aberta && <ApresentacaoFullscreen item={aberta} onClose={() => setAberta(null)} />}
 
       {novo && (
         <NovaApresentacaoDialog
