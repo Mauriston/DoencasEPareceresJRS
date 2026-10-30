@@ -154,6 +154,23 @@ export const normalizarUrlApresentacao = (texto: string): { url: string; platafo
   return null;
 };
 
+/**
+ * URL para exibir a apresentação dentro do app (iframe). O Google bloqueia /present em iframe, então
+ * usa /embed; o Canva precisa de ?embed no link /view; GitHub Pages abre como está.
+ */
+export const urlEmbedApresentacao = (item: Pick<ApresentacaoRecord, 'url' | 'plataforma'>): string => {
+  let u: URL;
+  try { u = new URL(item.url); } catch { return item.url; }
+  if (item.plataforma === 'google') {
+    const pub = u.pathname.match(/^\/presentation\/d\/e\/([\w-]+)/);
+    if (pub) return `https://docs.google.com/presentation/d/e/${pub[1]}/embed?start=false&loop=false&delayms=3000`;
+    const m = u.pathname.match(/\/d\/([\w-]{20,})/);
+    if (m) return `https://docs.google.com/presentation/d/${m[1]}/embed?start=false&loop=false&delayms=3000`;
+  }
+  if (item.plataforma === 'canva' && /\/view\/?$/.test(u.pathname)) return `${u.origin}${u.pathname}?embed`;
+  return item.url;
+};
+
 /** Captura da página (capa) por serviço público de screenshot, quando a URL não traz og:image. */
 export const screenshotDaUrl = (url: string) => `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=1280&h=720`;
 
