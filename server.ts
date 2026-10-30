@@ -278,6 +278,75 @@ async function startServer() {
     }
   });
 
+  // Prévia de uma apresentação de slides (página Apresentações): o Admin informa a URL e o
+  // servidor lê o HTML público para tirar o título e a imagem de capa (og:title/og:image),
+  // o que o navegador não consegue por CORS. Só Admin e só hosts de apresentação conhecidos
+  // (Google Slides, Canva, GitHub Pages), inclusive nos redirecionamentos — evita usar o
+  // servidor como proxy aberto.
+  const hostApresentacaoPermitido = (u: URL) =>
+    u.protocol === "https:" &&
+    (u.hostname === "docs.google.com" || u.hostname === "canva.com" || u.hostname === "www.canva.com" || /^[a-z0-9-]+\.github\.io$/i.test(u.hostname));
+  const metaDoHtml = (html: string, nomes: string[]): string => {
+    for (const nome of nomes) {
+      const re1 = new RegExp(`<meta[^>]+(?:property|name)=["']${nome}["'][^>]*content=["']([^"']*)["']`, "i");
+      const re2 = new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]*(?:property|name)=["']${nome}["']`, "i");
+      const m = html.match(re1) || html.match(re2);
+      if (m?.[1]) return m[1];
+    }
+    return "";
+  };
+  const decodificarEntidades = (t: string) => t
+    .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;|&#x27;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
+
+  app.post("/api/admin/preview-apresentacao", async (req, res) => {
+    try {
+      const authHeader = String(req.headers.authorization || "");
+      const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+      if (!idToken) {
+        res.status(401).json({ success: false, error: "Token ausente." });
+        return;
+      }
+      const { adminAuth, adminDb } = await getFirebaseAdmin();
+      const decoded = await adminAuth.verifyIdToken(idToken, true);
+      const solicitante = await adminDb.collection("usuarios").doc(decoded.uid).get();
+      if (!solicitante.exists || solicitante.data()?.perfil !== "admin") {
+        res.status(403).json({ success: false, error: "Apenas o Admin pode adicionar apresentações." });
+        return;
+      }
+      let alvo: URL;
+      try { alvo = new URL(String(req.body?.url || "")); } catch { res.status(400).json({ success: false, error: "URL inválida." }); return; }
+      if (!hostApresentacaoPermitido(alvo)) {
+        res.status(400).json({ success: false, error: "Use uma URL do Google Slides, do Canva ou do GitHub Pages." });
+        return;
+      }
+      // Segue até 4 redirecionamentos, conferindo o host em cada um.
+      let resp: Response | null = null;
+      for (let i = 0; i < 5; i++) {
+        resp = await fetch(alvo, { redirect: "manual", signal: AbortSignal.timeout(10_000), headers: { "User-Agent": "Mozilla/5.0 (compatible; JRS-HNRe-Preview/1.0)", "Accept-Language": "pt-BR,pt;q=0.9" } });
+        const destino = resp.status >= 300 && resp.status < 400 ? resp.headers.get("location") : null;
+        if (!destino) break;
+        alvo = new URL(destino, alvo);
+        if (!hostApresentacaoPermitido(alvo)) {
+          res.status(422).json({ success: false, error: "A apresentação não está pública (pede login). Compartilhe como \"qualquer pessoa com o link\"." });
+          return;
+        }
+      }
+      if (!resp || !resp.ok) {
+        res.status(422).json({ success: false, error: "Não foi possível abrir a URL da apresentação." });
+        return;
+      }
+      const html = (await resp.text()).slice(0, 1_500_000);
+      let titulo = decodificarEntidades(metaDoHtml(html, ["og:title", "twitter:title"]) || (html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] ?? "")).trim();
+      titulo = titulo.replace(/\s+[-–|]\s+(Apresentações Google|Google Slides|Canva)$/i, "").trim();
+      const imagem = decodificarEntidades(metaDoHtml(html, ["og:image", "og:image:url", "twitter:image"]));
+      res.json({ success: true, titulo, imagem: imagem ? new URL(imagem, alvo).toString() : "" });
+    } catch (error: any) {
+      console.error("Preview apresentacao error:", error);
+      res.status(500).json({ success: false, error: "Não foi possível ler a apresentação." });
+    }
+  });
+
   if (process.env.NODE_ENV !== "production") {
     // Import dinâmico: em produção (Cloud Run) o container não tem o pacote
     // "vite" instalado (é devDependency, removido por "npm ci --omit=dev"),

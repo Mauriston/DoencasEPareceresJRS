@@ -150,8 +150,13 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+    // Coleção "apresentacoes": página Apresentações (URL do Google Slides, Canva ou GitHub Pages).
+    match /apresentacoes/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
 
-    // Coleção "visualizacoesExtras": quem abriu cada vídeo/infográfico (id = {tipo}__{itemId}__{uid}).
+    // Coleção "visualizacoesExtras": quem abriu cada vídeo/infográfico/apresentação (id = {tipo}__{itemId}__{uid}).
     // Cada usuário grava só o PRÓPRIO registro (soma 1 em "vezes"); só o Admin lê.
     match /visualizacoesExtras/{id} {
       allow read: if isAdmin();

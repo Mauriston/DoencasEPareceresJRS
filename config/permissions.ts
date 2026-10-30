@@ -44,6 +44,7 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'casos', label: 'Casos Periciais', icon: 'quiz', subtitle: 'Teste seus conhecimentos em casos comentados.' },
   { id: 'videos', label: 'Vídeos', icon: 'smart_display', subtitle: 'Assista vídeos sobre os processos das IS.' },
   { id: 'infograficos', label: 'Infográficos', icon: 'image', subtitle: 'Resumos ilustrados para consultas rápidas.' },
+  { id: 'apresentacoes', label: 'Apresentações', icon: 'slideshow', subtitle: 'Apresentações de slides sobre os processos das IS.' },
   { id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list', subtitle: 'Trilha de estudos para capacitação dos AMP.' },
 ];
 
@@ -65,6 +66,7 @@ export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {
   casos: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
   videos: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
   infograficos: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  apresentacoes: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
   roteiro: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
 };
 

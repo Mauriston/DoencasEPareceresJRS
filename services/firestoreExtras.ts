@@ -1,20 +1,24 @@
 // Ficheiro: services/firestoreExtras.ts
-// Páginas Vídeos e Infográficos (antes lidas da planilha via Apps Script).
+// Páginas Vídeos, Infográficos e Apresentações (as duas primeiras antes lidas da planilha).
 //  - "videos": vídeos do YouTube. O Admin informa só a URL; o título vem do oEmbed do
 //    YouTube e a thumbnail é a do próprio YouTube (i.ytimg.com).
 //  - "infograficos": título + imagem enviada ao Storage em infograficos/{id}.{ext}.
-//  - "visualizacoesExtras": quem abriu cada vídeo/infográfico (um doc por pessoa e item, com o
+//  - "apresentacoes": apresentações de slides (Google Slides, Canva, GitHub Pages). O Admin informa só
+//    a URL; o título e a capa vêm do backend (/api/admin/preview-apresentacao), que lê o HTML público.
+//  - "visualizacoesExtras": quem abriu cada vídeo/infográfico/apresentação (um doc por pessoa e item, com o
 //    número de vezes). Cada usuário grava só as próprias visualizações; só o Admin lê.
 // Leitura: usuário autenticado; escrita: Admin (ver firestore.rules e storage.rules).
 import {
   getFirestore, collection, doc, onSnapshot, deleteDoc, setDoc, serverTimestamp, increment, query, where, getDocs, type Timestamp,
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { app } from './firebaseAuth';
+import { app, auth } from './firebaseAuth';
+import { apiUrl } from '../utils/apiBase';
 
 const db = getFirestore(app);
 const COL_VIDEOS = 'videos';
 const COL_INFOGRAFICOS = 'infograficos';
+const COL_APRESENTACOES = 'apresentacoes';
 const COL_VISUALIZACOES = 'visualizacoesExtras';
 
 export interface VideoRecord {
@@ -111,10 +115,95 @@ export const apagarInfografico = async (item: InfograficoRecord): Promise<void> 
 };
 
 // ---------------------------------------------------------------------------
+// Apresentações
+// ---------------------------------------------------------------------------
+
+export type PlataformaApresentacao = 'google' | 'canva' | 'github';
+
+export interface ApresentacaoRecord {
+  id: string;
+  /** URL aberta ao tocar no card (Google Slides já em /present). */
+  url: string;
+  plataforma: PlataformaApresentacao;
+  titulo: string;
+  thumbnailUrl: string;
+  criadoPor?: string;
+  criadoEm?: Timestamp;
+}
+
+/**
+ * Valida a URL e a deixa pronta para abrir em modo de apresentação. Google Slides:
+ * /d/{id}/edit|view|preview|embed... → /d/{id}/present (link publicado /d/e/... fica como está).
+ */
+export const normalizarUrlApresentacao = (texto: string): { url: string; plataforma: PlataformaApresentacao; googleId?: string } | null => {
+  let u: URL;
+  try { u = new URL(texto.trim()); } catch { return null; }
+  if (u.protocol !== 'https:') return null;
+  if (u.hostname === 'docs.google.com') {
+    const pub = u.pathname.match(/^\/presentation\/d\/e\/([\w-]+)/);
+    if (pub) return { url: u.toString(), plataforma: 'google' };
+    const m = u.pathname.match(/^\/presentation(?:\/u\/\d+)?\/d\/([\w-]{20,})/);
+    if (!m) return null;
+    return { url: `https://docs.google.com/presentation/d/${m[1]}/present`, plataforma: 'google', googleId: m[1] };
+  }
+  if (u.hostname === 'canva.com' || u.hostname === 'www.canva.com') {
+    if (!u.pathname.startsWith('/design/')) return null;
+    return { url: u.toString(), plataforma: 'canva' };
+  }
+  if (/^[a-z0-9-]+\.github\.io$/i.test(u.hostname)) return { url: u.toString(), plataforma: 'github' };
+  return null;
+};
+
+/** Captura da página (capa) por serviço público de screenshot, quando a URL não traz og:image. */
+export const screenshotDaUrl = (url: string) => `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=1280&h=720`;
+
+/**
+ * Título e capa da apresentação. O backend lê og:title/og:image; no Google Slides a capa é a
+ * miniatura do Drive (estável, exige compartilhamento público) e, sem og:image, cai no screenshot.
+ * Se o backend estiver indisponível, devolve a capa possível e título vazio (o Admin digita).
+ */
+export const buscarDadosApresentacao = async (
+  n: { url: string; plataforma: PlataformaApresentacao; googleId?: string },
+): Promise<{ titulo: string; thumbnailUrl: string; aviso?: string }> => {
+  const capaPadrao = n.googleId ? `https://drive.google.com/thumbnail?id=${n.googleId}&sz=w1280` : screenshotDaUrl(n.url);
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sessão expirada. Faça login novamente.');
+  let json: any = {};
+  try {
+    const resp = await fetch(apiUrl('/api/admin/preview-apresentacao'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
+      body: JSON.stringify({ url: n.url }),
+    });
+    json = await resp.json().catch(() => ({}));
+    if (!resp.ok || !json.success) return { titulo: '', thumbnailUrl: capaPadrao, aviso: json.error || 'Não foi possível ler o título; digite-o.' };
+  } catch {
+    return { titulo: '', thumbnailUrl: capaPadrao, aviso: 'Não foi possível ler o título; digite-o.' };
+  }
+  return { titulo: String(json.titulo || ''), thumbnailUrl: n.googleId ? capaPadrao : (json.imagem || capaPadrao) };
+};
+
+export const observarApresentacoes = (onData: (lista: ApresentacaoRecord[]) => void, onError?: (e: Error) => void) =>
+  onSnapshot(
+    collection(db, COL_APRESENTACOES),
+    snap => onData(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<ApresentacaoRecord, 'id'>) })).sort(porCriacao)),
+    err => onError?.(err),
+  );
+
+export const criarApresentacao = async (dados: Omit<ApresentacaoRecord, 'id' | 'criadoEm'>): Promise<void> => {
+  await setDoc(doc(collection(db, COL_APRESENTACOES)), { ...dados, titulo: dados.titulo.trim(), criadoEm: serverTimestamp() });
+};
+
+export const apagarApresentacao = async (id: string): Promise<void> => {
+  await deleteDoc(doc(db, COL_APRESENTACOES, id));
+  await apagarVisualizacoes('apresentacao', id);
+};
+
+// ---------------------------------------------------------------------------
 // Visualizações (registradas ao abrir o card; exibidas só ao Admin)
 // ---------------------------------------------------------------------------
 
-export type TipoExtra = 'video' | 'infografico';
+export type TipoExtra = 'video' | 'infografico' | 'apresentacao';
 
 export interface VisualizacaoExtra {
   id: string;
