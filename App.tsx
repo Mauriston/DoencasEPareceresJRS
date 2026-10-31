@@ -169,13 +169,20 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   }, [authUserReal?.uid]);
   const notificacoesNaoLidas = notificacoes.filter(n => !n.lida).length;
 
-  // Push "{{usuario}} logado." para o Admin: uma vez por sessão do navegador
-  // (recarregar a página não repete); o servidor ainda segura repetições em 15 min.
+  // Push "{{usuario}} logado." para o Admin a cada acesso: ao abrir o app e
+  // ao voltar para ele depois de 5 min em segundo plano (o PWA no celular
+  // costuma ficar aberto, sem recarregar).
   useEffect(() => {
     if (!authUserReal || authUserReal.perfil === 'admin') return;
-    const chave = `jrs_push_login_${authUserReal.uid}`;
-    try { if (sessionStorage.getItem(chave)) return; sessionStorage.setItem(chave, '1'); } catch { /* sem sessionStorage */ }
     void notificarEvento({ tipo: 'login' });
+    let escondidoDesde = 0;
+    const aoMudar = () => {
+      if (document.visibilityState === 'hidden') { escondidoDesde = Date.now(); return; }
+      if (escondidoDesde && Date.now() - escondidoDesde >= 5 * 60_000) void notificarEvento({ tipo: 'login' });
+      escondidoDesde = 0;
+    };
+    document.addEventListener('visibilitychange', aoMudar);
+    return () => document.removeEventListener('visibilitychange', aoMudar);
   }, [authUserReal?.uid]);
 
   useEffect(() => {

@@ -204,7 +204,8 @@ async function startServer() {
   // evitada (coleção "notificacoes_enviadas", só acessível pelo servidor).
   // Os tokens dos aparelhos ficam em "tokens_push/{token}" com o uid do dono.
   const APP_URL = (process.env.APP_URL || "https://mauriston.github.io/DoencasEPareceresJRS/").replace(/\/?$/, "/");
-  const INTERVALO_AVISO_LOGIN_MS = 15 * 60_000;
+  // Só segura chamadas duplicadas do mesmo acesso (ex.: recarga imediata).
+  const INTERVALO_AVISO_LOGIN_MS = 60_000;
 
   /** Grava a chave de "já enviado"; false se outra requisição já enviou. */
   const marcarEnvio = async (adminDb: any, chave: string): Promise<boolean> => {
