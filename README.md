@@ -121,7 +121,7 @@ A interface do usuário foi desenhada com estrita observância à Identidade Vis
 * **Ícones:** Google Material Symbols (shim `components/ui/icons.tsx`).
 * **Firebase:** Authentication, Firestore (dados operacionais; ver `docs/database.md`), Storage (PDFs e imagens) e **Cloud Messaging** (push); regras em `firestore.rules` e `storage.rules` (publicadas à parte).
 * **Servidor (Cloud Run):** `server.ts` (Node + Express + Firebase Admin SDK) — login por NIP e por QR code, operações de Admin, notificações e Gemini; publicado por `.github/workflows/deploy-cloud-run.yml`.
-* **Google Apps Script:** geração de PDFs a partir de templates, gravação no Google Drive, e-mails para impressão, sincronização com o Google Agenda e leitura de documentos pelo Gemini (`apps-script/`, publicação manual — ver `docs/apps-script-deploy.md`).
+* **Google Apps Script (projeto único):** geração de PDFs a partir de templates, gravação no Google Drive, e-mails para impressão, sincronização com o Google Agenda e leitura de documentos pelo Gemini (`apps-script/concursos/`, publicação manual — ver `docs/apps-script-deploy.md`). As antigas planilhas do Google Sheets não são mais usadas.
 * **Inteligência Artificial:** Google Gemini para leitura de atestados, transcrição de mensagens administrativas e de exames de candidatos.
 * **PWA:** `public/manifest.webmanifest` (app **JRS/HNRe App**) e service worker do push (`public/firebase-messaging-sw.js`).
 * **Documentos locais:** `jspdf` (PDF do atestado), `pdf-lib` (junção de termos), `react-image-crop` (recorte de imagem), `qrcode` (instalação/login no celular).
@@ -137,7 +137,7 @@ A interface do usuário foi desenhada com estrita observância à Identidade Vis
   - `server.ts` *(API do Cloud Run)*
   - `firestore.rules` / `storage.rules` / `firebase.json`
   - `constants.ts`, `types.ts`, `vite.config.ts`, `tailwind.config.js`, `package.json`
-- `apps-script/` *(`principal/Code.gs` e `concursos/CodeConcursos.gs`)*
+- `apps-script/` *(projeto único: `concursos/CodeConcursos.gs` e `concursos/CodePrincipal.gs`; IDs em `projetos.json`)*
 - `components/`
   - `Home.tsx`, `Inspecoes.tsx`, `Militares.tsx`, `ConcursosJRS.tsx`, `Pareceres.tsx`, `PericiaMenor.tsx`, `UsuariosManagement.tsx`, `Perfil.tsx` *(telas de trabalho)*
   - `DiseaseGuide.tsx`, `ExamesGuide.tsx`, `ConcursosGuide.tsx`, `DGPM406Guide.tsx`, `PortariaGuide.tsx`, `LawReference.tsx` *(consulta)*
