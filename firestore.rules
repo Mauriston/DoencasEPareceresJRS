@@ -86,6 +86,18 @@ service cloud.firestore {
       allow create, delete: if false;
     }
 
+    // Fila de impressão da Secretaria (Início): documentos enviados por e-mail
+    // para a impressão. Qualquer usuário registra em SEU nome (sempre como não
+    // aberto); Secretaria e Admin leem e só podem marcar como aberto.
+    match /documentos_gerados/{id} {
+      allow read: if isAdmin() || isSecretaria();
+      allow create: if isSignedIn() && request.resource.data.criadoPorUid == request.auth.uid &&
+        request.resource.data.aberto == false;
+      allow update: if (isAdmin() || isSecretaria()) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['aberto', 'abertoEm', 'abertoPor']);
+      allow delete: if isAdmin();
+    }
+
     // Controle de repetição das notificações: só o servidor usa.
     match /notificacoes_enviadas/{id} {
       allow read, write: if false;

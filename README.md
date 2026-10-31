@@ -41,6 +41,9 @@ Antiga página *Militares*; a base (coleção `militares`) agora reúne **milita
 ### Permissões
 Em *Usuários → Permissões por Perfil* entram as páginas **Inspeções de Saúde** e **Inspecionados** e as funcionalidades de *Inspeções de Saúde* (cadastrar, agendar, editar, gerar minuta, bloquear agenda) e *Inspecionados* (cadastrar). A configuração de turnos dos peritos, apagar IS e editar/apagar/inativar inspecionados continuam exclusivos do Admin. Publique também as regras: `firebase deploy --only firestore:rules`.
 
+### Início: fila de impressão da Secretaria
+Para o perfil `user_secretaria`, a Início mostra **Últimos documentos gerados** logo abaixo de *Precisa de atenção*: os documentos enviados por e-mail para impressão (Termo de Recurso e Cientificação, Pedido de Parecer e Solicitação de Exames dos concursos, Pedido de Parecer da página Pareceres) que ainda não foram abertos, com contador. Mostra os 5 mais recentes e *Ver todos*; abrir o PDF pressupõe que foi impresso e o tira da lista. Registro em `documentos_gerados` (ver `services/documentosGerados.ts` e `firestore.rules`).
+
 ### Notificações push
 Avisos no celular/computador mesmo com o app fechado (Firebase Cloud Messaging; service worker em `public/firebase-messaging-sw.js`, cliente em `services/notificacoesPush.ts`, envio em `server.ts`, `/api/notificacoes/evento`).
 * **Eventos:** status **Inapto** lançado num concurso → todos os usuários (`{usuario} exarou laudo de inaptidão no {concurso}`); status **IDM** lançado → todos (`{usuario} exarou IDM no {concurso}`); **todas as IS de concurso de um dia finalizadas** → todos (`As IS do {concurso} de hoje foram finalizadas`); **não-Admin abre o app** → só o Admin (`{usuario} logado.`, a cada acesso: ao abrir o app e ao voltar a ele após 5 min em segundo plano). *Meu perfil* tem o botão **Enviar notificação de teste** (mostra o erro do servidor, se houver). O servidor confere o evento no Firestore e evita repetição (`notificacoes_enviadas`).
