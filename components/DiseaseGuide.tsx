@@ -189,6 +189,166 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
+// Escala de Webster para Doença de Parkinson — 10 domínios, 0 a 3 pontos cada (total 0 a 30).
+// Fonte: planilha da JRS (Escala/Interpretação), tradução livre do MDCalc.
+const websterData = [
+  { id: 1, nome: 'Bradicinesia das mãos', opcoes: [
+      "Nenhuma.",
+      "Lentificação detectável da velocidade de pronossupinação; dificuldade inicial no manuseio de ferramentas, para abotoar roupas e na escrita.",
+      "Lentificação moderada da pronossupinação (um ou ambos os lados); comprometimento moderado da função da mão; escrita muito prejudicada, com micrografia.",
+      "Lentificação grave da pronossupinação; incapaz de escrever ou abotoar roupas; dificuldade acentuada no manuseio de utensílios."
+  ]},
+  { id: 2, nome: 'Rigidez', opcoes: [
+      "Não detectável.",
+      "Rigidez detectável no pescoço e nos ombros; fenômeno de ativação presente; rigidez de repouso nos braços leve ou ausente (um ou ambos).",
+      "Rigidez moderada (pescoço e ombros); rigidez de repouso presente se o paciente estiver sem medicação.",
+      "Rigidez grave (pescoço e ombros); rigidez de repouso não revertida pela medicação."
+  ]},
+  { id: 3, nome: 'Postura', opcoes: [
+      "Postura normal; cabeça fletida para a frente < 10 cm.",
+      "Início de coluna rígida em bloco (\"poker spine\"); cabeça fletida para a frente > 13 cm.",
+      "Início de flexão dos braços; cabeça fletida até 15 cm; braços elevados (um ou ambos), mas ainda abaixo da cintura.",
+      "Início de postura simiesca; cabeça fletida para a frente > 15 cm; mãos elevadas acima da cintura (uma ou ambas); flexão acentuada das mãos; início de extensão interfalangiana e de flexão dos joelhos."
+  ]},
+  { id: 4, nome: 'Balanço dos membros superiores', opcoes: [
+      "Balança bem os dois braços.",
+      "Balanço de um braço nitidamente diminuído.",
+      "Um braço não balança.",
+      "Os dois braços não balançam."
+  ]},
+  { id: 5, nome: 'Marcha', opcoes: [
+      "Passada de 46 a 76 cm; gira sem esforço.",
+      "Passada encurtada para 30 a 46 cm; começa a bater um calcanhar no chão; giro mais lento, exigindo vários passos.",
+      "Passada moderadamente encurtada para 15 a 30 cm; os dois calcanhares começam a bater no chão com força.",
+      "Início de marcha arrastada; passos < 7,6 cm; bloqueios ou hesitações ocasionais da marcha; anda na ponta dos pés; gira muito lentamente."
+  ]},
+  { id: 6, nome: 'Tremor', opcoes: [
+      "Sem tremor detectável.",
+      "Amplitude pico a pico < 2,5 cm nos membros ou na cabeça, em repouso, ou em qualquer das mãos ao caminhar ou na prova índex-nariz.",
+      "Amplitude máxima do tremor não excede 10 cm; tremor intenso, mas não constante; o paciente mantém algum controle das mãos.",
+      "Amplitude do tremor > 10 cm; tremor intenso e constante, persistente durante a vigília (salvo tremor cerebelar puro); escrever e alimentar-se sozinho são impossíveis."
+  ]},
+  { id: 7, nome: 'Fácies', opcoes: [
+      "Normal; mímica plena; sem olhar fixo.",
+      "Imobilidade detectável; boca fechada; início de traços de ansiedade ou depressão.",
+      "Imobilidade moderada; a emoção só se manifesta com limiar muito aumentado; lábios entreabertos parte do tempo; aparência moderada de ansiedade ou depressão; pode haver sialorreia.",
+      "Fácies congelada; boca aberta ≥ 0,6 cm; sialorreia intensa."
+  ]},
+  { id: 8, nome: 'Seborreia', opcoes: [
+      "Nenhuma.",
+      "Aumento da transpiração; secreções finas.",
+      "Oleosidade evidente; secreção bem mais espessa.",
+      "Seborreia acentuada; face e couro cabeludo inteiramente cobertos por secreção espessa."
+  ]},
+  { id: 9, nome: 'Fala', opcoes: [
+      "Clara, alta, ressonante, facilmente compreendida.",
+      "Início de rouquidão, perda de inflexão e ressonância; bom volume, ainda facilmente compreendida.",
+      "Rouquidão ou fraqueza vocal moderada; monotonia constante, sem variação de tom; início de disartria, hesitação e gagueira; difícil de compreender.",
+      "Aspereza ou fraqueza vocal acentuada; muito difícil de ouvir e compreender."
+  ]},
+  { id: 10, nome: 'Autocuidado', opcoes: [
+      "Sem comprometimento.",
+      "Ainda realiza todo o autocuidado, mas a velocidade para se vestir está nitidamente reduzida; capaz de morar sozinho; pode manter atividade laboral.",
+      "Necessita de ajuda em algumas áreas críticas; muito lento na maioria das atividades, mas as realiza levando muito tempo.",
+      "Incapacidade contínua; incapaz de vestir-se, alimentar-se ou andar sozinho."
+  ]}
+];
+
+function getWebsterGrau(total: number): { titulo: string; tom: StatusTone } {
+  if (total >= 21) return { titulo: 'Doença grave ou avançada', tom: 'danger' };
+  if (total >= 11) return { titulo: 'Incapacidade moderada', tom: 'attention' };
+  if (total >= 1) return { titulo: 'Doença inicial', tom: 'neutral' };
+  return { titulo: 'Sem achados', tom: 'success' };
+}
+
+// Calculadora de Webster no mesmo padrão da CDR: rádios de 44 px por domínio e painel fixo com o
+// total. Começa sem marcações (como a planilha): o resultado só é dado com os 10 itens preenchidos.
+const WebsterCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [scores, setScores] = useState<Record<number, number>>({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const preenchidos = websterData.filter(d => scores[d.id] !== undefined).length;
+  const completo = preenchidos === websterData.length;
+  const total = websterData.reduce((acc, d) => acc + (scores[d.id] ?? 0), 0);
+  const grau = getWebsterGrau(total);
+
+  const handleCopy = async () => {
+    const text = `ESCALA DE WEBSTER (DOENÇA DE PARKINSON):\n\n${websterData.map(d => `- ${d.nome} = ${scores[d.id]}`).join('\n')}\n-------------------------------\n- Pontuação total = ${total}/30\n\n- RESULTADO: ${grau.titulo.toUpperCase()}`;
+    try { await navigator.clipboard.writeText(text); setIsCopied(true); if (navigator.share) await navigator.share({ title: 'Avaliação Escala de Webster', text }); } catch (err) { if ((err as Error).name !== 'AbortError') console.error(err); }
+  };
+
+  const escolher = (id: number, pt: number) => { setScores(sc => ({ ...sc, [id]: pt })); setIsCopied(false); };
+
+  return (
+    <div className="flex flex-col flex-1">
+      <Container size="form" className="py-6 md:py-8 pb-6 space-y-5">
+        <PageHeader
+          title="Escala de Webster"
+          description="Webster Rating Scale for Parkinson’s Disease: 10 domínios, de 0 a 3 pontos cada."
+          actions={<Button variant="secondary" icon="arrow_back" onClick={onClose}>Voltar à doença</Button>}
+        />
+        {websterData.map(cat => (
+          <div key={cat.id} role="radiogroup" aria-labelledby={`webster-${cat.id}`} className="bg-white border border-line rounded-xl overflow-hidden">
+            <h2 id={`webster-${cat.id}`} className="text-h3 font-bold text-navy px-4 pt-4 pb-2"><span className="text-ink-3 font-normal">{cat.id}.</span> {cat.nome}</h2>
+            <div className="flex flex-col">
+              {cat.opcoes.map((desc, pt) => {
+                const marcado = scores[cat.id] === pt;
+                return (
+                  <label
+                    key={pt}
+                    className={`relative flex items-center gap-3 min-h-[44px] px-4 py-3 cursor-pointer border-t border-line transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-gold ${marcado ? 'bg-navy text-white' : 'bg-white text-ink hover:bg-thead'}`}
+                  >
+                    <input type="radio" name={`webster-${cat.id}`} checked={marcado} onChange={() => escolher(cat.id, pt)} className="sr-only" />
+                    <span className="flex-1 text-sm leading-snug">{desc}</span>
+                    <span className={`shrink-0 text-xs font-bold px-2 py-1 rounded tabular-nums ${marcado ? 'bg-white/20 text-white' : 'bg-thead text-ink-3'}`}>{pt === 0 ? '0' : '+' + pt}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </Container>
+
+      <div className="sticky bottom-0 mt-auto z-sticky bg-white border-t border-line" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="mx-auto w-full max-w-form px-4 py-3 flex flex-wrap items-center justify-between gap-3" role="status" aria-live="polite">
+          <div className="flex items-center gap-4">
+            <div>
+              <p className="text-xs font-semibold text-ink-3">Pontuação total</p>
+              <p className="text-kpi font-extrabold text-navy tabular-nums">{total}<span className="text-h3 font-bold text-ink-3">/30</span></p>
+            </div>
+            {completo
+              ? <StatusTag tone={grau.tom}>{grau.titulo}</StatusTag>
+              : <StatusTag tone="neutral">Preencha os 10 itens ({preenchidos}/10)</StatusTag>}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" icon="info" onClick={() => setIsModalOpen(true)}>Interpretação</Button>
+            <Button icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied || !completo} onClick={handleCopy}>{isCopied ? 'Copiado' : 'Copiar resultado'}</Button>
+          </div>
+        </div>
+      </div>
+
+      {isModalOpen && (
+        <Dialog title="Interpretação dos resultados" icon="info" size="md" onClose={() => setIsModalOpen(false)} footer={<Button variant="secondary" onClick={() => setIsModalOpen(false)}>Fechar</Button>}>
+          <p className="text-sm text-ink-3 mb-3">Pontuação total de 0 a 30 (10 itens, 0 a 3 pontos cada).</p>
+          <div className="overflow-x-auto scroll-x-visible">
+            <table className="w-full text-left text-sm text-ink border-collapse">
+              <thead className="bg-thead text-ink-3 text-xs">
+                <tr><th scope="col" className="px-3 py-2 border-b border-line">Pontuação</th><th scope="col" className="px-3 py-2 border-b border-line">Grau de incapacidade</th></tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                <tr><td className="px-3 py-2 font-medium">1 a 10</td><td className="px-3 py-2">Doença inicial</td></tr>
+                <tr className="bg-wine-50"><td className="px-3 py-2 font-medium">11 a 20</td><td className="px-3 py-2 font-medium text-navy">Incapacidade moderada</td></tr>
+                <tr className="bg-wine-100"><td className="px-3 py-2 font-bold text-wine-800">21 a 30</td><td className="px-3 py-2 font-bold text-wine-800">Doença grave ou avançada</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-ink-3 mt-3 leading-relaxed">Webster DD. Critical analysis of the disability in Parkinson's disease. Mod Treat. 1968;5(2):257-82. Tradução livre a partir do MDCalc.</p>
+        </Dialog>
+      )}
+    </div>
+  );
+};
+
 const getDiseaseIcon = (name: string) => {
   const lower = name.toLowerCase();
   if (lower.includes("espondilite")) return <span className="material-symbols-outlined text-[22px] text-navy">orthopedics</span>;
@@ -275,7 +435,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
   const [isCatCModalOpen, setIsCatCModalOpen] = useState(false);
   const [isBavModalOpen, setIsBavModalOpen] = useState(false);
   const [isBavImageExpanded, setIsBavImageExpanded] = useState(false);
-  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+  const [calculadoraAberta, setCalculadoraAberta] = useState<'cdr' | 'webster' | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   // Checklist de documentos reunidos: guardado neste aparelho, por doença/diagnóstico.
   const [docsMarcados, setDocsMarcados] = useState<Set<number>>(new Set());
@@ -353,7 +513,8 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
     }
   };
 
-  if (isCalculatorOpen) return <CdrCalculator onClose={() => setIsCalculatorOpen(false)} />;
+  if (calculadoraAberta === 'cdr') return <CdrCalculator onClose={() => setCalculadoraAberta(null)} />;
+  if (calculadoraAberta === 'webster') return <WebsterCalculator onClose={() => setCalculadoraAberta(null)} />;
 
   // PAGE LEVEL 2: Diagnoses List for a specific disease
   if (selectedDisease && !selectedDiagnosis) {
@@ -388,6 +549,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
   // + aside de 4 com os documentos necessários (checklist) e as ações rotuladas.
   if (selectedDisease && selectedDiagnosis) {
     const isDemencia = selectedDisease.name === "Alienação Mental" && selectedDiagnosis.name === "Demência";
+    const isParkinson = selectedDisease.id === "doenca_de_parkinson";
     const totalDocs = selectedDisease.documents.length;
     const secao = 'bg-white rounded-xl p-5 md:p-6 border border-line';
     const tituloSecao = 'font-heading font-bold text-h2 text-navy mb-3 pb-2 border-b border-line';
@@ -420,7 +582,16 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                   <h2 className={tituloSecao}>Avaliação de cognição
                   </h2>
                   <p className="text-sm text-ink-3 mb-4">A avaliação do escore CDR é fundamental para quantificar a gravidade do comprometimento cognitivo.</p>
-                  <Button icon="calculate" fullWidth onClick={() => setIsCalculatorOpen(true)}>CDR Score Calculator</Button>
+                  <Button icon="calculate" fullWidth onClick={() => setCalculadoraAberta('cdr')}>CDR Score Calculator</Button>
+                </section>
+              )}
+
+              {isParkinson && (
+                <section className={secao}>
+                  <h2 className={tituloSecao}>Avaliação da incapacidade
+                  </h2>
+                  <p className="text-sm text-ink-3 mb-4">A Escala de Webster quantifica o grau de incapacidade na Doença de Parkinson e fundamenta o enquadramento como doença prevista em lei.</p>
+                  <Button icon="calculate" fullWidth onClick={() => setCalculadoraAberta('webster')}>Webster Rating Scale Calculator</Button>
                 </section>
               )}
 
@@ -436,6 +607,25 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                   ))}
                 </ol>
               </section>
+
+              {isParkinson && (
+                <section className={secao}>
+                  <h2 className={tituloSecao}>O portador de Doença de Parkinson será enquadrado enquanto Doença Prevista em Lei:
+                  </h2>
+                  <ol className="space-y-4">
+                    {[
+                      'Quando as manifestações clínicas e a evolução da doença determinarem o impedimento ao desempenho das atividades laborativas e realização das atividades normais da vida diária;',
+                      'Com base na pontuação da tabela de Webster, todos os que apresentarem doença grave ou avançada. Os portadores de incapacidade moderada serão avaliados considerando-se a condição clínica e sua atividade laboral; ou',
+                      'Quando não for possível o controle terapêutico da enfermidade.'
+                    ].map((item, idx) => (
+                      <li key={idx} className="flex items-start gap-3 text-base text-ink">
+                        <span className="w-7 h-7 rounded-full bg-navy text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5" aria-hidden="true">{idx + 1}</span>
+                        <span className="leading-relaxed flex-1">{item}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
             </div>
 
             <aside className="@split:col-span-4 @split:sticky @split:top-6 space-y-4 min-w-0" aria-label="Documentos e ações">
