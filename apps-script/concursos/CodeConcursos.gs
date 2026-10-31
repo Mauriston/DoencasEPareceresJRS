@@ -616,7 +616,7 @@ function apiEnviarTermoRecursoImpressao(corpo) {
     htmlBody:
       '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #222;">' +
       '<p style="font-size: 18px; font-weight: bold; margin: 0 0 16px;">Giorginis,</p>' +
-      '<p style="margin: 0 0 16px;">Seguem os termos do candidato <strong>INAPTO</strong> ao ' + escaparHtml(nomeConcurso) +
+      '<p style="margin: 0 0 16px;">Seguem os termos do candidato <strong style="color: #C00000;">INAPTO</strong> ao ' + escaparHtml(nomeConcurso) +
       ' <strong>' + escaparHtml(idCandidato + candidato) + '</strong> para impressão e coleta de assinaturas.</p>' +
       '<p style="margin: 0 0 16px;">' + agradecimento + '</p>' +
       '<p style="margin: 0;">' + escaparHtml(remetente) + '</p>' +
