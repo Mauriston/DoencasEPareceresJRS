@@ -101,6 +101,8 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
     });
   }, [ampCompetente, peritosDoAmpAtual]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Entrevista em data passada (registro retroativo) só para o Admin.
+  const podeDataPassada = usuario.perfil === 'admin';
   const perito = peritos.find(p => p.uid === peritoUid);
   const ocupados = useMemo(() => ocupadosDe(inspecoes), [inspecoes]);
   // Entrevista de 20 min (padrão), 30 (Verificações e Términos) ou 60 (Benefícios), conforme a finalidade.
@@ -116,6 +118,7 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
     if ((data || hora) && !perito) e.perito = 'Escolha o perito para agendar a entrevista.';
     if (data && !hora) e.hora = 'Escolha o horário da entrevista.';
     if (hora && !data) e.hora = 'Escolha a data da entrevista.';
+    if (data && data < hojeISO() && !podeDataPassada) e.hora = 'Só o Admin pode cadastrar IS com entrevista em data anterior a hoje.';
     if (perito && data && hora) {
       const t = turnoDoSlot(hora);
       const estado = estadoDoSlot(perito.uid, data, hora, !!t && peritoAtendeNoTurno(config, perito.uid, data, t), bloqueios, ocupados, duracao);
@@ -228,7 +231,7 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
               <legend className="px-1 text-xs font-bold text-ink-3">Entrevista (opcional — pode ser agendada depois)</legend>
               <SeletorHorario
                 duracao={duracao} peritoUid={peritoUid} data={data} onData={d => { setData(d); limpar('hora'); }} hora={hora} onHora={h => { setHora(h); limpar('hora'); }}
-                config={config} bloqueios={bloqueios} ocupados={ocupados} erro={erros.hora}
+                config={config} bloqueios={bloqueios} ocupados={ocupados} erro={erros.hora} permitirDataPassada={podeDataPassada}
               />
               {hora && data && <p className="text-xs font-semibold text-green-700">A IS será cadastrada já como Agendada.</p>}
             </fieldset>

@@ -26,6 +26,8 @@ interface Props {
   duracao?: number;
   /** Esconde o campo de data (a data já foi escolhida, p.ex. num mini calendário). */
   semCampoData?: boolean;
+  /** Libera datas anteriores a hoje no campo de data (só o Admin, ao cadastrar IS retroativa). */
+  permitirDataPassada?: boolean;
 }
 
 export const estadoDoSlot = (
@@ -41,7 +43,7 @@ export const estadoDoSlot = (
   return 'livre';
 };
 
-export const SeletorHorario: React.FC<Props> = ({ peritoUid, data, onData, hora, onHora, config, bloqueios, ocupados, erro, semCampoData, duracao = DURACAO_SLOT_MIN }) => {
+export const SeletorHorario: React.FC<Props> = ({ peritoUid, data, onData, hora, onHora, config, bloqueios, ocupados, erro, semCampoData, permitirDataPassada = false, duracao = DURACAO_SLOT_MIN }) => {
   const diaUtil = !!data && ehDiaUtil(data);
   const turnos = useMemo(() => TURNOS.map(t => ({
     ...t,
@@ -56,7 +58,7 @@ export const SeletorHorario: React.FC<Props> = ({ peritoUid, data, onData, hora,
     <div className="space-y-3">
       {!semCampoData && (
         <Field label="Data da entrevista" error={!data ? erro : undefined}>
-          {a => <input {...a} type="date" min={hojeISO()} value={data} onChange={e => { onData(e.target.value); onHora(''); }} />}
+          {a => <input {...a} type="date" min={permitirDataPassada ? undefined : hojeISO()} value={data} onChange={e => { onData(e.target.value); onHora(''); }} />}
         </Field>
       )}
 

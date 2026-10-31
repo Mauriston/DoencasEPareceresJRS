@@ -38,3 +38,11 @@ export const salvarPdfParecerNoDrive = async (params: { nomeInspecionado: string
   const d = await chamarScript<{ url: string }>('salvarPdfParecer', params);
   return d.url;
 };
+
+/**
+ * "Enviar para Impressão": o Apps Script manda o PDF do pedido por e-mail para a impressão (Giorginis), a
+ * partir da conta dona do script, com o nome de exibição do médico solicitante (ex.: "CT MAURISTON").
+ */
+export const enviarParecerParaImpressao = async (params: { pdfUrl: string; remetente: string }): Promise<void> => {
+  await chamarScript<{ enviado: boolean }>('enviarParecerImpressao', params);
+};

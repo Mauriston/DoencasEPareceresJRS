@@ -16,6 +16,8 @@ import { controlClass } from './ui/Field';
 import { NovoParecerForm } from './pareceres/NovoParecerForm';
 import { QuesitosConfig } from './pareceres/QuesitosConfig';
 import { ParecerDetalhe, STATUS_PARECER, diasDesde } from './pareceres/ParecerDetalhe';
+import { EnviarImpressaoDialog, type AlvoImpressao } from './pareceres/EnviarImpressaoDialog';
+import { IconButton } from './ui/IconButton';
 import { useQueryParam } from '../hooks/useQueryParam';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
@@ -45,6 +47,8 @@ export const Pareceres: React.FC = () => {
   const [duplicando, setDuplicando] = useState<ParecerRecord | null>(null);
   const [detalheId, setDetalheId] = useState<string | null>(null);
   const [config, setConfig] = useState(false);
+  // Enviar para Impressão: aberto logo após gerar um parecer (aposGerar) ou pelo ícone da lista.
+  const [impressao, setImpressao] = useState<{ alvo: AlvoImpressao; aposGerar: boolean } | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error'; acao?: { rotulo: string; onClick: () => void } } | null>(null);
   const [agora] = useState(() => Date.now());
   const [novoParam, setNovoParam] = useQueryParam('novo');
@@ -99,6 +103,8 @@ export const Pareceres: React.FC = () => {
 
   // O PDF (Drive ou, nos mais antigos, Storage) abre sempre numa nova janela, no desktop e no mobile.
   const abrir = (p: ParecerRecord) => { window.open(p.pdfUrl, '_blank', 'noopener,noreferrer'); };
+  const pedirImpressao = (p: ParecerRecord) =>
+    setImpressao({ alvo: { nome: extrairNomeInspecionado(p.inspecionado), pdfUrl: p.pdfUrl, remetente: solicitanteDe(p) }, aposGerar: false });
 
   const nomeDe = (p: ParecerRecord) => {
     const nome = extrairNomeInspecionado(p.inspecionado);
@@ -167,8 +173,8 @@ export const Pareceres: React.FC = () => {
               {/* Mobile: cartões — tocar abre o detalhe */}
               <ul className="md:hidden divide-y divide-line">
                 {filtrada.map(({ p, status }) => (
-                  <li key={p.id}>
-                    <button type="button" onClick={() => setDetalheId(p.id)} className="w-full text-left px-4 py-3 space-y-1 hover:bg-thead">
+                  <li key={p.id} className="flex items-center gap-1 pr-3">
+                    <button type="button" onClick={() => setDetalheId(p.id)} className="flex-1 min-w-0 text-left px-4 py-3 space-y-1 hover:bg-thead">
                       <span className="flex items-start justify-between gap-2">
                         <span className="min-w-0">{nomeDe(p)}</span>
                         <StatusTag tone={STATUS_PARECER[status].tom}>{STATUS_PARECER[status].rotulo}</StatusTag>
@@ -176,6 +182,7 @@ export const Pareceres: React.FC = () => {
                       <span className="block text-xs text-ink-2">{p.especialidade} · {p.finalidade}</span>
                       <span className="block text-xs text-ink-3">{formatarData(p)}</span>
                     </button>
+                    {p.pdfUrl && <IconButton icon="print" variant="secondary" label={`Enviar para impressão o parecer de ${extrairNomeInspecionado(p.inspecionado)}`} onClick={() => pedirImpressao(p)} />}
                   </li>
                 ))}
               </ul>
@@ -188,6 +195,7 @@ export const Pareceres: React.FC = () => {
                       <th scope="col" className="px-4 py-3 text-left font-semibold">Especialidade · Finalidade</th>
                       <th scope="col" className="px-4 py-3 text-left font-semibold">Status</th>
                       <th scope="col" className="px-4 py-3 text-left font-semibold whitespace-nowrap">Pedido em</th>
+                      <th scope="col" className="px-4 py-3 text-center font-semibold whitespace-nowrap">Imprimir</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
@@ -203,6 +211,9 @@ export const Pareceres: React.FC = () => {
                         <td className="px-4 py-3 align-top"><span className="block text-ink-2">{p.especialidade}</span><span className="block text-xs text-ink-3">{p.finalidade}</span></td>
                         <td className="px-4 py-3 align-top whitespace-nowrap"><StatusTag tone={STATUS_PARECER[status].tom}>{STATUS_PARECER[status].rotulo}</StatusTag></td>
                         <td className="px-4 py-3 align-top whitespace-nowrap">{quando(p, status)}</td>
+                        <td className="px-4 py-2 align-top text-center">
+                          {p.pdfUrl && <IconButton icon="print" variant="secondary" label={`Enviar para impressão o parecer de ${extrairNomeInspecionado(p.inspecionado)}`} onClick={e => { e.stopPropagation(); pedirImpressao(p); }} />}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -228,10 +239,18 @@ export const Pareceres: React.FC = () => {
         <NovoParecerForm
           inicial={duplicando}
           onClose={() => { setNovo(false); setDuplicando(null); }}
-          onGerado={nome => {
+          onGerado={(nome, pdfUrl) => {
             setNovo(false); setDuplicando(null);
-            avisar(`Pedido de parecer gerado para ${nome}.`);
+            setImpressao({ alvo: { nome, pdfUrl, remetente: nav?.authUser?.usuario || nav?.authUser?.nome || '' }, aposGerar: true });
           }}
+        />
+      )}
+      {impressao && (
+        <EnviarImpressaoDialog
+          alvo={impressao.alvo}
+          aposGerar={impressao.aposGerar}
+          onClose={() => { if (impressao.aposGerar) avisar(`Pedido de parecer gerado para ${impressao.alvo.nome}.`); setImpressao(null); }}
+          onEnviado={msg => { setImpressao(null); avisar(msg); }}
         />
       )}
       {config && ehAdmin && <QuesitosConfig onClose={() => setConfig(false)} onAviso={avisar} />}

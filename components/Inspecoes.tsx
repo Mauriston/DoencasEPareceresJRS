@@ -403,7 +403,7 @@ export const Inspecoes: React.FC = () => {
       {horarioVazio && (
         <AgendarNoHorarioDialog
           dataHora={horarioVazio} peritoFiltro={peritoFiltro} inspecoes={lista ?? []} peritos={peritos} config={config} bloqueios={bloqueiosTodos}
-          podeCadastrar={podeCadastrar}
+          podeCadastrar={podeCadastrar && (ehAdmin || horarioVazio.slice(0, 10) >= hoje)}
           onNova={() => { setNovo({ dataEntrevista: horarioVazio, peritoUid: peritoFiltro || undefined }); setHorarioVazio(null); }}
           onClose={() => setHorarioVazio(null)}
           onAgendada={(msg, tom) => { setHorarioVazio(null); avisar(msg, tom); }}
