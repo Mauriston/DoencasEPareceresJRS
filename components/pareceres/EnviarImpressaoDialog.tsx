@@ -55,7 +55,6 @@ export const EnviarImpressaoDialog: React.FC<Props> = ({ alvo, aposGerar = false
     >
       <div className="space-y-3 text-sm text-ink">
         <p>O PDF do pedido de parecer de <strong className="text-navy">{alvo.nome}</strong> será enviado por e-mail para <strong>giorginis@marinha.mil.br</strong>, pedindo impressão em frente e verso colorido.</p>
-        <p className="text-ink-3">Remetente exibido: <strong className="text-ink">{alvo.remetente}</strong></p>
         {erro && <p role="alert" className="font-semibold text-wine">{erro}</p>}
       </div>
     </Dialog>
