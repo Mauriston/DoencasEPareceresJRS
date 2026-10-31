@@ -135,7 +135,7 @@ Cada item de `exames[]`: `ordem`, `categoria`, `nome`, `paciente`, `emissor`, `c
 
 No documento do candidato ficam só o resumo que a tabela usa (`examesQtd`, `examesPdfUrls[]`, `examesEnviadoEm`) — a transcrição inteira não é lida ao listar os candidatos. `examesQtd` é o badge do botão de exames na coluna *Ações*, que abre a tela cheia com os blocos. **Limpar IS** (Admin) apaga a subcoleção e manda os PDFs para a lixeira do Drive.
 
-Regras do Firestore: `concursos/{id}/candidatos/{matrícula}/exames/{id}` — leitura e escrita para qualquer usuário autenticado (o controle por perfil é na UI, pela funcionalidade `concursosJRS.enviarExamesCandidato`).
+Regras do Firestore: `concursos/{id}/candidatos/{matrícula}/exames/{id}` — leitura para qualquer usuário autenticado; criação por quem tem a funcionalidade `concursosJRS.enviarExamesCandidato`; edição e exclusão só do Admin.
 
 ---
 
@@ -258,12 +258,29 @@ O cliente só avisa o servidor (`/api/notificacoes/evento`); o servidor confere 
 | `bloqueiosAgenda` | autenticado | Admin e Secretaria; médico só os próprios |
 | `pareceres` | autenticado | médicos criam; não-Admin só altera o status de conclusão |
 | `periciasMenores` | autenticado | médicos criam; Admin edita e apaga |
-| `concursos` e subcoleções | autenticado | autenticado; status do concurso e exclusão só Admin; eventos só criação, leitura do Admin |
+| `concursos` e subcoleções | autenticado | por funcionalidade da matriz `config/permissoes` e por campo (abaixo); exclusão só Admin; eventos só criação, leitura do Admin |
 | `legislacao`, `videos`, `infograficos`, `apresentacoes`, `quesitosParecer`, `config` | autenticado | Admin |
 | `visualizacoesExtras` | Admin | o próprio registro |
 | `casos_periciais_resultados` | o dono | o dono |
 
-O controle fino por funcionalidade (quem gera termo, quem envia exames etc.) fica na UI, pela matriz `config/permissoes`.
+### Concursos: regras por funcionalidade e por campo
+
+As regras leem a **mesma matriz** da tela (`config/permissoes`, `features[id][perfil]`), com os padrões de `DEFAULT_FEATURE_PERMISSIONS` (`config/permissions.ts`) quando o Admin não alterou a célula — **ao mudar um padrão no código, mude também em `firestore.rules`**. O Admin pode tudo. Cada atualização de candidato só pode mexer nos campos de uma ação:
+
+| Ação (função em `services/firestoreConcursos.ts`) | Funcionalidade | Campos |
+|---|---|---|
+| Editar Status/Observações/Nº TIS (`atualizarCandidato`) | `editarDadosTabela` | `status`, `observacoes`, `numTIS`, `dataLaudo`, `laudo`, `finalizado`, termos e `recurso` |
+| Reagendar (`reagendarCandidato`) | `reagendar` | `dataAgendamento` (obrigatória) e status `Reagendado`, mais o que ele limpa |
+| Confirmar agendamento (`confirmarAgendamento`) | `registrarMensagemPDF` ou `reagendar` | só `dataAgendamento` |
+| Termo de Recurso (`salvarTermoRecurso`) | `gerarTermoRecurso` | `recurso`, `termoRecursoUrl` |
+| Termo de Cientificação (`salvarTermoCientificacao`) | equipe (qualquer perfil) | `termoCientificacaoUrl` |
+| Pedido de Parecer / Exames (`registrarSolicitacao`) | `solicitarParecerExames` | novo item em `solicitacoesParecer`/`solicitacoesExames` e status `Pendente` |
+| Exames do candidato (`salvarExamesCandidato`) | `enviarExamesCandidato` | `examesQtd`, `examesPdfUrls`, `examesEnviadoEm` (e criar em `exames`) |
+| Triagem (`salvarTriagem`) | perfil `user_medicos_mpi` | `triagem` |
+
+Criar concurso: `registrarMensagemPDF` ou `importarCsv`; status e período do concurso: `abrirEncerrarConcurso`; criar candidato: `adicionarCandidato`, `registrarMensagemPDF` ou `importarCsv`; mensagens: `registrarMensagemPDF`, `registrarMensagemArquivo` ou `importarCsv`.
+
+**Publicação:** `.github/workflows/deploy-firestore-rules.yml` roda os casos de `scripts/testar-regras-firestore.cjs` (simulador da API Firebase Rules) e, se passarem, publica `firestore.rules` e `storage.rules` a cada mudança na `main`.
 ## 15. Arquivos JSON estáticos
 
 ### 15.1 `public/cid.json`
@@ -361,15 +378,12 @@ O sistema trata informações pessoais e sensíveis: nome e NIP de militares, de
 
 ### 17.1 Riscos atuais
 
-- coleções de concursos graváveis por qualquer usuário autenticado (o controle fino por perfil está na UI);
 - links do Drive guardados diretamente nos documentos;
 - dados médicos enviados ao Gemini (atestados, mensagens e exames);
-- regras do Firestore publicadas à parte do código (podem ficar defasadas);
 - auditoria de escrita só nas IS de concurso; sem auditoria de leitura.
 
 ### 17.2 Controles recomendados
 
-- restringir por perfil, nas regras, as gravações em concursos;
 - princípio do menor privilégio nas pastas do Drive;
 - minimização dos dados enviados à IA;
 - política de retenção e descarte de documentos;

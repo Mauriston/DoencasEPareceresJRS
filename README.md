@@ -119,7 +119,7 @@ A interface do usuário foi desenhada com estrita observância à Identidade Vis
 * **Estilização:** Tailwind CSS 3.4 compilado pelo Vite/PostCSS (`tailwind.config.js` com paleta fechada e `styles/tokens.css`); `scripts/verificar-ds.mjs` falha o build com classes fora do DS.
 * **Navegação:** `react-router-dom` v7 com `HashRouter` (GitHub Pages) — cada tela e subnível tem URL própria.
 * **Ícones:** Google Material Symbols (shim `components/ui/icons.tsx`).
-* **Firebase:** Authentication, Firestore (dados operacionais; ver `docs/database.md`), Storage (PDFs e imagens) e **Cloud Messaging** (push); regras em `firestore.rules` e `storage.rules` (publicadas à parte).
+* **Firebase:** Authentication, Firestore (dados operacionais; ver `docs/database.md`), Storage (PDFs e imagens) e **Cloud Messaging** (push); regras em `firestore.rules` e `storage.rules`, testadas e publicadas pelo CI (`.github/workflows/deploy-firestore-rules.yml`).
 * **Servidor (Cloud Run):** `server.ts` (Node + Express + Firebase Admin SDK) — login por NIP e por QR code, operações de Admin, notificações e Gemini; publicado por `.github/workflows/deploy-cloud-run.yml`.
 * **Google Apps Script (projeto único):** geração de PDFs a partir de templates, gravação no Google Drive, e-mails para impressão, sincronização com o Google Agenda e leitura de documentos pelo Gemini (`apps-script/concursos/`, publicação manual — ver `docs/apps-script-deploy.md`). As antigas planilhas do Google Sheets não são mais usadas.
 * **Inteligência Artificial:** Google Gemini para leitura de atestados, transcrição de mensagens administrativas e de exames de candidatos.

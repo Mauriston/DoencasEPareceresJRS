@@ -341,7 +341,7 @@ A visibilidade de páginas e funcionalidades segue a matriz `config/permissoes` 
 
 ### 9.4 Limites de segurança atuais
 
-- Boa parte das coleções de trabalho (concursos e candidatos) é gravável por qualquer usuário autenticado; o controle fino por perfil está só na UI.
+- As gravações em concursos seguem a matriz de permissões também nas regras (por funcionalidade e por campo). Outras coleções de trabalho (IS, agenda) seguem por perfil, sem o detalhe por campo.
 - Não há validação de esquema no servidor para gravações feitas direto pelo cliente.
 - A configuração pública do Firebase e a chave VAPID ficam no bundle (são públicas por natureza); segredos (Gemini, service accounts) ficam só no Apps Script e no Cloud Run.
 
@@ -413,7 +413,7 @@ Publicação **manual**, colando o código no editor e reimplantando a versão �
 
 ### 11.4 Regras do Firebase
 
-`firestore.rules` e `storage.rules` são versionadas, mas publicadas à parte (console ou `firebase deploy --only firestore:rules`). **Uma regra nova só vale depois de publicada** — por exemplo, o histórico de notificações e a fila de impressão dependem dos blocos `usuarios/{uid}/notificacoes` e `documentos_gerados`.
+`.github/workflows/deploy-firestore-rules.yml` publica `firestore.rules` e `storage.rules` a cada mudança na `main` (Firebase CLI). Antes, roda `scripts/testar-regras-firestore.cjs`, que simula na API Firebase Rules os casos de cada perfil (quem pode mudar Status, reagendar, triar, enviar exames, criar concurso…) — se algum falhar, nada é publicado. Credencial: secret `FIREBASE_RULES_SA_KEY` (ou `GCP_SA_KEY`) com o papel **Firebase Rules Admin**.
 
 ### 11.5 Configuração de ambiente
 
@@ -469,9 +469,8 @@ O `index.html` carrega externamente apenas o Google Material Symbols. Tailwind e
 ### 13.2 Limitações
 
 - `ConcursosJRS.tsx` e `App.tsx` concentram muita lógica (componentes extensos);
-- coleções de concursos graváveis por qualquer usuário autenticado (controle fino só na UI);
 - sem validação de esquema no servidor para as gravações do cliente;
-- regras do Firebase e Apps Script publicados à parte do código (podem ficar defasados);
+- Apps Script publicado à parte do código (pode ficar defasado);
 - inexistência de testes automatizados;
 - observabilidade limitada aos logs do Cloud Run e à auditoria das IS de concurso;
 - sem *code splitting* por rota;
@@ -483,8 +482,8 @@ O `index.html` carrega externamente apenas o Google Material Symbols. Tailwind e
 
 | Risco | Impacto | Probabilidade | Mitigação recomendada |
 |---|---|---:|---|
-| Regras do Firestore não publicadas após mudança no código | Alto | Média | Publicar as regras no mesmo fluxo do deploy (CI) |
-| Gravação indevida em concursos por perfil sem permissão | Médio | Baixa | Restringir as regras por perfil/campo |
+| Regras do Firestore não publicadas após mudança no código | Alto | ~~Média~~ Baixa | **Mitigado (31/10/2026):** CI testa e publica as regras a cada mudança na `main` (`deploy-firestore-rules.yml`) |
+| Gravação indevida em concursos por perfil sem permissão | Médio | ~~Baixa~~ Muito baixa | **Mitigado (31/10/2026):** regras por funcionalidade e por campo, lendo a matriz `config/permissoes` (ver `docs/database.md`, seção 14) |
 | Componentes muito extensos (`ConcursosJRS.tsx`) | Médio | Alta | Dividir por responsabilidade (tabela, sheet, ações) |
 | Apps Script publicado manualmente | Médio | Média | Checklist de reimplantação; versionar o deploymentId |
 | Falha ou cota do Apps Script/Gemini | Alto | Média | Tratar erros e manter o documento salvo mesmo sem e-mail |
@@ -840,12 +839,12 @@ A arquitetura evoluiu de "SPA + Apps Script + planilhas" para **SPA instalável 
 
 Os próximos passos de maior retorno são:
 
-1. publicar as regras do Firebase no CI, junto do deploy;
-2. restringir por perfil as gravações em concursos;
-3. dividir os componentes mais extensos (`ConcursosJRS.tsx`);
-4. testes automatizados das regras puras (`utils/`) e dos fluxos críticos;
-5. *code splitting* por rota;
-6. observabilidade (erros do cliente e do servidor).
+1. dividir os componentes mais extensos (`ConcursosJRS.tsx`);
+2. testes automatizados das regras puras (`utils/`) e dos fluxos críticos;
+3. *code splitting* por rota;
+4. observabilidade (erros do cliente e do servidor).
+
+Já feitos em 31/10/2026: publicação das regras no CI (com teste antes) e restrição das gravações em concursos por funcionalidade/campo.
 
 ---
 
@@ -869,3 +868,4 @@ Os próximos passos de maior retorno são:
 | 31/10 | Triagem das IS de concurso (MPI) | `components/concursos/Triagem.tsx` |
 | 31/10 | IS de concurso atrasadas (Início e `/concursos/atrasadas`) | `Home.tsx`, `ConcursosJRS.tsx` |
 | 31/10 | Planilhas do Google Sheets e projeto Apps Script "principal" desativados; tudo num só projeto Apps Script | `apps-script/concursos/` |
+| 31/10 | Regras do Firebase testadas e publicadas pelo CI; gravações em concursos restritas pela matriz de permissões | `deploy-firestore-rules.yml`, `firestore.rules` |

@@ -127,6 +127,9 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'pericia-menor.historico', label: 'Perícia Menor - Histórico', group: 'Perícia Menor' },
 ];
 
+// Os padrões das funcionalidades "concursosJRS.*" se repetem em firestore.rules (função pode()),
+// que aplica a mesma matriz nas gravações: ao mudar um padrão aqui, mude lá também e rode
+// scripts/testar-regras-firestore.cjs.
 export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolean>> = {
   'concursosJRS.editarDadosTabela': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
   'concursosJRS.registrarMensagemPDF': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },

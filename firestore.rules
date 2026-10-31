@@ -228,27 +228,89 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
+    // ---------------------------------------------------------------------
+    // Permissões por funcionalidade (matriz editada pelo Admin em Usuários,
+    // documento config/permissoes). As regras leem a MESMA matriz da tela:
+    // features[id][perfil], com os padrões de DEFAULT_FEATURE_PERMISSIONS
+    // (config/permissions.ts) quando o Admin ainda não mexeu naquela célula.
+    // Ao mudar um padrão no código, mude também aqui.
+    function perfilAtual() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil;
+    }
+    function matrizFeatures() {
+      return exists(/databases/$(database)/documents/config/permissoes)
+        ? get(/databases/$(database)/documents/config/permissoes).data.get('features', {})
+        : {};
+    }
+    // padroes: { user_medicos, user_secretaria, user_medicos_mpi } → bool.
+    function pode(feature, padroes) {
+      return isAdmin() || (isSignedIn() &&
+        matrizFeatures().get(feature, {}).get(perfilAtual(), padroes.get(perfilAtual(), false)) == true);
+    }
+    function podeEditarTabela() { return pode('concursosJRS.editarDadosTabela', {'user_medicos': true, 'user_secretaria': false, 'user_medicos_mpi': true}); }
+    function podeRegistrarMensagemPDF() { return pode('concursosJRS.registrarMensagemPDF', {'user_medicos': true, 'user_secretaria': false, 'user_medicos_mpi': true}); }
+    function podeReagendar() { return pode('concursosJRS.reagendar', {'user_medicos': false, 'user_secretaria': true, 'user_medicos_mpi': false}); }
+    function podeImportarCsv() { return pode('concursosJRS.importarCsv', {'user_medicos': false, 'user_secretaria': false, 'user_medicos_mpi': false}); }
+    function podeAbrirEncerrar() { return pode('concursosJRS.abrirEncerrarConcurso', {'user_medicos': false, 'user_secretaria': false, 'user_medicos_mpi': false}); }
+    function podeArquivarMensagem() { return pode('concursosJRS.registrarMensagemArquivo', {'user_medicos': true, 'user_secretaria': false, 'user_medicos_mpi': true}); }
+    function podeAdicionarCandidato() { return pode('concursosJRS.adicionarCandidato', {'user_medicos': true, 'user_secretaria': false, 'user_medicos_mpi': true}); }
+    function podeGerarTermoRecurso() { return pode('concursosJRS.gerarTermoRecurso', {'user_medicos': true, 'user_secretaria': false, 'user_medicos_mpi': true}); }
+    function podeSolicitar() { return pode('concursosJRS.solicitarParecerExames', {'user_medicos': true, 'user_secretaria': false, 'user_medicos_mpi': true}); }
+    function podeEnviarExames() { return pode('concursosJRS.enviarExamesCandidato', {'user_medicos': true, 'user_secretaria': true, 'user_medicos_mpi': true}); }
+
+    // Uma atualização de candidato só pode mexer nos campos da ação que o
+    // perfil tem permissão de fazer (cada função de services/firestoreConcursos.ts
+    // grava um destes grupos).
+    function atualizacaoCandidatoPermitida(alterados) {
+      return
+        // atualizarCandidato: Status, Observações, Nº TIS e o que deriva deles.
+        (podeEditarTabela() && alterados.hasOnly(['status', 'observacoes', 'numTIS', 'dataLaudo', 'laudo', 'finalizado', 'termoCientificacaoUrl', 'termoRecursoUrl', 'recurso'])) ||
+        // reagendarCandidato: sempre muda a data e põe o status "Reagendado".
+        (podeReagendar() && alterados.hasOnly(['dataAgendamento', 'status', 'finalizado', 'dataLaudo', 'laudo', 'termoCientificacaoUrl', 'termoRecursoUrl', 'recurso'])
+          && alterados.hasAll(['dataAgendamento']) && request.resource.data.status == 'Reagendado') ||
+        // confirmarAgendamento (criação do concurso pela mensagem)
+        ((podeRegistrarMensagemPDF() || podeReagendar()) && alterados.hasOnly(['dataAgendamento'])) ||
+        // salvarTermoRecurso
+        (podeGerarTermoRecurso() && alterados.hasOnly(['recurso', 'termoRecursoUrl'])) ||
+        // salvarTermoCientificacao: qualquer perfil da equipe gera o termo de cientificação.
+        (isEquipe() && alterados.hasOnly(['termoCientificacaoUrl'])) ||
+        // registrarSolicitacao (Pedido de Parecer / Solicitação de Exames): acrescenta um
+        // documento e põe o status "Pendente".
+        (podeSolicitar() && alterados.hasOnly(['solicitacoesParecer', 'solicitacoesExames', 'status', 'dataLaudo', 'laudo', 'observacoes', 'finalizado'])
+          && alterados.hasAny(['solicitacoesParecer', 'solicitacoesExames']) && request.resource.data.status == 'Pendente') ||
+        // salvarExamesCandidato
+        (podeEnviarExames() && alterados.hasOnly(['examesQtd', 'examesPdfUrls', 'examesEnviadoEm'])) ||
+        // salvarTriagem: só o MPI.
+        (isSignedIn() && perfilAtual() == 'user_medicos_mpi' && alterados.hasOnly(['triagem']));
+    }
+
     // Coleção "concursos": backend do menu Concursos ("Planilhas de
     // Controle"), com subcoleções "candidatos", "mensagens" e
-    // "agendamentos" por concurso. Qualquer usuário autenticado lê/edita os
-    // dados (o controle fino por perfil — user_medicos/user_secretaria —
-    // já é feito na UI via config/permissions.ts, mesmo padrão do resto do
-    // app); só o Admin pode alterar o "status" do concurso (Em Breve/Em
-    // Andamento/Encerrado) ou apagar um concurso.
+    // "agendamentos". Leitura para qualquer usuário autenticado; cada
+    // gravação exige a funcionalidade correspondente da matriz de permissões
+    // (o Admin pode tudo). Status do concurso: abrirEncerrarConcurso.
     match /concursos/{concursoId} {
-      allow read, create: if isSignedIn();
-      allow update: if isSignedIn() &&
-        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']) || isAdmin());
+      allow read: if isSignedIn();
+      allow create: if podeRegistrarMensagemPDF() || podeImportarCsv();
+      allow update: if isAdmin() || (
+        (podeAbrirEncerrar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'periodoInicioISO', 'periodoFimISO'])) ||
+        ((podeAdicionarCandidato() || podeRegistrarMensagemPDF() || podeImportarCsv()) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalCandidatos']))
+      );
       allow delete: if isAdmin();
 
       match /candidatos/{candidatoId} {
-        allow read, write: if isSignedIn();
+        allow read: if isSignedIn();
+        allow create: if podeAdicionarCandidato() || podeRegistrarMensagemPDF() || podeImportarCsv();
+        allow update: if isAdmin() || atualizacaoCandidatoPermitida(request.resource.data.diff(resource.data).affectedKeys());
+        allow delete: if isAdmin();
 
         // Exames que o candidato entregou: um documento por PDF enviado, com a
         // transcrição dos laudos lida pelo Gemini (ver salvarExamesCandidato em
-        // services/firestoreConcursos.ts). Mesmo acesso do candidato.
+        // services/firestoreConcursos.ts). Apagados só pelo "Limpar IS" (Admin).
         match /exames/{exameId} {
-          allow read, write: if isSignedIn();
+          allow read: if isSignedIn();
+          allow create: if podeEnviarExames();
+          allow update, delete: if isAdmin();
         }
 
         // Registro de eventos (auditoria) da IS: qualquer usuário autenticado
@@ -260,10 +322,13 @@ service cloud.firestore {
         }
       }
       match /mensagens/{mensagemId} {
-        allow read, write: if isSignedIn();
+        allow read: if isSignedIn();
+        allow create: if podeRegistrarMensagemPDF() || podeArquivarMensagem() || podeImportarCsv();
+        allow update, delete: if isAdmin();
       }
       match /agendamentos/{data} {
-        allow read, write: if isSignedIn();
+        allow read: if isSignedIn();
+        allow write: if podeRegistrarMensagemPDF() || podeImportarCsv() || podeAbrirEncerrar();
       }
     }
   }
