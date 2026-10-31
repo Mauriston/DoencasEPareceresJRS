@@ -9,7 +9,7 @@ import { resolverNip, NipError } from '@/services/loginNip';
 import { formatNip } from '@/utils/format';
 import { SENHA_INICIAL_PADRAO, linkWhatsappRedefinicao } from '@/config/senha';
 import iconeJrs from '../../../assets/icone-jrs.png';
-import fachada from '../../../assets/hnre-fachada.jpg';
+import fachadaHnre from '../../../assets/hnre-fachada.jpg';
 
 const EASE = 'cubic-bezier(.22,1,.36,1)';
 const BOUNCE = 'cubic-bezier(.34,1.56,.64,1)';

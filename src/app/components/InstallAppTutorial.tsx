@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { PlataformaTutorial } from '@/utils/pwa';
 
-import icone from '../../assets/icone-jrs.png';
+import iconeJrs from '../../../assets/icone-jrs.png';
 
 const APP_ICON = iconeJrs;
 
