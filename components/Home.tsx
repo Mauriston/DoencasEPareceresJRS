@@ -69,6 +69,7 @@ const Secao: React.FC<{ id: string; titulo: string; badge?: number; acao?: React
 
 const ICONE_DOCUMENTO: Record<string, string> = {
   'termo-recurso': 'gavel',
+  'termo-cientificacao': 'task',
   'solicitacao-parecer': 'stethoscope',
   'solicitacao-exames': 'biotech',
   'pedido-parecer': 'description',

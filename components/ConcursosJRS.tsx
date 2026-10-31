@@ -2309,6 +2309,13 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
       const url = await salvarPdfCandidatoNoDrive({ pasta: pastaDrive(), candidatoId: id, candidatoNome: nome, tipo: 'termoCientificacao', pdfBase64 });
       await salvarTermoCientificacao(concursoId, id, url);
       setCandidatos(prev => prev.map(c => (c.id === id ? { ...c, termoCientificacaoUrl: url } : c)));
+      void registrarDocumentoGerado({
+        tipo: 'termo-cientificacao',
+        titulo: 'Termo de Cientificação de Resultado',
+        detalhe: `${nome} · ${concurso?.nome || ''}`,
+        pdfUrl: url,
+        remetente: nav?.authUser?.usuario || nav?.authUser?.nome || '',
+      });
       showToast(`Termo de Cientificação gerado para ${nome}.`);
       if (abrir) abrirPdf(url);
     } catch (e: any) {
