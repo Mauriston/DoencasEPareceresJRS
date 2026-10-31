@@ -325,7 +325,9 @@ async function startServer() {
         if (!concursoSnap.exists || !cand) { res.json({ success: true, enviados: [] }); return; }
         const nomeConcurso = String(concursoSnap.data()?.nome || concursoId);
         const rota = `/concursos/${encodeURIComponent(concursoId)}`;
+        // Todos os usuários ativos, menos quem realizou o evento.
         const todos = await uidsAtivos(adminDb);
+        todos.delete(decoded.uid);
         const data = String(cand.dataAgendamento || "");
         const enviados: string[] = [];
 
