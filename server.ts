@@ -221,7 +221,8 @@ async function startServer() {
   // Toda notificação também fica guardada para cada destinatário em
   // usuarios/{uid}/notificacoes/{id} (menu do avatar, com badge de não lidas).
   // O mesmo id vai no link do push (?notif=id): abrir pelo push marca como lida.
-  const TITULO_PUSH = "JRS/HNRe App";
+  // O título do push é o tipo do aviso; o nome do app ("JRS/HNRe App", do
+  // manifest) já aparece na notificação — no iOS, como "from JRS/HNRe App".
   const enviarPush = async (
     adminDb: any,
     destino: { uids: Set<string> },
@@ -248,7 +249,7 @@ async function startServer() {
       const lote = tokens.slice(i, i + 500);
       const resp = await getMessaging().sendEachForMulticast({
         tokens: lote,
-        notification: { title: TITULO_PUSH, body: msg.corpo },
+        notification: { title: msg.titulo, body: msg.corpo },
         data: { notifId: id, rota },
         webpush: {
           notification: { icon: `${APP_URL}icons/notificacao-192.png`, badge: `${APP_URL}icons/badge-96.png`, lang: "pt-BR" },
@@ -332,7 +333,7 @@ async function startServer() {
         const laudo = status === "INAPTO" ? "laudo de inaptidão" : status === "INSUF DOCUMENTAL" ? "IDM" : "";
         if (tipo === "status-alterado" && laudo && await marcarEnvio(adminDb, `${status === "INAPTO" ? "inapto" : "idm"}_${concursoId}_${candidatoId}_${data}`)) {
           await enviarPush(adminDb, { uids: todos }, {
-            titulo: status === "INAPTO" ? "Laudo de inaptidão" : "Insuficiência Documental Médica",
+            titulo: status === "INAPTO" ? "Laudo de inaptidão" : "IDM",
             corpo: `${nomeAtor} exarou ${laudo} no ${nomeConcurso}`,
             rota,
           });

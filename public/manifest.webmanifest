@@ -1,6 +1,6 @@
 {
-  "name": "JRS/HNRe",
-  "short_name": "JRS/HNRe",
+  "name": "JRS/HNRe App",
+  "short_name": "JRS/HNRe App",
   "description": "Guia para a avaliação pericial dos portadores de doenças especificadas em lei.",
   "start_url": "/DoencasEPareceresJRS/",
   "scope": "/DoencasEPareceresJRS/",
