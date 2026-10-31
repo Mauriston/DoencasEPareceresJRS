@@ -1,0 +1,9 @@
+{
+  "id": "alienacao_mental",
+  "name": "Alienação Mental",
+  "definition": "todo caso de distúrbio mental ou neuromental grave e persistente...",
+  "documents": [
+    "Laudo médico de especialista em neurologia, psiquiatria e/ou geriatria"
+  ],
+  "diagnoses": []
+}

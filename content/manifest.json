@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-31",
+  "source": "repositorio",
+  "collections": [
+    { "name": "doencas", "path": "doencas/" },
+    { "name": "legislacao", "path": "legislacao/" },
+    { "name": "artigos", "path": "artigos/" },
+    { "name": "resumos-dgpm", "path": "resumos-dgpm/" }
+  ]
+}
