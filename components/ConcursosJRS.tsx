@@ -25,7 +25,7 @@ import { CandidatoDetalhe } from './concursos/CandidatoDetalhe';
 import { EnviarExamesModal, ExamesTranscritosModal, type AlvoExames } from './concursos/ExamesCandidato';
 import { juntarPdfsBase64 } from '../services/pdfMerge';
 import {
-  extrairMensagemComGemini, salvarMensagemNoDrive, salvarPdfCandidatoNoDrive, criarEstruturaConcursoNoDrive, abrirPdf, urlVisualizacao, anoDoConcurso,
+  extrairMensagemComGemini, salvarMensagemNoDrive, salvarPdfCandidatoNoDrive, criarEstruturaConcursoNoDrive, abrirPdf, urlVisualizacao, anoDoConcurso, enviarTermoRecursoParaImpressao,
   type PastaConcurso, type MensagemExtraida,
 } from '../services/driveConcursos';
 import {
@@ -2521,7 +2521,8 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
     }
   };
 
-  type SignatarioTermo = { nome: string; postoGraduacao: string; cargo: string };
+  // usuario (ex.: "CT MAURISTON") é o remetente exibido e a assinatura do e-mail automático do termo.
+  type SignatarioTermo = { nome: string; usuario: string; postoGraduacao: string; cargo: string };
 
   // Ponto de entrada da geração do termo. Quem assina é sempre médico da JRS:
   // user_medicos/admin assinam com o próprio nome; o MPI escolhe, no modal, o
@@ -2534,6 +2535,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
     }
     gerarTermo(id, nome, {
       nome: nav?.authUser?.nome || '',
+      usuario: nav?.authUser?.usuario || nav?.authUser?.nome || '',
       postoGraduacao: nav?.authUser?.postoGraduacao || '',
       cargo: nav?.authUser?.cargo || '',
     });
@@ -2543,7 +2545,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
     const alvo = responsavelModal;
     setResponsavelModal(null);
     if (!alvo) return;
-    gerarTermo(alvo.id, alvo.nome, { nome: medico.nome, postoGraduacao: medico.postoGraduacao, cargo: medico.cargo });
+    gerarTermo(alvo.id, alvo.nome, { nome: medico.nome, usuario: medico.usuario || medico.nome, postoGraduacao: medico.postoGraduacao, cargo: medico.cargo });
   };
 
   const gerarTermo = async (id: string, nome: string, signatario: SignatarioTermo) => {
@@ -2575,7 +2577,13 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
       const url = await salvarPdfCandidatoNoDrive({ pasta: pastaDrive(), candidatoId: id, candidatoNome: nome, tipo: 'termoRecurso', pdfBase64: pdfUnico });
       await salvarTermoRecurso(concursoId, id, url);
       setCandidatos(prev => prev.map(c => (c.id === id ? { ...c, recurso: true, termoRecursoUrl: url } : c)));
-      showToast(`Termo de Recurso e Cientificação gerados para ${nome}.`);
+      // Envio automático para impressão e coleta de assinaturas; uma falha aqui não desfaz o termo gerado.
+      try {
+        await enviarTermoRecursoParaImpressao({ pdfUrl: url, candidatoId: id, candidatoNome: nome, nomeConcurso: concurso?.nome || '', remetente: signatario.usuario });
+        showToast(`Termo de Recurso e Cientificação gerados para ${nome} e enviados para impressão.`);
+      } catch (erroEnvio: any) {
+        showToast(`Termo gerado para ${nome}, mas o e-mail para impressão falhou: ${erroEnvio?.message || 'erro desconhecido'}.`);
+      }
     } catch (e: any) {
       showToast(e?.message || 'Erro ao gerar o Termo de Recurso.');
     } finally {
