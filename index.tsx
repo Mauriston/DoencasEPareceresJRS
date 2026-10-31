@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { Raiz } from './components/Raiz';
+import { ErroFatal } from './components/ErroFatal';
 import { consumirTokenDaUrl } from './services/handoff';
 import './styles/app.css';
 
@@ -34,8 +35,10 @@ const handoffToken = consumirTokenDaUrl();
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <HashRouter>
-      <Raiz handoffToken={handoffToken} />
-    </HashRouter>
+    <ErroFatal>
+      <HashRouter>
+        <Raiz handoffToken={handoffToken} />
+      </HashRouter>
+    </ErroFatal>
   </React.StrictMode>
 );
