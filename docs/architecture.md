@@ -2,18 +2,21 @@
 
 ## 1. Visão geral
 
-O **Guia Médico Naval — JRS/HNRe** é uma aplicação web responsiva, de página única (*Single Page Application* — SPA), voltada ao apoio das atividades médico-periciais da Junta Regular de Saúde do Hospital Naval de Recife.
+> **Atualizado em 31/10/2026.**
 
-A solução combina quatro grupos principais de capacidades:
+O **Guia Médico Naval — JRS/HNRe** é uma aplicação web de página única (*Single Page Application* — SPA), instalável como PWA, voltada ao apoio das atividades médico-periciais da Junta Regular de Saúde do Hospital Naval de Recife.
 
-1. **Consulta de conteúdo normativo e médico-pericial**, armazenado majoritariamente no próprio código-fonte.
-2. **Formulários operacionais**, como geração de pareceres e perícias menores.
-3. **Automação documental**, executada por Google Apps Script com Google Sheets, Google Docs, Google Drive e Gmail.
-4. **Extração assistida por IA**, utilizando o modelo Gemini 2.5 Flash no backend para interpretar imagens de atestados.
+A solução combina cinco grupos principais de capacidades:
 
-A arquitetura atual privilegia simplicidade de implantação e baixo custo operacional. O frontend é publicado como site estático no GitHub Pages, enquanto o backend é disponibilizado como Web App do Google Apps Script.
+1. **Consulta de conteúdo normativo e médico-pericial**, armazenado majoritariamente no próprio código-fonte (com páginas públicas, sem login, para as Doenças de Lei e a Portaria).
+2. **Trabalho da JRS**: Inspeções de Saúde e agenda dos peritos, concursos (planilha de candidatos, triagem, exames, termos), pareceres, perícias menores e inspecionados, com dados no **Cloud Firestore**.
+3. **Automação documental**, executada por Google Apps Script (`CodeConcursos.gs`) com Google Docs, Drive, Gmail e Google Agenda — inclusive o envio automático de documentos por e-mail para impressão.
+4. **IA (Gemini)**: leitura de atestados (Apps Script), transcrição de mensagens e de exames de candidatos (Apps Script e servidor no Cloud Run).
+5. **Notificações push** (Firebase Cloud Messaging), com histórico por usuário no app.
 
-> **Constatação:** apesar de o `README.md` classificar o projeto como PWA, não foram identificados no repositório manifesto web, *service worker* ou estratégia de cache offline. Tecnicamente, a implementação observada é uma SPA responsiva e instalável apenas de forma limitada pelo navegador, não uma PWA completa.
+O frontend é publicado como site estático no GitHub Pages. O backend tem duas partes: um **servidor Node/Express no Cloud Run** (`server.ts`, com o Firebase Admin SDK) para o que exige credencial de servidor — operações de Admin, notificações, Gemini — e o **Apps Script** para a automação do Google Workspace. Os dados operacionais ficam no Firestore e no Storage, acessados direto pelo navegador e protegidos pelas regras versionadas em `firestore.rules` e `storage.rules`.
+
+> **PWA:** o app tem manifesto (`public/manifest.webmanifest`, nome **JRS/HNRe App**), ícones e um *service worker* (`public/firebase-messaging-sw.js`) usado para o push. Não há cache offline.
 
 ---
 
@@ -21,26 +24,34 @@ A arquitetura atual privilegia simplicidade de implantação e baixo custo opera
 
 ```mermaid
 flowchart LR
-    U[Usuário<br/>Perito ou profissional autorizado]
-    FE[Frontend React<br/>GitHub Pages]
-    GAS[Google Apps Script<br/>API HTTP]
-    SS[(Google Sheets)]
-    GD[Google Drive]
-    DOCS[Google Docs]
-    MAIL[Gmail]
-    GEMINI[Gemini 2.5 Flash API]
+    U[Usuário<br/>perito, MPI, Secretaria, Admin]
+    FE[Frontend React · PWA<br/>GitHub Pages]
+    SW[Service worker<br/>firebase-messaging-sw.js]
+    RUN[Servidor Express<br/>Cloud Run · server.ts]
+    GAS[Google Apps Script<br/>CodeConcursos.gs / Code.gs]
+    FS[(Cloud Firestore)]
+    ST[(Firebase Storage)]
+    AUTH[Firebase Auth]
+    FCM[Firebase Cloud Messaging]
+    GW[Google Drive · Docs · Gmail · Agenda · Sheets]
+    GEMINI[Gemini API]
     STATIC[JSON e conteúdo estático<br/>no bundle/public]
-    EXT[Conteúdo externo<br/>YouTube, Canva, Imgur]
 
     U -->|HTTPS| FE
-    FE -->|Leitura local| STATIC
-    FE -->|GET e POST JSON| GAS
-    FE -->|Embeds e links| EXT
-    GAS -->|Leitura e gravação| SS
-    GAS -->|Criação e armazenamento| GD
-    GAS -->|Templates e composição| DOCS
-    GAS -->|Envio de documentos| MAIL
-    GAS -->|Imagem Base64 e prompt| GEMINI
+    FE --> STATIC
+    FE -->|SDK + regras| FS
+    FE -->|SDK + regras| ST
+    FE -->|login| AUTH
+    FE -->|/api/* com ID token| RUN
+    FE -->|POST JSON com ID token| GAS
+    RUN -->|Admin SDK| FS
+    RUN -->|Admin SDK| AUTH
+    RUN -->|envio| FCM
+    RUN --> GEMINI
+    FCM -->|push| SW
+    SW -->|notificação| U
+    GAS --> GW
+    GAS --> GEMINI
 ```
 
 ---
@@ -49,53 +60,54 @@ flowchart LR
 
 ### 3.1 Frontend
 
-O frontend segue uma arquitetura de SPA baseada em componentes React. A troca de telas ocorre por estado interno no componente `App.tsx`, sem React Router e sem alteração da URL do navegador.
+O frontend segue uma arquitetura de SPA baseada em componentes React, com roteamento por URL (`HashRouter`). `components/Raiz.tsx` decide entre o app autenticado (`App.tsx`) e as páginas públicas (`components/publico/`).
 
 Características observadas:
 
 - React 19 com TypeScript;
 - Vite como ferramenta de desenvolvimento e *build*;
 - componentes funcionais e Hooks;
-- estado predominantemente local com `useState` e `useEffect`;
-- ausência de gerenciador de estado global;
-- roteamento por URL com `react-router-dom` (`HashRouter`; tabela em `config/routes.ts`; `NavItem` segue como identificador das permissões e a `currentView` é derivada da URL);
-- estilos utilitários Tailwind compilados no build (PostCSS) com tokens do design system;
+- estado local com `useState`/`useEffect` e um `NavContext` com usuário, perfil, avisos e notificações;
+- leitura em tempo real do Firestore (`onSnapshot`) nas telas de trabalho;
+- roteamento por URL com `react-router-dom` (tabela em `config/routes.ts`; `NavItem` segue como identificador das permissões e a `currentView` é derivada da URL);
+- estilos utilitários Tailwind compilados no build (PostCSS) com tokens do design system — classes fora do DS falham o build (`scripts/verificar-ds.mjs`);
 - ícones Material Symbols (shim `components/ui/icons.tsx`);
+- tela de erro (`components/ErroFatal.tsx`) no lugar de tela branca quando uma tela falha;
 - conteúdo médico e normativo embutido em componentes e em `constants.ts`;
 - dados auxiliares estáticos em `public/*.json`.
 
 ### 3.2 Backend
 
-O backend é um monólito serverless implementado em um único arquivo `Code.gs`. Ele expõe uma API HTTP por meio das funções padrão do Google Apps Script:
+O backend tem duas partes, publicadas separadamente:
 
-- `doGet(e)` para consultas e operações parametrizadas;
-- `doPost(e)` para criação de documentos, processamento de imagens e outras operações com corpo JSON.
+**Servidor no Cloud Run (`server.ts`, Node + Express, Firebase Admin SDK).** Todas as rotas exigem o *ID token* do Firebase no cabeçalho `Authorization` (salvo as de login), e as de Admin conferem o perfil no Firestore:
 
-O Google Apps Script atua simultaneamente como:
+| Rota | Função |
+|---|---|
+| `POST /api/auth/handoff-token` | Token de login do desktop para o celular (QR code de "Instalar app") |
+| `POST /api/auth/resolver-nip` | Login por NIP (devolve só o login e se a senha é temporária; limitado por IP) |
+| `POST /api/admin/resetar-senha` | Admin volta a senha de um usuário à inicial |
+| `POST /api/admin/excluir-usuario` | Admin apaga um usuário **inativo** (Auth + `usuarios` + `usuarios_publicos`) |
+| `POST /api/admin/preview-apresentacao` | Título e capa de uma apresentação (Google Slides, Canva, GitHub Pages) |
+| `POST /api/notificacoes/evento` | Recebe um evento (login, status Inapto/IDM, IS finalizada, teste), confere no Firestore, grava o histórico e envia o push |
+| `POST /api/gemini/analyze-image` | Leitura de imagem pelo Gemini |
+| `POST /api/concursos/ocr-pdf` | Transcrição literal do PDF de mensagem administrativa |
 
-- controlador HTTP;
-- camada de aplicação;
-- camada de acesso a dados;
-- orquestrador de documentos;
-- cliente da API Gemini;
-- cliente dos serviços Google Workspace.
+O mesmo servidor serve o build em desenvolvimento (`npm run dev`) e libera CORS para a origem do GitHub Pages (`ALLOWED_ORIGIN`).
+
+**Google Apps Script.** `apps-script/concursos/CodeConcursos.gs` concentra a automação do Workspace: geração de PDFs por template (termos, pedidos de parecer, solicitações de exames), gravação no Drive, transcrição de exames e mensagens pelo Gemini, envio de e-mails para impressão e sincronização com o Google Agenda "JRS/HNRe". As ações que gravam exigem o `idToken` do Firebase. `apps-script/principal/Code.gs` mantém as funções legadas e as listas em planilha.
 
 ### 3.3 Persistência
 
-Não há banco de dados dedicado. A persistência operacional utiliza Google Sheets, com abas funcionando como tabelas lógicas. Os identificadores das planilhas e da pasta principal do Drive estão definidos no início de `Code.gs`.
+O **Cloud Firestore** é a fonte principal (detalhes em `docs/database.md`, seções 32+). PDFs ficam no **Firebase Storage** (legislação, perícias menores, infográficos, fotos) ou no **Google Drive** (concursos, pareceres, exames de candidatos). As planilhas Google ficaram para o histórico e listas de apoio.
 
 ### 3.4 Integrações
 
-A aplicação integra-se diretamente com:
-
-- Google Apps Script Web App;
-- Google Sheets;
-- Google Docs;
-- Google Drive;
-- Gmail;
-- Gemini API;
-- Firebase Authentication, embora essa integração não esteja conectada ao fluxo principal de autenticação observado;
-- provedores de mídia externa, como YouTube, Canva e Imgur.
+- Firebase Authentication, Firestore, Storage e Cloud Messaging;
+- Cloud Run (servidor `server.ts`);
+- Google Apps Script Web App (Drive, Docs, Gmail, Agenda, Sheets);
+- Gemini API (pelo Apps Script e pelo servidor);
+- provedores de mídia: YouTube (vídeos), Google Slides/Canva/GitHub Pages (apresentações), Imgur.
 
 ---
 
@@ -103,17 +115,20 @@ A aplicação integra-se diretamente com:
 
 | Componente | Responsabilidade | Tecnologia |
 |---|---|---|
-| `index.html` | Documento HTML base e montagem da aplicação (sem Tailwind CDN nem import map; estilos em `styles/*.css`) | HTML |
-| `index.tsx` | Ponto de entrada e montagem do React | React DOM |
-| `App.tsx` | Shell da aplicação, autenticação local, navegação e controle de acesso por perfil | React + TypeScript |
-| `components/` | Telas, módulos funcionais e conteúdo da aplicação | React + TypeScript |
-| `components/sections/` | Seções especializadas do guia de doenças | React + TypeScript |
-| `services/extrasService.ts` | Consulta e normalização de conteúdos extras | TypeScript + Fetch API |
-| `services/firebaseAuth.ts` | Autenticação Google via Firebase e obtenção de token do Drive | Firebase SDK |
-| `constants.ts` | Conteúdo estático e dados estruturados | TypeScript |
-| `public/*.json` | Catálogos estáticos carregados em tempo de execução | JSON |
-| `Code.gs` | API, regras de negócio, persistência e automação documental | Google Apps Script |
-| GitHub Actions | Compilação e publicação do frontend | GitHub Pages |
+| `index.html` / `index.tsx` | Documento base, manifesto, montagem do React e leitura do token de login por QR | HTML + React DOM |
+| `components/Raiz.tsx` | Desvio entre o app autenticado e as páginas públicas | React |
+| `App.tsx` | Shell autenticado: sessão, permissões, avisos pós-login (senha, notificações, triagem), histórico de notificações | React + TypeScript |
+| `components/shell/` | Sidebar, topbar, breadcrumb, busca global e menu do usuário (com badge de notificações) | React |
+| `components/ui/` | Primitivos do design system (Dialog, Drawer, Button, StatusTag, Toast…) | React + Tailwind |
+| `components/` (telas) | Início, Inspeções, Inspecionados, Concursos, Pareceres, Perícia Menor, Formação, Usuários, Perfil | React |
+| `config/` | Rotas, navegação, matriz de permissões e endpoints | TypeScript |
+| `services/` | Acesso ao Firestore/Storage, ao servidor e ao Apps Script; push | TypeScript |
+| `utils/` | Regras puras (datas, minutas, triagem, exames, PWA) | TypeScript |
+| `server.ts` | API do Cloud Run (Admin SDK, Gemini, notificações) | Node + Express |
+| `public/firebase-messaging-sw.js` | Service worker do push | JavaScript |
+| `apps-script/` | Automação do Google Workspace | Google Apps Script |
+| `firestore.rules` / `storage.rules` | Autorização dos dados | Firebase Rules |
+| GitHub Actions | Publicação do frontend (Pages) e do servidor (Cloud Run) | YAML |
 
 ---
 
@@ -121,42 +136,36 @@ A aplicação integra-se diretamente com:
 
 ```text
 /
-├── .github/
-│   └── workflows/
-│       └── deploy.yml
-├── components/
-│   ├── sections/
-│   ├── Artigos.tsx
-│   ├── CasosPericiais.tsx
-│   ├── ConcursosGuide.tsx
-│   ├── DGPM406Guide.tsx
-│   ├── DiseaseGuide.tsx
-│   ├── Estudo.tsx
-│   ├── ExamesGuide.tsx
-│   ├── HNReGuide.tsx
-│   ├── Login.tsx
-│   ├── Mensagens.tsx
-│   ├── Pareceres.tsx
-│   ├── PericiaMenor.tsx
-│   └── ...
-├── public/
-│   ├── cid.json
-│   └── servicosHNRe.json
-├── services/
-│   ├── extrasService.ts
-│   └── firebaseAuth.ts
-├── App.tsx
+├── .github/workflows/
+│   ├── deploy.yml               # frontend → GitHub Pages
+│   └── deploy-cloud-run.yml     # server.ts → Cloud Run
 ├── apps-script/
 │   ├── principal/Code.gs
 │   └── concursos/CodeConcursos.gs
-├── constants.ts
-├── firebase-applet-config.json
-├── index.html
-├── index.tsx
-├── package.json
-├── tsconfig.json
-├── types.ts
-└── vite.config.ts
+├── components/
+│   ├── concursos/               # detalhe da IS, exames, triagem, calendário
+│   ├── inspecoes/               # agenda, agendamento, bloqueios, minutas
+│   ├── militares/ pareceres/ periciaMenor/
+│   ├── publico/                 # páginas sem login
+│   ├── shell/                   # sidebar, topbar, menu do usuário
+│   ├── ui/                      # primitivos do design system
+│   ├── Home.tsx, ConcursosJRS.tsx, Inspecoes.tsx, …
+│   ├── NotificacoesConvite.tsx, NotificacoesPainel.tsx
+│   └── ErroFatal.tsx
+├── config/                      # routes, navigation, permissions, endpoints
+├── context/  hooks/  utils/
+├── services/                    # firestore*, drive*, notificacoesPush, documentosGerados…
+├── public/
+│   ├── manifest.webmanifest
+│   ├── firebase-messaging-sw.js
+│   ├── icons/                   # ícones das notificações
+│   └── *.json                   # CID, serviços, finalidades, restrições, OMs…
+├── scripts/                     # migrações e verificação do design system
+├── docs/
+├── server.ts
+├── firestore.rules  storage.rules  firebase.json
+├── App.tsx  index.tsx  index.html  constants.ts  types.ts
+└── vite.config.ts  tailwind.config.js  package.json
 ```
 
 ### 5.1 Observação sobre a estrutura atual
@@ -175,236 +184,102 @@ Com o crescimento do projeto, essa estrutura tende a aumentar o acoplamento e di
 
 ### 6.1 Inicialização
 
-O fluxo de inicialização é:
-
 ```mermaid
 sequenceDiagram
     participant B as Navegador
-    participant H as index.html
     participant I as index.tsx
+    participant R as Raiz.tsx
     participant A as App.tsx
 
-    B->>H: Carrega documento
-    H->>H: Carrega CSS compilado, fontes e ícones
-    H->>I: Importa módulo principal
-    I->>A: Monta <App /> em #root
-    A->>A: Verifica autenticação persistida
-    A->>A: Define tela inicial e permissões
+    B->>I: Carrega o bundle
+    I->>I: Lê e remove o token de login por QR (#h=…)
+    I->>R: Monta <Raiz /> dentro do HashRouter
+    R->>R: Rota pública? → AppPublico
+    R->>A: Senão → App
+    A->>A: onAuthStateChanged → perfil em usuarios/{uid}
+    A->>A: Permissões (config/permissoes, tempo real)
+    A->>A: Avisos pós-login, histórico de notificações, sincronizações
 ```
 
-O `index.tsx` utiliza `React.StrictMode` e monta o componente principal no elemento `#root`.
+`App.tsx` também lê, já no carregamento, o `?notif={id}` de quem abriu o app pelo push, para marcar a notificação como lida.
 
 ### 6.2 Navegação
 
-A navegação é controlada pela propriedade de estado:
-
-```ts
-const [currentView, setCurrentView] = useState<NavItem>('splash');
-```
-
-O tipo `NavItem`, definido em `types.ts`, enumera todas as telas possíveis. O método interno de renderização em `App.tsx` usa um `switch` para escolher o componente correspondente.
-
-#### Consequências desse modelo
-
-**Vantagens:**
-
-- implementação simples;
-- nenhuma dependência adicional;
-- transições imediatas entre telas;
-- adequada a uma aplicação pequena e fechada.
-
-**Limitações:**
-
-- não há URL exclusiva por tela;
-- atualizar o navegador pode perder o contexto de navegação;
-- o botão Voltar do navegador não representa a navegação interna;
-- não há *deep linking*;
-- todas as telas importadas diretamente tendem a integrar o mesmo bundle inicial;
-- o crescimento do `App.tsx` aumenta a complexidade do shell.
+- Rotas em `config/routes.ts` (ex.: `/inspecoes`, `/concursos/:concursoId`, `/concursos/dia/AAAA-MM-DD`, `/concursos/atrasadas`, `/pareceres`, `/extras/apresentacoes`). `HashRouter` por causa do GitHub Pages.
+- Menu lateral por categorias (`config/navigation.ts`): **Trabalho**, **Consulta**, **Formação** e **Administração** (Admin).
+- Cada página checa `canAccessPage` e mostra "acesso negado" quando o perfil não pode.
+- Páginas públicas: `/publico/doencas` e `/publico/portaria`.
 
 ### 6.3 Estado
 
-O projeto não utiliza Context API, Redux, Zustand ou outra solução de estado global. O estado fica distribuído entre:
-
-- `App.tsx`, para usuário autenticado, tela atual, menus e contadores;
-- componentes de tela, para formulários, listas, modais e estados assíncronos;
-- `localStorage`, para persistência da sessão personalizada.
+- `NavContext`: usuário (com o "Visualizar como" do Admin), perfil real, avisos, contagem de notificações não lidas, navegação e menus.
+- Estado das telas: local, com assinaturas em tempo real do Firestore.
+- `localStorage`: preferências por aparelho (acesso rápido, convite de notificações adiado, contagem do aviso de triagem, token do push, tutorial de instalação).
 
 ### 6.4 Camada de serviços
 
-Há uma camada de serviços parcial:
-
-- `extrasService.ts` centraliza a busca e normalização dos conteúdos extras;
-- `firebaseAuth.ts` encapsula Firebase Authentication.
-
-Entretanto, a maior parte das chamadas HTTP ao Google Apps Script está declarada diretamente nos componentes, com repetição da constante `GAS_URL` e tratamento individual de respostas.
+`services/` concentra o acesso a dados e integrações: um arquivo por coleção do Firestore (`firestore*.ts`), o Drive/Apps Script (`driveConcursos.ts`, `drivePareceres.ts`), a agenda (`agendaConcursos.ts`, `agendaGoogleIS.ts`), o push (`notificacoesPush.ts`), a fila de impressão (`documentosGerados.ts`) e a auditoria das IS (`auditoriaIS.ts`). A URL do servidor vem de `utils/apiBase.ts` e as do Apps Script de `config/endpoints.ts`.
 
 ### 6.5 Conteúdo e dados locais
 
-O frontend usa três formas de dados locais:
-
-1. objetos TypeScript em `constants.ts`;
-2. conteúdo textual diretamente nos componentes;
-3. arquivos JSON em `public/`.
-
-Os arquivos observados em `public/` são:
-
-- `cid.json`: catálogo de códigos CID;
-- `servicosHNRe.json`: catálogo de serviços do HNRe.
-
-O componente `PericiaMenor.tsx` resolve esses arquivos com base no caminho público configurado pelo Vite.
+- objetos TypeScript em `constants.ts` e conteúdo nos componentes (Doenças de Lei, normas);
+- `public/*.json`: CID, serviços do HNRe, finalidades e restrições das IS, OMs, corpos e quadros.
 
 ### 6.6 Geração local de documentos
 
-O componente `DiseaseGuide.tsx` utiliza `jsPDF` para geração de PDF no navegador. O componente `CasosPericiais.tsx` cria uma janela HTML temporária e aciona a impressão do navegador.
+- `jsPDF`: PDF do atestado fotografado (Perícia Menor) e documentos do guia de doenças.
+- `pdf-lib`: junção do Termo de Recurso com o Termo de Cientificação num PDF único.
 
-Esses fluxos são independentes da geração documental feita no backend.
+### 6.7 Notificações e avisos
+
+- `NotificacoesConvite` pede a permissão ao abrir o app (ou ensina a instalar no iPhone); `services/notificacoesPush.ts` registra o service worker, obtém o token e o grava em `tokens_push`.
+- O histórico (`usuarios/{uid}/notificacoes`) alimenta o badge do avatar e o painel do menu do usuário.
+- Fila de avisos pós-login: senha temporária → aviso da triagem (MPI, 3 primeiros acessos) → convite de notificações.
 
 ---
 
 ## 7. Módulos funcionais
 
-### 7.1 Benefícios e doenças previstas em lei
+### 7.1 Início
+Painel de trabalho: *Precisa de atenção* (pareceres atrasados, perícias vigentes, IS de hoje, concursos em andamento e do dia, **IS de concurso atrasadas**, senha temporária), *Últimos documentos gerados* (só Secretaria), Próximas Inspeções, Pareceres não concluídos, Perícias Menores Vigentes, Acesso rápido, **Próximas férias** (coluna direita), Agenda de inspeções e Avisos.
 
-Componentes principais:
+### 7.2 Inspeções de Saúde e agenda
+`Inspecoes.tsx` e `components/inspecoes/`: cadastro das IS (exceto concursos), tabela agrupada ou calendário Dia/Semana/Mês, agendamento por perito em slots (transação em `agendaSlots`), bloqueios de horário/turno/período, minutas e sincronização com o Google Agenda "JRS/HNRe" (Apps Script). Os dias de concurso ocupam o turno da manhã de todos os peritos.
 
-- `DiseaseGuide.tsx`;
-- `FinalidadesGuide.tsx`;
-- `PortariaGuide.tsx`;
-- `LawReference.tsx`;
-- `components/sections/*`.
+### 7.3 Concursos
+`ConcursosJRS.tsx` e `components/concursos/`:
+- cards dos concursos com calendário dos dias agendados; páginas por dia (`/concursos/dia/…`) e de **IS atrasadas** (`/concursos/atrasadas`), com uma tabela por concurso;
+- planilha de candidatos (status, observações/CID, Nº TIS e finalização; menu de ações; auditoria por IS);
+- termos de recurso e de cientificação, pedidos de parecer e solicitações de exames (PDF no Drive), **enviados por e-mail para impressão** automaticamente;
+- exames entregues pelo candidato (PDF + transcrição pelo Gemini);
+- **triagem** pelo MPI (`Triagem.tsx`, `utils/triagem.ts`): botão TRIAR só nas IS do dia, alertas de possível inaptidão, TRIADO com seção na barra lateral.
 
-Responsabilidades:
+### 7.4 Pareceres
+Firestore (`pareceres`, `quesitosParecer`); PDF pelo Apps Script no Drive; diálogo **Enviar para Impressão** por e-mail.
 
-- consulta a patologias e critérios;
-- apresentação de documentação necessária;
-- navegação entre referências normativas;
-- ferramentas clínicas auxiliares;
-- exportação local de conteúdo em PDF.
+### 7.5 Perícia menor
+Firestore (`periciasMenores`); leitura do atestado pelo Gemini (Apps Script); PDF do atestado no Storage.
 
-A maior parte dos dados deste domínio é estática e compilada junto ao frontend.
+### 7.6 Inspecionados
+`militares`: militares, dependentes e pensionistas; ficha com histórico das IS.
 
-### 7.2 Avaliações e exames
+### 7.7 Consulta
+Doenças de Lei (com calculadoras: CDR, Webster, Child-Pugh; tabela de classificação da SIDA/AIDS), exames e índices de concursos, DGPM-406, Portaria e Legislação (Firestore + PDFs no Storage).
 
-Componentes principais:
+### 7.8 Formação
+Casos periciais, Vídeos (YouTube), Infográficos (Storage), **Apresentações** (Google Slides, Canva, GitHub Pages, abertas em tela cheia) e Roteiro. Cadastro pelo Admin; visualizações registradas em `visualizacoesExtras`.
 
-- `ConcursosGuide.tsx`;
-- `ExamesGuide.tsx`;
-- `DGPM406AnexosGuide.tsx`.
+### 7.9 Administração e perfil
+Usuários (cadastro, permissões por perfil, redefinir senha, **excluir inativo**) e Perfil (contato, foto, senha e **Notificações**: status, ativação e envio de teste).
 
-Responsabilidades:
-
-- apresentar critérios incapacitantes;
-- filtrar exames por finalidade;
-- organizar conteúdo da DGPM-406 e anexos.
-
-### 7.3 Pareceres
-
-Componente principal:
-
-- `Pareceres.tsx`.
-
-Dependências externas:
-
-- Google Apps Script;
-- Google Sheets;
-- Google Docs;
-- Google Drive;
-- Gmail.
-
-Fluxo resumido:
-
-```mermaid
-sequenceDiagram
-    actor P as Perito
-    participant FE as Pareceres.tsx
-    participant GAS as Google Apps Script
-    participant S as Google Sheets
-    participant D as Google Docs/Drive
-    participant M as Gmail
-
-    P->>FE: Informa NIP e dados do parecer
-    FE->>GAS: GET getMilitar/getLookups
-    GAS->>S: Consulta cadastros
-    S-->>GAS: Dados
-    GAS-->>FE: JSON
-    P->>FE: Confirma geração
-    FE->>GAS: POST com dados do parecer
-    GAS->>S: Localiza template
-    GAS->>D: Copia e preenche Google Doc
-    GAS->>D: Exporta PDF e ODT
-    GAS->>S: Registra o parecer
-    GAS->>M: Envia documentos
-    GAS-->>FE: Resultado e link
-```
-
-### 7.4 Perícia menor
-
-Componentes principais:
-
-- `PericiaMenor.tsx`;
-- `PericiaMenorDetalhe.tsx`.
-
-Responsabilidades:
-
-- captura ou envio de imagem de atestado;
-- recorte e processamento da imagem com `react-image-crop` e Canvas;
-- extração estruturada de dados com Gemini;
-- pesquisa do militar por NIP ou nome;
-- consulta aos catálogos CID e serviços;
-- geração do documento final;
-- listagem de perícias vigentes e concluídas.
-
-Fluxo de leitura do atestado:
-
-```mermaid
-sequenceDiagram
-    actor U as Usuário
-    participant FE as PericiaMenor.tsx
-    participant C as Canvas/Image Crop
-    participant GAS as Google Apps Script
-    participant G as Gemini 2.5 Flash
-
-    U->>FE: Captura ou seleciona imagem
-    FE->>C: Recorta e processa imagem
-    C-->>FE: JPEG em Base64
-    FE->>GAS: POST extrair_dados_atestado
-    GAS->>G: Prompt + imagem Base64
-    G-->>GAS: JSON estruturado
-    GAS-->>FE: nome, data, dias e CID
-    FE->>FE: Preenche formulário
-```
-
-### 7.5 Mensagens
-
-Componente principal:
-
-- `Mensagens.tsx`.
-
-O módulo envia uma requisição `POST` ao mesmo backend GAS. No backend, a IA é utilizada para produzir ou estruturar minutas a partir dos dados recebidos, conforme as ações implementadas em `Code.gs`.
-
-### 7.6 Conteúdo educacional e extras
-
-Componentes principais:
-
-- `Estudo.tsx`;
-- `Aulas.tsx`;
-- `Videos.tsx`;
-- `Infograficos.tsx`;
-- `Resumos.tsx`;
-- `RoteiroJRS.tsx`;
-- `Artigos.tsx` e páginas de artigos.
-
-A função `fetchExtras()` consulta uma planilha via Google Apps Script e normaliza os formatos de mídia. A camada de apresentação reconhece principalmente:
-
-- vídeos do YouTube;
-- apresentações e materiais do Canva;
-- imagens e infográficos;
-- links externos.
+### 7.10 Mensagens
+`Mensagens.tsx`: minutas de mensagens administrativas.
 
 ---
 
 ## 8. Arquitetura do backend Google Apps Script
+
+> As subseções 8.1 a 8.6 descrevem o `Code.gs` principal (legado, planilhas). A automação atual está em `apps-script/concursos/CodeConcursos.gs`, com as ações: `criarEstruturaConcurso`, `salvarMensagemPdf`, `extrairMensagemConcurso`, `salvarPdfCandidato`, `salvarExamesCandidato`, `gerarTermoRecurso`, `gerarTermoCientificacao`, `gerarSolicitacaoParecer`, `gerarSolicitacaoExames`, `gerarPedidoParecer`, `salvarPdfParecer`, `gerarMinutaMensagem`, `removerArquivoDrive`, **`enviarTermoRecursoImpressao`**, **`enviarSolicitacaoConcursoImpressao`**, **`enviarParecerImpressao`** (e-mails para a impressão, com cópia para a Secretaria), `sincronizarEventoIS`, `sincronizarEventoBloqueio` e `sincronizarEventosConcursos` (Google Agenda).
 
 ### 8.1 Estrutura
 
@@ -500,65 +375,36 @@ gemini-2.5-flash
 
 ## 9. Autenticação e autorização
 
-### 9.1 Fluxo principal observado
+### 9.1 Fluxo atual
 
-A autenticação utilizada pelo `App.tsx` e por `Login.tsx` é personalizada e delegada ao Google Apps Script.
-
-O frontend envia:
-
-- usuário;
-- hash da senha.
-
-Após autenticação bem-sucedida, armazena em `localStorage`:
-
-```json
-{
-  "usuario": "...",
-  "senhaHash": "..."
-}
-```
-
-Na próxima inicialização, o frontend reutiliza essas informações para validar novamente a sessão no backend.
+- **Firebase Authentication** (e-mail/senha). O login é pelo *usuário* (ex.: `CT MAURISTON`) ou pelo NIP; cada usuário tem um e-mail sintético interno derivado do login (`services/firebaseAuth.ts`). O NIP é resolvido no servidor (`/api/auth/resolver-nip`).
+- O perfil vem de `usuarios/{uid}` no Firestore; usuário inativo é deslogado.
+- **Senha temporária**: diálogo pós-login pede a troca.
+- **Login no celular por QR code**: o desktop pede ao servidor um *custom token* do próprio usuário e o coloca no fragmento da URL do QR.
+- **Logout** apaga o token de push do aparelho antes de sair.
 
 ### 9.2 Perfis
 
-O shell reconhece três perfis:
-
-| Perfil | Acesso observado |
+| Perfil | Uso |
 |---|---|
-| `admin` | Acesso amplo, incluindo mensagens e recursos administrativos |
-| `hnre` | Acesso a documentos e conteúdos internos do HNRe |
-| `user` | Acesso reduzido, principalmente consulta geral |
+| `admin` | Presidente da JRS: acesso total, gestão de usuários e permissões, "Visualizar como" outro perfil |
+| `user_medicos` | Peritos da JRS |
+| `user_medicos_mpi` | Médicos da MPI (inclui a triagem das IS de concurso) |
+| `user_secretaria` | Secretaria (agenda, cadastros, fila de impressão na Início) |
 
-A visibilidade dos itens da navegação é controlada no frontend por condicionais baseadas em `authUser.perfil`.
+A visibilidade de páginas e funcionalidades segue a matriz `config/permissoes` (editável pelo Admin), lida por `canAccessPage`/`canUseFeature`.
 
-### 9.3 Firebase Authentication
+### 9.3 Autorização dos dados
 
-O arquivo `services/firebaseAuth.ts` implementa:
+- **Firestore/Storage:** regras por perfil em `firestore.rules`/`storage.rules` (resumo em `docs/database.md`, seção 42). O perfil é lido do próprio Firestore nas regras.
+- **Servidor:** cada rota verifica o ID token (`verifyIdToken(..., true)`) e, quando é de Admin, o perfil no Firestore.
+- **Apps Script:** as ações que gravam no Drive ou usam o Gemini validam o `idToken` do Firebase (`exigirUsuarioFirebase`).
 
-- login Google por popup;
-- escopo de leitura do Google Drive;
-- acompanhamento do estado de autenticação;
-- cache de token em memória;
-- logout.
+### 9.4 Limites de segurança atuais
 
-Entretanto, não foi identificada integração ativa desse serviço com `App.tsx` ou `Login.tsx`. Portanto, ele aparenta ser código experimental, legado ou preparado para uma migração futura.
-
-### 9.4 Limites de segurança da implementação atual
-
-Os controles de perfil no frontend não devem ser considerados autorização suficiente. Toda operação sensível precisa ser validada novamente no backend.
-
-Pontos de atenção observados:
-
-- hash de senha persistido no `localStorage`;
-- credenciais transmitidas por query string em operações GET;
-- URLs do backend repetidas e expostas no bundle;
-- identificadores de planilhas e pastas declarados no código do Apps Script;
-- controle de visibilidade implementado no cliente;
-- ausência aparente de token de sessão assinado e expirável;
-- possível coexistência de dois modelos de autenticação.
-
----
+- Boa parte das coleções de trabalho (concursos e candidatos) é gravável por qualquer usuário autenticado; o controle fino por perfil está só na UI.
+- Não há validação de esquema no servidor para gravações feitas direto pelo cliente.
+- A configuração pública do Firebase e a chave VAPID ficam no bundle (são públicas por natureza); segredos (Gemini, service accounts) ficam só no Apps Script e no Cloud Run.
 
 ## 10. Contratos de dados
 
@@ -605,46 +451,36 @@ A validação ocorre de forma manual no frontend e no backend. Não foram identi
 
 ### 11.1 Frontend
 
-O frontend é compilado pelo Vite e publicado no GitHub Pages por `.github/workflows/deploy.yml`.
-
-Fluxo:
+Compilado pelo Vite e publicado no GitHub Pages por `.github/workflows/deploy.yml` a cada push na `main`.
 
 ```mermaid
 flowchart LR
-    DEV[Push na branch main]
-    CI[GitHub Actions]
-    NPM[npm install]
-    BUILD[npm run build]
-    DIST[Artefato dist/]
-    PAGES[GitHub Pages]
-
-    DEV --> CI --> NPM --> BUILD --> DIST --> PAGES
+    DEV[Push na main] --> CI[GitHub Actions]
+    CI --> CHK[verificar-ds.mjs]
+    CHK --> BUILD[vite build]
+    BUILD --> PAGES[GitHub Pages]
 ```
 
-Configurações relevantes:
-
-- Node.js 20 no CI;
 - base pública do Vite: `/DoencasEPareceresJRS/`;
-- artefato publicado: `dist/`;
-- implantação acionada em `push` para `main`.
+- variáveis de build (variáveis do repositório): `VITE_API_BASE_URL` (URL do Cloud Run) e `VITE_FIREBASE_VAPID_KEY` (chave pública do push).
 
-### 11.2 Backend
+### 11.2 Servidor (Cloud Run)
 
-O backend precisa ser publicado separadamente como Web App do Google Apps Script. O código fica versionado em `apps-script/`, mas o repositório não contém automação de deploy: a publicação é manual, colando no editor — ver `docs/apps-script-deploy.md`.
+`.github/workflows/deploy-cloud-run.yml` publica `server.ts` no Cloud Run, no mesmo projeto Google Cloud do Firebase, quando ele (ou suas dependências) muda. A service account do serviço precisa de acesso ao Firestore, ao Auth (inclusive criar *custom tokens*) e ao Firebase Cloud Messaging.
 
-Consequentemente, frontend e backend possuem ciclos de publicação independentes.
+### 11.3 Apps Script
 
-### 11.3 Configuração de ambiente
+Publicação **manual**, colando o código no editor e reimplantando a versão — ver `docs/apps-script-deploy.md`.
 
-O `vite.config.ts` lê `GEMINI_API_KEY` e a injeta como `process.env`, mas não foi identificada utilização dessa chave no frontend analisado. A extração de atestados usa a chave armazenada nas propriedades do Apps Script.
+### 11.4 Regras do Firebase
 
-A configuração Firebase está no arquivo:
+`firestore.rules` e `storage.rules` são versionadas, mas publicadas à parte (console ou `firebase deploy --only firestore:rules`). **Uma regra nova só vale depois de publicada** — por exemplo, o histórico de notificações e a fila de impressão dependem dos blocos `usuarios/{uid}/notificacoes` e `documentos_gerados`.
 
-```text
-firebase-applet-config.json
-```
+### 11.5 Configuração de ambiente
 
-As configurações públicas de cliente Firebase não são segredos, mas as regras do projeto Firebase devem restringir adequadamente os recursos associados.
+- `firebase-applet-config.json`: configuração pública do cliente Firebase (também passada ao service worker pela URL do registro).
+- Cloud Run: `GEMINI_API_KEY`, `ALLOWED_ORIGIN`, `APP_URL` e credenciais padrão do serviço.
+- Apps Script: `GEMINI_API_KEY` nas propriedades do script.
 
 ---
 
@@ -652,14 +488,16 @@ As configurações públicas de cliente Firebase não são segredos, mas as regr
 
 ### 12.1 Dependências de produção
 
-| Pacote | Uso observado |
+| Pacote | Uso |
 |---|---|
-| `react` | Interface e composição de componentes |
-| `react-dom` | Montagem da aplicação |
-| `firebase` | Autenticação Google preparada em serviço separado |
-| `jspdf` | Geração local de PDFs |
-| `lucide-react` | Ícones |
+| `react`, `react-dom`, `react-router-dom` | Interface e rotas |
+| `firebase` | Auth, Firestore, Storage e Messaging no cliente |
+| `firebase-admin`, `express` | Servidor no Cloud Run |
+| `@google/genai` | Gemini no servidor |
+| `jspdf`, `pdf-lib` | PDFs locais (atestado, junção de termos) |
 | `react-image-crop` | Recorte de imagem de atestado |
+| `marked` | Renderização de Markdown |
+| `qrcode` | QR code de instalação/login no celular |
 
 ### 12.2 Dependências carregadas externamente
 
@@ -667,18 +505,13 @@ O `index.html` carrega externamente apenas o Google Material Symbols. Tailwind e
 
 ### 12.3 Serviços externos
 
-- Google Apps Script;
-- Google Sheets;
-- Google Drive;
-- Google Docs;
-- Gmail;
+- Firebase (Auth, Firestore, Storage, Cloud Messaging);
+- Google Cloud Run;
+- Google Apps Script, Drive, Docs, Gmail, Agenda e Sheets;
 - Gemini API;
-- Firebase;
-- GitHub Pages;
-- YouTube;
-- Canva;
-- Imgur;
-- Google Fonts.
+- GitHub Pages e GitHub Actions;
+- YouTube, Google Slides, Canva, Imgur;
+- Google Fonts (Material Symbols) e gstatic (SDK do Firebase no service worker).
 
 ---
 
@@ -686,28 +519,24 @@ O `index.html` carrega externamente apenas o Google Material Symbols. Tailwind e
 
 ### 13.1 Pontos fortes
 
-- **Baixo custo de infraestrutura:** GitHub Pages e Google Apps Script reduzem a necessidade de servidores dedicados.
-- **Integração nativa com Google Workspace:** adequada ao fluxo documental existente.
-- **Separação operacional básica:** frontend estático e backend serverless possuem responsabilidades distintas.
-- **Mobile-first:** apropriado ao uso em ambiente assistencial e pericial.
-- **Conteúdo local resiliente:** parte relevante da consulta funciona sem depender de banco remoto após o carregamento da aplicação.
-- **Automação de documentos:** reduz trabalho manual e padroniza saídas.
-- **Chave Gemini no backend:** evita exposição direta da chave usada no OCR.
+- **Baixo custo de infraestrutura:** GitHub Pages, Cloud Run (escala a zero), Firebase e Apps Script.
+- **Dados em tempo real e com regras de acesso** (Firestore), com transação onde há concorrência (agendamento).
+- **Integração nativa com Google Workspace** para documentos, e-mails e agenda.
+- **Segredos fora do navegador:** Gemini e Admin SDK só no servidor/Apps Script.
+- **Mobile-first e instalável**, com push e login no celular por QR code.
+- **Rotas por URL** (deep links, botão voltar) e design system verificado no build.
+- **Conteúdo de consulta resiliente**, compilado no bundle.
 
 ### 13.2 Limitações
 
-- `App.tsx` concentra navegação, autorização visual e shell da aplicação;
-- backend monolítico em um único `Code.gs`;
-- forte acoplamento ao layout e aos nomes das colunas das planilhas;
-- URLs e identificadores repetidos ou fixos no código;
+- `ConcursosJRS.tsx` e `App.tsx` concentram muita lógica (componentes extensos);
+- coleções de concursos graváveis por qualquer usuário autenticado (controle fino só na UI);
+- sem validação de esquema no servidor para as gravações do cliente;
+- regras do Firebase e Apps Script publicados à parte do código (podem ficar defasados);
 - inexistência de testes automatizados;
-- ausência de validação de schemas;
-- ausência de observabilidade estruturada;
-- autenticação personalizada com riscos de sessão;
-- ausência de *code splitting* explícito;
-- contratos de API implícitos;
-- componentes extensos com regras de UI, negócio e integração combinadas;
-- ausência de manifesto e *service worker* para caracterização como PWA completa.
+- observabilidade limitada aos logs do Cloud Run e à auditoria das IS de concurso;
+- sem *code splitting* por rota;
+- sem cache offline.
 
 ---
 
@@ -715,17 +544,15 @@ O `index.html` carrega externamente apenas o Google Material Symbols. Tailwind e
 
 | Risco | Impacto | Probabilidade | Mitigação recomendada |
 |---|---|---:|---|
-| Alteração de colunas ou nomes de abas nas planilhas | Alto | Média | Criar repositórios de dados e validação explícita de cabeçalhos |
-| Persistência do hash da senha no navegador | Alto | Alta | Substituir por sessão/token com expiração |
-| Autorização apenas por ocultação de UI | Alto | Média | Validar perfil no backend em todas as ações sensíveis |
-| Crescimento do `Code.gs` monolítico | Médio/Alto | Alta | Dividir em módulos `.gs` por domínio |
-| Contratos frontend/backend não tipados | Médio | Alta | Definir DTOs e schemas compartilhados |
-| Falha ou limite de cota do Apps Script | Alto | Média | Tratamento de retries, filas e monitoramento |
-| Dependência de IDs fixos | Médio | Média | Centralizar configuração em Script Properties |
-| Dependências por CDN | Baixo (mitigado: só Material Symbols) | Baixa | Autohospedar o Material Symbols |
-| Bundle crescente | Médio | Média | Lazy loading por rota (React Router já adotado) |
-| Ausência de testes | Alto | Alta | Adicionar testes unitários, integração e E2E |
+| Regras do Firestore não publicadas após mudança no código | Alto | Média | Publicar as regras no mesmo fluxo do deploy (CI) |
+| Gravação indevida em concursos por perfil sem permissão | Médio | Baixa | Restringir as regras por perfil/campo |
+| Componentes muito extensos (`ConcursosJRS.tsx`) | Médio | Alta | Dividir por responsabilidade (tabela, sheet, ações) |
+| Apps Script publicado manualmente | Médio | Média | Checklist de reimplantação; versionar o deploymentId |
+| Falha ou cota do Apps Script/Gemini | Alto | Média | Tratar erros e manter o documento salvo mesmo sem e-mail |
+| Push dependente da instalação no iOS | Baixo | Alta | Histórico no app (badge) independe do push |
+| Ausência de testes | Alto | Alta | Testes unitários das regras puras (`utils/`) e E2E dos fluxos críticos |
 | Dados médico-administrativos em serviços externos | Alto | Média | Revisar LGPD, acesso, retenção e auditoria |
+| Dependências por CDN | Baixo | Baixa | Autohospedar Material Symbols e o SDK do service worker |
 
 ---
 
@@ -1022,6 +849,31 @@ flowchart TB
 
 ---
 
+### ADR-006 — Cloud Firestore como persistência principal
+
+- **Status:** aceita (substitui a ADR-003 para os dados operacionais).
+- **Decisão:** usuários, IS, concursos, pareceres, perícias, legislação, formação, notificações e fila de impressão no Firestore, acessado pelo cliente com regras por perfil.
+- **Consequências:** tempo real e transações; a autorização passa a depender de `firestore.rules`, que precisam ser publicadas a cada mudança.
+
+### ADR-007 — Servidor Node no Cloud Run para operações privilegiadas
+
+- **Status:** aceita.
+- **Decisão:** `server.ts` (Express + Admin SDK) para o que o cliente não pode fazer: tokens de login, operações de Admin, notificações e Gemini.
+- **Consequências:** dois backends (Cloud Run e Apps Script), com deploys independentes.
+
+### ADR-008 — Notificações por FCM com histórico no Firestore
+
+- **Status:** aceita.
+- **Decisão:** o cliente só avisa o evento; o servidor confere, evita repetição (`notificacoes_enviadas`), grava o histórico de cada destinatário e envia o push. Quem realiza o evento não recebe o próprio aviso.
+- **Consequências:** o histórico (badge) funciona mesmo sem push; no iPhone o push exige o app instalado na Tela de Início.
+
+### ADR-009 — Documentos dos concursos e pareceres no Google Drive
+
+- **Status:** aceita.
+- **Decisão:** PDFs gerados pelo Apps Script ficam no Drive compartilhado e são enviados por e-mail para a impressão; o app registra a fila em `documentos_gerados`.
+
+---
+
 ## 18. Checklist para mudanças arquiteturais
 
 Antes de incorporar uma nova funcionalidade, verificar:
@@ -1032,6 +884,8 @@ Antes de incorporar uma nova funcionalidade, verificar:
 - [ ] O contrato da API está tipado e documentado?
 - [ ] Os dados de entrada são validados?
 - [ ] Não há segredo inserido no bundle do frontend?
+- [ ] Coleções novas têm bloco em `firestore.rules`, e as regras foram **publicadas**?
+- [ ] Mudanças no Apps Script foram reimplantadas (`docs/apps-script-deploy.md`)?
 - [ ] IDs e URLs estão centralizados em configuração?
 - [ ] A mudança evita acoplamento direto a índices fixos de planilha?
 - [ ] Há tratamento de erro e estado de carregamento?
@@ -1045,17 +899,35 @@ Antes de incorporar uma nova funcionalidade, verificar:
 
 ## 19. Resumo executivo
 
-A arquitetura atual é adequada a uma aplicação interna de pequeno a médio porte que depende fortemente do ecossistema Google Workspace. O desenho reduz custos e acelera a entrega, mas concentra responsabilidades no `App.tsx` e no `Code.gs`, usa contratos implícitos e apresenta fragilidades relevantes de autenticação, autorização e manutenção.
+A arquitetura evoluiu de "SPA + Apps Script + planilhas" para **SPA instalável + Firebase (Auth, Firestore, Storage, Messaging) + servidor no Cloud Run + Apps Script para o Google Workspace**. Das recomendações anteriores, já foram adotadas: autenticação por identidade (Firebase Auth), autorização por regras no banco e no servidor, roteamento por URL, camada de serviços, configuração externa (variáveis do CI e do Cloud Run) e auditoria das IS de concurso.
 
-A evolução recomendada não exige abandonar as tecnologias atuais. O caminho de menor risco é preservar React, GitHub Pages e Google Apps Script, enquanto se introduzem gradualmente:
+Os próximos passos de maior retorno são:
 
-1. autenticação baseada em identidade e sessão segura;
-2. autorização obrigatória no backend;
-3. camada única de API no frontend;
-4. roteamento por URL;
-5. organização por domínio;
-6. modularização do Apps Script;
-7. contratos e validação de dados;
-8. testes automatizados;
-9. configuração externa;
-10. auditoria e observabilidade.
+1. publicar as regras do Firebase no CI, junto do deploy;
+2. restringir por perfil as gravações em concursos;
+3. dividir os componentes mais extensos (`ConcursosJRS.tsx`);
+4. testes automatizados das regras puras (`utils/`) e dos fluxos críticos;
+5. *code splitting* por rota;
+6. observabilidade (erros do cliente e do servidor).
+
+---
+
+## 20. Histórico de mudanças (19 a 31/10/2026)
+
+| Data | Mudança | Onde |
+|---|---|---|
+| 19/10 | Inspeções de Saúde: tabela, calendário, agendamento por perito, bloqueios, Google Agenda | `Inspecoes.tsx`, `components/inspecoes/` |
+| 19/10 | Dias de concurso no calendário e no Google Agenda (turno da manhã) | `services/agendaConcursos.ts` |
+| 19/10 | Início como painel (Próximas Inspeções, IS de hoje, mini calendário) | `Home.tsx` |
+| 21/10 | Páginas públicas das Doenças de Lei e da Portaria | `components/publico/` |
+| 22/10 | Exames do candidato em PDF com transcrição pelo Gemini | `components/concursos/ExamesCandidato.tsx` |
+| 24/10 | Excluir usuário inativo | `/api/admin/excluir-usuario` |
+| 25/10 | Detalhes da IS com exames enviados | `CandidatoDetalhe.tsx` |
+| 30/10 | Vídeos e Infográficos no Firebase; página Apresentações; Próximas férias | `services/firestoreExtras.ts` |
+| 30–31/10 | Doenças de Lei: Webster, Child-Pugh, SIDA/AIDS, Cardiopatia isquêmica pós-IAM | `components/sections/` |
+| 31/10 | Envio por e-mail para impressão (parecer, termos, solicitações) | `CodeConcursos.gs` |
+| 31/10 | Tela de erro no lugar de tela branca | `ErroFatal.tsx` |
+| 31/10 | Notificações push, histórico e badge; app "JRS/HNRe App" | `notificacoesPush.ts`, `server.ts` |
+| 31/10 | Fila de documentos gerados (Secretaria) | `services/documentosGerados.ts` |
+| 31/10 | Triagem das IS de concurso (MPI) | `components/concursos/Triagem.tsx` |
+| 31/10 | IS de concurso atrasadas (Início e `/concursos/atrasadas`) | `Home.tsx`, `ConcursosJRS.tsx` |

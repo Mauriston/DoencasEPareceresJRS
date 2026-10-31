@@ -1,6 +1,8 @@
 # Guia Médico Naval - JRS / HNRe
 
-Este projeto é uma aplicação web progressiva (PWA - interface responsiva mobile-first) desenvolvida para auxiliar a Junta Regular de Saúde (JRS) do Hospital Naval de Recife (HNRe) no seu cotidiano pericial. A ferramenta unifica o acesso rápido a normativas, trilhas de estudo e automatiza a geração de documentos periciais utilizando **Inteligência Artificial e Visão Computacional**.
+Este projeto é uma aplicação web progressiva (PWA instalável, com notificações push) desenvolvida para auxiliar a Junta Regular de Saúde (JRS) do Hospital Naval de Recife (HNRe) no seu cotidiano pericial. A ferramenta unifica o acesso rápido a normativas, organiza o trabalho da JRS (Inspeções de Saúde, concursos, pareceres e perícias menores) e automatiza a geração de documentos periciais utilizando **Inteligência Artificial**.
+
+> Documentação técnica: `docs/architecture.md` (arquitetura), `docs/database.md` (dados e regras), `docs/design.md` (design system) e `docs/auditoria-frontend.md` (auditoria e evoluções da interface).
 
 ---
 
@@ -11,7 +13,8 @@ A aplicação funciona como um canivete suíço digital para os Peritos Médicos
 ### 1. Doenças de Lei (`/components/DiseaseGuide.tsx`)
 Esta página serve como um "Livro de Bolso" de acesso instantâneo ao rol de doenças previstas nas legislações que garantem isenções ou amparam reformas.
 * **Lógica Envolvida:** Utiliza um fluxo de dados baseado em JSON local estático (`/constants.ts`). Expõe uma lista expansível permitindo pesquisa livre em tempo real (`onChange` do campo de busca filtra o nome das patologias e critérios).
-* **Funcionalidade:** Exibe componentes retráteis internos detalhando os Critérios Diagnósticos, Exames Subsidiários e Documentação exigida para reconhecimento incontestável da doença na esfera civil-militar. Inclui também uma **Calculadora de CDR (Clinical Dementia Rating)** integrada.
+* **Funcionalidade:** Exibe componentes retráteis internos detalhando os Critérios Diagnósticos, Exames Subsidiários e Documentação exigida para reconhecimento incontestável da doença na esfera civil-militar. Calculadoras integradas: **CDR** (Clinical Dementia Rating), **Escala de Webster** (Doença de Parkinson, com card de enquadramento) e **Child-Pugh** (Hepatopatia Grave); tabela de classificação da **SIDA/AIDS** e diagnóstico de **Cardiopatia Isquêmica – Pós IAM**.
+* **Páginas públicas (sem login):** `/publico/doencas` e `/publico/portaria`, com barra enxuta no celular.
 
 ### 2. Concursos e Avaliações (`/components/ConcursosGuide.tsx` e `ExamesGuide.tsx`)
 Projetada para os momentos atarefados de inspeção admissional e de rotina.
@@ -22,6 +25,7 @@ Pedidos de parecer médico por especialidade, com acompanhamento do andamento de
 * **Lista:** tabela (Firestore, coleção `pareceres`) com busca por inspecionado/NIP, filtro por especialidade e situação *Solicitado / Atrasado (20 dias ou mais) / Concluído*; o detalhe abre em barra lateral (bottom sheet no mobile).
 * **Novo parecer:** o militar é escolhido por autocomplete na base `militares`, com a finalidade da IS e os quesitos sugeridos por especialidade (editáveis; modelos mantidos pelo Admin em `quesitosParecer`).
 * **Output:** um Apps Script preenche o template do Google Docs, o PDF é guardado no Google Drive e o pedido é registrado no Firestore.
+* **Enviar para Impressão:** depois de gerar (ou pelo ícone de impressora da lista), o PDF vai por e-mail para a impressão (Apps Script, ação `enviarParecerImpressao`). Nos concursos, o Termo de Recurso e as solicitações de parecer e de exames são enviados para impressão automaticamente.
 
 ### 3.1 Inspeções de Saúde (`/components/Inspecoes.tsx` e `/components/inspecoes/`)
 Cadastro das IS (exceto as de concursos), agendamento, acompanhamento de prazos e minutas de mensagem.
@@ -68,25 +72,36 @@ Registro e consulta das perícias menores dos militares de bordo, no mesmo padr�
 * **Término:** `dataTermino` = data do atestado + tempo homologado − 1, calculada ao gravar.
 * **Histórico:** as perícias da antiga aba `Pericia_Menor` foram migradas (`scripts/migrar-pericias-menores.mjs`) e ligadas aos militares pelo NIP. A Guia de Encaminhamento (Google Docs) foi removida.
 
-### 5. Roteiro JRS e Material de Estudo (`/components/RoteiroJRS.tsx` e `Estudo.tsx`)
-Ambiente de capacitação contínua e trilhas de aprendizagem.
-* **Funcionalidade:** O *Roteiro JRS* apresenta uma trilha em formato *Accordion* (lista expansível) com aulas, normas e infográficos, abrindo vídeos do YouTube e imagens do Imgur em modais de visualização rica sobrepostos à tela. O *Material de Estudo* divide o conhecimento em 3 abas limpas: Aulas, Vídeos e Livros (Artigos).
+### 5. Roteiro JRS (`/components/RoteiroJRS.tsx`)
+Trilha de capacitação em formato *accordion* (lista expansível) com aulas, normas e infográficos, abrindo vídeos e imagens em modais de visualização sobrepostos à tela. O material de formação (vídeos, infográficos e apresentações) tem páginas próprias (seção 8).
 
-### 6. Normas do HNRe e Legislação (`/components/HNReGuide.tsx`)
-Leitor nativo de normativas e diretrizes locais.
-* **Funcionalidade:** Renderiza de forma inteligente textos complexos em Markdown (como o Regimento Interno e Ordem Interna da JRS), aplicando negrito automático em Artigos e Incisos, com botões flutuantes (FABs) de atalho para download dos PDFs oficiais.
+### 6. Normas e Legislação (`/components/DGPM406Guide.tsx`, `PortariaGuide.tsx` e `LawReference.tsx`)
+* **DGPM-406 e Portaria:** leitura navegável das normas (a Portaria também tem página pública).
+* **Legislação:** lista da coleção `legislacao` (Firestore) com o PDF de cada norma no Firebase Storage, aberto em modal de tela cheia; o Admin cadastra novas normas pela própria página.
+* Documentos em Markdown são renderizados por `MarkdownDocPage.tsx`/`MarkdownContent.tsx`.
+
+### 7. Início (painel de trabalho)
+*Precisa de atenção* (pareceres atrasados, perícias vigentes, IS de hoje, concursos em andamento e do dia, IS de concurso atrasadas, senha temporária), *Últimos documentos gerados* (Secretaria), Próximas Inspeções, Pareceres não concluídos, Perícias Menores Vigentes, Acesso rápido (editável), **Próximas férias** (bloqueios da agenda com motivo FÉRIAS), Agenda de inspeções e Avisos.
+
+### 8. Formação
+**Casos Periciais**, **Vídeos** (YouTube), **Infográficos** (imagens no Storage), **Apresentações** (Google Slides, Canva ou GitHub Pages, abertas em tela cheia) e **Roteiro JRS**. Vídeos, infográficos e apresentações são cadastrados pelo Admin na própria página (coleções `videos`, `infograficos`, `apresentacoes`); quem abriu cada item fica registrado para o Admin (`visualizacoesExtras`).
+
+### 9. Usuários e Perfil
+* **Usuários (Admin):** cadastro, permissões por perfil (matriz `config/permissoes`), redefinir senha e **excluir usuário inativo** (servidor `/api/admin/excluir-usuario`). O Admin pode **Visualizar como** outro perfil.
+* **Perfil:** contato, foto, senha e **Notificações** (status neste aparelho, ativar e enviar notificação de teste).
 
 ---
 
-## 📱 Panorama dos Menus Inferiores (Bottom Nav)
+## 📱 Navegação
 
-A navegação ocorre em substituição de rotas através do Hook `currentView` no componente central `App.tsx`, garantindo fluidez *Single Page Application*. A barra divide-se em 5 blocos:
+Menu lateral fixo (recolhível; drawer no celular) com as categorias:
 
-1. **Benefícios** (*Ícone Estetoscópio*): Acesso a `Doenças de Lei`, verificação de `Finalidades` da perícia, e à `Portaria` do ministério da defesa (foco em direitos do inativo/ativo).
-2. **Avaliações** (*Ícone Prancheta*): Link direto aos vereditos dos critérios eliminatórios para `Concursos` e `Exames` obrigatórios.
-3. **Documentos** (*Ícone Arquivo*): Módulo de geração de `Pareceres` automatizados, e formulário inteligente de `Perícia Menor`.
-4. **Normas** (*Ícone Martelo*): Agrupa o baluarte da MB (`DGPM-406`), a aba de normas internas (`HNRe`) e a `Legislação` pura.
-5. **Extras** (*Ícone Widgets*): Congrega utilidades como `Casos` interativos, ambiente de `Estudo`, `Infográficos`, `Resumos` e a trilha do `Roteiro JRS`.
+1. **Trabalho:** Inspeções de Saúde, Inspecionados, Concursos, Perícia Menor, Pareceres e Mensagens.
+2. **Consulta:** Doenças de Lei, Exames, Índices, DGPM-406, Portaria e Legislação.
+3. **Formação:** Casos Periciais, Vídeos, Infográficos, Apresentações e Roteiro.
+4. **Administração** (Admin): Usuários.
+
+Cada tela tem URL própria (`HashRouter`, tabela em `config/routes.ts`). O menu do avatar traz Perfil, **Notificações** (com contador de não lidas) e Sair.
 
 ---
 
@@ -101,52 +116,41 @@ A interface do usuário foi desenhada com estrita observância à Identidade Vis
 ## 💻 Tecnologias e Dependências
 
 * **Framework Web:** React 19 + TypeScript + Vite.
-* **Estilização:** Tailwind CSS 3.4 compilado pelo Vite/PostCSS (`tailwind.config.js` com paleta fechada e `styles/tokens.css`).
+* **Estilização:** Tailwind CSS 3.4 compilado pelo Vite/PostCSS (`tailwind.config.js` com paleta fechada e `styles/tokens.css`); `scripts/verificar-ds.mjs` falha o build com classes fora do DS.
 * **Navegação:** `react-router-dom` v7 com `HashRouter` (GitHub Pages) — cada tela e subnível tem URL própria.
 * **Ícones:** Google Material Symbols (shim `components/ui/icons.tsx`).
-* **Processamento de Imagens:** `react-image-crop` para interações de recorte na web, manipulado com a API Canvas nativa do HTML5.
-* **Exportação Local:** `jspdf` para geração de relatórios instantâneos.
-* **Dados e Arquivos (Firebase):** Authentication, Firestore (`militares`, `pareceres`, `periciasMenores`, `legislacao`, `quesitosParecer`, `concursos`, entre outras) e Storage (PDFs); regras em `firestore.rules` e `storage.rules`.
-* **Backend Autônomo (Google Apps Script):** Geração de PDFs a partir de templates, leitura de atestados pelo Gemini e listas de apoio (planilhas), com Google Docs para *templates* e GmailApp para e-mails.
-* **Inteligência Artificial:** Integração via REST API com o modelo **Google Gemini 2.5 Flash** para leitura de documentos via Visão Computacional (OCR) estruturado em JSON.
+* **Firebase:** Authentication, Firestore (dados operacionais; ver `docs/database.md`), Storage (PDFs e imagens) e **Cloud Messaging** (push); regras em `firestore.rules` e `storage.rules` (publicadas à parte).
+* **Servidor (Cloud Run):** `server.ts` (Node + Express + Firebase Admin SDK) — login por NIP e por QR code, operações de Admin, notificações e Gemini; publicado por `.github/workflows/deploy-cloud-run.yml`.
+* **Google Apps Script:** geração de PDFs a partir de templates, gravação no Google Drive, e-mails para impressão, sincronização com o Google Agenda e leitura de documentos pelo Gemini (`apps-script/`, publicação manual — ver `docs/apps-script-deploy.md`).
+* **Inteligência Artificial:** Google Gemini para leitura de atestados, transcrição de mensagens administrativas e de exames de candidatos.
+* **PWA:** `public/manifest.webmanifest` (app **JRS/HNRe App**) e service worker do push (`public/firebase-messaging-sw.js`).
+* **Documentos locais:** `jspdf` (PDF do atestado), `pdf-lib` (junção de termos), `react-image-crop` (recorte de imagem), `qrcode` (instalação/login no celular).
+* **Variáveis do repositório (build):** `API_BASE_URL` (URL do Cloud Run) e `FIREBASE_VAPID_KEY` (chave pública do push).
 
 ---
 
 ## 📁 Estrutura de Pastas e Arquivos
 
-Abaixo encontra-se a arquitetura atualizada de ficheiros e diretórios no repositório deste projeto:
-
 - `/` (Raiz)
-  - `App.tsx` *(Componente de Roteamento Principal e Navigation Layout)*
-  - `apps-script/` *(Código dos projetos Google Apps Script: `principal/Code.gs` e `concursos/CodeConcursos.gs`/`CodePrincipal.gs`; publicados colando no editor do Apps Script — ver `docs/apps-script-deploy.md`)*
-  - `scripts/` *(Cargas e migrações para o Firebase, ex.: `migrar-pericias-menores.mjs`)*
-  - `constants.ts` *(Banco de Dados Estático)*
-  - `index.html` *(Index da aplicação PWA)*
-  - `index.tsx` *(Arquivo de montagem React / Entry point)*
-  - `types.ts` *(Tipagens TypeScript TS do ecossistema)*
-  - `vite.config.ts`, `tsconfig.json`, `package.json`, `cleanup.js` *(Configurações)*
-
-- `/services`
-  - `extrasService.ts` *(Serviços, extração de URLs e parsing de planilhas)*
-  - `firebaseAuth.ts` *(Integrações de autenticação e permissões)*
-  - `firestoreMilitares.ts` / `firestorePareceres.ts` / `firestorePericiasMenores.ts` *(Coleções do Firestore; status e data de término da Perícia Menor)*
-  - `atestadoIA.ts` *(Leitura do atestado pelo Gemini via Apps Script)*
-
-- `/components` (Árvore de Componentes Renderizados)
-  - `Aulas.tsx` / `Videos.tsx`
-  - `ConcursosGuide.tsx` / `ExamesGuide.tsx` / `FinalidadesGuide.tsx`
-  - `DGPM406Guide.tsx` / `HNReGuide.tsx`
-  - `RegimentoHNRe.tsx` / `OrdemInternaJRS.tsx` *(Renderizadores nativos Markdown)*
-  - `DiseaseGuide.tsx` / `CasosPericiais.tsx` / `Estudo.tsx` / `RoteiroJRS.tsx`
-  - `Header.tsx` / `Footer.tsx`
-  - `Infograficos.tsx` / `Resumos.tsx` / `Artigos.tsx`
-  - `LawReference.tsx` / `PortariaGuide.tsx`
-  - `Pareceres.tsx` / `PericiaMenor.tsx` / `PericiaMenorDetalhe.tsx`
-  - `pareceres/` / `periciaMenor/` *(Formulários em barra lateral, detalhes e modais de cada página)*
-  - `ArtigoPericiaMedica.tsx`, `ArtigoPerfilPerito.tsx`, etc. *(Sub-páginas de artigos)*
-
-- `/components/sections`
-  - Seções de componentes modulares de doenças (Ex: `AlienacaoMentalSection.tsx`, `CardiopatiaGraveSection.tsx`, etc.)
-
-- `/components/resumos-dgpm`
-  - Leitor interativo da normativa 406 (com páginas próprias para os Capítulos: `Capitulo1.tsx`, `Capitulo2.tsx`, etc.)
+  - `App.tsx` *(shell autenticado: sessão, permissões, avisos pós-login, notificações)*
+  - `index.tsx` / `index.html` *(entrada; manifesto e ícones)*
+  - `server.ts` *(API do Cloud Run)*
+  - `firestore.rules` / `storage.rules` / `firebase.json`
+  - `constants.ts`, `types.ts`, `vite.config.ts`, `tailwind.config.js`, `package.json`
+- `apps-script/` *(`principal/Code.gs` e `concursos/CodeConcursos.gs`)*
+- `components/`
+  - `Home.tsx`, `Inspecoes.tsx`, `Militares.tsx`, `ConcursosJRS.tsx`, `Pareceres.tsx`, `PericiaMenor.tsx`, `UsuariosManagement.tsx`, `Perfil.tsx` *(telas de trabalho)*
+  - `DiseaseGuide.tsx`, `ExamesGuide.tsx`, `ConcursosGuide.tsx`, `DGPM406Guide.tsx`, `PortariaGuide.tsx`, `LawReference.tsx` *(consulta)*
+  - `CasosPericiais.tsx`, `Videos.tsx`, `Infograficos.tsx`, `Apresentacoes.tsx`, `RoteiroJRS.tsx` *(formação)*
+  - `NotificacoesConvite.tsx`, `NotificacoesPainel.tsx`, `ErroFatal.tsx`, `Raiz.tsx`
+  - `concursos/` *(detalhe da IS, exames do candidato, triagem, calendário)*
+  - `inspecoes/` *(agenda, agendamento, bloqueios, minutas)*
+  - `militares/`, `pareceres/`, `periciaMenor/`, `publico/`, `sections/`
+  - `shell/` *(sidebar, topbar, breadcrumb, busca, menu do usuário)* e `ui/` *(primitivos do design system)*
+- `config/` *(rotas, navegação, permissões, endpoints)*
+- `services/` *(Firestore, Storage, Drive/Apps Script, agenda, push, fila de impressão, auditoria)*
+- `utils/` *(regras puras: datas, inspeções, minutas, exames, triagem, PWA)*
+- `hooks/`, `context/`, `styles/`
+- `public/` *(manifesto, service worker, ícones das notificações e catálogos JSON)*
+- `scripts/` *(migrações para o Firebase e verificação do design system)*
+- `docs/` *(arquitetura, banco de dados, design, auditoria, deploy do Apps Script)*
