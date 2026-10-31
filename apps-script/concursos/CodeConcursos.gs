@@ -75,6 +75,7 @@ function doPost(e) {
     if (corpo.action === 'salvarMensagemPdf') return apiSalvarMensagemPdf(corpo);
     if (corpo.action === 'salvarPdfCandidato') return apiSalvarPdfCandidato(corpo);
     if (corpo.action === 'salvarPdfParecer') return apiSalvarPdfParecer(corpo);
+    if (corpo.action === 'enviarParecerImpressao') return apiEnviarParecerImpressao(corpo);
     if (corpo.action === 'removerArquivoDrive') return apiRemoverArquivoDrive(corpo);
     if (corpo.action === 'extrairMensagemConcurso') return apiExtrairMensagemConcurso(corpo);
     if (corpo.action === 'salvarExamesCandidato') return apiSalvarExamesCandidato(corpo);
@@ -524,6 +525,45 @@ function apiSalvarPdfParecer(corpo) {
   var nomeArquivo = 'SOL_PARECER_' + especialidade + '_' + formatarDataMilitar(new Date()) + '.PDF';
   var arquivo = criarPdfNaPasta(pasta, nomeArquivo, corpo.pdfBase64);
   return { fileId: arquivo.getId(), url: urlVisualizacaoDrive(arquivo.getId()) };
+}
+
+/** Destinatário do "Enviar para Impressão" dos pedidos de parecer. */
+var EMAIL_IMPRESSAO = 'giorginis@marinha.mil.br';
+
+/**
+ * action=enviarParecerImpressao (POST): { idToken, pdfUrl, remetente } — envia o PDF do Pedido de Parecer por
+ * e-mail para impressão (EMAIL_IMPRESSAO), a partir da conta dona do script, com o nome de exibição do médico
+ * que solicitou o parecer (ex.: "CT MAURISTON"). Aceita o PDF no Drive (só sob a pasta PARECERES) ou, nos
+ * pedidos mais antigos, no Firebase Storage do projeto.
+ */
+function apiEnviarParecerImpressao(corpo) {
+  exigirUsuarioFirebase(corpo);
+  var pdfUrl = String(corpo.pdfUrl || '').trim();
+  var remetente = limparNomeDrive(corpo.remetente).slice(0, 80) || 'JRS/HNRe';
+  if (!pdfUrl) throw new Error('"pdfUrl" é obrigatório.');
+
+  var blob;
+  var idDrive = /drive\.google\.com\/file\/d\/([\w-]+)/.exec(pdfUrl);
+  if (idDrive) {
+    var arquivo = DriveApp.getFileById(idDrive[1]);
+    if (!estaSobPasta(arquivo, ID_PASTA_PARECERES)) throw new Error('O PDF não está na pasta PARECERES.');
+    blob = arquivo.getBlob();
+  } else if (/^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/jrs-app-web\.firebasestorage\.app\//.test(pdfUrl)) {
+    var resp = UrlFetchApp.fetch(pdfUrl, { muteHttpExceptions: true });
+    if (resp.getResponseCode() !== 200) throw new Error('Não foi possível baixar o PDF do pedido.');
+    blob = resp.getBlob().setName('PEDIDO_DE_PARECER.pdf');
+  } else {
+    throw new Error('Endereço do PDF não reconhecido.');
+  }
+
+  MailApp.sendEmail({
+    to: EMAIL_IMPRESSAO,
+    subject: 'POR FAVOR, IMPRIMIR',
+    body: 'Giorginis,\n\nPor favor, imprimir este documento em frente e verso colorido.\n\nObrigado!\n\n' + remetente,
+    name: remetente,
+    attachments: [blob]
+  });
+  return { enviado: true };
 }
 
 /** Verdadeiro se o arquivo está em algum lugar sob a pasta indicada (limite de profundidade por segurança). */
