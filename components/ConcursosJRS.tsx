@@ -2375,9 +2375,12 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
     setTriagemAlvo(null);
     showToast(`Triagem de ${c.nome} salva.`);
   };
-  // Limpar só faz sentido se há algum PDF gerado (termos, pareceres ou exames).
+  // Limpar só faz sentido se há algum PDF gerado (termos, pareceres ou exames) ou triagem.
   const temDocumentoGerado = (c: CandidatoRecord) =>
-    !!(c.termoRecursoUrl || c.termoCientificacaoUrl) || qtdSolicitacoes(c) > 0 || c.examesQtd > 0;
+    !!(c.termoRecursoUrl || c.termoCientificacaoUrl) || qtdSolicitacoes(c) > 0 || c.examesQtd > 0 || !!c.triagem;
+  // MPI: depois da triagem, o Status ainda indefinido fica em amarelo (lembrete de lançar o resultado).
+  const destacarStatus = (c: CandidatoRecord) =>
+    ehMpi && !!c.triagem && !c.finalizado && ['', 'PENDENTE', 'REAGENDADO'].includes(String(c.status || '').trim().toUpperCase());
   const temSolicitacaoGerada = (c: CandidatoRecord) => qtdSolicitacoes(c) > 0;
   const mostrarMenuAcoes = (c: CandidatoRecord) => podeSolicitarBase || temSolicitacaoGerada(c) || ehAdmin || podeEnviarExames;
 
@@ -2463,7 +2466,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
     setCandidatoModalMobile(null);
     setConfirmDialog({
       title: 'Limpar IS',
-      message: `Limpar toda a IS de ${c.nome}? O Status volta a "Sem status" e serão apagados Observações, Nº TIS, laudo, todos os documentos gerados (termo de recurso, termo de cientificação, pareceres e pedidos de exames) e os exames entregues pelo candidato (PDF no Drive e transcrição). Esta ação não pode ser desfeita.`,
+      message: `Limpar toda a IS de ${c.nome}? O Status volta a "Sem status" e serão apagados Observações, Nº TIS, laudo, todos os documentos gerados (termo de recurso, termo de cientificação, pareceres e pedidos de exames), os exames entregues pelo candidato (PDF no Drive e transcrição) e os dados da triagem. Esta ação não pode ser desfeita.`,
       confirmLabel: 'Limpar IS',
       onConfirm: async () => {
         setConfirmDialog(null);
@@ -3359,7 +3362,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                                 </td>
                                 <td className="py-3.5 px-4">
                                   {editavel ? (
-                                    <StatusSelect value={c.status || ''} options={STATUS_OPTIONS} onChange={v => handleStatusChange(c, v)} className="w-full" />
+                                    <StatusSelect value={c.status || ''} options={STATUS_OPTIONS} onChange={v => handleStatusChange(c, v)} className="w-full" destaque={destacarStatus(c)} />
                                   ) : <CandidatoStatusTag status={c.status} />}
                                 </td>
                                 <td className="py-3.5 px-4 text-ink">
@@ -3617,7 +3620,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                 <div>
                   <label className="block text-xs font-bold text-ink-3 uppercase tracking-wider mb-1.5">Status</label>
                   {editavel ? (
-                    <StatusSelect value={c.status || ''} options={STATUS_OPTIONS} onChange={v => handleStatusChange(c, v)} className="w-full" />
+                    <StatusSelect value={c.status || ''} options={STATUS_OPTIONS} onChange={v => handleStatusChange(c, v)} className="w-full" destaque={destacarStatus(c)} />
                   ) : (
                     <div>{<CandidatoStatusTag status={c.status} />}</div>
                   )}

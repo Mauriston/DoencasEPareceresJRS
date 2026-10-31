@@ -1,6 +1,6 @@
 // Ficheiro: components/concursos/Triagem.tsx
 // Triagem da IS de concurso (ver utils/triagem.ts):
-// - TriagemBotao: "TRIAR" (só MPI, IS sem triagem) / "TRIADO" (todos menos a
+// - TriagemBotao: chip "TRIAR" vermelho (só MPI, IS de hoje sem triagem) / chip "TRIADO" verde (todos menos a
 //   Secretaria), com badge vermelho de alertas + alterações; some com a IS finalizada.
 // - TriagemFormulario: lançamento/edição pelo MPI (modal no desktop, bottom sheet no
 //   celular), com os alertas de possível inaptidão.
@@ -23,17 +23,17 @@ import {
 export const TriagemBotao: React.FC<{ triagem: TriagemRecord | null; onTriar: () => void; onVer: () => void }> = ({ triagem, onTriar, onVer }) => {
   if (!triagem) {
     return (
-      <button type="button" onClick={e => { e.stopPropagation(); onTriar(); }} className="font-sans text-xs font-bold text-blue hover:text-navy underline underline-offset-2 min-h-[24px]">
+      <button type="button" onClick={e => { e.stopPropagation(); onTriar(); }} className="font-sans inline-flex items-center h-6 px-2.5 rounded-full bg-wine text-white text-xs font-bold tracking-wide hover:bg-wine-dark shadow-sm">
         TRIAR
       </button>
     );
   }
   const pend = pendenciasDaTriagem(triagem);
   return (
-    <button type="button" onClick={e => { e.stopPropagation(); onVer(); }} className="relative font-sans text-xs font-bold text-green-700 hover:text-navy underline underline-offset-2 min-h-[24px] pr-1">
+    <button type="button" onClick={e => { e.stopPropagation(); onVer(); }} className="relative font-sans inline-flex items-center h-6 px-2.5 rounded-full bg-green-700 text-white text-xs font-bold tracking-wide hover:bg-green-900 shadow-sm">
       TRIADO
       {pend > 0 && (
-        <span className="absolute -top-2 -right-3 min-w-[16px] h-4 px-1 rounded-full bg-wine text-white text-xs leading-4 text-center no-underline" aria-label={`${pend} achados na triagem`}>{pend}</span>
+        <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-wine text-white text-xs leading-[18px] text-center ring-2 ring-white" aria-label={`${pend} achados na triagem`}>{pend}</span>
       )}
     </button>
   );

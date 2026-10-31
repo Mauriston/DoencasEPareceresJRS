@@ -15,7 +15,7 @@
 // separada por concurso — aqui é só mais um documento na mesma coleção.
 import {
   getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, onSnapshot,
-  writeBatch, serverTimestamp, Timestamp,
+  writeBatch, serverTimestamp, Timestamp, deleteField,
 } from 'firebase/firestore';
 import { app } from './firebaseAuth';
 import { registrarEvento } from './auditoriaIS';
@@ -907,8 +907,8 @@ export const reabrirIS = async (concursoId: string, id: string): Promise<Candida
  * Admin — "Limpar": apaga todas as colunas da IS (volta a "Sem status") e todos
  * os documentos gerados (termos de recurso e de cientificação, pareceres e
  * pedidos de exames), inclusive os PDFs no Storage, e também os exames que o
- * candidato entregou (PDF no Drive e transcrição na subcoleção "exames"). Nome, matrícula e data de agendamento
- * são mantidos.
+ * candidato entregou (PDF no Drive e transcrição na subcoleção "exames") e a triagem. Nome, matrícula e data de
+ * agendamento são mantidos.
  */
 export const limparIS = async (concursoId: string, id: string): Promise<CandidatoRecord> => {
   const snap = await getDoc(candidatoRef(concursoId, id));
@@ -920,8 +920,9 @@ export const limparIS = async (concursoId: string, id: string): Promise<Candidat
     termoRecursoUrl: '', termoCientificacaoUrl: '',
     solicitacoesParecer: [] as SolicitacaoDoc[], solicitacoesExames: [] as SolicitacaoDoc[],
     examesQtd: 0, examesPdfUrls: [] as string[], examesEnviadoEm: '',
+    triagem: null,
   };
-  await updateDoc(candidatoRef(concursoId, id), proximo);
+  await updateDoc(candidatoRef(concursoId, id), { ...proximo, triagem: deleteField() });
   await apagarExamesCandidato(concursoId, id, atual.examesPdfUrls);
   const urls = [
     atual.termoRecursoUrl, atual.termoCientificacaoUrl,
