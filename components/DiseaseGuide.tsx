@@ -15,6 +15,7 @@ import { doencaPath } from '../config/routes';
 import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
 import { StatusTag, type StatusTone } from './ui/StatusTag';
+import { controlClass, controlErrorClass } from './ui/Field';
 
 const cdrData = [
   { id: 'M', nome: 'Memória', sigla: '(M)', opcoes: [
@@ -349,6 +350,171 @@ const WebsterCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
+// Child-Pugh: três exames digitados (a pontuação sai das faixas) e dois achados clínicos escolhidos
+// como nas calculadoras CDR e Webster. Cada variável vale de 1 a 3 pontos (total 5 a 15).
+const childPughLab = [
+  { id: 'bili', nome: 'Bilirrubina total', unidade: 'mg/dL', faixas: '< 2 · 2 a 3 · > 3',
+    pontos: (v: number) => (v < 2 ? 1 : v <= 3 ? 2 : 3) },
+  { id: 'alb', nome: 'Albumina', unidade: 'g/dL', faixas: '> 3,5 · 2,8 a 3,5 · < 2,8',
+    pontos: (v: number) => (v > 3.5 ? 1 : v >= 2.8 ? 2 : 3) },
+  { id: 'inr', nome: 'INR', unidade: '', faixas: '< 1,7 · 1,7 a 2,3 · > 2,3',
+    pontos: (v: number) => (v < 1.7 ? 1 : v <= 2.3 ? 2 : 3) },
+] as const;
+
+const childPughClinico = [
+  { id: 'ascite', nome: 'Ascite', opcoes: ['Ausente', 'Leve', 'Moderada'] },
+  { id: 'encef', nome: 'Encefalopatia hepática', opcoes: ['Sem encefalopatia', 'Grau 1-2', 'Grau 3-4'] },
+] as const;
+
+const grausEncefalopatia = [
+  { grau: 'Grau 0', desc: 'Consciência, personalidade, exame neurológico e eletroencefalograma normais.' },
+  { grau: 'Grau 1', desc: 'Inquietação, distúrbio do sono, irritabilidade/agitação, tremor, escrita prejudicada; ondas de 5 ciclos/s.' },
+  { grau: 'Grau 2', desc: 'Letargia, desorientação temporal, comportamento inadequado, asterixis, ataxia; ondas trifásicas lentas.' },
+  { grau: 'Grau 3', desc: 'Sonolência, estupor, desorientação espacial, hiper-reflexia, rigidez; ondas mais lentas.' },
+  { grau: 'Grau 4', desc: 'Coma sem resposta a estímulos, sem personalidade/comportamento, descerebração; atividade delta lenta de 2-3 ciclos/s.' },
+];
+
+function getChildPughClasse(total: number): { classe: string; prognostico: string; tom: StatusTone } {
+  if (total >= 10) return { classe: 'C', prognostico: 'mau prognóstico', tom: 'danger' };
+  if (total >= 7) return { classe: 'B', prognostico: 'prognóstico intermediário', tom: 'attention' };
+  return { classe: 'A', prognostico: 'bom prognóstico', tom: 'success' };
+}
+
+const lerNumero = (txt: string) => {
+  const v = parseFloat(txt.replace(',', '.'));
+  return txt.trim() !== '' && Number.isFinite(v) && v >= 0 ? v : null;
+};
+
+const ChildPughCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [valores, setValores] = useState<Record<string, string>>({ bili: '', alb: '', inr: '' });
+  const [clinico, setClinico] = useState<Record<string, number>>({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEncefOpen, setIsEncefOpen] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const labPontos = childPughLab.map(v => { const n = lerNumero(valores[v.id]); return n === null ? null : v.pontos(n); });
+  const preenchidos = labPontos.filter(p => p !== null).length + childPughClinico.filter(c => clinico[c.id] !== undefined).length;
+  const completo = preenchidos === 5;
+  const total = labPontos.reduce<number>((acc, p) => acc + (p ?? 0), 0) + childPughClinico.reduce((acc, c) => acc + (clinico[c.id] !== undefined ? clinico[c.id] + 1 : 0), 0);
+  const res = getChildPughClasse(total);
+
+  const handleCopy = async () => {
+    const linhasLab = childPughLab.map((v, i) => `- ${v.nome} = ${valores[v.id].trim().replace('.', ',')}${v.unidade ? ' ' + v.unidade : ''} (+${labPontos[i]})`);
+    const linhasClin = childPughClinico.map(c => `- ${c.nome} = ${c.opcoes[clinico[c.id]]} (+${clinico[c.id] + 1})`);
+    const text = `CHILD-PUGH SCORE:\n\n${[...linhasLab, ...linhasClin].join('\n')}\n-------------------------------\n- Pontuação total = ${total}\n\n- RESULTADO: CLASSE ${res.classe} (${res.prognostico.toUpperCase()})`;
+    try { await navigator.clipboard.writeText(text); setIsCopied(true); if (navigator.share) await navigator.share({ title: 'Avaliação Child-Pugh', text }); } catch (err) { if ((err as Error).name !== 'AbortError') console.error(err); }
+  };
+
+  const alterarValor = (id: string, txt: string) => { setValores(v => ({ ...v, [id]: txt })); setIsCopied(false); };
+  const escolher = (id: string, idx: number) => { setClinico(c => ({ ...c, [id]: idx })); setIsCopied(false); };
+
+  return (
+    <div className="flex flex-col flex-1">
+      <Container size="form" className="py-6 md:py-8 pb-6 space-y-5">
+        <PageHeader
+          title="Child-Pugh"
+          description="Classificação de Child-Turcotte-Pugh: 5 variáveis, de 1 a 3 pontos cada."
+          actions={<Button variant="secondary" icon="arrow_back" onClick={onClose}>Voltar à doença</Button>}
+        />
+        {childPughLab.map((v, i) => (
+          <div key={v.id} className="bg-white border border-line rounded-xl p-4">
+            <label htmlFor={`cp-${v.id}`} className="block text-h3 font-bold text-navy mb-1">{v.nome}{v.unidade && <span className="text-ink-3 font-normal"> ({v.unidade})</span>}</label>
+            <p className="text-xs text-ink-3 mb-3">Faixas: {v.faixas}</p>
+            <div className="flex items-center gap-3">
+              <input
+                id={`cp-${v.id}`}
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="Valor do exame"
+                value={valores[v.id]}
+                onChange={e => alterarValor(v.id, e.target.value)}
+                aria-invalid={valores[v.id].trim() !== '' && labPontos[i] === null ? true : undefined}
+                className={`${controlClass} ${valores[v.id].trim() !== '' && labPontos[i] === null ? controlErrorClass : ''}`}
+              />
+              <span className={`shrink-0 text-xs font-bold px-2 py-1 rounded tabular-nums ${labPontos[i] !== null ? 'bg-navy text-white' : 'bg-thead text-ink-3'}`}>{labPontos[i] !== null ? '+' + labPontos[i] : '—'}</span>
+            </div>
+          </div>
+        ))}
+        {childPughClinico.map(cat => (
+          <div key={cat.id} role="radiogroup" aria-labelledby={`cp-${cat.id}`} className="bg-white border border-line rounded-xl overflow-hidden">
+            <h2 id={`cp-${cat.id}`} className="text-h3 font-bold text-navy px-4 pt-4 pb-2">
+              {cat.id === 'encef' ? (
+                <button type="button" onClick={() => setIsEncefOpen(true)} className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-blue focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded">
+                  {cat.nome}
+                  <span className="material-symbols-outlined text-[18px]" aria-hidden="true">info</span>
+                  <span className="sr-only">(ver graus de encefalopatia)</span>
+                </button>
+              ) : cat.nome}
+            </h2>
+            <div className="flex flex-col">
+              {cat.opcoes.map((desc, idx) => {
+                const marcado = clinico[cat.id] === idx;
+                return (
+                  <label
+                    key={idx}
+                    className={`relative flex items-center gap-3 min-h-[44px] px-4 py-3 cursor-pointer border-t border-line transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-gold ${marcado ? 'bg-navy text-white' : 'bg-white text-ink hover:bg-thead'}`}
+                  >
+                    <input type="radio" name={`cp-${cat.id}`} checked={marcado} onChange={() => escolher(cat.id, idx)} className="sr-only" />
+                    <span className="flex-1 text-sm leading-snug">{desc}</span>
+                    <span className={`shrink-0 text-xs font-bold px-2 py-1 rounded tabular-nums ${marcado ? 'bg-white/20 text-white' : 'bg-thead text-ink-3'}`}>+{idx + 1}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </Container>
+
+      <div className="sticky bottom-0 mt-auto z-sticky bg-white border-t border-line" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="mx-auto w-full max-w-form px-4 py-3 flex flex-wrap items-center justify-between gap-3" role="status" aria-live="polite">
+          <div className="flex items-center gap-4">
+            <div>
+              <p className="text-xs font-semibold text-ink-3">Pontuação total</p>
+              <p className="text-kpi font-extrabold text-navy tabular-nums">{completo ? total : '—'}</p>
+            </div>
+            {completo
+              ? <StatusTag tone={res.tom}>Classe {res.classe} ({res.prognostico})</StatusTag>
+              : <StatusTag tone="neutral">Preencha as 5 variáveis ({preenchidos}/5)</StatusTag>}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" icon="info" onClick={() => setIsModalOpen(true)}>Interpretação</Button>
+            <Button icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied || !completo} onClick={handleCopy}>{isCopied ? 'Copiado' : 'Copiar resultado'}</Button>
+          </div>
+        </div>
+      </div>
+
+      {isModalOpen && (
+        <Dialog title="Interpretação dos resultados" icon="info" size="md" onClose={() => setIsModalOpen(false)} footer={<Button variant="secondary" onClick={() => setIsModalOpen(false)}>Fechar</Button>}>
+          <div className="overflow-x-auto scroll-x-visible">
+            <table className="w-full text-left text-sm text-ink border-collapse">
+              <thead className="bg-thead text-ink-3 text-xs">
+                <tr><th scope="col" className="px-3 py-2 border-b border-line">Pontuação</th><th scope="col" className="px-3 py-2 border-b border-line">Classe</th><th scope="col" className="px-3 py-2 border-b border-line">Prognóstico</th></tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                <tr><td className="px-3 py-2 font-medium">5 a 6</td><td className="px-3 py-2">A</td><td className="px-3 py-2">Bom prognóstico</td></tr>
+                <tr className="bg-wine-50"><td className="px-3 py-2 font-medium">7 a 9</td><td className="px-3 py-2 font-medium text-navy">B</td><td className="px-3 py-2 font-medium text-navy">Prognóstico intermediário</td></tr>
+                <tr className="bg-wine-100"><td className="px-3 py-2 font-bold text-wine-800">10 a 15</td><td className="px-3 py-2 font-bold text-wine-800">C</td><td className="px-3 py-2 font-bold text-wine-800">Mau prognóstico</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </Dialog>
+      )}
+
+      {isEncefOpen && (
+        <Dialog title="Graus de encefalopatia" icon="info" size="md" onClose={() => setIsEncefOpen(false)} footer={<Button variant="secondary" onClick={() => setIsEncefOpen(false)}>Fechar</Button>}>
+          <ul className="space-y-3">
+            {grausEncefalopatia.map(g => (
+              <li key={g.grau} className="text-sm text-ink leading-relaxed"><span className="font-bold text-navy">{g.grau}:</span> {g.desc}</li>
+            ))}
+          </ul>
+          <p className="text-xs text-ink-3 mt-3">Fonte: FDA (via MDCalc). Tradução livre.</p>
+        </Dialog>
+      )}
+    </div>
+  );
+};
+
 const getDiseaseIcon = (name: string) => {
   const lower = name.toLowerCase();
   if (lower.includes("espondilite")) return <span className="material-symbols-outlined text-[22px] text-navy">orthopedics</span>;
@@ -435,7 +601,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
   const [isCatCModalOpen, setIsCatCModalOpen] = useState(false);
   const [isBavModalOpen, setIsBavModalOpen] = useState(false);
   const [isBavImageExpanded, setIsBavImageExpanded] = useState(false);
-  const [calculadoraAberta, setCalculadoraAberta] = useState<'cdr' | 'webster' | null>(null);
+  const [calculadoraAberta, setCalculadoraAberta] = useState<'cdr' | 'webster' | 'childpugh' | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   // Checklist de documentos reunidos: guardado neste aparelho, por doença/diagnóstico.
   const [docsMarcados, setDocsMarcados] = useState<Set<number>>(new Set());
@@ -515,6 +681,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
 
   if (calculadoraAberta === 'cdr') return <CdrCalculator onClose={() => setCalculadoraAberta(null)} />;
   if (calculadoraAberta === 'webster') return <WebsterCalculator onClose={() => setCalculadoraAberta(null)} />;
+  if (calculadoraAberta === 'childpugh') return <ChildPughCalculator onClose={() => setCalculadoraAberta(null)} />;
 
   // PAGE LEVEL 2: Diagnoses List for a specific disease
   if (selectedDisease && !selectedDiagnosis) {
@@ -550,6 +717,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
   if (selectedDisease && selectedDiagnosis) {
     const isDemencia = selectedDisease.name === "Alienação Mental" && selectedDiagnosis.name === "Demência";
     const isParkinson = selectedDisease.id === "doenca_de_parkinson";
+    const isHepatopatia = selectedDisease.id === "hepatopatias_graves";
     const totalDocs = selectedDisease.documents.length;
     const secao = 'bg-white rounded-xl p-5 md:p-6 border border-line';
     const tituloSecao = 'font-heading font-bold text-h2 text-navy mb-3 pb-2 border-b border-line';
@@ -568,6 +736,25 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                 </h2>
                 <p className="text-base text-ink leading-relaxed">{selectedDisease.definition}</p>
               </section>
+
+              {selectedDisease.sections?.map(sec => (
+                <section key={sec.title} className={secao}>
+                  <h2 className={tituloSecao}>{sec.title}
+                  </h2>
+                  <ul className="space-y-2 list-disc pl-5 marker:text-navy">
+                    {sec.items.map((item, idx) => <li key={idx} className="text-base text-ink leading-relaxed">{item}</li>)}
+                  </ul>
+                </section>
+              ))}
+
+              {isHepatopatia && (
+                <section className={secao}>
+                  <h2 className={tituloSecao}>Classificação de Child-Pugh
+                  </h2>
+                  <p className="text-sm text-ink-3 mb-4">A classe de Child-Pugh estima a gravidade da doença hepática e fundamenta o enquadramento como doença prevista em lei.</p>
+                  <Button icon="calculate" fullWidth onClick={() => setCalculadoraAberta('childpugh')}>Child-Pugh Score Calculator</Button>
+                </section>
+              )}
 
               {selectedDisease.name === "SIDA/AIDS" && (
                 <section className={secao}>
@@ -602,7 +789,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                   {selectedDiagnosis.criteria.map((item, idx) => (
                     <li key={idx} className="flex items-start gap-3 text-base text-ink">
                       <span className="w-7 h-7 rounded-full bg-navy text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5" aria-hidden="true">{idx + 1}</span>
-                      <span className="leading-relaxed flex-1">{item}</span>
+                      <span className={`leading-relaxed flex-1 ${selectedDiagnosis.highlight?.includes(idx) ? 'font-bold' : ''}`}>{item}</span>
                     </li>
                   ))}
                 </ol>

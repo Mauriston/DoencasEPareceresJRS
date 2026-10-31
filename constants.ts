@@ -546,13 +546,47 @@ export const DISEASES: Disease[] = [
       "Laudo histopatológico (se submetido a biópsia hepática)",
       "Quadro clínico da época do diagnóstico"
     ],
+    sections: [
+      {
+        title: "Quadro clínico",
+        items: [
+          "Emagrecimento",
+          "Icterícia",
+          "Ascite",
+          "Edemas periféricos",
+          "Fenômenos hemorrágicos",
+          "Alterações cutaneomucosas (telangiectasias, eritema palmar, queda de pelos e sufusões hemorrágicas)"
+        ]
+      },
+      {
+        title: "Quadro laboratorial",
+        items: [
+          "Pancitopenia",
+          "Distúrbios da coagulação (hipoprotrombinemia, queda do fator V e queda do fibrinogênio)",
+          "Hiperbilirrubinemia",
+          "Elevação das transaminases",
+          "Elevação de FA e GGT",
+          "Hipoalbuminemia"
+        ]
+      },
+      {
+        title: "Exames de imagem",
+        items: [
+          "US: alterações estruturais do fígado e do baço, ascite, dilatação do sistema porta",
+          "EDA: varizes esofágicas e gastropatia hipertensiva",
+          "Cintilografia hepática: redução da captação hepática com aumento da captação esplênica"
+        ]
+      }
+    ],
     diagnoses: [
       {
         name: "Quadro Clínico Geral",
         criteria: [
-          "Alteração estrutural extensa e intensa progressiva do fígado",
-          "Grave deficiência funcional, incapacidade para atividades laborativas e risco de vida"
-        ]
+          "Child-Pugh A: não enquadra",
+          "Child-Pugh B: enquadra se ascite ou encefalopatia recidivantes",
+          "Child-Pugh C: enquadra sempre"
+        ],
+        highlight: [1, 2]
       }
     ]
   },
