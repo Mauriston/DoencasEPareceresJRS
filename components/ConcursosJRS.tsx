@@ -13,7 +13,7 @@ import { CalendarioConcursos } from './concursos/CalendarioConcursos';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
 import {
-  listarConcursos, getConcurso, listarCandidatos, observarConcursos, observarConcurso, observarCandidatos, criarConcursoDaMensagem, novoConcursoId, importarConcursoDeCsv, atualizarCandidato,
+  listarConcursos, getConcurso, salvarTriagem, listarCandidatos, observarConcursos, observarConcurso, observarCandidatos, criarConcursoDaMensagem, novoConcursoId, importarConcursoDeCsv, atualizarCandidato,
   criarCandidato, reagendarCandidato, listarDatasAgendamento, obterContextoAgendamento, confirmarAgendamento,
   gerarMinutaResultados, abrirConcurso, voltarParaEmBreve, encerrarConcurso, salvarTermoRecurso, salvarTermoCientificacao, registrarSolicitacao, STATUS_PERMITEM_SOLICITACAO, reabrirIS, limparIS, type SolicitacaoDoc,
   listarMensagens, arquivarMensagem, obterEstatisticasAnuais, definirPeriodoAgendamento,
@@ -22,6 +22,7 @@ import {
 } from '../services/firestoreConcursos';
 import { SolicitarParecerModal, SolicitarExamesModal } from './SolicitacaoModais';
 import { CandidatoDetalhe } from './concursos/CandidatoDetalhe';
+import { TriagemBotao, TriagemFormulario, TriagemSecao } from './concursos/Triagem';
 import { EnviarExamesModal, ExamesTranscritosModal, type AlvoExames } from './concursos/ExamesCandidato';
 import { juntarPdfsBase64 } from '../services/pdfMerge';
 import {
@@ -2352,6 +2353,19 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
   const qtdSolicitacoes = (c: CandidatoRecord) => c.solicitacoesParecer.length + c.solicitacoesExames.length;
   // Editar/Limpar: exclusivos do perfil Admin (nem desabilitados para os demais).
   const ehAdmin = perfil === 'admin';
+  // Triagem: o MPI lança ("TRIAR") e edita; depois de triado, todos menos a Secretaria veem
+  // ("TRIADO" e a seção na barra lateral). Com a IS finalizada, nada disso aparece.
+  const ehMpi = perfil === 'user_medicos_mpi';
+  const podeVerTriagem = perfil !== 'user_secretaria';
+  const mostrarBotaoTriagem = (c: CandidatoRecord) => !c.finalizado && (c.triagem ? podeVerTriagem : ehMpi);
+  const mostrarSecaoTriagem = (c: CandidatoRecord) => !!c.triagem && !c.finalizado && podeVerTriagem;
+  const [triagemAlvo, setTriagemAlvo] = useState<CandidatoRecord | null>(null);
+  const handleSalvarTriagem = async (c: CandidatoRecord, dados: Parameters<typeof salvarTriagem>[2]) => {
+    const triagem = await salvarTriagem(concursoId, c.id, dados, nav?.authUser?.usuario || nav?.authUser?.nome || '');
+    setCandidatos(prev => prev.map(x => (x.id === c.id ? { ...x, triagem } : x)));
+    setTriagemAlvo(null);
+    showToast(`Triagem de ${c.nome} salva.`);
+  };
   // Limpar só faz sentido se há algum PDF gerado (termos, pareceres ou exames).
   const temDocumentoGerado = (c: CandidatoRecord) =>
     !!(c.termoRecursoUrl || c.termoCientificacaoUrl) || qtdSolicitacoes(c) > 0 || c.examesQtd > 0;
@@ -2934,6 +2948,18 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
         <ResponsavelTermoModal candidatoNome={responsavelModal.nome} onSelect={handleResponsavelEscolhido} onClose={() => setResponsavelModal(null)} />
       )}
 
+      {triagemAlvo && (() => {
+        const c = candidatos.find(x => x.id === triagemAlvo.id) || triagemAlvo;
+        return (
+          <TriagemFormulario
+            candidatoNome={c.nome}
+            inicial={c.triagem}
+            onSalvar={dados => handleSalvarTriagem(c, dados)}
+            onClose={() => setTriagemAlvo(null)}
+          />
+        );
+      })()}
+
       {detalheCandidatoId && isDesktop && (() => {
         const c = candidatos.find(x => x.id === detalheCandidatoId);
         if (!c) return null;
@@ -2945,6 +2971,9 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
             statusTag={<CandidatoStatusTag status={c.status} />}
             onClose={() => setDetalheCandidatoId(null)}
             onVerExames={c.examesQtd > 0 ? () => handleVerExames(c) : undefined}
+            triagem={mostrarSecaoTriagem(c) && c.triagem ? (
+              <TriagemSecao triagem={c.triagem} onCopiado={showToast} onEditar={ehMpi ? () => setTriagemAlvo(c) : undefined} />
+            ) : undefined}
           />
         );
       })()}
@@ -3310,6 +3339,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                                     <button type="button" onClick={() => handleCopiarNomeCandidato(c.nome)} aria-label={`Copiar nome de ${c.nome}`} title="Copiar nome" className="inline-flex items-center justify-center w-6 h-6 rounded text-navy hover:bg-thead">
                                       <span className="material-symbols-outlined text-[16px]" aria-hidden="true">content_copy</span>
                                     </button>
+                                    {mostrarBotaoTriagem(c) && <TriagemBotao triagem={c.triagem} onTriar={() => setTriagemAlvo(c)} onVer={() => setDetalheCandidatoId(c.id)} />}
                                     {estadoSalvar[c.id] && (
                                       <span role="status" className={`font-sans font-semibold ${estadoSalvar[c.id] === 'falhou' ? 'text-wine' : 'text-ink-3'}`}>
                                         {estadoSalvar[c.id] === 'salvando' ? 'Salvando…' : estadoSalvar[c.id] === 'salvo' ? 'Salvo' : 'Falha ao salvar'}
@@ -3418,11 +3448,13 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                         )}
                       </button>
                       {expandidoGrupo && grupo.itens.map(c => (
-                        <button
+                        <div
                           key={c.id}
-                          type="button"
+                          role="button"
+                          tabIndex={0}
                           onClick={() => setCandidatoModalMobile(c)}
-                          className={`w-full flex items-center gap-3 px-4 py-3 border-t border-line text-left active:bg-paper transition-colors ${destaqueDaLinha(c)}`}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCandidatoModalMobile(c); } }}
+                          className={`w-full flex items-center gap-3 px-4 py-3 border-t border-line text-left active:bg-paper transition-colors cursor-pointer ${destaqueDaLinha(c)}`}
                         >
                           <span className="w-6 h-6 shrink-0 flex items-center justify-center">
                             {c.finalizado ? (
@@ -3434,13 +3466,14 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                           <span className="min-w-0 flex-1">
                             <span className="flex items-center gap-2 min-w-0">
                               <span className="text-sm font-semibold text-ink truncate">{c.nome}</span>
+                              {mostrarBotaoTriagem(c) && <span className="shrink-0"><TriagemBotao triagem={c.triagem} onTriar={() => setTriagemAlvo(c)} onVer={() => setCandidatoModalMobile(c)} /></span>}
                             </span>
                             {c.observacoes && (
                               <span className="block text-xs text-ink-3 truncate">{c.observacoes}</span>
                             )}
                           </span>
                           <span className="shrink-0">{c.status ? <CandidatoStatusTag status={c.status} /> : null}</span>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   );
@@ -3562,6 +3595,13 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                     <span className="material-symbols-outlined text-[20px] text-green-700" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                     <p className="text-xs font-bold text-green-800">IS finalizada — os dados não podem mais ser alterados.</p>
                   </div>
+                )}
+
+                {mostrarSecaoTriagem(c) && c.triagem && (
+                  <TriagemSecao
+                    triagem={c.triagem} onCopiado={showToast}
+                    onEditar={ehMpi ? () => { setCandidatoModalMobile(null); setTriagemAlvo(c); } : undefined}
+                  />
                 )}
 
                 <div>

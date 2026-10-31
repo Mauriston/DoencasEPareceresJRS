@@ -67,9 +67,11 @@ interface Props {
   onClose: () => void;
   /** Abre a tela cheia com os exames transcritos (só existe no desktop). */
   onVerExames?: () => void;
+  /** Seção de Triagem (só quando há triagem, a IS não foi finalizada e o perfil pode vê-la). */
+  triagem?: React.ReactNode;
 }
 
-export const CandidatoDetalhe: React.FC<Props> = ({ candidato: c, concursoId, concursoNome, statusTag, onClose, onVerExames }) => {
+export const CandidatoDetalhe: React.FC<Props> = ({ candidato: c, concursoId, concursoNome, statusTag, onClose, onVerExames, triagem }) => {
   const qtdDocs = (c.termoRecursoUrl ? 1 : 0) + (c.termoCientificacaoUrl ? 1 : 0) + c.solicitacoesParecer.length + c.solicitacoesExames.length;
 
   // Os exames ficam numa subcoleção (ver firestoreConcursos): só são lidos quando o
@@ -103,6 +105,8 @@ export const CandidatoDetalhe: React.FC<Props> = ({ candidato: c, concursoId, co
             {c.finalizado && <span className="text-xs font-semibold text-green-800">IS finalizada</span>}
           </div>
         </div>
+
+        {triagem}
 
         <dl className="space-y-3">
           <Linha rotulo="Concurso" valor={concursoNome} />
