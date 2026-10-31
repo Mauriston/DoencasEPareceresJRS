@@ -8,7 +8,7 @@
 // (o usuário faz login normalmente).
 import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from './firebaseAuth';
-import { apiUrl } from '../utils/apiBase';
+import { chamarServidor } from './apiClient';
 import { urlDoApp } from '../utils/pwa';
 
 const HASH_KEY = 'h';
@@ -29,15 +29,8 @@ export const entrarComToken = (token: string) => signInWithCustomToken(auth, tok
 export const montarUrlQr = async (): Promise<{ url: string; comLogin: boolean }> => {
   const base = urlDoApp();
   try {
-    const user = auth.currentUser;
-    if (!user) throw new Error('sem sessão');
-    const idToken = await user.getIdToken();
-    const resp = await fetch(apiUrl('/api/auth/handoff-token'), {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${idToken}` },
-    });
-    const json = await resp.json();
-    if (!resp.ok || !json.success || !json.token) throw new Error('falha');
+    const json = await chamarServidor<{ token: string }>('/api/auth/handoff-token', {}, { timeoutMs: 15_000 });
+    if (!json.token) throw new Error('falha');
     return { url: `${base}#${HASH_KEY}=${encodeURIComponent(json.token)}`, comLogin: true };
   } catch {
     return { url: base, comLogin: false };

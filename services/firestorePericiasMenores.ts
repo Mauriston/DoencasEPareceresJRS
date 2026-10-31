@@ -9,6 +9,7 @@
 // pois nada atualizaria um valor gravado com o passar do tempo.
 import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { camposIdDrive } from '../utils/googleDrive';
 import { app } from './firebaseAuth';
 
 const db = getFirestore(app);
@@ -37,6 +38,8 @@ export interface PericiaMenorDoc {
   peritoUid: string;
   /** URL de visualização do PDF do atestado (Storage ou, nas migradas, Drive); vazio se não houver. */
   pdfUrl: string;
+  /** ID do arquivo no Drive (quando pdfUrl é do Drive); ausente nos registros antigos. */
+  pdfFileId?: string;
   criadoEm: Timestamp | null;
 }
 export type PericiaMenorRecord = PericiaMenorDoc & { id: string };
@@ -96,4 +99,4 @@ export const enviarPdfPericiaMenor = async (id: string, pdf: Blob): Promise<stri
 export type NovaPericiaMenor = Omit<PericiaMenorDoc, 'criadoEm' | 'dataTermino'>;
 
 export const registrarPericiaMenor = (id: string, dados: NovaPericiaMenor) =>
-  setDoc(doc(db, COL, id), { ...dados, dataTermino: calcularDataTermino(dados.dataAtestado, dados.tempoHomologado), criadoEm: serverTimestamp() });
+  setDoc(doc(db, COL, id), { ...dados, ...camposIdDrive(dados.pdfUrl), dataTermino: calcularDataTermino(dados.dataAtestado, dados.tempoHomologado), criadoEm: serverTimestamp() });

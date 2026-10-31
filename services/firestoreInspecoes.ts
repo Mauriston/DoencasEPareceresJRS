@@ -12,6 +12,7 @@ import {
   getFirestore, collection, doc, query, where, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, runTransaction, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { app } from './firebaseAuth';
+import { registrarAcaoSensivel } from './auditoriaAcoes';
 import {
   chaveSlot, chavesOcupadas, duracaoDoGrupo, situacaoDoStatus, TODOS_PERITOS,
   type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS, type Turno,
@@ -167,6 +168,7 @@ export const cancelarInspecao = async (atual: InspecaoRecord, minuta: string): P
 export const apagarInspecao = async (atual: InspecaoRecord): Promise<void> => {
   if (atual.dataEntrevista) await Promise.all(refsSlots(atual).map(r => deleteDoc(r).catch(() => { /* slot já liberado */ })));
   await deleteDoc(doc(db, COL, atual.id));
+  void registrarAcaoSensivel('inspecao.excluir', 'inspecoes');
 };
 
 export const inspecaoExiste = async (id: string): Promise<boolean> => (await getDoc(doc(db, COL, id))).exists();

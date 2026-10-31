@@ -17,3 +17,16 @@ export const getDriveEmbedUrl = (url: string): string | null => {
   const id = getDriveFileId(url);
   return id ? `https://drive.google.com/file/d/${id}/preview` : null;
 };
+
+/**
+ * ID do arquivo SOMENTE se a URL for do Google Drive (URLs do Firebase Storage devolvem null).
+ * Gravado ao lado da URL (`pdfFileId`) para o ID sobreviver a mudanças de formato/pasta do link.
+ */
+export const getDriveFileIdSeDrive = (url: unknown): string | null =>
+  typeof url === 'string' && /^https:\/\/drive\.google\.com\//.test(url) ? getDriveFileId(url) : null;
+
+/** Campos de gravação `{ pdfFileId }` quando a URL é do Drive; `{}` caso contrário (compatível com dados antigos). */
+export const camposIdDrive = (url: unknown): { pdfFileId?: string } => {
+  const id = getDriveFileIdSeDrive(url);
+  return id ? { pdfFileId: id } : {};
+};

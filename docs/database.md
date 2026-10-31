@@ -376,19 +376,30 @@ Isso mantém o versionamento Git sem misturar conteúdo e componentes React.
 
 O sistema trata informações pessoais e sensíveis: nome e NIP de militares, dependentes e pensionistas; OM e situação funcional; dados de saúde (CID, laudos, triagem, exames); atestados em imagem; pareceres e documentos médico-periciais; dados de usuários.
 
-### 17.1 Riscos atuais
+> **Aviso:** a revisão formal de conformidade com a LGPD e as normas internas é **humana** (Encarregada de Dados/Comando) e **ainda não foi feita**. Esta seção registra apenas controles técnicos. Legenda: **Implementado (31/10/2026)** · **Parcial** · **Pendente**.
 
-- links do Drive guardados diretamente nos documentos;
-- dados médicos enviados ao Gemini (atestados, mensagens e exames);
-- auditoria de escrita só nas IS de concurso; sem auditoria de leitura.
+### 17.1 Riscos e situação
 
-### 17.2 Controles recomendados
+| Risco | Situação | Observação |
+|---|---|---|
+| Links do Drive guardados diretamente nos documentos | **Implementado (31/10/2026)**, parcial | Pareceres, perícias menores e `documentos_gerados` gravam também `pdfFileId` (`camposIdDrive` em `utils/googleDrive.ts`). Registros antigos não foram migrados (sem backfill); as telas ainda leem `pdfUrl`. Concursos já guardam `fileId` em parte do fluxo. |
+| Dados médicos enviados ao Gemini | **Parcial** | Ver 17.2. A imagem/PDF é o dado necessário e continua sendo enviada; a política do provedor e a base legal dependem da Encarregada. |
+| Auditoria de escrita só nas IS de concurso | **Implementado (31/10/2026)**, ampliada | `auditoria_acoes` (exclusão de militar, exclusão de IS, geração de documentos). **Sem auditoria de leitura** (pendente). |
+| Dados sensíveis em logs | **Implementado (31/10/2026)** | Ver 17.2. |
+| Pastas do Drive com acesso amplo | **Parcial** | Código sem `setSharing`/links públicos (verificado). Revisão real das pastas é manual: checklist em `docs/retencao-lgpd.md`. |
+| Retenção/descarte | **Pendente** | Proposta de prazos em `docs/retencao-lgpd.md`, a validar pela Encarregada/Comando. Sem rotina nem campo ativos. |
 
-- princípio do menor privilégio nas pastas do Drive;
-- minimização dos dados enviados à IA;
-- política de retenção e descarte de documentos;
-- revisão de conformidade com a LGPD e normas internas;
-- não incluir dados sensíveis em logs.
+### 17.2 Controles
+
+- **Minimização dos dados enviados à IA — Implementado (31/10/2026), parcial.**
+  - `server.ts` (`/api/gemini/analyze-image` e `/api/concursos/ocr-pdf`): valida o base64 e o tamanho (`base64ValidoParaIA`, teto ~16 MB) e higieniza/trunca o texto livre do cliente (`higienizarParaIA`: remove NIP, CPF, e-mail e telefone; máx. 2000 caracteres); a mensagem de erro devolvida ao cliente é mascarada.
+  - Apps Script: o prompt dos exames do candidato deixou de pedir CPF e identidade (`cpf` e `identidade` voltam sempre vazios); o campo continua no esquema por compatibilidade.
+  - Mantido por necessidade da finalidade: o atestado (nome do militar, data, dias, CID) e as imagens das IS na geração de minutas (nome, NIP, laudo). Reduzir isso exigiria recortar a imagem no cliente — pendente.
+- **Sem dados sensíveis em logs — Implementado (31/10/2026).** `utils/logSeguro.ts` (`logErroSeguro`, `descreverErro`, `mascararSensivel`) registra só contexto, código e mensagem mascarada/truncada (sem corpo, stack ou objeto do erro; mascara NIP, CPF, e-mail, tokens e blocos longos). Todo `console.error` de `server.ts` o usa; no Apps Script, `logSeguro_` (`CodeConcursos.gs`) é usado em `apiResponder`, `doPostPrincipal` e na extração de exames. Pendente: logs do lado do cliente (`console.error` nos `services/` ainda recebem o objeto do erro do Firebase) e logs do próprio Cloud Run/Stackdriver fora do nosso código.
+- **Auditoria de escrita — Implementado (31/10/2026).** `services/auditoriaAcoes.ts` grava `auditoria_acoes/{autoId} { acao, alvo, uid, usuario, em }` (best-effort; criar = qualquer autenticado em seu nome; ler = só Admin; imutável — `firestore.rules`). `alvo` é um rótulo fixo (ex.: `militares`, tipo do documento), nunca nome/NIP/CID/URL. Cobre `militar.excluir`, `inspecao.excluir` e `documento.gerar`. Pendente: demais exclusões (vídeos, quesitos, legislação), tela de consulta para o Admin e auditoria de leitura. **Atenção:** as regras novas só valem após o deploy de `firestore.rules`.
+- **Menor privilégio no Drive — Parcial.** Verificado no código: nenhum `setSharing`, `addViewer`/`addEditor` ou permissão pública. O web app é `ANYONE_ANONYMOUS` (necessário ao front), protegido pelo `idToken` do Firebase por ação. A conferência do compartilhamento real das pastas é manual (checklist em `docs/retencao-lgpd.md`) — **pendente**.
+- **Retenção e descarte — Pendente.** `docs/retencao-lgpd.md` (prazos propostos "a validar pela Encarregada/Comando"). Não há rotina automática nem campo `descarteEm` em uso.
+- **Revisão de conformidade com a LGPD e normas internas — Pendente (humana).**
 
 ---
 
@@ -407,37 +418,49 @@ Não há rotina automatizada de backup no repositório.
 
 ## 19. Convenções de dados recomendadas
 
+Helpers puros e testados em `utils/dados.ts` (testes em `utils/__tests__/dados.test.ts`). Estado de adoção em 31/10/2026: os helpers existem e estão cobertos por testes; a adoção no restante do código é **gradual** (nenhum dado existente foi reescrito).
+
 ### 19.1 Identificadores
 
-- usar UUID para registros internos;
+- usar UUID para registros internos (`novoId()`, `crypto.randomUUID`);
 - não usar nome como chave;
 - manter NIP como chave natural única, não como chave primária técnica;
-- armazenar IDs de arquivos do Drive separadamente das URLs.
+- armazenar IDs de arquivos do Drive separadamente das URLs (`pdfFileId` + `camposIdDrive`).
+
+*Adoção:* `pdfFileId` gravado em pareceres, perícias menores e `documentos_gerados` (novos registros). O id do militar ainda é o NIP só com dígitos (decisão histórica: chave natural no id do documento; `renomearMilitar` existe por isso) — **mantido**, sem migração. `novoId()` ainda não é usado em nenhum fluxo.
 
 ### 19.2 Datas e horas
 
-- persistir datas civis como `YYYY-MM-DD`;
-- persistir eventos como timestamp ISO 8601;
-- definir explicitamente `America/Recife` ou `America/Sao_Paulo`, conforme o ambiente institucional;
-- não depender da interpretação de `new Date(string)` para formatos ambíguos.
+- persistir datas civis como `YYYY-MM-DD` (`dataCivilISO`, aceita `dd/mm/aaaa`);
+- persistir eventos como timestamp ISO 8601 com offset (`timestampISO`, `America/Recife`);
+- ler sem depender de `new Date(string)` ambíguo (`parseTimestamp`: ISO com/sem offset e `dd/mm/aaaa [HH:mm]`; datas inexistentes → `null`);
+- `hojeISO()` dá a data civil de hoje no fuso institucional.
+
+*Adoção:* helpers prontos; os pontos de gravação existentes (`serverTimestamp()` do Firestore e `toISOString()` em exames) **não foram alterados** — pendente avaliar caso a caso.
 
 ### 19.3 Strings
 
-- aplicar `trim`;
-- armazenar forma canônica e rótulo de exibição separadamente;
+- aplicar `trim` (`normalizarTexto`);
+- armazenar forma canônica e rótulo de exibição separadamente (`rotuloECanonico`);
 - preservar acentos no rótulo;
 - usar códigos estáveis para relações;
 - evitar listas separadas por vírgula em uma única célula.
 
+*Adoção:* pendente (helpers prontos).
+
 ### 19.4 Booleanos
 
-Persistir booleanos reais, não textos como `SIM`, `TRUE` ou `VERDADEIRO`. A apresentação em português deve ocorrer apenas na interface.
+Persistir booleanos reais, não textos como `SIM`, `TRUE` ou `VERDADEIRO`. A apresentação em português deve ocorrer apenas na interface. Leitura legada tolerante: `lerBooleano` (SIM/TRUE/VERDADEIRO/1…; `null` se não reconhecer) e `comoBooleano` (sempre boolean).
+
+*Adoção:* o Firestore já persiste booleanos reais. `comoBooleano` passou a ser usado na importação de CSV (`utils/concursosUtils.ts`), que antes só aceitava `TRUE`.
 
 ### 19.5 Números
 
-- dias como inteiro;
+- dias como inteiro (`diasInteiro`, faixa 0–36500);
 - não converter números em string na API;
-- validar faixa e sinal;
-- tratar NIP e códigos como texto, mesmo quando compostos apenas por dígitos.
+- validar faixa e sinal (`inteiroEmFaixa`);
+- tratar NIP e códigos como texto, mesmo quando compostos apenas por dígitos (`normalizarNip`: só dígitos, preserva zeros; `formatarNip`; `nipValido`).
+
+*Adoção:* `idDoNip` (`services/firestoreMilitares.ts`) delega a `normalizarNip`. `tempoAtestado` da IA ainda chega como texto/número e é convertido nas telas — pendente usar `diasInteiro`.
 
 ---

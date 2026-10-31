@@ -89,6 +89,14 @@ service cloud.firestore {
     // Fila de impressão da Secretaria (Início): documentos enviados por e-mail
     // para a impressão. Qualquer usuário registra em SEU nome (sempre como não
     // aberto); Secretaria e Admin leem e só podem marcar como aberto.
+    // Auditoria geral de ações sensíveis (exclusão/geração de documentos): qualquer usuário
+    // autenticado grava em SEU nome; só o Admin lê; ninguém edita nem apaga. Sem dados pessoais.
+    match /auditoria_acoes/{id} {
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
     match /documentos_gerados/{id} {
       allow read: if isAdmin() || isSecretaria();
       allow create: if isSignedIn() && request.resource.data.criadoPorUid == request.auth.uid &&

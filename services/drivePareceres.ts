@@ -4,8 +4,7 @@
 // mesmo script (ação "salvarPdfParecer"), que o guarda no Google Drive em
 // PARECERES > {nome completo do inspecionado} > SOL_PARECER_{especialidade}_{DDMMMAAAA}.PDF, e grava no
 // Firestore a URL de visualização ("view") devolvida.
-import { GAS_URL_CONCURSOS } from '../config/endpoints';
-import { chamarScript } from './driveConcursos';
+import { chamarScript } from './apiClient';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
@@ -22,14 +21,8 @@ export interface DadosPedidoParecer {
 }
 
 export const gerarPdfPedidoParecer = async (dados: DadosPedidoParecer): Promise<string> => {
-  const res = await fetch(GAS_URL_CONCURSOS, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'gerarPedidoParecer', ...dados }),
-  });
-  const json = await res.json();
-  if (!json.sucesso) throw new Error(json.erro || 'Erro ao gerar o pedido de parecer.');
-  return json.dados.pdfBase64 as string;
+  const d = await chamarScript<{ pdfBase64: string }>('gerarPedidoParecer', { ...dados });
+  return d.pdfBase64;
 };
 
 /** Guarda o PDF no Drive (pasta do inspecionado dentro de PARECERES) e devolve a URL de visualização ("view"). */

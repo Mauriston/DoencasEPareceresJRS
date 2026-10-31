@@ -1,6 +1,8 @@
 import express from "express";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
+import { logErroSeguro, descreverErro } from "./utils/logSeguro";
+import { higienizarParaIA, base64ValidoParaIA } from "./utils/minimizacaoIA";
 
 // Firebase Admin (credenciais padrão do Cloud Run), inicializado sob demanda.
 async function getFirebaseAdmin() {
@@ -26,6 +28,45 @@ const limitarConsultaNip = (ip: string): boolean => {
   if (!reg || agora - reg.desde > 60_000) { consultasNip.set(ip, { n: 1, desde: agora }); return true; }
   reg.n += 1;
   return reg.n <= 30;
+};
+
+// Auditoria do servidor (LGPD, sem dados pessoais): log estruturado em JSON (o Cloud Run o indexa por
+// "severity") e registro em auditoria_acoes (Firestore, só o Admin lê). Cobre acessos recusados e
+// operações administrativas sensíveis. Só rota, uid e um motivo fixo: nunca corpo, NIP, nome ou token.
+// Best effort: uma falha aqui nunca derruba a requisição.
+const auditarServidor = async (evento: "acesso_negado" | "operacao_sensivel", rota: string, uid = "", motivo = ""): Promise<void> => {
+  console.log(JSON.stringify({ severity: evento === "acesso_negado" ? "WARNING" : "NOTICE", evento, rota, uid, motivo }));
+  try {
+    const { adminDb } = await getFirebaseAdmin();
+    await adminDb.collection("auditoria_acoes").add({ acao: `servidor.${evento}`, alvo: `${rota}${motivo ? `:${motivo}` : ""}`.slice(0, 60), uid, usuario: "", em: new Date() });
+  } catch { /* só o log estruturado fica */ }
+};
+
+// Exige um ID token válido de usuário ATIVO (rotas que gastam a cota do Gemini). Responde 401/403 e
+// registra a recusa; devolve o uid quando autorizado.
+const exigirUsuarioAtivo = async (req: express.Request, res: express.Response, rota: string): Promise<string | null> => {
+  const authHeader = String(req.headers.authorization || "");
+  const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  if (!idToken) {
+    void auditarServidor("acesso_negado", rota, "", "sem_token");
+    res.status(401).json({ success: false, error: "Token ausente." });
+    return null;
+  }
+  try {
+    const { adminAuth, adminDb } = await getFirebaseAdmin();
+    const decoded = await adminAuth.verifyIdToken(idToken, true);
+    const perfil = (await adminDb.collection("usuarios").doc(decoded.uid).get()).data();
+    if (!perfil || perfil.ativo === false) {
+      void auditarServidor("acesso_negado", rota, decoded.uid, "usuario_inativo");
+      res.status(403).json({ success: false, error: "Usuário inativo." });
+      return null;
+    }
+    return decoded.uid;
+  } catch {
+    void auditarServidor("acesso_negado", rota, "", "token_invalido");
+    res.status(401).json({ success: false, error: "Sessão inválida ou expirada." });
+    return null;
+  }
 };
 
 async function startServer() {
@@ -67,6 +108,7 @@ async function startServer() {
       const authHeader = String(req.headers.authorization || "");
       const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
       if (!idToken) {
+        void auditarServidor("acesso_negado", "handoff-token", "", "sem_token");
         res.status(401).json({ success: false, error: "Token ausente." });
         return;
       }
@@ -75,7 +117,7 @@ async function startServer() {
       const token = await adminAuth.createCustomToken(decoded.uid);
       res.json({ success: true, token });
     } catch (error: any) {
-      console.error("Handoff token error:", error);
+      logErroSeguro("Handoff token error", error);
       res.status(401).json({ success: false, error: "Não foi possível gerar o acesso para o celular." });
     }
   });
@@ -105,7 +147,7 @@ async function startServer() {
       const d = doc.data();
       res.json({ success: true, usuario: d.usuario, ativo: d.ativo !== false, senhaTemporaria: !!d.senhaTemporaria });
     } catch (error: any) {
-      console.error("Resolver NIP error:", error);
+      logErroSeguro("Resolver NIP error", error);
       res.status(500).json({ success: false, error: "Não foi possível consultar o NIP. Tente novamente." });
     }
   });
@@ -126,6 +168,7 @@ async function startServer() {
       const decoded = await adminAuth.verifyIdToken(idToken, true);
       const solicitante = await adminDb.collection("usuarios").doc(decoded.uid).get();
       if (!solicitante.exists || solicitante.data()?.perfil !== "admin") {
+        void auditarServidor("acesso_negado", "resetar-senha", decoded.uid, "nao_admin");
         res.status(403).json({ success: false, error: "Apenas o Admin pode redefinir senhas." });
         return;
       }
@@ -141,9 +184,10 @@ async function startServer() {
       }
       await adminAuth.updateUser(uid, { password: SENHA_INICIAL_PADRAO });
       await adminDb.collection("usuarios").doc(uid).update({ senhaTemporaria: true });
+      void auditarServidor("operacao_sensivel", "resetar-senha", decoded.uid);
       res.json({ success: true });
     } catch (error: any) {
-      console.error("Resetar senha error:", error);
+      logErroSeguro("Resetar senha error", error);
       res.status(500).json({ success: false, error: "Não foi possível redefinir a senha." });
     }
   });
@@ -163,6 +207,7 @@ async function startServer() {
       const decoded = await adminAuth.verifyIdToken(idToken, true);
       const solicitante = await adminDb.collection("usuarios").doc(decoded.uid).get();
       if (!solicitante.exists || solicitante.data()?.perfil !== "admin") {
+        void auditarServidor("acesso_negado", "excluir-usuario", decoded.uid, "nao_admin");
         res.status(403).json({ success: false, error: "Apenas o Admin pode excluir usuários." });
         return;
       }
@@ -191,9 +236,10 @@ async function startServer() {
       }
       await adminDb.collection("usuarios").doc(uid).delete();
       await adminDb.collection("usuarios_publicos").doc(uid).delete();
+      void auditarServidor("operacao_sensivel", "excluir-usuario", decoded.uid);
       res.json({ success: true });
     } catch (error: any) {
-      console.error("Excluir usuário error:", error);
+      logErroSeguro("Excluir usuário error", error);
       res.status(500).json({ success: false, error: "Não foi possível excluir o usuário." });
     }
   });
@@ -266,7 +312,7 @@ async function startServer() {
         }
       });
     }
-    if (erros.length) console.error("Push com falhas:", erros);
+    if (erros.length) console.error(`Push com falhas: ${erros.length} (${[...new Set(erros.map((x: string) => x.split(":")[0]))].join(", ")})`);
     return { aparelhos: tokens.length, enviados, erros };
   };
 
@@ -289,6 +335,7 @@ async function startServer() {
       const decoded = await adminAuth.verifyIdToken(idToken, true);
       const ator = (await adminDb.collection("usuarios").doc(decoded.uid).get()).data();
       if (!ator || ator.ativo === false) {
+        void auditarServidor("acesso_negado", "notificacoes-evento", decoded.uid, "usuario_inativo");
         res.status(403).json({ success: false, error: "Usuário inativo." });
         return;
       }
@@ -371,14 +418,20 @@ async function startServer() {
 
       res.status(400).json({ success: false, error: "Tipo de evento desconhecido." });
     } catch (error: any) {
-      console.error("Notificação push error:", error);
+      logErroSeguro("Notificação push error", error);
       res.status(500).json({ success: false, error: "Não foi possível enviar a notificação." });
     }
   });
 
   app.post("/api/gemini/analyze-image", async (req, res) => {
     try {
+      if (!(await exigirUsuarioAtivo(req, res, "gemini-analyze-image"))) return;
       const { image, prompt } = req.body; // image as base64 string
+      // Minimização (LGPD): só imagem válida e texto livre higienizado/truncado vão ao Gemini.
+      if (!base64ValidoParaIA(image)) {
+        res.status(400).json({ success: false, error: "Imagem inválida ou grande demais." });
+        return;
+      }
       const ai = new GoogleGenAI({
         apiKey: process.env.GEMINI_API_KEY,
         httpOptions: {
@@ -396,7 +449,7 @@ async function startServer() {
       };
       
       const textPart = {
-        text: prompt || "Extraia informações relevantes dessa imagem",
+        text: higienizarParaIA(prompt) || "Extraia informações relevantes dessa imagem",
       };
 
       const response = await ai.models.generateContent({
@@ -406,8 +459,8 @@ async function startServer() {
 
       res.json({ success: true, text: response.text });
     } catch (error: any) {
-      console.error("Gemini API error:", error);
-      res.status(500).json({ success: false, error: error.message });
+      logErroSeguro("Gemini API error", error);
+      res.status(500).json({ success: false, error: descreverErro(error).mensagem || "Falha ao analisar a imagem." });
     }
   });
 
@@ -418,7 +471,12 @@ async function startServer() {
   // transcreve, nunca interpreta ou resume o conteúdo.
   app.post("/api/concursos/ocr-pdf", async (req, res) => {
     try {
+      if (!(await exigirUsuarioAtivo(req, res, "concursos-ocr-pdf"))) return;
       const { fileBase64, mimeType } = req.body;
+      if (!base64ValidoParaIA(fileBase64)) {
+        res.status(400).json({ success: false, error: "Arquivo inválido ou grande demais." });
+        return;
+      }
       const ai = new GoogleGenAI({
         apiKey: process.env.GEMINI_API_KEY,
         httpOptions: {
@@ -451,8 +509,8 @@ async function startServer() {
 
       res.json({ success: true, texto: response.text });
     } catch (error: any) {
-      console.error("Gemini OCR error:", error);
-      res.status(500).json({ success: false, error: error.message });
+      logErroSeguro("Gemini OCR error", error);
+      res.status(500).json({ success: false, error: descreverErro(error).mensagem || "Falha ao ler o documento." });
     }
   });
 
@@ -489,6 +547,7 @@ async function startServer() {
       const decoded = await adminAuth.verifyIdToken(idToken, true);
       const solicitante = await adminDb.collection("usuarios").doc(decoded.uid).get();
       if (!solicitante.exists || solicitante.data()?.perfil !== "admin") {
+        void auditarServidor("acesso_negado", "preview-apresentacao", decoded.uid, "nao_admin");
         res.status(403).json({ success: false, error: "Apenas o Admin pode adicionar apresentações." });
         return;
       }
@@ -520,7 +579,7 @@ async function startServer() {
       const imagem = decodificarEntidades(metaDoHtml(html, ["og:image", "og:image:url", "twitter:image"]));
       res.json({ success: true, titulo, imagem: imagem ? new URL(imagem, alvo).toString() : "" });
     } catch (error: any) {
-      console.error("Preview apresentacao error:", error);
+      logErroSeguro("Preview apresentacao error", error);
       res.status(500).json({ success: false, error: "Não foi possível ler a apresentação." });
     }
   });

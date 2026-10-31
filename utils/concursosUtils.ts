@@ -4,6 +4,7 @@
 // CodeConcursos.gs (Apps Script) para TypeScript na migração do backend
 // para o Firebase — mesmas regras e regex, sem dependência de Google Sheets
 // ou Apps Script.
+import { comoBooleano } from './dados';
 
 export const MAPA_LAUDO_POR_STATUS: Record<string, string> = {
   APTO: 'Apto para Ingresso',
@@ -538,7 +539,7 @@ export const interpretarCsvCandidatosDataBase = (texto: string): CandidatoImport
 
   const campo = (linha: string[], indice: number): string => (indice !== -1 ? (linha[indice] || '').trim() : '');
   const campoBooleano = (linha: string[], indice: number): boolean =>
-    indice !== -1 && campo(linha, indice).toUpperCase() === 'TRUE';
+    indice !== -1 && comoBooleano(campo(linha, indice));
 
   return linhas
     .slice(1)

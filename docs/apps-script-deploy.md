@@ -47,6 +47,7 @@ Depois de alterar um `.gs` no repositório (e mergear na `main`):
 
 ## Falhas e cotas
 
+- **Logs:** use `logSeguro_(contexto, erro)` (CodeConcursos.gs); nunca `Logger.log` com corpo, NIP, nome, CID ou token.
 - **Gemini:** todas as chamadas passam por `chamarGemini`, que tenta de novo nas falhas passageiras (429 limite de uso, 500, 503; esperas de 2 s e 4 s) e devolve mensagens claras de cota ou indisponibilidade.
 - **E-mail para impressão:** `garantirCotaEmail` verifica a cota diária do `MailApp` antes de enviar. O documento é gerado e salvo **antes** do e-mail: se o envio falhar, o app avisa, o PDF continua salvo no Drive e o documento continua na fila de impressão da Secretaria (Início).
 

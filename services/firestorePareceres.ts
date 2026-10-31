@@ -10,6 +10,7 @@
 // derivado (solicitado há 20 dias ou mais), pois nada atualizaria um valor
 // gravado com o passar do tempo.
 import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, serverTimestamp, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { camposIdDrive } from '../utils/googleDrive';
 import { app } from './firebaseAuth';
 
 const db = getFirestore(app);
@@ -27,6 +28,8 @@ export interface ParecerDoc {
   historico: string;
   quesitos: string[];
   pdfUrl: string;
+  /** ID do arquivo no Drive (quando pdfUrl é do Drive); ausente nos pareceres antigos. */
+  pdfFileId?: string;
   status: 'solicitado' | 'concluido';
   solicitanteUid: string;
   solicitanteNome: string;
@@ -60,7 +63,7 @@ export const observarPareceres = (onData: (lista: ParecerRecord[]) => void, onEr
   );
 
 export const registrarParecer = (id: string, dados: Omit<ParecerDoc, 'criadoEm' | 'status'>) =>
-  setDoc(doc(db, COL, id), { ...dados, status: 'solicitado', criadoEm: serverTimestamp() });
+  setDoc(doc(db, COL, id), { ...dados, ...camposIdDrive(dados.pdfUrl), status: 'solicitado', criadoEm: serverTimestamp() });
 
 export const marcarConcluido = (id: string, concluido: boolean, porNome: string) =>
   updateDoc(doc(db, COL, id), concluido

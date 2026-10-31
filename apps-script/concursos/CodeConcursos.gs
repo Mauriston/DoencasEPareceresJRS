@@ -54,7 +54,7 @@ var MODELO_GEMINI = 'gemini-2.5-flash';
  * workflow "Apps Script publicado" compara este valor com o da implantação no ar (ação "versao")
  * e abre uma issue com o checklist de reimplantação enquanto forem diferentes.
  */
-var VERSAO_SCRIPT = '2026-10-31.1';
+var VERSAO_SCRIPT = '2026-10-31.2';
 
 /** Ações POST que vieram do antigo projeto "principal" (CodePrincipal.gs): respondem no formato antigo ({ success, ... }). */
 var ACOES_POST_PRINCIPAL = ['extrair_dados_atestado', 'gerarMinutaMensagem'];
@@ -62,8 +62,21 @@ var ACOES_POST_PRINCIPAL = ['extrair_dados_atestado', 'gerarMinutaMensagem'];
 /** Ponto de entrada POST do aplicativo da web. Espera um corpo JSON com a propriedade "action". */
 function doPost(e) {
   var acaoBruta = '';
-  try { acaoBruta = String(JSON.parse((e && e.postData && e.postData.contents) || '{}').action || ''); } catch (erroPeek) { /* tratado abaixo */ }
-  if (ACOES_POST_PRINCIPAL.indexOf(acaoBruta) !== -1) return doPostPrincipal(e);
+  var corpoBruto = {};
+  try {
+    corpoBruto = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    acaoBruta = String(corpoBruto.action || '');
+  } catch (erroPeek) { /* tratado abaixo */ }
+  if (ACOES_POST_PRINCIPAL.indexOf(acaoBruta) !== -1) {
+    // Formato legado ({ success, message }): login, usuário ativo e perfil também são exigidos aqui.
+    try {
+      autorizarAcao_(corpoBruto);
+    } catch (erroAcesso) {
+      return ContentService.createTextOutput(JSON.stringify({ success: false, message: erroAcesso.message }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    return doPostPrincipal(e);
+  }
 
   return apiResponder(function() {
     var corpo = {};
@@ -75,6 +88,9 @@ function doPost(e) {
 
     // Sem login: só informa a versão publicada (scripts/verificar-apps-script.mjs).
     if (corpo.action === 'versao') return { versao: VERSAO_SCRIPT };
+    // Todas as demais ações: login válido + usuário ativo + perfil permitido (autorizarAcao_), com
+    // registro das recusas e das operações sensíveis.
+    autorizarAcao_(corpo);
     if (corpo.action === 'gerarTermoRecurso') return apiGerarTermoRecurso(corpo);
     if (corpo.action === 'gerarTermoCientificacao') return apiGerarTermoCientificacao(corpo);
     if (corpo.action === 'gerarSolicitacaoParecer') return apiGerarSolicitacaoParecer(corpo);
@@ -133,6 +149,23 @@ function garantirCotaEmail() {
 }
 
 /**
+ * Log seguro (LGPD): registra só o contexto fixo e a mensagem do erro, mascarada e truncada. NUNCA passe
+ * corpo de requisição, NIP, nome, CID, e-mail, token ou base64 para o Logger/console.
+ */
+function logSeguro_(contexto, erro) {
+  var msg = String((erro && erro.message) || erro || '')
+    .replace(/eyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{5,}/g, '[token]')
+    .replace(/([?&](?:key|token|idToken)=)[^&\s"']+/gi, '$1[oculto]')
+    .replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, '[email]')
+    .replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, '[cpf]')
+    .replace(/\b\d{2}\.\d{4}\.\d{2}\b/g, '[nip]')
+    .replace(/\b\d{8}\b/g, '[nip]')
+    .replace(/[A-Za-z0-9+\/=_-]{120,}/g, '[dados-longos]')
+    .substring(0, 200);
+  Logger.log(contexto + ': ' + msg);
+}
+
+/**
  * Executa "fn", empacota o retorno em { sucesso: true, dados } ou, em caso
  * de erro, { sucesso: false, erro: mensagem }, e devolve como JSON.
  */
@@ -141,6 +174,7 @@ function apiResponder(fn) {
   try {
     resultado = { sucesso: true, dados: fn() };
   } catch (erro) {
+    logSeguro_('apiResponder', erro);
     resultado = { sucesso: false, erro: erro.message };
   }
   return ContentService.createTextOutput(JSON.stringify(resultado))
@@ -421,13 +455,122 @@ function apiGerarPedidoParecer(corpo) {
 // GOOGLE DRIVE — estrutura de pastas e arquivos dos concursos
 // =========================================================================
 
+/** ID do projeto Firebase (o mesmo de firebase-applet-config.json): usado na API REST do Firestore. */
+var FIREBASE_PROJECT_ID = 'jrs-app-web';
+var PERFIS_EQUIPE = ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
+var PERFIS_MEDICOS = ['admin', 'user_medicos', 'user_medicos_mpi'];
+/**
+ * Perfis aceitos por ação (espelha firestore.rules). Ação fora da lista: qualquer perfil da equipe, ativo.
+ * Pedido de parecer e Perícia Menor (leitura do atestado) são só dos médicos, como nas regras do Firestore.
+ * A matriz fina de páginas/funcionalidades (config/permissoes) continua conferida no app e nas regras.
+ */
+var PERFIS_POR_ACAO = {
+  gerarPedidoParecer: PERFIS_MEDICOS,
+  salvarPdfParecer: PERFIS_MEDICOS,
+  enviarParecerImpressao: PERFIS_MEDICOS,
+  extrair_dados_atestado: PERFIS_MEDICOS
+};
+/** Operações sensíveis: além do log, cada uso vira um registro em auditoria_acoes (Firestore). */
+var ACOES_SENSIVEIS = ['removerArquivoDrive', 'enviarParecerImpressao', 'enviarTermoRecursoImpressao', 'enviarSolicitacaoConcursoImpressao'];
+
+/** Usuário já validado nesta execução (evita repetir a consulta ao Firebase em autorizarAcao_ + exigirUsuarioFirebase). */
+var USUARIO_VALIDADO_ = null;
+
+/**
+ * Log estruturado de acesso, SEM dados pessoais: só evento, ação, uid, perfil e motivo (nada do corpo da
+ * requisição, nem token). Aparece em Execuções/Cloud Logging do Apps Script.
+ */
+function logAcesso_(evento, acao, uid, perfil, motivo) {
+  Logger.log(JSON.stringify({ evento: evento, acao: String(acao || '').substring(0, 60), uid: uid || '', perfil: perfil || '', motivo: motivo || '' }));
+}
+
+/**
+ * Grava um registro de auditoria em auditoria_acoes (mesma coleção do app; ver firestore.rules) usando o
+ * token do PRÓPRIO usuário, que as regras só deixam criar em nome dele. Best effort: nunca interrompe a ação.
+ */
+function registrarAuditoria_(idToken, uid, usuario, acao, alvo) {
+  try {
+    UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/' + FIREBASE_PROJECT_ID + '/databases/(default)/documents/auditoria_acoes', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + idToken },
+      payload: JSON.stringify({ fields: {
+        acao: { stringValue: String(acao).substring(0, 60) },
+        alvo: { stringValue: String(alvo || 'apps-script').substring(0, 60) },
+        uid: { stringValue: uid },
+        usuario: { stringValue: String(usuario || '').substring(0, 60) },
+        em: { timestampValue: new Date().toISOString() }
+      } }),
+      muteHttpExceptions: true
+    });
+  } catch (erro) {
+    logAcesso_('auditoria_falhou', acao, uid, '', 'erro_rede');
+  }
+}
+
+/** Perfil e situação do usuário em usuarios/{uid}, lidos com o token dele (as regras permitem a leitura). Cache de 60 s. */
+function obterPerfilUsuario_(uid, idToken) {
+  var cache = CacheService.getScriptCache();
+  var emCache = cache.get('perfil_' + uid);
+  if (emCache) return JSON.parse(emCache);
+  var resp = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/' + FIREBASE_PROJECT_ID + '/databases/(default)/documents/usuarios/' + encodeURIComponent(uid), {
+    method: 'get',
+    headers: { Authorization: 'Bearer ' + idToken },
+    muteHttpExceptions: true
+  });
+  if (resp.getResponseCode() !== 200) return null;
+  var campos = {};
+  try { campos = JSON.parse(resp.getContentText()).fields || {}; } catch (e) { return null; }
+  var perfil = {
+    perfil: (campos.perfil && campos.perfil.stringValue) || '',
+    ativo: !(campos.ativo && campos.ativo.booleanValue === false),
+    usuario: (campos.usuario && campos.usuario.stringValue) || ''
+  };
+  cache.put('perfil_' + uid, JSON.stringify(perfil), 60);
+  return perfil;
+}
+
+/**
+ * Porta de entrada de TODAS as ações (exceto "versao"): exige login válido do Firebase, usuário ativo e
+ * perfil permitido para a ação (PERFIS_POR_ACAO). Recusas são registradas (log + auditoria_acoes quando o
+ * token é válido); as operações sensíveis (ACOES_SENSIVEIS) também. Devolve { uid, perfil, usuario }.
+ */
+function autorizarAcao_(corpo) {
+  var acao = String((corpo && corpo.action) || '');
+  var idToken = String((corpo && corpo.idToken) || '');
+  var uid;
+  try {
+    uid = exigirUsuarioFirebase(corpo);
+  } catch (erroSessao) {
+    logAcesso_('acesso_negado', acao, '', '', idToken ? 'sessao_invalida' : 'sem_token');
+    throw erroSessao;
+  }
+  var dados = obterPerfilUsuario_(uid, idToken);
+  var motivo = '';
+  if (!dados || !dados.perfil) motivo = 'perfil_inexistente';
+  else if (!dados.ativo) motivo = 'usuario_inativo';
+  else if ((PERFIS_POR_ACAO[acao] || PERFIS_EQUIPE).indexOf(dados.perfil) === -1) motivo = 'perfil_sem_permissao';
+  if (motivo) {
+    logAcesso_('acesso_negado', acao, uid, dados && dados.perfil, motivo);
+    registrarAuditoria_(idToken, uid, dados && dados.usuario, 'acesso_negado.' + acao, motivo);
+    throw new Error('Acesso negado: seu perfil não tem permissão para esta operação.');
+  }
+  if (ACOES_SENSIVEIS.indexOf(acao) !== -1) {
+    logAcesso_('operacao_sensivel', acao, uid, dados.perfil, '');
+    registrarAuditoria_(idToken, uid, dados.usuario, 'apps-script.' + acao, 'apps-script');
+  }
+  return { uid: uid, perfil: dados.perfil, usuario: dados.usuario };
+}
+
 /**
  * Valida o token de login do Firebase enviado pelo app ("idToken") e devolve o uid.
- * Só as ações que gravam no Drive ou consomem o Gemini passam por aqui.
+ * Chamada por autorizarAcao_ (porta de entrada de todas as ações) e, por segurança, por cada ação que grava
+ * no Drive ou consome o Gemini.
  */
 function exigirUsuarioFirebase(corpo) {
   var idToken = String((corpo && corpo.idToken) || '');
   if (!idToken) throw new Error('Sessão não identificada. Entre novamente no app.');
+  if (USUARIO_VALIDADO_ && USUARIO_VALIDADO_.idToken === idToken) return USUARIO_VALIDADO_.uid;
   var resp = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + FIREBASE_API_KEY, {
     method: 'post',
     contentType: 'application/json',
@@ -439,6 +582,7 @@ function exigirUsuarioFirebase(corpo) {
   if (resp.getResponseCode() !== 200 || !json.users || !json.users.length) {
     throw new Error('Sessão inválida ou expirada. Entre novamente no app.');
   }
+  USUARIO_VALIDADO_ = { idToken: idToken, uid: json.users[0].localId };
   return json.users[0].localId;
 }
 
@@ -1086,7 +1230,7 @@ var PROMPT_EXAMES_CANDIDATO = [
   '- Qualquer exame fora dessa relação entra com categoria "outro" e o laudo integral em "texto".',
   '',
   'OUTRAS CHAVES',
-  '- "paciente": objeto { "nome": "NOME COMPLETO EM MAIÚSCULAS", "dataNascimento": "DD/MM/AAAA", "cpf": "", "identidade": "" } com os dados do candidato.',
+  '- "paciente": objeto { "nome": "NOME COMPLETO EM MAIÚSCULAS", "dataNascimento": "DD/MM/AAAA", "cpf": "", "identidade": "" } com o nome e a data de nascimento do candidato. Minimização de dados: deixe "cpf" e "identidade" SEMPRE vazios, mesmo que constem no documento.',
   '- "observacoes": lista de avisos curtos para conferência humana — valores fora da referência do laboratório, carimbo ou registro pouco legível (diga a leitura feita), páginas faltando, divergência de nome ou de data de nascimento entre os laudos. Lista vazia se não houver.',
 ].join('\n');
 
@@ -1169,6 +1313,7 @@ function apiSalvarExamesCandidato(corpo) {
   try {
     resultado.dados = extrairExamesComGemini(corpo.pdfBase64, corpo.mimeType);
   } catch (e) {
+    logSeguro_('salvarExamesCandidato/extração', e);
     resultado.erroExtracao = e.message;
   }
   return resultado;
