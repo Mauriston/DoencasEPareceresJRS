@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { Container, PageHeader } from './ui/Page';
 import { useParams } from 'react-router-dom';
 import { useBreadcrumbs } from '../context/BreadcrumbContext';
+import { hojeISO } from '../utils/inspecoes';
 import { concursoPath, concursosDiaPath } from '../config/routes';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
 import { CalendarioConcursos } from './concursos/CalendarioConcursos';
@@ -2120,9 +2121,15 @@ interface ConcursoDetalheProps {
   dataFixa?: string;
   /** Dentro da página do dia: sem migalha própria nem toolbar fixa (várias tabelas empilhadas). */
   embutido?: boolean;
+  /** Só as IS atrasadas: agendadas antes de hoje e ainda não finalizadas (página /concursos/atrasadas). */
+  apenasAtrasadas?: boolean;
 }
 
-const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar, dataFixa, embutido = false }) => {
+/** IS atrasada: agendada para um dia anterior a hoje e ainda não finalizada. */
+export const isAtrasada = (c: { dataAgendamento: string; finalizado: boolean }, hoje: string = hojeISO()): boolean =>
+  !!c.dataAgendamento && c.dataAgendamento < hoje && !c.finalizado;
+
+const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar, dataFixa, embutido = false, apenasAtrasadas = false }) => {
   const nav = useNav();
   const perfil = nav?.authUser?.perfil;
   const podeEditarInlineBase = canUseFeature('concursosJRS.editarDadosTabela', perfil);
@@ -2353,11 +2360,13 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
   const qtdSolicitacoes = (c: CandidatoRecord) => c.solicitacoesParecer.length + c.solicitacoesExames.length;
   // Editar/Limpar: exclusivos do perfil Admin (nem desabilitados para os demais).
   const ehAdmin = perfil === 'admin';
-  // Triagem: o MPI lança ("TRIAR") e edita; depois de triado, todos menos a Secretaria veem
-  // ("TRIADO" e a seção na barra lateral). Com a IS finalizada, nada disso aparece.
+  // Triagem: o MPI lança ("TRIAR", só nas IS agendadas para hoje) e edita; depois de triado,
+  // todos menos a Secretaria veem ("TRIADO" e a seção na barra lateral). Com a IS finalizada,
+  // nada disso aparece.
   const ehMpi = perfil === 'user_medicos_mpi';
   const podeVerTriagem = perfil !== 'user_secretaria';
-  const mostrarBotaoTriagem = (c: CandidatoRecord) => !c.finalizado && (c.triagem ? podeVerTriagem : ehMpi);
+  const mostrarBotaoTriagem = (c: CandidatoRecord) =>
+    !c.finalizado && (c.triagem ? podeVerTriagem : ehMpi && c.dataAgendamento === hojeISO());
   const mostrarSecaoTriagem = (c: CandidatoRecord) => !!c.triagem && !c.finalizado && podeVerTriagem;
   const [triagemAlvo, setTriagemAlvo] = useState<CandidatoRecord | null>(null);
   const handleSalvarTriagem = async (c: CandidatoRecord, dados: Parameters<typeof salvarTriagem>[2]) => {
@@ -2366,9 +2375,12 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
     setTriagemAlvo(null);
     showToast(`Triagem de ${c.nome} salva.`);
   };
-  // Limpar só faz sentido se há algum PDF gerado (termos, pareceres ou exames).
+  // Limpar só faz sentido se há algum PDF gerado (termos, pareceres ou exames) ou triagem.
   const temDocumentoGerado = (c: CandidatoRecord) =>
-    !!(c.termoRecursoUrl || c.termoCientificacaoUrl) || qtdSolicitacoes(c) > 0 || c.examesQtd > 0;
+    !!(c.termoRecursoUrl || c.termoCientificacaoUrl) || qtdSolicitacoes(c) > 0 || c.examesQtd > 0 || !!c.triagem;
+  // MPI: depois da triagem, o Status ainda indefinido fica em amarelo (lembrete de lançar o resultado).
+  const destacarStatus = (c: CandidatoRecord) =>
+    ehMpi && !!c.triagem && !c.finalizado && ['', 'PENDENTE', 'REAGENDADO'].includes(String(c.status || '').trim().toUpperCase());
   const temSolicitacaoGerada = (c: CandidatoRecord) => qtdSolicitacoes(c) > 0;
   const mostrarMenuAcoes = (c: CandidatoRecord) => podeSolicitarBase || temSolicitacaoGerada(c) || ehAdmin || podeEnviarExames;
 
@@ -2454,7 +2466,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
     setCandidatoModalMobile(null);
     setConfirmDialog({
       title: 'Limpar IS',
-      message: `Limpar toda a IS de ${c.nome}? O Status volta a "Sem status" e serão apagados Observações, Nº TIS, laudo, todos os documentos gerados (termo de recurso, termo de cientificação, pareceres e pedidos de exames) e os exames entregues pelo candidato (PDF no Drive e transcrição). Esta ação não pode ser desfeita.`,
+      message: `Limpar toda a IS de ${c.nome}? O Status volta a "Sem status" e serão apagados Observações, Nº TIS, laudo, todos os documentos gerados (termo de recurso, termo de cientificação, pareceres e pedidos de exames), os exames entregues pelo candidato (PDF no Drive e transcrição) e os dados da triagem. Esta ação não pode ser desfeita.`,
       confirmLabel: 'Limpar IS',
       onConfirm: async () => {
         setConfirmDialog(null);
@@ -2835,6 +2847,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
       .filter(c => {
         const matchesSearch = c.id.toLowerCase().includes(search.toLowerCase()) || c.nome.toLowerCase().includes(search.toLowerCase());
         if (!matchesSearch) return false;
+        if (apenasAtrasadas && !isAtrasada(c)) return false;
 
         if (statusKpiFilter === 'nao-finalizados') {
           if (!(c.status === '' || c.status === 'Pendente' || c.status === 'Reagendado')) return false;
@@ -2859,7 +2872,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
         if (da !== db) return da.localeCompare(db);
         return a.nome.localeCompare(b.nome, 'pt-BR');
       });
-  }, [candidatosComDataBR, search, statusKpiFilter, dateFilterMode, dateFilterCustom, hojeBR]);
+  }, [candidatosComDataBR, search, statusKpiFilter, dateFilterMode, dateFilterCustom, hojeBR, apenasAtrasadas]);
 
   const total = candidatos.length;
   const countApto = candidatos.filter(c => c.status === 'APTO').length;
@@ -3349,7 +3362,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                                 </td>
                                 <td className="py-3.5 px-4">
                                   {editavel ? (
-                                    <StatusSelect value={c.status || ''} options={STATUS_OPTIONS} onChange={v => handleStatusChange(c, v)} className="w-full" />
+                                    <StatusSelect value={c.status || ''} options={STATUS_OPTIONS} onChange={v => handleStatusChange(c, v)} className="w-full" destaque={destacarStatus(c)} />
                                   ) : <CandidatoStatusTag status={c.status} />}
                                 </td>
                                 <td className="py-3.5 px-4 text-ink">
@@ -3607,7 +3620,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
                 <div>
                   <label className="block text-xs font-bold text-ink-3 uppercase tracking-wider mb-1.5">Status</label>
                   {editavel ? (
-                    <StatusSelect value={c.status || ''} options={STATUS_OPTIONS} onChange={v => handleStatusChange(c, v)} className="w-full" />
+                    <StatusSelect value={c.status || ''} options={STATUS_OPTIONS} onChange={v => handleStatusChange(c, v)} className="w-full" destaque={destacarStatus(c)} />
                   ) : (
                     <div>{<CandidatoStatusTag status={c.status} />}</div>
                   )}
@@ -3757,6 +3770,32 @@ const ConcursosDia: React.FC<{ data: string }> = ({ data }) => {
   );
 };
 
+/** IS atrasadas de todos os concursos Em andamento / Em breve, uma tabela por concurso (vem da Início). */
+const ConcursosAtrasadas: React.FC = () => {
+  const nav = useNav();
+  const { dias, concursosAtivos } = useDiasConcursos();
+  useBreadcrumbs([{ label: 'IS atrasadas' }]);
+  const hoje = hojeISO();
+  const concursoIds = [...new Set(dias.filter(d => d.data < hoje && d.candidatos.some(c => !c.finalizado)).map(d => d.concursoId))];
+  return (
+    <div>
+      {concursosAtivos === null ? (
+        <div className="flex justify-center py-16" role="status" aria-label="Carregando"><span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span></div>
+      ) : concursoIds.length === 0 ? (
+        <Container size="data" className="pt-6 md:pt-8">
+          <div className="bg-white rounded-xl border border-line">
+            <EmptyState icon="event_available" title="Nenhuma IS atrasada" description="Todas as IS de concurso agendadas até ontem já foram finalizadas." />
+          </div>
+        </Container>
+      ) : (
+        concursoIds.map(id => (
+          <ConcursoDetalhe key={id} concursoId={id} apenasAtrasadas embutido onVoltar={() => nav?.navigate('/concursos')} />
+        ))
+      )}
+    </div>
+  );
+};
+
 // =========================================================================
 // COMPONENTE PRINCIPAL — alterna entre a lista de concursos e o detalhe
 // =========================================================================
@@ -3814,6 +3853,7 @@ export const ConcursosJRS: React.FC = () => {
 
   // /concursos/novo: criação do concurso como página própria (F60), com a mesma permissão do botão.
   if (diaParam) return <ConcursosDia data={diaParam} />;
+  if (selectedConcursoId === 'atrasadas') return <ConcursosAtrasadas />;
 
   if (selectedConcursoId === 'novo') {
     return podeRegistrarMensagem

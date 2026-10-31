@@ -71,10 +71,12 @@ interface StatusSelectProps {
   options: { value: string; label: string }[];
   onChange: (value: string) => void;
   className?: string;
+  /** Fundo amarelo de alerta (ex.: IS triada aguardando o status, para o MPI). */
+  destaque?: boolean;
 }
 
-/** Select de status NEUTRO: a cor fica só no ponto e no texto, nunca no fundo. */
-export const StatusSelect: React.FC<StatusSelectProps> = ({ value, options, onChange, className = '' }) => {
+/** Select de status NEUTRO: a cor fica só no ponto e no texto, nunca no fundo (salvo `destaque`). */
+export const StatusSelect: React.FC<StatusSelectProps> = ({ value, options, onChange, className = '', destaque = false }) => {
   const v = getCandidatoStatusVisual(value);
   return (
     <span className={`relative inline-flex items-center ${className}`}>
@@ -83,7 +85,7 @@ export const StatusSelect: React.FC<StatusSelectProps> = ({ value, options, onCh
         value={value}
         onChange={e => onChange(e.target.value)}
         aria-label="Status do candidato"
-        className={`w-full pl-7 pr-2 py-1.5 text-sm font-bold rounded-lg border border-line bg-white focus:outline-none focus:border-navy cursor-pointer ${v.text}`}
+        className={`w-full pl-7 pr-2 py-1.5 text-sm font-bold rounded-lg border focus:outline-none focus:border-navy cursor-pointer ${destaque ? 'bg-gold-300 border-gold-500' : 'bg-white border-line'} ${v.text}`}
       >
         {options.map(o => <option key={o.value} value={o.value} className="text-ink">{o.label}</option>)}
       </select>
