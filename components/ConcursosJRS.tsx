@@ -2360,11 +2360,13 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
   const qtdSolicitacoes = (c: CandidatoRecord) => c.solicitacoesParecer.length + c.solicitacoesExames.length;
   // Editar/Limpar: exclusivos do perfil Admin (nem desabilitados para os demais).
   const ehAdmin = perfil === 'admin';
-  // Triagem: o MPI lança ("TRIAR") e edita; depois de triado, todos menos a Secretaria veem
-  // ("TRIADO" e a seção na barra lateral). Com a IS finalizada, nada disso aparece.
+  // Triagem: o MPI lança ("TRIAR", só nas IS agendadas para hoje) e edita; depois de triado,
+  // todos menos a Secretaria veem ("TRIADO" e a seção na barra lateral). Com a IS finalizada,
+  // nada disso aparece.
   const ehMpi = perfil === 'user_medicos_mpi';
   const podeVerTriagem = perfil !== 'user_secretaria';
-  const mostrarBotaoTriagem = (c: CandidatoRecord) => !c.finalizado && (c.triagem ? podeVerTriagem : ehMpi);
+  const mostrarBotaoTriagem = (c: CandidatoRecord) =>
+    !c.finalizado && (c.triagem ? podeVerTriagem : ehMpi && c.dataAgendamento === hojeISO());
   const mostrarSecaoTriagem = (c: CandidatoRecord) => !!c.triagem && !c.finalizado && podeVerTriagem;
   const [triagemAlvo, setTriagemAlvo] = useState<CandidatoRecord | null>(null);
   const handleSalvarTriagem = async (c: CandidatoRecord, dados: Parameters<typeof salvarTriagem>[2]) => {
