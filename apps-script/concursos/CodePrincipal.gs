@@ -44,19 +44,8 @@ function doPostPrincipal(e) {
         }
       };
 
-      const options = {
-        "method": "post",
-        "contentType": "application/json",
-        "payload": JSON.stringify(requestBody),
-        "muteHttpExceptions": true
-      };
-
-      const response = UrlFetchApp.fetch(url, options);
-      const jsonResponse = JSON.parse(response.getContentText());
-
-      if (jsonResponse.error) {
-         throw new Error("Erro na API Gemini: " + jsonResponse.error.message);
-      }
+      // Novas tentativas e mensagens de cota/indisponibilidade: chamarGemini (CodeConcursos.gs).
+      const jsonResponse = chamarGemini(url, requestBody);
 
       try {
         const geminiText = jsonResponse.candidates[0].content.parts[0].text;
@@ -92,17 +81,7 @@ function doPostPrincipal(e) {
 
       const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
       const geminiBody = { contents: [{ parts: parts }] };
-      const geminiOptions = {
-        method: "post",
-        contentType: "application/json",
-        payload: JSON.stringify(geminiBody),
-        muteHttpExceptions: true
-      };
-
-      const geminiResp = UrlFetchApp.fetch(geminiUrl, geminiOptions);
-      const geminiJson = JSON.parse(geminiResp.getContentText());
-
-      if (geminiJson.error) throw new Error("Erro na API Gemini: " + geminiJson.error.message);
+      const geminiJson = chamarGemini(geminiUrl, geminiBody);
 
       const minuta = geminiJson.candidates[0].content.parts[0].text;
 

@@ -437,7 +437,7 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
         await enviarSolicitacaoParaImpressao({ pdfUrl: url, tipo, remetente: nav?.authUser?.usuario || nav?.authUser?.nome || '' });
         showToast(`${titulo} gerado para ${candidato.nome} e enviado para impressão.`);
       } catch (erroEnvio: any) {
-        showToast(`${titulo} gerado para ${candidato.nome}, mas o e-mail para impressão falhou: ${erroEnvio?.message || 'erro desconhecido'}.`);
+        showToast(`${titulo} gerado e salvo para ${candidato.nome}, mas o e-mail para impressão falhou (${erroEnvio?.message || 'erro desconhecido'}). Ele está na fila de impressão da Secretaria.`);
       }
     } catch (e: any) {
       showToast(e?.message || 'Erro ao gerar o documento.');
@@ -542,7 +542,7 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
         await enviarTermoRecursoParaImpressao({ pdfUrl: url, candidatoId: id, candidatoNome: nome, nomeConcurso: concurso?.nome || '', remetente: signatario.usuario });
         showToast(`Termo de Recurso e Cientificação gerados para ${nome} e enviados para impressão.`);
       } catch (erroEnvio: any) {
-        showToast(`Termo gerado para ${nome}, mas o e-mail para impressão falhou: ${erroEnvio?.message || 'erro desconhecido'}.`);
+        showToast(`Termo gerado e salvo para ${nome}, mas o e-mail para impressão falhou (${erroEnvio?.message || 'erro desconhecido'}). Ele está na fila de impressão da Secretaria.`);
       }
     } catch (e: any) {
       showToast(e?.message || 'Erro ao gerar o Termo de Recurso.');

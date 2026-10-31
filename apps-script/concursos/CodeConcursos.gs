@@ -26,8 +26,8 @@
  * Novo projeto; não atrelado a planilha nem ao Docs do template), cole este
  * arquivo e use Implantar → Nova implantação → Aplicativo da web, "Executar
  * como: Eu", "Quem pode acessar: Qualquer pessoa". Colar a URL ".../exec"
- * gerada em GAS_URL_TERMO_RECURSO
- * (components/ConcursosJRS.tsx). Como o script usa Docs/Drive só para
+ * gerada em GAS_URL_CONCURSOS
+ * (config/endpoints.ts). Como o script usa Docs/Drive só para
  * copiar e exportar o template (nunca grava nada no Drive do usuário além
  * de uma cópia temporária, descartada ao final), a primeira execução pode
  * pedir autorização dessas permissões.
@@ -49,6 +49,13 @@ var ID_PASTA_PARECERES = '176YQTOOWXuE78Xul49XYpJsVNyu-eZFi';
 var FIREBASE_API_KEY = 'AIzaSyAWBYm6iGQNQXeC5DO038lMSruxpRjoX2c';
 var MODELO_GEMINI = 'gemini-2.5-flash';
 
+/**
+ * Versão deste código. AUMENTE a cada alteração em qualquer .gs deste projeto (AAAA-MM-DD.N): o
+ * workflow "Apps Script publicado" compara este valor com o da implantação no ar (ação "versao")
+ * e abre uma issue com o checklist de reimplantação enquanto forem diferentes.
+ */
+var VERSAO_SCRIPT = '2026-10-31.1';
+
 /** Ações POST que vieram do antigo projeto "principal" (CodePrincipal.gs): respondem no formato antigo ({ success, ... }). */
 var ACOES_POST_PRINCIPAL = ['extrair_dados_atestado', 'gerarMinutaMensagem'];
 
@@ -66,6 +73,8 @@ function doPost(e) {
       throw new Error('Corpo da requisição não é um JSON válido.');
     }
 
+    // Sem login: só informa a versão publicada (scripts/verificar-apps-script.mjs).
+    if (corpo.action === 'versao') return { versao: VERSAO_SCRIPT };
     if (corpo.action === 'gerarTermoRecurso') return apiGerarTermoRecurso(corpo);
     if (corpo.action === 'gerarTermoCientificacao') return apiGerarTermoCientificacao(corpo);
     if (corpo.action === 'gerarSolicitacaoParecer') return apiGerarSolicitacaoParecer(corpo);
@@ -86,6 +95,41 @@ function doPost(e) {
     if (corpo.action === 'sincronizarEventoBloqueio') return apiSincronizarEventoBloqueio(corpo);
     throw new Error('Ação POST desconhecida: "' + corpo.action + '".');
   });
+}
+
+/**
+ * Chama a API Gemini com novas tentativas nas falhas passageiras (429 limite de uso, 500 e 503
+ * indisponibilidade): até 3 tentativas, com espera de 2 s e 4 s. Devolve o JSON da resposta;
+ * erros definitivos viram mensagens claras. Usada por todas as chamadas ao Gemini do projeto.
+ */
+function chamarGemini(url, requisicao) {
+  var esperas = [2000, 4000];
+  for (var tentativa = 0; ; tentativa++) {
+    var resp = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(requisicao),
+      muteHttpExceptions: true
+    });
+    var codigo = resp.getResponseCode();
+    if ((codigo === 429 || codigo === 500 || codigo === 503) && tentativa < esperas.length) {
+      Utilities.sleep(esperas[tentativa]);
+      continue;
+    }
+    var json;
+    try { json = JSON.parse(resp.getContentText()); } catch (e) { throw new Error('Resposta inválida da API Gemini (HTTP ' + codigo + ').'); }
+    if (codigo === 429) throw new Error('Limite de uso da IA (Gemini) atingido. Tente novamente em alguns minutos.');
+    if (codigo === 500 || codigo === 503) throw new Error('A IA (Gemini) está indisponível no momento. Tente novamente em alguns minutos.');
+    if (json.error) throw new Error('Erro na API Gemini: ' + json.error.message);
+    return json;
+  }
+}
+
+/** Antes de enviar e-mail: a cota diária do Apps Script esgotada vira uma mensagem clara (o documento já está salvo). */
+function garantirCotaEmail() {
+  if (MailApp.getRemainingDailyQuota() < 1) {
+    throw new Error('Cota diária de e-mails do Apps Script esgotada. O documento está salvo: imprima pela fila de documentos ou envie amanhã.');
+  }
 }
 
 /**
@@ -563,6 +607,7 @@ function apiEnviarParecerImpressao(corpo) {
     throw new Error('Endereço do PDF não reconhecido.');
   }
 
+  garantirCotaEmail();
   MailApp.sendEmail({
     to: EMAIL_IMPRESSAO,
     cc: EMAILS_COPIA_TERMO_RECURSO,
@@ -613,6 +658,7 @@ function apiEnviarTermoRecursoImpressao(corpo) {
   var agradecimento = agradecimentoDe(remetente);
   var idCandidato = candidatoId ? candidatoId + ' ' : '';
 
+  garantirCotaEmail();
   MailApp.sendEmail({
     to: EMAIL_IMPRESSAO,
     cc: EMAILS_COPIA_TERMO_RECURSO,
@@ -652,6 +698,7 @@ function apiEnviarSolicitacaoConcursoImpressao(corpo) {
   if (!estaSobPasta(arquivo, ID_PASTA_RAIZ_CONCURSOS)) throw new Error('O PDF não está na pasta CONCURSOS.');
 
   var agradecimento = agradecimentoDe(remetente);
+  garantirCotaEmail();
   MailApp.sendEmail({
     to: EMAIL_IMPRESSAO,
     cc: EMAILS_COPIA_TERMO_RECURSO,
@@ -958,15 +1005,7 @@ function apiExtrairMensagemConcurso(corpo) {
     }],
     generationConfig: { responseMimeType: 'application/json', temperature: 0 }
   };
-  var resp = UrlFetchApp.fetch(url, {
-    method: 'post',
-    contentType: 'application/json',
-    payload: JSON.stringify(requisicao),
-    muteHttpExceptions: true
-  });
-  var json;
-  try { json = JSON.parse(resp.getContentText()); } catch (e) { throw new Error('Resposta inválida da API Gemini.'); }
-  if (json.error) throw new Error('Erro na API Gemini: ' + json.error.message);
+  var json = chamarGemini(url, requisicao);
 
   try {
     var texto = json.candidates[0].content.parts[0].text;
@@ -1071,21 +1110,16 @@ function extrairExamesComGemini(pdfBase64, mimeType) {
     // o JSON vem cortado e não dá para interpretar.
     generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 65536 }
   };
-  var resp;
+  var json;
   try {
-    resp = UrlFetchApp.fetch(url, {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify(requisicao),
-      muteHttpExceptions: true
-    });
+    json = chamarGemini(url, requisicao);
   } catch (erroFetch) {
     // A leitura de um PDF escaneado com muitos laudos pode estourar o tempo da chamada.
-    throw new Error('A leitura dos exames não terminou em tempo (' + erroFetch.message + '). Divida os exames em dois PDFs e envie um por vez.');
+    if (/Timeout|tempo/i.test(erroFetch.message)) {
+      throw new Error('A leitura dos exames não terminou em tempo (' + erroFetch.message + '). Divida os exames em dois PDFs e envie um por vez.');
+    }
+    throw erroFetch;
   }
-  var json;
-  try { json = JSON.parse(resp.getContentText()); } catch (e) { throw new Error('Resposta inválida da API Gemini.'); }
-  if (json.error) throw new Error('Erro na API Gemini: ' + json.error.message);
 
   var candidato = json.candidates && json.candidates[0];
   if (candidato && candidato.finishReason === 'MAX_TOKENS') {

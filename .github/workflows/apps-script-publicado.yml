@@ -1,0 +1,79 @@
+name: Apps Script publicado
+
+# O Apps Script é publicado à mão (docs/apps-script-deploy.md). Este workflow
+# compara a versão no ar (ação "versao") com VERSAO_SCRIPT do repositório:
+#  - se forem diferentes, abre (ou mantém aberta) a issue "Reimplantar o Apps
+#    Script" com o checklist de publicação;
+#  - quando a versão no ar alcança a do repositório, fecha a issue.
+# Roda quando um .gs muda na main, todo dia útil de manhã e sob demanda.
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'apps-script/**'
+      - 'scripts/verificar-apps-script.mjs'
+      - '.github/workflows/apps-script-publicado.yml'
+  schedule:
+    - cron: '17 11 * * 1-5'   # 08:17 em Recife
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Comparar a versão no ar com a do repositório
+        id: versao
+        continue-on-error: true
+        run: node scripts/verificar-apps-script.mjs
+
+      - name: Abrir ou fechar a issue de reimplantação
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULTADO: ${{ steps.versao.outcome }}
+          VERSAO_REPO: ${{ steps.versao.outputs.versao_repo }}
+          VERSAO_NO_AR: ${{ steps.versao.outputs.versao_no_ar }}
+        run: |
+          TITULO="Reimplantar o Apps Script"
+          ABERTA=$(gh issue list --state open --search "\"$TITULO\" in:title" --json number --jq '.[0].number')
+          if [ "$RESULTADO" = "success" ]; then
+            if [ -n "$ABERTA" ]; then
+              gh issue close "$ABERTA" --comment "A versão no ar ($VERSAO_NO_AR) já é a do repositório. Fechada automaticamente."
+            fi
+            exit 0
+          fi
+          if [ -z "$VERSAO_REPO" ]; then
+            echo "Não foi possível consultar o Apps Script; nada a fazer agora."
+            exit 0
+          fi
+          CORPO=$(cat <<EOF
+          O código do Apps Script no repositório (**$VERSAO_REPO**) ainda não foi publicado — a implantação no ar responde **$VERSAO_NO_AR**.
+
+          ### Checklist de reimplantação (docs/apps-script-deploy.md)
+          - [ ] Abrir o projeto **concursos** no editor (scriptId em \`apps-script/projetos.json\`).
+          - [ ] Colar \`CodeConcursos.gs\` e \`CodePrincipal.gs\` da \`main\` (selecionar tudo e colar em cada arquivo) e salvar.
+          - [ ] Se \`appsscript.json\` mudou, atualizar o manifesto também.
+          - [ ] **Implantar → Gerenciar implantações → editar a implantação existente → Nova versão → Implantar** (mantém o deploymentId e a URL de \`config/endpoints.ts\`).
+          - [ ] Se o editor pedir, autorizar as permissões novas.
+          - [ ] Testar no app a funcionalidade alterada.
+
+          Esta issue fecha sozinha quando a versão no ar for **$VERSAO_REPO** (verificação diária ou *Run workflow* em Actions → "Apps Script publicado").
+          EOF
+          )
+          if [ -n "$ABERTA" ]; then
+            gh issue edit "$ABERTA" --body "$CORPO"
+          else
+            gh issue create --title "$TITULO" --body "$CORPO"
+          fi
