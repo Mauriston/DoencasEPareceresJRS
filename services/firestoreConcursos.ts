@@ -479,6 +479,10 @@ export const atualizarCandidato = async (
   const rot = (v: string) => v || '(vazio)';
   if (proximo.status !== undefined && proximo.status !== atual.status) {
     await registrarEvento(concursoId, id, 'Status alterado', `${rot(atual.status)} → ${rot(proximo.status)}`);
+    // Push: Inapto e IDM avisam todos assim que o status é lançado.
+    if (proximo.status === 'INAPTO' || proximo.status === 'INSUF DOCUMENTAL') {
+      void notificarEvento({ tipo: 'status-alterado', concursoId, candidatoId: id });
+    }
   }
   if (proximo.observacoes !== undefined && proximo.observacoes !== atual.observacoes) {
     await registrarEvento(concursoId, id, 'Observações alteradas', `${rot(atual.observacoes)} → ${rot(proximo.observacoes)}`);
@@ -488,7 +492,7 @@ export const atualizarCandidato = async (
   }
   if (proximo.finalizado && !atual.finalizado) {
     await registrarEvento(concursoId, id, 'IS finalizada', `Status: ${rot(statusFinal)}`);
-    // Push: laudo de Inapto/IDM e conclusão das IS do dia (o servidor confere e decide).
+    // Push: conclusão das IS do dia (o servidor confere se todas terminaram).
     void notificarEvento({ tipo: 'is-finalizada', concursoId, candidatoId: id });
   }
   return { ...atual, ...proximo };

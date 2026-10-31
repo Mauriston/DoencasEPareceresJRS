@@ -128,6 +128,7 @@ export const desvincularAparelho = async (): Promise<void> => {
 export type EventoNotificacao =
   | { tipo: 'login' }
   | { tipo: 'teste' }
+  | { tipo: 'status-alterado'; concursoId: string; candidatoId: string }
   | { tipo: 'is-finalizada'; concursoId: string; candidatoId: string };
 
 /** Botão de teste do Perfil: o servidor manda um aviso só para os aparelhos do usuário. */
