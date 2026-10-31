@@ -140,7 +140,8 @@ export const Home: React.FC = () => {
   const [bloqueios, setBloqueios] = useState<BloqueioAgenda[]>([]);
   useEffect(() => observarBloqueios(setBloqueios, () => { /* silencioso */ }), []);
   const ferias = useMemo(() => bloqueios
-    .filter(b => /\bferias\b/.test(b.motivo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()) && (b.dataFim || b.data) >= hoje)
+    // Registro incompleto (sem data de início ou sem motivo) não entra: o card não pode derrubar a Início.
+    .filter(b => b.data && /\bferias\b/.test((b.motivo ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()) && (b.dataFim || b.data) >= hoje)
     .sort((a, b) => a.data.localeCompare(b.data) || (a.peritoNome ?? '').localeCompare(b.peritoNome ?? '')), [bloqueios, hoje]);
 
   const atencao: Atencao[] = [];

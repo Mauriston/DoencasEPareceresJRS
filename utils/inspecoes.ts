@@ -63,6 +63,7 @@ export const prazoAtrasoDias = (grupoFinalidade?: string): number =>
 
 /** Dias corridos entre duas datas "AAAA-MM-DD" (b − a). */
 export const diasEntre = (a: string, b: string): number => {
+  if (!a || !b) return 0; // data ausente num registro incompleto
   const [ya, ma, da] = a.split('-').map(Number);
   const [yb, mb, db] = b.split('-').map(Number);
   return Math.round((Date.UTC(yb, mb - 1, db) - Date.UTC(ya, ma - 1, da)) / 86_400_000);
