@@ -31,7 +31,8 @@ const entrar = async (pagina, usuario) => {
   await pagina.getByText(/Bom dia|Boa tarde|Boa noite/).first().waitFor();
   // Aviso da triagem (MPI, 3 primeiros acessos): fecha para seguir.
   const entendi = pagina.getByRole('button', { name: 'Entendi' });
-  if (await entendi.isVisible().catch(() => false)) await entendi.click();
+  // O aviso aparece um instante depois da saudação: espera um pouco em vez de testar só uma vez.
+  await entendi.click({ timeout: 4_000 }).catch(() => { /* sem aviso para este perfil */ });
 };
 
 const abrirConcurso = async (pagina) => {
