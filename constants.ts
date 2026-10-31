@@ -219,6 +219,24 @@ export const DISEASES: Disease[] = [
         ]
       },
       {
+        name: "Cardiopatia Isquêmica - Pós IAM",
+        criteria: [
+          "cintilografia com Tálio / PET com FDG / RNM para pesquisa de viabilidade e demarcação de necrose (a extensão de necrose é marca de gravidade)",
+          "disfunção ventricular esquerda (áreas de acinesia, hipocinesia e discinesia)",
+          "isquemia à distância (em outra área que não a do infarto)",
+          "arritmias ventriculares complexas",
+          "idade avançada (70 anos)",
+          "comorbidades associadas (diabetes mellitus, DPOC severa, neoplasias malignas, doença arterial periférica comprometendo vários leitos arteriais)"
+        ],
+        documents: [
+          "Relatório médico com data do início do acompanhamento e terapêutica",
+          "Cintilografia miocárdica associada a teste ergométrico (Tálio, Sestamibi ou Tecnécio)",
+          "PET-CT com FDG cardiológico",
+          "RNM miocárdica",
+          "Holter"
+        ]
+      },
+      {
         name: "Cardiopatias Congênitas",
         criteria: [
           "crises hipoxêmicas ou hemoptises",
