@@ -252,3 +252,8 @@ export const enviarTermoRecursoParaImpressao = async (params: {
 }): Promise<void> => {
   await chamarScript<{ enviado: boolean }>('enviarTermoRecursoImpressao', params);
 };
+
+/** Envio automático (sem confirmação) de uma Solicitação de Parecer ou de Exames recém-gerada para a impressão. */
+export const enviarSolicitacaoParaImpressao = async (params: { pdfUrl: string; tipo: 'parecer' | 'exames'; remetente: string }): Promise<void> => {
+  await chamarScript<{ enviado: boolean }>('enviarSolicitacaoConcursoImpressao', params);
+};

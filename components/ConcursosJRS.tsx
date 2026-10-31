@@ -25,7 +25,7 @@ import { CandidatoDetalhe } from './concursos/CandidatoDetalhe';
 import { EnviarExamesModal, ExamesTranscritosModal, type AlvoExames } from './concursos/ExamesCandidato';
 import { juntarPdfsBase64 } from '../services/pdfMerge';
 import {
-  extrairMensagemComGemini, salvarMensagemNoDrive, salvarPdfCandidatoNoDrive, criarEstruturaConcursoNoDrive, abrirPdf, urlVisualizacao, anoDoConcurso, enviarTermoRecursoParaImpressao,
+  extrairMensagemComGemini, salvarMensagemNoDrive, salvarPdfCandidatoNoDrive, criarEstruturaConcursoNoDrive, abrirPdf, urlVisualizacao, anoDoConcurso, enviarTermoRecursoParaImpressao, enviarSolicitacaoParaImpressao,
   type PastaConcurso, type MensagemExtraida,
 } from '../services/driveConcursos';
 import {
@@ -2485,7 +2485,13 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
       const atualizado = await registrarSolicitacao(concursoId, id, tipo, { url, rotulo }, observacao);
       setCandidatos(prev => prev.map(c => (c.id === id ? atualizado : c)));
       const titulo = tipo === 'parecer' ? 'Pedido de Parecer' : 'Solicitação de Exames';
-      showToast(`${titulo} gerado para ${candidato.nome}.`);
+      // Envio automático para impressão; uma falha aqui não desfaz o documento gerado.
+      try {
+        await enviarSolicitacaoParaImpressao({ pdfUrl: url, tipo, remetente: nav?.authUser?.usuario || nav?.authUser?.nome || '' });
+        showToast(`${titulo} gerado para ${candidato.nome} e enviado para impressão.`);
+      } catch (erroEnvio: any) {
+        showToast(`${titulo} gerado para ${candidato.nome}, mas o e-mail para impressão falhou: ${erroEnvio?.message || 'erro desconhecido'}.`);
+      }
     } catch (e: any) {
       showToast(e?.message || 'Erro ao gerar o documento.');
     } finally {

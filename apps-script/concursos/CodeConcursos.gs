@@ -77,6 +77,7 @@ function doPost(e) {
     if (corpo.action === 'salvarPdfParecer') return apiSalvarPdfParecer(corpo);
     if (corpo.action === 'enviarParecerImpressao') return apiEnviarParecerImpressao(corpo);
     if (corpo.action === 'enviarTermoRecursoImpressao') return apiEnviarTermoRecursoImpressao(corpo);
+    if (corpo.action === 'enviarSolicitacaoConcursoImpressao') return apiEnviarSolicitacaoConcursoImpressao(corpo);
     if (corpo.action === 'removerArquivoDrive') return apiRemoverArquivoDrive(corpo);
     if (corpo.action === 'extrairMensagemConcurso') return apiExtrairMensagemConcurso(corpo);
     if (corpo.action === 'salvarExamesCandidato') return apiSalvarExamesCandidato(corpo);
@@ -564,6 +565,7 @@ function apiEnviarParecerImpressao(corpo) {
 
   MailApp.sendEmail({
     to: EMAIL_IMPRESSAO,
+    cc: EMAILS_COPIA_TERMO_RECURSO,
     subject: 'POR FAVOR, IMPRIMIR',
     body: 'Giorginis,\n\nPor favor, imprimir este documento em frente e verso colorido.\n\nObrigado!\n\n' + remetente,
     // Versão formatada (Arial): saudação maior e em negrito, "frente e verso colorido" em negrito.
@@ -580,7 +582,12 @@ function apiEnviarParecerImpressao(corpo) {
   return { enviado: true };
 }
 
-/** Cópias do e-mail automático do Termo de Recurso (além de EMAIL_IMPRESSAO). */
+/** "Obrigada!" quando quem assina é a 1T Mônica Virgínia; "Obrigado!" para os demais. */
+function agradecimentoDe(remetente) {
+  return /MONICA/.test(semAcentos(remetente).toUpperCase()) ? 'Obrigada!' : 'Obrigado!';
+}
+
+/** Cópias dos e-mails de impressão (Termo de Recurso, solicitações dos concursos e pedidos de parecer). */
 var EMAILS_COPIA_TERMO_RECURSO = 'dayvison.rubem@marinha.mil.br,brunelly.cavalcanti@marinha.mil.br';
 
 /**
@@ -603,8 +610,7 @@ function apiEnviarTermoRecursoImpressao(corpo) {
   var arquivo = DriveApp.getFileById(idDrive[1]);
   if (!estaSobPasta(arquivo, ID_PASTA_RAIZ_CONCURSOS)) throw new Error('O PDF não está na pasta CONCURSOS.');
 
-  // "Obrigada!" quando quem assina é a 1T Mônica Virgínia; "Obrigado!" para os demais.
-  var agradecimento = /MONICA/.test(semAcentos(remetente).toUpperCase()) ? 'Obrigada!' : 'Obrigado!';
+  var agradecimento = agradecimentoDe(remetente);
   var idCandidato = candidatoId ? candidatoId + ' ' : '';
 
   MailApp.sendEmail({
@@ -618,6 +624,43 @@ function apiEnviarTermoRecursoImpressao(corpo) {
       '<p style="font-size: 18px; font-weight: bold; margin: 0 0 16px;">Giorginis,</p>' +
       '<p style="margin: 0 0 16px;">Seguem os termos do candidato <strong style="color: #C00000;">INAPTO</strong> ao ' + escaparHtml(nomeConcurso) +
       ' <strong>' + escaparHtml(idCandidato + candidato) + '</strong> para impressão e coleta de assinaturas.</p>' +
+      '<p style="margin: 0 0 16px;">' + agradecimento + '</p>' +
+      '<p style="margin: 0;">' + escaparHtml(remetente) + '</p>' +
+      '</div>',
+    name: remetente,
+    attachments: [arquivo.getBlob()]
+  });
+  return { enviado: true };
+}
+
+/**
+ * action=enviarSolicitacaoConcursoImpressao (POST): { idToken, pdfUrl, tipo ('parecer' | 'exames'), remetente } —
+ * chamada automaticamente pelo app depois de gerar uma Solicitação de Parecer ou de Exames de um candidato:
+ * envia o PDF (só sob a pasta CONCURSOS) para EMAIL_IMPRESSAO, com cópia para EMAILS_COPIA_TERMO_RECURSO, para
+ * impressão só na frente e colorida. Nome de exibição e assinatura = médico que gerou a solicitação.
+ */
+function apiEnviarSolicitacaoConcursoImpressao(corpo) {
+  exigirUsuarioFirebase(corpo);
+  var pdfUrl = String(corpo.pdfUrl || '').trim();
+  var tipo = corpo.tipo === 'parecer' ? 'PARECER' : corpo.tipo === 'exames' ? 'EXAMES' : '';
+  var remetente = limparNomeDrive(corpo.remetente).slice(0, 80) || 'JRS/HNRe';
+  if (!tipo) throw new Error('"tipo" deve ser "parecer" ou "exames".');
+
+  var idDrive = /drive\.google\.com\/file\/d\/([\w-]+)/.exec(pdfUrl);
+  if (!idDrive) throw new Error('Endereço do PDF não reconhecido.');
+  var arquivo = DriveApp.getFileById(idDrive[1]);
+  if (!estaSobPasta(arquivo, ID_PASTA_RAIZ_CONCURSOS)) throw new Error('O PDF não está na pasta CONCURSOS.');
+
+  var agradecimento = agradecimentoDe(remetente);
+  MailApp.sendEmail({
+    to: EMAIL_IMPRESSAO,
+    cc: EMAILS_COPIA_TERMO_RECURSO,
+    subject: 'IMPRIMIR - SOLICITAÇÃO DE ' + tipo,
+    body: 'Giorginis,\n\nPor favor, imprimir apenas na frente e colorido.\n\n' + agradecimento + '\n\n' + remetente,
+    htmlBody:
+      '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #222;">' +
+      '<p style="font-size: 18px; font-weight: bold; margin: 0 0 16px;">Giorginis,</p>' +
+      '<p style="margin: 0 0 16px;">Por favor, imprimir <strong>apenas na frente e colorido</strong>.</p>' +
       '<p style="margin: 0 0 16px;">' + agradecimento + '</p>' +
       '<p style="margin: 0;">' + escaparHtml(remetente) + '</p>' +
       '</div>',
