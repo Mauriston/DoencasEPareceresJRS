@@ -18,13 +18,13 @@ import { Toast } from '../ui/Toast';
 import { CandidatoStatusTag, ConcursoStatusTag } from '../ui/statusTheme';
 import { CalendarioAgendamento } from './compartilhado';
 import { ModalDefinirPeriodoAgendamento } from './ModaisConcurso';
-import { useConcursoDetalhe, isAtrasada, type ConcursoDetalheProps } from './useConcursoDetalhe';
+import { useConcursoDetalhe, type ConcursoDetalheProps } from './useConcursoDetalhe';
 import { TabelaCandidatos } from './TabelaCandidatos';
 import { ListaCandidatosMobile } from './ListaCandidatosMobile';
 import { SheetCandidatoMobile } from './SheetCandidatoMobile';
 import { MenuAcoesCandidato } from './MenuAcoesCandidato';
 
-export { isAtrasada, type ConcursoDetalheProps };
+export { type ConcursoDetalheProps };
 
 // =========================================================================
 // REGISTRO DE EVENTOS (log de auditoria da IS) — exclusivo do Admin

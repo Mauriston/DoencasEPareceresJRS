@@ -11,7 +11,7 @@ import { type AlvoExames } from './ExamesCandidato';
 import { juntarPdfsBase64 } from '../../services/pdfMerge';
 import { salvarPdfCandidatoNoDrive, abrirPdf, anoDoConcurso, enviarTermoRecursoParaImpressao, enviarSolicitacaoParaImpressao, type PastaConcurso } from '../../services/driveConcursos';
 import { registrarDocumentoGerado } from '../../services/documentosGerados';
-import { MAPA_LAUDO_POR_STATUS } from '../../utils/concursosUtils';
+import { MAPA_LAUDO_POR_STATUS, isAtrasada } from '../../utils/concursosUtils';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { getScrollParent } from '../../utils/dom';
 import { ConfirmDialogState, isoParaBR, parseDataBR } from './compartilhado';
@@ -28,9 +28,6 @@ export interface ConcursoDetalheProps {
   apenasAtrasadas?: boolean;
 }
 
-/** IS atrasada: agendada para um dia anterior a hoje e ainda não finalizada. */
-export const isAtrasada = (c: { dataAgendamento: string; finalizado: boolean }, hoje: string = hojeISO()): boolean =>
-  !!c.dataAgendamento && c.dataAgendamento < hoje && !c.finalizado;
 
 
 /** Estado e ações da planilha de um concurso; a apresentação fica em ConcursoDetalhe e nos
@@ -753,7 +750,7 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
       .filter(c => {
         const matchesSearch = c.id.toLowerCase().includes(search.toLowerCase()) || c.nome.toLowerCase().includes(search.toLowerCase());
         if (!matchesSearch) return false;
-        if (apenasAtrasadas && !isAtrasada(c)) return false;
+        if (apenasAtrasadas && !isAtrasada(c, hojeISO())) return false;
 
         if (statusKpiFilter === 'nao-finalizados') {
           if (!(c.status === '' || c.status === 'Pendente' || c.status === 'Reagendado')) return false;

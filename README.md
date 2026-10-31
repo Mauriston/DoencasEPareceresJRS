@@ -125,6 +125,7 @@ A interface do usuário foi desenhada com estrita observância à Identidade Vis
 * **Inteligência Artificial:** Google Gemini para leitura de atestados, transcrição de mensagens administrativas e de exames de candidatos.
 * **PWA:** `public/manifest.webmanifest` (app **JRS/HNRe App**) e service worker do push (`public/firebase-messaging-sw.js`).
 * **Documentos locais:** `jspdf` (PDF do atestado), `pdf-lib` (junção de termos), `react-image-crop` (recorte de imagem), `qrcode` (instalação/login no celular).
+* **Testes:** `npm test` (Vitest, regras de `utils/`) e `npm run test:e2e` (Playwright contra o app ligado aos emuladores do Firebase; requer Java). Rodam no CI em todo PR (`.github/workflows/testes.yml`).
 * **Variáveis do repositório (build):** `API_BASE_URL` (URL do Cloud Run) e `FIREBASE_VAPID_KEY` (chave pública do push).
 
 ---

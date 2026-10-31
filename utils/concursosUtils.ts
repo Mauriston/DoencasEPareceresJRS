@@ -192,6 +192,10 @@ export const candidatoEstaFinalizado = (statusValor: string, numTisValor: string
   return true;
 };
 
+/** IS atrasada: agendada para um dia anterior a `hoje` (AAAA-MM-DD) e ainda não finalizada. */
+export const isAtrasada = (c: { dataAgendamento: string; finalizado: boolean }, hoje: string): boolean =>
+  !!c.dataAgendamento && c.dataAgendamento < hoje && !c.finalizado;
+
 // =========================================================================
 // EXTRAÇÃO DA MENSAGEM ADMINISTRATIVA (texto já transcrito do PDF)
 // =========================================================================

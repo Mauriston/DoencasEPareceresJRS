@@ -144,7 +144,7 @@ O **Cloud Firestore** é a fonte principal (detalhes em `docs/database.md`, seç
 │   ├── concursos/CodePrincipal.gs
 │   └── projetos.json
 ├── components/
-│   ├── concursos/               # detalhe da IS, exames, triagem, calendário
+│   ├── concursos/               # lista, planilha (hook + tabela/celular/ações), modais, triagem, exames
 │   ├── inspecoes/               # agenda, agendamento, bloqueios, minutas
 │   ├── militares/ pareceres/ periciaMenor/
 │   ├── publico/                 # páginas sem login
@@ -161,7 +161,8 @@ O **Cloud Firestore** é a fonte principal (detalhes em `docs/database.md`, seç
 │   ├── firebase-messaging-sw.js
 │   ├── icons/                   # ícones das notificações
 │   └── *.json                   # CID, serviços, finalidades, restrições, OMs…
-├── scripts/                     # migrações e verificação do design system
+├── e2e/                         # testes E2E (Playwright + emuladores do Firebase)
+├── scripts/                     # migrações, verificação do DS, teste das regras, versão do Apps Script
 ├── docs/
 ├── server.ts
 ├── firestore.rules  storage.rules  firebase.json
@@ -248,7 +249,18 @@ Painel de trabalho: *Precisa de atenção* (pareceres atrasados, perícias vigen
 `Inspecoes.tsx` e `components/inspecoes/`: cadastro das IS (exceto concursos), tabela agrupada ou calendário Dia/Semana/Mês, agendamento por perito em slots (transação em `agendaSlots`), bloqueios de horário/turno/período, minutas e sincronização com o Google Agenda "JRS/HNRe" (Apps Script). Os dias de concurso ocupam o turno da manhã de todos os peritos.
 
 ### 7.3 Concursos
-`ConcursosJRS.tsx` e `components/concursos/`:
+`ConcursosJRS.tsx` (só o roteamento entre lista, planilha, criação, dia e atrasadas) e `components/concursos/`, divididos por responsabilidade:
+
+| Arquivo | Responsabilidade |
+|---|---|
+| `ConcursosLista.tsx`, `MenuAcoesConcurso.tsx`, `ModaisConcurso.tsx` | Lista de concursos (cards, calendário, tabela, KPIs) e o menu ⋮ de cada concurso com seus modais |
+| `ModalRegistrarMensagem.tsx`, `ModalImportarCsv.tsx` | Criação do concurso pela mensagem (Gemini) e importação CSV |
+| `useConcursoDetalhe.tsx` | Estado, assinaturas do Firestore e handlers da planilha de um concurso |
+| `ConcursoDetalhe.tsx` | Página da planilha: cabeçalho, KPIs, filtros e diálogos |
+| `TabelaCandidatos.tsx` · `ListaCandidatosMobile.tsx` · `SheetCandidatoMobile.tsx` · `MenuAcoesCandidato.tsx` | Tabela (desktop), lista e sheet (celular) e menu ⋮ de cada candidato — recebem o estado do hook |
+| `CandidatoDetalhe.tsx`, `Triagem.tsx`, `ExamesCandidato.tsx`, `compartilhado.tsx` | Barra lateral da IS, triagem, exames do candidato e peças comuns |
+
+Funcionalidades:
 - cards dos concursos com calendário dos dias agendados; páginas por dia (`/concursos/dia/…`) e de **IS atrasadas** (`/concursos/atrasadas`), com uma tabela por concurso;
 - planilha de candidatos (status, observações/CID, Nº TIS e finalização; menu de ações; auditoria por IS);
 - termos de recurso e de cientificação, pedidos de parecer e solicitações de exames (PDF no Drive), **enviados por e-mail para impressão** automaticamente;
@@ -409,7 +421,13 @@ flowchart LR
 
 ### 11.3 Apps Script
 
-Publicação **manual**, colando o código no editor e reimplantando a versão — ver `docs/apps-script-deploy.md`.
+Publicação **manual**, colando o código no editor e reimplantando a versão — ver `docs/apps-script-deploy.md` (checklist). Para não ficar defasado:
+
+- `VERSAO_SCRIPT` em `CodeConcursos.gs` (aumentada a cada mudança) e a ação `versao`, sem login, que devolve a versão no ar;
+- o workflow `apps-script-publicado.yml` (a cada mudança em `apps-script/`, todo dia útil e sob demanda) compara as duas versões com `scripts/verificar-apps-script.mjs` e mantém aberta a issue **"Reimplantar o Apps Script"**, com o checklist, até a versão no ar alcançar a do repositório;
+- o `deploymentId` (URL do app) está versionado em `apps-script/projetos.json` e `config/endpoints.ts`; publica-se sempre editando a implantação existente.
+
+Falhas e cotas: as chamadas ao Gemini passam por `chamarGemini` (novas tentativas em 429/500/503 e mensagens claras); a cota diária de e-mail é conferida antes do envio (`garantirCotaEmail`). O documento é gerado e salvo **antes** do e-mail para impressão — se o e-mail falhar, o app avisa e o documento continua no Drive e na fila de impressão da Secretaria.
 
 ### 11.4 Regras do Firebase
 
@@ -420,6 +438,17 @@ Publicação **manual**, colando o código no editor e reimplantando a versão �
 - `firebase-applet-config.json`: configuração pública do cliente Firebase (também passada ao service worker pela URL do registro).
 - Cloud Run: `GEMINI_API_KEY`, `ALLOWED_ORIGIN`, `APP_URL` e credenciais padrão do serviço.
 - Apps Script: `GEMINI_API_KEY` nas propriedades do script.
+
+
+### 11.6 Testes
+
+| Tipo | Ferramenta | O que cobre | Onde roda |
+|---|---|---|---|
+| Unitários | Vitest (`npm test`) | Regras puras de `utils/`: triagem (máscaras, IMC, alertas, validação), concursos (finalização, IS atrasada, datas, dias úteis, agendamento, minutas, CSV), inspeções (prazos, slots, TIS) e formatação | `testes.yml` (PR e `main`) |
+| E2E | Playwright + emuladores do Firebase (`npm run test:e2e`) | Página pública; login por NIP (passa pelo `server.ts`); IS atrasada na Início; triagem pelo MPI (TRIAR só na IS de hoje, máscara, IMC, alertas, TRIADO e seção na barra lateral); Secretaria sem TRIAR/TRIADO. As regras do Firestore valem também nos emuladores | `testes.yml`, depois dos unitários |
+| Regras | API Firebase Rules (`scripts/testar-regras-firestore.cjs`) | 25 casos de permissão por perfil e campo | `deploy-firestore-rules.yml`, antes de publicar |
+
+O E2E nunca toca a produção: `e2e/executar.mjs` semeia os emuladores (projeto `demo-jrs`), sobe o app com `VITE_FIREBASE_EMULATORS=1` (o cliente conecta em Auth 9099 e Firestore 8080) e o `server.ts` com o Admin SDK apontado para os mesmos emuladores.
 
 ---
 
@@ -468,10 +497,10 @@ O `index.html` carrega externamente apenas o Google Material Symbols. Tailwind e
 
 ### 13.2 Limitações
 
-- `ConcursosJRS.tsx` e `App.tsx` concentram muita lógica (componentes extensos);
+- `useConcursoDetalhe.tsx` (~900 linhas) e `App.tsx` ainda concentram bastante lógica;
 - sem validação de esquema no servidor para as gravações do cliente;
 - Apps Script publicado à parte do código (pode ficar defasado);
-- inexistência de testes automatizados;
+- testes E2E cobrem os fluxos de concursos e login; ainda faltam Inspeções, Pareceres e Perícia Menor;
 - observabilidade limitada aos logs do Cloud Run e à auditoria das IS de concurso;
 - sem *code splitting* por rota;
 - sem cache offline.
@@ -484,11 +513,11 @@ O `index.html` carrega externamente apenas o Google Material Symbols. Tailwind e
 |---|---|---:|---|
 | Regras do Firestore não publicadas após mudança no código | Alto | ~~Média~~ Baixa | **Mitigado (31/10/2026):** CI testa e publica as regras a cada mudança na `main` (`deploy-firestore-rules.yml`) |
 | Gravação indevida em concursos por perfil sem permissão | Médio | ~~Baixa~~ Muito baixa | **Mitigado (31/10/2026):** regras por funcionalidade e por campo, lendo a matriz `config/permissoes` (ver `docs/database.md`, seção 14) |
-| Componentes muito extensos (`ConcursosJRS.tsx`) | Médio | Alta | Dividir por responsabilidade (tabela, sheet, ações) |
-| Apps Script publicado manualmente | Médio | Média | Checklist de reimplantação; versionar o deploymentId |
-| Falha ou cota do Apps Script/Gemini | Alto | Média | Tratar erros e manter o documento salvo mesmo sem e-mail |
+| Componentes muito extensos (`ConcursosJRS.tsx`) | Médio | ~~Alta~~ Baixa | **Mitigado (31/10/2026):** dividido em `components/concursos/` (lista, modais, hook de estado, tabela, celular e ações; ver 7.3) |
+| Apps Script publicado manualmente | Médio | ~~Média~~ Baixa | **Mitigado (31/10/2026):** checklist em `docs/apps-script-deploy.md`, `VERSAO_SCRIPT` e workflow que abre a issue de reimplantação até a versão no ar bater (ver 11.3) |
+| Falha ou cota do Apps Script/Gemini | Alto | ~~Média~~ Baixa | **Mitigado (31/10/2026):** novas tentativas no Gemini, checagem da cota de e-mail e documento salvo antes do e-mail (ver 11.3) |
 | Push dependente da instalação no iOS | Baixo | Alta | Histórico no app (badge) independe do push |
-| Ausência de testes | Alto | Alta | Testes unitários das regras puras (`utils/`) e E2E dos fluxos críticos |
+| Ausência de testes | Alto | ~~Alta~~ Média | **Mitigado (31/10/2026):** Vitest nas regras de `utils/` e Playwright + emuladores nos fluxos críticos de concursos, no CI (ver 11.6). Ampliar o E2E para Inspeções, Pareceres e Perícia Menor |
 | Dados médico-administrativos em serviços externos | Alto | Média | Revisar LGPD, acesso, retenção e auditoria |
 | Dependências por CDN | Baixo | Baixa | Autohospedar Material Symbols e o SDK do service worker |
 
@@ -630,22 +659,12 @@ No Apps Script, preferir `PropertiesService`. No frontend, usar variáveis `VITE
 
 ### 15.8 Testes
 
-Adicionar:
+Já há Vitest (regras de `utils/`) e Playwright com emuladores (login e concursos) — ver 11.6. Próximos passos:
 
-- Vitest para unidades frontend;
-- React Testing Library para componentes;
-- Playwright para fluxos críticos;
-- funções puras testáveis (`utils/`);
+- E2E de Inspeções (agendar, reagendar, bloqueio), Pareceres e Perícia Menor;
+- simular o Apps Script nos testes (hoje as ações que geram PDF ficam fora do E2E);
+- React Testing Library para componentes com regra de exibição (ex.: quem vê TRIAR/TRIADO);
 - ambiente de homologação com projeto Firebase e pasta do Drive separados.
-
-Fluxos prioritários para E2E:
-
-1. login;
-2. consulta de militar;
-3. geração de parecer;
-4. OCR de atestado;
-5. geração de perícia menor;
-6. controle de acesso por perfil.
 
 ### 15.9 Observabilidade
 
@@ -839,12 +858,12 @@ A arquitetura evoluiu de "SPA + Apps Script + planilhas" para **SPA instalável 
 
 Os próximos passos de maior retorno são:
 
-1. dividir os componentes mais extensos (`ConcursosJRS.tsx`);
-2. testes automatizados das regras puras (`utils/`) e dos fluxos críticos;
-3. *code splitting* por rota;
-4. observabilidade (erros do cliente e do servidor).
+1. ampliar o E2E para Inspeções, Pareceres e Perícia Menor;
+2. *code splitting* por rota;
+3. observabilidade (erros do cliente e do servidor);
+4. continuar dividindo `useConcursoDetalhe.tsx` e `App.tsx`.
 
-Já feitos em 31/10/2026: publicação das regras no CI (com teste antes) e restrição das gravações em concursos por funcionalidade/campo.
+Já feitos em 31/10/2026: publicação das regras no CI (com teste antes); restrição das gravações em concursos por funcionalidade/campo; divisão do `ConcursosJRS.tsx`; controle de versão e checklist do Apps Script, com novas tentativas no Gemini e cota de e-mail; testes unitários e E2E no CI.
 
 ---
 
@@ -869,3 +888,7 @@ Já feitos em 31/10/2026: publicação das regras no CI (com teste antes) e rest
 | 31/10 | IS de concurso atrasadas (Início e `/concursos/atrasadas`) | `Home.tsx`, `ConcursosJRS.tsx` |
 | 31/10 | Planilhas do Google Sheets e projeto Apps Script "principal" desativados; tudo num só projeto Apps Script | `apps-script/concursos/` |
 | 31/10 | Regras do Firebase testadas e publicadas pelo CI; gravações em concursos restritas pela matriz de permissões | `deploy-firestore-rules.yml`, `firestore.rules` |
+| 31/10 | `ConcursosJRS.tsx` dividido por responsabilidade (lista, modais, hook, tabela, celular, ações) | `components/concursos/` |
+| 31/10 | Apps Script: versão publicada verificada pelo CI, novas tentativas no Gemini, cota de e-mail | `apps-script-publicado.yml`, `CodeConcursos.gs` |
+| 31/10 | Testes unitários (Vitest) e E2E (Playwright + emuladores) no CI | `utils/__tests__/`, `e2e/`, `testes.yml` |
+
