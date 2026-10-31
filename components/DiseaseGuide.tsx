@@ -353,11 +353,11 @@ const WebsterCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 // Child-Pugh: três exames digitados (a pontuação sai das faixas) e dois achados clínicos escolhidos
 // como nas calculadoras CDR e Webster. Cada variável vale de 1 a 3 pontos (total 5 a 15).
 const childPughLab = [
-  { id: 'bili', nome: 'Bilirrubina total', unidade: 'mg/dL', faixas: '< 2 · 2 a 3 · > 3',
+  { id: 'bili', nome: 'Bilirrubina total', unidade: 'mg/dL',
     pontos: (v: number) => (v < 2 ? 1 : v <= 3 ? 2 : 3) },
-  { id: 'alb', nome: 'Albumina', unidade: 'g/dL', faixas: '> 3,5 · 2,8 a 3,5 · < 2,8',
+  { id: 'alb', nome: 'Albumina', unidade: 'g/dL',
     pontos: (v: number) => (v > 3.5 ? 1 : v >= 2.8 ? 2 : 3) },
-  { id: 'inr', nome: 'INR', unidade: '', faixas: '< 1,7 · 1,7 a 2,3 · > 2,3',
+  { id: 'inr', nome: 'INR', unidade: '',
     pontos: (v: number) => (v < 1.7 ? 1 : v <= 2.3 ? 2 : 3) },
 ] as const;
 
@@ -418,8 +418,7 @@ const ChildPughCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => 
         />
         {childPughLab.map((v, i) => (
           <div key={v.id} className="bg-white border border-line rounded-xl p-4">
-            <label htmlFor={`cp-${v.id}`} className="block text-h3 font-bold text-navy mb-1">{v.nome}{v.unidade && <span className="text-ink-3 font-normal"> ({v.unidade})</span>}</label>
-            <p className="text-xs text-ink-3 mb-3">Faixas: {v.faixas}</p>
+            <label htmlFor={`cp-${v.id}`} className="block text-h3 font-bold text-navy mb-3">{v.nome}{v.unidade && <span className="text-ink-3 font-normal"> ({v.unidade})</span>}</label>
             <div className="flex items-center gap-3">
               <input
                 id={`cp-${v.id}`}
