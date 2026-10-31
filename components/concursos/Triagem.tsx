@@ -46,10 +46,13 @@ const rotuloCls = 'block text-xs font-bold text-ink-3 uppercase tracking-wider m
 const inputCls = (erro?: string, alerta?: boolean) =>
   `w-full px-3 py-2.5 rounded-lg border text-sm font-semibold focus:outline-none focus:border-navy ${erro ? 'border-wine' : alerta ? 'border-wine text-wine' : 'border-ink-5 text-navy'}`;
 
+// O rótulo envolve o campo (associação implícita): leitores de tela e testes encontram o campo pelo rótulo.
 const Campo: React.FC<{ rotulo: string; unidade?: string; erro?: string; children: React.ReactNode }> = ({ rotulo, unidade, erro, children }) => (
   <div>
-    <label className={rotuloCls}>{rotulo}{unidade && <span className="normal-case font-semibold"> ({unidade})</span>}</label>
-    {children}
+    <label className="block">
+      <span className={rotuloCls}>{rotulo}{unidade && <span className="normal-case font-semibold"> ({unidade})</span>}</span>
+      {children}
+    </label>
     {erro && <p className="text-xs font-semibold text-wine mt-1">{erro}</p>}
   </div>
 );

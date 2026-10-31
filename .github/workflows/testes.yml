@@ -1,0 +1,47 @@
+name: Testes
+
+# Unitários (Vitest, regras puras de utils/) e E2E (Playwright contra o app real ligado aos
+# emuladores do Firebase — nunca à produção) em todo pull request e push na main.
+
+on:
+  pull_request:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unitarios:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Checagem de tipos
+        run: npx tsc --noEmit -p .
+      - name: Testes unitários
+        run: npm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: unitarios
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - name: Navegador do Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Testes E2E (emuladores do Firebase)
+        run: npm run test:e2e

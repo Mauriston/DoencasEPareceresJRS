@@ -20,6 +20,13 @@ Como os `.gs` mudam pouco, a automação custava mais em manutenção e em falha
 git fetch origin refs/pull/174/head:gas-deploy-sa
 ```
 
+## Controle de versão (o que está no ar?)
+
+- `CodeConcursos.gs` declara `VERSAO_SCRIPT` (formato `AAAA-MM-DD.N`). **Aumente esse valor em toda alteração de qualquer `.gs`** do projeto.
+- O web app responde à ação `versao` (sem login) com a versão publicada; `node scripts/verificar-apps-script.mjs` compara com a do repositório.
+- O workflow **Apps Script publicado** (`.github/workflows/apps-script-publicado.yml`) roda quando um `.gs` muda na `main`, todo dia útil de manhã e sob demanda. Enquanto a versão no ar for diferente da do repositório, mantém aberta a issue **"Reimplantar o Apps Script"** com o checklist abaixo; quando você publica, ela fecha sozinha.
+- O `deploymentId` (que define a URL `…/exec` do app) está versionado em `apps-script/projetos.json` e em `config/endpoints.ts`. Publicar sempre **editando a implantação existente** mantém esse id; criar implantação nova quebraria o app.
+
 ## Como publicar uma alteração
 
 Depois de alterar um `.gs` no repositório (e mergear na `main`):
@@ -29,6 +36,19 @@ Depois de alterar um `.gs` no repositório (e mergear na `main`):
 3. **Publique uma nova versão** — este passo é o que mais se esquece: salvar o código **não** atualiza o web app. Vá em **Implantar → Gerenciar implantações**, clique no lápis (editar) da implantação existente, em **Versão** escolha **Nova versão**, e clique em **Implantar**.
    - Editar a implantação existente mantém a **mesma URL `…/exec`**, então `config/endpoints.ts` não muda. Criar uma implantação *nova* geraria outra URL e quebraria o app.
 4. **Teste** a funcionalidade que depende daquela ação no app.
+5. **Confira a versão**: em GitHub → Actions → "Apps Script publicado" → *Run workflow* (ou `node scripts/verificar-apps-script.mjs`). A issue de reimplantação fecha quando a versão no ar bate com a do repositório.
+
+### Checklist rápido
+- [ ] `VERSAO_SCRIPT` aumentada no commit que alterou o `.gs`.
+- [ ] Código colado em todos os arquivos alterados e salvo.
+- [ ] Nova versão na implantação **existente** (mesmo deploymentId).
+- [ ] Permissões novas autorizadas, se pedidas.
+- [ ] Funcionalidade testada no app e versão conferida.
+
+## Falhas e cotas
+
+- **Gemini:** todas as chamadas passam por `chamarGemini`, que tenta de novo nas falhas passageiras (429 limite de uso, 500, 503; esperas de 2 s e 4 s) e devolve mensagens claras de cota ou indisponibilidade.
+- **E-mail para impressão:** `garantirCotaEmail` verifica a cota diária do `MailApp` antes de enviar. O documento é gerado e salvo **antes** do e-mail: se o envio falhar, o app avisa, o PDF continua salvo no Drive e o documento continua na fila de impressão da Secretaria (Início).
 
 ## Cuidados
 

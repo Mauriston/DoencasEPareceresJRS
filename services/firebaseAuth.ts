@@ -5,6 +5,7 @@
 // interno (nunca usado para enviar e-mails de verdade) derivado do usuário.
 import { initializeApp, deleteApp } from 'firebase/app';
 import {
+  connectAuthEmulator,
   getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -15,13 +16,21 @@ import {
   EmailAuthProvider,
   User,
 } from 'firebase/auth';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, connectFirestoreEmulator } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import { slugify } from '../utils/slug';
 import type { UsuarioDoc } from './firestoreUsuarios';
 
-export const app = initializeApp(firebaseConfig);
+// Testes E2E (e2e/): com VITE_FIREBASE_EMULATORS=1 o app fala com os emuladores locais do
+// Firebase (Auth 9099, Firestore 8080) num projeto de demonstração, nunca com a produção.
+const usarEmuladores = import.meta.env.VITE_FIREBASE_EMULATORS === '1';
+
+export const app = initializeApp(usarEmuladores ? { ...firebaseConfig, projectId: 'demo-jrs' } : firebaseConfig);
 export const auth = getAuth(app);
+if (usarEmuladores) {
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  connectFirestoreEmulator(getFirestore(app), '127.0.0.1', 8080);
+}
 
 const EMAIL_DOMAIN = 'jrs-hnre.internal';
 
