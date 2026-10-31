@@ -1,8 +1,8 @@
 import express from "express";
 import path from "path";
 import { GoogleGenAI } from "@google/genai";
-import { logErroSeguro, descreverErro } from "./utils/logSeguro";
-import { higienizarParaIA, base64ValidoParaIA } from "./utils/minimizacaoIA";
+import { logErroSeguro, descreverErro } from "./src/utils/logSeguro";
+import { higienizarParaIA, base64ValidoParaIA } from "./src/utils/minimizacaoIA";
 
 // Firebase Admin (credenciais padrão do Cloud Run), inicializado sob demanda.
 async function getFirebaseAdmin() {
