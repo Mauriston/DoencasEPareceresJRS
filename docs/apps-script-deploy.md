@@ -1,13 +1,12 @@
 # Publicação dos projetos Apps Script (manual)
 
-O código dos dois projetos Apps Script fica **versionado neste repositório** — ele é a fonte da verdade — e é publicado **colando no editor do Apps Script**. Não há automação de deploy.
+O código do projeto Apps Script fica **versionado neste repositório** — ele é a fonte da verdade — e é publicado **colando no editor do Apps Script**. Não há automação de deploy.
 
 | Projeto | Pasta no repositório | Arquivos | URL no app |
 |---|---|---|---|
-| `principal` | `apps-script/principal/` | `Code.gs` | `GAS_URL` em `config/endpoints.ts` |
 | `concursos` | `apps-script/concursos/` | `CodeConcursos.gs`, `CodePrincipal.gs` | `GAS_URL_CONCURSOS` em `config/endpoints.ts` |
 
-Os IDs de cada projeto (`scriptId` e `deploymentId`) estão em `apps-script/projetos.json`. Nenhum script lê esse arquivo: ele serve de referência para achar o projeto certo no editor e conferir a qual implantação cada URL corresponde.
+Os IDs do projeto (`scriptId` e `deploymentId`) estão em `apps-script/projetos.json`. Nenhum script lê esse arquivo: ele serve de referência para achar o projeto certo no editor e conferir a qual implantação cada URL corresponde.
 
 ## Por que não é automático
 
@@ -40,4 +39,9 @@ Depois de alterar um `.gs` no repositório (e mergear na `main`):
 - O secret `CLASPRC_JSON` do repositório não é mais usado por nada e pode ser apagado.
 
 ## Consolidação dos projetos
-`apps-script/concursos/CodePrincipal.gs` recebeu as ações em uso do antigo projeto `principal` (`getLookups`, `getMilitaresList`, `getMilitar`, `getPericiaMenorList`, `getExtras`, `extrair_dados_atestado`, `gerarMinutaMensagem`; a `gerar_pericia_menor` foi removida — a Perícia Menor agora é gravada no Firestore), com o mesmo formato de resposta. O `doPost` de `CodeConcursos.gs` encaminha essas ações para `doPostPrincipal`. Ficaram de fora, por estarem sem uso: `getPareceresList`, `imprimir` e o parecer "regular" por planilha. Enquanto o app não migrar para a URL única, o projeto `principal` continua como está (reversão).
+
+O antigo projeto `principal` (`Code.gs`, URL que terminava em `…AKfycby2vz9K…/exec`) foi **desativado em 31/10/2026**. Ele lia a planilha principal (abas `ListasRef`, `OM`, `Perito`, `Militares`, `Templates`, `Templates_Documentos`, `Pareceres`, `Pericia_Menor`, `Usuarios`) e a planilha de conteúdos extras, que deixaram de ser usadas — os dados estão no Firestore.
+
+- As duas ações dele ainda em uso (`extrair_dados_atestado` e `gerarMinutaMensagem`) ficam em `CodePrincipal.gs`, no projeto `concursos`, e o app (Perícia Menor e Mensagens) chama só a URL desse projeto.
+- As ações GET que liam as planilhas (`getLookups`, `getMilitaresList`, `getMilitar`, `getPericiaMenorList`, `getExtras`) e o cadastro de militar na planilha foram removidos de `CodePrincipal.gs`. O projeto não tem mais `doGet`.
+- **No Google:** depois de publicar esta versão do projeto `concursos`, o projeto `principal` pode ser arquivado (ou ter a implantação removida) no editor do Apps Script, e as planilhas podem ser arquivadas no Drive. Nada no app depende mais deles.

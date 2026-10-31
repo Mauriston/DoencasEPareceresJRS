@@ -2,8 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { useIsDesktop } from '../hooks/useIsDesktop';
-
-const GAS_URL = "https://script.google.com/macros/s/AKfycby2vz9KLrNFu_8dV85TFZt9hXemBbVn7ZMEPIn3C2tbhmhQ6I665ntfuSECO4TJqrs/exec";
+import { GAS_URL_CONCURSOS } from '../config/endpoints';
 
 interface ImageItem {
   file: File;
@@ -96,7 +95,7 @@ export const Mensagens: React.FC = () => {
         action: 'gerarMinutaMensagem',
         images: images.map(img => ({ data: img.base64, mimeType: img.mimeType })),
       };
-      const response = await fetch(GAS_URL, {
+      const response = await fetch(GAS_URL_CONCURSOS, {
         method: 'POST',
         body: JSON.stringify(payload),
       });

@@ -28,12 +28,12 @@ flowchart LR
     FE[Frontend React · PWA<br/>GitHub Pages]
     SW[Service worker<br/>firebase-messaging-sw.js]
     RUN[Servidor Express<br/>Cloud Run · server.ts]
-    GAS[Google Apps Script<br/>CodeConcursos.gs / Code.gs]
+    GAS[Google Apps Script<br/>CodeConcursos.gs + CodePrincipal.gs]
     FS[(Cloud Firestore)]
     ST[(Firebase Storage)]
     AUTH[Firebase Auth]
     FCM[Firebase Cloud Messaging]
-    GW[Google Drive · Docs · Gmail · Agenda · Sheets]
+    GW[Google Drive · Docs · Gmail · Agenda]
     GEMINI[Gemini API]
     STATIC[JSON e conteúdo estático<br/>no bundle/public]
 
@@ -95,17 +95,17 @@ O backend tem duas partes, publicadas separadamente:
 
 O mesmo servidor serve o build em desenvolvimento (`npm run dev`) e libera CORS para a origem do GitHub Pages (`ALLOWED_ORIGIN`).
 
-**Google Apps Script.** `apps-script/concursos/CodeConcursos.gs` concentra a automação do Workspace: geração de PDFs por template (termos, pedidos de parecer, solicitações de exames), gravação no Drive, transcrição de exames e mensagens pelo Gemini, envio de e-mails para impressão e sincronização com o Google Agenda "JRS/HNRe". As ações que gravam exigem o `idToken` do Firebase. `apps-script/principal/Code.gs` mantém as funções legadas e as listas em planilha.
+**Google Apps Script.** `apps-script/concursos/CodeConcursos.gs` concentra a automação do Workspace: geração de PDFs por template (termos, pedidos de parecer, solicitações de exames), gravação no Drive, transcrição de exames e mensagens pelo Gemini, envio de e-mails para impressão e sincronização com o Google Agenda "JRS/HNRe". As ações que gravam exigem o `idToken` do Firebase. `CodePrincipal.gs`, no mesmo projeto, atende a leitura do atestado e a minuta de mensagens (ações herdadas do antigo projeto "principal", que foi desativado junto com as planilhas).
 
 ### 3.3 Persistência
 
-O **Cloud Firestore** é a fonte principal (detalhes em `docs/database.md`, seções 32+). PDFs ficam no **Firebase Storage** (legislação, perícias menores, infográficos, fotos) ou no **Google Drive** (concursos, pareceres, exames de candidatos). As planilhas Google ficaram para o histórico e listas de apoio.
+O **Cloud Firestore** é a fonte principal (detalhes em `docs/database.md`, seções 4 a 14). PDFs ficam no **Firebase Storage** (legislação, perícias menores, infográficos, fotos) ou no **Google Drive** (concursos, pareceres, exames de candidatos). As antigas planilhas do Google Sheets não são mais usadas.
 
 ### 3.4 Integrações
 
 - Firebase Authentication, Firestore, Storage e Cloud Messaging;
 - Cloud Run (servidor `server.ts`);
-- Google Apps Script Web App (Drive, Docs, Gmail, Agenda, Sheets);
+- Google Apps Script Web App (Drive, Docs, Gmail, Agenda);
 - Gemini API (pelo Apps Script e pelo servidor);
 - provedores de mídia: YouTube (vídeos), Google Slides/Canva/GitHub Pages (apresentações), Imgur.
 
@@ -140,8 +140,9 @@ O **Cloud Firestore** é a fonte principal (detalhes em `docs/database.md`, seç
 │   ├── deploy.yml               # frontend → GitHub Pages
 │   └── deploy-cloud-run.yml     # server.ts → Cloud Run
 ├── apps-script/
-│   ├── principal/Code.gs
-│   └── concursos/CodeConcursos.gs
+│   ├── concursos/CodeConcursos.gs
+│   ├── concursos/CodePrincipal.gs
+│   └── projetos.json
 ├── components/
 │   ├── concursos/               # detalhe da IS, exames, triagem, calendário
 │   ├── inspecoes/               # agenda, agendamento, bloqueios, minutas
@@ -279,97 +280,35 @@ Usuários (cadastro, permissões por perfil, redefinir senha, **excluir inativo*
 
 ## 8. Arquitetura do backend Google Apps Script
 
-> As subseções 8.1 a 8.6 descrevem o `Code.gs` principal (legado, planilhas). A automação atual está em `apps-script/concursos/CodeConcursos.gs`, com as ações: `criarEstruturaConcurso`, `salvarMensagemPdf`, `extrairMensagemConcurso`, `salvarPdfCandidato`, `salvarExamesCandidato`, `gerarTermoRecurso`, `gerarTermoCientificacao`, `gerarSolicitacaoParecer`, `gerarSolicitacaoExames`, `gerarPedidoParecer`, `salvarPdfParecer`, `gerarMinutaMensagem`, `removerArquivoDrive`, **`enviarTermoRecursoImpressao`**, **`enviarSolicitacaoConcursoImpressao`**, **`enviarParecerImpressao`** (e-mails para a impressão, com cópia para a Secretaria), `sincronizarEventoIS`, `sincronizarEventoBloqueio` e `sincronizarEventosConcursos` (Google Agenda).
-
 ### 8.1 Estrutura
 
-O arquivo `Code.gs` contém:
+Um único projeto Apps Script (pasta `apps-script/concursos/`, URL `GAS_URL_CONCURSOS` em `config/endpoints.ts`), publicado manualmente (`docs/apps-script-deploy.md`):
 
-- constantes com IDs de recursos;
-- `doGet(e)`;
-- funções auxiliares;
-- `doPost(e)`;
-- regras de geração e envio de documentos.
+- `CodeConcursos.gs` — `doPost(e)` com as ações do app; respostas no envelope `{ sucesso, dados | erro }`;
+- `CodePrincipal.gs` — `doPostPrincipal(e)`, chamado pelo `doPost` para `extrair_dados_atestado` e `gerarMinutaMensagem`, no formato antigo `{ success, data | message }`.
 
-A seleção da operação é feita por um campo `action` recebido por query string ou no corpo JSON.
+Não há `doGet`: o app só faz chamadas POST. O antigo projeto "principal" (`Code.gs`) e as planilhas que ele lia foram desativados.
 
-### 8.2 Operações GET observadas
+### 8.2 Ações
 
-Entre as operações implementadas ou consumidas pelo frontend estão:
-
-| Ação | Finalidade |
+| Grupo | Ações |
 |---|---|
-| `login` | Validar credenciais do usuário |
-| `getUsuarios` | Consultar usuários cadastrados |
-| `createUsuario` | Criar solicitação ou registro de usuário |
-| `getLookups` | Obter finalidades, postos, quadros, especialidades, dispensas, OM e peritos |
-| `getMilitar` | Consultar um militar por NIP |
-| `getMilitaresList` | Listar militares para busca/autocomplete |
-| `getPareceresList` | Listar pareceres gerados |
-| `getPericiaMenorList` | Listar perícias menores e calcular vigência |
-| `getExtras` | Obter materiais extras de outra planilha |
+| Concursos | `criarEstruturaConcurso`, `salvarMensagemPdf`, `extrairMensagemConcurso`, `salvarPdfCandidato`, `salvarExamesCandidato`, `gerarTermoRecurso`, `gerarTermoCientificacao`, `gerarSolicitacaoParecer`, `gerarSolicitacaoExames`, `removerArquivoDrive` |
+| Pareceres | `gerarPedidoParecer`, `salvarPdfParecer` |
+| Impressão por e-mail | `enviarTermoRecursoImpressao`, `enviarSolicitacaoConcursoImpressao`, `enviarParecerImpressao` (com cópia para a Secretaria) |
+| Google Agenda "JRS/HNRe" | `sincronizarEventoIS`, `sincronizarEventoBloqueio`, `sincronizarEventosConcursos` |
+| Gemini | `extrair_dados_atestado` (Perícia Menor), `gerarMinutaMensagem` (Mensagens), além da transcrição em `extrairMensagemConcurso` e `salvarExamesCandidato` |
 
-> Algumas ações aparecem no consumo do frontend e outras no backend. A tabela consolida o contrato observado entre ambos.
+### 8.3 Automação documental
 
-### 8.3 Operações POST observadas
+1. copia o template do Google Docs para a pasta do Drive (concurso/candidato ou inspecionado);
+2. preenche os marcadores;
+3. exporta em PDF e devolve a URL de visualização;
+4. o app grava a URL no Firestore; para os documentos com automação de e-mail, envia o PDF para a impressão.
 
-| Ação | Finalidade |
-|---|---|
-| `extrair_dados_atestado` | Enviar imagem ao Gemini e obter dados estruturados |
-| geração de perícia menor | Criar documento, anexar imagem, exportar e registrar |
-| geração de parecer | Copiar template, substituir marcadores, exportar e registrar |
-| `imprimir` | Executar ação associada ao PDF gerado |
-| geração de mensagem/minuta | Processar dados com Gemini e retornar texto estruturado |
+### 8.4 Segurança
 
-### 8.4 Google Sheets como banco operacional
-
-O backend utiliza abas de planilha como tabelas. Foram identificadas referências a:
-
-- `ListasRef`;
-- `OM`;
-- `Perito`;
-- `Militares`;
-- `Templates_Documentos`;
-- `Pareceres`;
-- `Pericia_Menor`;
-- abas relacionadas a usuários e templates adicionais.
-
-A leitura é feita por `getDataRange().getValues()`, seguida por transformação manual de linhas e colunas.
-
-### 8.5 Automação documental
-
-O padrão de geração documental é:
-
-1. localizar o template por tipo ou especialidade;
-2. copiar o arquivo para uma pasta de destino;
-3. abrir a cópia com `DocumentApp`;
-4. substituir marcadores como `{{INSPECIONADO}}` e `{{FINALIDADE}}`;
-5. inserir conteúdo e, quando aplicável, imagem;
-6. salvar o documento;
-7. exportar para PDF e/ou ODT;
-8. registrar o resultado em planilha;
-9. enviar por e-mail;
-10. mover a cópia temporária do Google Docs para a lixeira.
-
-### 8.6 Integração com Gemini
-
-A chave da API Gemini é recuperada por:
-
-```js
-PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY")
-```
-
-Isso mantém a chave fora do frontend no fluxo observado de OCR. O backend envia à API:
-
-- prompt textual;
-- imagem JPEG em Base64;
-- configuração de resposta JSON.
-
-O modelo observado é:
-
-```text
-gemini-2.5-flash
-```
+As ações que gravam no Drive ou usam o Gemini validam o `idToken` do Firebase (`exigirUsuarioFirebase`). A chave do Gemini fica nas propriedades do script (`GEMINI_API_KEY`).
 
 ---
 
@@ -396,7 +335,7 @@ A visibilidade de páginas e funcionalidades segue a matriz `config/permissoes` 
 
 ### 9.3 Autorização dos dados
 
-- **Firestore/Storage:** regras por perfil em `firestore.rules`/`storage.rules` (resumo em `docs/database.md`, seção 42). O perfil é lido do próprio Firestore nas regras.
+- **Firestore/Storage:** regras por perfil em `firestore.rules`/`storage.rules` (resumo em `docs/database.md`, seção 14). O perfil é lido do próprio Firestore nas regras.
 - **Servidor:** cada rota verifica o ID token (`verifyIdToken(..., true)`) e, quando é de Admin, o perfil no Firestore.
 - **Apps Script:** as ações que gravam no Drive ou usam o Gemini validam o `idToken` do Firebase (`exigirUsuarioFirebase`).
 
@@ -507,7 +446,7 @@ O `index.html` carrega externamente apenas o Google Material Symbols. Tailwind e
 
 - Firebase (Auth, Firestore, Storage, Cloud Messaging);
 - Google Cloud Run;
-- Google Apps Script, Drive, Docs, Gmail, Agenda e Sheets;
+- Google Apps Script, Drive, Docs, Gmail e Agenda;
 - Gemini API;
 - GitHub Pages e GitHub Actions;
 - YouTube, Google Slides, Canva, Imgur;
@@ -682,10 +621,8 @@ Também é recomendável validar entradas e saídas com schemas.
 Mover para configuração central:
 
 - URL do Apps Script;
-- IDs de planilhas;
 - IDs de pastas;
 - IDs de templates;
-- nomes de abas;
 - modelo Gemini;
 - e-mails de destino;
 - flags de ambiente.
@@ -699,8 +636,8 @@ Adicionar:
 - Vitest para unidades frontend;
 - React Testing Library para componentes;
 - Playwright para fluxos críticos;
-- funções puras testáveis para transformação de dados do GAS;
-- ambiente de homologação com planilha e pasta separadas.
+- funções puras testáveis (`utils/`);
+- ambiente de homologação com projeto Firebase e pasta do Drive separados.
 
 Fluxos prioritários para E2E:
 
@@ -719,7 +656,7 @@ Implementar:
 - identificador de correlação por requisição;
 - registro de usuário, horário e resultado;
 - mensagens de erro sem dados sensíveis;
-- painel ou planilha de auditoria;
+- painel de auditoria;
 - alertas para falhas na geração de documentos e chamadas Gemini.
 
 ### 15.10 PWA real, caso seja um requisito
@@ -756,8 +693,8 @@ flowchart TB
         SEC[Auth/Authorization]
     end
 
-    subgraph Data[Google Workspace]
-        SHEETS[(Sheets)]
+    subgraph Data[Firebase e Google Workspace]
+        FS[(Firestore)]
         DRIVE[Drive]
         DOCS[Docs]
         GMAIL[Gmail]
@@ -774,7 +711,7 @@ flowchart TB
     APP --> REPO
     APP --> DOC
     APP --> AI
-    REPO --> SHEETS
+    REPO --> FS
     DOC --> DRIVE
     DOC --> DOCS
     DOC --> GMAIL
@@ -813,13 +750,13 @@ flowchart TB
 
 **Decisão:** usar Google Apps Script como API e orquestrador.
 
-**Motivação:** integração nativa com Sheets, Docs, Drive e Gmail.
+**Motivação:** integração nativa com Docs, Drive, Gmail e Agenda.
 
 **Consequência:** limites de execução e cotas do Apps Script precisam ser considerados.
 
 ### ADR-003 — Google Sheets como persistência operacional
 
-**Status:** vigente.
+**Status:** substituída pela ADR-006 (as planilhas foram desativadas em 31/10/2026).
 
 **Decisão:** usar abas de planilha como tabelas de cadastro e registro.
 
@@ -887,7 +824,7 @@ Antes de incorporar uma nova funcionalidade, verificar:
 - [ ] Coleções novas têm bloco em `firestore.rules`, e as regras foram **publicadas**?
 - [ ] Mudanças no Apps Script foram reimplantadas (`docs/apps-script-deploy.md`)?
 - [ ] IDs e URLs estão centralizados em configuração?
-- [ ] A mudança evita acoplamento direto a índices fixos de planilha?
+- [ ] A mudança evita acoplamento a formatos implícitos (campos sem tipo, índices fixos)?
 - [ ] Há tratamento de erro e estado de carregamento?
 - [ ] Há registro de auditoria para operação sensível?
 - [ ] O fluxo foi testado em desktop e mobile?
@@ -931,3 +868,4 @@ Os próximos passos de maior retorno são:
 | 31/10 | Fila de documentos gerados (Secretaria) | `services/documentosGerados.ts` |
 | 31/10 | Triagem das IS de concurso (MPI) | `components/concursos/Triagem.tsx` |
 | 31/10 | IS de concurso atrasadas (Início e `/concursos/atrasadas`) | `Home.tsx`, `ConcursosJRS.tsx` |
+| 31/10 | Planilhas do Google Sheets e projeto Apps Script "principal" desativados; tudo num só projeto Apps Script | `apps-script/concursos/` |
