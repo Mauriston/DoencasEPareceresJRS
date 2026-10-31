@@ -173,6 +173,8 @@ export const Sidebar: React.FC = () => {
                   authUser={authUser}
                   onPerfilClick={() => { setIsAvatarMenuOpen(false); setCurrentView('perfil'); }}
                   onLogoutClick={() => { setIsAvatarMenuOpen(false); handleLogout(); }}
+                  naoLidas={nav?.notificacoesNaoLidas}
+                  onNotificacoesClick={() => nav?.abrirNotificacoes()}
                   perfilReal={nav?.perfilReal}
                   verComo={nav?.verComo}
                   onVerComo={perfil => { setIsAvatarMenuOpen(false); nav?.setVerComo(perfil); }}
@@ -189,7 +191,7 @@ export const Sidebar: React.FC = () => {
               <span className="text-sm font-bold text-white truncate max-w-[170px]">{authUser?.usuario || 'Usuário'}</span>
               <span className={`text-xs truncate max-w-[170px] ${nav?.verComo ? 'font-bold text-gold' : 'font-medium text-white/70'}`}>{nav?.verComo ? `Vendo como ${PERFIL_LABELS[nav.verComo] || nav.verComo}` : (authUser?.cargo || ' ')}</span>
             </span>
-            <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} />
+            <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} badge={nav?.notificacoesNaoLidas} />
           </button>
         </div>
       </aside>

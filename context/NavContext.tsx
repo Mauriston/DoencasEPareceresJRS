@@ -36,6 +36,10 @@ export interface NavContextType {
   avisos: { casosPendente: boolean; pwaPendente: boolean };
   /** Abre o tutorial (celular) ou o QR code (desktop) de instalação do app. */
   abrirInstalacaoApp: () => void;
+  /** Notificações não lidas do usuário (badge do avatar). */
+  notificacoesNaoLidas: number;
+  /** Abre a lista de notificações (item do menu do avatar). */
+  abrirNotificacoes: () => void;
   updateAuthUser: (patch: Partial<AuthUser>) => void;
   handleLogout: () => void;
   periciaMenorVigentes: number;
