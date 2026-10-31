@@ -26,9 +26,7 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-image-crop": "^11.0.5",
-    "react-router-dom": "^7.18.4",
-    "ts-morph": "^28.0.0",
-    "ts-node": "^10.9.2"
+    "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
     "@tailwindcss/container-queries": "^0.1.1",
