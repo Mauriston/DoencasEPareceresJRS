@@ -39,6 +39,7 @@ import { canAccessPage, canUseFeature, setPermissoesCache } from './config/permi
 import { InstallAppTutorial } from './components/InstallAppTutorial';
 import { InstallAppQrDialog } from './components/InstallAppQrDialog';
 import { NotificacoesConvite } from './components/NotificacoesConvite';
+import { NotificacoesPainel } from './components/NotificacoesPainel';
 import { onAuthChange, logoutUsuario } from './services/firebaseAuth';
 import { entrarComToken } from './services/handoff';
 import {
@@ -50,7 +51,10 @@ import { observarPermissoes, salvarPermissoesRemoto, type PermissoesArmazenadas 
 import { getCasosResultado } from './services/firestoreCasos';
 import { observarPericiasMenores, statusPericia } from './services/firestorePericiasMenores';
 import { definirAtorAuditoria } from './services/auditoriaIS';
-import { notificarEvento, desvincularAparelho } from './services/notificacoesPush';
+import {
+  notificarEvento, desvincularAparelho, observarNotificacoes, marcarNotificacaoLida, marcarTodasLidas,
+  consumirNotifDaUrl, type NotificacaoRecord,
+} from './services/notificacoesPush';
 import { useIsDesktop } from './hooks/useIsDesktop';
 
 // Chave do antigo armazenamento (localStorage, só neste navegador) das
@@ -89,6 +93,10 @@ const buildAuthUser = (profile: UsuarioRecord): AuthUser => ({
   senhaTemporaria: !!profile.senhaTemporaria,
   pwaTutorialConcluido: !!profile.pwaTutorialConcluido,
 });
+
+// Quem abriu o app tocando num push chega com ?notif=<id>: lido (e removido da
+// URL) já no carregamento, para marcar a notificação como lida após o login.
+const NOTIF_ABERTA_PELO_PUSH = consumirNotifDaUrl();
 
 interface AppProps {
   /** Token do login por QR code (#h=…), lido em index.tsx ANTES de o roteador ler o hash. */
@@ -148,6 +156,18 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   useEffect(() => {
     definirAtorAuditoria(authUser ? { uid: authUser.uid, usuario: authUser.usuario, nome: authUser.nome } : null);
   }, [authUser?.uid]);
+
+  // Histórico de notificações do usuário (badge do avatar e lista do menu).
+  const [notificacoes, setNotificacoes] = useState<NotificacaoRecord[]>([]);
+  const [notificacoesAbertas, setNotificacoesAbertas] = useState(false);
+  useEffect(() => {
+    if (!authUserReal) { setNotificacoes([]); return; }
+    return observarNotificacoes(authUserReal.uid, setNotificacoes);
+  }, [authUserReal?.uid]);
+  useEffect(() => {
+    if (authUserReal && NOTIF_ABERTA_PELO_PUSH) void marcarNotificacaoLida(authUserReal.uid, NOTIF_ABERTA_PELO_PUSH);
+  }, [authUserReal?.uid]);
+  const notificacoesNaoLidas = notificacoes.filter(n => !n.lida).length;
 
   // Push "{{usuario}} logado." para o Admin: uma vez por sessão do navegador
   // (recarregar a página não repete); o servidor ainda segura repetições em 15 min.
@@ -391,6 +411,8 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
         authUser,
         avisos: { casosPendente, pwaPendente },
         abrirInstalacaoApp: () => setPwaDialogAberto(true),
+        notificacoesNaoLidas,
+        abrirNotificacoes: () => { setIsAvatarMenuOpen(false); setIsMobileMenuOpen(false); setNotificacoesAbertas(true); },
         perfilReal: authUserReal?.perfil,
         verComo: authUserReal?.perfil === 'admin' ? verComo : null,
         setVerComo,
@@ -446,6 +468,19 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
             Você ainda está usando a senha temporária (seu NIP). Por segurança, altere sua senha de acesso.
           </p>
         </Dialog>
+      )}
+
+      {notificacoesAbertas && (
+        <NotificacoesPainel
+          lista={notificacoes}
+          onClose={() => setNotificacoesAbertas(false)}
+          onMarcarTodas={() => { void marcarTodasLidas(authUser.uid, notificacoes.filter(n => !n.lida).map(n => n.id)); }}
+          onAbrir={n => {
+            if (!n.lida) void marcarNotificacaoLida(authUser.uid, n.id);
+            setNotificacoesAbertas(false);
+            if (n.rota && n.rota !== '/') navigate(n.rota);
+          }}
+        />
       )}
 
       <NotificacoesConvite

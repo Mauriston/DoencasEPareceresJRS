@@ -21,5 +21,14 @@ firebase.initializeApp({
 // Mensagens com "notification" são exibidas pelo próprio SDK.
 firebase.messaging();
 
+// Notificações exibidas pelo próprio app com ele aberto (onMessage, ver
+// services/notificacoesPush.ts) não passam pelo SDK: o clique abre o link delas.
+self.addEventListener('notificationclick', event => {
+  const link = event.notification.data && event.notification.data.link;
+  if (!link || (event.notification.data && event.notification.data.FCM_MSG)) return;
+  event.notification.close();
+  event.waitUntil(self.clients.openWindow(link));
+});
+
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));

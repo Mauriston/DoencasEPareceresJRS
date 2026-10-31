@@ -71,6 +71,14 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
       allow read: if false;
     }
+    // Histórico das notificações de cada usuário (menu do avatar). Criadas só
+    // pelo servidor; o dono lê e só pode marcar como lida.
+    match /usuarios/{uid}/notificacoes/{id} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lida']);
+      allow create, delete: if false;
+    }
     // Controle de repetição das notificações: só o servidor usa.
     match /notificacoes_enviadas/{id} {
       allow read, write: if false;

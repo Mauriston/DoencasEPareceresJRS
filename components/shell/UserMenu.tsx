@@ -18,9 +18,26 @@ interface AvatarProps {
   size?: number;
   /** "light": sobre fundo claro (topbar) · "dark": sobre navy (sidebar, modais). */
   tone?: 'light' | 'dark';
+  /** Notificações não lidas: bolinha com o número no canto do avatar. */
+  badge?: number;
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ nome, imageProfile, size = 32, tone = 'dark' }) => {
+export const Avatar: React.FC<AvatarProps> = ({ badge = 0, ...props }) => {
+  if (!badge) return <AvatarImagem {...props} />;
+  return (
+    <span className="relative inline-flex shrink-0">
+      <AvatarImagem {...props} />
+      <span
+        aria-label={`${badge} notificações não lidas`}
+        className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-wine text-white text-xs font-bold leading-[18px] text-center ring-2 ring-white"
+      >
+        {badge > 99 ? '99+' : badge}
+      </span>
+    </span>
+  );
+};
+
+const AvatarImagem: React.FC<Omit<AvatarProps, 'badge'>> = ({ nome, imageProfile, size = 32, tone = 'dark' }) => {
   const style = { width: size, height: size };
   const borda = tone === 'light' ? 'border border-line' : 'border border-white/30';
   if (imageProfile) {
@@ -40,6 +57,8 @@ interface UserDropdownContentProps {
   authUser: { nome?: string; imageProfile?: string; perfil?: string } | null;
   onPerfilClick: () => void;
   onLogoutClick: () => void;
+  naoLidas?: number;
+  onNotificacoesClick?: () => void;
   /** Perfil de verdade do usuário: só o Admin vê o item "Visualizar como". */
   perfilReal?: string;
   verComo?: string | null;
@@ -76,7 +95,7 @@ const VisualizarComo: React.FC<{ atual: string; onEscolher: (perfil: string | nu
   );
 };
 
-export const UserDropdownContent: React.FC<UserDropdownContentProps> = ({ authUser, onPerfilClick, onLogoutClick, perfilReal, verComo, onVerComo }) => (
+export const UserDropdownContent: React.FC<UserDropdownContentProps> = ({ authUser, onPerfilClick, onLogoutClick, naoLidas = 0, onNotificacoesClick, perfilReal, verComo, onVerComo }) => (
   <div role="menu" className="w-60 bg-white text-ink rounded-xl shadow-lg border border-line py-1.5 animate-fade-in divide-y divide-line">
     <div className="px-4 py-2.5 flex items-center gap-2.5">
       <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} tone="light" />
@@ -90,6 +109,13 @@ export const UserDropdownContent: React.FC<UserDropdownContentProps> = ({ authUs
         <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">account_circle</span>
         <span>Perfil</span>
       </button>
+      {onNotificacoesClick && (
+        <button type="button" role="menuitem" onClick={onNotificacoesClick} className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-ink hover:bg-thead flex items-center gap-2.5 transition-colors">
+          <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">notifications</span>
+          <span className="flex-1">Notificações</span>
+          {naoLidas > 0 && <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-wine text-white text-xs font-bold leading-5 text-center">{naoLidas > 99 ? '99+' : naoLidas}</span>}
+        </button>
+      )}
       {perfilReal === 'admin' && onVerComo && <VisualizarComo atual={verComo || 'admin'} onEscolher={onVerComo} />}
       <button type="button" role="menuitem" onClick={onLogoutClick} className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-wine hover:bg-wine/10 flex items-center gap-2.5 transition-colors">
         <span className="material-symbols-outlined text-[20px]" aria-hidden="true">logout</span>
@@ -116,7 +142,7 @@ export const UserMenu: React.FC = () => {
         aria-label="Menu do usuário"
         className="flex items-center gap-2 pl-1 pr-1 md:pr-3 py-1 rounded-full hover:bg-thead transition-colors"
       >
-        <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} tone="light" />
+        <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} tone="light" badge={nav?.notificacoesNaoLidas} />
         <span className="hidden md:flex flex-col items-start leading-tight text-left">
           <span className="text-xs font-bold text-navy truncate max-w-[140px]">{authUser?.usuario || 'Usuário'}</span>
           <span className={`text-xs truncate max-w-[140px] ${nav?.verComo ? 'font-bold text-wine' : 'text-ink-3'}`}>{nav?.verComo ? `Vendo como ${PERFIL_LABELS[nav.verComo] || nav.verComo}` : (authUser?.cargo || ' ')}</span>
@@ -130,6 +156,8 @@ export const UserMenu: React.FC = () => {
               authUser={authUser}
               onPerfilClick={() => { setAberto(false); nav?.setCurrentView('perfil'); }}
               onLogoutClick={() => { setAberto(false); nav?.handleLogout(); }}
+              naoLidas={nav?.notificacoesNaoLidas}
+              onNotificacoesClick={() => nav?.abrirNotificacoes()}
               perfilReal={nav?.perfilReal}
               verComo={nav?.verComo}
               onVerComo={perfil => { setAberto(false); nav?.setVerComo(perfil); }}

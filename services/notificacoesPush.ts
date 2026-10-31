@@ -11,7 +11,10 @@
 // Configurações do projeto > Cloud Messaging > Certificados push da Web); sem
 // ela as notificações ficam indisponíveis e nada é exibido.
 import { getMessaging, getToken, deleteToken, onMessage, isSupported } from 'firebase/messaging';
-import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import {
+  getFirestore, doc, setDoc, deleteDoc, updateDoc, writeBatch, collection, query, orderBy, limit, onSnapshot,
+  serverTimestamp, Timestamp,
+} from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import { app, auth } from './firebaseAuth';
 import { apiUrl } from '../utils/apiBase';
@@ -125,6 +128,7 @@ export const desvincularAparelho = async (): Promise<void> => {
 export type EventoNotificacao =
   | { tipo: 'login' }
   | { tipo: 'teste' }
+  | { tipo: 'status-alterado'; concursoId: string; candidatoId: string }
   | { tipo: 'is-finalizada'; concursoId: string; candidatoId: string };
 
 /** Botão de teste do Perfil: o servidor manda um aviso só para os aparelhos do usuário. */
@@ -163,4 +167,65 @@ export const notificarEvento = async (evento: EventoNotificacao): Promise<void> 
   } catch (e) {
     console.error('Falha ao enviar evento de notificação:', e);
   }
+};
+
+// ---------------------------------------------------------------------------
+// Histórico (menu do avatar): o servidor grava cada notificação também em
+//   usuarios/{uid}/notificacoes/{id}  { titulo, corpo, rota, lida, em }
+// O badge do avatar conta as não lidas. Tocar no item do menu ou no push
+// (o link traz ?notif=id) marca como lida.
+
+export interface NotificacaoRecord {
+  id: string;
+  titulo: string;
+  corpo: string;
+  /** Rota do app (HashRouter) aberta ao tocar, ex.: /concursos/CPAEAM-2026. */
+  rota: string;
+  lida: boolean;
+  em: Date | null;
+}
+
+const notificacoesCol = (uid: string) => collection(db, 'usuarios', uid, 'notificacoes');
+
+export const observarNotificacoes = (
+  uid: string,
+  cb: (lista: NotificacaoRecord[]) => void,
+): (() => void) =>
+  onSnapshot(
+    query(notificacoesCol(uid), orderBy('em', 'desc'), limit(100)),
+    snap => cb(snap.docs.map(d => {
+      const x = d.data();
+      return {
+        id: d.id,
+        titulo: String(x.titulo || ''),
+        corpo: String(x.corpo || ''),
+        rota: String(x.rota || '/'),
+        lida: x.lida === true,
+        em: x.em instanceof Timestamp ? x.em.toDate() : null,
+      };
+    })),
+    e => console.error('Falha ao ler notificações:', e),
+  );
+
+export const marcarNotificacaoLida = (uid: string, id: string) =>
+  updateDoc(doc(db, 'usuarios', uid, 'notificacoes', id), { lida: true }).catch(e => console.error('Falha ao marcar notificação como lida:', e));
+
+export const marcarTodasLidas = async (uid: string, ids: string[]): Promise<void> => {
+  for (let i = 0; i < ids.length; i += 400) {
+    const batch = writeBatch(db);
+    ids.slice(i, i + 400).forEach(id => batch.update(doc(db, 'usuarios', uid, 'notificacoes', id), { lida: true }));
+    await batch.commit();
+  }
+};
+
+/** Lê (e remove da barra de endereço) o ?notif=id de quem abriu o app pelo push. */
+export const consumirNotifDaUrl = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('notif');
+  if (!id) return null;
+  params.delete('notif');
+  const resto = params.toString();
+  window.history.replaceState(window.history.state, '', `${window.location.pathname}${resto ? `?${resto}` : ''}${window.location.hash}`);
+  return id;
 };

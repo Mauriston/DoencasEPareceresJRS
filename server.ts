@@ -217,12 +217,28 @@ async function startServer() {
     }
   };
 
+  // Toda notificação também fica guardada para cada destinatário em
+  // usuarios/{uid}/notificacoes/{id} (menu do avatar, com badge de não lidas).
+  // O mesmo id vai no link do push (?notif=id): abrir pelo push marca como lida.
+  const TITULO_PUSH = "JRS/HNRe App";
   const enviarPush = async (
     adminDb: any,
     destino: { uids: Set<string> },
-    msg: { titulo: string; corpo: string; link?: string },
+    msg: { titulo: string; corpo: string; rota?: string },
   ) => {
     const { getMessaging } = await import("firebase-admin/messaging");
+    const id = adminDb.collection("notificacoes_enviadas").doc().id;
+    const rota = msg.rota || "/";
+    const em = new Date();
+    const uids = [...destino.uids];
+    for (let i = 0; i < uids.length; i += 400) {
+      const batch = adminDb.batch();
+      uids.slice(i, i + 400).forEach(uid => batch.set(
+        adminDb.collection("usuarios").doc(uid).collection("notificacoes").doc(id),
+        { titulo: msg.titulo, corpo: msg.corpo, rota, lida: false, em },
+      ));
+      await batch.commit();
+    }
     const snap = await adminDb.collection("tokens_push").get();
     const tokens: string[] = snap.docs.filter((d: any) => destino.uids.has(d.data().uid)).map((d: any) => d.id);
     let enviados = 0;
@@ -231,10 +247,11 @@ async function startServer() {
       const lote = tokens.slice(i, i + 500);
       const resp = await getMessaging().sendEachForMulticast({
         tokens: lote,
-        notification: { title: msg.titulo, body: msg.corpo },
+        notification: { title: TITULO_PUSH, body: msg.corpo },
+        data: { notifId: id, rota },
         webpush: {
           notification: { icon: `${APP_URL}icons/notificacao-192.png`, badge: `${APP_URL}icons/badge-96.png`, lang: "pt-BR" },
-          fcmOptions: { link: msg.link || APP_URL },
+          fcmOptions: { link: `${APP_URL}?notif=${id}#${rota}` },
         },
       });
       // Aparelhos que desinstalaram o app ou revogaram a permissão: o token morreu.
@@ -291,8 +308,9 @@ async function startServer() {
         return;
       }
 
-      // IS de concurso finalizada: laudo de Inapto/IDM e conclusão das IS do dia.
-      if (tipo === "is-finalizada") {
+      // Concursos: status alterado para Inapto/IDM (aviso imediato) e IS
+      // finalizada (confere se todas as IS daquele dia terminaram).
+      if (tipo === "status-alterado" || tipo === "is-finalizada") {
         const concursoId = String(req.body?.concursoId || "");
         const candidatoId = String(req.body?.candidatoId || "");
         if (!concursoId || !candidatoId || concursoId.includes("/") || candidatoId.includes("/")) {
@@ -302,25 +320,25 @@ async function startServer() {
         const concursoRef = adminDb.collection("concursos").doc(concursoId);
         const [concursoSnap, candSnap] = await Promise.all([concursoRef.get(), concursoRef.collection("candidatos").doc(candidatoId).get()]);
         const cand = candSnap.data();
-        if (!concursoSnap.exists || !cand?.finalizado) { res.json({ success: true, enviado: false }); return; }
+        if (!concursoSnap.exists || !cand) { res.json({ success: true, enviados: [] }); return; }
         const nomeConcurso = String(concursoSnap.data()?.nome || concursoId);
-        const link = `${APP_URL}#/concursos/${encodeURIComponent(concursoId)}`;
+        const rota = `/concursos/${encodeURIComponent(concursoId)}`;
         const todos = await uidsAtivos(adminDb);
         const data = String(cand.dataAgendamento || "");
         const enviados: string[] = [];
 
         const status = String(cand.status || "").toUpperCase();
         const laudo = status === "INAPTO" ? "laudo de inaptidão" : status === "INSUF DOCUMENTAL" ? "IDM" : "";
-        if (laudo && await marcarEnvio(adminDb, `${status === "INAPTO" ? "inapto" : "idm"}_${concursoId}_${candidatoId}_${data}`)) {
+        if (tipo === "status-alterado" && laudo && await marcarEnvio(adminDb, `${status === "INAPTO" ? "inapto" : "idm"}_${concursoId}_${candidatoId}_${data}`)) {
           await enviarPush(adminDb, { uids: todos }, {
             titulo: status === "INAPTO" ? "Laudo de inaptidão" : "Insuficiência Documental Médica",
             corpo: `${nomeAtor} exarou ${laudo} no ${nomeConcurso}`,
-            link,
+            rota,
           });
           enviados.push(status);
         }
 
-        if (data) {
+        if (tipo === "is-finalizada" && cand.finalizado && data) {
           const doDia = await concursoRef.collection("candidatos").where("dataAgendamento", "==", data).get();
           const todasFinalizadas = doDia.size > 0 && doDia.docs.every((d: any) => d.data().finalizado === true);
           if (todasFinalizadas && await marcarEnvio(adminDb, `dia_${concursoId}_${data}`)) {
@@ -328,7 +346,7 @@ async function startServer() {
             await enviarPush(adminDb, { uids: todos }, {
               titulo: "IS do dia finalizadas",
               corpo: `As IS do ${nomeConcurso} ${quando} foram finalizadas`,
-              link,
+              rota,
             });
             enviados.push("dia");
           }
