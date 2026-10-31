@@ -148,7 +148,8 @@ export const Home: React.FC = () => {
   // Inspeções de Saúde agendadas: "Próximas Inspeções", item de atenção (hoje) e mini calendário.
   const [inspecoes, setInspecoes] = useState<InspecaoRecord[]>([]);
   useEffect(() => (podeInspecoes ? observarInspecoes(setInspecoes, () => { /* silencioso */ }) : undefined), [podeInspecoes]);
-  const { dias: diasConcursos } = useDiasConcursos(podeInspecoes || podeConcursos);
+  // Todos os perfis: além da agenda, alimenta o item "IS de concurso atrasadas" de Precisa de atenção.
+  const { dias: diasConcursos } = useDiasConcursos(true);
   const hoje = hojeISO();
   const proximas = useMemo(() => inspecoes
     .filter(i => i.dataEntrevista && i.status !== 'cancelada' && i.situacao !== 'finalizada' && dataDeEntrevista(i.dataEntrevista) >= hoje)
@@ -205,6 +206,18 @@ export const Home: React.FC = () => {
     });
   }
   // IS de concurso agendadas para hoje (todos os concursos do dia): abre a tabela do dia.
+  // IS de concurso atrasadas: agendadas antes de hoje e ainda não finalizadas (todos os perfis).
+  const diasAtrasados = diasConcursos.filter(d => d.data < hoje);
+  const qtdAtrasadas = diasAtrasados.reduce((n, d) => n + d.candidatos.filter(c => !c.finalizado).length, 0);
+  if (qtdAtrasadas > 0) {
+    const nomes = [...new Set(diasAtrasados.filter(d => d.candidatos.some(c => !c.finalizado)).map(d => d.nome))];
+    atencao.push({
+      id: 'is-atrasadas', icone: 'event_busy',
+      titulo: `${qtdAtrasadas} IS de concurso atrasada${qtdAtrasadas !== 1 ? 's' : ''}`,
+      detalhe: `Agendadas antes de hoje e não finalizadas · ${nomes.length === 1 ? nomes[0] : `${nomes.length} concursos`}`,
+      tag: 'Atrasadas', tom: 'danger', to: '/concursos/atrasadas',
+    });
+  }
   const concursosHoje = diasConcursos.filter(d => d.data === hoje);
   if (podeConcursos && concursosHoje.length > 0) {
     const totalHoje = concursosHoje.reduce((n, d) => n + d.total, 0);

@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { Container, PageHeader } from './ui/Page';
 import { useParams } from 'react-router-dom';
 import { useBreadcrumbs } from '../context/BreadcrumbContext';
+import { hojeISO } from '../utils/inspecoes';
 import { concursoPath, concursosDiaPath } from '../config/routes';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
 import { CalendarioConcursos } from './concursos/CalendarioConcursos';
@@ -2120,9 +2121,15 @@ interface ConcursoDetalheProps {
   dataFixa?: string;
   /** Dentro da página do dia: sem migalha própria nem toolbar fixa (várias tabelas empilhadas). */
   embutido?: boolean;
+  /** Só as IS atrasadas: agendadas antes de hoje e ainda não finalizadas (página /concursos/atrasadas). */
+  apenasAtrasadas?: boolean;
 }
 
-const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar, dataFixa, embutido = false }) => {
+/** IS atrasada: agendada para um dia anterior a hoje e ainda não finalizada. */
+export const isAtrasada = (c: { dataAgendamento: string; finalizado: boolean }, hoje: string = hojeISO()): boolean =>
+  !!c.dataAgendamento && c.dataAgendamento < hoje && !c.finalizado;
+
+const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar, dataFixa, embutido = false, apenasAtrasadas = false }) => {
   const nav = useNav();
   const perfil = nav?.authUser?.perfil;
   const podeEditarInlineBase = canUseFeature('concursosJRS.editarDadosTabela', perfil);
@@ -2835,6 +2842,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
       .filter(c => {
         const matchesSearch = c.id.toLowerCase().includes(search.toLowerCase()) || c.nome.toLowerCase().includes(search.toLowerCase());
         if (!matchesSearch) return false;
+        if (apenasAtrasadas && !isAtrasada(c)) return false;
 
         if (statusKpiFilter === 'nao-finalizados') {
           if (!(c.status === '' || c.status === 'Pendente' || c.status === 'Reagendado')) return false;
@@ -2859,7 +2867,7 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
         if (da !== db) return da.localeCompare(db);
         return a.nome.localeCompare(b.nome, 'pt-BR');
       });
-  }, [candidatosComDataBR, search, statusKpiFilter, dateFilterMode, dateFilterCustom, hojeBR]);
+  }, [candidatosComDataBR, search, statusKpiFilter, dateFilterMode, dateFilterCustom, hojeBR, apenasAtrasadas]);
 
   const total = candidatos.length;
   const countApto = candidatos.filter(c => c.status === 'APTO').length;
@@ -3757,6 +3765,32 @@ const ConcursosDia: React.FC<{ data: string }> = ({ data }) => {
   );
 };
 
+/** IS atrasadas de todos os concursos Em andamento / Em breve, uma tabela por concurso (vem da Início). */
+const ConcursosAtrasadas: React.FC = () => {
+  const nav = useNav();
+  const { dias, concursosAtivos } = useDiasConcursos();
+  useBreadcrumbs([{ label: 'IS atrasadas' }]);
+  const hoje = hojeISO();
+  const concursoIds = [...new Set(dias.filter(d => d.data < hoje && d.candidatos.some(c => !c.finalizado)).map(d => d.concursoId))];
+  return (
+    <div>
+      {concursosAtivos === null ? (
+        <div className="flex justify-center py-16" role="status" aria-label="Carregando"><span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span></div>
+      ) : concursoIds.length === 0 ? (
+        <Container size="data" className="pt-6 md:pt-8">
+          <div className="bg-white rounded-xl border border-line">
+            <EmptyState icon="event_available" title="Nenhuma IS atrasada" description="Todas as IS de concurso agendadas até ontem já foram finalizadas." />
+          </div>
+        </Container>
+      ) : (
+        concursoIds.map(id => (
+          <ConcursoDetalhe key={id} concursoId={id} apenasAtrasadas embutido onVoltar={() => nav?.navigate('/concursos')} />
+        ))
+      )}
+    </div>
+  );
+};
+
 // =========================================================================
 // COMPONENTE PRINCIPAL — alterna entre a lista de concursos e o detalhe
 // =========================================================================
@@ -3814,6 +3848,7 @@ export const ConcursosJRS: React.FC = () => {
 
   // /concursos/novo: criação do concurso como página própria (F60), com a mesma permissão do botão.
   if (diaParam) return <ConcursosDia data={diaParam} />;
+  if (selectedConcursoId === 'atrasadas') return <ConcursosAtrasadas />;
 
   if (selectedConcursoId === 'novo') {
     return podeRegistrarMensagem
