@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { useIsDesktop } from '../hooks/useIsDesktop';
-import { GAS_URL_CONCURSOS } from '../config/endpoints';
+import { ApiError, chamarScript } from '../services/apiClient';
 
 interface ImageItem {
   file: File;
@@ -91,24 +91,15 @@ export const Mensagens: React.FC = () => {
     setError(null);
 
     try {
-      const payload = {
-        action: 'gerarMinutaMensagem',
+      const resultado = await chamarScript<{ minuta: string; docUrl: string }>('gerarMinutaMensagem', {
         images: images.map(img => ({ data: img.base64, mimeType: img.mimeType })),
-      };
-      const response = await fetch(GAS_URL_CONCURSOS, {
-        method: 'POST',
-        body: JSON.stringify(payload),
       });
-      const data = await response.json();
-      if (data.success) {
-        setMinuta(data.minuta);
-        setDocUrl(data.docUrl);
-      } else {
-        setError('Erro ao gerar minuta: ' + (data.message || 'Tente novamente.'));
-      }
+      setMinuta(resultado.minuta);
+      setDocUrl(resultado.docUrl);
     } catch (err) {
-      console.error(err);
-      setError('Falha na comunicação com o servidor. Verifique a conexão e tente novamente.');
+      setError(err instanceof ApiError && err.codigo === 'negocio'
+        ? 'Erro ao gerar minuta: ' + err.message
+        : err instanceof ApiError ? err.message : 'Falha na comunicação com o servidor. Verifique a conexão e tente novamente.');
     } finally {
       setIsLoading(false);
     }

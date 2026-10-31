@@ -1,35 +1,16 @@
 // Ficheiro: App.tsx
-import React, { useState, useEffect, useReducer, useRef, useMemo } from 'react';
-import { useLocation, useNavigate, useNavigationType, useRoutes } from 'react-router-dom';
+import React, { useState, useEffect, useReducer, useRef, useMemo, lazy, Suspense } from 'react';
+import { Navigate, useLocation, useNavigate, useNavigationType, useRoutes } from 'react-router-dom';
 import { Login } from './components/Login';
 import { Home } from './components/Home';
 import { Sidebar } from './components/shell/Sidebar';
 import { Topbar } from './components/shell/Topbar';
 import { BreadcrumbProvider } from './context/BreadcrumbContext';
-import { ROUTES, pathForView, viewForPath } from './config/routes';
+import { ALIASES, ROUTES, destinoDoAlias, pathForView, viewForPath } from './config/routes';
 import { Dialog } from './components/ui/Dialog';
 import { Button } from './components/ui/Button';
 import { EmptyState } from './components/ui/EmptyState';
 import { Page } from './components/ui/Page';
-import { Perfil } from './components/Perfil';
-import { DiseaseGuide } from './components/DiseaseGuide';
-import { LawReference } from './components/LawReference';
-import { DGPM406Guide } from './components/DGPM406Guide';
-import { ConcursosGuide } from './components/ConcursosGuide';
-import { ConcursosJRS } from './components/ConcursosJRS';
-import { PortariaGuide } from './components/PortariaGuide';
-import { ExamesGuide } from './components/ExamesGuide';
-import { Infograficos } from './components/Infograficos';
-import { Apresentacoes } from './components/Apresentacoes';
-import { Pareceres } from './components/Pareceres';
-import { CasosPericiais } from './components/CasosPericiais';
-import { Videos } from './components/Videos';
-import { PericiaMenor } from './components/PericiaMenor';
-import { Mensagens } from './components/Mensagens';
-import { RoteiroJRS } from './components/RoteiroJRS';
-import { UsuariosManagement } from './components/UsuariosManagement';
-import { Militares } from './components/Militares';
-import { Inspecoes } from './components/Inspecoes';
 import { SincronizadorAgendaConcursos } from './components/inspecoes/SincronizadorAgendaConcursos';
 import { AccessDenied } from './components/ui/AccessDenied';
 import { PAGE_DEFS } from './config/permissions';
@@ -56,6 +37,36 @@ import {
   consumirNotifDaUrl, type NotificacaoRecord,
 } from './services/notificacoesPush';
 import { useIsDesktop } from './hooks/useIsDesktop';
+
+// Carregamento sob demanda (code splitting por rota): cada página vira um chunk próprio, baixado
+// só quando a rota é aberta. Home e Login ficam no pacote principal (primeira tela).
+const paginaLazy = <K extends string>(carregar: () => Promise<Record<K, React.ComponentType<any>>>, nome: K) =>
+  lazy(() => carregar().then(m => ({ default: m[nome] })));
+const Perfil = paginaLazy(() => import('./components/Perfil'), 'Perfil');
+const DiseaseGuide = paginaLazy(() => import('./components/DiseaseGuide'), 'DiseaseGuide');
+const LawReference = paginaLazy(() => import('./components/LawReference'), 'LawReference');
+const DGPM406Guide = paginaLazy(() => import('./components/DGPM406Guide'), 'DGPM406Guide');
+const ConcursosGuide = paginaLazy(() => import('./components/ConcursosGuide'), 'ConcursosGuide');
+const ConcursosJRS = paginaLazy(() => import('./components/ConcursosJRS'), 'ConcursosJRS');
+const PortariaGuide = paginaLazy(() => import('./components/PortariaGuide'), 'PortariaGuide');
+const ExamesGuide = paginaLazy(() => import('./components/ExamesGuide'), 'ExamesGuide');
+const Infograficos = paginaLazy(() => import('./components/Infograficos'), 'Infograficos');
+const Apresentacoes = paginaLazy(() => import('./components/Apresentacoes'), 'Apresentacoes');
+const Pareceres = paginaLazy(() => import('./components/Pareceres'), 'Pareceres');
+const CasosPericiais = paginaLazy(() => import('./components/CasosPericiais'), 'CasosPericiais');
+const Videos = paginaLazy(() => import('./components/Videos'), 'Videos');
+const PericiaMenor = paginaLazy(() => import('./components/PericiaMenor'), 'PericiaMenor');
+const Mensagens = paginaLazy(() => import('./components/Mensagens'), 'Mensagens');
+const RoteiroJRS = paginaLazy(() => import('./components/RoteiroJRS'), 'RoteiroJRS');
+const UsuariosManagement = paginaLazy(() => import('./components/UsuariosManagement'), 'UsuariosManagement');
+const Militares = paginaLazy(() => import('./components/Militares'), 'Militares');
+const Inspecoes = paginaLazy(() => import('./components/Inspecoes'), 'Inspecoes');
+
+/** Redireciona um alias de config/routes.ts para a rota canônica (replace, sem entrar no histórico). */
+const RedirecionarAlias: React.FC = () => {
+  const { pathname, search } = useLocation();
+  return <Navigate to={`${destinoDoAlias(pathname) ?? '/'}${search}`} replace />;
+};
 
 // Chave do antigo armazenamento (localStorage, só neste navegador) das
 // permissões — mantido aqui apenas para a migração automática de uma vez
@@ -378,6 +389,8 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   // Hook antes de qualquer retorno antecipado (ordem de hooks estável).
   const rotas = useRoutes([
     ...ROUTES.map(r => ({ path: r.path, element: renderView(r.view) })),
+    // Aliases estáveis (/doencas, /estudo…) redirecionam para a rota canônica.
+    ...ALIASES.flatMap(a => [a.de, `${a.de}/*`]).map(path => ({ path, element: <RedirecionarAlias /> })),
     {
       path: '*',
       element: (
@@ -464,7 +477,9 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
             <div ref={sentinelaRef} className="h-px -mb-px" aria-hidden="true" />
             {/* Única transição de troca de tela (CSS, 150 ms); Page e as telas não repetem o fade. */}
             <div key={currentView} className="flex flex-col min-h-full w-full animate-fade-in">
-              {rotas}
+              <Suspense fallback={<div className="flex flex-1 items-center justify-center py-24" role="status" aria-label="Carregando a página"><div className="w-8 h-8 border-2 border-navy/20 border-t-navy rounded-full animate-spin" /></div>}>
+                {rotas}
+              </Suspense>
             </div>
           </main>
         </div>

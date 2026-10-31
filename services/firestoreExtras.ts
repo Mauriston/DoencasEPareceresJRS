@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { app, auth } from './firebaseAuth';
-import { apiUrl } from '../utils/apiBase';
+import { ApiError, chamarServidor } from './apiClient';
 
 const db = getFirestore(app);
 const COL_VIDEOS = 'videos';
@@ -183,19 +183,13 @@ export const buscarDadosApresentacao = async (
   n: { url: string; plataforma: PlataformaApresentacao; googleId?: string },
 ): Promise<{ titulo: string; thumbnailUrl: string; aviso?: string }> => {
   const capaPadrao = n.googleId ? `https://drive.google.com/thumbnail?id=${n.googleId}&sz=w1280` : screenshotDaUrl(n.url);
-  const user = auth.currentUser;
-  if (!user) throw new Error('Sessão expirada. Faça login novamente.');
+  if (!auth.currentUser) throw new Error('Sessão expirada. Faça login novamente.');
   let json: any = {};
   try {
-    const resp = await fetch(apiUrl('/api/admin/preview-apresentacao'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
-      body: JSON.stringify({ url: n.url }),
-    });
-    json = await resp.json().catch(() => ({}));
-    if (!resp.ok || !json.success) return { titulo: '', thumbnailUrl: capaPadrao, aviso: json.error || 'Não foi possível ler o título; digite-o.' };
-  } catch {
-    return { titulo: '', thumbnailUrl: capaPadrao, aviso: 'Não foi possível ler o título; digite-o.' };
+    json = await chamarServidor('/api/admin/preview-apresentacao', { url: n.url }, { timeoutMs: 20_000 });
+  } catch (e) {
+    const aviso = e instanceof ApiError && e.codigo === 'negocio' ? e.message : 'Não foi possível ler o título; digite-o.';
+    return { titulo: '', thumbnailUrl: capaPadrao, aviso };
   }
   return { titulo: String(json.titulo || ''), thumbnailUrl: n.googleId ? capaPadrao : (json.imagem || capaPadrao) };
 };

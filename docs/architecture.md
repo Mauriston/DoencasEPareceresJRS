@@ -69,9 +69,10 @@ Características observadas:
 - componentes funcionais e Hooks;
 - estado local com `useState`/`useEffect` e um `NavContext` com usuário, perfil, avisos e notificações;
 - leitura em tempo real do Firestore (`onSnapshot`) nas telas de trabalho;
-- roteamento por URL com `react-router-dom` (tabela em `config/routes.ts`; `NavItem` segue como identificador das permissões e a `currentView` é derivada da URL);
+- roteamento por URL com `react-router-dom` (tabela e aliases em `config/routes.ts`; `NavItem` segue como identificador das permissões e a `currentView` é derivada da URL);
 - estilos utilitários Tailwind compilados no build (PostCSS) com tokens do design system — classes fora do DS falham o build (`scripts/verificar-ds.mjs`);
-- ícones Material Symbols (shim `components/ui/icons.tsx`);
+- ícones Material Symbols autohospedados (`styles/fonts.css`, `assets/fonts/`; shim `components/ui/icons.tsx`);
+- páginas carregadas sob demanda (`React.lazy` + `Suspense` em `App.tsx`): cada tela vira um *chunk* próprio;
 - tela de erro (`components/ErroFatal.tsx`) no lugar de tela branca quando uma tela falha;
 - conteúdo médico e normativo embutido em componentes e em `constants.ts`;
 - dados auxiliares estáticos em `public/*.json`.
@@ -90,8 +91,8 @@ O backend tem duas partes, publicadas separadamente:
 | `POST /api/admin/excluir-usuario` | Admin apaga um usuário **inativo** (Auth + `usuarios` + `usuarios_publicos`) |
 | `POST /api/admin/preview-apresentacao` | Título e capa de uma apresentação (Google Slides, Canva, GitHub Pages) |
 | `POST /api/notificacoes/evento` | Recebe um evento (login, status Inapto/IDM, IS finalizada, teste), confere no Firestore, grava o histórico e envia o push |
-| `POST /api/gemini/analyze-image` | Leitura de imagem pelo Gemini |
-| `POST /api/concursos/ocr-pdf` | Transcrição literal do PDF de mensagem administrativa |
+| `POST /api/gemini/analyze-image` | Leitura de imagem pelo Gemini (exige usuário ativo) |
+| `POST /api/concursos/ocr-pdf` | Transcrição literal do PDF de mensagem administrativa (exige usuário ativo) |
 
 O mesmo servidor serve o build em desenvolvimento (`npm run dev`) e libera CORS para a origem do GitHub Pages (`ALLOWED_ORIGIN`).
 
@@ -153,21 +154,25 @@ O **Cloud Firestore** é a fonte principal (detalhes em `docs/database.md`, seç
 │   ├── Home.tsx, ConcursosJRS.tsx, Inspecoes.tsx, …
 │   ├── NotificacoesConvite.tsx, NotificacoesPainel.tsx
 │   └── ErroFatal.tsx
-├── config/                      # routes, navigation, permissions, endpoints
+├── config/                      # routes (+ aliases), navigation, permissions, endpoints  (+ __tests__/)
 ├── context/  hooks/  utils/
-├── services/                    # firestore*, drive*, notificacoesPush, documentosGerados…
+├── assets/fonts/                # Montserrat e Material Symbols (autohospedadas)
+├── services/                    # apiClient, authService, firestore*, drive*, notificacoesPush…
+│   ├── apiClient.ts             # cliente único: servidor Node e Apps Script (token, timeout, erro tipado)
+│   ├── authService.ts           # fachada da autenticação (Firebase Auth)
+│   └── pareceresService.ts  periciaMenorService.ts  extrasService.ts   # fachadas por domínio
 ├── public/
 │   ├── manifest.webmanifest
 │   ├── firebase-messaging-sw.js
 │   ├── icons/                   # ícones das notificações
 │   └── *.json                   # CID, serviços, finalidades, restrições, OMs…
-├── e2e/                         # testes E2E (Playwright + emuladores do Firebase)
+├── e2e/                         # testes E2E (Playwright + emuladores): concursos, Inspeções, Pareceres, Perícia Menor
 ├── scripts/                     # migrações, verificação do DS, teste das regras, versão do Apps Script
 ├── docs/
 ├── server.ts
 ├── firestore.rules  storage.rules  firebase.json
 ├── App.tsx  index.tsx  index.html  constants.ts  types.ts
-└── vite.config.ts  tailwind.config.js  package.json
+└── vite.config.ts  tailwind.config.js  package.json   # vite.config.ts copia o SDK do Firebase do service worker para firebase-sdk/
 ```
 
 ### 5.1 Observação sobre a estrutura atual
@@ -211,6 +216,8 @@ sequenceDiagram
 - Menu lateral por categorias (`config/navigation.ts`): **Trabalho**, **Consulta**, **Formação** e **Administração** (Admin).
 - Cada página checa `canAccessPage` e mostra "acesso negado" quando o perfil não pode.
 - Páginas públicas: `/publico/doencas` e `/publico/portaria`.
+- **Aliases estáveis (31/10/2026):** endereços curtos que redirecionam (*replace*) para a rota canônica, preservando os subníveis — `/doencas`, `/portaria`, `/exames`, `/indices`, `/dgpm-406`, `/legislacao`, `/estudo`, `/casos`, `/videos`, `/infograficos`, `/apresentacoes` (lista em `ALIASES`). As rotas atuais não mudam; `/pericia-menor`, `/pareceres` e `/concursos` já eram estáveis.
+- **Carregamento sob demanda:** as 19 páginas (exceto Início e Login) são `React.lazy` em `App.tsx`, com um único `Suspense` ao redor das rotas; cada uma é baixada ao abrir a rota.
 
 ### 6.3 Estado
 
@@ -221,6 +228,10 @@ sequenceDiagram
 ### 6.4 Camada de serviços
 
 `services/` concentra o acesso a dados e integrações: um arquivo por coleção do Firestore (`firestore*.ts`), o Drive/Apps Script (`driveConcursos.ts`, `drivePareceres.ts`), a agenda (`agendaConcursos.ts`, `agendaGoogleIS.ts`), o push (`notificacoesPush.ts`), a fila de impressão (`documentosGerados.ts`) e a auditoria das IS (`auditoriaIS.ts`). A URL do servidor vem de `utils/apiBase.ts` e as do Apps Script de `config/endpoints.ts`.
+
+**Cliente único de API (31/10/2026).** Toda chamada ao servidor Node ou ao Apps Script passa por `services/apiClient.ts`: `chamarServidor(rota, corpo, opts)` (JSON, `Authorization: Bearer`) e `chamarScript(ação, dados, opts)` (corpo `text/plain`, `idToken` no corpo). Ele centraliza URL base, serialização, ID token do Firebase (`authService.obterIdToken`), *timeout* por `AbortController` (padrão 120 s), erro tipado `ApiError` (`codigo`: `nao_autenticado`, `sem_permissao`, `rede`, `timeout`, `resposta_invalida`, `negocio`) e os envelopes de resposta (`{ sucesso, dados | erro }` do Apps Script, o envelope legado `{ success, data | message }` do Gemini e `{ success, … }` do servidor). Migrados: `atestadoIA`, `driveConcursos`, `drivePareceres`, `handoff`, `loginNip`, `notificacoesPush`, `firestoreExtras` (prévia de apresentação), `Mensagens.tsx`, `useConcursoDetalhe.tsx` e `ImageScanner.tsx`. As demais `fetch` do código leem arquivos estáticos (`cid.json`, `corposQuadros`), uma imagem do próprio app (Infográficos) ou o oEmbed público do YouTube — não usam backend.
+
+`authService.ts` é a fachada da autenticação (sessão, login, logout, troca de senha, `obterIdToken`/`exigirIdToken`). Por domínio, `pareceresService.ts`, `periciaMenorService.ts` e `extrasService.ts` reexportam os serviços `firestore*`/`drive*`/`atestadoIA` correspondentes; os módulos originais continuam válidos e nenhum import existente mudou.
 
 ### 6.5 Conteúdo e dados locais
 
@@ -236,6 +247,7 @@ sequenceDiagram
 
 - `NotificacoesConvite` pede a permissão ao abrir o app (ou ensina a instalar no iPhone); `services/notificacoesPush.ts` registra o service worker, obtém o token e o grava em `tokens_push`.
 - O histórico (`usuarios/{uid}/notificacoes`) alimenta o badge do avatar e o painel do menu do usuário.
+- **iOS:** o push só funciona com o app instalado na Tela de Início; `estadoNotificacoes()` devolve `instalar-ios` e o convite mostra o tutorial de instalação. Quem não instala (ou nega a permissão) continua vendo os mesmos avisos no **histórico do menu do avatar, com badge de não lidas**, que independe do push — o servidor grava o histórico antes de enviar. O service worker usa o SDK do Firebase autohospedado (`firebase-sdk/`, copiado de `node_modules` pelo `vite.config.ts`).
 - Fila de avisos pós-login: senha temporária → aviso da triagem (MPI, 3 primeiros acessos) → convite de notificações.
 
 ---
@@ -320,7 +332,7 @@ Não há `doGet`: o app só faz chamadas POST. O antigo projeto "principal" (`Co
 
 ### 8.4 Segurança
 
-As ações que gravam no Drive ou usam o Gemini validam o `idToken` do Firebase (`exigirUsuarioFirebase`). A chave do Gemini fica nas propriedades do script (`GEMINI_API_KEY`).
+**Todas** as ações (exceto `versao`, que só informa a versão publicada) passam por `autorizarAcao_` no `doPost`, inclusive `extrair_dados_atestado` e `gerarMinutaMensagem` (formato legado): valida o `idToken` do Firebase, lê `usuarios/{uid}` no Firestore (API REST, com o token do próprio usuário e as regras valendo; cache de 60 s), exige usuário **ativo** e **perfil permitido** para a ação (`PERFIS_POR_ACAO`: pedido de parecer e leitura do atestado só para Admin e médicos; as demais, qualquer perfil da equipe). Recusas e operações sensíveis (`removerArquivoDrive` e os envios para impressão) geram log estruturado sem dados pessoais (`Logger`: evento, ação, uid, perfil, motivo) e um registro em `auditoria_acoes` (Firestore). A chave do Gemini fica nas propriedades do script (`GEMINI_API_KEY`).
 
 ---
 
@@ -333,6 +345,7 @@ As ações que gravam no Drive ou usam o Gemini validam o `idToken` do Firebase 
 - **Senha temporária**: diálogo pós-login pede a troca.
 - **Login no celular por QR code**: o desktop pede ao servidor um *custom token* do próprio usuário e o coloca no fragmento da URL do QR.
 - **Logout** apaga o token de push do aparelho antes de sair.
+- Nenhuma senha, hash de senha ou credencial é guardada no navegador (o SDK do Firebase mantém a sessão; o `localStorage` só tem preferências e o token de push). O ID token viaja no cabeçalho `Authorization` (servidor) ou no corpo POST (Apps Script), nunca em *query string*; o token de login por QR vai no fragmento `#`, que não é enviado a servidores.
 
 ### 9.2 Perfis
 
@@ -348,13 +361,16 @@ A visibilidade de páginas e funcionalidades segue a matriz `config/permissoes` 
 ### 9.3 Autorização dos dados
 
 - **Firestore/Storage:** regras por perfil em `firestore.rules`/`storage.rules` (resumo em `docs/database.md`, seção 14). O perfil é lido do próprio Firestore nas regras.
-- **Servidor:** cada rota verifica o ID token (`verifyIdToken(..., true)`) e, quando é de Admin, o perfil no Firestore.
-- **Apps Script:** as ações que gravam no Drive ou usam o Gemini validam o `idToken` do Firebase (`exigirUsuarioFirebase`).
+- **Servidor:** cada rota verifica o ID token (`verifyIdToken(..., true)`) e, quando é de Admin, o perfil no Firestore. As rotas do Gemini exigem usuário ativo (`exigirUsuarioAtivo`).
+- **Apps Script:** `autorizarAcao_` em todas as ações: token válido, usuário ativo e perfil permitido (ver 8.4).
+- **Auditoria de acessos e operações sensíveis:** `auditoria_acoes` (Firestore; cada usuário só cria registros em seu nome, só o Admin lê, ninguém edita nem apaga). Recebe os registros do app (exclusões e documentos gerados), do servidor (`auditarServidor`: acessos recusados, redefinição de senha, exclusão de usuário) e do Apps Script (acessos recusados, impressão e remoção de arquivos). Os logs estruturados do Cloud Run e do Apps Script seguem a mesma regra: sem corpo de requisição, NIP, nome, CID ou token (ver `docs/database.md`, seção 17).
 
 ### 9.4 Limites de segurança atuais
 
 - As gravações em concursos seguem a matriz de permissões também nas regras (por funcionalidade e por campo). Outras coleções de trabalho (IS, agenda) seguem por perfil, sem o detalhe por campo.
 - Não há validação de esquema no servidor para gravações feitas direto pelo cliente.
+- O Apps Script confere perfil e usuário ativo, mas não reconsulta a matriz fina `config/permissoes` (por página/funcionalidade); essa continua valendo no app e nas regras do Firestore.
+- O web app do Apps Script é `ANYONE_ANONYMOUS` (exigência do front estático): a barreira é o `idToken` por ação, não a URL.
 - A configuração pública do Firebase e a chave VAPID ficam no bundle (são públicas por natureza); segredos (Gemini, service accounts) ficam só no Apps Script e no Cloud Run.
 
 ## 10. Contratos de dados
@@ -444,11 +460,11 @@ Falhas e cotas: as chamadas ao Gemini passam por `chamarGemini` (novas tentativa
 
 | Tipo | Ferramenta | O que cobre | Onde roda |
 |---|---|---|---|
-| Unitários | Vitest (`npm test`) | Regras puras de `utils/`: triagem (máscaras, IMC, alertas, validação), concursos (finalização, IS atrasada, datas, dias úteis, agendamento, minutas, CSV), inspeções (prazos, slots, TIS) e formatação | `testes.yml` (PR e `main`) |
-| E2E | Playwright + emuladores do Firebase (`npm run test:e2e`) | Página pública; login por NIP (passa pelo `server.ts`); IS atrasada na Início; triagem pelo MPI (TRIAR só na IS de hoje, máscara, IMC, alertas, TRIADO e seção na barra lateral); Secretaria sem TRIAR/TRIADO. As regras do Firestore valem também nos emuladores | `testes.yml`, depois dos unitários |
+| Unitários | Vitest (`npm test`) | Regras puras de `utils/`: triagem (máscaras, IMC, alertas, validação), concursos (finalização, IS atrasada, datas, dias úteis, agendamento, minutas, CSV), inspeções (prazos, slots, TIS) e formatação; **mapa de rotas e aliases** (`config/__tests__/routes.test.ts`); **cliente de API** (`services/__tests__/apiClient.test.ts`: envelopes, erros tipados, token, timeout) | `testes.yml` (PR e `main`) |
+| E2E | Playwright + emuladores do Firebase (`npm run test:e2e`) | Página pública; login por NIP (passa pelo `server.ts`); IS atrasada na Início; triagem pelo MPI (TRIAR só na IS de hoje, máscara, IMC, alertas, TRIADO e seção na barra lateral); Secretaria sem TRIAR/TRIADO; **Inspeções** (lista, busca, detalhe e validação do "Cadastrar IS"), **Pareceres** (lista, busca, detalhe, formulário "Novo parecer" e acesso negado à Secretaria), **Perícia Menor** (lista, busca, detalhe e formulário "Novo"); aliases de rota; SDK do service worker e ícones sem CDN. As regras do Firestore valem também nos emuladores | `testes.yml`, depois dos unitários |
 | Regras | API Firebase Rules (`scripts/testar-regras-firestore.cjs`) | 25 casos de permissão por perfil e campo | `deploy-firestore-rules.yml`, antes de publicar |
 
-O E2E nunca toca a produção: `e2e/executar.mjs` semeia os emuladores (projeto `demo-jrs`), sobe o app com `VITE_FIREBASE_EMULATORS=1` (o cliente conecta em Auth 9099 e Firestore 8080) e o `server.ts` com o Admin SDK apontado para os mesmos emuladores.
+O E2E nunca toca a produção: `e2e/executar.mjs` semeia os emuladores (projeto `demo-jrs`), sobe o app com `VITE_FIREBASE_EMULATORS=1` (o cliente conecta em Auth 9099 e Firestore 8080) e o `server.ts` com o Admin SDK apontado para os mesmos emuladores. Os dados fictícios (um médico, uma IS, um parecer e uma perícia menor, além dos de concursos) ficam em `e2e/dados.mjs`. A geração de PDF (Apps Script/Gemini) não roda no E2E: os fluxos de criação cobrem até a abertura e a validação do formulário.
 
 ---
 
@@ -469,7 +485,13 @@ O E2E nunca toca a produção: `e2e/executar.mjs` semeia os emuladores (projeto 
 
 ### 12.2 Dependências carregadas externamente
 
-O `index.html` carrega externamente apenas o Google Material Symbols. Tailwind e a fonte Montserrat (`assets/fonts`) são empacotados no build; o antigo `importmap`/`esm.sh` foi removido e todas as dependências vêm do NPM.
+Nenhuma biblioteca, fonte ou script é carregado de CDN (31/10/2026):
+
+- **Material Symbols:** a fonte de ícones é autohospedada em `assets/fonts/material-symbols-outlined-400.woff2` (instância estática da fonte variável do pacote npm `material-symbols`, Apache 2.0: FILL 0, GRAD 0, opsz 24, wght 400, ~270 KB em vez de ~4 MB) e declarada em `styles/fonts.css`. Se algum dia for preciso outro peso/preenchimento, gere nova instância a partir do pacote.
+- **SDK do service worker:** `public/firebase-messaging-sw.js` faz `importScripts('firebase-sdk/…')`; o plugin do `vite.config.ts` copia `firebase-app-compat.js` e `firebase-messaging-compat.js` de `node_modules/firebase` para `firebase-sdk/` no build (e os serve no `npm run dev`), de modo que a versão acompanha a do pacote `firebase`.
+- Tailwind e a fonte Montserrat (`assets/fonts`) são empacotados no build; o antigo `importmap`/`esm.sh` foi removido e todas as dependências vêm do NPM.
+
+Ainda vêm de fora, por serem conteúdo e não código: imagens do Imgur (ícone e *Open Graph* no `index.html`), miniaturas e *embeds* do YouTube, Google Slides e Canva.
 
 ### 12.3 Serviços externos
 
@@ -479,7 +501,7 @@ O `index.html` carrega externamente apenas o Google Material Symbols. Tailwind e
 - Gemini API;
 - GitHub Pages e GitHub Actions;
 - YouTube, Google Slides, Canva, Imgur;
-- Google Fonts (Material Symbols) e gstatic (SDK do Firebase no service worker).
+- Imgur (ícones/imagem de compartilhamento) e `i.ytimg.com`/`s.wordpress.com` (miniaturas de vídeos e apresentações). Google Fonts e gstatic **não** são mais usados.
 
 ---
 
@@ -500,9 +522,9 @@ O `index.html` carrega externamente apenas o Google Material Symbols. Tailwind e
 - `useConcursoDetalhe.tsx` (~900 linhas) e `App.tsx` ainda concentram bastante lógica;
 - sem validação de esquema no servidor para as gravações do cliente;
 - Apps Script publicado à parte do código (pode ficar defasado);
-- testes E2E cobrem os fluxos de concursos e login; ainda faltam Inspeções, Pareceres e Perícia Menor;
+- o E2E cobre carregamento, busca, detalhe e formulários de Inspeções, Pareceres e Perícia Menor, mas não a geração de PDF (Apps Script) nem o agendamento completo de uma IS;
 - observabilidade limitada aos logs do Cloud Run e à auditoria das IS de concurso;
-- sem *code splitting* por rota;
+- o pacote principal ainda é grande (~1,7 MB; `constants.ts` e o conteúdo normativo ficam nele) — o *code splitting* por rota já separa as telas, mas não o conteúdo editorial;
 - sem cache offline.
 
 ---
@@ -516,69 +538,60 @@ O `index.html` carrega externamente apenas o Google Material Symbols. Tailwind e
 | Componentes muito extensos (`ConcursosJRS.tsx`) | Médio | ~~Alta~~ Baixa | **Mitigado (31/10/2026):** dividido em `components/concursos/` (lista, modais, hook de estado, tabela, celular e ações; ver 7.3) |
 | Apps Script publicado manualmente | Médio | ~~Média~~ Baixa | **Mitigado (31/10/2026):** checklist em `docs/apps-script-deploy.md`, `VERSAO_SCRIPT` e workflow que abre a issue de reimplantação até a versão no ar bater (ver 11.3) |
 | Falha ou cota do Apps Script/Gemini | Alto | ~~Média~~ Baixa | **Mitigado (31/10/2026):** novas tentativas no Gemini, checagem da cota de e-mail e documento salvo antes do e-mail (ver 11.3) |
-| Push dependente da instalação no iOS | Baixo | Alta | Histórico no app (badge) independe do push |
-| Ausência de testes | Alto | ~~Alta~~ Média | **Mitigado (31/10/2026):** Vitest nas regras de `utils/` e Playwright + emuladores nos fluxos críticos de concursos, no CI (ver 11.6). Ampliar o E2E para Inspeções, Pareceres e Perícia Menor |
-| Dados médico-administrativos em serviços externos | Alto | Média | Revisar LGPD, acesso, retenção e auditoria |
-| Dependências por CDN | Baixo | Baixa | Autohospedar Material Symbols e o SDK do service worker |
+| Push dependente da instalação no iOS | Baixo | ~~Alta~~ Média | **Mitigado (31/10/2026):** no iPhone fora da Tela de Início o convite ensina a instalar (`instalar-ios`) e o histórico de notificações com badge no avatar mostra os mesmos avisos sem push; o servidor grava o histórico antes de enviar (ver 6.7). O push em si continua sujeito à política da Apple |
+| Ausência de testes | Alto | ~~Alta~~ Baixa | **Mitigado (31/10/2026):** Vitest (regras de `utils/`, mapa de rotas e cliente de API) e Playwright + emuladores nos fluxos de concursos, Inspeções, Pareceres e Perícia Menor, no CI (ver 11.6). Pendente: E2E da geração de PDF (depende do Apps Script) e do agendamento completo de IS |
+| Dados médico-administrativos em serviços externos | Alto | Média | **Mitigado parcialmente / em andamento (31/10/2026):** acesso e auditoria feitos — Apps Script e servidor exigem usuário ativo e perfil, com log sem dados pessoais e trilha em `auditoria_acoes` (ver 8.4 e 9.3); minimização dos dados enviados ao Gemini, logs sem dados sensíveis e retenção estão em [`docs/database.md`, seção 17](database.md#17-segurança-e-privacidade-dos-dados) e `docs/retencao-lgpd.md`. Pendente: validar prazos de retenção com a Encarregada/Comando e revisar o compartilhamento real das pastas do Drive |
+| Dependências por CDN | Baixo | ~~Baixa~~ Muito baixa | **Mitigado (31/10/2026):** Material Symbols e o SDK do service worker autohospedados (ver 12.2); o E2E falha se o app voltar a pedir `fonts.googleapis.com`/`gstatic.com`. Restam apenas imagens de terceiros (Imgur) |
 
 ---
 
 ## 15. Recomendações de evolução
 
-### 15.1 Prioridade crítica: autenticação e autorização
+### 15.1 Prioridade crítica: autenticação e autorização — implementado (31/10/2026)
 
-1. Escolher um único mecanismo de autenticação.
-2. Preferir Firebase Authentication, Google Identity ou sessão emitida pelo backend.
-3. Eliminar o armazenamento de hash de senha no `localStorage`.
-4. Não transmitir credenciais por query string.
-5. Validar perfil e permissão em cada ação do Apps Script.
-6. Registrar tentativas de acesso e operações sensíveis.
+1. ~~Escolher um único mecanismo de autenticação.~~ **Feito:** Firebase Authentication é o único (sessão no SDK).
+2. ~~Preferir Firebase Authentication, Google Identity ou sessão emitida pelo backend.~~ **Feito:** o ID token é validado pelo servidor Node (`verifyIdToken`) e pelo Apps Script (`accounts:lookup`).
+3. ~~Eliminar o armazenamento de hash de senha no `localStorage`.~~ **Feito:** verificado — nenhuma senha, hash ou credencial é guardada no navegador.
+4. ~~Não transmitir credenciais por query string.~~ **Feito:** verificado — o token vai em cabeçalho ou corpo POST; o login por QR usa o fragmento `#`.
+5. ~~Validar perfil e permissão em cada ação do Apps Script.~~ **Feito:** `autorizarAcao_` em todas as ações (inclusive `extrair_dados_atestado` e `gerarMinutaMensagem`, que antes não exigiam login), com usuário ativo e perfil por ação; as rotas do Gemini do servidor passaram a exigir usuário ativo (antes eram abertas).
+6. ~~Registrar tentativas de acesso e operações sensíveis.~~ **Feito:** log estruturado sem dados pessoais (servidor e Apps Script) e trilha em `auditoria_acoes` (ver 9.3).
 
-### 15.2 Centralizar a API do frontend
+**Pendente:** o Apps Script não reconsulta a matriz fina `config/permissoes`; não há alerta automático sobre acessos recusados repetidos (só consulta pelo Admin/Cloud Logging); a versão `2026-10-31.2` do Apps Script precisa ser **reimplantada** (`docs/apps-script-deploy.md`) para o controle de perfil valer — enquanto isso, o app novo já envia o token em todas as chamadas, então nada quebra.
 
-Criar uma estrutura semelhante a:
-
-```text
-src/
-└── services/
-    ├── apiClient.ts
-    ├── authService.ts
-    ├── pareceresService.ts
-    ├── periciaMenorService.ts
-    └── extrasService.ts
-```
-
-O `apiClient.ts` deve centralizar:
-
-- URL base;
-- serialização;
-- tratamento de erro;
-- timeout;
-- autenticação;
-- envelope padrão de resposta.
-
-### 15.3 Adotar roteamento real
-
-Introduzir React Router com URLs estáveis, por exemplo:
+### 15.2 Centralizar a API do frontend — implementado (31/10/2026)
 
 ```text
-/doencas
-/concursos
-/exames
-/pareceres
-/pericia-menor
-/normas/dgpm-406
-/normas/hnre
-/estudo
+services/
+├── apiClient.ts            # URL base, serialização, token, timeout, ApiError, envelopes
+├── authService.ts          # sessão, login/logout, troca de senha, obterIdToken
+├── pareceresService.ts     # fachada: firestorePareceres + firestoreQuesitos + drivePareceres
+├── periciaMenorService.ts  # fachada: firestorePericiasMenores + atestadoIA
+└── extrasService.ts        # fachada: firestoreExtras + firestoreLegislacao + firestoreCasos
 ```
 
-Benefícios:
+O `apiClient.ts` centraliza URL base, serialização, tratamento de erro tipado, *timeout* (`AbortController`), autenticação (ID token do Firebase) e o envelope de resposta (ver 6.4), com testes Vitest. Os chamadores que usavam `fetch` direto foram migrados. As fachadas são reexportações finas: os módulos `firestore*`/`drive*` continuam existindo e importáveis.
 
-- histórico do navegador;
-- links diretos;
-- atualização sem perda de contexto;
-- carregamento sob demanda;
-- melhor organização de permissões.
+**Pendente:** migrar as telas para importar das fachadas (hoje elas ainda importam os módulos originais, o que é equivalente); padronizar o envelope do servidor Node e do Gemini no formato `{ sucesso, dados | erro }` (o cliente já lê os três formatos).
+
+### 15.3 Adotar roteamento real — implementado (31/10/2026)
+
+O roteamento por URL (`react-router-dom`, `HashRouter` por causa do GitHub Pages, tabela em `config/routes.ts`) já existia. Foram acrescentados:
+
+- **carregamento sob demanda:** `React.lazy` + `Suspense` nas 19 páginas de `App.tsx` (Início e Login ficam no pacote principal);
+- **aliases estáveis** em `ALIASES`, com redirecionamento (*replace*) para a rota canônica e sem tocar nas rotas atuais:
+
+```text
+/doencas → /beneficios/doencas     /portaria → /beneficios/portaria   /exames → /concursos/exames
+/indices → /concursos/indices      /dgpm-406 → /normas/dgpm-406       /legislacao → /normas/legislacao
+/estudo  → /extras/roteiro         /casos, /videos, /infograficos, /apresentacoes → /extras/…
+/concursos, /pareceres, /pericia-menor e /inspecoes já eram estáveis
+```
+
+- **testes Vitest do mapa de rotas** (`config/__tests__/routes.test.ts`): resolução de cada rota, ordem das estáticas antes das dinâmicas, ida e volta de `pathForView`/`viewForPath`, ausência de padrões e aliases duplicados, aliases que não colidem com rotas e preservam subníveis; e um teste E2E dos redirecionamentos.
+
+Benefícios obtidos: histórico do navegador, links diretos, atualização sem perda de contexto, carregamento sob demanda e permissões avaliadas por página.
+
+**Pendente:** `/normas/hnre` (não existe página própria das normas do HNRe); migrar para `BrowserRouter` só se o hospedamento deixar de ser o GitHub Pages.
 
 ### 15.4 Reorganizar o frontend por domínio
 
@@ -858,12 +871,12 @@ A arquitetura evoluiu de "SPA + Apps Script + planilhas" para **SPA instalável 
 
 Os próximos passos de maior retorno são:
 
-1. ampliar o E2E para Inspeções, Pareceres e Perícia Menor;
-2. *code splitting* por rota;
-3. observabilidade (erros do cliente e do servidor);
-4. continuar dividindo `useConcursoDetalhe.tsx` e `App.tsx`.
+1. observabilidade (erros do cliente e do servidor, alertas de acessos recusados);
+2. separar o conteúdo editorial pesado do pacote principal (~1,7 MB);
+3. continuar dividindo `useConcursoDetalhe.tsx` e `App.tsx`;
+4. fechar a retenção de dados (LGPD) e reimplantar o Apps Script com o controle de perfil.
 
-Já feitos em 31/10/2026: publicação das regras no CI (com teste antes); restrição das gravações em concursos por funcionalidade/campo; divisão do `ConcursosJRS.tsx`; controle de versão e checklist do Apps Script, com novas tentativas no Gemini e cota de e-mail; testes unitários e E2E no CI.
+Já feitos em 31/10/2026: publicação das regras no CI (com teste antes); restrição das gravações em concursos por funcionalidade/campo; divisão do `ConcursosJRS.tsx`; controle de versão e checklist do Apps Script, com novas tentativas no Gemini e cota de e-mail; testes unitários e E2E no CI; E2E de Inspeções, Pareceres e Perícia Menor; ícones e SDK do service worker autohospedados; cliente único de API (`apiClient.ts`) e fachadas por domínio; *code splitting* por rota e aliases de URL; controle de usuário/perfil em todas as ações do Apps Script e auditoria de acessos.
 
 ---
 
@@ -891,4 +904,9 @@ Já feitos em 31/10/2026: publicação das regras no CI (com teste antes); restr
 | 31/10 | `ConcursosJRS.tsx` dividido por responsabilidade (lista, modais, hook, tabela, celular, ações) | `components/concursos/` |
 | 31/10 | Apps Script: versão publicada verificada pelo CI, novas tentativas no Gemini, cota de e-mail | `apps-script-publicado.yml`, `CodeConcursos.gs` |
 | 31/10 | Testes unitários (Vitest) e E2E (Playwright + emuladores) no CI | `utils/__tests__/`, `e2e/`, `testes.yml` |
+| 31/10 | E2E ampliado: Inspeções, Pareceres, Perícia Menor, aliases e ausência de CDN; Vitest do mapa de rotas e do `apiClient` | `e2e/`, `config/__tests__/`, `services/__tests__/` |
+| 31/10 | Material Symbols e SDK do service worker autohospedados | `styles/fonts.css`, `assets/fonts/`, `vite.config.ts`, `public/firebase-messaging-sw.js` |
+| 31/10 | Cliente único de API, `authService` e fachadas por domínio; chamadores migrados | `services/apiClient.ts`, `authService.ts`, `*Service.ts` |
+| 31/10 | Páginas sob demanda (`React.lazy`) e aliases de rota | `App.tsx`, `config/routes.ts` |
+| 31/10 | Apps Script: login, usuário ativo e perfil em todas as ações; rotas do Gemini do servidor passam a exigir login; auditoria de acessos recusados e operações sensíveis | `CodeConcursos.gs` (`autorizarAcao_`), `server.ts` (`auditarServidor`), `auditoria_acoes` |
 

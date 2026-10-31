@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { apiUrl } from '../utils/apiBase';
+import { chamarServidor } from '../services/apiClient';
 
 export const ImageScanner: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,17 +29,8 @@ export const ImageScanner: React.FC = () => {
     try {
       // Remove data:image/jpeg;base64, prefix
       const base64Data = image.split(',')[1];
-      const response = await fetch(apiUrl("/api/gemini/analyze-image"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64Data }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setResult(data.text);
-      } else {
-        setError(data.error || "Ocorreu um erro ao analisar a imagem.");
-      }
+      const data = await chamarServidor<{ text: string }>("/api/gemini/analyze-image", { image: base64Data });
+      setResult(data.text);
     } catch (err: any) {
       setError(err.message || "Erro de conexão ao analisar a imagem.");
     } finally {

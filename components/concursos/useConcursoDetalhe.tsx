@@ -15,7 +15,7 @@ import { MAPA_LAUDO_POR_STATUS, isAtrasada } from '../../utils/concursosUtils';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { getScrollParent } from '../../utils/dom';
 import { ConfirmDialogState, isoParaBR, parseDataBR } from './compartilhado';
-import { GAS_URL_CONCURSOS } from '../../config/endpoints';
+import { chamarScript } from '../../services/apiClient';
 
 export interface ConcursoDetalheProps {
   concursoId: string;
@@ -196,20 +196,13 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
     !c.termoCientificacaoUrl && (c.status === 'APTO' || (c.status === 'INSUF DOCUMENTAL' && !!c.observacoes.trim()));
 
   const pedirPdfCientificacao = async (id: string, nome: string, status: string): Promise<string> => {
-    const res = await fetch(GAS_URL_CONCURSOS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        action: 'gerarTermoCientificacao',
-        candidatoId: id,
-        candidatoNome: nome,
-        nomeConcurso: concurso?.nome || '',
-        status,
-      }),
+    const d = await chamarScript<{ pdfBase64: string }>('gerarTermoCientificacao', {
+      candidatoId: id,
+      candidatoNome: nome,
+      nomeConcurso: concurso?.nome || '',
+      status,
     });
-    const json = await res.json();
-    if (!json.sucesso) throw new Error(json.erro || 'Erro ao gerar o Termo de Cientificação.');
-    return json.dados.pdfBase64;
+    return d.pdfBase64;
   };
 
   const gerarTermoCientificacao = async (id: string, nome: string, status: string, abrir: boolean) => {
@@ -393,11 +386,7 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
     const id = candidato.id;
     setGerandoSolicitacaoIds(prev => new Set(prev).add(id));
     try {
-      const res = await fetch(GAS_URL_CONCURSOS, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: tipo === 'parecer' ? 'gerarSolicitacaoParecer' : 'gerarSolicitacaoExames',
+      const doc = await chamarScript<{ pdfBase64: string }>(tipo === 'parecer' ? 'gerarSolicitacaoParecer' : 'gerarSolicitacaoExames', {
           candidatoId: id,
           candidatoNome: candidato.nome,
           nomeConcurso: concurso?.nome || '',
@@ -407,12 +396,9 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
           cargo: nav?.authUser?.cargo || '',
           crmPe: nav?.authUser?.crmPe || '',
           email: nav?.authUser?.email || '',
-        }),
       });
-      const json = await res.json();
-      if (!json.sucesso) throw new Error(json.erro || 'Erro ao gerar o documento.');
 
-      const url = await salvarPdfCandidatoNoDrive({ pasta: pastaDrive(), candidatoId: id, candidatoNome: candidato.nome, tipo: tipo === 'parecer' ? 'solicitacaoParecer' : 'solicitacaoExames', pdfBase64: json.dados.pdfBase64 });
+      const url = await salvarPdfCandidatoNoDrive({ pasta: pastaDrive(), candidatoId: id, candidatoNome: candidato.nome, tipo: tipo === 'parecer' ? 'solicitacaoParecer' : 'solicitacaoExames', pdfBase64: doc.pdfBase64 });
       const observacao = tipo === 'parecer'
         ? `SOLICITADO PARECER ${(dados.especialidade || '').toUpperCase()}`
         : `SOLICITADO ${(dados.exames || '').split(/\s*\n\s*/).filter(Boolean).join('; ')}`;
@@ -506,11 +492,7 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
       // Inapto: o PDF único leva o Termo de Recurso (1ª página) e o Termo de Cientificação (anexado).
       const cientificacaoPromise = pedirPdfCientificacao(id, nome, 'INAPTO');
       cientificacaoPromise.catch(() => {}); // o erro é tratado quando a promise é aguardada abaixo
-      const res = await fetch(GAS_URL_CONCURSOS, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'gerarTermoRecurso',
+      const recurso = await chamarScript<{ pdfBase64: string }>('gerarTermoRecurso', {
           candidatoId: id,
           candidatoNome: nome,
           nomeConcurso: concurso?.nome || '',
@@ -518,12 +500,9 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
           nomeUsuario: signatario.nome,
           postoGraduacao: signatario.postoGraduacao,
           cargo: signatario.cargo,
-        }),
       });
-      const json = await res.json();
-      if (!json.sucesso) throw new Error(json.erro || 'Erro ao gerar o Termo de Recurso.');
 
-      const pdfUnico = await juntarPdfsBase64([json.dados.pdfBase64, await cientificacaoPromise]);
+      const pdfUnico = await juntarPdfsBase64([recurso.pdfBase64, await cientificacaoPromise]);
       const url = await salvarPdfCandidatoNoDrive({ pasta: pastaDrive(), candidatoId: id, candidatoNome: nome, tipo: 'termoRecurso', pdfBase64: pdfUnico });
       await salvarTermoRecurso(concursoId, id, url);
       setCandidatos(prev => prev.map(c => (c.id === id ? { ...c, recurso: true, termoRecursoUrl: url } : c)));

@@ -17,7 +17,7 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import { app, auth } from './firebaseAuth';
-import { apiUrl } from '../utils/apiBase';
+import { chamarServidor } from './apiClient';
 import { isIOS, isStandalone } from '../utils/pwa';
 
 const db = getFirestore(app);
@@ -134,15 +134,7 @@ export type EventoNotificacao =
 /** Botão de teste do Perfil: o servidor manda um aviso só para os aparelhos do usuário. */
 export const testarNotificacao = async (usuario: string): Promise<string> => {
   await sincronizarAparelho(usuario);
-  const user = auth.currentUser;
-  if (!user) throw new Error('Sessão expirada. Faça login novamente.');
-  const resp = await fetch(apiUrl('/api/notificacoes/evento'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
-    body: JSON.stringify({ tipo: 'teste' }),
-  });
-  const json = await resp.json().catch(() => ({}));
-  if (!resp.ok || !json.success) throw new Error(json.error || `Servidor respondeu ${resp.status}.`);
+  const json = await chamarServidor<{ aparelhos?: number; enviados?: number; erros?: string[] }>('/api/notificacoes/evento', { tipo: 'teste' }, { timeoutMs: 30_000 });
   if (!json.aparelhos) throw new Error('Nenhum aparelho seu cadastrado no servidor.');
   if (!json.enviados) throw new Error(`O envio falhou: ${(json.erros || []).join(' | ') || 'motivo desconhecido'}`);
   return `Enviada para ${json.enviados} de ${json.aparelhos} aparelho(s). Deve chegar em alguns segundos.`;
@@ -156,14 +148,8 @@ export const testarNotificacao = async (usuario: string): Promise<string> => {
  */
 export const notificarEvento = async (evento: EventoNotificacao): Promise<void> => {
   try {
-    const user = auth.currentUser;
-    if (!user) return;
-    const idToken = await user.getIdToken();
-    await fetch(apiUrl('/api/notificacoes/evento'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-      body: JSON.stringify(evento),
-    });
+    if (!auth.currentUser) return;
+    await chamarServidor('/api/notificacoes/evento', evento, { timeoutMs: 20_000 });
   } catch (e) {
     console.error('Falha ao enviar evento de notificação:', e);
   }

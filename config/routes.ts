@@ -43,6 +43,39 @@ export const ROUTES: RouteDef[] = [
   { view: 'militares', path: '/militares' },
 ];
 
+// --- Aliases estáveis ----------------------------------------------------------
+// Endereços curtos e fáceis de compartilhar que redirecionam (replace) para a rota canônica de ROUTES,
+// preservando o que vier depois do prefixo (ex.: /doencas/<id>/0 → /beneficios/doencas/<id>/0).
+// Não substituem nem quebram as rotas atuais: são só atalhos. Os subníveis seguem sendo tratados pela
+// página de destino, e as permissões continuam avaliadas por página no App.tsx.
+export interface AliasRota {
+  /** Prefixo do alias (sem barra final). */
+  de: string;
+  /** Prefixo da rota canônica que o alias abre. */
+  para: string;
+}
+
+export const ALIASES: AliasRota[] = [
+  { de: '/doencas', para: '/beneficios/doencas' },
+  { de: '/portaria', para: '/beneficios/portaria' },
+  { de: '/exames', para: '/concursos/exames' },
+  { de: '/indices', para: '/concursos/indices' },
+  { de: '/dgpm-406', para: '/normas/dgpm-406' },
+  { de: '/legislacao', para: '/normas/legislacao' },
+  { de: '/estudo', para: '/extras/roteiro' },
+  { de: '/casos', para: '/extras/casos' },
+  { de: '/videos', para: '/extras/videos' },
+  { de: '/infograficos', para: '/extras/infograficos' },
+  { de: '/apresentacoes', para: '/extras/apresentacoes' },
+];
+
+/** Destino canônico de um alias (mantendo o sufixo), ou undefined quando o caminho não é um alias. */
+export const destinoDoAlias = (pathname: string): string | undefined => {
+  const limpo = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  const alias = ALIASES.find(a => limpo === a.de || limpo.startsWith(`${a.de}/`));
+  return alias ? alias.para + limpo.slice(alias.de.length) : undefined;
+};
+
 const BASE_PATHS: Record<NavItem, string> = {
   splash: '/',
   home: '/',

@@ -12,6 +12,8 @@ import {
   getFirestore, collection, doc, addDoc, updateDoc, onSnapshot, query, where, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { app, auth } from './firebaseAuth';
+import { camposIdDrive } from '../utils/googleDrive';
+import { registrarAcaoSensivel } from './auditoriaAcoes';
 
 const db = getFirestore(app);
 const COL = 'documentos_gerados';
@@ -34,10 +36,12 @@ export const registrarDocumentoGerado = async (d: Omit<DocumentoGerado, 'id' | '
   const uid = auth.currentUser?.uid;
   if (!uid || !d.pdfUrl) return;
   try {
-    await addDoc(collection(db, COL), { ...d, criadoPorUid: uid, criadoEm: serverTimestamp(), aberto: false });
+    await addDoc(collection(db, COL), { ...d, ...camposIdDrive(d.pdfUrl), criadoPorUid: uid, criadoEm: serverTimestamp(), aberto: false });
   } catch (e) {
     console.error('Falha ao registrar documento gerado:', e);
   }
+  // Auditoria sem conteúdo: só o tipo do documento (nunca nome/detalhe do inspecionado).
+  void registrarAcaoSensivel('documento.gerar', d.tipo);
 };
 
 /** Documentos ainda não abertos, do mais recente para o mais antigo (tempo real). */

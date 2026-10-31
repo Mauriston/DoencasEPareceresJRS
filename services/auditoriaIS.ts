@@ -21,6 +21,9 @@ let ator: AtorAuditoria | null = null;
 /** Chamado pelo App ao carregar/limpar o usuário logado. */
 export const definirAtorAuditoria = (novo: AtorAuditoria | null) => { ator = novo; };
 
+/** Ator atual (para a auditoria geral de ações sensíveis, services/auditoriaAcoes.ts). */
+export const obterAtorAuditoria = (): AtorAuditoria | null => ator;
+
 export interface EventoIS {
   id: string;
   acao: string;

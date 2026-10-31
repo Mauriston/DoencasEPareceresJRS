@@ -3,7 +3,7 @@
 // emuladores, sobe o app (server.ts + Vite) apontando para eles, roda os testes de e2e/ e
 // derruba o servidor no fim.
 import { spawn } from 'node:child_process';
-import { semear } from './dados.mjs';
+import { semear, semearTelas } from './dados.mjs';
 
 const PORTA = 3100;
 const ambiente = {
@@ -18,6 +18,7 @@ const ambiente = {
 Object.assign(process.env, { GCLOUD_PROJECT: 'demo-jrs' });
 
 await semear();
+await semearTelas();
 
 // Grupo de processos próprio (detached): no fim, derruba o npx e o tsx que ele abriu.
 const servidor = spawn('npx', ['tsx', 'server.ts'], { env: ambiente, stdio: ['ignore', 'inherit', 'inherit'], detached: true });

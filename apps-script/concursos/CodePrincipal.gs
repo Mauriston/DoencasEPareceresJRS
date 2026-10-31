@@ -108,6 +108,7 @@ function doPostPrincipal(e) {
     throw new Error("Ação não reconhecida.");
 
   } catch (err) {
+    logSeguro_('doPostPrincipal', err);
     return ContentService.createTextOutput(
       JSON.stringify({
         success: false,

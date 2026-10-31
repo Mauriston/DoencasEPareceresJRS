@@ -5,9 +5,7 @@
 // Quem cria as pastas e os arquivos é o Apps Script standalone (CodeConcursos.gs); este módulo só o
 // chama e devolve as URLs, que o app grava no Firestore. A leitura da mensagem (transcrição + dados) é
 // feita pelo Gemini, também por esse script.
-import { getAuth } from 'firebase/auth';
-import { app } from './firebaseAuth';
-import { GAS_URL_CONCURSOS } from '../config/endpoints';
+import { chamarScript as chamarScriptApi } from './apiClient';
 import { removerPdfDoStorage } from './firebaseStorageConcursos';
 import { normalizarExamesExtraidos, type ExamesExtraidos } from '../utils/examesCandidato';
 
@@ -32,30 +30,9 @@ export const anoDoConcurso = (criadoEm?: string): number => {
   return ano >= 2000 ? ano : new Date().getFullYear();
 };
 
-export const chamarScript = async <T>(action: string, dados: Record<string, unknown>): Promise<T> => {
-  const usuario = getAuth(app).currentUser;
-  if (!usuario) throw new Error('Sessão expirada. Faça login novamente.');
-  const idToken = await usuario.getIdToken();
-
-  let res: Response;
-  try {
-    res = await fetch(GAS_URL_CONCURSOS, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action, idToken, ...dados }),
-    });
-  } catch {
-    throw new Error('Não foi possível falar com o Google Drive. Verifique sua conexão e tente novamente.');
-  }
-  let json: any;
-  try {
-    json = await res.json();
-  } catch {
-    throw new Error('O servidor respondeu em um formato inesperado.');
-  }
-  if (!json.sucesso) throw new Error(json.erro || 'Erro ao processar a solicitação.');
-  return json.dados as T;
-};
+/** Chamada autenticada ao Apps Script (ver services/apiClient.ts: token, timeout e envelope). */
+export const chamarScript = <T>(action: string, dados: Record<string, unknown>): Promise<T> =>
+  chamarScriptApi<T>(action, dados, { mensagemRede: 'Não foi possível falar com o Google Drive. Verifique sua conexão e tente novamente.' });
 
 const arquivoParaBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
   const reader = new FileReader();

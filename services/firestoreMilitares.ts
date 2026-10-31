@@ -5,6 +5,8 @@
 // Leitura: qualquer usuário autenticado; escrita: ver firestore.rules.
 import { getFirestore, collection, doc, getDoc, getDocs, query, where, setDoc, updateDoc, deleteDoc, writeBatch, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { app } from './firebaseAuth';
+import { normalizarNip } from '../utils/dados';
+import { registrarAcaoSensivel } from './auditoriaAcoes';
 import type { VinculoFinalidade } from '../utils/corposQuadros';
 
 const db = getFirestore(app);
@@ -53,7 +55,7 @@ export interface MilitarDoc {
 }
 export type MilitarRecord = MilitarDoc & { id: string };
 
-export const idDoNip = (nip: string): string => nip.replace(/\D/g, '');
+export const idDoNip = (nip: string): string => normalizarNip(nip);
 
 export const observarMilitares = (
   onData: (lista: MilitarRecord[]) => void,
@@ -74,7 +76,10 @@ export const criarMilitar = async (dados: MilitarDoc): Promise<string> => {
 };
 
 /** Apaga o cadastro (definitivo). Para só tirar o acesso, prefira inativar. */
-export const apagarMilitar = (id: string) => deleteDoc(doc(db, COL, id));
+export const apagarMilitar = async (id: string) => {
+  await deleteDoc(doc(db, COL, id));
+  void registrarAcaoSensivel('militar.excluir', 'militares');
+};
 
 export const atualizarMilitar = (id: string, patch: Partial<MilitarDoc>) =>
   updateDoc(doc(db, COL, id), { ...patch, atualizadoEm: serverTimestamp() } as Record<string, unknown>);

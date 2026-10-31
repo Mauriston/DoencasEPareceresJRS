@@ -1,8 +1,7 @@
 // Ficheiro: services/loginNip.ts
 // Chamadas ao backend (Cloud Run, server.ts) do login por NIP e da
 // redefinição de senha pelo Admin.
-import { apiUrl } from '../utils/apiBase';
-import { auth } from './firebaseAuth';
+import { ApiError, chamarServidor } from './apiClient';
 
 export interface UsuarioPorNip {
   usuario: string;
@@ -14,44 +13,22 @@ export interface UsuarioPorNip {
 export class NipError extends Error {}
 
 export const resolverNip = async (nip: string): Promise<UsuarioPorNip> => {
-  let resp: Response;
   try {
-    resp = await fetch(apiUrl('/api/auth/resolver-nip'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nip }),
-    });
-  } catch {
-    throw new NipError('Erro de conexão. Tente novamente.');
+    // Rota pública (o usuário ainda não está logado): sem token.
+    const json = await chamarServidor<{ usuario: string; ativo: boolean; senhaTemporaria: boolean }>(
+      '/api/auth/resolver-nip', { nip }, { autenticar: false, timeoutMs: 20_000 });
+    return { usuario: json.usuario, ativo: json.ativo, senhaTemporaria: json.senhaTemporaria };
+  } catch (e) {
+    if (e instanceof ApiError && (e.codigo === 'rede' || e.codigo === 'timeout')) throw new NipError('Erro de conexão. Tente novamente.');
+    throw new NipError(e instanceof ApiError && e.codigo === 'negocio' ? e.message : 'Não foi possível consultar o NIP. Tente novamente.');
   }
-  const json = await resp.json().catch(() => ({}));
-  if (!resp.ok || !json.success) throw new NipError(json.error || 'Não foi possível consultar o NIP. Tente novamente.');
-  return { usuario: json.usuario, ativo: json.ativo, senhaTemporaria: json.senhaTemporaria };
 };
 
 /** Admin: devolve a senha do usuário para a inicial padrão. */
 export const resetarSenhaUsuario = async (uid: string): Promise<void> => {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Sessão expirada. Faça login novamente.');
-  const idToken = await user.getIdToken();
-  const resp = await fetch(apiUrl('/api/admin/resetar-senha'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-    body: JSON.stringify({ uid }),
-  });
-  const json = await resp.json().catch(() => ({}));
-  if (!resp.ok || !json.success) throw new Error(json.error || 'Não foi possível redefinir a senha.');
+  await chamarServidor('/api/admin/resetar-senha', { uid }, { timeoutMs: 30_000 });
 };
 
 export const excluirUsuario = async (uid: string): Promise<void> => {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Sessão expirada. Faça login novamente.');
-  const idToken = await user.getIdToken();
-  const resp = await fetch(apiUrl('/api/admin/excluir-usuario'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-    body: JSON.stringify({ uid }),
-  });
-  const json = await resp.json().catch(() => ({}));
-  if (!resp.ok || !json.success) throw new Error(json.error || 'Não foi possível excluir o usuário.');
+  await chamarServidor('/api/admin/excluir-usuario', { uid }, { timeoutMs: 30_000 });
 };
