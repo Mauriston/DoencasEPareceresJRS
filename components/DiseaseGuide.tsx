@@ -273,7 +273,7 @@ const WebsterCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const grau = getWebsterGrau(total);
 
   const handleCopy = async () => {
-    const text = `ESCALA DE WEBSTER (DOENÇA DE PARKINSON):\n\n${websterData.map(d => `- ${d.nome} = ${scores[d.id]}`).join('\n')}\n-------------------------------\n- Pontuação total = ${total}/30\n\n- RESULTADO: ${grau.titulo.toUpperCase()}`;
+    const text = `WEBSTER RATING SCALE FOR PARKINSON'S DISEASE:\n\n${websterData.map(d => `- ${d.nome} = ${scores[d.id]}`).join('\n')}\n-------------------------------\n- Pontuação total = ${total}/30\n\n- RESULTADO: ${grau.titulo.toUpperCase()}`;
     try { await navigator.clipboard.writeText(text); setIsCopied(true); if (navigator.share) await navigator.share({ title: 'Avaliação Escala de Webster', text }); } catch (err) { if ((err as Error).name !== 'AbortError') console.error(err); }
   };
 
