@@ -242,3 +242,13 @@ export const urlDownload = (url: string): string => {
 export const abrirPdf = (url: string): void => {
   window.open(urlVisualizacao(url), '_blank', 'noopener,noreferrer');
 };
+
+/**
+ * Envio automático (sem confirmação) do Termo de Recurso + Cientificação recém-gerado para a impressão
+ * (Giorginis, com cópia para a Secretaria), com o nome de exibição e a assinatura do médico que gerou o termo.
+ */
+export const enviarTermoRecursoParaImpressao = async (params: {
+  pdfUrl: string; candidatoId: string; candidatoNome: string; nomeConcurso: string; remetente: string;
+}): Promise<void> => {
+  await chamarScript<{ enviado: boolean }>('enviarTermoRecursoImpressao', params);
+};

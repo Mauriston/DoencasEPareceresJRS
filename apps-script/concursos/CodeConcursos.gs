@@ -76,6 +76,7 @@ function doPost(e) {
     if (corpo.action === 'salvarPdfCandidato') return apiSalvarPdfCandidato(corpo);
     if (corpo.action === 'salvarPdfParecer') return apiSalvarPdfParecer(corpo);
     if (corpo.action === 'enviarParecerImpressao') return apiEnviarParecerImpressao(corpo);
+    if (corpo.action === 'enviarTermoRecursoImpressao') return apiEnviarTermoRecursoImpressao(corpo);
     if (corpo.action === 'removerArquivoDrive') return apiRemoverArquivoDrive(corpo);
     if (corpo.action === 'extrairMensagemConcurso') return apiExtrairMensagemConcurso(corpo);
     if (corpo.action === 'salvarExamesCandidato') return apiSalvarExamesCandidato(corpo);
@@ -575,6 +576,53 @@ function apiEnviarParecerImpressao(corpo) {
       '</div>',
     name: remetente,
     attachments: [blob]
+  });
+  return { enviado: true };
+}
+
+/** Cópias do e-mail automático do Termo de Recurso (além de EMAIL_IMPRESSAO). */
+var EMAILS_COPIA_TERMO_RECURSO = 'dayvison.rubem@marinha.mil.br,brunelly.cavalcanti@marinha.mil.br';
+
+/**
+ * action=enviarTermoRecursoImpressao (POST): { idToken, pdfUrl, candidatoId, candidatoNome, nomeConcurso, remetente }
+ * — chamada automaticamente pelo app depois de gerar o Termo de Recurso (+ Cientificação) de um candidato INAPTO:
+ * envia o PDF (só sob a pasta CONCURSOS) para EMAIL_IMPRESSAO, com cópia para EMAILS_COPIA_TERMO_RECURSO, para
+ * impressão e coleta de assinaturas. Nome de exibição e assinatura = médico que gerou o termo.
+ */
+function apiEnviarTermoRecursoImpressao(corpo) {
+  exigirUsuarioFirebase(corpo);
+  var pdfUrl = String(corpo.pdfUrl || '').trim();
+  var candidatoId = limparNomeDrive(corpo.candidatoId);
+  var candidato = limparNomeDrive(corpo.candidatoNome).toUpperCase();
+  var nomeConcurso = limparNomeDrive(corpo.nomeConcurso);
+  var remetente = limparNomeDrive(corpo.remetente).slice(0, 80) || 'JRS/HNRe';
+  if (!candidato) throw new Error('"candidatoNome" é obrigatório.');
+
+  var idDrive = /drive\.google\.com\/file\/d\/([\w-]+)/.exec(pdfUrl);
+  if (!idDrive) throw new Error('Endereço do PDF não reconhecido.');
+  var arquivo = DriveApp.getFileById(idDrive[1]);
+  if (!estaSobPasta(arquivo, ID_PASTA_RAIZ_CONCURSOS)) throw new Error('O PDF não está na pasta CONCURSOS.');
+
+  // "Obrigada!" quando quem assina é a 1T Mônica Virgínia; "Obrigado!" para os demais.
+  var agradecimento = /MONICA/.test(semAcentos(remetente).toUpperCase()) ? 'Obrigada!' : 'Obrigado!';
+  var idCandidato = candidatoId ? candidatoId + ' ' : '';
+
+  MailApp.sendEmail({
+    to: EMAIL_IMPRESSAO,
+    cc: EMAILS_COPIA_TERMO_RECURSO,
+    subject: 'TERMO DE RECURSO INAPTIDÃO - ' + candidato,
+    body: 'Giorginis,\n\nSeguem os termos do candidato INAPTO ao ' + nomeConcurso + ' ' + idCandidato + candidato +
+      ' para impressão e coleta de assinaturas.\n\n' + agradecimento + '\n\n' + remetente,
+    htmlBody:
+      '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #222;">' +
+      '<p style="font-size: 18px; font-weight: bold; margin: 0 0 16px;">Giorginis,</p>' +
+      '<p style="margin: 0 0 16px;">Seguem os termos do candidato <strong>INAPTO</strong> ao ' + escaparHtml(nomeConcurso) +
+      ' <strong>' + escaparHtml(idCandidato + candidato) + '</strong> para impressão e coleta de assinaturas.</p>' +
+      '<p style="margin: 0 0 16px;">' + agradecimento + '</p>' +
+      '<p style="margin: 0;">' + escaparHtml(remetente) + '</p>' +
+      '</div>',
+    name: remetente,
+    attachments: [arquivo.getBlob()]
   });
   return { enviado: true };
 }
