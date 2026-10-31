@@ -13,7 +13,7 @@
 import fs from 'fs';
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { calcularDiasUteis, formatarChaveData, NOMES_DIAS_SEMANA } from '../src/utils/concursosUtils';
+import { calcularDiasUteis, formatarChaveData, NOMES_DIAS_SEMANA } from '../utils/concursosUtils';
 
 const serviceAccount = JSON.parse(fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS!, 'utf8'));
 initializeApp({ credential: cert(serviceAccount) });
