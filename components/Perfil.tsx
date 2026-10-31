@@ -6,7 +6,7 @@ import { uploadProfileImage } from '../services/profileImage';
 import { formatNip, formatCelular } from '../utils/format';
 import { trocarSenha, mapAuthErrorMessage } from '../services/firebaseAuth';
 import { updateUsuarioProfile } from '../services/firestoreUsuarios';
-import { estadoNotificacoes, ativarNotificacoes, type EstadoNotificacoes } from '../services/notificacoesPush';
+import { estadoNotificacoes, ativarNotificacoes, testarNotificacao, type EstadoNotificacoes } from '../services/notificacoesPush';
 
 const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-xs font-semibold text-navy focus:outline-none focus:border-navy transition-colors';
 const labelClass = 'text-xs font-bold text-ink-3 uppercase tracking-wider block mb-1';
@@ -22,12 +22,21 @@ const TEXTO_NOTIFICACOES: Record<EstadoNotificacoes, { titulo: string; texto: st
 const NotificacoesCard: React.FC<{ usuario: string }> = ({ usuario }) => {
   const [estado, setEstado] = useState<EstadoNotificacoes | null>(null);
   const [ativando, setAtivando] = useState(false);
+  const [testando, setTestando] = useState(false);
+  const [resultadoTeste, setResultadoTeste] = useState<{ ok: boolean; msg: string } | null>(null);
   useEffect(() => { estadoNotificacoes().then(setEstado); }, []);
   if (!estado) return null;
 
   const ativar = async () => {
     setAtivando(true);
     try { setEstado(await ativarNotificacoes(usuario)); } catch (e) { console.error('Falha ao ativar notificações:', e); } finally { setAtivando(false); }
+  };
+  const testar = async () => {
+    setTestando(true);
+    setResultadoTeste(null);
+    try { setResultadoTeste({ ok: true, msg: await testarNotificacao(usuario) }); }
+    catch (e: any) { setResultadoTeste({ ok: false, msg: e?.message || 'Falha ao enviar o teste.' }); }
+    finally { setTestando(false); }
   };
   const { titulo, texto } = TEXTO_NOTIFICACOES[estado];
 
@@ -39,6 +48,22 @@ const NotificacoesCard: React.FC<{ usuario: string }> = ({ usuario }) => {
       </h3>
       <p className={`text-sm font-bold ${estado === 'ativadas' ? 'text-green' : estado === 'bloqueadas' ? 'text-wine' : 'text-navy'}`}>{titulo}</p>
       <p className="text-xs text-ink-3 leading-relaxed">{texto}</p>
+      {estado === 'ativadas' && (
+        <div className="pt-2 flex flex-col items-end gap-2">
+          <button
+            type="button"
+            onClick={testar}
+            disabled={testando}
+            className="px-5 py-2.5 border border-navy text-navy hover:bg-navy/5 disabled:opacity-50 rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5"
+          >
+            <span className="material-symbols-outlined text-[16px]">send</span>
+            <span>{testando ? 'Enviando...' : 'Enviar notificação de teste'}</span>
+          </button>
+          {resultadoTeste && (
+            <p className={`text-xs font-semibold self-stretch ${resultadoTeste.ok ? 'text-green' : 'text-wine'}`}>{resultadoTeste.msg}</p>
+          )}
+        </div>
+      )}
       {estado === 'pendente' && (
         <div className="pt-2 flex justify-end">
           <button
