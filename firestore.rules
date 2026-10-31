@@ -62,6 +62,11 @@ service cloud.firestore {
     // usuários já era pública ali). Espelhada a partir de "usuarios" sempre
     // que uma conta é criada (Login.tsx / UsuariosManagement.tsx) ou tem o
     // status ativo/inativo alterado.
+    match /usuarios_publicos/{uid} {
+      allow read: if true;
+      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+    }
+
     // Notificações push: um documento por aparelho (id = token do FCM), com o
     // uid do dono. Cada usuário só grava/apaga os próprios; ninguém lê pelo
     // app — o envio é feito pelo servidor (Admin SDK, ignora estas regras).
@@ -71,6 +76,7 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
       allow read: if false;
     }
+
     // Histórico das notificações de cada usuário (menu do avatar). Criadas só
     // pelo servidor; o dono lê e só pode marcar como lida.
     match /usuarios/{uid}/notificacoes/{id} {
@@ -79,14 +85,10 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lida']);
       allow create, delete: if false;
     }
+
     // Controle de repetição das notificações: só o servidor usa.
     match /notificacoes_enviadas/{id} {
       allow read, write: if false;
-    }
-
-    match /usuarios_publicos/{uid} {
-      allow read: if true;
-      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
     }
 
     // Coleção "militares" (página Inspecionados): base de militares da ativa,
