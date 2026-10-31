@@ -2,6 +2,54 @@
 
 > **Nota:** a identidade visual vigente é a do sistema de design JRS/HNRe implementado a partir da *Auditoria Frontend* (tokens em `styles/tokens.css`, paleta em `tailwind.config.js`, primitivos em `components/ui`). Onde este documento divergir (raios, sombras, tipografia, ouro/verde), prevalece o `docs/auditoria-frontend.md`.
 
+## 0. Estado atual do design system (atualizado em 31/10/2026)
+
+> As seções 1 a 17 vêm da análise original do visual (antes da auditoria de frontend de 15–16/10/2026). **Onde houver conflito, valem esta seção e o código** (`tailwind.config.js`, `styles/tokens.css`, `components/ui/`). O build falha com classes fora do DS (`scripts/verificar-ds.mjs`).
+
+### 0.1 Tokens
+
+| Grupo | Valores |
+|---|---|
+| Cores (paleta fechada) | `navy` #050F41 (hover #01002B) · `gold` #FAB932 (escala 50–900; `gold-ink` #8A6100) · `green` #079551 (escala 50–900) · `wine` #85200C (escala 50–900) · `blue` #1C4587 (apoio, escala 50–900) · `ink` #3D4460 / `ink-3` #5A627A / `ink-4` #8A93AC / `ink-5` #B9BFD1 · `line` #E3E6ED · `paper` #F7F8FA · `thead`/`canvas` #F2F4F8 · branco e preto |
+| Tipografia | Montserrat autohospedada, única família. Escala: `display` 32 · `h1` 24 · `h2` 20 · `h3` 16 · `kpi` 24 · `base` 16 · `sm` 14 · `xs` 12 (piso de 12 px) |
+| Raios | 8 px (controles) e 14 px (cards, sheets e diálogos); `full` para chips e badges |
+| Sombra | Uma só (`0 3px 12px rgba(18,28,75,.08)`), apenas em sobreposições |
+| Camadas | sticky 10 · topbar/sidebar 20 · dropdown 30 · drawer 40 · diálogo 50 · toast 60 |
+| Larguras | `reading` 720 · `form` 640 · `data` 1200 |
+
+**Uso das cores:** navy é a identidade (títulos, botões primários, faixa dos diálogos); ouro só como indicador/foco e ícone sobre navy; verde só como estado positivo; vinho para erro, alerta, pendência e ação destrutiva; azul de apoio para links.
+
+### 0.2 Shell
+
+Sidebar fixa (recolhível) com as categorias Trabalho, Consulta, Formação e Administração; topbar com breadcrumb, busca global e menu do usuário; no celular, drawer lateral. O avatar do usuário (topbar e drawer) mostra o **badge vermelho de notificações não lidas** (`Avatar` com `badge`).
+
+### 0.3 Primitivos (`components/ui/`)
+
+`Button` (primário navy, secundário contornado, ícone opcional, `loading`), `Dialog` (faixa navy com título e ícone em ouro; fecha com Esc/fora, salvo `travado`), `Drawer` (barra lateral à direita no desktop, bottom sheet no celular), `SheetArrastavel`, `StatusTag`, `StatusSelect`, `Toast`, `EmptyState`, `Page`/`Container`, `Field`, `Autocomplete`, `MenuAcoes`, `KpiMini`, `FilterChip`, `Segmented`, `ProgressBar`.
+
+### 0.4 Padrões adicionados entre 19 e 31/10/2026
+
+| Padrão | Onde | Como |
+|---|---|---|
+| **Chip de ação TRIAR** | Tabela/lista de candidatos (MPI, IS de hoje) | Cápsula `bg-wine` com texto branco, 12 px bold, altura 24 px |
+| **Chip TRIADO** | Tabela/lista de candidatos | Cápsula `bg-green-700` com texto branco; badge vermelho com contorno branco no canto (alertas + alterações) |
+| **Status em destaque** | `StatusSelect` com `destaque` | Fundo `gold-300` e borda `gold-500` — para o MPI, IS triada aguardando o resultado |
+| **Seção de triagem** | Barra lateral da IS / sheet do celular | Card `bg-gold-50` com borda `gold-200`; blocos com título `gold-800` em caixa alta; cada dado com botão de copiar; valores alterados em `wine` |
+| **Formulário da triagem** | Modal (desktop) / bottom sheet (celular) | Campos com máscara; IMC e placas do Ishihara somente leitura (`bg-paper`); campo com alerta em borda/texto `wine`; quadro de alertas `bg-wine-50` com ícone `warning` |
+| **Badge de contagem** | Avatar, item "Notificações" do menu, título de card | Cápsula `bg-wine` texto branco 12 px bold (mín. 18–24 px); no avatar com `ring-2 ring-white` |
+| **Painel de notificações** | Menu do avatar → Notificações | `Dialog` md; não lidas com ponto `wine` e fundo `navy/5`; data relativa ("há 5 min", "ontem, 14:20"); ação "Marcar todas como lidas" |
+| **Convite de permissão** | Ao abrir o app | `Dialog` sm com "Agora não" (secundário) e "Ativar" (primário) |
+| **Card com badge no título** | Início: "Últimos documentos gerados" | `Secao` com `badge`; linhas de documento com ícone por tipo e ícone `print` à direita; "Ver todos" abre `Dialog` lg |
+| **Item de atenção** | Início: "IS de concurso atrasadas" | Linha com ícone `event_busy` e `StatusTag` `danger` "Atrasadas" |
+| **Próximas férias** | Início, coluna direita | Linhas com ícone `beach_access`; sem chip "Programada" (só "Em férias" para quem está de férias) |
+| **Tela de erro** | `ErroFatal.tsx` | Mensagem e ação de recarregar no lugar da tela branca |
+
+### 0.5 Notificações do sistema
+
+O push usa o nome do app instalado (**JRS/HNRe App**), o tipo do aviso como título e o brasão do HNRe (`public/icons/notificacao-192.png`); no Android, o ícone monocromático `public/icons/badge-96.png` vai à barra de status.
+
+---
+
 ## 1. Visão geral
 
 ### Personalidade visual
@@ -676,11 +724,10 @@ Não foi identificado um breadcrumb global. A navegação de retorno ocorre por 
 
 ### 10.11 Badges e contadores
 
-- Forma circular ou cápsula.
-- Tamanho tipográfico `10px`.
-- Peso `700`.
-- Contadores circulares: cerca de `16 × 16px`.
-- Cores semânticas: vermelho, verde, âmbar e cinza.
+- Forma cápsula (`rounded-full`), mínimo de 16–24 px de altura conforme o contexto.
+- Tamanho tipográfico `12px` (piso do DS), peso `700`, texto branco.
+- Contagem de pendências em `wine`; sobre imagens/avatares, contorno branco (`ring-2 ring-white`).
+- Usos atuais: notificações não lidas (avatar e menu), documentos pendentes de impressão (card da Início), achados da triagem (chip TRIADO), exames do candidato.
 
 ### 10.12 Tags e filtros
 

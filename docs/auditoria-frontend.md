@@ -21,7 +21,40 @@ Regra de ouro das 4 etapas: **nenhuma lógica de exibição de página, permiss�
 - **F52:** indicador de salvamento por linha (salvando → salvo / falha). O desfazer (Ctrl+Z) não existia no app e não foi criado.
 - **F60:** a criação de concurso é a página `/concursos/novo` (etapas 1 Mensagem · 2 Revisão · 3 Agendamento), com a mesma permissão `concursosJRS.registrarMensagemPDF`.
 - **Code.gs:** `getPareceresList` passou a devolver `perito`, `finalidade` e `om` — **reimplantar o Apps Script** para o histórico de Pareceres mostrar essas colunas (sem a reimplantação a tabela exibe "—").
-- Pendências conhecidas: `bun.lock` desatualizado em relação ao `package.json`; o perito (nome/e-mail) de Pareceres está fixo no código; o Material Symbols ainda vem do Google Fonts.
+- Pendências conhecidas na época: `bun.lock` desatualizado em relação ao `package.json`; o perito (nome/e-mail) de Pareceres está fixo no código; o Material Symbols ainda vem do Google Fonts. (Situação atual na seção seguinte.)
 
 \* F29 (affordances só no hover): remoção do botão de excluir imagem em *Mensagens* na etapa 1;
 rótulos da sidebar sempre visíveis na etapa 3.
+
+---
+
+## Evoluções após a auditoria (19 a 31/10/2026)
+
+A "regra de ouro" valeu para as 4 etapas da auditoria. Depois delas, as funcionalidades novas **alteram lógica de propósito** (novas telas, coleções e permissões) — mas seguem o sistema de design implantado: só cores e escala do DS (o build falha fora disso), primitivos de `components/ui/` e os mesmos padrões de tabela, sheet e diálogo.
+
+| Entrega | Padrão de UI usado |
+|---|---|
+| Inspeções de Saúde (tabela, calendário, agendamento, bloqueios) | Tabela com linhas duplas e grupos por data, `Drawer`, `Dialog`, menu de ações |
+| Início como painel (Precisa de atenção, Próximas Inspeções, mini calendário, Próximas férias na coluna direita, IS de concurso atrasadas, fila de impressão da Secretaria) | `Secao` (card com título, ação e badge), linhas de 56–64 px com chevron |
+| Páginas públicas (Doenças de Lei e Portaria) | `ShellPublico` com barra enxuta no celular |
+| Exames do candidato e detalhes da IS | Barra lateral (`Drawer`) com seções e itens que abrem nova janela |
+| Formação (Vídeos, Infográficos, Apresentações) | Grade de cards; apresentação em modal de tela cheia |
+| Notificações (convite, painel, badge no avatar, card no Perfil) | `Dialog` sm/md, badge `wine` |
+| Triagem das IS de concurso | Chips TRIAR (`wine`) e TRIADO (`green-700`), formulário em `Dialog`/`Drawer`, seção `gold-50` na barra lateral, `StatusSelect` com destaque `gold-300` |
+| Tela de erro (`ErroFatal`) | Mensagem com ação "Recarregar" e detalhe copiável |
+
+Os novos padrões estão documentados em `docs/design.md`, seção 0.4.
+
+### Decisões
+
+- **Chips sólidos de ação na planilha (TRIAR/TRIADO):** exceção pedida pelo Presidente da JRS ao uso contido de cor, para dar destaque à triagem. Vermelho (`wine`) = ação pendente; verde = concluída — o texto (TRIAR/TRIADO) carrega o estado, não só a cor.
+- **Fundo amarelo no Status** (`gold-300`), só para o MPI, enquanto a IS triada aguarda o resultado. Ouro usado como indicador, coerente com a regra "ouro só como indicador/foco".
+- **F58** continua valendo: o Nº TIS segue não editável no celular.
+
+### Pendências (situação em 31/10/2026)
+
+- `bun.lock` continua desatualizado (sem `firebase-admin`, `pdf-lib`, `qrcode` etc.); o CI usa `npm` e o `package-lock.json`.
+- Material Symbols ainda vem do Google Fonts (e o service worker do push carrega o SDK do Firebase do gstatic).
+- Dois textos de 11 px abaixo do piso de 12 px: `components/ui/VisualizacoesBadge.tsx` e `components/Apresentacoes.tsx` (`text-[11px]`, que escapa da verificação do DS por ser valor arbitrário).
+- **Resolvida:** a nota sobre reimplantar o `Code.gs` para as colunas de Pareceres ficou obsoleta — Pareceres foi para o Firestore.
+- **Resolvida:** o perito de Pareceres não está mais fixo no código (o solicitante vem do usuário logado).
