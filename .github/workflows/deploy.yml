@@ -36,6 +36,10 @@ jobs:
           # URL do backend no Cloud Run (ver deploy-cloud-run.yml); em branco
           # até o primeiro deploy do backend, o que só deixa /api/* indisponível.
           VITE_API_BASE_URL: ${{ vars.API_BASE_URL }}
+          # Chave pública VAPID das notificações push (Console do Firebase >
+          # Cloud Messaging > Certificados push da Web); em branco, o app só
+          # não oferece as notificações.
+          VITE_FIREBASE_VAPID_KEY: ${{ vars.FIREBASE_VAPID_KEY }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

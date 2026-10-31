@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Page } from './ui/Page';
 import { Toast } from './ui/Toast';
 import { NavContext } from '../context/NavContext';
@@ -6,9 +6,55 @@ import { uploadProfileImage } from '../services/profileImage';
 import { formatNip, formatCelular } from '../utils/format';
 import { trocarSenha, mapAuthErrorMessage } from '../services/firebaseAuth';
 import { updateUsuarioProfile } from '../services/firestoreUsuarios';
+import { estadoNotificacoes, ativarNotificacoes, type EstadoNotificacoes } from '../services/notificacoesPush';
 
 const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-xs font-semibold text-navy focus:outline-none focus:border-navy transition-colors';
 const labelClass = 'text-xs font-bold text-ink-3 uppercase tracking-wider block mb-1';
+
+const TEXTO_NOTIFICACOES: Record<EstadoNotificacoes, { titulo: string; texto: string }> = {
+  ativadas: { titulo: 'Ativadas neste aparelho', texto: 'Você recebe aqui os avisos da JRS mesmo com o app fechado. Para receber em outro aparelho, ative também nele.' },
+  pendente: { titulo: 'Desativadas', texto: 'Ative para receber neste aparelho os laudos de inaptidão e IDM exarados nos concursos e a conclusão das IS do dia.' },
+  bloqueadas: { titulo: 'Bloqueadas no navegador', texto: 'O app não pode mais pedir a permissão. Para liberar: toque no cadeado (ou em "Configurações do site") ao lado do endereço, permita as Notificações e recarregue a página. No celular com o app instalado, libere em Configurações > Notificações do aparelho.' },
+  'instalar-ios': { titulo: 'Instale o app', texto: 'No iPhone/iPad, as notificações só funcionam com o app adicionado à Tela de Início. Instale-o (Compartilhar > Adicionar à Tela de Início) e ative-as abrindo pelo ícone.' },
+  indisponivel: { titulo: 'Indisponíveis', texto: 'Este navegador não oferece notificações push.' },
+};
+
+const NotificacoesCard: React.FC<{ usuario: string }> = ({ usuario }) => {
+  const [estado, setEstado] = useState<EstadoNotificacoes | null>(null);
+  const [ativando, setAtivando] = useState(false);
+  useEffect(() => { estadoNotificacoes().then(setEstado); }, []);
+  if (!estado) return null;
+
+  const ativar = async () => {
+    setAtivando(true);
+    try { setEstado(await ativarNotificacoes(usuario)); } catch (e) { console.error('Falha ao ativar notificações:', e); } finally { setAtivando(false); }
+  };
+  const { titulo, texto } = TEXTO_NOTIFICACOES[estado];
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-line/60 p-5 space-y-3">
+      <h3 className="font-heading font-bold text-sm text-navy flex items-center gap-2">
+        <span className="material-symbols-outlined text-[18px]">notifications</span>
+        Notificações
+      </h3>
+      <p className={`text-sm font-bold ${estado === 'ativadas' ? 'text-green' : estado === 'bloqueadas' ? 'text-wine' : 'text-navy'}`}>{titulo}</p>
+      <p className="text-xs text-ink-3 leading-relaxed">{texto}</p>
+      {estado === 'pendente' && (
+        <div className="pt-2 flex justify-end">
+          <button
+            type="button"
+            onClick={ativar}
+            disabled={ativando}
+            className="px-5 py-2.5 bg-navy hover:bg-navy-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5"
+          >
+            <span className="material-symbols-outlined text-[16px]">notifications_active</span>
+            <span>{ativando ? 'Ativando...' : 'Ativar notificações'}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const InfoField: React.FC<{ label: string; value?: string }> = ({ label, value }) => (
   <div>
@@ -179,6 +225,9 @@ export const Perfil: React.FC = () => {
             </button>
           </div>
         </form>
+
+        {/* NOTIFICAÇÕES PUSH (POR APARELHO) */}
+        {authUser && <NotificacoesCard usuario={authUser.usuario} />}
 
         {/* ALTERAR SENHA (SOMENTE O PRÓPRIO USUÁRIO) */}
         <form onSubmit={handleSalvarSenha} className="bg-white rounded-2xl shadow-sm border border-line/60 p-5 space-y-4">
