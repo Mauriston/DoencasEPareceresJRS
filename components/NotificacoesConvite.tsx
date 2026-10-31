@@ -88,11 +88,7 @@ export const NotificacoesConvite: React.FC<Props> = ({ usuario, aguardar, onInst
       )}
     >
       <p className="text-ink-3 leading-relaxed">
-        Receba neste aparelho os avisos da JRS mesmo com o app fechado: laudos de inaptidão e IDM
-        exarados nos concursos e a conclusão das IS do dia.
-      </p>
-      <p className="text-ink-3 leading-relaxed mt-3">
-        Ao tocar em <strong>Ativar</strong>, o navegador vai pedir sua permissão.
+        Ao tocar em <strong>Ativar</strong>, o navegador vai pedir sua autorização.
       </p>
     </Dialog>
   );

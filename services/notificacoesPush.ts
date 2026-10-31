@@ -124,7 +124,25 @@ export const desvincularAparelho = async (): Promise<void> => {
 
 export type EventoNotificacao =
   | { tipo: 'login' }
+  | { tipo: 'teste' }
   | { tipo: 'is-finalizada'; concursoId: string; candidatoId: string };
+
+/** Botão de teste do Perfil: o servidor manda um aviso só para os aparelhos do usuário. */
+export const testarNotificacao = async (usuario: string): Promise<string> => {
+  await sincronizarAparelho(usuario);
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sessão expirada. Faça login novamente.');
+  const resp = await fetch(apiUrl('/api/notificacoes/evento'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
+    body: JSON.stringify({ tipo: 'teste' }),
+  });
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok || !json.success) throw new Error(json.error || `Servidor respondeu ${resp.status}.`);
+  if (!json.aparelhos) throw new Error('Nenhum aparelho seu cadastrado no servidor.');
+  if (!json.enviados) throw new Error(`O envio falhou: ${(json.erros || []).join(' | ') || 'motivo desconhecido'}`);
+  return `Enviada para ${json.enviados} de ${json.aparelhos} aparelho(s). Deve chegar em alguns segundos.`;
+};
 
 /**
  * Avisa o backend de um evento que pode gerar notificação. O servidor confere

@@ -225,6 +225,8 @@ async function startServer() {
     const { getMessaging } = await import("firebase-admin/messaging");
     const snap = await adminDb.collection("tokens_push").get();
     const tokens: string[] = snap.docs.filter((d: any) => destino.uids.has(d.data().uid)).map((d: any) => d.id);
+    let enviados = 0;
+    const erros: string[] = [];
     for (let i = 0; i < tokens.length; i += 500) {
       const lote = tokens.slice(i, i + 500);
       const resp = await getMessaging().sendEachForMulticast({
@@ -236,13 +238,17 @@ async function startServer() {
         },
       });
       // Aparelhos que desinstalaram o app ou revogaram a permissão: o token morreu.
+      enviados += resp.successCount;
       resp.responses.forEach((r, j) => {
         const code = r.error?.code || "";
+        if (r.error) erros.push(`${code}: ${r.error.message}`);
         if (code === "messaging/registration-token-not-registered" || code === "messaging/invalid-registration-token") {
           adminDb.collection("tokens_push").doc(lote[j]).delete().catch(() => {});
         }
       });
     }
+    if (erros.length) console.error("Push com falhas:", erros);
+    return { aparelhos: tokens.length, enviados, erros };
   };
 
   const uidsAtivos = async (adminDb: any, filtro?: (u: any) => boolean): Promise<Set<string>> => {
@@ -299,9 +305,7 @@ async function startServer() {
         if (!concursoSnap.exists || !cand?.finalizado) { res.json({ success: true, enviado: false }); return; }
         const nomeConcurso = String(concursoSnap.data()?.nome || concursoId);
         const link = `${APP_URL}#/concursos/${encodeURIComponent(concursoId)}`;
-        // Todos os usuários ativos, menos quem lançou o laudo (já sabe).
         const todos = await uidsAtivos(adminDb);
-        todos.delete(decoded.uid);
         const data = String(cand.dataAgendamento || "");
         const enviados: string[] = [];
 
@@ -330,6 +334,16 @@ async function startServer() {
           }
         }
         res.json({ success: true, enviados });
+        return;
+      }
+
+      // Teste (Meu perfil): manda um aviso só para os aparelhos do próprio usuário.
+      if (tipo === "teste") {
+        const n = await enviarPush(adminDb, { uids: new Set([decoded.uid]) }, {
+          titulo: "Notificação de teste",
+          corpo: `Tudo certo, ${nomeAtor}: as notificações estão chegando neste aparelho.`,
+        });
+        res.json({ success: true, ...n });
         return;
       }
 
