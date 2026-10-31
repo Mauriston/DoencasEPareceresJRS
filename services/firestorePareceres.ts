@@ -52,6 +52,9 @@ export const observarPareceres = (onData: (lista: ParecerRecord[]) => void, onEr
     max ? query(collection(db, COL), orderBy('criadoEm', 'desc'), limit(max)) : collection(db, COL),
     snap => onData(snap.docs
       .map(d => ({ id: d.id, ...(d.data() as ParecerDoc) }))
+      // Documento incompleto (ex.: apagado pela metade direto no console do Firestore) fica de
+      // fora: todas as telas assumem o texto do inspecionado e quebrariam sem ele.
+      .filter(p => typeof p.inspecionado === 'string' && p.inspecionado !== '')
       .sort((a, b) => (b.criadoEm?.toMillis?.() ?? Date.now()) - (a.criadoEm?.toMillis?.() ?? Date.now()))),
     err => onError?.(err),
   );
