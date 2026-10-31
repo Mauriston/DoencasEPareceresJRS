@@ -527,6 +527,11 @@ function apiSalvarPdfParecer(corpo) {
   return { fileId: arquivo.getId(), url: urlVisualizacaoDrive(arquivo.getId()) };
 }
 
+/** Escapa &, <, >, " e ' para inserir texto no HTML do e-mail. */
+function escaparHtml(texto) {
+  return String(texto || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 /** Destinatário do "Enviar para Impressão" dos pedidos de parecer. */
 var EMAIL_IMPRESSAO = 'giorginis@marinha.mil.br';
 
@@ -560,6 +565,14 @@ function apiEnviarParecerImpressao(corpo) {
     to: EMAIL_IMPRESSAO,
     subject: 'POR FAVOR, IMPRIMIR',
     body: 'Giorginis,\n\nPor favor, imprimir este documento em frente e verso colorido.\n\nObrigado!\n\n' + remetente,
+    // Versão formatada (Arial): saudação maior e em negrito, "frente e verso colorido" em negrito.
+    htmlBody:
+      '<div style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #222;">' +
+      '<p style="font-size: 18px; font-weight: bold; margin: 0 0 16px;">Giorginis,</p>' +
+      '<p style="margin: 0 0 16px;">Por favor, imprimir este documento em <strong>frente e verso colorido</strong>.</p>' +
+      '<p style="margin: 0 0 16px;">Obrigado!</p>' +
+      '<p style="margin: 0;">' + escaparHtml(remetente) + '</p>' +
+      '</div>',
     name: remetente,
     attachments: [blob]
   });
