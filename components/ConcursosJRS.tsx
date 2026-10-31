@@ -28,6 +28,7 @@ import {
   extrairMensagemComGemini, salvarMensagemNoDrive, salvarPdfCandidatoNoDrive, criarEstruturaConcursoNoDrive, abrirPdf, urlVisualizacao, anoDoConcurso, enviarTermoRecursoParaImpressao, enviarSolicitacaoParaImpressao,
   type PastaConcurso, type MensagemExtraida,
 } from '../services/driveConcursos';
+import { registrarDocumentoGerado } from '../services/documentosGerados';
 import {
   limparRuidoPaginacao, extrairCabecalhoMensagem, extrairCandidatosComAgendamento, extrairPeriodoJRS,
   extrairNomeConcurso, formatarChaveData, parseChaveData, interpretarCsvCandidatosDataBase,
@@ -2485,6 +2486,13 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
       const atualizado = await registrarSolicitacao(concursoId, id, tipo, { url, rotulo }, observacao);
       setCandidatos(prev => prev.map(c => (c.id === id ? atualizado : c)));
       const titulo = tipo === 'parecer' ? 'Pedido de Parecer' : 'Solicitação de Exames';
+      void registrarDocumentoGerado({
+        tipo: tipo === 'parecer' ? 'solicitacao-parecer' : 'solicitacao-exames',
+        titulo: tipo === 'parecer' ? `Pedido de Parecer · ${rotulo}` : 'Solicitação de Exames',
+        detalhe: `${candidato.nome} · ${concurso?.nome || ''}`,
+        pdfUrl: url,
+        remetente: nav?.authUser?.usuario || nav?.authUser?.nome || '',
+      });
       // Envio automático para impressão; uma falha aqui não desfaz o documento gerado.
       try {
         await enviarSolicitacaoParaImpressao({ pdfUrl: url, tipo, remetente: nav?.authUser?.usuario || nav?.authUser?.nome || '' });
@@ -2583,6 +2591,13 @@ const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = ({ concursoId, onVoltar,
       const url = await salvarPdfCandidatoNoDrive({ pasta: pastaDrive(), candidatoId: id, candidatoNome: nome, tipo: 'termoRecurso', pdfBase64: pdfUnico });
       await salvarTermoRecurso(concursoId, id, url);
       setCandidatos(prev => prev.map(c => (c.id === id ? { ...c, recurso: true, termoRecursoUrl: url } : c)));
+      void registrarDocumentoGerado({
+        tipo: 'termo-recurso',
+        titulo: 'Termo de Recurso e Cientificação',
+        detalhe: `${nome} · ${concurso?.nome || ''}`,
+        pdfUrl: url,
+        remetente: signatario.usuario,
+      });
       // Envio automático para impressão e coleta de assinaturas; uma falha aqui não desfaz o termo gerado.
       try {
         await enviarTermoRecursoParaImpressao({ pdfUrl: url, candidatoId: id, candidatoNome: nome, nomeConcurso: concurso?.nome || '', remetente: signatario.usuario });

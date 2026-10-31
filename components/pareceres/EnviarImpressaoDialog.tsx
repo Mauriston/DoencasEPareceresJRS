@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { enviarParecerParaImpressao } from '../../services/drivePareceres';
+import { registrarDocumentoGerado } from '../../services/documentosGerados';
 
 export interface AlvoImpressao {
   /** Nome do inspecionado (só para o texto do diálogo). */
@@ -32,6 +33,7 @@ export const EnviarImpressaoDialog: React.FC<Props> = ({ alvo, aposGerar = false
     setErro('');
     try {
       await enviarParecerParaImpressao({ pdfUrl: alvo.pdfUrl, remetente: alvo.remetente });
+      void registrarDocumentoGerado({ tipo: 'pedido-parecer', titulo: 'Pedido de Parecer', detalhe: alvo.nome, pdfUrl: alvo.pdfUrl, remetente: alvo.remetente });
       onEnviado(`Pedido de parecer de ${alvo.nome} enviado para impressão.`);
     } catch (e: any) {
       setErro(e?.message || 'Não foi possível enviar para impressão.');

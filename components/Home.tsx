@@ -1,9 +1,10 @@
 // Ficheiro: components/Home.tsx
 // Início como PAINEL DE TRABALHO (auditoria v2, N4/G3/L4): "Precisa de atenção" (pareceres
 // atrasados, perícias vigentes, concurso em andamento, IS marcadas para hoje, senha temporária),
+// "Últimos documentos gerados" (só Secretaria: fila do que foi enviado para impressão),
 // "Próximas Inspeções", "Pareceres não concluídos" e "Perícias Menores Vigentes" (cada um só aparece
 // quando há itens), "Acesso rápido" (até 6 páginas, editável e guardado no
-// aparelho) e "Avisos" (Casos Periciais e instalação do app — antes eram diálogos em
+// aparelho), "Próximas férias" e "Avisos" (Casos Periciais e instalação do app — antes eram diálogos em
 // sequência no login). O menu lateral já lista as páginas: a Home não o repete.
 // Tudo respeita a matriz de permissões: cada bloco só aparece para quem tem acesso.
 import React, { useContext, useEffect, useMemo, useState } from 'react';
@@ -27,6 +28,8 @@ import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, diasEntre, TODOS_P
 import { observarPericiasMenores, statusPericia, dataBR, type PericiaMenorRecord } from '../services/firestorePericiasMenores';
 import { extrairNomeInspecionado } from '../utils/format';
 import { useIsDesktop } from '../hooks/useIsDesktop';
+import { observarDocumentosPendentes, marcarDocumentoAberto, type DocumentoGerado } from '../services/documentosGerados';
+import { urlVisualizacao } from '../services/driveConcursos';
 import type { NavItem } from '../types';
 
 interface Atencao {
@@ -51,14 +54,41 @@ const dataPorExtenso = (): string => {
   return t.charAt(0).toUpperCase() + t.slice(1);
 };
 
-const Secao: React.FC<{ id: string; titulo: string; acao?: React.ReactNode; children: React.ReactNode }> = ({ id, titulo, acao, children }) => (
+const Secao: React.FC<{ id: string; titulo: string; badge?: number; acao?: React.ReactNode; children: React.ReactNode }> = ({ id, titulo, badge, acao, children }) => (
   <section aria-labelledby={id} className="bg-white border border-line rounded-xl">
     <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-2">
-      <h2 id={id} className="text-h3 font-bold text-navy">{titulo}</h2>
+      <h2 id={id} className="text-h3 font-bold text-navy flex items-center gap-2">
+        {titulo}
+        {!!badge && <span className="min-w-[24px] h-6 px-2 rounded-full bg-wine text-white text-xs font-bold leading-6 text-center" aria-label={`${badge} pendentes`}>{badge}</span>}
+      </h2>
       {acao}
     </div>
     {children}
   </section>
+);
+
+const ICONE_DOCUMENTO: Record<string, string> = {
+  'termo-recurso': 'gavel',
+  'solicitacao-parecer': 'stethoscope',
+  'solicitacao-exames': 'biotech',
+  'pedido-parecer': 'description',
+};
+const MAX_DOCUMENTOS = 5;
+
+/** Documento gerado ainda não aberto (fila de impressão da Secretaria): abrir o PDF o tira da lista. */
+const LinhaDocumentoGerado: React.FC<{ d: DocumentoGerado; onAbrir: (d: DocumentoGerado) => void }> = ({ d, onAbrir }) => (
+  <a
+    href={urlVisualizacao(d.pdfUrl)} target="_blank" rel="noopener noreferrer" onClick={() => onAbrir(d)}
+    className="flex items-center gap-3 px-4 min-h-[56px] py-2 hover:bg-thead transition-colors"
+  >
+    <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">{ICONE_DOCUMENTO[d.tipo] || 'description'}</span>
+    <span className="min-w-0 flex-1">
+      <span className="block text-sm font-bold text-navy truncate">{d.titulo}</span>
+      <span className="block text-xs text-ink-3 truncate">{d.detalhe}{d.remetente ? ` · ${d.remetente}` : ''}</span>
+    </span>
+    <span className="text-xs text-ink-3 shrink-0">{d.criadoEm ? d.criadoEm.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'agora'}</span>
+    <span className="material-symbols-outlined text-[20px] text-ink-4 shrink-0" aria-hidden="true">print</span>
+  </a>
 );
 
 /** Linha de documento: abre o PDF (nova aba) quando existe; senão leva à página do assunto. */
@@ -143,6 +173,16 @@ export const Home: React.FC = () => {
     // Registro incompleto (sem data de início ou sem motivo) não entra: o card não pode derrubar a Início.
     .filter(b => b.data && /\bferias\b/.test((b.motivo ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()) && (b.dataFim || b.data) >= hoje)
     .sort((a, b) => a.data.localeCompare(b.data) || (a.peritoNome ?? '').localeCompare(b.peritoNome ?? '')), [bloqueios, hoje]);
+
+  // Últimos documentos gerados (só Secretaria): fila do que foi enviado para impressão e ainda não abriu.
+  const ehSecretaria = perfil === 'user_secretaria';
+  const [documentos, setDocumentos] = useState<DocumentoGerado[]>([]);
+  const [todosDocumentos, setTodosDocumentos] = useState(false);
+  useEffect(() => (ehSecretaria ? observarDocumentosPendentes(setDocumentos) : undefined), [ehSecretaria]);
+  const abrirDocumento = (d: DocumentoGerado) => {
+    void marcarDocumentoAberto(d.id, authUser?.usuario || authUser?.nome || '');
+    setDocumentos(prev => prev.filter(x => x.id !== d.id));
+  };
 
   const atencao: Atencao[] = [];
   if (authUser?.senhaTemporaria) {
@@ -249,26 +289,18 @@ export const Home: React.FC = () => {
               )}
             </Secao>
 
-            {ferias.length > 0 && (
-              <Secao id="home-ferias" titulo="Próximas férias">
-                <ul className="divide-y divide-line">
-                  {ferias.slice(0, 6).map(f => {
-                    const fim = f.dataFim || f.data;
-                    const emCurso = f.data <= hoje;
-                    const dias = diasEntre(f.data, fim) + 1;
-                    return (
-                      <li key={f.id} className="flex items-center gap-3 px-4 min-h-[56px] py-2">
-                        <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">beach_access</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-bold text-navy truncate">{f.peritoUid === TODOS_PERITOS ? 'Todos os peritos' : (f.peritoNome || 'Perito')}</span>
-                          <span className="block text-xs text-ink-3 truncate">{fim === f.data ? dataBr(f.data) : `${dataBr(f.data)} a ${dataBr(fim)}`} · {dias} dia{dias !== 1 ? 's' : ''}</span>
-                        </span>
-                        <StatusTag tone={emCurso ? 'attention' : 'navyOutline'} className="shrink-0">{emCurso ? 'Em férias' : 'Programada'}</StatusTag>
-                      </li>
-                    );
-                  })}
-                </ul>
-                {ferias.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{ferias.length - 6} período{ferias.length - 6 !== 1 ? 's' : ''} de férias.</p>}
+            {ehSecretaria && (
+              <Secao
+                id="home-documentos" titulo="Últimos documentos gerados" badge={documentos.length}
+                acao={documentos.length > MAX_DOCUMENTOS ? <button type="button" onClick={() => setTodosDocumentos(true)} className="min-h-[44px] px-2 text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver todos</button> : undefined}
+              >
+                {documentos.length === 0 ? (
+                  <EmptyState icon="print" title="Nada para imprimir" description="Termos e solicitações enviados para impressão aparecem aqui até serem abertos." />
+                ) : (
+                  <ul className="divide-y divide-line">
+                    {documentos.slice(0, MAX_DOCUMENTOS).map(d => <li key={d.id}><LinhaDocumentoGerado d={d} onAbrir={abrirDocumento} /></li>)}
+                  </ul>
+                )}
               </Secao>
             )}
 
@@ -352,6 +384,29 @@ export const Home: React.FC = () => {
               </div>
             </Secao>
 
+            {ferias.length > 0 && (
+              <Secao id="home-ferias" titulo="Próximas férias">
+                <ul className="divide-y divide-line">
+                  {ferias.slice(0, 6).map(f => {
+                    const fim = f.dataFim || f.data;
+                    const emCurso = f.data <= hoje;
+                    const dias = diasEntre(f.data, fim) + 1;
+                    return (
+                      <li key={f.id} className="flex items-center gap-3 px-4 min-h-[56px] py-2">
+                        <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">beach_access</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold text-navy truncate">{f.peritoUid === TODOS_PERITOS ? 'Todos os peritos' : (f.peritoNome || 'Perito')}</span>
+                          <span className="block text-xs text-ink-3 truncate">{fim === f.data ? dataBr(f.data) : `${dataBr(f.data)} a ${dataBr(fim)}`} · {dias} dia{dias !== 1 ? 's' : ''}</span>
+                        </span>
+                        {emCurso && <StatusTag tone="attention" className="shrink-0">Em férias</StatusTag>}
+                      </li>
+                    );
+                  })}
+                </ul>
+                {ferias.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{ferias.length - 6} período{ferias.length - 6 !== 1 ? 's' : ''} de férias.</p>}
+              </Secao>
+            )}
+
             {podeInspecoes && (
               <Secao id="home-agenda" titulo="Agenda de inspeções">
                 <MiniCalendarioIS inspecoes={inspecoes} diasConcursos={diasConcursos} concursosClicaveis={podeConcursos} />
@@ -394,6 +449,18 @@ export const Home: React.FC = () => {
           usuarioNome={authUser?.nome}
           onClose={() => setEnviarExames(false)}
         />
+      )}
+
+      {todosDocumentos && (
+        <Dialog title={`Últimos documentos gerados (${documentos.length})`} icon="print" size="lg" onClose={() => setTodosDocumentos(false)}>
+          {documentos.length === 0 ? (
+            <p className="text-ink-3 text-center py-6">Nenhum documento pendente.</p>
+          ) : (
+            <ul className="-mx-5 -my-5 divide-y divide-line">
+              {documentos.map(d => <li key={d.id}><LinhaDocumentoGerado d={d} onAbrir={abrirDocumento} /></li>)}
+            </ul>
+          )}
+        </Dialog>
       )}
 
       {editandoRapido && (
