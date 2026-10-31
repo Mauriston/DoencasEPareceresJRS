@@ -198,6 +198,148 @@ async function startServer() {
     }
   });
 
+  // Notificações push (Firebase Cloud Messaging). O app só avisa que algo
+  // aconteceu (services/notificacoesPush.ts); aqui o evento é conferido no
+  // Firestore, o texto é montado, os destinatários escolhidos e a repetição
+  // evitada (coleção "notificacoes_enviadas", só acessível pelo servidor).
+  // Os tokens dos aparelhos ficam em "tokens_push/{token}" com o uid do dono.
+  const APP_URL = (process.env.APP_URL || "https://mauriston.github.io/DoencasEPareceresJRS/").replace(/\/?$/, "/");
+  const INTERVALO_AVISO_LOGIN_MS = 15 * 60_000;
+
+  /** Grava a chave de "já enviado"; false se outra requisição já enviou. */
+  const marcarEnvio = async (adminDb: any, chave: string): Promise<boolean> => {
+    try {
+      await adminDb.collection("notificacoes_enviadas").doc(chave).create({ em: new Date() });
+      return true;
+    } catch (e: any) {
+      if (e?.code === 6) return false; // ALREADY_EXISTS
+      throw e;
+    }
+  };
+
+  const enviarPush = async (
+    adminDb: any,
+    destino: { uids: Set<string> },
+    msg: { titulo: string; corpo: string; link?: string },
+  ) => {
+    const { getMessaging } = await import("firebase-admin/messaging");
+    const snap = await adminDb.collection("tokens_push").get();
+    const tokens: string[] = snap.docs.filter((d: any) => destino.uids.has(d.data().uid)).map((d: any) => d.id);
+    for (let i = 0; i < tokens.length; i += 500) {
+      const lote = tokens.slice(i, i + 500);
+      const resp = await getMessaging().sendEachForMulticast({
+        tokens: lote,
+        notification: { title: msg.titulo, body: msg.corpo },
+        webpush: {
+          notification: { icon: `${APP_URL}icons/notificacao-192.png`, badge: `${APP_URL}icons/badge-96.png`, lang: "pt-BR" },
+          fcmOptions: { link: msg.link || APP_URL },
+        },
+      });
+      // Aparelhos que desinstalaram o app ou revogaram a permissão: o token morreu.
+      resp.responses.forEach((r, j) => {
+        const code = r.error?.code || "";
+        if (code === "messaging/registration-token-not-registered" || code === "messaging/invalid-registration-token") {
+          adminDb.collection("tokens_push").doc(lote[j]).delete().catch(() => {});
+        }
+      });
+    }
+  };
+
+  const uidsAtivos = async (adminDb: any, filtro?: (u: any) => boolean): Promise<Set<string>> => {
+    const snap = await adminDb.collection("usuarios").get();
+    return new Set(snap.docs.filter((d: any) => d.data().ativo !== false && (!filtro || filtro(d.data()))).map((d: any) => d.id));
+  };
+
+  const hojeRecife = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Recife" }).format(new Date()); // AAAA-MM-DD
+
+  app.post("/api/notificacoes/evento", async (req, res) => {
+    try {
+      const authHeader = String(req.headers.authorization || "");
+      const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+      if (!idToken) {
+        res.status(401).json({ success: false, error: "Token ausente." });
+        return;
+      }
+      const { adminAuth, adminDb } = await getFirebaseAdmin();
+      const decoded = await adminAuth.verifyIdToken(idToken, true);
+      const ator = (await adminDb.collection("usuarios").doc(decoded.uid).get()).data();
+      if (!ator || ator.ativo === false) {
+        res.status(403).json({ success: false, error: "Usuário inativo." });
+        return;
+      }
+      const nomeAtor = String(ator.usuario || ator.nome || "Usuário");
+      const tipo = String(req.body?.tipo || "");
+
+      // "{{usuario}} logado." — só para o Admin, quando um não-Admin abre o app.
+      if (tipo === "login") {
+        if (ator.perfil === "admin") { res.json({ success: true, enviado: false }); return; }
+        const ref = adminDb.collection("notificacoes_enviadas").doc(`login_${decoded.uid}`);
+        const ultimo = (await ref.get()).data()?.em?.toDate?.() as Date | undefined;
+        if (ultimo && Date.now() - ultimo.getTime() < INTERVALO_AVISO_LOGIN_MS) { res.json({ success: true, enviado: false }); return; }
+        await ref.set({ em: new Date() });
+        await enviarPush(adminDb, { uids: await uidsAtivos(adminDb, u => u.perfil === "admin") }, {
+          titulo: "Acesso ao app",
+          corpo: `${nomeAtor} logado.`,
+        });
+        res.json({ success: true, enviado: true });
+        return;
+      }
+
+      // IS de concurso finalizada: laudo de Inapto/IDM e conclusão das IS do dia.
+      if (tipo === "is-finalizada") {
+        const concursoId = String(req.body?.concursoId || "");
+        const candidatoId = String(req.body?.candidatoId || "");
+        if (!concursoId || !candidatoId || concursoId.includes("/") || candidatoId.includes("/")) {
+          res.status(400).json({ success: false, error: "Evento inválido." });
+          return;
+        }
+        const concursoRef = adminDb.collection("concursos").doc(concursoId);
+        const [concursoSnap, candSnap] = await Promise.all([concursoRef.get(), concursoRef.collection("candidatos").doc(candidatoId).get()]);
+        const cand = candSnap.data();
+        if (!concursoSnap.exists || !cand?.finalizado) { res.json({ success: true, enviado: false }); return; }
+        const nomeConcurso = String(concursoSnap.data()?.nome || concursoId);
+        const link = `${APP_URL}#/concursos/${encodeURIComponent(concursoId)}`;
+        // Todos os usuários ativos, menos quem lançou o laudo (já sabe).
+        const todos = await uidsAtivos(adminDb);
+        todos.delete(decoded.uid);
+        const data = String(cand.dataAgendamento || "");
+        const enviados: string[] = [];
+
+        const status = String(cand.status || "").toUpperCase();
+        const laudo = status === "INAPTO" ? "laudo de inaptidão" : status === "INSUF DOCUMENTAL" ? "IDM" : "";
+        if (laudo && await marcarEnvio(adminDb, `${status === "INAPTO" ? "inapto" : "idm"}_${concursoId}_${candidatoId}_${data}`)) {
+          await enviarPush(adminDb, { uids: todos }, {
+            titulo: status === "INAPTO" ? "Laudo de inaptidão" : "Insuficiência Documental Médica",
+            corpo: `${nomeAtor} exarou ${laudo} no ${nomeConcurso}`,
+            link,
+          });
+          enviados.push(status);
+        }
+
+        if (data) {
+          const doDia = await concursoRef.collection("candidatos").where("dataAgendamento", "==", data).get();
+          const todasFinalizadas = doDia.size > 0 && doDia.docs.every((d: any) => d.data().finalizado === true);
+          if (todasFinalizadas && await marcarEnvio(adminDb, `dia_${concursoId}_${data}`)) {
+            const quando = data === hojeRecife() ? "de hoje" : `de ${data.split("-").reverse().join("/")}`;
+            await enviarPush(adminDb, { uids: todos }, {
+              titulo: "IS do dia finalizadas",
+              corpo: `As IS do ${nomeConcurso} ${quando} foram finalizadas`,
+              link,
+            });
+            enviados.push("dia");
+          }
+        }
+        res.json({ success: true, enviados });
+        return;
+      }
+
+      res.status(400).json({ success: false, error: "Tipo de evento desconhecido." });
+    } catch (error: any) {
+      console.error("Notificação push error:", error);
+      res.status(500).json({ success: false, error: "Não foi possível enviar a notificação." });
+    }
+  });
+
   app.post("/api/gemini/analyze-image", async (req, res) => {
     try {
       const { image, prompt } = req.body; // image as base64 string

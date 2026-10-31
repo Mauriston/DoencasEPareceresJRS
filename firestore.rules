@@ -62,6 +62,20 @@ service cloud.firestore {
     // usuários já era pública ali). Espelhada a partir de "usuarios" sempre
     // que uma conta é criada (Login.tsx / UsuariosManagement.tsx) ou tem o
     // status ativo/inativo alterado.
+    // Notificações push: um documento por aparelho (id = token do FCM), com o
+    // uid do dono. Cada usuário só grava/apaga os próprios; ninguém lê pelo
+    // app — o envio é feito pelo servidor (Admin SDK, ignora estas regras).
+    // update aceita trocar o dono: o mesmo aparelho passa ao usuário que logou.
+    match /tokens_push/{token} {
+      allow create, update: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow read: if false;
+    }
+    // Controle de repetição das notificações: só o servidor usa.
+    match /notificacoes_enviadas/{id} {
+      allow read, write: if false;
+    }
+
     match /usuarios_publicos/{uid} {
       allow read: if true;
       allow write: if isAdmin() || (isSignedIn() && request.auth.uid == uid);

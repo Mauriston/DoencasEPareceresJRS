@@ -38,6 +38,7 @@ import { NavContext, AuthUser, getPrimeiroNome } from './context/NavContext';
 import { canAccessPage, canUseFeature, setPermissoesCache } from './config/permissions';
 import { InstallAppTutorial } from './components/InstallAppTutorial';
 import { InstallAppQrDialog } from './components/InstallAppQrDialog';
+import { NotificacoesConvite } from './components/NotificacoesConvite';
 import { onAuthChange, logoutUsuario } from './services/firebaseAuth';
 import { entrarComToken } from './services/handoff';
 import {
@@ -49,6 +50,7 @@ import { observarPermissoes, salvarPermissoesRemoto, type PermissoesArmazenadas 
 import { getCasosResultado } from './services/firestoreCasos';
 import { observarPericiasMenores, statusPericia } from './services/firestorePericiasMenores';
 import { definirAtorAuditoria } from './services/auditoriaIS';
+import { notificarEvento, desvincularAparelho } from './services/notificacoesPush';
 import { useIsDesktop } from './hooks/useIsDesktop';
 
 // Chave do antigo armazenamento (localStorage, só neste navegador) das
@@ -146,6 +148,15 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   useEffect(() => {
     definirAtorAuditoria(authUser ? { uid: authUser.uid, usuario: authUser.usuario, nome: authUser.nome } : null);
   }, [authUser?.uid]);
+
+  // Push "{{usuario}} logado." para o Admin: uma vez por sessão do navegador
+  // (recarregar a página não repete); o servidor ainda segura repetições em 15 min.
+  useEffect(() => {
+    if (!authUserReal || authUserReal.perfil === 'admin') return;
+    const chave = `jrs_push_login_${authUserReal.uid}`;
+    try { if (sessionStorage.getItem(chave)) return; sessionStorage.setItem(chave, '1'); } catch { /* sem sessionStorage */ }
+    void notificarEvento({ tipo: 'login' });
+  }, [authUserReal?.uid]);
 
   useEffect(() => {
     if (!authUser) {
@@ -250,8 +261,10 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
     updateUsuarioProfile(authUser.uid, { pwaTutorialConcluido: true }).catch(() => {});
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setVerComo(null);
+    // Ainda logado: as regras só deixam o dono apagar o token deste aparelho.
+    await Promise.race([desvincularAparelho(), new Promise(r => setTimeout(r, 3000))]);
     logoutUsuario();
     navigate('/', { replace: true });
   };
@@ -434,6 +447,13 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
           </p>
         </Dialog>
       )}
+
+      <NotificacoesConvite
+        key={authUser.uid}
+        usuario={authUserReal?.usuario || authUser.usuario}
+        aguardar={mostrarAlertaSenha || pwaDialogAberto}
+        onInstalarApp={() => setPwaDialogAberto(true)}
+      />
 
       {mostrarTutorialPwa && (
         <InstallAppTutorial

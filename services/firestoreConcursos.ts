@@ -20,6 +20,7 @@ import {
 import { app } from './firebaseAuth';
 import { registrarEvento } from './auditoriaIS';
 import { removerPdfPorUrl } from './driveConcursos';
+import { notificarEvento } from './notificacoesPush';
 import type { ExameCandidato, ExamesExtraidos, PacienteExames } from '../utils/examesCandidato';
 import {
   MAPA_LAUDO_POR_STATUS, candidatoEstaFinalizado, formatarDataSimples, formatarDataMilitar,
@@ -487,6 +488,8 @@ export const atualizarCandidato = async (
   }
   if (proximo.finalizado && !atual.finalizado) {
     await registrarEvento(concursoId, id, 'IS finalizada', `Status: ${rot(statusFinal)}`);
+    // Push: laudo de Inapto/IDM e conclusão das IS do dia (o servidor confere e decide).
+    void notificarEvento({ tipo: 'is-finalizada', concursoId, candidatoId: id });
   }
   return { ...atual, ...proximo };
 };
