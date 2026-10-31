@@ -1,7 +1,8 @@
 // Ficheiro: services/documentosGerados.ts
 // Fila de impressão da Secretaria: cada documento enviado por e-mail para a
 // impressão (Termo de Recurso e Solicitações de Parecer/Exames dos concursos,
-// Pedido de Parecer da página Pareceres) também é registrado em
+// Pedido de Parecer da página Pareceres) e cada Termo de Cientificação de
+// Resultado dos concursos (que não vai por e-mail) é registrado em
 //   documentos_gerados/{autoId}  { tipo, titulo, detalhe, pdfUrl, remetente,
 //                                  criadoPorUid, criadoEm, aberto }
 // A Início da Secretaria lista os ainda não abertos; abrir o PDF pressupõe
@@ -15,7 +16,7 @@ import { app, auth } from './firebaseAuth';
 const db = getFirestore(app);
 const COL = 'documentos_gerados';
 
-export type TipoDocumentoGerado = 'termo-recurso' | 'solicitacao-parecer' | 'solicitacao-exames' | 'pedido-parecer';
+export type TipoDocumentoGerado = 'termo-recurso' | 'termo-cientificacao' | 'solicitacao-parecer' | 'solicitacao-exames' | 'pedido-parecer';
 
 export interface DocumentoGerado {
   id: string;
