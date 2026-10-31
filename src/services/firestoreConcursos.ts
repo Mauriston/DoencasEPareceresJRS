@@ -23,7 +23,7 @@ import { removerPdfPorUrl } from './driveConcursos';
 import { notificarEvento } from './notificacoesPush';
 import type { ExameCandidato, ExamesExtraidos, PacienteExames } from '@/utils/examesCandidato';
 import { lerTriagem, type TriagemDados, type TriagemRecord } from '@/utils/triagem';
-import { timestampISO } from '@/utils/dados';
+import { timestampISO, normalizarNip, normalizarTexto } from '@/utils/dados';
 import {
   MAPA_LAUDO_POR_STATUS, candidatoEstaFinalizado, formatarDataSimples, formatarDataMilitar,
   formatarChaveData, parseChaveData, calcularDiasUteis, distribuirCandidatosNasDatas,
@@ -113,9 +113,9 @@ export interface DataAgendamentoInfo {
 
 const concursoRef = (concursoId: string) => doc(db, COL_CONCURSOS, concursoId);
 const candidatosCol = (concursoId: string) => collection(db, COL_CONCURSOS, concursoId, 'candidatos');
-const candidatoRef = (concursoId: string, id: string) => doc(db, COL_CONCURSOS, concursoId, 'candidatos', id);
+const candidatoRef = (concursoId: string, id: string) => doc(db, COL_CONCURSOS, concursoId, 'candidatos', normalizarNip(id));
 const examesCol = (concursoId: string, candidatoId: string) =>
-  collection(db, COL_CONCURSOS, concursoId, 'candidatos', candidatoId, 'exames');
+  collection(db, COL_CONCURSOS, concursoId, 'candidatos', normalizarNip(candidatoId), 'exames');
 const mensagensCol = (concursoId: string) => collection(db, COL_CONCURSOS, concursoId, 'mensagens');
 const agendamentosCol = (concursoId: string) => collection(db, COL_CONCURSOS, concursoId, 'agendamentos');
 
@@ -142,15 +142,15 @@ const lerSolicitacoes = (lista: any, urlLegado: any, rotuloLegado: string): Soli
 };
 
 const toCandidatoRecord = (id: string, data: any): CandidatoRecord => ({
-  id,
+  id: normalizarNip(id),
   nome: data.nome || '',
   dataAgendamento: data.dataAgendamento || '',
   status: data.status || '',
-  observacoes: data.observacoes || '',
+  observacoes: normalizarTexto(data.observacoes),
   finalizado: !!data.finalizado,
   recurso: !!data.recurso,
   dataLaudo: data.dataLaudo || '',
-  laudo: data.laudo || '',
+  laudo: normalizarTexto(data.laudo),
   numTIS: data.numTIS || '',
   termoRecursoUrl: data.termoRecursoUrl || '',
   termoCientificacaoUrl: data.termoCientificacaoUrl || '',
@@ -371,11 +371,11 @@ export const importarConcursoDeCsv = async (
       nome: c.nome,
       dataAgendamento: c.dataAgendamento,
       status: c.status,
-      observacoes: c.observacoes,
+      observacoes: normalizarTexto(c.observacoes),
       finalizado: c.finalizado,
       recurso: c.recurso,
       dataLaudo: c.dataLaudo,
-      laudo: c.laudo,
+      laudo: normalizarTexto(c.laudo),
       numTIS: c.numTIS,
       termoRecursoUrl: c.termoRecursoUrl,
       termoCientificacaoUrl: c.termoCientificacaoUrl || '',
@@ -394,8 +394,9 @@ export const importarConcursoDeCsv = async (
 };
 
 export const criarCandidato = async (concursoId: string, id: string, nome: string, dataAgendamento: string = ''): Promise<CandidatoRecord> => {
-  const existente = await getDoc(candidatoRef(concursoId, id));
-  if (existente.exists()) throw new Error(`Já existe um candidato com a matrícula "${id}" neste concurso.`);
+  const nid = normalizarNip(id);
+  const existente = await getDoc(candidatoRef(concursoId, nid));
+  if (existente.exists()) throw new Error(`Já existe um candidato com a matrícula "${nid}" neste concurso.`);
 
   const dados = {
     nome, dataAgendamento, status: '', observacoes: '', finalizado: false,
@@ -403,10 +404,10 @@ export const criarCandidato = async (concursoId: string, id: string, nome: strin
     solicitacoesParecer: [], solicitacoesExames: [],
     examesQtd: 0, examesPdfUrls: [], examesEnviadoEm: '',
   };
-  await setDoc(candidatoRef(concursoId, id), dados);
+  await setDoc(candidatoRef(concursoId, nid), dados);
   await updateDoc(concursoRef(concursoId), { totalCandidatos: (await listarCandidatos(concursoId)).length });
-  await registrarEvento(concursoId, id, 'Candidato adicionado', dataAgendamento ? `Agendado para ${formatarDataSimples(new Date(`${dataAgendamento}T12:00:00`))}` : '');
-  return toCandidatoRecord(id, dados);
+  await registrarEvento(concursoId, nid, 'Candidato adicionado', dataAgendamento ? `Agendado para ${formatarDataSimples(new Date(`${dataAgendamento}T12:00:00`))}` : '');
+  return toCandidatoRecord(nid, dados);
 };
 
 export const atualizarCandidato = async (
@@ -414,9 +415,10 @@ export const atualizarCandidato = async (
   id: string,
   patch: { status?: string; observacoes?: string; numTIS?: string }
 ): Promise<CandidatoRecord> => {
-  const snap = await getDoc(candidatoRef(concursoId, id));
-  if (!snap.exists()) throw new Error(`Candidato com matrícula "${id}" não encontrado.`);
-  const atual = toCandidatoRecord(id, snap.data());
+  const nid = normalizarNip(id);
+  const snap = await getDoc(candidatoRef(concursoId, nid));
+  if (!snap.exists()) throw new Error(`Candidato com matrícula "${nid}" não encontrado.`);
+  const atual = toCandidatoRecord(nid, snap.data());
 
   // Uma IS finalizada trava Status/Observações/Nº TIS para edição — mesmo
   // para o perfil Admin. A única forma de "desfazer" seria direto no banco.
@@ -426,7 +428,7 @@ export const atualizarCandidato = async (
 
   const proximo: Partial<CandidatoRecord> = {};
 
-  if (patch.observacoes !== undefined) proximo.observacoes = patch.observacoes || '';
+  if (patch.observacoes !== undefined) proximo.observacoes = normalizarTexto(patch.observacoes);
   if (patch.numTIS !== undefined) proximo.numTIS = patch.numTIS || '';
 
   if (patch.status !== undefined) {
@@ -444,7 +446,7 @@ export const atualizarCandidato = async (
       if (!laudoTexto) throw new Error(`Status inválido: "${patch.status}".`);
       proximo.status = novoValor;
       proximo.dataLaudo = formatarDataSimples(new Date());
-      proximo.laudo = laudoTexto;
+      proximo.laudo = normalizarTexto(laudoTexto);
     }
   }
 
@@ -478,35 +480,36 @@ export const atualizarCandidato = async (
   const observacoesFinal = proximo.observacoes !== undefined ? proximo.observacoes : atual.observacoes;
   proximo.finalizado = candidatoEstaFinalizado(statusFinal, numTisFinal, observacoesFinal);
 
-  await updateDoc(candidatoRef(concursoId, id), proximo as any);
+  await updateDoc(candidatoRef(concursoId, nid), proximo as any);
 
   // Auditoria: um evento por campo alterado (e a finalização, se ocorreu).
   const rot = (v: string) => v || '(vazio)';
   if (proximo.status !== undefined && proximo.status !== atual.status) {
-    await registrarEvento(concursoId, id, 'Status alterado', `${rot(atual.status)} → ${rot(proximo.status)}`);
+    await registrarEvento(concursoId, nid, 'Status alterado', `${rot(atual.status)} → ${rot(proximo.status)}`);
     // Push: Inapto e IDM avisam todos assim que o status é lançado.
     if (proximo.status === 'INAPTO' || proximo.status === 'INSUF DOCUMENTAL') {
-      void notificarEvento({ tipo: 'status-alterado', concursoId, candidatoId: id });
+      void notificarEvento({ tipo: 'status-alterado', concursoId, candidatoId: nid });
     }
   }
   if (proximo.observacoes !== undefined && proximo.observacoes !== atual.observacoes) {
-    await registrarEvento(concursoId, id, 'Observações alteradas', `${rot(atual.observacoes)} → ${rot(proximo.observacoes)}`);
+    await registrarEvento(concursoId, nid, 'Observações alteradas', `${rot(atual.observacoes)} → ${rot(proximo.observacoes)}`);
   }
   if (proximo.numTIS !== undefined && proximo.numTIS !== atual.numTIS) {
-    await registrarEvento(concursoId, id, 'Nº TIS alterado', `${rot(atual.numTIS)} → ${rot(proximo.numTIS)}`);
+    await registrarEvento(concursoId, nid, 'Nº TIS alterado', `${rot(atual.numTIS)} → ${rot(proximo.numTIS)}`);
   }
   if (proximo.finalizado && !atual.finalizado) {
-    await registrarEvento(concursoId, id, 'IS finalizada', `Status: ${rot(statusFinal)}`);
+    await registrarEvento(concursoId, nid, 'IS finalizada', `Status: ${rot(statusFinal)}`);
     // Push: conclusão das IS do dia (o servidor confere se todas terminaram).
-    void notificarEvento({ tipo: 'is-finalizada', concursoId, candidatoId: id });
+    void notificarEvento({ tipo: 'is-finalizada', concursoId, candidatoId: nid });
   }
   return { ...atual, ...proximo };
 };
 
 export const reagendarCandidato = async (concursoId: string, id: string, dataISO: string): Promise<CandidatoRecord> => {
-  const snap = await getDoc(candidatoRef(concursoId, id));
-  if (!snap.exists()) throw new Error(`Candidato com matrícula "${id}" não encontrado.`);
-  const atual = toCandidatoRecord(id, snap.data());
+  const nid = normalizarNip(id);
+  const snap = await getDoc(candidatoRef(concursoId, nid));
+  if (!snap.exists()) throw new Error(`Candidato com matrícula "${nid}" não encontrado.`);
+  const atual = toCandidatoRecord(nid, snap.data());
 
   const proximo = {
     dataAgendamento: dataISO,
@@ -520,8 +523,8 @@ export const reagendarCandidato = async (concursoId: string, id: string, dataISO
   };
   if (atual.termoCientificacaoUrl) void removerPdfPorUrl(atual.termoCientificacaoUrl);
   if (atual.termoRecursoUrl) void removerPdfPorUrl(atual.termoRecursoUrl);
-  await updateDoc(candidatoRef(concursoId, id), proximo);
-  await registrarEvento(concursoId, id, 'IS reagendada', `${atual.dataAgendamento ? formatarDataSimples(new Date(`${atual.dataAgendamento}T12:00:00`)) : '(sem data)'} → ${formatarDataSimples(new Date(`${dataISO}T12:00:00`))}`);
+  await updateDoc(candidatoRef(concursoId, nid), proximo);
+  await registrarEvento(concursoId, nid, 'IS reagendada', `${atual.dataAgendamento ? formatarDataSimples(new Date(`${atual.dataAgendamento}T12:00:00`)) : '(sem data)'} → ${formatarDataSimples(new Date(`${dataISO}T12:00:00`))}`);
   return { ...atual, ...proximo };
 };
 
@@ -778,9 +781,10 @@ export const registrarSolicitacao = async (
   doc: { url: string; rotulo: string },
   textoObservacao: string,
 ): Promise<CandidatoRecord> => {
-  const snap = await getDoc(candidatoRef(concursoId, id));
-  if (!snap.exists()) throw new Error(`Candidato com matrícula "${id}" não encontrado.`);
-  const atual = toCandidatoRecord(id, snap.data());
+  const nid = normalizarNip(id);
+  const snap = await getDoc(candidatoRef(concursoId, nid));
+  if (!snap.exists()) throw new Error(`Candidato com matrícula "${nid}" não encontrado.`);
+  const atual = toCandidatoRecord(nid, snap.data());
   if (atual.finalizado || !STATUS_PERMITEM_SOLICITACAO.includes(String(atual.status || '').trim().toUpperCase())) {
     throw new Error('O status atual do candidato não permite gerar esta solicitação.');
   }
@@ -793,11 +797,11 @@ export const registrarSolicitacao = async (
     status: 'Pendente',
     dataLaudo: '',
     laudo: '',
-    observacoes,
+    observacoes: normalizarTexto(observacoes),
     finalizado: false,
   };
-  await updateDoc(candidatoRef(concursoId, id), proximo);
-  await registrarEvento(concursoId, id, tipo === 'parecer' ? 'Pedido de Parecer gerado' : 'Solicitação de Exames gerada', doc.rotulo);
+  await updateDoc(candidatoRef(concursoId, nid), proximo);
+  await registrarEvento(concursoId, nid, tipo === 'parecer' ? 'Pedido de Parecer gerado' : 'Solicitação de Exames gerada', doc.rotulo);
   return { ...atual, ...proximo };
 };
 

@@ -10,6 +10,7 @@
 import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { camposIdDrive } from '@/utils/googleDrive';
+import { normalizarNip, normalizarTexto, hojeISO } from '@/utils/dados';
 import { app } from './firebaseAuth';
 
 const db = getFirestore(app);
@@ -50,18 +51,16 @@ export const chaveMilitar = (p: Pick<PericiaMenorDoc, 'militarId' | 'inspecionad
 
 export const novoIdPericiaMenor = (): string => doc(collection(db, COL)).id;
 
-const dataLocalISO = (d: Date): string =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
 /** DATA_TERMINO = DATA_ATESTADO + TEMPO_HOMOLOGADO - 1 (o dia do atestado conta como o 1º dia). */
 export const calcularDataTermino = (dataAtestado: string, tempoHomologado: number): string => {
   const [a, m, d] = dataAtestado.split('-').map(Number);
   if (!a || !m || !d || !(tempoHomologado > 0)) return '';
-  return dataLocalISO(new Date(a, m - 1, d + tempoHomologado - 1));
+  const dt = new Date(a, m - 1, d + tempoHomologado - 1);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
 };
 
 /** Vigente enquanto hoje não passou da data de término; depois, Concluída. */
-export const statusPericia = (p: Pick<PericiaMenorDoc, 'dataTermino'>, hoje: string = dataLocalISO(new Date())): StatusPericia =>
+export const statusPericia = (p: Pick<PericiaMenorDoc, 'dataTermino'>, hoje: string = hojeISO()): StatusPericia =>
   p.dataTermino && p.dataTermino >= hoje ? 'vigente' : 'concluida';
 
 /** AAAA-MM-DD → DD/MM/AAAA. */
@@ -99,4 +98,12 @@ export const enviarPdfPericiaMenor = async (id: string, pdf: Blob): Promise<stri
 export type NovaPericiaMenor = Omit<PericiaMenorDoc, 'criadoEm' | 'dataTermino'>;
 
 export const registrarPericiaMenor = (id: string, dados: NovaPericiaMenor) =>
-  setDoc(doc(db, COL, id), { ...dados, ...camposIdDrive(dados.pdfUrl), dataTermino: calcularDataTermino(dados.dataAtestado, dados.tempoHomologado), criadoEm: serverTimestamp() });
+  setDoc(doc(db, COL, id), {
+    ...dados,
+    militarId: normalizarNip(dados.militarId),
+    inspecionado: normalizarTexto(dados.inspecionado),
+    om: normalizarTexto(dados.om),
+    ...camposIdDrive(dados.pdfUrl),
+    dataTermino: calcularDataTermino(dados.dataAtestado, dados.tempoHomologado),
+    criadoEm: serverTimestamp()
+  });

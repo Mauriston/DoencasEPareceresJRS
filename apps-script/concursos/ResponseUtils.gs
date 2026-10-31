@@ -2,7 +2,18 @@
  * ResponseUtils.gs
  */
 
+var correlationId_ = null;
+
+/** Obtém ou gera um ID de correlação para a execução atual. */
+function getCorrelationId_() {
+  if (!correlationId_) {
+    correlationId_ = Utilities.getUuid().split('-')[0]; // Usa a primeira parte do UUID
+  }
+  return correlationId_;
+}
+
 function logSeguro_(contexto, erro) {
+  var id = getCorrelationId_();
   var msg = String((erro && erro.message) || erro || '')
     .replace(/eyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{5,}/g, '[token]')
     .replace(/([?&](?:key|token|idToken)=)[^&\s"']+/gi, '$1[oculto]')
@@ -12,7 +23,7 @@ function logSeguro_(contexto, erro) {
     .replace(/\b\d{8}\b/g, '[nip]')
     .replace(/[A-Za-z0-9+\/=_-]{120,}/g, '[dados-longos]')
     .substring(0, 200);
-  Logger.log(contexto + ': ' + msg);
+  Logger.log('[' + id + '] ' + contexto + ': ' + msg);
 }
 
 function apiResponder(fn) {

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "lei_6880",
+    "number": "Lei nº 6.880/1980",
+    "title": "Estatuto dos Militares",
+    "description": "Define as situações de reforma por incapacidade definitiva e invalidez.",
+    "keyArticles": ["Art. 108 (Causalidade)", "Art. 110 (Benefícios)"]
+  },
+  {
+    "id": "portaria_3551",
+    "number": "Portaria GM-MD nº 3.551/2021",
+    "title": "Normas Técnicas de Perícia",
+    "description": "Padroniza os procedimentos das Juntas de Inspeção de Saúde das Forças Armadas.",
+    "keyArticles": ["Definição de doenças graves", "Critérios de invalidez"]
+  },
+  {
+    "id": "lei_7713",
+    "number": "Lei nº 7.713/1988",
+    "title": "Isenção de Imposto de Renda",
+    "description": "Regula a isenção de IR para portadores de moléstias graves.",
+    "keyArticles": ["Art. 6º, XIV (Rol de doenças)"]
+  }
+]

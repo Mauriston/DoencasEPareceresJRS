@@ -5,7 +5,7 @@ import { MotivoIdmModal } from '@/features/beneficios/MotivoIdmModal';
 import { ResponsavelTermoModal } from '@/features/pericia-menor/ResponsavelTermoModal';
 import React, { useEffect, useState } from 'react';
 import { Container, PageHeader } from '@/components/ui/Page';
-import { SolicitarParecerModal, SolicitarExamesModal } from '@/components/SolicitacaoModais';
+import { SolicitarParecerModal, SolicitarExamesModal } from '@/features/concursos/components/SolicitacaoModais';
 import { CandidatoDetalhe } from './CandidatoDetalhe';
 import { TriagemFormulario, TriagemSecao } from './Triagem';
 import { EnviarExamesModal, ExamesTranscritosModal } from './ExamesCandidato';

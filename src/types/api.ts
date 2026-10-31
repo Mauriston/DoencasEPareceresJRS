@@ -1,12 +1,21 @@
-// Ficheiro: types/api.ts
-
+/**
+ * Envelope de resposta unificado para as APIs do sistema (Apps Script e Servidor Node).
+ * 
+ * O apiClient.ts consome este envelope, extrai o conteúdo de sucesso e lança
+ * um ApiError tipado em caso de erro, por isso as funções de serviço geralmente
+ * retornam apenas o tipo T diretamente.
+ */
 export interface ApiResponse<T = any> {
-  sucesso: boolean; // Usado pelo script legados
-  success?: boolean; // Algumas respostas usavam success, outras sucesso
+  // Padrão Apps Script (Config.gs / ResponseUtils.gs)
+  sucesso?: boolean;
   dados?: T;
-  data?: T;
   erro?: string;
-  message?: string;
+
+  // Padrão Servidor Node (server.ts) e Legado Gemini (GeminiService.gs)
+  success?: boolean;
+  data?: T;
+  message?: string; // Usado no erro legado
+  error?: string;   // Usado no erro do servidor Node
 }
 
 export interface AtestadoDTO {

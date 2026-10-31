@@ -1,20 +1,35 @@
 /**
  * Config.gs
  * Configurações globais, IDs de templates e pastas.
+ * 
+ * Chaves necessárias nas Propriedades do Script (Script Properties):
+ * - ID_TEMPLATE_TERMO_RECURSO: ID do Google Doc para termo de recurso
+ * - ID_TEMPLATE_TERMO_CIENTIFICACAO: ID do Google Doc para termo de cientificação
+ * - ID_TEMPLATE_SOLICITACAO_PARECER: ID do Google Doc para solicitação de parecer
+ * - ID_TEMPLATE_PEDIDO_PARECER: ID do Google Doc para pedido de parecer
+ * - ID_TEMPLATE_SOLICITACAO_EXAMES: ID do Google Doc para solicitação de exames
+ * - ID_PASTA_RAIZ_CONCURSOS: ID da pasta raiz no Drive para arquivos de concursos
+ * - ID_AGENDA_JRS_HNRE: ID da agenda do Google Calendar
+ * - ID_PASTA_PARECERES: ID da pasta no Drive onde os pareceres são salvos
+ * - FIREBASE_API_KEY: Chave de API do Firebase
+ * - FIREBASE_PROJECT_ID: ID do projeto Firebase (ex: jrs-app-web)
+ * - GEMINI_API_KEY: Chave de API do Google Gemini
  */
 
-var ID_TEMPLATE_TERMO_RECURSO = '1gVSaakcQJBrFJnF4umFbI_cjR9abCXPjfOyfSUFKnRo';
-var ID_TEMPLATE_TERMO_CIENTIFICACAO = '1uSdvvwxjPDkvGm7kjCrDGaGnPVF3_pDu4rN6C6tJFiI';
-var ID_TEMPLATE_SOLICITACAO_PARECER = '16KIcTgceHNdbTNRe8UeYPjJXn4r_d450Xy61conLO3Q';
-var ID_TEMPLATE_PEDIDO_PARECER = '1jE-3VQ8G2t4JQJ5B7ydedq6oupvsXwo7aPX_AVttMEM';
-var ID_TEMPLATE_SOLICITACAO_EXAMES = '1SSAzdWANvfQJx7Sip2-NbqDGAM0cgpVD6Q4Ci9UhGqQ';
+var scriptProperties = PropertiesService.getScriptProperties();
 
-var ID_PASTA_RAIZ_CONCURSOS = '1eBTehJDTOPjsgOeP3DjWKbE-iXdIKGos';
-var ID_AGENDA_JRS_HNRE = 'c_b103c034ba38b68e447b1ea6ab97b0da658878ebc7daa7535d612f9f7eaed762@group.calendar.google.com';
-var ID_PASTA_PARECERES = '176YQTOOWXuE78Xul49XYpJsVNyu-eZFi';
+var ID_TEMPLATE_TERMO_RECURSO = scriptProperties.getProperty('ID_TEMPLATE_TERMO_RECURSO');
+var ID_TEMPLATE_TERMO_CIENTIFICACAO = scriptProperties.getProperty('ID_TEMPLATE_TERMO_CIENTIFICACAO');
+var ID_TEMPLATE_SOLICITACAO_PARECER = scriptProperties.getProperty('ID_TEMPLATE_SOLICITACAO_PARECER');
+var ID_TEMPLATE_PEDIDO_PARECER = scriptProperties.getProperty('ID_TEMPLATE_PEDIDO_PARECER');
+var ID_TEMPLATE_SOLICITACAO_EXAMES = scriptProperties.getProperty('ID_TEMPLATE_SOLICITACAO_EXAMES');
 
-var FIREBASE_API_KEY = 'AIzaSyAWBYm6iGQNQXeC5DO038lMSruxpRjoX2c';
-var FIREBASE_PROJECT_ID = 'jrs-app-web';
+var ID_PASTA_RAIZ_CONCURSOS = scriptProperties.getProperty('ID_PASTA_RAIZ_CONCURSOS');
+var ID_AGENDA_JRS_HNRE = scriptProperties.getProperty('ID_AGENDA_JRS_HNRE');
+var ID_PASTA_PARECERES = scriptProperties.getProperty('ID_PASTA_PARECERES');
+
+var FIREBASE_API_KEY = scriptProperties.getProperty('FIREBASE_API_KEY');
+var FIREBASE_PROJECT_ID = scriptProperties.getProperty('FIREBASE_PROJECT_ID');
 
 var MODELO_GEMINI = 'gemini-2.5-flash';
 

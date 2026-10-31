@@ -11,6 +11,7 @@
 // gravado com o passar do tempo.
 import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, serverTimestamp, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { camposIdDrive } from '@/utils/googleDrive';
+import { normalizarNip, normalizarTexto } from '@/utils/dados';
 import { app } from './firebaseAuth';
 
 const db = getFirestore(app);
@@ -63,9 +64,18 @@ export const observarPareceres = (onData: (lista: ParecerRecord[]) => void, onEr
   );
 
 export const registrarParecer = (id: string, dados: Omit<ParecerDoc, 'criadoEm' | 'status'>) =>
-  setDoc(doc(db, COL, id), { ...dados, ...camposIdDrive(dados.pdfUrl), status: 'solicitado', criadoEm: serverTimestamp() });
+  setDoc(doc(db, COL, id), {
+    ...dados,
+    militarId: normalizarNip(dados.militarId),
+    inspecionado: normalizarTexto(dados.inspecionado),
+    finalidade: normalizarTexto(dados.finalidade),
+    historico: normalizarTexto(dados.historico),
+    ...camposIdDrive(dados.pdfUrl),
+    status: 'solicitado',
+    criadoEm: serverTimestamp()
+  });
 
 export const marcarConcluido = (id: string, concluido: boolean, porNome: string) =>
   updateDoc(doc(db, COL, id), concluido
-    ? { status: 'concluido', concluidoEm: serverTimestamp(), concluidoPor: porNome }
+    ? { status: 'concluido', concluidoEm: serverTimestamp(), concluidoPor: normalizarTexto(porNome) }
     : { status: 'solicitado', concluidoEm: null, concluidoPor: '' });

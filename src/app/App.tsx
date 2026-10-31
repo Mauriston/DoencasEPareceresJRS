@@ -17,10 +17,10 @@ import { PAGE_DEFS } from '@/config/permissions';
 import { NavItem } from '@/types';
 import { NavContext, AuthUser, getPrimeiroNome } from '@/context/NavContext';
 import { canAccessPage, canUseFeature, setPermissoesCache } from '@/config/permissions';
-import { InstallAppTutorial } from '@/components/InstallAppTutorial';
-import { InstallAppQrDialog } from '@/components/InstallAppQrDialog';
-import { NotificacoesConvite } from '@/components/NotificacoesConvite';
-import { NotificacoesPainel } from '@/components/NotificacoesPainel';
+import { InstallAppTutorial } from '@/app/components/InstallAppTutorial';
+import { InstallAppQrDialog } from '@/app/components/InstallAppQrDialog';
+import { NotificacoesConvite } from '@/app/components/NotificacoesConvite';
+import { NotificacoesPainel } from '@/app/components/NotificacoesPainel';
 import { onAuthChange, logoutUsuario } from '@/services/firebaseAuth';
 import { entrarComToken } from '@/services/handoff';
 import {
@@ -56,8 +56,8 @@ const Pareceres = paginaLazy(() => import('@/features/pareceres/Pareceres'), 'Pa
 const CasosPericiais = paginaLazy(() => import('@/features/estudo/CasosPericiais'), 'CasosPericiais');
 const Videos = paginaLazy(() => import('@/features/estudo/Videos'), 'Videos');
 const PericiaMenor = paginaLazy(() => import('@/features/pericia-menor/PericiaMenor'), 'PericiaMenor');
-const Mensagens = paginaLazy(() => import('@/components/Mensagens'), 'Mensagens');
-const RoteiroJRS = paginaLazy(() => import('@/components/RoteiroJRS'), 'RoteiroJRS');
+const Mensagens = paginaLazy(() => import('@/features/mensagens/Mensagens'), 'Mensagens');
+const RoteiroJRS = paginaLazy(() => import('@/features/estudo/RoteiroJRS'), 'RoteiroJRS');
 const UsuariosManagement = paginaLazy(() => import('@/features/auth/UsuariosManagement'), 'UsuariosManagement');
 const Militares = paginaLazy(() => import('@/features/beneficios/Militares'), 'Militares');
 const Inspecoes = paginaLazy(() => import('@/features/beneficios/Inspecoes'), 'Inspecoes');

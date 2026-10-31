@@ -9,7 +9,8 @@ import { getNavCategories } from '@/config/navigation';
 import { canAccessPage } from '@/config/permissions';
 import { doencaPath, pathForView } from '@/config/routes';
 import { useIsDesktop } from '@/hooks/useIsDesktop';
-import { DISEASES } from '../../../constants';
+import DISEASES from '@/../content/doencas/all.json';
+import LAWS from '@/../content/legislacao/all.json';
 
 interface Resultado {
   id: string;
@@ -47,7 +48,10 @@ export const GlobalSearch: React.FC<{ className?: string }> = ({ className = '' 
         id: `g-${d.id}-${i}`, rotulo: g.name, contexto: `em ${d.name}`, icone: 'diagnosis', to: doencaPath(d.id, i),
       })) : []),
     ]);
-    return [...paginas, ...doencas];
+    const leis = !canAccessPage('laws', perfil) ? [] : LAWS.map(l => ({
+      id: `l-${l.id}`, rotulo: l.number, contexto: l.title, icone: 'balance', to: pathForView('laws'),
+    }));
+    return [...paginas, ...doencas, ...leis];
   };
 
   const resultados = (() => {

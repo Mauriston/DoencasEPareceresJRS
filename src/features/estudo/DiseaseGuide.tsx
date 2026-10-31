@@ -1,6 +1,6 @@
 // Ficheiro: components/DiseaseGuide.tsx
 import React, { useState, useEffect, useContext } from 'react';
-import { DISEASES } from '../../../constants';
+import DISEASES from '@/../content/doencas/all.json';
 import { Disease, Diagnosis } from '@/types';
 import { ChevronRight, Info, Brain, HeartPulse, EyeOff, Radiation, Accessibility, Stethoscope, Ribbon, X, Download, ArrowLeft } from '@/components/ui/icons';
 import { jsPDF } from 'jspdf';
