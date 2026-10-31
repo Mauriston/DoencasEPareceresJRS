@@ -581,6 +581,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
   // Doença com um único diagnóstico abre direto o detalhe (sem o nível intermediário).
   const diagIdx = diagnosticoIdx !== undefined ? Number(diagnosticoIdx) : (selectedDisease?.diagnoses.length === 1 ? 0 : -1);
   const selectedDiagnosis: Diagnosis | null = selectedDisease?.diagnoses[diagIdx] ?? null;
+  const documentos = selectedDiagnosis?.documents ?? selectedDisease?.documents ?? [];
   // Mesma tela em dois endereços: /beneficios/doencas (app) e /publico/doencas.
   const dPath = (id: string, idx?: number) => doencaPath(id, idx, publico ? PUBLICO_DOENCAS : undefined);
   useBreadcrumbs(
@@ -622,7 +623,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
 
   const handleCopy = async () => {
     if (!selectedDisease || !selectedDiagnosis) return;
-    const copyText = `Doença: ${selectedDisease.name}\nDiagnóstico: ${selectedDiagnosis.name}\n\nDefinição:\n${selectedDisease.definition}\n\nCritérios de Gravidade:\n${selectedDiagnosis.criteria.map(c => `- ${c}`).join('\n')}\n\nDocumentos Necessários:\n${selectedDisease.documents.map(d => `- ${d}`).join('\n')}`;
+    const copyText = `Doença: ${selectedDisease.name}\nDiagnóstico: ${selectedDiagnosis.name}\n\nDefinição:\n${selectedDisease.definition}\n\nCritérios de Gravidade:\n${selectedDiagnosis.criteria.map(c => `- ${c}`).join('\n')}\n\nDocumentos Necessários:\n${documentos.map(d => `- ${d}`).join('\n')}`;
     try { await navigator.clipboard.writeText(copyText); setIsCopied(true); } catch (error) { console.error(error); }
   };
 
@@ -717,7 +718,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
     const isDemencia = selectedDisease.name === "Alienação Mental" && selectedDiagnosis.name === "Demência";
     const isParkinson = selectedDisease.id === "doenca_de_parkinson";
     const isHepatopatia = selectedDisease.id === "hepatopatias_graves";
-    const totalDocs = selectedDisease.documents.length;
+    const totalDocs = documentos.length;
     const secao = 'bg-white rounded-xl p-5 md:p-6 border border-line';
     const tituloSecao = 'font-heading font-bold text-h2 text-navy mb-3 pb-2 border-b border-line';
     return (
@@ -759,7 +760,26 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                 <section className={secao}>
                   <h2 className={tituloSecao}>Classificação
                   </h2>
-                  <p className="text-base text-ink leading-relaxed">Grupos I (CD4 ≥500), II (200-499), III (&lt;200) / Classes A, B, C por sintomas e condições definidoras.</p>
+                  <div className="overflow-x-auto scroll-x-visible">
+                    <table className="w-full text-left text-sm text-ink border-collapse border border-line">
+                      <thead className="bg-thead text-navy">
+                        <tr>{['Grupo', 'CD4', 'A', 'B', 'C'].map(h => <th key={h} scope="col" className="px-3 py-2 border border-line font-bold">{h}</th>)}</tr>
+                      </thead>
+                      <tbody>
+                        {[['I', '≥ 500'], ['II', '200-499'], ['III', '< 200']].map(([grupo, cd4], i) => (
+                          <tr key={grupo}>
+                            <th scope="row" className="px-3 py-2 border border-line font-normal">{grupo}</th>
+                            <td className="px-3 py-2 border border-line">{cd4}</td>
+                            {['A', 'B', 'C'].map(cat => {
+                              const aids = cat === 'C' || i === 2;
+                              return <td key={cat} className={`px-3 py-2 border border-line ${aids ? 'bg-wine-100 font-bold text-wine-800' : ''}`}>{cat}{i + 1}</td>;
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-sm text-ink-3 italic mt-3">A3, B3 e C são considerados SIDA/AIDS.</p>
                 </section>
               )}
 
@@ -820,7 +840,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                 </h2>
                 <p className="text-xs font-semibold text-ink-3 mb-2" aria-live="polite">{docsMarcados.size} de {totalDocs} reunidos</p>
                 <ul className="space-y-1">
-                  {selectedDisease.documents.map((item, idx) => (
+                  {documentos.map((item, idx) => (
                     <li key={idx}>
                       <label className="flex items-start gap-3 min-h-[44px] py-2 cursor-pointer rounded-lg hover:bg-thead px-1">
                         <input

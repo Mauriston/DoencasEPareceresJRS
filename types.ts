@@ -6,6 +6,8 @@ export interface Diagnosis {
   criteria: string[];
   /** Índices de `criteria` exibidos em negrito (enquadramentos positivos). */
   highlight?: number[];
+  /** Documentos próprios do diagnóstico; quando ausente, valem os da doença. */
+  documents?: string[];
 }
 
 export interface Disease {
