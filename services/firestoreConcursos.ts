@@ -22,6 +22,7 @@ import { registrarEvento } from './auditoriaIS';
 import { removerPdfPorUrl } from './driveConcursos';
 import { notificarEvento } from './notificacoesPush';
 import type { ExameCandidato, ExamesExtraidos, PacienteExames } from '../utils/examesCandidato';
+import { lerTriagem, type TriagemDados, type TriagemRecord } from '../utils/triagem';
 import {
   MAPA_LAUDO_POR_STATUS, candidatoEstaFinalizado, formatarDataSimples, formatarDataMilitar,
   formatarChaveData, parseChaveData, calcularDiasUteis, distribuirCandidatosNasDatas,
@@ -79,6 +80,8 @@ export interface CandidatoRecord {
   examesPdfUrls: string[];
   /** Data/hora ISO do último envio. */
   examesEnviadoEm: string;
+  /** Triagem lançada pelo MPI (botão "TRIAR"); null enquanto não triado. */
+  triagem: TriagemRecord | null;
 }
 
 export interface SolicitacaoDoc {
@@ -155,6 +158,7 @@ const toCandidatoRecord = (id: string, data: any): CandidatoRecord => ({
   examesQtd: typeof data.examesQtd === 'number' ? data.examesQtd : 0,
   examesPdfUrls: Array.isArray(data.examesPdfUrls) ? data.examesPdfUrls.filter((u: unknown) => typeof u === 'string' && u) : [],
   examesEnviadoEm: data.examesEnviadoEm || '',
+  triagem: lerTriagem(data.triagem),
 });
 
 export const listarConcursos = async (): Promise<ConcursoRecord[]> => {
@@ -740,6 +744,18 @@ export const encerrarConcurso = async (concursoId: string) => {
     throw new Error('Ainda há candidatos não finalizados. Encerre apenas quando todos estiverem finalizados.');
   }
   await updateDoc(concursoRef(concursoId), { status: 'encerrado' as ConcursoStatus });
+};
+
+/** Grava (ou corrige) a triagem da IS. IS finalizada não aceita mais alteração. */
+export const salvarTriagem = async (concursoId: string, candidatoId: string, dados: TriagemDados, usuario: string): Promise<TriagemRecord> => {
+  const snap = await getDoc(candidatoRef(concursoId, candidatoId));
+  if (!snap.exists()) throw new Error('Candidato não encontrado.');
+  if (snap.data().finalizado) throw new Error('Esta IS já foi finalizada e não pode mais ser editada.');
+  const jaTinha = !!snap.data().triagem;
+  const triagem: TriagemRecord = { ...dados, atualizadoEm: new Date().toISOString(), atualizadoPor: usuario };
+  await updateDoc(candidatoRef(concursoId, candidatoId), { triagem });
+  await registrarEvento(concursoId, candidatoId, jaTinha ? 'Triagem alterada' : 'Triagem registrada');
+  return triagem;
 };
 
 export const salvarTermoCientificacao = async (concursoId: string, candidatoId: string, url: string) => {

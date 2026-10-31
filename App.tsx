@@ -169,6 +169,18 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   }, [authUserReal?.uid]);
   const notificacoesNaoLidas = notificacoes.filter(n => !n.lida).length;
 
+  // Aviso da triagem para o MPI: nos 3 primeiros acessos (por aparelho) ao app.
+  const [avisoTriagem, setAvisoTriagem] = useState(false);
+  useEffect(() => {
+    if (!authUser || authUser.perfil !== 'user_medicos_mpi') { setAvisoTriagem(false); return; }
+    const chave = `jrs_aviso_triagem_${authUser.uid}`;
+    let vistos = 0;
+    try { vistos = Number(localStorage.getItem(chave) || 0); } catch { /* sem localStorage */ }
+    if (vistos >= 3) return;
+    try { localStorage.setItem(chave, String(vistos + 1)); } catch { /* sem localStorage */ }
+    setAvisoTriagem(true);
+  }, [authUser?.uid, authUser?.perfil]);
+
   // Push "{{usuario}} logado." para o Admin a cada acesso: ao abrir o app e
   // ao voltar para ele depois de 5 min em segundo plano (o PWA no celular
   // costuma ficar aberto, sem recarregar).
@@ -493,9 +505,24 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       <NotificacoesConvite
         key={authUser.uid}
         usuario={authUserReal?.usuario || authUser.usuario}
-        aguardar={mostrarAlertaSenha || pwaDialogAberto}
+        aguardar={mostrarAlertaSenha || pwaDialogAberto || avisoTriagem}
         onInstalarApp={() => setPwaDialogAberto(true)}
       />
+
+      {avisoTriagem && !mostrarAlertaSenha && (
+        <Dialog
+          title="Triagem dos concursos"
+          icon="monitor_heart"
+          onClose={() => setAvisoTriagem(false)}
+          footer={<Button onClick={() => setAvisoTriagem(false)}>Entendi</Button>}
+        >
+          <p className="text-ink-3 leading-relaxed">
+            Os dados da triagem das IS de concurso (biometria, oftalmologia e alterações na entrevista, no
+            exame clínico ou nos exames) agora são lançados na tabela do concurso, pelo botão
+            <strong className="text-navy"> TRIAR</strong>, ao lado do nome de cada candidato.
+          </p>
+        </Dialog>
+      )}
 
       {mostrarTutorialPwa && (
         <InstallAppTutorial
