@@ -13,7 +13,7 @@
 // vale o tempo homologado (máx. 20). Somado às perícias do militar vigentes ou concluídas há até
 // 10 dias, não passa de 30 (utils/periciaMenorRegras.ts).
 // Ao registrar: a foto (já filtrada) vira PDF no Storage e a perícia é gravada no Firestore.
-// A foto está temporariamente opcional (FOTO_OBRIGATORIA = false); sem foto, pdfUrl fica vazio.
+// A foto é obrigatória (FOTO_OBRIGATORIA = true): os campos só aparecem depois dela processada.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
@@ -47,9 +47,9 @@ type Modo = '' | 'registrar' | 'homologar';
 /** Etapas reveladas em sequência, depois da escolha Registrar/Homologar. */
 type Etapa = 'foto' | 'militar' | 'data' | 'tempo' | 'tempoHomologado' | 'cid' | 'dispensas' | 'vdf';
 
-/** Foto do atestado obrigatória? TEMPORARIAMENTE desligada (pedido de 06/11/2026); voltar para true
- * quando a obrigatoriedade for retomada — valida o envio e mostra o asterisco no título da seção. */
-const FOTO_OBRIGATORIA = false;
+/** Foto do atestado obrigatória? Voltou a ser (pedido de 06/11/2026). Com false, a foto fica opcional
+ * (aparece "Continuar sem foto" e o pdfUrl pode ficar vazio). */
+const FOTO_OBRIGATORIA = true;
 
 const comUnidade = (v: string): string => (v ? `${v} dia${Number(v) > 1 ? 's' : ''}` : v);
 const digitos = (v: string) => v.replace(/\D/g, '');

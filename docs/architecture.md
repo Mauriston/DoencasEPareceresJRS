@@ -2,16 +2,16 @@
 
 ## 1. Visão geral
 
-> **Atualizado em 31/10/2026.**
+> **Atualizado em 06/11/2026.**
 
 O **Guia Médico Naval — JRS/HNRe** é uma aplicação web de página única (*Single Page Application* — SPA), instalável como PWA, voltada ao apoio das atividades médico-periciais da Junta Regular de Saúde do Hospital Naval de Recife.
 
 A solução combina cinco grupos principais de capacidades:
 
 1. **Consulta de conteúdo normativo e médico-pericial**, armazenado majoritariamente no próprio código-fonte (com páginas públicas, sem login, para as Doenças de Lei e a Portaria).
-2. **Trabalho da JRS**: Inspeções de Saúde e agenda dos peritos, concursos (planilha de candidatos, triagem, exames, termos), pareceres, perícias menores e inspecionados, com dados no **Cloud Firestore**.
+2. **Trabalho da JRS**: Inspeções de Saúde e agenda dos peritos, concursos (planilha de candidatos, triagem, exames, termos), pareceres, perícias menores/atestados, inspecionados e a **Escala SVÇ** do SPA, com dados no **Cloud Firestore**.
 3. **Automação documental**, executada por Google Apps Script (`CodeConcursos.gs`) com Google Docs, Drive, Gmail e Google Agenda — inclusive o envio automático de documentos por e-mail para impressão.
-4. **IA (Gemini)**: leitura de atestados, minuta de mensagens e transcrição de mensagens e de exames de candidatos pelo **Firebase AI Logic** (Vertex AI, `gemini-3.5-flash`, região global, protegido pelo App Check — `services/geminiAI.ts`, prompts em `config/promptsIA.ts`); OCR de PDFs e análise de imagens no servidor do Cloud Run.
+4. **IA (Gemini)**: leitura de atestados e de prints do SINAIS, minuta de mensagens e transcrição de mensagens e de exames de candidatos pelo **Firebase AI Logic** (Vertex AI, `gemini-3.5-flash`, região global, protegido pelo App Check — `services/geminiAI.ts`, prompts em `config/promptsIA.ts`); OCR de PDFs e análise de imagens no servidor do Cloud Run.
 5. **Notificações push** (Firebase Cloud Messaging), com histórico por usuário no app.
 
 O frontend é publicado como site estático no GitHub Pages. O backend tem duas partes: um **servidor Node/Express no Cloud Run** (`server.ts`, com o Firebase Admin SDK) para o que exige credencial de servidor — operações de Admin, notificações, Gemini — e o **Apps Script** para a automação do Google Workspace. Os dados operacionais ficam no Firestore e no Storage, acessados direto pelo navegador e protegidos pelas regras versionadas em `firestore.rules` e `storage.rules`.
@@ -35,6 +35,8 @@ flowchart LR
     FCM[Firebase Cloud Messaging]
     GW[Google Drive · Docs · Gmail · Agenda]
     GEMINI[Gemini API]
+    AIL[Firebase AI Logic<br/>Vertex AI · gemini-3.5-flash]
+    APPCHECK[App Check<br/>reCAPTCHA Enterprise]
     STATIC[JSON e conteúdo estático<br/>no bundle/public]
 
     U -->|HTTPS| FE
@@ -44,6 +46,8 @@ flowchart LR
     FE -->|login| AUTH
     FE -->|/api/* com ID token| RUN
     FE -->|POST JSON com ID token| GAS
+    FE -->|SDK firebase/ai| AIL
+    FE -->|token| APPCHECK
     RUN -->|Admin SDK| FS
     RUN -->|Admin SDK| AUTH
     RUN -->|envio| FCM
@@ -51,7 +55,6 @@ flowchart LR
     FCM -->|push| SW
     SW -->|notificação| U
     GAS --> GW
-    GAS --> GEMINI
 ```
 
 ---
@@ -121,7 +124,7 @@ O **Cloud Firestore** é a fonte principal (detalhes em `docs/database.md`, seç
 | `App.tsx` | Shell autenticado: sessão, permissões, avisos pós-login (senha, notificações, triagem), histórico de notificações | React + TypeScript |
 | `components/shell/` | Sidebar, topbar, breadcrumb, busca global e menu do usuário (com badge de notificações) | React |
 | `components/ui/` | Primitivos do design system (Dialog, Drawer, Button, StatusTag, Toast…) | React + Tailwind |
-| `components/` (telas) | Início, Inspeções, Inspecionados, Concursos, Pareceres, Perícia Menor, Formação, Usuários, Perfil | React |
+| `components/` (telas) | Início, Inspeções, Inspecionados, Concursos, Pareceres, Perícia Menor/Atestados, Escala SVÇ, Formação, Usuários, Perfil | React |
 | `config/` | Rotas, navegação, matriz de permissões e endpoints | TypeScript |
 | `services/` | Acesso ao Firestore/Storage, ao servidor e ao Apps Script; push | TypeScript |
 | `utils/` | Regras puras (datas, minutas, triagem, exames, PWA) | TypeScript |
@@ -147,19 +150,20 @@ O **Cloud Firestore** é a fonte principal (detalhes em `docs/database.md`, seç
 ├── components/
 │   ├── concursos/               # lista, planilha (hook + tabela/celular/ações), modais, triagem, exames
 │   ├── inspecoes/               # agenda, agendamento, bloqueios, minutas
-│   ├── militares/ pareceres/ periciaMenor/
+│   ├── escala/ militares/ pareceres/ periciaMenor/
 │   ├── publico/                 # páginas sem login
 │   ├── shell/                   # sidebar, topbar, menu do usuário
 │   ├── ui/                      # primitivos do design system
 │   ├── Home.tsx, ConcursosJRS.tsx, Inspecoes.tsx, …
 │   ├── NotificacoesConvite.tsx, NotificacoesPainel.tsx
 │   └── ErroFatal.tsx
-├── config/                      # routes (+ aliases), navigation, permissions, endpoints  (+ __tests__/)
+├── config/                      # routes (+ aliases), navigation, permissions, endpoints, promptsIA, termosPericia  (+ __tests__/)
 ├── context/  hooks/  utils/
 ├── assets/fonts/                # Montserrat e Material Symbols (autohospedadas)
 ├── services/                    # apiClient, authService, firestore*, drive*, notificacoesPush…
 │   ├── apiClient.ts             # cliente único: servidor Node e Apps Script (token, timeout, erro tipado)
 │   ├── authService.ts           # fachada da autenticação (Firebase Auth)
+│   ├── geminiAI.ts  atestadoIA.ts  sinaisIA.ts  appCheck.ts   # IA pelo Firebase AI Logic + App Check
 │   └── pareceresService.ts  periciaMenorService.ts  extrasService.ts   # fachadas por domínio
 ├── public/
 │   ├── manifest.webmanifest
@@ -229,7 +233,9 @@ sequenceDiagram
 
 `services/` concentra o acesso a dados e integrações: um arquivo por coleção do Firestore (`firestore*.ts`), o Drive/Apps Script (`driveConcursos.ts`, `drivePareceres.ts`), a agenda (`agendaConcursos.ts`, `agendaGoogleIS.ts`), o push (`notificacoesPush.ts`), a fila de impressão (`documentosGerados.ts`) e a auditoria das IS (`auditoriaIS.ts`). A URL do servidor vem de `utils/apiBase.ts` e as do Apps Script de `config/endpoints.ts`.
 
-**Cliente único de API (31/10/2026).** Toda chamada ao servidor Node ou ao Apps Script passa por `services/apiClient.ts`: `chamarServidor(rota, corpo, opts)` (JSON, `Authorization: Bearer`) e `chamarScript(ação, dados, opts)` (corpo `text/plain`, `idToken` no corpo). Ele centraliza URL base, serialização, ID token do Firebase (`authService.obterIdToken`), *timeout* por `AbortController` (padrão 120 s), erro tipado `ApiError` (`codigo`: `nao_autenticado`, `sem_permissao`, `rede`, `timeout`, `resposta_invalida`, `negocio`) e os envelopes de resposta (`{ sucesso, dados | erro }` do Apps Script, o envelope legado `{ success, data | message }` e `{ success, … }` do servidor). Migrados: `atestadoIA`, `driveConcursos`, `drivePareceres`, `handoff`, `loginNip`, `notificacoesPush`, `firestoreExtras` (prévia de apresentação), `Mensagens.tsx`, `useConcursoDetalhe.tsx` e `ImageScanner.tsx`. As demais `fetch` do código leem arquivos estáticos (`cid.json`, `corposQuadros`), uma imagem do próprio app (Infográficos) ou o oEmbed público do YouTube — não usam backend.
+**Cliente único de API (31/10/2026).** Toda chamada ao servidor Node ou ao Apps Script passa por `services/apiClient.ts`: `chamarServidor(rota, corpo, opts)` (JSON, `Authorization: Bearer`) e `chamarScript(ação, dados, opts)` (corpo `text/plain`, `idToken` no corpo). Ele centraliza URL base, serialização, ID token do Firebase (`authService.obterIdToken`), *timeout* por `AbortController` (padrão 120 s), erro tipado `ApiError` (`codigo`: `nao_autenticado`, `sem_permissao`, `rede`, `timeout`, `resposta_invalida`, `negocio`) e os envelopes de resposta (`{ sucesso, dados | erro }` do Apps Script, o envelope legado `{ success, data | message }` e `{ success, … }` do servidor). Migrados: `driveConcursos`, `drivePareceres`, `handoff`, `loginNip`, `notificacoesPush`, `firestoreExtras` (prévia de apresentação), `Mensagens.tsx`, `useConcursoDetalhe.tsx` e `ImageScanner.tsx`. As demais `fetch` do código leem arquivos estáticos (`cid.json`, `corposQuadros`), uma imagem do próprio app (Infográficos) ou o oEmbed público do YouTube — não usam backend.
+
+**IA no app (06/11/2026).** As chamadas ao Gemini feitas pelo navegador não passam pelo `apiClient`: usam o SDK `firebase/ai` (Firebase AI Logic, backend Vertex AI, `gemini-3.5-flash`, região `global`) por `services/geminiAI.ts` (`gerarComGemini`, `lerJsonIA`), com saída por esquema JSON quando cabe e os prompts em `config/promptsIA.ts`. O App Check (reCAPTCHA Enterprise, chave do site *app-jrs-hnre*, `services/appCheck.ts`) protege as chamadas. Usam esse caminho: `atestadoIA.ts` (atestado), `sinaisIA.ts` (print do SINAIS), a minuta de mensagens, a mensagem de concurso e os exames do candidato.
 
 `authService.ts` é a fachada da autenticação (sessão, login, logout, troca de senha, `obterIdToken`/`exigirIdToken`). Por domínio, `pareceresService.ts`, `periciaMenorService.ts` e `extrasService.ts` reexportam os serviços `firestore*`/`drive*`/`atestadoIA` correspondentes; os módulos originais continuam válidos e nenhum import existente mudou.
 
@@ -240,7 +246,8 @@ sequenceDiagram
 
 ### 6.6 Geração local de documentos
 
-- `jsPDF`: PDF do atestado fotografado (Perícia Menor) e documentos do guia de doenças.
+- `jsPDF`: PDF do atestado fotografado (Perícia Menor), depois do filtro "Documento" (`utils/filtroDocumento.ts`), e documentos do guia de doenças.
+- Visualização: PDFs arquivados de atestados abrem, no desktop, num modal em tela cheia (`components/ui/LinkPdf.tsx` → `PdfFullscreenModal.tsx`, renderizado no `<body>`); no celular, no visualizador do aparelho.
 - `pdf-lib`: junção do Termo de Recurso com o Termo de Cientificação num PDF único.
 
 ### 6.7 Notificações e avisos
@@ -255,7 +262,7 @@ sequenceDiagram
 ## 7. Módulos funcionais
 
 ### 7.1 Início
-Painel de trabalho: *Precisa de atenção* (pareceres atrasados, perícias vigentes, IS de hoje, concursos em andamento e do dia, **IS de concurso atrasadas**, senha temporária), *Últimos documentos gerados* (só Secretaria), Próximas Inspeções, Pareceres não concluídos, Perícias Menores Vigentes, Acesso rápido, **Próximas férias** (coluna direita), Agenda de inspeções e Avisos.
+Painel de trabalho: *Precisa de atenção* (pareceres atrasados, perícias vigentes, IS de hoje, concursos em andamento e do dia, **IS de concurso atrasadas**, senha temporária), *Últimos documentos gerados* (só Secretaria), **Próximos serviços** (Escala SVÇ do usuário), Próximas Inspeções, Pareceres não concluídos, Perícias Menores Vigentes (as 4 mais antigas; o badge do título mostra o total), Acesso rápido, **Próximas férias** (coluna direita), Agenda de inspeções e Avisos. Para `user_medicos_geral`: sem Próximas férias e com **Últimos atestados** (os registrados pelo usuário).
 
 ### 7.2 Inspeções de Saúde e agenda
 `Inspecoes.tsx` e `components/inspecoes/`: cadastro das IS (exceto concursos), tabela agrupada ou calendário Dia/Semana/Mês, agendamento por perito em slots (transação em `agendaSlots`), bloqueios de horário/turno/período, minutas e sincronização com o Google Agenda "JRS/HNRe" (Apps Script). Os dias de concurso ocupam o turno da manhã de todos os peritos.
@@ -283,10 +290,10 @@ Funcionalidades:
 Firestore (`pareceres`, `quesitosParecer`); PDF pelo Apps Script no Drive; diálogo **Enviar para Impressão** por e-mail.
 
 ### 7.5 Perícia menor
-Firestore (`periciasMenores`); leitura do atestado pelo Gemini (Firebase AI Logic); PDF do atestado no Storage.
+`PericiaMenor.tsx` e `components/periciaMenor/`; Firestore (`periciasMenores`). Rótulos por perfil em `config/termosPericia.ts` ("Atestados" para `user_medicos_mpi` e `user_medicos_geral`). O formulário (`NovaPericiaMenorForm.tsx`) começa por **Registrar Atestado / Homologar Atestado** e revela os campos em sequência (foto obrigatória → militar → data → tempo → [tempo homologado] → CID → dispensas → ENC p/ VDF Sim/Não); a foto passa pelo recorte, pelo filtro "Documento" e pela leitura do Gemini (Firebase AI Logic), que já preenche os campos. Regras de tempo (20 dias por atestado, 30 acumulados) em `utils/periciaMenorRegras.ts`; dispensas com complemento em `DispensasModal.tsx`. PDF do atestado no Storage.
 
 ### 7.6 Inspecionados
-`militares`: militares, dependentes e pensionistas; ficha com histórico das IS.
+`militares`: militares, dependentes e pensionistas; ficha com histórico das IS. Cadastro de militar preenchido a partir de um print do SINAIS (`services/sinaisIA.ts` + `utils/inspecionadoSinais.ts`) e importação em lote por CSV, só para o Admin (`components/militares/ImportarInspecionadosCsv.tsx`).
 
 ### 7.7 Consulta
 Doenças de Lei (com calculadoras: CDR, Webster, Child-Pugh; tabela de classificação da SIDA/AIDS), exames e índices de concursos, DGPM-406, Portaria e Legislação (Firestore + PDFs no Storage).
@@ -295,10 +302,13 @@ Doenças de Lei (com calculadoras: CDR, Webster, Child-Pugh; tabela de classific
 Casos periciais, Vídeos (YouTube), Infográficos (Storage), **Apresentações** (Google Slides, Canva, GitHub Pages, abertas em tela cheia) e Roteiro. Cadastro pelo Admin; visualizações registradas em `visualizacoesExtras`.
 
 ### 7.9 Administração e perfil
-Usuários (cadastro, permissões por perfil, redefinir senha, **excluir inativo**) e Perfil (contato, foto, senha e **Notificações**: status, ativação e envio de teste).
+Usuários (cadastro, permissões por perfil, redefinir senha, **excluir inativo**, ordenação por Perfil + NIP; e-mail institucional só `@marinha.mil.br` — `utils/emails.ts`) e Perfil (contato, foto, senha e **Notificações**: status, ativação e envio de teste).
 
 ### 7.10 Mensagens
 `Mensagens.tsx`: minutas de mensagens administrativas.
+
+### 7.11 Escala SVÇ
+`EscalaSpa.tsx` e `components/escala/ImportarEscalaCsv.tsx`; Firestore (`escalaSpa`, um documento por dia). Calendário mensal no desktop (cards que giram entre supervisão e plantões dia/noite; cores por dia útil, fim de semana/feriado e festas maiores — `utils/escalaSpa.ts`) e lista no celular. O Admin envia a escala em CSV (modelo próprio ou o CSV da aba *Agenda*); não há leitura da planilha nem do Google Agenda pelo app. O card **Próximos serviços** da Início cruza a escala com o login do usuário (`servicosDoUsuario`).
 
 ---
 
@@ -353,9 +363,9 @@ Não há `doGet`: o app só faz chamadas POST. O antigo projeto "principal" (`Co
 |---|---|
 | `admin` | Presidente da JRS: acesso total, gestão de usuários e permissões, "Visualizar como" outro perfil |
 | `user_medicos` | Peritos da JRS |
-| `user_medicos_mpi` | Médicos da MPI (inclui a triagem das IS de concurso) |
-| `user_medicos_geral` | Demais médicos do HNRe: por padrão só Perícia Menor (Novo e Histórico) e Exames mínimos, além do próprio perfil; não recebe notificações. Cadastro em lote: `scripts/criar-usuarios-csv.mjs` |
-| `user_secretaria` | Secretaria (agenda, cadastros, fila de impressão na Início) |
+| `user_medicos_mpi` | Médicos da MPI (inclui a triagem das IS de concurso); vê a Perícia Menor como "Atestados" |
+| `user_medicos_geral` | Demais médicos do HNRe: por padrão só Atestados (Perícia Menor: Novo e Histórico), Exames mínimos e Escala SVÇ, além do próprio perfil; não recebe notificações. Cadastro em lote: `scripts/criar-usuarios-csv.mjs` |
+| `user_secretaria` | Secretaria (agenda, cadastros, fila de impressão na Início); não vê a Escala SVÇ |
 
 A visibilidade de páginas e funcionalidades segue a matriz `config/permissoes` (editável pelo Admin), lida por `canAccessPage`/`canUseFeature`.
 
@@ -808,7 +818,7 @@ flowchart TB
 
 ### ADR-005 — Gemini acessado pelo backend
 
-**Status:** vigente.
+**Status:** substituída pela ADR-010 (06/11/2026) — o Apps Script não chama mais o Gemini.
 
 **Decisão:** encaminhar imagens para Gemini por meio do Apps Script.
 
@@ -840,6 +850,19 @@ flowchart TB
 
 - **Status:** aceita.
 - **Decisão:** PDFs gerados pelo Apps Script ficam no Drive compartilhado e são enviados por e-mail para a impressão; o app registra a fila em `documentos_gerados`.
+
+### ADR-010 — Gemini no app pelo Firebase AI Logic
+
+- **Status:** aceita (06/11/2026; substitui a ADR-005).
+- **Decisão:** o navegador chama o Gemini pelo SDK `firebase/ai` (backend Vertex AI, `gemini-3.5-flash`, região `global`), com App Check (reCAPTCHA Enterprise) e saída por esquema JSON. O Apps Script guarda só o trabalho do Drive (ex.: `salvarMinutaMensagem`); o servidor do Cloud Run mantém OCR de PDF e análise de imagem.
+- **Motivação:** sem chave de API no bundle nem no Apps Script, menos latência e um só ponto de configuração de modelo e prompts (`services/geminiAI.ts`, `config/promptsIA.ts`); Vertex AI atende melhor aos requisitos de LGPD.
+- **Consequências:** a API *Vertex AI / Agent Platform* precisa estar ativa no projeto e o domínio do app registrado na chave do reCAPTCHA; requisições sem token do App Check são recusadas.
+
+### ADR-011 — Escala SVÇ enviada pelo Admin em CSV
+
+- **Status:** aceita (06/11/2026).
+- **Decisão:** a escala do SPA é gravada no Firestore (`escalaSpa`, por dia) a partir de um CSV enviado pelo Admin no app; o app não lê a planilha da escala nem o Google Agenda.
+- **Consequências:** sem dependência de Apps Script para a escala; atualizar a escala exige reenviar o CSV (a gravação mescla por dia).
 
 ---
 
@@ -911,3 +934,18 @@ Já feitos em 31/10/2026: publicação das regras no CI (com teste antes); restr
 | 31/10 | Páginas sob demanda (`React.lazy`) e aliases de rota | `App.tsx`, `config/routes.ts` |
 | 31/10 | Apps Script: login, usuário ativo e perfil em todas as ações; rotas do Gemini do servidor passam a exigir login; auditoria de acessos recusados e operações sensíveis | `CodeConcursos.gs` (`autorizarAcao_`), `server.ts` (`auditarServidor`), `auditoria_acoes` |
 
+## 21. Histórico de mudanças (01 a 06/11/2026)
+
+| Data | Mudança | Onde |
+|---|---|---|
+| 01–06/11 | Inspecionados: importação em lote por CSV (Admin) | `components/militares/ImportarInspecionadosCsv.tsx` |
+| 01–06/11 | Menus de finalidade em cascata (Inspeções, Pareceres, Exames mínimos); "+ Novo inspecionado" só para NIP de 8 dígitos sem resultado | `components/ui/MenuCascata.tsx`, `NovoParecerForm.tsx` |
+| 01–06/11 | Perfil `user_medicos_geral` (30 contas criadas por CSV); e-mail institucional só `@marinha.mil.br` | `config/permissions.ts`, `scripts/criar-usuarios-csv.mjs`, `utils/emails.ts` |
+| 01–06/11 | Perícia Menor: "Atestados" (geral e MPI), filtros, Dispensa no lugar de LTS, dispensas com complemento, limites de 20/30 dias, médico/CRM do emissor, filtro "Documento" e leitura automática | `components/periciaMenor/`, `utils/periciaMenorRegras.ts`, `config/termosPericia.ts` |
+| 01–06/11 | Usuários: ordenação por Perfil (NIP como segundo critério) | `UsuariosManagement.tsx` |
+| 06/11 | Toda a IA do app migrada para o Firebase AI Logic com App Check; Apps Script sem Gemini | `services/geminiAI.ts`, `services/appCheck.ts`, `config/promptsIA.ts` (ADR-010) |
+| 06/11 | Novo inspecionado preenchido por print do SINAIS | `services/sinaisIA.ts`, `utils/inspecionadoSinais.ts` |
+| 06/11 | Início do `user_medicos_geral`: Últimos atestados, sem Próximas férias; atestados vigentes de todos em "Precisa de atenção" | `Home.tsx` |
+| 06/11 | Página Escala SVÇ, envio da escala por CSV e card "Próximos serviços" | `EscalaSpa.tsx`, `components/escala/`, `utils/escalaSpa.ts`, `escalaSpa` (ADR-011) |
+| 06/11 | Novo atestado em etapas (Registrar/Homologar, ENC p/ VDF Sim/Não), PDF em modal no desktop, foto obrigatória de novo | `NovaPericiaMenorForm.tsx`, `components/ui/LinkPdf.tsx`, `PdfFullscreenModal.tsx` |
+| 06/11 | Início: Perícias Menores Vigentes mostra as 4 mais antigas, com o total no badge | `Home.tsx` |
