@@ -31,6 +31,12 @@ const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm 
 const labelClass = 'text-sm font-bold text-ink-3 uppercase tracking-wider block mb-1';
 const featureGroups = [...new Set(FEATURE_DEFS.map(f => f.group))];
 
+/** Rótulo exibido de cada perfil (a ordenação por Perfil segue a ordem alfabética do rótulo). */
+const PERFIL_ROTULO: Record<string, string> = {
+  admin: 'Admin', user_medicos: 'User Médicos', user_medicos_mpi: 'User Médicos MPI',
+  user_medicos_geral: 'User Médicos Geral', user_secretaria: 'User Secretaria',
+};
+
 export const UsuariosManagement: React.FC = () => {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +44,9 @@ export const UsuariosManagement: React.FC = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'todos' | 'ativos' | 'inativos'>('todos');
   const [perfilFilter, setPerfilFilter] = useState<string>('todos');
+  // Ordenação pela coluna Perfil (botão no cabeçalho): crescente → decrescente → sem; o NIP crescente
+  // é sempre o critério seguinte (e o único quando a ordenação por Perfil está desligada).
+  const [ordemPerfil, setOrdemPerfil] = useState<'' | 'asc' | 'desc'>('');
 
   // Edit Modal State
   const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
@@ -282,7 +291,12 @@ export const UsuariosManagement: React.FC = () => {
     const matchesPerfil = perfilFilter === 'todos' ? true : u.perfil === perfilFilter;
 
     return matchesSearch && matchesStatus && matchesPerfil;
+  }).sort((a, b) => {
+    const rotulo = (p: string) => PERFIL_ROTULO[p] || p;
+    const porPerfil = ordemPerfil ? rotulo(a.perfil).localeCompare(rotulo(b.perfil), 'pt-BR') * (ordemPerfil === 'asc' ? 1 : -1) : 0;
+    return porPerfil || a.nip.replace(/\D/g, '').localeCompare(b.nip.replace(/\D/g, ''));
   });
+  const alternarOrdemPerfil = () => setOrdemPerfil(o => (o === '' ? 'asc' : o === 'asc' ? 'desc' : ''));
 
   // Perfil não é resultado nem estado: tags navy (Admin cheio, demais contornados).
   const getPerfilBadge = (perfil: string) => {
@@ -412,7 +426,19 @@ export const UsuariosManagement: React.FC = () => {
                       <th className="py-3.5 px-4 whitespace-nowrap">Cargo</th>
                       <th className="py-3.5 px-4 whitespace-nowrap">NIP</th>
                       <th className="py-3.5 px-4 whitespace-nowrap">E-mail</th>
-                      <th className="py-3.5 px-4 whitespace-nowrap">Perfil</th>
+                      <th className="py-3.5 px-4 whitespace-nowrap" aria-sort={ordemPerfil === 'asc' ? 'ascending' : ordemPerfil === 'desc' ? 'descending' : 'none'}>
+                        <span className="inline-flex items-center gap-1">
+                          Perfil
+                          <button
+                            type="button" onClick={alternarOrdemPerfil}
+                            title={ordemPerfil === '' ? 'Ordenar por perfil' : ordemPerfil === 'asc' ? 'Perfil: Z→A' : 'Remover ordenação por perfil'}
+                            aria-label={ordemPerfil === '' ? 'Ordenar por perfil (crescente)' : ordemPerfil === 'asc' ? 'Ordenar por perfil (decrescente)' : 'Remover ordenação por perfil'}
+                            className={`w-7 h-7 -my-1 inline-flex items-center justify-center rounded-md hover:bg-thead hover:text-navy ${ordemPerfil ? 'text-navy' : 'text-ink-4'}`}
+                          >
+                            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">{ordemPerfil === 'asc' ? 'arrow_upward' : ordemPerfil === 'desc' ? 'arrow_downward' : 'unfold_more'}</span>
+                          </button>
+                        </span>
+                      </th>
                       <th className="py-3.5 px-4 whitespace-nowrap text-center">Status</th>
                       <th className="py-3.5 px-4 whitespace-nowrap text-right">Ações</th>
                     </tr>
