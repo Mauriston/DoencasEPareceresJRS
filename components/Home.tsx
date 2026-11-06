@@ -32,6 +32,19 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 import { observarDocumentosPendentes, marcarDocumentoAberto, type DocumentoGerado } from '../services/documentosGerados';
 import { urlVisualizacao } from '../services/driveConcursos';
 import type { NavItem } from '../types';
+import { observarEscalaAPartirDe, type EscalaDia } from '../services/firestoreEscala';
+import { servicosDoUsuario, type FuncaoEscala } from '../utils/escalaSpa';
+
+const SEMANA_ABR = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'];
+/** Ícone e cor de cada função da Escala SVÇ no card "Próximos serviços". */
+const FUNCAO_ESCALA: Record<FuncaoEscala, { icone: string; rotulo: string }> = {
+  'Supervisão': { icone: 'shield_person', rotulo: 'Supervisão 24 h' },
+  'Retém supervisão': { icone: 'person_pin', rotulo: 'Retém da supervisão' },
+  'Dia': { icone: 'light_mode', rotulo: 'Plantão dia (12 h)' },
+  'Retém dia': { icone: 'person_pin', rotulo: 'Retém do plantão dia' },
+  'Noite': { icone: 'dark_mode', rotulo: 'Plantão noite (12 h)' },
+  'Retém noite': { icone: 'person_pin', rotulo: 'Retém do plantão noite' },
+};
 
 interface Atencao {
   id: string;
@@ -179,6 +192,12 @@ export const Home: React.FC = () => {
     ? pericias.filter(p => p.peritoUid === authUser?.uid)
       .sort((a, b) => (b.criadoEm?.toMillis?.() ?? 0) - (a.criadoEm?.toMillis?.() ?? 0) || b.dataAtestado.localeCompare(a.dataAtestado))
     : []), [pericias, ehMedicoGeral, authUser?.uid]);
+
+  // Escala SVÇ: próximos serviços do usuário (supervisão, retém, plantões), a partir de hoje.
+  const podeEscala = canAccessPage('escala', perfil);
+  const [escala, setEscala] = useState<EscalaDia[]>([]);
+  useEffect(() => (podeEscala ? observarEscalaAPartirDe(hoje, 62, setEscala, () => { /* silencioso */ }) : undefined), [podeEscala, hoje]);
+  const meusServicos = useMemo(() => servicosDoUsuario(escala, authUser?.usuario).slice(0, 5), [escala, authUser?.usuario]);
 
   // Próximas férias: bloqueios da agenda com motivo "FÉRIAS" (sem distinguir acento/caixa) ainda não
   // terminados, os mais próximos primeiro. Só para Admin, médicos JRS/MPI e Secretaria (não para
@@ -431,6 +450,31 @@ export const Home: React.FC = () => {
           </div>
 
           <div className="space-y-6 min-w-0">
+            {podeEscala && meusServicos.length > 0 && (
+              <Secao id="home-escala" titulo="Próximos serviços" acao={<Link to={pathForView('escala')} className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver escala</Link>}>
+                <Link to={pathForView('escala')} className="block hover:bg-thead/60 transition-colors" aria-label="Abrir a Escala SVÇ">
+                  <ul className="divide-y divide-line">
+                    {meusServicos.map(s => {
+                      const [y, m, d] = s.data.split('-').map(Number);
+                      const dow = new Date(y, m - 1, d).getDay();
+                      const f = FUNCAO_ESCALA[s.funcao];
+                      return (
+                        <li key={s.data + s.funcao} className="flex items-center gap-3 px-4 min-h-[56px] py-2">
+                          <span className="w-11 shrink-0 text-center">
+                            <span className="block text-base font-extrabold text-navy leading-none">{String(d).padStart(2, '0')}/{String(m).padStart(2, '0')}</span>
+                            <span className="block text-[11px] font-semibold text-ink-3">{s.data === hoje ? 'hoje' : SEMANA_ABR[dow]}</span>
+                          </span>
+                          <span className="material-symbols-outlined text-[22px] text-navy shrink-0" aria-hidden="true">{f.icone}</span>
+                          <span className="min-w-0 flex-1 text-sm font-bold text-navy truncate">{f.rotulo}</span>
+                          {s.data === hoje && <StatusTag tone="attention" className="shrink-0">Hoje</StatusTag>}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Link>
+              </Secao>
+            )}
+
             <Secao
               id="home-rapido" titulo="Acesso rápido"
               acao={<button type="button" onClick={() => { setRascunho(rapido.map(r => r.id)); setEditandoRapido(true); }} className="min-h-[44px] px-2 text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Editar</button>}

@@ -132,6 +132,13 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Coleção "escalaSpa": escala de serviço do SPA, um documento por dia (id = AAAA-MM-DD), com a
+    // supervisão e os plantões dia/noite. Lê quem está autenticado; só o Admin grava (importação CSV).
+    match /escalaSpa/{dia} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // Coleção "periciasMenores": Perícias Menores (um doc por perícia, id
     // automático; liga ao militar por "militarId" = NIP só dígitos; o status
     // Vigente/Concluída é derivado de "dataTermino"). Lê quem está autenticado;
