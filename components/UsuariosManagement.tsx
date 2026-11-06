@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { emailInstitucionalValido, MSG_EMAIL_INSTITUCIONAL } from '../utils/emails';
 import { Container, PageHeader } from './ui/Page';
 import { Toast } from './ui/Toast';
 import { ConfirmDialog } from './ui/Dialog';
@@ -100,6 +101,7 @@ export const UsuariosManagement: React.FC = () => {
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser || !editForm.nome) return;
+    if (!emailInstitucionalValido(editForm.email)) { showToast(MSG_EMAIL_INSTITUCIONAL); return; }
 
     setSaving(true);
     try {
@@ -201,6 +203,11 @@ export const UsuariosManagement: React.FC = () => {
     }
     if (!newUserForm.nip.trim()) {
       setNewUserError('Informe o NIP — é com ele que o usuário faz login.');
+      return;
+    }
+
+    if (!emailInstitucionalValido(newUserForm.email)) {
+      setNewUserError(MSG_EMAIL_INSTITUCIONAL);
       return;
     }
 
@@ -706,7 +713,8 @@ export const UsuariosManagement: React.FC = () => {
 
               <div>
                 <label className={labelClass}>E-mail Institucional</label>
-                <input type="email" value={newUserForm.email} onChange={e => setNewUserForm(prev => ({ ...prev, email: e.target.value }))} className={inputClass} placeholder="exemplo@marinha.mil.br" />
+                <input type="email" value={newUserForm.email} onChange={e => setNewUserForm(prev => ({ ...prev, email: e.target.value }))} className={inputClass} placeholder="exemplo@marinha.mil.br" aria-invalid={!emailInstitucionalValido(newUserForm.email) || undefined} />
+                {!emailInstitucionalValido(newUserForm.email) && <p role="alert" className="mt-1 text-xs font-semibold text-wine">{MSG_EMAIL_INSTITUCIONAL}</p>}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -800,7 +808,8 @@ export const UsuariosManagement: React.FC = () => {
 
               <div>
                 <label className={labelClass}>E-mail Institucional</label>
-                <input type="email" value={editForm.email || ''} onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))} className={inputClass} />
+                <input type="email" value={editForm.email || ''} onChange={e => setEditForm(prev => ({ ...prev, email: e.target.value }))} className={inputClass} placeholder="exemplo@marinha.mil.br" aria-invalid={!emailInstitucionalValido(editForm.email) || undefined} />
+                {!emailInstitucionalValido(editForm.email) && <p role="alert" className="mt-1 text-xs font-semibold text-wine">{MSG_EMAIL_INSTITUCIONAL}</p>}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
