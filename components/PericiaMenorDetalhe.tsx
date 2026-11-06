@@ -8,6 +8,7 @@ import { dataBR, statusPericia, type PericiaMenorRecord } from '../services/fire
 import { extrairNomeInspecionado } from '../utils/format';
 import { useNav } from '../context/NavContext';
 import { termosPericia } from '../config/termosPericia';
+import { LinkPdf } from './ui/LinkPdf';
 
 interface Props {
   person: string;
@@ -151,11 +152,11 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, hoje }) 
                   {rec.dispensas?.length > 0 && <p className="text-xs text-ink-3 mt-0.5">{rec.dispensas.join(', ')}</p>}
                 </div>
                 {rec.pdfUrl && (
-                  <a href={rec.pdfUrl} target="_blank" rel="noopener noreferrer"
+                  <LinkPdf url={rec.pdfUrl} tituloPdf={`Atestado de ${dataBR(rec.dataAtestado)}`}
                     className="shrink-0 w-11 h-11 bg-thead hover:bg-navy text-ink-3 hover:text-white rounded-full flex items-center justify-center transition-colors"
                     title="Abrir documento" aria-label="Abrir documento">
                     <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                  </a>
+                  </LinkPdf>
                 )}
               </div>
             </div>
