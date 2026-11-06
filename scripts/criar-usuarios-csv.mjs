@@ -4,7 +4,8 @@
 //   nip,perfil,postoGraduacao,cargo,nomeCompleto,usuario,crmPe,rqe,email,gmail,Celular,imgUrl
 // Faz o mesmo que "Novo usuário" em Usuários (Admin): login = "usuario" (e-mail sintético
 // <slug>@jrs-hnre.internal), senha inicial informada e senhaTemporaria=true (o app pede a troca).
-// Usuário cujo login já existe é pulado (nunca sobrescreve conta ou perfil).
+// Usuário cujo login já existe é pulado (nunca sobrescreve conta ou perfil). E-mail funcional fora de
+// @marinha.mil.br não é gravado como funcional: vai para o Gmail (se vazio) ou é descartado.
 //
 // Uso: GOOGLE_APPLICATION_CREDENTIALS=<chave da service account> \
 //        node scripts/criar-usuarios-csv.mjs <arquivo.csv> <senhaInicial> [--aplicar]
@@ -75,6 +76,12 @@ for (const l of tabela.slice(1)) {
     imageProfile: val(l, 'imgUrl'),
     senhaTemporaria: true,
   };
+  // E-mail funcional é sempre @marinha.mil.br; outro domínio vai para o Gmail (se ainda vazio) ou é descartado.
+  if (doc.email && !/@marinha\.mil\.br$/.test(doc.email)) {
+    console.log(`AVISO ${usuario}: e-mail funcional fora de @marinha.mil.br (${doc.email}) — ${doc.gmail ? 'descartado (Gmail já preenchido)' : 'movido para o Gmail'}`);
+    if (!doc.gmail) doc.gmail = doc.email;
+    doc.email = '';
+  }
   if (!aplicar) { console.log(`CRIA  ${usuario} <${email}> ${perfil} · ${doc.nome}`); criados++; continue; }
   try {
     const u = await auth.createUser({ email, password: senha, displayName: usuario });
