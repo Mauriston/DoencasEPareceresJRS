@@ -11,6 +11,7 @@
 // vale o tempo homologado (máx. 20). Somado às perícias do militar vigentes ou concluídas há até
 // 10 dias, não passa de 30 (utils/periciaMenorRegras.ts).
 // Ao registrar: a foto (já filtrada) vira PDF no Storage e a perícia é gravada no Firestore.
+// A foto está temporariamente opcional (FOTO_OBRIGATORIA = false); sem foto, pdfUrl fica vazio.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
@@ -39,6 +40,10 @@ interface Props {
 }
 
 type Erros = Record<string, string>;
+
+/** Foto do atestado obrigatória? TEMPORARIAMENTE desligada (pedido de 06/11/2026); voltar para true
+ * quando a obrigatoriedade for retomada — valida o envio e mostra o asterisco no título da seção. */
+const FOTO_OBRIGATORIA = false;
 
 const comUnidade = (v: string): string => (v ? `${v} dia${Number(v) > 1 ? 's' : ''}` : v);
 const digitos = (v: string) => v.replace(/\D/g, '');
@@ -201,7 +206,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
   const dataAtestado = dataCivilISO(dataTexto) || '';
   const validar = (): Erros => {
     const e: Erros = {};
-    if (!imagemDoc) e.foto = 'Fotografe o atestado.';
+    if (FOTO_OBRIGATORIA && !imagemDoc) e.foto = 'Fotografe o atestado.';
     if (!militar) e.militar = 'Escolha o militar na lista.';
     if (!dataTexto) e.dataAtestado = 'Informe a data do atestado.';
     else if (!dataAtestado) e.dataAtestado = 'Data inválida (dd/mm/aaaa).';
@@ -225,7 +230,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
     setSalvando(true);
     try {
       const id = novoIdPericiaMenor();
-      const pdfUrl = await enviarPdfPericiaMenor(id, await imagemParaPdf(imagemDoc));
+      const pdfUrl = imagemDoc ? await enviarPdfPericiaMenor(id, await imagemParaPdf(imagemDoc)) : '';
       const medico = medicoEmissor.trim();
       const crm = crmEmissor.trim();
       await registrarPericiaMenor(id, {
@@ -286,7 +291,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
           </label>
 
           <section className="space-y-2" aria-labelledby="pm-foto">
-            <h3 id="pm-foto" className={secao}>Fotografar atestado<span className="text-wine ml-0.5" aria-hidden="true">*</span><span className="sr-only"> (obrigatório)</span></h3>
+            <h3 id="pm-foto" className={secao}>Fotografar atestado{FOTO_OBRIGATORIA && <><span className="text-wine ml-0.5" aria-hidden="true">*</span><span className="sr-only"> (obrigatório)</span></>}</h3>
             <input type="file" accept="image/*" capture="environment" ref={arquivo} onChange={aoEscolherArquivo} className="hidden" />
             {!imagemDoc && !processando ? (
               <Button variant="secondary" icon="photo_camera" onClick={() => arquivo.current?.click()} aria-invalid={!!erros.foto || undefined} aria-describedby={erros.foto ? 'pm-foto-erro' : undefined}>Fotografar atestado</Button>
