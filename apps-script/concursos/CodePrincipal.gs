@@ -1,8 +1,8 @@
 /**
  * CodePrincipal.gs — ações vindas do antigo projeto "principal" (Code.gs), agora neste projeto único.
  *
- * POST (doPostPrincipal, chamado por doPost de CodeConcursos.gs): extrair_dados_atestado (Perícia Menor)
- * e gerarMinutaMensagem (página Mensagens). As respostas mantêm o formato antigo ({ success, data | message }).
+ * POST (doPostPrincipal, chamado por doPost de CodeConcursos.gs): gerarMinutaMensagem (página Mensagens).
+ * (A leitura do atestado da Perícia Menor saiu daqui: é feita no app pelo Firebase AI Logic.) As respostas mantêm o formato antigo ({ success, data | message }).
  *
  * A planilha principal (abas ListasRef, OM, Perito, Militares, Templates, Pareceres, Pericia_Menor,
  * Usuarios) e a de conteúdos extras deixaram de ser usadas: os dados estão no Firestore. As ações GET
@@ -14,52 +14,6 @@ function doPostPrincipal(e) {
   
   try {
     const payload = JSON.parse(e.postData.contents);
-
-    // ==========================================
-    // LÓGICA: EXTRAIR DADOS COM O GEMINI 2.5
-    // ==========================================
-    if (payload.action === "extrair_dados_atestado") {
-      const apiKey = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
-      if (!apiKey) throw new Error("Aviso: GEMINI_API_KEY não configurada nas propriedades do Google Apps Script.");
-
-      const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
-      
-      const requestBody = {
-        "contents": [{
-          "parts": [
-            {
-              // Paciente, data, dias e CID; e o médico que EMITIU o atestado (nome e CRM), usados
-              // quando o atestado externo é apresentado para homologação. Campo ausente: string vazia.
-              "text": "Extraia os seguintes 6 dados da imagem do atestado médico:\n1) nomeMilitar (o nome completo do paciente)\n2) dataAtestado (no formato YYYY-MM-DD)\n3) tempoAtestado (apenas o número de dias)\n4) cid (apenas o código principal, ex: M54.5)\n5) medicoEmissor (o nome do médico que assina/emite o atestado, como aparece no carimbo ou na assinatura)\n6) crmEmissor (o número do CRM do médico emissor, com a UF se houver, ex: 12345-PE).\nSe algum dado não estiver legível ou presente, use string vazia. Não invente dados.\nResponda estritamente num formato JSON válido com as chaves exatas 'nomeMilitar', 'dataAtestado', 'tempoAtestado', 'cid', 'medicoEmissor', 'crmEmissor'."
-            },
-            {
-              "inline_data": {
-                "mime_type": "image/jpeg",
-                "data": payload.base64Image
-              }
-            }
-          ]
-        }],
-        "generationConfig": {
-          "responseMimeType": "application/json"
-        }
-      };
-
-      // Novas tentativas e mensagens de cota/indisponibilidade: chamarGemini (CodeConcursos.gs).
-      const jsonResponse = chamarGemini(url, requestBody);
-
-      try {
-        const geminiText = jsonResponse.candidates[0].content.parts[0].text;
-        const extractedData = JSON.parse(geminiText); 
-        
-        return ContentService.createTextOutput(JSON.stringify({
-          success: true,
-          data: extractedData
-        })).setMimeType(ContentService.MimeType.JSON);
-      } catch (parseError) {
-        throw new Error("O Gemini não conseguiu estruturar os dados. Tente uma foto mais clara.");
-      }
-    }
 
     // ==========================================
     // LÓGICA: GERAÇÃO DE MINUTA DE MENSAGEM IS

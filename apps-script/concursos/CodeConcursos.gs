@@ -54,10 +54,10 @@ var MODELO_GEMINI = 'gemini-2.5-flash';
  * workflow "Apps Script publicado" compara este valor com o da implantação no ar (ação "versao")
  * e abre uma issue com o checklist de reimplantação enquanto forem diferentes.
  */
-var VERSAO_SCRIPT = '2026-11-06.2';
+var VERSAO_SCRIPT = '2026-11-06.3';
 
 /** Ações POST que vieram do antigo projeto "principal" (CodePrincipal.gs): respondem no formato antigo ({ success, ... }). */
-var ACOES_POST_PRINCIPAL = ['extrair_dados_atestado', 'gerarMinutaMensagem'];
+var ACOES_POST_PRINCIPAL = ['gerarMinutaMensagem'];
 
 /** Ponto de entrada POST do aplicativo da web. Espera um corpo JSON com a propriedade "action". */
 function doPost(e) {
@@ -459,18 +459,15 @@ function apiGerarPedidoParecer(corpo) {
 var FIREBASE_PROJECT_ID = 'jrs-app-web';
 var PERFIS_EQUIPE = ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
 var PERFIS_MEDICOS = ['admin', 'user_medicos', 'user_medicos_mpi'];
-/** Perícia Menor: também os demais médicos do HNRe (user_medicos_geral). */
-var PERFIS_PERICIA_MENOR = PERFIS_MEDICOS.concat(['user_medicos_geral']);
 /**
  * Perfis aceitos por ação (espelha firestore.rules). Ação fora da lista: qualquer perfil da equipe, ativo.
- * Pedido de parecer e Perícia Menor (leitura do atestado) são só dos médicos, como nas regras do Firestore.
+ * Pedido de parecer é só dos médicos, como nas regras do Firestore.
  * A matriz fina de páginas/funcionalidades (config/permissoes) continua conferida no app e nas regras.
  */
 var PERFIS_POR_ACAO = {
   gerarPedidoParecer: PERFIS_MEDICOS,
   salvarPdfParecer: PERFIS_MEDICOS,
-  enviarParecerImpressao: PERFIS_MEDICOS,
-  extrair_dados_atestado: PERFIS_PERICIA_MENOR
+  enviarParecerImpressao: PERFIS_MEDICOS
 };
 /** Operações sensíveis: além do log, cada uso vira um registro em auditoria_acoes (Firestore). */
 var ACOES_SENSIVEIS = ['removerArquivoDrive', 'enviarParecerImpressao', 'enviarTermoRecursoImpressao', 'enviarSolicitacaoConcursoImpressao'];
