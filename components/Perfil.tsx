@@ -1,3 +1,4 @@
+import { emailInstitucionalValido, MSG_EMAIL_INSTITUCIONAL } from '../utils/emails';
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Page } from './ui/Page';
 import { Toast } from './ui/Toast';
@@ -135,6 +136,7 @@ export const Perfil: React.FC = () => {
   const handleSalvarContato = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!authUser) return;
+    if (!emailInstitucionalValido(email)) { showToast('error', MSG_EMAIL_INSTITUCIONAL); return; }
     setSavingContato(true);
     try {
       const patch = { email: email.trim(), gmail: gmail.trim(), celular: celular.trim() };
@@ -228,7 +230,8 @@ export const Perfil: React.FC = () => {
 
           <div>
             <label className={labelClass}>E-mail Institucional</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputClass} placeholder="nome@marinha.mil.br" />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputClass} placeholder="nome@marinha.mil.br" aria-invalid={!emailInstitucionalValido(email) || undefined} />
+            {!emailInstitucionalValido(email) && <p role="alert" className="mt-1 text-xs font-semibold text-wine">{MSG_EMAIL_INSTITUCIONAL}</p>}
           </div>
           <div>
             <label className={labelClass}>E-mail Google (Gmail)</label>
@@ -252,7 +255,7 @@ export const Perfil: React.FC = () => {
         </form>
 
         {/* NOTIFICAÇÕES PUSH (POR APARELHO) */}
-        {authUser && <NotificacoesCard usuario={authUser.usuario} />}
+        {authUser && authUser.perfil !== 'user_medicos_geral' && <NotificacoesCard usuario={authUser.usuario} />}
 
         {/* ALTERAR SENHA (SOMENTE O PRÓPRIO USUÁRIO) */}
         <form onSubmit={handleSalvarSenha} className="bg-white rounded-2xl shadow-sm border border-line/60 p-5 space-y-4">

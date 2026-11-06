@@ -161,7 +161,7 @@ Regras: Firestore — leitura autenticada, escrita só Admin; Storage (`legislac
 
 | Coleção | Documento | Conteúdo |
 |---|---|---|
-| `usuarios` | UID do Firebase Auth | `usuario` (login, ex.: `CT MAURISTON`), `nome`, `postoGraduacao`, `cargo`, `nip`, `crmPe`, `rqe`, `email`, `gmail`, `celular`, `perfil` (`admin` \| `user_medicos` \| `user_medicos_mpi` \| `user_secretaria`), `ativo`, `imageProfile`, `senhaTemporaria`, `pwaTutorialConcluido` |
+| `usuarios` | UID do Firebase Auth | `usuario` (login, ex.: `CT MAURISTON`), `nome`, `postoGraduacao`, `cargo`, `nip`, `crmPe`, `rqe`, `email`, `gmail`, `celular`, `perfil` (`admin` \| `user_medicos` \| `user_medicos_mpi` \| `user_secretaria` \| `user_medicos_geral`), `ativo`, `imageProfile`, `senhaTemporaria`, `pwaTutorialConcluido` |
 | `usuarios_publicos` | UID | Réplica mínima (`usuario`, `ativo`) para o menu de login, legível sem autenticação |
 | `config/permissoes` | documento único | Matriz de páginas e funcionalidades por perfil (editada pelo Admin em *Usuários*) |
 | `militares` | NIP só dígitos | Inspecionados (página *Inspecionados*): `tipo` (militar, dependente ou pensionista; dependente traz `titularId/Nome/Posto`), `om`, `temporario`, `pgq`, `nip`, `nome`, `inspecionado` (`{pgq} {nip} {nome}`), `email`, `ativo`, `rm1`, `refo`, `servico_label` (só HNRe), `nomeGuerra` e `especialidade` (oficiais médicos do HNRe) |

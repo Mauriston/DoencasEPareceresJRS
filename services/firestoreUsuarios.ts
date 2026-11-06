@@ -18,7 +18,7 @@ export interface UsuarioDoc {
   email: string;
   gmail: string;
   celular: string;
-  perfil: 'admin' | 'user_medicos' | 'user_secretaria' | 'user_medicos_mpi' | string;
+  perfil: 'admin' | 'user_medicos' | 'user_secretaria' | 'user_medicos_mpi' | 'user_medicos_geral' | string;
   ativo: boolean;
   imageProfile: string;
   senhaTemporaria: boolean;

@@ -174,7 +174,7 @@ export const Sidebar: React.FC = () => {
                   onPerfilClick={() => { setIsAvatarMenuOpen(false); setCurrentView('perfil'); }}
                   onLogoutClick={() => { setIsAvatarMenuOpen(false); handleLogout(); }}
                   naoLidas={nav?.notificacoesNaoLidas}
-                  onNotificacoesClick={() => nav?.abrirNotificacoes()}
+                  onNotificacoesClick={nav?.abrirNotificacoes}
                   perfilReal={nav?.perfilReal}
                   verComo={nav?.verComo}
                   onVerComo={perfil => { setIsAvatarMenuOpen(false); nav?.setVerComo(perfil); }}

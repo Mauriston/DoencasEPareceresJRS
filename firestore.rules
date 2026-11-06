@@ -37,6 +37,12 @@ service cloud.firestore {
       return isSignedIn() &&
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
     }
+    // Demais médicos do HNRe (perfil "user_medicos_geral"): acesso restrito à Perícia Menor
+    // (registrar perícia, cadastro rápido do militar e Serviço do HNRe) e aos Exames mínimos.
+    function isMedicoGeral() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil == 'user_medicos_geral';
+    }
     function isSecretaria() {
       return isSignedIn() &&
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil == 'user_secretaria';
@@ -120,8 +126,8 @@ service cloud.firestore {
     // ("servico_label", a partir da "Nova perícia menor").
     match /militares/{nip} {
       allow read: if isSignedIn();
-      allow create: if isEquipe();
-      allow update: if isAdmin() || (isMedico() &&
+      allow create: if isEquipe() || isMedicoGeral();
+      allow update: if isAdmin() || ((isMedico() || isMedicoGeral()) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['servico_label', 'atualizadoEm']));
       allow delete: if isAdmin();
     }
@@ -132,7 +138,7 @@ service cloud.firestore {
     // só médicos registram; o Admin corrige ou apaga.
     match /periciasMenores/{id} {
       allow read: if isSignedIn();
-      allow create: if isMedico();
+      allow create: if isMedico() || isMedicoGeral();
       allow update, delete: if isAdmin();
     }
 

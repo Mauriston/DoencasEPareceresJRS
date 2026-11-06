@@ -5,7 +5,7 @@ export interface AuthUser {
   uid: string;
   usuario: string;
   nome: string;
-  perfil: 'admin' | 'user_medicos' | 'user_secretaria' | 'user_medicos_mpi' | string;
+  perfil: 'admin' | 'user_medicos' | 'user_secretaria' | 'user_medicos_mpi' | 'user_medicos_geral' | string;
   postoGraduacao?: string;
   cargo?: string;
   nip?: string;
@@ -38,8 +38,8 @@ export interface NavContextType {
   abrirInstalacaoApp: () => void;
   /** Notificações não lidas do usuário (badge do avatar). */
   notificacoesNaoLidas: number;
-  /** Abre a lista de notificações (item do menu do avatar). */
-  abrirNotificacoes: () => void;
+  /** Abre a lista de notificações (item do menu do avatar). Ausente para quem não recebe notificações (user_medicos_geral). */
+  abrirNotificacoes?: () => void;
   updateAuthUser: (patch: Partial<AuthUser>) => void;
   handleLogout: () => void;
   periciaMenorVigentes: number;
