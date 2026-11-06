@@ -168,9 +168,17 @@ export const Home: React.FC = () => {
   const [pericias, setPericias] = useState<PericiaMenorRecord[]>([]);
   useEffect(() => (podePericiaMenor ? observarPericiasMenores(setPericias, () => { /* silencioso */ }) : undefined), [podePericiaMenor]);
   const vigentes = useMemo(() => pericias.filter(p => statusPericia(p) === 'vigente').sort((a, b) => a.dataTermino.localeCompare(b.dataTermino)), [pericias]);
+  // user_medicos_geral: no lugar das vigentes, os últimos atestados registrados pelo próprio usuário.
+  const ehMedicoGeral = perfil === 'user_medicos_geral';
+  const meusAtestados = useMemo(() => (ehMedicoGeral
+    ? pericias.filter(p => p.peritoUid === authUser?.uid)
+      .sort((a, b) => (b.criadoEm?.toMillis?.() ?? 0) - (a.criadoEm?.toMillis?.() ?? 0) || b.dataAtestado.localeCompare(a.dataAtestado))
+    : []), [pericias, ehMedicoGeral, authUser?.uid]);
 
   // Próximas férias: bloqueios da agenda com motivo "FÉRIAS" (sem distinguir acento/caixa) ainda não
-  // terminados, os mais próximos primeiro. Visível a todos; o card só aparece quando há registro.
+  // terminados, os mais próximos primeiro. Só para Admin, médicos JRS/MPI e Secretaria (não para
+  // user_medicos_geral); o card só aparece quando há registro.
+  const mostraFerias = ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'].includes(perfil || '');
   const [bloqueios, setBloqueios] = useState<BloqueioAgenda[]>([]);
   useEffect(() => observarBloqueios(setBloqueios, () => { /* silencioso */ }), []);
   const ferias = useMemo(() => bloqueios
@@ -230,7 +238,7 @@ export const Home: React.FC = () => {
       tag: 'Hoje', tom: feitas === totalHoje ? 'success' : 'attention', to: concursosDiaPath(hoje),
     });
   }
-  if (podePericiaMenor && periciaMenorVigentes > 0) {
+  if (podePericiaMenor && periciaMenorVigentes > 0 && !ehMedicoGeral) {
     atencao.push({
       id: 'pm', icone: 'personal_injury', titulo: termosPm.pagina === 'Atestados'
         ? `${periciaMenorVigentes} atestado${periciaMenorVigentes !== 1 ? 's' : ''} vigente${periciaMenorVigentes !== 1 ? 's' : ''}`
@@ -369,7 +377,27 @@ export const Home: React.FC = () => {
               </Secao>
             )}
 
-            {podePericiaMenor && vigentes.length > 0 && (
+            {podePericiaMenor && ehMedicoGeral && meusAtestados.length > 0 && (
+              <Secao id="home-meus-atestados" titulo="Últimos atestados" acao={<Link to="/pericia-menor/historico" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver atestados</Link>}>
+                <ul className="divide-y divide-line">
+                  {meusAtestados.slice(0, 6).map(p => {
+                    const vigente = statusPericia(p) === 'vigente';
+                    return (
+                      <li key={p.id}>
+                        <LinhaDocumento
+                          icone="personal_injury" titulo={extrairNomeInspecionado(p.inspecionado)} detalhe={`${dataBR(p.dataAtestado)} · ${p.tempoHomologado} dia${p.tempoHomologado !== 1 ? 's' : ''} · ${p.cid}`}
+                          data={`até ${dataBR(p.dataTermino)}`} link={p.pdfUrl} to="/pericia-menor/historico"
+                          tag={<StatusTag tone={vigente ? 'danger' : 'success'} className="shrink-0">{vigente ? 'Vigente' : 'Concluída'}</StatusTag>}
+                        />
+                      </li>
+                    );
+                  })}
+                </ul>
+                {meusAtestados.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{meusAtestados.length - 6} em Atestados.</p>}
+              </Secao>
+            )}
+
+            {podePericiaMenor && !ehMedicoGeral && vigentes.length > 0 && (
               <Secao id="home-pericias" titulo={`${termosPm.pagina === 'Atestados' ? 'Atestados vigentes' : 'Perícias Menores Vigentes'} (${vigentes.length})`} acao={<Link to="/pericia-menor/historico" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">{termosPm.pagina === 'Atestados' ? 'Ver atestados' : 'Ver perícias'}</Link>}>
                 <ul className="divide-y divide-line">
                   {vigentes.slice(0, 6).map(p => (
@@ -402,7 +430,7 @@ export const Home: React.FC = () => {
               </div>
             </Secao>
 
-            {ferias.length > 0 && (
+            {mostraFerias && ferias.length > 0 && (
               <Secao id="home-ferias" titulo="Próximas férias">
                 <ul className="divide-y divide-line">
                   {ferias.slice(0, 6).map(f => {

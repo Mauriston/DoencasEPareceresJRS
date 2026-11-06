@@ -24,29 +24,24 @@ const EM_PE: DispensaComplemento = {
 const COMPLEMENTOS = [SOBRECARGA, EM_PE];
 const complementoDe = (chave: string) => COMPLEMENTOS.find(c => c.chave === chave);
 
-/** Dispensas possíveis numa Perícia Menor (lista fixa; as com complemento aparecem pela chave). */
+/** Dispensas possíveis numa Perícia Menor (lista fixa; as com complemento aparecem pela chave).
+ * "TODAS AS ATIVIDADES" fica sempre em primeiro; as demais, em ordem alfabética. */
 export const DISPENSAS = [
   TODAS_ATIVIDADES,
-  'Carregar peso',
-  'Dirigir ou manobrar veículos Automotores',
-  'Embarque',
-  'Esforços físicos intensos e extenuantes',
-  'Formatura',
-  'Manobras Operativas',
-  'Marchas',
-  SOBRECARGA.chave,
-  'Operar equipamentos de precisão',
-  EM_PE.chave,
-  'Segurança / escolta',
-  'Serviço Armado',
-  'Serviço Noturno',
-  'Serviços em locais elevados',
-  'Subir e descer escadas repetidamente',
-  'TAF/TFM',
-  'TAF/TFM (Exceto caminhadas)',
-  'TAF/TFM (Exceto natação)',
-  'TAF/TFM(Exceto Caminhadas e Natação)',
-  'Uso de calçado fechado',
+  ...[
+    'Todo serviço',
+    'Dirigir ou manobrar veículos automotores',
+    'Formatura / Ordem unida',
+    'Serviços pesados',
+    'Uso de sapato fechado',
+    'Fazer a barba',
+    'Serviço armado',
+    'Serviço de rancho',
+    'Serviço de enfermaria',
+    EM_PE.chave,
+    SOBRECARGA.chave,
+    'TAF/TFM',
+  ].sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })),
 ];
 
 /** Separa a lista gravada em chaves marcadas + complementos digitados. */
