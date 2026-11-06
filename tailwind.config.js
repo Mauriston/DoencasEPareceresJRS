@@ -136,6 +136,10 @@ export default {
         'sheet-up': { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } },
         'backdrop-in': { from: { opacity: '0' }, to: { opacity: '1' } },
         'drawer-in': { from: { transform: 'translateX(100%)' }, to: { transform: 'translateX(0)' } },
+        // Menu suspenso (padrão M3): cresce a partir do campo que o abriu.
+        'menu-in': { from: { opacity: '0', transform: 'scaleY(0.9)' }, to: { opacity: '1', transform: 'scaleY(1)' } },
+        // Troca de nível do menu em cascata (grupo ↔ finalidades).
+        'menu-nivel': { from: { opacity: '0', transform: 'translateX(8px)' }, to: { opacity: '1', transform: 'translateX(0)' } },
       },
       // Container queries (auditoria v2, G1): os grids respondem à largura ÚTIL do conteúdo
       // (viewport − sidebar − margens), não à da janela. `@container` no wrapper + @split:… (≥ 960 px).
@@ -147,6 +151,8 @@ export default {
         'sheet-up': 'sheet-up 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
         'backdrop-in': 'backdrop-in 0.2s ease-out',
         'drawer-in': 'drawer-in 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
+        'menu-in': 'menu-in 0.16s cubic-bezier(0.2, 0, 0, 1)',
+        'menu-nivel': 'menu-nivel 0.14s ease-out',
       },
     },
   },

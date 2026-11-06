@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
-import { ChevronDown, ChevronRight, CheckCircle2, User, Calendar, FileText, Info, X } from './ui/icons';
+import { CheckCircle2, User, Calendar, FileText, Info, X } from './ui/icons';
 import examesData from '../data/anexoOExamesMinimos.json';
+import { MenuCascata, type GrupoMenu } from './ui/MenuCascata';
 
 // Anexo O da DGPM-406 (9ª Rev): finalidades de IS agrupadas (Controle
 // Periódico, Ingresso...) e, dentro de cada finalidade, exames agrupados
@@ -39,135 +40,17 @@ const FINALIDADES = GRUPOS_FINALIDADE.flatMap(g =>
 
 const FINALIDADE_PADRAO = 'Ingresso SAM / SMV (oriundos do meio civil)';
 
-// Menu suspenso no estilo dos menus nativos do iOS: lista escura de grupos com
-// seta ">"; ao tocar num grupo, a lista esmaece e o grupo sobe como um cartão
-// (título com seta "v") listando as finalidades. Tocar no título volta à lista.
+// Menu de finalidades (Exames mínimos, Inspeções de Saúde, Pareceres): menu em cascata compacto
+// (ui/MenuCascata) com os grupos do Anexo O — ou os grupos de quem o usa.
 /** Grupo de finalidades acrescentado ao menu por quem o usa (ex.: Pareceres), além dos do Anexo O. `gruposProprios` substitui o Anexo O por inteiro. */
 export interface GrupoFinalidadeExtra { nome: string; finalidades: string[] }
 
-export const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => void; placeholder?: string; erro?: boolean; gruposExtras?: GrupoFinalidadeExtra[]; gruposProprios?: GrupoFinalidadeExtra[] }> = ({ value, onChange, placeholder, erro, gruposExtras = [], gruposProprios }) => {
-  const grupos: GrupoFinalidade[] = useMemo(() => [
-    ...(gruposProprios ? [] : GRUPOS_FINALIDADE),
-    ...(gruposProprios ?? gruposExtras).map(g => ({ Grupo_Finalidade_Inspecao: g.nome, Finalidades_Inspecao: g.finalidades.map(f => ({ Finalidade_Inspecao: f, Grupos_Exame: [] })) })),
-  ], [gruposExtras, gruposProprios]);
-  const [aberto, setAberto] = useState(false);
-  const [grupoAberto, setGrupoAberto] = useState<{ nome: string; topo: number } | null>(null);
-  const raiz = useRef<HTMLDivElement>(null);
-
-  const grupoDoValor = grupos.find(g =>
-    g.Finalidades_Inspecao.some(f => limparNome(f.Finalidade_Inspecao) === value)
-  )?.Grupo_Finalidade_Inspecao ?? null;
-
-  useEffect(() => {
-    if (!aberto) return;
-    const fora = (e: MouseEvent | TouchEvent) => {
-      if (raiz.current && !raiz.current.contains(e.target as Node)) setAberto(false);
-    };
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setAberto(false); };
-    document.addEventListener('mousedown', fora);
-    document.addEventListener('touchstart', fora);
-    document.addEventListener('keydown', esc);
-    return () => {
-      document.removeEventListener('mousedown', fora);
-      document.removeEventListener('touchstart', fora);
-      document.removeEventListener('keydown', esc);
-    };
-  }, [aberto]);
-
-  const grupoSelecionado = grupoAberto
-    ? grupos.find(g => g.Grupo_Finalidade_Inspecao === grupoAberto.nome)
-    : undefined;
-
-  const alternar = () => {
-    setGrupoAberto(null);
-    setAberto(a => !a);
-  };
-
-  return (
-    <div ref={raiz} className="relative">
-      <button
-        id="finalidade-select"
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={aberto}
-        onClick={alternar}
-        aria-invalid={erro || undefined}
-        className={`w-full flex items-center justify-between gap-3 bg-paper border ${erro ? 'border-wine' : 'border-line'} text-navy text-base font-semibold rounded-lg p-3 text-left focus:outline-none focus:ring-1 focus:ring-navy focus:border-navy transition-all font-body shadow-inner`}
-      >
-        <span className="min-w-0">
-          {grupoDoValor && <span className="block text-xs font-bold text-ink-3 uppercase tracking-wider">{grupoDoValor}</span>}
-          <span className={`block leading-snug ${value ? '' : 'text-ink-4 font-normal'}`}>{value || placeholder}</span>
-        </span>
-        <ChevronDown size={18} className={`text-navy flex-shrink-0 transition-transform ${aberto ? 'rotate-180' : ''}`} />
-      </button>
-
-      {aberto && (
-        <div className="absolute z-30 left-0 right-0 mt-2 animate-fade-in">
-          {/* Nível 1: grupos. Com um grupo aberto, a lista inteira esmaece e o
-              toque nela volta ao nível 1. */}
-          <div
-            className={`rounded-[28px] bg-navy/95 backdrop-blur-xl text-white shadow-2xl ring-1 ring-white/10 py-2 transition-opacity duration-200 ${grupoAberto ? 'opacity-40' : ''}`}
-            onClick={grupoAberto ? () => setGrupoAberto(null) : undefined}
-          >
-            {grupos.map((grupo, i) => (
-              <button
-                key={grupo.Grupo_Finalidade_Inspecao}
-                type="button"
-                disabled={!!grupoAberto}
-                onClick={(e) => {
-                  setGrupoAberto({ nome: grupo.Grupo_Finalidade_Inspecao, topo: e.currentTarget.offsetTop });
-                }}
-                className={`w-full flex items-center justify-between gap-3 px-6 py-4 text-h2 font-medium text-left ${i > 0 ? 'border-t border-white/10' : ''} ${grupo.Grupo_Finalidade_Inspecao === grupoDoValor ? 'text-white' : 'text-white/90'}`}
-              >
-                <span>{grupo.Grupo_Finalidade_Inspecao}</span>
-                <ChevronRight size={20} className="flex-shrink-0 text-white/70" />
-              </button>
-            ))}
-          </div>
-
-          {/* Nível 2: o grupo tocado "sobe" como um cartão por cima da lista,
-              com o título (seta para baixo) e as finalidades abaixo. */}
-          {grupoSelecionado && grupoAberto && (
-            <div
-              className="absolute left-0 right-0 animate-fade-in"
-              style={{ top: Math.max(0, grupoAberto.topo - 8) }}
-            >
-              <div className="rounded-[28px] bg-navy text-white shadow-2xl ring-1 ring-white/10 max-h-[65vh] overflow-y-auto">
-                <button
-                  type="button"
-                  aria-expanded
-                  onClick={() => setGrupoAberto(null)}
-                  className="w-full flex items-center justify-between gap-3 px-6 py-4 text-h2 font-semibold text-left border-b border-white/10"
-                >
-                  <span>{grupoSelecionado.Grupo_Finalidade_Inspecao}</span>
-                  <ChevronDown size={20} className="flex-shrink-0 text-white/80" />
-                </button>
-                <div role="listbox" className="py-1">
-                  {grupoSelecionado.Finalidades_Inspecao.map((f, i) => {
-                    const nome = limparNome(f.Finalidade_Inspecao);
-                    const ativo = nome === value;
-                    return (
-                      <button
-                        key={nome}
-                        type="button"
-                        role="option"
-                        aria-selected={ativo}
-                        onClick={() => { onChange(nome); setAberto(false); setGrupoAberto(null); }}
-                        className={`w-full flex items-center justify-between gap-3 px-6 py-3.5 text-left text-h2 leading-snug hover:bg-white/5 ${i > 0 ? 'border-t border-white/5' : ''} ${ativo ? 'font-bold text-white' : 'text-white/85'}`}
-                      >
-                        <span>{nome}</span>
-                        {ativo && <CheckCircle2 size={18} className="flex-shrink-0 text-gold" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
+export const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: string) => void; placeholder?: string; erro?: boolean; gruposExtras?: GrupoFinalidadeExtra[]; gruposProprios?: GrupoFinalidadeExtra[]; tamanho?: 'campo' | 'destaque' }> = ({ value, onChange, placeholder = 'Selecione a finalidade', erro, gruposExtras = [], gruposProprios, tamanho }) => {
+  const grupos: GrupoMenu[] = useMemo(() => [
+    ...(gruposProprios ? [] : GRUPOS_FINALIDADE.map(g => ({ nome: g.Grupo_Finalidade_Inspecao, itens: g.Finalidades_Inspecao.map(f => limparNome(f.Finalidade_Inspecao)) }))),
+    ...(gruposProprios ?? gruposExtras).map(g => ({ nome: g.nome, itens: g.finalidades })),
+  ].filter(g => g.itens.length > 0), [gruposExtras, gruposProprios]);
+  return <MenuCascata id="finalidade-select" grupos={grupos} value={value} onChange={onChange} placeholder={placeholder} erro={erro} tamanho={tamanho} />;
 };
 
 export const ExamesGuide: React.FC = () => {
@@ -248,7 +131,7 @@ export const ExamesGuide: React.FC = () => {
             <label className="text-sm font-bold text-navy uppercase tracking-wider flex items-center gap-1">
               <FileText size={15} className="text-navy" /> Finalidade da Inspeção:
             </label>
-            <FinalidadeDropdown value={selectedFinalidade} onChange={setSelectedFinalidade} />
+            <FinalidadeDropdown value={selectedFinalidade} onChange={setSelectedFinalidade} tamanho="destaque" />
           </div>
         </div>
 
