@@ -29,18 +29,43 @@
  * pedir autorização dessas permissões.
  */
 
-var ID_TEMPLATE_TERMO_RECURSO = '1gVSaakcQJBrFJnF4umFbI_cjR9abCXPjfOyfSUFKnRo';
-var ID_TEMPLATE_TERMO_CIENTIFICACAO = '1uSdvvwxjPDkvGm7kjCrDGaGnPVF3_pDu4rN6C6tJFiI';
-var ID_TEMPLATE_SOLICITACAO_PARECER = '16KIcTgceHNdbTNRe8UeYPjJXn4r_d450Xy61conLO3Q';
-var ID_TEMPLATE_PEDIDO_PARECER = '1jE-3VQ8G2t4JQJ5B7ydedq6oupvsXwo7aPX_AVttMEM';
-var ID_TEMPLATE_SOLICITACAO_EXAMES = '1SSAzdWANvfQJx7Sip2-NbqDGAM0cgpVD6Q4Ci9UhGqQ';
+/**
+ * Configuração (IDs de templates, pastas, agenda e e-mail da impressão): vem das Propriedades do script
+ * (Configurações do projeto → Propriedades do script), com o valor abaixo como padrão. Assim dá para
+ * trocar uma pasta ou um template sem editar o código. Inventário completo em docs/configuracao.md.
+ * Para gravar os padrões atuais nas propriedades, rode uma vez gravarConfiguracaoPadrao() no editor.
+ */
+var CONFIG_PADRAO_ = {};
+function cfg_(chave, padrao) {
+  CONFIG_PADRAO_[chave] = padrao;
+  if (!cfg_.props) cfg_.props = PropertiesService.getScriptProperties().getProperties(); // uma leitura por execução
+  var v = cfg_.props[chave];
+  return v && String(v).trim() ? String(v).trim() : padrao;
+}
+
+/** Grava nas Propriedades do script os valores padrão que ainda não estão lá (rodar no editor). */
+function gravarConfiguracaoPadrao() {
+  var props = PropertiesService.getScriptProperties();
+  var atuais = props.getProperties();
+  var novos = {};
+  Object.keys(CONFIG_PADRAO_).forEach(function (k) { if (!atuais[k]) novos[k] = CONFIG_PADRAO_[k]; });
+  if (!atuais.ID_PASTA_MINUTAS && typeof ID_PASTA_MINUTAS !== 'undefined') novos.ID_PASTA_MINUTAS = ID_PASTA_MINUTAS; // CodePrincipal.gs
+  props.setProperties(novos, false);
+  Logger.log('Propriedades gravadas: ' + (Object.keys(novos).join(', ') || 'nenhuma (já existiam)'));
+}
+
+var ID_TEMPLATE_TERMO_RECURSO = cfg_('ID_TEMPLATE_TERMO_RECURSO', '1gVSaakcQJBrFJnF4umFbI_cjR9abCXPjfOyfSUFKnRo');
+var ID_TEMPLATE_TERMO_CIENTIFICACAO = cfg_('ID_TEMPLATE_TERMO_CIENTIFICACAO', '1uSdvvwxjPDkvGm7kjCrDGaGnPVF3_pDu4rN6C6tJFiI');
+var ID_TEMPLATE_SOLICITACAO_PARECER = cfg_('ID_TEMPLATE_SOLICITACAO_PARECER', '16KIcTgceHNdbTNRe8UeYPjJXn4r_d450Xy61conLO3Q');
+var ID_TEMPLATE_PEDIDO_PARECER = cfg_('ID_TEMPLATE_PEDIDO_PARECER', '1jE-3VQ8G2t4JQJ5B7ydedq6oupvsXwo7aPX_AVttMEM');
+var ID_TEMPLATE_SOLICITACAO_EXAMES = cfg_('ID_TEMPLATE_SOLICITACAO_EXAMES', '1SSAzdWANvfQJx7Sip2-NbqDGAM0cgpVD6Q4Ci9UhGqQ');
 
 /** Pasta raiz CONCURSOS (drive compartilhado): dentro dela ficam as pastas por ano. */
-var ID_PASTA_RAIZ_CONCURSOS = '1eBTehJDTOPjsgOeP3DjWKbE-iXdIKGos';
+var ID_PASTA_RAIZ_CONCURSOS = cfg_('ID_PASTA_RAIZ_CONCURSOS', '1eBTehJDTOPjsgOeP3DjWKbE-iXdIKGos');
 /** Agenda "JRS/HNRe" do Google Agenda (entrevistas das Inspeções de Saúde). */
-var ID_AGENDA_JRS_HNRE = 'c_b103c034ba38b68e447b1ea6ab97b0da658878ebc7daa7535d612f9f7eaed762@group.calendar.google.com';
+var ID_AGENDA_JRS_HNRE = cfg_('ID_AGENDA_JRS_HNRE', 'c_b103c034ba38b68e447b1ea6ab97b0da658878ebc7daa7535d612f9f7eaed762@group.calendar.google.com');
 /** Pasta PARECERES (Drive): uma subpasta por inspecionado (nome completo) com os pedidos de parecer em PDF. */
-var ID_PASTA_PARECERES = '176YQTOOWXuE78Xul49XYpJsVNyu-eZFi';
+var ID_PASTA_PARECERES = cfg_('ID_PASTA_PARECERES', '176YQTOOWXuE78Xul49XYpJsVNyu-eZFi');
 /** Chave de API web do projeto Firebase (pública, a mesma de firebase-applet-config.json): só serve para validar o idToken. */
 var FIREBASE_API_KEY = 'AIzaSyAWBYm6iGQNQXeC5DO038lMSruxpRjoX2c';
 
@@ -49,7 +74,7 @@ var FIREBASE_API_KEY = 'AIzaSyAWBYm6iGQNQXeC5DO038lMSruxpRjoX2c';
  * workflow "Apps Script publicado" compara este valor com o da implantação no ar (ação "versao")
  * e abre uma issue com o checklist de reimplantação enquanto forem diferentes.
  */
-var VERSAO_SCRIPT = '2026-11-06.4';
+var VERSAO_SCRIPT = '2026-11-06.5';
 
 /** Ponto de entrada POST do aplicativo da web. Espera um corpo JSON com a propriedade "action". */
 function doPost(e) {
@@ -669,7 +694,7 @@ function escaparHtml(texto) {
 }
 
 /** Destinatário do "Enviar para Impressão" dos pedidos de parecer. */
-var EMAIL_IMPRESSAO = 'giorginis@marinha.mil.br';
+var EMAIL_IMPRESSAO = cfg_('EMAIL_IMPRESSAO', 'giorginis@marinha.mil.br');
 
 /**
  * action=enviarParecerImpressao (POST): { idToken, pdfUrl, remetente } — envia o PDF do Pedido de Parecer por

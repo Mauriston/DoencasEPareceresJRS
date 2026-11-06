@@ -55,7 +55,7 @@ Depois de alterar um `.gs` no repositório (e mergear na `main`):
 
 - **A direção é sempre repositório → editor.** Se alguém editar direto no editor, a alteração não está versionada e some na próxima colagem. Quando isso acontecer, traga o código do editor para o repositório antes de qualquer outra coisa.
 - **Permissões novas**: se uma versão passar a usar um serviço que o projeto ainda não usava (ex.: Drive, Agenda), o dono precisa autorizar uma vez — no editor, rode qualquer função e aceite as permissões. Até lá o web app responde com erro de autorização.
-- **Propriedades do script** (ex.: `GEMINI_API_KEY`) ficam em Configurações do projeto → Propriedades do script. Não estão no repositório e não são afetadas pela colagem.
+- **Propriedades do script** ficam em Configurações do projeto → Propriedades do script. Não estão no repositório e não são afetadas pela colagem. Desde a versão `2026-11-06.5`, os IDs de templates, pastas, agenda e o e-mail da impressão são lidos daí (`cfg_`), com o valor do código como padrão; rode uma vez `gravarConfiguracaoPadrao()` no editor para gravá-los. Lista completa em `docs/configuracao.md`. A antiga `GEMINI_API_KEY` não é mais usada e pode ser apagada.
 - **Manifesto**: `apps-script/<projeto>/appsscript.json` guarda fuso, permissões e a configuração do web app (executar como, quem acessa). Normalmente não muda; se mudar, atualize também pelo editor (Configurações do projeto → marque "Mostrar arquivo de manifesto `appsscript.json` no editor").
 - O secret `CLASPRC_JSON` do repositório não é mais usado por nada e pode ser apagado.
 

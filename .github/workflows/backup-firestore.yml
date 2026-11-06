@@ -1,0 +1,68 @@
+name: Backup do Firestore
+
+# Vigia os backups do Firestore e testa a restauração (item 18 de docs/database.md).
+#  - Toda terça: confere se há backup pronto (READY) com no máximo 8 dias; falha (e o GitHub avisa por
+#    e-mail) se os backups agendados pararam.
+#  - No dia 1 de jan/abr/jul/out: restaura o backup mais recente num banco temporário, compara a
+#    contagem de documentos com a produção e apaga o banco temporário (scripts/backup/testar-restauracao.sh).
+#  - Manual (Actions → Backup do Firestore → Run workflow): escolha "verificar" ou "restauracao".
+#
+# Credencial: secret BACKUP_SA_KEY (chave JSON de uma service account com "Cloud Datastore Owner" —
+# roles/datastore.owner — para listar backups, restaurar e apagar o banco temporário); se não existir,
+# usa GCP_SA_KEY, que então precisa desse papel no IAM do projeto.
+# Os backups em si são agendados no próprio Firestore (scripts/backup/configurar-backup.sh), não aqui.
+
+on:
+  schedule:
+    - cron: '17 11 * * 2'      # terça, 08:17 em Recife
+    - cron: '41 12 1 1,4,7,10 *' # trimestral, 09:41 em Recife
+  workflow_dispatch:
+    inputs:
+      tarefa:
+        description: 'O que rodar'
+        type: choice
+        options: [verificar, restauracao]
+        default: verificar
+
+permissions:
+  contents: read
+
+env:
+  PROJETO: jrs-app-web
+
+jobs:
+  verificar:
+    if: github.event_name == 'schedule' && github.event.schedule == '17 11 * * 2' || github.event_name == 'workflow_dispatch' && inputs.tarefa == 'verificar'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.BACKUP_SA_KEY || secrets.GCP_SA_KEY }}'
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Backup recente?
+        run: |
+          ultimo="$(gcloud firestore backups list --project="$PROJETO" --filter='state=READY' --format='value(snapshotTime)' | sort | tail -n1)"
+          echo "Backup mais recente: ${ultimo:-nenhum}"
+          [ -n "$ultimo" ] || { echo "::error::Nenhum backup pronto do Firestore."; exit 1; }
+          idade=$(( ( $(date +%s) - $(date -d "$ultimo" +%s) ) / 86400 ))
+          echo "Idade: $idade dia(s)"
+          [ "$idade" -le 8 ] || { echo "::error::O backup mais recente tem $idade dias: os backups agendados pararam?"; exit 1; }
+          gcloud firestore backups schedules list --project="$PROJETO" --database='(default)' --format='table(name.basename(),dailyRecurrence.yesno(yes=diário,no=""),weeklyRecurrence.day,retention)'
+
+  restauracao:
+    if: github.event_name == 'schedule' && github.event.schedule == '41 12 1 1,4,7,10 *' || github.event_name == 'workflow_dispatch' && inputs.tarefa == 'restauracao'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.BACKUP_SA_KEY || secrets.GCP_SA_KEY }}'
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Testar a restauração do backup mais recente
+        run: bash scripts/backup/testar-restauracao.sh

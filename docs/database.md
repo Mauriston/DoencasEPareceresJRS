@@ -422,20 +422,56 @@ O sistema trata informações pessoais e sensíveis: nome e NIP de militares, de
 
 ## 18. Backup, retenção e recuperação
 
-Não há rotina automatizada de backup no repositório.
+> **Atualizado em 06/11/2026.** Plano mínimo implementado: backups gerenciados do Firestore, lixeira no Storage e no Drive, inventário de configuração e teste de restauração automatizado.
 
-### Plano mínimo recomendado
+### 18.1 Firestore — backups agendados
 
-1. **Firestore:** exportação agendada (`gcloud firestore export`) para um bucket do Cloud Storage, com retenção definida.
-2. **Storage e Drive:** evitar exclusão definitiva automática; usar lixeira e retenção administrativa; copiar artefatos críticos para pasta de arquivo.
-3. **Configuração:** manter fora do código, e inventariados, os IDs de pastas e templates, as propriedades do Apps Script e as variáveis do Cloud Run.
-4. **Teste de restauração:** validar periodicamente a recuperação; backup sem teste não conta.
+Em vez da exportação manual (`gcloud firestore export` para um bucket), o projeto usa os **backups agendados gerenciados do Firestore** (mesma região do banco, sem bucket nem job próprio para manter):
+
+| Agendamento | Retenção | Situação |
+|---|---|---|
+| Semanal (segunda-feira) | 14 semanas | **Ativo desde 28/09/2026** (6 backups prontos em 06/11/2026, de 29/09 a 02/11) |
+| Diário | 7 dias | Configurado por `scripts/backup/configurar-backup.sh` |
+
+O mesmo script liga a **proteção contra exclusão** do banco `(default)` (`delete protection`) e, com `PITR=1`, a recuperação a qualquer instante dos últimos 7 dias (tem custo; desligada por padrão). O script é idempotente: pode ser rodado de novo sem duplicar agendamentos.
+
+**Vigilância:** o workflow `.github/workflows/backup-firestore.yml` roda toda terça e **falha** (o GitHub avisa por e-mail) se o backup pronto mais recente tiver mais de 8 dias.
+
+### 18.2 Storage e Drive — sem exclusão definitiva automática
+
+- **Storage:** o app só apaga arquivos por ação de uma pessoa (Admin removendo um infográfico; termo antigo de concurso regerado). O bucket tem **lixeira (soft delete)**: o padrão do Google Cloud é 7 dias; `configurar-backup.sh` amplia para **30 dias** — um arquivo apagado pode ser restaurado nesse prazo (Console → Cloud Storage → bucket → *Objetos excluídos*).
+- **Drive:** o Apps Script nunca apaga de vez: cópias temporárias e termos substituídos vão para a **lixeira** (`setTrashed(true)`), recuperáveis por 30 dias. Os PDFs gerados (termos, pareceres, exames, minutas) ficam nas pastas do drive compartilhado, que são o próprio arquivo de longo prazo.
+- **Retenção administrativa e descarte:** prazos propostos em `docs/retencao-lgpd.md`, ainda a validar pela Encarregada/Comando (seção 17).
+
+### 18.3 Configuração fora do código e inventariada
+
+- Inventário completo em **`docs/configuracao.md`**: projeto e serviços do Google Cloud, variáveis do Cloud Run, secrets e variáveis do GitHub, propriedades do Apps Script, IDs de pastas, templates e agenda.
+- **Apps Script:** os IDs de templates, pastas, agenda e o e-mail da impressão passaram a ser lidos das **Propriedades do script** (`cfg_` em `CodeConcursos.gs`; `ID_PASTA_MINUTAS` em `CodePrincipal.gs`), com o valor atual como padrão — trocar uma pasta não exige editar nem republicar o código. `gravarConfiguracaoPadrao()` (rodar uma vez no editor) grava os padrões nas propriedades. Versão `2026-11-06.5`.
+- **Segredos** (chaves de service account, `GEMINI_API_KEY` do servidor) ficam só nos secrets do GitHub e no Cloud Run; o inventário guarda apenas o nome.
+
+### 18.4 Teste de restauração
+
+- `scripts/backup/testar-restauracao.sh` restaura o backup mais recente num **banco temporário** (`restauracao-teste`, mesmo projeto), compara a contagem de documentos das coleções principais com a produção (`scripts/backup/comparar-contagens.mjs`) e apaga o banco temporário — a produção não é tocada.
+- Critério: reprova se uma coleção essencial (`usuarios`, `militares`, `concursos`) que tem dados vier vazia; coleções criadas depois do snapshot e diferenças de contagem viram aviso.
+- **Agenda:** trimestral (1º de janeiro, abril, julho e outubro), pelo workflow *Backup do Firestore*, ou manual (*Actions → Backup do Firestore → Run workflow → restauracao*).
+- Credencial: secret `BACKUP_SA_KEY` (ou `GCP_SA_KEY`) com o papel *Cloud Datastore Owner*.
+- O comparador foi validado contra a produção em 06/11/2026 (14 coleções contadas). O primeiro teste completo de restauração depende de rodar o workflow (ou o script) com essa credencial.
+
+### 18.5 Como recuperar
+
+| Situação | Como |
+|---|---|
+| Documento ou coleção apagada/alterada por engano | Restaurar o backup anterior num banco novo (`gcloud firestore databases restore --source-backup=… --destination-database=recuperacao`) e copiar os documentos afetados para o `(default)` |
+| Banco inteiro perdido | Restaurar o backup num banco novo e apontar o app para ele, ou restaurar e copiar tudo; a proteção contra exclusão evita apagar o `(default)` por engano |
+| Arquivo do Storage apagado | Restaurar da lixeira do bucket (até 30 dias) |
+| Arquivo do Drive apagado | Restaurar da lixeira do Drive (até 30 dias) |
+| Configuração perdida | Refazer a partir de `docs/configuracao.md` |
 
 ---
 
 ## 19. Convenções de dados recomendadas
 
-Helpers puros e testados em `utils/dados.ts` (testes em `utils/__tests__/dados.test.ts`). Estado de adoção em 31/10/2026: os helpers existem e estão cobertos por testes; a adoção no restante do código é **gradual** (nenhum dado existente foi reescrito).
+Helpers puros e testados em `utils/dados.ts` (testes em `utils/__tests__/dados.test.ts`). Estado de adoção em **06/11/2026**: aplicados nos fluxos de gravação novos e nos pontos de leitura que tinham bug de fuso; **nenhum dado existente foi reescrito** (os registros antigos continuam legíveis).
 
 ### 19.1 Identificadores
 
@@ -444,7 +480,7 @@ Helpers puros e testados em `utils/dados.ts` (testes em `utils/__tests__/dados.t
 - manter NIP como chave natural única, não como chave primária técnica;
 - armazenar IDs de arquivos do Drive separadamente das URLs (`pdfFileId` + `camposIdDrive`).
 
-*Adoção:* `pdfFileId` gravado em pareceres, perícias menores e `documentos_gerados` (novos registros). O id do militar ainda é o NIP só com dígitos (decisão histórica: chave natural no id do documento; `renomearMilitar` existe por isso) — **mantido**, sem migração. `novoId()` ainda não é usado em nenhum fluxo.
+*Adoção:* **`novoId()` passa a gerar o id** de novos pareceres (`novoIdParecer`), perícias menores (`novoIdPericiaMenor`), infográficos, apresentações e bloqueios da agenda (antes: id automático do Firestore; os antigos continuam válidos). Concursos mantêm o id automático (aparece em caminhos do Drive) e os registros de auditoria, o `addDoc`. `pdfFileId` gravado em pareceres, perícias menores e `documentos_gerados`. O id do militar segue o NIP só com dígitos (decisão histórica; `renomearMilitar` existe por isso) — **mantido**, sem migração. Chaves naturais deliberadas: `escalaSpa` (data), `inspecoes` (nº da IS), `agendaSlots`.
 
 ### 19.2 Datas e horas
 
@@ -453,7 +489,10 @@ Helpers puros e testados em `utils/dados.ts` (testes em `utils/__tests__/dados.t
 - ler sem depender de `new Date(string)` ambíguo (`parseTimestamp`: ISO com/sem offset e `dd/mm/aaaa [HH:mm]`; datas inexistentes → `null`);
 - `hojeISO()` dá a data civil de hoje no fuso institucional.
 
-*Adoção:* helpers prontos; os pontos de gravação existentes (`serverTimestamp()` do Firestore e `toISOString()` em exames) **não foram alterados** — pendente avaliar caso a caso.
+*Adoção:*
+- **Gravação:** `timestampISO()` no lugar de `new Date().toISOString()` (UTC "Z") em triagem (`atualizadoEm`), solicitações de parecer/exames dos concursos (`criadoEm`), envios de exames (`criadoEm`, `examesEnviadoEm`) e Casos Periciais (`concluidoEm`). Os campos com `serverTimestamp()` do Firestore continuam como estão (já são instantes absolutos).
+- **Leitura:** `parseTimestamp` nos detalhes da IS (datas dos documentos e dos exames) e na triagem; a lista de exames ordena por instante (os registros antigos em "Z" e os novos com "-03:00" não ordenam certo como texto).
+- **Bugs de fuso corrigidos:** a data do laudo na minuta de resultado dos concursos (`new Date("AAAA-MM-DD")` é meia-noite UTC = véspera às 21h em Recife) e a validação "nascimento não pode ser futuro" no cadastro de inspecionados (`toISOString().slice(0,10)` virava o dia às 21h) — agora `parseTimestamp` e `hojeISO()`.
 
 ### 19.3 Strings
 
@@ -463,7 +502,7 @@ Helpers puros e testados em `utils/dados.ts` (testes em `utils/__tests__/dados.t
 - usar códigos estáveis para relações;
 - evitar listas separadas por vírgula em uma única célula.
 
-*Adoção:* pendente (helpers prontos).
+*Adoção:* perícias menores gravam **`cidCodigo`** (código estável, ex. `M545`) ao lado do rótulo `cid` (`"M545 - Dor lombar baixa"`); dispensas, médico e CRM do emissor passam por `normalizarTexto`. A Escala SVÇ normaliza os nomes do CSV (espaços repetidos) e guarda os médicos de cada plantão como lista (`dia[]`, `noite[]`), não como texto separado por vírgula; a comparação de nomes usa forma canônica (`chaveNome`). Pendente: `rotuloECanonico` em outros cadastros livres.
 
 ### 19.4 Booleanos
 
@@ -478,6 +517,6 @@ Persistir booleanos reais, não textos como `SIM`, `TRUE` ou `VERDADEIRO`. A apr
 - validar faixa e sinal (`inteiroEmFaixa`);
 - tratar NIP e códigos como texto, mesmo quando compostos apenas por dígitos (`normalizarNip`: só dígitos, preserva zeros; `formatarNip`; `nipValido`).
 
-*Adoção:* `idDoNip` (`services/firestoreMilitares.ts`) delega a `normalizarNip`. `tempoAtestado` da IA ainda chega como texto/número e é convertido nas telas — pendente usar `diasInteiro`.
+*Adoção:* `idDoNip` (`services/firestoreMilitares.ts`) delega a `normalizarNip`. O `tempoAtestado` lido pela IA passa por `diasInteiro` antes de preencher o formulário (`"5"`, `5` ou `"5 dias"` → 5; fora da faixa é ignorado) e é gravado como inteiro.
 
 ---

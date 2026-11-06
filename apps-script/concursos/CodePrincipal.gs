@@ -6,7 +6,9 @@
  *
  * action=salvarMinutaMensagem (POST): { idToken, minuta } → { docUrl }.
  */
-var ID_PASTA_MINUTAS = '1q_Pw_mbjYKvyJvBr-PGmV9pK7YiBZOKv';
+/** Pasta das minutas: Propriedade do script ID_PASTA_MINUTAS, com o padrão abaixo (lida aqui mesmo, sem
+ * depender da ordem de carga dos arquivos; ver cfg_ em CodeConcursos.gs e docs/configuracao.md). */
+var ID_PASTA_MINUTAS = PropertiesService.getScriptProperties().getProperty('ID_PASTA_MINUTAS') || '1q_Pw_mbjYKvyJvBr-PGmV9pK7YiBZOKv';
 
 function apiSalvarMinutaMensagem(corpo) {
   exigirUsuarioFirebase(corpo);
