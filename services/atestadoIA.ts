@@ -1,10 +1,7 @@
 // Ficheiro: services/atestadoIA.ts
-// Leitura do atestado fotografado (Perícia Menor / Atestados).
-// Principal: Firebase AI Logic com o Gemini via Vertex AI (dados de saúde ficam no contrato do Google
-// Cloud do projeto), saída estruturada por esquema JSON obrigatório e protegida pelo App Check
-// (services/appCheck.ts). (A antiga ação "extrair_dados_atestado" do Apps Script foi retirada.)
-import { app } from './firebaseAuth';
-import { logErroSeguro } from '../utils/logSeguro';
+// Leitura do atestado fotografado (Perícia Menor / Atestados) pelo Gemini via Firebase AI Logic
+// (services/geminiAI.ts), com saída estruturada por esquema JSON obrigatório.
+import { gerarComGemini, lerJsonIA } from './geminiAI';
 
 export interface DadosAtestado {
   nomeMilitar?: string;
@@ -15,11 +12,6 @@ export interface DadosAtestado {
   medicoEmissor?: string;
   crmEmissor?: string;
 }
-
-/** Modelo e região do Vertex AI (Agent Platform). Em nov/2026 o projeto só tem acesso aos modelos
- * Gemini atuais na região "global" (o gemini-2.5-flash e a região us-central1 respondem 404). */
-const MODELO = 'gemini-3.5-flash';
-const REGIAO = 'global';
 
 const INSTRUCOES = [
   'Você lê a foto de um atestado médico brasileiro e extrai os dados pedidos no esquema.',
@@ -32,15 +24,13 @@ const INSTRUCOES = [
   'Se um dado não estiver presente ou legível, omita o campo. Não invente dados.',
 ].join('\n');
 
-/** Leitura pelo Firebase AI Logic (carregado sob demanda para não pesar no bundle inicial). */
 export const extrairDadosAtestado = async (base64Image: string): Promise<DadosAtestado> => {
-  const { getAI, getGenerativeModel, VertexAIBackend, Schema } = await import('firebase/ai');
-  const ai = getAI(app, { backend: new VertexAIBackend(REGIAO) });
-  const model = getGenerativeModel(ai, {
-    model: MODELO,
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema: Schema.object({
+  try {
+    const r = await gerarComGemini({
+      contexto: 'leitura do atestado',
+      instrucoes: INSTRUCOES,
+      arquivos: [{ base64: base64Image, mimeType: 'image/jpeg' }],
+      esquema: Schema => Schema.object({
         properties: {
           nomeMilitar: Schema.string(),
           dataAtestado: Schema.string({ description: 'AAAA-MM-DD' }),
@@ -51,13 +41,9 @@ export const extrairDadosAtestado = async (base64Image: string): Promise<DadosAt
         },
         optionalProperties: ['nomeMilitar', 'dataAtestado', 'tempoAtestado', 'cid', 'medicoEmissor', 'crmEmissor'],
       }),
-    },
-  });
-  try {
-    const r = await model.generateContent([INSTRUCOES, { inlineData: { mimeType: 'image/jpeg', data: base64Image } }]);
-    return JSON.parse(r.response.text()) as DadosAtestado;
-  } catch (e) {
-    logErroSeguro('Leitura do atestado pelo Firebase AI Logic falhou', e);
+    });
+    return lerJsonIA<DadosAtestado>(r, 'Não foi possível ler o atestado automaticamente.');
+  } catch {
     throw new Error('Não foi possível ler o atestado automaticamente.');
   }
 };

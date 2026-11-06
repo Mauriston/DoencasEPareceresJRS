@@ -2,7 +2,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { useIsDesktop } from '../hooks/useIsDesktop';
-import { ApiError, chamarScript } from '../services/apiClient';
+import { chamarScript } from '../services/apiClient';
+import { gerarComGemini } from '../services/geminiAI';
+import { PROMPT_MINUTA_MENSAGEM } from '../config/promptsIA';
+import { logErroSeguro } from '../utils/logSeguro';
 
 interface ImageItem {
   file: File;
@@ -91,15 +94,21 @@ export const Mensagens: React.FC = () => {
     setError(null);
 
     try {
-      const resultado = await chamarScript<{ minuta: string; docUrl: string }>('gerarMinutaMensagem', {
-        images: images.map(img => ({ data: img.base64, mimeType: img.mimeType })),
+      // A minuta é gerada pelo Gemini (Firebase AI Logic); o Apps Script só a guarda como Google Doc no Drive.
+      const r = await gerarComGemini({
+        contexto: 'minuta de mensagem',
+        instrucoes: PROMPT_MINUTA_MENSAGEM,
+        arquivos: images.map(img => ({ base64: img.base64, mimeType: img.mimeType })),
       });
-      setMinuta(resultado.minuta);
-      setDocUrl(resultado.docUrl);
+      const texto = r.texto.trim();
+      if (!texto) throw new Error('A IA não devolveu a minuta. Tente novamente.');
+      setMinuta(texto);
+      // Cópia no Drive: se falhar, a minuta continua na tela para copiar.
+      chamarScript<{ docUrl: string }>('salvarMinutaMensagem', { minuta: texto })
+        .then(d => setDocUrl(d.docUrl || null))
+        .catch(e => logErroSeguro('Salvar minuta no Drive', e));
     } catch (err) {
-      setError(err instanceof ApiError && err.codigo === 'negocio'
-        ? 'Erro ao gerar minuta: ' + err.message
-        : err instanceof ApiError ? err.message : 'Falha na comunicação com o servidor. Verifique a conexão e tente novamente.');
+      setError('Erro ao gerar minuta: ' + ((err as Error)?.message || 'tente novamente.'));
     } finally {
       setIsLoading(false);
     }

@@ -11,7 +11,7 @@ A solução combina cinco grupos principais de capacidades:
 1. **Consulta de conteúdo normativo e médico-pericial**, armazenado majoritariamente no próprio código-fonte (com páginas públicas, sem login, para as Doenças de Lei e a Portaria).
 2. **Trabalho da JRS**: Inspeções de Saúde e agenda dos peritos, concursos (planilha de candidatos, triagem, exames, termos), pareceres, perícias menores e inspecionados, com dados no **Cloud Firestore**.
 3. **Automação documental**, executada por Google Apps Script (`CodeConcursos.gs`) com Google Docs, Drive, Gmail e Google Agenda — inclusive o envio automático de documentos por e-mail para impressão.
-4. **IA (Gemini)**: leitura de atestados (Apps Script), transcrição de mensagens e de exames de candidatos (Apps Script e servidor no Cloud Run).
+4. **IA (Gemini)**: leitura de atestados, minuta de mensagens e transcrição de mensagens e de exames de candidatos pelo **Firebase AI Logic** (Vertex AI, `gemini-3.5-flash`, região global, protegido pelo App Check — `services/geminiAI.ts`, prompts em `config/promptsIA.ts`); OCR de PDFs e análise de imagens no servidor do Cloud Run.
 5. **Notificações push** (Firebase Cloud Messaging), com histórico por usuário no app.
 
 O frontend é publicado como site estático no GitHub Pages. O backend tem duas partes: um **servidor Node/Express no Cloud Run** (`server.ts`, com o Firebase Admin SDK) para o que exige credencial de servidor — operações de Admin, notificações, Gemini — e o **Apps Script** para a automação do Google Workspace. Os dados operacionais ficam no Firestore e no Storage, acessados direto pelo navegador e protegidos pelas regras versionadas em `firestore.rules` e `storage.rules`.
@@ -96,7 +96,7 @@ O backend tem duas partes, publicadas separadamente:
 
 O mesmo servidor serve o build em desenvolvimento (`npm run dev`) e libera CORS para a origem do GitHub Pages (`ALLOWED_ORIGIN`).
 
-**Google Apps Script.** `apps-script/concursos/CodeConcursos.gs` concentra a automação do Workspace: geração de PDFs por template (termos, pedidos de parecer, solicitações de exames), gravação no Drive, transcrição de exames e mensagens pelo Gemini, envio de e-mails para impressão e sincronização com o Google Agenda "JRS/HNRe". As ações que gravam exigem o `idToken` do Firebase. `CodePrincipal.gs`, no mesmo projeto, atende a leitura do atestado e a minuta de mensagens (ações herdadas do antigo projeto "principal", que foi desativado junto com as planilhas).
+**Google Apps Script.** `apps-script/concursos/CodeConcursos.gs` concentra a automação do Workspace: geração de PDFs por template (termos, pedidos de parecer, solicitações de exames), gravação no Drive (inclusive o PDF dos exames dos candidatos), envio de e-mails para impressão e sincronização com o Google Agenda "JRS/HNRe". As ações que gravam exigem o `idToken` do Firebase. `CodePrincipal.gs`, no mesmo projeto, guarda a minuta de mensagens como Google Doc (`salvarMinutaMensagem`). O Apps Script não chama mais o Gemini.
 
 ### 3.3 Persistência
 
@@ -107,7 +107,7 @@ O **Cloud Firestore** é a fonte principal (detalhes em `docs/database.md`, seç
 - Firebase Authentication, Firestore, Storage e Cloud Messaging;
 - Cloud Run (servidor `server.ts`);
 - Google Apps Script Web App (Drive, Docs, Gmail, Agenda);
-- Gemini API (pelo Apps Script e pelo servidor);
+- Gemini: Firebase AI Logic / Vertex AI (no app) e Gemini API (servidor);
 - provedores de mídia: YouTube (vídeos), Google Slides/Canva/GitHub Pages (apresentações), Imgur.
 
 ---
@@ -229,7 +229,7 @@ sequenceDiagram
 
 `services/` concentra o acesso a dados e integrações: um arquivo por coleção do Firestore (`firestore*.ts`), o Drive/Apps Script (`driveConcursos.ts`, `drivePareceres.ts`), a agenda (`agendaConcursos.ts`, `agendaGoogleIS.ts`), o push (`notificacoesPush.ts`), a fila de impressão (`documentosGerados.ts`) e a auditoria das IS (`auditoriaIS.ts`). A URL do servidor vem de `utils/apiBase.ts` e as do Apps Script de `config/endpoints.ts`.
 
-**Cliente único de API (31/10/2026).** Toda chamada ao servidor Node ou ao Apps Script passa por `services/apiClient.ts`: `chamarServidor(rota, corpo, opts)` (JSON, `Authorization: Bearer`) e `chamarScript(ação, dados, opts)` (corpo `text/plain`, `idToken` no corpo). Ele centraliza URL base, serialização, ID token do Firebase (`authService.obterIdToken`), *timeout* por `AbortController` (padrão 120 s), erro tipado `ApiError` (`codigo`: `nao_autenticado`, `sem_permissao`, `rede`, `timeout`, `resposta_invalida`, `negocio`) e os envelopes de resposta (`{ sucesso, dados | erro }` do Apps Script, o envelope legado `{ success, data | message }` do Gemini e `{ success, … }` do servidor). Migrados: `atestadoIA`, `driveConcursos`, `drivePareceres`, `handoff`, `loginNip`, `notificacoesPush`, `firestoreExtras` (prévia de apresentação), `Mensagens.tsx`, `useConcursoDetalhe.tsx` e `ImageScanner.tsx`. As demais `fetch` do código leem arquivos estáticos (`cid.json`, `corposQuadros`), uma imagem do próprio app (Infográficos) ou o oEmbed público do YouTube — não usam backend.
+**Cliente único de API (31/10/2026).** Toda chamada ao servidor Node ou ao Apps Script passa por `services/apiClient.ts`: `chamarServidor(rota, corpo, opts)` (JSON, `Authorization: Bearer`) e `chamarScript(ação, dados, opts)` (corpo `text/plain`, `idToken` no corpo). Ele centraliza URL base, serialização, ID token do Firebase (`authService.obterIdToken`), *timeout* por `AbortController` (padrão 120 s), erro tipado `ApiError` (`codigo`: `nao_autenticado`, `sem_permissao`, `rede`, `timeout`, `resposta_invalida`, `negocio`) e os envelopes de resposta (`{ sucesso, dados | erro }` do Apps Script, o envelope legado `{ success, data | message }` e `{ success, … }` do servidor). Migrados: `atestadoIA`, `driveConcursos`, `drivePareceres`, `handoff`, `loginNip`, `notificacoesPush`, `firestoreExtras` (prévia de apresentação), `Mensagens.tsx`, `useConcursoDetalhe.tsx` e `ImageScanner.tsx`. As demais `fetch` do código leem arquivos estáticos (`cid.json`, `corposQuadros`), uma imagem do próprio app (Infográficos) ou o oEmbed público do YouTube — não usam backend.
 
 `authService.ts` é a fachada da autenticação (sessão, login, logout, troca de senha, `obterIdToken`/`exigirIdToken`). Por domínio, `pareceresService.ts`, `periciaMenorService.ts` e `extrasService.ts` reexportam os serviços `firestore*`/`drive*`/`atestadoIA` correspondentes; os módulos originais continuam válidos e nenhum import existente mudou.
 
@@ -283,7 +283,7 @@ Funcionalidades:
 Firestore (`pareceres`, `quesitosParecer`); PDF pelo Apps Script no Drive; diálogo **Enviar para Impressão** por e-mail.
 
 ### 7.5 Perícia menor
-Firestore (`periciasMenores`); leitura do atestado pelo Gemini (Apps Script); PDF do atestado no Storage.
+Firestore (`periciasMenores`); leitura do atestado pelo Gemini (Firebase AI Logic); PDF do atestado no Storage.
 
 ### 7.6 Inspecionados
 `militares`: militares, dependentes e pensionistas; ficha com histórico das IS.
@@ -321,7 +321,7 @@ Não há `doGet`: o app só faz chamadas POST. O antigo projeto "principal" (`Co
 | Pareceres | `gerarPedidoParecer`, `salvarPdfParecer` |
 | Impressão por e-mail | `enviarTermoRecursoImpressao`, `enviarSolicitacaoConcursoImpressao`, `enviarParecerImpressao` (com cópia para a Secretaria) |
 | Google Agenda "JRS/HNRe" | `sincronizarEventoIS`, `sincronizarEventoBloqueio`, `sincronizarEventosConcursos` |
-| Gemini | `extrair_dados_atestado` (Perícia Menor), `gerarMinutaMensagem` (Mensagens), além da transcrição em `extrairMensagemConcurso` e `salvarExamesCandidato` |
+| Minuta | `salvarMinutaMensagem` (guarda como Google Doc a minuta gerada no app pelo AI Logic) |
 
 ### 8.3 Automação documental
 
@@ -332,7 +332,7 @@ Não há `doGet`: o app só faz chamadas POST. O antigo projeto "principal" (`Co
 
 ### 8.4 Segurança
 
-**Todas** as ações (exceto `versao`, que só informa a versão publicada) passam por `autorizarAcao_` no `doPost`, inclusive `extrair_dados_atestado` e `gerarMinutaMensagem` (formato legado): valida o `idToken` do Firebase, lê `usuarios/{uid}` no Firestore (API REST, com o token do próprio usuário e as regras valendo; cache de 60 s), exige usuário **ativo** e **perfil permitido** para a ação (`PERFIS_POR_ACAO`: pedido de parecer e leitura do atestado só para Admin e médicos; as demais, qualquer perfil da equipe). Recusas e operações sensíveis (`removerArquivoDrive` e os envios para impressão) geram log estruturado sem dados pessoais (`Logger`: evento, ação, uid, perfil, motivo) e um registro em `auditoria_acoes` (Firestore). A chave do Gemini fica nas propriedades do script (`GEMINI_API_KEY`).
+**Todas** as ações (exceto `versao`, que só informa a versão publicada) passam por `autorizarAcao_` no `doPost`: valida o `idToken` do Firebase, lê `usuarios/{uid}` no Firestore (API REST, com o token do próprio usuário e as regras valendo; cache de 60 s), exige usuário **ativo** e **perfil permitido** para a ação (`PERFIS_POR_ACAO`: pedido de parecer só para Admin e médicos; as demais, qualquer perfil da equipe). Recusas e operações sensíveis (`removerArquivoDrive` e os envios para impressão) geram log estruturado sem dados pessoais (`Logger`: evento, ação, uid, perfil, motivo) e um registro em `auditoria_acoes` (Firestore).
 
 ---
 
@@ -372,7 +372,7 @@ A visibilidade de páginas e funcionalidades segue a matriz `config/permissoes` 
 - Não há validação de esquema no servidor para gravações feitas direto pelo cliente.
 - O Apps Script confere perfil e usuário ativo, mas não reconsulta a matriz fina `config/permissoes` (por página/funcionalidade); essa continua valendo no app e nas regras do Firestore.
 - O web app do Apps Script é `ANYONE_ANONYMOUS` (exigência do front estático): a barreira é o `idToken` por ação, não a URL.
-- A configuração pública do Firebase e a chave VAPID ficam no bundle (são públicas por natureza); segredos (Gemini, service accounts) ficam só no Apps Script e no Cloud Run.
+- A configuração pública do Firebase e a chave VAPID ficam no bundle (são públicas por natureza); segredos (service accounts, chave do Gemini do servidor) ficam só no Cloud Run; o Gemini do app passa pelo Firebase AI Logic, sem chave no bundle.
 
 ## 10. Contratos de dados
 

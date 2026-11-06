@@ -3,13 +3,17 @@
 //   CONCURSOS > {ano} > {concurso} > CANDIDATOS > {candidato} (termos, pedidos de parecer e exames)
 //                                  > MENSAGENS (PDF das mensagens administrativas)
 // Quem cria as pastas e os arquivos é o Apps Script standalone (CodeConcursos.gs); este módulo só o
-// chama e devolve as URLs, que o app grava no Firestore. A leitura da mensagem (transcrição + dados) é
-// feita pelo Gemini, também por esse script.
+// chama e devolve as URLs, que o app grava no Firestore. A leitura da mensagem e a transcrição dos exames
+// são feitas pelo Gemini no próprio app (Firebase AI Logic, services/geminiAI.ts).
 import { chamarScript as chamarScriptApi } from './apiClient';
+import { gerarComGemini, lerJsonIA } from './geminiAI';
+import { PROMPT_EXAMES_CANDIDATO, PROMPT_MENSAGEM_CONCURSO } from '../config/promptsIA';
 import { removerPdfDoStorage } from './firebaseStorageConcursos';
 import { normalizarExamesExtraidos, type ExamesExtraidos } from '../utils/examesCandidato';
 
 const MAX_PDF_BYTES = 15 * 1024 * 1024;
+/** Leitura da mensagem pela IA: o arquivo vai em base64 (~33% maior) numa requisição de até 20 MB. */
+const MAX_PDF_MENSAGEM_IA_BYTES = 14 * 1024 * 1024;
 /**
  * Exames: o PDF vai inteiro no corpo da chamada ao Gemini, em base64 (que
  * cresce ~33%), e a requisição da API não passa de 20 MB. 12 MB de PDF é o
@@ -70,13 +74,20 @@ export interface MensagemExtraida {
   candidatos: { matricula: string; nome: string; dataAgendamento: string }[];
 }
 
-/** O Gemini lê o PDF (ou imagem) da mensagem e devolve os dados em JSON. */
+/** O Gemini (Firebase AI Logic) lê o PDF (ou imagem) da mensagem e devolve os dados em JSON. */
 export const extrairMensagemComGemini = async (file: File): Promise<MensagemExtraida> => {
   exigirTamanho(file.size);
-  const d = await chamarScript<Partial<MensagemExtraida>>('extrairMensagemConcurso', {
-    pdfBase64: await arquivoParaBase64(file),
-    mimeType: file.type || 'application/pdf',
+  if (file.size > MAX_PDF_MENSAGEM_IA_BYTES) {
+    throw new Error(`O arquivo tem ${(file.size / (1024 * 1024)).toFixed(1)} MB — acima do limite de ${MAX_PDF_MENSAGEM_IA_BYTES / (1024 * 1024)} MB para a leitura pela IA. Tente um PDF menor.`);
+  }
+  const r = await gerarComGemini({
+    contexto: 'mensagem de concurso',
+    instrucoes: PROMPT_MENSAGEM_CONCURSO,
+    arquivos: [{ base64: await arquivoParaBase64(file), mimeType: file.type || 'application/pdf' }],
+    json: true,
+    temperature: 0,
   });
+  const d = lerJsonIA<Partial<MensagemExtraida>>(r, 'A IA não conseguiu estruturar os dados da mensagem. Confira se o PDF está legível.');
   const texto = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
   return {
     dataHora: texto(d.dataHora).toUpperCase(),
@@ -151,6 +162,21 @@ export interface EnvioExamesResultado {
   erroExtracao: string;
 }
 
+/** Transcrição dos laudos do candidato pelo Gemini (ver PROMPT_EXAMES_CANDIDATO). */
+const transcreverExames = async (pdfBase64: string, mimeType: string): Promise<ExamesExtraidos> => {
+  // A transcrição integral de um PDF com muitos laudos é longa: sem teto alto o JSON vem cortado.
+  const r = await gerarComGemini({
+    contexto: 'exames do candidato',
+    instrucoes: PROMPT_EXAMES_CANDIDATO,
+    arquivos: [{ base64: pdfBase64, mimeType }],
+    json: true,
+    temperature: 0,
+    maxOutputTokens: 65536,
+  });
+  if (r.cortada) throw new Error('A transcrição ficou longa demais e foi cortada. Envie os exames em dois PDFs menores.');
+  return normalizarExamesExtraidos(lerJsonIA<unknown>(r, 'A IA não conseguiu estruturar os exames. Confira se o PDF está legível.'));
+};
+
 /**
  * Grava o PDF dos exames na pasta do candidato (CONCURSOS > ano > concurso >
  * CANDIDATOS > candidato, a mesma lógica dos termos e das solicitações) com o
@@ -166,20 +192,30 @@ export const enviarExamesCandidatoParaDrive = async (params: {
   file: File;
 }): Promise<EnvioExamesResultado> => {
   exigirTamanhoExames(params.file.size);
-  const d = await chamarScript<{ url: string; fileId: string; nomeArquivo: string; dados: unknown; erroExtracao?: string }>('salvarExamesCandidato', {
-    ano: params.pasta.ano,
-    nomeConcurso: params.pasta.nome,
-    candidatoId: params.candidatoId,
-    candidatoNome: params.candidatoNome,
-    pdfBase64: await arquivoParaBase64(params.file),
-    mimeType: params.file.type || 'application/pdf',
-  });
+  const pdfBase64 = await arquivoParaBase64(params.file);
+  const mimeType = params.file.type || 'application/pdf';
+  // Em paralelo: o Apps Script guarda o PDF no Drive e o Gemini (AI Logic) transcreve os laudos.
+  // O PDF fica salvo mesmo se a transcrição falhar ("erroExtracao" explica o motivo).
+  const [d, transcricao] = await Promise.all([
+    chamarScript<{ url: string; fileId: string; nomeArquivo: string }>('salvarExamesCandidato', {
+      ano: params.pasta.ano,
+      nomeConcurso: params.pasta.nome,
+      candidatoId: params.candidatoId,
+      candidatoNome: params.candidatoNome,
+      pdfBase64,
+      mimeType,
+    }),
+    transcreverExames(pdfBase64, mimeType).then(
+      dados => ({ dados, erro: '' }),
+      (e: Error) => ({ dados: null as ExamesExtraidos | null, erro: e?.message || 'Não foi possível transcrever os exames.' }),
+    ),
+  ]);
   return {
     url: d.url || '',
     fileId: d.fileId || '',
     nomeArquivo: d.nomeArquivo || '',
-    dados: d.dados ? normalizarExamesExtraidos(d.dados) : null,
-    erroExtracao: typeof d.erroExtracao === 'string' ? d.erroExtracao : '',
+    dados: transcricao.dados,
+    erroExtracao: transcricao.erro,
   };
 };
 
