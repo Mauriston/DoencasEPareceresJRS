@@ -93,17 +93,22 @@ const LinhaDocumentoGerado: React.FC<{ d: DocumentoGerado; onAbrir: (d: Document
   </a>
 );
 
+/** Versão enxuta da linha no celular (< md): outro detalhe (pode ser vazio) e outra tag; sem a coluna de data. */
+interface LinhaCompacta { detalhe: string; tag: React.ReactNode }
+
 /** Linha de documento: abre o PDF (nova aba) quando existe; senão leva à página do assunto. */
-const LinhaDocumento: React.FC<{ icone: string; titulo: string; detalhe: string; data: string; link: string; to: string; tag: React.ReactNode }> = ({ icone, titulo, detalhe, data, link, to, tag }) => {
+const LinhaDocumento: React.FC<{ icone: string; titulo: string; detalhe: string; data: string; link: string; to: string; tag: React.ReactNode; compactoMobile?: LinhaCompacta }> = ({ icone, titulo, detalhe, data, link, to, tag, compactoMobile: m }) => {
+  const soDesktop = m ? 'hidden md:block' : 'block';
   const corpo = (
     <>
       <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">{icone}</span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-bold text-navy truncate">{titulo}</span>
-        <span className="block text-xs text-ink-3 truncate">{detalhe}</span>
+        <span className={`${soDesktop} text-xs text-ink-3 truncate`}>{detalhe}</span>
+        {m?.detalhe && <span className="block md:hidden text-xs text-ink-3 truncate">{m.detalhe}</span>}
       </span>
-      <span className="text-xs text-ink-3 shrink-0">{data}</span>
-      {tag}
+      <span className={`${m ? 'hidden md:inline' : ''} text-xs text-ink-3 shrink-0`}>{data}</span>
+      {m ? <><span className="hidden md:inline-flex shrink-0">{tag}</span><span className="md:hidden shrink-0 inline-flex">{m.tag}</span></> : tag}
       <span className="material-symbols-outlined text-[20px] text-ink-4 shrink-0" aria-hidden="true">{link ? 'open_in_new' : 'chevron_right'}</span>
     </>
   );
@@ -238,7 +243,7 @@ export const Home: React.FC = () => {
       tag: 'Hoje', tom: feitas === totalHoje ? 'success' : 'attention', to: concursosDiaPath(hoje),
     });
   }
-  if (podePericiaMenor && periciaMenorVigentes > 0 && !ehMedicoGeral) {
+  if (podePericiaMenor && periciaMenorVigentes > 0) {
     atencao.push({
       id: 'pm', icone: 'personal_injury', titulo: termosPm.pagina === 'Atestados'
         ? `${periciaMenorVigentes} atestado${periciaMenorVigentes !== 1 ? 's' : ''} vigente${periciaMenorVigentes !== 1 ? 's' : ''}`
@@ -388,6 +393,16 @@ export const Home: React.FC = () => {
                           icone="personal_injury" titulo={extrairNomeInspecionado(p.inspecionado)} detalhe={`${dataBR(p.dataAtestado)} · ${p.tempoHomologado} dia${p.tempoHomologado !== 1 ? 's' : ''} · ${p.cid}`}
                           data={`até ${dataBR(p.dataTermino)}`} link={p.pdfUrl} to="/pericia-menor/historico"
                           tag={<StatusTag tone={vigente ? 'danger' : 'success'} className="shrink-0">{vigente ? 'Vigente' : 'Concluída'}</StatusTag>}
+                          // Celular: só "Fim: dd/mm/aaaa" nas vigentes e o chip só com a bolinha (texto para leitor de tela).
+                          compactoMobile={{
+                            detalhe: vigente ? `Fim: ${dataBR(p.dataTermino)}` : '',
+                            tag: (
+                              <span className={`inline-flex items-center justify-center w-7 h-6 rounded-full ${vigente ? 'bg-wine/10' : 'bg-green/10'}`} title={vigente ? 'Vigente' : 'Concluída'}>
+                                <span className={`w-2 h-2 rounded-full ${vigente ? 'bg-wine' : 'bg-green'}`} aria-hidden="true" />
+                                <span className="sr-only">{vigente ? 'Vigente' : 'Concluída'}</span>
+                              </span>
+                            ),
+                          }}
                         />
                       </li>
                     );
