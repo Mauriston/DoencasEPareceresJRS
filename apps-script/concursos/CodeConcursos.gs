@@ -10,17 +10,13 @@
  *  - guardar os PDFs dos concursos no Google Drive (drive compartilhado,
  *    pasta raiz CONCURSOS > ano > concurso > CANDIDATOS/MENSAGENS) e devolver
  *    as URLs, que o app grava no Firestore (services/driveConcursos.ts);
- *  - ler a mensagem administrativa (PDF) com o Gemini e devolver os dados
- *    estruturados em JSON;
  *  - guardar o PDF dos exames de um candidato na pasta dele (como
- *    EXAMES_NOME_DO_CANDIDATO.pdf) e devolver a transcrição dos laudos lida
- *    pelo Gemini, em JSON, para o app gravar no Firestore.
- *
- * Propriedades do script (Configurações do projeto → Propriedades do script):
- *   GEMINI_API_KEY — chave da API Gemini (usada em "extrairMensagemConcurso"
- *   e em "salvarExamesCandidato").
- * As ações que escrevem no Drive ou usam o Gemini exigem o token de login do
- * Firebase ("idToken") — ver "exigirUsuarioFirebase".
+ *    EXAMES_NOME_DO_CANDIDATO.pdf) e a minuta de mensagem como Google Doc.
+ * O Gemini NÃO é mais chamado daqui: a IA (minuta, mensagem de concurso, exames
+ * e atestado) roda no app pelo Firebase AI Logic (services/geminiAI.ts). A
+ * propriedade GEMINI_API_KEY pode ser apagada do projeto.
+ * As ações que escrevem no Drive exigem o token de login do Firebase
+ * ("idToken") — ver "exigirUsuarioFirebase".
  *
  * Implantação: crie um projeto Apps Script STANDALONE (script.google.com →
  * Novo projeto; não atrelado a planilha nem ao Docs do template), cole este
@@ -47,37 +43,16 @@ var ID_AGENDA_JRS_HNRE = 'c_b103c034ba38b68e447b1ea6ab97b0da658878ebc7daa7535d61
 var ID_PASTA_PARECERES = '176YQTOOWXuE78Xul49XYpJsVNyu-eZFi';
 /** Chave de API web do projeto Firebase (pública, a mesma de firebase-applet-config.json): só serve para validar o idToken. */
 var FIREBASE_API_KEY = 'AIzaSyAWBYm6iGQNQXeC5DO038lMSruxpRjoX2c';
-var MODELO_GEMINI = 'gemini-2.5-flash';
 
 /**
  * Versão deste código. AUMENTE a cada alteração em qualquer .gs deste projeto (AAAA-MM-DD.N): o
  * workflow "Apps Script publicado" compara este valor com o da implantação no ar (ação "versao")
  * e abre uma issue com o checklist de reimplantação enquanto forem diferentes.
  */
-var VERSAO_SCRIPT = '2026-11-06.2';
-
-/** Ações POST que vieram do antigo projeto "principal" (CodePrincipal.gs): respondem no formato antigo ({ success, ... }). */
-var ACOES_POST_PRINCIPAL = ['extrair_dados_atestado', 'gerarMinutaMensagem'];
+var VERSAO_SCRIPT = '2026-11-06.4';
 
 /** Ponto de entrada POST do aplicativo da web. Espera um corpo JSON com a propriedade "action". */
 function doPost(e) {
-  var acaoBruta = '';
-  var corpoBruto = {};
-  try {
-    corpoBruto = JSON.parse((e && e.postData && e.postData.contents) || '{}');
-    acaoBruta = String(corpoBruto.action || '');
-  } catch (erroPeek) { /* tratado abaixo */ }
-  if (ACOES_POST_PRINCIPAL.indexOf(acaoBruta) !== -1) {
-    // Formato legado ({ success, message }): login, usuário ativo e perfil também são exigidos aqui.
-    try {
-      autorizarAcao_(corpoBruto);
-    } catch (erroAcesso) {
-      return ContentService.createTextOutput(JSON.stringify({ success: false, message: erroAcesso.message }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    return doPostPrincipal(e);
-  }
-
   return apiResponder(function() {
     var corpo = {};
     try {
@@ -104,41 +79,13 @@ function doPost(e) {
     if (corpo.action === 'enviarTermoRecursoImpressao') return apiEnviarTermoRecursoImpressao(corpo);
     if (corpo.action === 'enviarSolicitacaoConcursoImpressao') return apiEnviarSolicitacaoConcursoImpressao(corpo);
     if (corpo.action === 'removerArquivoDrive') return apiRemoverArquivoDrive(corpo);
-    if (corpo.action === 'extrairMensagemConcurso') return apiExtrairMensagemConcurso(corpo);
+    if (corpo.action === 'salvarMinutaMensagem') return apiSalvarMinutaMensagem(corpo);
     if (corpo.action === 'salvarExamesCandidato') return apiSalvarExamesCandidato(corpo);
     if (corpo.action === 'sincronizarEventoIS') return apiSincronizarEventoIS(corpo);
     if (corpo.action === 'sincronizarEventosConcursos') return apiSincronizarEventosConcursos(corpo);
     if (corpo.action === 'sincronizarEventoBloqueio') return apiSincronizarEventoBloqueio(corpo);
     throw new Error('Ação POST desconhecida: "' + corpo.action + '".');
   });
-}
-
-/**
- * Chama a API Gemini com novas tentativas nas falhas passageiras (429 limite de uso, 500 e 503
- * indisponibilidade): até 3 tentativas, com espera de 2 s e 4 s. Devolve o JSON da resposta;
- * erros definitivos viram mensagens claras. Usada por todas as chamadas ao Gemini do projeto.
- */
-function chamarGemini(url, requisicao) {
-  var esperas = [2000, 4000];
-  for (var tentativa = 0; ; tentativa++) {
-    var resp = UrlFetchApp.fetch(url, {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify(requisicao),
-      muteHttpExceptions: true
-    });
-    var codigo = resp.getResponseCode();
-    if ((codigo === 429 || codigo === 500 || codigo === 503) && tentativa < esperas.length) {
-      Utilities.sleep(esperas[tentativa]);
-      continue;
-    }
-    var json;
-    try { json = JSON.parse(resp.getContentText()); } catch (e) { throw new Error('Resposta inválida da API Gemini (HTTP ' + codigo + ').'); }
-    if (codigo === 429) throw new Error('Limite de uso da IA (Gemini) atingido. Tente novamente em alguns minutos.');
-    if (codigo === 500 || codigo === 503) throw new Error('A IA (Gemini) está indisponível no momento. Tente novamente em alguns minutos.');
-    if (json.error) throw new Error('Erro na API Gemini: ' + json.error.message);
-    return json;
-  }
 }
 
 /** Antes de enviar e-mail: a cota diária do Apps Script esgotada vira uma mensagem clara (o documento já está salvo). */
@@ -459,18 +406,15 @@ function apiGerarPedidoParecer(corpo) {
 var FIREBASE_PROJECT_ID = 'jrs-app-web';
 var PERFIS_EQUIPE = ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
 var PERFIS_MEDICOS = ['admin', 'user_medicos', 'user_medicos_mpi'];
-/** Perícia Menor: também os demais médicos do HNRe (user_medicos_geral). */
-var PERFIS_PERICIA_MENOR = PERFIS_MEDICOS.concat(['user_medicos_geral']);
 /**
  * Perfis aceitos por ação (espelha firestore.rules). Ação fora da lista: qualquer perfil da equipe, ativo.
- * Pedido de parecer e Perícia Menor (leitura do atestado) são só dos médicos, como nas regras do Firestore.
+ * Pedido de parecer é só dos médicos, como nas regras do Firestore.
  * A matriz fina de páginas/funcionalidades (config/permissoes) continua conferida no app e nas regras.
  */
 var PERFIS_POR_ACAO = {
   gerarPedidoParecer: PERFIS_MEDICOS,
   salvarPdfParecer: PERFIS_MEDICOS,
-  enviarParecerImpressao: PERFIS_MEDICOS,
-  extrair_dados_atestado: PERFIS_PERICIA_MENOR
+  enviarParecerImpressao: PERFIS_MEDICOS
 };
 /** Operações sensíveis: além do log, cada uso vira um registro em auditoria_acoes (Firestore). */
 var ACOES_SENSIVEIS = ['removerArquivoDrive', 'enviarParecerImpressao', 'enviarTermoRecursoImpressao', 'enviarSolicitacaoConcursoImpressao'];
@@ -567,7 +511,7 @@ function autorizarAcao_(corpo) {
 /**
  * Valida o token de login do Firebase enviado pelo app ("idToken") e devolve o uid.
  * Chamada por autorizarAcao_ (porta de entrada de todas as ações) e, por segurança, por cada ação que grava
- * no Drive ou consome o Gemini.
+ * no Drive.
  */
 function exigirUsuarioFirebase(corpo) {
   var idToken = String((corpo && corpo.idToken) || '');
@@ -1112,57 +1056,7 @@ function apiSincronizarEventosConcursos(corpo) {
 }
 
 // =========================================================================
-// GEMINI — leitura da mensagem administrativa (PDF)
-// =========================================================================
-
-var PROMPT_MENSAGEM_CONCURSO = [
-  'Você lê mensagens administrativas navais (SIGAD-MB) em PDF sobre concursos/processos seletivos e extrai os dados.',
-  'Responda estritamente em JSON válido, com exatamente estas chaves:',
-  '- "dataHora": o código Data-Hora (DTG) da mensagem, formato <R|P><DDHHMM>Z/<MÊS>/<ANO>, ex.: "R181644Z/SET/2026".',
-  '- "remetente": o conteúdo do campo "De:" (ex.: "HOSRCF").',
-  '- "destinatario": o conteúdo do campo "Para:".',
-  '- "info": o conteúdo do campo "Info:" (string vazia se não houver).',
-  '- "assunto": o conteúdo do campo "Assunto:".',
-  '- "texto": a transcrição fiel e completa do corpo da mensagem (campo "Texto:"), sem cabeçalho de página nem rodapé; preserve os parágrafos com quebras de linha.',
-  '- "nomeConcurso": o identificador curto do concurso no assunto, no formato SIGLA/ANO (ex.: "CP-CAP/2026"); se não houver, use o assunto inteiro.',
-  '- "mensagemDeAgendamento": true se os candidatos aparecem agrupados por data de comparecimento/agendamento (uma data por grupo); false se é só uma lista de apresentação.',
-  '- "periodoJRS": objeto { "inicio": "AAAA-MM-DD", "fim": "AAAA-MM-DD" } com o período em que a JRS fará as inspeções (trecho como "03AGO a 14SET2026 (JRS)"), ou null se não constar.',
-  '- "candidatos": lista, na ordem da mensagem, de objetos { "matricula": "000000-0", "nome": "NOME COMPLETO EM MAIÚSCULAS", "dataAgendamento": "AAAA-MM-DD" }. A matrícula tem 5 a 7 dígitos, hífen e um dígito verificador. "dataAgendamento" só se a mensagem agendar o candidato numa data; senão, string vazia. Não inclua militares que não sejam candidatos.',
-  'Não invente dados: use string vazia (ou null/lista vazia) quando a informação não estiver no documento.'
-].join('\n');
-
-/**
- * action=extrairMensagemConcurso (POST): { idToken, pdfBase64, mimeType } — o Gemini lê a mensagem (PDF ou imagem)
- * e devolve os dados estruturados (ver PROMPT_MENSAGEM_CONCURSO). Exige GEMINI_API_KEY nas propriedades do script.
- */
-function apiExtrairMensagemConcurso(corpo) {
-  exigirUsuarioFirebase(corpo);
-  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-  if (!apiKey) throw new Error('GEMINI_API_KEY não configurada nas propriedades do projeto Apps Script.');
-  if (!corpo.pdfBase64) throw new Error('"pdfBase64" é obrigatório.');
-
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + MODELO_GEMINI + ':generateContent?key=' + apiKey;
-  var requisicao = {
-    contents: [{
-      parts: [
-        { text: PROMPT_MENSAGEM_CONCURSO },
-        { inline_data: { mime_type: corpo.mimeType || 'application/pdf', data: corpo.pdfBase64 } }
-      ]
-    }],
-    generationConfig: { responseMimeType: 'application/json', temperature: 0 }
-  };
-  var json = chamarGemini(url, requisicao);
-
-  try {
-    var texto = json.candidates[0].content.parts[0].text;
-    return JSON.parse(texto);
-  } catch (e) {
-    throw new Error('O Gemini não conseguiu estruturar os dados da mensagem. Confira se o PDF está legível.');
-  }
-}
-
-// =========================================================================
-// EXAMES DOS CANDIDATOS — PDF no Drive + transcrição pelo Gemini
+// EXAMES DOS CANDIDATOS — PDF no Drive (a transcrição é feita no app, pelo Firebase AI Logic)
 // =========================================================================
 
 /**
@@ -1194,96 +1088,11 @@ function nomeArquivoExamesLivre(pasta, candidatoNome) {
   return nome;
 }
 
-var PROMPT_EXAMES_CANDIDATO = [
-  'Você transcreve, na íntegra, os exames de um candidato de concurso da Marinha do Brasil a partir de um PDF (em geral escaneado), para a Inspeção de Saúde da Junta Regular de Saúde.',
-  'Responda estritamente em JSON válido, com exatamente estas chaves de primeiro nível: "paciente", "exames" e "observacoes".',
-  '',
-  'REGRAS GERAIS',
-  '- Transcreva TODOS os laudos do documento: um objeto do array "exames" por exame ou por grupo de exames (ver AGRUPAMENTO).',
-  '- Despreze textos fúteis de cabeçalho e de rodapé: numeração de páginas ("Página 1 de 4"), endereço, telefone, e-mail, site e redes sociais da clínica ou do laboratório, código de barras, protocolo de conferência na internet, avisos do tipo "laudo sem valor sem assinatura" e afins.',
-  '- NÃO transcreva a Folha de Anamnese Dirigida (Anexo W / DS-8), em geral a primeira página.',
-  '- Transcreva em texto puro: sem markdown, sem negrito, sem tabelas e sem numerar as listas do laudo. Preserve as quebras de linha e as linhas em branco do original.',
-  '- Não invente dados: use string vazia (ou lista vazia) quando a informação não estiver no documento.',
-  '',
-  'CAMPOS DE CADA EXAME',
-  '- "categoria": exatamente uma destas: "hemograma", "eas", "bioquimica", "betaHcg", "vdrl", "antiHiv", "imagem", "colpocitologia", "ecg", "toxicologico", "outro".',
-  '- "nome": título do bloco em MAIÚSCULAS e sem acentos (ex.: "HEMOGRAMA COMPLETO", "EAS", "BIOQUIMICA", "BETA-HCG", "VDRL", "ANTI-HIV 1+2 (QUIMIOLUMINESCENCIA)", "RADIOGRAFIA DE TORAX", "USG DE MAMAS", "USG TRANSVAGINAL", "COLPOCITOLOGIA ONCOTICA", "ELETROCARDIOGRAMA", "EXAME TOXICOLOGICO").',
-  '- "paciente": nome do paciente como consta naquele laudo.',
-  '- "emissor": nome do profissional que assina o laudo, com o título (Dr., Dra., Biomed., Farm. etc.).',
-  '- "conselho": conselho de classe e número (ex.: "CRM-PE 20674", "CRBio-5 012345", "CRF-PE 7890"); acrescente o RQE quando houver.',
-  '- "data": data do laudo em DD/MM/AAAA.',
-  '- "itens": lista de { "nome": "...", "valor": "..." } — só para "hemograma", "eas" e "bioquimica"; nos demais, lista vazia.',
-  '- "resultado": resultado curto — só para "betaHcg", "vdrl" e "antiHiv" (ex.: "Nao reagente", "Negativo", "Inferior a 1,20 mUI/mL"); nos demais, string vazia.',
-  '- "texto": o laudo na íntegra — para "imagem", "colpocitologia", "ecg", "toxicologico" e "outro"; nos exames de valores, string vazia.',
-  '',
-  'VALORES (hemograma, EAS e bioquímica)',
-  '- Cada analito é um item separado, com APENAS o valor, SEM unidade de medida e sem o valor de referência.',
-  '- Plaquetas em milhares (209, nunca 209.000).',
-  '- Hemograma: hemácias, hemoglobina, hematócrito, VCM, HCM, CHCM, RDW, leucócitos, basófilos, eosinófilos, mielócitos, metamielócitos, bastões, segmentados, linfócitos, monócitos e plaquetas. Mielócitos, metamielócitos e bastões que não constem do laudo entram com valor "0".',
-  '- EAS (urina): densidade, pH, proteínas, glicose, corpos cetônicos, hemoglobina, nitrito, urobilinogênio, bilirrubinas, leucócitos, hemácias, células epiteliais, cilindros, cristais, muco e flora bacteriana.',
-  '- Bioquímica: glicemia de jejum, ureia, creatinina, colesterol total e frações (HDL, LDL, VLDL), triglicerídeos, TGO e TGP.',
-  '',
-  'AGRUPAMENTO',
-  '- Hemograma, EAS e bioquímica formam UM ÚNICO objeto cada, com todos os seus analitos em "itens".',
-  '- Se o mesmo analito aparecer em laudos de datas diferentes, use o valor MAIS RECENTE; e use "emissor", "conselho" e "data" do laudo mais recente do grupo.',
-  '- Beta-HCG, VDRL e anti-HIV são objetos próprios, um para cada, com o "resultado". No anti-HIV, informe o método no "nome".',
-  '- Exames de imagem (radiografia de tórax, USG de mamas, USG transvaginal ou pélvica), colpocitologia oncótica, eletrocardiograma e exame toxicológico: um objeto por exame, com o laudo em "texto".',
-  '- Exame toxicológico: inclua no "texto" o número do laudo, o material, o comprimento da amostra, a janela de detecção, o método, a data da coleta e o resultado por classe de substância.',
-  '- Qualquer exame fora dessa relação entra com categoria "outro" e o laudo integral em "texto".',
-  '',
-  'OUTRAS CHAVES',
-  '- "paciente": objeto { "nome": "NOME COMPLETO EM MAIÚSCULAS", "dataNascimento": "DD/MM/AAAA", "cpf": "", "identidade": "" } com o nome e a data de nascimento do candidato. Minimização de dados: deixe "cpf" e "identidade" SEMPRE vazios, mesmo que constem no documento.',
-  '- "observacoes": lista de avisos curtos para conferência humana — valores fora da referência do laboratório, carimbo ou registro pouco legível (diga a leitura feita), páginas faltando, divergência de nome ou de data de nascimento entre os laudos. Lista vazia se não houver.',
-].join('\n');
-
-/**
- * Chama o Gemini com o PDF dos exames e devolve o JSON estruturado
- * (ver PROMPT_EXAMES_CANDIDATO). Exige GEMINI_API_KEY nas propriedades do script.
- */
-function extrairExamesComGemini(pdfBase64, mimeType) {
-  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-  if (!apiKey) throw new Error('GEMINI_API_KEY não configurada nas propriedades do projeto Apps Script.');
-
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + MODELO_GEMINI + ':generateContent?key=' + apiKey;
-  var requisicao = {
-    contents: [{
-      parts: [
-        { text: PROMPT_EXAMES_CANDIDATO },
-        { inline_data: { mime_type: mimeType || 'application/pdf', data: pdfBase64 } }
-      ]
-    }],
-    // A transcrição integral de um PDF com muitos laudos é longa: sem teto alto
-    // o JSON vem cortado e não dá para interpretar.
-    generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 65536 }
-  };
-  var json;
-  try {
-    json = chamarGemini(url, requisicao);
-  } catch (erroFetch) {
-    // A leitura de um PDF escaneado com muitos laudos pode estourar o tempo da chamada.
-    if (/Timeout|tempo/i.test(erroFetch.message)) {
-      throw new Error('A leitura dos exames não terminou em tempo (' + erroFetch.message + '). Divida os exames em dois PDFs e envie um por vez.');
-    }
-    throw erroFetch;
-  }
-
-  var candidato = json.candidates && json.candidates[0];
-  if (candidato && candidato.finishReason === 'MAX_TOKENS') {
-    throw new Error('A transcrição ficou longa demais e foi cortada. Envie os exames em dois PDFs menores.');
-  }
-  try {
-    return JSON.parse(candidato.content.parts[0].text);
-  } catch (e) {
-    throw new Error('O Gemini não conseguiu estruturar os exames. Confira se o PDF está legível.');
-  }
-}
-
 /**
  * action=salvarExamesCandidato (POST): { idToken, ano, nomeConcurso, candidatoId, candidatoNome, pdfBase64, mimeType }
  * — guarda o PDF dos exames na pasta do candidato (dentro de CANDIDATOS, mesma lógica dos termos e das
- * solicitações) com o nome EXAMES_NOME_DO_CANDIDATO.pdf e, em seguida, manda o Gemini transcrever os laudos.
- * Devolve { fileId, url, nomeArquivo, dados, erroExtracao }: o PDF já está salvo mesmo quando a leitura falha,
- * e nesse caso "erroExtracao" explica o motivo (o app grava o link e avisa o usuário).
+ * solicitações) com o nome EXAMES_NOME_DO_CANDIDATO.pdf. Devolve { fileId, url, nomeArquivo }; a transcrição
+ * dos laudos é feita pelo app (Firebase AI Logic), em paralelo ao envio.
  */
 function apiSalvarExamesCandidato(corpo) {
   exigirUsuarioFirebase(corpo);
@@ -1305,18 +1114,9 @@ function apiSalvarExamesCandidato(corpo) {
   }
 
   var arquivo = criarPdfNaPasta(pastaCandidato, nomeArquivo, corpo.pdfBase64);
-  var resultado = {
+  return {
     fileId: arquivo.getId(),
     url: urlVisualizacaoDrive(arquivo.getId()),
-    nomeArquivo: nomeArquivo,
-    dados: null,
-    erroExtracao: ''
+    nomeArquivo: nomeArquivo
   };
-  try {
-    resultado.dados = extrairExamesComGemini(corpo.pdfBase64, corpo.mimeType);
-  } catch (e) {
-    logSeguro_('salvarExamesCandidato/extração', e);
-    resultado.erroExtracao = e.message;
-  }
-  return resultado;
 }
