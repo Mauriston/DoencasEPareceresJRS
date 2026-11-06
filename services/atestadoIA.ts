@@ -18,9 +18,10 @@ export interface DadosAtestado {
   crmEmissor?: string;
 }
 
-/** Modelo e região do Vertex AI. */
-const MODELO = 'gemini-2.5-flash';
-const REGIAO = 'us-central1';
+/** Modelo e região do Vertex AI (Agent Platform). Em nov/2026 o projeto só tem acesso aos modelos
+ * Gemini atuais na região "global" (o gemini-2.5-flash e a região us-central1 respondem 404). */
+const MODELO = 'gemini-3.5-flash';
+const REGIAO = 'global';
 
 const INSTRUCOES = [
   'Você lê a foto de um atestado médico brasileiro e extrai os dados pedidos no esquema.',

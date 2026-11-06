@@ -91,7 +91,7 @@ A página **Perícia Menor** deixou de usar a aba `Pericia_Menor` e a Guia de En
 Decisões:
 - **`dataTermino`** = `dataAtestado` + `tempoHomologado` − 1 (o dia do atestado conta como o 1º), calculada ao gravar.
 - **Status derivado**, não gravado: **Vigente** enquanto hoje ≤ `dataTermino`; depois, **Concluída** (`statusPericia` em `services/firestorePericiasMenores.ts`).
-- **PDF do atestado** (foto obrigatória): a foto recortada recebe o filtro "Documento" (`utils/filtroDocumento.ts`) e vira PDF no navegador (`utils/imagemParaPdf.ts`) e vai ao Storage em `periciasMenores/{id}.pdf`. A leitura por IA é feita pelo **Firebase AI Logic** (Gemini 2.5 Flash via Vertex AI, saída por esquema JSON, protegida pelo App Check com reCAPTCHA Enterprise — `services/atestadoIA.ts`, `services/appCheck.ts`); a ação `extrair_dados_atestado` do Apps Script fica como reserva se o AI Logic falhar.
+- **PDF do atestado** (foto obrigatória): a foto recortada recebe o filtro "Documento" (`utils/filtroDocumento.ts`) e vira PDF no navegador (`utils/imagemParaPdf.ts`) e vai ao Storage em `periciasMenores/{id}.pdf`. A leitura por IA é feita pelo **Firebase AI Logic** (Gemini 3.5 Flash via Vertex AI, região global, saída por esquema JSON, protegida pelo App Check com reCAPTCHA Enterprise — `services/atestadoIA.ts`, `services/appCheck.ts`); a ação `extrair_dados_atestado` do Apps Script fica como reserva se o AI Logic falhar.
 - **Serviço do HNRe** vem de `militares.servico_label` e só é exibido e gravado (`servico`) para militares da OM HNRe; médicos podem gravar só esse campo no cadastro (regra do Firestore).
 - Carga do histórico: `scripts/migrar-pericias-menores.mjs` (dados em `scripts/pericias-menores.json`).
 
