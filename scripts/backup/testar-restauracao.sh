@@ -21,23 +21,24 @@ limpar() {
 trap limpar EXIT
 
 echo "== Backup mais recente (READY)"
-BACKUP="$(gc firestore backups list --format='value(name,snapshotTime)' --filter='state=READY' | sort -k2 | tail -n1 | cut -f1)"
-[[ -n "$BACKUP" ]] || { echo "Nenhum backup pronto encontrado."; exit 1; }
-SNAPSHOT="$(gc firestore backups describe "$BACKUP" --format='value(snapshotTime)')"
+LINHA="$(gc firestore backups list --format='value(snapshotTime,name)' --filter='state=READY' | sort | tail -n1)"
+[[ -n "$LINHA" ]] || { echo "Nenhum backup pronto encontrado."; exit 1; }
+SNAPSHOT="$(cut -f1 <<<"$LINHA")"
+BACKUP="$(cut -f2 <<<"$LINHA")"
 echo "   $BACKUP (snapshot $SNAPSHOT)"
 
 limpar
 echo "== Restaurando em $DESTINO (pode levar alguns minutos)"
 gc firestore databases restore --source-backup="$BACKUP" --destination-database="$DESTINO"
-for i in $(seq 1 120); do
-  estado="$(gc firestore databases describe --database="$DESTINO" --format='value(name)' 2>/dev/null || true)"
-  [[ -n "$estado" ]] && break; sleep 15
+# A restauração continua depois que o banco aparece (pode levar dezenas de minutos): espera o fim.
+for i in $(seq 1 240); do
+  progresso="$(gc firestore databases describe --database="$DESTINO" --format='value(sourceInfo.progress)' 2>/dev/null || true)"
+  [[ "$progresso" == "IN_PROGRESS" || -z "$progresso" ]] || break
+  (( i % 4 == 0 )) && echo "   ainda restaurando… ($((i / 4)) min)"
+  sleep 15
 done
-# A restauração termina de copiar os dados depois que o banco aparece: espera a operação concluir.
-for i in $(seq 1 120); do
-  pend="$(gc firestore operations list --database="$DESTINO" --filter='done!=true' --format='value(name)' 2>/dev/null | wc -l)"
-  [[ "$pend" == "0" ]] && break; sleep 20
-done
+echo "   restauração: ${progresso:-desconhecida}"
+[[ "$progresso" == "SUCCEEDED" ]] || { echo "A restauração não terminou com sucesso."; exit 1; }
 
 echo "== Comparando contagens"
 node scripts/backup/comparar-contagens.mjs "$PROJETO" "$DESTINO" "$SNAPSHOT"
