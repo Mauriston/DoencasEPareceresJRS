@@ -10,6 +10,7 @@
 // derivado (solicitado há 20 dias ou mais), pois nada atualizaria um valor
 // gravado com o passar do tempo.
 import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, serverTimestamp, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { novoId } from '../utils/dados';
 import { camposIdDrive } from '../utils/googleDrive';
 import { app } from './firebaseAuth';
 
@@ -42,7 +43,8 @@ export interface ParecerDoc {
 }
 export type ParecerRecord = ParecerDoc & { id: string };
 
-export const novoIdParecer = (): string => doc(collection(db, COL)).id;
+/** Id interno (UUID v4, `novoId` de utils/dados.ts — convenção 19.1 de docs/database.md). */
+export const novoIdParecer = (): string => novoId();
 
 export const statusEfetivo = (p: Pick<ParecerDoc, 'status' | 'criadoEm'>, agora = Date.now()): StatusParecer => {
   if (p.status === 'concluido') return 'concluido';

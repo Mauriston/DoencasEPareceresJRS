@@ -17,6 +17,7 @@ import {
   getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, onSnapshot,
   writeBatch, serverTimestamp, Timestamp, deleteField,
 } from 'firebase/firestore';
+import { parseTimestamp, timestampISO } from '../utils/dados';
 import { app } from './firebaseAuth';
 import { registrarEvento } from './auditoriaIS';
 import { removerPdfPorUrl } from './driveConcursos';
@@ -666,7 +667,7 @@ export const gerarMinutaResultados = async (
     else if (status === 'INAPTO') inaptos.push(item);
     else if (status === 'FALTOU') faltosos.push(item);
     else if (status === 'INSUF DOCUMENTAL') idm.push(item);
-    if (c.recurso) recursos.push(`- Em ${formatarDataMilitar(c.dataLaudo ? new Date(c.dataLaudo.split('/').reverse().join('-')) : new Date())}: ${c.id}  ${c.nome}`);
+    if (c.recurso) recursos.push(`- Em ${formatarDataMilitar((c.dataLaudo && parseTimestamp(c.dataLaudo)) || new Date())}: ${c.id}  ${c.nome}`);
   });
 
   const aptosF = aplicarPontuacao(aptos, false);
@@ -752,7 +753,7 @@ export const salvarTriagem = async (concursoId: string, candidatoId: string, dad
   if (!snap.exists()) throw new Error('Candidato não encontrado.');
   if (snap.data().finalizado) throw new Error('Esta IS já foi finalizada e não pode mais ser editada.');
   const jaTinha = !!snap.data().triagem;
-  const triagem: TriagemRecord = { ...dados, atualizadoEm: new Date().toISOString(), atualizadoPor: usuario };
+  const triagem: TriagemRecord = { ...dados, atualizadoEm: timestampISO(), atualizadoPor: usuario };
   await updateDoc(candidatoRef(concursoId, candidatoId), { triagem });
   await registrarEvento(concursoId, candidatoId, jaTinha ? 'Triagem alterada' : 'Triagem registrada');
   return triagem;
@@ -784,7 +785,7 @@ export const registrarSolicitacao = async (
     throw new Error('O status atual do candidato não permite gerar esta solicitação.');
   }
   const observacoes = atual.observacoes.trim() ? `${atual.observacoes.trim()}; ${textoObservacao}` : textoObservacao;
-  const novoDoc: SolicitacaoDoc = { url: doc.url, rotulo: doc.rotulo, criadoEm: new Date().toISOString() };
+  const novoDoc: SolicitacaoDoc = { url: doc.url, rotulo: doc.rotulo, criadoEm: timestampISO() };
   const proximo = {
     ...(tipo === 'parecer'
       ? { solicitacoesParecer: [...atual.solicitacoesParecer, novoDoc] }
@@ -847,7 +848,7 @@ export const salvarExamesCandidato = async (
   if (!snap.exists()) throw new Error(`Candidato com matrícula "${candidatoId}" não encontrado.`);
   const atual = toCandidatoRecord(candidatoId, snap.data());
 
-  const criadoEm = new Date().toISOString();
+  const criadoEm = timestampISO();
   const exames = envio.extraidos?.exames ?? [];
   await addDoc(examesCol(concursoId, candidatoId), {
     pdfUrl: envio.pdfUrl,
@@ -878,7 +879,8 @@ export const listarExamesCandidato = async (concursoId: string, candidatoId: str
   const snap = await getDocs(examesCol(concursoId, candidatoId));
   return snap.docs
     .map(d => toExamesEnvioRecord(d.id, d.data()))
-    .sort((a, b) => a.criadoEm.localeCompare(b.criadoEm));
+    // Por instante (registros antigos em UTC "Z", novos com offset -03:00: a ordem de texto não serve).
+    .sort((a, b) => (parseTimestamp(a.criadoEm)?.getTime() ?? 0) - (parseTimestamp(b.criadoEm)?.getTime() ?? 0));
 };
 
 /** Apaga a subcoleção "exames" do candidato e os PDFs correspondentes no Drive (usado por `limparIS`). */

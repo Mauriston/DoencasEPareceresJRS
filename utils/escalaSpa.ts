@@ -6,7 +6,7 @@
 //    exportado direto da aba "Agenda" da planilha (Início, SVC, Medico, Retens);
 //  - cruzamento dos nomes da escala com o login do usuário ("CT MAURISTON" = "CT (Md) MAURISTON").
 import { parseCsvGenerico } from './concursosUtils';
-import { dataCivilISO } from './dados';
+import { dataCivilISO, normalizarTexto } from './dados';
 import type { EscalaDia } from '../services/firestoreEscala';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -141,8 +141,8 @@ export const lerCsvEscala = (texto: string): ResultadoCsvEscala => {
     const dataBruta = val('DATA').split(/\s+/)[0];
     const data = dataCivilISO(dataBruta);
     const servico = chaveCab(val('SERVICO'));
-    const medicos = val('MEDICOS').split(/[,/+]| e /).map(s => s.trim()).filter(Boolean);
-    const retem = val('RETEM');
+    const medicos = val('MEDICOS').split(/[,/+]| e /).map(normalizarTexto).filter(Boolean);
+    const retem = normalizarTexto(val('RETEM'));
     if (!data) { erros.push({ linha, motivo: `Data "${val('DATA')}" inválida (use DD/MM/AAAA).` }); return; }
     if (!['supervisao', 'dia', 'noite'].includes(servico)) { erros.push({ linha, motivo: `Serviço "${val('SERVICO')}" inválido (use Supervisão, DIA ou NOITE).` }); return; }
     if (medicos.length === 0) { erros.push({ linha, motivo: 'Sem médico escalado.' }); return; }

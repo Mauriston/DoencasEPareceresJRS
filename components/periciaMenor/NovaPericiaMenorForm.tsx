@@ -31,7 +31,7 @@ import { enviarPdfPericiaMenor, novoIdPericiaMenor, observarPericiasDoMilitar, r
 import { carregarCid, normalizarBusca, omEhHnre, type CidItem } from '../../utils/corposQuadros';
 import { imagemParaPdf } from '../../utils/imagemParaPdf';
 import { aplicarFiltroDocumento } from '../../utils/filtroDocumento';
-import { dataCivilISO, hojeISO } from '../../utils/dados';
+import { dataCivilISO, diasInteiro, hojeISO, normalizarTexto } from '../../utils/dados';
 import { MAX_DIAS_PERICIA, MAX_DIAS_ACUMULADOS, limitarDias, saldoAcumulado } from '../../utils/periciaMenorRegras';
 import { formatNip } from '../../utils/format';
 
@@ -179,7 +179,9 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
   const aplicarDados = (dados: Awaited<ReturnType<typeof extrairDadosAtestado>>) => {
     const iso = dados.dataAtestado ? dataCivilISO(String(dados.dataAtestado)) : null;
     if (iso) { setDataTexto(dataBR(iso)); limpar('dataAtestado'); }
-    if (dados.tempoAtestado) alterarTempoAtestado(String(dados.tempoAtestado));
+    // Dias como inteiro (convenção 19.5): "5", 5 ou "5 dias" → 5; fora de 0–36500 é ignorado.
+    const dias = diasInteiro(String(dados.tempoAtestado ?? '').replace(/\D+$/, '').trim());
+    if (dias) alterarTempoAtestado(String(dias));
     if (dados.cid) {
       const codigo = String(dados.cid).toLowerCase().replace(/[^a-z0-9]/g, '');
       const achado = cids.find(c => c.SUBCAT.toLowerCase() === codigo) ?? cids.find(c => c.SUBCAT.toLowerCase().startsWith(codigo));
@@ -264,12 +266,12 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
     try {
       const id = novoIdPericiaMenor();
       const pdfUrl = imagemDoc ? await enviarPdfPericiaMenor(id, await imagemParaPdf(imagemDoc)) : '';
-      const medico = medicoEmissor.trim();
-      const crm = crmEmissor.trim();
+      const medico = normalizarTexto(medicoEmissor);
+      const crm = normalizarTexto(crmEmissor);
       await registrarPericiaMenor(id, {
         militarId: militar.id, inspecionado: militar.inspecionado, om: militar.om,
         ...(servicoAplicavel && militar.servico_label ? { servico: militar.servico_label } : {}),
-        cid: rotuloCid(cid), dispensas, dataAtestado,
+        cid: rotuloCid(cid), cidCodigo: cid.SUBCAT, dispensas: dispensas.map(normalizarTexto), dataAtestado,
         tempoAtestado: Number(digitos(tempoAtestado)),
         // O que conta para a dispensa: o homologado (na homologação) ou o próprio tempo do atestado.
         tempoHomologado: tempoEfetivo,

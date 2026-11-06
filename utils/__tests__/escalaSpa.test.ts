@@ -36,6 +36,11 @@ describe('lerCsvEscala', () => {
       { data: '2026-03-01', supervisor: 'CT SEIXAS', retemSupervisao: 'CT JÚLIO CÉSAR' },
     ]);
   });
+  it('normaliza espaços nos nomes (convenção 19.3)', () => {
+    const r = lerCsvEscala('DATA;SERVICO;MEDICOS;RETEM\n01/12/2026;DIA;"  1T   KILDARE ,  1T OLIVEIRA ";  CT  LUZ \n');
+    expect(r.dias[0].dia).toEqual(['1T KILDARE', '1T OLIVEIRA']);
+    expect(r.dias[0].retemDia).toBe('CT LUZ');
+  });
   it('cabeçalho sem colunas obrigatórias', () => {
     expect(() => lerCsvEscala('foo;bar\n1;2')).toThrow(/DATA/);
   });

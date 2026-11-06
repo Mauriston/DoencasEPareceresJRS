@@ -11,6 +11,7 @@ import { Dialog } from '../ui/Dialog';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
+import { parseTimestamp } from '../../utils/dados';
 import {
   ALTERACOES, ISHIHARA_PLACAS, TRIAGEM_VAZIA, alertasDaTriagem, calcularImc, formatarDecimal, mascaraAltura,
   mascaraInteiro3, mascaraIshihara, pendenciasDaTriagem, validarTriagem,
@@ -284,7 +285,7 @@ export const TriagemSecao: React.FC<{ triagem: TriagemRecord; onEditar?: () => v
       )}
 
       {t.atualizadoPor && (
-        <p className="text-xs text-ink-3">Por {t.atualizadoPor}{t.atualizadoEm ? ` em ${new Date(t.atualizadoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}.</p>
+        <p className="text-xs text-ink-3">Por {t.atualizadoPor}{parseTimestamp(t.atualizadoEm) ? ` em ${parseTimestamp(t.atualizadoEm)!.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}.</p>
       )}
     </section>
   );
