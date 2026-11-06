@@ -354,6 +354,7 @@ Não há `doGet`: o app só faz chamadas POST. O antigo projeto "principal" (`Co
 | `admin` | Presidente da JRS: acesso total, gestão de usuários e permissões, "Visualizar como" outro perfil |
 | `user_medicos` | Peritos da JRS |
 | `user_medicos_mpi` | Médicos da MPI (inclui a triagem das IS de concurso) |
+| `user_medicos_geral` | Demais médicos do HNRe: por padrão só Perícia Menor (Novo e Histórico) e Exames mínimos, além do próprio perfil; não recebe notificações. Cadastro em lote: `scripts/criar-usuarios-csv.mjs` |
 | `user_secretaria` | Secretaria (agenda, cadastros, fila de impressão na Início) |
 
 A visibilidade de páginas e funcionalidades segue a matriz `config/permissoes` (editável pelo Admin), lida por `canAccessPage`/`canUseFeature`.

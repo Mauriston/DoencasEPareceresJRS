@@ -286,6 +286,8 @@ export const UsuariosManagement: React.FC = () => {
         return <StatusTag tone="navyOutline" dot={false}>User Médicos</StatusTag>;
       case 'user_medicos_mpi':
         return <StatusTag tone="navyOutline" dot={false}>User Médicos MPI</StatusTag>;
+      case 'user_medicos_geral':
+        return <StatusTag tone="neutral" dot={false}>User Médicos Geral</StatusTag>;
       default:
         return <StatusTag tone="neutral" dot={false}>User Secretaria</StatusTag>;
     }
@@ -329,6 +331,7 @@ export const UsuariosManagement: React.FC = () => {
               <option value="user_medicos">Perfil: User Médicos</option>
               <option value="user_medicos_mpi">Perfil: User Médicos MPI</option>
               <option value="user_secretaria">Perfil: User Secretaria</option>
+              <option value="user_medicos_geral">Perfil: User Médicos Geral</option>
             </select>
 
             <button
@@ -685,6 +688,7 @@ export const UsuariosManagement: React.FC = () => {
                     <option value="user_medicos">Usuário Médicos (user_medicos)</option>
                     <option value="user_medicos_mpi">Usuário Médicos MPI (user_medicos_mpi)</option>
                     <option value="user_secretaria">Usuário Secretaria (user_secretaria)</option>
+                    <option value="user_medicos_geral">Usuário Médicos Geral (user_medicos_geral)</option>
                   </select>
                 </div>
               </div>
@@ -778,6 +782,7 @@ export const UsuariosManagement: React.FC = () => {
                     <option value="user_medicos">Usuário Médicos (user_medicos)</option>
                     <option value="user_medicos_mpi">Usuário Médicos MPI (user_medicos_mpi)</option>
                     <option value="user_secretaria">Usuário Secretaria (user_secretaria)</option>
+                    <option value="user_medicos_geral">Usuário Médicos Geral (user_medicos_geral)</option>
                   </select>
                 </div>
               </div>

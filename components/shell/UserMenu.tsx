@@ -10,6 +10,7 @@ export const PERFIL_LABELS: Record<string, string> = {
   user_medicos: 'User Médicos',
   user_secretaria: 'User Secretaria',
   user_medicos_mpi: 'User Médicos MPI',
+  user_medicos_geral: 'User Médicos Geral',
 };
 
 interface AvatarProps {
@@ -65,7 +66,7 @@ interface UserDropdownContentProps {
   onVerComo?: (perfil: string | null) => void;
 }
 
-const PERFIS_VISUALIZAVEIS = ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
+const PERFIS_VISUALIZAVEIS = ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria', 'user_medicos_geral'];
 
 /** Item exclusivo do Admin: troca só a visualização do app (não altera o perfil de fato). Sempre visível para o Admin. */
 const VisualizarComo: React.FC<{ atual: string; onEscolher: (perfil: string | null) => void }> = ({ atual, onEscolher }) => {
@@ -157,7 +158,7 @@ export const UserMenu: React.FC = () => {
               onPerfilClick={() => { setAberto(false); nav?.setCurrentView('perfil'); }}
               onLogoutClick={() => { setAberto(false); nav?.handleLogout(); }}
               naoLidas={nav?.notificacoesNaoLidas}
-              onNotificacoesClick={() => nav?.abrirNotificacoes()}
+              onNotificacoesClick={nav?.abrirNotificacoes}
               perfilReal={nav?.perfilReal}
               verComo={nav?.verComo}
               onVerComo={perfil => { setAberto(false); nav?.setVerComo(perfil); }}

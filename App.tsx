@@ -171,10 +171,13 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   // Histórico de notificações do usuário (badge do avatar e lista do menu).
   const [notificacoes, setNotificacoes] = useState<NotificacaoRecord[]>([]);
   const [notificacoesAbertas, setNotificacoesAbertas] = useState(false);
+  // "user_medicos_geral" (demais médicos do HNRe) não recebe notificações: sem histórico,
+  // sem badge, sem item "Notificações" no menu e sem o convite para ativá-las.
+  const semNotificacoes = authUserReal?.perfil === 'user_medicos_geral';
   useEffect(() => {
-    if (!authUserReal) { setNotificacoes([]); return; }
+    if (!authUserReal || semNotificacoes) { setNotificacoes([]); return; }
     return observarNotificacoes(authUserReal.uid, setNotificacoes);
-  }, [authUserReal?.uid]);
+  }, [authUserReal?.uid, semNotificacoes]);
   useEffect(() => {
     if (authUserReal && NOTIF_ABERTA_PELO_PUSH) void marcarNotificacaoLida(authUserReal.uid, NOTIF_ABERTA_PELO_PUSH);
   }, [authUserReal?.uid]);
@@ -358,7 +361,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
     switch (view) {
       case 'home': return <Home />;
       case 'perfil': return <Perfil />;
-      case 'guide': return <DiseaseGuide />;
+      case 'guide': return can('guide') ? <DiseaseGuide /> : <AccessDenied pagina={paginaLabel('guide')} />;
       case 'laws': return can('laws') ? <LawReference podeCadastrar={authUser?.perfil === 'admin'} /> : <AccessDenied pagina={paginaLabel('laws')} />;
       case 'dgpm406': return can('dgpm406') ? <DGPM406Guide /> : <AccessDenied pagina={paginaLabel('dgpm406')} />;
       case 'concursos': return can('concursos') ? <ConcursosGuide /> : <AccessDenied pagina={paginaLabel('concursos')} />;
@@ -444,7 +447,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
         avisos: { casosPendente, pwaPendente },
         abrirInstalacaoApp: () => setPwaDialogAberto(true),
         notificacoesNaoLidas,
-        abrirNotificacoes: () => { setIsAvatarMenuOpen(false); setIsMobileMenuOpen(false); setNotificacoesAbertas(true); },
+        abrirNotificacoes: semNotificacoes ? undefined : () => { setIsAvatarMenuOpen(false); setIsMobileMenuOpen(false); setNotificacoesAbertas(true); },
         perfilReal: authUserReal?.perfil,
         verComo: authUserReal?.perfil === 'admin' ? verComo : null,
         setVerComo,
@@ -499,7 +502,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
           )}
         >
           <p className="text-ink-3 leading-relaxed">
-            Você ainda está usando a senha temporária (seu NIP). Por segurança, altere sua senha de acesso.
+            Você ainda está usando a senha temporária. Por segurança, altere sua senha de acesso.
           </p>
         </Dialog>
       )}
@@ -517,12 +520,12 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
         />
       )}
 
-      <NotificacoesConvite
+      {!semNotificacoes && <NotificacoesConvite
         key={authUser.uid}
         usuario={authUserReal?.usuario || authUser.usuario}
         aguardar={mostrarAlertaSenha || pwaDialogAberto || avisoTriagem}
         onInstalarApp={() => setPwaDialogAberto(true)}
-      />
+      />}
 
       {avisoTriagem && !mostrarAlertaSenha && (
         <Dialog

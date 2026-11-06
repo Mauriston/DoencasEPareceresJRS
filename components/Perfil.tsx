@@ -252,7 +252,7 @@ export const Perfil: React.FC = () => {
         </form>
 
         {/* NOTIFICAÇÕES PUSH (POR APARELHO) */}
-        {authUser && <NotificacoesCard usuario={authUser.usuario} />}
+        {authUser && authUser.perfil !== 'user_medicos_geral' && <NotificacoesCard usuario={authUser.usuario} />}
 
         {/* ALTERAR SENHA (SOMENTE O PRÓPRIO USUÁRIO) */}
         <form onSubmit={handleSalvarSenha} className="bg-white rounded-2xl shadow-sm border border-line/60 p-5 space-y-4">

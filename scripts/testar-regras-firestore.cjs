@@ -57,6 +57,15 @@ const casos = [
   cre('Secretaria cria concurso', 'user_secretaria', 'concursos/c9', 'DENY'),
   cre('Médico cria concurso', 'user_medicos', 'concursos/c9', 'ALLOW'),
   cre('Secretaria envia PDF de exames (subcoleção)', 'user_secretaria', 'concursos/c1/candidatos/m1/exames/e1', 'ALLOW'),
+  // user_medicos_geral (demais médicos do HNRe): só Perícia Menor.
+  cre('Médico Geral registra perícia menor', 'user_medicos_geral', 'periciasMenores/p1', 'ALLOW'),
+  cre('Médico Geral cadastra militar (cadastro rápido da perícia)', 'user_medicos_geral', 'militares/12345678', 'ALLOW'),
+  upd('Médico Geral define o Serviço do HNRe', 'user_medicos_geral', { servico_label: 'X (HNRe-00.0)' }, 'ALLOW', null, 'militares/12345678', { nome: 'X', servico_label: '' }),
+  upd('Médico Geral altera nome do militar', 'user_medicos_geral', { nome: 'Y' }, 'DENY', null, 'militares/12345678', { nome: 'X', servico_label: '' }),
+  cre('Médico Geral cria pedido de parecer', 'user_medicos_geral', 'pareceres/p1', 'DENY'),
+  cre('Médico Geral cria IS', 'user_medicos_geral', 'inspecoes/9001', 'DENY'),
+  cre('Médico Geral cria concurso', 'user_medicos_geral', 'concursos/c9', 'DENY'),
+  upd('Médico Geral altera Status de candidato', 'user_medicos_geral', { status: 'APTO' }, 'DENY'),
 ];
 (async () => {
   const c = await new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] }).getClient();

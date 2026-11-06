@@ -7,12 +7,14 @@
 import { NavItem } from '../types';
 import { salvarPermissoesRemoto, type PermissoesArmazenadas } from '../services/firestorePermissions';
 
-export type Role = 'user_medicos' | 'user_secretaria' | 'user_medicos_mpi';
+export type Role = 'user_medicos' | 'user_secretaria' | 'user_medicos_mpi' | 'user_medicos_geral';
 
 export const ROLES: { id: Role; label: string }[] = [
   { id: 'user_medicos', label: 'User Médicos' },
   { id: 'user_secretaria', label: 'User Secretaria' },
   { id: 'user_medicos_mpi', label: 'User Médicos MPI' },
+  // Demais médicos do HNRe: acesso restrito (por padrão só Perícia Menor e Exames mínimos) e sem notificações.
+  { id: 'user_medicos_geral', label: 'User Médicos Geral' },
 ];
 
 export interface PageDef {
@@ -51,23 +53,23 @@ export const PAGE_DEFS: PageDef[] = [
 // Perfil novo (user_medicos_mpi) começa espelhando os defaults de
 // user_medicos — o Admin ajusta a matriz depois conforme a necessidade.
 export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {
-  guide: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  portaria: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  concursosJRS: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  concursos: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  exames: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  pareceres: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
-  inspecoes: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  guide: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  portaria: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  concursosJRS: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  concursos: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  exames: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: true },
+  pareceres: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  inspecoes: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   // Inspecionados começa restrita ao Admin (como era "Militares"); o Admin libera por perfil.
-  militares: { user_medicos: false, user_secretaria: false, user_medicos_mpi: false },
-  mensagens: { user_medicos: false, user_secretaria: false, user_medicos_mpi: false },
-  dgpm406: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  laws: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  casos: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
-  videos: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
-  infograficos: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
-  apresentacoes: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
-  roteiro: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  militares: { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
+  mensagens: { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
+  dgpm406: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  laws: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  casos: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  videos: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  infograficos: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  apresentacoes: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  roteiro: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
 };
 
 export type FeatureKey =
@@ -131,30 +133,30 @@ export const FEATURE_DEFS: FeatureDef[] = [
 // que aplica a mesma matriz nas gravações: ao mudar um padrão aqui, mude lá também e rode
 // scripts/testar-regras-firestore.cjs.
 export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolean>> = {
-  'concursosJRS.editarDadosTabela': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
-  'concursosJRS.registrarMensagemPDF': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
-  'concursosJRS.reagendar': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false },
-  'concursosJRS.gerarMinutaResultados': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
-  'concursosJRS.importarCsv': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false },
-  'concursosJRS.abrirEncerrarConcurso': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false },
-  'concursosJRS.registrarMensagemArquivo': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
-  'concursosJRS.listarMensagens': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  'concursosJRS.adicionarCandidato': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
-  'concursosJRS.visualizarTabela': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  'concursosJRS.gerarTermoRecurso': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
-  'concursosJRS.solicitarParecerExames': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  'concursosJRS.editarDadosTabela': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  'concursosJRS.registrarMensagemPDF': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  'concursosJRS.reagendar': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
+  'concursosJRS.gerarMinutaResultados': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  'concursosJRS.importarCsv': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
+  'concursosJRS.abrirEncerrarConcurso': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
+  'concursosJRS.registrarMensagemArquivo': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  'concursosJRS.listarMensagens': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  'concursosJRS.adicionarCandidato': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  'concursosJRS.visualizarTabela': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  'concursosJRS.gerarTermoRecurso': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  'concursosJRS.solicitarParecerExames': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
   // Enviar os exames entregues pelo candidato é trabalho de recepção/secretaria tanto quanto dos médicos.
-  'concursosJRS.enviarExamesCandidato': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  'inspecoes.cadastrar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  'inspecoes.agendar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  'inspecoes.editar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  'inspecoes.gerarMinuta': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
+  'concursosJRS.enviarExamesCandidato': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  'inspecoes.cadastrar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  'inspecoes.agendar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  'inspecoes.editar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  'inspecoes.gerarMinuta': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   // Bloqueios: por padrão só Admin e Secretaria; se o Admin liberar a um perfil médico, ele só bloqueia os próprios turnos.
-  'inspecoes.bloquearAgenda': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false },
-  'militares.cadastrar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true },
-  'pareceres.gerar': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
-  'pericia-menor.novo': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
-  'pericia-menor.historico': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true },
+  'inspecoes.bloquearAgenda': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
+  'militares.cadastrar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  'pareceres.gerar': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  'pericia-menor.novo': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: true },
+  'pericia-menor.historico': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: true },
 };
 
 // Cache em memória alimentado pelo listener em tempo real do Firestore
@@ -172,13 +174,9 @@ export const getPagePermissions = (): Record<string, Record<Role, boolean>> => {
   const stored = permissoesCache?.pages || {};
   const result: Record<string, Record<Role, boolean>> = {};
   PAGE_DEFS.forEach(page => {
-    const defaults = DEFAULT_PAGE_PERMISSIONS[page.id] || { user_medicos: true, user_secretaria: true, user_medicos_mpi: true };
-    const overrides = stored[page.id] || {};
-    result[page.id] = {
-      user_medicos: overrides.user_medicos ?? defaults.user_medicos,
-      user_secretaria: overrides.user_secretaria ?? defaults.user_secretaria,
-      user_medicos_mpi: overrides.user_medicos_mpi ?? defaults.user_medicos_mpi,
-    };
+    const defaults = DEFAULT_PAGE_PERMISSIONS[page.id] || { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false };
+    const overrides = (stored[page.id] || {}) as Partial<Record<Role, boolean>>;
+    result[page.id] = Object.fromEntries(ROLES.map(r => [r.id, overrides[r.id] ?? defaults[r.id]])) as Record<Role, boolean>;
   });
   return result;
 };
@@ -188,12 +186,8 @@ export const getFeaturePermissions = (): Record<FeatureKey, Record<Role, boolean
   const result = {} as Record<FeatureKey, Record<Role, boolean>>;
   FEATURE_DEFS.forEach(feature => {
     const defaults = DEFAULT_FEATURE_PERMISSIONS[feature.id];
-    const overrides = stored[feature.id] || {};
-    result[feature.id] = {
-      user_medicos: overrides.user_medicos ?? defaults.user_medicos,
-      user_secretaria: overrides.user_secretaria ?? defaults.user_secretaria,
-      user_medicos_mpi: overrides.user_medicos_mpi ?? defaults.user_medicos_mpi,
-    };
+    const overrides = (stored[feature.id] || {}) as Partial<Record<Role, boolean>>;
+    result[feature.id] = Object.fromEntries(ROLES.map(r => [r.id, overrides[r.id] ?? defaults[r.id]])) as Record<Role, boolean>;
   });
   return result;
 };
@@ -203,8 +197,7 @@ export const savePermissions = (
   features: Record<FeatureKey, Record<Role, boolean>>
 ): Promise<void> => salvarPermissoesRemoto({ pages, features });
 
-const isPerfilEditavel = (perfil: string | undefined): perfil is Role =>
-  perfil === 'user_medicos' || perfil === 'user_secretaria' || perfil === 'user_medicos_mpi';
+const isPerfilEditavel = (perfil: string | undefined): perfil is Role => ROLES.some(r => r.id === perfil);
 
 export const canUseFeature = (featureId: FeatureKey, perfil: string | undefined): boolean => {
   if (perfil === 'admin') return true;

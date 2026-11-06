@@ -318,7 +318,8 @@ async function startServer() {
 
   const uidsAtivos = async (adminDb: any, filtro?: (u: any) => boolean): Promise<Set<string>> => {
     const snap = await adminDb.collection("usuarios").get();
-    return new Set(snap.docs.filter((d: any) => d.data().ativo !== false && (!filtro || filtro(d.data()))).map((d: any) => d.id));
+    // "user_medicos_geral" (demais médicos do HNRe) não recebe notificações do app.
+    return new Set(snap.docs.filter((d: any) => d.data().ativo !== false && d.data().perfil !== "user_medicos_geral" && (!filtro || filtro(d.data()))).map((d: any) => d.id));
   };
 
   const hojeRecife = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Recife" }).format(new Date()); // AAAA-MM-DD
