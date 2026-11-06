@@ -56,6 +56,7 @@ const Pareceres = paginaLazy(() => import('./components/Pareceres'), 'Pareceres'
 const CasosPericiais = paginaLazy(() => import('./components/CasosPericiais'), 'CasosPericiais');
 const Videos = paginaLazy(() => import('./components/Videos'), 'Videos');
 const PericiaMenor = paginaLazy(() => import('./components/PericiaMenor'), 'PericiaMenor');
+const EscalaSpa = paginaLazy(() => import('./components/EscalaSpa'), 'EscalaSpa');
 const Mensagens = paginaLazy(() => import('./components/Mensagens'), 'Mensagens');
 const RoteiroJRS = paginaLazy(() => import('./components/RoteiroJRS'), 'RoteiroJRS');
 const UsuariosManagement = paginaLazy(() => import('./components/UsuariosManagement'), 'UsuariosManagement');
@@ -372,6 +373,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       case 'pareceres': return can('pareceres') ? <Pareceres /> : <AccessDenied pagina={paginaLabel('pareceres')} />;
       case 'concursosJRS': return can('concursosJRS') ? <ConcursosJRS /> : <AccessDenied pagina={paginaLabel('concursosJRS')} />;
       case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor /> : <AccessDenied pagina={paginaLabel('pericia-menor')} />;
+      case 'escala': return can('escala') ? <EscalaSpa /> : <AccessDenied pagina={paginaLabel('escala')} />;
       case 'mensagens': return can('mensagens') ? <Mensagens /> : <AccessDenied pagina={paginaLabel('mensagens')} />;
       case 'infograficos': return can('infograficos') ? <Infograficos /> : <AccessDenied pagina={paginaLabel('infograficos')} />;
       case 'apresentacoes': return can('apresentacoes') ? <Apresentacoes /> : <AccessDenied pagina={paginaLabel('apresentacoes')} />;

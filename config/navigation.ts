@@ -32,7 +32,7 @@ export interface NavCategory {
 const MOBILE_ONLY_PAGES: NavItem[] = [];
 
 const CATEGORY_DEFS: { id: string; label: string; icon: string; subtitle: string; pages: NavItem[] }[] = [
-  { id: 'trabalho', label: 'Trabalho', icon: 'work', subtitle: 'Inspeções de saúde, inspecionados, concursos, perícias menores, pareceres e mensagens.', pages: ['inspecoes', 'militares', 'concursosJRS', 'pericia-menor', 'pareceres', 'mensagens'] },
+  { id: 'trabalho', label: 'Trabalho', icon: 'work', subtitle: 'Inspeções de saúde, inspecionados, concursos, perícias menores, pareceres e mensagens.', pages: ['inspecoes', 'militares', 'concursosJRS', 'pericia-menor', 'escala', 'pareceres', 'mensagens'] },
   { id: 'consulta', label: 'Consulta', icon: 'manage_search', subtitle: 'Doenças de Lei, exames, índices e normas.', pages: ['guide', 'exames', 'concursos', 'dgpm406', 'portaria', 'laws'] },
   { id: 'formacao', label: 'Formação', icon: 'school', subtitle: 'Casos periciais, vídeos, infográficos, apresentações e roteiro.', pages: ['casos', 'videos', 'infograficos', 'apresentacoes', 'roteiro'] },
 ];

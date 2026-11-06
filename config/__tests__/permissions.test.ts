@@ -4,9 +4,9 @@ import { canAccessPage, canUseFeature, PAGE_DEFS, FEATURE_DEFS } from '../permis
 
 describe('perfil user_medicos_geral (padrões)', () => {
   const p = 'user_medicos_geral';
-  it('só acessa Exames mínimos e Perícia Menor', () => {
+  it('só acessa Escala SVÇ, Exames mínimos e Perícia Menor', () => {
     const liberadas = PAGE_DEFS.map(d => d.id).filter(id => canAccessPage(id, p));
-    expect(liberadas.sort()).toEqual(['exames', 'pericia-menor']);
+    expect(liberadas.sort()).toEqual(['escala', 'exames', 'pericia-menor']);
   });
   it('só usa as funcionalidades da Perícia Menor', () => {
     const liberadas = FEATURE_DEFS.map(f => f.id).filter(id => canUseFeature(id, p));

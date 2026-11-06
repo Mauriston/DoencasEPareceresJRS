@@ -65,6 +65,9 @@ const casos = [
   cre('Médico Geral cria pedido de parecer', 'user_medicos_geral', 'pareceres/p1', 'DENY'),
   cre('Médico Geral cria IS', 'user_medicos_geral', 'inspecoes/9001', 'DENY'),
   cre('Médico Geral cria concurso', 'user_medicos_geral', 'concursos/c9', 'DENY'),
+  cre('Admin grava a escala do SPA', 'admin', 'escalaSpa/2026-11-06', 'ALLOW'),
+  cre('Médico grava a escala do SPA', 'user_medicos', 'escalaSpa/2026-11-06', 'DENY'),
+  cre('Secretaria grava a escala do SPA', 'user_secretaria', 'escalaSpa/2026-11-06', 'DENY'),
   upd('Médico Geral altera Status de candidato', 'user_medicos_geral', { status: 'APTO' }, 'DENY'),
 ];
 (async () => {

@@ -40,6 +40,8 @@ export const PAGE_DEFS: PageDef[] = [
   // canAccessPage e UsuariosManagement.tsx). Este registro só fornece
   // label/ícone/subtítulo para a navegação (Home/Sidebar).
   { id: 'pericia-menor', label: 'Perícia Menor', icon: 'personal_injury', subtitle: 'Registre as Perícias Menores dos militares de bordo.' },
+  // Escala de serviço do SPA (supervisão 24h com retém e plantões de 12h dia/noite), enviada pelo Admin em CSV.
+  { id: 'escala', label: 'Escala SVÇ', icon: 'calendar_month', subtitle: 'Escala de supervisão e plantões do SPA.' },
   { id: 'mensagens', label: 'Mensagens', icon: 'chat', subtitle: 'Faça minutas das MSG de IS auxiliado por IA.' },
   { id: 'dgpm406', label: 'DGPM-406', icon: 'anchor', subtitle: 'Consulte capítulos e anexos da DGPM-406.' },
   { id: 'laws', label: 'Legislação', icon: 'balance', subtitle: 'Pesquise as leis que fundamentam as IS.' },
@@ -62,6 +64,7 @@ export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {
   inspecoes: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   // Inspecionados começa restrita ao Admin (como era "Militares"); o Admin libera por perfil.
   militares: { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
+  escala: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: true },
   mensagens: { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
   dgpm406: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   laws: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },

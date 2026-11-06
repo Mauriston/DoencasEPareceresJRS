@@ -86,6 +86,7 @@ A página **Perícia Menor** deixou de usar a aba `Pericia_Menor` e a Guia de En
 
 | Coleção | Documento | Conteúdo |
 |---|---|---|
+| `escalaSpa` | data `AAAA-MM-DD` | `data`, `supervisor`, `retemSupervisao`, `dia[]`, `retemDia`, `noite[]`, `retemNoite`, `atualizadoEm` — escala do SPA (supervisão 24 h e plantões 12 h), enviada pelo Admin em CSV (`utils/escalaSpa.ts`; aceita o modelo `DATA;SERVICO;MEDICOS;RETEM` ou o CSV da aba Agenda) |
 | `periciasMenores` | id automático (as migradas: `planilha-LINHA`) | `militarId` (NIP só dígitos = id em `militares`), `inspecionado`, `om`, `servico`, `cid`, `dispensas[]`, `dataAtestado` (AAAA-MM-DD), `tempoAtestado`, `tempoHomologado` (tempo que conta para a dispensa), `homologacao` (boolean; atestado externo), `medicoEmissor`/`crmEmissor` (só na homologação, lidos da foto), `dataTermino`, `vdf` (boolean, "ENC p/ VDF?"), `peritoUsuario/Nome/Uid` (médico que registrou), `pdfUrl`, `criadoEm` |
 
 Decisões:
@@ -257,6 +258,7 @@ O cliente só avisa o servidor (`/api/notificacoes/evento`); o servidor confere 
 | `inspecoes`, `agendaSlots` | autenticado | equipe (Admin, médicos, Secretaria); apagar IS: Admin |
 | `bloqueiosAgenda` | autenticado | Admin e Secretaria; médico só os próprios |
 | `pareceres` | autenticado | médicos criam; não-Admin só altera o status de conclusão |
+| `escalaSpa` | autenticado | só Admin grava |
 | `periciasMenores` | autenticado | médicos criam; Admin edita e apaga |
 | `concursos` e subcoleções | autenticado | por funcionalidade da matriz `config/permissoes` e por campo (abaixo); exclusão só Admin; eventos só criação, leitura do Admin |
 | `legislacao`, `videos`, `infograficos`, `apresentacoes`, `quesitosParecer`, `config` | autenticado | Admin |
