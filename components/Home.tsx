@@ -69,12 +69,12 @@ const dataPorExtenso = (): string => {
   return t.charAt(0).toUpperCase() + t.slice(1);
 };
 
-const Secao: React.FC<{ id: string; titulo: string; badge?: number; acao?: React.ReactNode; children: React.ReactNode }> = ({ id, titulo, badge, acao, children }) => (
+const Secao: React.FC<{ id: string; titulo: string; badge?: number; badgeRotulo?: string; acao?: React.ReactNode; children: React.ReactNode }> = ({ id, titulo, badge, badgeRotulo = 'pendentes', acao, children }) => (
   <section aria-labelledby={id} className="bg-white border border-line rounded-xl">
     <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-2">
       <h2 id={id} className="text-h3 font-bold text-navy flex items-center gap-2">
         {titulo}
-        {!!badge && <span className="min-w-[24px] h-6 px-2 rounded-full bg-wine text-white text-xs font-bold leading-6 text-center" aria-label={`${badge} pendentes`}>{badge}</span>}
+        {!!badge && <span className="min-w-[24px] h-6 px-2 rounded-full bg-wine text-white text-xs font-bold leading-6 text-center" aria-label={`${badge} ${badgeRotulo}`}>{badge}</span>}
       </h2>
       {acao}
     </div>
@@ -90,6 +90,8 @@ const ICONE_DOCUMENTO: Record<string, string> = {
   'pedido-parecer': 'description',
 };
 const MAX_DOCUMENTOS = 5;
+/** Card "Perícias Menores Vigentes": só as mais antigas; o badge do título traz o total. */
+const MAX_VIGENTES_CARD = 4;
 
 /** Documento gerado ainda não aberto (fila de impressão da Secretaria): abrir o PDF o tira da lista. */
 const LinhaDocumentoGerado: React.FC<{ d: DocumentoGerado; onAbrir: (d: DocumentoGerado) => void }> = ({ d, onAbrir }) => (
@@ -188,6 +190,8 @@ export const Home: React.FC = () => {
   const [pericias, setPericias] = useState<PericiaMenorRecord[]>([]);
   useEffect(() => (podePericiaMenor ? observarPericiasMenores(setPericias, () => { /* silencioso */ }) : undefined), [podePericiaMenor]);
   const vigentes = useMemo(() => pericias.filter(p => statusPericia(p) === 'vigente').sort((a, b) => a.dataTermino.localeCompare(b.dataTermino)), [pericias]);
+  // Card da Início: as vigentes mais antigas (pela data do atestado) primeiro.
+  const vigentesMaisAntigas = useMemo(() => [...vigentes].sort((a, b) => a.dataAtestado.localeCompare(b.dataAtestado)).slice(0, MAX_VIGENTES_CARD), [vigentes]);
   // user_medicos_geral: no lugar das vigentes, os últimos atestados registrados pelo próprio usuário.
   const ehMedicoGeral = perfil === 'user_medicos_geral';
   const meusAtestados = useMemo(() => (ehMedicoGeral
@@ -434,9 +438,9 @@ export const Home: React.FC = () => {
             )}
 
             {podePericiaMenor && !ehMedicoGeral && vigentes.length > 0 && (
-              <Secao id="home-pericias" titulo={`${termosPm.pagina === 'Atestados' ? 'Atestados vigentes' : 'Perícias Menores Vigentes'} (${vigentes.length})`} acao={<Link to="/pericia-menor/historico" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">{termosPm.pagina === 'Atestados' ? 'Ver atestados' : 'Ver perícias'}</Link>}>
+              <Secao id="home-pericias" titulo={termosPm.pagina === 'Atestados' ? 'Atestados vigentes' : 'Perícias Menores Vigentes'} badge={vigentes.length} badgeRotulo="vigentes" acao={<Link to="/pericia-menor/historico" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">{termosPm.pagina === 'Atestados' ? 'Ver atestados' : 'Ver perícias'}</Link>}>
                 <ul className="divide-y divide-line">
-                  {vigentes.slice(0, 6).map(p => (
+                  {vigentesMaisAntigas.map(p => (
                     <li key={p.id}>
                       <LinhaDocumento
                         icone="personal_injury" titulo={extrairNomeInspecionado(p.inspecionado)} detalhe={`${termosPm.pagina} · ${p.cid}`}
@@ -446,7 +450,7 @@ export const Home: React.FC = () => {
                     </li>
                   ))}
                 </ul>
-                {vigentes.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{vigentes.length - 6} em {termosPm.pagina}.</p>}
+                {vigentes.length > MAX_VIGENTES_CARD && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{vigentes.length - MAX_VIGENTES_CARD} em {termosPm.pagina}.</p>}
               </Secao>
             )}
           </div>
