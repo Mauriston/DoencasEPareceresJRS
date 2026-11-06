@@ -9,8 +9,9 @@
 //  - "bloqueiosAgenda": bloqueios de horário/turno (de todos os peritos ou de um perito).
 //  - config/agendaIS: turnos em que cada perito atende, por dia da semana (só o Admin grava).
 import {
-  getFirestore, collection, doc, query, where, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, runTransaction, serverTimestamp, Timestamp,
+  getFirestore, collection, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, runTransaction, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
+import { novoId } from '../utils/dados';
 import { app } from './firebaseAuth';
 import { registrarAcaoSensivel } from './auditoriaAcoes';
 import {
@@ -201,7 +202,7 @@ export interface NovoBloqueio {
 export const criarBloqueio = async (b: NovoBloqueio): Promise<void> => {
   const dados: Record<string, unknown> = { ...b, criadoEm: serverTimestamp() };
   Object.keys(dados).forEach(k => { if (dados[k] === undefined) delete dados[k]; });
-  await addDoc(collection(db, COL_BLOQUEIOS), dados);
+  await setDoc(doc(db, COL_BLOQUEIOS, novoId()), dados);
 };
 
 export const apagarBloqueio = (id: string) => deleteDoc(doc(db, COL_BLOQUEIOS, id));

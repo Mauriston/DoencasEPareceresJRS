@@ -6,6 +6,7 @@ import { Button } from './ui/Button';
 import { NavContext } from '../context/NavContext';
 import { useBackToTop } from '../hooks/useBackToTop';
 import { getCasosResultado, saveCasosResultado } from '../services/firestoreCasos';
+import { timestampISO } from '../utils/dados';
 import { ChevronRight, RotateCcw, Download, CheckCircle, XCircle, ArrowUp, Play, Smartphone, Eye } from './ui/icons';
 
 const CASOS_DATA = [
@@ -373,7 +374,7 @@ export const CasosPericiais: React.FC = () => {
           acertos,
           total: totalCases,
           nota: Number(((acertos / totalCases) * 10).toFixed(1)),
-          concluidoEm: new Date().toISOString(),
+          concluidoEm: timestampISO(),
         });
       } catch {
         // Mantém o resultado exibido localmente mesmo se a gravação falhar.

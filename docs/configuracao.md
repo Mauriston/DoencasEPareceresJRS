@@ -1,0 +1,86 @@
+# Inventário de configuração
+
+> **Atualizado em 06/11/2026.** Item 18.3 de `docs/database.md`: tudo o que o app precisa para funcionar e que **não** é código — IDs de pastas e templates, propriedades do Apps Script, variáveis do Cloud Run e do build, segredos e serviços do Google Cloud. Para recuperar o ambiente (ou montar um novo projeto), basta seguir esta lista.
+>
+> **Segredos não entram aqui** (nem no repositório): só o nome e onde ficam. Valores públicos por natureza (configuração web do Firebase, chave do site do reCAPTCHA, IDs de pastas) aparecem para facilitar a recuperação.
+
+## 1. Projeto Google Cloud / Firebase
+
+| Item | Valor | Onde |
+|---|---|---|
+| Projeto | `jrs-app-web` | `firebase-applet-config.json`, `.firebaserc` implícito nos workflows |
+| Firestore | banco `(default)`, `southamerica-east1`, modo nativo | Console → Firestore |
+| Storage | `gs://jrs-app-web.firebasestorage.app` (`southamerica-east1`) | `firebase-applet-config.json` |
+| Configuração web do Firebase | `apiKey`, `authDomain`, `projectId`, `storageBucket`, `appId`… (públicos) | `firebase-applet-config.json` |
+| App Check | reCAPTCHA Enterprise, chave do site *app-jrs-hnre* `6LdtjBMuAAAAADcsZuWXKZS2PU8MMvV0tA2z5-K3` (domínio `mauriston.github.io`) | `services/appCheck.ts`; registro no Console → App Check |
+| Firebase AI Logic | backend Vertex AI, modelo `gemini-3.5-flash`, região `global` | `services/geminiAI.ts`; API *Vertex AI / Agent Platform* ativa no projeto |
+| Backups do Firestore | agendamento gerenciado **semanal** (segunda, retenção de 14 semanas — ativo desde 28/09/2026); **diário** (7 dias) e proteção contra exclusão do banco — ativos desde 06/11/2026 (`scripts/backup/configurar-backup.sh`) | conferidos por `.github/workflows/backup-firestore.yml` |
+| Lixeira do Storage | soft delete de **30 dias** (desde 06/11/2026; antes, 7 dias do padrão do GCS) — `scripts/backup/configurar-backup.sh` | Console → Cloud Storage → bucket → Proteção |
+| Regras | `firestore.rules`, `storage.rules` | publicadas pelo CI (`deploy-firestore-rules.yml`) |
+
+## 2. Cloud Run (`server.ts`)
+
+| Variável | Conteúdo | Origem |
+|---|---|---|
+| `GEMINI_API_KEY` | chave da Gemini API (OCR de PDF e análise de imagem no servidor) | **secret** `GEMINI_API_KEY` do GitHub → `deploy-cloud-run.yml` |
+| `ALLOWED_ORIGIN` | origem liberada no CORS (padrão `https://mauriston.github.io`) | variável `ALLOWED_ORIGIN` do GitHub |
+| `FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_EMAIL` | opcionais (o Admin SDK usa as credenciais padrão do Cloud Run) | definidas à mão no serviço, se preciso |
+| `APP_URL`, `PORT`, `NODE_ENV` | URL do app (links das notificações), porta e modo | padrão do Cloud Run / do código |
+
+Serviço `jrs-hnre-api`, região `southamerica-east1` (`deploy-cloud-run.yml`). A service account do Cloud Run precisa de *Firebase Cloud Messaging API Admin* (push).
+
+## 3. GitHub (Settings → Secrets and variables → Actions)
+
+| Nome | Tipo | Uso |
+|---|---|---|
+| `GCP_SA_KEY` | secret | Deploy do Cloud Run; também regras e backup quando não houver chave própria |
+| `GCP_PROJECT_ID` | secret | Deploy do Cloud Run |
+| `GEMINI_API_KEY` | secret | Variável do Cloud Run |
+| `FIREBASE_RULES_SA_KEY` | secret (opcional) | Teste e publicação das regras (papel *Firebase Rules Admin*) |
+| `BACKUP_SA_KEY` | secret (opcional) | Workflow *Backup do Firestore* (papel *Cloud Datastore Owner*) |
+| `API_BASE_URL` | variável | URL do Cloud Run no build do app (`VITE_API_BASE_URL`) |
+| `FIREBASE_VAPID_KEY` | variável | Chave pública do push (`VITE_FIREBASE_VAPID_KEY`) |
+| `ALLOWED_ORIGIN` | variável | CORS do servidor |
+
+Build local: `VITE_FIREBASE_EMULATORS=1` (E2E) e `VITE_APPCHECK_DEBUG_TOKEN` (App Check em `localhost`), ambos opcionais.
+
+## 4. Apps Script (projeto único)
+
+| Item | Valor |
+|---|---|
+| `scriptId` | `apps-script/projetos.json` |
+| `deploymentId` / URL do web app | `apps-script/projetos.json` e `GAS_URL_CONCURSOS` em `config/endpoints.ts` |
+| Versão publicada esperada | `VERSAO_SCRIPT` em `CodeConcursos.gs` (conferida por `apps-script-publicado.yml`) |
+
+**Propriedades do script** (Configurações do projeto → Propriedades do script). Desde 06/11/2026 os IDs abaixo são lidos das propriedades (`cfg_` em `CodeConcursos.gs`), com o valor atual do código como padrão — trocar uma pasta ou template não exige editar o código. Para gravar os padrões nas propriedades, rode uma vez `gravarConfiguracaoPadrao()` no editor.
+
+| Propriedade | Uso | Valor padrão |
+|---|---|---|
+| `ID_TEMPLATE_TERMO_RECURSO` | Template do Termo de Recurso (Docs) | `1gVSaakcQJBrFJnF4umFbI_cjR9abCXPjfOyfSUFKnRo` |
+| `ID_TEMPLATE_TERMO_CIENTIFICACAO` | Template do Termo de Cientificação | `1uSdvvwxjPDkvGm7kjCrDGaGnPVF3_pDu4rN6C6tJFiI` |
+| `ID_TEMPLATE_SOLICITACAO_PARECER` | Template da Solicitação de Parecer (concursos) | `16KIcTgceHNdbTNRe8UeYPjJXn4r_d450Xy61conLO3Q` |
+| `ID_TEMPLATE_PEDIDO_PARECER` | Template do Pedido de Parecer (página Pareceres) | `1jE-3VQ8G2t4JQJ5B7ydedq6oupvsXwo7aPX_AVttMEM` |
+| `ID_TEMPLATE_SOLICITACAO_EXAMES` | Template da Solicitação de Exames | `1SSAzdWANvfQJx7Sip2-NbqDGAM0cgpVD6Q4Ci9UhGqQ` |
+| `ID_PASTA_RAIZ_CONCURSOS` | Pasta CONCURSOS (drive compartilhado) | `1eBTehJDTOPjsgOeP3DjWKbE-iXdIKGos` |
+| `ID_PASTA_PARECERES` | Pasta PARECERES | `176YQTOOWXuE78Xul49XYpJsVNyu-eZFi` |
+| `ID_PASTA_MINUTAS` | Pasta das minutas de mensagem (`CodePrincipal.gs`) | `1q_Pw_mbjYKvyJvBr-PGmV9pK7YiBZOKv` |
+| `ID_AGENDA_JRS_HNRE` | Agenda "JRS/HNRe" (IS e dias de concurso) | `c_b103c034…762@group.calendar.google.com` |
+| `EMAIL_IMPRESSAO` | Destino dos e-mails "Enviar para impressão" | e-mail da Secretaria (ver código) |
+| `GEMINI_API_KEY` | **Não é mais usada** (a IA saiu do Apps Script em 06/11/2026); pode ser apagada | — |
+
+Constantes que continuam no código por serem públicas e estáveis: `FIREBASE_PROJECT_ID` e `FIREBASE_API_KEY` (validação do `idToken`).
+
+## 5. Outros
+
+| Item | Onde |
+|---|---|
+| Escala SVÇ | enviada pelo Admin em CSV (coleção `escalaSpa`); a planilha de origem (aba *Agenda*) não é lida pelo app |
+| Matriz de permissões | Firestore `config/permissoes` (editada em *Usuários*); padrões em `config/permissions.ts` |
+| Turnos dos peritos | Firestore `config/agendaIS` |
+| Catálogos | `public/*.json` (CID, OMs, corpos e quadros, finalidades, restrições, serviços do HNRe) |
+
+## 6. Ao mudar algo
+
+1. Atualize este inventário no mesmo PR.
+2. Segredo novo → só no GitHub/Cloud Run, nunca no código; registre aqui o **nome**.
+3. Pasta ou template novo do Drive → Propriedade do script (sem republicar) e, se for padrão, também o valor em `cfg_`.

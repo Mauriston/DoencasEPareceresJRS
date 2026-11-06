@@ -26,6 +26,7 @@ import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
 import { carregarOms, carregarCorposQuadros, carregarServicosHnre, normalizarBusca, montarInspecionado, separarPosto, aplicarSituacaoAoPgq, ehOficialMedico, omEhHnre, type OrganizacaoMilitar, type CorposQuadros, type PostoInfo, type ServicoHnre, type SituacaoMilitar } from '../utils/corposQuadros';
 import { formatNip, formatCelular } from '../utils/format';
+import { hojeISO } from '../utils/dados';
 
 type Filtro = 'todos' | 'ativos' | 'inativos';
 type FiltroTipo = 'todos' | TipoInspecionado;
@@ -364,7 +365,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
     if (ehMilitar && vinculo === 'Inativo' && !situacao) e.situacao = 'Marque RM1 ou Refº.';
     if (ehMilitar && !omSigla && !situacao) e.om = 'Escolha a OM na lista.';
     if (celular && celular.replace(/\D/g, '').length < 10) e.celular = 'Informe o DDD e o número.';
-    if (dataNascimento && dataNascimento > new Date().toISOString().slice(0, 10)) e.dataNascimento = 'A data não pode ser futura.';
+    if (dataNascimento && dataNascimento > hojeISO()) e.dataNascimento = 'A data não pode ser futura.';
     if (hnre) Object.assign(e, validarAdicionais(adicionais, medico));
     setErros(e);
     if (Object.keys(e).length > 0) return;

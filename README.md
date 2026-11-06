@@ -2,7 +2,7 @@
 
 Este projeto é uma aplicação web progressiva (PWA instalável, com notificações push) desenvolvida para auxiliar a Junta Regular de Saúde (JRS) do Hospital Naval de Recife (HNRe) no seu cotidiano pericial. A ferramenta unifica o acesso rápido a normativas, organiza o trabalho da JRS (Inspeções de Saúde, concursos, pareceres, perícias menores/atestados e a escala de serviço do SPA) e automatiza a geração de documentos periciais utilizando **Inteligência Artificial**.
 
-> Documentação técnica: `docs/architecture.md` (arquitetura), `docs/database.md` (dados e regras), `docs/design.md` (design system) e `docs/auditoria-frontend.md` (auditoria e evoluções da interface).
+> Documentação técnica: `docs/architecture.md` (arquitetura), `docs/database.md` (dados e regras), `docs/design.md` (design system), `docs/configuracao.md` (inventário de configuração, IDs e segredos por nome) e `docs/auditoria-frontend.md` (auditoria e evoluções da interface). Backups do Firestore e teste de restauração: `docs/database.md`, seção 18, e `scripts/backup/`.
 
 ---
 

@@ -18,6 +18,7 @@ import { Field } from '../ui/Field';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { formatNip, formatCelular } from '../../utils/format';
+import { hojeISO } from '../../utils/dados';
 import {
   carregarCorposQuadros, carregarOms, postosDoVinculo, quadrosDoOficial, especialidadesDaPraca, montarPgq, montarInspecionado, ehOficialMedico, omEhHnre, type SituacaoMilitar,
   type CorposQuadros, type OrganizacaoMilitar, type Vinculo,
@@ -177,7 +178,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs }
     if (!nipCompleto) e.nip = 'Informe o NIP no formato 00.0000.00.';
     if (!omSigla && !situacao) e.om = 'Escolha a OM na lista.';
     if (celular && celular.replace(/\D/g, '').length < 10) e.celular = 'Informe o DDD e o número.';
-    if (dataNascimento && dataNascimento > new Date().toISOString().slice(0, 10)) e.dataNascimento = 'A data não pode ser futura.';
+    if (dataNascimento && dataNascimento > hojeISO()) e.dataNascimento = 'A data não pode ser futura.';
     if (hnre) Object.assign(e, validarAdicionais(adicionais, medico));
     return e;
   };

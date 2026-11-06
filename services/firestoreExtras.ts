@@ -11,6 +11,7 @@
 import {
   getFirestore, collection, doc, onSnapshot, deleteDoc, setDoc, serverTimestamp, increment, query, where, getDocs, type Timestamp,
 } from 'firebase/firestore';
+import { novoId } from '../utils/dados';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { app, auth } from './firebaseAuth';
 import { ApiError, chamarServidor } from './apiClient';
@@ -99,7 +100,7 @@ export const observarInfograficos = (onData: (lista: InfograficoRecord[]) => voi
 
 /** Envia a imagem ao Storage (infograficos/{id}.{ext}) e cria o documento. */
 export const criarInfografico = async (titulo: string, arquivo: File, criadoPor: string): Promise<void> => {
-  const novo = doc(collection(db, COL_INFOGRAFICOS));
+  const novo = doc(db, COL_INFOGRAFICOS, novoId());
   const ext = (arquivo.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
   const imagePath = `infograficos/${novo.id}.${ext}`;
   const arq = ref(getStorage(app), imagePath);
@@ -202,7 +203,7 @@ export const observarApresentacoes = (onData: (lista: ApresentacaoRecord[]) => v
   );
 
 export const criarApresentacao = async (dados: Omit<ApresentacaoRecord, 'id' | 'criadoEm'>): Promise<void> => {
-  await setDoc(doc(collection(db, COL_APRESENTACOES)), { ...dados, titulo: dados.titulo.trim(), criadoEm: serverTimestamp() });
+  await setDoc(doc(db, COL_APRESENTACOES, novoId()), { ...dados, titulo: dados.titulo.trim(), criadoEm: serverTimestamp() });
 };
 
 export const apagarApresentacao = async (id: string): Promise<void> => {

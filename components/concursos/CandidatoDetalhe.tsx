@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { formatDataBr } from '../../utils/format';
+import { parseTimestamp } from '../../utils/dados';
 import { urlVisualizacao } from '../../services/driveConcursos';
 import { listarExamesCandidato, type CandidatoRecord, type ExamesEnvioRecord, type SolicitacaoDoc } from '../../services/firestoreConcursos';
 
@@ -50,13 +51,13 @@ const ItemAcao: React.FC<{ icone: string; titulo: string; detalhe?: string; onCl
 );
 
 const dataDoDocumento = (d: SolicitacaoDoc): string => {
-  const data = d.criadoEm ? new Date(d.criadoEm) : null;
-  return data && !isNaN(data.getTime()) ? `Gerado em ${data.toLocaleDateString('pt-BR')}` : '';
+  const data = parseTimestamp(d.criadoEm);
+  return data ? `Gerado em ${data.toLocaleDateString('pt-BR')}` : '';
 };
 
 const dataDoEnvio = (e: ExamesEnvioRecord): string => {
-  const data = e.criadoEm ? new Date(e.criadoEm) : null;
-  return data && !isNaN(data.getTime()) ? `Enviado em ${data.toLocaleDateString('pt-BR')}` : '';
+  const data = parseTimestamp(e.criadoEm);
+  return data ? `Enviado em ${data.toLocaleDateString('pt-BR')}` : '';
 };
 
 interface Props {

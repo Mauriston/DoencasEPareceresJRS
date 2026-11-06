@@ -8,6 +8,7 @@
 // Status NÃO é gravado: é derivado de "dataTermino" (dataAtestado + tempoHomologado - 1),
 // pois nada atualizaria um valor gravado com o passar do tempo.
 import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
+import { novoId } from '../utils/dados';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { camposIdDrive } from '../utils/googleDrive';
 import { app } from './firebaseAuth';
@@ -22,8 +23,10 @@ export interface PericiaMenorDoc {
   om: string;
   /** Serviço do HNRe do militar no momento do registro ("Nome (HNRe-00.0)"); só para militares da OM HNRe. */
   servico?: string;
-  /** "G432 - Estado de mal enxaquecoso". */
+  /** "G432 - Estado de mal enxaquecoso" (rótulo de exibição). */
   cid: string;
+  /** Código estável do CID ("G432"), para relações e filtros (convenção 19.3). Registros antigos não têm. */
+  cidCodigo?: string;
   dispensas: string[];
   /** AAAA-MM-DD. */
   dataAtestado: string;
@@ -55,7 +58,8 @@ export type StatusPericia = 'vigente' | 'concluida';
 /** Chave do militar nas rotas e agrupamentos: o NIP (militarId) ou, sem vínculo, o texto do inspecionado. */
 export const chaveMilitar = (p: Pick<PericiaMenorDoc, 'militarId' | 'inspecionado'>): string => p.militarId || p.inspecionado;
 
-export const novoIdPericiaMenor = (): string => doc(collection(db, COL)).id;
+/** Id interno (UUID v4, `novoId` de utils/dados.ts — convenção 19.1 de docs/database.md). */
+export const novoIdPericiaMenor = (): string => novoId();
 
 const dataLocalISO = (d: Date): string =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
