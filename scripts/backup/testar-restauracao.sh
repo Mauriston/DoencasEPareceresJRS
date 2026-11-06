@@ -38,7 +38,12 @@ for i in $(seq 1 240); do
   sleep 15
 done
 echo "   restauração: ${progresso:-desconhecida}"
-[[ "$progresso" == "SUCCEEDED" ]] || { echo "A restauração não terminou com sucesso."; exit 1; }
+[[ "$progresso" == "COMPLETED" || "$progresso" == "SUCCEEDED" ]] || { echo "A restauração não terminou com sucesso."; exit 1; }
+# O banco só pode ser lido/apagado quando a operação de restauração fecha (done=True).
+for i in $(seq 1 40); do
+  [[ -z "$(gc firestore operations list --database="$DESTINO" --filter='done!=true' --format='value(name)' 2>/dev/null)" ]] && break
+  sleep 15
+done
 
 echo "== Comparando contagens"
 node scripts/backup/comparar-contagens.mjs "$PROJETO" "$DESTINO" "$SNAPSHOT"
