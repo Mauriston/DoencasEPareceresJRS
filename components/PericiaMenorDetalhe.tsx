@@ -6,6 +6,8 @@ import { periciaMenorPath } from '../config/routes';
 import { PericiaStatusTags, isAfastamentoLts, isRestricaoPericia, registroPericia } from './ui/PericiaStatusTags';
 import { dataBR, statusPericia, type PericiaMenorRecord } from '../services/firestorePericiasMenores';
 import { extrairNomeInspecionado } from '../utils/format';
+import { useNav } from '../context/NavContext';
+import { termosPericia } from '../config/termosPericia';
 
 interface Props {
   person: string;
@@ -17,7 +19,9 @@ interface Props {
 const tsDe = (r: PericiaMenorRecord): number => { const [a, m, d] = r.dataAtestado.split('-').map(Number); return new Date(a, m - 1, d).getTime(); };
 
 export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, hoje }) => {
-  useBreadcrumbs([{ label: 'Perícias menores', to: periciaMenorPath('historico') }, { label: extrairNomeInspecionado(person) }]);
+  const t = termosPericia(useNav()?.authUser?.perfil);
+  const Plural = t.plural.charAt(0).toUpperCase() + t.plural.slice(1);
+  useBreadcrumbs([{ label: t.pagina, to: periciaMenorPath('historico') }, { label: extrairNomeInspecionado(person) }]);
   const now = Date.now();
   const startOfYear = new Date(new Date().getFullYear(), 0, 1).getTime();
   const last30 = now - 30 * 24 * 60 * 60 * 1000;
@@ -48,13 +52,13 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, hoje }) 
   return (
     <div className="flex flex-col flex-1">
       <Container size="reading" className="py-6 md:py-8 pb-10 space-y-4">
-        <PageHeader title={person} description={om ? `Histórico de perícias menores · OM: ${om}` : 'Histórico de perícias menores'} />
+        <PageHeader title={person} description={om ? `Histórico de ${t.plural} · OM: ${om}` : `Histórico de ${t.plural}`} />
 
 
         <div className="bg-white rounded-2xl border border-line shadow-sm p-4 space-y-3">
           <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-navy">assignment</span>
-            Perícias Menores Realizadas
+            {Plural} realizad{t.plural === 'atestados' ? 'os' : 'as'}
           </h3>
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -73,7 +77,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, hoje }) 
         <div className="bg-white rounded-2xl border border-line shadow-sm p-4 space-y-3">
           <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-navy">event_busy</span>
-            Dias Afastados
+            Dias de Dispensa
           </h3>
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -130,7 +134,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, hoje }) 
 
         <div className="bg-white rounded-2xl border border-line shadow-sm overflow-hidden">
           <div className="bg-navy/5 px-4 py-2.5 border-b border-line">
-            <h3 className="text-xs font-bold text-navy tracking-wider">Histórico de Perícias</h3>
+            <h3 className="text-xs font-bold text-navy tracking-wider">Histórico de {Plural}</h3>
           </div>
           {sorted.map((rec, i) => (
             <div key={i} className={`px-4 py-3 border-b border-line last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-paper/40'}`}>

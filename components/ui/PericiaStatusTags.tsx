@@ -12,6 +12,7 @@ interface RegistroPericia {
   dispensas: string;
 }
 
+/** "Dispensa": foi marcada "TODAS AS ATIVIDADES" (antes chamado de LTS). */
 export const isAfastamentoLts = (r: Pick<RegistroPericia, 'dispensas'>) =>
   r.dispensas.toUpperCase().includes('TODAS AS ATIVIDADES');
 
@@ -29,7 +30,7 @@ export const PericiaStatusTags: React.FC<{ registro: RegistroPericia; mostrarVdf
     {registro.vigente && <StatusTag tone="danger">Vigente</StatusTag>}
     {registro.concluido && !registro.vigente && <StatusTag tone="success">Concluída</StatusTag>}
     {mostrarVdf && registro.vdf && <StatusTag tone="navyOutline" dot={false} title="Verificação de Deficiência Funcional">VDF</StatusTag>}
-    {isAfastamentoLts(registro) && <StatusTag tone="danger" title="Licença para Tratamento de Saúde">LTS</StatusTag>}
+    {isAfastamentoLts(registro) && <StatusTag tone="danger" title="Dispensa de todas as atividades">Dispensa</StatusTag>}
     {isRestricaoPericia(registro) && <StatusTag tone="attention">Restrições</StatusTag>}
   </div>
 );

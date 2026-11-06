@@ -7,6 +7,9 @@ export interface DadosAtestado {
   dataAtestado?: string;
   tempoAtestado?: string | number;
   cid?: string;
+  /** Médico que emitiu o atestado e o CRM dele (atestado externo, para homologação). */
+  medicoEmissor?: string;
+  crmEmissor?: string;
 }
 
 export const extrairDadosAtestado = async (base64Image: string): Promise<DadosAtestado> => {

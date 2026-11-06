@@ -18,20 +18,24 @@ import { PericiaMenorDrawer } from './periciaMenor/PericiaMenorDrawer';
 import { useQueryParam } from '../hooks/useQueryParam';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
+import { termosPericia } from '../config/termosPericia';
 import { periciaMenorPath } from '../config/routes';
 import { observarPericiasMenores, chaveMilitar, dataBR, statusPericia, type PericiaMenorRecord } from '../services/firestorePericiasMenores';
 import { normalizarBusca } from '../utils/corposQuadros';
 import { extrairNomeInspecionado } from '../utils/format';
 
-type FiltroSituacao = 'todas' | 'vigentes' | 'concluidas';
-type FiltroTipo = 'todos' | 'lts' | 'restricoes';
+// '' = sem filtro (todas as situações / todos os tipos): os botões são desmarcáveis.
+type FiltroSituacao = '' | 'vigentes' | 'concluidas';
+type FiltroTipo = '' | 'dispensa' | 'restricoes';
 
 const dias = (n: number) => `${n} dia${n !== 1 ? 's' : ''}`;
 
 const nomeDe = (p: PericiaMenorRecord) => {
   const nome = extrairNomeInspecionado(p.inspecionado);
   const prefixo = p.inspecionado.slice(0, p.inspecionado.indexOf(nome)).trim();
-  return (<><span className="block font-semibold text-navy break-words">{nome}</span>{prefixo && <span className="block text-xs text-ink-3">{prefixo}</span>}</>);
+  // Após o NIP, a sigla da OM.
+  const linha2 = [prefixo, p.om].filter(Boolean).join(' · ');
+  return (<><span className="block font-semibold text-navy break-words">{nome}</span>{linha2 && <span className="block text-xs text-ink-3">{linha2}</span>}</>);
 };
 
 export const PericiaMenor: React.FC = () => {
@@ -39,13 +43,14 @@ export const PericiaMenor: React.FC = () => {
   const perfil = nav?.authUser?.perfil;
   const podeNovo = canUseFeature('pericia-menor.novo', perfil);
   const podeConsultar = canUseFeature('pericia-menor.historico', perfil);
+  const t = termosPericia(perfil);
   const { pessoa: pessoaParam } = useParams();
   const pessoa = pessoaParam ? decodeURIComponent(pessoaParam) : null;
 
   const [lista, setLista] = useState<PericiaMenorRecord[] | null>(null);
   const [erroCarga, setErroCarga] = useState('');
-  const [situacao, setSituacao] = useState<FiltroSituacao>('todas');
-  const [tipo, setTipo] = useState<FiltroTipo>('todos');
+  const [situacao, setSituacao] = useState<FiltroSituacao>('');
+  const [tipo, setTipo] = useState<FiltroTipo>('');
   const [busca, setBusca] = useState('');
   const [novo, setNovo] = useState(false);
   const [detalheId, setDetalheId] = useState<string | null>(null);
@@ -60,7 +65,7 @@ export const PericiaMenor: React.FC = () => {
 
   useEffect(() => {
     if (!podeConsultar) return;
-    return observarPericiasMenores(setLista, e => setErroCarga(e.message || 'Não foi possível carregar as perícias menores.'));
+    return observarPericiasMenores(setLista, e => setErroCarga(e.message || `Não foi possível carregar os registros.`));
   }, [podeConsultar]);
   // Atalho da Início: /pericia-menor?novo=1 abre o formulário de nova perícia.
   useEffect(() => {
@@ -69,18 +74,17 @@ export const PericiaMenor: React.FC = () => {
 
   const comStatus = useMemo(() => (lista ?? []).map(p => ({ p, vigente: statusPericia(p, hoje) === 'vigente', reg: registroPericia(p, hoje) })), [lista, hoje]);
   const totais = useMemo(() => ({
-    todas: comStatus.length,
     vigentes: comStatus.filter(x => x.vigente).length,
     concluidas: comStatus.filter(x => !x.vigente).length,
-    lts: comStatus.filter(x => isAfastamentoLts(x.reg)).length,
+    dispensa: comStatus.filter(x => isAfastamentoLts(x.reg)).length,
     restricoes: comStatus.filter(x => isRestricaoPericia(x.reg)).length,
   }), [comStatus]);
 
   const filtrada = useMemo(() => {
     const termos = normalizarBusca(busca).split(/\s+/).filter(Boolean);
     return comStatus
-      .filter(x => situacao === 'todas' || (situacao === 'vigentes') === x.vigente)
-      .filter(x => tipo === 'todos' || (tipo === 'lts' ? isAfastamentoLts(x.reg) : isRestricaoPericia(x.reg)))
+      .filter(x => !situacao || (situacao === 'vigentes') === x.vigente)
+      .filter(x => !tipo || (tipo === 'dispensa' ? isAfastamentoLts(x.reg) : isRestricaoPericia(x.reg)))
       .filter(x => { const alvo = normalizarBusca(`${x.p.inspecionado} ${x.p.militarId} ${x.p.cid} ${x.p.om}`); return termos.every(t => alvo.includes(t)); });
   }, [comStatus, situacao, tipo, busca]);
 
@@ -106,21 +110,20 @@ export const PericiaMenor: React.FC = () => {
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
       <Container size="data" className="py-6 md:py-8 pb-10 space-y-4">
         <PageHeader
-          title="Perícia Menor"
-          description="Perícias menores dos militares de bordo e a situação de cada uma."
+          title={t.pagina}
           actions={podeNovo ? <Button icon="add" onClick={() => setNovo(true)}>Novo</Button> : undefined}
         />
 
         {!podeConsultar ? (
           <div className="bg-white rounded-xl border border-line">
-            <EmptyState icon="personal_injury" title="Registre uma perícia menor" description="Use o botão Novo. Seu perfil não consulta o histórico de perícias." />
+            <EmptyState icon="personal_injury" title={`Registre um${t.singular === 'atestado' ? '' : 'a'} ${t.singular}`} description={`Use o botão Novo. Seu perfil não consulta o histórico de ${t.plural}.`} />
           </div>
         ) : (
           <>
             <div className="bg-white rounded-xl border border-line p-4 space-y-3">
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
-                <input type="search" aria-label="Buscar perícia menor" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Inspecionado, NIP ou CID…" className={`${controlClass} pl-10`} autoComplete="off" />
+                <input type="search" aria-label={`Buscar ${t.singular}`} value={busca} onChange={e => setBusca(e.target.value)} placeholder="Inspecionado, NIP, OM ou CID…" className={`${controlClass} pl-10`} autoComplete="off" />
               </div>
               <div className="flex flex-col lg:flex-row gap-2 lg:items-center">
                 <Segmented
@@ -128,8 +131,8 @@ export const PericiaMenor: React.FC = () => {
                   className="overflow-x-auto"
                   value={situacao}
                   onChange={setSituacao}
+                  onDesmarcar={() => setSituacao('')}
                   options={[
-                    { value: 'todas', label: 'Todas', badge: totais.todas, badgeTone: 'neutro' },
                     { value: 'vigentes', label: 'Vigentes', badge: totais.vigentes, badgeTone: 'alerta' },
                     { value: 'concluidas', label: 'Concluídas', badge: totais.concluidas, badgeTone: 'neutro' },
                   ]}
@@ -139,9 +142,9 @@ export const PericiaMenor: React.FC = () => {
                   className="overflow-x-auto"
                   value={tipo}
                   onChange={setTipo}
+                  onDesmarcar={() => setTipo('')}
                   options={[
-                    { value: 'todos', label: 'Todos os tipos' },
-                    { value: 'lts', label: 'LTS', badge: totais.lts, badgeTone: 'neutro' },
+                    { value: 'dispensa', label: 'Dispensa', badge: totais.dispensa, badgeTone: 'neutro' },
                     { value: 'restricoes', label: 'Restrições', badge: totais.restricoes, badgeTone: 'neutro' },
                   ]}
                 />
@@ -152,9 +155,9 @@ export const PericiaMenor: React.FC = () => {
               {erroCarga ? (
                 <p role="alert" className="p-6 text-sm font-semibold text-wine">{erroCarga}</p>
               ) : lista === null ? (
-                <p className="p-10 text-center text-sm text-ink-3" role="status">Carregando perícias menores…</p>
+                <p className="p-10 text-center text-sm text-ink-3" role="status">Carregando {t.plural}…</p>
               ) : filtrada.length === 0 ? (
-                <EmptyState icon="personal_injury" title={lista.length === 0 ? 'Nenhuma perícia menor registrada' : 'Nenhum resultado'} description={lista.length === 0 ? 'As perícias menores registradas aparecem aqui.' : 'Ajuste a busca ou os filtros.'} />
+                <EmptyState icon="personal_injury" title={lista.length === 0 ? `Nenhum${t.singular === 'atestado' ? '' : 'a'} ${t.singular} registrad${t.singular === 'atestado' ? 'o' : 'a'}` : 'Nenhum resultado'} description={lista.length === 0 ? `Os ${t.plural === 'atestados' ? 'atestados registrados aparecem' : 'registros de perícias menores aparecem'} aqui.` : 'Ajuste a busca ou os filtros.'} />
               ) : (
                 <>
                   {/* Mobile: cartões — tocar abre o detalhe */}
@@ -189,7 +192,7 @@ export const PericiaMenor: React.FC = () => {
                             className={`cursor-pointer hover:bg-thead transition-colors ${p.id === detalheId ? 'bg-thead shadow-[inset_3px_0_0_#FAB932]' : ''}`}
                           >
                             <td className="px-4 py-3 align-top">
-                              <button type="button" onClick={e => { e.stopPropagation(); setDetalheId(p.id); }} className="text-left w-full" aria-label={`Abrir detalhe da perícia de ${extrairNomeInspecionado(p.inspecionado)}`}>{nomeDe(p)}</button>
+                              <button type="button" onClick={e => { e.stopPropagation(); setDetalheId(p.id); }} className="text-left w-full" aria-label={`Abrir detalhe ${t.singular === 'atestado' ? 'do atestado' : 'da perícia'} de ${extrairNomeInspecionado(p.inspecionado)}`}>{nomeDe(p)}</button>
                             </td>
                             <td className="px-4 py-3 align-top"><span className="block text-ink-2">{p.cid}</span><span className="block text-xs text-ink-3">{(p.dispensas ?? []).join(', ')}</span></td>
                             <td className="px-4 py-3 align-top"><PericiaStatusTags registro={reg} /></td>
@@ -199,7 +202,7 @@ export const PericiaMenor: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
-                  <div className="px-4 py-3 border-t border-line text-xs text-ink-3" role="status">{filtrada.length} perícia{filtrada.length !== 1 ? 's' : ''} menor{filtrada.length !== 1 ? 'es' : ''}</div>
+                  <div className="px-4 py-3 border-t border-line text-xs text-ink-3" role="status">{t.singular === 'atestado' ? `${filtrada.length} atestado${filtrada.length !== 1 ? 's' : ''}` : `${filtrada.length} perícia${filtrada.length !== 1 ? 's' : ''} menor${filtrada.length !== 1 ? 'es' : ''}`}</div>
                 </>
               )}
             </div>
@@ -210,6 +213,7 @@ export const PericiaMenor: React.FC = () => {
       {detalhe && (
         <PericiaMenorDrawer
           pericia={detalhe}
+          titulo={t.singular === 'atestado' ? 'Atestado' : 'Perícia menor'}
           onClose={() => setDetalheId(null)}
           onHistorico={() => { setDetalheId(null); nav?.navigate(periciaMenorPath('historico', chaveMilitar(detalhe))); }}
         />
@@ -217,7 +221,8 @@ export const PericiaMenor: React.FC = () => {
       {novo && podeNovo && (
         <NovaPericiaMenorForm
           onClose={() => setNovo(false)}
-          onRegistrado={nome => { setNovo(false); avisar(`Perícia menor de ${nome} registrada.`); }}
+          titulo={t.novo}
+          onRegistrado={nome => { setNovo(false); avisar(t.singular === 'atestado' ? `Atestado de ${nome} registrado.` : `Perícia menor de ${nome} registrada.`); }}
         />
       )}
     </div>

@@ -23,9 +23,12 @@ interface SegmentedProps<T extends string> {
   ariaLabel: string;
   fullWidth?: boolean;
   className?: string;
+  /** Filtro opcional: tocar na opção ativa a desmarca (chama onDesmarcar); sem opção ativa = sem filtro. */
+  onDesmarcar?: () => void;
 }
 
-export function Segmented<T extends string>({ options, value, onChange, ariaLabel, fullWidth = false, className = '' }: SegmentedProps<T>) {
+export function Segmented<T extends string>({ options, value, onChange, ariaLabel, fullWidth = false, className = '', onDesmarcar }: SegmentedProps<T>) {
+  const nenhumAtivo = !options.some(o => o.value === value);
   const raiz = useRef<HTMLDivElement>(null);
   // Radiogroup: setas movem a seleção; só a opção ativa entra na ordem do Tab (roving tabindex).
   const aoTecla = (e: React.KeyboardEvent) => {
@@ -53,8 +56,8 @@ export function Segmented<T extends string>({ options, value, onChange, ariaLabe
             type="button"
             role="radio"
             aria-checked={ativo}
-            tabIndex={ativo ? 0 : -1}
-            onClick={() => onChange(o.value)}
+            tabIndex={ativo || (nenhumAtivo && o === options[0]) ? 0 : -1}
+            onClick={() => (ativo && onDesmarcar ? onDesmarcar() : onChange(o.value))}
             className={`${fullWidth ? 'flex-1' : ''} inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-md text-sm font-bold whitespace-nowrap transition-colors ${
               ativo ? 'bg-navy text-white' : 'text-ink-3 hover:bg-white hover:text-navy'
             }`}
