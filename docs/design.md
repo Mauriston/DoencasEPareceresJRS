@@ -2,7 +2,7 @@
 
 > **Nota:** a identidade visual vigente é a do sistema de design JRS/HNRe implementado a partir da *Auditoria Frontend* (tokens em `styles/tokens.css`, paleta em `tailwind.config.js`, primitivos em `components/ui`). Onde este documento divergir (raios, sombras, tipografia, ouro/verde), prevalece o `docs/auditoria-frontend.md`.
 
-## 0. Estado atual do design system (atualizado em 31/10/2026)
+## 0. Estado atual do design system (atualizado em 06/11/2026)
 
 > As seções 1 a 17 vêm da análise original do visual (antes da auditoria de frontend de 15–16/10/2026). **Onde houver conflito, valem esta seção e o código** (`tailwind.config.js`, `styles/tokens.css`, `components/ui/`). O build falha com classes fora do DS (`scripts/verificar-ds.mjs`).
 
@@ -25,7 +25,11 @@ Sidebar fixa (recolhível) com as categorias Trabalho, Consulta, Formação e Ad
 
 ### 0.3 Primitivos (`components/ui/`)
 
-`Button` (primário navy, secundário contornado, ícone opcional, `loading`), `Dialog` (faixa navy com título e ícone em ouro; fecha com Esc/fora, salvo `travado`), `Drawer` (barra lateral à direita no desktop, bottom sheet no celular), `SheetArrastavel`, `StatusTag`, `StatusSelect`, `Toast`, `EmptyState`, `Page`/`Container`, `Field`, `Autocomplete`, `MenuAcoes`, `KpiMini`, `FilterChip`, `Segmented`, `ProgressBar`.
+`Button` (primário navy, secundário contornado, ícone opcional, `loading`), `Dialog` (faixa navy com título e ícone em ouro; fecha com Esc/fora, salvo `travado`), `Drawer` (barra lateral à direita no desktop, bottom sheet no celular), `SheetArrastavel`, `StatusTag`, `StatusSelect`, `Toast`, `EmptyState`, `Page`/`Container`, `Field`, `Autocomplete`, `MenuAcoes`, `MenuCascata`, `ChoiceGroup`, `LinkPdf`, `KpiMini`, `FilterChip`, `Segmented`, `ProgressBar`.
+
+- **`MenuCascata`** — menu suspenso em dois níveis (grupo → item) no padrão Material 3: superfície clara ancorada ao campo, itens de 44 px, altura máxima com rolagem, item escolhido com ✓; tocar num grupo troca o conteúdo do mesmo painel (com "voltar"), igual no celular e no desktop; abre para cima quando falta espaço; teclado completo (↑/↓/Home/End, →/Enter entra, ←/Backspace volta, Esc fecha). Usado nas finalidades (Inspeções, Pareceres, Exames mínimos).
+- **`ChoiceGroup`** — escolha única em botões de 44 px (`role=radiogroup`), selecionado navy cheio. `emLinha`: colunas iguais, sempre lado a lado (também no celular); `ocultarRotulo`: rótulo só para leitor de tela.
+- **`LinkPdf`** — link para PDF arquivado: no desktop abre o `PdfFullscreenModal` (portal no `<body>`, faixa navy com título branco, "abrir em nova aba" e fechar de 44 px; Esc fecha só ele); no celular e com Ctrl/Cmd/Shift ou botão do meio, segue o link.
 
 ### 0.4 Padrões adicionados entre 19 e 31/10/2026
 
@@ -43,6 +47,21 @@ Sidebar fixa (recolhível) com as categorias Trabalho, Consulta, Formação e Ad
 | **Item de atenção** | Início: "IS de concurso atrasadas" | Linha com ícone `event_busy` e `StatusTag` `danger` "Atrasadas" |
 | **Próximas férias** | Início, coluna direita | Linhas com ícone `beach_access`; sem chip "Programada" (só "Em férias" para quem está de férias) |
 | **Tela de erro** | `ErroFatal.tsx` | Mensagem e ação de recarregar no lugar da tela branca |
+
+### 0.4.1 Padrões adicionados entre 01 e 06/11/2026
+
+| Padrão | Onde | Como |
+|---|---|---|
+| **Formulário em etapas (revelação progressiva)** | Novo atestado / Nova perícia menor | Começa só com o `ChoiceGroup emLinha` *Registrar Atestado · Homologar Atestado* (sem rótulo visível). Cada campo surge (`animate-fade-in`) quando o anterior está preenchido e rola para a vista (`scrollIntoView` `nearest`); o que já apareceu não some. Depois da foto lida, os campos surgem já preenchidos |
+| **Pergunta Sim/Não obrigatória** | "ENC p/ VDF?" | `ChoiceGroup emLinha` com asterisco; o botão primário do rodapé fica desabilitado até a escolha |
+| **Foto de documento** | Novo atestado | Botão secundário com `photo_camera`; depois, a imagem tratada (filtro "Documento") ocupa a largura com sobreposição branca e spinner durante o tratamento/leitura; botão circular `restart_alt` (`bg-navy/60`) no canto para refazer |
+| **Campo de data com seletor nativo** | Data do atestado | "Casca" com `dd/mm/aaaa` e ícone `calendar_month`, com o `input type=date` transparente por cima (abre o seletor do aparelho sem estourar a largura no iPhone) |
+| **Dispensas com complemento** | `DispensasModal` | Caixas de seleção em grade de 2 colunas; a opção com complemento ocupa a linha inteira e abre um campo inline (texto ou 2 dígitos + "horas"), com erro `wine` |
+| **Aviso de limite** | Campos de dias | "Máx 20 dias" em `xs` bold `wine`, alinhado à direita, logo abaixo do campo |
+| **Calendário da Escala SVÇ** | `EscalaSpa.tsx` (desktop) | Grade de 7 colunas sobre `bg-navy`; cards brancos (dia útil), `#F3DEDA` (fim de semana/feriado) e `#E6DDF5` (festas maiores); hoje com `outline-gold`; o nome do usuário em `bg-gold/30`. Tocar num card gira **todos** (rotação 3D em Y, `[perspective:1400px]`, atraso em cascata) entre supervisão e plantões |
+| **Lista "Programação"** | Escala SVÇ (celular) | Um bloco por dia (data à esquerda) com linhas Supervisão · Dia · Noite e retém em `ink-3`; linhas do usuário destacadas; rola até hoje |
+| **Card com badge de total** | Início: Perícias Menores Vigentes | Mostra só as 4 mais antigas; o total real vai no badge `wine` do título (`Secao` com `badge`) e o rodapé diz "+N em …" |
+| **Últimos atestados (celular)** | Início do `user_medicos_geral` | Linha enxuta: nome e "Fim: dd/mm/aaaa" só nos vigentes; chip só com a bolinha (`wine` vigente, `green` concluída) e o texto para leitor de tela |
 
 ### 0.5 Notificações do sistema
 

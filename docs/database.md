@@ -2,11 +2,11 @@
 
 ## 1. Visão geral
 
-> **Atualizado em 31/10/2026.** A fonte dos dados operacionais é o **Cloud Firestore** do projeto Firebase `jrs-app-web`. A antiga planilha principal do Google Sheets (abas `ListasRef`, `OM`, `Perito`, `Militares`, `Templates`, `Templates_Documentos`, `Pareceres`, `Pericia_Menor` e `Usuarios`) e a planilha de conteúdos extras **não são mais usadas pelo app**: os dados foram migrados para o Firestore e o código que as lia foi removido do repositório.
+> **Atualizado em 06/11/2026.** A fonte dos dados operacionais é o **Cloud Firestore** do projeto Firebase `jrs-app-web`. A antiga planilha principal do Google Sheets (abas `ListasRef`, `OM`, `Perito`, `Militares`, `Templates`, `Templates_Documentos`, `Pareceres`, `Pericia_Menor` e `Usuarios`) e a planilha de conteúdos extras **não são mais usadas pelo app**: os dados foram migrados para o Firestore e o código que as lia foi removido do repositório.
 
 A persistência do **Guia Médico Naval — JRS/HNRe** está distribuída entre:
 
-1. **Cloud Firestore** — banco principal: usuários, inspecionados, Inspeções de Saúde e agenda, concursos e candidatos (com exames, triagem e auditoria), pareceres, perícias menores, legislação, conteúdos de formação, notificações e a fila de impressão;
+1. **Cloud Firestore** — banco principal: usuários, inspecionados, Inspeções de Saúde e agenda, concursos e candidatos (com exames, triagem e auditoria), pareceres, perícias menores, a escala do SPA, legislação, conteúdos de formação, notificações e a fila de impressão;
 2. **Firebase Storage** — PDFs da legislação e das perícias menores, imagens dos infográficos e fotos de perfil;
 3. **Google Drive** (via Apps Script `CodeConcursos.gs`) — PDFs dos concursos, dos pedidos de parecer e dos exames dos candidatos;
 4. **Firebase Authentication** — contas de login (e-mail sintético derivado do usuário; ver `services/firebaseAuth.ts`);
@@ -82,19 +82,31 @@ Decisões:
 
 ## 5. Perícias Menores no Firestore
 
-A página **Perícia Menor** deixou de usar a aba `Pericia_Menor` e a Guia de Encaminhamento (Google Docs). Os dados ficam no Firestore:
+A página **Perícia Menor** (chamada **Atestados** para `user_medicos_mpi` e `user_medicos_geral`) deixou de usar a aba `Pericia_Menor` e a Guia de Encaminhamento (Google Docs). Os dados ficam no Firestore:
 
 | Coleção | Documento | Conteúdo |
 |---|---|---|
-| `escalaSpa` | data `AAAA-MM-DD` | `data`, `supervisor`, `retemSupervisao`, `dia[]`, `retemDia`, `noite[]`, `retemNoite`, `atualizadoEm` — escala do SPA (supervisão 24 h e plantões 12 h), enviada pelo Admin em CSV (`utils/escalaSpa.ts`; aceita o modelo `DATA;SERVICO;MEDICOS;RETEM` ou o CSV da aba Agenda) |
-| `periciasMenores` | id automático (as migradas: `planilha-LINHA`) | `militarId` (NIP só dígitos = id em `militares`), `inspecionado`, `om`, `servico`, `cid`, `dispensas[]`, `dataAtestado` (AAAA-MM-DD), `tempoAtestado`, `tempoHomologado` (tempo que conta para a dispensa), `homologacao` (boolean; atestado externo), `medicoEmissor`/`crmEmissor` (só na homologação, lidos da foto), `dataTermino`, `vdf` (boolean, "ENC p/ VDF?"), `peritoUsuario/Nome/Uid` (médico que registrou), `pdfUrl`, `criadoEm` |
+| `periciasMenores` | id automático (as migradas: `planilha-LINHA`) | `militarId` (NIP só dígitos = id em `militares`), `inspecionado`, `om`, `servico`, `cid`, `dispensas[]`, `dataAtestado` (AAAA-MM-DD), `tempoAtestado`, `tempoHomologado` (tempo que conta para a dispensa), `homologacao` (boolean: *Homologar Atestado* = true, *Registrar Atestado* = false), `medicoEmissor`/`crmEmissor` (só na homologação, lidos da foto), `dataTermino`, `vdf` (boolean; "ENC p/ VDF?" respondido com Sim/Não, obrigatório), `peritoUsuario/Nome/Uid` (médico que registrou), `pdfUrl`, `criadoEm` |
 
 Decisões:
 - **`dataTermino`** = `dataAtestado` + `tempoHomologado` − 1 (o dia do atestado conta como o 1º), calculada ao gravar.
 - **Status derivado**, não gravado: **Vigente** enquanto hoje ≤ `dataTermino`; depois, **Concluída** (`statusPericia` em `services/firestorePericiasMenores.ts`).
 - **PDF do atestado** (foto obrigatória): a foto recortada recebe o filtro "Documento" (`utils/filtroDocumento.ts`) e vira PDF no navegador (`utils/imagemParaPdf.ts`) e vai ao Storage em `periciasMenores/{id}.pdf`. A leitura por IA é feita pelo **Firebase AI Logic** (Gemini 3.5 Flash via Vertex AI, região global, saída por esquema JSON, protegida pelo App Check com reCAPTCHA Enterprise — `services/atestadoIA.ts`, `services/appCheck.ts`). Se a leitura falhar, os campos são preenchidos à mão e a foto é arquivada mesmo assim.
+- **Tempo:** `tempoHomologado` é o tempo que conta — o do atestado ao registrar, o homologado ao homologar — e vai até 20 dias; somado às perícias do militar vigentes ou concluídas há até 10 dias, não passa de 30 (`utils/periciaMenorRegras.ts`, validado na tela).
+- **Dispensas:** textos da lista fixa de `DispensasModal.tsx` ("TODAS AS ATIVIDADES" é exclusiva). Duas gravam o complemento digitado no próprio texto: `Movimentos repetitivos com sobrecarga {local}` e `Permanecer em pé por mais de {N} horas`. Registros antigos podem ter "LTS", exibido como "Dispensa".
 - **Serviço do HNRe** vem de `militares.servico_label` e só é exibido e gravado (`servico`) para militares da OM HNRe; médicos podem gravar só esse campo no cadastro (regra do Firestore).
 - Carga do histórico: `scripts/migrar-pericias-menores.mjs` (dados em `scripts/pericias-menores.json`).
+
+### 5.1 Escala SVÇ do SPA no Firestore
+
+| Coleção | Documento | Conteúdo |
+|---|---|---|
+| `escalaSpa` | data `AAAA-MM-DD` | `data`, `supervisor`, `retemSupervisao`, `dia[]`, `retemDia`, `noite[]`, `retemNoite`, `atualizadoEm` |
+
+- **Origem:** CSV enviado pelo Admin na página *Escala SVÇ* (`components/escala/ImportarEscalaCsv.tsx`, regras em `utils/escalaSpa.ts`). Aceita o modelo `DATA;SERVICO;MEDICOS;RETEM` (uma linha por serviço; `SERVICO` = Supervisão, DIA ou NOITE; nos plantões, dois médicos separados por vírgula) ou o CSV exportado da aba *Agenda* da planilha da escala (colunas Início, SVC, Medico, Retens). Separador detectado sozinho; arquivo em UTF-8 ou Windows-1252.
+- **Gravação:** em lotes de 400 com `set(..., { merge: true })` — reenviar só a supervisão de um dia não apaga os plantões daquele dia.
+- **Nomes:** gravados como na escala (ex.: `1T (RM2-Md) COSTA`); o cruzamento com o login ignora o parêntese, acentos e caixa (`chaveNome`).
+- **Derivados, não gravados:** cor do dia (útil, fim de semana/feriado nacional, de PE ou do Recife, festas maiores) e os serviços do usuário (`servicosDoUsuario`).
 
 ## 6. PDFs dos concursos no Google Drive
 
@@ -113,14 +125,14 @@ CONCURSOS/
 - `tipoDocumento`: `termoRecurso`, `termoCientificacao`, `solicitacaoParecer`, `solicitacaoExames`.
 - No Firestore continuam as mesmas URLs (`termoRecursoUrl`, `termoCientificacaoUrl`, `solicitacoesParecer[].url`, `solicitacoesExames[].url`, `mensagens/{id}.fileUrl`), agora do Drive: visualização (`https://drive.google.com/file/d/…/view`), tanto para os documentos do candidato quanto para as mensagens; os botões abrem a URL numa nova janela. URLs antigas do Storage continuam válidas.
 - Ao apagar/regerar um termo, o arquivo do Drive vai para a lixeira (só arquivos sob a pasta raiz); URLs antigas do Storage são apagadas do Storage.
-- As ações do script que gravam no Drive ou usam o Gemini exigem o `idToken` do Firebase (validado em `exigirUsuarioFirebase`).
-- A transcrição e os dados da mensagem (cabeçalho, texto, período, candidatos) são lidos pelo Gemini (`extrairMensagemConcurso`, chave `GEMINI_API_KEY` nas propriedades do script) e gravados no Firestore como antes.
+- As ações do script que gravam no Drive exigem o `idToken` do Firebase (validado em `exigirUsuarioFirebase`).
+- A transcrição e os dados da mensagem (cabeçalho, texto, período, candidatos) são lidos pelo Gemini no próprio app (Firebase AI Logic, `PROMPT_MENSAGEM_CONCURSO` em `config/promptsIA.ts`) e gravados no Firestore como antes. O Apps Script não chama mais o Gemini (a propriedade `GEMINI_API_KEY` do script pode ser apagada).
 
 ### Exames entregues pelo candidato
 
 Os exames que o candidato apresenta na IS de Ingresso são enviados em PDF pelo app e seguem a **mesma lógica de pasta** dos termos e das solicitações (pasta do candidato, dentro de `CANDIDATOS`), mas com nome próprio: `EXAMES_{NOME_COMPLETO_SEM_ACENTOS}.pdf` (ex.: `EXAMES_JOSE_DA_SILVA_JUNIOR.pdf`). Um segundo PDF do mesmo candidato ganha sufixo (`_2`, `_3`…) — nada é sobrescrito.
 
-A ação `salvarExamesCandidato` (`CodeConcursos.gs`) faz as duas coisas numa chamada só (o PDF escaneado sobe uma vez): grava o arquivo no Drive e manda o Gemini transcrever os laudos (`PROMPT_EXAMES_CANDIDATO`). Se a leitura falhar, o PDF continua salvo e a resposta traz `erroExtracao` — o app grava o link de qualquer forma.
+O app faz duas coisas em paralelo (`services/driveConcursos.ts`): a ação `salvarExamesCandidato` do Apps Script grava o PDF no Drive, e o Gemini (Firebase AI Logic, `PROMPT_EXAMES_CANDIDATO`) transcreve os laudos. Se a leitura falhar, o PDF continua salvo e o app grava o link de qualquer forma, com o aviso do erro.
 
 A transcrição estruturada vai para uma subcoleção, um documento por PDF enviado:
 
@@ -168,6 +180,9 @@ Regras: Firestore — leitura autenticada, escrita só Admin; Storage (`legislac
 | `militares` | NIP só dígitos | Inspecionados (página *Inspecionados*): `tipo` (militar, dependente ou pensionista; dependente traz `titularId/Nome/Posto`), `om`, `temporario`, `pgq`, `nip`, `nome`, `inspecionado` (`{pgq} {nip} {nome}`), `email`, `ativo`, `rm1`, `refo`, `servico_label` (só HNRe), `nomeGuerra` e `especialidade` (oficiais médicos do HNRe) |
 
 - O próprio usuário só altera e-mail, Gmail, celular, foto, `senhaTemporaria` e `pwaTutorialConcluido`. Perfil, nome, NIP e cargo só o Admin altera.
+- **E-mails:** `email` (institucional) só aceita `@marinha.mil.br`; qualquer outro domínio vai em `gmail` (`utils/emails.ts`, validado no Perfil e em Usuários).
+- **Contas em lote:** `scripts/criar-usuarios-csv.mjs` cria contas no Auth e em `usuarios`/`usuarios_publicos` a partir de um CSV (senha inicial com `senhaTemporaria = true`); usado para as contas `user_medicos_geral`.
+- **Inspecionados em lote:** o Admin importa um CSV (`nip | vinculo | posto | nomeCompleto | om | nasc`) na página *Inspecionados*; só os NIPs ainda não cadastrados são gravados (`criarMilitaresEmLote`). O cadastro unitário pode vir de um print do SINAIS lido pela IA (`utils/inspecionadoSinais.ts`); a imagem não é guardada.
 - **Excluir usuário** (Admin, só usuários **inativos**): o servidor (`/api/admin/excluir-usuario`) apaga a conta no Auth e os documentos em `usuarios` e `usuarios_publicos`. **Redefinir senha** (`/api/admin/resetar-senha`) volta à senha inicial e marca `senhaTemporaria`.
 
 ## 9. Inspeções de Saúde e agenda dos peritos
