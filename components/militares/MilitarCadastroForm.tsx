@@ -4,7 +4,14 @@
 // Vínculo → Posto/Graduação (conforme o vínculo) → [oficial: Quadro] ou
 // [praça: CPFN? → Especialidade] → Nome → NIP → OM (autocomplete). O INSPECIONADO
 // é montado como POSTO (QUADRO) NIP NOME (oficial) ou POSTO-ESP NIP NOME (praça).
-import React, { useEffect, useMemo, useState } from 'react';
+// No topo, o botão de foto pré-preenche tudo a partir de um print da tela de uma IS do SINAIS
+// (enviado, fotografado ou colado com Ctrl+V): a IA lê "Dados do Inspecionado" (services/sinaisIA.ts)
+// e utils/inspecionadoSinais.ts converte nos campos; o usuário confere e corrige antes de cadastrar.
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { IconButton } from '../ui/IconButton';
+import { lerInspecionadoDoSinais } from '../../services/sinaisIA';
+import { arquivoParaBase64IA } from '../../services/geminiAI';
+import { preencherInspecionadoDoSinais } from '../../utils/inspecionadoSinais';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
@@ -55,6 +62,11 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs }
   const [adicionais, setAdicionais] = useState<Adicionais>(ADICIONAIS_VAZIO);
   const [erros, setErros] = useState<Erros>({});
   const [salvando, setSalvando] = useState(false);
+  // Print do SINAIS: leitura em andamento, avisos do que faltou e erro da leitura.
+  const [lendoPrint, setLendoPrint] = useState(false);
+  const [avisosPrint, setAvisosPrint] = useState<string[]>([]);
+  const [erroPrint, setErroPrint] = useState('');
+  const arquivoPrint = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     Promise.all([carregarCorposQuadros(), carregarOms()])
@@ -63,6 +75,43 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs }
   }, []);
 
   const limpar = (k: string) => setErros(er => (er[k] ? { ...er, [k]: '' } : er));
+
+  // ---- Print do SINAIS → campos do formulário ----
+  const lerPrint = async (arquivo: File) => {
+    if (!dados || !arquivo.type.startsWith('image/')) return;
+    setLendoPrint(true); setErroPrint(''); setAvisosPrint([]);
+    try {
+      const lido = await lerInspecionadoDoSinais(await arquivoParaBase64IA(arquivo), arquivo.type || 'image/png');
+      const p = preencherInspecionadoDoSinais(lido, dados, oms);
+      if (p.tipo !== 'militar') {
+        setErroPrint(`O print é de ${p.tipo === 'dependente' ? 'um dependente' : 'um(a) pensionista'}: use a aba Dep/Pens.`);
+        return;
+      }
+      setVinculoSel(p.vinculo); setSituacao(p.situacao); setPosto(p.posto); setQuadroChave(p.quadroChave);
+      setCpfn(p.cpfn); setEspSigla(p.espSigla); setEspTexto(p.espTexto);
+      if (p.nome) setNome(p.nome);
+      if (p.nip) setNip(p.nip);
+      if (p.omSigla || p.omTexto) { setOmSigla(p.omSigla); setOmTexto(p.omTexto); }
+      if (p.dataNascimento) setDataNascimento(p.dataNascimento);
+      setErros({});
+      setAvisosPrint(p.avisos);
+    } catch (e: any) {
+      setErroPrint(e?.message || 'Não foi possível ler o print.');
+    } finally {
+      setLendoPrint(false);
+    }
+  };
+  // Desktop: Ctrl+V com uma imagem na área de transferência lê o print (só imagens; texto colado segue normal).
+  useEffect(() => {
+    const aoColar = (e: ClipboardEvent) => {
+      const img = Array.from(e.clipboardData?.items ?? []).find(i => i.type.startsWith('image/'))?.getAsFile();
+      if (!img) return;
+      e.preventDefault();
+      void lerPrint(img);
+    };
+    window.addEventListener('paste', aoColar);
+    return () => window.removeEventListener('paste', aoColar);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
 
   const postos = useMemo(() => (dados && vinculo ? postosDoVinculo(dados, vinculo) : []), [dados, vinculo]);
   const categoria = dados && posto ? dados.postos[posto]?.categoria : undefined;
@@ -182,6 +231,28 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs }
       ) : (
         <form id="form-novo-militar" onSubmit={salvar} noValidate className="space-y-4">
           {erros.geral && <p role="alert" className="text-sm font-semibold text-wine">{erros.geral}</p>}
+
+          <div className="rounded-lg border border-dashed border-line bg-thead/60 p-3">
+            <div className="flex items-center gap-3">
+              <input
+                ref={arquivoPrint} type="file" accept="image/*" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void lerPrint(f); }}
+              />
+              <IconButton
+                icon={lendoPrint ? 'hourglass_top' : 'add_a_photo'} label="Preencher com o print do SINAIS"
+                variant="secondary" disabled={lendoPrint} onClick={() => arquivoPrint.current?.click()}
+              />
+              <p className="text-xs text-ink-3 leading-snug" role="status">
+                {lendoPrint ? 'Lendo o print do SINAIS…' : <>Preencha a partir de um <strong className="text-ink">print do SINAIS</strong>: envie, fotografe ou cole (Ctrl+V).</>}
+              </p>
+            </div>
+            {erroPrint && <p role="alert" className="mt-2 text-xs font-semibold text-wine">{erroPrint}</p>}
+            {avisosPrint.length > 0 && (
+              <ul className="mt-2 space-y-0.5 text-xs text-ink-2 list-disc pl-5">
+                {avisosPrint.map(a => <li key={a}>{a}</li>)}
+              </ul>
+            )}
+          </div>
 
           <ChoiceGroup<VinculoForm>
             label="Vínculo" required error={erros.vinculo} value={vinculo} onChange={escolherVinculo}
