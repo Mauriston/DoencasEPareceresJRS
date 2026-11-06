@@ -243,7 +243,7 @@ export const Home: React.FC = () => {
       tag: 'Hoje', tom: feitas === totalHoje ? 'success' : 'attention', to: concursosDiaPath(hoje),
     });
   }
-  if (podePericiaMenor && periciaMenorVigentes > 0 && !ehMedicoGeral) {
+  if (podePericiaMenor && periciaMenorVigentes > 0) {
     atencao.push({
       id: 'pm', icone: 'personal_injury', titulo: termosPm.pagina === 'Atestados'
         ? `${periciaMenorVigentes} atestado${periciaMenorVigentes !== 1 ? 's' : ''} vigente${periciaMenorVigentes !== 1 ? 's' : ''}`
