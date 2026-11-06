@@ -74,9 +74,14 @@ export const EscalaSpa: React.FC = () => {
   const anos = useMemo(() => { const a = new Date().getFullYear(); return [...new Set([a - 1, a, a + 1, mes.y])].sort(); }, [mes.y]);
 
   const souEu = (n?: string) => !!eu && chaveNome(n) === eu;
-  const Nome: React.FC<{ n?: string; forte?: boolean }> = ({ n, forte }) => (
-    <span className={`${souEu(n) ? 'bg-gold/30 rounded px-0.5 -mx-0.5' : ''} ${forte ? 'font-extrabold text-navy' : 'font-semibold text-ink-2'}`}>{n ? nomeExibicao(n) : '—'}</span>
-  );
+  // O nome nunca quebra entre o posto e o nome ("1T MÔNICA VIRGÍNIA" fica junto): se não couber na
+  // linha, desce inteiro; se não couber nem sozinho, termina em "…" (nome completo no title).
+  const Nome: React.FC<{ n?: string; forte?: boolean }> = ({ n, forte }) => {
+    const texto = n ? nomeExibicao(n) : '—';
+    return (
+      <span title={n ? texto : undefined} className={`inline-block max-w-full truncate align-bottom ${souEu(n) ? 'bg-gold/30 rounded px-0.5 -mx-0.5' : ''} ${forte ? 'font-extrabold text-navy' : 'font-semibold text-ink-2'}`}>{texto}</span>
+    );
+  };
   const dupla = (lista?: string[]) => (lista && lista.length
     ? lista.map((n, i) => <React.Fragment key={n + i}>{i > 0 && <span className="text-ink-4"> - </span>}<Nome n={n} forte /></React.Fragment>)
     : <span className="text-ink-4">—</span>);
@@ -180,9 +185,9 @@ export const EscalaSpa: React.FC = () => {
               {fer[k] && <p className="text-[11px] font-semibold text-wine mb-0.5">{fer[k]}</p>}
               {e ? (
                 <>
-                  {linhaEvento('Supervisão', <><Nome n={e.supervisor} forte />{e.retemSupervisao && <span className="text-xs text-ink-3"> · Retém: <Nome n={e.retemSupervisao} /></span>}</>, souEu(e.supervisor) || souEu(e.retemSupervisao))}
-                  {linhaEvento('Dia', <>{dupla(e.dia)}{e.retemDia && <span className="text-xs text-ink-3"> · Retém: <Nome n={e.retemDia} /></span>}</>, (e.dia ?? []).some(souEu) || souEu(e.retemDia))}
-                  {linhaEvento('Noite', <>{dupla(e.noite)}{e.retemNoite && <span className="text-xs text-ink-3"> · Retém: <Nome n={e.retemNoite} /></span>}</>, (e.noite ?? []).some(souEu) || souEu(e.retemNoite))}
+                  {linhaEvento('Supervisão', <><Nome n={e.supervisor} forte />{e.retemSupervisao && <span className="text-xs text-ink-3"> · <span className="inline-block max-w-full whitespace-nowrap">Retém: <Nome n={e.retemSupervisao} /></span></span>}</>, souEu(e.supervisor) || souEu(e.retemSupervisao))}
+                  {linhaEvento('Dia', <>{dupla(e.dia)}{e.retemDia && <span className="text-xs text-ink-3"> · <span className="inline-block max-w-full whitespace-nowrap">Retém: <Nome n={e.retemDia} /></span></span>}</>, (e.dia ?? []).some(souEu) || souEu(e.retemDia))}
+                  {linhaEvento('Noite', <>{dupla(e.noite)}{e.retemNoite && <span className="text-xs text-ink-3"> · <span className="inline-block max-w-full whitespace-nowrap">Retém: <Nome n={e.retemNoite} /></span></span>}</>, (e.noite ?? []).some(souEu) || souEu(e.retemNoite))}
                 </>
               ) : <p className="text-sm text-ink-4 py-1">Sem escala registrada.</p>}
             </div>
