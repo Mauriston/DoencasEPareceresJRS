@@ -29,7 +29,7 @@ import { carregarCid, normalizarBusca, omEhHnre, type CidItem } from '../../util
 import { imagemParaPdf } from '../../utils/imagemParaPdf';
 import { aplicarFiltroDocumento } from '../../utils/filtroDocumento';
 import { dataCivilISO, hojeISO } from '../../utils/dados';
-import { MAX_DIAS_PERICIA, MAX_DIAS_ACUMULADOS, JANELA_ACUMULO_DIAS, limitarDias, saldoAcumulado } from '../../utils/periciaMenorRegras';
+import { MAX_DIAS_PERICIA, MAX_DIAS_ACUMULADOS, limitarDias, saldoAcumulado } from '../../utils/periciaMenorRegras';
 import { formatNip } from '../../utils/format';
 
 interface Props {
@@ -135,8 +135,10 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
   const tempoEfetivo = Number(digitos(homologacao ? tempoHomologado : tempoAtestado)) || 0;
   const saldo = useMemo(() => saldoAcumulado(anteriores, hoje), [anteriores, hoje]);
   const passaDe30 = saldo.quantidade > 0 && tempoEfetivo > 0 && saldo.usados + tempoEfetivo > MAX_DIAS_ACUMULADOS;
+  // Aviso quando há atestado recente (vigente ou concluído há até 10 dias — utils/periciaMenorRegras.ts): os dias já usados.
+  // O limite de MAX_DIAS_ACUMULADOS continua validado no campo de tempo (erro ao passar).
   const msgAcumulado = saldo.quantidade > 0
-    ? `${saldo.quantidade === 1 ? 'Há outro registro' : `Há ${saldo.quantidade} registros`} vigente${saldo.quantidade > 1 ? 's' : ''} ou concluído${saldo.quantidade > 1 ? 's' : ''} há até ${JANELA_ACUMULO_DIAS} dias (${saldo.usados} dia${saldo.usados !== 1 ? 's' : ''}). A soma não pode passar de ${MAX_DIAS_ACUMULADOS} dias: máximo agora ${saldo.restante} dia${saldo.restante !== 1 ? 's' : ''}.`
+    ? `O inspecionado(a) teve ${saldo.usados} dia${saldo.usados !== 1 ? 's' : ''} de atestados no último mês.`
     : '';
 
   const alterarTempoAtestado = (texto: string, homolog = homologacao) => {
