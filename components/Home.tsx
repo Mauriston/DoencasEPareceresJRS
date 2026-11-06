@@ -17,6 +17,7 @@ import { EmptyState } from './ui/EmptyState';
 import { NavContext, getPrimeiroNome } from '../context/NavContext';
 import { getNavCategories } from '../config/navigation';
 import { termosPericia } from '../config/termosPericia';
+import { LinkPdf } from './ui/LinkPdf';
 import { canAccessPage, canUseFeature } from '../config/permissions';
 import { pathForView, concursoPath, concursosDiaPath } from '../config/routes';
 import { observarConcursos, type ConcursoRecord } from '../services/firestoreConcursos';
@@ -109,8 +110,8 @@ const LinhaDocumentoGerado: React.FC<{ d: DocumentoGerado; onAbrir: (d: Document
 /** Versão enxuta da linha no celular (< md): outro detalhe (pode ser vazio) e outra tag; sem a coluna de data. */
 interface LinhaCompacta { detalhe: string; tag: React.ReactNode }
 
-/** Linha de documento: abre o PDF (nova aba) quando existe; senão leva à página do assunto. */
-const LinhaDocumento: React.FC<{ icone: string; titulo: string; detalhe: string; data: string; link: string; to: string; tag: React.ReactNode; compactoMobile?: LinhaCompacta }> = ({ icone, titulo, detalhe, data, link, to, tag, compactoMobile: m }) => {
+/** Linha de documento: abre o PDF (nova aba; atestados num modal em tela cheia no desktop) quando existe; senão leva à página do assunto. */
+const LinhaDocumento: React.FC<{ icone: string; titulo: string; detalhe: string; data: string; link: string; to: string; tag: React.ReactNode; compactoMobile?: LinhaCompacta; tituloPdf?: string }> = ({ icone, titulo, detalhe, data, link, to, tag, compactoMobile: m, tituloPdf }) => {
   const soDesktop = m ? 'hidden md:block' : 'block';
   const corpo = (
     <>
@@ -126,6 +127,7 @@ const LinhaDocumento: React.FC<{ icone: string; titulo: string; detalhe: string;
     </>
   );
   const classe = 'flex items-center gap-3 px-4 min-h-[56px] py-2 hover:bg-thead transition-colors';
+  if (link && tituloPdf) return <LinkPdf url={link} tituloPdf={tituloPdf} className={classe}>{corpo}</LinkPdf>;
   return link
     ? <a href={link} target="_blank" rel="noopener noreferrer" className={classe}>{corpo}</a>
     : <Link to={to} className={classe}>{corpo}</Link>;
@@ -410,7 +412,7 @@ export const Home: React.FC = () => {
                       <li key={p.id}>
                         <LinhaDocumento
                           icone="personal_injury" titulo={extrairNomeInspecionado(p.inspecionado)} detalhe={`${dataBR(p.dataAtestado)} · ${p.tempoHomologado} dia${p.tempoHomologado !== 1 ? 's' : ''} · ${p.cid}`}
-                          data={`até ${dataBR(p.dataTermino)}`} link={p.pdfUrl} to="/pericia-menor/historico"
+                          data={`até ${dataBR(p.dataTermino)}`} link={p.pdfUrl} tituloPdf={`Atestado — ${extrairNomeInspecionado(p.inspecionado)}`} to="/pericia-menor/historico"
                           tag={<StatusTag tone={vigente ? 'danger' : 'success'} className="shrink-0">{vigente ? 'Vigente' : 'Concluída'}</StatusTag>}
                           // Celular: só "Fim: dd/mm/aaaa" nas vigentes e o chip só com a bolinha (texto para leitor de tela).
                           compactoMobile={{
@@ -438,7 +440,7 @@ export const Home: React.FC = () => {
                     <li key={p.id}>
                       <LinhaDocumento
                         icone="personal_injury" titulo={extrairNomeInspecionado(p.inspecionado)} detalhe={`${termosPm.pagina} · ${p.cid}`}
-                        data={`até ${dataBR(p.dataTermino)}`} link={p.pdfUrl} to="/pericia-menor/historico"
+                        data={`até ${dataBR(p.dataTermino)}`} link={p.pdfUrl} tituloPdf={`Atestado — ${extrairNomeInspecionado(p.inspecionado)}`} to="/pericia-menor/historico"
                         tag={<StatusTag tone="danger" className="shrink-0">Vigente</StatusTag>}
                       />
                     </li>

@@ -4,6 +4,7 @@
 import React from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
+import { LinkPdf } from '../ui/LinkPdf';
 import { PericiaStatusTags, registroPericia } from '../ui/PericiaStatusTags';
 import { extrairNomeInspecionado } from '../../utils/format';
 import { dataBR, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
@@ -69,8 +70,8 @@ export const PericiaMenorDrawer: React.FC<Props> = ({ pericia: p, titulo = 'Per√
         </div>
 
         {p.pdfUrl && (
-          <a
-            href={p.pdfUrl} target="_blank" rel="noopener noreferrer"
+          <LinkPdf
+            url={p.pdfUrl} tituloPdf={`Atestado ‚Äî ${nome}`}
             className="w-full flex items-center gap-3 p-3 rounded-lg border border-line hover:border-navy text-left transition-colors"
           >
             <span className="material-symbols-outlined text-[28px] text-navy shrink-0" aria-hidden="true">picture_as_pdf</span>
@@ -79,7 +80,7 @@ export const PericiaMenorDrawer: React.FC<Props> = ({ pericia: p, titulo = 'Per√
               <span className="block text-xs text-ink-3">documento do atestado</span>
             </span>
             <span className="text-sm font-bold text-blue underline underline-offset-2">Abrir</span>
-          </a>
+          </LinkPdf>
         )}
       </div>
     </Drawer>
