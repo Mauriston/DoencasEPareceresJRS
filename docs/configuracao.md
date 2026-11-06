@@ -14,8 +14,8 @@
 | Configuração web do Firebase | `apiKey`, `authDomain`, `projectId`, `storageBucket`, `appId`… (públicos) | `firebase-applet-config.json` |
 | App Check | reCAPTCHA Enterprise, chave do site *app-jrs-hnre* `6LdtjBMuAAAAADcsZuWXKZS2PU8MMvV0tA2z5-K3` (domínio `mauriston.github.io`) | `services/appCheck.ts`; registro no Console → App Check |
 | Firebase AI Logic | backend Vertex AI, modelo `gemini-3.5-flash`, região `global` | `services/geminiAI.ts`; API *Vertex AI / Agent Platform* ativa no projeto |
-| Backups do Firestore | agendamento gerenciado **semanal** (segunda, retenção de 14 semanas — ativo desde 28/09/2026); **diário** (7 dias) e proteção contra exclusão do banco aplicados por `scripts/backup/configurar-backup.sh` | conferidos por `.github/workflows/backup-firestore.yml` |
-| Lixeira do Storage | soft delete: 7 dias (padrão do GCS) → 30 dias com `scripts/backup/configurar-backup.sh` | Console → Cloud Storage → bucket → Proteção |
+| Backups do Firestore | agendamento gerenciado **semanal** (segunda, retenção de 14 semanas — ativo desde 28/09/2026); **diário** (7 dias) e proteção contra exclusão do banco — ativos desde 06/11/2026 (`scripts/backup/configurar-backup.sh`) | conferidos por `.github/workflows/backup-firestore.yml` |
+| Lixeira do Storage | soft delete de **30 dias** (desde 06/11/2026; antes, 7 dias do padrão do GCS) — `scripts/backup/configurar-backup.sh` | Console → Cloud Storage → bucket → Proteção |
 | Regras | `firestore.rules`, `storage.rules` | publicadas pelo CI (`deploy-firestore-rules.yml`) |
 
 ## 2. Cloud Run (`server.ts`)

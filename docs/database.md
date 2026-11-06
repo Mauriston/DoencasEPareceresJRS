@@ -431,15 +431,15 @@ Em vez da exportação manual (`gcloud firestore export` para um bucket), o proj
 | Agendamento | Retenção | Situação |
 |---|---|---|
 | Semanal (segunda-feira) | 14 semanas | **Ativo desde 28/09/2026** (6 backups prontos em 06/11/2026, de 29/09 a 02/11) |
-| Diário | 7 dias | Configurado por `scripts/backup/configurar-backup.sh` |
+| Diário | 7 dias | **Ativo desde 06/11/2026** (`scripts/backup/configurar-backup.sh`) |
 
-O mesmo script liga a **proteção contra exclusão** do banco `(default)` (`delete protection`) e, com `PITR=1`, a recuperação a qualquer instante dos últimos 7 dias (tem custo; desligada por padrão). O script é idempotente: pode ser rodado de novo sem duplicar agendamentos.
+O mesmo script liga a **proteção contra exclusão** do banco `(default)` (`delete protection` — **ativa desde 06/11/2026**) e, com `PITR=1`, a recuperação a qualquer instante dos últimos 7 dias (tem custo; desligada por padrão). O script é idempotente: pode ser rodado de novo sem duplicar agendamentos.
 
 **Vigilância:** o workflow `.github/workflows/backup-firestore.yml` roda toda terça e **falha** (o GitHub avisa por e-mail) se o backup pronto mais recente tiver mais de 8 dias.
 
 ### 18.2 Storage e Drive — sem exclusão definitiva automática
 
-- **Storage:** o app só apaga arquivos por ação de uma pessoa (Admin removendo um infográfico; termo antigo de concurso regerado). O bucket tem **lixeira (soft delete)**: o padrão do Google Cloud é 7 dias; `configurar-backup.sh` amplia para **30 dias** — um arquivo apagado pode ser restaurado nesse prazo (Console → Cloud Storage → bucket → *Objetos excluídos*).
+- **Storage:** o app só apaga arquivos por ação de uma pessoa (Admin removendo um infográfico; termo antigo de concurso regerado). O bucket tem **lixeira (soft delete)**: o padrão do Google Cloud era 7 dias; desde 06/11/2026 são **30 dias** (`configurar-backup.sh`) — um arquivo apagado pode ser restaurado nesse prazo (Console → Cloud Storage → bucket → *Objetos excluídos*).
 - **Drive:** o Apps Script nunca apaga de vez: cópias temporárias e termos substituídos vão para a **lixeira** (`setTrashed(true)`), recuperáveis por 30 dias. Os PDFs gerados (termos, pareceres, exames, minutas) ficam nas pastas do drive compartilhado, que são o próprio arquivo de longo prazo.
 - **Retenção administrativa e descarte:** prazos propostos em `docs/retencao-lgpd.md`, ainda a validar pela Encarregada/Comando (seção 17).
 
