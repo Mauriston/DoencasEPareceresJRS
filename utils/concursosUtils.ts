@@ -427,8 +427,8 @@ export interface PeriodoJRS { inicio: Date; fim: Date; }
 // IMPORTAÇÃO DE CONCURSO A PARTIR DE CSV ("candidatosDataBase" + nome)
 // =========================================================================
 
-/** Parser de CSV tolerante a campos entre aspas (com vírgulas/quebras de linha internas). */
-export const parseCsvGenerico = (texto: string): string[][] => {
+/** Parser de CSV tolerante a campos entre aspas (com separador/quebras de linha internas). Separador padrão: vírgula. */
+export const parseCsvGenerico = (texto: string, separador = ','): string[][] => {
   const linhas: string[][] = [];
   let campo = '';
   let linha: string[] = [];
@@ -445,7 +445,7 @@ export const parseCsvGenerico = (texto: string): string[][] => {
       }
     } else if (c === '"') {
       dentroAspas = true;
-    } else if (c === ',') {
+    } else if (c === separador) {
       linha.push(campo);
       campo = '';
     } else if (c === '\r') {

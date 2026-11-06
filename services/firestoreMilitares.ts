@@ -75,6 +75,28 @@ export const criarMilitar = async (dados: MilitarDoc): Promise<string> => {
   return id;
 };
 
+/**
+ * Cria vários cadastros de uma vez (importação CSV do Admin). Lotes de até 400 gravações; quem chama
+ * já descartou os NIPs existentes. Devolve quantos foram gravados.
+ */
+export const criarMilitaresEmLote = async (docs: MilitarDoc[], aoProgredir?: (gravados: number) => void): Promise<number> => {
+  let gravados = 0;
+  for (let i = 0; i < docs.length; i += 400) {
+    const lote = writeBatch(db);
+    const fatia = docs.slice(i, i + 400);
+    fatia.forEach(d => {
+      const id = idDoNip(d.nip);
+      if (id.length !== 8) throw new Error(`NIP inválido: ${d.nip}`);
+      lote.set(doc(db, COL, id), { ...d, criadoEm: serverTimestamp(), atualizadoEm: serverTimestamp() });
+    });
+    await lote.commit();
+    gravados += fatia.length;
+    aoProgredir?.(gravados);
+  }
+  void registrarAcaoSensivel('militar.importarCsv', 'militares');
+  return gravados;
+};
+
 /** Apaga o cadastro (definitivo). Para só tirar o acesso, prefira inativar. */
 export const apagarMilitar = async (id: string) => {
   await deleteDoc(doc(db, COL, id));

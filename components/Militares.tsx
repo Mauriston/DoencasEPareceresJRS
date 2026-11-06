@@ -1,7 +1,7 @@
 // Ficheiro: components/Militares.tsx
 // Página INSPECIONADOS: base de militares da ativa, servidores civis, dependentes e
 // pensionistas (coleção "militares"). Busca, ficha, edição dos dados, ativar/inativar para o
-// appweb (só Admin) e "Cadastrar novo" com duas abas: Militares (formulário em cascata com OM e
+// appweb (só Admin), "Importar CSV" em lote (só Admin) e "Cadastrar novo" com duas abas: Militares (formulário em cascata com OM e
 // quadros da MB) e Dep/Pens. (Dependente ou Pensionista).
 import React, { useEffect, useMemo, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
@@ -17,6 +17,7 @@ import { Toast } from './ui/Toast';
 import { Autocomplete, type OpcaoAutocomplete } from './ui/Autocomplete';
 import { MenuAcoes } from './ui/MenuAcoes';
 import { CadastroInspecionado } from './militares/CadastroInspecionado';
+import { ImportarInspecionadosCsv } from './militares/ImportarInspecionadosCsv';
 import { MilitarDetalhe } from './militares/MilitarDetalhe';
 import { InformacoesAdicionais, adicionaisDoMilitar, adicionaisParaPatch, validarAdicionais, type Adicionais } from './militares/InformacoesAdicionais';
 import { enviarFotoMilitar } from '../services/militarFoto';
@@ -52,6 +53,7 @@ export const Militares: React.FC = () => {
   const [busca, setBusca] = useState('');
   const [limite, setLimite] = useState(PAGINA);
   const [novo, setNovo] = useState(false);
+  const [importando, setImportando] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
   const [editando, setEditando] = useState<MilitarRecord | null>(null);
   const [detalhe, setDetalhe] = useState<MilitarRecord | null>(null);
@@ -150,7 +152,13 @@ export const Militares: React.FC = () => {
         <PageHeader
           title="Inspecionados"
           description="Cadastro de militares da ativa, servidores civis, dependentes e pensionistas. Edite os dados e defina quem está ativo no appweb."
-          actions={podeCadastrar ? <Button icon="person_add" onClick={() => setNovo(true)}>Cadastrar novo</Button> : undefined}
+          actions={(podeCadastrar || ehAdmin) ? (
+            <div className="flex flex-wrap gap-2">
+              {/* Importação em lote por CSV: exclusiva do Admin. */}
+              {ehAdmin && <Button variant="secondary" icon="upload_file" onClick={() => setImportando(true)} disabled={lista === null}>Importar CSV</Button>}
+              {podeCadastrar && <Button icon="person_add" onClick={() => setNovo(true)}>Cadastrar novo</Button>}
+            </div>
+          ) : undefined}
         />
 
         <div className="bg-white rounded-xl border border-line p-4 space-y-3">
@@ -293,6 +301,7 @@ export const Militares: React.FC = () => {
           onCancel={() => setApagando(null)}
         />
       )}
+      {importando && ehAdmin && lista && <ImportarInspecionadosCsv existentes={lista} onClose={() => setImportando(false)} onImportado={n => { setImportando(false); avisar(`${n} inspecionado${n !== 1 ? 's' : ''} importado${n !== 1 ? 's' : ''}.`); }} />}
       {novo && <CadastroInspecionado onClose={() => setNovo(false)} onCriado={nome => { setNovo(false); avisar(`${nome} cadastrado.`); }} />}
       {lote === 'posto' && postos && <PromocaoEmLote militares={escolhidos} postos={postos} onClose={() => setLote(null)} onAplicado={n => { setLote(null); setSelecionados(new Set()); avisar(`Posto atualizado em ${n} militar${n !== 1 ? 'es' : ''}.`); }} onErro={m => avisar(m, 'error')} />}
       {lote === 'servico' && <ServicoEmLote militares={escolhidos} onClose={() => setLote(null)} onAplicado={n => { setLote(null); setSelecionados(new Set()); avisar(`Serviço do HNRe atualizado em ${n} militar${n !== 1 ? 'es' : ''}.`); }} onErro={m => avisar(m, 'error')} />}
