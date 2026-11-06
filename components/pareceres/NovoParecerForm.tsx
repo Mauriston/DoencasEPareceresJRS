@@ -81,6 +81,9 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, onClose, on
 
   const limpar = (k: string) => setErros(e => (e[k] ? { ...e, [k]: '' } : e));
 
+  /** A busca digitada é um NIP completo (8 dígitos, com ou sem pontos)? */
+  const nipBuscado = /^[\d.\s-]+$/.test(militarTexto.trim()) && militarTexto.replace(/\D/g, '').length === 8;
+
   const opcoesMilitar: OpcaoAutocomplete[] = useMemo(() => militares.map(m => ({
     chave: m.id, principal: m.nome, secundaria: `${m.pgq} · ${formatNip(m.nip)} · ${m.om}`,
     busca: normalizarBusca(`${m.inspecionado} ${m.om} ${m.id}`), // m.id = NIP só com dígitos: dá para buscar sem os pontos
@@ -164,11 +167,9 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, onClose, on
               valor={militarTexto} opcoes={opcoesMilitar}
               onDigitar={t => { setMilitarTexto(t); setMilitar(null); limpar('militar'); }}
               onSelecionar={o => { const m = militares.find(x => x.id === o.chave); if (m) { setMilitar(m); setMilitarTexto(m.inspecionado); limpar('militar'); } }}
+              // "+ Novo inspecionado" só quando a busca é um NIP completo (8 dígitos) sem resultado.
+              aoNaoEncontrar={nipBuscado ? { rotulo: 'Novo inspecionado', icone: 'add', onClick: () => setCadastrando(true) } : undefined}
             />
-            <button type="button" onClick={() => setCadastrando(true)} className="mt-1 min-h-[44px] inline-flex items-center gap-1 text-sm font-bold text-navy underline underline-offset-2 hover:text-navy-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded">
-              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">person_add</span>
-              Inspecionado não cadastrado? Cadastrar novo inspecionado
-            </button>
           </div>
 
           <Field label="Especialidade" required error={erros.especialidade}>
