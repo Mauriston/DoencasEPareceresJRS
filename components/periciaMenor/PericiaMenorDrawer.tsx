@@ -16,16 +16,18 @@ const dias = (n: number) => `${n} dia${n !== 1 ? 's' : ''}`;
 
 interface Props {
   pericia: PericiaMenorRecord;
+  /** "Perícia menor" ou "Atestado" (perfil user_medicos_geral). */
+  titulo?: string;
   onClose: () => void;
   onHistorico: () => void;
 }
 
-export const PericiaMenorDrawer: React.FC<Props> = ({ pericia: p, onClose, onHistorico }) => {
+export const PericiaMenorDrawer: React.FC<Props> = ({ pericia: p, titulo = 'Perícia menor', onClose, onHistorico }) => {
   const nome = extrairNomeInspecionado(p.inspecionado);
   const prefixo = p.inspecionado.slice(0, p.inspecionado.indexOf(nome)).trim();
   return (
     <Drawer
-      title="Perícia menor"
+      title={titulo}
       icon="personal_injury"
       onClose={onClose}
       footer={(
@@ -46,8 +48,11 @@ export const PericiaMenorDrawer: React.FC<Props> = ({ pericia: p, onClose, onHis
           <Linha rotulo="OM" valor={p.om} />
           {p.servico && <Linha rotulo="Serviço do HNRe" valor={p.servico} />}
           <Linha rotulo="Data do atestado" valor={dataBR(p.dataAtestado)} />
+          {p.homologacao !== undefined && <Linha rotulo="Homologação" valor={p.homologacao ? 'Sim' : 'Não'} />}
           <Linha rotulo="Tempo do atestado" valor={dias(p.tempoAtestado)} />
-          <Linha rotulo="Tempo homologado" valor={dias(p.tempoHomologado)} />
+          {p.homologacao !== false && <Linha rotulo="Tempo homologado" valor={dias(p.tempoHomologado)} />}
+          {p.medicoEmissor && <Linha rotulo="Médico emissor" valor={p.medicoEmissor} />}
+          {p.crmEmissor && <Linha rotulo="CRM" valor={p.crmEmissor} />}
           <Linha rotulo="Término" valor={dataBR(p.dataTermino)} />
           <Linha rotulo="Perito" valor={p.peritoUsuario || p.peritoNome} />
           <Linha rotulo="Registrada em" valor={p.criadoEm?.toDate?.().toLocaleDateString('pt-BR')} />

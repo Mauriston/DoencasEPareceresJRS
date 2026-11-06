@@ -54,7 +54,7 @@ var MODELO_GEMINI = 'gemini-2.5-flash';
  * workflow "Apps Script publicado" compara este valor com o da implantação no ar (ação "versao")
  * e abre uma issue com o checklist de reimplantação enquanto forem diferentes.
  */
-var VERSAO_SCRIPT = '2026-11-06.1';
+var VERSAO_SCRIPT = '2026-11-06.2';
 
 /** Ações POST que vieram do antigo projeto "principal" (CodePrincipal.gs): respondem no formato antigo ({ success, ... }). */
 var ACOES_POST_PRINCIPAL = ['extrair_dados_atestado', 'gerarMinutaMensagem'];

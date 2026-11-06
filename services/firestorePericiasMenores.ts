@@ -31,7 +31,14 @@ export interface PericiaMenorDoc {
   tempoHomologado: number;
   /** AAAA-MM-DD = dataAtestado + tempoHomologado - 1. */
   dataTermino: string;
+  /** Encaminhado para IS de VDF ("ENC p/ VDF?"). */
   vdf: boolean;
+  /** Atestado externo apresentado para homologação: o tempo de dispensa é o "tempoHomologado".
+   *  Sem homologação (ou nos registros antigos, sem o campo), tempoHomologado = tempoAtestado. */
+  homologacao?: boolean;
+  /** Só na homologação, quando lidos da foto: médico que emitiu o atestado e o CRM dele. */
+  medicoEmissor?: string;
+  crmEmissor?: string;
   /** Médico que registrou a perícia (login do usuário, ex.: "CT MAURISTON"). */
   peritoUsuario: string;
   peritoNome: string;

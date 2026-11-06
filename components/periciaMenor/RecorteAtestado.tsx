@@ -1,6 +1,6 @@
 // Ficheiro: components/periciaMenor/RecorteAtestado.tsx
 // Recorte da foto do atestado (tela cheia): o usuário seleciona a área com nome, datas e CID e a
-// imagem recortada (JPEG) volta para a leitura por IA e para o PDF do atestado.
+// imagem recortada (JPEG) recebe o filtro "Documento" e segue para a leitura por IA e o PDF.
 import React, { useRef, useState } from 'react';
 import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -42,7 +42,7 @@ export const RecorteAtestado: React.FC<Props> = ({ imagem, onConfirmar, onCancel
   return (
     <div className="fixed inset-0 z-dialog bg-black/90 flex flex-col animate-fade-in" role="dialog" aria-modal="true" aria-label="Recortar atestado">
       <div className="p-4 bg-black flex justify-between items-center text-white shrink-0 border-b border-white/20">
-        <h2 className="font-bold flex items-center gap-2 text-sm"><CropIcon size={20} className="text-gold" aria-hidden="true" /> Recortar atestado</h2>
+        <h2 className="font-bold flex items-center gap-2 text-sm text-white"><CropIcon size={20} className="text-gold" aria-hidden="true" /> Recortar atestado</h2>
         <button type="button" onClick={onCancelar} aria-label="Cancelar recorte" className="w-11 h-11 -mr-2 inline-flex items-center justify-center rounded-lg hover:bg-white/10"><X size={22} aria-hidden="true" /></button>
       </div>
       <div className="flex-1 overflow-auto flex items-center justify-center p-4">

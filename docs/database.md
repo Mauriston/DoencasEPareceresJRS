@@ -86,12 +86,12 @@ A página **Perícia Menor** deixou de usar a aba `Pericia_Menor` e a Guia de En
 
 | Coleção | Documento | Conteúdo |
 |---|---|---|
-| `periciasMenores` | id automático (as migradas: `planilha-LINHA`) | `militarId` (NIP só dígitos = id em `militares`), `inspecionado`, `om`, `servico`, `cid`, `dispensas[]`, `dataAtestado` (AAAA-MM-DD), `tempoAtestado`, `tempoHomologado`, `dataTermino`, `vdf` (boolean), `peritoUsuario/Nome/Uid` (médico que registrou), `pdfUrl`, `criadoEm` |
+| `periciasMenores` | id automático (as migradas: `planilha-LINHA`) | `militarId` (NIP só dígitos = id em `militares`), `inspecionado`, `om`, `servico`, `cid`, `dispensas[]`, `dataAtestado` (AAAA-MM-DD), `tempoAtestado`, `tempoHomologado` (tempo que conta para a dispensa), `homologacao` (boolean; atestado externo), `medicoEmissor`/`crmEmissor` (só na homologação, lidos da foto), `dataTermino`, `vdf` (boolean, "ENC p/ VDF?"), `peritoUsuario/Nome/Uid` (médico que registrou), `pdfUrl`, `criadoEm` |
 
 Decisões:
 - **`dataTermino`** = `dataAtestado` + `tempoHomologado` − 1 (o dia do atestado conta como o 1º), calculada ao gravar.
 - **Status derivado**, não gravado: **Vigente** enquanto hoje ≤ `dataTermino`; depois, **Concluída** (`statusPericia` em `services/firestorePericiasMenores.ts`).
-- **PDF do atestado**: a foto recortada vira PDF no navegador (`utils/imagemParaPdf.ts`) e vai ao Storage em `periciasMenores/{id}.pdf`. A leitura por IA continua na ação `extrair_dados_atestado` (Gemini, Apps Script).
+- **PDF do atestado** (foto obrigatória): a foto recortada recebe o filtro "Documento" (`utils/filtroDocumento.ts`) e vira PDF no navegador (`utils/imagemParaPdf.ts`) e vai ao Storage em `periciasMenores/{id}.pdf`. A leitura por IA continua na ação `extrair_dados_atestado` (Gemini, Apps Script).
 - **Serviço do HNRe** vem de `militares.servico_label` e só é exibido e gravado (`servico`) para militares da OM HNRe; médicos podem gravar só esse campo no cadastro (regra do Firestore).
 - Carga do histórico: `scripts/migrar-pericias-menores.mjs` (dados em `scripts/pericias-menores.json`).
 

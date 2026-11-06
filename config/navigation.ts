@@ -6,6 +6,7 @@
 // agrupamento muda, as permissões não. Um grupo sem páginas visíveis não aparece.
 import { NavItem } from '../types';
 import { PAGE_DEFS, canAccessPage } from './permissions';
+import { termosPericia } from './termosPericia';
 
 export interface NavSubItem {
   id: NavItem;
@@ -55,7 +56,7 @@ export const getNavCategories = (
       .filter(p => !(isDesktop && MOBILE_ONLY_PAGES.includes(p.id)))
       .map(p => ({
         id: p.id,
-        label: p.label,
+        label: p.id === 'pericia-menor' ? termosPericia(perfil).pagina : p.label,
         icon: p.icon,
         subtitle: p.subtitle,
         badge: p.id === 'pericia-menor' && periciaMenorVigentes > 0 ? periciaMenorVigentes : undefined,

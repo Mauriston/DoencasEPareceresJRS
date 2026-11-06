@@ -1,10 +1,16 @@
 // Ficheiro: components/periciaMenor/NovaPericiaMenorForm.tsx
-// "Nova perícia menor": barra lateral à direita (desktop) ou bottom sheet (mobile). Começa pela
-// leitura do atestado fotografado (Gemini preenche nome, data, tempo e CID) e segue por militar
-// (autocomplete na base por nome ou NIP, com cadastro rápido), serviço do HNRe (vem do cadastro
-// do militar), dados do atestado (CID por autocomplete) e homologação (tempo, dispensas, VDF).
-// Ao registrar: a foto vira PDF no Storage e a perícia é gravada no Firestore; o perito é o
-// médico logado e a data de término é calculada (data do atestado + tempo homologado - 1).
+// "Nova perícia menor" ("Novo atestado" para user_medicos_geral): barra lateral à direita (desktop)
+// ou bottom sheet (mobile). Ordem:
+//   1. "Homologação?" (atestado externo apresentado para homologação);
+//   2. Foto do atestado (obrigatória): recorte → filtro "Documento" → leitura automática pelo Gemini
+//      (militar, data, tempo, CID e, na homologação, médico emissor e CRM). Se a leitura falhar, os
+//      campos são preenchidos à mão e a foto é mantida;
+//   3. Militar (autocomplete na base, cadastro rápido) e Serviço do HNRe;
+//   4. Dados do atestado: data (dd/mm/aaaa), tempo, [tempo homologado], CID, dispensas, ENC p/ VDF.
+// Tempo: sem homologação, o tempo do atestado é o tempo de dispensa (máx. 20 dias); com homologação,
+// vale o tempo homologado (máx. 20). Somado às perícias do militar vigentes ou concluídas há até
+// 10 dias, não passa de 30 (utils/periciaMenorRegras.ts).
+// Ao registrar: a foto (já filtrada) vira PDF no Storage e a perícia é gravada no Firestore.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
@@ -17,57 +23,67 @@ import { ServicoMilitarForm } from './ServicoMilitarForm';
 import { useNav } from '../../context/NavContext';
 import { extrairDadosAtestado } from '../../services/atestadoIA';
 import { observarMilitares, type MilitarRecord } from '../../services/firestoreMilitares';
-import { enviarPdfPericiaMenor, novoIdPericiaMenor, registrarPericiaMenor } from '../../services/firestorePericiasMenores';
+import { enviarPdfPericiaMenor, novoIdPericiaMenor, observarPericiasDoMilitar, registrarPericiaMenor, dataBR, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
 import { carregarCid, normalizarBusca, omEhHnre, type CidItem } from '../../utils/corposQuadros';
 import { imagemParaPdf } from '../../utils/imagemParaPdf';
+import { aplicarFiltroDocumento } from '../../utils/filtroDocumento';
+import { dataCivilISO, hojeISO } from '../../utils/dados';
+import { MAX_DIAS_PERICIA, MAX_DIAS_ACUMULADOS, JANELA_ACUMULO_DIAS, limitarDias, mascaraDataBR, saldoAcumulado } from '../../utils/periciaMenorRegras';
 import { formatNip } from '../../utils/format';
 
 interface Props {
+  /** "Nova perícia menor" ou "Novo atestado" (perfil user_medicos_geral). */
+  titulo?: string;
   onClose: () => void;
   onRegistrado: (nome: string) => void;
 }
 
 type Erros = Record<string, string>;
 
-const MAX_HOMOLOGACAO = 20;
-
-const soDigitos = (v: string, max?: number): string => {
-  const n = v.replace(/\D/g, '');
-  if (!n) return '';
-  let num = parseInt(n, 10);
-  if (max && num > max) num = max;
-  return String(Math.max(num, 1));
-};
 const comUnidade = (v: string): string => (v ? `${v} dia${Number(v) > 1 ? 's' : ''}` : v);
-
+const digitos = (v: string) => v.replace(/\D/g, '');
 const rotuloCid = (c: CidItem) => `${c.SUBCAT} - ${c.DESCRICAO}`;
 
-export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado }) => {
+/** Aviso discreto, vermelho e à direita, logo abaixo do campo. */
+const AvisoMax: React.FC<{ visivel: boolean }> = ({ visivel }) =>
+  visivel ? <p role="status" className="mt-1 text-right text-xs font-semibold text-wine">Máx {MAX_DIAS_PERICIA} dias</p> : null;
+
+export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia menor', onClose, onRegistrado }) => {
   const nav = useNav();
   const usuario = nav?.authUser;
+  const [hoje] = useState(() => hojeISO());
 
   const [militares, setMilitares] = useState<MilitarRecord[]>([]);
   const [cids, setCids] = useState<CidItem[]>([]);
+
+  const [homologacao, setHomologacao] = useState(false);
 
   const [militarId, setMilitarId] = useState('');
   const [militarTexto, setMilitarTexto] = useState('');
   const [cadastrando, setCadastrando] = useState(false);
   const [recemCadastradoId, setRecemCadastradoId] = useState('');
   const [editandoServico, setEditandoServico] = useState(false);
+  const [anteriores, setAnteriores] = useState<PericiaMenorRecord[]>([]);
 
-  const [dataAtestado, setDataAtestado] = useState('');
+  const [dataTexto, setDataTexto] = useState('');
   const [tempoAtestado, setTempoAtestado] = useState('');
+  const [avisoMaxAtestado, setAvisoMaxAtestado] = useState(false);
+  const [tempoHomologado, setTempoHomologado] = useState('');
+  const [avisoMaxHomologado, setAvisoMaxHomologado] = useState(false);
   const [cid, setCid] = useState<CidItem | null>(null);
   const [cidTexto, setCidTexto] = useState('');
-
-  const [tempoHomologado, setTempoHomologado] = useState('');
   const [dispensas, setDispensas] = useState<string[]>([]);
   const [escolhendoDispensas, setEscolhendoDispensas] = useState(false);
   const [vdf, setVdf] = useState(false);
+  // Médico emissor e CRM (atestado externo): aparecem só na homologação e se a leitura os trouxe.
+  const [medicoEmissor, setMedicoEmissor] = useState('');
+  const [crmEmissor, setCrmEmissor] = useState('');
+  const [emissorLido, setEmissorLido] = useState(false);
 
   const [imagemBruta, setImagemBruta] = useState('');
-  const [imagemRecortada, setImagemRecortada] = useState('');
-  const [extraindo, setExtraindo] = useState(false);
+  const [imagemDoc, setImagemDoc] = useState('');
+  const [processando, setProcessando] = useState<'' | 'filtro' | 'leitura'>('');
+  const [falhaLeitura, setFalhaLeitura] = useState('');
   const arquivo = useRef<HTMLInputElement>(null);
 
   const [erros, setErros] = useState<Erros>({});
@@ -78,6 +94,12 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado })
   useEffect(() => observarMilitares(setMilitares), []);
   useEffect(() => { carregarCid().then(setCids).catch(() => setCids([])); }, []);
   const militar = militares.find(m => m.id === militarId) ?? null;
+  // Perícias anteriores do militar escolhido, para o limite de 30 dias acumulados.
+  useEffect(() => {
+    setAnteriores([]);
+    if (!militarId) return;
+    return observarPericiasDoMilitar(militarId, setAnteriores, () => setAnteriores([]));
+  }, [militarId]);
   // O Serviço do HNRe só existe para militares da OM HNRe; para as demais OMs o campo some e nada é gravado.
   const servicoAplicavel = !!militar && omEhHnre(militar.om);
   const selecionarMilitar = (m: MilitarRecord) => { setMilitarId(m.id); setMilitarTexto(m.inspecionado); limpar('militar'); };
@@ -104,7 +126,30 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado })
     return !opcoesMilitar.some(o => termos.every(t => (o.busca ?? '').includes(t)));
   }, [militar, militarTexto, opcoesMilitar]);
 
-  // ---- Leitura do atestado (foto → recorte → Gemini) ----
+  // ---- Tempo: o que conta para a dispensa e o limite de 30 dias acumulados ----
+  const tempoEfetivo = Number(digitos(homologacao ? tempoHomologado : tempoAtestado)) || 0;
+  const saldo = useMemo(() => saldoAcumulado(anteriores, hoje), [anteriores, hoje]);
+  const passaDe30 = saldo.quantidade > 0 && tempoEfetivo > 0 && saldo.usados + tempoEfetivo > MAX_DIAS_ACUMULADOS;
+  const msgAcumulado = saldo.quantidade > 0
+    ? `${saldo.quantidade === 1 ? 'Há outro registro' : `Há ${saldo.quantidade} registros`} vigente${saldo.quantidade > 1 ? 's' : ''} ou concluído${saldo.quantidade > 1 ? 's' : ''} há até ${JANELA_ACUMULO_DIAS} dias (${saldo.usados} dia${saldo.usados !== 1 ? 's' : ''}). A soma não pode passar de ${MAX_DIAS_ACUMULADOS} dias: máximo agora ${saldo.restante} dia${saldo.restante !== 1 ? 's' : ''}.`
+    : '';
+
+  const alterarTempoAtestado = (texto: string, homolog = homologacao) => {
+    const r = limitarDias(texto, homolog ? undefined : MAX_DIAS_PERICIA);
+    setTempoAtestado(r.valor); setAvisoMaxAtestado(r.cortado); limpar('tempoAtestado');
+  };
+  const alterarTempoHomologado = (texto: string) => {
+    const r = limitarDias(texto, MAX_DIAS_PERICIA);
+    setTempoHomologado(r.valor); setAvisoMaxHomologado(r.cortado); limpar('tempoHomologado');
+  };
+  const alternarHomologacao = (marcado: boolean) => {
+    setHomologacao(marcado);
+    // Sem homologação, o tempo do atestado volta ao limite de 20 dias.
+    if (!marcado && tempoAtestado) alterarTempoAtestado(tempoAtestado, false);
+    if (!marcado) { setTempoHomologado(''); setAvisoMaxHomologado(false); limpar('tempoHomologado'); }
+  };
+
+  // ---- Foto do atestado: recorte → filtro "Documento" → leitura automática ----
   const aoEscolherArquivo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     e.target.value = '';
@@ -114,41 +159,57 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado })
     leitor.readAsDataURL(f);
   };
 
-  const extrairDados = async () => {
-    if (!imagemRecortada) return;
-    setExtraindo(true);
-    setErros(e => ({ ...e, geral: '' }));
+  const aplicarDados = (dados: Awaited<ReturnType<typeof extrairDadosAtestado>>) => {
+    const iso = dados.dataAtestado ? dataCivilISO(String(dados.dataAtestado)) : null;
+    if (iso) { setDataTexto(dataBR(iso)); limpar('dataAtestado'); }
+    if (dados.tempoAtestado) alterarTempoAtestado(String(dados.tempoAtestado));
+    if (dados.cid) {
+      const codigo = String(dados.cid).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const achado = cids.find(c => c.SUBCAT.toLowerCase() === codigo) ?? cids.find(c => c.SUBCAT.toLowerCase().startsWith(codigo));
+      if (achado) { setCid(achado); setCidTexto(rotuloCid(achado)); limpar('cid'); } else { setCid(null); setCidTexto(String(dados.cid)); }
+    }
+    if (dados.nomeMilitar) {
+      const termos = normalizarBusca(String(dados.nomeMilitar)).split(/\s+/).filter(Boolean);
+      const achados = militares.filter(m => { const alvo = normalizarBusca(m.inspecionado); return termos.every(t => alvo.includes(t)); });
+      if (achados.length === 1) selecionarMilitar(achados[0]);
+      else { setMilitarId(''); setMilitarTexto(String(dados.nomeMilitar)); }
+    }
+    const medico = String(dados.medicoEmissor || '').trim();
+    const crm = String(dados.crmEmissor || '').trim();
+    setMedicoEmissor(medico); setCrmEmissor(crm); setEmissorLido(!!(medico || crm));
+  };
+
+  const aoConfirmarRecorte = async (recortada: string) => {
+    setImagemBruta('');
+    setFalhaLeitura('');
+    limpar('foto');
+    setProcessando('filtro');
+    let doc = recortada;
+    try { doc = await aplicarFiltroDocumento(recortada); } catch { /* sem filtro, segue com a foto recortada */ }
+    setImagemDoc(doc);
+    setProcessando('leitura');
     try {
-      const dados = await extrairDadosAtestado(imagemRecortada.split(',')[1]);
-      if (dados.dataAtestado) { setDataAtestado(String(dados.dataAtestado)); limpar('dataAtestado'); }
-      if (dados.tempoAtestado) { setTempoAtestado(soDigitos(String(dados.tempoAtestado))); limpar('tempoAtestado'); }
-      if (dados.cid) {
-        const codigo = String(dados.cid).toLowerCase().replace(/[^a-z0-9]/g, '');
-        const achado = cids.find(c => c.SUBCAT.toLowerCase() === codigo) ?? cids.find(c => c.SUBCAT.toLowerCase().startsWith(codigo));
-        if (achado) { setCid(achado); setCidTexto(rotuloCid(achado)); limpar('cid'); } else { setCid(null); setCidTexto(String(dados.cid)); }
-      }
-      if (dados.nomeMilitar) {
-        const termos = normalizarBusca(String(dados.nomeMilitar)).split(/\s+/).filter(Boolean);
-        const achados = militares.filter(m => { const alvo = normalizarBusca(m.inspecionado); return termos.every(t => alvo.includes(t)); });
-        if (achados.length === 1) selecionarMilitar(achados[0]);
-        else { setMilitarId(''); setMilitarTexto(String(dados.nomeMilitar)); }
-      }
+      aplicarDados(await extrairDadosAtestado(doc.split(',')[1]));
     } catch (err: any) {
-      setErros(e => ({ ...e, geral: err?.message || 'Não foi possível ler o atestado.' }));
+      setFalhaLeitura(`${err?.message || 'Não foi possível ler o atestado.'} Preencha os campos abaixo; a foto será arquivada.`);
     } finally {
-      setExtraindo(false);
+      setProcessando('');
     }
   };
 
   // ---- Envio ----
+  const dataAtestado = dataCivilISO(dataTexto) || '';
   const validar = (): Erros => {
     const e: Erros = {};
+    if (!imagemDoc) e.foto = 'Fotografe o atestado.';
     if (!militar) e.militar = 'Escolha o militar na lista.';
-    if (!dataAtestado) e.dataAtestado = 'Informe a data do atestado.';
-    if (!soDigitos(tempoAtestado)) e.tempoAtestado = 'Informe o tempo do atestado.';
+    if (!dataTexto) e.dataAtestado = 'Informe a data do atestado.';
+    else if (!dataAtestado) e.dataAtestado = 'Data inválida (dd/mm/aaaa).';
+    if (!digitos(tempoAtestado)) e.tempoAtestado = 'Informe o tempo do atestado.';
+    if (homologacao && !digitos(tempoHomologado)) e.tempoHomologado = 'Informe o tempo homologado.';
     if (!cid) e.cid = 'Escolha o CID na lista.';
-    if (!soDigitos(tempoHomologado)) e.tempoHomologado = 'Informe o tempo homologado.';
     if (dispensas.length === 0) e.dispensas = 'Selecione ao menos uma dispensa.';
+    if (passaDe30) e[homologacao ? 'tempoHomologado' : 'tempoAtestado'] = `Total acima de ${MAX_DIAS_ACUMULADOS} dias com o registro anterior: máximo agora ${saldo.restante} dia${saldo.restante !== 1 ? 's' : ''}.`;
     return e;
   };
 
@@ -164,54 +225,96 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado })
     setSalvando(true);
     try {
       const id = novoIdPericiaMenor();
-      const pdfUrl = imagemRecortada ? await enviarPdfPericiaMenor(id, await imagemParaPdf(imagemRecortada)) : '';
+      const pdfUrl = await enviarPdfPericiaMenor(id, await imagemParaPdf(imagemDoc));
+      const medico = medicoEmissor.trim();
+      const crm = crmEmissor.trim();
       await registrarPericiaMenor(id, {
         militarId: militar.id, inspecionado: militar.inspecionado, om: militar.om,
         ...(servicoAplicavel && militar.servico_label ? { servico: militar.servico_label } : {}),
-        cid: rotuloCid(cid), dispensas, dataAtestado, tempoAtestado: Number(soDigitos(tempoAtestado)), tempoHomologado: Number(soDigitos(tempoHomologado)),
+        cid: rotuloCid(cid), dispensas, dataAtestado,
+        tempoAtestado: Number(digitos(tempoAtestado)),
+        // O que conta para a dispensa: o homologado (na homologação) ou o próprio tempo do atestado.
+        tempoHomologado: tempoEfetivo,
+        homologacao,
+        ...(homologacao && medico ? { medicoEmissor: medico } : {}),
+        ...(homologacao && crm ? { crmEmissor: crm } : {}),
         vdf, peritoUsuario: usuario.usuario, peritoNome: usuario.nome, peritoUid: usuario.uid, pdfUrl,
       });
       onRegistrado(militar.nome);
     } catch (err: any) {
-      setErros({ geral: err?.message || 'Não foi possível registrar a perícia menor.' });
+      setErros({ geral: err?.message || 'Não foi possível registrar.' });
       setSalvando(false);
     }
   };
 
   const resumoDispensas = dispensas.length === 0 ? 'Selecione as dispensas…' : dispensas.join(', ');
   const secao = 'font-heading font-bold text-navy text-base';
+  // Campo de dias: só números ao digitar; "N dias" ao sair do campo.
+  const tempoField = (rotulo: string, valor: string, setValor: React.Dispatch<React.SetStateAction<string>>, erro: string | undefined, aviso: boolean, aoMudar: (t: string) => void) => (
+    <div>
+      <Field label={rotulo} required error={erro}>
+        {a => (
+          <input {...a} type="text" inputMode="numeric" placeholder="Dias" value={valor}
+            onChange={e => aoMudar(e.target.value)}
+            onBlur={() => setValor(t => comUnidade(digitos(t)))}
+            onFocus={() => setValor(t => digitos(t))} />
+        )}
+      </Field>
+      <AvisoMax visivel={aviso && !erro} />
+    </div>
+  );
 
   return (
     <>
       <Drawer
-        title="Nova perícia menor"
+        title={titulo}
         icon="personal_injury"
         onClose={() => { if (!salvando) onClose(); }}
         footer={(
           <>
             <Button variant="secondary" onClick={onClose} disabled={salvando}>Cancelar</Button>
-            <Button type="submit" form="form-nova-pericia" icon="check" loading={salvando}>Registrar</Button>
+            <Button type="submit" form="form-nova-pericia" icon="check" loading={salvando} disabled={!!processando}>Registrar</Button>
           </>
         )}
       >
         <form id="form-nova-pericia" onSubmit={registrar} noValidate className="space-y-6">
           {erros.geral && <p role="alert" className="text-sm font-semibold text-wine">{erros.geral}</p>}
 
-          <section className="space-y-2" aria-labelledby="pm-ia">
-            <h3 id="pm-ia" className={secao}>Fotografar atestado</h3>
-            <p className="text-xs text-ink-3">Fotografe o atestado para preencher militar, data, tempo e CID automaticamente. Opcional; a foto é guardada em PDF.</p>
+          <label className="flex items-center gap-3 min-h-[44px] cursor-pointer text-sm font-bold text-navy">
+            <input type="checkbox" className="w-5 h-5 accent-navy" checked={homologacao} onChange={e => alternarHomologacao(e.target.checked)} />
+            Homologação?
+          </label>
+
+          <section className="space-y-2" aria-labelledby="pm-foto">
+            <h3 id="pm-foto" className={secao}>Fotografar atestado<span className="text-wine ml-0.5" aria-hidden="true">*</span><span className="sr-only"> (obrigatório)</span></h3>
             <input type="file" accept="image/*" capture="environment" ref={arquivo} onChange={aoEscolherArquivo} className="hidden" />
-            {!imagemRecortada ? (
-              <Button variant="secondary" icon="photo_camera" onClick={() => arquivo.current?.click()}>Fotografar atestado</Button>
+            {!imagemDoc && !processando ? (
+              <Button variant="secondary" icon="photo_camera" onClick={() => arquivo.current?.click()} aria-invalid={!!erros.foto || undefined} aria-describedby={erros.foto ? 'pm-foto-erro' : undefined}>Fotografar atestado</Button>
             ) : (
-              <div className="flex items-center gap-3">
-                <img src={imagemRecortada} alt="Atestado recortado" className="w-16 h-16 rounded-lg object-cover border border-line shrink-0" />
-                <div className="flex flex-wrap gap-2">
-                  <Button icon="auto_awesome" loading={extraindo} onClick={extrairDados}>{extraindo ? 'Analisando…' : 'Extrair dados'}</Button>
-                  <Button variant="secondary" disabled={extraindo} onClick={() => setImagemRecortada('')}>Refazer</Button>
-                </div>
+              <div className="relative rounded-lg border border-line bg-white overflow-hidden">
+                {imagemDoc
+                  ? <img src={imagemDoc} alt="Atestado fotografado (filtro Documento)" className="w-full max-h-[55vh] object-contain bg-white" />
+                  : <div className="h-48" aria-hidden="true" />}
+                {processando && (
+                  <div className="absolute inset-0 bg-white/75 flex items-center justify-center gap-2 text-sm font-bold text-navy" role="status">
+                    <span className="w-5 h-5 border-2 border-navy/20 border-t-navy rounded-full animate-spin" aria-hidden="true" />
+                    {processando === 'filtro' ? 'Tratando a foto…' : 'Lendo o atestado…'}
+                  </div>
+                )}
+                {!processando && (
+                  <button
+                    type="button" onClick={() => arquivo.current?.click()} aria-label="Refazer foto do atestado" title="Refazer foto"
+                    className="group absolute bottom-1 right-1 w-11 h-11 flex items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
+                  >
+                    <span className="w-8 h-8 rounded-full bg-navy/60 group-hover:bg-navy text-white flex items-center justify-center transition-colors">
+                      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">restart_alt</span>
+                    </span>
+                  </button>
+                )}
               </div>
             )}
+            {erros.foto && <p id="pm-foto-erro" role="alert" className="text-xs font-semibold text-wine">{erros.foto}</p>}
+            {falhaLeitura && <p role="status" className="text-xs font-semibold text-wine">{falhaLeitura}</p>}
           </section>
 
           <section className="space-y-4" aria-labelledby="pm-militar">
@@ -250,35 +353,30 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado })
             <h3 id="pm-atestado" className={secao}>Dados do atestado</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Data do atestado" required error={erros.dataAtestado}>
-                {a => <input {...a} type="date" value={dataAtestado} onChange={e => { setDataAtestado(e.target.value); limpar('dataAtestado'); }} />}
+                {a => <input {...a} type="text" inputMode="numeric" placeholder="dd/mm/aaaa" maxLength={10} autoComplete="off" value={dataTexto} onChange={e => { setDataTexto(mascaraDataBR(e.target.value)); limpar('dataAtestado'); }} />}
               </Field>
-              <Field label="Tempo do atestado" required error={erros.tempoAtestado}>
-                {a => (
-                  <input {...a} type="text" inputMode="numeric" placeholder="Dias" value={tempoAtestado}
-                    onChange={e => { setTempoAtestado(soDigitos(e.target.value)); limpar('tempoAtestado'); }}
-                    onBlur={() => setTempoAtestado(t => comUnidade(soDigitos(t)))}
-                    onFocus={() => setTempoAtestado(t => soDigitos(t))} />
-                )}
-              </Field>
+              {tempoField('Tempo do atestado', tempoAtestado, setTempoAtestado, erros.tempoAtestado, avisoMaxAtestado && !homologacao, alterarTempoAtestado)}
+              {homologacao && tempoField('Tempo homologado', tempoHomologado, setTempoHomologado, erros.tempoHomologado, avisoMaxHomologado, alterarTempoHomologado)}
             </div>
+            {msgAcumulado && !erros.tempoAtestado && !erros.tempoHomologado && (
+              <p className={`text-xs ${passaDe30 ? 'font-semibold text-wine' : 'text-ink-3'}`} role={passaDe30 ? 'alert' : undefined}>{msgAcumulado}</p>
+            )}
+            {homologacao && emissorLido && (
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_10rem] gap-4">
+                <Field label="Médico" help="Emissor do atestado (lido da foto; corrija se preciso).">
+                  {a => <input {...a} type="text" value={medicoEmissor} onChange={e => setMedicoEmissor(e.target.value)} />}
+                </Field>
+                <Field label="CRM">
+                  {a => <input {...a} type="text" value={crmEmissor} onChange={e => setCrmEmissor(e.target.value)} />}
+                </Field>
+              </div>
+            )}
             <Autocomplete
               label="CID" required error={erros.cid} placeholder="Digite o código ou a descrição do CID"
               valor={cidTexto} opcoes={opcoesCid}
               onDigitar={t => { setCidTexto(t); setCid(null); limpar('cid'); }}
               onSelecionar={o => { const c = cids.find(x => x.SUBCAT === o.chave); if (c) { setCid(c); setCidTexto(rotuloCid(c)); limpar('cid'); } }}
             />
-          </section>
-
-          <section className="space-y-4" aria-labelledby="pm-homolog">
-            <h3 id="pm-homolog" className={secao}>Homologação</h3>
-            <Field label="Tempo homologado" required error={erros.tempoHomologado} help={`Máximo de ${MAX_HOMOLOGACAO} dias.`}>
-              {a => (
-                <input {...a} type="text" inputMode="numeric" placeholder="Dias" value={tempoHomologado}
-                  onChange={e => { setTempoHomologado(soDigitos(e.target.value, MAX_HOMOLOGACAO)); limpar('tempoHomologado'); }}
-                  onBlur={() => setTempoHomologado(t => comUnidade(soDigitos(t, MAX_HOMOLOGACAO)))}
-                  onFocus={() => setTempoHomologado(t => soDigitos(t, MAX_HOMOLOGACAO))} />
-              )}
-            </Field>
             <Field label="Dispensas" required error={erros.dispensas}>
               {a => (
                 <button
@@ -293,7 +391,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado })
             </Field>
             <label className="flex items-center gap-3 min-h-[44px] cursor-pointer text-sm font-semibold text-ink">
               <input type="checkbox" className="w-5 h-5 accent-navy" checked={vdf} onChange={e => setVdf(e.target.checked)} />
-              VDF
+              ENC p/ VDF?
             </label>
           </section>
         </form>
@@ -303,7 +401,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ onClose, onRegistrado })
         <RecorteAtestado
           imagem={imagemBruta}
           onCancelar={() => setImagemBruta('')}
-          onConfirmar={url => { setImagemRecortada(url); setImagemBruta(''); }}
+          onConfirmar={url => { void aoConfirmarRecorte(url); }}
         />
       )}
       {escolhendoDispensas && (

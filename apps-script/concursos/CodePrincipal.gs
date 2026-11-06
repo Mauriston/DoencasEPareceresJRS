@@ -28,8 +28,9 @@ function doPostPrincipal(e) {
         "contents": [{
           "parts": [
             {
-              // Documentação: Atualização no Prompt para buscar também o nome do Militar.
-              "text": "Extraia os seguintes 4 dados da imagem do atestado médico:\n1) nomeMilitar (o nome completo do paciente)\n2) dataAtestado (no formato YYYY-MM-DD)\n3) tempoAtestado (apenas o número de dias)\n4) cid (apenas o código principal, ex: M54.5).\nResponda estritamente num formato JSON válido com as chaves exatas 'nomeMilitar', 'dataAtestado', 'tempoAtestado', 'cid'."
+              // Paciente, data, dias e CID; e o médico que EMITIU o atestado (nome e CRM), usados
+              // quando o atestado externo é apresentado para homologação. Campo ausente: string vazia.
+              "text": "Extraia os seguintes 6 dados da imagem do atestado médico:\n1) nomeMilitar (o nome completo do paciente)\n2) dataAtestado (no formato YYYY-MM-DD)\n3) tempoAtestado (apenas o número de dias)\n4) cid (apenas o código principal, ex: M54.5)\n5) medicoEmissor (o nome do médico que assina/emite o atestado, como aparece no carimbo ou na assinatura)\n6) crmEmissor (o número do CRM do médico emissor, com a UF se houver, ex: 12345-PE).\nSe algum dado não estiver legível ou presente, use string vazia. Não invente dados.\nResponda estritamente num formato JSON válido com as chaves exatas 'nomeMilitar', 'dataAtestado', 'tempoAtestado', 'cid', 'medicoEmissor', 'crmEmissor'."
             },
             {
               "inline_data": {

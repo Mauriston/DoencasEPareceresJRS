@@ -16,6 +16,7 @@ import { StatusTag, type StatusTone } from './ui/StatusTag';
 import { EmptyState } from './ui/EmptyState';
 import { NavContext, getPrimeiroNome } from '../context/NavContext';
 import { getNavCategories } from '../config/navigation';
+import { termosPericia } from '../config/termosPericia';
 import { canAccessPage, canUseFeature } from '../config/permissions';
 import { pathForView, concursoPath, concursosDiaPath } from '../config/routes';
 import { observarConcursos, type ConcursoRecord } from '../services/firestoreConcursos';
@@ -129,6 +130,7 @@ export const Home: React.FC = () => {
   const podePericiaMenor = canAccessPage('pericia-menor', perfil);
   const podeGerarParecer = podePareceres && canUseFeature('pareceres.gerar', perfil);
   const podeNovaPericia = canUseFeature('pericia-menor.novo', perfil);
+  const termosPm = termosPericia(perfil);
   const podeEnviarExames = podeConcursos && canUseFeature('concursosJRS.enviarExamesCandidato', perfil);
   // Envio dos exames de um candidato direto da Home: o candidato é escolhido no
   // próprio sheet, entre os dos concursos em andamento (ver `enviarExames` abaixo).
@@ -230,7 +232,9 @@ export const Home: React.FC = () => {
   }
   if (podePericiaMenor && periciaMenorVigentes > 0) {
     atencao.push({
-      id: 'pm', icone: 'personal_injury', titulo: `${periciaMenorVigentes} perícia${periciaMenorVigentes !== 1 ? 's' : ''} menor${periciaMenorVigentes !== 1 ? 'es' : ''} vigente${periciaMenorVigentes !== 1 ? 's' : ''}`,
+      id: 'pm', icone: 'personal_injury', titulo: termosPm.pagina === 'Atestados'
+        ? `${periciaMenorVigentes} atestado${periciaMenorVigentes !== 1 ? 's' : ''} vigente${periciaMenorVigentes !== 1 ? 's' : ''}`
+        : `${periciaMenorVigentes} perícia${periciaMenorVigentes !== 1 ? 's' : ''} menor${periciaMenorVigentes !== 1 ? 'es' : ''} vigente${periciaMenorVigentes !== 1 ? 's' : ''}`,
       detalhe: periciaMenorVigentes === 1 ? 'Militar com dispensa em curso' : 'Militares com dispensa em curso', tag: 'Vigente', tom: 'danger', to: '/pericia-menor/historico',
     });
   }
@@ -272,7 +276,7 @@ export const Home: React.FC = () => {
         {(podeNovaPericia && podePericiaMenor || podeGerarParecer || mostrarEnviarExames) && (
           <div className="flex flex-col-reverse sm:flex-row gap-2">
             {mostrarEnviarExames && <button type="button" onClick={() => setEnviarExames(true)} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">lab_profile</span>Enviar exames de concurso</button>}
-            {podeNovaPericia && podePericiaMenor && <Link to="/pericia-menor?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">personal_injury</span>Nova perícia menor</Link>}
+            {podeNovaPericia && podePericiaMenor && <Link to="/pericia-menor?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">personal_injury</span>{termosPm.novo}</Link>}
             {podeGerarParecer && <Link to="/pareceres?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>Novo parecer</Link>}
           </div>
         )}
@@ -366,19 +370,19 @@ export const Home: React.FC = () => {
             )}
 
             {podePericiaMenor && vigentes.length > 0 && (
-              <Secao id="home-pericias" titulo={`Perícias Menores Vigentes (${vigentes.length})`} acao={<Link to="/pericia-menor/historico" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver perícias</Link>}>
+              <Secao id="home-pericias" titulo={`${termosPm.pagina === 'Atestados' ? 'Atestados vigentes' : 'Perícias Menores Vigentes'} (${vigentes.length})`} acao={<Link to="/pericia-menor/historico" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">{termosPm.pagina === 'Atestados' ? 'Ver atestados' : 'Ver perícias'}</Link>}>
                 <ul className="divide-y divide-line">
                   {vigentes.slice(0, 6).map(p => (
                     <li key={p.id}>
                       <LinhaDocumento
-                        icone="personal_injury" titulo={extrairNomeInspecionado(p.inspecionado)} detalhe={`Perícia Menor · ${p.cid}`}
+                        icone="personal_injury" titulo={extrairNomeInspecionado(p.inspecionado)} detalhe={`${termosPm.pagina} · ${p.cid}`}
                         data={`até ${dataBR(p.dataTermino)}`} link={p.pdfUrl} to="/pericia-menor/historico"
                         tag={<StatusTag tone="danger" className="shrink-0">Vigente</StatusTag>}
                       />
                     </li>
                   ))}
                 </ul>
-                {vigentes.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{vigentes.length - 6} em Perícia Menor.</p>}
+                {vigentes.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{vigentes.length - 6} em {termosPm.pagina}.</p>}
               </Secao>
             )}
           </div>
