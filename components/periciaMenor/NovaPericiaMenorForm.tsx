@@ -29,7 +29,7 @@ import { carregarCid, normalizarBusca, omEhHnre, type CidItem } from '../../util
 import { imagemParaPdf } from '../../utils/imagemParaPdf';
 import { aplicarFiltroDocumento } from '../../utils/filtroDocumento';
 import { dataCivilISO, hojeISO } from '../../utils/dados';
-import { MAX_DIAS_PERICIA, MAX_DIAS_ACUMULADOS, JANELA_ACUMULO_DIAS, limitarDias, mascaraDataBR, saldoAcumulado } from '../../utils/periciaMenorRegras';
+import { MAX_DIAS_PERICIA, MAX_DIAS_ACUMULADOS, JANELA_ACUMULO_DIAS, limitarDias, saldoAcumulado } from '../../utils/periciaMenorRegras';
 import { formatNip } from '../../utils/format';
 
 interface Props {
@@ -358,7 +358,22 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
             <h3 id="pm-atestado" className={secao}>Dados do atestado</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Data do atestado" required error={erros.dataAtestado}>
-                {a => <input {...a} type="text" inputMode="numeric" placeholder="dd/mm/aaaa" maxLength={10} autoComplete="off" value={dataTexto} onChange={e => { setDataTexto(mascaraDataBR(e.target.value)); limpar('dataAtestado'); }} />}
+                {a => (
+                  // Seletor de data nativo (calendário/rolagem do aparelho) sob uma "casca" que mostra dd/mm/aaaa:
+                  // o input nativo cobre o campo, transparente — no iPhone o formato longo não estoura a largura.
+                  <div className="relative group">
+                    <div aria-hidden="true" className={`${a.className} flex items-center justify-between gap-2 pointer-events-none group-focus-within:border-navy group-focus-within:ring-1 group-focus-within:ring-navy`}>
+                      <span className={dataTexto ? 'text-ink' : 'text-ink-4'}>{dataTexto || 'dd/mm/aaaa'}</span>
+                      <span className="material-symbols-outlined text-[20px] text-ink-3">calendar_month</span>
+                    </div>
+                    <input
+                      {...a} type="date" max={hoje} value={dataAtestado}
+                      onChange={e => { setDataTexto(dataBR(e.target.value)); limpar('dataAtestado'); }}
+                      onClick={e => { try { (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.(); } catch { /* sem showPicker: o navegador abre o seletor sozinho */ } }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer appearance-none"
+                    />
+                  </div>
+                )}
               </Field>
               {tempoField('Tempo do atestado', tempoAtestado, setTempoAtestado, erros.tempoAtestado, avisoMaxAtestado && !homologacao, alterarTempoAtestado)}
               {homologacao && tempoField('Tempo homologado', tempoHomologado, setTempoHomologado, erros.tempoHomologado, avisoMaxHomologado, alterarTempoHomologado)}
