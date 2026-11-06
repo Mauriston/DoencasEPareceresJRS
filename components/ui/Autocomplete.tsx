@@ -29,7 +29,7 @@ interface AutocompleteProps {
   maxOpcoes?: number;
   className?: string;
   /** Quando a busca não encontra nada, oferece este botão (ex.: "Cadastrar novo") no fim da lista. */
-  aoNaoEncontrar?: { rotulo: string; onClick: () => void };
+  aoNaoEncontrar?: { rotulo: string; onClick: () => void; /** Material Symbol do botão (padrão: person_add). */ icone?: string };
 }
 
 export const Autocomplete: React.FC<AutocompleteProps> = ({
@@ -98,7 +98,7 @@ export const Autocomplete: React.FC<AutocompleteProps> = ({
                   onClick={() => { setAberto(false); aoNaoEncontrar.onClick(); }}
                   className="mt-2 inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg border border-navy text-navy font-bold hover:bg-thead"
                 >
-                  <span className="material-symbols-outlined text-[20px]" aria-hidden="true">person_add</span>
+                  <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{aoNaoEncontrar.icone ?? 'person_add'}</span>
                   {aoNaoEncontrar.rotulo}
                 </button>
               )}
