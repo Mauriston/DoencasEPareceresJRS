@@ -9,7 +9,8 @@
 import type { FirebaseApp } from 'firebase/app';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 
-export const RECAPTCHA_ENTERPRISE_SITE_KEY = '6LeUrQkuAAAAAORpLMUWK4T0BeNTaI9yD85nxn1K';
+// Chave "app-jrs-hnre" (Google Cloud > Segurança > Fraud Defense), domínio mauriston.github.io.
+export const RECAPTCHA_ENTERPRISE_SITE_KEY = '6LdtjBMuAAAAADcsZuWXKZS2PU8MMvV0tA2z5-K3';
 
 export const iniciarAppCheck = (app: FirebaseApp): void => {
   if (typeof window === 'undefined') return;
