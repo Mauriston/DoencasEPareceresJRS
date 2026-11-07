@@ -87,7 +87,9 @@ Estes termos aparecem na fala do perito ou nos documentos trazidos. A IA NÃO es
 - MPI / MPIQ — Médico Perito Isolado / Médico Perito Isolado Qualificado.
 - OM — Organização Militar.
 - PMI — Prontuário Médico Individual.
-- RM1 — Reserva Remunerada.
+- RM1 — Reserva de 1ª Classe da Marinha (Reserva Remunerada).
+- RM2 — Reserva de 2ª Classe da Marinha: militares temporários (SMV/SMI) e convocados (ex.: "Oficial Médico RM2", "praças RM2").
+- RM3 — Reserva de 3ª Classe da Marinha.
 - SAM — Serviço Ativo da Marinha.
 - SC — Servidor Civil.
 - SEIS — Sistema Eletrônico de Inspeção de Saúde.
