@@ -455,7 +455,8 @@ O mesmo script liga a **proteção contra exclusão** do banco `(default)` (`del
 - Critério: reprova se uma coleção essencial (`usuarios`, `militares`, `concursos`) que tem dados vier vazia; coleções criadas depois do snapshot e diferenças de contagem viram aviso.
 - **Agenda:** trimestral (1º de janeiro, abril, julho e outubro), pelo workflow *Backup do Firestore*, ou manual (*Actions → Backup do Firestore → Run workflow → restauracao*).
 - Credencial: secret `BACKUP_SA_KEY` (ou `GCP_SA_KEY`) com o papel *Cloud Datastore Owner*.
-- O comparador foi validado contra a produção em 06/11/2026 (14 coleções contadas). O primeiro teste completo de restauração depende de rodar o workflow (ou o script) com essa credencial.
+- **Primeiro teste completo — 06/11/2026: APROVADO.** Backup de 02/11/2026 (05:34 UTC) restaurado em `restauracao-teste` em ~11 minutos; banco temporário apagado em seguida. Contagens (produção → restaurado): `usuarios` 38 → 10, `militares` 433 → 260, `concursos` 16 → 15, `periciasMenores` 12 → 6, `documentos_gerados` 25 → 1 (diferenças = registros criados depois do snapshot, como as 30 contas de médicos gerais e a importação de inspecionados); `inspecoes`, `bloqueiosAgenda`, `pareceres`, `legislacao`, `videos`, `apresentacoes` e `quesitosParecer` idênticas; `escalaSpa` vazia no backup (coleção criada em 06/11, depois do snapshot).
+- Para o teste trimestral automático, a credencial do workflow precisa do papel *Cloud Datastore Owner*.
 
 ### 18.5 Como recuperar
 
