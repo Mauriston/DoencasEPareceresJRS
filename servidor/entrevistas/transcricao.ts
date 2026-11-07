@@ -23,7 +23,7 @@ export const projetoGoogle = () => (process.env.GOOGLE_CLOUD_PROJECT || process.
 
 /** Siglas usadas nas entrevistas da junta (reforçadas no reconhecimento de fala). */
 export const SIGLAS_JUNTA = [
-  'VDF', 'TAF', 'TFM', 'IS', 'JRS', 'JSD', 'JSS', 'AO', 'ISO', 'TIS', 'SAM', 'SMV', 'SMI', 'DGPM', 'CID', 'LTS', 'HNRe', 'OM', 'IMS',
+  'VDF', 'TAF', 'TFM', 'IS', 'JRS', 'JSD', 'JSS', 'AO', 'ISO', 'TIS', 'SAM', 'SMV', 'SMI', 'DGPM', 'CID', 'LTS', 'HNRe', 'OM', 'RM1', 'RM2', 'RM3',
 ] as const;
 export const BOOST_NOME = 10;
 export const BOOST_SIGLA = 5;
