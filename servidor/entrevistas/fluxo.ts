@@ -108,12 +108,18 @@ const localizarOriginal = async (bucket: Bucket, isId: string, entrevistaId: str
   return achado;
 };
 
+/** Campos apagados ao refazer a transcrição de uma entrevista pronta (o `audio` é regravado). */
+export const CAMPOS_DESCARTADOS_AO_REFAZER = [
+  'transcricao', 'anamnese', 'mapaFalantes', 'falantesConfirmados', 'anamneseEditada', 'editadoPor', 'revisada', 'erro', 'operacaoSpeech',
+] as const;
+
 export interface PedidoProcessar { isId: string; entrevistaId: string; caminho: unknown; mimeType: unknown; duracaoSeg: unknown }
 
 export const processarEntrevista = async (db: Firestore, bucket: Bucket, p: PedidoProcessar): Promise<SituacaoEntrevista> => {
   const ref = refEntrevista(db, p.isId, p.entrevistaId);
-  // Reprocessar (botão "Tentar novamente" do resultado): sem caminho, usa o original que já está no Storage.
-  if (!p.caminho) p = { ...p, caminho: await localizarOriginal(bucket, p.isId, p.entrevistaId) };
+  // Reprocessar ("Tentar novamente" / "Refazer transcrição"): sem caminho, usa o original que já está no Storage.
+  const reprocessamento = !p.caminho;
+  if (reprocessamento) p = { ...p, caminho: await localizarOriginal(bucket, p.isId, p.entrevistaId) };
   const ext = extensaoDoCaminhoOriginal(p.caminho, p.isId, p.entrevistaId);
   if (!ext) throw new ErroEntrevista(400, 'Caminho do áudio inválido.');
   const caminho = p.caminho as string;
@@ -128,13 +134,20 @@ export const processarEntrevista = async (db: Firestore, bucket: Bucket, p: Pedi
   if (bytes > MAX_BYTES_AUDIO) throw new ErroEntrevista(413, 'O áudio é grande demais.');
 
   // Reserva a entrevista (aguardando_envio | erro → transcrevendo) para não processar duas vezes.
+  // `pronta` só no reprocessamento explícito (sem caminho: "Refazer transcrição"), que descarta
+  // transcrição, anamnese, falantes e edições.
   const FieldValue = await fv();
   const d = await db.runTransaction(async tx => {
     const atual = await lerDoc(ref, tx);
-    if (atual.situacao !== 'aguardando_envio' && atual.situacao !== 'erro') {
+    const refazer = reprocessamento && atual.situacao === 'pronta';
+    if (atual.situacao !== 'aguardando_envio' && atual.situacao !== 'erro' && !refazer) {
       throw new ErroEntrevista(409, 'Esta entrevista já está em processamento ou pronta.');
     }
+    const descartar = refazer
+      ? Object.fromEntries(CAMPOS_DESCARTADOS_AO_REFAZER.map(c => [c, FieldValue.delete()]))
+      : {};
     tx.update(ref, {
+      ...descartar,
       situacao: 'transcrevendo', transcrevendoDesde: Date.now(),
       erro: FieldValue.delete(), operacaoSpeech: FieldValue.delete(),
       atualizadoEm: FieldValue.serverTimestamp(),
@@ -154,7 +167,7 @@ export const processarEntrevista = async (db: Firestore, bucket: Bucket, p: Pedi
       if (!size) throw new Error('conversão vazia');
       await bucket.upload(saida, { destination: caminhoFlac, contentType: 'audio/flac', metadata: { cacheControl: 'private, no-store' } });
     });
-    const operacao = await iniciarTranscricao(`gs://${bucket.name}/${caminhoFlac}`, nParticipantes);
+    const operacao = await iniciarTranscricao(`gs://${bucket.name}/${caminhoFlac}`, nParticipantes, Array.isArray(d.participantes) ? d.participantes : []);
     await ref.update({
       audio: { caminho, mimeType, bytes, duracaoSeg, apagarApos: dataApagarApos(dataDaEntrevista(d), DIAS_RETENCAO_AUDIO) },
       operacaoSpeech: operacao,
