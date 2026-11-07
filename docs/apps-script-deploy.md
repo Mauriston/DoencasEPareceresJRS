@@ -49,13 +49,13 @@ Depois de alterar um `.gs` no repositório (e mergear na `main`):
 
 - **Logs:** use `logSeguro_(contexto, erro)` (CodeConcursos.gs); nunca `Logger.log` com corpo, NIP, nome, CID ou token.
 - **Gemini:** todas as chamadas passam por `chamarGemini`, que tenta de novo nas falhas passageiras (429 limite de uso, 500, 503; esperas de 2 s e 4 s) e devolve mensagens claras de cota ou indisponibilidade.
-- **E-mail para impressão:** `garantirCotaEmail` verifica a cota diária do `MailApp` antes de enviar. O documento é gerado e salvo **antes** do e-mail: se o envio falhar, o app avisa, o PDF continua salvo no Drive e o documento continua na fila de impressão da Secretaria (Início).
+- **E-mail para impressão** (reserva do servidor — ADR-013; só é usado enquanto a conta Google da JRS não estiver autorizada no servidor): `garantirCotaEmail` verifica a cota diária do `MailApp` antes de enviar. O documento é gerado e salvo **antes** do e-mail: se o envio falhar, o app avisa, o PDF continua salvo no Drive e o documento continua na fila de impressão da Secretaria (Início).
 
 ## Cuidados
 
 - **A direção é sempre repositório → editor.** Se alguém editar direto no editor, a alteração não está versionada e some na próxima colagem. Quando isso acontecer, traga o código do editor para o repositório antes de qualquer outra coisa.
 - **Permissões novas**: se uma versão passar a usar um serviço que o projeto ainda não usava (ex.: Drive, Agenda), o dono precisa autorizar uma vez — no editor, rode qualquer função e aceite as permissões. Até lá o web app responde com erro de autorização.
-- **Propriedades do script** ficam em Configurações do projeto → Propriedades do script. Não estão no repositório e não são afetadas pela colagem. Desde a versão `2026-11-06.5`, os IDs de templates, pastas, agenda e o e-mail da impressão são lidos daí (`cfg_`), com o valor do código como padrão; rode uma vez `gravarConfiguracaoPadrao()` no editor para gravá-los. Lista completa em `docs/configuracao.md`. A antiga `GEMINI_API_KEY` não é mais usada e pode ser apagada.
+- **Propriedades do script** ficam em Configurações do projeto → Propriedades do script. Não estão no repositório e não são afetadas pela colagem. Desde a versão `2026-11-06.5`, os IDs de pastas, agenda e o e-mail da impressão são lidos daí (`cfg_`), com o valor do código como padrão; rode uma vez `gravarConfiguracaoPadrao()` no editor para gravá-los. Lista completa em `docs/configuracao.md`. A antiga `GEMINI_API_KEY` e as `ID_TEMPLATE_*` (desde `2026-11-07.1`, sem geração de documentos no Apps Script) não são mais usadas e podem ser apagadas.
 - **Manifesto**: `apps-script/<projeto>/appsscript.json` guarda fuso, permissões e a configuração do web app (executar como, quem acessa). Normalmente não muda; se mudar, atualize também pelo editor (Configurações do projeto → marque "Mostrar arquivo de manifesto `appsscript.json` no editor").
 - O secret `CLASPRC_JSON` do repositório não é mais usado por nada e pode ser apagado.
 

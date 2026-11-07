@@ -579,6 +579,80 @@ async function startServer() {
     await responderPdf(res, "pedido-parecer", async () => (await import("./servidor/documentos/pedidoParecer")).docPedidoParecer(dados));
   });
 
+  // ---- Conta Google da JRS no servidor (e-mail de impressão e Google Agenda, no lugar do Apps Script) ----
+  // Sem a conta autorizada (ou sem o cliente OAuth configurado), as rotas respondem 503 com
+  // codigo "google_indisponivel" e o app usa o Apps Script, como antes (services/googleServidor.ts).
+  const urlServidor = (req: express.Request) => `https://${req.get("host")}`;
+  const rotaGoogle = (rota: string, perfis: string[], acao: (db: import("firebase-admin/firestore").Firestore, b: any) => Promise<unknown>, sensivel = false) =>
+    async (req: express.Request, res: express.Response) => {
+      const quem = await exigirUsuario(req, res, rota, perfis);
+      if (!quem) return;
+      try {
+        const { adminDb } = await getFirebaseAdmin();
+        const r = await acao(adminDb, req.body || {});
+        // E-mails de impressão: operação sensível (como ACOES_SENSIVEIS no Apps Script).
+        if (sensivel) void auditarServidor("operacao_sensivel", rota, quem.uid);
+        res.json({ success: true, ...(r && typeof r === "object" ? r : {}) });
+      } catch (error: any) {
+        const { ErroContaGoogle } = await import("./servidor/google/contaGoogle");
+        if (error instanceof ErroContaGoogle && error.codigo !== "falha") {
+          res.status(503).json({ success: false, codigo: "google_indisponivel", error: error.message });
+          return;
+        }
+        logErroSeguro(`Google ${rota}`, error);
+        res.status(error instanceof ErroContaGoogle ? 400 : 500).json({ success: false, error: error?.message || "Falha na operação com o Google." });
+      }
+    };
+
+  app.post("/api/google/situacao", rotaGoogle("google-situacao", ["admin"], async db =>
+    (await import("./servidor/google/contaGoogle")).situacaoConta(db)));
+  app.post("/api/google/autorizacao", async (req, res) => {
+    const quem = await exigirUsuario(req, res, "google-autorizacao", ["admin"]);
+    if (!quem) return;
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      const { iniciarAutorizacao } = await import("./servidor/google/contaGoogle");
+      res.json({ success: true, url: await iniciarAutorizacao(adminDb, quem.uid, urlServidor(req)) });
+    } catch (error: any) {
+      res.status(503).json({ success: false, error: error?.message || "Cliente OAuth não configurado." });
+    }
+  });
+  // Retorno do Google depois do "Permitir" (navegação direta, sem token do app: o "state" de uso único vale como prova).
+  app.get("/api/google/retorno", async (req, res) => {
+    const pagina = (titulo: string, texto: string) => `<!doctype html><meta charset="utf-8"><title>${titulo}</title>` +
+      `<body style="font-family:system-ui,sans-serif;max-width:560px;margin:15vh auto;padding:0 16px;color:#050F41"><h1 style="font-size:22px">${titulo}</h1><p>${texto}</p><p>Pode fechar esta aba e voltar ao app.</p></body>`;
+    const esc = (t: string) => t.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+    try {
+      if (req.query.error) throw new Error(`O Google recusou: ${String(req.query.error)}`);
+      const { adminDb } = await getFirebaseAdmin();
+      const { concluirAutorizacao } = await import("./servidor/google/contaGoogle");
+      const conta = await concluirAutorizacao(adminDb, String(req.query.code || ""), String(req.query.state || ""), urlServidor(req));
+      void auditarServidor("operacao_sensivel", "google-autorizacao", "", "conta_autorizada");
+      res.type("html").send(pagina("Conta Google autorizada", `O servidor do app passa a enviar os e-mails de impressão e a sincronizar o Google Agenda como <b>${esc(conta || "a conta autorizada")}</b>.`));
+    } catch (error: any) {
+      res.status(400).type("html").send(pagina("Autorização não concluída", esc(error?.message || "Tente de novo pelo app.")));
+    }
+  });
+
+  app.post("/api/impressao/parecer", rotaGoogle("impressao-parecer", PERFIS_MEDICOS, async (db, b) => {
+    await (await import("./servidor/google/impressao")).enviarParecerImpressao(db, String(b.pdfUrl || ""), b.remetente);
+    return { enviado: true };
+  }, true));
+  app.post("/api/impressao/termo-recurso", rotaGoogle("impressao-termo-recurso", PERFIS_EQUIPE, async (db, b) => {
+    await (await import("./servidor/google/impressao")).enviarTermoRecursoImpressao(db, b);
+    return { enviado: true };
+  }, true));
+  app.post("/api/impressao/solicitacao-concurso", rotaGoogle("impressao-solicitacao", PERFIS_EQUIPE, async (db, b) => {
+    await (await import("./servidor/google/impressao")).enviarSolicitacaoConcursoImpressao(db, b);
+    return { enviado: true };
+  }, true));
+  app.post("/api/agenda/evento-is", rotaGoogle("agenda-evento-is", PERFIS_EQUIPE, async (db, b) =>
+    (await import("./servidor/google/agenda")).sincronizarEventoIS(db, b)));
+  app.post("/api/agenda/evento-bloqueio", rotaGoogle("agenda-evento-bloqueio", PERFIS_EQUIPE, async (db, b) =>
+    (await import("./servidor/google/agenda")).sincronizarEventoBloqueio(db, b)));
+  app.post("/api/agenda/concursos", rotaGoogle("agenda-concursos", PERFIS_EQUIPE, async (db, b) =>
+    (await import("./servidor/google/agenda")).sincronizarEventosConcursos(db, b)));
+
   app.post("/api/gemini/analyze-image", async (req, res) => {
     try {
       if (!(await exigirUsuarioAtivo(req, res, "gemini-analyze-image"))) return;

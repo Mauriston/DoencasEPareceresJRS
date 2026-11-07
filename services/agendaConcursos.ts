@@ -8,7 +8,7 @@
 //
 // "Dia encerrado" = todos os candidatos agendados naquele dia estão finalizados (IS concluída com TIS).
 import { observarConcursos, observarCandidatos, type CandidatoRecord } from './firestoreConcursos';
-import { chamarScript } from './driveConcursos';
+import { chamarGoogle } from './googleServidor';
 import { listUsuarios } from './firestoreUsuarios';
 import { NOME_AGENDA_GOOGLE } from './agendaGoogleIS';
 import type { BloqueioAgenda } from '../utils/inspecoes';
@@ -103,7 +103,7 @@ const escaparHtml = (t: string): string => t.replace(/&/g, '&amp;').replace(/</g
 
 /** Envia ao Google Agenda "JRS/HNRe" os dias de concurso (cria, atualiza e remove eventos conforme o caso). */
 export const sincronizarConcursosNaAgenda = (dias: DiaConcurso[], concursosAtivos: string[], convidados: string[]) =>
-  chamarScript<{ criados: number; atualizados: number; removidos: number }>('sincronizarEventosConcursos', {
+  chamarGoogle<{ criados: number; atualizados: number; removidos: number }>('/api/agenda/concursos', 'sincronizarEventosConcursos', {
     agenda: NOME_AGENDA_GOOGLE,
     concursosAtivos,
     // Todos os usuários ativos do appweb (Gmail) são convidados, com convite por e-mail; a notificação de 12 h é aplicada no script.

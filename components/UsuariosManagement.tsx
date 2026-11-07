@@ -6,6 +6,7 @@ import { ConfirmDialog } from './ui/Dialog';
 import { resetarSenhaUsuario, excluirUsuario } from '../services/loginNip';
 import { SENHA_INICIAL_PADRAO } from '../config/senha';
 import { StatusTag } from './ui/StatusTag';
+import { ContaGoogleServidor } from './usuarios/ContaGoogleServidor';
 import {
   ROLES,
   PAGE_DEFS,
@@ -321,6 +322,7 @@ export const UsuariosManagement: React.FC = () => {
 
       <Container size="data" className="py-6 md:py-8 pb-10 space-y-4">
         <PageHeader title="Usuários" description="Gerencie usuários e as permissões de acesso por perfil." />
+        <ContaGoogleServidor />
 
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-line/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="relative flex-1">
