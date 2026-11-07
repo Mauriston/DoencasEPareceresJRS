@@ -9,7 +9,7 @@ import { enviarGravacao, type ProgressoEnvio } from '../../../services/entrevist
 const ROTULO_ETAPA: Record<ProgressoEnvio['etapa'], string> = {
   preparando: 'Preparando o áudio…',
   storage: 'Enviando o áudio…',
-  reserva: 'Enviando o áudio pelo servidor do app (rota alternativa)…',
+  reserva: 'Enviando o áudio…',
   processando: 'Pedindo a transcrição…',
 };
 
@@ -40,7 +40,7 @@ export const GravacaoEnvio: React.FC<Props> = ({ entrevistaId, onEnviado, onDepo
       .then(() => aoEnviado.current())
       .catch((e: any) => {
         const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
-        setErro(offline ? 'O celular está sem internet. A gravação continua guardada neste aparelho.' : (e?.message || 'Não foi possível enviar a gravação.'));
+        setErro(offline ? 'O celular está sem internet.' : (e?.message || 'Não foi possível enviar a gravação.'));
       });
   }, [entrevistaId, tentativa]);
 
@@ -56,10 +56,7 @@ export const GravacaoEnvio: React.FC<Props> = ({ entrevistaId, onEnviado, onDepo
             </div>
             <h3 className="font-heading font-bold text-h3 text-navy">O envio não foi concluído</h3>
             <p role="alert" className="text-sm text-wine font-semibold max-w-md">{erro}</p>
-            <p className="text-sm text-ink-3 max-w-md">
-              Nada foi perdido: a gravação está guardada neste aparelho. Tente de novo agora ou, mais tarde, abra a
-              gravação desta IS neste mesmo celular e toque em “Reenviar”.
-            </p>
+            <p className="text-xs text-ink-3">Nada foi perdido: a gravação ficou neste aparelho.</p>
           </>
         ) : (
           <>

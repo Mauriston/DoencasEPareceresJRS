@@ -174,7 +174,7 @@ export const GravacaoGravador: React.FC<Props> = ({ isId, entrevistaId, rotulo, 
     setErro(null);
     setAviso(null);
     if (!navigator.mediaDevices?.getUserMedia || typeof (window as any).MediaRecorder !== 'function') {
-      setErro('Este navegador não permite gravar áudio. Use o Chrome (Android) ou o Safari (iPhone) atualizados.');
+      setErro('Este navegador não grava áudio. Use Chrome (Android) ou Safari (iPhone) atualizados.');
       return;
     }
     mudarEstado('iniciando');
@@ -184,7 +184,7 @@ export const GravacaoGravador: React.FC<Props> = ({ isId, entrevistaId, rotulo, 
     } catch (e: any) {
       mudarEstado('pronto');
       setErro(e?.name === 'NotAllowedError' || e?.name === 'SecurityError'
-        ? 'O acesso ao microfone foi negado. Libere o microfone para este site nas configurações do navegador e tente de novo.'
+        ? 'Microfone bloqueado. Libere-o nas configurações do navegador e tente de novo.'
         : e?.name === 'NotFoundError' ? 'Nenhum microfone foi encontrado neste aparelho.' : 'Não foi possível acessar o microfone.');
       return;
     }
@@ -210,22 +210,22 @@ export const GravacaoGravador: React.FC<Props> = ({ isId, entrevistaId, rotulo, 
       const seq = seqRef.current++;
       filaRef.current = filaRef.current
         .then(() => salvarPedaco(entrevistaId, seq, ev.data, segRef.current))
-        .catch(() => setAviso('Não foi possível guardar parte do áudio no aparelho (memória cheia?). Encerre e envie o quanto antes.'));
+        .catch(() => setAviso('Falha ao guardar parte do áudio. Encerre e envie o quanto antes.'));
     };
     rec.onstop = () => fimDaGravacao();
-    rec.onerror = () => { pausar('O gravador do aparelho apresentou um erro. Encerre e envie o que foi gravado.'); };
+    rec.onerror = () => { pausar('Erro no gravador. Encerre e envie o que foi gravado.'); };
 
     const trilha = stream.getAudioTracks()[0];
     if (trilha) {
       trilha.onended = () => {
         setTrilhaEncerrada(true);
-        pausar('O microfone foi desligado pelo aparelho (ligação ou outro app). A gravação foi pausada: toque em "Encerrar e enviar" para enviar o que já foi gravado.');
+        pausar('Microfone desligado pelo aparelho. Toque em "Encerrar e enviar".');
       };
       trilha.onmute = () => {
-        if (estadoRef.current === 'gravando') pausar('O microfone foi interrompido (ligação ou outro app?). A gravação foi pausada — toque em "Retomar" quando puder continuar.');
+        if (estadoRef.current === 'gravando') pausar('Microfone interrompido; gravação pausada. Toque em "Retomar" quando puder.');
       };
       trilha.onunmute = () => {
-        if (estadoRef.current === 'pausado') setAviso('O microfone voltou. Toque em "Retomar" para continuar a gravação.');
+        if (estadoRef.current === 'pausado') setAviso('O microfone voltou. Toque em "Retomar".');
       };
     }
 
@@ -240,7 +240,7 @@ export const GravacaoGravador: React.FC<Props> = ({ isId, entrevistaId, rotulo, 
     // O Safari só preenche rec.mimeType depois do start.
     const mimeBase = ((rec.mimeType || tipo || 'audio/webm').split(';')[0] || 'audio/webm').trim();
     filaRef.current = iniciarGravacaoLocal({ entrevistaId, isId, rotulo, mimeType: mimeBase, ext: extensaoDoMime(mimeBase) })
-      .catch(() => setErro('Não foi possível guardar a gravação neste aparelho. Verifique se o navegador não está em modo anônimo.'));
+      .catch(() => setErro('Não foi possível guardar a gravação neste aparelho (modo anônimo?).'));
     pedirArmazenamentoPersistente();
     iniciarMedidor(stream);
     mudarEstado('gravando');
@@ -352,10 +352,7 @@ export const GravacaoGravador: React.FC<Props> = ({ isId, entrevistaId, rotulo, 
           </div>
         )}
         {semWakeLock && emCurso && (
-          <p className="text-xs text-ink-3 max-w-md">Este navegador não consegue manter a tela acesa sozinho: toque na tela de vez em quando ou aumente o tempo de bloqueio automático.</p>
-        )}
-        {estado === 'pronto' && !erro && (
-          <p className="text-sm text-ink-3 max-w-md">Toque no botão abaixo para começar. O áudio é guardado no aparelho a cada 5 segundos e enviado no final.</p>
+          <p className="text-xs text-ink-3 max-w-md">Toque na tela de vez em quando para ela não apagar.</p>
         )}
       </div>
 
@@ -395,7 +392,7 @@ export const GravacaoGravador: React.FC<Props> = ({ isId, entrevistaId, rotulo, 
       {confirmarEncerrar && (
         <ConfirmDialog
           title="Encerrar a gravação?"
-          message={`A gravação (${formatarDuracao(segundos)}) será encerrada e enviada para transcrição. Não será possível continuar esta mesma gravação.`}
+          message={`A gravação (${formatarDuracao(segundos)}) será encerrada e enviada; não poderá ser continuada.`}
           confirmLabel="Encerrar e enviar"
           cancelLabel="Continuar gravando"
           onConfirm={() => encerrarEEnviar()}
@@ -405,7 +402,7 @@ export const GravacaoGravador: React.FC<Props> = ({ isId, entrevistaId, rotulo, 
       {confirmarSair && (
         <ConfirmDialog
           title="Sair sem enviar?"
-          message="A gravação será interrompida. O que já foi gravado fica guardado neste aparelho e pode ser enviado depois, ao abrir a gravação desta IS novamente."
+          message="O que já foi gravado fica neste aparelho para enviar depois."
           confirmLabel="Sair e enviar depois"
           cancelLabel="Continuar gravando"
           destructive

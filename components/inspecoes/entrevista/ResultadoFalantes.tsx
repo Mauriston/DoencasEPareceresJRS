@@ -32,10 +32,7 @@ export const ResultadoFalantes: React.FC<Props> = ({ entrevista: e, salvando, on
     <section aria-labelledby="titulo-falantes" className="rounded-xl border border-gold bg-gold/10 p-4 space-y-3">
       <div>
         <h3 id="titulo-falantes" className="font-heading font-bold text-h3 text-navy">Confirmar falantes</h3>
-        <p className="text-xs text-ink-3 mt-1">
-          A transcrição separou {rotulos.length} {rotulos.length === 1 ? 'voz' : 'vozes'}. Indique quem é quem pela primeira fala de cada uma;
-          os nomes passam a valer na transcrição e nas citações.
-        </p>
+        <p className="text-xs text-ink-3 mt-1">Indique quem é cada voz pela primeira fala.</p>
       </div>
       <form onSubmit={enviar} className="space-y-3">
         {rotulos.map(({ rotulo, fala }) => (

@@ -22,23 +22,22 @@ export const ResultadoAudio: React.FC<Props> = ({ url, carregando, erro, apagarA
     {apagado && !url ? (
       <p className="text-xs text-ink-3 flex items-center gap-1">
         <span className="material-symbols-outlined text-[16px]" aria-hidden="true">delete_history</span>
-        O áudio foi apagado em {dataIsoBr(apagarApos)} (retenção de 90 dias); a transcrição e a anamnese continuam na IS.
+        Áudio apagado em {dataIsoBr(apagarApos)}.
       </p>
     ) : url ? (
       <audio ref={audioRef} src={url} controls preload="metadata" className="w-full">
         Seu navegador não toca este áudio.
       </audio>
     ) : (
-      <div className="flex flex-wrap items-center gap-2">
+      <div>
         <Button variant="secondary" icon="headphones" loading={carregando} onClick={onCarregar}>Carregar áudio</Button>
-        <span className="text-xs text-ink-3">Os tempos da transcrição e da anamnese levam ao trecho.</span>
       </div>
     )}
     {erro && <p role="alert" className="text-xs font-semibold text-wine">{erro}</p>}
     {apagarApos && !apagado && (
       <p className="text-xs text-ink-3 flex items-center gap-1">
         <span className="material-symbols-outlined text-[16px]" aria-hidden="true">schedule</span>
-        O áudio é apagado em {dataIsoBr(apagarApos)}; a transcrição e a anamnese continuam na IS.
+        Áudio disponível até {dataIsoBr(apagarApos)}
       </p>
     )}
   </section>

@@ -220,14 +220,9 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
                 );
               })}
             </ol>
-            <p className="text-xs text-ink-3">
-              {e.situacao === 'aguardando_envio'
-                ? 'O celular que gravou ainda está enviando o áudio. Se a gravação foi interrompida e o envio não aconteceu, grave a entrevista de novo.'
-                : e.situacao === 'transcrevendo'
-                  ? 'O servidor está transcrevendo o áudio e separando as vozes (Speech-to-Text). Leva alguns minutos — em geral menos que a metade da duração da entrevista.'
-                  : 'A transcrição está pronta; a IA está organizando a anamnese médico-pericial. Costuma levar menos de um minuto.'}
-              {' '}O andamento é conferido enquanto o detalhe da IS estiver aberto; pode fechar esta janela e voltar depois.
-            </p>
+            {e.situacao === 'aguardando_envio' && (
+              <p className="text-xs text-ink-3">Se o envio não acontecer, grave de novo.</p>
+            )}
           </section>
         )}
 
@@ -239,7 +234,6 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
               Não foi possível concluir o processamento.
             </p>
             <p className="text-sm text-ink">{e.erro || 'Erro desconhecido.'}</p>
-            <p className="text-xs text-ink-3">{e.transcricao?.length ? 'A transcrição está salva; tentar de novo refaz só a organização da anamnese.' : 'Tentar de novo consulta o servidor e retoma a transcrição.'}</p>
             <Button icon="refresh" loading={ocupado === 'tentar'} onClick={tentarNovamente}>Tentar novamente</Button>
           </section>
         )}
@@ -263,8 +257,8 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
             )}
             {ofertaReorganizar && !mostrarFalantes && (
               <section className="rounded-xl border border-line bg-paper p-4 space-y-2">
-                <p className="text-sm text-ink">Os nomes confirmados já aparecem na transcrição e nas citações. Quer que a IA reorganize a anamnese usando esses nomes?</p>
-                {e.anamneseEditada && <p className="text-xs text-ink-3">A edição feita à mão continua valendo na tela até ser editada de novo; a nova organização fica salva como original.</p>}
+                <p className="text-sm text-ink">Reorganizar a anamnese com os nomes confirmados?</p>
+                {e.anamneseEditada && <p className="text-xs text-ink-3">Sua edição continua sendo a versão exibida.</p>}
                 <div className="flex flex-wrap gap-2">
                   <Button icon="auto_awesome" loading={ocupado === 'reorganizar'} onClick={reorganizar}>Reorganizar com os nomes confirmados</Button>
                   <Button variant="ghost" onClick={() => setOfertaReorganizar(false)}>Agora não</Button>

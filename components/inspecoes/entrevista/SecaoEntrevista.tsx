@@ -86,10 +86,7 @@ export const SecaoEntrevista: React.FC<Props> = ({ is }) => {
       ) : lista === null ? (
         <p className="text-sm text-ink-3" aria-busy="true">Carregando entrevistas…</p>
       ) : lista.length === 0 ? (
-        <p className="text-xs text-ink-3">
-          Nenhuma entrevista gravada. A gravação é feita pelo celular, com o consentimento do inspecionado; o servidor transcreve,
-          separa as vozes e a IA organiza a anamnese para revisão.
-        </p>
+        <p className="text-xs text-ink-3">Nenhuma entrevista gravada.</p>
       ) : (
         <ul className="space-y-2">
           {lista.map(en => naoEnviada(en) ? (
@@ -98,7 +95,7 @@ export const SecaoEntrevista: React.FC<Props> = ({ is }) => {
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-bold text-ink">{dataHoraEntrevista(en.criadoPor?.em) || 'Entrevista'}</span>
                 <span className="block text-xs text-ink-3">
-                  Gravada por {en.criadoPor?.nome || '—'} · {pendentesLocais.has(en.id) ? 'a gravação está neste aparelho e pode ser reenviada.' : 'o áudio não chegou ao servidor.'}
+                  Gravada por {en.criadoPor?.nome || '—'}
                 </span>
               </span>
               <span className="flex items-center gap-2 shrink-0">

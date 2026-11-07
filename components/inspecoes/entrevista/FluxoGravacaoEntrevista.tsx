@@ -137,7 +137,7 @@ export const FluxoGravacaoEntrevista: React.FC<Props> = ({ is, onClose, onConclu
 
       {semPermissao ? (
         <div className="flex-1 px-4 py-8 text-center text-sm text-ink-3">
-          A gravação de entrevistas é restrita aos membros da junta (Médicos JRS e Admin).
+          Gravação restrita aos membros da junta.
         </div>
       ) : etapa.tipo === 'preparacao' ? (
         <>
@@ -169,10 +169,7 @@ export const FluxoGravacaoEntrevista: React.FC<Props> = ({ is, onClose, onConclu
               <span className="material-symbols-outlined text-[36px] text-green-700" aria-hidden="true">check_circle</span>
             </div>
             <h3 className="font-heading font-bold text-h2 text-navy">Enviado</h3>
-            <p className="text-sm text-ink max-w-md">
-              A transcrição leva alguns minutos; você pode fechar. O resultado aparece na seção de entrevista desta IS,
-              no celular ou no computador.
-            </p>
+            <p className="text-xs text-ink-3">Pode fechar. O resultado aparece nesta IS.</p>
           </div>
           <div className="shrink-0 border-t border-line bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <Button fullWidth icon="done" onClick={onClose}>Fechar</Button>
@@ -183,7 +180,7 @@ export const FluxoGravacaoEntrevista: React.FC<Props> = ({ is, onClose, onConclu
       {descartando && (
         <ConfirmDialog
           title="Descartar a gravação?"
-          message="O áudio guardado neste aparelho será apagado e não poderá ser recuperado."
+          message="O áudio guardado neste aparelho será apagado definitivamente."
           confirmLabel="Descartar"
           destructive
           onConfirm={descartar}

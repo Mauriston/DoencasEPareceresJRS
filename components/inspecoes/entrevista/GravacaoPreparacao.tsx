@@ -34,7 +34,7 @@ export const GravacaoPreparacao: React.FC<Props> = ({ inicial, salvando, erroEnv
 
   const erroNome = (p: ParticipanteEntrevista) => (tentou && !p.nome.trim() ? 'Informe o nome.' : undefined);
   const erroFinalidade = tentou && !finalidade.trim() ? 'Informe a finalidade da IS.' : undefined;
-  const erroConsentimento = tentou && !consentiu ? 'Sem o consentimento do inspecionado, a entrevista não pode ser gravada.' : undefined;
+  const erroConsentimento = tentou && !consentiu ? 'Sem consentimento, não é possível gravar.' : undefined;
   const qtdValida = participantes.length >= MIN_PARTICIPANTES && participantes.length <= MAX_PARTICIPANTES;
 
   const avancar = (e: React.FormEvent) => {
@@ -49,7 +49,7 @@ export const GravacaoPreparacao: React.FC<Props> = ({ inicial, salvando, erroEnv
       <div className="flex-1 overflow-y-auto px-4 py-5 space-y-5">
         <fieldset className="space-y-3">
           <legend className="font-heading font-bold text-h3 text-navy mb-1">Participantes</legend>
-          <p className="text-xs text-ink-3">De {MIN_PARTICIPANTES} a {MAX_PARTICIPANTES} pessoas. Os nomes ajudam a identificar quem fala na transcrição.</p>
+          <p className="text-xs text-ink-3">De {MIN_PARTICIPANTES} a {MAX_PARTICIPANTES} pessoas.</p>
           {participantes.map((p, i) => (
             <div key={i} className="rounded-xl border border-line bg-white p-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
@@ -81,7 +81,7 @@ export const GravacaoPreparacao: React.FC<Props> = ({ inicial, salvando, erroEnv
           )}
         </fieldset>
 
-        <Field label="Finalidade da IS" required help="Vem da IS; ajuste se necessário. Orienta a organização da anamnese." error={erroFinalidade}>
+        <Field label="Finalidade da IS" required error={erroFinalidade}>
           {aria => <input {...aria} type="text" value={finalidade} onChange={e => setFinalidade(e.target.value)} />}
         </Field>
 
@@ -104,9 +104,9 @@ export const GravacaoPreparacao: React.FC<Props> = ({ inicial, salvando, erroEnv
           )}
         </div>
 
-        <div className="rounded-xl border border-blue-200 bg-blue-50 text-blue-800 p-3 flex items-start gap-2 text-sm">
+        <div className="rounded-xl border border-blue-200 bg-blue-50 text-blue-800 p-3 flex items-center gap-2 text-xs">
           <span className="material-symbols-outlined text-[20px] shrink-0" aria-hidden="true">tips_and_updates</span>
-          <p>Coloque o celular sobre a mesa, entre os participantes, com o microfone voltado para cima.</p>
+          <p>Celular sobre a mesa, entre os participantes.</p>
         </div>
 
         {erroEnvio && (
