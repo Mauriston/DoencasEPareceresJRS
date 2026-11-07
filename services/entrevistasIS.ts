@@ -22,6 +22,7 @@ import {
   type EntrevistaRecord, type ParticipanteEntrevista, type SituacaoEntrevista,
 } from '../config/entrevistas';
 import { apagarGravacaoLocal, atualizarGravacaoLocal, lerAudioLocal, obterGravacaoLocal } from './gravacaoLocal';
+import { tokenDesteAparelho } from './notificacoesPush';
 
 const db = getFirestore(app);
 const colecao = (isId: string) => collection(db, 'inspecoes', isId, 'entrevistas');
@@ -220,4 +221,16 @@ export const enviarGravacao = async (entrevistaId: string, onProgresso: (p: Prog
   const situacao = await processarEntrevista(meta.isId, entrevistaId, caminho, meta.mimeType, meta.duracaoSeg);
   await apagarGravacaoLocal(entrevistaId).catch(() => { /* fica como pendente já enviada; o reenvio só repete o /processar */ });
   return situacao;
+};
+
+/**
+ * Computador → celular: o servidor manda um push só para os celulares do próprio usuário (menos
+ * este aparelho); tocar abre o app instalado em /inspecoes/{isId}/entrevista. Devolve quantos
+ * aparelhos receberam; sem nenhum, ApiError (409) com a mensagem do servidor.
+ */
+export const enviarParaCelular = async (isId: string): Promise<number> => {
+  const r = await chamarServidor<{ enviados: number }>(
+    '/api/entrevistas/enviar-para-celular', { isId, aparelhoAtual: tokenDesteAparelho() }, { timeoutMs: 30_000 },
+  );
+  return r.enviados;
 };

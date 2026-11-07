@@ -25,38 +25,9 @@ export const consumirTokenDaUrl = (): string | null => {
 
 export const entrarComToken = (token: string) => signInWithCustomToken(auth, token);
 
-/** Parâmetro de busca com a rota que o app abre depois do login (ex.: ?abrir=/inspecoes/123/entrevista). */
-const PARAM_ABRIR = 'abrir';
-
-/** Só destinos internos conhecidos: hoje, as telas de Inspeções (`/inspecoes/{isId}[/{acao}]`). */
-export const destinoAbrirValido = (destino: string | null | undefined): destino is string =>
-  typeof destino === 'string' && /^\/inspecoes\/[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)?$/.test(destino);
-
-/**
- * Lê (e remove da barra de endereço) o destino `?abrir=` e o põe no hash, para o HashRouter abrir
- * direto nessa tela. Sem sessão, o Login aparece por cima e, depois de entrar, o app continua na
- * rota (o App não volta à Home no login). Chamar DEPOIS de consumirTokenDaUrl (que limpa o hash).
- */
-export const aplicarDestinoDaUrl = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  const params = new URLSearchParams(window.location.search);
-  if (!params.has(PARAM_ABRIR)) return null;
-  const destino = params.get(PARAM_ABRIR);
-  params.delete(PARAM_ABRIR);
-  const resto = params.toString();
-  const valido = destinoAbrirValido(destino);
-  const hash = valido ? `#${destino}` : window.location.hash;
-  window.history.replaceState(window.history.state, '', `${window.location.pathname}${resto ? `?${resto}` : ''}${hash}`);
-  return valido ? destino : null;
-};
-
-/**
- * Monta a URL do QR; com token, o celular entra já autenticado. Com `destino` (rota interna aceita
- * por destinoAbrirValido), o app abre nessa tela depois do login.
- */
-export const montarUrlQr = async (destino?: string): Promise<{ url: string; comLogin: boolean }> => {
-  const abrir = destinoAbrirValido(destino) ? `?${PARAM_ABRIR}=${encodeURIComponent(destino)}` : '';
-  const base = `${urlDoApp()}${abrir}`;
+/** Monta a URL do QR; com token, o celular entra já autenticado. */
+export const montarUrlQr = async (): Promise<{ url: string; comLogin: boolean }> => {
+  const base = urlDoApp();
   try {
     const json = await chamarServidor<{ token: string }>('/api/auth/handoff-token', {}, { timeoutMs: 15_000 });
     if (!json.token) throw new Error('falha');

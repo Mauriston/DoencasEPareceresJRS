@@ -109,6 +109,11 @@ export const sincronizarAparelho = async (usuario: string): Promise<void> => {
   }
 };
 
+/** Token de push deste aparelho (se as notificações estiverem ativadas nele). */
+export const tokenDesteAparelho = (): string => {
+  try { return localStorage.getItem(LS_TOKEN) || ''; } catch { return ''; }
+};
+
 /** Pede a permissão do navegador (precisa vir de um clique) e vincula o aparelho. */
 export const ativarNotificacoes = async (usuario: string): Promise<EstadoNotificacoes> => {
   const resposta = await Notification.requestPermission();
