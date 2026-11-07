@@ -657,7 +657,7 @@ async function startServer() {
   // ---- Entrevista da IS gravada no celular (servidor/entrevistas/; contrato em config/entrevistas.ts) ----
   // Áudio → ffmpeg (FLAC) → Speech-to-Text V2 (Chirp 3, pt-BR, falantes) → Gemini no Vertex AI (anamnese)
   // → Firestore inspecoes/{isId}/entrevistas/{entrevistaId}. Só Admin e user_medicos. Logs sem conteúdo.
-  const rotaEntrevista = (rota: string, acao: (ctx: { req: express.Request; res: express.Response; uid: string; db: import("firebase-admin/firestore").Firestore; bucket: import("@google-cloud/storage").Bucket }) => Promise<void>) =>
+  const rotaEntrevista = (rota: string, acao: (ctx: { req: express.Request; res: express.Response; uid: string; db: import("firebase-admin/firestore").Firestore; bucket: import("./servidor/entrevistas/fluxo").Bucket }) => Promise<void>) =>
     async (req: express.Request, res: express.Response) => {
       // A rota /audio autentica ANTES de ler o corpo binário (res.locals.quemEntrevista).
       const quem = res.locals.quemEntrevista || await exigirUsuario(req, res, rota, [...PERFIS_ENTREVISTA]);

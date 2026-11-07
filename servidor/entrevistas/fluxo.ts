@@ -11,7 +11,9 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Firestore, DocumentReference, Transaction } from 'firebase-admin/firestore';
-import type { Bucket } from '@google-cloud/storage';
+import type { getStorage } from 'firebase-admin/storage';
+/** Bucket do Admin SDK (tipo derivado do firebase-admin: @google-cloud/storage é dependência opcional dele e pode não estar instalado no CI). */
+export type Bucket = ReturnType<ReturnType<typeof getStorage>['bucket']>;
 import {
   DIAS_RETENCAO_AUDIO, MAX_BYTES_AUDIO, MAX_DURACAO_SEG, MAX_PARTICIPANTES, MIN_PARTICIPANTES,
   caminhoAudioOriginal, type EntrevistaRecord, type FalaTranscrita, type SituacaoEntrevista,
