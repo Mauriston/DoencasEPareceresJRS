@@ -7,7 +7,7 @@
 // Regras do negócio (decisões do Presidente da JRS, 08/11/2026):
 //  - só Admin e `user_medicos` (membros da junta) gravam, leem e revisam — e TODOS eles veem as
 //    entrevistas de qualquer IS (a junta trabalha em conjunto);
-//  - gravação SÓ no celular (os PCs do HNRe não têm microfone); no computador, QR para abrir no celular;
+//  - gravação SÓ no celular (os PCs do HNRe não têm microfone); no computador, "Enviar para o meu celular" (push);
 //  - o áudio fica no Storage (`entrevistas/{isId}/{entrevistaId}/…`) e é apagado 90 dias após a
 //    entrevista (regra de ciclo de vida do bucket); nenhum PDF é gerado: o resultado vive no Firestore;
 //  - processamento pode ser nos EUA (região do Chirp 3).

@@ -2,8 +2,8 @@
 // Seção "Entrevista gravada" do detalhe da IS (só Admin e user_medicos — quem monta decide com
 // `podeUsarEntrevista`). Lista as entrevistas da IS (todas, de qualquer perito da junta), abre o
 // resultado de cada uma e oferece a gravação: no celular, "Gravar entrevista"; no computador,
-// "Gravar pelo celular" (QR para abrir esta IS no celular). Pela rota /inspecoes/:isId/entrevista
-// (o QR leva a ela), o fluxo de gravação abre sozinho uma vez. Enquanto montada, avança o
+// "Gravar pelo celular" (push para o celular do próprio usuário). Pela rota /inspecoes/:isId/entrevista
+// (o push leva a ela), o fluxo de gravação abre sozinho uma vez. Enquanto montada, avança o
 // processamento da entrevista em andamento (useAcompanharEntrevista). Entrevista criada cujo áudio
 // não foi enviado aparece como "Não enviada" (sem abrir o resultado) e, se a gravação ainda estiver
 // neste aparelho (IndexedDB, services/gravacaoLocal.ts), oferece "Reenviar" (o fluxo lista as pendências).
@@ -13,7 +13,7 @@ import { matchPath, useLocation, useParams } from 'react-router-dom';
 import { Button } from '../../ui/Button';
 import { StatusTag } from '../../ui/StatusTag';
 import { FluxoGravacaoEntrevista } from './FluxoGravacaoEntrevista';
-import { AbrirNoCelularDialog } from './AbrirNoCelularDialog';
+import { EnviarParaCelularDialog } from './EnviarParaCelularDialog';
 import { ResultadoEntrevista } from './ResultadoEntrevista';
 import { observarEntrevistas, useAcompanharEntrevista } from '../../../services/entrevistasIS';
 import { listarPendentes } from '../../../services/gravacaoLocal';
@@ -33,7 +33,7 @@ export const SecaoEntrevista: React.FC<Props> = ({ is }) => {
   const [erro, setErro] = useState('');
   const [abertaId, setAbertaId] = useState<string | null>(null);
   const [gravando, setGravando] = useState(false);
-  const [qrAberto, setQrAberto] = useState(false);
+  const [envioAberto, setEnvioAberto] = useState(false);
   const podeGravar = podeGravarNoDispositivo();
   const podeIniciar = is.status !== 'cancelada';
 
@@ -57,7 +57,7 @@ export const SecaoEntrevista: React.FC<Props> = ({ is }) => {
   const emAndamento = lista ? entrevistaEmAndamento<EntrevistaRecord>(lista) : null;
   useAcompanharEntrevista(is.id, emAndamento);
 
-  // Aberto pelo QR (rota /inspecoes/:isId/entrevista) num celular que grava: abre o fluxo uma vez.
+  // Aberto pelo push (rota /inspecoes/:isId/entrevista) num celular que grava: abre o fluxo uma vez.
   const params = useParams<{ isId?: string }>();
   const { pathname } = useLocation();
   const autoAberto = useRef(false);
@@ -78,7 +78,7 @@ export const SecaoEntrevista: React.FC<Props> = ({ is }) => {
         <h3 id={`titulo-entrevista-${is.id}`} className="text-xs font-bold uppercase tracking-wide text-ink-3">Entrevista gravada</h3>
         {podeIniciar && (podeGravar
           ? <Button icon="mic" onClick={() => setGravando(true)}>Gravar entrevista</Button>
-          : <Button variant="secondary" icon="qr_code_2" onClick={() => setQrAberto(true)}>Gravar pelo celular</Button>)}
+          : <Button variant="secondary" icon="send_to_mobile" onClick={() => setEnvioAberto(true)}>Gravar pelo celular</Button>)}
       </div>
 
       {erro ? (
@@ -140,7 +140,7 @@ export const SecaoEntrevista: React.FC<Props> = ({ is }) => {
         />,
         document.body,
       )}
-      {qrAberto && createPortal(<AbrirNoCelularDialog isId={is.id} aberto={qrAberto} onClose={() => setQrAberto(false)} />, document.body)}
+      {envioAberto && createPortal(<EnviarParaCelularDialog isId={is.id} onClose={() => setEnvioAberto(false)} />, document.body)}
     </section>
   );
 };

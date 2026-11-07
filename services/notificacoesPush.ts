@@ -109,6 +109,11 @@ export const sincronizarAparelho = async (usuario: string): Promise<void> => {
   }
 };
 
+/** Token de push deste aparelho (se as notificações estiverem ativadas nele). */
+export const tokenDesteAparelho = (): string => {
+  try { return localStorage.getItem(LS_TOKEN) || ''; } catch { return ''; }
+};
+
 /** Pede a permissão do navegador (precisa vir de um clique) e vincula o aparelho. */
 export const ativarNotificacoes = async (usuario: string): Promise<EstadoNotificacoes> => {
   const resposta = await Notification.requestPermission();
@@ -214,4 +219,22 @@ export const consumirNotifDaUrl = (): string | null => {
   const resto = params.toString();
   window.history.replaceState(window.history.state, '', `${window.location.pathname}${resto ? `?${resto}` : ''}${window.location.hash}`);
   return id;
+};
+
+/**
+ * Toque num push com o app já aberto: o service worker foca a janela e manda o link
+ * (APP_URL?notif=id#/rota). Devolve a função que encerra a escuta.
+ */
+export const ouvirCliquesDoPush = (cb: (rota: string, notifId: string | null) => void): (() => void) => {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return () => {};
+  const aoReceber = (e: MessageEvent) => {
+    if (e.data?.tipo !== 'jrs-notificacao-clicada' || typeof e.data.link !== 'string') return;
+    try {
+      const url = new URL(e.data.link);
+      if (url.origin !== window.location.origin) return;
+      cb(url.hash.replace(/^#/, '') || '/', url.searchParams.get('notif'));
+    } catch { /* link malformado */ }
+  };
+  navigator.serviceWorker.addEventListener('message', aoReceber);
+  return () => navigator.serviceWorker.removeEventListener('message', aoReceber);
 };
