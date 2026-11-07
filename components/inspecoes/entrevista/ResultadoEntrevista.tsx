@@ -23,7 +23,7 @@ import { ROTULO_PAPEL, type AnamneseEntrevista, type EntrevistaRecord, type Quem
 import type { InspecaoRecord } from '../../../services/firestoreInspecoes';
 import { hojeISO } from '../../../utils/inspecoes';
 import {
-  AVISO_IA, anamneseEfetiva, dataHoraEntrevista, formatarDuracao, rotuloSituacao, textoAnamnese, tomSituacao,
+  AVISO_IA, anamneseEfetiva, dataHoraEntrevista, formatarDuracao, rotuloSituacao, textoAnamnese, textoTemposProcessamento, tomSituacao,
 } from '../../../utils/entrevistas';
 
 interface Props {
@@ -163,6 +163,7 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
   };
 
   const pronta = e.situacao === 'pronta';
+  const tempoProcessamento = pronta ? textoTemposProcessamento(e.tempos) : null;
   const mostrarFalantes = pronta && !editando && (!e.falantesConfirmados || revendoFalantes) && (e.transcricao?.length ?? 0) > 0;
   const etapaAtual = ETAPAS.findIndex(x => x.id === e.situacao);
 
@@ -218,6 +219,7 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
               </div>
             </div>
           </dl>
+          {tempoProcessamento && <p className="text-xs text-ink-3">{tempoProcessamento}</p>}
           {e.revisada && <p className="text-xs text-ink-3">Revisada por {e.revisada.nome}{dataHoraEntrevista(e.revisada.em) ? ` em ${dataHoraEntrevista(e.revisada.em)}` : ''}.</p>}
         </div>
 

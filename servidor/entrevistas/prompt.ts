@@ -1,7 +1,9 @@
 // Ficheiro: servidor/entrevistas/prompt.ts
 // Prompt do Gemini que organiza a entrevista da IS como anamnese médico-pericial. Função pura e testada.
+// Inclui o conhecimento de referência da JRS (glossário + trechos da DGPM-406 da finalidade: ./contexto).
 
 import { ROTULO_PAPEL, type FalaTranscrita, type ParticipanteEntrevista } from '../../config/entrevistas';
+import { contextoParaFinalidade, finalidadesDaIS, semAcento, type IdFinalidade } from './contexto';
 
 export interface EntradaPrompt {
   finalidade: string;
@@ -21,8 +23,6 @@ export const formatarTempo = (seg: number): string => {
 
 // ------------------------------------------------------------------ roteiro mínimo por finalidade (puro)
 
-const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-
 const ROTEIRO_GENERICO = [
   'início dos sintomas', 'evolução', 'localização e lateralidade', 'intensidade', 'fatores de piora e de melhora',
   'tratamentos e medicações', 'afastamentos e dispensas médicas', 'exames realizados',
@@ -30,30 +30,13 @@ const ROTEIRO_GENERICO = [
 const ROTEIRO_OSTEOMUSCULAR = [
   'lateralidade (lado acometido)', 'mecanismo do trauma', 'sintomas mecânicos (bloqueio, falseio)', 'uso de órteses ou muletas', 'analgesia em uso',
 ];
-const ROTEIROS: Array<{ id: string; chaves: RegExp; sigla?: RegExp; itens: string[] }> = [
-  {
-    id: 'ao',
-    // "ao" é preposição comum: a sigla AO/ISO casa só em maiúsculas (ver `casa`).
-    chaves: /atestado de origem|inquerito sanitario de origem|acidente/,
-    sigla: /\b(AO|ISO)\b/,
-    itens: ['circunstância do acidente', 'data, hora e local', 'testemunhas', 'se estava em serviço', 'registro do fato (parte, comunicação)'],
-  },
-  {
-    id: 'vdf',
-    chaves: /\bvdf\b|deficiencia funcional|verificacao de deficiencia/,
-    itens: ['limitações nas atividades diárias e no serviço', 'atividades que deixou de fazer', 'necessidade de ajuda de terceiros ou de dispositivos', 'evolução da limitação e tratamento atual'],
-  },
-  {
-    id: 'termino',
-    chaves: /termino|restric|incapacidade|licenca|\blts\b/,
-    itens: ['evolução desde o afastamento ou restrição', 'tratamento realizado', 'sintomas atuais', 'retorno às atividades'],
-  },
-  {
-    id: 'beneficio',
-    chaves: /beneficio|doenca especificada|especificada em lei|isencao|reforma/,
-    itens: ['diagnóstico', 'data do diagnóstico', 'tratamento', 'evolução', 'limitações atuais'],
-  },
-];
+/** Itens por finalidade (o casamento da finalidade é o mesmo do contexto de conhecimento: `finalidadesDaIS`). */
+const ROTEIROS: Record<IdFinalidade, string[]> = {
+  ao: ['circunstância do acidente', 'data, hora e local', 'testemunhas', 'se estava em serviço', 'registro do fato (parte, comunicação)'],
+  vdf: ['limitações nas atividades diárias e no serviço', 'atividades que deixou de fazer', 'necessidade de ajuda de terceiros ou de dispositivos', 'evolução da limitação e tratamento atual'],
+  termino: ['evolução desde o afastamento ou restrição', 'tratamento realizado', 'sintomas atuais', 'retorno às atividades'],
+  beneficio: ['diagnóstico', 'data do diagnóstico', 'tratamento', 'evolução', 'limitações atuais'],
+};
 /** Palavras que indicam lesão osteomuscular (na finalidade ou no conteúdo da entrevista). */
 const OSTEOMUSCULAR = /joelho|ombro|coluna|lombar|cervical|tornozelo|punho|cotovelo|quadril|menisco|ligamento|tendao|tendin|fratura|entorse|luxacao|\blca\b|lombalgia|hernia de disco|osteomuscular|ortoped/;
 
@@ -63,10 +46,9 @@ const OSTEOMUSCULAR = /joelho|ombro|coluna|lombar|cervical|tornozelo|punho|cotov
  * a transcrição), acrescenta os itens osteomusculares. Sem duplicatas.
  */
 export const roteiroMinimo = (finalidade: string, contexto = ''): string[] => {
-  const original = String(finalidade || '');
-  const f = semAcento(original);
+  const f = semAcento(String(finalidade || ''));
   const itens: string[] = [];
-  for (const r of ROTEIROS) if (r.chaves.test(f) || r.sigla?.test(original)) itens.push(...r.itens);
+  for (const id of finalidadesDaIS(finalidade)) itens.push(...ROTEIROS[id]);
   itens.push(...ROTEIRO_GENERICO);
   if (OSTEOMUSCULAR.test(f) || OSTEOMUSCULAR.test(semAcento(String(contexto || '')))) itens.push(...ROTEIRO_OSTEOMUSCULAR);
   return [...new Set(itens)];
@@ -116,6 +98,12 @@ l) Faça um resumo executivo objetivo (3 a 6 frases).
 
 ROTEIRO MÍNIMO PARA ESTA FINALIDADE (use só para apontar lacunas em "pontosAEsclarecer"):
 ${roteiro.map(i => `- ${i}`).join('\n')}
+
+CONHECIMENTO DE REFERÊNCIA (para entender o vocabulário e o contexto; NÃO use para concluir):
+A entrevista é só a 1ª etapa da IS; exame físico, laudo e conclusão vêm depois e são da junta. Use este material apenas para reconhecer termos, siglas e o objeto da finalidade (ex.: expandir corretamente uma sigla dita na entrevista). Não traga para a anamnese nada que não tenha sido dito.
+<<<CONHECIMENTO
+${contextoParaFinalidade(finalidade)}
+CONHECIMENTO>>>
 
 REGRAS
 - Não invente nada: use apenas o que está na transcrição. Quando a informação não aparecer, escreva "Não referido" (ou deixe a lista vazia).

@@ -7,7 +7,7 @@
     "dev": "tsx server.ts",
     "check:ds": "node scripts/verificar-ds.mjs",
     "prebuild": "node scripts/verificar-ds.mjs",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --charset=utf8 --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "test": "vitest run",

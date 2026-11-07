@@ -9,6 +9,11 @@ import {
 import { formatarTempo, montarPromptAnamnese, roteiroMinimo } from '../../servidor/entrevistas/prompt';
 import { ESQUEMA_RESPOSTA, NAO_IDENTIFICADO, NAO_REFERIDO, normalizarResultado } from '../../servidor/entrevistas/organizacao';
 import { CAMPOS_DESCARTADOS_AO_REFAZER, TRAVA_VENCIDA_MS, travaVencida } from '../../servidor/entrevistas/fluxo';
+import { contextoParaFinalidade, finalidadesDaIS, TRECHOS_DGPM } from '../../servidor/entrevistas/contexto';
+import { GLOSSARIO_JRS } from '../../servidor/entrevistas/contexto/textos';
+import * as TEXTOS from '../../servidor/entrevistas/contexto/textos';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import type { ParticipanteEntrevista } from '../../config/entrevistas';
 
 const w = (word: string, ini: number, fim: number, speakerLabel?: string) => ({
@@ -250,7 +255,7 @@ describe('organização', () => {
 describe('refazer transcrição', () => {
   it('descarta o resultado e as edições, mas não o áudio', () => {
     expect([...CAMPOS_DESCARTADOS_AO_REFAZER].sort()).toEqual(
-      ['anamnese', 'anamneseEditada', 'editadoPor', 'erro', 'falantesConfirmados', 'mapaFalantes', 'operacaoSpeech', 'revisada', 'transcricao'],
+      ['anamnese', 'anamneseEditada', 'editadoPor', 'erro', 'falantesConfirmados', 'mapaFalantes', 'operacaoSpeech', 'revisada', 'tempos', 'transcricao'],
     );
     expect(CAMPOS_DESCARTADOS_AO_REFAZER).not.toContain('audio' as never);
   });
@@ -266,13 +271,66 @@ describe('trava de organização', () => {
 });
 
 describe('adaptacaoLigada (SPEECH_ADAPTACAO)', () => {
-  it('ligada por padrão; "0" desliga', async () => {
+  it('desligada por padrão; só "1" liga', async () => {
     const { adaptacaoLigada } = await import('../../servidor/entrevistas/transcricao');
     const antes = process.env.SPEECH_ADAPTACAO;
     delete process.env.SPEECH_ADAPTACAO;
-    expect(adaptacaoLigada()).toBe(true);
+    expect(adaptacaoLigada()).toBe(false);
     process.env.SPEECH_ADAPTACAO = '0';
     expect(adaptacaoLigada()).toBe(false);
+    process.env.SPEECH_ADAPTACAO = 'true';
+    expect(adaptacaoLigada()).toBe(false);
+    process.env.SPEECH_ADAPTACAO = '1';
+    expect(adaptacaoLigada()).toBe(true);
     if (antes === undefined) delete process.env.SPEECH_ADAPTACAO; else process.env.SPEECH_ADAPTACAO = antes;
+  });
+});
+
+describe('contexto de conhecimento (glossário + DGPM-406 por finalidade)', () => {
+  const md = (arquivo: string) => readFileSync(fileURLToPath(new URL(`../../servidor/entrevistas/contexto/${arquivo}`, import.meta.url)), 'utf8');
+  it('textos.ts está igual aos .md (rode scripts/entrevistas/gerar-contexto.mjs após editar)', () => {
+    expect(TEXTOS.GLOSSARIO_JRS).toBe(md('glossario-jrs.md'));
+    expect(TEXTOS.TRECHO_VDF).toBe(md('dgpm-vdf.md'));
+    expect(TEXTOS.TRECHO_TERMINO).toBe(md('dgpm-termino.md'));
+    expect(TEXTOS.TRECHO_AO).toBe(md('dgpm-ao.md'));
+    expect(TEXTOS.TRECHO_BENEFICIO).toBe(md('dgpm-beneficio.md'));
+  });
+  it('textos dentro do limite de tamanho', () => {
+    const palavras = (t: string) => t.split(/\s+/).filter(Boolean).length;
+    expect(palavras(GLOSSARIO_JRS)).toBeLessThanOrEqual(5000);
+    for (const t of Object.values(TRECHOS_DGPM)) expect(palavras(t)).toBeLessThanOrEqual(2500);
+  });
+  it('reconhece a finalidade sem acento/caixa (AO só em maiúsculas)', () => {
+    expect(finalidadesDaIS('Verificação de Deficiência Funcional')).toEqual(['vdf']);
+    expect(finalidadesDaIS('vdf')).toEqual(['vdf']);
+    expect(finalidadesDaIS('AO')).toEqual(['ao']);
+    expect(finalidadesDaIS('ACIDENTE EM SERVIÇO')).toEqual(['ao']);
+    expect(finalidadesDaIS('Término de restrições ao serviço')).toEqual(['termino']);
+    expect(finalidadesDaIS('Isenção de IR — doença especificada em lei')).toEqual(['beneficio']);
+    expect(finalidadesDaIS('Controle periódico')).toEqual([]);
+  });
+  it('glossário sempre; trecho só da finalidade', () => {
+    const vdf = contextoParaFinalidade('VDF');
+    expect(vdf).toContain('TAF — Teste de Aptidão Física');
+    expect(vdf).toContain('TFM — Treinamento Físico Militar');
+    expect(vdf).toContain('antes que o período permitido por perícia menor seja excedido');
+    expect(vdf).not.toContain('Atestado de Origem (AO) é o documento destinado');
+    const ao = contextoParaFinalidade('Atestado de Origem');
+    expect(ao).toContain('Atestado de Origem (AO) é o documento destinado');
+    expect(ao).not.toContain('antes que o período permitido por perícia menor seja excedido');
+    expect(contextoParaFinalidade('Término de Incapacidade')).toContain('ao término de um período de LTS');
+    expect(contextoParaFinalidade('Benefício')).toContain('perícia médica eventual que verifica o estado de saúde');
+    expect(contextoParaFinalidade('Outra')).toBe(GLOSSARIO_JRS.trim());
+  });
+  it('o prompt traz o conhecimento de referência e mantém a proibição de concluir', () => {
+    const transcricao = [{ falante: 'F1', inicioSeg: 0, fimSeg: 1, texto: 'Estou de restrição de TAF.' }];
+    const vdf = montarPromptAnamnese({ finalidade: 'VDF', participantes, transcricao });
+    expect(vdf).toContain('CONHECIMENTO DE REFERÊNCIA (para entender o vocabulário e o contexto; NÃO use para concluir)');
+    expect(vdf).toContain('Teste de Aptidão Física');
+    expect(vdf).toContain('Verificação de Deficiência Funcional É a perícia inicial, eminentemente clínico-funcional');
+    expect(vdf).toMatch(/Não emita conclusão pericial/);
+    const ao = montarPromptAnamnese({ finalidade: 'AO', participantes, transcricao });
+    expect(ao).toContain('Atestado de Origem (AO) é o documento destinado primeiramente a registrar doença ocupacional');
+    expect(ao).not.toContain('Verificação de Deficiência Funcional É a perícia inicial');
   });
 });
