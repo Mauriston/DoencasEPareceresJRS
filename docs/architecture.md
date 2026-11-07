@@ -94,13 +94,15 @@ O backend tem duas partes, publicadas separadamente:
 | `POST /api/admin/excluir-usuario` | Admin apaga um usuário **inativo** (Auth + `usuarios` + `usuarios_publicos`) |
 | `POST /api/admin/preview-apresentacao` | Título e capa de uma apresentação (Google Slides, Canva, GitHub Pages) |
 | `POST /api/notificacoes/evento` | Recebe um evento (login, status Inapto/IDM, IS finalizada, teste), confere no Firestore, grava o histórico e envia o push |
+| `POST /api/documentos/termo-recurso` | Termo de Reconhecimento de Recurso (com o Termo de Cientificação "Inapto" na 2ª página) em PDF, gerado de HTML + CSS (`servidor/documentos/`). Perfis da equipe (Admin, médicos, MPI, Secretaria) |
+| `POST /api/documentos/termo-cientificacao` | Termo de Cientificação de Resultado (APTO, INAPTO ou INSUF DOCUMENTAL) em PDF. Perfis da equipe |
 | `POST /api/arquivos/baixar` | Repasse de arquivos do Firebase Storage (PDFs, fotos de perfil, infográficos) para redes que bloqueiam `firebasestorage.googleapis.com` — ex.: Firefox nos PCs da Marinha. Exige usuário ativo; só as pastas liberadas em `storage.rules` (`utils/arquivosPermitidos.ts`). O cliente monta um `blob:` (`services/arquivosStorage.ts`) e cai para a URL direta se o repasse falhar |
 | `POST /api/gemini/analyze-image` | Leitura de imagem pelo Gemini (exige usuário ativo) |
 | `POST /api/concursos/ocr-pdf` | Transcrição literal do PDF de mensagem administrativa (exige usuário ativo) |
 
 O mesmo servidor serve o build em desenvolvimento (`npm run dev`) e libera CORS para a origem do GitHub Pages (`ALLOWED_ORIGIN`).
 
-**Google Apps Script.** `apps-script/concursos/CodeConcursos.gs` concentra a automação do Workspace: geração de PDFs por template (termos, pedidos de parecer, solicitações de exames), gravação no Drive (inclusive o PDF dos exames dos candidatos), envio de e-mails para impressão e sincronização com o Google Agenda "JRS/HNRe". As ações que gravam exigem o `idToken` do Firebase. `CodePrincipal.gs`, no mesmo projeto, guarda a minuta de mensagens como Google Doc (`salvarMinutaMensagem`). O Apps Script não chama mais o Gemini.
+**Google Apps Script.** `apps-script/concursos/CodeConcursos.gs` concentra a automação do Workspace: geração de PDFs por template (pedidos de parecer, solicitações de parecer e de exames — os termos dos concursos já saem do servidor, em HTML + CSS), gravação no Drive (inclusive o PDF dos exames dos candidatos), envio de e-mails para impressão e sincronização com o Google Agenda "JRS/HNRe". As ações que gravam exigem o `idToken` do Firebase. `CodePrincipal.gs`, no mesmo projeto, guarda a minuta de mensagens como Google Doc (`salvarMinutaMensagem`). O Apps Script não chama mais o Gemini.
 
 ### 3.3 Persistência
 
@@ -249,7 +251,7 @@ sequenceDiagram
 
 - `jsPDF`: PDF do atestado fotografado (Perícia Menor), depois do filtro "Documento" (`utils/filtroDocumento.ts`), e documentos do guia de doenças.
 - Visualização: PDFs arquivados de atestados abrem, no desktop, num modal em tela cheia (`components/ui/LinkPdf.tsx` → `PdfFullscreenModal.tsx`, renderizado no `<body>`); no celular, no visualizador do aparelho.
-- `pdf-lib`: junção do Termo de Recurso com o Termo de Cientificação num PDF único.
+- Documentos oficiais em HTML + CSS → PDF no servidor (`servidor/documentos/`, Chromium via `puppeteer-core`): o Termo de Recurso já sai com o Termo de Cientificação na 2ª página, num PDF único (ADR-012).
 
 ### 6.7 Notificações e avisos
 
@@ -490,7 +492,8 @@ O E2E nunca toca a produção: `e2e/executar.mjs` semeia os emuladores (projeto 
 | `firebase` | Auth, Firestore, Storage e Messaging no cliente |
 | `firebase-admin`, `express` | Servidor no Cloud Run |
 | `@google/genai` | Gemini no servidor |
-| `jspdf`, `pdf-lib` | PDFs locais (atestado, junção de termos) |
+| `jspdf` | PDF local do atestado |
+| `puppeteer-core` | Documentos oficiais HTML + CSS → PDF no servidor (Chromium do sistema) |
 | `react-image-crop` | Recorte de imagem de atestado |
 | `marked` | Renderização de Markdown |
 | `qrcode` | QR code de instalação/login no celular |
@@ -865,6 +868,13 @@ flowchart TB
 - **Decisão:** a escala do SPA é gravada no Firestore (`escalaSpa`, por dia) a partir de um CSV enviado pelo Admin no app; o app não lê a planilha da escala nem o Google Agenda.
 - **Consequências:** sem dependência de Apps Script para a escala; atualizar a escala exige reenviar o CSV (a gravação mescla por dia).
 
+
+### ADR-012 — Documentos oficiais em HTML + CSS no servidor (em vez de templates do Google Docs)
+
+- **Status:** aceita (07/11/2026); migração gradual — começou pelos termos dos concursos.
+- **Decisão:** cada documento é um modelo HTML + CSS em `servidor/documentos/` (layout comum em `layoutOficial.ts`: A4, margens dos templates, Carlito, cabeçalho/rodapé de sigilo e brasão) e vira PDF no Cloud Run com o Chromium headless (`puppeteer-core`; imagem Debian com `chromium` e `fonts-crosextra-carlito`, 1 GiB de memória). A fidelidade é conferida contra o PDF exportado do template (`scripts/documentos/comparar-com-template.mts`: cada linha a menos de 1 pt).
+- **Motivação:** tirar a dependência do Apps Script e dos templates do Drive (cópia, preenchimento e exportação a cada documento); modelos versionados e testáveis; mais rápido.
+- **Consequências:** o servidor passa a precisar do Chromium; mudar o texto de um documento exige mudar o código (com teste), não mais o Google Doc. O PDF continua sendo salvo no Drive pelo Apps Script (`salvarPdfCandidato`) até a migração do armazenamento.
 ---
 
 ## 18. Checklist para mudanças arquiteturais

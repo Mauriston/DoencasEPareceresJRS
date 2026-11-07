@@ -27,7 +27,7 @@
 | `FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_EMAIL` | opcionais (o Admin SDK usa as credenciais padrão do Cloud Run) | definidas à mão no serviço, se preciso |
 | `APP_URL`, `PORT`, `NODE_ENV` | URL do app (links das notificações), porta e modo | padrão do Cloud Run / do código |
 
-Serviço `jrs-hnre-api`, região `southamerica-east1` (`deploy-cloud-run.yml`). A service account do Cloud Run precisa de *Firebase Cloud Messaging API Admin* (push).
+Serviço `jrs-hnre-api`, região `southamerica-east1`, 1 GiB de memória (`deploy-cloud-run.yml`). A imagem (Debian) traz o Chromium e as fontes Carlito/Liberation dos documentos em PDF (`CHROMIUM_PATH=/usr/bin/chromium`). A service account do Cloud Run precisa de *Firebase Cloud Messaging API Admin* (push).
 
 ## 3. GitHub (Settings → Secrets and variables → Actions)
 
@@ -56,8 +56,8 @@ Build local: `VITE_FIREBASE_EMULATORS=1` (E2E) e `VITE_APPCHECK_DEBUG_TOKEN` (Ap
 
 | Propriedade | Uso | Valor padrão |
 |---|---|---|
-| `ID_TEMPLATE_TERMO_RECURSO` | Template do Termo de Recurso (Docs) | `1gVSaakcQJBrFJnF4umFbI_cjR9abCXPjfOyfSUFKnRo` |
-| `ID_TEMPLATE_TERMO_CIENTIFICACAO` | Template do Termo de Cientificação | `1uSdvvwxjPDkvGm7kjCrDGaGnPVF3_pDu4rN6C6tJFiI` |
+| `ID_TEMPLATE_TERMO_RECURSO` | Template do Termo de Recurso (Docs) — **sem uso pelo app desde 07/11/2026** (o termo sai de `servidor/documentos/`) | `1gVSaakcQJBrFJnF4umFbI_cjR9abCXPjfOyfSUFKnRo` |
+| `ID_TEMPLATE_TERMO_CIENTIFICACAO` | Template do Termo de Cientificação — **sem uso pelo app desde 07/11/2026** | `1uSdvvwxjPDkvGm7kjCrDGaGnPVF3_pDu4rN6C6tJFiI` |
 | `ID_TEMPLATE_SOLICITACAO_PARECER` | Template da Solicitação de Parecer (concursos) | `16KIcTgceHNdbTNRe8UeYPjJXn4r_d450Xy61conLO3Q` |
 | `ID_TEMPLATE_PEDIDO_PARECER` | Template do Pedido de Parecer (página Pareceres) | `1jE-3VQ8G2t4JQJ5B7ydedq6oupvsXwo7aPX_AVttMEM` |
 | `ID_TEMPLATE_SOLICITACAO_EXAMES` | Template da Solicitação de Exames | `1SSAzdWANvfQJx7Sip2-NbqDGAM0cgpVD6Q4Ci9UhGqQ` |
