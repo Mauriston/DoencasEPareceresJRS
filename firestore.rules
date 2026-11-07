@@ -43,6 +43,12 @@ service cloud.firestore {
       return isSignedIn() &&
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil == 'user_medicos_geral';
     }
+    // Junta (membros que gravam e revisam as entrevistas das IS): Admin e user_medicos.
+    // Espelha PERFIS_ENTREVISTA em config/entrevistas.ts (e storage.rules / server.ts).
+    function isJunta() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos'];
+    }
     function isSecretaria() {
       return isSignedIn() &&
         get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.perfil == 'user_secretaria';
@@ -176,6 +182,28 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update: if isEquipe();
       allow delete: if isAdmin();
+
+      // Entrevistas gravadas da IS (config/entrevistas.ts; ADR-014): só a junta — Admin e
+      // user_medicos — e TODOS da junta leem as entrevistas de qualquer IS. O app cria o doc
+      // (situação "aguardando_envio", em nome de quem grava, com 2 a 4 participantes) e depois
+      // só mexe nos campos de revisão (falantes, anamnese editada, revisada). Transcrição,
+      // anamnese da IA, áudio e situação são do servidor (Admin SDK, ignora as regras).
+      match /entrevistas/{eid} {
+        allow read: if isJunta();
+        allow create: if isJunta()
+          && request.resource.data.keys().hasOnly(['isId', 'participantes', 'finalidade', 'consentimento', 'criadoPor', 'situacao'])
+          && request.resource.data.keys().hasAll(['isId', 'participantes', 'finalidade', 'consentimento', 'criadoPor', 'situacao'])
+          && request.resource.data.situacao == 'aguardando_envio'
+          && request.resource.data.criadoPor.uid == request.auth.uid
+          && request.resource.data.isId == id
+          && request.resource.data.participantes is list
+          && request.resource.data.participantes.size() >= 2
+          && request.resource.data.participantes.size() <= 4
+          && request.resource.data.consentimento is map;
+        allow update: if isJunta()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mapaFalantes', 'falantesConfirmados', 'anamneseEditada', 'editadoPor', 'revisada']);
+        allow delete: if isAdmin();
+      }
     }
 
     // Coleção "agendaSlots": horário ocupado de um perito ({peritoUid}__{data}T{hh-mm}),

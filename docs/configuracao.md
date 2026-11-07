@@ -1,6 +1,6 @@
 # Inventário de configuração
 
-> **Atualizado em 07/11/2026.** Item 18.3 de `docs/database.md`: tudo o que o app precisa para funcionar e que **não** é código — IDs de pastas, propriedades do Apps Script, variáveis do Cloud Run e do build, segredos e serviços do Google Cloud. Para recuperar o ambiente (ou montar um novo projeto), basta seguir esta lista.
+> **Atualizado em 08/11/2026.** Item 18.3 de `docs/database.md`: tudo o que o app precisa para funcionar e que **não** é código — IDs de pastas, propriedades do Apps Script, variáveis do Cloud Run e do build, segredos e serviços do Google Cloud. Para recuperar o ambiente (ou montar um novo projeto), basta seguir esta lista.
 >
 > **Segredos não entram aqui** (nem no repositório): só o nome e onde ficam. Valores públicos por natureza (configuração web do Firebase, chave do site do reCAPTCHA, IDs de pastas) aparecem para facilitar a recuperação.
 
@@ -95,3 +95,22 @@ Configuração única (ADR-013). Enquanto não for feita, tudo continua pelo App
 5. No app, como Admin: **Usuários → Conta Google do servidor → Autorizar conta**, entrando com a **conta Google da JRS** (a dona da agenda "JRS/HNRe" e do Apps Script). O cartão passa a "Autorizada" com o e-mail da conta.
 
 O *refresh token* fica em `segredos_servidor/contaGoogle` (Firestore; só o Admin SDK lê). Para revogar: myaccount.google.com → Segurança → Apps de terceiros, ou autorize de novo com outra conta.
+
+## 8. Entrevistas gravadas (Speech-to-Text)
+
+Configuração única da gravação da entrevista da IS (ADR-014): o servidor transcreve o áudio com o **Cloud Speech-to-Text** (v2, modelo Chirp 3, separação de falantes) e organiza a anamnese com o **Gemini no Vertex AI**, usando a conta de serviço do Cloud Run — sem chave de API. Enquanto não for feita, a gravação chega ao Storage, mas a entrevista fica em *Erro* ao processar.
+
+1. **Google Cloud Console → APIs e serviços → Biblioteca** (projeto `jrs-app-web`): ative **Cloud Speech-to-Text API** e **Vertex AI API**.
+2. **IAM e administrador → IAM**: na conta de serviço do Cloud Run, `666287638123-compute@developer.gserviceaccount.com`, adicione os papéis:
+   - **Cloud Speech Client** (`roles/speech.client`) — iniciar e consultar as transcrições;
+   - **Vertex AI User** (`roles/aiplatform.user`) — organizar a anamnese pelo Gemini.
+3. **Cloud Storage → bucket `jrs-app-web.firebasestorage.app` → Permissões → Conceder acesso**:
+   - `666287638123-compute@developer.gserviceaccount.com` com **Storage Object Admin** (`roles/storage.objectAdmin`) — ler o original, gravar o `audio.flac` e devolver o áudio ao app;
+   - o agente de serviço do Speech, `service-666287638123@gcp-sa-speech.iam.gserviceaccount.com`, com **Storage Object Viewer** (`roles/storage.objectViewer`) — o Speech lê o áudio direto do bucket. (O agente só aparece depois que a API do passo 1 é ativada; se o Console não o encontrar, rode `gcloud beta services identity create --service=speech.googleapis.com --project=jrs-app-web`.)
+4. **Retenção do áudio (90 dias):** com o `gcloud` autenticado numa conta com *Storage Admin* no bucket, rode `bash scripts/entrevistas/configurar-retencao.sh` (para conferir antes: `SIMULAR=1 bash scripts/entrevistas/configurar-retencao.sh`). O script acrescenta a regra de ciclo de vida que apaga `entrevistas/` com 90 dias e **preserva** as regras que já existirem; pode ser rodado de novo sem duplicar. Confira em *Cloud Storage → bucket → Ciclo de vida*.
+5. **Regras:** `firestore.rules` (subcoleção `inspecoes/{id}/entrevistas`) e `storage.rules` (`entrevistas/`) são publicadas pelo CI (`deploy-firestore-rules.yml`) — confira se a publicação rodou.
+6. **Região:** o Chirp 3 roda na região multirregional **`us`** (EUA); o processamento dos dados de saúde nos EUA foi **aceito** pelo Presidente da JRS (08/11/2026). O áudio continua guardado no bucket em `southamerica-east1`.
+
+Variáveis opcionais do Cloud Run (padrões no código, `servidor/entrevistas/`): `SPEECH_LOCALIZACAO` (padrão `us`), `GEMINI_MODELO_ENTREVISTA` (padrão `gemini-3.5-flash`), `GEMINI_LOCALIZACAO` (padrão `global`), `SPEECH_DIARIZACAO_LIMITES` (`0` desliga os limites de 2–4 falantes) e `FFMPEG_PATH` (conversão para FLAC; padrão `ffmpeg` da imagem).
+
+Para testar: no celular, entre como um usuário `user_medicos`, abra uma IS → **Entrevista gravada → Gravar entrevista**, grave alguns segundos e acompanhe a situação (*Transcrevendo* → *Organizando* → *Pronta*).

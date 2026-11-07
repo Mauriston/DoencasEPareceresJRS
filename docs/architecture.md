@@ -99,6 +99,9 @@ O backend tem duas partes, publicadas separadamente:
 | `POST /api/documentos/solicitacao-parecer` · `/solicitacao-exames` | Solicitações da planilha do concurso em PDF. Perfis da equipe |
 | `POST /api/documentos/pedido-parecer` | Pedido de Parecer da página Pareceres (folha de resposta na última página, "- n de N -"). Só médicos (Admin, médicos, MPI) |
 | `POST /api/google/situacao` · `/api/google/autorizacao` · `GET /api/google/retorno` | Conta Google da JRS no servidor (OAuth 2.0, ADR-013): situação e início da autorização (só Admin, cartão em Usuários) e o retorno do Google, que guarda o *refresh token* em `segredos_servidor/contaGoogle` (só o Admin SDK lê) |
+| `POST /api/entrevistas/audio` | Reserva do envio do áudio da entrevista gravada da IS (corpo binário `audio/*`, cabeçalhos `X-Is-Id` e `X-Entrevista-Id`) quando o upload direto do celular ao Storage falha; grava em `entrevistas/{isId}/{entrevistaId}/` (ADR-014). Só Admin e `user_medicos` |
+| `POST /api/entrevistas/processar` · `/situacao` · `/reorganizar` | Processamento da entrevista (ADR-014): converte o áudio para FLAC e inicia o Speech-to-Text (Chirp 3, separação de falantes); `situacao` avança o processamento (confere a operação do Speech e, pronta a transcrição, organiza a anamnese pelo Gemini no Vertex AI); `reorganizar` refaz a organização com os falantes confirmados. Gravam em `inspecoes/{isId}/entrevistas/{id}`. Só Admin e `user_medicos` |
+| `POST /api/entrevistas/ouvir` | Devolve o áudio da entrevista (binário) enquanto existir (90 dias). O Storage nega leitura pelo app; o repasse `/api/arquivos/baixar` nunca serve `entrevistas/`. Só Admin e `user_medicos` |
 | `POST /api/impressao/parecer` · `/termo-recurso` · `/solicitacao-concurso` | "Enviar para impressão" pela Gmail API (mesmos destinatários, assuntos, textos e anexo do Apps Script; o PDF é lido do Drive e precisa estar sob PARECERES ou CONCURSOS). Parecer: só médicos; demais: equipe. Operação sensível (auditada) |
 | `POST /api/agenda/evento-is` · `/evento-bloqueio` · `/concursos` | Sincronização da agenda "JRS/HNRe" pela Calendar API (mesmas cores, convites e lembrete de 12 h; ids antigos do CalendarApp continuam valendo). Perfis da equipe |
 | `POST /api/arquivos/baixar` | Repasse de arquivos do Firebase Storage (PDFs, fotos de perfil, infográficos) para redes que bloqueiam `firebasestorage.googleapis.com` — ex.: Firefox nos PCs da Marinha. Exige usuário ativo; só as pastas liberadas em `storage.rules` (`utils/arquivosPermitidos.ts`). O cliente monta um `blob:` (`services/arquivosStorage.ts`) e cai para a URL direta se o repasse falhar |
@@ -273,7 +276,7 @@ sequenceDiagram
 Painel de trabalho: *Precisa de atenção* (pareceres atrasados, perícias vigentes, IS de hoje, concursos em andamento e do dia, **IS de concurso atrasadas**, senha temporária), *Últimos documentos gerados* (só Secretaria), **Próximos serviços** (Escala SVÇ do usuário), Próximas Inspeções, Pareceres não concluídos, Perícias Menores Vigentes (as 4 mais antigas; o badge do título mostra o total), Acesso rápido, **Próximas férias** (coluna direita), Agenda de inspeções e Avisos. Para `user_medicos_geral`: sem Próximas férias e com **Últimos atestados** (os registrados pelo usuário).
 
 ### 7.2 Inspeções de Saúde e agenda
-`Inspecoes.tsx` e `components/inspecoes/`: cadastro das IS (exceto concursos), tabela agrupada ou calendário Dia/Semana/Mês, agendamento por perito em slots (transação em `agendaSlots`), bloqueios de horário/turno/período, minutas e sincronização com o Google Agenda "JRS/HNRe" (servidor; Apps Script de reserva). Os dias de concurso ocupam o turno da manhã de todos os peritos.
+`Inspecoes.tsx` e `components/inspecoes/`: cadastro das IS (exceto concursos), tabela agrupada ou calendário Dia/Semana/Mês, agendamento por perito em slots (transação em `agendaSlots`), bloqueios de horário/turno/período, minutas e sincronização com o Google Agenda "JRS/HNRe" (servidor; Apps Script de reserva). Os dias de concurso ocupam o turno da manhã de todos os peritos. **Entrevista gravada** (08/11/2026, ADR-014): no detalhe da IS, a junta (Admin e `user_medicos`) grava a entrevista pelo celular (no computador, um QR abre a IS no celular); o servidor transcreve com separação de falantes e o Gemini organiza a anamnese, revisada e editada no app (`components/inspecoes/entrevista/`, `services/entrevistasIS.ts`, `utils/entrevistas.ts`).
 
 ### 7.3 Concursos
 `ConcursosJRS.tsx` (só o roteamento entre lista, planilha, criação, dia e atrasadas) e `components/concursos/`, divididos por responsabilidade:
@@ -888,6 +891,15 @@ flowchart TB
 - **Motivação:** completar a saída do Apps Script sem mudar o comportamento: mesmo remetente, convites, cores e lembrete de 12 h. Uma conta de serviço não serviria: não envia e-mail nem convida em nome da JRS sem delegação de domínio (indisponível numa conta Gmail).
 - **Consequências:** o app OAuth precisa estar **"Em produção"** (em "Teste" o token expira em 7 dias). Se a senha da conta mudar ou o acesso for revogado, o servidor volta a responder 503 e o app cai no Apps Script até o Admin autorizar de novo. Os eventos e e-mails antigos continuam válidos (ids do CalendarApp sem o sufixo `@google.com`; marcas `jrsConcurso` privadas ou compartilhadas).
 
+### ADR-014 — Entrevista da IS gravada no celular, transcrita no servidor (Speech-to-Text Chirp 3) e organizada pelo Gemini
+
+- **Status:** aceita (08/11/2026, decisões do Presidente da JRS). Contrato único em `config/entrevistas.ts`.
+- **Decisão:** o perito grava a entrevista da IS **só pelo celular** (os PCs do HNRe não têm microfone; no computador, o botão "Gravar pelo celular" mostra um QR que abre `/inspecoes/{isId}/entrevista` no celular, já com o login). O app cria `inspecoes/{isId}/entrevistas/{id}` (situação `aguardando_envio`, participantes e consentimento registrado) e envia o áudio direto ao Storage (`entrevistas/{isId}/{id}/original.{ext}`; reserva: `/api/entrevistas/audio`). O servidor converte para FLAC, transcreve com o **Cloud Speech-to-Text v2, modelo Chirp 3, com separação de falantes** (região dos EUA, aceita) e organiza a anamnese médico-pericial com o **Gemini no Vertex AI**, sem emitir conclusão pericial. O resultado fica no Firestore (nenhum PDF é gerado). O app avança o processamento enquanto o detalhe da IS está aberto (`useAcompanharEntrevista` → `/api/entrevistas/situacao`).
+- **Acesso:** só Admin e `user_medicos` (a junta) gravam, leem e revisam — e **todos** eles veem as entrevistas de qualquer IS. Espelhado em `firestore.rules` (`isJunta()`; o app só cria o doc e mexe em `mapaFalantes`, `falantesConfirmados`, `anamneseEditada`, `editadoPor`, `revisada`), `storage.rules` (só a junta envia `original.*`, áudio até 80 MB; ninguém lê pelo app) e no servidor. O repasse `/api/arquivos/baixar` nunca serve `entrevistas/`.
+- **Revisão humana:** o perito confirma quem é cada falante (F1, F2…), pode pedir a reorganização com os nomes confirmados, edita a anamnese (a original da IA fica preservada) e marca como revisada. A tela avisa sempre: "Rascunho gerado por IA — revisar antes de usar no laudo".
+- **Retenção:** o áudio é apagado **90 dias** após a entrevista pela regra de ciclo de vida do bucket (`scripts/entrevistas/configurar-retencao.sh`); transcrição e anamnese seguem a retenção da IS (`docs/retencao-lgpd.md`).
+- **Consequências:** novas APIs e papéis IAM na conta do Cloud Run (`docs/configuracao.md`, seção 8); custo por minuto de áudio (Speech) e por chamada (Gemini); dados de saúde processados nos EUA (registrado e aceito). O processamento depende de alguém da junta abrir o detalhe da IS até a entrevista ficar pronta.
+
 ---
 
 ## 18. Checklist para mudanças arquiteturais
@@ -958,7 +970,7 @@ Já feitos em 31/10/2026: publicação das regras no CI (com teste antes); restr
 | 31/10 | Páginas sob demanda (`React.lazy`) e aliases de rota | `App.tsx`, `config/routes.ts` |
 | 31/10 | Apps Script: login, usuário ativo e perfil em todas as ações; rotas do Gemini do servidor passam a exigir login; auditoria de acessos recusados e operações sensíveis | `CodeConcursos.gs` (`autorizarAcao_`), `server.ts` (`auditarServidor`), `auditoria_acoes` |
 
-## 21. Histórico de mudanças (01 a 06/11/2026)
+## 21. Histórico de mudanças (01 a 08/11/2026)
 
 | Data | Mudança | Onde |
 |---|---|---|
@@ -974,3 +986,4 @@ Já feitos em 31/10/2026: publicação das regras no CI (com teste antes); restr
 | 06/11 | Novo atestado em etapas (Registrar/Homologar, ENC p/ VDF Sim/Não), PDF em modal no desktop, foto obrigatória de novo | `NovaPericiaMenorForm.tsx`, `components/ui/LinkPdf.tsx`, `PdfFullscreenModal.tsx` |
 | 06/11 | Início: Perícias Menores Vigentes mostra as 4 mais antigas, com o total no badge | `Home.tsx` |
 | 07/11 | E-mails de impressão e Google Agenda pelo servidor (conta Google da JRS por OAuth, Apps Script de reserva); Apps Script sem geração de documentos nem templates | `servidor/google/`, `services/googleServidor.ts`, `components/usuarios/ContaGoogleServidor.tsx` (ADR-013) |
+| 08/11 | Entrevista da IS gravada no celular, transcrita com separação de falantes (Speech-to-Text Chirp 3) e organizada pelo Gemini; revisão, edição e cópia da anamnese no detalhe da IS; áudio apagado em 90 dias | `components/inspecoes/entrevista/`, `services/entrevistasIS.ts`, `utils/entrevistas.ts`, `config/entrevistas.ts`, `/api/entrevistas/*`, `scripts/entrevistas/configurar-retencao.sh` (ADR-014) |

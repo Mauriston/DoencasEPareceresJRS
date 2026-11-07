@@ -20,6 +20,8 @@ name: Deploy API to Cloud Run
 #   Variables (opcional):
 #     ALLOWED_ORIGIN   - origem do frontend publicado, se for diferente de
 #                        https://mauriston.github.io (ex.: domínio próprio)
+#     SPEECH_LOCALIZACAO - região do Speech-to-Text (Chirp 3) da entrevista da IS;
+#                        padrão "us" (servidor/entrevistas/transcricao.ts)
 
 on:
   push:
@@ -62,13 +64,15 @@ jobs:
           region: ${{ env.REGION }}
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           source: .
-          # 1 GiB: o Chromium dos documentos em PDF (servidor/documentos/) não cabe folgado nos 512 MiB padrão.
-          flags: --allow-unauthenticated --memory=1Gi
+          # 2 GiB: o Chromium dos documentos em PDF (servidor/documentos/) e o áudio da entrevista da IS
+          # (até 80 MB + o FLAC convertido, em /tmp, que no Cloud Run ocupa memória) com o ffmpeg.
+          flags: --allow-unauthenticated --memory=2Gi
           env_vars: |
             GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
             GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
             GOOGLE_OAUTH_CLIENT_SECRET=${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
             ALLOWED_ORIGIN=${{ vars.ALLOWED_ORIGIN || 'https://mauriston.github.io' }}
+            SPEECH_LOCALIZACAO=${{ vars.SPEECH_LOCALIZACAO || 'us' }}
 
       - name: URL do serviço
         run: |

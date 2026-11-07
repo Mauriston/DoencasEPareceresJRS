@@ -31,6 +31,24 @@ const cre = (nome, perfil, path, esperado) => ({ nome, tc: {
   request: { auth: { uid: 'u1' }, path: `${DB}/${path}`, method: 'create', resource: { data: base } },
   functionMocks: mocks(perfil),
 } });
+// Entrevistas gravadas da IS (inspecoes/{id}/entrevistas/{eid}): só a junta (Admin e user_medicos).
+const ENT = 'inspecoes/9001/entrevistas/e1';
+const entNova = {
+  isId: '9001', finalidade: 'Atestado de Origem', situacao: 'aguardando_envio',
+  participantes: [{ nome: 'CT A', papel: 'perito' }, { nome: 'SG B', papel: 'inspecionado' }],
+  consentimento: { uid: 'u1', nome: 'CT A', em: 'x' }, criadoPor: { uid: 'u1', nome: 'CT A', em: 'x' },
+};
+const entPronta = { ...entNova, situacao: 'pronta', transcricao: [{ falante: 'F1', inicioSeg: 0, fimSeg: 1, texto: 'x' }], mapaFalantes: { F1: 'CT A' }, anamnese: { resumoExecutivo: 'x' } };
+const creEnt = (nome, perfil, patch, esperado) => ({ nome, tc: {
+  expectation: esperado,
+  request: { auth: { uid: 'u1' }, path: `${DB}/${ENT}`, method: 'create', resource: { data: { ...entNova, ...patch } } },
+  functionMocks: mocks(perfil),
+} });
+const reqEnt = (nome, perfil, method, esperado) => ({ nome, tc: {
+  expectation: esperado,
+  request: { auth: { uid: 'u1' }, path: `${DB}/${ENT}`, method },
+  resource: { data: entPronta }, functionMocks: mocks(perfil),
+} });
 const casos = [
   upd('MPI grava triagem', 'user_medicos_mpi', { triagem: { altura: '1,75' } }, 'ALLOW'),
   upd('Médico JRS grava triagem', 'user_medicos', { triagem: { altura: '1,75' } }, 'DENY'),
@@ -74,6 +92,36 @@ const casos = [
   { nome: 'Admin lê segredo do servidor', tc: { expectation: 'DENY',
     request: { auth: { uid: 'u1' }, path: `${DB}/segredos_servidor/contaGoogle`, method: 'get' },
     resource: { data: { refreshToken: 'x' } }, functionMocks: mocks('admin') } },
+  // Entrevistas gravadas: criação (o app só cria "aguardando_envio", em nome próprio, 2–4 participantes).
+  creEnt('Médico JRS cria entrevista', 'user_medicos', {}, 'ALLOW'),
+  creEnt('Admin cria entrevista', 'admin', {}, 'ALLOW'),
+  creEnt('MPI cria entrevista', 'user_medicos_mpi', {}, 'DENY'),
+  creEnt('Secretaria cria entrevista', 'user_secretaria', {}, 'DENY'),
+  creEnt('Médico Geral cria entrevista', 'user_medicos_geral', {}, 'DENY'),
+  creEnt('Médico cria entrevista já com transcrição', 'user_medicos', { transcricao: [] }, 'DENY'),
+  creEnt('Médico cria entrevista com situação "pronta"', 'user_medicos', { situacao: 'pronta' }, 'DENY'),
+  creEnt('Médico cria entrevista em nome de outro', 'user_medicos', { criadoPor: { uid: 'u2', nome: 'Y', em: 'x' } }, 'DENY'),
+  creEnt('Médico cria entrevista de outra IS', 'user_medicos', { isId: '9002' }, 'DENY'),
+  creEnt('Médico cria entrevista com 1 participante', 'user_medicos', { participantes: [{ nome: 'CT A', papel: 'perito' }] }, 'DENY'),
+  creEnt('Médico cria entrevista com 5 participantes', 'user_medicos', { participantes: [1, 2, 3, 4, 5].map(i => ({ nome: `P${i}`, papel: 'outro' })) }, 'DENY'),
+  // Revisão: só os campos editáveis pelo app.
+  upd('Médico confirma falantes', 'user_medicos', { mapaFalantes: { F1: 'SG B' }, falantesConfirmados: true }, 'ALLOW', null, ENT, entPronta),
+  upd('Admin edita a anamnese', 'admin', { anamneseEditada: { resumoExecutivo: 'y' }, editadoPor: { uid: 'u1', nome: 'A', em: 'x' } }, 'ALLOW', null, ENT, entPronta),
+  upd('Médico marca como revisada', 'user_medicos', { revisada: { uid: 'u1', nome: 'A', em: 'x' } }, 'ALLOW', null, ENT, entPronta),
+  upd('Médico grava transcrição pelo app', 'user_medicos', { transcricao: [] }, 'DENY', null, ENT, entPronta),
+  upd('Médico muda a situação pelo app', 'user_medicos', { situacao: 'erro' }, 'DENY', null, ENT, entPronta),
+  upd('Admin troca a anamnese da IA pelo app', 'admin', { anamnese: { resumoExecutivo: 'y' } }, 'DENY', null, ENT, entPronta),
+  upd('MPI marca como revisada', 'user_medicos_mpi', { revisada: { uid: 'u1', nome: 'A', em: 'x' } }, 'DENY', null, ENT, entPronta),
+  upd('Secretaria edita a anamnese', 'user_secretaria', { anamneseEditada: {} }, 'DENY', null, ENT, entPronta),
+  upd('Médico Geral confirma falantes', 'user_medicos_geral', { falantesConfirmados: true }, 'DENY', null, ENT, entPronta),
+  // Leitura: toda a junta lê qualquer entrevista; os demais perfis, nenhuma.
+  reqEnt('Médico JRS lê entrevista', 'user_medicos', 'get', 'ALLOW'),
+  reqEnt('Admin lê entrevista', 'admin', 'get', 'ALLOW'),
+  reqEnt('MPI lê entrevista', 'user_medicos_mpi', 'get', 'DENY'),
+  reqEnt('Secretaria lê entrevista', 'user_secretaria', 'get', 'DENY'),
+  reqEnt('Médico Geral lê entrevista', 'user_medicos_geral', 'get', 'DENY'),
+  reqEnt('Médico apaga entrevista', 'user_medicos', 'delete', 'DENY'),
+  reqEnt('Admin apaga entrevista', 'admin', 'delete', 'ALLOW'),
 ];
 (async () => {
   const c = await new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] }).getClient();

@@ -193,10 +193,12 @@ Regras: Firestore — leitura autenticada, escrita só Admin; Storage (`legislac
 | `agendaSlots` | `{peritoUid}__{AAAA-MM-DD}T{hh-mm}` | Um documento por horário ocupado. É gravado na **mesma transação** do agendamento, que reserva o slot novo e libera o anterior, então dois usuários nunca ocupam o mesmo horário do mesmo perito |
 | `bloqueiosAgenda` | id automático | `data`, `dataFim?` (bloqueio de período, dia inteiro), `turno` (`manha` \| `tarde` \| `dia`), `hora?`, `peritoUid` (`*` = todos), `peritoNome?`, `motivo`, `eventoAgendaId?` |
 | `config/agendaIS` | documento único | Turnos em que cada perito atende, por dia da semana (só o Admin grava) |
+| `inspecoes/{isId}/entrevistas` | id gerado pelo app | **Entrevista gravada da IS** (ADR-014; contrato em `config/entrevistas.ts`). O app cria com `isId`, `participantes` (2 a 4: `nome`, `papel` = perito \| inspecionado \| membro_junta \| acompanhante \| outro), `finalidade`, `consentimento` e `criadoPor` (`{uid, nome, em}`) e `situacao` = `aguardando_envio`. O **servidor** grava `situacao` (`transcrevendo` → `organizando` → `pronta` \| `erro`), `erro?`, `audio` (`caminho`, `mimeType`, `bytes`, `duracaoSeg`, `apagarApos` AAAA-MM-DD), `operacaoSpeech`, `transcricao` (`[{falante: "F1", inicioSeg, fimSeg, texto}]`), `mapaFalantes` sugerido, `anamnese` (resumo executivo, queixa principal, alegações, história cronológica `{quando, evento, fonte, tempoSeg?}`, antecedentes, medicações, tratamentos, exames citados, repercussão funcional, `secaoFinalidade {titulo, texto}`, pontos a esclarecer, citações `{falante, texto, tempoSeg}`), `modelos`, `atualizadoEm`. Depois de criado, o app só altera `mapaFalantes`, `falantesConfirmados`, `anamneseEditada` (a original da IA fica em `anamnese`), `editadoPor` e `revisada` |
 
 - **Status derivados**, não gravados: IS **Atrasada** (aberta sem entrevista há mais de 7 dias; 60 dias no grupo *Benefícios*).
 - **Próximas férias** da Início: bloqueios com motivo contendo "FÉRIAS" (sem distinguir acento/caixa) ainda não terminados.
 - Os **dias de concurso** não são gravados como bloqueio: são derivados dos candidatos (seção 10) e ocupam o turno da manhã de todos os peritos.
+- **Áudio das entrevistas** no Storage em `entrevistas/{isId}/{entrevistaId}/` (`original.{ext}` enviado pelo celular e `audio.flac` convertido pelo servidor). `storage.rules`: só a junta (Admin e `user_medicos`) envia o `original.*` (áudio até 80 MB); ninguém lê, troca nem apaga pelo app — o áudio é ouvido por `/api/entrevistas/ouvir`. Apagado **90 dias** depois pela regra de ciclo de vida do bucket (`scripts/entrevistas/configurar-retencao.sh`; ainda recuperável na lixeira por 30 dias). Nenhum PDF é gerado.
 
 ## 10. Concursos e candidatos
 
@@ -272,6 +274,7 @@ O cliente só avisa o servidor (`/api/notificacoes/evento`); o servidor confere 
 | `documentos_gerados` | Secretaria e Admin | criar: autenticado em seu nome; marcar aberto: Secretaria e Admin; apagar: Admin |
 | `militares` | autenticado | criar: equipe; editar: Admin (médicos só `servico_label`); apagar: Admin |
 | `inspecoes`, `agendaSlots` | autenticado | equipe (Admin, médicos, Secretaria); apagar IS: Admin |
+| `inspecoes/{isId}/entrevistas` | junta (Admin e `user_medicos`), qualquer IS | criar: junta, em seu nome, só os campos de criação, situação `aguardando_envio`, 2 a 4 participantes; editar: junta, só `mapaFalantes`, `falantesConfirmados`, `anamneseEditada`, `editadoPor`, `revisada` (transcrição, anamnese da IA, áudio e situação são do servidor); apagar: Admin |
 | `bloqueiosAgenda` | autenticado | Admin e Secretaria; médico só os próprios |
 | `pareceres` | autenticado | médicos criam; não-Admin só altera o status de conclusão |
 | `escalaSpa` | autenticado | só Admin grava |
@@ -440,6 +443,7 @@ O mesmo script liga a **proteção contra exclusão** do banco `(default)` (`del
 
 ### 18.2 Storage e Drive — sem exclusão definitiva automática
 
+- **Storage — exceção:** o áudio das entrevistas gravadas (`entrevistas/`) é apagado **automaticamente 90 dias** após a gravação (regra de ciclo de vida, `scripts/entrevistas/configurar-retencao.sh`; ADR-014). Depois disso, só a lixeira (30 dias) o recupera.
 - **Storage:** o app só apaga arquivos por ação de uma pessoa (Admin removendo um infográfico; termo antigo de concurso regerado). O bucket tem **lixeira (soft delete)**: o padrão do Google Cloud era 7 dias; desde 06/11/2026 são **30 dias** (`configurar-backup.sh`) — um arquivo apagado pode ser restaurado nesse prazo (Console → Cloud Storage → bucket → *Objetos excluídos*).
 - **Drive:** o Apps Script nunca apaga de vez: cópias temporárias e termos substituídos vão para a **lixeira** (`setTrashed(true)`), recuperáveis por 30 dias. Os PDFs gerados (termos, pareceres, exames, minutas) ficam nas pastas do drive compartilhado, que são o próprio arquivo de longo prazo.
 - **Retenção administrativa e descarte:** prazos propostos em `docs/retencao-lgpd.md`, ainda a validar pela Encarregada/Comando (seção 17).

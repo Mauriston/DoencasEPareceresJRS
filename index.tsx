@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { Raiz } from './components/Raiz';
 import { ErroFatal } from './components/ErroFatal';
-import { consumirTokenDaUrl } from './services/handoff';
+import { aplicarDestinoDaUrl, consumirTokenDaUrl } from './services/handoff';
 import './styles/app.css';
 
 // Depois de uma nova publicação, uma aba aberta com a versão anterior não encontra mais os arquivos
@@ -31,6 +31,9 @@ if (!rootElement) {
 // para as rotas (HashRouter), o token precisa ser lido e removido da barra de
 // endereço ANTES de o roteador ler o hash.
 const handoffToken = consumirTokenDaUrl();
+// O QR "Abrir no celular" (ex.: gravação da entrevista da IS) leva ?abrir=/inspecoes/{isId}/entrevista:
+// vira a rota inicial do HashRouter; sem sessão, o Login aparece e, depois de entrar, o app segue nela.
+aplicarDestinoDaUrl();
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(

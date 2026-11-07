@@ -4,7 +4,8 @@
 // (agrupada em Abertas · Em andamento · Finalizadas) com alternância para calendário no formato do
 // Google Agenda. As IS com entrevista marcada são sincronizadas com a agenda "JRS/HNRe" do Google
 // Agenda, com o perito como convidado (ver services/agendaGoogleIS.ts).
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
 import { Segmented } from './ui/Segmented';
@@ -85,7 +86,17 @@ export const Inspecoes: React.FC = () => {
   const [peritoFiltro, setPeritoFiltro] = useState('');
 
   const [novo, setNovo] = useState<{ dataEntrevista?: string; peritoUid?: string } | null>(null);
-  const [detalheId, setDetalheId] = useState<string | null>(null);
+  const [detalheId, setDetalheIdEstado] = useState<string | null>(null);
+  // Deep link /inspecoes/{isId}[/{acao}] (ex.: QR "Abrir no celular" da gravação da entrevista): abre o
+  // detalhe da IS; ao fechar, a URL volta para /inspecoes. A ação (ex.: 'entrevista') é lida pelo próprio
+  // InspecaoDetalhe via useParams.
+  const { isId: isIdDaRota } = useParams();
+  const navigate = useNavigate();
+  useEffect(() => { if (isIdDaRota) setDetalheIdEstado(isIdDaRota); }, [isIdDaRota]);
+  const setDetalheId = (id: string | null) => {
+    setDetalheIdEstado(id);
+    if (id === null && isIdDaRota) navigate('/inspecoes', { replace: true });
+  };
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
   const [trocandoPerito, setTrocandoPerito] = useState<{ is: InspecaoRecord; dataHora: string } | null>(null);
   const [horarioVazio, setHorarioVazio] = useState<string | null>(null);
@@ -115,6 +126,13 @@ export const Inspecoes: React.FC = () => {
   // Sigla da OM do inspecionado (dependente herda a do titular; pensionista não tem).
   const omPorId = useMemo(() => new Map(militares.map(m => [m.id, m.om])), [militares]);
   const detalhe = detalheId ? lista?.find(i => i.id === detalheId) ?? null : null;
+  const avisouRotaInvalida = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isIdDaRota || !lista || lista.some(i => i.id === isIdDaRota) || avisouRotaInvalida.current === isIdDaRota) return;
+    avisouRotaInvalida.current = isIdDaRota;
+    avisar(`IS ${isIdDaRota} não encontrada.`, 'error');
+    setDetalheId(null);
+  }, [isIdDaRota, lista]);
 
   const totais = useMemo(() => ({
     todas: lista?.length ?? 0,
