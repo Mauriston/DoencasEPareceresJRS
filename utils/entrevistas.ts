@@ -1,12 +1,11 @@
 // Ficheiro: utils/entrevistas.ts
 // Funções puras de APRESENTAÇÃO da entrevista gravada da IS (sem Firebase): tempo mm:ss,
 // nomes dos falantes pelo `mapaFalantes`, anamnese efetiva (editada ?? original), busca na
-// transcrição, edição de listas e o texto formatado que o perito copia para o laudo.
+// transcrição e o texto formatado que o perito copia para o laudo.
 // Contrato dos dados em config/entrevistas.ts.
 import {
   ROTULO_SITUACAO,
-  type AnamneseEntrevista, type EntrevistaRecord, type FalaTranscrita, type FonteInformacao,
-  type ItemCronologia, type ParticipanteEntrevista, type SituacaoEntrevista, type TemposEntrevista,
+  type AnamneseEntrevista, type EntrevistaRecord, type FalaTranscrita, type FonteInformacao, type SituacaoEntrevista,
 } from '../config/entrevistas';
 
 /** Segundos → "mm:ss" (ou "h:mm:ss" a partir de 1 hora). Valores inválidos viram "00:00". */
@@ -26,30 +25,6 @@ export const formatarDuracao = (seg: unknown): string => {
   const min = Math.round(n / 60);
   if (min < 60) return `${min} min`;
   return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`;
-};
-
-/** Milissegundos → "m:ss" (ou "h:mm:ss" a partir de 1 hora), sem zero à esquerda nos minutos. */
-const relogio = (ms: number): string => {
-  const n = Math.round(ms / 1000);
-  const h = Math.floor(n / 3600), m = Math.floor((n % 3600) / 60), s = n % 60;
-  const p = (x: number) => String(x).padStart(2, '0');
-  return h > 0 ? `${h}:${p(m)}:${p(s)}` : `${m}:${p(s)}`;
-};
-
-/**
- * Linha da duração do processamento: "Processada em 3 min 40 s (transcrição 3:05 · organização 0:35)".
- * Transcrição = do início do processamento (inclui a conversão do áudio) à transcrição pronta;
- * organização = da transcrição pronta à anamnese organizada. Null se faltar algum marco ou se a ordem
- * for incoerente.
- */
-export const textoTemposProcessamento = (t: TemposEntrevista | null | undefined): string | null => {
-  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);
-  const ini = num(t?.processamentoIniciado), tr = num(t?.transcricaoConcluida), org = num(t?.organizacaoConcluida);
-  if (![ini, tr, org].every(Number.isFinite) || tr < ini || org < tr) return null;
-  const totalSeg = Math.round((org - ini) / 1000);
-  const h = Math.floor(totalSeg / 3600), min = Math.floor((totalSeg % 3600) / 60), s = totalSeg % 60;
-  const total = h > 0 ? `${h} h ${min} min` : min > 0 ? (s ? `${min} min ${s} s` : `${min} min`) : `${s} s`;
-  return `Processada em ${total} (transcrição ${relogio(tr - ini)} · organização ${relogio(org - tr)})`;
 };
 
 /** Converte o `em` de QuemQuando (Timestamp do Firestore, Date, número, {seconds}) em Date. */
@@ -72,12 +47,6 @@ export const dataHoraEntrevista = (em: unknown): string => {
   if (!d) return '';
   const p = (x: number) => String(x).padStart(2, '0');
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
-};
-
-/** "AAAA-MM-DD" → "DD/MM/AAAA" (o `audio.apagarApos`). */
-export const dataIsoBr = (iso: string | undefined): string => {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
 };
 
 export const ROTULO_FONTE: Record<FonteInformacao, string> = {
@@ -112,29 +81,6 @@ export type FalaComNome = FalaTranscrita & { nome: string };
 export const aplicarMapaFalantes = (falas: FalaTranscrita[] | undefined, mapa?: Record<string, string> | null): FalaComNome[] =>
   (falas || []).map(f => ({ ...f, nome: nomeDoFalante(f.falante, mapa) }));
 
-/** Rótulos dos falantes na ordem em que aparecem pela primeira vez, com a primeira fala de cada um. */
-export const primeirasFalas = (falas: FalaTranscrita[] | undefined): { rotulo: string; fala: FalaTranscrita }[] => {
-  const vistos = new Map<string, FalaTranscrita>();
-  for (const f of falas || []) if (f.falante && !vistos.has(f.falante)) vistos.set(f.falante, f);
-  return [...vistos.entries()]
-    .map(([rotulo, fala]) => ({ rotulo, fala }))
-    .sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR', { numeric: true }));
-};
-
-/**
- * Mapa inicial do formulário "Confirmar falantes": o sugerido pela IA, desde que o nome seja de
- * um participante; os demais rótulos ficam '' (não identificado).
- */
-export const mapaInicial = (falas: FalaTranscrita[] | undefined, participantes: ParticipanteEntrevista[], sugerido?: Record<string, string> | null): Record<string, string> => {
-  const nomes = new Set(participantes.map(p => p.nome));
-  const mapa: Record<string, string> = {};
-  for (const { rotulo } of primeirasFalas(falas)) {
-    const s = sugerido?.[rotulo];
-    mapa[rotulo] = s && nomes.has(s) ? s : '';
-  }
-  return mapa;
-};
-
 const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 /** Busca simples na transcrição (texto ou nome do falante; ignora maiúsculas e acentos). */
@@ -144,10 +90,6 @@ export const filtrarTranscricao = <T extends FalaTranscrita & { nome?: string }>
   return falas.filter(f => semAcento(f.texto).includes(q) || semAcento(f.nome || '').includes(q));
 };
 
-/** Lista ↔ texto de uma linha por item (edição em textarea). */
-export const listaParaTexto = (l: string[] | undefined): string => (l || []).join('\n');
-export const textoParaLista = (t: string): string[] => t.split('\n').map(s => s.trim()).filter(Boolean);
-
 /** Anamnese vazia (base quando a IA não devolveu algum campo). */
 export const anamneseVazia = (): AnamneseEntrevista => ({
   resumoExecutivo: '', queixaPrincipal: '', alegacoesInspecionado: [], historiaCronologica: [], antecedentes: [],
@@ -155,7 +97,7 @@ export const anamneseVazia = (): AnamneseEntrevista => ({
   condutaPerito: [], pontosAEsclarecer: [], citacoes: [],
 });
 
-/** Completa campos ausentes (a IA pode omitir algum) para a tela e a edição não quebrarem. */
+/** Completa campos ausentes (a IA pode omitir algum) para a tela não quebrar. */
 export const normalizarAnamnese = (a: Partial<AnamneseEntrevista> | null | undefined): AnamneseEntrevista => {
   const v = anamneseVazia();
   const s = (x: unknown) => (typeof x === 'string' ? x : '');
@@ -175,34 +117,6 @@ export const normalizarAnamnese = (a: Partial<AnamneseEntrevista> | null | undef
     condutaPerito: l(a?.condutaPerito),
     pontosAEsclarecer: l(a?.pontosAEsclarecer),
     citacoes: Array.isArray(a?.citacoes) ? a!.citacoes.filter(Boolean) : v.citacoes,
-  };
-};
-
-/** Limpa a anamnese editada antes de gravar: apara textos, tira itens vazios e campos `undefined`. */
-export const limparAnamnese = (a: AnamneseEntrevista): AnamneseEntrevista => {
-  const lista = (l: string[]) => l.map(s => s.trim()).filter(Boolean);
-  return {
-    resumoExecutivo: a.resumoExecutivo.trim(),
-    queixaPrincipal: a.queixaPrincipal.trim(),
-    alegacoesInspecionado: lista(a.alegacoesInspecionado),
-    historiaCronologica: a.historiaCronologica
-      .map(i => {
-        const item: ItemCronologia = { quando: (i.quando || '').trim(), evento: (i.evento || '').trim(), fonte: i.fonte || 'outro' };
-        if (typeof i.tempoSeg === 'number' && Number.isFinite(i.tempoSeg)) item.tempoSeg = i.tempoSeg;
-        return item;
-      })
-      .filter(i => i.evento),
-    antecedentes: lista(a.antecedentes),
-    medicacoes: lista(a.medicacoes),
-    tratamentos: lista(a.tratamentos),
-    examesCitados: lista(a.examesCitados),
-    repercussaoFuncional: a.repercussaoFuncional.trim(),
-    secaoFinalidade: { titulo: a.secaoFinalidade.titulo.trim(), texto: a.secaoFinalidade.texto.trim() },
-    condutaPerito: lista(a.condutaPerito || []),
-    pontosAEsclarecer: lista(a.pontosAEsclarecer),
-    citacoes: a.citacoes
-      .map(c => ({ falante: c.falante || '', texto: (c.texto || '').trim(), tempoSeg: typeof c.tempoSeg === 'number' ? c.tempoSeg : 0 }))
-      .filter(c => c.texto),
   };
 };
 
@@ -229,7 +143,6 @@ export const SECOES_ANAMNESE = [
 export const tituloSecaoFinalidade = (a: AnamneseEntrevista, finalidade?: string): string =>
   a.secaoFinalidade?.titulo?.trim() || (finalidade ? `Finalidade: ${finalidade}` : 'Finalidade');
 
-export const AVISO_IA = 'Rascunho gerado por IA — revisar antes de usar no laudo.';
 
 /**
  * Texto da anamnese para a área de transferência (colar no laudo/prontuário): títulos em
@@ -259,7 +172,6 @@ export const textoAnamnese = (
   sec('Pontos a esclarecer', lista(an.pontosAEsclarecer));
   sec('Citações literais', an.citacoes
     .map(c => `- ${nomeDoFalante(c.falante, opcoes.mapaFalantes)} (${formatarTempo(c.tempoSeg)}): "${c.texto}"`).join('\n'));
-  blocos.push(`(${AVISO_IA})`);
   return blocos.join('\n\n');
 };
 
