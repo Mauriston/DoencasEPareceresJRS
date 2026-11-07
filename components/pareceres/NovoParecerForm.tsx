@@ -27,6 +27,8 @@ interface Props {
   inicial?: ParecerRecord | null;
   /** Pré-preenchimento a partir de uma Inspeção de Saúde: inspecionado (id = NIP só dígitos) e finalidade. */
   prefill?: { militarId: string; finalidade: string };
+  /** Pedido feito a partir de uma IS: grava o vínculo (isId e nº) no parecer. */
+  vinculoIS?: { isId: string; is: number };
   onClose: () => void;
   onGerado: (nome: string, pdfUrl: string) => void;
 }
@@ -35,7 +37,7 @@ type Erros = Record<string, string>;
 
 const vinculoDoMilitar = vinculoDoInspecionado;
 
-export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, onClose, onGerado }) => {
+export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, vinculoIS, onClose, onGerado }) => {
   const nav = useNav();
   const usuario = nav?.authUser;
 
@@ -136,6 +138,7 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, onClose, on
         militarId: militar.id, inspecionado: militar.inspecionado, especialidade: modelo.especialidade, finalidade,
         historico: historico.trim(), quesitos: lista, pdfUrl,
         solicitanteUid: usuario.uid, solicitanteNome: usuario.nome, solicitanteUsuario: usuario.usuario, solicitantePosto: usuario.postoGraduacao || '',
+        ...(vinculoIS ? { isId: vinculoIS.isId, is: vinculoIS.is } : {}),
       });
       onGerado(militar.nome, pdfUrl);
     } catch (err: any) {

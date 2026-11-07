@@ -2,6 +2,7 @@
 // Regras puras (sem Firebase) das Inspeções de Saúde: situações e status, prazo de atraso,
 // slots de agendamento de 20 minutos e utilitários de data/hora. Datas viajam como texto
 // ("AAAA-MM-DD" e "AAAA-MM-DDThh:mm", horário de Recife) — nada de fuso nem Date UTC.
+import { feriados } from './escalaSpa';
 
 // ---------------------------------------------------------------------------
 // Situação e status
@@ -11,7 +12,8 @@ export type SituacaoIS = 'aberta' | 'andamento' | 'finalizada';
 
 /** Status gravado. "Atrasada" não é gravado: é derivado (ver statusEfetivoIS). */
 export type StatusIS =
-  | 'aberta' | 'agendada' | 'reagendada' | 'faltou' | 'auditoria' | 'revisao_exofficio'
+  | 'aberta' | 'agendada' | 'reagendada' | 'faltou' | 'parecer_solicitado' | 'auditoria' | 'revisao_exofficio'
+  | 'restituicao_auditoria' | 'restituicao_jsd'
   | 'conclusao_pendente' | 'votacao_pendente' | 'assinaturas_pendentes' | 'tis_assinado' | 'cancelada';
 export type StatusExibicaoIS = StatusIS | 'atrasada';
 
@@ -23,8 +25,11 @@ export const STATUS_IS: Record<StatusExibicaoIS, { rotulo: string; situacao: Sit
   agendada: { rotulo: 'Agendada', situacao: 'andamento', tom: 'navy' },
   reagendada: { rotulo: 'Reagendada', situacao: 'andamento', tom: 'navy' },
   faltou: { rotulo: 'Faltou', situacao: 'andamento', tom: 'danger' },
+  parecer_solicitado: { rotulo: 'Parecer solicitado', situacao: 'andamento', tom: 'attention' },
   auditoria: { rotulo: 'Em auditoria', situacao: 'andamento', tom: 'attention' },
   revisao_exofficio: { rotulo: 'Em Revisão Ex-officio', situacao: 'andamento', tom: 'attention' },
+  restituicao_auditoria: { rotulo: 'Restituição Auditoria', situacao: 'andamento', tom: 'attention' },
+  restituicao_jsd: { rotulo: 'Restituição JSD', situacao: 'andamento', tom: 'attention' },
   conclusao_pendente: { rotulo: 'Conclusão pendente', situacao: 'andamento', tom: 'attention' },
   votacao_pendente: { rotulo: 'Votação pendente', situacao: 'andamento', tom: 'attention' },
   assinaturas_pendentes: { rotulo: 'Assinaturas pendentes', situacao: 'andamento', tom: 'attention' },
@@ -38,18 +43,13 @@ export const SITUACOES_IS: { id: SituacaoIS; rotulo: string; plural: string }[] 
   { id: 'finalizada', rotulo: 'Finalizada', plural: 'Finalizadas' },
 ];
 
-/** Status que o usuário escolhe no menu suspenso (Atrasada é calculado; Cancelada vem da minuta de cancelamento). */
-export const STATUS_ESCOLHIVEIS: StatusIS[] = [
-  'aberta', 'agendada', 'reagendada', 'faltou', 'auditoria', 'revisao_exofficio',
-  'conclusao_pendente', 'votacao_pendente', 'assinaturas_pendentes', 'tis_assinado',
-];
-
 export const situacaoDoStatus = (status: StatusIS): SituacaoIS => STATUS_IS[status].situacao;
 
 export const PRAZO_ATRASO_DIAS = 7;
 export const PRAZO_ATRASO_DIAS_BENEFICIOS = 60;
 export const GRUPO_BENEFICIOS = 'Benefícios';
 export const GRUPO_VERIFICACOES = 'Verificações e Términos';
+export const GRUPO_LICENCIAMENTO = 'Licenciamento';
 
 export interface DadosPrazoIS {
   status: StatusIS;
@@ -77,6 +77,36 @@ export const statusEfetivoIS = (is: DadosPrazoIS, hoje: string = hojeISO()): Sta
   if (is.status === 'aberta' && !is.dataEntrevista && diasEmAberto(is.dataAbertura, hoje) > prazoAtrasoDias(is.grupoFinalidade)) return 'atrasada';
   return is.status;
 };
+
+/**
+ * Status depois de agendar/reagendar/trocar o perito. Só mexe no status das etapas de agendamento
+ * (Aberta, Agendada, Reagendada, Faltou): uma IS em votação, auditoria etc. mantém o status. Mesma
+ * data e hora (só troca de perito) também mantém.
+ */
+export const statusAoAgendar = (atual: { status: StatusIS; dataEntrevista?: string }, novaDataEntrevista: string): StatusIS => {
+  if (!['aberta', 'agendada', 'reagendada', 'faltou'].includes(atual.status)) return atual.status;
+  if (atual.dataEntrevista && atual.dataEntrevista === novaDataEntrevista && atual.status !== 'faltou') return atual.status;
+  return atual.dataEntrevista || atual.status === 'faltou' ? 'reagendada' : 'agendada';
+};
+
+/** Dias úteis (seg–sex, fora os feriados nacionais, de PE e do Recife) depois de `a` até `b` (inclusive). */
+export const diasUteisEntre = (a: string, b: string): number => {
+  if (!a || !b || b <= a) return 0;
+  let n = 0;
+  const feriadosPorAno = new Map<number, Record<string, string>>();
+  for (let d = somarDias(a, 1); d <= b; d = somarDias(d, 1)) {
+    const ano = Number(d.slice(0, 4));
+    if (!feriadosPorAno.has(ano)) feriadosPorAno.set(ano, feriados(ano));
+    if (ehDiaUtil(d) && !feriadosPorAno.get(ano)![d]) n++;
+  }
+  return n;
+};
+
+export const DIAS_UTEIS_CANCELAR = 7;
+
+/** "Cancelar IS" aparece com status Faltou, ou Aberta há 7 dias úteis ou mais desde a abertura. */
+export const podeCancelarIS = (is: { status: StatusIS; dataAbertura: string }, hoje: string = hojeISO()): boolean =>
+  is.status === 'faltou' || (is.status === 'aberta' && diasUteisEntre(is.dataAbertura, hoje) >= DIAS_UTEIS_CANCELAR);
 
 // ---------------------------------------------------------------------------
 // Datas

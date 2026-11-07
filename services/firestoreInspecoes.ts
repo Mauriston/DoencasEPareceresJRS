@@ -15,7 +15,7 @@ import { novoId } from '../utils/dados';
 import { app } from './firebaseAuth';
 import { registrarAcaoSensivel } from './auditoriaAcoes';
 import {
-  chaveSlot, chavesOcupadas, duracaoDoGrupo, situacaoDoStatus, TODOS_PERITOS,
+  chaveSlot, chavesOcupadas, duracaoDoGrupo, situacaoDoStatus, statusAoAgendar, TODOS_PERITOS,
   type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS, type Turno,
 } from '../utils/inspecoes';
 
@@ -147,21 +147,22 @@ export interface Agendamento {
 }
 
 /**
- * Agenda ou reagenda: grava perito + data/hora, reserva o slot novo, libera o antigo e ajusta o status
- * (Agendada na primeira vez; Reagendada se já havia data ou se faltou).
+ * Agenda, reagenda ou troca o perito: grava perito + data/hora, reserva o slot novo, libera o antigo e
+ * ajusta o status (ver statusAoAgendar: Agendada na primeira vez; Reagendada se já havia data ou se
+ * faltou; as etapas depois da entrevista mantêm o status).
  */
 export const agendarInspecao = async (atual: InspecaoRecord, novo: Agendamento): Promise<StatusIS> => {
-  const status: StatusIS = atual.dataEntrevista || atual.status === 'faltou' ? 'reagendada' : 'agendada';
+  const status: StatusIS = statusAoAgendar(atual, novo.dataEntrevista);
   const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(atual.id, { ...novo, status, situacao: situacaoDoStatus(status) }, { peritoUid: novo.peritoUid, dataEntrevista: novo.dataEntrevista, grupoFinalidade: atual.grupoFinalidade }, slotAntigo, false);
   return status;
 };
 
 /** Cancela a IS (situação Finalizada) e libera o horário reservado. */
-export const cancelarInspecao = async (atual: InspecaoRecord, minuta: string): Promise<void> => {
+export const cancelarInspecao = async (atual: InspecaoRecord): Promise<void> => {
   const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(atual.id, {
-    status: 'cancelada', situacao: situacaoDoStatus('cancelada'), minutaCancelamento: minuta,
+    status: 'cancelada', situacao: situacaoDoStatus('cancelada'),
   }, null, slotAntigo, false);
 };
 
