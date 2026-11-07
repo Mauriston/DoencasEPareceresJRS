@@ -197,10 +197,20 @@ export const recusouAdaptacao = (e: unknown): boolean => {
  * Inicia o BatchRecognize e devolve o nome da operação (não espera a transcrição). Com adaptação de
  * frases (nomes dos participantes + siglas); se o Google recusar a adaptação para o modelo, repete sem ela.
  */
-export const iniciarTranscricao = async (uriGcs: string, nParticipantes: number, participantes: ParticipanteEntrevista[] = []): Promise<string> => {
+/** Adaptação de frases ligada? (SPEECH_ADAPTACAO=0 desliga — o Chirp 3 pode falhar com ela.) */
+export const adaptacaoLigada = (): boolean => process.env.SPEECH_ADAPTACAO !== '0';
+
+/**
+ * Inicia o BatchRecognize. Com `semAdaptacao`, não manda a lista de frases. Devolve o nome da operação e se a
+ * adaptação foi usada (para o fluxo refazer SEM ela caso o processamento falhe depois de aceito).
+ */
+export const iniciarTranscricao = async (
+  uriGcs: string, nParticipantes: number, participantes: ParticipanteEntrevista[] = [], semAdaptacao = false,
+): Promise<{ nome: string; comAdaptacao: boolean }> => {
   const cliente = await obterCliente();
-  const frases = frasesAdaptacao(participantes);
+  const frases = semAdaptacao || !adaptacaoLigada() ? [] : frasesAdaptacao(participantes);
   let operacao: any;
+  let comAdaptacao = frases.length > 0;
   try {
     [operacao] = await cliente.batchRecognize(montarPedidoBatch(uriGcs, nParticipantes, { frases }) as any);
   } catch (e) {
@@ -208,10 +218,11 @@ export const iniciarTranscricao = async (uriGcs: string, nParticipantes: number,
     // Só o fato e o código: a mensagem do Google pode citar as frases (nomes dos participantes).
     console.warn(`Entrevista: Speech recusou a adaptação de frases (código ${String((e as { code?: unknown })?.code ?? '?').slice(0, 20)}); repetindo sem adaptação.`);
     [operacao] = await cliente.batchRecognize(montarPedidoBatch(uriGcs, nParticipantes) as any);
+    comAdaptacao = false;
   }
   const nome = String(operacao?.name || '');
   if (!nome) throw new Error('O Speech-to-Text não devolveu a operação.');
-  return nome;
+  return { nome, comAdaptacao };
 };
 
 export type ConsultaTranscricao =

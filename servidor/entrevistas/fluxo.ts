@@ -167,10 +167,13 @@ export const processarEntrevista = async (db: Firestore, bucket: Bucket, p: Pedi
       if (!size) throw new Error('conversão vazia');
       await bucket.upload(saida, { destination: caminhoFlac, contentType: 'audio/flac', metadata: { cacheControl: 'private, no-store' } });
     });
-    const operacao = await iniciarTranscricao(`gs://${bucket.name}/${caminhoFlac}`, nParticipantes, Array.isArray(d.participantes) ? d.participantes : []);
+    const uriFlac = `gs://${bucket.name}/${caminhoFlac}`;
+    const operacao = await iniciarTranscricao(uriFlac, nParticipantes, Array.isArray(d.participantes) ? d.participantes : []);
     await ref.update({
       audio: { caminho, mimeType, bytes, duracaoSeg, apagarApos: dataApagarApos(dataDaEntrevista(d), DIAS_RETENCAO_AUDIO) },
-      operacaoSpeech: operacao,
+      operacaoSpeech: operacao.nome,
+      speechComAdaptacao: operacao.comAdaptacao,
+      speechUri: uriFlac,
       situacao: 'transcrevendo',
       modelos: { speech: MODELO_SPEECH, gemini: MODELO_GEMINI_ENTREVISTA },
       transcrevendoDesde: FieldValue.delete(),
@@ -256,6 +259,24 @@ export const avancarEntrevista = async (db: Firestore, isId: string, entrevistaI
     }
     if (!consulta.concluida) return 'transcrevendo';
     if ('erro' in consulta) {
+      // O Chirp 3 pode aceitar a lista de frases (nomes/siglas) e falhar ao processar: refaz UMA vez sem ela.
+      if (d.speechComAdaptacao === true && typeof d.speechUri === 'string' && d.speechUri) {
+        try {
+          const nParticipantes = Math.max(MIN_PARTICIPANTES, Math.min(MAX_PARTICIPANTES, Array.isArray(d.participantes) ? d.participantes.length : MIN_PARTICIPANTES));
+          const nova = await iniciarTranscricao(d.speechUri, nParticipantes, [], true);
+          console.warn('Entrevista: transcrição com adaptação falhou; refeita sem adaptação.');
+          const FieldValue = await fv();
+          const trocou = await ref.firestore.runTransaction(async tx => {
+            const atual = await lerDoc(ref, tx);
+            if (atual.situacao !== 'transcrevendo' || atual.operacaoSpeech !== nome) return false;
+            tx.update(ref, { operacaoSpeech: nova.nome, speechComAdaptacao: false, atualizadoEm: FieldValue.serverTimestamp() });
+            return true;
+          });
+          if (trocou) return 'transcrevendo';
+        } catch (e) {
+          logErroSeguro('Entrevista refazer sem adaptação', e);
+        }
+      }
       await marcarErro(ref, consulta.erro, x => x.situacao === 'transcrevendo' && x.operacaoSpeech === nome);
       return 'erro';
     }
