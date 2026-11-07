@@ -264,3 +264,15 @@ describe('trava de organização', () => {
     expect(travaVencida(agora - TRAVA_VENCIDA_MS - 1, agora)).toBe(true);
   });
 });
+
+describe('adaptacaoLigada (SPEECH_ADAPTACAO)', () => {
+  it('ligada por padrão; "0" desliga', async () => {
+    const { adaptacaoLigada } = await import('../../servidor/entrevistas/transcricao');
+    const antes = process.env.SPEECH_ADAPTACAO;
+    delete process.env.SPEECH_ADAPTACAO;
+    expect(adaptacaoLigada()).toBe(true);
+    process.env.SPEECH_ADAPTACAO = '0';
+    expect(adaptacaoLigada()).toBe(false);
+    if (antes === undefined) delete process.env.SPEECH_ADAPTACAO; else process.env.SPEECH_ADAPTACAO = antes;
+  });
+});
