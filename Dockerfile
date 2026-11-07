@@ -13,9 +13,10 @@ RUN npm run build
 # Execução em Debian (slim): o Chromium e a fonte Carlito (métrica da Calibri, a dos templates oficiais)
 # vêm dos pacotes do sistema — usados para gerar os documentos em HTML + CSS → PDF
 # (servidor/documentos/gerarPdf.ts). fonts-liberation cobre Arial/Times se algum modelo usar.
+# ffmpeg converte o áudio da entrevista da IS em FLAC mono 16 kHz (servidor/entrevistas/audio.ts).
 FROM node:20-bookworm-slim
 RUN apt-get update \
- && apt-get install -y --no-install-recommends chromium fonts-crosextra-carlito fonts-liberation \
+ && apt-get install -y --no-install-recommends chromium fonts-crosextra-carlito fonts-liberation ffmpeg \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production

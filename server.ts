@@ -4,6 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 import { logErroSeguro, descreverErro } from "./utils/logSeguro";
 import { higienizarParaIA, base64ValidoParaIA } from "./utils/minimizacaoIA";
 import { caminhoArquivoValido } from "./utils/arquivosPermitidos";
+import { PERFIS_ENTREVISTA } from "./config/entrevistas";
 
 // Firebase Admin (credenciais padrão do Cloud Run), inicializado sob demanda.
 async function getFirebaseAdmin() {
@@ -103,7 +104,7 @@ async function startServer() {
   app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Is-Id, X-Entrevista-Id");
     if (req.method === "OPTIONS") {
       res.sendStatus(204);
       return;
@@ -652,6 +653,79 @@ async function startServer() {
     (await import("./servidor/google/agenda")).sincronizarEventoBloqueio(db, b)));
   app.post("/api/agenda/concursos", rotaGoogle("agenda-concursos", PERFIS_EQUIPE, async (db, b) =>
     (await import("./servidor/google/agenda")).sincronizarEventosConcursos(db, b)));
+
+  // ---- Entrevista da IS gravada no celular (servidor/entrevistas/; contrato em config/entrevistas.ts) ----
+  // Áudio → ffmpeg (FLAC) → Speech-to-Text V2 (Chirp 3, pt-BR, falantes) → Gemini no Vertex AI (anamnese)
+  // → Firestore inspecoes/{isId}/entrevistas/{entrevistaId}. Só Admin e user_medicos. Logs sem conteúdo.
+  const rotaEntrevista = (rota: string, acao: (ctx: { req: express.Request; res: express.Response; uid: string; db: import("firebase-admin/firestore").Firestore; bucket: import("@google-cloud/storage").Bucket }) => Promise<void>) =>
+    async (req: express.Request, res: express.Response) => {
+      // A rota /audio autentica ANTES de ler o corpo binário (res.locals.quemEntrevista).
+      const quem = res.locals.quemEntrevista || await exigirUsuario(req, res, rota, [...PERFIS_ENTREVISTA]);
+      if (!quem) return;
+      try {
+        const { adminDb, adminApp } = await getFirebaseAdmin();
+        const { getStorage } = await import("firebase-admin/storage");
+        await acao({ req, res, uid: quem.uid, db: adminDb, bucket: getStorage(adminApp).bucket(BUCKET_STORAGE) });
+      } catch (error: any) {
+        const { ErroEntrevista } = await import("./servidor/entrevistas/fluxo");
+        if (error instanceof ErroEntrevista) {
+          if (!res.headersSent) res.status(error.status).json({ success: false, error: error.message });
+          return;
+        }
+        logErroSeguro(`Entrevista ${rota}`, error);
+        if (!res.headersSent) res.status(500).json({ success: false, error: "Falha ao processar a entrevista. Tente novamente." });
+        else res.destroy();
+      }
+    };
+  const idsEntrevista = (b: any) => ({ isId: String(b?.isId ?? ""), entrevistaId: String(b?.entrevistaId ?? "") });
+
+  // Reserva do upload (quando o envio direto ao Storage falha): corpo binário audio/*.
+  const lerAudioBruto = express.raw({ type: "audio/*", limit: "80mb" });
+  app.post("/api/entrevistas/audio", async (req, res, next) => {
+    const quem = await exigirUsuario(req, res, "entrevista-audio", [...PERFIS_ENTREVISTA]);
+    if (!quem) return;
+    res.locals.quemEntrevista = quem;
+    lerAudioBruto(req, res, (erro?: any) => {
+      if (!erro) { next(); return; }
+      const grande = erro?.type === "entity.too.large" || erro?.status === 413;
+      res.status(grande ? 413 : 400).json({ success: false, error: grande ? "O áudio é grande demais." : "Falha ao receber o áudio." });
+    });
+  }, rotaEntrevista("entrevista-audio", async ({ req, res, db, bucket }) => {
+    const { salvarAudioReserva } = await import("./servidor/entrevistas/fluxo");
+    const caminho = await salvarAudioReserva(db, bucket, String(req.get("X-Is-Id") || ""), String(req.get("X-Entrevista-Id") || ""), req.body, req.get("Content-Type"));
+    res.json({ success: true, caminho });
+  }));
+  app.post("/api/entrevistas/processar", rotaEntrevista("entrevista-processar", async ({ req, res, uid, db, bucket }) => {
+    const { processarEntrevista } = await import("./servidor/entrevistas/fluxo");
+    const b = req.body || {};
+    void auditarServidor("operacao_sensivel", "entrevista-processar", uid);
+    const situacao = await processarEntrevista(db, bucket, { ...idsEntrevista(b), caminho: b.caminho, mimeType: b.mimeType, duracaoSeg: b.duracaoSeg });
+    res.json({ success: true, situacao });
+  }));
+  app.post("/api/entrevistas/situacao", rotaEntrevista("entrevista-situacao", async ({ req, res, db }) => {
+    const { avancarEntrevista } = await import("./servidor/entrevistas/fluxo");
+    const { isId, entrevistaId } = idsEntrevista(req.body);
+    res.json({ success: true, situacao: await avancarEntrevista(db, isId, entrevistaId) });
+  }));
+  app.post("/api/entrevistas/reorganizar", rotaEntrevista("entrevista-reorganizar", async ({ req, res, uid, db }) => {
+    const { reorganizarEntrevista } = await import("./servidor/entrevistas/fluxo");
+    const { isId, entrevistaId } = idsEntrevista(req.body);
+    void auditarServidor("operacao_sensivel", "entrevista-reorganizar", uid);
+    res.json({ success: true, situacao: await reorganizarEntrevista(db, isId, entrevistaId) });
+  }));
+  app.post("/api/entrevistas/ouvir", rotaEntrevista("entrevista-ouvir", async ({ req, res, uid, db, bucket }) => {
+    const { localizarAudioOriginal } = await import("./servidor/entrevistas/fluxo");
+    const { isId, entrevistaId } = idsEntrevista(req.body);
+    const { arquivo, contentType, tamanho } = await localizarAudioOriginal(db, bucket, isId, entrevistaId);
+    void auditarServidor("operacao_sensivel", "entrevista-ouvir", uid);
+    res.setHeader("Content-Type", contentType);
+    if (tamanho) res.setHeader("Content-Length", String(tamanho));
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    arquivo.createReadStream()
+      .on("error", (e: unknown) => { logErroSeguro("Entrevista ouvir stream", e); if (!res.headersSent) res.status(500).end(); else res.destroy(); })
+      .pipe(res);
+  }));
 
   app.post("/api/gemini/analyze-image", async (req, res) => {
     try {
