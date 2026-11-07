@@ -26,7 +26,8 @@ export const ROUTES: RouteDef[] = [
   { view: 'exames', path: '/concursos/exames' },
   { view: 'concursosJRS', path: '/concursos/dia/:data' },
   { view: 'concursosJRS', path: '/concursos/:concursoId?' },
-  { view: 'inspecoes', path: '/inspecoes' },
+  // /inspecoes/{isId} abre o detalhe da IS; /inspecoes/{isId}/entrevista também inicia a gravação da entrevista (no celular).
+  { view: 'inspecoes', path: '/inspecoes/:isId?/:acao?' },
   { view: 'pareceres', path: '/pareceres' },
   { view: 'pericia-menor', path: '/pericia-menor/:aba?/:pessoa?' },
   { view: 'mensagens', path: '/mensagens' },
@@ -132,5 +133,8 @@ export const doencaPath = (doencaId: string, diagnosticoIdx?: number, base: stri
 /** Tabela dos candidatos agendados de todos os concursos num dia (AAAA-MM-DD). */
 export const concursosDiaPath = (dataISO: string): string => `/concursos/dia/${dataISO}`;
 export const concursoPath = (concursoId: string): string => `/concursos/${encodeURIComponent(concursoId)}`;
+/** Detalhe de uma IS (e, opcionalmente, uma ação — ex.: 'entrevista', que abre a gravação no celular). */
+export const inspecaoPath = (isId: string, acao?: string): string =>
+  `/inspecoes/${encodeURIComponent(isId)}${acao ? `/${encodeURIComponent(acao)}` : ''}`;
 export const periciaMenorPath = (aba: 'novo' | 'historico', pessoa?: string): string =>
   `/pericia-menor/${aba}${pessoa ? `/${encodeURIComponent(pessoa)}` : ''}`;
