@@ -8,6 +8,8 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { htmlTermoRecurso, htmlTermoCientificacao } from '../../servidor/documentos/termosConcurso';
 import { htmlParaPdf } from '../../servidor/documentos/gerarPdf';
+import { docSolicitacaoParecer, docSolicitacaoExames } from '../../servidor/documentos/solicitacoesConcurso';
+import { docPedidoParecer } from '../../servidor/documentos/pedidoParecer';
 
 const pasta = process.argv[2] || '.';
 type Linha = { x0: number; y0: number; x1: number; texto: string };
@@ -41,4 +43,16 @@ comparar('Termo de Recurso', join(pasta, 'recurso.pdf'), rec);
 const cie = join(pasta, 'novo-cientificacao.pdf');
 writeFileSync(cie, await htmlParaPdf(htmlTermoCientificacao({ ...ph, status: 'APTO' })));
 comparar('Termo de Cientificação', join(pasta, 'cientificacao.pdf'), cie);
+// Solicitações dos concursos e Pedido de Parecer (PDFs exportados: solparecer.pdf, solexames.pdf, pedparecer.pdf).
+const assinatura = { nomeUsuario: '{{nomeUsuario}}', postoGraduacao: '{{postoGraduacao}}', cargo: '{{cargo}}', crmPe: '{{crmPe}}' };
+const casos: [string, string, () => Promise<Buffer>][] = [
+  ['Solicitação de Parecer', 'solparecer', () => htmlParaPdf(docSolicitacaoParecer({ ...ph, ...assinatura, especialidade: '{{especialidade}}', historico: '{{historico}}' }))],
+  ['Solicitação de Exames', 'solexames', () => htmlParaPdf(docSolicitacaoExames({ ...ph, ...assinatura, exames: '{{exames}}' }))],
+  ['Pedido de Parecer', 'pedparecer', () => htmlParaPdf(docPedidoParecer({ ...assinatura, inspecionado: '{{inspecionado}}', especialidade: '{{especialidadeParecer}}', finalidade: '{{finalidade}}', historico: '{{historico}}', quesitos: ['{{quesitos}}'], dataEmissao: '{{dataHoje}}' }))],
+];
+for (const [nome, arq, gerar] of casos) {
+  const novo = join(pasta, `novo-${arq}.pdf`);
+  writeFileSync(novo, await gerar());
+  comparar(nome, join(pasta, `${arq}.pdf`), novo);
+}
 process.exit(0);

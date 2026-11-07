@@ -96,13 +96,15 @@ O backend tem duas partes, publicadas separadamente:
 | `POST /api/notificacoes/evento` | Recebe um evento (login, status Inapto/IDM, IS finalizada, teste), confere no Firestore, grava o histórico e envia o push |
 | `POST /api/documentos/termo-recurso` | Termo de Reconhecimento de Recurso (com o Termo de Cientificação "Inapto" na 2ª página) em PDF, gerado de HTML + CSS (`servidor/documentos/`). Perfis da equipe (Admin, médicos, MPI, Secretaria) |
 | `POST /api/documentos/termo-cientificacao` | Termo de Cientificação de Resultado (APTO, INAPTO ou INSUF DOCUMENTAL) em PDF. Perfis da equipe |
+| `POST /api/documentos/solicitacao-parecer` · `/solicitacao-exames` | Solicitações da planilha do concurso em PDF. Perfis da equipe |
+| `POST /api/documentos/pedido-parecer` | Pedido de Parecer da página Pareceres (folha de resposta na última página, "- n de N -"). Só médicos (Admin, médicos, MPI) |
 | `POST /api/arquivos/baixar` | Repasse de arquivos do Firebase Storage (PDFs, fotos de perfil, infográficos) para redes que bloqueiam `firebasestorage.googleapis.com` — ex.: Firefox nos PCs da Marinha. Exige usuário ativo; só as pastas liberadas em `storage.rules` (`utils/arquivosPermitidos.ts`). O cliente monta um `blob:` (`services/arquivosStorage.ts`) e cai para a URL direta se o repasse falhar |
 | `POST /api/gemini/analyze-image` | Leitura de imagem pelo Gemini (exige usuário ativo) |
 | `POST /api/concursos/ocr-pdf` | Transcrição literal do PDF de mensagem administrativa (exige usuário ativo) |
 
 O mesmo servidor serve o build em desenvolvimento (`npm run dev`) e libera CORS para a origem do GitHub Pages (`ALLOWED_ORIGIN`).
 
-**Google Apps Script.** `apps-script/concursos/CodeConcursos.gs` concentra a automação do Workspace: geração de PDFs por template (pedidos de parecer, solicitações de parecer e de exames — os termos dos concursos já saem do servidor, em HTML + CSS), gravação no Drive (inclusive o PDF dos exames dos candidatos), envio de e-mails para impressão e sincronização com o Google Agenda "JRS/HNRe". As ações que gravam exigem o `idToken` do Firebase. `CodePrincipal.gs`, no mesmo projeto, guarda a minuta de mensagens como Google Doc (`salvarMinutaMensagem`). O Apps Script não chama mais o Gemini.
+**Google Apps Script.** `apps-script/concursos/CodeConcursos.gs` concentra a automação do Workspace: gravação no Drive dos PDFs gerados pelo servidor (termos, solicitações e pedidos de parecer saem do servidor em HTML + CSS — ADR-012), gravação no Drive (inclusive o PDF dos exames dos candidatos), envio de e-mails para impressão e sincronização com o Google Agenda "JRS/HNRe". As ações que gravam exigem o `idToken` do Firebase. `CodePrincipal.gs`, no mesmo projeto, guarda a minuta de mensagens como Google Doc (`salvarMinutaMensagem`). O Apps Script não chama mais o Gemini.
 
 ### 3.3 Persistência
 
@@ -871,7 +873,7 @@ flowchart TB
 
 ### ADR-012 — Documentos oficiais em HTML + CSS no servidor (em vez de templates do Google Docs)
 
-- **Status:** aceita (07/11/2026); migração gradual — começou pelos termos dos concursos.
+- **Status:** aceita (07/11/2026). Migrados: termos, solicitações de parecer e de exames dos concursos e o Pedido de Parecer. Documentos de várias páginas (`paginado.ts`): o corpo flui entre as margens do `@page` e cabeçalho, rodapé, assinatura e numeração vão no `headerTemplate` do Chromium, em coordenadas absolutas da página; nada pode transbordar a margem direita no fluxo (o Chromium encolheria a página).
 - **Decisão:** cada documento é um modelo HTML + CSS em `servidor/documentos/` (layout comum em `layoutOficial.ts`: A4, margens dos templates, Carlito, cabeçalho/rodapé de sigilo e brasão) e vira PDF no Cloud Run com o Chromium headless (`puppeteer-core`; imagem Debian com `chromium` e `fonts-crosextra-carlito`, 1 GiB de memória). A fidelidade é conferida contra o PDF exportado do template (`scripts/documentos/comparar-com-template.mts`: cada linha a menos de 1 pt).
 - **Motivação:** tirar a dependência do Apps Script e dos templates do Drive (cópia, preenchimento e exportação a cada documento); modelos versionados e testáveis; mais rápido.
 - **Consequências:** o servidor passa a precisar do Chromium; mudar o texto de um documento exige mudar o código (com teste), não mais o Google Doc. O PDF continua sendo salvo no Drive pelo Apps Script (`salvarPdfCandidato`) até a migração do armazenamento.

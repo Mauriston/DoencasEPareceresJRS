@@ -49,6 +49,8 @@ const auditarServidor = async (evento: "acesso_negado" | "operacao_sensivel", ro
 
 // Perfis da equipe da JRS (documentos dos concursos): os mesmos de PERFIS_EQUIPE no Apps Script.
 const PERFIS_EQUIPE = ["admin", "user_medicos", "user_medicos_mpi", "user_secretaria"];
+// Pedido de parecer (página Pareceres): só médicos, como no Apps Script e nas regras do Firestore.
+const PERFIS_MEDICOS = ["admin", "user_medicos", "user_medicos_mpi"];
 
 // Exige um ID token válido de usuário ATIVO (rotas que gastam a cota do Gemini). Responde 401/403 e
 // registra a recusa; devolve o uid quando autorizado.
@@ -480,7 +482,11 @@ async function startServer() {
   //    é o Termo de Cientificação com "Inapto" marcado — o PDF único que o app guarda para o inapto;
   //  - termo-cientificacao: Termo de Cientificação de Resultado (APTO | INAPTO | INSUF DOCUMENTAL).
   const texto = (v: unknown, max = 300): string => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
-  const responderPdf = async (res: express.Response, rota: string, gerarHtml: () => Promise<string>) => {
+  // Texto livre de várias linhas (histórico, exames): mantém as quebras, apara cada linha e limita o tamanho.
+  const textoLongo = (v: unknown, max = 8000): string => String(v ?? "").replace(/\r\n?/g, "\n").split("\n")
+    .map(l => l.replace(/[ \t]+/g, " ").trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, max);
+  const assinatura = (b: any) => ({ nomeUsuario: texto(b.nomeUsuario), postoGraduacao: texto(b.postoGraduacao), cargo: texto(b.cargo), crmPe: texto(b.crmPe, 40) });
+  const responderPdf = async (res: express.Response, rota: string, gerarHtml: () => Promise<string | import("./servidor/documentos/paginado").DocumentoPaginado>) => {
     try {
       const { htmlParaPdf } = await import("./servidor/documentos/gerarPdf");
       const pdf = await htmlParaPdf(await gerarHtml());
@@ -523,6 +529,54 @@ async function startServer() {
     }
     await responderPdf(res, "termo-cientificacao", async () =>
       (await import("./servidor/documentos/termosConcurso")).htmlTermoCientificacao({ ...dados, status }));
+  });
+
+  // Solicitações da planilha do concurso (parecer e exames) e Pedido de Parecer da página Pareceres.
+  app.post("/api/documentos/solicitacao-parecer", async (req, res) => {
+    if (!(await exigirUsuario(req, res, "documentos-solicitacao-parecer", PERFIS_EQUIPE))) return;
+    const b = req.body || {};
+    const dados = {
+      candidatoId: texto(b.candidatoId, 40), candidatoNome: texto(b.candidatoNome), nomeConcurso: texto(b.nomeConcurso),
+      especialidade: texto(b.especialidade, 120), historico: textoLongo(b.historico), ...assinatura(b),
+    };
+    if (!dados.candidatoId || !dados.candidatoNome || !dados.especialidade || !dados.historico) {
+      res.status(400).json({ success: false, error: "Informe candidato, especialidade e histórico." });
+      return;
+    }
+    await responderPdf(res, "solicitacao-parecer", async () => (await import("./servidor/documentos/solicitacoesConcurso")).docSolicitacaoParecer(dados));
+  });
+
+  app.post("/api/documentos/solicitacao-exames", async (req, res) => {
+    if (!(await exigirUsuario(req, res, "documentos-solicitacao-exames", PERFIS_EQUIPE))) return;
+    const b = req.body || {};
+    const dados = {
+      candidatoId: texto(b.candidatoId, 40), candidatoNome: texto(b.candidatoNome), nomeConcurso: texto(b.nomeConcurso),
+      exames: textoLongo(b.exames, 4000), ...assinatura(b),
+    };
+    if (!dados.candidatoId || !dados.candidatoNome || !dados.exames) {
+      res.status(400).json({ success: false, error: "Informe o candidato e os exames." });
+      return;
+    }
+    await responderPdf(res, "solicitacao-exames", async () => (await import("./servidor/documentos/solicitacoesConcurso")).docSolicitacaoExames(dados));
+  });
+
+  app.post("/api/documentos/pedido-parecer", async (req, res) => {
+    if (!(await exigirUsuario(req, res, "documentos-pedido-parecer", PERFIS_MEDICOS))) return;
+    const b = req.body || {};
+    const quesitos = (Array.isArray(b.quesitos) ? b.quesitos : []).map((q: unknown) => textoLongo(q, 2000)).filter(Boolean).slice(0, 60);
+    const dados = {
+      inspecionado: texto(b.inspecionado), especialidade: texto(b.especialidade, 120), finalidade: texto(b.finalidade),
+      historico: textoLongo(b.historico), quesitos, ...assinatura(b),
+    };
+    if (!dados.inspecionado || !dados.especialidade || !dados.finalidade || !dados.historico) {
+      res.status(400).json({ success: false, error: "Informe inspecionado, especialidade, finalidade e histórico." });
+      return;
+    }
+    if (!quesitos.length) {
+      res.status(400).json({ success: false, error: "Informe ao menos um quesito." });
+      return;
+    }
+    await responderPdf(res, "pedido-parecer", async () => (await import("./servidor/documentos/pedidoParecer")).docPedidoParecer(dados));
   });
 
   app.post("/api/gemini/analyze-image", async (req, res) => {

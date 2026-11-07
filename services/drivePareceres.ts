@@ -1,10 +1,10 @@
 // Ficheiro: services/drivePareceres.ts
-// Geração e armazenamento do PDF do Pedido de Parecer: o Apps Script standalone (CodeConcursos.gs, ação
-// "gerarPedidoParecer") preenche o template do Google Docs e devolve o PDF em base64; o app o entrega ao
-// mesmo script (ação "salvarPdfParecer"), que o guarda no Google Drive em
+// Geração e armazenamento do PDF do Pedido de Parecer: o servidor do app gera o PDF em HTML + CSS
+// (POST /api/documentos/pedido-parecer, servidor/documentos/pedidoParecer.ts) e o app o entrega ao
+// Apps Script (ação "salvarPdfParecer"), que o guarda no Google Drive em
 // PARECERES > {nome completo do inspecionado} > SOL_PARECER_{especialidade}_{DDMMMAAAA}.PDF, e grava no
 // Firestore a URL de visualização ("view") devolvida.
-import { chamarScript } from './apiClient';
+import { chamarScript, chamarServidor } from './apiClient';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
@@ -21,7 +21,7 @@ export interface DadosPedidoParecer {
 }
 
 export const gerarPdfPedidoParecer = async (dados: DadosPedidoParecer): Promise<string> => {
-  const d = await chamarScript<{ pdfBase64: string }>('gerarPedidoParecer', { ...dados });
+  const d = await chamarServidor<{ pdfBase64: string }>('/api/documentos/pedido-parecer', { ...dados });
   return d.pdfBase64;
 };
 

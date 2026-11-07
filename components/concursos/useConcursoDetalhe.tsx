@@ -14,7 +14,7 @@ import { MAPA_LAUDO_POR_STATUS, isAtrasada } from '../../utils/concursosUtils';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { getScrollParent } from '../../utils/dom';
 import { ConfirmDialogState, isoParaBR, parseDataBR } from './compartilhado';
-import { chamarScript, chamarServidor } from '../../services/apiClient';
+import { chamarServidor } from '../../services/apiClient';
 
 export interface ConcursoDetalheProps {
   concursoId: string;
@@ -386,7 +386,8 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
     const id = candidato.id;
     setGerandoSolicitacaoIds(prev => new Set(prev).add(id));
     try {
-      const doc = await chamarScript<{ pdfBase64: string }>(tipo === 'parecer' ? 'gerarSolicitacaoParecer' : 'gerarSolicitacaoExames', {
+      // Gerado no servidor do app em HTML + CSS (servidor/documentos/), sem template do Google Docs.
+      const doc = await chamarServidor<{ pdfBase64: string }>(tipo === 'parecer' ? '/api/documentos/solicitacao-parecer' : '/api/documentos/solicitacao-exames', {
           candidatoId: id,
           candidatoNome: candidato.nome,
           nomeConcurso: concurso?.nome || '',
