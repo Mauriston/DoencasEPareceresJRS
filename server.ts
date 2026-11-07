@@ -47,9 +47,16 @@ const auditarServidor = async (evento: "acesso_negado" | "operacao_sensivel", ro
   } catch { /* só o log estruturado fica */ }
 };
 
+// Perfis da equipe da JRS (documentos dos concursos): os mesmos de PERFIS_EQUIPE no Apps Script.
+const PERFIS_EQUIPE = ["admin", "user_medicos", "user_medicos_mpi", "user_secretaria"];
+
 // Exige um ID token válido de usuário ATIVO (rotas que gastam a cota do Gemini). Responde 401/403 e
 // registra a recusa; devolve o uid quando autorizado.
-const exigirUsuarioAtivo = async (req: express.Request, res: express.Response, rota: string): Promise<string | null> => {
+const exigirUsuarioAtivo = async (req: express.Request, res: express.Response, rota: string): Promise<string | null> =>
+  (await exigirUsuario(req, res, rota))?.uid ?? null;
+
+// Como exigirUsuarioAtivo, e opcionalmente restringe a uma lista de perfis. Devolve uid e perfil.
+const exigirUsuario = async (req: express.Request, res: express.Response, rota: string, perfis?: string[]): Promise<{ uid: string; perfil: string } | null> => {
   const authHeader = String(req.headers.authorization || "");
   const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
   if (!idToken) {
@@ -66,7 +73,12 @@ const exigirUsuarioAtivo = async (req: express.Request, res: express.Response, r
       res.status(403).json({ success: false, error: "Usuário inativo." });
       return null;
     }
-    return decoded.uid;
+    if (perfis && !perfis.includes(String(perfil.perfil))) {
+      void auditarServidor("acesso_negado", rota, decoded.uid, "perfil_sem_permissao");
+      res.status(403).json({ success: false, error: "Seu perfil não tem permissão para esta operação." });
+      return null;
+    }
+    return { uid: decoded.uid, perfil: String(perfil.perfil) };
   } catch {
     void auditarServidor("acesso_negado", rota, "", "token_invalido");
     res.status(401).json({ success: false, error: "Sessão inválida ou expirada." });
@@ -460,6 +472,57 @@ async function startServer() {
       if (!naoExiste) logErroSeguro("Storage repasse", error);
       res.status(naoExiste ? 404 : 500).json({ success: false, error: naoExiste ? "Arquivo não encontrado." : "Falha ao ler o arquivo." });
     }
+  });
+
+  // Documentos oficiais em HTML + CSS → PDF (Chromium), no lugar dos templates do Google Docs no Apps
+  // Script (servidor/documentos/). Devolvem { success, pdfBase64 }, o mesmo formato das ações antigas.
+  //  - termo-recurso: Termo de Reconhecimento de Recurso; com incluirCientificacao (padrão), a 2ª página
+  //    é o Termo de Cientificação com "Inapto" marcado — o PDF único que o app guarda para o inapto;
+  //  - termo-cientificacao: Termo de Cientificação de Resultado (APTO | INAPTO | INSUF DOCUMENTAL).
+  const texto = (v: unknown, max = 300): string => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+  const responderPdf = async (res: express.Response, rota: string, gerarHtml: () => Promise<string>) => {
+    try {
+      const { htmlParaPdf } = await import("./servidor/documentos/gerarPdf");
+      const pdf = await htmlParaPdf(await gerarHtml());
+      res.json({ success: true, pdfBase64: pdf.toString("base64") });
+    } catch (error) {
+      logErroSeguro(`Documento ${rota}`, error);
+      res.status(500).json({ success: false, error: "Não foi possível gerar o documento. Tente novamente." });
+    }
+  };
+
+  app.post("/api/documentos/termo-recurso", async (req, res) => {
+    if (!(await exigirUsuario(req, res, "documentos-termo-recurso", PERFIS_EQUIPE))) return;
+    const b = req.body || {};
+    const dados = {
+      candidatoId: texto(b.candidatoId, 40), candidatoNome: texto(b.candidatoNome), nomeConcurso: texto(b.nomeConcurso),
+      dataLaudo: texto(b.dataLaudo, 40), nomeUsuario: texto(b.nomeUsuario), postoGraduacao: texto(b.postoGraduacao), cargo: texto(b.cargo),
+    };
+    if (!dados.candidatoId || !dados.candidatoNome) {
+      res.status(400).json({ success: false, error: "Informe a matrícula e o nome do candidato." });
+      return;
+    }
+    await responderPdf(res, "termo-recurso", async () => {
+      const t = await import("./servidor/documentos/termosConcurso");
+      return b.incluirCientificacao === false ? t.htmlTermoRecurso(dados) : t.htmlTermoRecursoComCientificacao(dados);
+    });
+  });
+
+  app.post("/api/documentos/termo-cientificacao", async (req, res) => {
+    if (!(await exigirUsuario(req, res, "documentos-termo-cientificacao", PERFIS_EQUIPE))) return;
+    const b = req.body || {};
+    const status = texto(b.status, 20).toUpperCase();
+    const dados = { candidatoId: texto(b.candidatoId, 40), candidatoNome: texto(b.candidatoNome), nomeConcurso: texto(b.nomeConcurso) };
+    if (!dados.candidatoId || !dados.candidatoNome) {
+      res.status(400).json({ success: false, error: "Informe a matrícula e o nome do candidato." });
+      return;
+    }
+    if (status !== "APTO" && status !== "INAPTO" && status !== "INSUF DOCUMENTAL") {
+      res.status(400).json({ success: false, error: "Status deve ser APTO, INAPTO ou INSUF DOCUMENTAL." });
+      return;
+    }
+    await responderPdf(res, "termo-cientificacao", async () =>
+      (await import("./servidor/documentos/termosConcurso")).htmlTermoCientificacao({ ...dados, status }));
   });
 
   app.post("/api/gemini/analyze-image", async (req, res) => {

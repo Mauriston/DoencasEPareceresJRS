@@ -8,14 +8,13 @@ import { useNav } from '../../context/NavContext';
 import { canUseFeature } from '../../config/permissions';
 import { getConcurso, salvarTriagem, listarCandidatos, observarConcurso, observarCandidatos, atualizarCandidato, reagendarCandidato, listarDatasAgendamento, salvarTermoRecurso, salvarTermoCientificacao, registrarSolicitacao, STATUS_PERMITEM_SOLICITACAO, reabrirIS, limparIS, type SolicitacaoDoc, type ConcursoRecord, type CandidatoRecord, type DataAgendamentoInfo } from '../../services/firestoreConcursos';
 import { type AlvoExames } from './ExamesCandidato';
-import { juntarPdfsBase64 } from '../../services/pdfMerge';
 import { salvarPdfCandidatoNoDrive, abrirPdf, anoDoConcurso, enviarTermoRecursoParaImpressao, enviarSolicitacaoParaImpressao, type PastaConcurso } from '../../services/driveConcursos';
 import { registrarDocumentoGerado } from '../../services/documentosGerados';
 import { MAPA_LAUDO_POR_STATUS, isAtrasada } from '../../utils/concursosUtils';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { getScrollParent } from '../../utils/dom';
 import { ConfirmDialogState, isoParaBR, parseDataBR } from './compartilhado';
-import { chamarScript } from '../../services/apiClient';
+import { chamarScript, chamarServidor } from '../../services/apiClient';
 
 export interface ConcursoDetalheProps {
   concursoId: string;
@@ -196,7 +195,8 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
     !c.termoCientificacaoUrl && (c.status === 'APTO' || (c.status === 'INSUF DOCUMENTAL' && !!c.observacoes.trim()));
 
   const pedirPdfCientificacao = async (id: string, nome: string, status: string): Promise<string> => {
-    const d = await chamarScript<{ pdfBase64: string }>('gerarTermoCientificacao', {
+    // Gerado no servidor do app em HTML + CSS (servidor/documentos/), sem o template do Google Docs.
+    const d = await chamarServidor<{ pdfBase64: string }>('/api/documentos/termo-cientificacao', {
       candidatoId: id,
       candidatoNome: nome,
       nomeConcurso: concurso?.nome || '',
@@ -489,10 +489,9 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
     marcarGerandoTermo(id, true);
     try {
       const candidato = candidatos.find(c => c.id === id);
-      // Inapto: o PDF único leva o Termo de Recurso (1ª página) e o Termo de Cientificação (anexado).
-      const cientificacaoPromise = pedirPdfCientificacao(id, nome, 'INAPTO');
-      cientificacaoPromise.catch(() => {}); // o erro é tratado quando a promise é aguardada abaixo
-      const recurso = await chamarScript<{ pdfBase64: string }>('gerarTermoRecurso', {
+      // Inapto: o PDF único leva o Termo de Recurso (1ª página) e o Termo de Cientificação com "Inapto"
+      // marcado (2ª página) — os dois gerados juntos no servidor do app (HTML + CSS).
+      const recurso = await chamarServidor<{ pdfBase64: string }>('/api/documentos/termo-recurso', {
           candidatoId: id,
           candidatoNome: nome,
           nomeConcurso: concurso?.nome || '',
@@ -500,9 +499,10 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
           nomeUsuario: signatario.nome,
           postoGraduacao: signatario.postoGraduacao,
           cargo: signatario.cargo,
+          incluirCientificacao: true,
       });
 
-      const pdfUnico = await juntarPdfsBase64([recurso.pdfBase64, await cientificacaoPromise]);
+      const pdfUnico = recurso.pdfBase64;
       const url = await salvarPdfCandidatoNoDrive({ pasta: pastaDrive(), candidatoId: id, candidatoNome: nome, tipo: 'termoRecurso', pdfBase64: pdfUnico });
       await salvarTermoRecurso(concursoId, id, url);
       setCandidatos(prev => prev.map(c => (c.id === id ? { ...c, recurso: true, termoRecursoUrl: url } : c)));
