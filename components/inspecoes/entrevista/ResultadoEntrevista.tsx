@@ -9,6 +9,7 @@ import { Button } from '../../ui/Button';
 import { StatusTag } from '../../ui/StatusTag';
 import { Segmented } from '../../ui/Segmented';
 import { Toast } from '../../ui/Toast';
+import { ConfirmDialog } from '../../ui/Dialog';
 import { ResultadoPainel } from './ResultadoPainel';
 import { ResultadoFalantes } from './ResultadoFalantes';
 import { ResultadoAnamnese } from './ResultadoAnamnese';
@@ -50,7 +51,8 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
   const [editando, setEditando] = useState(false);
   const [revendoFalantes, setRevendoFalantes] = useState(false);
   const [ofertaReorganizar, setOfertaReorganizar] = useState(false);
-  const [ocupado, setOcupado] = useState<'' | 'falantes' | 'edicao' | 'revisada' | 'reorganizar' | 'tentar'>('');
+  const [confirmarRefazer, setConfirmarRefazer] = useState(false);
+  const [ocupado, setOcupado] = useState<'' | 'falantes' | 'edicao' | 'revisada' | 'reorganizar' | 'tentar' | 'refazer'>('');
   const [aviso, setAviso] = useState<{ msg: string; tom: 'success' | 'error' } | null>(null);
 
   // Áudio: carregado sob demanda (blob: URL), revogado ao fechar.
@@ -134,6 +136,14 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
         : e.situacao === 'erro' ? processarEntrevista(isId, e.id, e.audio?.caminho ?? '', e.audio?.mimeType ?? '', e.audio?.duracaoSeg ?? 0)
           : consultarSituacao(isId, e.id)
     ), 'Processamento retomado.');
+  // Refaz do áudio já no servidor (caminho vazio): descarta transcrição, anamnese, falantes e edições.
+  const refazerTranscricao = () => {
+    setConfirmarRefazer(false);
+    setEditando(false);
+    setRevendoFalantes(false);
+    setOfertaReorganizar(false);
+    return executar('refazer', () => processarEntrevista(isId, e.id, '', '', e.audio?.duracaoSeg ?? 0), 'Refazendo a transcrição.');
+  };
   const salvarEdicao = async (a: AnamneseEntrevista) => {
     const ok = await executar('edicao', () => atualizarEntrevista(isId, e.id, { anamneseEditada: a, editadoPor: quem() }), 'Anamnese salva.');
     if (ok) setEditando(false);
@@ -172,6 +182,16 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
       )}
     >
       <Toast message={aviso?.msg ?? null} tone={aviso?.tom} />
+      {confirmarRefazer && (
+        <ConfirmDialog
+          title="Refazer transcrição"
+          message="A transcrição e a anamnese serão refeitas e as edições serão descartadas."
+          confirmLabel="Refazer"
+          destructive
+          onConfirm={() => { void refazerTranscricao(); }}
+          onCancel={() => setConfirmarRefazer(false)}
+        />
+      )}
       <div className="space-y-5">
         {/* Cabeçalho */}
         <div className="space-y-2">
@@ -220,14 +240,9 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
                 );
               })}
             </ol>
-            <p className="text-xs text-ink-3">
-              {e.situacao === 'aguardando_envio'
-                ? 'O celular que gravou ainda está enviando o áudio. Se a gravação foi interrompida e o envio não aconteceu, grave a entrevista de novo.'
-                : e.situacao === 'transcrevendo'
-                  ? 'O servidor está transcrevendo o áudio e separando as vozes (Speech-to-Text). Leva alguns minutos — em geral menos que a metade da duração da entrevista.'
-                  : 'A transcrição está pronta; a IA está organizando a anamnese médico-pericial. Costuma levar menos de um minuto.'}
-              {' '}O andamento é conferido enquanto o detalhe da IS estiver aberto; pode fechar esta janela e voltar depois.
-            </p>
+            {e.situacao === 'aguardando_envio' && (
+              <p className="text-xs text-ink-3">Se o envio não acontecer, grave de novo.</p>
+            )}
           </section>
         )}
 
@@ -239,7 +254,6 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
               Não foi possível concluir o processamento.
             </p>
             <p className="text-sm text-ink">{e.erro || 'Erro desconhecido.'}</p>
-            <p className="text-xs text-ink-3">{e.transcricao?.length ? 'A transcrição está salva; tentar de novo refaz só a organização da anamnese.' : 'Tentar de novo consulta o servidor e retoma a transcrição.'}</p>
             <Button icon="refresh" loading={ocupado === 'tentar'} onClick={tentarNovamente}>Tentar novamente</Button>
           </section>
         )}
@@ -263,8 +277,8 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
             )}
             {ofertaReorganizar && !mostrarFalantes && (
               <section className="rounded-xl border border-line bg-paper p-4 space-y-2">
-                <p className="text-sm text-ink">Os nomes confirmados já aparecem na transcrição e nas citações. Quer que a IA reorganize a anamnese usando esses nomes?</p>
-                {e.anamneseEditada && <p className="text-xs text-ink-3">A edição feita à mão continua valendo na tela até ser editada de novo; a nova organização fica salva como original.</p>}
+                <p className="text-sm text-ink">Reorganizar a anamnese com os nomes confirmados?</p>
+                {e.anamneseEditada && <p className="text-xs text-ink-3">Sua edição continua sendo a versão exibida.</p>}
                 <div className="flex flex-wrap gap-2">
                   <Button icon="auto_awesome" loading={ocupado === 'reorganizar'} onClick={reorganizar}>Reorganizar com os nomes confirmados</Button>
                   <Button variant="ghost" onClick={() => setOfertaReorganizar(false)}>Agora não</Button>
@@ -289,6 +303,9 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
                   {!e.revisada && <Button icon="task_alt" loading={ocupado === 'revisada'} onClick={marcarRevisada}>Marcar como revisada</Button>}
                   {e.falantesConfirmados && !revendoFalantes && (e.transcricao?.length ?? 0) > 0 && (
                     <Button variant="ghost" icon="group" onClick={() => setRevendoFalantes(true)}>Rever falantes</Button>
+                  )}
+                  {temAudio && (
+                    <Button variant="secondary" icon="restart_alt" loading={ocupado === 'refazer'} onClick={() => setConfirmarRefazer(true)}>Refazer transcrição</Button>
                   )}
                 </div>
                 {e.anamneseEditada && e.editadoPor && (

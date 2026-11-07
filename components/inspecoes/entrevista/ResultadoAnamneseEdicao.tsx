@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { Button } from '../../ui/Button';
 import { Field } from '../../ui/Field';
 import type { AnamneseEntrevista, FonteInformacao, ItemCronologia } from '../../../config/entrevistas';
-import { ROTULO_FONTE, formatarTempo, limparAnamnese, listaParaTexto, nomeDoFalante, normalizarAnamnese, textoParaLista, tituloSecaoFinalidade } from '../../../utils/entrevistas';
+import { ROTULO_FONTE, formatarTempo, limparAnamnese, listaParaTexto, nomeDoFalante, normalizarAnamnese, textoParaLista, TITULO_CONDUTA_PERITO, tituloSecaoFinalidade } from '../../../utils/entrevistas';
 
 interface Props {
   inicial: AnamneseEntrevista;
@@ -17,7 +17,7 @@ interface Props {
 }
 
 type CampoTexto = 'resumoExecutivo' | 'queixaPrincipal' | 'repercussaoFuncional';
-type CampoLista = 'alegacoesInspecionado' | 'antecedentes' | 'medicacoes' | 'tratamentos' | 'examesCitados' | 'pontosAEsclarecer';
+type CampoLista = 'alegacoesInspecionado' | 'antecedentes' | 'medicacoes' | 'tratamentos' | 'examesCitados' | 'condutaPerito' | 'pontosAEsclarecer';
 
 const FONTES = Object.keys(ROTULO_FONTE) as FonteInformacao[];
 
@@ -31,6 +31,7 @@ export const ResultadoAnamneseEdicao: React.FC<Props> = ({ inicial, finalidade, 
     medicacoes: listaParaTexto(base.medicacoes),
     tratamentos: listaParaTexto(base.tratamentos),
     examesCitados: listaParaTexto(base.examesCitados),
+    condutaPerito: listaParaTexto(base.condutaPerito),
     pontosAEsclarecer: listaParaTexto(base.pontosAEsclarecer),
   }));
 
@@ -105,6 +106,7 @@ export const ResultadoAnamneseEdicao: React.FC<Props> = ({ inicial, finalidade, 
         </Field>
       </fieldset>
 
+      {lista('condutaPerito', TITULO_CONDUTA_PERITO)}
       {lista('pontosAEsclarecer', 'Pontos a esclarecer')}
 
       {a.citacoes.length > 0 && (

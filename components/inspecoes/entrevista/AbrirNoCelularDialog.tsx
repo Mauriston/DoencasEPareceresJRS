@@ -48,11 +48,6 @@ export const AbrirNoCelularDialog: React.FC<Props> = ({ isId, aberto, onClose })
       footer={<Button variant="secondary" onClick={onClose}>Fechar</Button>}
     >
       <div className="flex flex-col items-center text-center">
-        <p className="text-sm text-ink mb-3">
-          Este computador não grava áudio. Aponte a câmera do celular para o QR code: o app abrirá
-          {comLogin ? ' já com o seu login' : ''} nesta IS, pronto para gravar a entrevista.
-        </p>
-
         <div className="w-[220px] h-[220px] mb-3 flex items-center justify-center rounded-xl border border-line bg-white" aria-live="polite">
           {qr ? (
             <img src={qr} alt="QR code para abrir a gravação da entrevista desta IS no celular" className="w-full h-full rounded-xl" />
@@ -65,18 +60,18 @@ export const AbrirNoCelularDialog: React.FC<Props> = ({ isId, aberto, onClose })
 
         {qr && !comLogin && (
           <p className="text-xs text-gold-ink font-semibold mb-2">
-            Não foi possível enviar o login: entre normalmente no celular — o app abrirá esta IS em seguida.
+            Login não enviado: entre no celular e a IS abrirá em seguida.
           </p>
         )}
 
         <ol className="text-left text-sm text-ink-3 space-y-1 list-decimal pl-5 mb-3 self-stretch">
-          <li>Abra a câmera do celular e toque no link do QR code.</li>
-          <li>Preencha os participantes e confirme o consentimento do inspecionado.</li>
-          <li>Grave e toque em “Encerrar e enviar”. O resultado aparece aqui, nesta IS, em alguns minutos.</li>
+          <li>Aponte a câmera do celular para o QR code.</li>
+          <li>Preencha os participantes e o consentimento.</li>
+          <li>Grave e toque em “Encerrar e enviar”.</li>
         </ol>
 
         <p className="text-xs text-ink-3">
-          Este QR code dá acesso à sua conta — não o compartilhe nem mostre a tela a terceiros.
+          Não compartilhe: o QR dá acesso à sua conta.
           {qr && comLogin && (
             <> <button type="button" onClick={gerar} className="font-bold text-navy underline underline-offset-2 min-h-[44px]">Gerar novo QR</button></>
           )}

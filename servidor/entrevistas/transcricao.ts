@@ -7,15 +7,57 @@
 // RecognitionConfig { autoDecodingConfig, model, languageCodes, features { enableWordTimeOffsets,
 // enableAutomaticPunctuation, diarizationConfig { minSpeakerCount, maxSpeakerCount } } };
 // BatchRecognizeRequest { recognizer, config, files[{ uri }], recognitionOutputConfig { inlineResponseConfig } };
-// WordInfo { startOffset, endOffset, word, speakerLabel }.
+// WordInfo { startOffset, endOffset, word, speakerLabel };
+// RecognitionConfig.adaptation: SpeechAdaptation { phraseSets[] : AdaptationPhraseSet { inlinePhraseSet:
+// PhraseSet { phrases[] : Phrase { value, boost (0–20) } } } }.
 
-import type { FalaTranscrita } from '../../config/entrevistas';
+import type { FalaTranscrita, ParticipanteEntrevista } from '../../config/entrevistas';
 
 export const MODELO_SPEECH = 'chirp_3';
 export const IDIOMA_SPEECH = 'pt-BR';
 /** Multirregião onde o Chirp 3 roda (us | eu | …). O endpoint é `{loc}-speech.googleapis.com`. */
 export const localizacaoSpeech = () => (process.env.SPEECH_LOCALIZACAO || 'us').trim();
 export const projetoGoogle = () => (process.env.GOOGLE_CLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID || 'jrs-app-web').trim();
+
+// ------------------------------------------------------------------ adaptação de frases (pura)
+
+/** Siglas usadas nas entrevistas da junta (reforçadas no reconhecimento de fala). */
+export const SIGLAS_JUNTA = [
+  'VDF', 'TAF', 'TFM', 'IS', 'JRS', 'JSD', 'JSS', 'AO', 'ISO', 'TIS', 'SAM', 'SMV', 'SMI', 'DGPM', 'CID', 'LTS', 'HNRe', 'OM', 'IMS',
+] as const;
+export const BOOST_NOME = 10;
+export const BOOST_SIGLA = 5;
+/** Limite de frases enviadas ao Speech (os participantes são no máximo 4: sobra folga). */
+export const MAX_FRASES_ADAPTACAO = 200;
+
+export interface FraseAdaptacao { value: string; boost: number }
+
+/**
+ * Frases para o Speech adaptation: nome completo de cada participante e cada palavra do nome com
+ * 4+ letras (boost de nome), mais as siglas da junta (boost de sigla). Sem vazias nem duplicatas
+ * (comparação sem caixa); a primeira ocorrência prevalece.
+ */
+export const frasesAdaptacao = (participantes: ParticipanteEntrevista[] | null | undefined): FraseAdaptacao[] => {
+  const frases: FraseAdaptacao[] = [];
+  const vistas = new Set<string>();
+  const add = (valor: string, boost: number) => {
+    const v = valor.replace(/\s+/g, ' ').trim().slice(0, 100);
+    const chave = v.toLocaleLowerCase('pt-BR');
+    if (!v || vistas.has(chave) || frases.length >= MAX_FRASES_ADAPTACAO) return;
+    vistas.add(chave);
+    frases.push({ value: v, boost });
+  };
+  for (const p of participantes || []) {
+    const nome = String(p?.nome ?? '');
+    add(nome, BOOST_NOME);
+    for (const palavra of nome.split(/[^\p{L}\p{N}'’-]+/u)) {
+      const letras = palavra.replace(/[^\p{L}]/gu, '');
+      if (letras.length >= 4) add(palavra.replace(/^['’-]+|['’-]+$/g, ''), BOOST_NOME);
+    }
+  }
+  for (const s of SIGLAS_JUNTA) add(s, BOOST_SIGLA);
+  return frases;
+};
 
 // ------------------------------------------------------------------ conversão pura
 
@@ -117,7 +159,11 @@ const obterCliente = async (): Promise<ClienteSpeech> => {
 };
 
 /** Monta o pedido do BatchRecognize (puro, testado). */
-export const montarPedidoBatch = (uriGcs: string, nParticipantes: number, opcoes: { projeto?: string; localizacao?: string; limitesFalantes?: boolean } = {}) => {
+export const montarPedidoBatch = (
+  uriGcs: string,
+  nParticipantes: number,
+  opcoes: { projeto?: string; localizacao?: string; limitesFalantes?: boolean; frases?: FraseAdaptacao[] } = {},
+) => {
   const n = Math.max(1, Math.min(6, Math.trunc(nParticipantes) || 2));
   const limites = opcoes.limitesFalantes ?? process.env.SPEECH_DIARIZACAO_LIMITES !== '0';
   return {
@@ -132,16 +178,37 @@ export const montarPedidoBatch = (uriGcs: string, nParticipantes: number, opcoes
         // Mensagem vazia = falantes detectados automaticamente; com limites, min = max = nº de participantes.
         diarizationConfig: limites ? { minSpeakerCount: n, maxSpeakerCount: n } : {},
       },
+      // Nomes próprios e siglas que o modelo erra sem contexto (ex.: sobrenomes incomuns).
+      ...(opcoes.frases?.length ? { adaptation: { phraseSets: [{ inlinePhraseSet: { phrases: opcoes.frases } }] } } : {}),
     },
     files: [{ uri: uriGcs }],
     recognitionOutputConfig: { inlineResponseConfig: {} },
   };
 };
 
-/** Inicia o BatchRecognize e devolve o nome da operação (não espera a transcrição). */
-export const iniciarTranscricao = async (uriGcs: string, nParticipantes: number): Promise<string> => {
+/** Erro do Google que recusa a adaptação de frases (INVALID_ARGUMENT mencionando adaptation/phrase). Pura. */
+export const recusouAdaptacao = (e: unknown): boolean => {
+  const o = (e && typeof e === 'object' ? e : {}) as { code?: unknown; message?: unknown; details?: unknown };
+  const codigo = o.code === 3 || o.code === '3' || o.code === 'INVALID_ARGUMENT' || /INVALID_ARGUMENT/.test(String(o.message ?? ''));
+  return codigo && /adaptation|phrase/i.test(`${String(o.message ?? '')} ${String(o.details ?? '')}`);
+};
+
+/**
+ * Inicia o BatchRecognize e devolve o nome da operação (não espera a transcrição). Com adaptação de
+ * frases (nomes dos participantes + siglas); se o Google recusar a adaptação para o modelo, repete sem ela.
+ */
+export const iniciarTranscricao = async (uriGcs: string, nParticipantes: number, participantes: ParticipanteEntrevista[] = []): Promise<string> => {
   const cliente = await obterCliente();
-  const [operacao] = await cliente.batchRecognize(montarPedidoBatch(uriGcs, nParticipantes) as any);
+  const frases = frasesAdaptacao(participantes);
+  let operacao: any;
+  try {
+    [operacao] = await cliente.batchRecognize(montarPedidoBatch(uriGcs, nParticipantes, { frases }) as any);
+  } catch (e) {
+    if (!frases.length || !recusouAdaptacao(e)) throw e;
+    // Só o fato e o código: a mensagem do Google pode citar as frases (nomes dos participantes).
+    console.warn(`Entrevista: Speech recusou a adaptação de frases (código ${String((e as { code?: unknown })?.code ?? '?').slice(0, 20)}); repetindo sem adaptação.`);
+    [operacao] = await cliente.batchRecognize(montarPedidoBatch(uriGcs, nParticipantes) as any);
+  }
   const nome = String(operacao?.name || '');
   if (!nome) throw new Error('O Speech-to-Text não devolveu a operação.');
   return nome;

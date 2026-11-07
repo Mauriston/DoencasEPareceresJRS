@@ -3,7 +3,7 @@
 // seções da anamnese médico-pericial. Os tempos (cronologia e citações) levam ao trecho do áudio.
 import React from 'react';
 import type { AnamneseEntrevista } from '../../../config/entrevistas';
-import { ROTULO_FONTE, formatarTempo, nomeDoFalante, normalizarAnamnese, tituloSecaoFinalidade } from '../../../utils/entrevistas';
+import { ROTULO_FONTE, formatarTempo, nomeDoFalante, normalizarAnamnese, TITULO_CONDUTA_PERITO, tituloSecaoFinalidade } from '../../../utils/entrevistas';
 
 interface Props {
   anamnese: AnamneseEntrevista;
@@ -60,6 +60,7 @@ export const ResultadoAnamnese: React.FC<Props> = ({ anamnese, finalidade, mapaF
       <Secao titulo="Exames citados" vazio={!a.examesCitados.length}><Lista itens={a.examesCitados} /></Secao>
       <Secao titulo="Repercussão funcional" vazio={!a.repercussaoFuncional}><p className="text-sm text-ink whitespace-pre-line">{a.repercussaoFuncional}</p></Secao>
       <Secao titulo={tituloSecaoFinalidade(a, finalidade)} vazio={!a.secaoFinalidade.texto}><p className="text-sm text-ink whitespace-pre-line">{a.secaoFinalidade.texto}</p></Secao>
+      <Secao titulo={TITULO_CONDUTA_PERITO} vazio={!a.condutaPerito.length}><Lista itens={a.condutaPerito} /></Secao>
       <Secao titulo="Pontos a esclarecer" vazio={!a.pontosAEsclarecer.length}><Lista itens={a.pontosAEsclarecer} /></Secao>
       <Secao titulo="Citações literais" vazio={!a.citacoes.length}>
         <ul className="space-y-2">

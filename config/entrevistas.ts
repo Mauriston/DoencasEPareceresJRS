@@ -70,9 +70,15 @@ export interface AnamneseEntrevista {
   medicacoes: string[];
   tratamentos: string[];
   examesCitados: string[];
+  /** Só as limitações que o INSPECIONADO relatou (restrições propostas pelo perito vão em `condutaPerito`). */
   repercussaoFuncional: string;
-  /** Seção específica da finalidade da IS (ex.: nexo com o serviço no AO; capacidade na VDF). */
+  /** Seção específica da finalidade da IS: organiza os elementos relevantes, sem juízo nem conclusão. */
   secaoFinalidade: { titulo: string; texto: string };
+  /**
+   * Conduta e encaminhamentos ditos pelo perito (restrições propostas, prazos, exames/pareceres
+   * solicitados, orientações). Ausente em docs antigos: tratar como [].
+   */
+  condutaPerito: string[];
   pontosAEsclarecer: string[];
   citacoes: CitacaoLiteral[];
 }

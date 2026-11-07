@@ -93,6 +93,7 @@ describe('anamnese', () => {
     const n = normalizarAnamnese({ queixaPrincipal: 'x' } as Partial<AnamneseEntrevista>);
     expect(n.medicacoes).toEqual([]);
     expect(n.secaoFinalidade).toEqual({ titulo: '', texto: '' });
+    expect(n.condutaPerito).toEqual([]); // doc antigo, sem o campo
   });
   it('limpa itens vazios e não deixa undefined', () => {
     const a = { ...anamnese(), medicacoes: [' dipirona ', ''], historiaCronologica: [{ quando: 'x', evento: ' ', fonte: 'outro' as const }, { quando: '', evento: 'E', fonte: 'perito' as const }] };
@@ -108,6 +109,10 @@ describe('anamnese', () => {
     expect(t).toContain('FINALIDADE: ATESTADO DE ORIGEM');
     expect(t).toContain('- SG B (01:05): "Sinto dor na coluna"');
     expect(t).not.toContain('MEDICAÇÕES');
+    expect(t).not.toContain('CONDUTA E ENCAMINHAMENTOS');
+    const c = textoAnamnese({ ...anamnese(), condutaPerito: ['Restrição de TAF por 30 dias'] }, { finalidade: 'Atestado de Origem' });
+    expect(c).toContain('CONDUTA E ENCAMINHAMENTOS DO PERITO\n- Restrição de TAF por 30 dias');
+    expect(c.indexOf('FINALIDADE: ATESTADO DE ORIGEM')).toBeLessThan(c.indexOf('CONDUTA E ENCAMINHAMENTOS'));
     expect(t.endsWith(`(${AVISO_IA})`)).toBe(true);
   });
 });
