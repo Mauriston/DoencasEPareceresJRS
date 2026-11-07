@@ -95,7 +95,8 @@ export const paginaTermoCientificacao = (d: DadosTermoCientificacao): PaginaOfic
       ${vazio()}
       <p class="p c b">TERMO DE CIENTIFICAÇÃO DE RESULTADO DE IS INGRESSO/SELEÇÃO</p>
       ${vazio('c b')}${vazio()}
-      <p class="p l150 sb10">Eu,<b> ${esc(d.candidatoNome)}, </b>candidato ao concurso <b>${esc(d.nomeConcurso)}</b>, <b>n<sup>o</sup> de inscrição ${esc(d.candidatoId)}</b>, declaro que tomei ciência do resultado da Inspeção de Saúde a que fui submetido pela JRS/HNRe, tendo sido considerado: </p>
+      <!-- Justificado a pedido (o template era alinhado à esquerda). -->
+      <p class="p l150 j sb10">Eu,<b> ${esc(d.candidatoNome)}, </b>candidato ao concurso <b>${esc(d.nomeConcurso)}</b>, <b>n<sup>o</sup> de inscrição ${esc(d.candidatoId)}</b>, declaro que tomei ciência do resultado da Inspeção de Saúde a que fui submetido pela JRS/HNRe, tendo sido considerado: </p>
       ${vazio('sb10')}
       <p class="p sb10">${opcao('APTO', '   Apto')}</p>
       <p class="p sb10">${opcao('INAPTO', '  Inapto')}</p>
