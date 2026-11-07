@@ -1,6 +1,7 @@
 // Ficheiro: components/Inspecoes.tsx
 // Página INSPEÇÕES DE SAÚDE: cadastro das IS (exceto as de concursos), agendamento das entrevistas em
-// slots de 20 min por perito, acompanhamento de prazos e minutas de mensagem. Visão inicial em tabela
+// slots de 20 min por perito, acompanhamento de prazos e minutas de mensagem. O status muda sozinho
+// (Conclusão da IS no detalhe; Falta, Restituição, Reabrir e Cancelar IS no menu ⋮ da linha). Visão inicial em tabela
 // (agrupada em Abertas · Em andamento · Finalizadas) com alternância para calendário no formato do
 // Google Agenda. As IS com entrevista marcada são sincronizadas com a agenda "JRS/HNRe" do Google
 // Agenda, com o perito como convidado (ver services/agendaGoogleIS.ts).
@@ -27,20 +28,25 @@ import { AgendaConfigDialog } from './inspecoes/AgendaConfigDialog';
 import { NovoParecerForm } from './pareceres/NovoParecerForm';
 import { useNav } from '../context/NavContext';
 import { canUseFeature, canAccessPage } from '../config/permissions';
-import { observarMilitares, type MilitarRecord } from '../services/firestoreMilitares';
+import { podeUsarEntrevista } from '../config/entrevistas';
+import { observarMilitares, vinculoDoInspecionado, type MilitarRecord } from '../services/firestoreMilitares';
 import {
-  observarInspecoes, observarBloqueios, observarConfigAgenda, cancelarInspecao, apagarInspecao, agendarInspecao, type InspecaoRecord,
+  observarInspecoes, observarBloqueios, observarConfigAgenda, cancelarInspecao, apagarInspecao, agendarInspecao, atualizarInspecao, type InspecaoRecord,
 } from '../services/firestoreInspecoes';
+import type { ParecerRecord } from '../services/firestorePareceres';
+import { mostraMinutaMsg, fasesDeEntrevista } from './inspecoes/InspecaoDetalhe';
+import { restituicaoDoStatus } from '../utils/conclusaoIS';
 import { bloqueiosDeConcursos } from '../services/agendaConcursos';
 import { useDiasConcursos, useSincronizarAgendaConcursos } from '../hooks/useDiasConcursos';
 import { concursoPath } from '../config/routes';
 import { carregarPeritos, type PeritoIS } from '../services/peritosIS';
 import { sincronizarAgendaIS, removerEventoAgendaIS } from '../services/agendaGoogleIS';
-import { minutaCancelamento, minutaResultado } from '../utils/minutasIS';
+import { minutaCancelamento, minutaResultadoDaIS } from '../utils/minutasIS';
 import { normalizarBusca } from '../utils/corposQuadros';
 import {
   STATUS_IS, SITUACOES_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataBr, dataHoraBr, hojeISO, dataDeEntrevista, horaDeEntrevista, nomeDiaSemana,
-  type BloqueioAgenda, type ConfigAgenda, type SituacaoIS,
+  podeCancelarIS, situacaoDoStatus,
+  type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS,
 } from '../utils/inspecoes';
 
 type Visao = 'tabela' | 'calendario';
@@ -63,6 +69,7 @@ export const Inspecoes: React.FC = () => {
   const usuario = nav?.authUser;
   const perfil = usuario?.perfil;
   const ehAdmin = perfil === 'admin';
+  const ehSecretaria = perfil === 'user_secretaria';
 
   const podeCadastrar = canUseFeature('inspecoes.cadastrar', perfil);
   const podeAgendar = canUseFeature('inspecoes.agendar', perfil);
@@ -71,6 +78,7 @@ export const Inspecoes: React.FC = () => {
   const podeBloquear = canUseFeature('inspecoes.bloquearAgenda', perfil);
   const podeParecer = canUseFeature('pareceres.gerar', perfil);
   const podeCadastrarInspecionado = canUseFeature('militares.cadastrar', perfil);
+  const podeGravarEntrevista = podeUsarEntrevista(perfil);
 
   const [lista, setLista] = useState<InspecaoRecord[] | null>(null);
   const [erroCarga, setErroCarga] = useState('');
@@ -98,10 +106,11 @@ export const Inspecoes: React.FC = () => {
     if (id === null && isIdDaRota) navigate('/inspecoes', { replace: true });
   };
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
-  const [trocandoPerito, setTrocandoPerito] = useState<{ is: InspecaoRecord; dataHora: string } | null>(null);
+  const [trocandoPerito, setTrocandoPerito] = useState<{ is: InspecaoRecord; dataHora: string; modo: 'arraste' | 'troca' } | null>(null);
   const [horarioVazio, setHorarioVazio] = useState<string | null>(null);
-  const [minuta, setMinuta] = useState<{ tipo: 'cancelamento' | 'resultado'; is: InspecaoRecord } | null>(null);
-  const [parecerPara, setParecerPara] = useState<InspecaoRecord | null>(null);
+  const [minuta, setMinuta] = useState<InspecaoRecord | null>(null);
+  const [parecerPara, setParecerPara] = useState<{ is: InspecaoRecord; inicial?: ParecerRecord } | null>(null);
+  const [confirmando, setConfirmando] = useState<{ tipo: 'falta' | 'cancelar'; is: InspecaoRecord } | null>(null);
   const [apagando, setApagando] = useState<InspecaoRecord | null>(null);
   const [bloqueiosAberto, setBloqueiosAberto] = useState(false);
   const [turnosAberto, setTurnosAberto] = useState(false);
@@ -173,10 +182,39 @@ export const Inspecoes: React.FC = () => {
     } else avisar(`IS ${is.is} cadastrada.`);
   };
 
-  const cancelarComMinuta = async (is: InspecaoRecord, texto: string) => {
-    await cancelarInspecao(is, texto);
-    setMinuta(null);
-    if (is.eventoAgendaId) await removerEventoAgendaIS(is);
+  /** Muda o status por uma ação do menu (Falta, Restituição, Reabrir IS) e atualiza o Google Agenda se a situação mudar. */
+  const mudarStatus = async (is: InspecaoRecord, status: StatusIS, msg: string) => {
+    try {
+      await atualizarInspecao(is.id, { status });
+      avisar(msg);
+      if (is.dataEntrevista && situacaoDoStatus(status) !== is.situacao) {
+        sincronizarAgendaIS({ ...is, status, situacao: situacaoDoStatus(status) }).then(r => { if (!r.ok) avisar(`Google Agenda não atualizado: ${r.erro}`, 'error'); });
+      }
+    } catch (e: any) {
+      avisar(e?.message || 'Não foi possível alterar o status.', 'error');
+    }
+  };
+
+  const confirmarAcao = async () => {
+    const alvo = confirmando;
+    if (!alvo) return;
+    setConfirmando(null);
+    if (alvo.tipo === 'falta') { await mudarStatus(alvo.is, 'faltou', `IS ${alvo.is.is}: Faltou.`); return; }
+    try {
+      await cancelarInspecao(alvo.is);
+      if (alvo.is.eventoAgendaId) await removerEventoAgendaIS(alvo.is);
+      avisar(`IS ${alvo.is.is} cancelada.`);
+    } catch (e: any) {
+      avisar(e?.message || 'Não foi possível cancelar a IS.', 'error');
+    }
+  };
+
+  /** Parecer pedido a partir da IS: a IS passa a "Parecer solicitado". */
+  const aoParecerGerado = async (is: InspecaoRecord, nome: string) => {
+    setParecerPara(null);
+    avisar(`Pedido de parecer de ${nome} gerado.`);
+    const atual = lista?.find(i => i.id === is.id) ?? is;
+    if (fasesDeEntrevista(atual)) await mudarStatus(atual, 'parecer_solicitado', `Pedido de parecer de ${nome} gerado. IS ${is.is}: Parecer solicitado.`);
   };
 
   const confirmarApagar = async () => {
@@ -205,17 +243,22 @@ export const Inspecoes: React.FC = () => {
     }
   };
 
-  const omDe = (is: InspecaoRecord) => militares.find(m => m.id === is.inspecionadoId)?.om;
-  const dadosMinuta = (is: InspecaoRecord) => ({ is: is.is, finalidade: is.finalidade, grupoFinalidade: is.grupoFinalidade, inspecionado: is.inspecionado, dataAbertura: is.dataAbertura, amp: is.amp, om: omDe(is) });
+  const omDe = (is: InspecaoRecord) => omPorId.get(is.inspecionadoId);
+  const vinculoDe = (is: InspecaoRecord) => { const m = militares.find(x => x.id === is.inspecionadoId); return m ? vinculoDoInspecionado(m) : undefined; };
+  const dadosMinuta = (is: InspecaoRecord) => ({ is: is.is, finalidade: is.finalidade, grupoFinalidade: is.grupoFinalidade, inspecionado: is.inspecionado, dataAbertura: is.dataAbertura, amp: is.amp, om: omDe(is), dataEntrevista: is.dataEntrevista });
 
   const itensDe = (is: InspecaoRecord): ItemMenu[] => {
-    const itens: ItemMenu[] = [{ rotulo: 'Ver detalhes', icone: 'visibility', onClick: () => setDetalheId(is.id) }];
-    const encerrada = is.situacao === 'finalizada';
-    if (podeAgendar && !encerrada) itens.push({ rotulo: is.dataEntrevista ? 'Reagendar' : 'Agendar', icone: 'event', onClick: () => setAgendando(is) });
-    if (podeMinuta && statusEfetivoIS(is, hoje) === 'atrasada') itens.push({ rotulo: 'Cancelar (minuta de cancelamento)', icone: 'cancel', perigo: true, onClick: () => setMinuta({ tipo: 'cancelamento', is }) });
-    if (podeMinuta && is.status !== 'cancelada' && (is.laudo || is.tis)) itens.push({ rotulo: 'Minuta de resultado', icone: 'mail', onClick: () => setMinuta({ tipo: 'resultado', is }) });
-    if (podeParecer && is.status !== 'cancelada') itens.push({ rotulo: 'Solicitar parecer', icone: 'assignment_add', onClick: () => setParecerPara(is) });
-    if (podeAgendar && is.dataEntrevista && !(is.agendaSincronizada && is.eventoAgendaId)) itens.push({ rotulo: 'Sincronizar com o Google Agenda', icone: 'sync', onClick: () => { sincronizar(is); } });
+    const itens: ItemMenu[] = [];
+    if (podeAgendar && is.status === 'aberta') itens.push({ rotulo: is.dataEntrevista ? 'Reagendar' : 'Agendar', icone: 'event', onClick: () => setAgendando(is) });
+    if (podeAgendar && is.status === 'faltou') itens.push({ rotulo: 'Reagendar', icone: 'event', onClick: () => setAgendando(is) });
+    if (podeEditar && fasesDeEntrevista(is)) itens.push({ rotulo: 'Falta', icone: 'person_off', onClick: () => setConfirmando({ tipo: 'falta', is }) });
+    const restituicao = restituicaoDoStatus(is.status);
+    if (restituicao && podeEditar && !ehSecretaria) itens.push({ rotulo: restituicao.rotulo, icone: 'undo', onClick: () => { mudarStatus(is, restituicao.status, `IS ${is.is}: ${restituicao.rotulo}.`); } });
+    if (podeMinuta && mostraMinutaMsg(is)) itens.push({ rotulo: 'Minuta MSG', icone: 'mail', onClick: () => setMinuta(is) });
+    if (podeParecer && fasesDeEntrevista(is)) itens.push({ rotulo: 'Parecer', icone: 'assignment_add', onClick: () => setParecerPara({ is }) });
+    if (podeAgendar && is.dataEntrevista && is.status !== 'cancelada' && !(is.agendaSincronizada && is.eventoAgendaId)) itens.push({ rotulo: 'Sincronizar com o Google Agenda', icone: 'sync', onClick: () => { sincronizar(is); } });
+    if (ehAdmin && is.status === 'tis_assinado') itens.push({ rotulo: 'Reabrir IS', icone: 'lock_open', onClick: () => { mudarStatus(is, 'assinaturas_pendentes', `IS ${is.is} reaberta.`); } });
+    if ((ehAdmin || ehSecretaria) && podeCancelarIS(is, hoje)) itens.push({ rotulo: 'Cancelar IS', icone: 'cancel', perigo: true, onClick: () => setConfirmando({ tipo: 'cancelar', is }) });
     if (ehAdmin) itens.push({ rotulo: 'Apagar IS', icone: 'delete', perigo: true, onClick: () => setApagando(is) });
     return itens;
   };
@@ -298,7 +341,7 @@ export const Inspecoes: React.FC = () => {
             onAbrir={is => setDetalheId(is.id)}
             onNovoNoHorario={podeAgendar ? setHorarioVazio : undefined}
             onReagendar={podeAgendar ? reagendarArrastando : undefined}
-            onTrocarPerito={podeAgendar ? (is, dataHora) => setTrocandoPerito({ is, dataHora }) : undefined}
+            onTrocarPerito={podeAgendar ? (is, dataHora) => setTrocandoPerito({ is, dataHora, modo: 'arraste' }) : undefined}
             onAviso={avisar}
           />
         ) : grupos.length === 0 ? (
@@ -330,7 +373,7 @@ export const Inspecoes: React.FC = () => {
                         <span className="shrink-0">{tagStatus(is)}</span>
                       </span>
                     </button>
-                    <div className="shrink-0 pr-2 pt-1"><MenuAcoes rotulo={`Ações da IS ${is.is}`} itens={itensDe(is)} /></div>
+                    <div className="shrink-0 pr-2 pt-1 w-12">{itensDe(is).length > 0 && <MenuAcoes rotulo={`Ações da IS ${is.is}`} itens={itensDe(is)} />}</div>
                   </li>
                   </React.Fragment>
                 ))}
@@ -343,7 +386,6 @@ export const Inspecoes: React.FC = () => {
                       <th scope="col" className="px-4 py-2 text-left font-semibold">IS</th>
                       <th scope="col" className="px-4 py-2 text-left font-semibold">Inspecionado</th>
                       <th scope="col" className="px-4 py-2 text-left font-semibold">Perito</th>
-                      <th scope="col" className="px-4 py-2 text-left font-semibold">Entrevista</th>
                       <th scope="col" className="px-4 py-2 text-left font-semibold">Status</th>
                       <th scope="col" className="pr-2 py-2 w-14 text-right font-semibold"><span className="sr-only">Ações</span></th>
                     </tr>
@@ -352,7 +394,7 @@ export const Inspecoes: React.FC = () => {
                     {g.itens.map((is, i) => (
                       <React.Fragment key={is.id}>
                         {g.id !== 'aberta' && (i === 0 || rotuloData(g.itens[i - 1]) !== rotuloData(is)) && (
-                          <tr className="bg-thead"><th scope="colgroup" colSpan={6} className="px-4 py-1.5 text-left text-xs font-bold text-ink-3 capitalize">{rotuloData(is)}</th></tr>
+                          <tr className="bg-thead"><th scope="colgroup" colSpan={5} className="px-4 py-1.5 text-left text-xs font-bold text-ink-3 capitalize">{rotuloData(is)}</th></tr>
                         )}
                         <tr onClick={() => setDetalheId(is.id)} className="cursor-pointer hover:bg-thead transition-colors">
                           <td className="px-4 py-2 font-mono whitespace-nowrap">
@@ -369,12 +411,15 @@ export const Inspecoes: React.FC = () => {
                             })()}
                             <span className="block text-xs text-ink-3 truncate" title={`${is.amp} | ${is.finalidade}`}>{is.amp} | {is.finalidade}</span>
                           </td>
-                          <td className="px-4 py-2 whitespace-nowrap">
-                            {is.peritoNome || <span className="text-ink-4">—</span>}
+                          <td className="px-4 py-2 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                            {podeAgendar && !['cancelada', 'tis_assinado'].includes(is.status) ? (
+                              <button type="button" onClick={() => setTrocandoPerito({ is, dataHora: is.dataEntrevista, modo: 'troca' })} aria-label={`Trocar perito da IS ${is.is}`} className="min-h-[44px] font-bold text-navy hover:underline text-left">
+                                {is.peritoNome || '—'}
+                              </button>
+                            ) : <span className="font-bold text-navy">{is.peritoNome || '—'}</span>}
                           </td>
-                          <td className="px-4 py-2 whitespace-nowrap">{is.dataEntrevista ? dataHoraBr(is.dataEntrevista) : <span className="text-ink-4">Não agendada</span>}</td>
                           <td className="px-4 py-2">{tagStatus(is)}</td>
-                          <td className="pr-2 py-1 text-right" onClick={e => e.stopPropagation()}><MenuAcoes rotulo={`Ações da IS ${is.is}`} itens={itensDe(is)} /></td>
+                          <td className="pr-2 py-1 text-right" onClick={e => e.stopPropagation()}>{itensDe(is).length > 0 && <MenuAcoes rotulo={`Ações da IS ${is.is}`} itens={itensDe(is)} />}</td>
                         </tr>
                       </React.Fragment>
                     ))}
@@ -398,22 +443,20 @@ export const Inspecoes: React.FC = () => {
       {detalhe && (
         <InspecaoDetalhe
           inspecao={detalhe}
-          permissoes={{ editar: podeEditar, agendar: podeAgendar, minuta: podeMinuta, parecer: podeParecer, apagar: ehAdmin }}
+          om={omDe(detalhe)}
+          permissoes={{ editar: podeEditar, minuta: podeMinuta, parecer: podeParecer, entrevista: podeGravarEntrevista }}
           onClose={() => setDetalheId(null)}
-          onAgendar={() => setAgendando(detalhe)}
-          onMinutaCancelamento={() => setMinuta({ tipo: 'cancelamento', is: detalhe })}
-          onMinutaResultado={() => setMinuta({ tipo: 'resultado', is: detalhe })}
-          onSolicitarParecer={() => setParecerPara(detalhe)}
-          onSincronizar={() => sincronizar(detalhe)}
+          onMinuta={() => setMinuta(detalhe)}
+          onSolicitarParecer={() => setParecerPara({ is: detalhe })}
+          onDuplicarParecer={p => setParecerPara({ is: detalhe, inicial: p })}
           onSituacaoMudou={is => { sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS atualizada, mas o Google Agenda não: ${r.erro}`, 'error'); }); }}
-          onApagar={() => setApagando(detalhe)}
           onAviso={avisar}
         />
       )}
 
       {trocandoPerito && (
         <TrocarPeritoDialog
-          inspecao={trocandoPerito.is} dataHora={trocandoPerito.dataHora} peritos={peritos} config={config} bloqueios={bloqueiosTodos} inspecoes={lista ?? []}
+          inspecao={trocandoPerito.is} dataHora={trocandoPerito.dataHora} modo={trocandoPerito.modo} peritos={peritos} config={config} bloqueios={bloqueiosTodos} inspecoes={lista ?? []}
           onClose={() => setTrocandoPerito(null)} onConcluido={(msg, tom) => { setTrocandoPerito(null); avisar(msg, tom); }}
         />
       )}
@@ -435,31 +478,36 @@ export const Inspecoes: React.FC = () => {
         />
       )}
 
-      {minuta?.tipo === 'cancelamento' && (
+      {minuta && (minuta.status === 'cancelada' ? (
         <MinutaDialog
-          titulo={`Minuta de cancelamento — IS ${minuta.is.is}`}
-          textoInicial={minutaCancelamento(dadosMinuta(minuta.is))}
-          confirmar={{
-            rotulo: 'Copiar e cancelar IS', icone: 'cancel', destrutiva: true,
-            aviso: 'Ao confirmar, o texto é copiado, a IS passa para o status Cancelada (situação Finalizada) e o horário e o evento do Google Agenda, se houver, são liberados.',
-            onConfirmar: texto => cancelarComMinuta(minuta.is, texto),
-          }}
+          titulo={`Minuta de cancelamento — IS ${minuta.is}`}
+          textoInicial={minuta.minutaCancelamento || minutaCancelamento(dadosMinuta(minuta))}
           onClose={() => setMinuta(null)} onAviso={avisar}
         />
-      )}
-      {minuta?.tipo === 'resultado' && (
+      ) : (
         <MinutaDialog
-          titulo={`Minuta de resultado — IS ${minuta.is.is}`}
-          textoInicial={minutaResultado({ ...dadosMinuta(minuta.is), dataEntrevista: minuta.is.dataEntrevista, dataLaudo: minuta.is.dataLaudo, laudo: minuta.is.laudo, restricoes: minuta.is.restricoes, tis: minuta.is.tis })}
+          titulo={`Minuta MSG — IS ${minuta.is}`}
+          textoInicial={minutaResultadoDaIS(minuta, { om: omDe(minuta), vinculo: vinculoDe(minuta) })}
           onClose={() => setMinuta(null)} onAviso={avisar}
         />
-      )}
+      ))}
 
       {parecerPara && (
         <NovoParecerForm
-          prefill={{ militarId: parecerPara.inspecionadoId, finalidade: parecerPara.finalidade }}
+          inicial={parecerPara.inicial}
+          prefill={{ militarId: parecerPara.is.inspecionadoId, finalidade: parecerPara.is.finalidade }}
+          vinculoIS={{ isId: parecerPara.is.id, is: parecerPara.is.is }}
           onClose={() => setParecerPara(null)}
-          onGerado={nome => { setParecerPara(null); avisar(`Pedido de parecer de ${nome} gerado.`); }}
+          onGerado={nome => { aoParecerGerado(parecerPara.is, nome); }}
+        />
+      )}
+
+      {confirmando && (
+        <ConfirmDialog
+          title={confirmando.tipo === 'falta' ? 'Falta' : 'Cancelar IS'}
+          message={<>{confirmando.tipo === 'falta' ? 'Registrar falta na' : 'Cancelar a'} <strong>IS {confirmando.is.is}</strong> ({nomeCurto(confirmando.is.inspecionado)})?</>}
+          confirmLabel={confirmando.tipo === 'falta' ? 'Registrar falta' : 'Cancelar IS'} cancelLabel="Voltar"
+          destructive={confirmando.tipo === 'cancelar'} onConfirm={confirmarAcao} onCancel={() => setConfirmando(null)}
         />
       )}
 

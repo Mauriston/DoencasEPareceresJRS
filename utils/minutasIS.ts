@@ -17,6 +17,8 @@ interface DadosMinuta {
   amp: string;
   /** OM do inspecionado (destinatária da mensagem), quando conhecida. */
   om?: string;
+  /** AAAA-MM-DDThh:mm: com entrevista marcada, o cancelamento foi por falta (não por prazo). */
+  dataEntrevista?: string;
 }
 
 const cabecalho = (d: DadosMinuta, assunto: string) => [
@@ -29,9 +31,12 @@ const cabecalho = (d: DadosMinuta, assunto: string) => [
 /** Minuta de cancelamento de IS aberta e não agendada além do prazo (7 dias; 60 para Benefícios). */
 export const minutaCancelamento = (d: DadosMinuta): string => {
   const prazo = prazoAtrasoDias(d.grupoFinalidade);
+  const motivo = d.dataEntrevista
+    ? `pelo não comparecimento do inspecionado à entrevista agendada para ${dataBr(d.dataEntrevista.slice(0, 10))}`
+    : `por não ter sido agendada no prazo de ${prazo} dias (${diasEmAberto(d.dataAbertura)} dias em aberto)`;
   return [
     cabecalho(d, `CANCELAMENTO DE INSPEÇÃO DE SAÚDE Nº ${d.is}`),
-    `1. Comunico que a Inspeção de Saúde (IS) nº ${d.is}, finalidade "${d.finalidade}", aberta em ${dataBr(d.dataAbertura)} em favor de ${d.inspecionado}, foi CANCELADA, por não ter sido agendada no prazo de ${prazo} dias (${diasEmAberto(d.dataAbertura)} dias em aberto).`,
+    `1. Comunico que a Inspeção de Saúde (IS) nº ${d.is}, finalidade "${d.finalidade}", aberta em ${dataBr(d.dataAbertura)} em favor de ${d.inspecionado}, foi CANCELADA, ${motivo}.`,
     '',
     '2. Caso persista a necessidade da inspeção, solicito nova apresentação do inspecionado a esta Junta Regular de Saúde, com a documentação pertinente.',
   ].join('\n');

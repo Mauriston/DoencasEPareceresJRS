@@ -73,7 +73,7 @@ const nomeCurto = (inspecionado: string): string => {
 };
 
 export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, onReagendar, onTrocarPerito, onAviso, diasConcursos = [], onAbrirConcurso }) => {
-  const [modo, setModo] = useState<Modo>('semana');
+  const [modo, setModo] = useState<Modo>('mes');
   const [ancora, setAncora] = useState(() => { const h = hojeISO(); return ehDiaUtil(h) ? h : somarDias(h, deISO(h).getDay() === 6 ? 2 : 1); });
   const hoje = hojeISO();
   const rolagem = useRef<HTMLDivElement>(null);

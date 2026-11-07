@@ -121,3 +121,13 @@ describe('minuta de cancelamento (formato próprio, inalterado)', () => {
     expect(t).toContain('foi CANCELADA, por não ter sido agendada no prazo de 7 dias');
   });
 });
+
+describe('minutaCancelamento: motivo', () => {
+  const base = { is: 1, finalidade: 'VDF', grupoFinalidade: 'Verificações e Términos', inspecionado: 'CT X', dataAbertura: '2026-10-01', amp: 'JRS' };
+  it('sem entrevista: prazo', () => { expect(minutaCancelamento(base)).toMatch(/não ter sido agendada no prazo/); });
+  it('com entrevista: falta', () => {
+    const t = minutaCancelamento({ ...base, dataEntrevista: '2026-10-10T08:00' });
+    expect(t).toMatch(/não comparecimento do inspecionado à entrevista agendada para 10\/10\/2026/);
+    expect(t).not.toMatch(/prazo/);
+  });
+});
