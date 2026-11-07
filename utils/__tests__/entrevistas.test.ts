@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   formatarTempo, formatarDuracao, dataDe, dataIsoBr, anamneseEfetiva, nomeDoFalante, aplicarMapaFalantes, primeirasFalas,
   mapaInicial, filtrarTranscricao, listaParaTexto, textoParaLista, normalizarAnamnese, limparAnamnese, textoAnamnese,
-  tomSituacao, entrevistaEmAndamento, anamneseVazia, AVISO_IA, naoEnviada,
+  tomSituacao, entrevistaEmAndamento, anamneseVazia, AVISO_IA, naoEnviada, textoTemposProcessamento,
 } from '../entrevistas';
 import type { AnamneseEntrevista, FalaTranscrita } from '../../config/entrevistas';
 
@@ -129,5 +129,24 @@ describe('situação', () => {
     expect(naoEnviada({ situacao: 'aguardando_envio' })).toBe(true);
     expect(naoEnviada({ situacao: 'aguardando_envio', audio: { caminho: 'c', mimeType: 'audio/webm', bytes: 1, duracaoSeg: 1, apagarApos: '2027-01-01' } })).toBe(false);
     expect(naoEnviada({ situacao: 'transcrevendo' })).toBe(false);
+  });
+});
+
+describe('duração do processamento', () => {
+  const t0 = 1_800_000_000_000;
+  it('formata total e etapas', () => {
+    expect(textoTemposProcessamento({ processamentoIniciado: t0, transcricaoIniciada: t0 + 20_000, transcricaoConcluida: t0 + 185_000, organizacaoConcluida: t0 + 220_000 }))
+      .toBe('Processada em 3 min 40 s (transcrição 3:05 · organização 0:35)');
+    expect(textoTemposProcessamento({ processamentoIniciado: t0, transcricaoConcluida: t0 + 40_000, organizacaoConcluida: t0 + 52_400 }))
+      .toBe('Processada em 52 s (transcrição 0:40 · organização 0:12)');
+    expect(textoTemposProcessamento({ processamentoIniciado: t0, transcricaoConcluida: t0 + 120_000, organizacaoConcluida: t0 + 180_000 }))
+      .toBe('Processada em 3 min (transcrição 2:00 · organização 1:00)');
+    expect(textoTemposProcessamento({ processamentoIniciado: t0, transcricaoConcluida: t0 + 3_700_000, organizacaoConcluida: t0 + 3_730_000 }))
+      .toBe('Processada em 1 h 2 min (transcrição 1:01:40 · organização 0:30)');
+  });
+  it('sem marcos completos ou fora de ordem: nada', () => {
+    expect(textoTemposProcessamento(undefined)).toBeNull();
+    expect(textoTemposProcessamento({ processamentoIniciado: t0, transcricaoConcluida: t0 + 1000 })).toBeNull();
+    expect(textoTemposProcessamento({ processamentoIniciado: t0, transcricaoConcluida: t0 - 1, organizacaoConcluida: t0 + 5 })).toBeNull();
   });
 });

@@ -83,6 +83,19 @@ export interface AnamneseEntrevista {
   citacoes: CitacaoLiteral[];
 }
 
+/**
+ * Marcos do processamento (Date.now() do servidor). Reiniciados a cada /processar; `transcricaoIniciada`
+ * é sobrescrito quando a transcrição é refeita sem adaptação de frases (`transcricaoRefeita`);
+ * `organizacaoConcluida` registra só a primeira organização (o "Reorganizar" não o altera).
+ */
+export interface TemposEntrevista {
+  processamentoIniciado?: number;
+  transcricaoIniciada?: number;
+  transcricaoConcluida?: number;
+  organizacaoConcluida?: number;
+  transcricaoRefeita?: boolean;
+}
+
 export interface QuemQuando { uid: string; nome: string; em: unknown /* Timestamp do Firestore */ }
 
 /** Documento `inspecoes/{isId}/entrevistas/{entrevistaId}`. */
@@ -103,6 +116,8 @@ export interface EntrevistaRecord {
   mapaFalantes?: Record<string, string>;
   anamnese?: AnamneseEntrevista;
   modelos?: { speech: string; gemini: string };
+  /** Marcos do processamento (ms epoch, só servidor) para medir a duração de cada etapa. */
+  tempos?: TemposEntrevista;
   atualizadoEm?: unknown;
   // ---- os ÚNICOS campos que o app atualiza depois de criar (firestore.rules) ----
   falantesConfirmados?: boolean;

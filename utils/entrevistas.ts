@@ -6,7 +6,7 @@
 import {
   ROTULO_SITUACAO,
   type AnamneseEntrevista, type EntrevistaRecord, type FalaTranscrita, type FonteInformacao,
-  type ItemCronologia, type ParticipanteEntrevista, type SituacaoEntrevista,
+  type ItemCronologia, type ParticipanteEntrevista, type SituacaoEntrevista, type TemposEntrevista,
 } from '../config/entrevistas';
 
 /** Segundos → "mm:ss" (ou "h:mm:ss" a partir de 1 hora). Valores inválidos viram "00:00". */
@@ -26,6 +26,30 @@ export const formatarDuracao = (seg: unknown): string => {
   const min = Math.round(n / 60);
   if (min < 60) return `${min} min`;
   return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`;
+};
+
+/** Milissegundos → "m:ss" (ou "h:mm:ss" a partir de 1 hora), sem zero à esquerda nos minutos. */
+const relogio = (ms: number): string => {
+  const n = Math.round(ms / 1000);
+  const h = Math.floor(n / 3600), m = Math.floor((n % 3600) / 60), s = n % 60;
+  const p = (x: number) => String(x).padStart(2, '0');
+  return h > 0 ? `${h}:${p(m)}:${p(s)}` : `${m}:${p(s)}`;
+};
+
+/**
+ * Linha da duração do processamento: "Processada em 3 min 40 s (transcrição 3:05 · organização 0:35)".
+ * Transcrição = do início do processamento (inclui a conversão do áudio) à transcrição pronta;
+ * organização = da transcrição pronta à anamnese organizada. Null se faltar algum marco ou se a ordem
+ * for incoerente.
+ */
+export const textoTemposProcessamento = (t: TemposEntrevista | null | undefined): string | null => {
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : NaN);
+  const ini = num(t?.processamentoIniciado), tr = num(t?.transcricaoConcluida), org = num(t?.organizacaoConcluida);
+  if (![ini, tr, org].every(Number.isFinite) || tr < ini || org < tr) return null;
+  const totalSeg = Math.round((org - ini) / 1000);
+  const h = Math.floor(totalSeg / 3600), min = Math.floor((totalSeg % 3600) / 60), s = totalSeg % 60;
+  const total = h > 0 ? `${h} h ${min} min` : min > 0 ? (s ? `${min} min ${s} s` : `${min} min`) : `${s} s`;
+  return `Processada em ${total} (transcrição ${relogio(tr - ini)} · organização ${relogio(org - tr)})`;
 };
 
 /** Converte o `em` de QuemQuando (Timestamp do Firestore, Date, número, {seconds}) em Date. */

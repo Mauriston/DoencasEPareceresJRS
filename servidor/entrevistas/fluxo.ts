@@ -5,6 +5,7 @@
 //  - situacao: consulta a operação; concluída, grava a transcrição e passa a `organizando` numa
 //    TRANSAÇÃO — só quem fez a troca (ou quem retoma uma trava vencida, > 5 min) roda o Gemini;
 //  - reorganizar: refaz só a organização com o mapaFalantes atual, pela mesma trava.
+// `tempos` guarda os marcos (ms epoch) de cada etapa para medir a duração do processamento.
 // Nenhum log aqui contém transcrição, nomes ou conteúdo: só o contexto fixo e o erro mascarado.
 
 import { promises as fs } from 'node:fs';
@@ -111,6 +112,7 @@ const localizarOriginal = async (bucket: Bucket, isId: string, entrevistaId: str
 /** Campos apagados ao refazer a transcrição de uma entrevista pronta (o `audio` é regravado). */
 export const CAMPOS_DESCARTADOS_AO_REFAZER = [
   'transcricao', 'anamnese', 'mapaFalantes', 'falantesConfirmados', 'anamneseEditada', 'editadoPor', 'revisada', 'erro', 'operacaoSpeech',
+  'tempos',
 ] as const;
 
 export interface PedidoProcessar { isId: string; entrevistaId: string; caminho: unknown; mimeType: unknown; duracaoSeg: unknown }
@@ -146,9 +148,12 @@ export const processarEntrevista = async (db: Firestore, bucket: Bucket, p: Pedi
     const descartar = refazer
       ? Object.fromEntries(CAMPOS_DESCARTADOS_AO_REFAZER.map(c => [c, FieldValue.delete()]))
       : {};
+    const agora = Date.now();
     tx.update(ref, {
       ...descartar,
-      situacao: 'transcrevendo', transcrevendoDesde: Date.now(),
+      // Os marcos recomeçam a cada processamento (substitui o mapa inteiro).
+      tempos: { processamentoIniciado: agora },
+      situacao: 'transcrevendo', transcrevendoDesde: agora,
       erro: FieldValue.delete(), operacaoSpeech: FieldValue.delete(),
       atualizadoEm: FieldValue.serverTimestamp(),
     });
@@ -173,6 +178,7 @@ export const processarEntrevista = async (db: Firestore, bucket: Bucket, p: Pedi
       audio: { caminho, mimeType, bytes, duracaoSeg, apagarApos: dataApagarApos(dataDaEntrevista(d), DIAS_RETENCAO_AUDIO) },
       operacaoSpeech: operacao.nome,
       speechComAdaptacao: operacao.comAdaptacao,
+      'tempos.transcricaoIniciada': Date.now(),
       speechUri: uriFlac,
       situacao: 'transcrevendo',
       modelos: { speech: MODELO_SPEECH, gemini: MODELO_GEMINI_ENTREVISTA },
@@ -222,6 +228,8 @@ const organizarComTrava = async (ref: DocumentReference, token: string, d: Doc):
         // O mapa confirmado pelo perito nunca é sobrescrito pela sugestão.
         ...(atual.falantesConfirmados ? {} : { mapaFalantes: r.mapaFalantes }),
         situacao: 'pronta',
+        // Só a primeira organização conta para a duração do processamento (o "Reorganizar" não altera).
+        ...(atual.tempos?.organizacaoConcluida ? {} : { 'tempos.organizacaoConcluida': Date.now() }),
         modelos: { speech: atual.modelos?.speech || MODELO_SPEECH, gemini: MODELO_GEMINI_ENTREVISTA },
         organizandoDesde: FieldValue.delete(), travaOrganizacao: FieldValue.delete(),
         atualizadoEm: FieldValue.serverTimestamp(),
@@ -269,7 +277,11 @@ export const avancarEntrevista = async (db: Firestore, isId: string, entrevistaI
           const trocou = await ref.firestore.runTransaction(async tx => {
             const atual = await lerDoc(ref, tx);
             if (atual.situacao !== 'transcrevendo' || atual.operacaoSpeech !== nome) return false;
-            tx.update(ref, { operacaoSpeech: nova.nome, speechComAdaptacao: false, atualizadoEm: FieldValue.serverTimestamp() });
+            tx.update(ref, {
+              operacaoSpeech: nova.nome, speechComAdaptacao: false,
+              'tempos.transcricaoIniciada': Date.now(), 'tempos.transcricaoRefeita': true,
+              atualizadoEm: FieldValue.serverTimestamp(),
+            });
             return true;
           });
           if (trocou) return 'transcrevendo';
@@ -283,7 +295,7 @@ export const avancarEntrevista = async (db: Firestore, isId: string, entrevistaI
     const falas = consulta.falas;
     const trava = await tomarTrava(ref,
       x => x.situacao === 'transcrevendo' && x.operacaoSpeech === nome,
-      () => ({ transcricao: falas }));
+      () => ({ transcricao: falas, 'tempos.transcricaoConcluida': Date.now() }));
     if (!trava) return ((await lerDoc(ref)).situacao || 'organizando') as SituacaoEntrevista;
     return organizarComTrava(ref, trava.token, trava.doc);
   }

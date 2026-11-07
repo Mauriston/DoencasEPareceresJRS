@@ -194,11 +194,10 @@ export const recusouAdaptacao = (e: unknown): boolean => {
 };
 
 /**
- * Inicia o BatchRecognize e devolve o nome da operação (não espera a transcrição). Com adaptação de
- * frases (nomes dos participantes + siglas); se o Google recusar a adaptação para o modelo, repete sem ela.
+ * Adaptação de frases ligada? Desligada por padrão: o Chirp 3 aceita o pedido com `adaptation`, mas a
+ * operação falha (código 13) e o fluxo precisa refazer sem ela, dobrando a espera. Só `SPEECH_ADAPTACAO=1` liga.
  */
-/** Adaptação de frases ligada? (SPEECH_ADAPTACAO=0 desliga — o Chirp 3 pode falhar com ela.) */
-export const adaptacaoLigada = (): boolean => process.env.SPEECH_ADAPTACAO !== '0';
+export const adaptacaoLigada = (): boolean => process.env.SPEECH_ADAPTACAO === '1';
 
 /**
  * Inicia o BatchRecognize. Com `semAdaptacao`, não manda a lista de frases. Devolve o nome da operação e se a
