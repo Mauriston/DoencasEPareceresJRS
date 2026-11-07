@@ -2,6 +2,8 @@
 // Caminhos do Firebase Storage que o servidor pode repassar (POST /api/arquivos/baixar, server.ts):
 // as mesmas pastas que storage.rules libera para leitura de usuário autenticado (perfil/ é pública).
 // Qualquer outro caminho, ou com "..", barra inicial ou caractere de controle, é recusado.
+// NUNCA inclua `entrevistas/` (áudio das entrevistas gravadas da IS): só a junta ouve, pelo
+// servidor (/api/entrevistas/ouvir), que confere o perfil — este repasse vale para qualquer usuário ativo.
 export const PASTAS_ARQUIVOS = ['perfil/', 'pareceres/', 'periciasMenores/', 'concursos/', 'legislacao/', 'infograficos/', 'dgpm406/'] as const;
 
 export const caminhoArquivoValido = (c: unknown): c is string =>

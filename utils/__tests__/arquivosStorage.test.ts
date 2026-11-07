@@ -25,6 +25,11 @@ describe('caminhoArquivoValido (repasse do servidor)', () => {
     expect(caminhoArquivoValido('concursos/x/termos/1.pdf')).toBe(true);
     expect(caminhoArquivoValido('outra/arquivo.pdf')).toBe(false);
   });
+  it('nunca repassa o áudio das entrevistas gravadas (só o servidor ouve, por /api/entrevistas/ouvir)', () => {
+    expect(caminhoArquivoValido('entrevistas/9001/e1/original.webm')).toBe(false);
+    expect(caminhoArquivoValido('entrevistas/9001/e1/audio.flac')).toBe(false);
+    expect(caminhoArquivoValido('perfil/../entrevistas/9001/e1/audio.flac')).toBe(false);
+  });
   it('recusa travessia, barra inicial, controle e tipos errados', () => {
     expect(caminhoArquivoValido('periciasMenores/../segredo')).toBe(false);
     expect(caminhoArquivoValido('/periciasMenores/a.pdf')).toBe(false);

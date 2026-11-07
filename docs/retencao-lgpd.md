@@ -15,17 +15,29 @@
 | Auditoria (`eventos`, `auditoria_acoes`) | Firestore | 5 anos (sugestão) | Exclusão em lote por Admin | a validar pela Encarregada/Comando |
 | Cadastro de militares/dependentes | Firestore `militares` | Enquanto houver vínculo/necessidade; inativar antes de apagar | Exclusão pelo Admin (já auditada) | a validar pela Encarregada/Comando |
 | Usuários do sistema | Firestore `usuarios` + Authentication | Enquanto ativo; inativar ao término do vínculo | Exclusão após prazo a definir | a validar pela Encarregada/Comando |
+| Áudio das entrevistas gravadas da IS | Storage `entrevistas/{isId}/{entrevistaId}/` | **90 dias** após a entrevista (decisão do Presidente da JRS, 08/11/2026; `DIAS_RETENCAO_AUDIO` em `config/entrevistas.ts`) | **Automático:** regra de ciclo de vida do bucket (`scripts/entrevistas/configurar-retencao.sh`); recuperável na lixeira do Storage por mais 30 dias. O app mostra a data em que o áudio será apagado | **implementado** (ADR-014) |
+| Transcrição e anamnese organizada da entrevista | Firestore `inspecoes/{isId}/entrevistas` | Seguem a IS (ficam com ela enquanto a IS existir) | Junto com a IS (Admin); só a junta (Admin e `user_medicos`) lê | a validar pela Encarregada/Comando |
+| Consentimento do inspecionado para a gravação | Firestore, campo `consentimento` (`uid`, `nome` de quem registrou, `em`) da entrevista | Igual à transcrição (prova do consentimento enquanto houver dado gravado) | Junto com a entrevista | a validar pela Encarregada/Comando |
 | Imagens enviadas ao Gemini | Não armazenadas pelo app | Não retidas pelo app (transitam na requisição) | — | confirmar com a Encarregada a política do provedor |
 
 ## 2. Rotina simples (não ativada)
 
-Não há exclusão automática. Para tornar a política executável sem risco, a sugestão é, **após a aprovação dos prazos**:
+Não há exclusão automática, **salvo o áudio das entrevistas gravadas** (90 dias, abaixo). Para tornar a política executável sem risco, a sugestão é, **após a aprovação dos prazos**:
 
 1. Gravar nos documentos uma data de descarte prevista (`descarteEm`, `AAAA-MM-DD`, ver `utils/dados.ts: dataCivilISO`) no momento do encerramento do concurso/arquivamento do parecer;
 2. Uma tela de Admin lista os registros com `descarteEm` vencido, para **revisão humana** e exclusão manual (Drive: lixeira; depois exclusão definitiva);
 3. A exclusão fica registrada em `auditoria_acoes` (sem dados pessoais).
 
 Pendente: aprovação dos prazos, o campo `descarteEm` e a tela de Admin.
+
+### 2.1 Entrevistas gravadas da IS (ADR-014)
+
+- **Consentimento:** a gravação só começa depois que o perito registra no app o consentimento do inspecionado (quem registrou e quando ficam no documento da entrevista).
+- **Acesso:** só a junta (Admin e `user_medicos`) grava, lê e revisa; o áudio não tem leitura pelo app (`storage.rules`) — é ouvido pelo servidor, que confere o perfil.
+- **Áudio:** apagado **90 dias** depois (ciclo de vida do bucket; lixeira de 30 dias). Os backups do Firestore não contêm áudio.
+- **Transcrição e anamnese:** ficam no Firestore e seguem a retenção da IS; nenhum PDF é gerado.
+- **Processamento:** Speech-to-Text (Chirp 3) na região `us` e Gemini no Vertex AI — dados de saúde processados nos EUA, **aceito** pelo Presidente da JRS (08/11/2026); a confirmar com a Encarregada de Dados.
+- **IA:** o resultado é um rascunho; o app avisa "revisar antes de usar no laudo" e registra quem editou e quem revisou.
 
 ## 3. Princípios
 

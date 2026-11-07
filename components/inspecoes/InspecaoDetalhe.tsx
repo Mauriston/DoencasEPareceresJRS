@@ -1,6 +1,6 @@
 // Ficheiro: components/inspecoes/InspecaoDetalhe.tsx
 // Ficha de uma IS em barra lateral (bottom sheet no mobile): situação e prazo, dados da entrevista,
-// estado da sincronização com o Google Agenda, edição do andamento (status, laudo, restrições, TIS,
+// estado da sincronização com o Google Agenda, a entrevista gravada (junta), edição do andamento (status, laudo, restrições, TIS,
 // DS-1a, observações) e as ações ligadas à IS: agendar/reagendar, minutas de mensagem, pedido de
 // parecer e (Admin) apagar.
 import React, { useEffect, useState } from 'react';
@@ -8,6 +8,9 @@ import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
 import { StatusTag } from '../ui/StatusTag';
+import { SecaoEntrevista } from './entrevista/SecaoEntrevista';
+import { useNav } from '../../context/NavContext';
+import { podeUsarEntrevista } from '../../config/entrevistas';
 import { atualizarInspecao, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { carregarRestricoesIS } from '../../utils/corposQuadros';
 import {
@@ -45,6 +48,8 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, permissoes, onC
   const info = STATUS_IS[efetivo];
   const finalizada = is.situacao === 'finalizada';
   const editavel = permissoes.editar && is.status !== 'cancelada';
+  // Entrevista gravada: só Admin e user_medicos (a junta), espelhando firestore.rules.
+  const mostraEntrevista = podeUsarEntrevista(useNav()?.authUser?.perfil);
 
   const [restricoesOpcoes, setRestricoesOpcoes] = useState<string[]>([]);
   const [status, setStatus] = useState<StatusIS>(is.status);
@@ -145,6 +150,8 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, permissoes, onC
           {permissoes.minuta && is.status !== 'cancelada' && (is.laudo || is.tis) && <Button variant="secondary" icon="mail" onClick={onMinutaResultado}>Minuta de resultado</Button>}
           {permissoes.parecer && is.status !== 'cancelada' && <Button variant="secondary" icon="assignment_add" onClick={onSolicitarParecer}>Solicitar parecer</Button>}
         </div>
+
+        {mostraEntrevista && <SecaoEntrevista is={is} />}
 
         {editavel ? (
           <form id="form-editar-is" onSubmit={salvar} noValidate className="space-y-4 border-t border-line pt-4">
