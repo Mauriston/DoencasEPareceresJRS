@@ -46,12 +46,12 @@ describe('extrairEnvelopeScript', () => {
 describe('chamarScript', () => {
   it('envia ação, idToken e dados em text/plain (sem preflight) e devolve "dados"', async () => {
     fetchMock.mockResolvedValue(resposta({ sucesso: true, dados: { pdfBase64: 'abc' } }));
-    const d = await chamarScript<{ pdfBase64: string }>('gerarTermoRecurso', { candidatoId: '1' });
+    const d = await chamarScript<{ pdfBase64: string }>('salvarPdfCandidato', { candidatoId: '1' });
     expect(d.pdfBase64).toBe('abc');
     const [, init] = fetchMock.mock.calls[0];
     expect(init.method).toBe('POST');
     expect(init.headers['Content-Type']).toBe('text/plain;charset=utf-8');
-    expect(JSON.parse(init.body)).toEqual({ action: 'gerarTermoRecurso', idToken: 'token-de-teste', candidatoId: '1' });
+    expect(JSON.parse(init.body)).toEqual({ action: 'salvarPdfCandidato', idToken: 'token-de-teste', candidatoId: '1' });
   });
 
   it('sem sessão não chama o servidor', async () => {

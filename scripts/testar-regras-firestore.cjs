@@ -69,6 +69,11 @@ const casos = [
   cre('Médico grava a escala do SPA', 'user_medicos', 'escalaSpa/2026-11-06', 'DENY'),
   cre('Secretaria grava a escala do SPA', 'user_secretaria', 'escalaSpa/2026-11-06', 'DENY'),
   upd('Médico Geral altera Status de candidato', 'user_medicos_geral', { status: 'APTO' }, 'DENY'),
+  // Refresh token da conta Google do servidor: nem o Admin lê ou grava pelo app (só o Admin SDK).
+  cre('Admin grava segredo do servidor', 'admin', 'segredos_servidor/contaGoogle', 'DENY'),
+  { nome: 'Admin lê segredo do servidor', tc: { expectation: 'DENY',
+    request: { auth: { uid: 'u1' }, path: `${DB}/segredos_servidor/contaGoogle`, method: 'get' },
+    resource: { data: { refreshToken: 'x' } }, functionMocks: mocks('admin') } },
 ];
 (async () => {
   const c = await new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] }).getClient();

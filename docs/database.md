@@ -268,6 +268,7 @@ O cliente só avisa o servidor (`/api/notificacoes/evento`); o servidor confere 
 | `usuarios/{uid}/notificacoes` | o dono | servidor cria; o dono só marca `lida` |
 | `tokens_push` | ninguém | o dono (`uid` = usuário logado) |
 | `notificacoes_enviadas` | ninguém | ninguém (só o servidor) |
+| `segredos_servidor` | ninguém | ninguém (só o servidor: *refresh token* da conta Google da JRS — ADR-013) |
 | `documentos_gerados` | Secretaria e Admin | criar: autenticado em seu nome; marcar aberto: Secretaria e Admin; apagar: Admin |
 | `militares` | autenticado | criar: equipe; editar: Admin (médicos só `servico_label`); apagar: Admin |
 | `inspecoes`, `agendaSlots` | autenticado | equipe (Admin, médicos, Secretaria); apagar IS: Admin |

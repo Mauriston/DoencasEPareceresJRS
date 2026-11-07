@@ -5,6 +5,7 @@
 // PARECERES > {nome completo do inspecionado} > SOL_PARECER_{especialidade}_{DDMMMAAAA}.PDF, e grava no
 // Firestore a URL de visualização ("view") devolvida.
 import { chamarScript, chamarServidor } from './apiClient';
+import { chamarGoogle } from './googleServidor';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
@@ -33,9 +34,9 @@ export const salvarPdfParecerNoDrive = async (params: { nomeInspecionado: string
 };
 
 /**
- * "Enviar para Impressão": o Apps Script manda o PDF do pedido por e-mail para a impressão (Giorginis), a
+ * "Enviar para Impressão": o servidor (ou, sem a conta Google autorizada, o Apps Script) manda o PDF do pedido por e-mail para a impressão (Giorginis), a
  * partir da conta dona do script, com o nome de exibição do médico solicitante (ex.: "CT MAURISTON").
  */
 export const enviarParecerParaImpressao = async (params: { pdfUrl: string; remetente: string }): Promise<void> => {
-  await chamarScript<{ enviado: boolean }>('enviarParecerImpressao', params);
+  await chamarGoogle<{ enviado: boolean }>('/api/impressao/parecer', 'enviarParecerImpressao', params);
 };

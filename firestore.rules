@@ -97,6 +97,12 @@ service cloud.firestore {
     // aberto); Secretaria e Admin leem e só podem marcar como aberto.
     // Auditoria geral de ações sensíveis (exclusão/geração de documentos): qualquer usuário
     // autenticado grava em SEU nome; só o Admin lê; ninguém edita nem apaga. Sem dados pessoais.
+    // Segredos do servidor (refresh token da conta Google da JRS — servidor/google/contaGoogle.ts):
+    // só o Admin SDK do Cloud Run lê e grava; nenhum acesso pelo app, nem do Admin.
+    match /segredos_servidor/{id} {
+      allow read, write: if false;
+    }
+
     match /auditoria_acoes/{id} {
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
       allow read: if isAdmin();

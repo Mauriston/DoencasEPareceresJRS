@@ -1,10 +1,10 @@
 // Ficheiro: services/agendaGoogleIS.ts
 // Sincroniza as IS com entrevista marcada com a agenda "JRS/HNRe" do Google Agenda do Admin.
-// Quem fala com o Google Agenda é o Apps Script standalone (CodeConcursos.gs, ação
-// "sincronizarEventoIS", que roda como o dono do script); o perito da IS entra como convidado,
+// Quem fala com o Google Agenda é o servidor (conta Google da JRS; servidor/google/agenda.ts) ou, sem a
+// conta autorizada, o Apps Script (ação "sincronizarEventoIS"); o perito da IS entra como convidado,
 // pelo Gmail cadastrado em Usuários. O id do evento volta e é gravado na IS, para que
 // reagendar atualize o mesmo evento e cancelar o remova.
-import { chamarScript } from './driveConcursos';
+import { chamarGoogle } from './googleServidor';
 import { registrarSincronizacaoAgenda, type InspecaoRecord } from './firestoreInspecoes';
 import { extrairNomeInspecionado } from '../utils/format';
 import { dataDeEntrevista, horaDeEntrevista, horaFimEntrevista, duracaoDaIS } from '../utils/inspecoes';
@@ -31,7 +31,7 @@ const montar = (is: DadosEvento) => ({
 export const sincronizarAgendaIS = async (is: InspecaoRecord): Promise<{ ok: boolean; erro?: string; semConvidado?: boolean }> => {
   if (!is.dataEntrevista) return { ok: true };
   try {
-    const r = await chamarScript<{ eventoId: string }>('sincronizarEventoIS', montar(is));
+    const r = await chamarGoogle<{ eventoId: string }>('/api/agenda/evento-is', 'sincronizarEventoIS', montar(is));
     await registrarSincronizacaoAgenda(is.id, { eventoAgendaId: r.eventoId, agendaSincronizada: true });
     return { ok: true, semConvidado: !is.peritoGmail };
   } catch (e: any) {
@@ -44,7 +44,7 @@ export const sincronizarAgendaIS = async (is: InspecaoRecord): Promise<{ ok: boo
 export const removerEventoAgendaIS = async (is: Pick<InspecaoRecord, 'id' | 'eventoAgendaId'>): Promise<boolean> => {
   if (!is.eventoAgendaId) return true;
   try {
-    await chamarScript('sincronizarEventoIS', { eventoId: is.eventoAgendaId, agenda: NOME_AGENDA_GOOGLE, remover: true });
+    await chamarGoogle('/api/agenda/evento-is', 'sincronizarEventoIS', { eventoId: is.eventoAgendaId, agenda: NOME_AGENDA_GOOGLE, remover: true });
     await registrarSincronizacaoAgenda(is.id, { eventoAgendaId: '', agendaSincronizada: true }).catch(() => { /* IS pode ter sido apagada */ });
     return true;
   } catch {
@@ -54,11 +54,11 @@ export const removerEventoAgendaIS = async (is: Pick<InspecaoRecord, 'id' | 'eve
 
 /** Evento de dia inteiro (cinza) no Google Agenda para um bloqueio de período; título "{usuário} - {motivo}". Devolve o id do evento. */
 export const criarEventoBloqueioAgenda = async (p: { titulo: string; dataInicio: string; dataFim: string }): Promise<string> => {
-  const r = await chamarScript<{ eventoId: string }>('sincronizarEventoBloqueio', { agenda: NOME_AGENDA_GOOGLE, ...p });
+  const r = await chamarGoogle<{ eventoId: string }>('/api/agenda/evento-bloqueio', 'sincronizarEventoBloqueio', { agenda: NOME_AGENDA_GOOGLE, ...p });
   return r.eventoId;
 };
 
 /** Remove do Google Agenda o evento de um bloqueio de período. */
 export const removerEventoBloqueioAgenda = async (eventoId: string): Promise<void> => {
-  await chamarScript('sincronizarEventoBloqueio', { agenda: NOME_AGENDA_GOOGLE, eventoId, remover: true });
+  await chamarGoogle('/api/agenda/evento-bloqueio', 'sincronizarEventoBloqueio', { agenda: NOME_AGENDA_GOOGLE, eventoId, remover: true });
 };

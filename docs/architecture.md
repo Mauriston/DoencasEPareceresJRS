@@ -98,13 +98,16 @@ O backend tem duas partes, publicadas separadamente:
 | `POST /api/documentos/termo-cientificacao` | Termo de Cientificação de Resultado (APTO, INAPTO ou INSUF DOCUMENTAL) em PDF. Perfis da equipe |
 | `POST /api/documentos/solicitacao-parecer` · `/solicitacao-exames` | Solicitações da planilha do concurso em PDF. Perfis da equipe |
 | `POST /api/documentos/pedido-parecer` | Pedido de Parecer da página Pareceres (folha de resposta na última página, "- n de N -"). Só médicos (Admin, médicos, MPI) |
+| `POST /api/google/situacao` · `/api/google/autorizacao` · `GET /api/google/retorno` | Conta Google da JRS no servidor (OAuth 2.0, ADR-013): situação e início da autorização (só Admin, cartão em Usuários) e o retorno do Google, que guarda o *refresh token* em `segredos_servidor/contaGoogle` (só o Admin SDK lê) |
+| `POST /api/impressao/parecer` · `/termo-recurso` · `/solicitacao-concurso` | "Enviar para impressão" pela Gmail API (mesmos destinatários, assuntos, textos e anexo do Apps Script; o PDF é lido do Drive e precisa estar sob PARECERES ou CONCURSOS). Parecer: só médicos; demais: equipe. Operação sensível (auditada) |
+| `POST /api/agenda/evento-is` · `/evento-bloqueio` · `/concursos` | Sincronização da agenda "JRS/HNRe" pela Calendar API (mesmas cores, convites e lembrete de 12 h; ids antigos do CalendarApp continuam valendo). Perfis da equipe |
 | `POST /api/arquivos/baixar` | Repasse de arquivos do Firebase Storage (PDFs, fotos de perfil, infográficos) para redes que bloqueiam `firebasestorage.googleapis.com` — ex.: Firefox nos PCs da Marinha. Exige usuário ativo; só as pastas liberadas em `storage.rules` (`utils/arquivosPermitidos.ts`). O cliente monta um `blob:` (`services/arquivosStorage.ts`) e cai para a URL direta se o repasse falhar |
 | `POST /api/gemini/analyze-image` | Leitura de imagem pelo Gemini (exige usuário ativo) |
 | `POST /api/concursos/ocr-pdf` | Transcrição literal do PDF de mensagem administrativa (exige usuário ativo) |
 
 O mesmo servidor serve o build em desenvolvimento (`npm run dev`) e libera CORS para a origem do GitHub Pages (`ALLOWED_ORIGIN`).
 
-**Google Apps Script.** `apps-script/concursos/CodeConcursos.gs` concentra a automação do Workspace: gravação no Drive dos PDFs gerados pelo servidor (termos, solicitações e pedidos de parecer saem do servidor em HTML + CSS — ADR-012), gravação no Drive (inclusive o PDF dos exames dos candidatos), envio de e-mails para impressão e sincronização com o Google Agenda "JRS/HNRe". As ações que gravam exigem o `idToken` do Firebase. `CodePrincipal.gs`, no mesmo projeto, guarda a minuta de mensagens como Google Doc (`salvarMinutaMensagem`). O Apps Script não chama mais o Gemini.
+**Google Apps Script.** `apps-script/concursos/CodeConcursos.gs` concentra a gravação no Drive: os PDFs gerados pelo servidor (termos, solicitações e pedidos de parecer saem do servidor em HTML + CSS — ADR-012; o Apps Script não gera mais documentos nem usa templates), o PDF dos exames dos candidatos e a estrutura de pastas dos concursos. E-mails para impressão e Google Agenda "JRS/HNRe" passam ao servidor (conta Google da JRS por OAuth — ADR-013); o Apps Script continua com essas ações só como **reserva**, enquanto a conta não estiver autorizada no servidor (`services/googleServidor.ts`). As ações que gravam exigem o `idToken` do Firebase. `CodePrincipal.gs`, no mesmo projeto, guarda a minuta de mensagens como Google Doc (`salvarMinutaMensagem`). O Apps Script não chama mais o Gemini.
 
 ### 3.3 Persistência
 
@@ -270,7 +273,7 @@ sequenceDiagram
 Painel de trabalho: *Precisa de atenção* (pareceres atrasados, perícias vigentes, IS de hoje, concursos em andamento e do dia, **IS de concurso atrasadas**, senha temporária), *Últimos documentos gerados* (só Secretaria), **Próximos serviços** (Escala SVÇ do usuário), Próximas Inspeções, Pareceres não concluídos, Perícias Menores Vigentes (as 4 mais antigas; o badge do título mostra o total), Acesso rápido, **Próximas férias** (coluna direita), Agenda de inspeções e Avisos. Para `user_medicos_geral`: sem Próximas férias e com **Últimos atestados** (os registrados pelo usuário).
 
 ### 7.2 Inspeções de Saúde e agenda
-`Inspecoes.tsx` e `components/inspecoes/`: cadastro das IS (exceto concursos), tabela agrupada ou calendário Dia/Semana/Mês, agendamento por perito em slots (transação em `agendaSlots`), bloqueios de horário/turno/período, minutas e sincronização com o Google Agenda "JRS/HNRe" (Apps Script). Os dias de concurso ocupam o turno da manhã de todos os peritos.
+`Inspecoes.tsx` e `components/inspecoes/`: cadastro das IS (exceto concursos), tabela agrupada ou calendário Dia/Semana/Mês, agendamento por perito em slots (transação em `agendaSlots`), bloqueios de horário/turno/período, minutas e sincronização com o Google Agenda "JRS/HNRe" (servidor; Apps Script de reserva). Os dias de concurso ocupam o turno da manhã de todos os peritos.
 
 ### 7.3 Concursos
 `ConcursosJRS.tsx` (só o roteamento entre lista, planilha, criação, dia e atrasadas) e `components/concursos/`, divididos por responsabilidade:
@@ -292,7 +295,7 @@ Funcionalidades:
 - **triagem** pelo MPI (`Triagem.tsx`, `utils/triagem.ts`): botão TRIAR só nas IS do dia, alertas de possível inaptidão, TRIADO com seção na barra lateral.
 
 ### 7.4 Pareceres
-Firestore (`pareceres`, `quesitosParecer`); PDF pelo Apps Script no Drive; diálogo **Enviar para Impressão** por e-mail.
+Firestore (`pareceres`, `quesitosParecer`); PDF gerado no servidor e guardado no Drive pelo Apps Script; diálogo **Enviar para Impressão** por e-mail.
 
 ### 7.5 Perícia menor
 `PericiaMenor.tsx` e `components/periciaMenor/`; Firestore (`periciasMenores`). Rótulos por perfil em `config/termosPericia.ts` ("Atestados" para `user_medicos_mpi` e `user_medicos_geral`). O formulário (`NovaPericiaMenorForm.tsx`) começa por **Registrar Atestado / Homologar Atestado** e revela os campos em sequência (foto obrigatória → militar → data → tempo → [tempo homologado] → CID → dispensas → ENC p/ VDF Sim/Não); a foto passa pelo recorte, pelo filtro "Documento" e pela leitura do Gemini (Firebase AI Logic), que já preenche os campos. Regras de tempo (20 dias por atestado, 30 acumulados) em `utils/periciaMenorRegras.ts`; dispensas com complemento em `DispensasModal.tsx`. PDF do atestado no Storage.
@@ -332,22 +335,23 @@ Não há `doGet`: o app só faz chamadas POST. O antigo projeto "principal" (`Co
 
 | Grupo | Ações |
 |---|---|
-| Concursos | `criarEstruturaConcurso`, `salvarMensagemPdf`, `extrairMensagemConcurso`, `salvarPdfCandidato`, `salvarExamesCandidato`, `gerarTermoRecurso`, `gerarTermoCientificacao`, `gerarSolicitacaoParecer`, `gerarSolicitacaoExames`, `removerArquivoDrive` |
-| Pareceres | `gerarPedidoParecer`, `salvarPdfParecer` |
-| Impressão por e-mail | `enviarTermoRecursoImpressao`, `enviarSolicitacaoConcursoImpressao`, `enviarParecerImpressao` (com cópia para a Secretaria) |
-| Google Agenda "JRS/HNRe" | `sincronizarEventoIS`, `sincronizarEventoBloqueio`, `sincronizarEventosConcursos` |
+| Concursos | `criarEstruturaConcurso`, `salvarMensagemPdf`, `extrairMensagemConcurso`, `salvarPdfCandidato`, `salvarExamesCandidato`, `removerArquivoDrive` |
+| Pareceres | `salvarPdfParecer` |
+| Impressão por e-mail (reserva do servidor) | `enviarTermoRecursoImpressao`, `enviarSolicitacaoConcursoImpressao`, `enviarParecerImpressao` (com cópia para a Secretaria) |
+| Google Agenda "JRS/HNRe" (reserva do servidor) | `sincronizarEventoIS`, `sincronizarEventoBloqueio`, `sincronizarEventosConcursos` |
+
+As ações `gerarTermoRecurso`, `gerarTermoCientificacao`, `gerarSolicitacaoParecer`, `gerarSolicitacaoExames` e `gerarPedidoParecer` e os IDs dos templates do Google Docs foram **removidos** em 07/11/2026 (versão `2026-11-07.1`): os documentos saem do servidor (ADR-012).
 | Minuta | `salvarMinutaMensagem` (guarda como Google Doc a minuta gerada no app pelo AI Logic) |
 
 ### 8.3 Automação documental
 
-1. copia o template do Google Docs para a pasta do Drive (concurso/candidato ou inspecionado);
-2. preenche os marcadores;
-3. exporta em PDF e devolve a URL de visualização;
-4. o app grava a URL no Firestore; para os documentos com automação de e-mail, envia o PDF para a impressão.
+1. o servidor gera o PDF em HTML + CSS (`/api/documentos/*`, ADR-012);
+2. o Apps Script grava o PDF na pasta do Drive (concurso/candidato ou inspecionado) e devolve a URL de visualização;
+3. o app grava a URL no Firestore; para os documentos com automação de e-mail, envia o PDF para a impressão (servidor; Apps Script de reserva).
 
 ### 8.4 Segurança
 
-**Todas** as ações (exceto `versao`, que só informa a versão publicada) passam por `autorizarAcao_` no `doPost`: valida o `idToken` do Firebase, lê `usuarios/{uid}` no Firestore (API REST, com o token do próprio usuário e as regras valendo; cache de 60 s), exige usuário **ativo** e **perfil permitido** para a ação (`PERFIS_POR_ACAO`: pedido de parecer só para Admin e médicos; as demais, qualquer perfil da equipe). Recusas e operações sensíveis (`removerArquivoDrive` e os envios para impressão) geram log estruturado sem dados pessoais (`Logger`: evento, ação, uid, perfil, motivo) e um registro em `auditoria_acoes` (Firestore).
+**Todas** as ações (exceto `versao`, que só informa a versão publicada) passam por `autorizarAcao_` no `doPost`: valida o `idToken` do Firebase, lê `usuarios/{uid}` no Firestore (API REST, com o token do próprio usuário e as regras valendo; cache de 60 s), exige usuário **ativo** e **perfil permitido** para a ação (`PERFIS_POR_ACAO`: pareceres só para Admin e médicos; as demais, qualquer perfil da equipe). Recusas e operações sensíveis (`removerArquivoDrive` e os envios para impressão) geram log estruturado sem dados pessoais (`Logger`: evento, ação, uid, perfil, motivo) e um registro em `auditoria_acoes` (Firestore).
 
 ---
 
@@ -877,6 +881,13 @@ flowchart TB
 - **Decisão:** cada documento é um modelo HTML + CSS em `servidor/documentos/` (layout comum em `layoutOficial.ts`: A4, margens dos templates, Carlito, cabeçalho/rodapé de sigilo e brasão) e vira PDF no Cloud Run com o Chromium headless (`puppeteer-core`; imagem Debian com `chromium` e `fonts-crosextra-carlito`, 1 GiB de memória). A fidelidade é conferida contra o PDF exportado do template (`scripts/documentos/comparar-com-template.mts`: cada linha a menos de 1 pt).
 - **Motivação:** tirar a dependência do Apps Script e dos templates do Drive (cópia, preenchimento e exportação a cada documento); modelos versionados e testáveis; mais rápido.
 - **Consequências:** o servidor passa a precisar do Chromium; mudar o texto de um documento exige mudar o código (com teste), não mais o Google Doc. O PDF continua sendo salvo no Drive pelo Apps Script (`salvarPdfCandidato`) até a migração do armazenamento.
+### ADR-013 — E-mails de impressão e Google Agenda pelo servidor (conta Google da JRS por OAuth)
+
+- **Status:** aceita (07/11/2026). Em vigor quando o Admin autoriza a conta (Usuários → *Conta Google do servidor*); até lá, e sempre que a conta perder a autorização, o app usa o Apps Script.
+- **Decisão:** o servidor fala com a Gmail API (`gmail.send`), a Calendar API (`calendar.events`) e a Drive API (`drive.readonly`, para anexar os PDFs) **como a conta Google da JRS** — a dona da agenda "JRS/HNRe" e remetente dos e-mails —, autorizada uma vez pelo Admin (cliente OAuth "Aplicativo da Web" do projeto, `access_type=offline`). O *refresh token* fica em `segredos_servidor/contaGoogle` (regras negam todo acesso pelo app). Código em `servidor/google/` (`contaGoogle.ts`, `impressao.ts`, `agenda.ts`); no app, `services/googleServidor.ts` chama a rota e, se o servidor responder 503 `google_indisponivel` (ou 404), repete a mesma ação no Apps Script.
+- **Motivação:** completar a saída do Apps Script sem mudar o comportamento: mesmo remetente, convites, cores e lembrete de 12 h. Uma conta de serviço não serviria: não envia e-mail nem convida em nome da JRS sem delegação de domínio (indisponível numa conta Gmail).
+- **Consequências:** o app OAuth precisa estar **"Em produção"** (em "Teste" o token expira em 7 dias). Se a senha da conta mudar ou o acesso for revogado, o servidor volta a responder 503 e o app cai no Apps Script até o Admin autorizar de novo. Os eventos e e-mails antigos continuam válidos (ids do CalendarApp sem o sufixo `@google.com`; marcas `jrsConcurso` privadas ou compartilhadas).
+
 ---
 
 ## 18. Checklist para mudanças arquiteturais
@@ -962,3 +973,4 @@ Já feitos em 31/10/2026: publicação das regras no CI (com teste antes); restr
 | 06/11 | Página Escala SVÇ, envio da escala por CSV e card "Próximos serviços" | `EscalaSpa.tsx`, `components/escala/`, `utils/escalaSpa.ts`, `escalaSpa` (ADR-011) |
 | 06/11 | Novo atestado em etapas (Registrar/Homologar, ENC p/ VDF Sim/Não), PDF em modal no desktop, foto obrigatória de novo | `NovaPericiaMenorForm.tsx`, `components/ui/LinkPdf.tsx`, `PdfFullscreenModal.tsx` |
 | 06/11 | Início: Perícias Menores Vigentes mostra as 4 mais antigas, com o total no badge | `Home.tsx` |
+| 07/11 | E-mails de impressão e Google Agenda pelo servidor (conta Google da JRS por OAuth, Apps Script de reserva); Apps Script sem geração de documentos nem templates | `servidor/google/`, `services/googleServidor.ts`, `components/usuarios/ContaGoogleServidor.tsx` (ADR-013) |

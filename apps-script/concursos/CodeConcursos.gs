@@ -5,13 +5,15 @@
  * Após a migração do backend de Concursos para o Firebase (Firestore — ver
  * services/firestoreConcursos.ts), este projeto Apps Script STANDALONE não
  * lê nem escreve planilhas. Responsabilidades:
- *  - gerar os PDFs (termos, pedidos de parecer, solicitações de exames) a
- *    partir dos templates Google Docs e devolvê-los em base64;
  *  - guardar os PDFs dos concursos no Google Drive (drive compartilhado,
  *    pasta raiz CONCURSOS > ano > concurso > CANDIDATOS/MENSAGENS) e devolver
  *    as URLs, que o app grava no Firestore (services/driveConcursos.ts);
  *  - guardar o PDF dos exames de um candidato na pasta dele (como
- *    EXAMES_NOME_DO_CANDIDATO.pdf) e a minuta de mensagem como Google Doc.
+ *    EXAMES_NOME_DO_CANDIDATO.pdf) e a minuta de mensagem como Google Doc;
+ *  - RESERVA do servidor: e-mails "Enviar para impressão" e Google Agenda, enquanto a
+ *    conta Google da JRS não estiver autorizada no servidor (servidor/google/*).
+ * Os PDFs (termos, pedidos de parecer, solicitações de exames) são gerados no servidor
+ * em HTML + CSS (servidor/documentos/); os templates do Google Docs não são mais usados.
  * O Gemini NÃO é mais chamado daqui: a IA (minuta, mensagem de concurso, exames
  * e atestado) roda no app pelo Firebase AI Logic (services/geminiAI.ts). A
  * propriedade GEMINI_API_KEY pode ser apagada do projeto.
@@ -19,20 +21,18 @@
  * ("idToken") — ver "exigirUsuarioFirebase".
  *
  * Implantação: crie um projeto Apps Script STANDALONE (script.google.com →
- * Novo projeto; não atrelado a planilha nem ao Docs do template), cole este
+ * Novo projeto; não atrelado a planilha nem a um Google Doc), cole este
  * arquivo e use Implantar → Nova implantação → Aplicativo da web, "Executar
  * como: Eu", "Quem pode acessar: Qualquer pessoa". Colar a URL ".../exec"
  * gerada em GAS_URL_CONCURSOS
- * (config/endpoints.ts). Como o script usa Docs/Drive só para
- * copiar e exportar o template (nunca grava nada no Drive do usuário além
- * de uma cópia temporária, descartada ao final), a primeira execução pode
- * pedir autorização dessas permissões.
+ * (config/endpoints.ts). A primeira execução pede autorização do Drive,
+ * do Docs (minuta), do Gmail e do Google Agenda.
  */
 
 /**
- * Configuração (IDs de templates, pastas, agenda e e-mail da impressão): vem das Propriedades do script
+ * Configuração (IDs de pastas, agenda e e-mail da impressão): vem das Propriedades do script
  * (Configurações do projeto → Propriedades do script), com o valor abaixo como padrão. Assim dá para
- * trocar uma pasta ou um template sem editar o código. Inventário completo em docs/configuracao.md.
+ * trocar uma pasta sem editar o código. Inventário completo em docs/configuracao.md.
  * Para gravar os padrões atuais nas propriedades, rode uma vez gravarConfiguracaoPadrao() no editor.
  */
 var CONFIG_PADRAO_ = {};
@@ -54,12 +54,6 @@ function gravarConfiguracaoPadrao() {
   Logger.log('Propriedades gravadas: ' + (Object.keys(novos).join(', ') || 'nenhuma (já existiam)'));
 }
 
-var ID_TEMPLATE_TERMO_RECURSO = cfg_('ID_TEMPLATE_TERMO_RECURSO', '1gVSaakcQJBrFJnF4umFbI_cjR9abCXPjfOyfSUFKnRo');
-var ID_TEMPLATE_TERMO_CIENTIFICACAO = cfg_('ID_TEMPLATE_TERMO_CIENTIFICACAO', '1uSdvvwxjPDkvGm7kjCrDGaGnPVF3_pDu4rN6C6tJFiI');
-var ID_TEMPLATE_SOLICITACAO_PARECER = cfg_('ID_TEMPLATE_SOLICITACAO_PARECER', '16KIcTgceHNdbTNRe8UeYPjJXn4r_d450Xy61conLO3Q');
-var ID_TEMPLATE_PEDIDO_PARECER = cfg_('ID_TEMPLATE_PEDIDO_PARECER', '1jE-3VQ8G2t4JQJ5B7ydedq6oupvsXwo7aPX_AVttMEM');
-var ID_TEMPLATE_SOLICITACAO_EXAMES = cfg_('ID_TEMPLATE_SOLICITACAO_EXAMES', '1SSAzdWANvfQJx7Sip2-NbqDGAM0cgpVD6Q4Ci9UhGqQ');
-
 /** Pasta raiz CONCURSOS (drive compartilhado): dentro dela ficam as pastas por ano. */
 var ID_PASTA_RAIZ_CONCURSOS = cfg_('ID_PASTA_RAIZ_CONCURSOS', '1eBTehJDTOPjsgOeP3DjWKbE-iXdIKGos');
 /** Agenda "JRS/HNRe" do Google Agenda (entrevistas das Inspeções de Saúde). */
@@ -74,7 +68,7 @@ var FIREBASE_API_KEY = 'AIzaSyAWBYm6iGQNQXeC5DO038lMSruxpRjoX2c';
  * workflow "Apps Script publicado" compara este valor com o da implantação no ar (ação "versao")
  * e abre uma issue com o checklist de reimplantação enquanto forem diferentes.
  */
-var VERSAO_SCRIPT = '2026-11-06.5';
+var VERSAO_SCRIPT = '2026-11-07.1';
 
 /** Ponto de entrada POST do aplicativo da web. Espera um corpo JSON com a propriedade "action". */
 function doPost(e) {
@@ -91,11 +85,6 @@ function doPost(e) {
     // Todas as demais ações: login válido + usuário ativo + perfil permitido (autorizarAcao_), com
     // registro das recusas e das operações sensíveis.
     autorizarAcao_(corpo);
-    if (corpo.action === 'gerarTermoRecurso') return apiGerarTermoRecurso(corpo);
-    if (corpo.action === 'gerarTermoCientificacao') return apiGerarTermoCientificacao(corpo);
-    if (corpo.action === 'gerarSolicitacaoParecer') return apiGerarSolicitacaoParecer(corpo);
-    if (corpo.action === 'gerarPedidoParecer') return apiGerarPedidoParecer(corpo);
-    if (corpo.action === 'gerarSolicitacaoExames') return apiGerarSolicitacaoExames(corpo);
     if (corpo.action === 'criarEstruturaConcurso') return apiCriarEstruturaConcurso(corpo);
     if (corpo.action === 'salvarMensagemPdf') return apiSalvarMensagemPdf(corpo);
     if (corpo.action === 'salvarPdfCandidato') return apiSalvarPdfCandidato(corpo);
@@ -153,273 +142,12 @@ function apiResponder(fn) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-/** Formata uma data (objeto Date) para "DD/MM/AAAA", ou string vazia se não for uma data válida. */
-function formatarDataSimples(data) {
-  if (!data || Object.prototype.toString.call(data) !== '[object Date]' || isNaN(data.getTime())) return '';
-  var dia = String(data.getDate()).padStart(2, '0');
-  var mes = String(data.getMonth() + 1).padStart(2, '0');
-  return dia + '/' + mes + '/' + data.getFullYear();
-}
-
 /** Formata uma data (objeto Date) para o padrão militar "DDMMMAAAA" (ex.: 13OUT2026), ou string vazia se não for uma data válida. */
 function formatarDataMilitar(data) {
   if (!data || Object.prototype.toString.call(data) !== '[object Date]' || isNaN(data.getTime())) return '';
   var meses = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
   var dia = String(data.getDate()).padStart(2, '0');
   return dia + meses[data.getMonth()] + data.getFullYear();
-}
-
-/**
- * action=gerarTermoRecurso (POST): { candidatoId, candidatoNome, nomeConcurso,
- * dataLaudo, nomeUsuario, postoGraduacao, cargo } — gera o PDF do Termo de
- * Reconhecimento de Recurso a partir do template Google Docs
- * ("JRSApp - TEMPLATE RECONHECIMENTO RECURSO"), preenchendo os placeholders
- * abaixo, e devolve o conteúdo em base64 (o app grava o PDF no Firebase
- * Storage). Não lê nem grava nada em planilhas ou pastas do Drive do usuário:
- * a cópia do template é sempre temporária e descartada ao final.
- *
- * Placeholders do template:
- *   {{candidatoNome}} {{candidatoId}} (matrícula) {{nomeConcurso}} {{dataLaudo}}
- *   {{DATA_HOJE}} (DDMMMAAAA, ex.: 13OUT2026) {{nomeUsuario}} {{postoGraduacao}} {{cargo}}
- */
-function apiGerarTermoRecurso(corpo) {
-  var campo = function(nome) { return String((corpo && corpo[nome]) || '').trim(); };
-
-  var candidatoId = campo('candidatoId');
-  var candidatoNome = campo('candidatoNome');
-  if (!candidatoId) throw new Error('"candidatoId" (matrícula do candidato) é obrigatório.');
-  if (!candidatoNome) throw new Error('"candidatoNome" é obrigatório.');
-
-  var valores = {
-    candidatoNome: candidatoNome,
-    candidatoId: candidatoId,
-    nomeConcurso: campo('nomeConcurso'),
-    dataLaudo: campo('dataLaudo'),
-    DATA_HOJE: formatarDataMilitar(new Date()),
-    nomeUsuario: campo('nomeUsuario'),
-    postoGraduacao: campo('postoGraduacao'),
-    cargo: campo('cargo')
-  };
-
-  var docCopia = DriveApp.getFileById(ID_TEMPLATE_TERMO_RECURSO).makeCopy('Temp_Recurso_' + candidatoId);
-  try {
-    var docAberto = DocumentApp.openById(docCopia.getId());
-    var body = docAberto.getBody();
-
-    Object.keys(valores).forEach(function(chave) {
-      body.replaceText('\\{\\{' + chave + '\\}\\}', valores[chave]);
-    });
-
-    docAberto.saveAndClose();
-
-    var pdfBlob = docCopia.getAs('application/pdf');
-    var base64 = Utilities.base64Encode(pdfBlob.getBytes());
-
-    return { candidatoId: candidatoId, pdfBase64: base64 };
-  } finally {
-    docCopia.setTrashed(true);
-  }
-}
-
-/**
- * action=gerarTermoCientificacao (POST): { candidatoId, candidatoNome,
- * nomeConcurso, status } — gera o PDF do Termo de Cientificação de Resultado
- * de IS Ingresso/Seleção a partir do template Google Docs, e devolve o
- * conteúdo em base64 (o app grava o PDF no Firebase Storage). Só o candidato
- * assina, então não há dados de médico.
- *
- * "status": APTO | INAPTO | INSUF DOCUMENTAL. Cada opção do template tem um
- * marcador entre parênteses: o do resultado vira "X" (e o parágrafo inteiro
- * da opção fica em negrito); os outros dois são esvaziados.
- *
- * Placeholders do template:
- *   {{candidatoNome}} {{candidatoId}} {{nomeConcurso}} {{DATA_HOJE}} (DDMMMAAAA)
- *   {{X_APTO}} {{X_INAPTO}} {{X_IDM}}
- */
-function apiGerarTermoCientificacao(corpo) {
-  var campo = function(nome) { return String((corpo && corpo[nome]) || '').trim(); };
-
-  var candidatoId = campo('candidatoId');
-  var candidatoNome = campo('candidatoNome');
-  if (!candidatoId) throw new Error('"candidatoId" (matrícula do candidato) é obrigatório.');
-  if (!candidatoNome) throw new Error('"candidatoNome" é obrigatório.');
-
-  var mapaMarcadores = { 'APTO': 'X_APTO', 'INAPTO': 'X_INAPTO', 'INSUF DOCUMENTAL': 'X_IDM' };
-  var status = campo('status').toUpperCase();
-  var marcadorEscolhido = mapaMarcadores[status];
-  if (!marcadorEscolhido) throw new Error('"status" deve ser APTO, INAPTO ou INSUF DOCUMENTAL.');
-
-  var valores = {
-    candidatoNome: candidatoNome,
-    candidatoId: candidatoId,
-    nomeConcurso: campo('nomeConcurso'),
-    DATA_HOJE: formatarDataMilitar(new Date())
-  };
-
-  var docCopia = DriveApp.getFileById(ID_TEMPLATE_TERMO_CIENTIFICACAO).makeCopy('Temp_Cientificacao_' + candidatoId);
-  try {
-    var docAberto = DocumentApp.openById(docCopia.getId());
-    var body = docAberto.getBody();
-
-    // Localiza o parágrafo da opção escolhida antes de trocar o marcador.
-    var achado = body.findText('\\{\\{' + marcadorEscolhido + '\\}\\}');
-    var paragrafo = null;
-    if (achado) {
-      var el = achado.getElement();
-      while (el && el.getType() !== DocumentApp.ElementType.PARAGRAPH && el.getType() !== DocumentApp.ElementType.LIST_ITEM) {
-        el = el.getParent();
-      }
-      paragrafo = el;
-    }
-
-    Object.keys(mapaMarcadores).forEach(function(chave) {
-      var marcador = mapaMarcadores[chave];
-      body.replaceText('\\{\\{' + marcador + '\\}\\}', marcador === marcadorEscolhido ? 'X' : '');
-    });
-    Object.keys(valores).forEach(function(chave) {
-      body.replaceText('\\{\\{' + chave + '\\}\\}', valores[chave]);
-    });
-
-    if (paragrafo) paragrafo.editAsText().setBold(true);
-
-    docAberto.saveAndClose();
-
-    var pdfBlob = docCopia.getAs('application/pdf');
-    var base64 = Utilities.base64Encode(pdfBlob.getBytes());
-
-    return { candidatoId: candidatoId, pdfBase64: base64 };
-  } finally {
-    docCopia.setTrashed(true);
-  }
-}
-
-/**
- * Gera o PDF de um template Google Docs substituindo os placeholders "{{chave}}"
- * pelos valores informados (a cópia do template é temporária e descartada).
- * Os placeholders são substituídos no corpo, no cabeçalho e no RODAPÉ (inclusive dentro de
- * tabelas): body.replaceText não alcança o rodapé — no template do Pedido de Parecer, a data
- * ({{DATA_HOJE}}) e o bloco de assinatura ficam numa tabela no rodapé.
- * "$" é escapado porque o replaceText trata "$1" como referência a grupo.
- */
-function gerarPdfDeTemplate(idTemplate, nomeTemp, valores) {
-  var docCopia = DriveApp.getFileById(idTemplate).makeCopy(nomeTemp);
-  try {
-    var docAberto = DocumentApp.openById(docCopia.getId());
-    var partes = [docAberto.getBody(), docAberto.getHeader(), docAberto.getFooter()].filter(function(p) { return p; });
-    Object.keys(valores).forEach(function(chave) {
-      var padrao = '\\{\\{' + chave + '\\}\\}';
-      var texto = String(valores[chave]).replace(/\$/g, '\\$');
-      partes.forEach(function(parte) { parte.replaceText(padrao, texto); });
-    });
-    docAberto.saveAndClose();
-    return Utilities.base64Encode(docCopia.getAs('application/pdf').getBytes());
-  } finally {
-    docCopia.setTrashed(true);
-  }
-}
-
-/** Valores comuns aos dois documentos: candidato, concurso, data e médico signatário. */
-function valoresBaseSolicitacao(corpo) {
-  var campo = function(nome) { return String((corpo && corpo[nome]) || '').trim(); };
-  var candidatoId = campo('candidatoId');
-  var candidatoNome = campo('candidatoNome');
-  if (!candidatoId) throw new Error('"candidatoId" (matrícula do candidato) é obrigatório.');
-  if (!candidatoNome) throw new Error('"candidatoNome" é obrigatório.');
-  return {
-    campo: campo,
-    candidatoId: candidatoId,
-    valores: {
-      candidatoNome: candidatoNome,
-      candidatoId: candidatoId,
-      nomeConcurso: campo('nomeConcurso'),
-      DATA_HOJE: formatarDataMilitar(new Date()),
-      nomeUsuario: campo('nomeUsuario'),
-      postoGraduacao: campo('postoGraduacao'),
-      cargo: campo('cargo'),
-      crmPe: campo('crmPe'),
-      email: campo('email')
-    }
-  };
-}
-
-/**
- * action=gerarSolicitacaoParecer (POST): { candidatoId, candidatoNome, nomeConcurso,
- * especialidade, historico, nomeUsuario, postoGraduacao, cargo, crmPe, email } —
- * Pedido de Parecer Médico. Placeholders: {{especialidade}} {{historico}} +
- * os comuns (candidatoNome, candidatoId, nomeConcurso, DATA_HOJE, nomeUsuario,
- * postoGraduacao, cargo, crmPe, email).
- */
-function apiGerarSolicitacaoParecer(corpo) {
-  var base = valoresBaseSolicitacao(corpo);
-  var especialidade = base.campo('especialidade');
-  var historico = base.campo('historico');
-  if (!especialidade) throw new Error('"especialidade" é obrigatória.');
-  if (!historico) throw new Error('"historico" é obrigatório.');
-  base.valores.especialidade = especialidade;
-  base.valores.historico = historico;
-  return {
-    candidatoId: base.candidatoId,
-    pdfBase64: gerarPdfDeTemplate(ID_TEMPLATE_SOLICITACAO_PARECER, 'Temp_Parecer_' + base.candidatoId, base.valores)
-  };
-}
-
-/**
- * action=gerarSolicitacaoExames (POST): mesmos campos, com "exames" no lugar de
- * especialidade/historico — Solicitação de Exames Complementares Periciais.
- * Placeholder próprio: {{exames}}.
- */
-function apiGerarSolicitacaoExames(corpo) {
-  var base = valoresBaseSolicitacao(corpo);
-  var exames = base.campo('exames');
-  if (!exames) throw new Error('"exames" é obrigatório.');
-  base.valores.exames = exames;
-  return {
-    candidatoId: base.candidatoId,
-    pdfBase64: gerarPdfDeTemplate(ID_TEMPLATE_SOLICITACAO_EXAMES, 'Temp_Exames_' + base.candidatoId, base.valores)
-  };
-}
-
-/** Data por extenso no padrão do pedido de parecer: "1º de outubro de 2026". */
-function formatarDataPorExtenso(data) {
-  var meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-  var dia = Number(Utilities.formatDate(data, 'America/Recife', 'd'));
-  var mes = Number(Utilities.formatDate(data, 'America/Recife', 'M'));
-  var ano = Utilities.formatDate(data, 'America/Recife', 'yyyy');
-  return (dia === 1 ? '1º' : String(dia)) + ' de ' + meses[mes - 1] + ' de ' + ano;
-}
-
-/**
- * action=gerarPedidoParecer (POST): { inspecionado, especialidade, finalidade, historico,
- * quesitos (lista de textos), nomeUsuario, postoGraduacao, cargo, crmPe } — Pedido de Parecer
- * Médico da página Pareceres. Placeholders do template: {{dataHoje}} {{especialidadeParecer}}
- * {{inspecionado}} {{finalidade}} {{historico}} {{quesitos}} (lista numerada) {{nomeUsuario}}
- * {{postoGraduacao}} {{cargo}} {{crmPe}}.
- */
-function apiGerarPedidoParecer(corpo) {
-  var campo = function(nome) { return String((corpo && corpo[nome]) || '').trim(); };
-  ['inspecionado', 'especialidade', 'finalidade', 'historico'].forEach(function(nome) {
-    if (!campo(nome)) throw new Error('"' + nome + '" é obrigatório.');
-  });
-  var quesitos = (corpo.quesitos || []).map(function(q) { return String(q).trim(); }).filter(Boolean);
-  if (!quesitos.length) throw new Error('Informe ao menos um quesito.');
-  // Lista numerada; linhas seguintes de um mesmo quesito (ex.: "A) ...") recuam sob o número.
-  var listaNumerada = quesitos.map(function(q, i) {
-    var linhas = q.split(/\r?\n/);
-    return (i + 1) + '. ' + linhas[0] + linhas.slice(1).map(function(l) { return '\n    ' + l.trim(); }).join('');
-  }).join('\n');
-  var valores = {
-    dataHoje: formatarDataPorExtenso(new Date()),
-    especialidadeParecer: campo('especialidade'),
-    inspecionado: campo('inspecionado'),
-    finalidade: campo('finalidade'),
-    historico: campo('historico'),
-    quesitos: listaNumerada,
-    nomeUsuario: campo('nomeUsuario'),
-    postoGraduacao: campo('postoGraduacao'),
-    cargo: campo('cargo'),
-    crmPe: campo('crmPe')
-  };
-  return { pdfBase64: gerarPdfDeTemplate(ID_TEMPLATE_PEDIDO_PARECER, 'Temp_PedidoParecer_' + Date.now(), valores) };
 }
 
 
@@ -433,11 +161,10 @@ var PERFIS_EQUIPE = ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretar
 var PERFIS_MEDICOS = ['admin', 'user_medicos', 'user_medicos_mpi'];
 /**
  * Perfis aceitos por ação (espelha firestore.rules). Ação fora da lista: qualquer perfil da equipe, ativo.
- * Pedido de parecer é só dos médicos, como nas regras do Firestore.
+ * Pareceres (salvar o PDF e enviar para impressão) são só dos médicos, como nas regras do Firestore.
  * A matriz fina de páginas/funcionalidades (config/permissoes) continua conferida no app e nas regras.
  */
 var PERFIS_POR_ACAO = {
-  gerarPedidoParecer: PERFIS_MEDICOS,
   salvarPdfParecer: PERFIS_MEDICOS,
   enviarParecerImpressao: PERFIS_MEDICOS
 };

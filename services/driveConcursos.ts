@@ -6,6 +6,7 @@
 // chama e devolve as URLs, que o app grava no Firestore. A leitura da mensagem e a transcrição dos exames
 // são feitas pelo Gemini no próprio app (Firebase AI Logic, services/geminiAI.ts).
 import { chamarScript as chamarScriptApi } from './apiClient';
+import { chamarGoogle } from './googleServidor';
 import { gerarComGemini, lerJsonIA } from './geminiAI';
 import { PROMPT_EXAMES_CANDIDATO, PROMPT_MENSAGEM_CONCURSO } from '../config/promptsIA';
 import { removerPdfDoStorage } from './firebaseStorageConcursos';
@@ -263,10 +264,10 @@ export const abrirPdf = (url: string): void => {
 export const enviarTermoRecursoParaImpressao = async (params: {
   pdfUrl: string; candidatoId: string; candidatoNome: string; nomeConcurso: string; remetente: string;
 }): Promise<void> => {
-  await chamarScript<{ enviado: boolean }>('enviarTermoRecursoImpressao', params);
+  await chamarGoogle<{ enviado: boolean }>('/api/impressao/termo-recurso', 'enviarTermoRecursoImpressao', params);
 };
 
 /** Envio automático (sem confirmação) de uma Solicitação de Parecer ou de Exames recém-gerada para a impressão. */
 export const enviarSolicitacaoParaImpressao = async (params: { pdfUrl: string; tipo: 'parecer' | 'exames'; remetente: string }): Promise<void> => {
-  await chamarScript<{ enviado: boolean }>('enviarSolicitacaoConcursoImpressao', params);
+  await chamarGoogle<{ enviado: boolean }>('/api/impressao/solicitacao-concurso', 'enviarSolicitacaoConcursoImpressao', params);
 };
