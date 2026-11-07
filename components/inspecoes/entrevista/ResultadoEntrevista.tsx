@@ -17,7 +17,7 @@ import { ResultadoTranscricao } from './ResultadoTranscricao';
 import { ResultadoAudio } from './ResultadoAudio';
 import { useNav } from '../../../context/NavContext';
 import { useIsDesktop } from '../../../hooks/useIsDesktop';
-import { atualizarEntrevista, consultarSituacao, ouvirAudio, reorganizarEntrevista } from '../../../services/entrevistasIS';
+import { atualizarEntrevista, consultarSituacao, ouvirAudio, processarEntrevista, reorganizarEntrevista } from '../../../services/entrevistasIS';
 import { ROTULO_PAPEL, type AnamneseEntrevista, type EntrevistaRecord, type QuemQuando } from '../../../config/entrevistas';
 import type { InspecaoRecord } from '../../../services/firestoreInspecoes';
 import { hojeISO } from '../../../utils/inspecoes';
@@ -128,7 +128,12 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
     if (ok) setOfertaReorganizar(false);
   };
   const tentarNovamente = () =>
-    executar('tentar', () => (e.transcricao?.length ? reorganizarEntrevista(isId, e.id) : consultarSituacao(isId, e.id)), 'Processamento retomado.');
+    executar('tentar', () => (
+      e.transcricao?.length ? reorganizarEntrevista(isId, e.id)
+        // Sem transcrição em erro: refaz do começo com o áudio que já está no servidor (caminho vazio = o servidor localiza).
+        : e.situacao === 'erro' ? processarEntrevista(isId, e.id, e.audio?.caminho ?? '', e.audio?.mimeType ?? '', e.audio?.duracaoSeg ?? 0)
+          : consultarSituacao(isId, e.id)
+    ), 'Processamento retomado.');
   const salvarEdicao = async (a: AnamneseEntrevista) => {
     const ok = await executar('edicao', () => atualizarEntrevista(isId, e.id, { anamneseEditada: a, editadoPor: quem() }), 'Anamnese salva.');
     if (ok) setEditando(false);

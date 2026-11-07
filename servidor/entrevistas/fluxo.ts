@@ -99,10 +99,21 @@ export const salvarAudioReserva = async (db: Firestore, bucket: Bucket, isId: st
 
 // ------------------------------------------------------------------ processar (POST /processar)
 
+/** Caminho do original já enviado (entrevistas/{isId}/{eid}/original.*), para reprocessar sem o celular. */
+const localizarOriginal = async (bucket: Bucket, isId: string, entrevistaId: string): Promise<string> => {
+  if (!extensaoDoCaminhoOriginal(`entrevistas/${isId}/${entrevistaId}/original.webm`, isId, entrevistaId)) throw new ErroEntrevista(400, 'Entrevista inválida.');
+  const [arquivos] = await bucket.getFiles({ prefix: `entrevistas/${isId}/${entrevistaId}/original.`, maxResults: 5 });
+  const achado = arquivos.map(f => f.name).find(n => extensaoDoCaminhoOriginal(n, isId, entrevistaId));
+  if (!achado) throw new ErroEntrevista(404, 'O áudio não está no servidor. Reenvie pelo celular onde a entrevista foi gravada.');
+  return achado;
+};
+
 export interface PedidoProcessar { isId: string; entrevistaId: string; caminho: unknown; mimeType: unknown; duracaoSeg: unknown }
 
 export const processarEntrevista = async (db: Firestore, bucket: Bucket, p: PedidoProcessar): Promise<SituacaoEntrevista> => {
   const ref = refEntrevista(db, p.isId, p.entrevistaId);
+  // Reprocessar (botão "Tentar novamente" do resultado): sem caminho, usa o original que já está no Storage.
+  if (!p.caminho) p = { ...p, caminho: await localizarOriginal(bucket, p.isId, p.entrevistaId) };
   const ext = extensaoDoCaminhoOriginal(p.caminho, p.isId, p.entrevistaId);
   if (!ext) throw new ErroEntrevista(400, 'Caminho do áudio inválido.');
   const caminho = p.caminho as string;
