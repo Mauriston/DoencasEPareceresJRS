@@ -7,7 +7,7 @@
 A persistência do **Guia Médico Naval — JRS/HNRe** está distribuída entre:
 
 1. **Cloud Firestore** — banco principal: usuários, inspecionados, Inspeções de Saúde e agenda, concursos e candidatos (com exames, triagem e auditoria), pareceres, perícias menores, a escala do SPA, legislação, conteúdos de formação, notificações e a fila de impressão;
-2. **Firebase Storage** — PDFs da legislação e das perícias menores, imagens dos infográficos e fotos de perfil;
+2. **Firebase Storage** — PDFs da legislação e das perícias menores, imagens dos infográficos e fotos de perfil. O app não abre esses arquivos direto de `firebasestorage.googleapis.com`: pede os bytes ao servidor do Cloud Run (`/api/arquivos/baixar`, com login), porque redes como a da Marinha bloqueiam ou interceptam o domínio do Storage;
 3. **Google Drive** (via Apps Script `CodeConcursos.gs`) — PDFs dos concursos, dos pedidos de parecer e dos exames dos candidatos;
 4. **Firebase Authentication** — contas de login (e-mail sintético derivado do usuário; ver `services/firebaseAuth.ts`);
 5. **JSON e TypeScript estáticos** — catálogos (`public/*.json`) e conteúdo normativo no bundle;

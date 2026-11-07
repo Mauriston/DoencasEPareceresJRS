@@ -93,6 +93,23 @@ export const chamarServidor = async <T = Record<string, any>>(rota: string, corp
 };
 
 /**
+ * Baixa um arquivo binário do servidor Node (POST JSON, token no cabeçalho) e devolve o Blob.
+ * Erros vêm como ApiError (o corpo de erro do servidor é JSON).
+ */
+export const baixarDoServidor = async (rota: string, corpo: unknown = {}, opts: OpcoesApi = {}): Promise<Blob> => {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (opts.autenticar !== false) headers.Authorization = `Bearer ${await exigirToken()}`;
+  const resp = await enviar(apiUrl(rota), { method: 'POST', headers, body: JSON.stringify(corpo) }, opts);
+  if (!resp.ok) {
+    let msg = `Servidor respondeu ${resp.status}.`;
+    try { msg = (await resp.json())?.error || msg; } catch { /* corpo não-JSON */ }
+    const codigo: CodigoErroApi = resp.status === 401 ? 'nao_autenticado' : resp.status === 403 ? 'sem_permissao' : 'negocio';
+    throw new ApiError(codigo, msg, resp.status);
+  }
+  return resp.blob();
+};
+
+/**
  * Chama uma ação do Apps Script. Devolve `dados` (envelope padrão) ou `data` (envelope legado do
  * Gemini; sem `data`, o corpo inteiro menos o campo `success`). Lança ApiError nas falhas.
  */

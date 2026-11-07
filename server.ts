@@ -3,6 +3,7 @@ import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import { logErroSeguro, descreverErro } from "./utils/logSeguro";
 import { higienizarParaIA, base64ValidoParaIA } from "./utils/minimizacaoIA";
+import { caminhoArquivoValido } from "./utils/arquivosPermitidos";
 
 // Firebase Admin (credenciais padrão do Cloud Run), inicializado sob demanda.
 async function getFirebaseAdmin() {
@@ -14,8 +15,12 @@ async function getFirebaseAdmin() {
     projectId: process.env.FIREBASE_PROJECT_ID || "jrs-app-web",
     serviceAccountId: process.env.FIREBASE_SERVICE_ACCOUNT_EMAIL || undefined,
   });
-  return { adminAuth: getAuth(adminApp), adminDb: getFirestore(adminApp) };
+  return { adminAuth: getAuth(adminApp), adminDb: getFirestore(adminApp), adminApp };
 }
+
+// Bucket do Firebase Storage do app (PDFs, fotos de perfil, infográficos).
+const BUCKET_STORAGE = process.env.FIREBASE_STORAGE_BUCKET || "jrs-app-web.firebasestorage.app";
+
 
 // Senha inicial padrão (ver config/senha.ts no frontend).
 const SENHA_INICIAL_PADRAO = "123456";
@@ -421,6 +426,39 @@ async function startServer() {
     } catch (error: any) {
       logErroSeguro("Notificação push error", error);
       res.status(500).json({ success: false, error: "Não foi possível enviar a notificação." });
+    }
+  });
+
+  // Repasse de arquivos do Firebase Storage (POST /api/arquivos/baixar { caminho }). Em redes que
+  // bloqueiam ou interceptam firebasestorage.googleapis.com (ex.: Firefox nos PCs da Marinha), os PDFs
+  // e as fotos chegam pelo próprio servidor do app, que já é acessível. Exige usuário ativo e só serve
+  // as pastas de PASTAS_ARQUIVOS (espelho de storage.rules). Devolve os bytes com o Content-Type do
+  // arquivo; o cliente monta um blob: (services/arquivosStorage.ts).
+  app.post("/api/arquivos/baixar", async (req, res) => {
+    const uid = await exigirUsuarioAtivo(req, res, "arquivos-baixar");
+    if (!uid) return;
+    const caminho = req.body?.caminho;
+    if (!caminhoArquivoValido(caminho)) {
+      void auditarServidor("acesso_negado", "arquivos-baixar", uid, "caminho_invalido");
+      res.status(400).json({ success: false, error: "Arquivo inválido." });
+      return;
+    }
+    try {
+      const { adminApp } = await getFirebaseAdmin();
+      const { getStorage } = await import("firebase-admin/storage");
+      const arquivo = getStorage(adminApp).bucket(BUCKET_STORAGE).file(caminho);
+      const [meta] = await arquivo.getMetadata();
+      res.setHeader("Content-Type", String(meta.contentType || "application/octet-stream"));
+      if (meta.size) res.setHeader("Content-Length", String(meta.size));
+      res.setHeader("Cache-Control", "private, max-age=300");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      arquivo.createReadStream()
+        .on("error", (e: unknown) => { logErroSeguro("Storage stream", e); if (!res.headersSent) res.status(500).end(); else res.destroy(); })
+        .pipe(res);
+    } catch (error: any) {
+      const naoExiste = error?.code === 404 || /No such object/i.test(String(error?.message));
+      if (!naoExiste) logErroSeguro("Storage repasse", error);
+      res.status(naoExiste ? 404 : 500).json({ success: false, error: naoExiste ? "Arquivo não encontrado." : "Falha ao ler o arquivo." });
     }
   });
 

@@ -94,6 +94,7 @@ O backend tem duas partes, publicadas separadamente:
 | `POST /api/admin/excluir-usuario` | Admin apaga um usuário **inativo** (Auth + `usuarios` + `usuarios_publicos`) |
 | `POST /api/admin/preview-apresentacao` | Título e capa de uma apresentação (Google Slides, Canva, GitHub Pages) |
 | `POST /api/notificacoes/evento` | Recebe um evento (login, status Inapto/IDM, IS finalizada, teste), confere no Firestore, grava o histórico e envia o push |
+| `POST /api/arquivos/baixar` | Repasse de arquivos do Firebase Storage (PDFs, fotos de perfil, infográficos) para redes que bloqueiam `firebasestorage.googleapis.com` — ex.: Firefox nos PCs da Marinha. Exige usuário ativo; só as pastas liberadas em `storage.rules` (`utils/arquivosPermitidos.ts`). O cliente monta um `blob:` (`services/arquivosStorage.ts`) e cai para a URL direta se o repasse falhar |
 | `POST /api/gemini/analyze-image` | Leitura de imagem pelo Gemini (exige usuário ativo) |
 | `POST /api/concursos/ocr-pdf` | Transcrição literal do PDF de mensagem administrativa (exige usuário ativo) |
 
