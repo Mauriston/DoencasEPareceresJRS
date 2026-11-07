@@ -128,7 +128,7 @@ export const textoParaLista = (t: string): string[] => t.split('\n').map(s => s.
 export const anamneseVazia = (): AnamneseEntrevista => ({
   resumoExecutivo: '', queixaPrincipal: '', alegacoesInspecionado: [], historiaCronologica: [], antecedentes: [],
   medicacoes: [], tratamentos: [], examesCitados: [], repercussaoFuncional: '', secaoFinalidade: { titulo: '', texto: '' },
-  pontosAEsclarecer: [], citacoes: [],
+  condutaPerito: [], pontosAEsclarecer: [], citacoes: [],
 });
 
 /** Completa campos ausentes (a IA pode omitir algum) para a tela e a edição não quebrarem. */
@@ -147,6 +147,8 @@ export const normalizarAnamnese = (a: Partial<AnamneseEntrevista> | null | undef
     examesCitados: l(a?.examesCitados),
     repercussaoFuncional: s(a?.repercussaoFuncional),
     secaoFinalidade: { titulo: s(a?.secaoFinalidade?.titulo), texto: s(a?.secaoFinalidade?.texto) },
+    // Docs anteriores à seção não têm o campo: [].
+    condutaPerito: l(a?.condutaPerito),
     pontosAEsclarecer: l(a?.pontosAEsclarecer),
     citacoes: Array.isArray(a?.citacoes) ? a!.citacoes.filter(Boolean) : v.citacoes,
   };
@@ -172,12 +174,15 @@ export const limparAnamnese = (a: AnamneseEntrevista): AnamneseEntrevista => {
     examesCitados: lista(a.examesCitados),
     repercussaoFuncional: a.repercussaoFuncional.trim(),
     secaoFinalidade: { titulo: a.secaoFinalidade.titulo.trim(), texto: a.secaoFinalidade.texto.trim() },
+    condutaPerito: lista(a.condutaPerito || []),
     pontosAEsclarecer: lista(a.pontosAEsclarecer),
     citacoes: a.citacoes
       .map(c => ({ falante: c.falante || '', texto: (c.texto || '').trim(), tempoSeg: typeof c.tempoSeg === 'number' ? c.tempoSeg : 0 }))
       .filter(c => c.texto),
   };
 };
+
+export const TITULO_CONDUTA_PERITO = 'Conduta e encaminhamentos do perito';
 
 /** Seções da anamnese, na ordem da anamnese médico-pericial (tela e texto copiado). */
 export const SECOES_ANAMNESE = [
@@ -191,6 +196,7 @@ export const SECOES_ANAMNESE = [
   { id: 'examesCitados', titulo: 'Exames citados' },
   { id: 'repercussaoFuncional', titulo: 'Repercussão funcional' },
   { id: 'secaoFinalidade', titulo: 'Finalidade' },
+  { id: 'condutaPerito', titulo: TITULO_CONDUTA_PERITO },
   { id: 'pontosAEsclarecer', titulo: 'Pontos a esclarecer' },
   { id: 'citacoes', titulo: 'Citações literais' },
 ] as const;
@@ -225,6 +231,7 @@ export const textoAnamnese = (
   sec('Exames citados', lista(an.examesCitados));
   sec('Repercussão funcional', an.repercussaoFuncional);
   sec(tituloSecaoFinalidade(an, opcoes.finalidade), an.secaoFinalidade.texto);
+  sec(TITULO_CONDUTA_PERITO, lista(an.condutaPerito));
   sec('Pontos a esclarecer', lista(an.pontosAEsclarecer));
   sec('Citações literais', an.citacoes
     .map(c => `- ${nomeDoFalante(c.falante, opcoes.mapaFalantes)} (${formatarTempo(c.tempoSeg)}): "${c.texto}"`).join('\n'));

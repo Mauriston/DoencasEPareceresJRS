@@ -52,6 +52,7 @@ export const ESQUEMA_RESPOSTA: Schema = {
         examesCitados: LISTA_STR,
         repercussaoFuncional: STR,
         secaoFinalidade: { type: Type.OBJECT, properties: { titulo: STR, texto: STR }, required: ['titulo', 'texto'] },
+        condutaPerito: LISTA_STR,
         pontosAEsclarecer: LISTA_STR,
         citacoes: {
           type: Type.ARRAY,
@@ -59,7 +60,7 @@ export const ESQUEMA_RESPOSTA: Schema = {
         },
       },
       required: ['resumoExecutivo', 'queixaPrincipal', 'alegacoesInspecionado', 'historiaCronologica', 'antecedentes', 'medicacoes',
-        'tratamentos', 'examesCitados', 'repercussaoFuncional', 'secaoFinalidade', 'pontosAEsclarecer', 'citacoes'],
+        'tratamentos', 'examesCitados', 'repercussaoFuncional', 'secaoFinalidade', 'condutaPerito', 'pontosAEsclarecer', 'citacoes'],
     },
   },
   required: ['mapaFalantes', 'anamnese'],
@@ -122,6 +123,7 @@ export const normalizarResultado = (
       titulo: txt(sf.titulo, 200) || (txt(ctx.finalidade, 200) ? `Finalidade: ${txt(ctx.finalidade, 200)}` : 'Finalidade da inspeção'),
       texto: txtOu(sf.texto),
     },
+    condutaPerito: lista(a.condutaPerito),
     pontosAEsclarecer: lista(a.pontosAEsclarecer),
     citacoes,
   };
