@@ -291,7 +291,7 @@ async function startServer() {
   // manifest) já aparece na notificação — no iOS, como "from JRS/HNRe App".
   const enviarPush = async (
     adminDb: any,
-    destino: { uids: Set<string> },
+    destino: { uids: Set<string>; excluirToken?: string },
     msg: { titulo: string; corpo: string; rota?: string },
   ) => {
     const { getMessaging } = await import("firebase-admin/messaging");
@@ -308,7 +308,7 @@ async function startServer() {
       await batch.commit();
     }
     const snap = await adminDb.collection("tokens_push").get();
-    const tokens: string[] = snap.docs.filter((d: any) => destino.uids.has(d.data().uid)).map((d: any) => d.id);
+    const tokens: string[] = snap.docs.filter((d: any) => destino.uids.has(d.data().uid) && d.id !== destino.excluirToken).map((d: any) => d.id);
     let enviados = 0;
     const erros: string[] = [];
     for (let i = 0; i < tokens.length; i += 500) {
@@ -725,6 +725,33 @@ async function startServer() {
     arquivo.createReadStream()
       .on("error", (e: unknown) => { logErroSeguro("Entrevista ouvir stream", e); if (!res.headersSent) res.status(500).end(); else res.destroy(); })
       .pipe(res);
+  }));
+
+  // "Enviar para o meu celular" (computador sem microfone): push SÓ para os aparelhos do próprio
+  // usuário, menos o que pediu (o computador, se tiver notificações). Tocar abre o app instalado
+  // em #/inspecoes/{isId}/entrevista e o fluxo de gravação abre sozinho (SecaoEntrevista).
+  app.post("/api/entrevistas/enviar-para-celular", rotaEntrevista("entrevista-enviar-celular", async ({ req, res, uid, db }) => {
+    const { ErroEntrevista } = await import("./servidor/entrevistas/fluxo");
+    const { idValido } = await import("./servidor/entrevistas/audio");
+    const isId = String(req.body?.isId ?? "");
+    if (!idValido(isId)) throw new ErroEntrevista(400, "IS inválida.");
+    const isSnap = await db.collection("inspecoes").doc(isId).get();
+    if (!isSnap.exists) throw new ErroEntrevista(404, "IS não encontrada.");
+    const atual = typeof req.body?.aparelhoAtual === "string" && req.body.aparelhoAtual.length < 4096 ? req.body.aparelhoAtual : "";
+    const semCelular = "Nenhum celular com notificações ativadas. Ative as notificações no app do celular.";
+    const meus = await db.collection("tokens_push").where("uid", "==", uid).get();
+    if (!meus.docs.some(d => d.id !== atual)) throw new ErroEntrevista(409, semCelular);
+    const is = isSnap.data() || {};
+    // Só posto/quadro e nome: o NIP não vai para a tela de bloqueio.
+    const nome = String(is.inspecionado || "").replace(/\b\d[\d.\-]{4,}\b/g, " ").replace(/\s+/g, " ").trim();
+    void auditarServidor("operacao_sensivel", "entrevista-enviar-celular", uid);
+    const { enviados } = await enviarPush(db, { uids: new Set([uid]), excluirToken: atual }, {
+      titulo: `Gravar entrevista — IS ${is.is ?? isId}`,
+      corpo: nome.slice(0, 80) || "Toque para gravar.",
+      rota: `/inspecoes/${encodeURIComponent(isId)}/entrevista`,
+    });
+    if (!enviados) throw new ErroEntrevista(409, semCelular);
+    res.json({ success: true, enviados });
   }));
 
   app.post("/api/gemini/analyze-image", async (req, res) => {
