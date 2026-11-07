@@ -235,3 +235,9 @@ export const textoAnamnese = (
 /** A primeira entrevista em processamento (o hook de acompanhamento avança só uma por vez). */
 export const entrevistaEmAndamento = <T extends Pick<EntrevistaRecord, 'situacao'>>(lista: T[]): T | null =>
   lista.find(e => e.situacao === 'transcrevendo' || e.situacao === 'organizando') ?? null;
+
+/**
+ * Entrevista criada mas cujo áudio nunca chegou ao servidor (o perito fechou o fluxo antes de
+ * enviar): fica `aguardando_envio` sem `audio`. Mostrada como "Não enviada"; não abre o resultado.
+ */
+export const naoEnviada = (e: Pick<EntrevistaRecord, 'situacao' | 'audio'>): boolean => e.situacao === 'aguardando_envio' && !e.audio;

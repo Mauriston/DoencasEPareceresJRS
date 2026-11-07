@@ -4,7 +4,9 @@
 // resultado de cada uma e oferece a gravação: no celular, "Gravar entrevista"; no computador,
 // "Gravar pelo celular" (QR para abrir esta IS no celular). Pela rota /inspecoes/:isId/entrevista
 // (o QR leva a ela), o fluxo de gravação abre sozinho uma vez. Enquanto montada, avança o
-// processamento da entrevista em andamento (useAcompanharEntrevista).
+// processamento da entrevista em andamento (useAcompanharEntrevista). Entrevista criada cujo áudio
+// não foi enviado aparece como "Não enviada" (sem abrir o resultado) e, se a gravação ainda estiver
+// neste aparelho (IndexedDB, services/gravacaoLocal.ts), oferece "Reenviar" (o fluxo lista as pendências).
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { matchPath, useLocation, useParams } from 'react-router-dom';
@@ -14,10 +16,11 @@ import { FluxoGravacaoEntrevista } from './FluxoGravacaoEntrevista';
 import { AbrirNoCelularDialog } from './AbrirNoCelularDialog';
 import { ResultadoEntrevista } from './ResultadoEntrevista';
 import { observarEntrevistas, useAcompanharEntrevista } from '../../../services/entrevistasIS';
+import { listarPendentes } from '../../../services/gravacaoLocal';
 import { podeGravarNoDispositivo } from '../../../utils/dispositivo';
 import type { EntrevistaRecord } from '../../../config/entrevistas';
 import type { InspecaoRecord } from '../../../services/firestoreInspecoes';
-import { dataHoraEntrevista, entrevistaEmAndamento, formatarDuracao, rotuloSituacao, tomSituacao } from '../../../utils/entrevistas';
+import { dataHoraEntrevista, entrevistaEmAndamento, formatarDuracao, naoEnviada, rotuloSituacao, tomSituacao } from '../../../utils/entrevistas';
 
 interface Props {
   is: InspecaoRecord;
@@ -40,6 +43,17 @@ export const SecaoEntrevista: React.FC<Props> = ({ is }) => {
     return observarEntrevistas(is.id, setLista, () => setErro('Não foi possível carregar as entrevistas desta IS.'));
   }, [is.id]);
 
+  // Gravações deste aparelho ainda não enviadas (relidas quando a lista muda ou o fluxo fecha).
+  const [pendentesLocais, setPendentesLocais] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    if (gravando) return;
+    let vivo = true;
+    listarPendentes(is.id)
+      .then(l => { if (vivo) setPendentesLocais(new Set(l.map(g => g.entrevistaId))); })
+      .catch(() => { if (vivo) setPendentesLocais(new Set()); });
+    return () => { vivo = false; };
+  }, [is.id, lista, gravando]);
+
   const emAndamento = lista ? entrevistaEmAndamento<EntrevistaRecord>(lista) : null;
   useAcompanharEntrevista(is.id, emAndamento);
 
@@ -55,7 +69,8 @@ export const SecaoEntrevista: React.FC<Props> = ({ is }) => {
     setGravando(true);
   }, [rotaDeGravacao, podeGravar, podeIniciar]);
 
-  const aberta = abertaId ? lista?.find(x => x.id === abertaId) ?? null : null;
+  // Sem áudio enviado não há resultado a mostrar.
+  const aberta = abertaId ? lista?.find(x => x.id === abertaId && !naoEnviada(x)) ?? null : null;
 
   return (
     <section aria-labelledby={`titulo-entrevista-${is.id}`} className="space-y-3 border-t border-line pt-4">
@@ -77,7 +92,23 @@ export const SecaoEntrevista: React.FC<Props> = ({ is }) => {
         </p>
       ) : (
         <ul className="space-y-2">
-          {lista.map(en => (
+          {lista.map(en => naoEnviada(en) ? (
+            <li key={en.id} className="rounded-lg border border-line bg-paper p-3 min-h-[44px] flex flex-wrap items-center gap-3">
+              <span className="material-symbols-outlined text-[24px] text-ink-4 shrink-0" aria-hidden="true">cloud_off</span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-bold text-ink">{dataHoraEntrevista(en.criadoPor?.em) || 'Entrevista'}</span>
+                <span className="block text-xs text-ink-3">
+                  Gravada por {en.criadoPor?.nome || '—'} · {pendentesLocais.has(en.id) ? 'a gravação está neste aparelho e pode ser reenviada.' : 'o áudio não chegou ao servidor.'}
+                </span>
+              </span>
+              <span className="flex items-center gap-2 shrink-0">
+                <StatusTag tone="neutral">Não enviada</StatusTag>
+                {pendentesLocais.has(en.id) && podeGravar && (
+                  <Button variant="secondary" icon="cloud_upload" onClick={() => setGravando(true)}>Reenviar</Button>
+                )}
+              </span>
+            </li>
+          ) : (
             <li key={en.id}>
               <button
                 type="button"

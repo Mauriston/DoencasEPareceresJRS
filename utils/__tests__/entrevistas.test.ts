@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   formatarTempo, formatarDuracao, dataDe, dataIsoBr, anamneseEfetiva, nomeDoFalante, aplicarMapaFalantes, primeirasFalas,
   mapaInicial, filtrarTranscricao, listaParaTexto, textoParaLista, normalizarAnamnese, limparAnamnese, textoAnamnese,
-  tomSituacao, entrevistaEmAndamento, anamneseVazia, AVISO_IA,
+  tomSituacao, entrevistaEmAndamento, anamneseVazia, AVISO_IA, naoEnviada,
 } from '../entrevistas';
 import type { AnamneseEntrevista, FalaTranscrita } from '../../config/entrevistas';
 
@@ -119,5 +119,10 @@ describe('situação', () => {
     expect(tomSituacao('transcrevendo')).toBe('attention');
     expect(entrevistaEmAndamento([{ situacao: 'pronta' }, { situacao: 'organizando' }])).toEqual({ situacao: 'organizando' });
     expect(entrevistaEmAndamento([{ situacao: 'aguardando_envio' }])).toBeNull();
+  });
+  it('"Não enviada" = aguardando_envio sem áudio', () => {
+    expect(naoEnviada({ situacao: 'aguardando_envio' })).toBe(true);
+    expect(naoEnviada({ situacao: 'aguardando_envio', audio: { caminho: 'c', mimeType: 'audio/webm', bytes: 1, duracaoSeg: 1, apagarApos: '2027-01-01' } })).toBe(false);
+    expect(naoEnviada({ situacao: 'transcrevendo' })).toBe(false);
   });
 });
