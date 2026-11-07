@@ -58,9 +58,9 @@ Build local: `VITE_FIREBASE_EMULATORS=1` (E2E) e `VITE_APPCHECK_DEBUG_TOKEN` (Ap
 |---|---|---|
 | `ID_TEMPLATE_TERMO_RECURSO` | Template do Termo de Recurso (Docs) — **sem uso pelo app desde 07/11/2026** (o termo sai de `servidor/documentos/`) | `1gVSaakcQJBrFJnF4umFbI_cjR9abCXPjfOyfSUFKnRo` |
 | `ID_TEMPLATE_TERMO_CIENTIFICACAO` | Template do Termo de Cientificação — **sem uso pelo app desde 07/11/2026** | `1uSdvvwxjPDkvGm7kjCrDGaGnPVF3_pDu4rN6C6tJFiI` |
-| `ID_TEMPLATE_SOLICITACAO_PARECER` | Template da Solicitação de Parecer (concursos) | `16KIcTgceHNdbTNRe8UeYPjJXn4r_d450Xy61conLO3Q` |
-| `ID_TEMPLATE_PEDIDO_PARECER` | Template do Pedido de Parecer (página Pareceres) | `1jE-3VQ8G2t4JQJ5B7ydedq6oupvsXwo7aPX_AVttMEM` |
-| `ID_TEMPLATE_SOLICITACAO_EXAMES` | Template da Solicitação de Exames | `1SSAzdWANvfQJx7Sip2-NbqDGAM0cgpVD6Q4Ci9UhGqQ` |
+| `ID_TEMPLATE_SOLICITACAO_PARECER` | Template da Solicitação de Parecer (concursos) — **sem uso pelo app desde 07/11/2026** | `16KIcTgceHNdbTNRe8UeYPjJXn4r_d450Xy61conLO3Q` |
+| `ID_TEMPLATE_PEDIDO_PARECER` | Template do Pedido de Parecer (página Pareceres) — **sem uso pelo app desde 07/11/2026** | `1jE-3VQ8G2t4JQJ5B7ydedq6oupvsXwo7aPX_AVttMEM` |
+| `ID_TEMPLATE_SOLICITACAO_EXAMES` | Template da Solicitação de Exames — **sem uso pelo app desde 07/11/2026** | `1SSAzdWANvfQJx7Sip2-NbqDGAM0cgpVD6Q4Ci9UhGqQ` |
 | `ID_PASTA_RAIZ_CONCURSOS` | Pasta CONCURSOS (drive compartilhado) | `1eBTehJDTOPjsgOeP3DjWKbE-iXdIKGos` |
 | `ID_PASTA_PARECERES` | Pasta PARECERES | `176YQTOOWXuE78Xul49XYpJsVNyu-eZFi` |
 | `ID_PASTA_MINUTAS` | Pasta das minutas de mensagem (`CodePrincipal.gs`) | `1q_Pw_mbjYKvyJvBr-PGmV9pK7YiBZOKv` |
