@@ -34,7 +34,7 @@ import { observarPericiasMenores, statusPericia } from './services/firestorePeri
 import { definirAtorAuditoria } from './services/auditoriaIS';
 import {
   notificarEvento, desvincularAparelho, observarNotificacoes, marcarNotificacaoLida, marcarTodasLidas,
-  consumirNotifDaUrl, type NotificacaoRecord,
+  consumirNotifDaUrl, ouvirCliquesDoPush, type NotificacaoRecord,
 } from './services/notificacoesPush';
 import { useIsDesktop } from './hooks/useIsDesktop';
 
@@ -182,6 +182,11 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   useEffect(() => {
     if (authUserReal && NOTIF_ABERTA_PELO_PUSH) void marcarNotificacaoLida(authUserReal.uid, NOTIF_ABERTA_PELO_PUSH);
   }, [authUserReal?.uid]);
+  // Push tocado com o app já aberto: o service worker foca a janela e manda a rota.
+  useEffect(() => ouvirCliquesDoPush((rota, notifId) => {
+    if (authUserReal && notifId) void marcarNotificacaoLida(authUserReal.uid, notifId);
+    if (rota.startsWith('/')) navigate(rota);
+  }), [authUserReal?.uid, navigate]);
   const notificacoesNaoLidas = notificacoes.filter(n => !n.lida).length;
 
   // Aviso da triagem para o MPI: nos 3 primeiros acessos (por aparelho) ao app.
