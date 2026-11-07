@@ -3,11 +3,12 @@ import {
   dataApagarApos, extensaoDoCaminhoOriginal, extensaoDoMime, idValido, mimeDaExtensao,
 } from '../../servidor/entrevistas/audio';
 import {
-  duracaoEmSegundos, interpretarRespostaBatch, montarPedidoBatch, resultadoParaFalas,
+  BOOST_NOME, BOOST_SIGLA, SIGLAS_JUNTA, duracaoEmSegundos, frasesAdaptacao, interpretarRespostaBatch, montarPedidoBatch,
+  recusouAdaptacao, resultadoParaFalas,
 } from '../../servidor/entrevistas/transcricao';
-import { formatarTempo, montarPromptAnamnese } from '../../servidor/entrevistas/prompt';
+import { formatarTempo, montarPromptAnamnese, roteiroMinimo } from '../../servidor/entrevistas/prompt';
 import { ESQUEMA_RESPOSTA, NAO_IDENTIFICADO, NAO_REFERIDO, normalizarResultado } from '../../servidor/entrevistas/organizacao';
-import { TRAVA_VENCIDA_MS, travaVencida } from '../../servidor/entrevistas/fluxo';
+import { CAMPOS_DESCARTADOS_AO_REFAZER, TRAVA_VENCIDA_MS, travaVencida } from '../../servidor/entrevistas/fluxo';
 import type { ParticipanteEntrevista } from '../../config/entrevistas';
 
 const w = (word: string, ini: number, fim: number, speakerLabel?: string) => ({
@@ -87,6 +88,39 @@ describe('transcrição', () => {
     expect(p.files).toEqual([{ uri: 'gs://b/a.flac' }]);
     expect(p.recognitionOutputConfig).toEqual({ inlineResponseConfig: {} });
     expect(montarPedidoBatch('gs://b/a.flac', 2, { limitesFalantes: false }).config.features.diarizationConfig).toEqual({});
+    expect('adaptation' in p.config).toBe(false);
+  });
+
+  it('frases de adaptação: nomes completos, palavras com 4+ letras e siglas, sem duplicatas', () => {
+    const f = frasesAdaptacao([
+      { nome: 'CC (Md) Mauriston Mademann', papel: 'perito' },
+      { nome: '3SG João Mademann', papel: 'inspecionado' },
+      { nome: '  ', papel: 'outro' },
+    ]);
+    const valores = f.map(x => x.value);
+    expect(valores.slice(0, 4)).toEqual(['CC (Md) Mauriston Mademann', 'Mauriston', 'Mademann', '3SG João Mademann']);
+    expect(valores).toContain('João');
+    expect(valores).not.toContain('CC');
+    expect(valores).not.toContain('Md');
+    expect(valores).not.toContain('');
+    expect(valores.filter(v => v.toLowerCase() === 'mademann')).toHaveLength(1);
+    expect(f.find(x => x.value === 'Mauriston')?.boost).toBe(BOOST_NOME);
+    for (const s of SIGLAS_JUNTA) expect(f.find(x => x.value === s)?.boost).toBe(BOOST_SIGLA);
+    expect(new Set(valores.map(v => v.toLowerCase())).size).toBe(valores.length);
+    expect(frasesAdaptacao(undefined).map(x => x.value)).toEqual([...SIGLAS_JUNTA]);
+    // Sigla igual a palavra de nome não duplica.
+    expect(frasesAdaptacao([{ nome: 'DGPM', papel: 'outro' }]).filter(x => x.value === 'DGPM')).toHaveLength(1);
+  });
+
+  it('pedido com adaptação (inlinePhraseSet) e detecção da recusa', () => {
+    const frases = frasesAdaptacao([{ nome: 'Mademann', papel: 'perito' }]);
+    const p = montarPedidoBatch('gs://b/a.flac', 2, { projeto: 'p', localizacao: 'us', frases });
+    expect(p.config.adaptation).toEqual({ phraseSets: [{ inlinePhraseSet: { phrases: frases } }] });
+    expect(recusouAdaptacao({ code: 3, message: '3 INVALID_ARGUMENT: adaptation is not supported for model chirp_3' })).toBe(true);
+    expect(recusouAdaptacao({ code: 3, details: 'Phrase sets are not supported' })).toBe(true);
+    expect(recusouAdaptacao({ code: 3, message: 'Invalid audio' })).toBe(false);
+    expect(recusouAdaptacao({ code: 7, message: 'adaptation permission denied' })).toBe(false);
+    expect(recusouAdaptacao(null)).toBe(false);
   });
 });
 
@@ -118,10 +152,52 @@ describe('prompt', () => {
     expect(t).toMatch(/Não emita conclusão pericial/);
     expect(t).not.toContain('MAPA DE FALANTES CONFIRMADO');
   });
+  it('regras de fonte, conduta do perito, finalidade sem juízo e pontos sem recomendações', () => {
+    const t = montarPromptAnamnese({ finalidade: 'VDF', participantes, transcricao: [{ falante: 'F1', inicioSeg: 0, fimSeg: 1, texto: 'Dor no joelho direito.' }] });
+    expect(t).toContain('FONTE RIGOROSA DO EXAME FÍSICO');
+    expect(t).toContain('NUNCA são atribuídos ao exame físico');
+    expect(t).toContain('"condutaPerito"');
+    expect(t).toMatch(/"repercussaoFuncional": só as limitações que o INSPECIONADO relatou/);
+    expect(t).toMatch(/"tratamentos": só medidas terapêuticas/);
+    expect(t).toContain('PROIBIDO juízo ou conclusão');
+    expect(t).toContain('Não abordado na entrevista: <item>');
+    expect(t).toContain('NUNCA sugere exames, relatórios, pareceres');
+    expect(t).toContain('Exemplo do que NÃO fazer: "Apresentação de relatório médico detalhado do ortopedista assistente');
+    expect(t).toMatch(/mal transcrito/);
+    // Roteiro da VDF + osteomuscular (joelho na transcrição).
+    expect(t).toContain('- limitações nas atividades diárias e no serviço');
+    expect(t).toContain('- sintomas mecânicos (bloqueio, falseio)');
+  });
   it('com mapa confirmado, manda repeti-lo', () => {
     const t = montarPromptAnamnese({ finalidade: 'VDF', participantes, transcricao: [{ falante: 'F1', inicioSeg: 0, fimSeg: 1, texto: 'x' }], mapaConfirmado: { F1: 'CC (Md) Fulano' } });
     expect(t).toContain('MAPA DE FALANTES CONFIRMADO');
     expect(t).toContain('- F1 = CC (Md) Fulano');
+  });
+});
+
+describe('roteiro mínimo por finalidade', () => {
+  it('casa a finalidade sem acento/caixa e acrescenta o genérico', () => {
+    const vdf = roteiroMinimo('Verificação de Deficiência Funcional');
+    expect(vdf).toContain('atividades que deixou de fazer');
+    expect(vdf).toContain('início dos sintomas');
+    expect(vdf).not.toContain('testemunhas');
+    expect(roteiroMinimo('vdf')).toEqual(vdf);
+    expect(roteiroMinimo('AO')).toContain('testemunhas');
+    expect(roteiroMinimo('Atestado de Origem')).toContain('data, hora e local');
+    expect(roteiroMinimo('ACIDENTE EM SERVIÇO')).toContain('se estava em serviço');
+    // "ao" minúsculo é preposição, não a sigla.
+    expect(roteiroMinimo('Término de restrições ao serviço')).not.toContain('testemunhas');
+    expect(roteiroMinimo('Término de restrições ao serviço')).toContain('retorno às atividades');
+    expect(roteiroMinimo('Doença especificada em lei')).toContain('data do diagnóstico');
+    const gen = roteiroMinimo('Outra qualquer');
+    expect(gen).toContain('fatores de piora e de melhora');
+    expect(gen).not.toContain('mecanismo do trauma');
+    expect(new Set(roteiroMinimo('VDF joelho')).size).toBe(roteiroMinimo('VDF joelho').length);
+  });
+  it('osteomuscular pela finalidade ou pelo conteúdo', () => {
+    expect(roteiroMinimo('Lesão de joelho')).toContain('mecanismo do trauma');
+    expect(roteiroMinimo('VDF', 'rompeu o menisco')).toContain('uso de órteses ou muletas');
+    expect(roteiroMinimo('VDF', 'ansiedade')).not.toContain('analgesia em uso');
   });
 });
 
@@ -135,6 +211,7 @@ describe('organização', () => {
     expect(r.anamnese.alegacoesInspecionado).toEqual([]);
     expect(r.anamnese.historiaCronologica).toEqual([]);
     expect(r.anamnese.citacoes).toEqual([]);
+    expect(r.anamnese.condutaPerito).toEqual([]);
     expect(r.anamnese.secaoFinalidade).toEqual({ titulo: 'Finalidade: Atestado de Origem', texto: NAO_REFERIDO });
     expect(r.mapaFalantes).toEqual({ F1: NAO_IDENTIFICADO, F2: NAO_IDENTIFICADO, F3: NAO_IDENTIFICADO });
   });
@@ -146,6 +223,7 @@ describe('organização', () => {
         historiaCronologica: [{ quando: '', evento: 'Queda', fonte: 'xyz', tempoSeg: '12.34' }, { evento: '' }, { quando: 'mar/2024', evento: 'Cirurgia', fonte: 'documento_citado' }],
         medicacoes: 'não é lista',
         secaoFinalidade: { titulo: 'Nexo com o serviço', texto: 'Relata queda a bordo.' },
+        condutaPerito: ['Restrição de TAF por 30 dias', ' ', 'Solicitada RM de joelho'],
         citacoes: [{ falante: 'F2', texto: 'Caí da escada', tempoSeg: 5 }, { falante: 'F2', texto: '' }, { texto: 'Sem falante' }],
       },
     }, ctx);
@@ -158,12 +236,23 @@ describe('organização', () => {
     ]);
     expect(r.anamnese.medicacoes).toEqual([]);
     expect(r.anamnese.secaoFinalidade.titulo).toBe('Nexo com o serviço');
+    expect(r.anamnese.condutaPerito).toEqual(['Restrição de TAF por 30 dias', 'Solicitada RM de joelho']);
     expect(r.anamnese.citacoes).toEqual([{ falante: 'F2', texto: 'Caí da escada', tempoSeg: 5 }, { falante: NAO_IDENTIFICADO, texto: 'Sem falante', tempoSeg: 0 }]);
     expect(r.mapaFalantes).toEqual({ F1: 'CC (Md) Fulano', F2: '3SG Beltrano', F3: NAO_IDENTIFICADO });
   });
   it('esquema exige anamnese e mapaFalantes', () => {
     expect(ESQUEMA_RESPOSTA.required).toEqual(['mapaFalantes', 'anamnese']);
-    expect(Object.keys(ESQUEMA_RESPOSTA.properties!.anamnese.properties!)).toHaveLength(12);
+    expect(Object.keys(ESQUEMA_RESPOSTA.properties!.anamnese.properties!)).toHaveLength(13);
+    expect(ESQUEMA_RESPOSTA.properties!.anamnese.required).toContain('condutaPerito');
+  });
+});
+
+describe('refazer transcrição', () => {
+  it('descarta o resultado e as edições, mas não o áudio', () => {
+    expect([...CAMPOS_DESCARTADOS_AO_REFAZER].sort()).toEqual(
+      ['anamnese', 'anamneseEditada', 'editadoPor', 'erro', 'falantesConfirmados', 'mapaFalantes', 'operacaoSpeech', 'revisada', 'transcricao'],
+    );
+    expect(CAMPOS_DESCARTADOS_AO_REFAZER).not.toContain('audio' as never);
   });
 });
 
