@@ -4,6 +4,7 @@
 // modais que listam usuários.
 import React, { useContext, useState } from 'react';
 import { NavContext } from '../../context/NavContext';
+import { useUrlArquivo } from '../../services/arquivosStorage';
 
 export const PERFIL_LABELS: Record<string, string> = {
   admin: 'Administrador',
@@ -41,8 +42,10 @@ export const Avatar: React.FC<AvatarProps> = ({ badge = 0, ...props }) => {
 const AvatarImagem: React.FC<Omit<AvatarProps, 'badge'>> = ({ nome, imageProfile, size = 32, tone = 'dark' }) => {
   const style = { width: size, height: size };
   const borda = tone === 'light' ? 'border border-line' : 'border border-white/30';
-  if (imageProfile) {
-    return <img src={imageProfile} alt={nome || 'Usuário'} style={style} className={`rounded-full object-cover shrink-0 ${borda}`} />;
+  // Foto do Storage via servidor do app (redes que bloqueiam o Storage); enquanto carrega, a inicial.
+  const { src: foto } = useUrlArquivo(imageProfile);
+  if (foto) {
+    return <img src={foto} alt={nome || 'Usuário'} style={style} className={`rounded-full object-cover shrink-0 ${borda}`} />;
   }
   return (
     <div

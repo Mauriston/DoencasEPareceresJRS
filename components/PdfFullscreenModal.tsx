@@ -6,6 +6,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useEscapeEmpilhado } from '../hooks/useEscapeEmpilhado';
+import { useUrlArquivo } from '../services/arquivosStorage';
 
 interface PdfFullscreenModalProps {
   title: string;
@@ -15,6 +16,8 @@ interface PdfFullscreenModalProps {
 
 export const PdfFullscreenModal: React.FC<PdfFullscreenModalProps> = ({ title, url, onClose }) => {
   useEscapeEmpilhado(onClose);
+  // PDF do Storage via servidor do app (redes que bloqueiam o Storage, ex.: Firefox nos PCs da Marinha).
+  const { src, carregando } = useUrlArquivo(url);
 
   return createPortal(
     <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 z-dialog bg-black/70 flex flex-col animate-fade-in">
@@ -22,7 +25,7 @@ export const PdfFullscreenModal: React.FC<PdfFullscreenModalProps> = ({ title, u
         <h3 className="font-heading font-bold text-sm text-white truncate">{title}</h3>
         <div className="flex items-center gap-1 shrink-0">
           <a
-            href={url}
+            href={src || url}
             target="_blank"
             rel="noopener noreferrer"
             title="Abrir em nova aba"
@@ -36,7 +39,9 @@ export const PdfFullscreenModal: React.FC<PdfFullscreenModalProps> = ({ title, u
           </button>
         </div>
       </div>
-      <iframe src={url} title={title} className="flex-1 w-full bg-white" />
+      {carregando
+        ? <div role="status" className="flex-1 w-full bg-white flex items-center justify-center gap-2 text-sm font-bold text-navy"><span className="w-5 h-5 border-2 border-navy/20 border-t-navy rounded-full animate-spin" aria-hidden="true" />Abrindo o documento…</div>
+        : <iframe src={src} title={title} className="flex-1 w-full bg-white" />}
     </div>,
     document.body,
   );

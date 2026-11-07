@@ -13,6 +13,8 @@ import { IconButton } from './ui/IconButton';
 import { Toast } from './ui/Toast';
 import { VisualizacoesBadge } from './ui/VisualizacoesBadge';
 import { NavContext } from '../context/NavContext';
+import { ImagemArquivo } from './ui/ImagemArquivo';
+import { urlExibivel } from '../services/arquivosStorage';
 import { useEscapeEmpilhado } from '../hooks/useEscapeEmpilhado';
 import {
   observarInfograficos, criarInfografico, apagarInfografico, LIMITE_INFOGRAFICO_MB, observarVisualizacoes, registrarVisualizacao,
@@ -82,7 +84,7 @@ const InfograficoFullscreen: React.FC<{ item: InfograficoRecord; onClose: () => 
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(item.imageUrl);
+      const response = await fetch(await urlExibivel(item.imageUrl));
       const blob = await response.blob();
       const ext = item.imagePath.split('.').pop() || 'jpg';
       const filename = `${item.titulo.replace(/[^\p{L}\p{N} -]/gu, '').trim() || 'infografico'}.${ext}`;
@@ -128,7 +130,7 @@ const InfograficoFullscreen: React.FC<{ item: InfograficoRecord; onClose: () => 
         </div>
       </div>
       <div className="flex-1 overflow-auto w-full flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-        <img src={item.imageUrl} alt={item.titulo} className="max-w-full max-h-full object-contain rounded-xl shadow-2xl" />
+        <ImagemArquivo src={item.imageUrl} alt={item.titulo} className="max-w-full max-h-full object-contain rounded-xl shadow-2xl" />
       </div>
     </div>
   );
@@ -194,7 +196,7 @@ export const Infograficos: React.FC = () => {
               <div key={item.id} className="relative group bg-white rounded-xl border border-line/60 shadow-sm flex flex-col hover:shadow-md hover:border-navy transition-all">
                 <button type="button" onClick={() => abrir(item)} className="flex flex-col w-full text-left focus:outline-none">
                   <div className="w-full aspect-[4/5] bg-thead overflow-hidden rounded-t-xl">
-                    <img src={item.imageUrl} alt="" loading="lazy" className="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform" />
+                    <ImagemArquivo src={item.imageUrl} alt="" loading="lazy" className="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform" />
                   </div>
                   <h3 className="p-3 text-sm font-bold text-navy font-heading leading-snug line-clamp-3">{item.titulo}</h3>
                 </button>
