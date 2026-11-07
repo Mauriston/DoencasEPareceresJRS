@@ -3,7 +3,7 @@
 # .github/workflows/deploy.yml). Este container serve os endpoints /api/*
 # (login, Admin, notificações, Gemini, repasse de arquivos e documentos em PDF).
 
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -14,7 +14,7 @@ RUN npm run build
 # vêm dos pacotes do sistema — usados para gerar os documentos em HTML + CSS → PDF
 # (servidor/documentos/gerarPdf.ts). fonts-liberation cobre Arial/Times se algum modelo usar.
 # ffmpeg converte o áudio da entrevista da IS em FLAC mono 16 kHz (servidor/entrevistas/audio.ts).
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 RUN apt-get update \
  && apt-get install -y --no-install-recommends chromium fonts-crosextra-carlito fonts-liberation ffmpeg \
  && rm -rf /var/lib/apt/lists/*
