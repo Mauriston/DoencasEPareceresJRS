@@ -9,7 +9,7 @@
 // Status gravado: "solicitado" ou "concluido". "Atrasado" não é gravado — é
 // derivado (solicitado há 20 dias ou mais), pois nada atualizaria um valor
 // gravado com o passar do tempo.
-import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, serverTimestamp, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, serverTimestamp, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { novoId } from '../utils/dados';
 import { camposIdDrive } from '../utils/googleDrive';
 import { app } from './firebaseAuth';
@@ -40,6 +40,10 @@ export interface ParecerDoc {
   criadoEm: Timestamp | null;
   concluidoEm?: Timestamp | null;
   concluidoPor?: string;
+  /** IS de onde o pedido saiu (id do doc em "inspecoes"); ausente nos pedidos feitos fora de uma IS. */
+  isId?: string;
+  /** Número da IS (o mesmo do id). */
+  is?: number;
 }
 export type ParecerRecord = ParecerDoc & { id: string };
 
@@ -61,6 +65,17 @@ export const observarPareceres = (onData: (lista: ParecerRecord[]) => void, onEr
       // fora: todas as telas assumem o texto do inspecionado e quebrariam sem ele.
       .filter(p => typeof p.inspecionado === 'string' && p.inspecionado !== '')
       .sort((a, b) => (b.criadoEm?.toMillis?.() ?? Date.now()) - (a.criadoEm?.toMillis?.() ?? Date.now()))),
+    err => onError?.(err),
+  );
+
+/** Pedidos de parecer feitos a partir de uma IS, do mais antigo para o mais recente. */
+export const observarPareceresDaIS = (isId: string, onData: (lista: ParecerRecord[]) => void, onError?: (e: Error) => void) =>
+  onSnapshot(
+    query(collection(db, COL), where('isId', '==', isId)),
+    snap => onData(snap.docs
+      .map(d => ({ id: d.id, ...(d.data() as ParecerDoc) }))
+      .filter(p => typeof p.inspecionado === 'string' && p.inspecionado !== '')
+      .sort((a, b) => (a.criadoEm?.toMillis?.() ?? Date.now()) - (b.criadoEm?.toMillis?.() ?? Date.now()))),
     err => onError?.(err),
   );
 

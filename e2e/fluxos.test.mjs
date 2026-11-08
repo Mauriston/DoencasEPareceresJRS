@@ -113,7 +113,31 @@ test('Inspeções: lista a IS semeada, filtra pela busca e abre o detalhe', asyn
   await abrir.waitFor();
 
   await abrir.click();
-  await p.getByRole('dialog', { name: `IS ${IS_E2E.numero}` }).waitFor();
+  const detalhe = p.getByRole('dialog', { name: `IS ${IS_E2E.numero}` });
+  await detalhe.waitFor();
+  await detalhe.getByText('Dados da IS').waitFor();
+  await detalhe.getByText('Conclusão da IS').waitFor();
+  // Sem select de Status e sem "Salvar alterações": a Conclusão grava sozinha.
+  assert.equal(await detalhe.getByRole('button', { name: 'Salvar alterações' }).count(), 0);
+  assert.equal(await detalhe.getByLabel('Status').count(), 0);
+  // Nº do TIS e DS-1a ficam desabilitados sem Laudo.
+  assert.equal(await detalhe.getByLabel('Nº do TIS').isDisabled(), true);
+  assert.equal(await detalhe.getByLabel('DS-1a').isDisabled(), true);
+  await detalhe.getByLabel('Observações').fill('Observação do E2E');
+  await detalhe.getByLabel('Observações').blur();
+  await detalhe.getByText('Salvo', { exact: true }).waitFor();
+  await p.context().close();
+});
+
+test('Inspeções: o menu da linha não tem mais "Ver detalhes" e a tabela não tem a coluna Entrevista', async () => {
+  const p = await novaPagina();
+  await entrar(p, MEDICO);
+  await p.goto(`${BASE}#/inspecoes`);
+  await p.getByRole('button', { name: `Abrir IS ${IS_E2E.numero}` }).waitFor();
+  assert.equal(await p.getByRole('columnheader', { name: 'Entrevista' }).count(), 0);
+  await p.locator(`button[aria-label="Ações da IS ${IS_E2E.numero}"]:visible`).first().click();
+  await p.getByRole('menuitem').first().waitFor();
+  assert.equal(await p.getByRole('menuitem', { name: 'Ver detalhes' }).count(), 0);
   await p.context().close();
 });
 

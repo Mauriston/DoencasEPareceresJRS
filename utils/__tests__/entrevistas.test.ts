@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  formatarTempo, formatarDuracao, dataDe, dataIsoBr, anamneseEfetiva, nomeDoFalante, aplicarMapaFalantes, primeirasFalas,
-  mapaInicial, filtrarTranscricao, listaParaTexto, textoParaLista, normalizarAnamnese, limparAnamnese, textoAnamnese,
-  tomSituacao, entrevistaEmAndamento, anamneseVazia, AVISO_IA, naoEnviada, textoTemposProcessamento,
+  formatarTempo, formatarDuracao, dataDe, anamneseEfetiva, nomeDoFalante, aplicarMapaFalantes,
+  filtrarTranscricao, normalizarAnamnese, textoAnamnese, tomSituacao, entrevistaEmAndamento, anamneseVazia, naoEnviada,
 } from '../entrevistas';
 import type { AnamneseEntrevista, FalaTranscrita } from '../../config/entrevistas';
 
@@ -41,8 +40,6 @@ describe('tempo e datas', () => {
     expect(dataDe({ toDate: () => d })).toBe(d);
     expect(dataDe({ seconds: 10 })?.getTime()).toBe(10000);
     expect(dataDe(null)).toBeNull();
-    expect(dataIsoBr('2027-02-06')).toBe('06/02/2027');
-    expect(dataIsoBr(undefined)).toBe('');
   });
 });
 
@@ -57,15 +54,6 @@ describe('falantes', () => {
     expect(r.map(f => f.nome)).toEqual(['Perito', 'Inspecionado', 'Perito', 'Falante 10']);
     expect(aplicarMapaFalantes(undefined, null)).toEqual([]);
   });
-  it('lista a primeira fala de cada rótulo, em ordem numérica', () => {
-    const r = primeirasFalas(falas);
-    expect(r.map(x => x.rotulo)).toEqual(['F1', 'F2', 'F10']);
-    expect(r[1].fala.texto).toBe('Bom dia, sente-se.');
-  });
-  it('mapa inicial só aceita nomes de participantes', () => {
-    const participantes = [{ nome: 'CT A', papel: 'perito' as const }, { nome: 'SG B', papel: 'inspecionado' as const }];
-    expect(mapaInicial(falas, participantes, { F1: 'SG B', F2: 'Desconhecido' })).toEqual({ F1: 'SG B', F2: '', F10: '' });
-  });
 });
 
 describe('transcrição e listas', () => {
@@ -74,10 +62,6 @@ describe('transcrição e listas', () => {
     expect(filtrarTranscricao(r, 'MARCO').length).toBe(1);
     expect(filtrarTranscricao(r, 'inspecionado').length).toBe(1);
     expect(filtrarTranscricao(r, '  ').length).toBe(4);
-  });
-  it('converte lista ↔ texto', () => {
-    expect(listaParaTexto(['a', 'b'])).toBe('a\nb');
-    expect(textoParaLista(' a \n\n b ')).toEqual(['a', 'b']);
   });
 });
 
@@ -95,13 +79,6 @@ describe('anamnese', () => {
     expect(n.secaoFinalidade).toEqual({ titulo: '', texto: '' });
     expect(n.condutaPerito).toEqual([]); // doc antigo, sem o campo
   });
-  it('limpa itens vazios e não deixa undefined', () => {
-    const a = { ...anamnese(), medicacoes: [' dipirona ', ''], historiaCronologica: [{ quando: 'x', evento: ' ', fonte: 'outro' as const }, { quando: '', evento: 'E', fonte: 'perito' as const }] };
-    const l = limparAnamnese(a);
-    expect(l.medicacoes).toEqual(['dipirona']);
-    expect(l.historiaCronologica).toEqual([{ quando: '', evento: 'E', fonte: 'perito' }]);
-    expect(JSON.stringify(l)).not.toContain('undefined');
-  });
   it('gera o texto para copiar na ordem da anamnese, com o aviso de IA', () => {
     const t = textoAnamnese(anamnese(), { finalidade: 'Atestado de Origem', mapaFalantes: { F1: 'SG B' } });
     expect(t.indexOf('RESUMO EXECUTIVO')).toBeLessThan(t.indexOf('QUEIXA PRINCIPAL'));
@@ -113,7 +90,7 @@ describe('anamnese', () => {
     const c = textoAnamnese({ ...anamnese(), condutaPerito: ['Restrição de TAF por 30 dias'] }, { finalidade: 'Atestado de Origem' });
     expect(c).toContain('CONDUTA E ENCAMINHAMENTOS DO PERITO\n- Restrição de TAF por 30 dias');
     expect(c.indexOf('FINALIDADE: ATESTADO DE ORIGEM')).toBeLessThan(c.indexOf('CONDUTA E ENCAMINHAMENTOS'));
-    expect(t.endsWith(`(${AVISO_IA})`)).toBe(true);
+    expect(t).not.toContain('Rascunho gerado por IA');
   });
 });
 
@@ -129,24 +106,5 @@ describe('situação', () => {
     expect(naoEnviada({ situacao: 'aguardando_envio' })).toBe(true);
     expect(naoEnviada({ situacao: 'aguardando_envio', audio: { caminho: 'c', mimeType: 'audio/webm', bytes: 1, duracaoSeg: 1, apagarApos: '2027-01-01' } })).toBe(false);
     expect(naoEnviada({ situacao: 'transcrevendo' })).toBe(false);
-  });
-});
-
-describe('duração do processamento', () => {
-  const t0 = 1_800_000_000_000;
-  it('formata total e etapas', () => {
-    expect(textoTemposProcessamento({ processamentoIniciado: t0, transcricaoIniciada: t0 + 20_000, transcricaoConcluida: t0 + 185_000, organizacaoConcluida: t0 + 220_000 }))
-      .toBe('Processada em 3 min 40 s (transcrição 3:05 · organização 0:35)');
-    expect(textoTemposProcessamento({ processamentoIniciado: t0, transcricaoConcluida: t0 + 40_000, organizacaoConcluida: t0 + 52_400 }))
-      .toBe('Processada em 52 s (transcrição 0:40 · organização 0:12)');
-    expect(textoTemposProcessamento({ processamentoIniciado: t0, transcricaoConcluida: t0 + 120_000, organizacaoConcluida: t0 + 180_000 }))
-      .toBe('Processada em 3 min (transcrição 2:00 · organização 1:00)');
-    expect(textoTemposProcessamento({ processamentoIniciado: t0, transcricaoConcluida: t0 + 3_700_000, organizacaoConcluida: t0 + 3_730_000 }))
-      .toBe('Processada em 1 h 2 min (transcrição 1:01:40 · organização 0:30)');
-  });
-  it('sem marcos completos ou fora de ordem: nada', () => {
-    expect(textoTemposProcessamento(undefined)).toBeNull();
-    expect(textoTemposProcessamento({ processamentoIniciado: t0, transcricaoConcluida: t0 + 1000 })).toBeNull();
-    expect(textoTemposProcessamento({ processamentoIniciado: t0, transcricaoConcluida: t0 - 1, organizacaoConcluida: t0 + 5 })).toBeNull();
   });
 });

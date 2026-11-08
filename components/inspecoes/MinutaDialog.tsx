@@ -1,10 +1,12 @@
 // Ficheiro: components/inspecoes/MinutaDialog.tsx
 // Minuta de mensagem editável: mostra o rascunho, permite ajustar e copiar. Com `confirmar`, o botão
-// principal copia o texto e executa a ação (ex.: cancelar a IS atrasada).
+// principal copia o texto e executa a ação (ex.: cancelar a IS atrasada). Avisa quando ainda há campos
+// "[preencher: …]" (dados que a IS não tem, ex.: código DS-1A) antes de copiar.
 import React, { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { controlClass } from '../ui/Field';
+import { contarPreencher } from '../../utils/minutaMensagemResultado';
 
 interface Props {
   titulo: string;
@@ -23,6 +25,7 @@ export const MinutaDialog: React.FC<Props> = ({ titulo, textoInicial, confirmar,
   const [texto, setTexto] = useState(textoInicial);
   const [executando, setExecutando] = useState(false);
   const [erro, setErro] = useState('');
+  const pendentes = contarPreencher(texto);
 
   const soCopiar = async () => {
     const ok = await copiar(texto);
@@ -58,6 +61,7 @@ export const MinutaDialog: React.FC<Props> = ({ titulo, textoInicial, confirmar,
     >
       <div className="space-y-3">
         {confirmar?.aviso && <p className="text-ink-3">{confirmar.aviso}</p>}
+        {pendentes > 0 && <p className="text-sm font-semibold text-wine">{pendentes === 1 ? 'Há 1 campo marcado' : `Há ${pendentes} campos marcados`} “[preencher: …]” — complete antes de enviar.</p>}
         {erro && <p role="alert" className="text-sm font-semibold text-wine">{erro}</p>}
         <label htmlFor="texto-minuta" className="block text-xs font-semibold text-ink-3">Texto da minuta (editável)</label>
         <textarea id="texto-minuta" value={texto} onChange={e => setTexto(e.target.value)} className={`${controlClass} min-h-[280px] font-mono text-xs leading-relaxed`} />

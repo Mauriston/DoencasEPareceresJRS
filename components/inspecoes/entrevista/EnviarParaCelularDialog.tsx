@@ -29,7 +29,7 @@ export const EnviarParaCelularDialog: React.FC<Props> = ({ isId, onClose }) => {
 
   return (
     <Dialog
-      title="Gravar no celular"
+      title="Gravar Entrevista"
       icon="phone_iphone"
       onClose={onClose}
       footer={<Button variant="secondary" onClick={onClose}>Fechar</Button>}

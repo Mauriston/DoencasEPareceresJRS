@@ -1,30 +1,23 @@
 // Ficheiro: components/inspecoes/entrevista/ResultadoEntrevista.tsx
-// Resultado de uma entrevista gravada da IS (Dialog largo no computador, tela cheia no celular):
-// cabeçalho (participantes, finalidade, duração, situação), progresso enquanto o servidor
-// transcreve/organiza, erro com "Tentar novamente" e, pronta, a confirmação dos falantes, a
-// anamnese organizada (editável), a transcrição íntegra, o áudio, "Copiar" e "Marcar como revisada".
-// O documento vem ao vivo do pai (observarEntrevistas): toda gravação aqui reaparece pelo snapshot.
+// Resultado de uma entrevista gravada da IS (Dialog largo no computador, tela cheia no celular).
+// Título "IS nº — inspecionado". Enquanto o servidor transcreve/organiza, as etapas de andamento;
+// em erro, a mensagem e "Tentar novamente". Pronta: abas "Anamnese organizada" (com "Copiar" no fim)
+// e "Transcrição íntegra" (com o áudio no fim). Os falantes seguem o `mapaFalantes` sugerido pela IA.
+// O documento vem ao vivo do pai (observarEntrevistas).
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../../ui/Button';
-import { StatusTag } from '../../ui/StatusTag';
 import { Segmented } from '../../ui/Segmented';
 import { Toast } from '../../ui/Toast';
-import { ConfirmDialog } from '../../ui/Dialog';
 import { ResultadoPainel } from './ResultadoPainel';
-import { ResultadoFalantes } from './ResultadoFalantes';
 import { ResultadoAnamnese } from './ResultadoAnamnese';
-import { ResultadoAnamneseEdicao } from './ResultadoAnamneseEdicao';
 import { ResultadoTranscricao } from './ResultadoTranscricao';
 import { ResultadoAudio } from './ResultadoAudio';
-import { useNav } from '../../../context/NavContext';
 import { useIsDesktop } from '../../../hooks/useIsDesktop';
-import { atualizarEntrevista, consultarSituacao, ouvirAudio, processarEntrevista, reorganizarEntrevista } from '../../../services/entrevistasIS';
-import { ROTULO_PAPEL, type AnamneseEntrevista, type EntrevistaRecord, type QuemQuando } from '../../../config/entrevistas';
+import { consultarSituacao, ouvirAudio, processarEntrevista, reorganizarEntrevista } from '../../../services/entrevistasIS';
+import type { EntrevistaRecord } from '../../../config/entrevistas';
 import type { InspecaoRecord } from '../../../services/firestoreInspecoes';
 import { hojeISO } from '../../../utils/inspecoes';
-import {
-  AVISO_IA, anamneseEfetiva, dataHoraEntrevista, formatarDuracao, rotuloSituacao, textoAnamnese, textoTemposProcessamento, tomSituacao,
-} from '../../../utils/entrevistas';
+import { anamneseEfetiva, dataHoraEntrevista, textoAnamnese } from '../../../utils/entrevistas';
 
 interface Props {
   is: InspecaoRecord;
@@ -43,19 +36,12 @@ const ETAPAS: { id: EntrevistaRecord['situacao']; rotulo: string }[] = [
 const msgErro = (e: unknown, padrao: string) => (e instanceof Error && e.message ? e.message : padrao);
 
 export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClose }) => {
-  const authUser = useNav()?.authUser;
   const isDesktop = useIsDesktop();
-  const quem = (): QuemQuando => ({ uid: authUser?.uid || '', nome: authUser?.usuario || authUser?.nome || '', em: new Date() });
-
   const [aba, setAba] = useState<Aba>('anamnese');
-  const [editando, setEditando] = useState(false);
-  const [revendoFalantes, setRevendoFalantes] = useState(false);
-  const [ofertaReorganizar, setOfertaReorganizar] = useState(false);
-  const [confirmarRefazer, setConfirmarRefazer] = useState(false);
-  const [ocupado, setOcupado] = useState<'' | 'falantes' | 'edicao' | 'revisada' | 'reorganizar' | 'tentar' | 'refazer'>('');
+  const [tentando, setTentando] = useState(false);
   const [aviso, setAviso] = useState<{ msg: string; tom: 'success' | 'error' } | null>(null);
 
-  // Áudio: carregado sob demanda (blob: URL), revogado ao fechar.
+  // Áudio: carregado sob demanda (blob: URL), revogado ao fechar. O player fica na aba Transcrição.
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioCarregando, setAudioCarregando] = useState(false);
   const [audioErro, setAudioErro] = useState('');
@@ -68,24 +54,23 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
     const t = window.setTimeout(() => setAviso(null), 3500);
     return () => window.clearTimeout(t);
   }, [aviso]);
-  // Assim que o <audio> existe, vai ao trecho pedido antes do carregamento.
+  // Assim que o <audio> existe (carregou ou a aba Transcrição abriu), vai ao trecho pedido.
   useEffect(() => {
     const el = audioRef.current;
     if (!audioUrl || !el || irPara.current === null) return;
     el.currentTime = irPara.current;
     irPara.current = null;
     el.play().catch(() => { /* o navegador pode exigir um toque no play */ });
-  }, [audioUrl]);
+  }, [audioUrl, aba]);
 
-  const apagarApos = e.audio?.apagarApos;
-  const audioApagado = !!apagarApos && apagarApos <= hojeISO();
-  const temAudio = !!e.audio && !audioApagado;
+  const isId = e.isId || is.id;
+  const temAudio = !!e.audio && !(e.audio.apagarApos && e.audio.apagarApos <= hojeISO());
 
   const carregarAudio = async () => {
     setAudioCarregando(true);
     setAudioErro('');
     try {
-      const blob = await ouvirAudio(e.isId || is.id, e.id);
+      const blob = await ouvirAudio(isId, e.id);
       setAudioUrl(URL.createObjectURL(blob));
     } catch (err) {
       irPara.current = null;
@@ -95,60 +80,35 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
     }
   };
 
+  // Tempo clicado (anamnese ou transcrição): abre a aba Transcrição (onde está o player) e toca o trecho.
   const ouvir = (seg: number) => {
     const el = audioRef.current;
-    if (audioUrl && el) {
+    if (audioUrl && el && aba === 'transcricao') {
       el.currentTime = seg;
       el.play().catch(() => undefined);
       return;
     }
     irPara.current = seg;
-    if (!audioCarregando) void carregarAudio();
+    setAba('transcricao');
+    if (!audioUrl && !audioCarregando) void carregarAudio();
   };
 
-  const executar = async (tipo: typeof ocupado, acao: () => Promise<unknown>, ok?: string) => {
-    setOcupado(tipo);
+  const tentarNovamente = async () => {
+    setTentando(true);
     try {
-      await acao();
-      if (ok) setAviso({ msg: ok, tom: 'success' });
-      return true;
+      await (
+        e.transcricao?.length ? reorganizarEntrevista(isId, e.id)
+          // Sem transcrição em erro: refaz do começo com o áudio que já está no servidor (caminho vazio = o servidor localiza).
+          : e.situacao === 'erro' ? processarEntrevista(isId, e.id, e.audio?.caminho ?? '', e.audio?.mimeType ?? '', e.audio?.duracaoSeg ?? 0)
+            : consultarSituacao(isId, e.id)
+      );
+      setAviso({ msg: 'Processamento retomado.', tom: 'success' });
     } catch (err) {
       setAviso({ msg: msgErro(err, 'Não foi possível concluir. Tente de novo.'), tom: 'error' });
-      return false;
     } finally {
-      setOcupado('');
+      setTentando(false);
     }
   };
-
-  const isId = e.isId || is.id;
-  const confirmarFalantes = async (mapa: Record<string, string>) => {
-    const ok = await executar('falantes', () => atualizarEntrevista(isId, e.id, { mapaFalantes: mapa, falantesConfirmados: true }), 'Falantes confirmados.');
-    if (ok) { setRevendoFalantes(false); setOfertaReorganizar(true); }
-  };
-  const reorganizar = async () => {
-    const ok = await executar('reorganizar', () => reorganizarEntrevista(isId, e.id), 'Reorganizando a anamnese com os nomes confirmados.');
-    if (ok) setOfertaReorganizar(false);
-  };
-  const tentarNovamente = () =>
-    executar('tentar', () => (
-      e.transcricao?.length ? reorganizarEntrevista(isId, e.id)
-        // Sem transcrição em erro: refaz do começo com o áudio que já está no servidor (caminho vazio = o servidor localiza).
-        : e.situacao === 'erro' ? processarEntrevista(isId, e.id, e.audio?.caminho ?? '', e.audio?.mimeType ?? '', e.audio?.duracaoSeg ?? 0)
-          : consultarSituacao(isId, e.id)
-    ), 'Processamento retomado.');
-  // Refaz do áudio já no servidor (caminho vazio): descarta transcrição, anamnese, falantes e edições.
-  const refazerTranscricao = () => {
-    setConfirmarRefazer(false);
-    setEditando(false);
-    setRevendoFalantes(false);
-    setOfertaReorganizar(false);
-    return executar('refazer', () => processarEntrevista(isId, e.id, '', '', e.audio?.duracaoSeg ?? 0), 'Refazendo a transcrição.');
-  };
-  const salvarEdicao = async (a: AnamneseEntrevista) => {
-    const ok = await executar('edicao', () => atualizarEntrevista(isId, e.id, { anamneseEditada: a, editadoPor: quem() }), 'Anamnese salva.');
-    if (ok) setEditando(false);
-  };
-  const marcarRevisada = () => executar('revisada', () => atualizarEntrevista(isId, e.id, { revisada: quem() }), 'Entrevista marcada como revisada.');
 
   const anamnese = anamneseEfetiva(e);
   const copiar = async () => {
@@ -162,69 +122,19 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
     }
   };
 
-  const pronta = e.situacao === 'pronta';
-  const tempoProcessamento = pronta ? textoTemposProcessamento(e.tempos) : null;
-  const mostrarFalantes = pronta && !editando && (!e.falantesConfirmados || revendoFalantes) && (e.transcricao?.length ?? 0) > 0;
   const etapaAtual = ETAPAS.findIndex(x => x.id === e.situacao);
+  const onOuvir = temAudio ? ouvir : undefined;
 
   return (
     <ResultadoPainel
-      title={`Entrevista — IS ${is.is}`}
+      title={`IS ${is.is}${is.inspecionado ? ` — ${is.inspecionado}` : ''}`}
       icon="record_voice_over"
       onClose={onClose}
-      footer={(
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 w-full">
-          <p role="note" className="text-xs font-semibold text-gold-ink flex items-center gap-1">
-            <span className="material-symbols-outlined text-[16px]" aria-hidden="true">warning</span>
-            {AVISO_IA}
-          </p>
-          <Button variant="secondary" onClick={onClose}>Fechar</Button>
-        </div>
-      )}
     >
       <Toast message={aviso?.msg ?? null} tone={aviso?.tom} />
-      {confirmarRefazer && (
-        <ConfirmDialog
-          title="Refazer transcrição"
-          message="A transcrição e a anamnese serão refeitas e as edições serão descartadas."
-          confirmLabel="Refazer"
-          destructive
-          onConfirm={() => { void refazerTranscricao(); }}
-          onCancel={() => setConfirmarRefazer(false)}
-        />
-      )}
       <div className="space-y-5">
-        {/* Cabeçalho */}
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusTag tone={tomSituacao(e.situacao)}>{rotuloSituacao(e.situacao)}</StatusTag>
-            {e.revisada && <StatusTag tone="success" title={`Revisada por ${e.revisada.nome} em ${dataHoraEntrevista(e.revisada.em)}`}>Revisada</StatusTag>}
-            {e.anamneseEditada && <StatusTag tone="navyOutline">Editada</StatusTag>}
-          </div>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-            <div>
-              <dt className="text-xs font-semibold text-ink-3">Participantes</dt>
-              <dd className="text-sm text-ink">
-                <ul>{e.participantes.map(p => <li key={p.nome}>{p.nome} <span className="text-ink-3">({ROTULO_PAPEL[p.papel] ?? p.papel})</span></li>)}</ul>
-              </dd>
-            </div>
-            <div className="space-y-2">
-              <div><dt className="text-xs font-semibold text-ink-3">Finalidade</dt><dd className="text-sm text-ink">{e.finalidade || is.finalidade}</dd></div>
-              <div>
-                <dt className="text-xs font-semibold text-ink-3">Gravada</dt>
-                <dd className="text-sm text-ink">
-                  {dataHoraEntrevista(e.criadoPor?.em) || '—'}{e.criadoPor?.nome ? ` por ${e.criadoPor.nome}` : ''}
-                  {e.audio?.duracaoSeg ? ` · ${formatarDuracao(e.audio.duracaoSeg)}` : ''}
-                </dd>
-              </div>
-            </div>
-          </dl>
-          {tempoProcessamento && <p className="text-xs text-ink-3">{tempoProcessamento}</p>}
-          {e.revisada && <p className="text-xs text-ink-3">Revisada por {e.revisada.nome}{dataHoraEntrevista(e.revisada.em) ? ` em ${dataHoraEntrevista(e.revisada.em)}` : ''}.</p>}
-        </div>
-
         {/* Em andamento */}
-        {(e.situacao === 'aguardando_envio' || e.situacao === 'transcrevendo' || e.situacao === 'organizando') && (
+        {etapaAtual >= 0 && (
           <section aria-live="polite" className="rounded-xl border border-line bg-paper p-4 space-y-3">
             <p className="font-bold text-navy flex items-center gap-2">
               <span className="material-symbols-outlined text-[20px] animate-spin" aria-hidden="true">progress_activity</span>
@@ -242,9 +152,6 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
                 );
               })}
             </ol>
-            {e.situacao === 'aguardando_envio' && (
-              <p className="text-xs text-ink-3">Se o envio não acontecer, grave de novo.</p>
-            )}
           </section>
         )}
 
@@ -256,83 +163,37 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
               Não foi possível concluir o processamento.
             </p>
             <p className="text-sm text-ink">{e.erro || 'Erro desconhecido.'}</p>
-            <Button icon="refresh" loading={ocupado === 'tentar'} onClick={tentarNovamente}>Tentar novamente</Button>
+            <Button icon="refresh" loading={tentando} onClick={tentarNovamente}>Tentar novamente</Button>
           </section>
         )}
 
-        {/* Áudio (também útil enquanto processa ou com erro) */}
-        {e.audio && (
-          <ResultadoAudio url={audioUrl} carregando={audioCarregando} erro={audioErro} apagarApos={apagarApos} apagado={audioApagado} onCarregar={carregarAudio} audioRef={audioRef} />
-        )}
-
         {/* Pronta */}
-        {pronta && (
+        {e.situacao === 'pronta' && (
           <>
-            {mostrarFalantes && (
-              <ResultadoFalantes
-                entrevista={e}
-                salvando={ocupado === 'falantes'}
-                onConfirmar={confirmarFalantes}
-                onCancelar={revendoFalantes ? () => setRevendoFalantes(false) : undefined}
-                onOuvir={temAudio ? ouvir : undefined}
-              />
-            )}
-            {ofertaReorganizar && !mostrarFalantes && (
-              <section className="rounded-xl border border-line bg-paper p-4 space-y-2">
-                <p className="text-sm text-ink">Reorganizar a anamnese com os nomes confirmados?</p>
-                {e.anamneseEditada && <p className="text-xs text-ink-3">Sua edição continua sendo a versão exibida.</p>}
-                <div className="flex flex-wrap gap-2">
-                  <Button icon="auto_awesome" loading={ocupado === 'reorganizar'} onClick={reorganizar}>Reorganizar com os nomes confirmados</Button>
-                  <Button variant="ghost" onClick={() => setOfertaReorganizar(false)}>Agora não</Button>
-                </div>
-              </section>
-            )}
-
-            {editando && anamnese ? (
-              <ResultadoAnamneseEdicao
-                inicial={anamnese}
-                finalidade={e.finalidade}
-                mapaFalantes={e.mapaFalantes}
-                salvando={ocupado === 'edicao'}
-                onSalvar={salvarEdicao}
-                onCancelar={() => setEditando(false)}
-              />
+            <Segmented<Aba>
+              ariaLabel="Conteúdo da entrevista"
+              value={aba}
+              onChange={setAba}
+              fullWidth
+              options={[
+                { value: 'anamnese', label: isDesktop ? 'Anamnese organizada' : 'Anamnese' },
+                { value: 'transcricao', label: isDesktop ? 'Transcrição íntegra' : 'Transcrição' },
+              ]}
+            />
+            {aba === 'anamnese' ? (
+              anamnese ? (
+                <>
+                  <ResultadoAnamnese anamnese={anamnese} finalidade={e.finalidade} mapaFalantes={e.mapaFalantes} onOuvir={onOuvir} />
+                  <div className="flex justify-end">
+                    <Button variant="secondary" icon="content_copy" onClick={copiar}>Copiar</Button>
+                  </div>
+                </>
+              ) : <p className="text-sm text-ink-3">A anamnese ainda não foi organizada.</p>
             ) : (
               <>
-                <div className="flex flex-wrap gap-2">
-                  {anamnese && <Button variant="secondary" icon="edit" onClick={() => { setAba('anamnese'); setEditando(true); }}>Editar</Button>}
-                  {anamnese && <Button variant="secondary" icon="content_copy" onClick={copiar}>Copiar</Button>}
-                  {!e.revisada && <Button icon="task_alt" loading={ocupado === 'revisada'} onClick={marcarRevisada}>Marcar como revisada</Button>}
-                  {e.falantesConfirmados && !revendoFalantes && (e.transcricao?.length ?? 0) > 0 && (
-                    <Button variant="ghost" icon="group" onClick={() => setRevendoFalantes(true)}>Rever falantes</Button>
-                  )}
-                  {temAudio && (
-                    <Button variant="secondary" icon="restart_alt" loading={ocupado === 'refazer'} onClick={() => setConfirmarRefazer(true)}>Refazer transcrição</Button>
-                  )}
-                </div>
-                {e.anamneseEditada && e.editadoPor && (
-                  <p className="text-xs text-ink-3 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[16px]" aria-hidden="true">edit_note</span>
-                    Editada por {e.editadoPor.nome}{dataHoraEntrevista(e.editadoPor.em) ? ` em ${dataHoraEntrevista(e.editadoPor.em)}` : ''}.
-                  </p>
-                )}
-
-                <Segmented<Aba>
-                  ariaLabel="Conteúdo da entrevista"
-                  value={aba}
-                  onChange={setAba}
-                  fullWidth
-                  options={[
-                    { value: 'anamnese', label: isDesktop ? 'Anamnese organizada' : 'Anamnese' },
-                    { value: 'transcricao', label: isDesktop ? 'Transcrição íntegra' : 'Transcrição' },
-                  ]}
-                />
-                {aba === 'anamnese' ? (
-                  anamnese
-                    ? <ResultadoAnamnese anamnese={anamnese} finalidade={e.finalidade} mapaFalantes={e.mapaFalantes} onOuvir={temAudio ? ouvir : undefined} />
-                    : <p className="text-sm text-ink-3">A anamnese ainda não foi organizada.</p>
-                ) : (
-                  <ResultadoTranscricao falas={e.transcricao} mapaFalantes={e.mapaFalantes} onOuvir={temAudio ? ouvir : undefined} />
+                <ResultadoTranscricao falas={e.transcricao} mapaFalantes={e.mapaFalantes} onOuvir={onOuvir} />
+                {temAudio && (
+                  <ResultadoAudio url={audioUrl} carregando={audioCarregando} erro={audioErro} onCarregar={carregarAudio} audioRef={audioRef} />
                 )}
               </>
             )}

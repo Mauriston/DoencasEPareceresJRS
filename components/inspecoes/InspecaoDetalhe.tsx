@@ -1,216 +1,296 @@
 // Ficheiro: components/inspecoes/InspecaoDetalhe.tsx
-// Ficha de uma IS em barra lateral (bottom sheet no mobile): situação e prazo, dados da entrevista,
-// estado da sincronização com o Google Agenda, a entrevista gravada (junta), edição do andamento (status, laudo, restrições, TIS,
-// DS-1a, observações) e as ações ligadas à IS: agendar/reagendar, minutas de mensagem, pedido de
-// parecer e (Admin) apagar.
-import React, { useEffect, useState } from 'react';
+// Ficha de uma IS em barra lateral (bottom sheet no mobile). Título "IS nº — finalidade" e só o status.
+//  1. Dados da IS: inspecionado · OM, abertura, data da entrevista e data do laudo.
+//  2. Conclusão da IS (salva sozinha, sem botão): cards da entrevista gravada e dos pareceres pedidos a
+//     partir desta IS, Laudo, Auditoria | JSD, Restrições (caixas de seleção), Nº do TIS, DS-1a e
+//     Observações. O status muda automaticamente (regras puras em utils/conclusaoIS.ts); com o DS-1a
+//     (TIS assinado) ou cancelada, nada é editável até "Reabrir IS" (Admin, menu da tabela).
+// Rodapé: Minuta MSG · Parecer · Gravar Entrevista (cada um só quando cabe). Fecha no X ou fora.
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
+import { Segmented } from '../ui/Segmented';
 import { StatusTag } from '../ui/StatusTag';
-import { SecaoEntrevista } from './entrevista/SecaoEntrevista';
+import { SecaoEntrevista, cardConclusaoClass, pedidoDeGravacao, type PedidoGravacao } from './entrevista/SecaoEntrevista';
+import { ParecerDetalhe } from '../pareceres/ParecerDetalhe';
 import { useNav } from '../../context/NavContext';
-import { podeUsarEntrevista } from '../../config/entrevistas';
 import { atualizarInspecao, type InspecaoRecord } from '../../services/firestoreInspecoes';
+import { marcarConcluido, observarPareceresDaIS, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
 import { carregarRestricoesIS } from '../../utils/corposQuadros';
 import {
-  STATUS_IS, STATUS_ESCOLHIVEIS, situacaoDoStatus, SITUACOES_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataBr, dataHoraBr, duracaoDaIS, horaFimEntrevista, horaDeEntrevista, formatTis, tisValido, prefixoAnoTis, hojeISO,
-  type StatusIS,
+  STATUS_IS, statusEfetivoIS, dataBr, formatTis, tisValido, prefixoAnoTis, hojeISO, dataDeEntrevista,
 } from '../../utils/inspecoes';
+import {
+  conclusaoTravada, encaminhamentoDoStatus, juntarRestricoes, mostraEncaminhamento, mostraRestricoes, patchConclusao, patchEncaminhamento,
+  separarRestricoes, type CampoConclusao, type Encaminhamento, type EstadoConclusao, type ResultadoConclusao,
+} from '../../utils/conclusaoIS';
+
+export interface PermissoesDetalheIS {
+  editar: boolean;
+  minuta: boolean;
+  parecer: boolean;
+  /** Entrevista gravada (Admin e user_medicos). */
+  entrevista: boolean;
+}
 
 interface Props {
   inspecao: InspecaoRecord;
-  permissoes: { editar: boolean; agendar: boolean; minuta: boolean; parecer: boolean; apagar: boolean };
+  /** Sigla da OM do inspecionado. */
+  om?: string;
+  permissoes: PermissoesDetalheIS;
   onClose: () => void;
-  onAgendar: () => void;
-  onMinutaCancelamento: () => void;
-  onMinutaResultado: () => void;
+  onMinuta: () => void;
   onSolicitarParecer: () => void;
-  onSincronizar: () => void;
+  onDuplicarParecer: (p: ParecerRecord) => void;
   /** A situação (Em andamento/Finalizada) mudou: o evento do Google Agenda muda de título e cor. */
   onSituacaoMudou: (is: InspecaoRecord) => void;
-  onApagar: () => void;
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
 }
 
-const Linha: React.FC<{ rotulo: string; children?: React.ReactNode }> = ({ rotulo, children }) => {
-  if (children === undefined || children === null || children === '') return null;
-  return (
-    <div>
-      <dt className="text-xs font-semibold text-ink-3">{rotulo}</dt>
-      <dd className="text-sm text-ink break-words">{children}</dd>
-    </div>
-  );
+/** Minuta MSG: com Nº do TIS e DS-1a, ou IS cancelada. */
+export const mostraMinutaMsg = (is: Pick<InspecaoRecord, 'tis' | 'ds1a' | 'status'>): boolean => (!!is.tis?.trim() && !!is.ds1a?.trim()) || is.status === 'cancelada';
+/** Parecer e Gravar Entrevista: só com a IS Agendada ou Reagendada. */
+export const fasesDeEntrevista = (is: Pick<InspecaoRecord, 'status'>): boolean => is.status === 'agendada' || is.status === 'reagendada';
+
+const Linha: React.FC<{ rotulo: string; children?: React.ReactNode; className?: string }> = ({ rotulo, children, className = '' }) => (
+  <div className={className}>
+    <dt className="text-xs font-semibold text-ink-3">{rotulo}</dt>
+    <dd className="text-sm text-ink break-words">{children || '—'}</dd>
+  </div>
+);
+
+const ATRASO_AUTOSAVE_MS = 1000;
+
+/** Campos da Conclusão sempre como texto (docs antigos podem não ter algum). */
+const comPadroes = (i: InspecaoRecord): EstadoConclusao => ({
+  status: i.status, dataEntrevista: i.dataEntrevista || '', finalidade: i.finalidade || '', grupoFinalidade: i.grupoFinalidade || '',
+  dataLaudo: i.dataLaudo || '', laudo: i.laudo || '', restricoes: i.restricoes || '', tis: i.tis || '', ds1a: i.ds1a || '', observacoes: i.observacoes || '',
+});
+
+/** Campo de texto com gravação automática: ~1 s sem digitar ou ao sair do campo. */
+const useCampoAuto = (remoto: string, salvar: (valor: string) => void) => {
+  const [valor, setValor] = useState(remoto);
+  const editando = useRef(false);
+  const timer = useRef<number | undefined>(undefined);
+  const atual = useRef(valor);
+  const salvarRef = useRef(salvar);
+  salvarRef.current = salvar;
+
+  // Mudança vinda do banco (outro campo apagou este, outro usuário…) só entra fora da digitação.
+  useEffect(() => { if (!editando.current) { setValor(remoto); atual.current = remoto; } }, [remoto]);
+
+  const confirmar = () => {
+    if (timer.current !== undefined) { window.clearTimeout(timer.current); timer.current = undefined; }
+    salvarRef.current(atual.current);
+  };
+  // Fechou o detalhe com gravação pendente: grava.
+  useEffect(() => () => { if (timer.current !== undefined) confirmar(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return {
+    valor,
+    onChange: (v: string) => {
+      editando.current = true;
+      atual.current = v;
+      setValor(v);
+      if (timer.current !== undefined) window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(confirmar, ATRASO_AUTOSAVE_MS);
+    },
+    onBlur: () => { editando.current = false; confirmar(); },
+  };
 };
 
-export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, permissoes, onClose, onAgendar, onMinutaCancelamento, onMinutaResultado, onSolicitarParecer, onSincronizar, onSituacaoMudou, onApagar, onAviso }) => {
+type EstadoGravacao = 'ocioso' | 'salvando' | 'salvo' | 'erro';
+
+export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes, onClose, onMinuta, onSolicitarParecer, onDuplicarParecer, onSituacaoMudou, onAviso }) => {
+  const nav = useNav();
   const efetivo = statusEfetivoIS(is);
   const info = STATUS_IS[efetivo];
-  const finalizada = is.situacao === 'finalizada';
-  const editavel = permissoes.editar && is.status !== 'cancelada';
-  // Entrevista gravada: só Admin e user_medicos (a junta), espelhando firestore.rules.
-  const mostraEntrevista = podeUsarEntrevista(useNav()?.authUser?.perfil);
+  const travado = conclusaoTravada(is.status);
+  const editavel = permissoes.editar && !travado;
 
   const [restricoesOpcoes, setRestricoesOpcoes] = useState<string[]>([]);
-  const [status, setStatus] = useState<StatusIS>(is.status);
-  const [dataLaudo, setDataLaudo] = useState(is.dataLaudo);
-  const [laudo, setLaudo] = useState(is.laudo);
-  const [restricoes, setRestricoes] = useState(is.restricoes);
-  const [tis, setTis] = useState(is.tis);
-  const [ds1a, setDs1a] = useState(is.ds1a);
-  const [observacoes, setObservacoes] = useState(is.observacoes);
-  const [erros, setErros] = useState<Record<string, string>>({});
-  const [salvando, setSalvando] = useState(false);
+  const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
+  const [parecerAbertoId, setParecerAbertoId] = useState<string | null>(null);
+  const [gravacao, setGravacao] = useState<PedidoGravacao>(null);
+  const [estado, setEstado] = useState<EstadoGravacao>('ocioso');
+  const [erroTis, setErroTis] = useState('');
 
   useEffect(() => { carregarRestricoesIS().then(setRestricoesOpcoes).catch(() => setRestricoesOpcoes([])); }, []);
-  // A IS foi reagendada/alterada por outro lugar: reflete o status atual no menu.
-  useEffect(() => { setStatus(is.status); }, [is.status]);
+  useEffect(() => observarPareceresDaIS(is.id, setPareceres, () => setPareceres([])), [is.id]);
 
-  const limpar = (k: string) => setErros(e => (e[k] ? { ...e, [k]: '' } : e));
-  const sujo = status !== is.status || dataLaudo !== is.dataLaudo || laudo !== is.laudo || restricoes !== is.restricoes || tis !== is.tis || ds1a !== is.ds1a || observacoes !== is.observacoes;
+  // Estado mais recente da IS (banco + gravações já disparadas): as regras partem dele.
+  const atualRef = useRef<InspecaoRecord>(is);
+  useEffect(() => { atualRef.current = is; }, [is]);
+  const pareceresRef = useRef(pareceres);
+  pareceresRef.current = pareceres;
+  const fila = useRef<Promise<void>>(Promise.resolve());
 
-  const validar = (): Record<string, string> => {
-    const e: Record<string, string> = {};
-    // Nº antigo, de outro formato, só é cobrado se for alterado.
-    if (tis && tis !== is.tis && !tisValido(tis)) e.tis = `O Nº do TIS tem o formato ${prefixoAnoTis()}.000.N (um ou mais dígitos depois do 2º ponto).`;
-    if (is.dataEntrevista && status === 'aberta') e.status = 'A IS já tem entrevista marcada; use Agendada ou Reagendada.';
-    if (!is.dataEntrevista && (status === 'agendada' || status === 'reagendada')) e.status = 'Para agendar, use o botão Agendar (escolhe perito, data e horário).';
-    if (status === 'tis_assinado' && !tis.trim()) e.tis = 'Informe o Nº do TIS para marcar "TIS assinado".';
-    if (dataLaudo && dataLaudo > hojeISO()) e.dataLaudo = 'A data do laudo não pode ser futura.';
-    return e;
+  /** Grava, em fila, o patch calculado a partir do estado mais recente. */
+  const gravar = (calcular: (atual: InspecaoRecord) => ResultadoConclusao) => {
+    fila.current = fila.current.then(async () => {
+      const atual = atualRef.current;
+      const { patch, concluirPareceres } = calcular(atual);
+      if (Object.keys(patch).length === 0) return;
+      atualRef.current = { ...atual, ...patch };
+      setEstado('salvando');
+      try {
+        await atualizarInspecao(atual.id, patch);
+        setEstado('salvo');
+        if (patch.situacao && patch.situacao !== atual.situacao && atual.dataEntrevista) onSituacaoMudou({ ...atualRef.current });
+        if (concluirPareceres) {
+          const abertos = pareceresRef.current.filter(p => p.status === 'solicitado');
+          await Promise.all(abertos.map(p => marcarConcluido(p.id, true, nav?.authUser?.nome || ''))).catch(() => onAviso('Parecer não marcado como concluído.', 'error'));
+        }
+      } catch (e: any) {
+        atualRef.current = atual;
+        setEstado('erro');
+        onAviso(e?.message || 'Não foi possível salvar.', 'error');
+      }
+    });
+  };
+  const gravarCampo = (campo: CampoConclusao, valor: string) => gravar(atual => patchConclusao(comPadroes(atual), campo, valor, hojeISO()));
+
+  const laudo = useCampoAuto(is.laudo || '', v => gravarCampo('laudo', v));
+  const ds1a = useCampoAuto(is.ds1a || '', v => gravarCampo('ds1a', v));
+  const observacoes = useCampoAuto(is.observacoes || '', v => gravarCampo('observacoes', v));
+  const tis = useCampoAuto(is.tis || '', v => {
+    const t = v.trim();
+    if (t === (atualRef.current.tis || '')) { setErroTis(''); return; }
+    if (t && !tisValido(t)) { setErroTis(`Formato ${prefixoAnoTis()}.000.N`); return; }
+    setErroTis('');
+    gravarCampo('tis', t);
+  });
+
+  const estadoConclusao = comPadroes(is);
+  const comEncaminhamento = mostraEncaminhamento(estadoConclusao);
+  const comRestricoes = mostraRestricoes(estadoConclusao);
+  const restricoesMarcadas = separarRestricoes(is.restricoes || '');
+  const opcoesRestricoes = [...restricoesOpcoes, ...restricoesMarcadas.filter(r => !restricoesOpcoes.includes(r))];
+  const alternarRestricao = (r: string, marcada: boolean) => {
+    const lista = marcada ? [...restricoesMarcadas, r] : restricoesMarcadas.filter(x => x !== r);
+    gravarCampo('restricoes', juntarRestricoes(lista));
   };
 
-  const salvar = async (ev: React.FormEvent) => {
-    ev.preventDefault();
-    const novos = validar();
-    setErros(novos);
-    if (Object.keys(novos).length > 0) return;
-    setSalvando(true);
-    try {
-      await atualizarInspecao(is.id, { status, dataLaudo, laudo: laudo.trim(), restricoes, tis, ds1a: ds1a.trim(), observacoes: observacoes.trim() });
-      onAviso(`IS ${is.is} atualizada.`);
-      if (is.dataEntrevista && situacaoDoStatus(status) !== is.situacao) onSituacaoMudou({ ...is, status, situacao: situacaoDoStatus(status) });
-    } catch (err: any) {
-      setErros({ geral: err?.message || 'Não foi possível salvar.' });
-    } finally {
-      setSalvando(false);
-    }
-  };
+  const parecerAberto = parecerAbertoId ? pareceres.find(p => p.id === parecerAbertoId) ?? null : null;
+  const dataParecer = (p: ParecerRecord) => p.criadoEm?.toDate?.().toLocaleDateString('pt-BR') ?? dataBr(hojeISO());
 
-  const dias = diasEmAberto(is.dataAbertura);
-  const prazo = prazoAtrasoDias(is.grupoFinalidade);
+  const botoes = [
+    permissoes.minuta && mostraMinutaMsg(is) && <Button key="minuta" variant="secondary" icon="mail" onClick={onMinuta}>Minuta MSG</Button>,
+    permissoes.parecer && fasesDeEntrevista(is) && <Button key="parecer" variant="secondary" icon="assignment_add" onClick={onSolicitarParecer}>Parecer</Button>,
+    permissoes.entrevista && fasesDeEntrevista(is) && <Button key="gravar" icon="mic" onClick={() => setGravacao(pedidoDeGravacao())}>Gravar Entrevista</Button>,
+  ].filter(Boolean);
 
   return (
     <Drawer
-      title={`IS ${is.is}`}
+      title={`IS ${is.is}${is.finalidade ? ` — ${is.finalidade}` : ''}`}
       icon="event_available"
       onClose={onClose}
-      footer={(
-        <>
-          <Button variant="secondary" onClick={onClose}>Fechar</Button>
-          {editavel && <Button type="submit" form="form-editar-is" icon="save" loading={salvando} disabled={!sujo}>Salvar alterações</Button>}
-        </>
-      )}
+      footer={botoes.length > 0 ? <div className="flex flex-wrap gap-2 sm:justify-end">{botoes}</div> : undefined}
     >
-      <div className="space-y-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusTag tone={info.tom}>{info.rotulo}</StatusTag>
-          <StatusTag tone="neutral">{SITUACOES_IS.find(s => s.id === info.situacao)?.rotulo}</StatusTag>
-          <StatusTag tone="neutral">{is.amp}</StatusTag>
-        </div>
+      <div className="space-y-6">
+        <StatusTag tone={info.tom}>{info.rotulo}</StatusTag>
 
-        {efetivo === 'atrasada' && (
-          <p role="status" className="bg-wine/10 border border-wine/30 rounded-lg p-3 text-sm text-wine font-semibold">
-            Aberta há {dias} dias sem agendamento (prazo: {prazo} dias{is.grupoFinalidade === 'Benefícios' ? ', finalidade de Benefícios' : ''}). Agende a entrevista ou gere a minuta de cancelamento.
-          </p>
-        )}
-        {is.status === 'aberta' && efetivo !== 'atrasada' && (
-          <p className="text-xs text-ink-3">Aberta há {dias} dia{dias !== 1 ? 's' : ''}; vence em {Math.max(0, prazo - dias + 1)} dia{prazo - dias + 1 !== 1 ? 's' : ''} sem agendamento (prazo de {prazo} dias).</p>
-        )}
-
-        <dl className="space-y-3">
-          <Linha rotulo="Inspecionado">{is.inspecionado}</Linha>
-          <Linha rotulo="Finalidade">{is.finalidade}{is.grupoFinalidade ? ` — ${is.grupoFinalidade}` : ''}</Linha>
-          <Linha rotulo="Data de abertura">{dataBr(is.dataAbertura)}</Linha>
-          <Linha rotulo="Entrevista">{is.dataEntrevista ? `${dataHoraBr(is.dataEntrevista)}${duracaoDaIS(is) > 20 ? ` às ${horaFimEntrevista(horaDeEntrevista(is.dataEntrevista), duracaoDaIS(is))} (${duracaoDaIS(is)} min)` : ''} — ${is.peritoNome}` : is.peritoNome ? `Não agendada — perito: ${is.peritoNome}` : 'Não agendada'}</Linha>
-          {is.dataEntrevista && (
-            <Linha rotulo="Google Agenda (JRS/HNRe)">
-              {is.agendaSincronizada && is.eventoAgendaId ? 'Sincronizado' : is.agendaSincronizada === false ? 'Falha na sincronização' : 'Ainda não sincronizado'}
-              {!is.peritoGmail && ' · perito sem Gmail cadastrado (não é convidado)'}
-              {permissoes.agendar && !(is.agendaSincronizada && is.eventoAgendaId) && (
-                <> · <button type="button" onClick={onSincronizar} className="font-bold text-navy underline min-h-[24px]">Sincronizar agora</button></>
-              )}
-            </Linha>
-          )}
-        </dl>
-
-        <div className="flex flex-wrap gap-2">
-          {permissoes.agendar && !finalizada && <Button icon="event" onClick={onAgendar}>{is.dataEntrevista ? 'Reagendar' : 'Agendar'}</Button>}
-          {permissoes.minuta && efetivo === 'atrasada' && <Button variant="destructive" icon="mail" onClick={onMinutaCancelamento}>Minuta de cancelamento</Button>}
-          {permissoes.minuta && is.status !== 'cancelada' && (is.laudo || is.tis) && <Button variant="secondary" icon="mail" onClick={onMinutaResultado}>Minuta de resultado</Button>}
-          {permissoes.parecer && is.status !== 'cancelada' && <Button variant="secondary" icon="assignment_add" onClick={onSolicitarParecer}>Solicitar parecer</Button>}
-        </div>
-
-        {mostraEntrevista && <SecaoEntrevista is={is} />}
-
-        {editavel ? (
-          <form id="form-editar-is" onSubmit={salvar} noValidate className="space-y-4 border-t border-line pt-4">
-            <h3 className="text-xs font-bold uppercase tracking-wide text-ink-3">Andamento e resultado</h3>
-            {erros.geral && <p role="alert" className="text-sm font-semibold text-wine">{erros.geral}</p>}
-            <Field label="Status" error={erros.status}>
-              {a => (
-                <select {...a} value={status} onChange={e => { setStatus(e.target.value as StatusIS); limpar('status'); }}>
-                  {STATUS_ESCOLHIVEIS.map(s => <option key={s} value={s}>{STATUS_IS[s].rotulo}</option>)}
-                </select>
-              )}
-            </Field>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Data do laudo" error={erros.dataLaudo}>
-                {a => <input {...a} type="date" max={hojeISO()} value={dataLaudo} onChange={e => { setDataLaudo(e.target.value); limpar('dataLaudo'); }} />}
-              </Field>
-              <Field label="Restrições">
-                {a => (
-                  <select {...a} value={restricoes} onChange={e => setRestricoes(e.target.value)}>
-                    <option value="">Selecione…</option>
-                    {restricoes && !restricoesOpcoes.includes(restricoes) && <option value={restricoes}>{restricoes}</option>}
-                    {restricoesOpcoes.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                )}
-              </Field>
-            </div>
-            <Field label="Laudo">
-              {a => <textarea {...a} value={laudo} onChange={e => setLaudo(e.target.value)} className={`${a.className} min-h-[88px]`} />}
-            </Field>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Nº do TIS" error={erros.tis} help={`Formato ${prefixoAnoTis()}.000.N — digite só o final`}>
-                {a => <input {...a} type="text" inputMode="numeric" value={tis} onChange={e => { setTis(formatTis(e.target.value, tis)); limpar('tis'); }} placeholder={`${prefixoAnoTis()}.000.0`} maxLength={14} className={`${a.className} font-mono`} />}
-              </Field>
-              <Field label="DS-1a">
-                {a => <input {...a} type="text" value={ds1a} onChange={e => setDs1a(e.target.value)} autoComplete="off" />}
-              </Field>
-            </div>
-            <Field label="Observações">
-              {a => <textarea {...a} value={observacoes} onChange={e => setObservacoes(e.target.value)} className={`${a.className} min-h-[72px]`} />}
-            </Field>
-          </form>
-        ) : (
-          <dl className="space-y-3 border-t border-line pt-4">
-            <Linha rotulo="Data do laudo">{dataBr(is.dataLaudo)}</Linha>
-            <Linha rotulo="Laudo"><span className="whitespace-pre-line">{is.laudo}</span></Linha>
-            <Linha rotulo="Restrições">{is.restricoes}</Linha>
-            <Linha rotulo="Nº do TIS">{is.tis}</Linha>
-            <Linha rotulo="DS-1a">{is.ds1a}</Linha>
-            <Linha rotulo="Observações"><span className="whitespace-pre-line">{is.observacoes}</span></Linha>
+        <section aria-labelledby={`dados-is-${is.id}`} className="space-y-3">
+          <h3 id={`dados-is-${is.id}`} className="text-xs font-bold uppercase tracking-wide text-ink-3">Dados da IS</h3>
+          <dl className="grid grid-cols-3 gap-x-4 gap-y-3">
+            <Linha rotulo="Inspecionado" className="col-span-3">{is.inspecionado}{om ? ` · ${om}` : ''}</Linha>
+            <Linha rotulo="Abertura IS">{dataBr(is.dataAbertura)}</Linha>
+            <Linha rotulo="Entrevista">{is.dataEntrevista ? dataBr(dataDeEntrevista(is.dataEntrevista)) : ''}</Linha>
+            <Linha rotulo="Laudo">{dataBr(is.dataLaudo)}</Linha>
           </dl>
-        )}
+        </section>
 
-        {permissoes.apagar && (
-          <div className="border-t border-line pt-4">
-            <Button variant="destructive" icon="delete" onClick={onApagar}>Apagar IS</Button>
-            <p className="mt-1 text-xs text-ink-3">Definitivo (só Admin). Para encerrar uma IS atrasada, prefira a minuta de cancelamento.</p>
+        <section aria-labelledby={`conclusao-is-${is.id}`} className="space-y-4 border-t border-line pt-4">
+          <div className="flex items-center justify-between gap-2">
+            <h3 id={`conclusao-is-${is.id}`} className="text-xs font-bold uppercase tracking-wide text-ink-3">Conclusão da IS</h3>
+            <span role="status" className={`text-xs ${estado === 'erro' ? 'font-semibold text-wine' : 'text-ink-3'}`}>
+              {estado === 'salvando' ? 'Salvando…' : estado === 'salvo' ? 'Salvo' : estado === 'erro' ? 'Erro' : ''}
+            </span>
           </div>
-        )}
+
+          <div className="flex flex-wrap gap-2 empty:hidden">
+            {permissoes.entrevista && <SecaoEntrevista is={is} gravacao={gravacao} onGravacao={setGravacao} />}
+            {pareceres.map(p => (
+              <button key={p.id} type="button" onClick={() => setParecerAbertoId(p.id)} className={cardConclusaoClass}>
+                <span className="material-symbols-outlined text-[20px] text-navy shrink-0" aria-hidden="true">assignment</span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold text-navy">Parecer Solicitado</span>
+                  <span className="block text-xs text-ink-3">{dataParecer(p)}{statusEfetivo(p) === 'concluido' ? ' · concluído' : ''}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <Field label="Laudo">
+            {a => <textarea {...a} value={laudo.valor} disabled={!editavel} onChange={e => laudo.onChange(e.target.value)} onBlur={laudo.onBlur} className={`${a.className} min-h-[88px]`} />}
+          </Field>
+
+          {comEncaminhamento && (
+            <fieldset disabled={!editavel || !!is.tis?.trim()} className="disabled:opacity-60">
+              <Segmented<Encaminhamento | ''>
+                ariaLabel="Encaminhamento"
+                value={encaminhamentoDoStatus(is.status) ?? ''}
+                onChange={v => { if (v) gravar(atual => ({ patch: patchEncaminhamento(comPadroes(atual), v), concluirPareceres: false })); }}
+                options={[{ value: 'auditoria', label: 'Auditoria' }, { value: 'jsd', label: 'JSD' }]}
+              />
+            </fieldset>
+          )}
+
+          {comRestricoes && (
+            <fieldset disabled={!editavel}>
+              <legend className="block text-xs font-semibold text-ink-3 mb-1">Restrições</legend>
+              <div className="max-h-56 overflow-y-auto rounded-lg border border-line divide-y divide-line">
+                {opcoesRestricoes.map(r => {
+                  const marcada = restricoesMarcadas.includes(r);
+                  return (
+                    <label key={r} className="flex items-center gap-3 px-3 min-h-[44px] text-sm text-ink cursor-pointer hover:bg-thead has-[:disabled]:cursor-not-allowed">
+                      <input type="checkbox" checked={marcada} onChange={e => alternarRestricao(r, e.target.checked)} className="w-5 h-5 accent-navy shrink-0" />
+                      <span className="break-words">{r}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Nº do TIS" error={erroTis}>
+              {a => (
+                <input
+                  {...a} type="text" inputMode="numeric" value={tis.valor} disabled={!editavel || !is.laudo?.trim()}
+                  onChange={e => { tis.onChange(formatTis(e.target.value, tis.valor)); setErroTis(''); }} onBlur={tis.onBlur}
+                  placeholder={`${prefixoAnoTis()}.000.0`} maxLength={14} className={`${a.className} font-mono`}
+                />
+              )}
+            </Field>
+            <Field label="DS-1a">
+              {a => <input {...a} type="text" value={ds1a.valor} disabled={!editavel || !is.tis?.trim()} onChange={e => ds1a.onChange(e.target.value)} onBlur={ds1a.onBlur} autoComplete="off" />}
+            </Field>
+          </div>
+
+          <Field label="Observações">
+            {a => <textarea {...a} value={observacoes.valor} disabled={!editavel} onChange={e => observacoes.onChange(e.target.value)} onBlur={observacoes.onBlur} className={`${a.className} min-h-[72px]`} />}
+          </Field>
+        </section>
       </div>
+
+      {parecerAberto && createPortal(
+        <ParecerDetalhe
+          parecer={parecerAberto}
+          podeGerar={permissoes.parecer}
+          onClose={() => setParecerAbertoId(null)}
+          onAbrirPdf={() => { window.open(parecerAberto.pdfUrl, '_blank', 'noopener,noreferrer'); }}
+          onConcluir={concluido => {
+            marcarConcluido(parecerAberto.id, concluido, concluido ? nav?.authUser?.nome || '' : '')
+              .then(() => onAviso(concluido ? 'Parecer concluído.' : 'Parecer reaberto.'))
+              .catch((e: any) => onAviso(e?.message || 'Não foi possível alterar o parecer.', 'error'));
+          }}
+          onDuplicar={() => { setParecerAbertoId(null); onDuplicarParecer(parecerAberto); }}
+        />,
+        document.body,
+      )}
     </Drawer>
   );
 };
