@@ -71,7 +71,7 @@ const FabMenu: React.FC<{ acoes: AcaoRodape[] }> = ({ acoes }) => {
   }, [aberto]);
 
   const navegar = (e: React.KeyboardEvent) => {
-    const itens = Array.from(menu.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? []);
+    const itens: HTMLButtonElement[] = menu.current ? Array.from(menu.current.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')) : [];
     if (!itens.length) return;
     const i = itens.indexOf(document.activeElement as HTMLButtonElement);
     const ir = (n: number) => { e.preventDefault(); itens[(n + itens.length) % itens.length].focus(); };
@@ -103,7 +103,7 @@ const FabMenu: React.FC<{ acoes: AcaoRodape[] }> = ({ acoes }) => {
                 aria-busy={a.loading || undefined}
                 onClick={() => escolher(a)}
                 style={{ animationDelay: `${(acoes.length - 1 - i) * 30}ms` }}
-                className={`fab-item-in inline-flex items-center gap-2 h-14 max-w-[calc(100vw-2rem)] pl-4 pr-5 rounded-full shadow-lg text-sm font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${FOCO} ${COR_FAB[a.variante ?? 'secondary']}`}
+                className={`fab-item-in inline-flex items-center gap-2 h-14 max-w-[calc(100vw-2rem)] pl-4 pr-5 rounded-full shadow-lg text-sm font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${FOCO} ${COR_FAB[a.variante ?? 'primary']}`}
               >
                 <Icone acao={a} />
                 <span className="truncate">{a.rotulo}</span>

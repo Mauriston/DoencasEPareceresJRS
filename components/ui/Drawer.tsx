@@ -13,9 +13,11 @@ interface DrawerProps {
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** Conteúdo extra na barra do topo, logo após o título (ex.: chip de status). */
+  tituloExtra?: React.ReactNode;
 }
 
-export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, footer }) => {
+export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, footer, tituloExtra }) => {
   const isDesktop = useIsDesktop();
   const titleId = useId();
   const painel = useRef<HTMLDivElement>(null);
@@ -46,14 +48,15 @@ export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, 
         <div className="px-5 py-3 bg-white border-b border-line flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             {icon && <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">{icon}</span>}
-            <h2 id={titleId} className="font-heading font-extrabold text-h2 text-navy truncate">{title}</h2>
+            <h2 id={titleId} className="font-heading font-extrabold text-h2 text-navy truncate min-w-0">{title}</h2>
+            {tituloExtra && <div className="shrink-0 flex items-center">{tituloExtra}</div>}
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0 w-11 h-11 -mr-2 flex items-center justify-center rounded-lg text-ink-3 hover:text-navy hover:bg-thead transition-colors">
             <span className="material-symbols-outlined text-[24px]" aria-hidden="true">close</span>
           </button>
         </div>
-        <div className="p-5 overflow-y-auto flex-1 text-sm text-ink">{children}</div>
-        {footer && <div className="px-5 py-3 border-t border-line flex flex-col-reverse sm:flex-row sm:justify-end gap-2 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{footer}</div>}
+        <div data-sheet-corpo="" className="p-5 overflow-y-auto flex-1 text-sm text-ink">{children}</div>
+        {footer && <div data-sheet-rodape="" className="px-5 py-3 border-t border-line flex flex-col-reverse sm:flex-row sm:justify-end gap-2 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{footer}</div>}
       </SheetArrastavel>
     </div>
   );

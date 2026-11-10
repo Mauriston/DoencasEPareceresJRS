@@ -15,6 +15,8 @@ export const MEDICO = { uid: 'e2e-med', usuario: 'CT TESTE MEDICO', nome: 'TESTE
 // Registros semeados das telas de Inspeções, Pareceres e Perícia Menor. Dados fictícios.
 export const INSPECIONADO = { nip: '44444444', texto: '1T (IM) 44.4444.44 PACIENTE DE TESTE', nome: 'PACIENTE DE TESTE' };
 export const IS_E2E = { numero: 9001, finalidade: 'Controle Trienal' };
+// IS já agendada (Em andamento) para hoje às 08:00: aparece no calendário (rich tooltip) e nos filtros de situação.
+export const IS_AGENDADA_E2E = { numero: 9002, finalidade: 'Verificação de Término de Restrições' };
 export const PARECER_E2E = { id: 'parecer-e2e', especialidade: 'Ortopedia' };
 export const PERICIA_E2E = { id: 'pericia-e2e', cid: 'M54.5 - Dor lombar baixa' };
 
@@ -58,6 +60,12 @@ export const semearTelas = async () => {
     is: IS_E2E.numero, dataAbertura: HOJE, dataEntrevista: '', finalidade: IS_E2E.finalidade, grupoFinalidade: 'Verificações e Términos', amp: 'JRS',
     peritoUid: '', peritoNome: '', peritoGmail: '', inspecionadoId: INSPECIONADO.nip, inspecionado: INSPECIONADO.texto,
     situacao: 'aberta', status: 'aberta', dataLaudo: '', laudo: '', observacoes: '', restricoes: '', tis: '', ds1a: '',
+    criadoPor: MEDICO.usuario, criadoEm: agora,
+  });
+  await db.doc(`inspecoes/${IS_AGENDADA_E2E.numero}`).set({
+    is: IS_AGENDADA_E2E.numero, dataAbertura: HOJE, dataEntrevista: `${HOJE}T08:00`, finalidade: IS_AGENDADA_E2E.finalidade, grupoFinalidade: 'Verificações e Términos', amp: 'JRS',
+    peritoUid: MEDICO.uid, peritoNome: MEDICO.usuario, peritoGmail: '', inspecionadoId: INSPECIONADO.nip, inspecionado: '1T (IM) 55.5555.55 AGENDADO DE TESTE',
+    situacao: 'andamento', status: 'agendada', dataLaudo: '', laudo: '', observacoes: '', restricoes: '', tis: '', ds1a: '',
     criadoPor: MEDICO.usuario, criadoEm: agora,
   });
   await db.doc(`pareceres/${PARECER_E2E.id}`).set({

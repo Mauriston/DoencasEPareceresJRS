@@ -9,6 +9,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
+import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
@@ -113,8 +114,8 @@ export const DepPensCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs }
         onClose={onClose}
         footer={(
           <>
-            <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" form="form-novo-deppens" icon="save" loading={salvando} disabled={!dados || !subtipo}>Cadastrar</Button>
+            <Button variant="secondary" className="max-md:hidden" onClick={onClose}>Cancelar</Button>
+            <AcoesRodape acoes={[{ id: 'salvar', rotulo: 'Cadastrar', icone: 'save', onClick: () => submeterFormulario('form-novo-deppens'), loading: salvando, disabled: !dados || !subtipo }]} />
           </>
         )}
       >

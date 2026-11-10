@@ -8,6 +8,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
+import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { carregarFinalidadesIS, filtrarFinalidadesPorVinculo, type GrupoFinalidadeIS, type VinculoFinalidade } from '../../utils/corposQuadros';
@@ -155,8 +156,8 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, vinculoIS, 
         onClose={() => { if (!gerando) onClose(); }}
         footer={(
           <>
-            <Button variant="secondary" onClick={onClose} disabled={gerando}>Cancelar</Button>
-            <Button type="submit" form="form-novo-parecer" icon="picture_as_pdf" loading={gerando}>Gerar pedido</Button>
+            <Button variant="secondary" className="max-md:hidden" onClick={onClose} disabled={gerando}>Cancelar</Button>
+            <AcoesRodape acoes={[{ id: 'salvar', rotulo: 'Gerar pedido', icone: 'picture_as_pdf', onClick: () => submeterFormulario('form-novo-parecer'), loading: gerando }]} />
           </>
         )}
       >

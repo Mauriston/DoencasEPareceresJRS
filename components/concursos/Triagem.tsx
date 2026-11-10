@@ -10,6 +10,7 @@ import React, { useMemo, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
+import { AcoesRodape } from '../ui/AcoesRodape';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { parseTimestamp } from '../../utils/dados';
 import {
@@ -192,8 +193,8 @@ export const TriagemFormulario: React.FC<FormProps> = ({ candidatoNome, inicial,
 
   const rodape = (
     <>
-      <Button variant="secondary" onClick={onClose} disabled={salvando}>Cancelar</Button>
-      <Button icon="save" loading={salvando} onClick={salvar}>Salvar triagem</Button>
+      <Button variant="secondary" className="max-md:hidden" onClick={onClose} disabled={salvando}>Cancelar</Button>
+      <AcoesRodape acoes={[{ id: 'salvar', rotulo: 'Salvar triagem', icone: 'save', onClick: salvar, loading: salvando }]} />
     </>
   );
   const titulo = inicial ? 'Editar triagem' : 'Triagem';

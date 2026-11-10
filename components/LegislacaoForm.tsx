@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { Drawer } from './ui/Drawer';
 import { Button } from './ui/Button';
+import { AcoesRodape } from './ui/AcoesRodape';
 import { Field } from './ui/Field';
 import { criarLegislacao, IMAGEM_PADRAO_LEGISLACAO } from '../services/firestoreLegislacao';
 
@@ -47,8 +48,8 @@ export const LegislacaoForm: React.FC<Props> = ({ proximaOrdem, onClose, onCriad
       onClose={onClose}
       footer={(
         <>
-          <Button variant="secondary" onClick={onClose} disabled={salvando}>Cancelar</Button>
-          <Button icon="save" onClick={salvar} loading={salvando} disabled={!valido}>Salvar</Button>
+          <Button variant="secondary" className="max-md:hidden" onClick={onClose} disabled={salvando}>Cancelar</Button>
+          <AcoesRodape acoes={[{ id: 'salvar', rotulo: 'Salvar', icone: 'save', onClick: salvar, loading: salvando, disabled: !valido }]} />
         </>
       )}
     >

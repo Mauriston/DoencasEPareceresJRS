@@ -1,43 +1,49 @@
 // Ficheiro: components/inspecoes/MinutaDialog.tsx
-// Minuta de mensagem editável: mostra o rascunho, permite ajustar e copiar. Com `confirmar`, o botão
-// principal copia o texto e executa a ação (ex.: cancelar a IS atrasada). Avisa quando ainda há campos
-// "[preencher: …]" (dados que a IS não tem, ex.: código DS-1A) antes de copiar.
+// Minuta de mensagem em campos editáveis (PARA, INFO, Assunto, Texto), cada um com botão de copiar.
+// Formato retrato, alto, com rolagem interna. Fecha pelo X, Esc ou clique fora. Com `confirmar`, o rodapé
+// traz a ação principal, que copia a minuta inteira e executa a ação (ex.: cancelar a IS atrasada).
+// Aceita a minuta em campos (`campos`) ou como texto único (`textoInicial`, separado pelos cabeçalhos).
 import React, { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
-import { controlClass } from '../ui/Field';
-import { contarPreencher } from '../../utils/minutaMensagemResultado';
+import { CampoCopiavel, copiarTexto } from './CampoCopiavel';
+import { contarPreencher, juntarMinuta, separarMinuta, type MinutaCampos } from '../../utils/minutaMensagemResultado';
 
 interface Props {
   titulo: string;
-  textoInicial: string;
-  /** Ação principal que depende da minuta (recebe o texto final). */
+  /** Minuta em campos (preferível). */
+  campos?: MinutaCampos;
+  /** Minuta como texto único; usado quando `campos` não vem. */
+  textoInicial?: string;
+  /** Ação principal que depende da minuta (recebe o texto completo). */
   confirmar?: { rotulo: string; icone: string; destrutiva?: boolean; aviso?: string; onConfirmar: (texto: string) => Promise<void> };
   onClose: () => void;
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
 }
 
-const copiar = async (texto: string): Promise<boolean> => {
-  try { await navigator.clipboard.writeText(texto); return true; } catch { return false; }
-};
+type Chave = 'de' | 'para' | 'info' | 'assunto';
+const CABECALHOS: { chave: Chave; rotulo: string }[] = [
+  { chave: 'de', rotulo: 'DE:' },
+  { chave: 'para', rotulo: 'PARA:' },
+  { chave: 'info', rotulo: 'INFO:' },
+  { chave: 'assunto', rotulo: 'Assunto:' },
+];
 
-export const MinutaDialog: React.FC<Props> = ({ titulo, textoInicial, confirmar, onClose, onAviso }) => {
-  const [texto, setTexto] = useState(textoInicial);
+export const MinutaDialog: React.FC<Props> = ({ titulo, campos: camposIniciais, textoInicial = '', confirmar, onClose, onAviso }) => {
+  const [campos, setCampos] = useState<MinutaCampos>(() => camposIniciais ?? separarMinuta(textoInicial));
   const [executando, setExecutando] = useState(false);
   const [erro, setErro] = useState('');
-  const pendentes = contarPreencher(texto);
-
-  const soCopiar = async () => {
-    const ok = await copiar(texto);
-    onAviso(ok ? 'Minuta copiada.' : 'Não foi possível copiar; selecione o texto e copie manualmente.', ok ? 'success' : 'error');
-  };
+  const textoCompleto = juntarMinuta(campos);
+  const pendentes = contarPreencher(textoCompleto);
+  const set = (k: keyof MinutaCampos) => (v: string) => setCampos(c => ({ ...c, [k]: v }));
+  const erroCopiar = () => onAviso('Não foi possível copiar; selecione o texto e copie manualmente.', 'error');
 
   const executar = async () => {
     if (!confirmar) return;
     setExecutando(true); setErro('');
-    const copiou = await copiar(texto);
+    const copiou = await copiarTexto(textoCompleto);
     try {
-      await confirmar.onConfirmar(texto);
+      await confirmar.onConfirmar(textoCompleto);
       onAviso(copiou ? 'Minuta copiada e ação concluída.' : 'Ação concluída; copie a minuta manualmente.', copiou ? 'success' : 'error');
     } catch (e: any) {
       setErro(e?.message || 'Não foi possível concluir a ação.');
@@ -49,22 +55,20 @@ export const MinutaDialog: React.FC<Props> = ({ titulo, textoInicial, confirmar,
     <Dialog
       title={titulo}
       icon="mail"
-      size="lg"
+      size="md"
       onClose={onClose}
-      footer={(
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={executando}>Fechar</Button>
-          <Button variant="secondary" icon="content_copy" onClick={soCopiar} disabled={executando}>Copiar minuta</Button>
-          {confirmar && <Button variant={confirmar.destrutiva ? 'destructive' : 'primary'} icon={confirmar.icone} loading={executando} onClick={executar}>{confirmar.rotulo}</Button>}
-        </>
-      )}
+      footer={confirmar ? (
+        <Button variant={confirmar.destrutiva ? 'destructive' : 'primary'} icon={confirmar.icone} loading={executando} onClick={executar}>{confirmar.rotulo}</Button>
+      ) : undefined}
     >
-      <div className="space-y-3">
+      <div className={`flex flex-col gap-3 min-h-[420px] ${confirmar ? 'h-[calc(90vh-11rem)]' : 'h-[calc(90vh-7.5rem)]'}`}>
         {confirmar?.aviso && <p className="text-ink-3">{confirmar.aviso}</p>}
-        {pendentes > 0 && <p className="text-sm font-semibold text-wine">{pendentes === 1 ? 'Há 1 campo marcado' : `Há ${pendentes} campos marcados`} “[preencher: …]” — complete antes de enviar.</p>}
+        {pendentes > 0 && <p className="text-xs font-semibold text-wine">{pendentes === 1 ? '1 campo' : `${pendentes} campos`} “[preencher]” a completar.</p>}
         {erro && <p role="alert" className="text-sm font-semibold text-wine">{erro}</p>}
-        <label htmlFor="texto-minuta" className="block text-xs font-semibold text-ink-3">Texto da minuta (editável)</label>
-        <textarea id="texto-minuta" value={texto} onChange={e => setTexto(e.target.value)} className={`${controlClass} min-h-[280px] font-mono text-xs leading-relaxed`} />
+        {CABECALHOS.filter(h => campos[h.chave] !== undefined).map(h => (
+          <CampoCopiavel key={h.chave} rotulo={h.rotulo} valor={campos[h.chave] ?? ''} onChange={set(h.chave)} onErroCopiar={erroCopiar} />
+        ))}
+        <CampoCopiavel rotulo="Texto:" valor={campos.texto} onChange={set('texto')} multilinha onErroCopiar={erroCopiar} />
       </div>
     </Dialog>
   );

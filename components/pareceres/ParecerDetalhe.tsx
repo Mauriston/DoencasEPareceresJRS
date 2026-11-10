@@ -5,6 +5,7 @@
 import React from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
+import { AcoesRodape } from '../ui/AcoesRodape';
 import { StatusTag, type StatusTone } from '../ui/StatusTag';
 import { extrairNomeInspecionado } from '../../utils/format';
 import { statusEfetivo, type ParecerRecord, type StatusParecer } from '../../services/firestorePareceres';
@@ -44,12 +45,12 @@ export const ParecerDetalhe: React.FC<Props> = ({ parecer: p, podeGerar, onClose
       icon="assignment"
       onClose={onClose}
       footer={podeGerar ? (
-        <>
-          <Button variant="secondary" icon="content_copy" onClick={onDuplicar}>Duplicar</Button>
-          {status === 'concluido'
-            ? <Button variant="secondary" icon="undo" onClick={() => onConcluir(false)}>Reabrir</Button>
-            : <Button icon="task_alt" onClick={() => onConcluir(true)}>Marcar como concluído</Button>}
-        </>
+        <AcoesRodape acoes={[
+          { id: 'duplicar', rotulo: 'Duplicar', icone: 'content_copy', onClick: onDuplicar, variante: 'secondary' },
+          status === 'concluido'
+            ? { id: 'reabrir', rotulo: 'Reabrir', icone: 'undo', onClick: () => onConcluir(false), variante: 'secondary' }
+            : { id: 'concluir', rotulo: 'Marcar como concluído', icone: 'task_alt', onClick: () => onConcluir(true) },
+        ]} />
       ) : <Button variant="secondary" onClick={onClose}>Fechar</Button>}
     >
       <div className="space-y-5">

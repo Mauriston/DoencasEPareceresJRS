@@ -9,6 +9,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { SheetArrastavel } from '../ui/SheetArrastavel';
+import { AcoesRodape } from '../ui/AcoesRodape';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
 import {
@@ -271,8 +272,11 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
               </button>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto p-5 pb-8">{corpo}</div>
-          <div className="px-5 py-3 border-t border-line flex flex-col-reverse gap-2 shrink-0 bg-white">{acoes}</div>
+          <div data-sheet-corpo="" className="flex-1 overflow-y-auto p-5 pb-8">{corpo}</div>
+          {/* Mobile: só a ação principal, como FAB ("Cancelar"/"Concluir" = fechar no X ou arrastando). */}
+          {etapa !== 'concluido' && (
+            <AcoesRodape acoes={[{ id: 'enviar', rotulo: travado ? 'Enviando...' : 'Enviar e transcrever', icone: 'upload_file', onClick: handleEnviar, loading: travado, disabled: !file || !destino }]} />
+          )}
         </SheetArrastavel>
       </div>
     );
