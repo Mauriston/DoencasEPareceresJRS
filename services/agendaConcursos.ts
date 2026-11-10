@@ -1,7 +1,7 @@
 // Ficheiro: services/agendaConcursos.ts
 // Dias de concurso na agenda das Inspeções de Saúde. Cada dia em que há candidatos agendados de um concurso
-// "Em andamento" ou "Em breve" vira UM evento que ocupa o turno da manhã inteiro (07:30–12:00) e bloqueia os
-// horários do turno para todos os peritos. No app, o cartão é vermelho (verde quando o dia é encerrado) e leva à
+// "Em andamento" ou "Em breve" vira UM evento que ocupa a manhã de 07:30 às 10:50 e bloqueia esses horários
+// para todos os peritos; os 3 últimos slots da manhã (10:50–12:00) ficam livres para as demais IS. No app, o cartão é vermelho (verde quando o dia é encerrado) e leva à
 // tabela do concurso; no Google Agenda "JRS/HNRe" o evento tem o mesmo padrão (ver CodeConcursos.gs, ação
 // "sincronizarEventosConcursos"): descrição com os nomes dos candidatos do dia ("- NOME"), todos os usuários ativos do appweb
 // convidados pelo Gmail (com convite por e-mail) e notificação 12 h antes.
@@ -11,7 +11,7 @@ import { observarConcursos, observarCandidatos, type CandidatoRecord } from './f
 import { chamarGoogle } from './googleServidor';
 import { listUsuarios } from './firestoreUsuarios';
 import { NOME_AGENDA_GOOGLE } from './agendaGoogleIS';
-import type { BloqueioAgenda } from '../utils/inspecoes';
+import { fimDoDiaDeConcurso, type BloqueioAgenda } from '../utils/inspecoes';
 
 export interface DiaConcurso {
   /** "{concursoId}|{AAAA-MM-DD}" — chave única do dia (a mesma usada na tag do evento do Google Agenda). */
@@ -74,9 +74,11 @@ export const observarDiasConcursos = (onData: (dias: DiaConcurso[], concursosAti
   return () => { parar(); assinaturas.forEach(c => c()); assinaturas.clear(); };
 };
 
-/** Dias de concurso como bloqueios da agenda: o turno da manhã inteiro, para todos os peritos. */
-export const bloqueiosDeConcursos = (dias: DiaConcurso[]): BloqueioAgenda[] =>
-  dias.map(d => ({ id: `concurso-${d.chave}`, data: d.data, turno: 'manha', peritoUid: '*', motivo: tituloDiaConcurso(d) }));
+/** Dias de concurso como bloqueios da agenda: a manhã até 10:50 (os 3 últimos slots ficam livres), para todos os peritos. */
+export const bloqueiosDeConcursos = (dias: DiaConcurso[]): BloqueioAgenda[] => {
+  const horaFim = fimDoDiaDeConcurso();
+  return dias.map(d => ({ id: `concurso-${d.chave}`, data: d.data, turno: 'manha', horaFim, peritoUid: '*', motivo: tituloDiaConcurso(d) }));
+};
 
 export const ehBloqueioDeConcurso = (b: Pick<BloqueioAgenda, 'id'>): boolean => b.id.startsWith('concurso-');
 

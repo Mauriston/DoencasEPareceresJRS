@@ -3,7 +3,7 @@
 // JRS), no lugar do CalendarApp do Apps Script. Mesmas regras:
 //  - entrevista de IS: evento com o perito convidado, amarelo (verde quando finalizada), lembrete 12 h antes;
 //  - bloqueio de período: evento de dia inteiro, cinza;
-//  - dias de concurso: um evento por dia (07:30–12:00), todos os usuários ativos convidados, vermelho
+//  - dias de concurso: um evento por dia (07:30–10:50; os 3 últimos slots da manhã ficam livres), todos os usuários ativos convidados, vermelho
 //    (verde quando encerrado), marcado com a chave "{concursoId}|{data}" — sincronização idempotente.
 // Os ids gravados pelo Apps Script ("abc@google.com") continuam valendo: o sufixo é removido.
 import type { Firestore } from 'firebase-admin/firestore';
@@ -132,7 +132,7 @@ const sincronizarConcursos = async (db: Firestore, b: any) => {
     const data = dataValida(d.data);
     const ev = {
       summary: String(d.titulo), description: String(d.descricao || ''),
-      start: quando(data, '07:30'), end: quando(data, '12:00'),
+      start: quando(data, '07:30'), end: quando(data, '10:50'), // = fimDoDiaDeConcurso() (utils/inspecoes.ts)
       attendees: convidadosDoEvento(convidados, existentes.get(chave)?.attendees),
       colorId: d.encerrado ? COR.verde : COR.vermelho, reminders: LEMBRETE_12H,
       extendedProperties: { shared: { jrsConcurso: chave, jrsConcursoId: String(d.concursoId) } },
