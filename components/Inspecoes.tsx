@@ -46,6 +46,7 @@ import { concursoPath } from '../config/routes';
 import { carregarPeritos, type PeritoIS } from '../services/peritosIS';
 import { sincronizarAgendaIS, removerEventoAgendaIS } from '../services/agendaGoogleIS';
 import { minutaCancelamento, minutaResultadoDaIS } from '../utils/minutasIS';
+import { postoDoInspecionado, sugerirDestinatariosIA } from '../services/destinatariosIA';
 import { normalizarBusca } from '../utils/corposQuadros';
 import {
   STATUS_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataHoraBr, hojeISO,
@@ -462,6 +463,16 @@ export const Inspecoes: React.FC = () => {
         <MinutaDialog
           titulo={`Minuta MSG — IS ${minuta.is}`}
           textoInicial={minutaResultadoDaIS(minuta, { om: omDe(minuta), vinculo: vinculoDe(minuta) })}
+          sugerirDestinatarios={async () => {
+            const s = await sugerirDestinatariosIA({
+              finalidade: minuta.finalidade, grupoFinalidade: minuta.grupoFinalidade, vinculo: vinculoDe(minuta),
+              posto: postoDoInspecionado(minuta.inspecionado), laudo: minuta.laudo || '',
+            });
+            return s && {
+              para: s.para, info: s.info,
+              origem: `Linha: ${s.finalidadeIS} › ${s.situacaoInspecionado} › ${s.laudo}.${s.justificativa ? ` ${s.justificativa}` : ''}`,
+            };
+          }}
           onClose={() => setMinuta(null)} onAviso={avisar}
         />
       ))}
