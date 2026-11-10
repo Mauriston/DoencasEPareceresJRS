@@ -49,6 +49,16 @@ const reqEnt = (nome, perfil, method, esperado) => ({ nome, tc: {
   request: { auth: { uid: 'u1' }, path: `${DB}/${ENT}`, method },
   resource: { data: entPronta }, functionMocks: mocks(perfil),
 } });
+// Exames da IS (inspecoes/{id}/exames/{eid}): a equipe envia e apaga enquanto a IS não está finalizada.
+const EXA = 'inspecoes/9001/exames/x1';
+const exaNovo = { caminho: 'inspecoes/9001/exames/x1.pdf', nomeArquivo: 'rm.pdf', itens: [], enviadoPor: { uid: 'u1', usuario: 'ct' } };
+const mocksExa = (perfil, situacao) => [...mocks(perfil), { function: 'get', args: [{ exactValue: `${DB}/inspecoes/9001` }], result: { value: { data: { situacao } } } }];
+const exa = (nome, perfil, method, situacao, esperado, patch = {}) => ({ nome, tc: {
+  expectation: esperado,
+  request: { auth: { uid: 'u1' }, path: `${DB}/${EXA}`, method, ...(method === 'create' ? { resource: { data: { ...exaNovo, ...patch } } } : {}) },
+  ...(method === 'create' ? {} : { resource: { data: exaNovo } }),
+  functionMocks: mocksExa(perfil, situacao),
+} });
 const casos = [
   upd('MPI grava triagem', 'user_medicos_mpi', { triagem: { altura: '1,75' } }, 'ALLOW'),
   upd('Médico JRS grava triagem', 'user_medicos', { triagem: { altura: '1,75' } }, 'DENY'),
@@ -131,6 +141,16 @@ const casos = [
   reqEnt('Médico Geral lê entrevista', 'user_medicos_geral', 'get', 'DENY'),
   reqEnt('Médico apaga entrevista', 'user_medicos', 'delete', 'DENY'),
   reqEnt('Admin apaga entrevista', 'admin', 'delete', 'ALLOW'),
+  exa('Secretaria envia exame (IS em andamento)', 'user_secretaria', 'create', 'andamento', 'ALLOW'),
+  exa('MPI envia exame (IS aberta)', 'user_medicos_mpi', 'create', 'aberta', 'ALLOW'),
+  exa('Médico envia exame em IS finalizada', 'user_medicos', 'create', 'finalizada', 'DENY'),
+  exa('Médico Geral envia exame', 'user_medicos_geral', 'create', 'andamento', 'DENY'),
+  exa('Exame em nome de outro usuário', 'user_medicos', 'create', 'andamento', 'DENY', { enviadoPor: { uid: 'u2', usuario: 'x' } }),
+  exa('Exame com caminho de outra IS', 'user_medicos', 'create', 'andamento', 'DENY', { caminho: 'inspecoes/9002/exames/x1.pdf' }),
+  exa('Médico apaga exame (IS em andamento)', 'user_medicos', 'delete', 'andamento', 'ALLOW'),
+  exa('Apagar exame de IS finalizada', 'admin', 'delete', 'finalizada', 'DENY'),
+  exa('Médico Geral lê exame', 'user_medicos_geral', 'get', 'andamento', 'DENY'),
+  exa('Alterar exame', 'admin', 'update', 'andamento', 'DENY', {}),
 ];
 (async () => {
   const c = await new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] }).getClient();

@@ -10,7 +10,9 @@
 //     automaticamente (regras puras em utils/conclusaoIS.ts).
 // Não editável (DS-1a/TIS assinado ou cancelada — até "Reabrir IS", Admin — ou sem permissão): os dados
 // numa tabela vertical (rótulo | valor) e, abaixo, os cards da entrevista gravada e dos pareceres.
-// Rodapé (AcoesRodape: linha no desktop, FAB no mobile): Minuta MSG · Parecer · Gravar Entrevista (cada um
+// Exames: PDFs enviados pelo rodapé ("Exames", até a IS ser finalizada); a IA identifica o documento e o
+// laudo fica na íntegra para copiar (exames/ExamesDaIS).
+// Rodapé (AcoesRodape: linha no desktop, FAB no mobile): Minuta MSG · Parecer · Exames · Gravar Entrevista (cada um
 // só quando cabe). Fecha no X ou fora.
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -24,6 +26,8 @@ import { SecaoEntrevista, cardConclusaoClass, pedidoDeGravacao, type PedidoGrava
 import { ParecerDetalhe } from '../pareceres/ParecerDetalhe';
 import { CampoFinalidadeIS, useFinalidadesIS } from './InspecaoForm';
 import { useNav } from '../../context/NavContext';
+import { ExamesDaIS } from './exames/ExamesDaIS';
+import { EnviarExamesISDialog } from './exames/EnviarExamesISDialog';
 import { atualizarInspecao, type InspecaoDoc, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { marcarConcluido, observarPareceresDaIS, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
 import { carregarRestricoesIS } from '../../utils/corposQuadros';
@@ -42,6 +46,8 @@ export interface PermissoesDetalheIS {
   parecer: boolean;
   /** Entrevista gravada (Admin e user_medicos). */
   entrevista: boolean;
+  /** Enviar exames em PDF (inspecoes.enviarExames); ver/copiar os laudos é de quem abre a IS. */
+  exames: boolean;
 }
 
 interface Props {
@@ -132,6 +138,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
 
   const [restricoesOpcoes, setRestricoesOpcoes] = useState<string[]>([]);
   const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
+  const [enviandoExames, setEnviandoExames] = useState(false);
   const [parecerAbertoId, setParecerAbertoId] = useState<string | null>(null);
   const [gravacao, setGravacao] = useState<PedidoGravacao>(null);
   const [estado, setEstado] = useState<EstadoGravacao>('ocioso');
@@ -212,9 +219,13 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const parecerAberto = parecerAbertoId ? pareceres.find(p => p.id === parecerAbertoId) ?? null : null;
   const dataParecer = (p: ParecerRecord) => p.criadoEm?.toDate?.().toLocaleDateString('pt-BR') ?? dataBr(hojeISO());
 
+  // Exames: envio (e remoção) só enquanto a IS não está finalizada.
+  const isAtiva = is.situacao !== 'finalizada';
+  const podeEnviarExames = permissoes.exames && isAtiva && !!nav?.authUser;
   const acoes: AcaoRodape[] = [
     ...(permissoes.minuta && mostraMinutaMsg(is) ? [{ id: 'minuta', rotulo: 'Minuta MSG', icone: 'mail', variante: 'secondary' as const, onClick: onMinuta }] : []),
     ...(permissoes.parecer && fasesDeEntrevista(is) ? [{ id: 'parecer', rotulo: 'Parecer', icone: 'assignment_add', variante: 'secondary' as const, onClick: onSolicitarParecer }] : []),
+    ...(podeEnviarExames ? [{ id: 'exames', rotulo: 'Exames', icone: 'upload_file', variante: 'secondary' as const, onClick: () => setEnviandoExames(true) }] : []),
     ...(permissoes.entrevista && fasesDeEntrevista(is) ? [{ id: 'gravar', rotulo: 'Gravar Entrevista', icone: 'mic', variante: 'primary' as const, onClick: () => setGravacao(pedidoDeGravacao()) }] : []),
   ];
 
@@ -230,6 +241,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   );
 
   const cards = (
+    <>
     <div className="flex flex-wrap gap-2 empty:hidden">
       {permissoes.entrevista && <SecaoEntrevista is={is} gravacao={gravacao} onGravacao={setGravacao} />}
       {pareceres.map(p => (
@@ -242,6 +254,8 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
         </button>
       ))}
     </div>
+    <ExamesDaIS isId={is.id} podeApagar={podeEnviarExames} onAviso={onAviso} />
+    </>
   );
 
   return (
@@ -385,6 +399,11 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
           )}
         </section>
       </div>
+      )}
+
+      {enviandoExames && nav?.authUser && createPortal(
+        <EnviarExamesISDialog isId={is.id} usuario={{ uid: nav.authUser.uid, usuario: nav.authUser.usuario }} onClose={() => setEnviandoExames(false)} />,
+        document.body,
       )}
 
       {parecerAberto && createPortal(

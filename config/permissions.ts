@@ -94,6 +94,7 @@ export type FeatureKey =
   | 'inspecoes.editar'
   | 'inspecoes.gerarMinuta'
   | 'inspecoes.bloquearAgenda'
+  | 'inspecoes.enviarExames'
   | 'militares.cadastrar'
   | 'pareceres.gerar'
   | 'pericia-menor.novo'
@@ -123,6 +124,7 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'inspecoes.agendar', label: 'Agendar e reagendar IS (escolher perito, data e horário)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.editar', label: 'Editar IS: status, laudo, restrições, TIS, DS-1a e observações', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.gerarMinuta', label: 'Gerar Minuta de Mensagem (cancelamento de IS atrasada)', group: 'Inspeções de Saúde' },
+  { id: 'inspecoes.enviarExames', label: 'Enviar exames em PDF da IS (a IA identifica o exame e transcreve o laudo; não vale para IS finalizada)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.bloquearAgenda', label: 'Bloquear horários e turnos da agenda (perfis médicos só bloqueiam os próprios turnos; a configuração de turnos dos peritos é só do Admin)', group: 'Inspeções de Saúde' },
   { id: 'militares.cadastrar', label: 'Cadastrar novo inspecionado (Militares e Dep/Pens.); editar, apagar e inativar continuam só com o Admin', group: 'Inspecionados' },
   { id: 'pareceres.gerar', label: 'Gerar Pedido de Parecer e marcar como concluído (a lista de pareceres é vista por quem acessa a página)', group: 'Pareceres' },
@@ -154,6 +156,7 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'inspecoes.agendar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   'inspecoes.editar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   'inspecoes.gerarMinuta': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  'inspecoes.enviarExames': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   // Bloqueios: por padrão só Admin e Secretaria; se o Admin liberar a um perfil médico, ele só bloqueia os próprios turnos.
   'inspecoes.bloquearAgenda': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
   'militares.cadastrar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
