@@ -35,6 +35,8 @@ export interface ConclusaoSinais {
   finalidade?: string;
   laudos?: { resultado?: string; finalidade?: string; laudo?: string }[];
   restricoes?: string[];
+  /** Data do campo "Laudo" no rodapé da tela da conclusão. */
+  dataLaudo?: string;
 }
 
 const chave = (t: string | undefined): string => normalizarBusca(String(t || '')).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -168,8 +170,8 @@ export const proporImportacao = (
   if (c) {
     laudo = laudoDaConclusao(c);
     if (!laudo) avisos.push('Laudo não lido na foto da conclusão.');
-    else if (d) {
-      dataLaudo = dataDoSinais(d.dataLaudo);
+    else dataLaudo = dataDoSinais(d?.dataLaudo) || dataDoSinais(c.dataLaudo);
+    if (laudo && d) {
       tis = String(d.numTis || '').replace(/\s+/g, '').replace(/^-$/, '');
       ds1a = String(d.ds1a || '').replace(/\s+/g, '').replace(/^-$/, '').toUpperCase();
       if (ds1a && !tis) { avisos.push('Código DS-1A sem Num. TIS: o DS-1A foi ignorado.'); ds1a = ''; }
@@ -211,7 +213,7 @@ export const tipoDoPrint = (l: LeituraPrint): TipoPrint => {
 };
 
 export const conclusaoDaLeitura = (l: LeituraPrint): ConclusaoSinais => ({
-  numInspecao: l.numInspecao, nip: l.nip, finalidade: l.finalidade, laudos: l.laudos ?? [], restricoes: l.restricoes ?? [],
+  numInspecao: l.numInspecao, nip: l.nip, finalidade: l.finalidade, laudos: l.laudos ?? [], restricoes: l.restricoes ?? [], dataLaudo: l.dataLaudo,
 });
 
 /** Campos da tela da IS (com o `tipo` do inspecionado, como o cadastro espera). */

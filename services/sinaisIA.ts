@@ -63,6 +63,8 @@ const INSTRUCOES_PRINT = [
   '- numInspecao: campo "IS" do cabeçalho (só os dígitos); nip: "NIP" (só os dígitos); finalidade: "Final.".',
   '- laudos: uma linha por linha da tabela "Laudos": resultado ("Resultado"), finalidade ("Finalidade") e laudo ("Laudo", o texto completo).',
   '- restricoes: o texto da coluna "Restrição" de cada linha de "Restrições Associadas" (pule as linhas com a restrição vazia).',
+  '- dataLaudo: a data do campo "Laudo" no rodapé (ao lado de "Rec. Assist."), no formato AAAA-MM-DD.',
+  '- Ignore a seção "CID Associados".',
 ].join('\n');
 
 const TEXTOS_PRINT = ['numInspecao', 'junta', 'finalidadeTis', 'dataCriacao', 'dataAgendamento', 'ds1a', 'dataLaudo', 'numTis',

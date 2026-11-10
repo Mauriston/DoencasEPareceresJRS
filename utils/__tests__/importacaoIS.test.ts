@@ -127,6 +127,8 @@ describe('várias fotos, várias IS', () => {
     expect(proporImportacao(undefined, foto2, grupos).erro).toMatch(/não cadastrada/);
     const { proposta } = proporImportacao(undefined, foto2, grupos, [], { inspecionadoId: '26075920', finalidade: 'Verificação de Deficiência Funcional', dataAbertura: '2026-09-02' });
     expect(proposta).toMatchObject({ numero: '1235690', temDados: false, temConclusao: true, laudo: 'Apto para o SAM com restrições por 90 dias.', tis: '', ds1a: '', dataAbertura: '2026-09-02' });
+    const comData = proporImportacao(undefined, { ...foto2, dataLaudo: '01/10/2026' }, grupos, [], { inspecionadoId: '26075920', finalidade: '', dataAbertura: '2026-09-02' });
+    expect(comData.proposta?.dataLaudo).toBe('2026-10-01');
     expect(proporImportacao(undefined, foto2, grupos, [], { inspecionadoId: '99999999', finalidade: '', dataAbertura: '' }).erro).toMatch(/NIP/);
   });
 });
