@@ -40,6 +40,15 @@ const abrirConcurso = async (pagina) => {
   await pagina.getByText('CANDIDATO DE HOJE').first().waitFor();
 };
 
+// Inspeções: a Tabela abre em "Em andamento" · "Este mês"; alterna as situações indicadas no dropdown de Situação.
+const alternarSituacoes = async (pagina, nomes) => {
+  await pagina.getByRole('button', { name: /^Situação:/ }).click();
+  const painel = pagina.getByRole('dialog', { name: 'Situação' });
+  for (const n of nomes) await painel.getByRole('checkbox', { name: new RegExp(`^${n}`) }).click();
+  await pagina.keyboard.press('Escape');
+  await painel.waitFor({ state: 'detached' });
+};
+
 test('página pública das Doenças de Lei abre sem login', async () => {
   const p = await novaPagina();
   await p.goto(`${BASE}#/publico/doencas`);
@@ -103,6 +112,7 @@ test('Inspeções: lista a IS semeada, filtra pela busca e abre o detalhe', asyn
   await entrar(p, MEDICO);
   await p.goto(`${BASE}#/inspecoes`);
   await p.getByRole('heading', { name: 'Inspeções de Saúde' }).waitFor();
+  await alternarSituacoes(p, ['Abertas']); // a IS semeada está aberta (não agendada)
   const abrir = p.getByRole('button', { name: `Abrir IS ${IS_E2E.numero}` });
   await abrir.waitFor();
 
@@ -129,10 +139,44 @@ test('Inspeções: lista a IS semeada, filtra pela busca e abre o detalhe', asyn
   await p.context().close();
 });
 
+test('Inspeções: Restrições (Verificações e Términos, sem laudo) — clicar seleciona e o × do chip remove', async () => {
+  const p = await novaPagina();
+  await entrar(p, MEDICO);
+  await p.goto(`${BASE}#/inspecoes`);
+  await alternarSituacoes(p, ['Abertas']);
+  await p.getByRole('button', { name: `Abrir IS ${IS_E2E.numero}` }).click();
+  const detalhe = p.getByRole('dialog', { name: `IS ${IS_E2E.numero}` });
+  const campo = detalhe.getByRole('combobox', { name: 'Restrições' });
+  await campo.click();
+  const lista = detalhe.getByRole('listbox', { name: 'Restrições' });
+  await lista.waitFor();
+  assert.equal(await lista.getByRole('option', { name: 'TODAS AS ATIVIDADES' }).count(), 0, 'sem "TODAS AS ATIVIDADES"');
+  await lista.getByRole('option', { name: 'Marchas', exact: true }).click();
+  await detalhe.getByRole('button', { name: 'Remover Marchas' }).waitFor();
+  assert.equal(await lista.getByRole('option', { name: 'Marchas', exact: true }).getAttribute('aria-selected'), 'true');
+  // Digitar filtra; Enter alterna a opção ativa.
+  await campo.fill('embar');
+  assert.equal(await lista.getByRole('option').count(), 1);
+  await campo.press('Enter');
+  await detalhe.getByRole('button', { name: 'Remover Embarque' }).waitFor();
+  await detalhe.getByText('Salvo', { exact: true }).waitFor();
+  // O × do chip remove; Esc fecha só a lista.
+  await detalhe.getByRole('button', { name: 'Remover Marchas' }).click();
+  await detalhe.getByRole('button', { name: 'Remover Marchas' }).waitFor({ state: 'detached' });
+  await campo.press('Escape');
+  await lista.waitFor({ state: 'detached' });
+  await detalhe.waitFor();
+  // Backspace no campo vazio remove o último chip (deixa a IS como estava).
+  await campo.press('Backspace');
+  await detalhe.getByRole('button', { name: 'Remover Embarque' }).waitFor({ state: 'detached' });
+  await p.context().close();
+});
+
 test('Inspeções: o menu da linha não tem mais "Ver detalhes" e a tabela não tem a coluna Entrevista', async () => {
   const p = await novaPagina();
   await entrar(p, MEDICO);
   await p.goto(`${BASE}#/inspecoes`);
+  await alternarSituacoes(p, ['Abertas']);
   await p.getByRole('button', { name: `Abrir IS ${IS_E2E.numero}` }).waitFor();
   assert.equal(await p.getByRole('columnheader', { name: 'Entrevista' }).count(), 0);
   await p.locator(`button[aria-label="Ações da IS ${IS_E2E.numero}"]:visible`).first().click();
@@ -158,36 +202,78 @@ test('Inspeções: "+ Abrir IS" abre o formulário que valida os campos obrigat�
   await p.context().close();
 });
 
-test('Inspeções: filtros de situação sem "Todas" (clique de novo limpa), botões só ícone e rich tooltip no calendário', async () => {
+test('Inspeções: agenda com filtros de Situação (caixas + "Todas") e Período, botões só ícone e rich tooltip no calendário', async () => {
   const p = await novaPagina();
   await entrar(p, MEDICO);
   await p.goto(`${BASE}#/inspecoes`);
   const aberta = p.getByRole('button', { name: `Abrir IS ${IS_E2E.numero}` });
   const agendada = p.getByRole('button', { name: `Abrir IS ${IS_AGENDADA_E2E.numero}` });
-  await aberta.waitFor();
+  // Padrão: só "Em andamento" · "Este mês" — a agendada (hoje) aparece, a aberta não.
   await agendada.waitFor();
-  // Sem subtítulo e sem o botão "Todas"; nenhuma situação marcada = todas.
+  assert.equal(await aberta.count(), 0);
   assert.equal(await p.getByText('Cadastre IS, agende as entrevistas').count(), 0);
-  const situacao = p.getByRole('radiogroup', { name: 'Situação da IS' });
-  assert.equal(await situacao.getByRole('radio', { name: /^Todas/ }).count(), 0);
-  assert.equal(await situacao.getByRole('radio', { checked: true }).count(), 0);
-  const abertas = situacao.getByRole('radio', { name: /^Abertas/ });
-  await abertas.click();
+  const botaoSituacao = p.getByRole('button', { name: /^Situação:/ });
+  assert.equal(await botaoSituacao.getAttribute('aria-label'), 'Situação: Em andamento');
+  assert.equal(await p.getByRole('button', { name: /^Período:/ }).getAttribute('aria-label'), 'Período: Este mês');
+  // Agenda: o dia de hoje é o cabeçalho do grupo da IS agendada.
+  await p.getByRole('rowheader', { name: /hoje/ }).waitFor();
+
+  // "Todas" marca as três situações; a aberta (não agendada) vai para o grupo do topo.
+  await botaoSituacao.click();
+  const painel = p.getByRole('dialog', { name: 'Situação' });
+  await painel.getByRole('checkbox', { name: 'Todas' }).click();
+  for (const n of ['Abertas', 'Em andamento', 'Finalizadas']) assert.equal(await painel.getByRole('checkbox', { name: new RegExp(`^${n}`) }).isChecked(), true);
+  await aberta.waitFor();
+  await p.getByRole('rowheader', { name: /Não agendadas/ }).waitFor();
+  // Desmarcar "Todas" limpa tudo.
+  await painel.getByRole('checkbox', { name: 'Todas' }).click();
+  await p.getByText('Selecione ao menos uma situação.').waitFor();
+  await painel.getByRole('checkbox', { name: /^Abertas/ }).click();
+  await p.keyboard.press('Escape');
+  assert.equal(await botaoSituacao.getAttribute('aria-label'), 'Situação: Abertas');
+  await aberta.waitFor();
+  assert.equal(await agendada.count(), 0);
+  await alternarSituacoes(p, ['Em andamento']);
+  assert.equal(await botaoSituacao.getAttribute('aria-label'), 'Situação: 2 situações');
+  await agendada.waitFor();
+
+  // Período customizado no passado: some a agendada; a não agendada continua.
+  await p.getByRole('button', { name: /^Período:/ }).click();
+  const periodo = p.getByRole('dialog', { name: 'Período' });
+  await periodo.getByRole('radio', { name: 'Customizado' }).check();
+  await periodo.getByLabel('Início').fill('2000-01-01');
+  await periodo.getByLabel('Fim').fill('2000-01-31');
+  await periodo.getByRole('button', { name: 'Aplicar' }).click();
+  await periodo.waitFor({ state: 'detached' });
   await agendada.waitFor({ state: 'detached' });
   await aberta.waitFor();
-  await abertas.click(); // clicar de novo no selecionado limpa o filtro
+  // Hoje: a agendada volta.
+  await p.getByRole('button', { name: /^Período:/ }).click();
+  await periodo.getByRole('radio', { name: 'Hoje' }).check();
+  await periodo.waitFor({ state: 'detached' });
   await agendada.waitFor();
-  assert.equal(await situacao.getByRole('radio', { checked: true }).count(), 0);
 
   // Calendário (ícone) abre em Mês; o hover numa IS mostra o rich tooltip.
   await p.getByRole('radio', { name: 'Calendário' }).click();
   await p.getByRole('radio', { name: 'Mês', checked: true }).waitFor();
-  await p.getByRole('button', { name: /AGENDADO DE TESTE/ }).first().hover();
-  const dica = p.getByRole('tooltip');
-  await dica.waitFor();
-  for (const t of ['Inspecionado', 'Finalidade', IS_AGENDADA_E2E.finalidade, 'Perito', MEDICO.usuario, 'Status', 'Agendada']) await dica.getByText(t, { exact: true }).waitFor();
-  await p.mouse.move(5, 5);
-  await dica.waitFor({ state: 'detached' });
+  // Situação e Período só valem para a Tabela.
+  assert.equal(await p.getByRole('button', { name: /^(Situação|Período):/ }).count(), 0);
+  // Painel à esquerda: a IS aberta e não agendada vira um cartão (com "Agendar…"); o Mês só tem seg–sex.
+  const painelAbertas = p.getByRole('complementary', { name: 'IS abertas aguardando agendamento' });
+  await painelAbertas.getByRole('button', { name: new RegExp(`^IS ${IS_E2E.numero}: PACIENTE DE TESTE`) }).waitFor();
+  await painelAbertas.getByRole('button', { name: new RegExp(`^Agendar IS ${IS_E2E.numero}`) }).waitFor();
+  assert.equal(await p.getByText('sáb', { exact: true }).count(), 0);
+  // A IS agendada é de hoje: no fim de semana ela não aparece no Mês (só dias úteis).
+  if (![0, 6].includes(new Date().getDay())) {
+    await p.getByRole('button', { name: /AGENDADO DE TESTE/ }).first().hover();
+    const dica = p.getByRole('tooltip');
+    await dica.waitFor();
+    for (const t of ['Inspecionado', 'Finalidade', IS_AGENDADA_E2E.finalidade, 'Perito', MEDICO.usuario, 'Status', 'Agendada']) await dica.getByText(t, { exact: true }).waitFor();
+    await p.mouse.move(5, 5);
+    await dica.waitFor({ state: 'detached' });
+    // Sem laudo/TIS/DS-1a: arrastável para remarcar.
+    assert.equal(await p.getByRole('button', { name: /AGENDADO DE TESTE/ }).first().getAttribute('draggable'), 'true');
+  }
   await p.context().close();
 });
 

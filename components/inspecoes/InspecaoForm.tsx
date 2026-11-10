@@ -1,8 +1,8 @@
 // Ficheiro: components/inspecoes/InspecaoForm.tsx
 // "Cadastrar IS": barra lateral à direita (desktop) ou bottom sheet (mobile). Campos: Nº da IS, data de
-// abertura, inspecionado (autocomplete na base INSPECIONADOS, com "Cadastrar novo"), finalidade (filtrada
-// pelo vínculo do inspecionado), AMP (definido pela finalidade: JRS ou MPI), perito (usuários médicos
-// do AMP) e, opcionalmente, já a data/hora da entrevista (slots de 20 min). A IS nasce "Aberta", ou
+// abertura, inspecionado (autocomplete na base INSPECIONADOS, com "Cadastrar novo"), finalidade (todas,
+// no menu em cascata por grupo), AMP (definido pela finalidade: JRS ou MPI), perito (cards com avatar dos
+// usuários médicos do AMP — AvatarRadioGroup) e, opcionalmente, já a data/hora da entrevista (slots de 20 min). A IS nasce "Aberta", ou
 // "Agendada" quando a entrevista já é marcada no cadastro.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
@@ -10,14 +10,15 @@ import { Button } from '../ui/Button';
 import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
+import { AvatarRadioGroup } from '../ui/AvatarRadioGroup';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { FinalidadeDropdown, type GrupoFinalidadeExtra } from '../ExamesGuide';
 import { CadastroInspecionado } from '../militares/CadastroInspecionado';
 import { SeletorHorario, estadoDoSlot } from './SeletorHorario';
-import { carregarFinalidadesIS, filtrarFinalidadesPorVinculo, normalizarBusca, type GrupoFinalidadeIS } from '../../utils/corposQuadros';
+import { carregarFinalidadesIS, normalizarBusca, type GrupoFinalidadeIS } from '../../utils/corposQuadros';
 import { formatNip } from '../../utils/format';
 import { hojeISO, ocupadosDe, duracaoDoGrupo, peritoAtendeNoTurno, turnoDoSlot, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
-import { vinculoDoInspecionado, type MilitarRecord } from '../../services/firestoreMilitares';
+import type { MilitarRecord } from '../../services/firestoreMilitares';
 import { criarInspecao, idDaIs, type AmpIS, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { peritosDoAmp, ampDaFinalidade, type PeritoIS } from '../../services/peritosIS';
 
@@ -48,7 +49,6 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
   const [cadastrando, setCadastrando] = useState(false);
   const [recemCadastradoId, setRecemCadastradoId] = useState('');
   const [finalidade, setFinalidade] = useState('');
-  const [verTodas, setVerTodas] = useState(false);
   const [grupos, setGrupos] = useState<GrupoFinalidadeIS[]>([]);
   const [amp, setAmp] = useState<AmpIS | ''>('');
   const [peritoUid, setPeritoUid] = useState(inicial?.peritoUid ?? '');
@@ -73,22 +73,16 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
     busca: normalizarBusca(`${m.inspecionado} ${m.om} ${m.id}`),
   })), [militares]);
 
-  const vinculoFiltro = militar && !verTodas ? vinculoDoInspecionado(militar) : '';
+  // Todas as finalidades, por grupo (sem filtrar pelo vínculo/título do inspecionado).
   const gruposFinalidade: GrupoFinalidadeExtra[] = useMemo(
-    () => filtrarFinalidadesPorVinculo(grupos, vinculoFiltro).map(g => ({ nome: g.grupo, finalidades: g.finalidades.map(f => f.nome) })),
-    [grupos, vinculoFiltro],
+    () => grupos.map(g => ({ nome: g.grupo, finalidades: g.finalidades.map(f => f.nome) })),
+    [grupos],
   );
   const achada = useMemo(() => {
     for (const g of grupos) { const f = g.finalidades.find(x => x.nome === finalidade); if (f) return { grupo: g.grupo, ...f }; }
     return null;
   }, [grupos, finalidade]);
   const ampCompetente: AmpIS | '' = achada ? ampDaFinalidade(achada.amp) : '';
-
-  // Trocou o inspecionado e a finalidade deixou de valer para o vínculo: limpa.
-  useEffect(() => {
-    if (!finalidade || grupos.length === 0 || !vinculoFiltro) return;
-    if (!filtrarFinalidadesPorVinculo(grupos, vinculoFiltro).some(g => g.finalidades.some(f => f.nome === finalidade))) setFinalidade('');
-  }, [vinculoFiltro, grupos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // O AMP é o da competência da finalidade; trocar de finalidade pode invalidar o perito.
   const peritosDoAmpAtual = useMemo(() => (ampCompetente ? peritosDoAmp(peritos, ampCompetente) : []), [peritos, ampCompetente]);
@@ -198,12 +192,6 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
           <div>
             <label className="block text-xs font-semibold text-ink-3 mb-1">Finalidade<span className="text-wine ml-0.5" aria-hidden="true">*</span></label>
             <FinalidadeDropdown value={finalidade} onChange={v => { setFinalidade(v); limpar('finalidade'); }} placeholder="Selecione a finalidade da IS" gruposProprios={gruposFinalidade} erro={!!erros.finalidade} />
-            {militar && (
-              <p className="mt-1 text-xs text-ink-3">
-                {verTodas ? 'Mostrando todas as finalidades.' : `Finalidades disponíveis para o vínculo ${vinculoDoInspecionado(militar)}.`}{' '}
-                <button type="button" onClick={() => setVerTodas(v => !v)} className="font-semibold text-navy underline min-h-[24px]">{verTodas ? 'Filtrar pelo vínculo' : 'Ver todas'}</button>
-              </p>
-            )}
             {erros.finalidade && <p role="alert" className="mt-1 text-xs font-semibold text-wine">{erros.finalidade}</p>}
           </div>
 
@@ -218,10 +206,13 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
               {peritosDoAmpAtual.length === 0
                 ? <p role="alert" className="text-sm font-semibold text-wine">Não há perito ativo para o AMP {ampCompetente}. Cadastre o usuário médico em Usuários.</p>
                 : (
-                  <ChoiceGroup<string>
+                  <AvatarRadioGroup<string>
                     label={`Perito (${ampCompetente === 'JRS' ? 'Admin e médicos JRS' : 'médicos MPI'})`} error={erros.perito}
-                    value={peritoUid} onChange={v => { setPeritoUid(v); setHora(''); limpar('perito'); }}
-                    options={peritosDoAmpAtual.map(p => ({ value: p.uid, label: p.usuario, avatar: { nome: p.usuario, imageProfile: p.imageProfile } }))}
+                    value={peritoUid} onChange={v => { if (v !== peritoUid) { setPeritoUid(v); setHora(''); } limpar('perito'); }}
+                    options={peritosDoAmpAtual.map(p => ({
+                      value: p.uid, label: p.usuario, imageProfile: p.imageProfile, nomeAvatar: p.nome || p.usuario,
+                      secundaria: p.nome && p.nome.trim().toUpperCase() !== p.usuario.trim().toUpperCase() ? p.nome : undefined,
+                    }))}
                   />
                 )}
             </div>
