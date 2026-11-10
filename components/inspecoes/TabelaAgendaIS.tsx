@@ -1,24 +1,15 @@
 // Ficheiro: components/inspecoes/TabelaAgendaIS.tsx
 // Visão Tabela das Inspeções de Saúde no formato "agenda": à esquerda, a data da entrevista (dia do mês
 // grande; dia da semana e mês/ano abaixo; hoje em círculo navy); à direita, as IS do dia, uma por linha,
-// com hora (bullet colorido do status antes), inspecionado (OM menor), finalidade, perito (clique troca
-// o perito) e o menu ⋮. Divisores só entre dias. No topo, o grupo "Não agendadas" (IS sem data de
+// com hora, status (StatusTag do status efetivo), inspecionado (OM e nº da IS menores), finalidade,
+// perito (clique troca o perito) e o menu ⋮. Divisores só entre dias. No topo, o grupo "Não agendadas" (IS sem data de
 // entrevista). No celular, cada dia vira um cartão com a data no cabeçalho e as IS em itens compactos.
 import React from 'react';
 import { MenuAcoes, type ItemMenu } from '../ui/MenuAcoes';
+import { StatusTag } from '../ui/StatusTag';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import type { DiaAgendaIS } from '../../utils/agendaIS';
 import { horaDeEntrevista, nomeDiaSemana, nomeMes, type TomStatus } from '../../utils/inspecoes';
-
-const BULLET: Record<TomStatus, string> = {
-  success: 'bg-green',
-  danger: 'bg-wine',
-  attention: 'bg-gold',
-  neutral: 'bg-ink-4',
-  navy: 'bg-navy',
-  navyOutline: 'bg-white border-2 border-navy',
-  muted: 'bg-ink-5',
-};
 
 export interface TabelaAgendaISProps {
   grupos: DiaAgendaIS<InspecaoRecord>[];
@@ -39,12 +30,8 @@ const maiuscula = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 const rotuloDia = (data: string | null): string =>
   data ? `${maiuscula(nomeDiaSemana(data))}, ${Number(data.slice(8, 10))} de ${nomeMes(data)} de ${data.slice(0, 4)}` : 'Não agendadas';
 
-const Bullet: React.FC<{ rotulo: string; tom: TomStatus }> = ({ rotulo, tom }) => (
-  <span title={rotulo} className="inline-flex items-center shrink-0">
-    <span aria-hidden="true" className={`w-2.5 h-2.5 rounded-full ${BULLET[tom]}`} />
-    <span className="sr-only">{rotulo}</span>
-  </span>
-);
+/** Linha menor do inspecionado: sigla da OM e nº da IS (ex.: "EAMPE · 8478471"). */
+const linhaOmIS = (om: string | undefined, is: InspecaoRecord): string => [om, String(is.is)].filter(Boolean).join(' · ');
 
 /** Dia do mês grande (hoje em círculo navy). */
 const NumeroDia: React.FC<{ data: string; hoje: string; compacto?: boolean }> = ({ data, hoje, compacto }) => {
@@ -100,7 +87,8 @@ export const TabelaAgendaIS: React.FC<TabelaAgendaISProps> = ({ grupos, hoje, no
           <caption className="sr-only">Agenda das Inspeções de Saúde</caption>
           <colgroup>
             <col className="w-36" />
-            <col className="w-28" />
+            <col className="w-24" />
+            <col className="w-48" />
             <col />
             <col />
             <col className="w-44" />
@@ -108,7 +96,7 @@ export const TabelaAgendaIS: React.FC<TabelaAgendaISProps> = ({ grupos, hoje, no
           </colgroup>
           <thead className="sr-only">
             <tr>
-              <th scope="col">Data</th><th scope="col">Hora</th><th scope="col">Inspecionado</th><th scope="col">Finalidade</th><th scope="col">Perito</th><th scope="col">Ações</th>
+              <th scope="col">Data</th><th scope="col">Hora</th><th scope="col">Status</th><th scope="col">Inspecionado</th><th scope="col">Finalidade</th><th scope="col">Perito</th><th scope="col">Ações</th>
             </tr>
           </thead>
           {grupos.map((g, gi) => (
@@ -129,18 +117,17 @@ export const TabelaAgendaIS: React.FC<TabelaAgendaISProps> = ({ grupos, hoje, no
                       </th>
                     )}
                     <td className={`align-top pr-3 ${py}`}>
-                      <button type="button" onClick={e => { e.stopPropagation(); onAbrir(is); }} aria-label={`Abrir IS ${is.is}`} className="min-h-[44px] w-full flex items-center gap-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded">
-                        <Bullet rotulo={st.rotulo} tom={st.tom} />
-                        <span className="min-w-0">
-                          <span className="block font-bold text-navy tabular-nums leading-tight">{is.dataEntrevista ? horaDeEntrevista(is.dataEntrevista) : (prazoDe(is) ?? '—')}</span>
-                          <span className="block text-xs text-ink-3 font-mono leading-tight">IS {is.is}</span>
-                        </span>
+                      <button type="button" onClick={e => { e.stopPropagation(); onAbrir(is); }} aria-label={`Abrir IS ${is.is}`} className="min-h-[44px] w-full flex items-center text-left font-bold text-navy tabular-nums leading-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded">
+                        {is.dataEntrevista ? horaDeEntrevista(is.dataEntrevista) : (prazoDe(is) ?? '—')}
                       </button>
+                    </td>
+                    <td className={`align-top pr-3 ${py}`}>
+                      <span className="flex items-center min-h-[44px] min-w-0"><StatusTag tone={st.tom} title={st.rotulo} className="max-w-full truncate">{st.rotulo}</StatusTag></span>
                     </td>
                     <td className={`align-top pr-4 ${py}`}>
                       <span className="flex flex-col justify-center min-h-[44px] min-w-0">
                         <span className="block font-semibold text-ink truncate leading-tight" title={nome}>{nome}</span>
-                        {om && <span className="block text-xs text-ink-3 truncate leading-tight">{om}</span>}
+                        <span className="block text-xs text-ink-3 truncate leading-tight">{linhaOmIS(om, is)}</span>
                       </span>
                     </td>
                     <td className={`align-top pr-4 ${py}`}>
@@ -192,13 +179,13 @@ export const TabelaAgendaIS: React.FC<TabelaAgendaISProps> = ({ grupos, hoje, no
                   <li key={is.id} className="flex items-start rounded-lg hover:bg-thead">
                     <button type="button" onClick={() => onAbrir(is)} className="flex-1 min-w-0 text-left px-2 py-2 min-h-[44px]">
                       <span className="flex items-center gap-2">
-                        <Bullet rotulo={st.rotulo} tom={st.tom} />
-                        <span className="text-sm font-bold text-navy tabular-nums">{is.dataEntrevista ? horaDeEntrevista(is.dataEntrevista) : (prazoDe(is) ?? `IS ${is.is}`)}</span>
-                        <span className="min-w-0 text-sm font-semibold text-ink truncate">{nomeDe(is)}</span>
+                        <span className="text-sm font-bold text-navy tabular-nums">{is.dataEntrevista ? horaDeEntrevista(is.dataEntrevista) : (prazoDe(is) ?? '—')}</span>
+                        <StatusTag tone={st.tom} title={st.rotulo} className="min-w-0 truncate">{st.rotulo}</StatusTag>
                       </span>
-                      <span className="block pl-[1.125rem] text-xs text-ink-3 truncate">{[om, is.finalidade].filter(Boolean).join(' · ')}</span>
-                      <span className="block pl-[1.125rem] text-xs text-ink-3 truncate">
-                        IS {is.is}{is.peritoNome ? <> · <strong className="font-bold text-navy">{is.peritoNome}</strong></> : null}
+                      <span className="block text-sm font-semibold text-ink truncate">{nomeDe(is)}</span>
+                      <span className="block text-xs text-ink-3 truncate">{linhaOmIS(om, is)}</span>
+                      <span className="block text-xs text-ink-3 truncate">
+                        {is.finalidade}{is.finalidade && is.peritoNome ? ' · ' : null}{is.peritoNome ? <strong className="font-bold text-navy">{is.peritoNome}</strong> : null}
                       </span>
                     </button>
                     <div className="shrink-0 w-12 pt-0.5">{itens.length > 0 && <MenuAcoes rotulo={`Ações da IS ${is.is}`} itens={itens} />}</div>

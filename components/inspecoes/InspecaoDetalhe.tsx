@@ -2,7 +2,9 @@
 // Ficha de uma IS em barra lateral (bottom sheet no mobile). Título "IS nº" com o chip do status ao lado.
 // Editável:
 //  1. Dados da IS: inspecionado · OM (negrito), finalidade, abertura, data da entrevista e data do laudo.
-//  2. Conclusão da IS (salva sozinha, sem botão): cards da entrevista gravada e dos pareceres pedidos a
+//     IS Aberta sem data de entrevista: a Finalidade é o único campo editável (o mesmo menu em cascata do
+//     cadastro; grava finalidade, grupo e AMP sozinha) e a Conclusão aparece só em leitura (campos vazios ocultos).
+//  2. Conclusão da IS (salva sozinha, sem botão; só com data de entrevista — utils/conclusaoIS.ts): cards da entrevista gravada e dos pareceres pedidos a
 //     partir desta IS, Laudo, Auditoria | JSD, Restrições (MultiSelectCombobox com chips; opcional, sempre
 //     que a finalidade é de Verificações e Términos), Nº do TIS, DS-1a e Observações. O status muda
 //     automaticamente (regras puras em utils/conclusaoIS.ts).
@@ -20,16 +22,18 @@ import { StatusTag } from '../ui/StatusTag';
 import { MultiSelectCombobox } from '../ui/MultiSelectCombobox';
 import { SecaoEntrevista, cardConclusaoClass, pedidoDeGravacao, type PedidoGravacao } from './entrevista/SecaoEntrevista';
 import { ParecerDetalhe } from '../pareceres/ParecerDetalhe';
+import { CampoFinalidadeIS, useFinalidadesIS } from './InspecaoForm';
 import { useNav } from '../../context/NavContext';
-import { atualizarInspecao, type InspecaoRecord } from '../../services/firestoreInspecoes';
+import { atualizarInspecao, type InspecaoDoc, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { marcarConcluido, observarPareceresDaIS, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
 import { carregarRestricoesIS } from '../../utils/corposQuadros';
 import {
   STATUS_IS, statusEfetivoIS, dataBr, formatTis, tisValido, prefixoAnoTis, hojeISO, dataDeEntrevista,
 } from '../../utils/inspecoes';
 import {
-  conclusaoTravada, encaminhamentoDoStatus, juntarRestricoes, mostraEncaminhamento, mostraRestricoes, opcoesDeRestricoes, patchConclusao,
-  patchEncaminhamento, separarRestricoes, type CampoConclusao, type Encaminhamento, type EstadoConclusao, type ResultadoConclusao,
+  encaminhamentoDoStatus, juntarRestricoes, mostraEncaminhamento, mostraRestricoes, opcoesDeRestricoes, patchConclusao,
+  patchEncaminhamento, patchFinalidade, podeEditarConclusao, podeEditarFinalidade, separarRestricoes,
+  type CampoConclusao, type Encaminhamento, type EstadoConclusao,
 } from '../../utils/conclusaoIS';
 
 export interface PermissoesDetalheIS {
@@ -120,9 +124,11 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const nav = useNav();
   const efetivo = statusEfetivoIS(is);
   const info = STATUS_IS[efetivo];
-  const travado = conclusaoTravada(is.status);
-  const editavel = permissoes.editar && !travado;
-  const somenteLeitura = !editavel;
+  const estadoConclusao = comPadroes(is);
+  // Conclusão: só com data de entrevista (até finalizar). Aberta sem data: só a Finalidade.
+  const conclusaoEditavel = permissoes.editar && podeEditarConclusao(estadoConclusao);
+  const finalidadeEditavel = permissoes.editar && podeEditarFinalidade(estadoConclusao);
+  const somenteLeitura = !conclusaoEditavel && !finalidadeEditavel;
 
   const [restricoesOpcoes, setRestricoesOpcoes] = useState<string[]>([]);
   const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
@@ -142,7 +148,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const fila = useRef<Promise<void>>(Promise.resolve());
 
   /** Grava, em fila, o patch calculado a partir do estado mais recente. */
-  const gravar = (calcular: (atual: InspecaoRecord) => ResultadoConclusao) => {
+  const gravar = (calcular: (atual: InspecaoRecord) => { patch: Partial<InspecaoDoc>; concluirPareceres: boolean }) => {
     fila.current = fila.current.then(async () => {
       const atual = atualRef.current;
       const { patch, concluirPareceres } = calcular(atual);
@@ -177,7 +183,20 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
     gravarCampo('tis', t);
   });
 
-  const estadoConclusao = comPadroes(is);
+  // Finalidade (IS Aberta sem entrevista): a tela reflete a escolha na hora; grava finalidade, grupo e AMP.
+  const { gruposMenu, achar } = useFinalidadesIS(finalidadeEditavel);
+  const [finalidadeLocal, setFinalidadeLocal] = useState(is.finalidade || '');
+  useEffect(() => { setFinalidadeLocal(is.finalidade || ''); }, [is.finalidade]);
+  const mudarFinalidade = (nome: string) => {
+    const nova = achar(nome);
+    if (!nova) return;
+    setFinalidadeLocal(nova.finalidade);
+    gravar(atual => ({
+      patch: patchFinalidade({ finalidade: atual.finalidade || '', grupoFinalidade: atual.grupoFinalidade || '', amp: atual.amp || '', peritoUid: atual.peritoUid || '', restricoes: atual.restricoes || '' }, nova),
+      concluirPareceres: false,
+    }));
+  };
+
   const comEncaminhamento = mostraEncaminhamento(estadoConclusao);
   const comRestricoes = mostraRestricoes(estadoConclusao);
   // Restrições: a tela reflete o clique na hora (o banco confirma depois pelo onSnapshot).
@@ -203,6 +222,12 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const textoLaudo = is.laudo?.trim() || '';
   const textoObservacoes = is.observacoes?.trim() || '';
   const restricoesGravadas = separarRestricoes(is.restricoes || '');
+
+  const indicadorGravacao = (
+    <span role="status" className={`text-xs ${estado === 'erro' ? 'font-semibold text-wine' : 'text-ink-3'}`}>
+      {estado === 'salvando' ? 'Salvando…' : estado === 'salvo' ? 'Salvo' : estado === 'erro' ? 'Erro' : ''}
+    </span>
+  );
 
   const cards = (
     <div className="flex flex-wrap gap-2 empty:hidden">
@@ -266,12 +291,23 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
       <div className="space-y-6">
 
         <section aria-labelledby={`dados-is-${is.id}`} className="space-y-3">
-          <h3 id={`dados-is-${is.id}`} className="text-h3 font-bold text-navy">Dados da IS</h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 id={`dados-is-${is.id}`} className="text-h3 font-bold text-navy">Dados da IS</h3>
+            {finalidadeEditavel && indicadorGravacao}
+          </div>
           <dl className="grid grid-cols-3 gap-x-4 gap-y-3">
             <Linha rotulo="Inspecionado" className="col-span-3">
               {is.inspecionado ? <><span className="font-bold">{is.inspecionado}</span>{om ? ` · ${om}` : ''}</> : ''}
             </Linha>
-            <Linha rotulo="Finalidade" className="col-span-3">{is.finalidade}</Linha>
+            {!finalidadeEditavel && <Linha rotulo="Finalidade" className="col-span-3">{is.finalidade}</Linha>}
+          </dl>
+          {finalidadeEditavel && (
+            <div>
+              <CampoFinalidadeIS value={finalidadeLocal} onChange={mudarFinalidade} gruposMenu={gruposMenu} />
+              {is.amp && <p className="mt-1 text-xs text-ink-3">Competência da {is.amp} (definida pela finalidade).</p>}
+            </div>
+          )}
+          <dl className="grid grid-cols-3 gap-x-4 gap-y-3">
             <Linha rotulo="Abertura IS">{dataBr(is.dataAbertura)}</Linha>
             <Linha rotulo="Entrevista">{is.dataEntrevista ? dataBr(dataDeEntrevista(is.dataEntrevista)) : ''}</Linha>
             <Linha rotulo="Laudo">{dataBr(is.dataLaudo)}</Linha>
@@ -281,12 +317,32 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
         <section aria-labelledby={`conclusao-is-${is.id}`} className="space-y-4 border-t border-line pt-4">
           <div className="flex items-center justify-between gap-2">
             <h3 id={`conclusao-is-${is.id}`} className="text-h3 font-bold text-navy">Conclusão da IS</h3>
-            <span role="status" className={`text-xs ${estado === 'erro' ? 'font-semibold text-wine' : 'text-ink-3'}`}>
-              {estado === 'salvando' ? 'Salvando…' : estado === 'salvo' ? 'Salvo' : estado === 'erro' ? 'Erro' : ''}
-            </span>
+            {conclusaoEditavel && indicadorGravacao}
           </div>
 
           {cards}
+
+          {!conclusaoEditavel ? (
+            <>
+              <p className="text-xs text-ink-3">A Conclusão fica editável depois que a entrevista for agendada.</p>
+              {(textoLaudo || restricoesGravadas.length > 0 || is.tis?.trim() || is.ds1a?.trim() || textoObservacoes || (comEncaminhamento && encaminhamento)) && (
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                  {textoLaudo && (
+                    <Linha rotulo="Laudo" className="col-span-2">
+                      <span className="block whitespace-pre-line">{textoLaudo}</span>
+                      {is.dataLaudo && <span className="block mt-1 text-xs text-ink-3">Data do laudo: {dataBr(is.dataLaudo)}</span>}
+                    </Linha>
+                  )}
+                  {comEncaminhamento && encaminhamento && <Linha rotulo="Encaminhamento" className="col-span-2">{encaminhamento === 'jsd' ? 'JSD' : 'Auditoria'}</Linha>}
+                  {restricoesGravadas.length > 0 && <Linha rotulo="Restrições" className="col-span-2">{restricoesGravadas.join(', ')}</Linha>}
+                  {is.tis?.trim() && <Linha rotulo="Nº do TIS"><span className="font-mono">{is.tis}</span></Linha>}
+                  {is.ds1a?.trim() && <Linha rotulo="DS-1a">{is.ds1a}</Linha>}
+                  {textoObservacoes && <Linha rotulo="Observações" className="col-span-2"><span className="whitespace-pre-line">{textoObservacoes}</span></Linha>}
+                </dl>
+              )}
+            </>
+          ) : (
+          <>
 
           <Field label="Laudo">
             {a => <textarea {...a} value={laudo.valor} onChange={e => laudo.onChange(e.target.value)} onBlur={laudo.onBlur} className={`${a.className} min-h-[88px]`} />}
@@ -325,6 +381,8 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
           <Field label="Observações">
             {a => <textarea {...a} value={observacoes.valor} onChange={e => observacoes.onChange(e.target.value)} onBlur={observacoes.onBlur} className={`${a.className} min-h-[72px]`} />}
           </Field>
+          </>
+          )}
         </section>
       </div>
       )}

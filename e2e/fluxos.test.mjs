@@ -258,6 +258,10 @@ test('Inspeções: agenda com filtros de Situação (caixas + "Todas") e Períod
   await p.getByRole('radio', { name: 'Mês', checked: true }).waitFor();
   // Situação e Período só valem para a Tabela.
   assert.equal(await p.getByRole('button', { name: /^(Situação|Período):/ }).count(), 0);
+  // No Calendário não há barra de filtros (nem perito/busca); a alternância fica na barra do calendário.
+  assert.equal(await p.getByLabel('Filtrar por perito').count(), 0);
+  assert.equal(await p.getByLabel('Buscar IS').count(), 0);
+  await p.getByRole('radio', { name: 'Tabela' }).waitFor();
   // Painel à esquerda: a IS aberta e não agendada vira um cartão (com "Agendar…"); o Mês só tem seg–sex.
   const painelAbertas = p.getByRole('complementary', { name: 'IS abertas aguardando agendamento' });
   await painelAbertas.getByRole('button', { name: new RegExp(`^IS ${IS_E2E.numero}: PACIENTE DE TESTE`) }).waitFor();

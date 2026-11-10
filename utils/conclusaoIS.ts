@@ -165,3 +165,54 @@ export const patchEncaminhamento = (atual: EstadoConclusao, e: Encaminhamento): 
   const status = statusDoEncaminhamento(e);
   return status === atual.status ? {} : comSituacao({ status });
 };
+
+// ---------------------------------------------------------------------------
+// O que é editável no detalhe da IS
+// ---------------------------------------------------------------------------
+
+type EstadoEdicao = Pick<EstadoConclusao, 'status' | 'dataEntrevista'>;
+const temEntrevista = (is: EstadoEdicao): boolean => !!String(is.dataEntrevista || '').trim();
+
+/**
+ * Conclusão da IS (Laudo, Auditoria | JSD, Restrições, Nº do TIS, DS-1a, Observações): só com data de
+ * entrevista, e até a IS ser finalizada (DS-1a/TIS assinado) ou cancelada.
+ */
+export const podeEditarConclusao = (is: EstadoEdicao): boolean => temEntrevista(is) && !conclusaoTravada(is.status);
+
+/** Finalidade: só com a IS Aberta, ainda sem data de entrevista (é o único campo editável nesse caso). */
+export const podeEditarFinalidade = (is: EstadoEdicao): boolean => is.status === 'aberta' && !temEntrevista(is);
+
+export type AmpFinalidade = 'JRS' | 'MPI';
+
+export interface EstadoFinalidade {
+  finalidade: string;
+  grupoFinalidade: string;
+  amp: AmpFinalidade | '';
+  peritoUid: string;
+  restricoes: string;
+}
+
+export interface PatchFinalidade {
+  finalidade?: string;
+  grupoFinalidade?: string;
+  amp?: AmpFinalidade;
+  peritoUid?: string;
+  peritoNome?: string;
+  peritoGmail?: string;
+  restricoes?: string;
+}
+
+/**
+ * Troca da finalidade (IS Aberta sem entrevista): grava finalidade, grupo e o AMP de competência (como no
+ * cadastro). Mudando o AMP, o perito escolhido deixa de valer (os peritos da JRS e do MPI são perfis
+ * distintos) e é apagado; Restrições gravadas saem se o novo grupo não for Verificações e Términos.
+ */
+export const patchFinalidade = (atual: EstadoFinalidade, nova: { finalidade: string; grupo: string; amp: AmpFinalidade }): PatchFinalidade => {
+  const finalidade = nova.finalidade.trim();
+  if (!finalidade || !nova.grupo) return {};
+  if (finalidade === atual.finalidade && nova.grupo === atual.grupoFinalidade && nova.amp === atual.amp) return {};
+  const patch: PatchFinalidade = { finalidade, grupoFinalidade: nova.grupo, amp: nova.amp };
+  if (nova.amp !== atual.amp && atual.peritoUid) Object.assign(patch, { peritoUid: '', peritoNome: '', peritoGmail: '' });
+  if (atual.restricoes && !mostraRestricoes({ grupoFinalidade: nova.grupo })) patch.restricoes = '';
+  return patch;
+};

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   encaminhamentoDoStatus, juntarRestricoes, laudoAptoComRestricoes, laudoIncapacidadeDefinitivaSam, mostraEncaminhamento, mostraRestricoes,
-  opcoesDeRestricoes, patchConclusao, patchEncaminhamento, restituicaoDoStatus, separarRestricoes, type EstadoConclusao,
+  opcoesDeRestricoes, patchConclusao, patchEncaminhamento, patchFinalidade, podeEditarConclusao, podeEditarFinalidade, restituicaoDoStatus,
+  separarRestricoes, type EstadoConclusao,
 } from '../conclusaoIS';
 import { diasUteisEntre, podeCancelarIS, statusAoAgendar } from '../inspecoes';
 
@@ -151,5 +152,43 @@ describe('agendamento e cancelamento', () => {
     expect(podeCancelarIS({ status: 'aberta', dataAbertura: '2026-11-02' }, '2026-11-10')).toBe(false);
     expect(podeCancelarIS({ status: 'aberta', dataAbertura: '2026-11-02' }, '2026-11-11')).toBe(true);
     expect(podeCancelarIS({ status: 'agendada', dataAbertura: '2026-01-02' }, HOJE)).toBe(false);
+  });
+});
+
+describe('o que é editável no detalhe', () => {
+  it('Conclusão: só com data de entrevista e até finalizar/cancelar', () => {
+    expect(podeEditarConclusao({ status: 'aberta', dataEntrevista: '' })).toBe(false);
+    expect(podeEditarConclusao({ status: 'votacao_pendente', dataEntrevista: '' })).toBe(false);
+    expect(podeEditarConclusao({ status: 'agendada', dataEntrevista: '2026-11-10T08:00' })).toBe(true);
+    expect(podeEditarConclusao({ status: 'faltou', dataEntrevista: '2026-11-10T08:00' })).toBe(true);
+    expect(podeEditarConclusao({ status: 'assinaturas_pendentes', dataEntrevista: '2026-11-10T08:00' })).toBe(true);
+    expect(podeEditarConclusao({ status: 'tis_assinado', dataEntrevista: '2026-11-10T08:00' })).toBe(false);
+    expect(podeEditarConclusao({ status: 'cancelada', dataEntrevista: '2026-11-10T08:00' })).toBe(false);
+  });
+  it('Finalidade: só com a IS Aberta sem data de entrevista', () => {
+    expect(podeEditarFinalidade({ status: 'aberta', dataEntrevista: '' })).toBe(true);
+    expect(podeEditarFinalidade({ status: 'aberta', dataEntrevista: '2026-11-10T08:00' })).toBe(false);
+    expect(podeEditarFinalidade({ status: 'agendada', dataEntrevista: '2026-11-10T08:00' })).toBe(false);
+    expect(podeEditarFinalidade({ status: 'cancelada', dataEntrevista: '' })).toBe(false);
+  });
+});
+
+describe('troca da finalidade', () => {
+  const aberta = { finalidade: 'Controle Trienal', grupoFinalidade: 'Controle Periódico', amp: 'JRS' as const, peritoUid: 'u1', restricoes: '' };
+  it('grava finalidade, grupo e AMP; mesmo AMP mantém o perito', () => {
+    expect(patchFinalidade(aberta, { finalidade: 'Verificação de Deficiência Funcional', grupo: 'Verificações e Términos', amp: 'JRS' }))
+      .toEqual({ finalidade: 'Verificação de Deficiência Funcional', grupoFinalidade: 'Verificações e Términos', amp: 'JRS' });
+  });
+  it('outro AMP apaga o perito', () => {
+    expect(patchFinalidade(aberta, { finalidade: 'Outra', grupo: 'Ingresso', amp: 'MPI' }))
+      .toEqual({ finalidade: 'Outra', grupoFinalidade: 'Ingresso', amp: 'MPI', peritoUid: '', peritoNome: '', peritoGmail: '' });
+    expect(patchFinalidade({ ...aberta, peritoUid: '' }, { finalidade: 'Outra', grupo: 'Ingresso', amp: 'MPI' }))
+      .toEqual({ finalidade: 'Outra', grupoFinalidade: 'Ingresso', amp: 'MPI' });
+  });
+  it('Restrições saem fora de Verificações e Términos; mesma finalidade não grava', () => {
+    expect(patchFinalidade({ ...aberta, grupoFinalidade: 'Verificações e Términos', restricoes: 'Marchas' }, { finalidade: 'Controle Trienal', grupo: 'Controle Periódico', amp: 'JRS' }))
+      .toEqual({ finalidade: 'Controle Trienal', grupoFinalidade: 'Controle Periódico', amp: 'JRS', restricoes: '' });
+    expect(patchFinalidade(aberta, { finalidade: 'Controle Trienal', grupo: 'Controle Periódico', amp: 'JRS' })).toEqual({});
+    expect(patchFinalidade(aberta, { finalidade: '', grupo: 'Controle Periódico', amp: 'JRS' })).toEqual({});
   });
 });
