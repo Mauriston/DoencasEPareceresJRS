@@ -1,7 +1,8 @@
 // Ficheiro: components/inspecoes/AgendarNoHorarioDialog.tsx
 // Clique num horário vazio do calendário: agenda ali uma IS já aberta (ainda sem entrevista) ou segue
 // para o cadastro de uma nova IS nesse horário. O perito precisa atender o turno, o horário estar livre e
-// ser do AMP de competência da finalidade da IS.
+// ser do AMP de competência da finalidade da IS. Com só a data (botão "+" de um dia do calendário), escolhe
+// a IS aberta, o perito com horário livre no dia e o horário.
 import React, { useMemo, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
@@ -9,7 +10,7 @@ import { Segmented } from '../ui/Segmented';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
 import { StatusTag } from '../ui/StatusTag';
 import { controlClass } from '../ui/Field';
-import { estadoDoSlot } from './SeletorHorario';
+import { estadoDoSlot, slotsLivresDoDia, SeletorHorario } from './SeletorHorario';
 import { agendarInspecao, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { sincronizarAgendaIS } from '../../services/agendaGoogleIS';
 import { peritosDoAmp, type PeritoIS } from '../../services/peritosIS';
@@ -22,7 +23,7 @@ import {
 type Modo = 'aberta' | 'nova';
 
 interface Props {
-  /** AAAA-MM-DDThh:mm do horário clicado. */
+  /** AAAA-MM-DDThh:mm do horário clicado, ou só AAAA-MM-DD (dia inteiro: o horário é escolhido no diálogo). */
   dataHora: string;
   /** Perito filtrado no calendário ('' = todos). */
   peritoFiltro: string;
@@ -39,20 +40,25 @@ interface Props {
 const nomeCurto = (inspecionado: string): string => inspecionado.replace(/^.*?\d{2}\.\d{4}\.\d{2}\s*/, '') || inspecionado;
 
 export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro, inspecoes, peritos, config, bloqueios, podeCadastrar, onNova, onClose, onAgendada }) => {
+  const soDia = !dataHora.includes('T');
   const data = dataDeEntrevista(dataHora);
-  const hora = horaDeEntrevista(dataHora);
+  const hora = soDia ? '' : horaDeEntrevista(dataHora);
+  // No modo dia não há "Nova IS" (o cadastro precisa do horário).
+  const cadastrar = podeCadastrar && !soDia;
   const abertas = useMemo(() => inspecoes.filter(i => i.status === 'aberta' && !i.dataEntrevista).sort((a, b) => a.dataAbertura.localeCompare(b.dataAbertura) || a.is - b.is), [inspecoes]);
 
-  const [modo, setModo] = useState<Modo>(abertas.length > 0 || !podeCadastrar ? 'aberta' : 'nova');
+  const [modo, setModo] = useState<Modo>(abertas.length > 0 || !cadastrar ? 'aberta' : 'nova');
   const [busca, setBusca] = useState('');
   const [escolhida, setEscolhida] = useState<InspecaoRecord | null>(null);
   const [peritoUid, setPeritoUid] = useState('');
+  const [horaEscolhida, setHoraEscolhida] = useState('');
   const [erro, setErro] = useState('');
   const [salvando, setSalvando] = useState(false);
 
   const ocupados = useMemo(() => ocupadosDe(inspecoes), [inspecoes]);
   // Livre para a IS (que dura 20, 30 ou 60 min conforme a finalidade); sem IS escolhida, vale 1 slot.
   const livre = (p: PeritoIS, is: InspecaoRecord | null = escolhida) => {
+    if (soDia) return slotsLivresDoDia(p.uid, data, config, bloqueios, ocupados, is ? duracaoDaIS(is) : 20).length > 0;
     const t = turnoDoSlot(hora);
     return estadoDoSlot(p.uid, data, hora, !!t && peritoAtendeNoTurno(config, p.uid, data, t), bloqueios, ocupados, is ? duracaoDaIS(is) : 20) === 'livre';
   };
@@ -66,7 +72,7 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
   const candidatos = useMemo(() => (escolhida ? peritosDoAmp(peritos, escolhida.amp).filter(p => (!peritoFiltro || p.uid === peritoFiltro) && livre(p)) : []), [escolhida, peritos, peritoFiltro, config, bloqueios, ocupados]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const escolher = (is: InspecaoRecord) => {
-    setEscolhida(is); setErro('');
+    setEscolhida(is); setErro(''); setHoraEscolhida('');
     const possiveis = peritosDoAmp(peritos, is.amp).filter(p => (!peritoFiltro || p.uid === peritoFiltro) && livre(p, is));
     setPeritoUid(possiveis.length === 1 ? possiveis[0].uid : possiveis.find(p => p.uid === is.peritoUid)?.uid ?? '');
   };
@@ -75,12 +81,14 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
     const perito = candidatos.find(p => p.uid === peritoUid);
     if (!escolhida) { setErro('Escolha a IS.'); return; }
     if (!perito) { setErro('Escolha o perito.'); return; }
+    if (soDia && !horaEscolhida) { setErro('Escolha o horário.'); return; }
+    const dataEntrevista = soDia ? `${data}T${horaEscolhida}` : dataHora;
     setSalvando(true); setErro('');
     try {
-      const novo = { peritoUid: perito.uid, peritoNome: perito.usuario, peritoGmail: perito.gmail, amp: escolhida.amp, dataEntrevista: dataHora };
+      const novo = { peritoUid: perito.uid, peritoNome: perito.usuario, peritoGmail: perito.gmail, amp: escolhida.amp, dataEntrevista };
       const status = await agendarInspecao(escolhida, novo);
       const sync = await sincronizarAgendaIS({ ...escolhida, ...novo, status, situacao: 'andamento' });
-      const base = `IS ${escolhida.is} agendada para ${dataHoraBr(dataHora)}.`;
+      const base = `IS ${escolhida.is} agendada para ${dataHoraBr(dataEntrevista)}.`;
       if (!sync.ok) onAgendada(`${base} Mas o Google Agenda não foi atualizado: ${sync.erro}`, 'error');
       else onAgendada(sync.semConvidado ? `${base} O perito não tem Gmail cadastrado e não foi convidado.` : `${base} Evento criado no Google Agenda.`);
     } catch (e: any) {
@@ -91,7 +99,7 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
 
   return (
     <Dialog
-      title={`${nomeDiaSemana(data)}, ${dataBr(data)} às ${hora}`}
+      title={soDia ? `Agendar IS em ${nomeDiaSemana(data)}, ${dataBr(data)}` : `${nomeDiaSemana(data)}, ${dataBr(data)} às ${hora}`}
       icon="event"
       size="md"
       onClose={() => { if (!salvando) onClose(); }}
@@ -99,13 +107,13 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
         <>
           <Button variant="secondary" onClick={onClose} disabled={salvando}>Cancelar</Button>
           {modo === 'aberta'
-            ? <Button icon="check" loading={salvando} disabled={!escolhida} onClick={confirmar}>Agendar neste horário</Button>
+            ? <Button icon="check" loading={salvando} disabled={!escolhida} onClick={confirmar}>{soDia ? 'Agendar' : 'Agendar neste horário'}</Button>
             : <Button icon="add" onClick={onNova}>Cadastrar IS neste horário</Button>}
         </>
       )}
     >
       <div className="space-y-4">
-        {podeCadastrar && (
+        {cadastrar && (
           <Segmented<Modo>
             ariaLabel="O que fazer neste horário" fullWidth value={modo} onChange={m => { setModo(m); setErro(''); }}
             options={[{ value: 'aberta', label: 'Agendar IS aberta', badge: abertas.length, badgeTone: 'neutro' }, { value: 'nova', label: 'Nova IS' }]}
@@ -118,7 +126,7 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
           <>
             {erro && <p role="alert" className="text-sm font-semibold text-wine">{erro}</p>}
             {abertas.length === 0 ? (
-              <p className="text-ink-3">Não há IS aberta aguardando agendamento.{podeCadastrar ? ' Use "Nova IS" para cadastrar uma.' : ''}</p>
+              <p className="text-ink-3">Não há IS aberta aguardando agendamento.{cadastrar ? ' Use "Nova IS" para cadastrar uma.' : ''}</p>
             ) : (
               <>
                 <input type="search" aria-label="Buscar IS aberta" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nº, inspecionado ou finalidade…" className={controlClass} autoComplete="off" />
@@ -145,13 +153,19 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
               </>
             )}
             {escolhida && (candidatos.length === 0
-              ? <p role="alert" className="text-sm font-semibold text-wine">Nenhum perito do AMP {escolhida.amp} está disponível neste horário (turno não configurado, bloqueio ou horário ocupado).</p>
+              ? <p role="alert" className="text-sm font-semibold text-wine">Nenhum perito do AMP {escolhida.amp} está disponível {soDia ? 'neste dia' : 'neste horário'} (turno não configurado, bloqueio ou horário ocupado).</p>
               : (
                 <ChoiceGroup<string>
-                  label="Perito" value={peritoUid} onChange={v => { setPeritoUid(v); setErro(''); }}
+                  label="Perito" value={peritoUid} onChange={v => { setPeritoUid(v); setHoraEscolhida(''); setErro(''); }}
                   options={candidatos.map(p => ({ value: p.uid, label: p.usuario, avatar: { nome: p.usuario, imageProfile: p.imageProfile } }))}
                 />
               ))}
+            {soDia && escolhida && peritoUid && candidatos.some(p => p.uid === peritoUid) && (
+              <SeletorHorario
+                semCampoData duracao={duracaoDaIS(escolhida)} peritoUid={peritoUid} data={data} onData={() => undefined}
+                hora={horaEscolhida} onHora={h => { setHoraEscolhida(h); setErro(''); }} config={config} bloqueios={bloqueios} ocupados={ocupados}
+              />
+            )}
           </>
         )}
       </div>

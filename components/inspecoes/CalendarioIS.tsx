@@ -1,24 +1,33 @@
 // Ficheiro: components/inspecoes/CalendarioIS.tsx
 // Visão de calendário das IS, no formato do Google Agenda: barra com "Hoje", setas e título do
-// período, e as visões Dia · Semana · Mês. Dia e Semana são grades de horário (07:00–17:00) com as
-// entrevistas nos slots de 20 min, os bloqueios hachurados e, quando há um perito filtrado, os
-// turnos em que ele não atende esmaecidos. Clicar numa IS abre os detalhes; clicar num horário
-// livre (quem pode agendar) abre o agendamento nesse horário (IS aberta ou nova IS). Segurar e arrastar
-// uma IS para outro horário livre do mesmo perito a reagenda. Os cartões mostram só a hora e o nome do
+// período, e as visões Dia · Semana · Mês (abre em Mês, só com os dias úteis seg–sex). Dia e Semana são
+// grades de horário (07:00–17:00) com as entrevistas nos slots de 20 min, os bloqueios hachurados e,
+// quando há um perito filtrado, os turnos em que ele não atende esmaecidos. Clicar numa IS abre os
+// detalhes; clicar num horário livre (quem pode agendar) abre o agendamento nesse horário (IS aberta ou
+// nova IS); o botão "+" de um dia abre o agendamento de uma IS aberta naquele dia.
+// À esquerda, o painel das IS abertas ainda sem entrevista (com o mini calendário no topo na visão Dia).
+// Arrastar (HTML5 drag-and-drop) um cartão do painel para um dia/horário — ou uma IS agendada ainda sem
+// laudo, TIS e DS-1a (ver podeArrastarIS) — abre o diálogo de agendamento/reagendamento já com a nova
+// data; a transação de agendamento valida perito e slot. Os cartões mostram só a hora e o nome do
 // inspecionado; a cor indica o AMP (JRS = azul-marinho, MPI = dourado). Passar o mouse (ou o foco por
 // teclado) sobre uma IS mostra um rich tooltip com Inspecionado, Finalidade, Perito e Status.
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { estadoDoSlot } from './SeletorHorario';
 import { TooltipIS } from './TooltipIS';
+import { AgendarDialog } from './AgendarDialog';
+import { AgendarNoHorarioDialog } from './AgendarNoHorarioDialog';
+import { MiniCalendarioIS } from './MiniCalendarioIS';
+import { CalendarioPainelAbertas, TIPO_ARRASTE_IS } from './CalendarioPainelAbertas';
 import { Button } from '../ui/Button';
 import { Segmented } from '../ui/Segmented';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
+import { carregarPeritos, type PeritoIS } from '../../services/peritosIS';
 import { tituloDiaConcurso, ehBloqueioDeConcurso, type DiaConcurso } from '../../services/agendaConcursos';
 import {
-  STATUS_IS, statusEfetivoIS, hojeISO, ocupadosDe, duracaoDaIS, horaFimEntrevista, somarDias, inicioDaSemana, inicioDoMes, nomeMes, nomeDiaCurto, nomeDiaSemana, ehDiaUtil, deISO, paraISO, bloqueioNoDia,
-  dataDeEntrevista, horaDeEntrevista, minutosDe, hhmmDe, ehSlotValido, bloqueioAtinge, peritoAtendeNoTurno, turnoDoSlot, TURNOS, DURACAO_SLOT_MIN,
+  STATUS_IS, statusEfetivoIS, hojeISO, duracaoDaIS, horaFimEntrevista, somarDias, inicioDaSemana, nomeMes, nomeDiaCurto, nomeDiaSemana, ehDiaUtil, deISO, paraISO, bloqueioNoDia,
+  dataDeEntrevista, horaDeEntrevista, minutosDe, hhmmDe, ehSlotValido, bloqueioAtinge, peritoAtendeNoTurno, TURNOS, DURACAO_SLOT_MIN,
   type BloqueioAgenda, type ConfigAgenda, type Turno,
 } from '../../utils/inspecoes';
+import { podeArrastarIS, abertasNaoAgendadas, semanasUteisDoMes, nomeCurtoInspecionado } from '../../utils/calendarioIS';
 
 type Modo = 'dia' | 'semana' | 'mes';
 
@@ -36,6 +45,10 @@ const COR_AMP: Record<string, string> = {
 const corAmp = (amp: string) => COR_AMP[amp] ?? COR_AMP.JRS;
 /** Dia de concurso: vermelho enquanto aberto; verde quando todos os candidatos do dia estão finalizados. */
 const corConcurso = (d: Pick<DiaConcurso, 'encerrado'>) => (d.encerrado ? 'bg-green text-white border-green' : 'bg-wine text-white border-wine');
+/** Destaque do dia/horário sob o arraste. */
+const DESTAQUE_ALVO = 'ring-2 ring-inset ring-green bg-green/10';
+/** Botão "+" do dia: discreto, aparece no hover/foco (sempre visível no toque). */
+const CLASSE_MAIS_DIA = 'w-7 h-7 shrink-0 inline-flex items-center justify-center rounded-full text-navy bg-white border border-line hover:bg-thead opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold transition-opacity';
 
 interface Props {
   inspecoes: InspecaoRecord[];
@@ -50,11 +63,14 @@ interface Props {
   onAbrirConcurso?: (concursoId: string) => void;
   /** Presente só para quem pode agendar: clique num horário livre (dataHora = AAAA-MM-DDThh:mm). */
   onNovoNoHorario?: (dataHora: string) => void;
-  /** Presente só para quem pode agendar: IS arrastada para outro horário (mesmo perito). */
+  /**
+   * Presente só para quem pode agendar (habilita o arraste e o botão "+"). O próprio calendário abre o
+   * diálogo de agendamento/reagendamento ao soltar; esta função não é mais chamada pelo arraste.
+   */
   onReagendar?: (is: InspecaoRecord, dataHora: string) => void;
-  /** IS solta num turno em que o perito dela não atende: o chamador oferece trocar o perito. */
+  /** @deprecated O diálogo de reagendamento já permite trocar o perito; mantido por compatibilidade. */
   onTrocarPerito?: (is: InspecaoRecord, dataHora: string) => void;
-  /** Avisos do arraste (horário indisponível etc.). */
+  /** Avisos (resultado do agendamento, arraste recusado etc.). */
   onAviso?: (msg: string, tom?: 'success' | 'error') => void;
 }
 
@@ -69,19 +85,37 @@ const titulo = (modo: Modo, ancora: string): string => {
     : `${Number(ini.slice(8))} de ${mesIni.slice(0, 3)} – ${Number(fim.slice(8))} de ${mesFim.slice(0, 3)} de ${fim.slice(0, 4)}`;
 };
 
-const nomeCurto = (inspecionado: string): string => {
-  const nome = inspecionado.replace(/^.*?\d{2}\.\d{4}\.\d{2}\s*/, '');
-  return nome || inspecionado;
-};
+const nomeCurto = nomeCurtoInspecionado;
+/** O próprio dia, se útil; senão a próxima segunda. */
+const diaUtilOuProximo = (d: string): string => (ehDiaUtil(d) ? d : somarDias(d, deISO(d).getDay() === 6 ? 2 : 1));
 
 /** Handlers do rich tooltip de uma IS (mouse e foco por teclado; toque não mostra). */
 type PropsDica = (is: InspecaoRecord) => Pick<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onPointerEnter' | 'onPointerLeave' | 'onFocus' | 'onBlur' | 'aria-describedby'>;
 
-export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, onReagendar, onTrocarPerito, onAviso, diasConcursos = [], onAbrirConcurso }) => {
+/** Props de arraste de uma IS agendada (vazio = não arrastável: sem draggable e cursor normal). */
+interface HandlersArraste { draggable?: boolean; onDragStart?: React.DragEventHandler<HTMLElement>; onDragEnd?: React.DragEventHandler<HTMLElement> }
+type PropsArraste = (is: InspecaoRecord) => HandlersArraste;
+/** Props de um dia como destino do arraste (célula do Mês, cabeçalho da Semana). */
+interface HandlersAlvo { onDragOver?: React.DragEventHandler<HTMLElement>; onDragLeave?: React.DragEventHandler<HTMLElement>; onDrop?: React.DragEventHandler<HTMLElement> }
+type PropsAlvoDia = (data: string) => HandlersAlvo;
+/** Alvo atual do arraste: dia (hhmm null) ou horário. */
+type Alvo = { data: string; hhmm: string | null } | null;
+
+type Dialogo = { tipo: 'agendar'; is: InspecaoRecord; data?: string; hora?: string } | { tipo: 'dia'; data: string } | null;
+
+export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, onReagendar, onAviso, diasConcursos = [], onAbrirConcurso }) => {
   const [modo, setModo] = useState<Modo>('mes');
-  const [ancora, setAncora] = useState(() => { const h = hojeISO(); return ehDiaUtil(h) ? h : somarDias(h, deISO(h).getDay() === 6 ? 2 : 1); });
+  const [ancora, setAncora] = useState(() => diaUtilOuProximo(hojeISO()));
   const hoje = hojeISO();
   const rolagem = useRef<HTMLDivElement>(null);
+  const podeAgendar = !!(onNovoNoHorario || onReagendar);
+
+  // Peritos (para os diálogos de agendamento): carregados só para quem pode agendar.
+  const [peritos, setPeritos] = useState<PeritoIS[]>([]);
+  useEffect(() => { if (podeAgendar) carregarPeritos().then(setPeritos).catch(() => setPeritos([])); }, [podeAgendar]);
+  const [dialogo, setDialogo] = useState<Dialogo>(null);
+  const fecharDialogo = () => setDialogo(null);
+  const concluido = (msg: string, tom?: 'success' | 'error') => { setDialogo(null); onAviso?.(msg, tom); };
 
   // ----- rich tooltip -----
   const idDica = useId();
@@ -123,81 +157,70 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
     return m;
   }, [inspecoes, peritoUid]);
 
-  // ----- arrastar para reagendar -----
-  interface Arraste { is: InspecaoRecord; x: number; y: number; alvo: { data: string; hhmm: string; motivo: string | null; trocar?: boolean } | null }
-  const [arraste, setArraste] = useState<Arraste | null>(null);
+  const abertas = useMemo(() => abertasNaoAgendadas(inspecoes, hoje), [inspecoes, hoje]);
 
-  const podeArrastar = (is: InspecaoRecord) => !!onReagendar && is.situacao !== 'finalizada' && !!is.peritoUid;
+  // ----- arrastar (HTML5): cartão do painel para agendar; IS agendada para remarcar -----
+  const [arraste, setArraste] = useState<{ is: InspecaoRecord; origem: 'painel' | 'agenda' } | null>(null);
+  const [alvo, setAlvo] = useState<Alvo>(null);
 
-  /** Slot (data + hora alinhada a 20 min) sob o ponto da tela, ou null se fora das colunas/turnos. */
-  const slotDoPonto = (x: number, y: number): { data: string; hhmm: string } | null => {
-    const coluna = document.elementsFromPoint(x, y).map(el => (el as HTMLElement).closest?.('[data-coluna]')).find(Boolean) as HTMLElement | null | undefined;
-    if (!coluna) return null;
-    const min = INICIO_GRADE + Math.floor((y - coluna.getBoundingClientRect().top) / PX_POR_MIN);
-    const turno = TURNOS.find(t => min >= minutosDe(t.inicio) && min < minutosDe(t.fim));
-    if (!turno) return null;
-    const ini = minutosDe(turno.inicio);
-    const hhmm = hhmmDe(ini + Math.floor((min - ini) / DURACAO_SLOT_MIN) * DURACAO_SLOT_MIN);
-    return ehSlotValido(hhmm) ? { data: coluna.dataset.coluna!, hhmm } : null;
-  };
+  const podeArrastar = (is: InspecaoRecord) => podeAgendar && podeArrastarIS(is);
 
-  /** O perito da IS não atende no turno do slot (dia útil): dá para oferecer a troca de perito. */
-  const foraDoTurnoDoPerito = (is: InspecaoRecord, data: string, hhmm: string): boolean => {
-    const turno = turnoDoSlot(hhmm);
-    return !!onTrocarPerito && ehDiaUtil(data) && !!turno && !peritoAtendeNoTurno(config, is.peritoUid, data, turno);
-  };
-
-  /** Motivo pelo qual a IS não pode ir para o slot (null = pode). */
-  const motivoRecusa = (is: InspecaoRecord, data: string, hhmm: string): string | null => {
-    if (!ehDiaUtil(data)) return 'Sem expediente neste dia.';
-    const turno = turnoDoSlot(hhmm);
-    const ocupados = ocupadosDe(inspecoes, is.id);
-    const estado = estadoDoSlot(is.peritoUid, data, hhmm, !!turno && peritoAtendeNoTurno(config, is.peritoUid, data, turno), bloqueios, ocupados, duracaoDaIS(is));
-    if (estado === 'nao_cabe') return `A entrevista (${duracaoDaIS(is)} min) não cabe no turno a partir das ${hhmm}.`;
-    if (estado === 'fora') return `${is.peritoNome} não atende neste turno.`;
-    if (estado === 'bloqueado') return 'Horário bloqueado.';
-    if (estado === 'ocupado') return `${is.peritoNome} já tem outra IS neste horário.`;
-    return null;
-  };
-
-  const iniciarArraste = (is: InspecaoRecord, e: React.PointerEvent<HTMLButtonElement>) => {
+  const iniciarArraste = (is: InspecaoRecord, origem: 'painel' | 'agenda', e: React.DragEvent<HTMLElement>) => {
     setDica(null);
-    if (!podeArrastar(is) || (e.pointerType === 'mouse' && e.button !== 0)) return;
-    const botao = e.currentTarget;
-    const x0 = e.clientX; const y0 = e.clientY;
-    let movendo = false;
-    botao.setPointerCapture(e.pointerId);
-    const mover = (ev: PointerEvent) => {
-      if (!movendo && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 6) return;
-      movendo = true;
-      const ponto = slotDoPonto(ev.clientX, ev.clientY);
-      setArraste({ is, x: ev.clientX, y: ev.clientY, alvo: ponto ? { ...ponto, motivo: motivoRecusa(is, ponto.data, ponto.hhmm), trocar: foraDoTurnoDoPerito(is, ponto.data, ponto.hhmm) } : null });
-    };
-    const soltar = (ev: PointerEvent) => {
-      botao.removeEventListener('pointermove', mover);
-      botao.removeEventListener('pointerup', soltar);
-      botao.removeEventListener('pointercancel', cancelar);
-      botao.releasePointerCapture?.(ev.pointerId);
-      setArraste(null);
-      if (!movendo) return;
-      // O clique que se segue ao arraste não deve abrir a ficha.
-      const engolir = (ce: Event) => ce.stopImmediatePropagation();
-      botao.addEventListener('click', engolir, { once: true, capture: true });
-      window.setTimeout(() => botao.removeEventListener('click', engolir, true), 100);
-      const ponto = slotDoPonto(ev.clientX, ev.clientY);
-      if (!ponto) { onAviso?.('Solte a IS sobre um horário do calendário.', 'error'); return; }
-      const destino = `${ponto.data}T${ponto.hhmm}`;
-      if (destino === is.dataEntrevista) return;
-      if (foraDoTurnoDoPerito(is, ponto.data, ponto.hhmm)) { onTrocarPerito?.(is, destino); return; }
-      const motivo = motivoRecusa(is, ponto.data, ponto.hhmm);
-      if (motivo) { onAviso?.(`Não foi possível reagendar: ${motivo}`, 'error'); return; }
-      onReagendar?.(is, destino);
-    };
-    const cancelar = () => { botao.removeEventListener('pointermove', mover); botao.removeEventListener('pointerup', soltar); botao.removeEventListener('pointercancel', cancelar); setArraste(null); };
-    botao.addEventListener('pointermove', mover);
-    botao.addEventListener('pointerup', soltar);
-    botao.addEventListener('pointercancel', cancelar);
+    e.dataTransfer.setData(TIPO_ARRASTE_IS, is.id);
+    e.dataTransfer.setData('text/plain', `IS ${is.is}`);
+    e.dataTransfer.effectAllowed = 'move';
+    // Atualiza o estado depois do dragstart: mexer no DOM da origem durante o evento cancela o arraste em alguns navegadores.
+    window.setTimeout(() => setArraste({ is, origem }), 0);
   };
+  const terminarArraste = () => { setArraste(null); setAlvo(null); };
+
+  const propsArraste: PropsArraste = is => (podeArrastar(is)
+    ? { draggable: true, onDragStart: e => { e.stopPropagation(); iniciarArraste(is, 'agenda', e); }, onDragEnd: terminarArraste }
+    : {});
+
+  /** O dia aceita a IS solta: dia útil, de hoje em diante. */
+  const aceitaDia = (data: string) => ehDiaUtil(data) && data >= hoje;
+  const marcarAlvo = (novo: NonNullable<Alvo>) => setAlvo(a => (a && a.data === novo.data && a.hhmm === novo.hhmm ? a : novo));
+
+  /** Solta a IS no dia (e horário, se houver): abre o diálogo de agendamento/reagendamento já preenchido. */
+  const soltar = (e: React.DragEvent<HTMLElement>, data: string, hhmm: string | null) => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData(TIPO_ARRASTE_IS);
+    const is = arraste?.is ?? inspecoes.find(i => i.id === id);
+    terminarArraste();
+    if (!is) return;
+    if (!aceitaDia(data)) { onAviso?.('Solte a IS num dia útil, de hoje em diante.', 'error'); return; }
+    if (is.dataEntrevista) {
+      if (!podeArrastarIS(is)) return;
+      // Mesmo dia (sem horário) ou mesmo horário: nada a remarcar.
+      if (hhmm ? is.dataEntrevista === `${data}T${hhmm}` : dataDeEntrevista(is.dataEntrevista) === data) return;
+    }
+    setDialogo({ tipo: 'agendar', is, data, hora: hhmm ?? undefined });
+  };
+
+  const propsAlvoDia: PropsAlvoDia = data => (podeAgendar ? {
+    onDragOver: e => {
+      if (!aceitaDia(data) || !e.dataTransfer.types.includes(TIPO_ARRASTE_IS)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      marcarAlvo({ data, hhmm: null });
+    },
+    onDragLeave: e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setAlvo(a => (a?.data === data && !a.hhmm ? null : a)); },
+    onDrop: e => soltar(e, data, null),
+  } : {});
+
+  /** Coluna da grade (Dia/Semana) como destino: o horário sob o ponteiro, alinhado ao slot de 20 min. */
+  const propsAlvoColuna: PropsAlvoDia = data => (podeAgendar ? {
+    onDragOver: e => {
+      if (!aceitaDia(data) || !e.dataTransfer.types.includes(TIPO_ARRASTE_IS)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      marcarAlvo({ data, hhmm: slotNoY(e.clientY - e.currentTarget.getBoundingClientRect().top) });
+    },
+    onDragLeave: e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setAlvo(a => (a?.data === data ? null : a)); },
+    onDrop: e => soltar(e, data, slotNoY(e.clientY - e.currentTarget.getBoundingClientRect().top)),
+  } : {});
 
   const navegar = (sentido: -1 | 1) => {
     if (modo === 'dia') {
@@ -207,62 +230,96 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
     } else if (modo === 'semana') setAncora(somarDias(ancora, 7 * sentido));
     else { const d = deISO(ancora); d.setMonth(d.getMonth() + sentido, 1); setAncora(paraISO(d)); }
   };
-  const irHoje = () => setAncora(ehDiaUtil(hoje) ? hoje : somarDias(hoje, deISO(hoje).getDay() === 6 ? 2 : 1));
+  const irHoje = () => setAncora(diaUtilOuProximo(hoje));
 
   const dias = modo === 'dia' ? [ancora] : modo === 'semana' ? Array.from({ length: 5 }, (_, i) => somarDias(inicioDaSemana(ancora), i)) : [];
 
   // Ao abrir a grade, rola até as 8h (ou o primeiro evento do período).
   useEffect(() => { if (modo !== 'mes' && rolagem.current) rolagem.current.scrollTop = 0; }, [modo, ancora]);
 
+  /** "+" de um dia: agenda uma IS aberta naquele dia. */
+  const maisDoDia = (d: string) => (podeAgendar && aceitaDia(d) ? () => setDialogo({ tipo: 'dia', data: d }) : undefined);
+
   return (
-    <div className="bg-white rounded-xl border border-line overflow-clip">
-      <div className="flex flex-wrap items-center justify-between gap-2 p-3 border-b border-line">
-        <div className="flex items-center gap-1">
-          <Button variant="secondary" onClick={irHoje}>Hoje</Button>
-          <button type="button" onClick={() => navegar(-1)} aria-label="Período anterior" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined" aria-hidden="true">chevron_left</span></button>
-          <button type="button" onClick={() => navegar(1)} aria-label="Próximo período" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>
-          <h2 className="text-h3 font-bold text-navy ml-1 first-letter:uppercase" aria-live="polite">{titulo(modo, ancora)}</h2>
+    <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-stretch">
+      {/* Painel: no desktop, mesma altura do calendário (posição absoluta na célula da grade) e rolagem própria. */}
+      <div className="lg:relative lg:min-h-[24rem]">
+        <div className="lg:absolute lg:inset-0">
+          <CalendarioPainelAbertas
+            abertas={abertas} hoje={hoje} onAbrir={onAbrir}
+            onAgendar={podeAgendar ? is => setDialogo({ tipo: 'agendar', is }) : undefined}
+            onArrastarInicio={(is, e) => iniciarArraste(is, 'painel', e)} onArrastarFim={terminarArraste}
+            arrastandoId={arraste?.origem === 'painel' ? arraste.is.id : null}
+            topo={modo === 'dia' ? (
+              <MiniCalendarioIS compacto inspecoes={peritoUid ? inspecoes.filter(i => i.peritoUid === peritoUid) : inspecoes} diasConcursos={diasConcursos} selecionado={ancora} onSelecionar={d => setAncora(diaUtilOuProximo(d))} />
+            ) : undefined}
+          />
         </div>
-        <Segmented<Modo>
-          ariaLabel="Visão do calendário" value={modo} onChange={setModo}
-          options={[{ value: 'dia', label: 'Dia' }, { value: 'semana', label: 'Semana' }, { value: 'mes', label: 'Mês' }]}
-        />
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 border-b border-line text-xs text-ink-3" aria-label="Legenda de cores por AMP">
-        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-navy" aria-hidden="true" />JRS</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-gold" aria-hidden="true" />MPI</span>
-        {diasConcursos.length > 0 && <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-wine" aria-hidden="true" />Concurso (turno reservado)<span className="w-3 h-3 rounded-sm bg-green ml-1" aria-hidden="true" />dia encerrado</span>}
-        {onReagendar && <span className="ml-auto hidden sm:inline">Segure e arraste uma IS para reagendar.</span>}
-      </div>
+      <div className="bg-white rounded-xl border border-line overflow-clip min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 border-b border-line">
+          <div className="flex items-center gap-1 min-w-0">
+            <Button variant="secondary" onClick={irHoje}>Hoje</Button>
+            <button type="button" onClick={() => navegar(-1)} aria-label="Período anterior" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined" aria-hidden="true">chevron_left</span></button>
+            <button type="button" onClick={() => navegar(1)} aria-label="Próximo período" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>
+            <h2 className="text-h3 font-bold text-navy ml-1 first-letter:uppercase" aria-live="polite">{titulo(modo, ancora)}</h2>
+          </div>
+          <Segmented<Modo>
+            ariaLabel="Visão do calendário" value={modo} onChange={setModo}
+            options={[{ value: 'dia', label: 'Dia' }, { value: 'semana', label: 'Semana' }, { value: 'mes', label: 'Mês' }]}
+          />
+        </div>
 
-      {modo === 'mes'
-        ? <VisaoMes ancora={ancora} hoje={hoje} porDia={porDia} bloqueios={bloqueios} peritoUid={peritoUid} onAbrir={onAbrir} concursosPorDia={concursosPorDia} onAbrirConcurso={onAbrirConcurso} propsDica={propsDica} onDia={d => { setAncora(d); setModo('dia'); }} />
-        : (
-          <div ref={rolagem} className="overflow-auto max-h-[70vh]">
-            <div className="min-w-[640px]">
-              <div className="sticky top-0 z-20 grid bg-white border-b border-line" style={{ gridTemplateColumns: `56px repeat(${dias.length}, minmax(0, 1fr))` }}>
-                <div />
-                {dias.map(d => (
-                  <button key={d} type="button" onClick={() => { setAncora(d); setModo('dia'); }} className="py-2 text-center border-l border-line hover:bg-thead" aria-label={`Abrir ${nomeDiaSemana(d)}, ${Number(d.slice(8))} de ${nomeMes(d)}`}>
-                    <span className="block text-xs font-semibold text-ink-3 uppercase">{nomeDiaCurto(d)}</span>
-                    <span className={`inline-flex w-9 h-9 items-center justify-center rounded-full text-h3 font-bold ${d === hoje ? 'bg-navy text-white' : 'text-navy'}`}>{Number(d.slice(8))}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="grid" style={{ gridTemplateColumns: `56px repeat(${dias.length}, minmax(0, 1fr))` }}>
-                <div className="relative" style={{ height: ALTURA_GRADE }} aria-hidden="true">
-                  {HORAS.map(h => (
-                    <span key={h} className="absolute right-2 -translate-y-1/2 text-xs text-ink-3 font-mono" style={{ top: (h * 60 - INICIO_GRADE) * PX_POR_MIN }}>{h > 7 ? `${String(h).padStart(2, '0')}:00` : ''}</span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 border-b border-line text-xs text-ink-3" aria-label="Legenda de cores por AMP">
+          <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-navy" aria-hidden="true" />JRS</span>
+          <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-gold" aria-hidden="true" />MPI</span>
+          {diasConcursos.length > 0 && <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-wine" aria-hidden="true" />Concurso (turno reservado)<span className="w-3 h-3 rounded-sm bg-green ml-1" aria-hidden="true" />dia encerrado</span>}
+        </div>
+
+        {modo === 'mes'
+          ? <VisaoMes ancora={ancora} hoje={hoje} porDia={porDia} bloqueios={bloqueios} peritoUid={peritoUid} onAbrir={onAbrir} concursosPorDia={concursosPorDia} onAbrirConcurso={onAbrirConcurso} propsDica={propsDica} propsArraste={propsArraste} propsAlvoDia={propsAlvoDia} alvo={alvo} arrastandoId={arraste?.is.id ?? null} maisDoDia={maisDoDia} onDia={d => { setAncora(d); setModo('dia'); }} />
+          : (
+            <div ref={rolagem} className="overflow-auto max-h-[70vh]">
+              <div className="min-w-[640px]">
+                <div className="sticky top-0 z-20 grid bg-white border-b border-line" style={{ gridTemplateColumns: `56px repeat(${dias.length}, minmax(0, 1fr))` }}>
+                  <div />
+                  {dias.map(d => {
+                    const mais = maisDoDia(d);
+                    return (
+                      <div key={d} {...propsAlvoDia(d)} className={`group relative border-l border-line ${alvo?.data === d && !alvo.hhmm ? DESTAQUE_ALVO : ''}`}>
+                        <button type="button" onClick={() => { setAncora(d); setModo('dia'); }} className="w-full py-2 text-center hover:bg-thead" aria-label={`Abrir ${nomeDiaSemana(d)}, ${Number(d.slice(8))} de ${nomeMes(d)}`}>
+                          <span className="block text-xs font-semibold text-ink-3 uppercase">{nomeDiaCurto(d)}</span>
+                          <span className={`inline-flex w-9 h-9 items-center justify-center rounded-full text-h3 font-bold ${d === hoje ? 'bg-navy text-white' : 'text-navy'}`}>{Number(d.slice(8))}</span>
+                        </button>
+                        {mais && (
+                          <button type="button" onClick={mais} aria-label={`Agendar IS aberta em ${Number(d.slice(8))} de ${nomeMes(d)}`} title="Agendar IS neste dia" className={`absolute top-1 right-1 ${CLASSE_MAIS_DIA}`}>
+                            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">add</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="grid" style={{ gridTemplateColumns: `56px repeat(${dias.length}, minmax(0, 1fr))` }}>
+                  <div className="relative" style={{ height: ALTURA_GRADE }} aria-hidden="true">
+                    {HORAS.map(h => (
+                      <span key={h} className="absolute right-2 -translate-y-1/2 text-xs text-ink-3 font-mono" style={{ top: (h * 60 - INICIO_GRADE) * PX_POR_MIN }}>{h > 7 ? `${String(h).padStart(2, '0')}:00` : ''}</span>
+                    ))}
+                  </div>
+                  {dias.map(d => (
+                    <ColunaDia
+                      key={d} data={d} hoje={hoje} inspecoes={porDia.get(d) ?? []} bloqueios={bloqueios} config={config} peritoUid={peritoUid} onAbrir={onAbrir} onNovoNoHorario={onNovoNoHorario}
+                      propsArraste={propsArraste} propsAlvo={propsAlvoColuna(d)} alvo={alvo?.data === d ? alvo : null} arrastando={arraste?.is ?? null}
+                      concursosDoDia={concursosPorDia.get(d) ?? []} onAbrirConcurso={onAbrirConcurso} propsDica={propsDica}
+                    />
                   ))}
                 </div>
-                {dias.map(d => (
-                  <ColunaDia key={d} data={d} hoje={hoje} inspecoes={porDia.get(d) ?? []} bloqueios={bloqueios} config={config} peritoUid={peritoUid} onAbrir={onAbrir} onNovoNoHorario={onNovoNoHorario} podeArrastar={podeArrastar} onIniciarArraste={iniciarArraste} arrastando={arraste} concursosDoDia={concursosPorDia.get(d) ?? []} onAbrirConcurso={onAbrirConcurso} propsDica={propsDica} />
-                ))}
               </div>
             </div>
-          </div>
-        )}
+          )}
+      </div>
+
       {dica && !arraste && (
         <TooltipIS
           id={idDica} alvo={dica.alvo} titulo={`IS ${dica.is.is}${dica.is.dataEntrevista ? ` · ${horaDeEntrevista(dica.is.dataEntrevista)}–${horaFimEntrevista(horaDeEntrevista(dica.is.dataEntrevista), duracaoDaIS(dica.is))}` : ''}`}
@@ -274,16 +331,32 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
           ]}
         />
       )}
-      {arraste && (
-        <div
-          className={`fixed z-toast pointer-events-none px-2 py-1 rounded border text-xs font-semibold shadow-lg opacity-90 ${corAmp(arraste.is.amp)}`}
-          style={{ left: arraste.x + 12, top: arraste.y + 12 }}
-        >
-          {arraste.alvo ? (arraste.alvo.trocar ? `⚠ ${arraste.is.peritoNome} não atende: solte para trocar o perito` : arraste.alvo.motivo ? `✖ ${arraste.alvo.motivo}` : `${arraste.alvo.hhmm} · ${nomeCurto(arraste.is.inspecionado)}`) : nomeCurto(arraste.is.inspecionado)}
-        </div>
+
+      {dialogo?.tipo === 'agendar' && (
+        <AgendarDialog
+          inspecao={dialogo.is} peritos={peritos} config={config} bloqueios={bloqueios} inspecoes={inspecoes}
+          dataInicial={dialogo.data} horaInicial={dialogo.hora} peritoInicial={dialogo.is.peritoUid || peritoUid || undefined}
+          onClose={fecharDialogo} onAgendada={concluido}
+        />
+      )}
+      {dialogo?.tipo === 'dia' && (
+        <AgendarNoHorarioDialog
+          dataHora={dialogo.data} peritoFiltro={peritoUid} inspecoes={inspecoes} peritos={peritos} config={config} bloqueios={bloqueios}
+          podeCadastrar={false} onNova={fecharDialogo} onClose={fecharDialogo} onAgendada={concluido}
+        />
       )}
     </div>
   );
+};
+
+/** Slot (hh:mm, alinhado a 20 min) na altura y da coluna, ou null fora dos turnos. */
+const slotNoY = (y: number): string | null => {
+  const min = INICIO_GRADE + Math.floor(y / PX_POR_MIN);
+  const turno = TURNOS.find(t => min >= minutosDe(t.inicio) && min < minutosDe(t.fim));
+  if (!turno) return null;
+  const ini = minutosDe(turno.inicio);
+  const hhmm = hhmmDe(ini + Math.floor((min - ini) / DURACAO_SLOT_MIN) * DURACAO_SLOT_MIN);
+  return ehSlotValido(hhmm) ? hhmm : null;
 };
 
 // ---------------------------------------------------------------------------
@@ -293,13 +366,16 @@ const topo = (min: number) => (min - INICIO_GRADE) * PX_POR_MIN;
 const ColunaDia: React.FC<{
   data: string; hoje: string; inspecoes: InspecaoRecord[]; bloqueios: BloqueioAgenda[]; config: ConfigAgenda; peritoUid: string;
   onAbrir: (is: InspecaoRecord) => void; onNovoNoHorario?: (dataHora: string) => void;
-  podeArrastar: (is: InspecaoRecord) => boolean;
-  onIniciarArraste: (is: InspecaoRecord, e: React.PointerEvent<HTMLButtonElement>) => void;
-  arrastando: { is: InspecaoRecord; alvo: { data: string; hhmm: string; motivo: string | null; trocar?: boolean } | null } | null;
+  propsArraste: PropsArraste;
+  /** Handlers de destino do arraste (a coluna inteira). */
+  propsAlvo: HandlersAlvo;
+  /** Alvo do arraste nesta coluna (dia inteiro ou horário). */
+  alvo: Alvo;
+  arrastando: InspecaoRecord | null;
   concursosDoDia: DiaConcurso[];
   onAbrirConcurso?: (concursoId: string) => void;
   propsDica: PropsDica;
-}> = ({ data, hoje, inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, podeArrastar, onIniciarArraste, arrastando, concursosDoDia, onAbrirConcurso, propsDica }) => {
+}> = ({ data, hoje, inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, propsArraste, propsAlvo, alvo, arrastando, concursosDoDia, onAbrirConcurso, propsDica }) => {
   const agora = new Date();
   const minAgora = agora.getHours() * 60 + agora.getMinutes();
   // Os bloqueios gerados pelos dias de concurso aparecem como o próprio cartão do concurso (abaixo), não hachurados.
@@ -340,16 +416,17 @@ const ColunaDia: React.FC<{
 
   return (
     <div
-      className={`relative border-l border-line ${onNovoNoHorario ? 'cursor-cell' : ''}`}
+      className={`relative border-l border-line ${onNovoNoHorario ? 'cursor-cell' : ''} ${alvo && !alvo.hhmm ? DESTAQUE_ALVO : ''}`}
       style={{ height: ALTURA_GRADE }}
       data-coluna={data}
       onClick={aoClicarVazio}
+      {...propsAlvo}
     >
       {/* destino do arraste */}
-      {arrastando?.alvo?.data === data && (
+      {alvo?.hhmm && arrastando && (
         <div
-          className={`absolute inset-x-0 z-20 pointer-events-none border-2 rounded ${arrastando.alvo.trocar ? 'border-gold bg-gold/20' : arrastando.alvo.motivo ? 'border-wine bg-wine/10' : 'border-green bg-green/15'}`}
-          style={{ top: topo(minutosDe(arrastando.alvo.hhmm)), height: duracaoDaIS(arrastando.is) * PX_POR_MIN }}
+          className="absolute inset-x-0 z-20 pointer-events-none border-2 rounded border-green bg-green/15"
+          style={{ top: topo(minutosDe(alvo.hhmm)), height: duracaoDaIS(arrastando) * PX_POR_MIN }}
         />
       )}
       {/* fora do expediente: antes das 07:30, almoço e depois das 17:00 */}
@@ -425,15 +502,15 @@ const ColunaDia: React.FC<{
       {/* IS */}
       {posicoes.map(({ is, ini: min, col, total }) => {
         const duracao = duracaoDaIS(is);
-        const arrastavel = podeArrastar(is);
+        const arraste = propsArraste(is);
         return (
           <button
             key={is.id}
             type="button"
             onClick={e => { e.stopPropagation(); onAbrir(is); }}
-            onPointerDown={e => onIniciarArraste(is, e)}
+            {...arraste}
             {...propsDica(is)}
-            className={`absolute z-10 px-1.5 rounded border text-left overflow-hidden text-xs leading-tight hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold select-none ${arrastavel ? 'cursor-grab active:cursor-grabbing touch-none' : ''} ${arrastando?.is.id === is.id ? 'opacity-40' : ''} ${corAmp(is.amp)}`}
+            className={`absolute z-10 px-1.5 rounded border text-left overflow-hidden text-xs leading-tight hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold select-none ${arraste.draggable ? 'cursor-grab active:cursor-grabbing' : ''} ${arrastando?.id === is.id ? 'opacity-40' : ''} ${corAmp(is.amp)}`}
             style={{ top: topo(min) + 1, height: duracao * PX_POR_MIN - 2, left: `calc(${(col / total) * 100}% + 2px)`, width: `calc(${100 / total}% - 4px)` }}
           >
             <span className="font-bold font-mono">{horaDeEntrevista(is.dataEntrevista)}</span> <span className="font-semibold">{nomeCurto(is.inspecionado)}</span>
@@ -450,32 +527,40 @@ const VisaoMes: React.FC<{
   ancora: string; hoje: string; porDia: Map<string, InspecaoRecord[]>; bloqueios: BloqueioAgenda[]; peritoUid: string;
   onAbrir: (is: InspecaoRecord) => void; onDia: (d: string) => void;
   concursosPorDia: Map<string, DiaConcurso[]>; onAbrirConcurso?: (concursoId: string) => void;
-  propsDica: PropsDica;
-}> = ({ ancora, hoje, porDia, bloqueios, peritoUid, onAbrir, onDia, concursosPorDia, onAbrirConcurso, propsDica }) => {
-  const primeiro = inicioDoMes(ancora);
-  const inicio = inicioDaSemana(primeiro);
-  const semanas = Array.from({ length: 6 }, (_, w) => Array.from({ length: 7 }, (_, d) => somarDias(inicio, w * 7 + d)));
-  // O sexto ramal só aparece se ainda tem dias do mês.
-  const visiveis = semanas.filter((s, i) => i < 5 || s.some(d => d.slice(0, 7) === ancora.slice(0, 7)));
+  propsDica: PropsDica; propsArraste: PropsArraste; propsAlvoDia: PropsAlvoDia; alvo: Alvo; arrastandoId: string | null;
+  /** Ação do botão "+" do dia (undefined = sem botão). */
+  maisDoDia: (d: string) => (() => void) | undefined;
+}> = ({ ancora, hoje, porDia, bloqueios, peritoUid, onAbrir, onDia, concursosPorDia, onAbrirConcurso, propsDica, propsArraste, propsAlvoDia, alvo, arrastandoId, maisDoDia }) => {
+  // Só os dias úteis (seg–sex): a grade tem 5 colunas.
+  const semanas = semanasUteisDoMes(ancora);
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[640px]">
-        <div className="grid grid-cols-7 border-b border-line bg-thead text-xs font-semibold text-ink-3 uppercase">
-          {['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'].map(n => <div key={n} className="px-2 py-2 text-center">{n}</div>)}
+      <div className="min-w-[560px]">
+        <div className="grid grid-cols-5 border-b border-line bg-thead text-xs font-semibold text-ink-3 uppercase">
+          {['seg', 'ter', 'qua', 'qui', 'sex'].map(n => <div key={n} className="px-2 py-2 text-center">{n}</div>)}
         </div>
-        {visiveis.map((sem, i) => (
-          <div key={i} className="grid grid-cols-7 border-b border-line last:border-b-0">
+        {semanas.map(sem => (
+          <div key={sem[0]} className="grid grid-cols-5 border-b border-line last:border-b-0">
             {sem.map(d => {
               const lista = porDia.get(d) ?? [];
               const foraDoMes = d.slice(0, 7) !== ancora.slice(0, 7);
               const concursosDoDia = concursosPorDia.get(d) ?? [];
               const bloqueado = bloqueios.some(b => !ehBloqueioDeConcurso(b) && bloqueioNoDia(b, d) && (!peritoUid || b.peritoUid === '*' || b.peritoUid === peritoUid));
+              const mais = maisDoDia(d);
+              const ehAlvo = alvo?.data === d;
               return (
-                <div key={d} className={`min-h-[104px] p-1 border-l border-line first:border-l-0 ${foraDoMes ? 'bg-thead/60' : 'bg-white'} ${ehDiaUtil(d) ? '' : 'bg-thead/60'}`}>
-                  <button type="button" onClick={() => onDia(d)} aria-label={`Abrir ${Number(d.slice(8))} de ${nomeMes(d)}`} className="flex items-center gap-1 w-full">
-                    <span className={`inline-flex w-7 h-7 items-center justify-center rounded-full text-sm font-bold ${d === hoje ? 'bg-navy text-white' : foraDoMes ? 'text-ink-4' : 'text-navy'}`}>{Number(d.slice(8))}</span>
-                    {bloqueado && <span className="material-symbols-outlined text-[16px] text-wine" aria-label="Há bloqueio neste dia" title="Há bloqueio neste dia">block</span>}
-                  </button>
+                <div key={d} {...propsAlvoDia(d)} className={`group min-h-[104px] p-1 border-l border-line first:border-l-0 transition-colors ${foraDoMes ? 'bg-thead/60' : 'bg-white'} ${ehAlvo ? DESTAQUE_ALVO : ''}`}>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => onDia(d)} aria-label={`Abrir ${Number(d.slice(8))} de ${nomeMes(d)}`} className="flex items-center gap-1 min-w-0 flex-1">
+                      <span className={`inline-flex w-7 h-7 items-center justify-center rounded-full text-sm font-bold ${d === hoje ? 'bg-navy text-white' : foraDoMes ? 'text-ink-4' : 'text-navy'}`}>{Number(d.slice(8))}</span>
+                      {bloqueado && <span className="material-symbols-outlined text-[16px] text-wine" aria-label="Há bloqueio neste dia" title="Há bloqueio neste dia">block</span>}
+                    </button>
+                    {mais && (
+                      <button type="button" onClick={mais} aria-label={`Agendar IS aberta em ${Number(d.slice(8))} de ${nomeMes(d)}`} title="Agendar IS neste dia" className={CLASSE_MAIS_DIA}>
+                        <span className="material-symbols-outlined text-[18px]" aria-hidden="true">add</span>
+                      </button>
+                    )}
+                  </div>
                   <div className="space-y-0.5 mt-0.5">
                     {concursosDoDia.map(c => (
                       <button key={c.chave} type="button" disabled={!onAbrirConcurso} onClick={() => onAbrirConcurso?.(c.concursoId)} title={`${tituloDiaConcurso(c)}${c.encerrado ? ' · dia encerrado' : ''}`} className={`block w-full text-left truncate rounded border px-1 text-xs font-bold ${onAbrirConcurso ? '' : 'cursor-default'} ${corConcurso(c)}`}>
@@ -483,8 +568,9 @@ const VisaoMes: React.FC<{
                       </button>
                     ))}
                     {lista.slice(0, 3).map(is => {
+                      const arraste = propsArraste(is);
                       return (
-                        <button key={is.id} type="button" onClick={() => onAbrir(is)} {...propsDica(is)} className={`block w-full text-left truncate rounded border px-1 text-xs ${corAmp(is.amp)}`}>
+                        <button key={is.id} type="button" onClick={() => onAbrir(is)} {...arraste} {...propsDica(is)} className={`block w-full text-left truncate rounded border px-1 text-xs ${arraste.draggable ? 'cursor-grab active:cursor-grabbing' : ''} ${arrastandoId === is.id ? 'opacity-40' : ''} ${corAmp(is.amp)}`}>
                           <span className="font-mono font-bold">{horaDeEntrevista(is.dataEntrevista)}</span> {nomeCurto(is.inspecionado)}
                         </button>
                       );

@@ -2,7 +2,9 @@
 // Mini calendário do mês para a Home: marca os dias com IS agendadas (ponto azul-marinho = JRS,
 // dourado = MPI) e com concursos (ponto vinho; verde quando o dia é encerrado) e lista, abaixo da grade, o que
 // ocupa o dia selecionado (começa em hoje): os concursos (turno da manhã inteiro) e as IS.
-import React, { useMemo, useState } from 'react';
+// No painel da visão Calendário (visão Dia) é usado controlado e compacto: `selecionado` + `onSelecionar`
+// navegam o calendário grande e a lista do dia some.
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import { tituloDiaConcurso, type DiaConcurso } from '../../services/agendaConcursos';
@@ -13,10 +15,26 @@ import {
 
 const nomeCurto = (inspecionado: string): string => inspecionado.replace(/^.*?\d{2}\.\d{4}\.\d{2}\s*/, '') || inspecionado;
 
-export const MiniCalendarioIS: React.FC<{ inspecoes: InspecaoRecord[]; diasConcursos?: DiaConcurso[]; concursosClicaveis?: boolean }> = ({ inspecoes, diasConcursos = [], concursosClicaveis = false }) => {
+interface Props {
+  inspecoes: InspecaoRecord[];
+  diasConcursos?: DiaConcurso[];
+  concursosClicaveis?: boolean;
+  /** Modo controlado: dia selecionado (AAAA-MM-DD). */
+  selecionado?: string;
+  /** Modo controlado: clique num dia. */
+  onSelecionar?: (dia: string) => void;
+  /** Só a grade do mês (sem a lista do dia nem o link para o calendário). */
+  compacto?: boolean;
+}
+
+export const MiniCalendarioIS: React.FC<Props> = ({ inspecoes, diasConcursos = [], concursosClicaveis = false, selecionado: selecionadoExterno, onSelecionar, compacto = false }) => {
   const hoje = hojeISO();
-  const [mes, setMes] = useState(inicioDoMes(hoje));
-  const [selecionado, setSelecionado] = useState(hoje);
+  const [mes, setMes] = useState(inicioDoMes(selecionadoExterno ?? hoje));
+  const [selecionadoInterno, setSelecionadoInterno] = useState(hoje);
+  const selecionado = selecionadoExterno ?? selecionadoInterno;
+  const setSelecionado = (d: string) => { if (onSelecionar) onSelecionar(d); else setSelecionadoInterno(d); };
+  // O dia escolhido de fora (setas do calendário grande) leva a grade para o mês dele.
+  useEffect(() => { if (selecionadoExterno) setMes(inicioDoMes(selecionadoExterno)); }, [selecionadoExterno]);
 
   const porDia = useMemo(() => {
     const m = new Map<string, InspecaoRecord[]>();
@@ -44,7 +62,7 @@ export const MiniCalendarioIS: React.FC<{ inspecoes: InspecaoRecord[]; diasConcu
   const concursosDoDia = concursosPorDia.get(selecionado) ?? [];
 
   return (
-    <div className="px-3 pb-3">
+    <div className={compacto ? '' : 'px-3 pb-3'}>
       <div className="flex items-center justify-between mb-1">
         <button type="button" onClick={() => mudarMes(-1)} aria-label="Mês anterior" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined text-[22px]" aria-hidden="true">chevron_left</span></button>
         <p className="text-sm font-bold text-navy first-letter:uppercase" aria-live="polite">{nomeMes(mes)} de {mes.slice(0, 4)}</p>
@@ -81,7 +99,7 @@ export const MiniCalendarioIS: React.FC<{ inspecoes: InspecaoRecord[]; diasConcu
         })}
       </div>
 
-      <div className="mt-3 border-t border-line pt-2">
+      {!compacto && <div className="mt-3 border-t border-line pt-2">
         <p className="text-xs font-bold text-ink-3 capitalize mb-1">{nomeDiaSemana(selecionado)}, {dataBr(selecionado)}</p>
         {concursosDoDia.length > 0 && (
           <ul className="space-y-1 mb-1" aria-label="Concursos do dia">
@@ -120,7 +138,7 @@ export const MiniCalendarioIS: React.FC<{ inspecoes: InspecaoRecord[]; diasConcu
           </ul>
         )}
         <Link to="/inspecoes" className="inline-flex items-center min-h-[44px] text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Abrir calendário completo</Link>
-      </div>
+      </div>}
     </div>
   );
 };

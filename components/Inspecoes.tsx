@@ -2,21 +2,23 @@
 // Página INSPEÇÕES DE SAÚDE: cadastro das IS (exceto as de concursos), agendamento das entrevistas em
 // slots de 20 min por perito, acompanhamento de prazos e minutas de mensagem. O status muda sozinho
 // (Conclusão da IS no detalhe; Falta, Restituição, Reabrir e Cancelar IS no menu ⋮ da linha). Visão inicial em tabela
-// (agrupada em Abertas · Em andamento · Finalizadas) com alternância para calendário no formato do
-// Google Agenda. As IS com entrevista marcada são sincronizadas com a agenda "JRS/HNRe" do Google
+// no formato "agenda" (um grupo por dia da entrevista; no topo, as não agendadas — ver inspecoes/TabelaAgendaIS),
+// filtrada por situação (padrão: Em andamento) e período (padrão: Este mês), com alternância para calendário no
+// formato do Google Agenda. As IS com entrevista marcada são sincronizadas com a agenda "JRS/HNRe" do Google
 // Agenda, com o perito como convidado (ver services/agendaGoogleIS.ts).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
 import { IconButton } from './ui/IconButton';
-import { Segmented } from './ui/Segmented';
-import { StatusTag } from './ui/StatusTag';
 import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
 import { ConfirmDialog } from './ui/Dialog';
 import { controlClass } from './ui/Field';
-import { MenuAcoes, type ItemMenu } from './ui/MenuAcoes';
+import { type ItemMenu } from './ui/MenuAcoes';
+import { TabelaAgendaIS } from './inspecoes/TabelaAgendaIS';
+import { FiltroSituacaoIS } from './inspecoes/FiltroSituacaoIS';
+import { FiltroPeriodo, type FiltroPeriodoValor } from './inspecoes/FiltroPeriodo';
 import { InspecaoForm } from './inspecoes/InspecaoForm';
 import { InspecaoDetalhe } from './inspecoes/InspecaoDetalhe';
 import { AgendarDialog } from './inspecoes/AgendarDialog';
@@ -45,26 +47,17 @@ import { sincronizarAgendaIS, removerEventoAgendaIS } from '../services/agendaGo
 import { minutaCancelamento, minutaResultadoDaIS } from '../utils/minutasIS';
 import { normalizarBusca } from '../utils/corposQuadros';
 import {
-  STATUS_IS, SITUACOES_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataBr, dataHoraBr, hojeISO, dataDeEntrevista, horaDeEntrevista, nomeDiaSemana,
+  STATUS_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataHoraBr, hojeISO,
   podeCancelarIS, situacaoDoStatus,
   type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS,
 } from '../utils/inspecoes';
+import { intervaloDoPeriodo } from '../utils/periodos';
+import { agruparAgendaIS, passaNoPeriodo } from '../utils/agendaIS';
 
 type Visao = 'tabela' | 'calendario';
-/** '' = nenhuma situação selecionada (mostra todas). */
-type FiltroSituacao = '' | SituacaoIS;
 
 /** IS finalizadas de concursos não entram aqui; aqui só as cadastradas na página. */
 const nomeCurto = (inspecionado: string): string => inspecionado.replace(/^.*?\d{2}\.\d{4}\.\d{2}\s*/, '') || inspecionado;
-
-const ordenar = (situacao: SituacaoIS, a: InspecaoRecord, b: InspecaoRecord): number => {
-  if (situacao === 'aberta') return a.dataAbertura.localeCompare(b.dataAbertura) || a.is - b.is;
-  // Em andamento e Finalizadas: agrupadas por data da entrevista, da mais antiga para a mais recente (sem data no fim).
-  return (a.dataEntrevista || '9').localeCompare(b.dataEntrevista || '9') || a.is - b.is;
-};
-
-/** Cabeçalho de grupo por data: "segunda-feira, 19/10/2026". */
-const rotuloData = (is: InspecaoRecord): string => (is.dataEntrevista ? `${nomeDiaSemana(dataDeEntrevista(is.dataEntrevista))}, ${dataBr(dataDeEntrevista(is.dataEntrevista))}` : 'Sem data de entrevista');
 
 const VISOES: { value: Visao; label: string; icon: string }[] = [
   { value: 'tabela', label: 'Tabela', icon: 'table_rows' },
@@ -125,7 +118,9 @@ export const Inspecoes: React.FC = () => {
   const [peritos, setPeritos] = useState<PeritoIS[]>([]);
 
   const [visao, setVisao] = useState<Visao>('tabela');
-  const [filtro, setFiltro] = useState<FiltroSituacao>('');
+  // Filtros da visão Tabela (o calendário tem navegação própria). Padrão: Em andamento · Este mês.
+  const [situacoes, setSituacoes] = useState<SituacaoIS[]>(['andamento']);
+  const [periodo, setPeriodo] = useState<FiltroPeriodoValor>({ id: 'mes' });
   const [busca, setBusca] = useState('');
   const [peritoFiltro, setPeritoFiltro] = useState('');
 
@@ -179,24 +174,26 @@ export const Inspecoes: React.FC = () => {
     setDetalheId(null);
   }, [isIdDaRota, lista]);
 
-  const totais = useMemo(() => ({
-    aberta: lista?.filter(i => i.situacao === 'aberta').length ?? 0,
-    andamento: lista?.filter(i => i.situacao === 'andamento').length ?? 0,
-    finalizada: lista?.filter(i => i.situacao === 'finalizada').length ?? 0,
-    atrasadas: lista?.filter(i => statusEfetivoIS(i, hoje) === 'atrasada').length ?? 0,
-  }), [lista, hoje]);
+  const intervalo = useMemo(() => intervaloDoPeriodo(periodo.id, hoje, periodo.custom), [periodo, hoje]);
 
-  const filtrada = useMemo(() => {
+  // Perito + período + busca (sem a situação): base dos contadores do filtro de situação.
+  const semSituacao = useMemo(() => {
     const termos = normalizarBusca(busca).split(/\s+/).filter(Boolean);
     return (lista ?? [])
-      .filter(i => (filtro ? i.situacao === filtro : true))
       .filter(i => (peritoFiltro ? i.peritoUid === peritoFiltro : true))
+      .filter(i => passaNoPeriodo(i, intervalo))
       .filter(i => { const alvo = normalizarBusca(`${i.is} ${i.inspecionado} ${i.inspecionadoId} ${i.finalidade} ${i.peritoNome} ${STATUS_IS[statusEfetivoIS(i, hoje)].rotulo}`); return termos.every(t => alvo.includes(t)); });
-  }, [lista, filtro, peritoFiltro, busca, hoje]);
+  }, [lista, peritoFiltro, intervalo, busca, hoje]);
 
-  const grupos = useMemo(() => SITUACOES_IS
-    .map(s => ({ ...s, itens: filtrada.filter(i => i.situacao === s.id).sort((a, b) => ordenar(s.id, a, b)) }))
-    .filter(g => g.itens.length > 0), [filtrada]);
+  const totais = useMemo(() => ({
+    aberta: semSituacao.filter(i => i.situacao === 'aberta').length,
+    andamento: semSituacao.filter(i => i.situacao === 'andamento').length,
+    finalizada: semSituacao.filter(i => i.situacao === 'finalizada').length,
+    atrasadas: lista?.filter(i => statusEfetivoIS(i, hoje) === 'atrasada').length ?? 0,
+  }), [semSituacao, lista, hoje]);
+
+  // Agenda: não agendadas no topo; depois um grupo por dia da entrevista (crescente; no dia, pela hora).
+  const grupos = useMemo(() => agruparAgendaIS(semSituacao.filter(i => situacoes.includes(i.situacao))), [semSituacao, situacoes]);
 
   // ----- ações -----
 
@@ -300,7 +297,7 @@ export const Inspecoes: React.FC = () => {
 
   // ----- apresentação -----
 
-  const tagStatus = (is: InspecaoRecord) => { const e = statusEfetivoIS(is, hoje); return <StatusTag tone={STATUS_IS[e].tom}>{STATUS_IS[e].rotulo}</StatusTag>; };
+  const statusDe = (is: InspecaoRecord) => STATUS_IS[statusEfetivoIS(is, hoje)];
   const prazoTexto = (is: InspecaoRecord): string | null => {
     if (is.status !== 'aberta' || is.dataEntrevista) return null;
     return `${diasEmAberto(is.dataAbertura, hoje)}/${prazoAtrasoDias(is.grupoFinalidade)} dias`;
@@ -326,7 +323,7 @@ export const Inspecoes: React.FC = () => {
         {totais.atrasadas > 0 && (
           <button
             type="button"
-            onClick={() => { setVisao('tabela'); setFiltro('aberta'); setBusca('atrasada'); }}
+            onClick={() => { setVisao('tabela'); setSituacoes(['aberta']); setBusca('atrasada'); }}
             className="w-full text-left bg-wine/10 border border-wine/30 rounded-xl px-4 py-3 text-sm font-semibold text-wine flex items-center gap-2 min-h-[44px]"
           >
             <span className="material-symbols-outlined text-[20px]" aria-hidden="true">warning</span>
@@ -334,17 +331,14 @@ export const Inspecoes: React.FC = () => {
           </button>
         )}
 
-        {/* Barra de filtros: Situação → Perito → Tabela/Calendário → Busca (uma linha no desktop largo). */}
+        {/* Barra de filtros: Situação → Período → Perito → Tabela/Calendário → Busca (uma linha no desktop largo).
+            Situação, Período e Busca só valem para a Tabela (o calendário tem navegação própria). */}
         <div className="bg-white rounded-xl border border-line p-3 flex flex-wrap xl:flex-nowrap items-center gap-2">
           {visao === 'tabela' && (
-            <Segmented<FiltroSituacao>
-              ariaLabel="Situação da IS" className="w-full xl:w-auto overflow-x-auto shrink-0" value={filtro} onChange={setFiltro} onDesmarcar={() => setFiltro('')}
-              options={[
-                { value: 'aberta', label: 'Abertas', badge: totais.aberta, badgeTone: 'neutro' },
-                { value: 'andamento', label: 'Em andamento', badge: totais.andamento, badgeTone: 'neutro' },
-                { value: 'finalizada', label: 'Finalizadas', badge: totais.finalizada, badgeTone: 'neutro' },
-              ]}
-            />
+            <>
+              <FiltroSituacaoIS value={situacoes} onChange={setSituacoes} contadores={totais} className="flex-1 min-w-[9rem] sm:flex-none sm:w-48 xl:w-44 xl:shrink-0" />
+              <FiltroPeriodo value={periodo} onChange={setPeriodo} className="flex-1 min-w-[9rem] sm:flex-none sm:w-52 xl:w-48 xl:shrink-0" />
+            </>
           )}
           <select aria-label="Filtrar por perito" value={peritoFiltro} onChange={e => setPeritoFiltro(e.target.value)} className={`${controlClass} !w-auto flex-1 min-w-0 sm:flex-none sm:min-w-[12rem] xl:max-w-[14rem]`}>
             <option value="">Todos os peritos</option>
@@ -375,88 +369,20 @@ export const Inspecoes: React.FC = () => {
           />
         ) : grupos.length === 0 ? (
           <div className="bg-white rounded-xl border border-line">
-            <EmptyState icon="event_available" title="Nenhuma IS encontrada" description={lista.length === 0 ? 'Cadastre a primeira IS para começar.' : 'Ajuste a busca ou os filtros.'} />
+            <EmptyState
+              icon="event_available" title="Nenhuma IS encontrada"
+              description={lista.length === 0 ? 'Cadastre a primeira IS para começar.' : situacoes.length === 0 ? 'Selecione ao menos uma situação.' : 'Ajuste a situação, o período, o perito ou a busca.'}
+            />
           </div>
         ) : (
-          grupos.map(g => (
-            <section key={g.id} aria-label={g.plural} className="bg-white rounded-xl border border-line overflow-clip">
-              <h2 className="px-4 py-3 bg-thead border-b border-line text-h3 font-bold text-navy flex items-center gap-2">
-                {g.plural}
-                <span className="text-xs font-bold text-ink-3 bg-white border border-line rounded-full px-2 py-0.5">{g.itens.length}</span>
-              </h2>
-              {/* Mobile */}
-              <ul className="md:hidden divide-y divide-line">
-                {g.itens.map((is, i) => (
-                  <React.Fragment key={is.id}>
-                  {g.id !== 'aberta' && (i === 0 || rotuloData(g.itens[i - 1]) !== rotuloData(is)) && (
-                    <li className="px-4 py-1.5 bg-thead text-xs font-bold text-ink-3 capitalize">{rotuloData(is)}</li>
-                  )}
-                  <li className="flex items-start">
-                    <button type="button" onClick={() => setDetalheId(is.id)} className="flex-1 min-w-0 text-left pl-4 py-3 min-h-[44px] hover:bg-thead">
-                      <span className="flex items-start justify-between gap-2">
-                        <span className="min-w-0">
-                          <span className="block text-sm font-bold text-navy break-words">IS {is.is}{is.dataEntrevista ? ` · ${horaDeEntrevista(is.dataEntrevista)}` : ''} · {nomeCurto(is.inspecionado)}</span>
-                          <span className="block text-xs text-ink-3 break-words">{is.finalidade}</span>
-                          <span className="block text-xs text-ink-3">{is.dataEntrevista ? `${dataHoraBr(is.dataEntrevista)} · ${is.peritoNome}` : `Aberta em ${dataBr(is.dataAbertura)}${prazoTexto(is) ? ` · ${prazoTexto(is)}` : ''}`}</span>
-                        </span>
-                        <span className="shrink-0">{tagStatus(is)}</span>
-                      </span>
-                    </button>
-                    <div className="shrink-0 pr-2 pt-1 w-12">{itensDe(is).length > 0 && <MenuAcoes rotulo={`Ações da IS ${is.is}`} itens={itensDe(is)} />}</div>
-                  </li>
-                  </React.Fragment>
-                ))}
-              </ul>
-              {/* Desktop */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-ink-3 text-xs border-b border-line">
-                    <tr>
-                      <th scope="col" className="px-4 py-2 text-left font-semibold">IS</th>
-                      <th scope="col" className="px-4 py-2 text-left font-semibold">Inspecionado</th>
-                      <th scope="col" className="px-4 py-2 text-left font-semibold">Perito</th>
-                      <th scope="col" className="px-4 py-2 text-left font-semibold">Status</th>
-                      <th scope="col" className="pr-2 py-2 w-14 text-right font-semibold"><span className="sr-only">Ações</span></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {g.itens.map((is, i) => (
-                      <React.Fragment key={is.id}>
-                        {g.id !== 'aberta' && (i === 0 || rotuloData(g.itens[i - 1]) !== rotuloData(is)) && (
-                          <tr className="bg-thead"><th scope="colgroup" colSpan={5} className="px-4 py-1.5 text-left text-xs font-bold text-ink-3 capitalize">{rotuloData(is)}</th></tr>
-                        )}
-                        <tr onClick={() => setDetalheId(is.id)} className="cursor-pointer hover:bg-thead transition-colors">
-                          <td className="px-4 py-2 font-mono whitespace-nowrap">
-                            <button type="button" onClick={e => { e.stopPropagation(); setDetalheId(is.id); }} aria-label={`Abrir IS ${is.is}`} className="min-h-[44px] text-left">
-                              <span className="block font-bold text-navy">{is.is}</span>
-                              {is.dataEntrevista && <span className="block text-xs font-normal text-ink-3">{horaDeEntrevista(is.dataEntrevista)}</span>}
-                            </button>
-                          </td>
-                          <td className="px-4 py-2 max-w-[320px]">
-                            {(() => {
-                              const om = omPorId.get(is.inspecionadoId);
-                              const titulo = `${nomeCurto(is.inspecionado)}${om ? ` (${om})` : ''}`;
-                              return <span className="block font-semibold text-navy truncate" title={titulo}>{titulo}</span>;
-                            })()}
-                            <span className="block text-xs text-ink-3 truncate" title={`${is.amp} | ${is.finalidade}`}>{is.amp} | {is.finalidade}</span>
-                          </td>
-                          <td className="px-4 py-2 whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                            {podeAgendar && !['cancelada', 'tis_assinado'].includes(is.status) ? (
-                              <button type="button" onClick={() => setTrocandoPerito({ is, dataHora: is.dataEntrevista, modo: 'troca' })} aria-label={`Trocar perito da IS ${is.is}`} className="min-h-[44px] font-bold text-navy hover:underline text-left">
-                                {is.peritoNome || '—'}
-                              </button>
-                            ) : <span className="font-bold text-navy">{is.peritoNome || '—'}</span>}
-                          </td>
-                          <td className="px-4 py-2">{tagStatus(is)}</td>
-                          <td className="pr-2 py-1 text-right" onClick={e => e.stopPropagation()}>{itensDe(is).length > 0 && <MenuAcoes rotulo={`Ações da IS ${is.is}`} itens={itensDe(is)} />}</td>
-                        </tr>
-                      </React.Fragment>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          ))
+          <TabelaAgendaIS
+            grupos={grupos} hoje={hoje}
+            nomeDe={is => nomeCurto(is.inspecionado)} omDe={omDe} statusDe={statusDe} prazoDe={prazoTexto}
+            onAbrir={is => setDetalheId(is.id)}
+            podeTrocarPerito={is => !['cancelada', 'tis_assinado'].includes(is.status)}
+            onTrocarPerito={podeAgendar ? is => setTrocandoPerito({ is, dataHora: is.dataEntrevista, modo: 'troca' }) : undefined}
+            itensDe={itensDe}
+          />
         )}
       </Container>
 

@@ -1,11 +1,13 @@
 // Ficheiro: components/inspecoes/InspecaoDetalhe.tsx
 // Ficha de uma IS em barra lateral (bottom sheet no mobile). Título "IS nº" com o chip do status ao lado.
+// Editável:
 //  1. Dados da IS: inspecionado · OM (negrito), finalidade, abertura, data da entrevista e data do laudo.
 //  2. Conclusão da IS (salva sozinha, sem botão): cards da entrevista gravada e dos pareceres pedidos a
-//     partir desta IS, Laudo, Auditoria | JSD, Restrições (lista suspensa com caixas de seleção), Nº do TIS,
-//     DS-1a e Observações. O status muda automaticamente (regras puras em utils/conclusaoIS.ts); com o DS-1a
-//     (TIS assinado) ou cancelada, nada é editável até "Reabrir IS" (Admin, menu da tabela); só leitura, os
-//     campos preenchidos aparecem como texto (rótulo + valor) e os vazios somem.
+//     partir desta IS, Laudo, Auditoria | JSD, Restrições (MultiSelectCombobox com chips; opcional, sempre
+//     que a finalidade é de Verificações e Términos), Nº do TIS, DS-1a e Observações. O status muda
+//     automaticamente (regras puras em utils/conclusaoIS.ts).
+// Não editável (DS-1a/TIS assinado ou cancelada — até "Reabrir IS", Admin — ou sem permissão): os dados
+// numa tabela vertical (rótulo | valor) e, abaixo, os cards da entrevista gravada e dos pareceres.
 // Rodapé (AcoesRodape: linha no desktop, FAB no mobile): Minuta MSG · Parecer · Gravar Entrevista (cada um
 // só quando cabe). Fecha no X ou fora.
 import React, { useEffect, useRef, useState } from 'react';
@@ -15,7 +17,7 @@ import { AcoesRodape, type AcaoRodape } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
 import { Segmented } from '../ui/Segmented';
 import { StatusTag } from '../ui/StatusTag';
-import { RestricoesSelect } from './RestricoesSelect';
+import { MultiSelectCombobox } from '../ui/MultiSelectCombobox';
 import { SecaoEntrevista, cardConclusaoClass, pedidoDeGravacao, type PedidoGravacao } from './entrevista/SecaoEntrevista';
 import { ParecerDetalhe } from '../pareceres/ParecerDetalhe';
 import { useNav } from '../../context/NavContext';
@@ -26,8 +28,8 @@ import {
   STATUS_IS, statusEfetivoIS, dataBr, formatTis, tisValido, prefixoAnoTis, hojeISO, dataDeEntrevista,
 } from '../../utils/inspecoes';
 import {
-  conclusaoTravada, encaminhamentoDoStatus, juntarRestricoes, mostraEncaminhamento, mostraRestricoes, patchConclusao, patchEncaminhamento,
-  separarRestricoes, type CampoConclusao, type Encaminhamento, type EstadoConclusao, type ResultadoConclusao,
+  conclusaoTravada, encaminhamentoDoStatus, juntarRestricoes, mostraEncaminhamento, mostraRestricoes, opcoesDeRestricoes, patchConclusao,
+  patchEncaminhamento, separarRestricoes, type CampoConclusao, type Encaminhamento, type EstadoConclusao, type ResultadoConclusao,
 } from '../../utils/conclusaoIS';
 
 export interface PermissoesDetalheIS {
@@ -64,12 +66,12 @@ const Linha: React.FC<{ rotulo: string; children?: React.ReactNode; className?: 
   </div>
 );
 
-/** Texto longo (laudo, observações) em modo leitura: preserva as quebras de linha. */
-const LinhaTexto: React.FC<{ rotulo: string; valor: string }> = ({ rotulo, valor }) => (
-  <dl>
-    <dt className="text-xs font-semibold text-ink-3">{rotulo}</dt>
-    <dd className="text-sm text-ink break-words whitespace-pre-line">{valor}</dd>
-  </dl>
+/** Linha da tabela vertical (modo leitura): rótulo em fundo acinzentado à esquerda, valor à direita. */
+const LinhaTabela: React.FC<{ rotulo: string; children?: React.ReactNode }> = ({ rotulo, children }) => (
+  <tr>
+    <th scope="row" className="w-[38%] sm:w-[32%] bg-thead px-3 py-2.5 text-left align-top text-xs font-semibold text-ink">{rotulo}</th>
+    <td className="px-3 py-2.5 align-top text-sm text-ink break-words">{children || '—'}</td>
+  </tr>
 );
 
 const ATRASO_AUTOSAVE_MS = 1000;
@@ -129,7 +131,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const [estado, setEstado] = useState<EstadoGravacao>('ocioso');
   const [erroTis, setErroTis] = useState('');
 
-  useEffect(() => { carregarRestricoesIS().then(setRestricoesOpcoes).catch(() => setRestricoesOpcoes([])); }, []);
+  useEffect(() => { carregarRestricoesIS().then(l => setRestricoesOpcoes(opcoesDeRestricoes(l))).catch(() => setRestricoesOpcoes([])); }, []);
   useEffect(() => observarPareceresDaIS(is.id, setPareceres, () => setPareceres([])), [is.id]);
 
   // Estado mais recente da IS (banco + gravações já disparadas): as regras partem dele.
@@ -178,11 +180,14 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const estadoConclusao = comPadroes(is);
   const comEncaminhamento = mostraEncaminhamento(estadoConclusao);
   const comRestricoes = mostraRestricoes(estadoConclusao);
-  const restricoesMarcadas = separarRestricoes(is.restricoes || '');
-  const opcoesRestricoes = [...restricoesOpcoes, ...restricoesMarcadas.filter(r => !restricoesOpcoes.includes(r))];
-  const alternarRestricao = (r: string, marcada: boolean) => {
-    const lista = marcada ? [...restricoesMarcadas, r] : restricoesMarcadas.filter(x => x !== r);
-    gravarCampo('restricoes', juntarRestricoes(lista));
+  // Restrições: a tela reflete o clique na hora (o banco confirma depois pelo onSnapshot).
+  const [restricoesLocal, setRestricoesLocal] = useState(is.restricoes || '');
+  useEffect(() => { setRestricoesLocal(is.restricoes || ''); }, [is.restricoes]);
+  const restricoesMarcadas = separarRestricoes(restricoesLocal);
+  const mudarRestricoes = (lista: string[]) => {
+    const texto = juntarRestricoes(lista);
+    setRestricoesLocal(texto);
+    gravarCampo('restricoes', texto);
   };
 
   const parecerAberto = parecerAbertoId ? pareceres.find(p => p.id === parecerAbertoId) ?? null : null;
@@ -197,6 +202,22 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const encaminhamento = encaminhamentoDoStatus(is.status);
   const textoLaudo = is.laudo?.trim() || '';
   const textoObservacoes = is.observacoes?.trim() || '';
+  const restricoesGravadas = separarRestricoes(is.restricoes || '');
+
+  const cards = (
+    <div className="flex flex-wrap gap-2 empty:hidden">
+      {permissoes.entrevista && <SecaoEntrevista is={is} gravacao={gravacao} onGravacao={setGravacao} />}
+      {pareceres.map(p => (
+        <button key={p.id} type="button" onClick={() => setParecerAbertoId(p.id)} className={cardConclusaoClass}>
+          <span className="material-symbols-outlined text-[20px] text-navy shrink-0" aria-hidden="true">assignment</span>
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-navy">Parecer Solicitado</span>
+            <span className="block text-xs text-ink-3">{dataParecer(p)}{statusEfetivo(p) === 'concluido' ? ' · concluído' : ''}</span>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <Drawer
@@ -206,6 +227,42 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
       tituloExtra={<StatusTag tone={info.tom}>{info.rotulo}</StatusTag>}
       footer={acoes.length > 0 ? <AcoesRodape acoes={acoes} /> : undefined}
     >
+      {somenteLeitura ? (
+        <div className="space-y-4">
+          <section aria-labelledby={`dados-is-${is.id}`} className="space-y-3">
+            <h3 id={`dados-is-${is.id}`} className="text-h3 font-bold text-navy">Dados da IS</h3>
+            <div className="overflow-hidden rounded-lg border border-line">
+              <table className="w-full table-fixed border-collapse">
+                <tbody className="divide-y divide-line">
+                  <LinhaTabela rotulo="Inspecionado">
+                    {is.inspecionado ? <><span className="font-bold">{is.inspecionado}</span>{om ? ` · ${om}` : ''}</> : ''}
+                  </LinhaTabela>
+                  <LinhaTabela rotulo="Finalidade">{is.finalidade}</LinhaTabela>
+                  <LinhaTabela rotulo="Abertura IS">{is.dataAbertura ? dataBr(is.dataAbertura) : ''}</LinhaTabela>
+                  <LinhaTabela rotulo="Entrevista">{is.dataEntrevista ? dataBr(dataDeEntrevista(is.dataEntrevista)) : ''}</LinhaTabela>
+                  <LinhaTabela rotulo="Laudo">
+                    {textoLaudo ? (
+                      <>
+                        <span className="block whitespace-pre-line">{textoLaudo}</span>
+                        {is.dataLaudo && <span className="block mt-1 text-xs text-ink-3">Data do laudo: {dataBr(is.dataLaudo)}</span>}
+                      </>
+                    ) : ''}
+                  </LinhaTabela>
+                  {comEncaminhamento && encaminhamento && (
+                    <LinhaTabela rotulo="Encaminhamento">{encaminhamento === 'jsd' ? 'JSD' : 'Auditoria'}</LinhaTabela>
+                  )}
+                  {restricoesGravadas.length > 0 && <LinhaTabela rotulo="Restrições">{restricoesGravadas.join(', ')}</LinhaTabela>}
+                  <LinhaTabela rotulo="Nº do TIS">{is.tis?.trim() ? <span className="font-mono">{is.tis}</span> : ''}</LinhaTabela>
+                  <LinhaTabela rotulo="DS-1a">{is.ds1a?.trim() || ''}</LinhaTabela>
+                  {textoObservacoes && <LinhaTabela rotulo="Observações"><span className="whitespace-pre-line">{textoObservacoes}</span></LinhaTabela>}
+                  <LinhaTabela rotulo="Status"><StatusTag tone={info.tom}>{info.rotulo}</StatusTag></LinhaTabela>
+                </tbody>
+              </table>
+            </div>
+          </section>
+          {cards}
+        </div>
+      ) : (
       <div className="space-y-6">
 
         <section aria-labelledby={`dados-is-${is.id}`} className="space-y-3">
@@ -229,77 +286,48 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
             </span>
           </div>
 
-          <div className="flex flex-wrap gap-2 empty:hidden">
-            {permissoes.entrevista && <SecaoEntrevista is={is} gravacao={gravacao} onGravacao={setGravacao} />}
-            {pareceres.map(p => (
-              <button key={p.id} type="button" onClick={() => setParecerAbertoId(p.id)} className={cardConclusaoClass}>
-                <span className="material-symbols-outlined text-[20px] text-navy shrink-0" aria-hidden="true">assignment</span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-bold text-navy">Parecer Solicitado</span>
-                  <span className="block text-xs text-ink-3">{dataParecer(p)}{statusEfetivo(p) === 'concluido' ? ' · concluído' : ''}</span>
-                </span>
-              </button>
-            ))}
+          {cards}
+
+          <Field label="Laudo">
+            {a => <textarea {...a} value={laudo.valor} onChange={e => laudo.onChange(e.target.value)} onBlur={laudo.onBlur} className={`${a.className} min-h-[88px]`} />}
+          </Field>
+
+          {comEncaminhamento && (
+            <fieldset disabled={!!is.tis?.trim()} className="disabled:opacity-60">
+              <Segmented<Encaminhamento | ''>
+                ariaLabel="Encaminhamento"
+                value={encaminhamento ?? ''}
+                onChange={v => { if (v) gravar(atual => ({ patch: patchEncaminhamento(comPadroes(atual), v), concluirPareceres: false })); }}
+                options={[{ value: 'auditoria', label: 'Auditoria' }, { value: 'jsd', label: 'JSD' }]}
+              />
+            </fieldset>
+          )}
+
+          {comRestricoes && (
+            <MultiSelectCombobox label="Restrições" opcoes={restricoesOpcoes} selecionadas={restricoesMarcadas} onChange={mudarRestricoes} />
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Nº do TIS" error={erroTis}>
+              {a => (
+                <input
+                  {...a} type="text" inputMode="numeric" value={tis.valor} disabled={!is.laudo?.trim()}
+                  onChange={e => { tis.onChange(formatTis(e.target.value, tis.valor)); setErroTis(''); }} onBlur={tis.onBlur}
+                  placeholder={`${prefixoAnoTis()}.000.0`} maxLength={14} className={`${a.className} font-mono`}
+                />
+              )}
+            </Field>
+            <Field label="DS-1a">
+              {a => <input {...a} type="text" value={ds1a.valor} disabled={!is.tis?.trim()} onChange={e => ds1a.onChange(e.target.value)} onBlur={ds1a.onBlur} autoComplete="off" />}
+            </Field>
           </div>
 
-          {somenteLeitura ? (
-            <>
-              {textoLaudo && <LinhaTexto rotulo="Laudo" valor={is.laudo || ''} />}
-              {comEncaminhamento && encaminhamento && (
-                <LinhaTexto rotulo="Encaminhamento" valor={encaminhamento === 'jsd' ? 'JSD' : 'Auditoria'} />
-              )}
-              {comRestricoes && restricoesMarcadas.length > 0 && <LinhaTexto rotulo="Restrições" valor={restricoesMarcadas.join(', ')} />}
-              {(is.tis?.trim() || is.ds1a?.trim()) && (
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
-                  {is.tis?.trim() && <Linha rotulo="Nº do TIS"><span className="font-mono">{is.tis}</span></Linha>}
-                  {is.ds1a?.trim() && <Linha rotulo="DS-1a">{is.ds1a}</Linha>}
-                </dl>
-              )}
-              {textoObservacoes && <LinhaTexto rotulo="Observações" valor={is.observacoes || ''} />}
-            </>
-          ) : (
-            <>
-              <Field label="Laudo">
-                {a => <textarea {...a} value={laudo.valor} onChange={e => laudo.onChange(e.target.value)} onBlur={laudo.onBlur} className={`${a.className} min-h-[88px]`} />}
-              </Field>
-
-              {comEncaminhamento && (
-                <fieldset disabled={!!is.tis?.trim()} className="disabled:opacity-60">
-                  <Segmented<Encaminhamento | ''>
-                    ariaLabel="Encaminhamento"
-                    value={encaminhamento ?? ''}
-                    onChange={v => { if (v) gravar(atual => ({ patch: patchEncaminhamento(comPadroes(atual), v), concluirPareceres: false })); }}
-                    options={[{ value: 'auditoria', label: 'Auditoria' }, { value: 'jsd', label: 'JSD' }]}
-                  />
-                </fieldset>
-              )}
-
-              {comRestricoes && (
-                <RestricoesSelect opcoes={opcoesRestricoes} marcadas={restricoesMarcadas} onAlternar={alternarRestricao} />
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Nº do TIS" error={erroTis}>
-                  {a => (
-                    <input
-                      {...a} type="text" inputMode="numeric" value={tis.valor} disabled={!is.laudo?.trim()}
-                      onChange={e => { tis.onChange(formatTis(e.target.value, tis.valor)); setErroTis(''); }} onBlur={tis.onBlur}
-                      placeholder={`${prefixoAnoTis()}.000.0`} maxLength={14} className={`${a.className} font-mono`}
-                    />
-                  )}
-                </Field>
-                <Field label="DS-1a">
-                  {a => <input {...a} type="text" value={ds1a.valor} disabled={!is.tis?.trim()} onChange={e => ds1a.onChange(e.target.value)} onBlur={ds1a.onBlur} autoComplete="off" />}
-                </Field>
-              </div>
-
-              <Field label="Observações">
-                {a => <textarea {...a} value={observacoes.valor} onChange={e => observacoes.onChange(e.target.value)} onBlur={observacoes.onBlur} className={`${a.className} min-h-[72px]`} />}
-              </Field>
-            </>
-          )}
+          <Field label="Observações">
+            {a => <textarea {...a} value={observacoes.valor} onChange={e => observacoes.onChange(e.target.value)} onBlur={observacoes.onBlur} className={`${a.className} min-h-[72px]`} />}
+          </Field>
         </section>
       </div>
+      )}
 
       {parecerAberto && createPortal(
         <ParecerDetalhe

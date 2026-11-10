@@ -1,8 +1,9 @@
 // Ficheiro: components/inspecoes/AgendarDialog.tsx
 // Agendar / reagendar a entrevista de uma IS: escolhe o perito (do AMP de competência da finalidade),
 // a data e o horário (slots de 20 min livres). Grava o slot em transação e sincroniza o evento no
-// Google Agenda "JRS/HNRe".
-import React, { useMemo, useState } from 'react';
+// Google Agenda "JRS/HNRe". Vindo do calendário (IS arrastada para um dia/horário), abre com a data — e,
+// se couber, o perito e o horário — já preenchidos; a transação de agendamento valida o slot.
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
@@ -21,12 +22,18 @@ interface Props {
   inspecoes: InspecaoRecord[];
   onClose: () => void;
   onAgendada: (mensagem: string, tom?: 'success' | 'error') => void;
+  /** Data (AAAA-MM-DD) já escolhida, ex.: dia em que a IS foi solta no calendário. */
+  dataInicial?: string;
+  /** Horário (hh:mm) já escolhido, se a IS foi solta num horário e ele estiver livre. */
+  horaInicial?: string;
+  /** Perito preferido (o atual da IS ou o filtrado no calendário), se tiver horário livre no dia. */
+  peritoInicial?: string;
 }
 
-export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloqueios, inspecoes, onClose, onAgendada }) => {
+export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloqueios, inspecoes, onClose, onAgendada, dataInicial, horaInicial, peritoInicial }) => {
   const candidatos = useMemo(() => peritosDoAmp(peritos, inspecao.amp), [peritos, inspecao.amp]);
   const [peritoUid, setPeritoUid] = useState('');
-  const [data, setData] = useState('');
+  const [data, setData] = useState(dataInicial ?? '');
   const [hora, setHora] = useState('');
   const [erro, setErro] = useState('');
   const [salvando, setSalvando] = useState(false);
@@ -53,6 +60,18 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
     setPeritoUid(livres.length === 1 ? livres[0].uid : livres.some(p => p.uid === peritoUid) ? peritoUid : '');
   };
   const reagendando = !!inspecao.dataEntrevista;
+
+  // Data vinda do calendário: escolhe o perito (o preferido, ou o único livre no dia) e o horário, se livre.
+  // Espera os peritos carregarem; roda uma vez.
+  const inicialAplicado = useRef(false);
+  useEffect(() => {
+    if (inicialAplicado.current || !dataInicial || candidatos.length === 0) return;
+    inicialAplicado.current = true;
+    const livres = candidatos.filter(p => slotsLivresDoDia(p.uid, dataInicial, config, bloqueios, ocupados, duracao).length > 0);
+    const uid = livres.find(p => p.uid === peritoInicial)?.uid ?? (livres.length === 1 ? livres[0].uid : '');
+    setPeritoUid(uid);
+    if (uid && horaInicial && slotsLivresDoDia(uid, dataInicial, config, bloqueios, ocupados, duracao).includes(horaInicial)) setHora(horaInicial);
+  }, [candidatos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const confirmar = async () => {
     if (!perito) { setErro('Escolha o perito.'); return; }
@@ -97,12 +116,15 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
           <>
             <div>
               <span className="block text-xs font-semibold text-ink-3 mb-1">Data da entrevista (peritos {inspecao.amp === 'JRS' ? 'da JRS' : 'do MPI'})</span>
-              <CalendarioDisponibilidade valor={data} onChange={escolherData} disponivel={diaDisponivel} mesInicial={proximaLivre} />
+              <CalendarioDisponibilidade valor={data} onChange={escolherData} disponivel={diaDisponivel} mesInicial={dataInicial || proximaLivre} />
               {!data && (
                 <p className="mt-1 text-xs text-ink-3">Próxima data livre: <button type="button" onClick={() => escolherData(proximaLivre)} className="font-bold text-navy underline min-h-[24px]">{nomeDiaSemana(proximaLivre)}, {dataBr(proximaLivre)}</button></p>
               )}
             </div>
 
+            {data && peritosDoDia.length === 0 && (
+              <p role="alert" className="text-sm font-semibold text-wine">Nenhum perito {inspecao.amp === 'JRS' ? 'da JRS' : 'do MPI'} tem horário livre em {dataBr(data)}. Escolha outra data.</p>
+            )}
             {data && peritosDoDia.length >= 1 && (
               <ChoiceGroup<string>
                 label="Perito" value={peritoUid}

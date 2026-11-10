@@ -1,7 +1,8 @@
 // Ficheiro: utils/conclusaoIS.ts
 // Regras puras da seção "Conclusão da IS" (detalhe da IS): o status muda sozinho conforme o Laudo,
 // o Nº do TIS e o DS-1a são preenchidos ou apagados; a Data do laudo é a data em que o Laudo foi
-// inserido/alterado; as Restrições e o encaminhamento (Auditoria | JSD) só existem em certos casos.
+// inserido/alterado; o encaminhamento (Auditoria | JSD) só existe em certos casos; as Restrições (opcionais)
+// aparecem sempre que a finalidade é do grupo "Verificações e Términos", qualquer que seja o Laudo.
 // Testadas em utils/__tests__/conclusaoIS.test.ts.
 import { normalizarBusca } from './corposQuadros';
 import {
@@ -54,9 +55,8 @@ export const mostraEncaminhamento = (is: Pick<EstadoConclusao, 'laudo' | 'finali
   return ehTerminoDeIncapacidade(is.finalidade) && laudoIncapacidadeDefinitivaSam(is.laudo);
 };
 
-/** Restrições: só em Verificações e Términos com laudo "Apto com restrições…". */
-export const mostraRestricoes = (is: Pick<EstadoConclusao, 'laudo' | 'grupoFinalidade'>): boolean =>
-  is.grupoFinalidade === GRUPO_VERIFICACOES && laudoAptoComRestricoes(is.laudo);
+/** Restrições (opcionais): sempre que a finalidade é do grupo Verificações e Términos (independe do Laudo). */
+export const mostraRestricoes = (is: Pick<EstadoConclusao, 'grupoFinalidade'>): boolean => is.grupoFinalidade === GRUPO_VERIFICACOES;
 
 // ---------------------------------------------------------------------------
 // Restrições (várias, gravadas num só texto)
@@ -65,6 +65,10 @@ export const mostraRestricoes = (is: Pick<EstadoConclusao, 'laudo' | 'grupoFinal
 export const SEPARADOR_RESTRICOES = '; ';
 export const separarRestricoes = (texto: string): string[] => String(texto || '').split(';').map(s => s.trim()).filter(Boolean);
 export const juntarRestricoes = (lista: string[]): string => Array.from(new Set(lista.map(s => s.trim()).filter(Boolean))).join(SEPARADOR_RESTRICOES);
+/** Opção que não cabe nas Restrições da IS (é das dispensas da Perícia Menor). */
+const TODAS_AS_ATIVIDADES = 'todas as atividades';
+/** Opções do campo Restrições: sem "TODAS AS ATIVIDADES". */
+export const opcoesDeRestricoes = (lista: string[]): string[] => lista.filter(op => norm(op).trim() !== TODAS_AS_ATIVIDADES);
 
 // ---------------------------------------------------------------------------
 // Status
@@ -96,13 +100,13 @@ const comSituacao = (patch: PatchConclusao): PatchConclusao => (patch.status ? {
 /**
  * Patch completo a gravar quando um campo da Conclusão muda (autosave):
  *  - Laudo inserido/alterado: Data do laudo = hoje; status → Votação pendente se ainda antes da votação.
- *    Inserido com "Parecer solicitado": `concluirPareceres`. Restrições e encaminhamento que deixam de
- *    valer são desfeitos.
- *  - Laudo apagado: apaga Data do laudo, Restrições, Nº do TIS e DS-1a; status → Agendada (com
- *    entrevista) ou Aberta.
+ *    Inserido com "Parecer solicitado": `concluirPareceres`. O encaminhamento que deixa de valer é desfeito.
+ *  - Laudo apagado: apaga Data do laudo, Nº do TIS e DS-1a; status → Agendada (com entrevista) ou Aberta.
+ *  - Restrições não dependem do Laudo: só são apagadas (em qualquer gravação) se a finalidade não for
+ *    do grupo Verificações e Términos.
  *  - Nº do TIS inserido → Assinaturas pendentes; apagado → apaga o DS-1a e volta a Votação pendente.
  *  - DS-1a inserido → TIS assinado (Finalizada); apagado (depois de reabrir) → Assinaturas pendentes.
- *  - Restrições só ficam gravadas se o campo estiver visível.
+ *  - Restrições só ficam gravadas se o campo estiver visível (finalidade do grupo).
  */
 export const patchConclusao = (atual: EstadoConclusao, campo: CampoConclusao, valorBruto: string, hoje: string = hojeISO()): ResultadoConclusao => {
   const valor = campo === 'restricoes' ? juntarRestricoes(separarRestricoes(valorBruto)) : String(valorBruto ?? '').trim();
@@ -119,7 +123,8 @@ export const patchConclusao = (atual: EstadoConclusao, campo: CampoConclusao, va
 
     case 'laudo': {
       if (!valor) {
-        const patch: PatchConclusao = { laudo: '', dataLaudo: '', restricoes: '', tis: '', ds1a: '' };
+        const patch: PatchConclusao = { laudo: '', dataLaudo: '', tis: '', ds1a: '' };
+        if (atual.restricoes && !mostraRestricoes(atual)) patch.restricoes = '';
         if (STATUS_COM_LAUDO.includes(atual.status)) patch.status = atual.dataEntrevista ? 'agendada' : 'aberta';
         return { patch: comSituacao(patch), concluirPareceres: false };
       }
