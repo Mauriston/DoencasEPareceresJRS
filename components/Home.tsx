@@ -159,7 +159,7 @@ export const Home: React.FC = () => {
   const [enviarExames, setEnviarExames] = useState(false);
 
   const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
-  useEffect(() => observarConcursos(setConcursos, () => { /* silencioso: não bloqueia a Home */ }), []);
+  useEffect(() => (podeConcursos ? observarConcursos(setConcursos, () => { /* silencioso: não bloqueia a Home */ }) : undefined), [podeConcursos]);
   const emAndamento = concursos.filter(c => c.status === 'em_andamento');
   // O botão de enviar exames só existe quando há concurso em andamento: fora disso
   // não há candidato a quem anexar os laudos.
@@ -172,8 +172,9 @@ export const Home: React.FC = () => {
   // Inspeções de Saúde agendadas: "Próximas Inspeções", item de atenção (hoje) e mini calendário.
   const [inspecoes, setInspecoes] = useState<InspecaoRecord[]>([]);
   useEffect(() => (podeInspecoes ? observarInspecoes(setInspecoes, () => { /* silencioso */ }) : undefined), [podeInspecoes]);
-  // Todos os perfis: além da agenda, alimenta o item "IS de concurso atrasadas" de Precisa de atenção.
-  const { dias: diasConcursos } = useDiasConcursos(true);
+  // Quem acessa Concursos: além da agenda, alimenta o item "IS de concurso atrasadas" de Precisa de atenção.
+  // (user_medicos_geral não tem acesso às IS de concursos: nada de concurso aparece para ele.)
+  const { dias: diasConcursos } = useDiasConcursos(podeConcursos);
   const hoje = hojeISO();
   const proximas = useMemo(() => inspecoes
     .filter(i => i.dataEntrevista && i.status !== 'cancelada' && i.situacao !== 'finalizada' && dataDeEntrevista(i.dataEntrevista) >= hoje)
@@ -246,8 +247,8 @@ export const Home: React.FC = () => {
     });
   }
   // IS de concurso agendadas para hoje (todos os concursos do dia): abre a tabela do dia.
-  // IS de concurso atrasadas: agendadas antes de hoje e ainda não finalizadas (todos os perfis).
-  const diasAtrasados = diasConcursos.filter(d => d.data < hoje);
+  // IS de concurso atrasadas: agendadas antes de hoje e ainda não finalizadas (quem acessa Concursos).
+  const diasAtrasados = podeConcursos ? diasConcursos.filter(d => d.data < hoje) : [];
   const qtdAtrasadas = diasAtrasados.reduce((n, d) => n + d.candidatos.filter(c => !c.finalizado).length, 0);
   if (qtdAtrasadas > 0) {
     const nomes = [...new Set(diasAtrasados.filter(d => d.candidatos.some(c => !c.finalizado)).map(d => d.nome))];
@@ -341,7 +342,7 @@ export const Home: React.FC = () => {
                   ))}
                 </ul>
               ) : (
-                <EmptyState icon="task_alt" title="Nada pendente" description="Não há pareceres atrasados, perícias vigentes, inspeções de hoje nem concursos em andamento ou de hoje para você agora." />
+                <EmptyState icon="task_alt" title="Nada pendente" description={podeConcursos ? 'Não há pareceres atrasados, perícias vigentes, inspeções de hoje nem concursos em andamento ou de hoje para você agora.' : 'Nada pendente para você agora.'} />
               )}
             </Secao>
 
