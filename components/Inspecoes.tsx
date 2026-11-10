@@ -40,6 +40,7 @@ import {
 import type { ParecerRecord } from '../services/firestorePareceres';
 import { mostraMinutaMsg, fasesDeEntrevista } from './inspecoes/InspecaoDetalhe';
 import { restituicaoDoStatus } from '../utils/conclusaoIS';
+import { podeArrastarIS } from '../utils/calendarioIS';
 import { bloqueiosDeConcursos } from '../services/agendaConcursos';
 import { useDiasConcursos, useSincronizarAgendaConcursos } from '../hooks/useDiasConcursos';
 import { concursoPath } from '../config/routes';
@@ -110,6 +111,7 @@ export const Inspecoes: React.FC = () => {
   const podeParecer = canUseFeature('pareceres.gerar', perfil);
   const podeCadastrarInspecionado = canUseFeature('militares.cadastrar', perfil);
   const podeGravarEntrevista = podeUsarEntrevista(perfil);
+  const podeEnviarExames = canUseFeature('inspecoes.enviarExames', perfil);
 
   const [lista, setLista] = useState<InspecaoRecord[] | null>(null);
   const [erroCarga, setErroCarga] = useState('');
@@ -297,6 +299,8 @@ export const Inspecoes: React.FC = () => {
     const itens: ItemMenu[] = [];
     if (podeAgendar && is.status === 'aberta') itens.push({ rotulo: is.dataEntrevista ? 'Reagendar' : 'Agendar', icone: 'event', onClick: () => setAgendando(is) });
     if (podeAgendar && is.status === 'faltou') itens.push({ rotulo: 'Reagendar', icone: 'event', onClick: () => setAgendando(is) });
+    // Agendada/Reagendada: reagendar enquanto der para remarcar (sem laudo, TIS nem DS-1a; não é de concurso).
+    if (podeAgendar && is.status !== 'aberta' && is.status !== 'faltou' && podeArrastarIS(is)) itens.push({ rotulo: 'Reagendar', icone: 'event', onClick: () => setAgendando(is) });
     if (podeEditar && fasesDeEntrevista(is)) itens.push({ rotulo: 'Falta', icone: 'person_off', onClick: () => setConfirmando({ tipo: 'falta', is }) });
     const restituicao = restituicaoDoStatus(is.status);
     if (restituicao && podeEditar && !ehSecretaria) itens.push({ rotulo: restituicao.rotulo, icone: 'undo', onClick: () => { mudarStatus(is, restituicao.status, `IS ${is.is}: ${restituicao.rotulo}.`); } });
@@ -419,7 +423,7 @@ export const Inspecoes: React.FC = () => {
         <InspecaoDetalhe
           inspecao={detalhe}
           om={omDe(detalhe)}
-          permissoes={{ editar: podeEditar, minuta: podeMinuta, parecer: podeParecer, entrevista: podeGravarEntrevista }}
+          permissoes={{ editar: podeEditar, minuta: podeMinuta, parecer: podeParecer, entrevista: podeGravarEntrevista, exames: podeEnviarExames }}
           onClose={() => setDetalheId(null)}
           onMinuta={() => setMinuta(detalhe)}
           onSolicitarParecer={() => setParecerPara({ is: detalhe })}

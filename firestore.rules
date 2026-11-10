@@ -208,6 +208,20 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mapaFalantes', 'falantesConfirmados', 'anamneseEditada', 'editadoPor', 'revisada']);
         allow delete: if isAdmin();
       }
+
+      // Exames da IS (PDFs em Storage inspecoes/{id}/exames/{eid}.pdf; services/examesIS.ts): a equipe
+      // (Admin, médicos JRS/MPI e Secretaria) lê; envia e apaga enquanto a IS não está finalizada.
+      // O documento é gravado de uma vez (leitura da IA já feita) e não muda depois.
+      match /exames/{eid} {
+        allow read: if isEquipe();
+        allow create: if isEquipe()
+          && get(/databases/$(database)/documents/inspecoes/$(id)).data.situacao != 'finalizada'
+          && request.resource.data.enviadoPor.uid == request.auth.uid
+          && request.resource.data.caminho == 'inspecoes/' + id + '/exames/' + eid + '.pdf';
+        allow delete: if isEquipe()
+          && get(/databases/$(database)/documents/inspecoes/$(id)).data.situacao != 'finalizada';
+        allow update: if false;
+      }
     }
 
     // Coleção "agendaSlots": horário ocupado de um perito ({peritoUid}__{data}T{hh-mm}),

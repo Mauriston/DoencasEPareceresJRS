@@ -98,5 +98,21 @@ service firebase.storage {
         && request.resource.contentType.matches('audio/.*');
       allow read, update, delete: if false;
     }
+
+    // Exames da IS (PDFs; services/examesIS.ts): inspecoes/{isId}/exames/{exameId}.pdf. A equipe
+    // (Admin, médicos JRS/MPI e Secretaria) lê; envia (PDF até 15 MB) e apaga enquanto a IS não está finalizada.
+    match /inspecoes/{isId}/exames/{arquivo} {
+      allow read: if request.auth != null
+        && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
+      allow create: if request.auth != null
+        && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria']
+        && firestore.get(/databases/(default)/documents/inspecoes/$(isId)).data.situacao != 'finalizada'
+        && request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+      allow delete: if request.auth != null
+        && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria']
+        && firestore.get(/databases/(default)/documents/inspecoes/$(isId)).data.situacao != 'finalizada';
+      allow update: if false;
+    }
   }
 }
