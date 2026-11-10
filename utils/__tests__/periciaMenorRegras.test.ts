@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { limitarDias, periciasNaJanela, saldoAcumulado, mascaraDataBR } from '../periciaMenorRegras';
+import { limitarDias, periciasNaJanela, saldoAcumulado, mascaraDataBR, peritosPericiaMenor } from '../periciaMenorRegras';
 
 describe('limitarDias', () => {
   it('limita a 20 e avisa', () => {
@@ -32,5 +32,19 @@ describe('mascaraDataBR', () => {
     expect(mascaraDataBR('0711')).toBe('07/11');
     expect(mascaraDataBR('07112026')).toBe('07/11/2026');
     expect(mascaraDataBR('07/11/20261')).toBe('07/11/2026');
+  });
+});
+
+describe('peritosPericiaMenor', () => {
+  const u = (id: string, nip: string, perfil: string, ativo = true) => ({ id, usuario: id.toUpperCase(), nome: id, nip, perfil, ativo });
+  it('só ativos com perfil de perito, por NIP crescente', () => {
+    const lista = peritosPericiaMenor([
+      u('c', '12.3456.78', 'user_medicos'), u('a', '01.2345.67', 'admin'), u('s', '00.0000.01', 'user_secretaria'),
+      u('x', '00.0000.02', 'user_medicos', false), u('g', '', 'user_medicos_geral'), u('m', '9.9999.99', 'user_medicos_mpi'),
+    ]);
+    expect(lista.map(p => p.uid)).toEqual(['m', 'a', 'c', 'g']);
+  });
+  it('respeita a permissão do perfil', () => {
+    expect(peritosPericiaMenor([u('a', '1', 'admin'), u('g', '2', 'user_medicos_geral')], p => p !== 'user_medicos_geral').map(p => p.uid)).toEqual(['a']);
   });
 });

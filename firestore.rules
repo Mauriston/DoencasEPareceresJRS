@@ -154,10 +154,14 @@ service cloud.firestore {
     // Coleção "periciasMenores": Perícias Menores (um doc por perícia, id
     // automático; liga ao militar por "militarId" = NIP só dígitos; o status
     // Vigente/Concluída é derivado de "dataTermino"). Lê quem está autenticado;
-    // só médicos registram; o Admin corrige ou apaga.
+    // só médicos registram, em nome próprio ("criadoPor" = quem registra); só o Admin
+    // pode indicar outro médico como perito responsável ("peritoUid"). O Admin corrige ou apaga.
     match /periciasMenores/{id} {
       allow read: if isSignedIn();
-      allow create: if isMedico() || isMedicoGeral();
+      allow create: if (isMedico() || isMedicoGeral()) &&
+        // criadoPor é novo: versões antigas do app (PWA em cache) ainda não mandam o campo.
+        (!('criadoPor' in request.resource.data) || request.resource.data.criadoPor == request.auth.uid) &&
+        (!('peritoUid' in request.resource.data) || request.resource.data.peritoUid == request.auth.uid || isAdmin());
       allow update, delete: if isAdmin();
     }
 

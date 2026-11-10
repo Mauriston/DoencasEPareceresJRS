@@ -45,3 +45,25 @@ export const mascaraDataBR = (texto: string): string => {
   if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
   return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
 };
+
+// ---- Perito responsável (escolhido pelo Admin ao registrar) ----
+/** Perfis que podem registrar perícia menor (firestore.rules: isMedico() || isMedicoGeral()). */
+export const PERFIS_PERITO_PERICIA_MENOR = ['admin', 'user_medicos', 'user_medicos_mpi', 'user_medicos_geral'];
+
+export interface PeritoPericiaMenor { uid: string; usuario: string; nome: string; nip: string }
+
+/** Usuários ativos com perfil de perito (e liberados por `podeRegistrar`), em ordem crescente de NIP (sem NIP no fim). */
+export const peritosPericiaMenor = (
+  usuarios: { id: string; usuario: string; nome: string; nip: string; perfil: string; ativo: boolean }[],
+  podeRegistrar: (perfil: string) => boolean = () => true,
+): PeritoPericiaMenor[] => {
+  const chave = (nip: string) => (nip || '').replace(/\D/g, '');
+  return usuarios
+    .filter(u => u.ativo && PERFIS_PERITO_PERICIA_MENOR.includes(u.perfil) && podeRegistrar(u.perfil))
+    .map(u => ({ uid: u.id, usuario: u.usuario || '', nome: u.nome || '', nip: u.nip || '' }))
+    .sort((a, b) => {
+      const na = chave(a.nip), nb = chave(b.nip);
+      if (!na || !nb) return na ? -1 : nb ? 1 : a.usuario.localeCompare(b.usuario, 'pt-BR');
+      return na.length - nb.length || na.localeCompare(nb);
+    });
+};
