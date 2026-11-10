@@ -1,12 +1,12 @@
 // Ficheiro: utils/importacaoIS.ts
 // "IS por foto": regras puras que convertem o que a IA leu nos prints do SINAIS (services/sinaisIA.ts)
-// numa IS a criar ou atualizar.
-//  - Foto 1 (tela da IS, "Dados da Inspeção" + "Dados do Inspecionado"): Nº da IS, Junta (JRS/HNRE →
-//    JRS; MPI/… → MPI), Data de Criação (abertura) e Data de Agendamento (entrevista). Só com ela a IS
+// numa IS a criar ou atualizar — várias fotos, de uma ou mais IS, em qualquer ordem (agrupadas pelo nº).
+//  - Tela da IS ("Dados da Inspeção" + "Dados do Inspecionado"): Nº da IS, Junta (JRS/HNRE → JRS;
+//    MPI/… → MPI), Data de Criação (abertura) e Data de Agendamento (entrevista). Só com ela a IS
 //    fica Aberta ou Agendada.
-//  - Foto 2 (conclusão: laudos e restrições associadas): só com ela valem também o Código DS-1A, a Data
-//    do Laudo e o Num. TIS da foto 1, e o status sai do Laudo, do Nº do TIS e do DS-1A (Votação pendente,
-//    Assinaturas pendentes ou TIS assinado).
+//  - Conclusão (laudos e restrições associadas): com ela valem também o Código DS-1A, a Data do Laudo e
+//    o Num. TIS da tela da IS, e o status sai do Laudo, do Nº do TIS e do DS-1A (Votação pendente,
+//    Assinaturas pendentes ou TIS assinado). Só a conclusão: atualiza a IS já cadastrada com aquele nº.
 // Testadas em utils/__tests__/importacaoIS.test.ts.
 import { normalizarBusca, type GrupoFinalidadeIS } from './corposQuadros';
 import { dataCivilISO, normalizarNip } from './dados';
@@ -35,6 +35,8 @@ export interface ConclusaoSinais {
   finalidade?: string;
   laudos?: { resultado?: string; finalidade?: string; laudo?: string }[];
   restricoes?: string[];
+  /** Data do campo "Laudo" no rodapé da tela da conclusão. */
+  dataLaudo?: string;
 }
 
 const chave = (t: string | undefined): string => normalizarBusca(String(t || '')).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -116,6 +118,7 @@ export interface PropostaImportacao {
   dataAbertura: string;
   /** AAAA-MM-DD (o SINAIS não mostra a hora). */
   dataAgendamento: string;
+  temDados: boolean;
   temConclusao: boolean;
   laudo: string;
   dataLaudo: string;
@@ -125,38 +128,50 @@ export interface PropostaImportacao {
   avisos: string[];
 }
 
-/** Junta as duas leituras numa proposta; `erro` quando não há como seguir (sem nº, fotos de IS diferentes…). */
+/** O que já está gravado da IS (atualização). */
+export interface ISCadastrada { inspecionadoId: string; finalidade: string; dataAbertura: string }
+
+/**
+ * Junta as leituras de uma IS numa proposta; `erro` quando não há como seguir (sem nº, fotos de IS
+ * diferentes…). Só a foto da conclusão: a IS precisa já estar cadastrada (é atualizada com o laudo).
+ */
 export const proporImportacao = (
-  d: DadosISSinais, c: ConclusaoSinais | undefined, grupos: GrupoFinalidadeIS[], opcoesRestricoes: string[] = [],
+  d: DadosISSinais | undefined, c: ConclusaoSinais | undefined, grupos: GrupoFinalidadeIS[], opcoesRestricoes: string[] = [],
+  atual?: ISCadastrada | null,
 ): { proposta: PropostaImportacao | null; erro: string } => {
-  const numero = numeroDaIs(d.numInspecao);
-  if (!numero) return { proposta: null, erro: 'Não foi possível ler o Num. Inspeção na foto da IS.' };
-  const nip = normalizarNip(d.nip || '');
-  if (c) {
+  const numero = numeroDaIs(d?.numInspecao) || numeroDaIs(c?.numInspecao);
+  if (!numero) return { proposta: null, erro: 'Não foi possível ler o nº da IS.' };
+  if (!d && !c) return { proposta: null, erro: `IS ${numero}: nenhuma foto lida.` };
+  if (!d && !atual) return { proposta: null, erro: `IS ${numero} não cadastrada: envie também a foto da tela da IS.` };
+  const nip = normalizarNip(d?.nip || '') || normalizarNip(c?.nip || '');
+  if (d && c) {
     const num2 = numeroDaIs(c.numInspecao);
     if (num2 && num2 !== numero) return { proposta: null, erro: `As fotos são de IS diferentes (${numero} e ${num2}).` };
+    const nip1 = normalizarNip(d.nip || '');
     const nip2 = normalizarNip(c.nip || '');
-    if (nip && nip2 && nip2 !== nip) return { proposta: null, erro: 'As fotos são de inspecionados diferentes (NIP não confere).' };
+    if (nip1 && nip2 && nip2 !== nip1) return { proposta: null, erro: `IS ${numero}: as fotos são de inspecionados diferentes (NIP não confere).` };
   }
+  if (atual && nip && atual.inspecionadoId && atual.inspecionadoId !== nip) return { proposta: null, erro: `IS ${numero}: o NIP da foto não confere com o da IS cadastrada.` };
   const avisos: string[] = [];
 
-  const achada = acharFinalidade(d.finalidadeTis, grupos) ?? acharFinalidade(c?.finalidade, grupos) ?? acharFinalidade(c?.laudos?.[0]?.finalidade, grupos);
-  const finalidadeLida = (d.finalidadeTis || c?.finalidade || '').trim();
+  const achada = acharFinalidade(d?.finalidadeTis, grupos) ?? acharFinalidade(c?.finalidade, grupos) ?? acharFinalidade(c?.laudos?.[0]?.finalidade, grupos)
+    ?? (atual ? acharFinalidade(atual.finalidade, grupos) : null);
+  const finalidadeLida = (d?.finalidadeTis || c?.finalidade || '').trim();
   if (!achada) avisos.push(finalidadeLida ? `Finalidade "${finalidadeLida}" não identificada: escolha na lista.` : 'Finalidade não lida: escolha na lista.');
-  const ampJunta = ampDaJunta(d.junta);
+  const ampJunta = ampDaJunta(d?.junta);
   const amp: AmpImportacao | '' = ampJunta || (achada ? (/mpi/i.test(achada.amp) ? 'MPI' : 'JRS') : '');
 
-  const dataAbertura = dataDoSinais(d.dataCriacao);
+  const dataAbertura = dataDoSinais(d?.dataCriacao) || atual?.dataAbertura || '';
   if (!dataAbertura) avisos.push('Data de Criação não lida: informe a data de abertura.');
-  const dataAgendamento = dataDoSinais(d.dataAgendamento);
+  const dataAgendamento = dataDoSinais(d?.dataAgendamento);
 
-  // DS-1A, Data do Laudo e Num. TIS só valem com a foto da conclusão.
+  // DS-1A, Data do Laudo e Num. TIS (da tela da IS) só valem com a foto da conclusão.
   let laudo = '', dataLaudo = '', restricoes = '', tis = '', ds1a = '';
   if (c) {
     laudo = laudoDaConclusao(c);
     if (!laudo) avisos.push('Laudo não lido na foto da conclusão.');
-    else {
-      dataLaudo = dataDoSinais(d.dataLaudo);
+    else dataLaudo = dataDoSinais(d?.dataLaudo) || dataDoSinais(c.dataLaudo);
+    if (laudo && d) {
       tis = String(d.numTis || '').replace(/\s+/g, '').replace(/^-$/, '');
       ds1a = String(d.ds1a || '').replace(/\s+/g, '').replace(/^-$/, '').toUpperCase();
       if (ds1a && !tis) { avisos.push('Código DS-1A sem Num. TIS: o DS-1A foi ignorado.'); ds1a = ''; }
@@ -167,8 +182,67 @@ export const proporImportacao = (
   return {
     proposta: {
       numero, nip, amp, finalidade: achada?.finalidade ?? '', grupoFinalidade: achada?.grupo ?? '', finalidadeLida,
-      dataAbertura, dataAgendamento, temConclusao: !!c, laudo, dataLaudo, restricoes, tis, ds1a, avisos,
+      dataAbertura, dataAgendamento, temDados: !!d, temConclusao: !!c, laudo, dataLaudo, restricoes, tis, ds1a, avisos,
     },
     erro: '',
   };
+};
+
+// ---------------------------------------------------------------- Várias fotos, várias IS
+
+/** Leitura de um print qualquer do SINAIS: a IA diz de que tela é e devolve os campos daquela tela. */
+export interface LeituraPrint extends DadosISSinais {
+  /** "is" (tela da IS), "conclusao" (laudos/restrições) ou outra coisa. */
+  tipo?: string;
+  /** "Tipo" do inspecionado na tela da IS (Titular, Dependente…) — vira `tipo` em `dadosDaLeitura`. */
+  tipoInspecionado?: string;
+  finalidade?: string;
+  laudos?: ConclusaoSinais['laudos'];
+  restricoes?: string[];
+}
+
+export type TipoPrint = 'is' | 'conclusao' | '';
+
+export const tipoDoPrint = (l: LeituraPrint): TipoPrint => {
+  const t = chave(l.tipo);
+  if (/conclus|laudo|resultado/.test(t)) return 'conclusao';
+  if (/\bis\b|inspec|dados/.test(t)) return 'is';
+  if ((l.laudos?.length ?? 0) > 0) return 'conclusao';
+  if (l.junta || l.dataCriacao || l.finalidadeTis) return 'is';
+  return '';
+};
+
+export const conclusaoDaLeitura = (l: LeituraPrint): ConclusaoSinais => ({
+  numInspecao: l.numInspecao, nip: l.nip, finalidade: l.finalidade, laudos: l.laudos ?? [], restricoes: l.restricoes ?? [], dataLaudo: l.dataLaudo,
+});
+
+/** Campos da tela da IS (com o `tipo` do inspecionado, como o cadastro espera). */
+export const dadosDaLeitura = (l: LeituraPrint): DadosISSinais => {
+  const { tipo: _tela, tipoInspecionado, finalidade: _f, laudos: _l, restricoes: _r, ...resto } = l;
+  return { ...resto, ...(tipoInspecionado ? { tipo: tipoInspecionado } : {}) };
+};
+
+export interface GrupoPrints<T> {
+  numero: string;
+  dados?: { leitura: DadosISSinais; origem: T };
+  conclusao?: { leitura: ConclusaoSinais; origem: T };
+  /** Fotos repetidas da mesma tela (só a primeira vale). */
+  repetidas: T[];
+}
+
+/** Agrupa as leituras pelo nº da IS, na ordem em que aparecem; sem nº ou sem tela reconhecida, à parte. */
+export const agruparPrints = <T>(lidos: { leitura: LeituraPrint; origem: T }[]): { grupos: GrupoPrints<T>[]; naoReconhecidas: T[] } => {
+  const grupos = new Map<string, GrupoPrints<T>>();
+  const naoReconhecidas: T[] = [];
+  for (const { leitura, origem } of lidos) {
+    const tipo = tipoDoPrint(leitura);
+    const numero = numeroDaIs(leitura.numInspecao);
+    if (!tipo || !numero) { naoReconhecidas.push(origem); continue; }
+    const g = grupos.get(numero) ?? { numero, repetidas: [] };
+    if (tipo === 'is') { if (g.dados) g.repetidas.push(origem); else g.dados = { leitura: dadosDaLeitura(leitura), origem }; }
+    else if (g.conclusao) g.repetidas.push(origem);
+    else g.conclusao = { leitura: conclusaoDaLeitura(leitura), origem };
+    grupos.set(numero, g);
+  }
+  return { grupos: [...grupos.values()], naoReconhecidas };
 };

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  acharFinalidade, ampDaJunta, dataDoSinais, laudoDaConclusao, proporImportacao, restricoesDaConclusao,
+  acharFinalidade, agruparPrints, ampDaJunta, tipoDoPrint, dataDoSinais, laudoDaConclusao, proporImportacao, restricoesDaConclusao,
   statusDaConclusao, statusDosDados, type DadosISSinais,
 } from '../importacaoIS';
 import { militarDoPreenchimento, preencherInspecionadoDoSinais } from '../inspecionadoSinais';
@@ -82,7 +82,7 @@ describe('proporImportacao', () => {
   it('junta MPI prevalece; fotos de IS diferentes; sem número', () => {
     expect(proporImportacao({ ...foto1, junta: 'MPI/CASSUNDÉ' }, undefined, grupos).proposta?.amp).toBe('MPI');
     expect(proporImportacao(foto1, { ...foto2, numInspecao: '1245271' }, grupos).erro).toMatch(/IS diferentes/);
-    expect(proporImportacao({ ...foto1, numInspecao: '' }, undefined, grupos).erro).toMatch(/Num\. Inspeção/);
+    expect(proporImportacao({ ...foto1, numInspecao: '' }, undefined, grupos).erro).toMatch(/nº da IS/);
   });
   it('DS-1A sem TIS é ignorado', () => {
     const { proposta } = proporImportacao({ ...foto1, numTis: '-' }, foto2, grupos);
@@ -99,5 +99,36 @@ describe('militarDoPreenchimento', () => {
     else expect(m).toBeNull();
     expect(militarDoPreenchimento({ ...p, avisos: [], omSigla: 'HNRe' }, cq)).toBeNull();
     expect(militarDoPreenchimento({ ...p, nome: '' }, cq)).toBeNull();
+  });
+});
+
+describe('várias fotos, várias IS', () => {
+  it('tipo da tela', () => {
+    expect(tipoDoPrint({ tipo: 'is' })).toBe('is');
+    expect(tipoDoPrint({ tipo: 'conclusao' })).toBe('conclusao');
+    expect(tipoDoPrint({ tipo: 'outra' })).toBe('');
+    expect(tipoDoPrint({ laudos: [{ laudo: 'Apto' }] })).toBe('conclusao');
+    expect(tipoDoPrint({ junta: 'JRS/HNRE' })).toBe('is');
+  });
+  it('agrupa pelo nº da IS em qualquer ordem; repetidas e não reconhecidas à parte', () => {
+    const { grupos, naoReconhecidas } = agruparPrints([
+      { leitura: { tipo: 'conclusao', ...foto2 }, origem: 'a' },
+      { leitura: { tipo: 'is', numInspecao: '999', nip: '11111111' }, origem: 'b' },
+      { leitura: { ...foto1, tipo: 'is', tipoInspecionado: 'Titular' }, origem: 'c' },
+      { leitura: { tipo: 'outra' }, origem: 'd' },
+      { leitura: { tipo: 'is', numInspecao: '1235690' }, origem: 'e' },
+    ]);
+    expect(grupos.map(g => g.numero)).toEqual(['1235690', '999']);
+    expect(grupos[0]).toMatchObject({ conclusao: { origem: 'a' }, dados: { origem: 'c' }, repetidas: ['e'] });
+    expect(grupos[0].dados!.leitura.tipo).toBe('Titular');
+    expect(naoReconhecidas).toEqual(['d']);
+  });
+  it('só a conclusão: atualiza a IS cadastrada; sem IS cadastrada, erro', () => {
+    expect(proporImportacao(undefined, foto2, grupos).erro).toMatch(/não cadastrada/);
+    const { proposta } = proporImportacao(undefined, foto2, grupos, [], { inspecionadoId: '26075920', finalidade: 'Verificação de Deficiência Funcional', dataAbertura: '2026-09-02' });
+    expect(proposta).toMatchObject({ numero: '1235690', temDados: false, temConclusao: true, laudo: 'Apto para o SAM com restrições por 90 dias.', tis: '', ds1a: '', dataAbertura: '2026-09-02' });
+    const comData = proporImportacao(undefined, { ...foto2, dataLaudo: '01/10/2026' }, grupos, [], { inspecionadoId: '26075920', finalidade: '', dataAbertura: '2026-09-02' });
+    expect(comData.proposta?.dataLaudo).toBe('2026-10-01');
+    expect(proporImportacao(undefined, foto2, grupos, [], { inspecionadoId: '99999999', finalidade: '', dataAbertura: '' }).erro).toMatch(/NIP/);
   });
 });
