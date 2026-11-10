@@ -20,6 +20,7 @@ import { TabelaAgendaIS } from './inspecoes/TabelaAgendaIS';
 import { FiltroSituacaoIS } from './inspecoes/FiltroSituacaoIS';
 import { FiltroPeriodo, type FiltroPeriodoValor } from './inspecoes/FiltroPeriodo';
 import { InspecaoForm } from './inspecoes/InspecaoForm';
+import { ISPorFotoForm } from './inspecoes/ISPorFotoForm';
 import { InspecaoDetalhe } from './inspecoes/InspecaoDetalhe';
 import { AgendarDialog } from './inspecoes/AgendarDialog';
 import { TrocarPeritoDialog } from './inspecoes/TrocarPeritoDialog';
@@ -125,6 +126,7 @@ export const Inspecoes: React.FC = () => {
   const [peritoFiltro, setPeritoFiltro] = useState('');
 
   const [novo, setNovo] = useState<{ dataEntrevista?: string; peritoUid?: string } | null>(null);
+  const [porFoto, setPorFoto] = useState(false);
   const [detalheId, setDetalheIdEstado] = useState<string | null>(null);
   // Deep link /inspecoes/{isId}[/{acao}] (ex.: QR "Abrir no celular" da gravação da entrevista): abre o
   // detalhe da IS; ao fechar, a URL volta para /inspecoes. A ação (ex.: 'entrevista') é lida pelo próprio
@@ -212,6 +214,17 @@ export const Inspecoes: React.FC = () => {
         else avisar(r.semConvidado ? `IS ${is.is} agendada. O perito não tem Gmail cadastrado e não foi convidado.` : `IS ${is.is} agendada e sincronizada com o Google Agenda.`);
       });
     } else avisar(`IS ${is.is} cadastrada.`);
+  };
+
+  /** IS por foto: criada ou atualizada; com horário reservado, sincroniza o Google Agenda. Abre o detalhe. */
+  const aoSalvarPorFoto = (is: InspecaoRecord, criada: boolean, agendaReservada: boolean) => {
+    setPorFoto(false);
+    const feito = `IS ${is.is} ${criada ? 'cadastrada' : 'atualizada'}`;
+    if (agendaReservada) {
+      avisar(`${feito}. Sincronizando com o Google Agenda…`);
+      sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`${feito}, mas o Google Agenda não foi atualizado: ${r.erro}`, 'error'); else avisar(`${feito} e sincronizada com o Google Agenda.`); });
+    } else avisar(`${feito}.`);
+    setDetalheId(is.id);
   };
 
   /** Muda o status por uma ação do menu (Falta, Restituição, Reabrir IS) e atualiza o Google Agenda se a situação mudar. */
@@ -315,6 +328,7 @@ export const Inspecoes: React.FC = () => {
             <>
               {ehAdmin && <IconButton variant="secondary" icon="tune" label="Horários" onClick={() => setTurnosAberto(true)} />}
               {podeBloquear && <IconButton variant="secondary" icon="block" label="Bloqueios" onClick={() => setBloqueiosAberto(true)} />}
+              {podeCadastrar && <IconButton variant="secondary" icon="photo_camera" label="IS por foto" onClick={() => setPorFoto(true)} />}
               {podeCadastrar && <Button icon="add" onClick={() => setNovo({})}>Abrir IS</Button>}
             </>
           )}
@@ -389,6 +403,14 @@ export const Inspecoes: React.FC = () => {
           usuario={{ uid: usuario.uid, usuario: usuario.usuario, perfil: usuario.perfil }}
           podeCadastrarInspecionado={podeCadastrarInspecionado} podeAgendar={podeAgendar}
           inicial={novo} onClose={() => setNovo(null)} onCriada={aoCriada}
+        />
+      )}
+
+      {porFoto && usuario && (
+        <ISPorFotoForm
+          militares={militares} peritos={peritos} config={config} bloqueios={bloqueiosTodos} inspecoes={lista ?? []}
+          usuario={{ uid: usuario.uid, usuario: usuario.usuario, perfil: usuario.perfil }}
+          podeCadastrarInspecionado={podeCadastrarInspecionado} onClose={() => setPorFoto(false)} onSalva={aoSalvarPorFoto}
         />
       )}
 

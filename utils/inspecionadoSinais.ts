@@ -4,7 +4,7 @@
 // usando a tabela de corpos/quadros/postos da MB (public/corposQuadrosMB.json) e a lista de OM.
 // Função pura: o que não der para identificar com segurança fica em branco e vira um aviso.
 import {
-  postosDoVinculo, quadrosDoOficial, especialidadesDaPraca,
+  postosDoVinculo, quadrosDoOficial, especialidadesDaPraca, montarPgq, montarInspecionado,
   type CorposQuadros, type OrganizacaoMilitar, type Vinculo, type SituacaoMilitar,
 } from './corposQuadros';
 import { dataCivilISO, normalizarNip } from './dados';
@@ -130,5 +130,33 @@ export const preencherInspecionadoDoSinais = (
     omTexto: om ? `${om.sigla} — ${om.nome}` : omLida,
     dataNascimento: dataCivilISO(d.dataNascimento || '') || '',
     avisos,
+  };
+};
+
+/**
+ * Cadastro pronto para gravar a partir do preenchimento (IS por foto: inspecionado ainda não cadastrado).
+ * Null quando falta algo que o formulário exigiria (vínculo, posto, quadro/especialidade, nome, NIP, OM),
+ * quando houve aviso, ou quando a OM é o HNRe (que pede as informações adicionais): nesses casos o
+ * cadastro abre preenchido para o usuário completar.
+ */
+export const militarDoPreenchimento = (p: PreenchimentoInspecionado, cq: CorposQuadros): {
+  om: string; temporario: boolean; pgq: string; nip: string; nome: string; inspecionado: string;
+  email: string; ativo: boolean; celular: string; dataNascimento: string; rm1: boolean; refo: boolean;
+} | null => {
+  if (p.tipo !== 'militar' || p.avisos.length > 0 || !p.vinculo || !p.posto || !p.nome || !p.nip) return null;
+  if (p.vinculo === 'Inativo' && !p.situacao) return null;
+  if (!p.omSigla && !p.situacao) return null;
+  if (p.omSigla.trim().toUpperCase() === 'HNRE') return null;
+  const vinculoTabela: Vinculo = p.vinculo === 'Inativo' ? 'Carreira' : p.vinculo;
+  const categoria = cq.postos[p.posto]?.categoria;
+  if (!categoria) return null;
+  const [corpoSigla = '', quadroSigla = ''] = p.quadroChave.split('|');
+  if (categoria === 'Oficial' && !p.quadroChave) return null;
+  if (categoria === 'Praça' && !p.espSigla && especialidadesDaPraca(cq, vinculoTabela, p.posto, p.cpfn).length > 0) return null;
+  const pgq = montarPgq(categoria, p.posto, quadroSigla, corpoSigla, p.espSigla, p.situacao);
+  return {
+    om: p.omSigla, temporario: p.vinculo === 'Temporário', pgq, nip: p.nip, nome: p.nome,
+    inspecionado: montarInspecionado(pgq, p.nip, p.nome), email: '', ativo: true, celular: '',
+    dataNascimento: p.dataNascimento, rm1: p.situacao === 'RM1', refo: p.situacao === 'Refº',
   };
 };

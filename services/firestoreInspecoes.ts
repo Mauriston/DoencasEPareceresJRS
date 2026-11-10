@@ -158,6 +158,33 @@ export const agendarInspecao = async (atual: InspecaoRecord, novo: Agendamento):
   return status;
 };
 
+/** IS por foto (prints do SINAIS): os campos conferidos pelo usuário e o status calculado (utils/importacaoIS.ts). */
+export type DadosImportacaoIS = Pick<InspecaoDoc,
+  'dataAbertura' | 'dataEntrevista' | 'finalidade' | 'grupoFinalidade' | 'amp' | 'peritoUid' | 'peritoNome' | 'peritoGmail'
+  | 'inspecionadoId' | 'inspecionado' | 'laudo' | 'dataLaudo' | 'restricoes' | 'tis' | 'ds1a' | 'status' | 'criadoPor'>;
+
+/**
+ * Cria a IS (`atual` nulo) ou atualiza a já cadastrada com o que veio das fotos. Na atualização, campo
+ * vazio não apaga o que já estava gravado (as fotos só acrescentam). O horário só é reservado quando
+ * `reservarSlot` (entrevista de hoje em diante); mudando a data, o horário antigo é liberado.
+ */
+export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atual: InspecaoRecord | null, reservarSlot: boolean): Promise<InspecaoRecord> => {
+  const slotNovo = reservarSlot && dados.dataEntrevista && dados.peritoUid
+    ? { peritoUid: dados.peritoUid, dataEntrevista: dados.dataEntrevista, grupoFinalidade: dados.grupoFinalidade } : null;
+  if (!atual) {
+    const completo = { ...dados, is: Number(id), observacoes: '', situacao: situacaoDoStatus(dados.status) };
+    await gravarComSlot(id, completo, slotNovo, null, true);
+    return { ...completo, id, criadoEm: null };
+  }
+  const { criadoPor: _c, ...resto } = dados;
+  const patch: Record<string, unknown> = Object.fromEntries(Object.entries(resto).filter(([k, v]) => k === 'status' || String(v ?? '').trim() !== ''));
+  patch.situacao = situacaoDoStatus(dados.status);
+  const mudouData = !!dados.dataEntrevista && dados.dataEntrevista !== atual.dataEntrevista;
+  const slotAntigo = mudouData && atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
+  await gravarComSlot(id, patch, mudouData ? slotNovo : null, slotAntigo, false);
+  return { ...atual, ...(patch as Partial<InspecaoDoc>) };
+};
+
 /** Cancela a IS (situação Finalizada) e libera o horário reservado. */
 export const cancelarInspecao = async (atual: InspecaoRecord): Promise<void> => {
   const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
