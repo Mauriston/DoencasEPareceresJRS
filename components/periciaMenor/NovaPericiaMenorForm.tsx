@@ -1,25 +1,23 @@
 // Ficheiro: components/periciaMenor/NovaPericiaMenorForm.tsx
 // "Nova perícia menor" ("Novo atestado" para user_medicos_geral): barra lateral à direita (desktop)
-// ou bottom sheet (mobile). Os campos aparecem aos poucos, cada um quando o anterior é preenchido:
-//   1. "Registrar Atestado" ou "Homologar Atestado" (atestado externo apresentado para homologação);
-//   2. Foto do atestado (obrigatória): recorte → filtro "Documento" → leitura automática pelo Gemini
-//      (militar, data, tempo, CID e, na homologação, médico emissor e CRM). Se a leitura falhar, os
-//      campos são preenchidos à mão e a foto é mantida;
-//   3. Militar (autocomplete na base, cadastro rápido) e Serviço do HNRe;
-//   4. Dados do atestado: data (dd/mm/aaaa), tempo, [tempo homologado], CID, dispensas, ENC p/ VDF (Sim/Não).
-// Depois da foto (lida ou não), os campos surgem já preenchidos com o que a leitura trouxe; um campo
-// revelado não volta a sumir. "Registrar" só habilita depois de escolher Sim ou Não em ENC p/ VDF.
+// ou bottom sheet (mobile). Abas no topo, todos os campos visíveis de uma vez:
+//   - "Registrar atestado": militar, dados do atestado, ENC p/ VDF e, só para o Admin, "Perito
+//     responsável" (select de médicos ativos que podem registrar, por NIP; padrão = o próprio Admin).
+//     Sem foto (pdfUrl vazio).
+//   - "Homologar atestado" (atestado externo): foto obrigatória (recorte → filtro "Documento" → leitura
+//     pelo Gemini, que preenche militar, data, tempo, CID, médico emissor e CRM), tempo homologado.
+// Gravação: peritoUid/peritoNome/peritoUsuario = perito responsável (o escolhido pelo Admin ou quem
+// registra); criadoPor/criadoPorUsuario = quem registrou. Na homologação a foto vira PDF no Storage.
 // Tempo: sem homologação, o tempo do atestado é o tempo de dispensa (máx. 20 dias); com homologação,
 // vale o tempo homologado (máx. 20). Somado às perícias do militar vigentes ou concluídas há até
 // 10 dias, não passa de 30 (utils/periciaMenorRegras.ts).
-// Ao registrar: a foto (já filtrada) vira PDF no Storage e a perícia é gravada no Firestore.
-// A foto é obrigatória (FOTO_OBRIGATORIA = true): os campos só aparecem depois dela processada.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
+import { Segmented } from '../ui/Segmented';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { MilitarCadastroForm } from '../militares/MilitarCadastroForm';
 import { RecorteAtestado } from './RecorteAtestado';
@@ -29,11 +27,12 @@ import { useNav } from '../../context/NavContext';
 import { extrairDadosAtestado } from '../../services/atestadoIA';
 import { observarMilitares, type MilitarRecord } from '../../services/firestoreMilitares';
 import { enviarPdfPericiaMenor, novoIdPericiaMenor, observarPericiasDoMilitar, registrarPericiaMenor, dataBR, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
+import { carregarPeritosPericiaMenor } from '../../services/periciaMenorService';
 import { carregarCid, normalizarBusca, omEhHnre, type CidItem } from '../../utils/corposQuadros';
 import { imagemParaPdf } from '../../utils/imagemParaPdf';
 import { aplicarFiltroDocumento } from '../../utils/filtroDocumento';
 import { dataCivilISO, diasInteiro, hojeISO, normalizarTexto } from '../../utils/dados';
-import { MAX_DIAS_PERICIA, MAX_DIAS_ACUMULADOS, limitarDias, saldoAcumulado } from '../../utils/periciaMenorRegras';
+import { MAX_DIAS_PERICIA, MAX_DIAS_ACUMULADOS, limitarDias, saldoAcumulado, type PeritoPericiaMenor } from '../../utils/periciaMenorRegras';
 import { formatNip } from '../../utils/format';
 
 interface Props {
@@ -44,17 +43,12 @@ interface Props {
 }
 
 type Erros = Record<string, string>;
-type Modo = '' | 'registrar' | 'homologar';
-/** Etapas reveladas em sequência, depois da escolha Registrar/Homologar. */
-type Etapa = 'foto' | 'militar' | 'data' | 'tempo' | 'tempoHomologado' | 'cid' | 'dispensas' | 'vdf';
-
-/** Foto do atestado obrigatória? Voltou a ser (pedido de 06/11/2026). Com false, a foto fica opcional
- * (aparece "Continuar sem foto" e o pdfUrl pode ficar vazio). */
-const FOTO_OBRIGATORIA = true;
+type Modo = 'registrar' | 'homologar';
 
 const comUnidade = (v: string): string => (v ? `${v} dia${Number(v) > 1 ? 's' : ''}` : v);
 const digitos = (v: string) => v.replace(/\D/g, '');
 const rotuloCid = (c: CidItem) => `${c.SUBCAT} - ${c.DESCRICAO}`;
+const rotuloPerito = (p: PeritoPericiaMenor) => `${p.usuario || p.nome}${p.nip ? ` — ${formatNip(p.nip)}` : ''}`;
 
 /** Aviso discreto, vermelho e à direita, logo abaixo do campo. */
 const AvisoMax: React.FC<{ visivel: boolean }> = ({ visivel }) =>
@@ -68,10 +62,12 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
   const [militares, setMilitares] = useState<MilitarRecord[]>([]);
   const [cids, setCids] = useState<CidItem[]>([]);
 
-  const [modo, setModo] = useState<Modo>('');
+  const [modo, setModo] = useState<Modo>('registrar');
   const homologacao = modo === 'homologar';
-  const [semFoto, setSemFoto] = useState(false);
-  const [revelados, setRevelados] = useState<ReadonlySet<Etapa>>(() => new Set());
+  // Perito responsável: só o Admin escolhe (na aba Registrar); para os demais é o próprio usuário.
+  const ehAdmin = usuario?.perfil === 'admin';
+  const [peritos, setPeritos] = useState<PeritoPericiaMenor[]>([]);
+  const [peritoUid, setPeritoUid] = useState(usuario?.uid ?? '');
 
   const [militarId, setMilitarId] = useState('');
   const [militarTexto, setMilitarTexto] = useState('');
@@ -108,6 +104,16 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
 
   useEffect(() => observarMilitares(setMilitares), []);
   useEffect(() => { carregarCid().then(setCids).catch(() => setCids([])); }, []);
+  useEffect(() => {
+    if (!ehAdmin) return;
+    let vivo = true;
+    carregarPeritosPericiaMenor().then(l => { if (vivo) setPeritos(l); }).catch(() => { if (vivo) setPeritos([]); });
+    return () => { vivo = false; };
+  }, [ehAdmin]);
+  // O próprio Admin sempre aparece no select (mesmo que a lista não carregue).
+  const opcoesPerito = useMemo(() => (!usuario || peritos.some(p => p.uid === usuario.uid)
+    ? peritos
+    : [{ uid: usuario.uid, usuario: usuario.usuario, nome: usuario.nome, nip: usuario.nip || '' }, ...peritos]), [peritos, usuario]);
   const militar = militares.find(m => m.id === militarId) ?? null;
   // Perícias anteriores do militar escolhido, para o limite de 30 dias acumulados.
   useEffect(() => {
@@ -159,12 +165,12 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
     const r = limitarDias(texto, MAX_DIAS_PERICIA);
     setTempoHomologado(r.valor); setAvisoMaxHomologado(r.cortado); limpar('tempoHomologado');
   };
-  const escolherModo = (m: Exclude<Modo, ''>) => {
+  const escolherModo = (m: Modo) => {
     const marcado = m === 'homologar';
     setModo(m);
     // Sem homologação, o tempo do atestado volta ao limite de 20 dias.
     if (!marcado && tempoAtestado) alterarTempoAtestado(tempoAtestado, false);
-    if (!marcado) { setTempoHomologado(''); setAvisoMaxHomologado(false); limpar('tempoHomologado'); }
+    if (!marcado) { setTempoHomologado(''); setAvisoMaxHomologado(false); limpar('tempoHomologado'); limpar('foto'); }
   };
 
   // ---- Foto do atestado: recorte → filtro "Documento" → leitura automática ----
@@ -220,28 +226,9 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
   // ---- Envio ----
   const dataAtestado = dataCivilISO(dataTexto) || '';
 
-  // ---- Revelação progressiva: visível até a primeira etapa pendente; o que já apareceu não some ----
-  const etapas: Etapa[] = modo ? ['foto', 'militar', 'data', 'tempo', ...(homologacao ? ['tempoHomologado' as const] : []), 'cid', 'dispensas', 'vdf'] : [];
-  const completa: Record<Etapa, boolean> = {
-    foto: (!!imagemDoc && !processando) || semFoto,
-    militar: !!militar, data: !!dataAtestado, tempo: !!digitos(tempoAtestado), tempoHomologado: !!digitos(tempoHomologado),
-    cid: !!cid, dispensas: dispensas.length > 0, vdf: vdf !== '',
-  };
-  const pendente = etapas.findIndex(e => !completa[e]);
-  const atingidas = etapas.slice(0, pendente < 0 ? etapas.length : pendente + 1);
-  const chaveAtingidas = atingidas.join();
-  useEffect(() => {
-    const novas = atingidas.filter(e => !revelados.has(e));
-    if (novas.length === 0) return;
-    setRevelados(prev => new Set([...prev, ...novas]));
-    // Traz à vista o campo que acabou de surgir (só rola se estiver fora da tela).
-    const ultima = novas[novas.length - 1];
-    if (ultima !== 'foto') requestAnimationFrame(() => document.querySelector(`#form-nova-pericia [data-etapa="${ultima}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
-  }, [chaveAtingidas]); // eslint-disable-line react-hooks/exhaustive-deps
-  const ver = (e: Etapa) => !!modo && (atingidas.includes(e) || revelados.has(e));
   const validar = (): Erros => {
     const e: Erros = {};
-    if (FOTO_OBRIGATORIA && !imagemDoc) e.foto = 'Fotografe o atestado.';
+    if (homologacao && !imagemDoc) e.foto = 'Anexe a foto do atestado.';
     if (!militar) e.militar = 'Escolha o militar na lista.';
     if (!dataTexto) e.dataAtestado = 'Informe a data do atestado.';
     else if (!dataAtestado) e.dataAtestado = 'Data inválida (dd/mm/aaaa).';
@@ -263,10 +250,12 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
       return;
     }
     if (!militar || !cid || !usuario) return;
+    const perito = (ehAdmin && !homologacao && opcoesPerito.find(p => p.uid === peritoUid))
+      || { uid: usuario.uid, usuario: usuario.usuario, nome: usuario.nome };
     setSalvando(true);
     try {
       const id = novoIdPericiaMenor();
-      const pdfUrl = imagemDoc ? await enviarPdfPericiaMenor(id, await imagemParaPdf(imagemDoc)) : '';
+      const pdfUrl = homologacao && imagemDoc ? await enviarPdfPericiaMenor(id, await imagemParaPdf(imagemDoc)) : '';
       const medico = normalizarTexto(medicoEmissor);
       const crm = normalizarTexto(crmEmissor);
       await registrarPericiaMenor(id, {
@@ -279,7 +268,8 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
         homologacao,
         ...(homologacao && medico ? { medicoEmissor: medico } : {}),
         ...(homologacao && crm ? { crmEmissor: crm } : {}),
-        vdf: vdf === 'sim', peritoUsuario: usuario.usuario, peritoNome: usuario.nome, peritoUid: usuario.uid, pdfUrl,
+        vdf: vdf === 'sim', peritoUsuario: perito.usuario, peritoNome: perito.nome, peritoUid: perito.uid,
+        criadoPor: usuario.uid, criadoPorUsuario: usuario.usuario, pdfUrl,
       });
       onRegistrado(militar.nome);
     } catch (err: any) {
@@ -314,20 +304,21 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
         footer={(
           <>
             <Button variant="secondary" className="max-md:hidden" onClick={onClose} disabled={salvando}>Cancelar</Button>
-            <AcoesRodape acoes={[{ id: 'salvar', rotulo: 'Registrar', icone: 'check', onClick: () => submeterFormulario('form-nova-pericia'), loading: salvando, disabled: !!processando || !vdf }]} />
+            <AcoesRodape acoes={[{ id: 'salvar', rotulo: 'Registrar', icone: 'check', onClick: () => submeterFormulario('form-nova-pericia'), loading: salvando, disabled: !!processando }]} />
           </>
         )}
       >
         <form id="form-nova-pericia" onSubmit={registrar} noValidate className="space-y-6">
           {erros.geral && <p role="alert" className="text-sm font-semibold text-wine">{erros.geral}</p>}
 
-          <ChoiceGroup
-            label="Tipo de registro" ocultarRotulo emLinha value={modo} onChange={escolherModo}
-            options={[{ value: 'registrar', label: 'Registrar Atestado' }, { value: 'homologar', label: 'Homologar Atestado' }]}
+          <Segmented
+            papel="tab" idBase="pm" ariaLabel="Tipo de registro" fullWidth value={modo} onChange={escolherModo}
+            options={[{ value: 'registrar', label: 'Registrar atestado' }, { value: 'homologar', label: 'Homologar atestado' }]}
           />
 
-          {ver('foto') && <section data-etapa="foto" className="space-y-2 animate-fade-in" aria-labelledby="pm-foto">
-            <h3 id="pm-foto" className={secao}>Fotografar atestado{FOTO_OBRIGATORIA && <><span className="text-wine ml-0.5" aria-hidden="true">*</span><span className="sr-only"> (obrigatório)</span></>}</h3>
+          <div role="tabpanel" id="pm-painel" aria-labelledby={`pm-aba-${modo}`} className="space-y-6">
+          {homologacao && <section className="space-y-2" aria-labelledby="pm-foto">
+            <h3 id="pm-foto" className={secao}>Foto do atestado<span className="text-wine ml-0.5" aria-hidden="true">*</span><span className="sr-only"> (obrigatório)</span></h3>
             <input type="file" accept="image/*" capture="environment" ref={arquivo} onChange={aoEscolherArquivo} className="hidden" />
             {!imagemDoc && !processando ? (
               <Button variant="secondary" icon="photo_camera" onClick={() => arquivo.current?.click()} aria-invalid={!!erros.foto || undefined} aria-describedby={erros.foto ? 'pm-foto-erro' : undefined}>Fotografar atestado</Button>
@@ -356,14 +347,9 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
             )}
             {erros.foto && <p id="pm-foto-erro" role="alert" className="text-xs font-semibold text-wine">{erros.foto}</p>}
             {falhaLeitura && <p role="status" className="text-xs font-semibold text-wine">{falhaLeitura}</p>}
-            {!FOTO_OBRIGATORIA && !imagemDoc && !processando && !semFoto && (
-              <button type="button" onClick={() => setSemFoto(true)} className="ml-4 min-h-[44px] inline-flex items-center gap-1 text-sm font-bold text-navy underline underline-offset-2 hover:text-navy-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded">
-                Continuar sem foto
-              </button>
-            )}
           </section>}
 
-          {ver('militar') && <section data-etapa="militar" className="space-y-4 animate-fade-in" aria-labelledby="pm-militar">
+          <section className="space-y-4" aria-labelledby="pm-militar">
             <h3 id="pm-militar" className={secao}>Dados do militar</h3>
             <div>
               <Autocomplete
@@ -393,9 +379,9 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
                 )}
               </div>
             )}
-          </section>}
+          </section>
 
-          {ver('data') && <section data-etapa="data" className="space-y-4 animate-fade-in" aria-labelledby="pm-atestado">
+          <section className="space-y-4" aria-labelledby="pm-atestado">
             <h3 id="pm-atestado" className={secao}>Dados do atestado</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Data do atestado" required error={erros.dataAtestado}>
@@ -416,15 +402,15 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
                   </div>
                 )}
               </Field>
-              {ver('tempo') && <div data-etapa="tempo" className="animate-fade-in">{tempoField('Tempo do atestado', tempoAtestado, setTempoAtestado, erros.tempoAtestado, avisoMaxAtestado && !homologacao, alterarTempoAtestado)}</div>}
-              {homologacao && ver('tempoHomologado') && <div data-etapa="tempoHomologado" className="animate-fade-in">{tempoField('Tempo homologado', tempoHomologado, setTempoHomologado, erros.tempoHomologado, avisoMaxHomologado, alterarTempoHomologado)}</div>}
+              {tempoField('Tempo do atestado', tempoAtestado, setTempoAtestado, erros.tempoAtestado, avisoMaxAtestado && !homologacao, alterarTempoAtestado)}
+              {homologacao && tempoField('Tempo homologado', tempoHomologado, setTempoHomologado, erros.tempoHomologado, avisoMaxHomologado, alterarTempoHomologado)}
             </div>
-            {ver('tempo') && msgAcumulado && !erros.tempoAtestado && !erros.tempoHomologado && (
+            {msgAcumulado && !erros.tempoAtestado && !erros.tempoHomologado && (
               <p className={`text-xs ${passaDe30 ? 'font-semibold text-wine' : 'text-ink-3'}`} role={passaDe30 ? 'alert' : undefined}>{msgAcumulado}</p>
             )}
-            {homologacao && emissorLido && ver('cid') && (
-              <div className="animate-fade-in grid grid-cols-1 sm:grid-cols-[1fr_10rem] gap-4">
-                <Field label="Médico" help="Emissor do atestado (lido da foto; corrija se preciso).">
+            {homologacao && emissorLido && (
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_10rem] gap-4">
+                <Field label="Médico emissor">
                   {a => <input {...a} type="text" value={medicoEmissor} onChange={e => setMedicoEmissor(e.target.value)} />}
                 </Field>
                 <Field label="CRM">
@@ -432,13 +418,13 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
                 </Field>
               </div>
             )}
-            {ver('cid') && <div data-etapa="cid" className="animate-fade-in"><Autocomplete
+            <Autocomplete
               label="CID" required error={erros.cid} placeholder="Digite o código ou a descrição do CID"
               valor={cidTexto} opcoes={opcoesCid}
               onDigitar={t => { setCidTexto(t); setCid(null); limpar('cid'); }}
               onSelecionar={o => { const c = cids.find(x => x.SUBCAT === o.chave); if (c) { setCid(c); setCidTexto(rotuloCid(c)); limpar('cid'); } }}
-            /></div>}
-            {ver('dispensas') && <div data-etapa="dispensas" className="animate-fade-in"><Field label="Dispensas" required error={erros.dispensas}>
+            />
+            <Field label="Dispensas" required error={erros.dispensas}>
               {a => (
                 <button
                   id={a.id} type="button" onClick={() => setEscolhendoDispensas(true)} aria-haspopup="dialog"
@@ -449,17 +435,24 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
                   <span className="material-symbols-outlined text-[20px] text-ink-3 shrink-0" aria-hidden="true">checklist</span>
                 </button>
               )}
-            </Field></div>}
-            {ver('vdf') && (
-              <div data-etapa="vdf" className="animate-fade-in">
-                <ChoiceGroup
-                  label="ENC p/ VDF?" required emLinha value={vdf} error={erros.vdf}
-                  onChange={v => { setVdf(v); limpar('vdf'); }}
-                  options={[{ value: 'sim', label: 'Sim' }, { value: 'nao', label: 'Não' }]}
-                />
-              </div>
-            )}
-          </section>}
+            </Field>
+            <ChoiceGroup
+              label="ENC p/ VDF?" required emLinha value={vdf} error={erros.vdf}
+              onChange={v => { setVdf(v); limpar('vdf'); }}
+              options={[{ value: 'sim', label: 'Sim' }, { value: 'nao', label: 'Não' }]}
+            />
+          </section>
+
+          {ehAdmin && !homologacao && (
+            <Field label="Perito responsável">
+              {a => (
+                <select {...a} value={peritoUid} onChange={e => setPeritoUid(e.target.value)}>
+                  {opcoesPerito.map(p => <option key={p.uid} value={p.uid}>{rotuloPerito(p)}</option>)}
+                </select>
+              )}
+            </Field>
+          )}
+          </div>
         </form>
       </Drawer>
 

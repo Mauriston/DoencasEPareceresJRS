@@ -25,12 +25,17 @@ interface SegmentedProps<T extends string> {
   className?: string;
   /** Filtro opcional: tocar na opção ativa a desmarca (chama onDesmarcar); sem opção ativa = sem filtro. */
   onDesmarcar?: () => void;
+  /** 'tab': vira abas (role tablist/tab, aria-selected) que controlam o painel `${idBase}-painel`. Padrão: radiogroup. */
+  papel?: 'radio' | 'tab';
+  /** Com papel 'tab': prefixo dos ids (aba = `${idBase}-aba-${value}`, painel = `${idBase}-painel`). */
+  idBase?: string;
 }
 
-export function Segmented<T extends string>({ options, value, onChange, ariaLabel, fullWidth = false, className = '', onDesmarcar }: SegmentedProps<T>) {
+export function Segmented<T extends string>({ options, value, onChange, ariaLabel, fullWidth = false, className = '', onDesmarcar, papel = 'radio', idBase = 'seg' }: SegmentedProps<T>) {
+  const aba = papel === 'tab';
   const nenhumAtivo = !options.some(o => o.value === value);
   const raiz = useRef<HTMLDivElement>(null);
-  // Radiogroup: setas movem a seleção; só a opção ativa entra na ordem do Tab (roving tabindex).
+  // Radiogroup/tablist: setas movem a seleção; só a opção ativa entra na ordem do Tab (roving tabindex).
   const aoTecla = (e: React.KeyboardEvent) => {
     const passo = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
     if (!passo) return;
@@ -38,13 +43,13 @@ export function Segmented<T extends string>({ options, value, onChange, ariaLabe
     const i = options.findIndex(o => o.value === value);
     const proximo = options[(i + passo + options.length) % options.length];
     onChange(proximo.value);
-    requestAnimationFrame(() => raiz.current?.querySelectorAll<HTMLElement>('[role="radio"]')[options.indexOf(proximo)]?.focus());
+    requestAnimationFrame(() => raiz.current?.querySelectorAll<HTMLElement>(`[role="${aba ? 'tab' : 'radio'}"]`)[options.indexOf(proximo)]?.focus());
   };
   return (
     <div
       ref={raiz}
       onKeyDown={aoTecla}
-      role="radiogroup"
+      role={aba ? 'tablist' : 'radiogroup'}
       aria-label={ariaLabel}
       className={`${fullWidth ? 'flex w-full' : 'inline-flex'} gap-1 p-1 rounded-lg bg-thead border border-line ${className}`}
     >
@@ -54,8 +59,8 @@ export function Segmented<T extends string>({ options, value, onChange, ariaLabe
           <button
             key={o.value}
             type="button"
-            role="radio"
-            aria-checked={ativo}
+            role={aba ? 'tab' : 'radio'}
+            {...(aba ? { id: `${idBase}-aba-${o.value}`, 'aria-selected': ativo, 'aria-controls': `${idBase}-painel` } : { 'aria-checked': ativo })}
             tabIndex={ativo || (nenhumAtivo && o === options[0]) ? 0 : -1}
             onClick={() => (ativo && onDesmarcar ? onDesmarcar() : onChange(o.value))}
             className={`${fullWidth ? 'flex-1' : ''} inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-md text-sm font-bold whitespace-nowrap transition-colors ${

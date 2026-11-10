@@ -316,6 +316,9 @@ test('Perícia Menor: lista o registro semeado, busca, abre o detalhe e o formul
   await p.getByRole('heading', { name: 'Perícia Menor' }).waitFor();
   const abrir = p.getByRole('button', { name: `Abrir detalhe da perícia de ${INSPECIONADO.nome}` });
   await abrir.waitFor();
+  // Colunas na ordem do Presidente: Data · Inspecionado · Médico · CID · Dispensas.
+  assert.deepEqual(await p.locator('table thead th').allInnerTexts(), ['Data', 'Inspecionado', 'Médico', 'CID', 'Dispensas']);
+  await p.locator('table').getByText('CT Teste Medico').waitFor();
 
   const busca = p.getByLabel('Buscar perícia menor');
   await busca.fill('NADA-COM-ESSE-TEXTO');
@@ -327,7 +330,17 @@ test('Perícia Menor: lista o registro semeado, busca, abre o detalhe e o formul
   await p.keyboard.press('Escape');
 
   await p.getByRole('button', { name: 'Novo', exact: true }).click();
-  await p.getByRole('dialog', { name: 'Nova perícia menor' }).waitFor();
+  const form = p.getByRole('dialog', { name: 'Nova perícia menor' });
+  await form.waitFor();
+  // Abas Registrar/Homologar; todos os campos visíveis; foto só (e obrigatória) na homologação.
+  const abaRegistrar = form.getByRole('tab', { name: 'Registrar atestado' });
+  assert.equal(await abaRegistrar.getAttribute('aria-selected'), 'true');
+  await form.getByText('ENC p/ VDF?').waitFor();
+  assert.equal(await form.getByRole('button', { name: 'Fotografar atestado' }).count(), 0);
+  assert.equal(await form.getByLabel('Perito responsável').count(), 0); // só o Admin escolhe
+  await form.getByRole('tab', { name: 'Homologar atestado' }).click();
+  await form.getByRole('button', { name: 'Fotografar atestado' }).waitFor();
+  await form.getByLabel(/Tempo homologado/).waitFor();
   await p.context().close();
 });
 

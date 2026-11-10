@@ -42,10 +42,15 @@ export interface PericiaMenorDoc {
   /** Só na homologação, quando lidos da foto: médico que emitiu o atestado e o CRM dele. */
   medicoEmissor?: string;
   crmEmissor?: string;
-  /** Médico que registrou a perícia (login do usuário, ex.: "CT MAURISTON"). */
+  /** Perito responsável pela perícia (login do usuário, ex.: "CT MAURISTON"): quem registrou ou, se o
+   *  Admin registrou, o médico que ele escolheu em "Perito responsável". É o que a lista mostra. */
   peritoUsuario: string;
   peritoNome: string;
   peritoUid: string;
+  /** Quem de fato registrou (uid e login); difere do perito quando o Admin registra por outro médico.
+   *  firestore.rules exige criadoPor == auth.uid. Ausente nos registros antigos. */
+  criadoPor?: string;
+  criadoPorUsuario?: string;
   /** URL de visualização do PDF do atestado (Storage ou, nas migradas, Drive); vazio se não houver. */
   pdfUrl: string;
   /** ID do arquivo no Drive (quando pdfUrl é do Drive); ausente nos registros antigos. */
