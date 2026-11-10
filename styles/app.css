@@ -259,3 +259,16 @@ th[role="button"],
 @media (prefers-reduced-motion: reduce) {
   .splash-animado { animation: none !important; transition: none !important; }
 }
+
+/* AcoesRodape no mobile (components/ui/AcoesRodape.tsx): as ações viram um FAB flutuante.
+   A barra de rodapé que só abriga o FAB perde borda e altura, e o corpo rolável do sheet
+   (marcado com data-sheet-corpo) ganha folga embaixo para o FAB não cobrir o fim do conteúdo. */
+[data-sheet-rodape]:has([data-acoes-fab]) { padding: 0; border: 0; min-height: 0; }
+[data-sheet-corpo]:has([data-acoes-fab]),
+[data-sheet-corpo]:has(~ [data-acoes-fab]),
+[data-sheet-corpo]:has(~ * [data-acoes-fab]) { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
+@keyframes fab-item-in { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+.fab-item-in { animation: fab-item-in .18s cubic-bezier(0.2, 0, 0, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .fab-item-in { animation: none; }
+}

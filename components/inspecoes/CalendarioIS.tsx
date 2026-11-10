@@ -5,9 +5,11 @@
 // turnos em que ele não atende esmaecidos. Clicar numa IS abre os detalhes; clicar num horário
 // livre (quem pode agendar) abre o agendamento nesse horário (IS aberta ou nova IS). Segurar e arrastar
 // uma IS para outro horário livre do mesmo perito a reagenda. Os cartões mostram só a hora e o nome do
-// inspecionado; a cor indica o AMP (JRS = azul-marinho, MPI = dourado).
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+// inspecionado; a cor indica o AMP (JRS = azul-marinho, MPI = dourado). Passar o mouse (ou o foco por
+// teclado) sobre uma IS mostra um rich tooltip com Inspecionado, Finalidade, Perito e Status.
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { estadoDoSlot } from './SeletorHorario';
+import { TooltipIS } from './TooltipIS';
 import { Button } from '../ui/Button';
 import { Segmented } from '../ui/Segmented';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
@@ -72,11 +74,36 @@ const nomeCurto = (inspecionado: string): string => {
   return nome || inspecionado;
 };
 
+/** Handlers do rich tooltip de uma IS (mouse e foco por teclado; toque não mostra). */
+type PropsDica = (is: InspecaoRecord) => Pick<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onPointerEnter' | 'onPointerLeave' | 'onFocus' | 'onBlur' | 'aria-describedby'>;
+
 export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, onReagendar, onTrocarPerito, onAviso, diasConcursos = [], onAbrirConcurso }) => {
   const [modo, setModo] = useState<Modo>('mes');
   const [ancora, setAncora] = useState(() => { const h = hojeISO(); return ehDiaUtil(h) ? h : somarDias(h, deISO(h).getDay() === 6 ? 2 : 1); });
   const hoje = hojeISO();
   const rolagem = useRef<HTMLDivElement>(null);
+
+  // ----- rich tooltip -----
+  const idDica = useId();
+  const [dica, setDica] = useState<{ is: InspecaoRecord; alvo: DOMRect } | null>(null);
+  const mostrarDica = (is: InspecaoRecord, el: HTMLElement) => setDica({ is, alvo: el.getBoundingClientRect() });
+  const esconderDica = (is: InspecaoRecord) => setDica(d => (d?.is.id === is.id ? null : d));
+  useEffect(() => {
+    if (!dica) return;
+    const fechar = () => setDica(null);
+    const tecla = (e: KeyboardEvent) => { if (e.key === 'Escape') fechar(); };
+    window.addEventListener('scroll', fechar, true);
+    window.addEventListener('resize', fechar);
+    window.addEventListener('keydown', tecla);
+    return () => { window.removeEventListener('scroll', fechar, true); window.removeEventListener('resize', fechar); window.removeEventListener('keydown', tecla); };
+  }, [dica]);
+  const propsDica: PropsDica = is => ({
+    onPointerEnter: e => { if (e.pointerType === 'mouse') mostrarDica(is, e.currentTarget); },
+    onPointerLeave: () => esconderDica(is),
+    onFocus: e => { if (e.currentTarget.matches(':focus-visible')) mostrarDica(is, e.currentTarget); },
+    onBlur: () => esconderDica(is),
+    'aria-describedby': dica?.is.id === is.id ? idDica : undefined,
+  });
 
   const concursosPorDia = useMemo(() => {
     const m = new Map<string, DiaConcurso[]>();
@@ -134,6 +161,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
   };
 
   const iniciarArraste = (is: InspecaoRecord, e: React.PointerEvent<HTMLButtonElement>) => {
+    setDica(null);
     if (!podeArrastar(is) || (e.pointerType === 'mouse' && e.button !== 0)) return;
     const botao = e.currentTarget;
     const x0 = e.clientX; const y0 = e.clientY;
@@ -209,7 +237,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
       </div>
 
       {modo === 'mes'
-        ? <VisaoMes ancora={ancora} hoje={hoje} porDia={porDia} bloqueios={bloqueios} peritoUid={peritoUid} onAbrir={onAbrir} concursosPorDia={concursosPorDia} onAbrirConcurso={onAbrirConcurso} onDia={d => { setAncora(d); setModo('dia'); }} />
+        ? <VisaoMes ancora={ancora} hoje={hoje} porDia={porDia} bloqueios={bloqueios} peritoUid={peritoUid} onAbrir={onAbrir} concursosPorDia={concursosPorDia} onAbrirConcurso={onAbrirConcurso} propsDica={propsDica} onDia={d => { setAncora(d); setModo('dia'); }} />
         : (
           <div ref={rolagem} className="overflow-auto max-h-[70vh]">
             <div className="min-w-[640px]">
@@ -229,12 +257,23 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
                   ))}
                 </div>
                 {dias.map(d => (
-                  <ColunaDia key={d} data={d} hoje={hoje} inspecoes={porDia.get(d) ?? []} bloqueios={bloqueios} config={config} peritoUid={peritoUid} onAbrir={onAbrir} onNovoNoHorario={onNovoNoHorario} podeArrastar={podeArrastar} onIniciarArraste={iniciarArraste} arrastando={arraste} concursosDoDia={concursosPorDia.get(d) ?? []} onAbrirConcurso={onAbrirConcurso} />
+                  <ColunaDia key={d} data={d} hoje={hoje} inspecoes={porDia.get(d) ?? []} bloqueios={bloqueios} config={config} peritoUid={peritoUid} onAbrir={onAbrir} onNovoNoHorario={onNovoNoHorario} podeArrastar={podeArrastar} onIniciarArraste={iniciarArraste} arrastando={arraste} concursosDoDia={concursosPorDia.get(d) ?? []} onAbrirConcurso={onAbrirConcurso} propsDica={propsDica} />
                 ))}
               </div>
             </div>
           </div>
         )}
+      {dica && !arraste && (
+        <TooltipIS
+          id={idDica} alvo={dica.alvo} titulo={`IS ${dica.is.is}${dica.is.dataEntrevista ? ` · ${horaDeEntrevista(dica.is.dataEntrevista)}–${horaFimEntrevista(horaDeEntrevista(dica.is.dataEntrevista), duracaoDaIS(dica.is))}` : ''}`}
+          linhas={[
+            { rotulo: 'Inspecionado', valor: dica.is.inspecionado },
+            { rotulo: 'Finalidade', valor: dica.is.finalidade },
+            { rotulo: 'Perito', valor: dica.is.peritoNome },
+            { rotulo: 'Status', valor: STATUS_IS[statusEfetivoIS(dica.is)].rotulo },
+          ]}
+        />
+      )}
       {arraste && (
         <div
           className={`fixed z-toast pointer-events-none px-2 py-1 rounded border text-xs font-semibold shadow-lg opacity-90 ${corAmp(arraste.is.amp)}`}
@@ -259,7 +298,8 @@ const ColunaDia: React.FC<{
   arrastando: { is: InspecaoRecord; alvo: { data: string; hhmm: string; motivo: string | null; trocar?: boolean } | null } | null;
   concursosDoDia: DiaConcurso[];
   onAbrirConcurso?: (concursoId: string) => void;
-}> = ({ data, hoje, inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, podeArrastar, onIniciarArraste, arrastando, concursosDoDia, onAbrirConcurso }) => {
+  propsDica: PropsDica;
+}> = ({ data, hoje, inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, podeArrastar, onIniciarArraste, arrastando, concursosDoDia, onAbrirConcurso, propsDica }) => {
   const agora = new Date();
   const minAgora = agora.getHours() * 60 + agora.getMinutes();
   // Os bloqueios gerados pelos dias de concurso aparecem como o próprio cartão do concurso (abaixo), não hachurados.
@@ -385,7 +425,6 @@ const ColunaDia: React.FC<{
       {/* IS */}
       {posicoes.map(({ is, ini: min, col, total }) => {
         const duracao = duracaoDaIS(is);
-        const st = STATUS_IS[statusEfetivoIS(is)];
         const arrastavel = podeArrastar(is);
         return (
           <button
@@ -393,7 +432,7 @@ const ColunaDia: React.FC<{
             type="button"
             onClick={e => { e.stopPropagation(); onAbrir(is); }}
             onPointerDown={e => onIniciarArraste(is, e)}
-            title={`${horaDeEntrevista(is.dataEntrevista)}–${horaFimEntrevista(horaDeEntrevista(is.dataEntrevista), duracao)} · IS ${is.is} · ${is.inspecionado} · ${is.amp} · ${is.peritoNome} · ${st.rotulo}${arrastavel ? ' · arraste para reagendar' : ''}`}
+            {...propsDica(is)}
             className={`absolute z-10 px-1.5 rounded border text-left overflow-hidden text-xs leading-tight hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold select-none ${arrastavel ? 'cursor-grab active:cursor-grabbing touch-none' : ''} ${arrastando?.is.id === is.id ? 'opacity-40' : ''} ${corAmp(is.amp)}`}
             style={{ top: topo(min) + 1, height: duracao * PX_POR_MIN - 2, left: `calc(${(col / total) * 100}% + 2px)`, width: `calc(${100 / total}% - 4px)` }}
           >
@@ -411,7 +450,8 @@ const VisaoMes: React.FC<{
   ancora: string; hoje: string; porDia: Map<string, InspecaoRecord[]>; bloqueios: BloqueioAgenda[]; peritoUid: string;
   onAbrir: (is: InspecaoRecord) => void; onDia: (d: string) => void;
   concursosPorDia: Map<string, DiaConcurso[]>; onAbrirConcurso?: (concursoId: string) => void;
-}> = ({ ancora, hoje, porDia, bloqueios, peritoUid, onAbrir, onDia, concursosPorDia, onAbrirConcurso }) => {
+  propsDica: PropsDica;
+}> = ({ ancora, hoje, porDia, bloqueios, peritoUid, onAbrir, onDia, concursosPorDia, onAbrirConcurso, propsDica }) => {
   const primeiro = inicioDoMes(ancora);
   const inicio = inicioDaSemana(primeiro);
   const semanas = Array.from({ length: 6 }, (_, w) => Array.from({ length: 7 }, (_, d) => somarDias(inicio, w * 7 + d)));
@@ -443,9 +483,8 @@ const VisaoMes: React.FC<{
                       </button>
                     ))}
                     {lista.slice(0, 3).map(is => {
-                      const st = STATUS_IS[statusEfetivoIS(is)];
                       return (
-                        <button key={is.id} type="button" onClick={() => onAbrir(is)} title={`${is.inspecionado} · ${is.amp} · ${st.rotulo}`} className={`block w-full text-left truncate rounded border px-1 text-xs ${corAmp(is.amp)}`}>
+                        <button key={is.id} type="button" onClick={() => onAbrir(is)} {...propsDica(is)} className={`block w-full text-left truncate rounded border px-1 text-xs ${corAmp(is.amp)}`}>
                           <span className="font-mono font-bold">{horaDeEntrevista(is.dataEntrevista)}</span> {nomeCurto(is.inspecionado)}
                         </button>
                       );

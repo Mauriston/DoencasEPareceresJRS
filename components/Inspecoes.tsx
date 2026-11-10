@@ -9,6 +9,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
+import { IconButton } from './ui/IconButton';
 import { Segmented } from './ui/Segmented';
 import { StatusTag } from './ui/StatusTag';
 import { EmptyState } from './ui/EmptyState';
@@ -50,7 +51,8 @@ import {
 } from '../utils/inspecoes';
 
 type Visao = 'tabela' | 'calendario';
-type FiltroSituacao = 'todas' | SituacaoIS;
+/** '' = nenhuma situação selecionada (mostra todas). */
+type FiltroSituacao = '' | SituacaoIS;
 
 /** IS finalizadas de concursos não entram aqui; aqui só as cadastradas na página. */
 const nomeCurto = (inspecionado: string): string => inspecionado.replace(/^.*?\d{2}\.\d{4}\.\d{2}\s*/, '') || inspecionado;
@@ -63,6 +65,40 @@ const ordenar = (situacao: SituacaoIS, a: InspecaoRecord, b: InspecaoRecord): nu
 
 /** Cabeçalho de grupo por data: "segunda-feira, 19/10/2026". */
 const rotuloData = (is: InspecaoRecord): string => (is.dataEntrevista ? `${nomeDiaSemana(dataDeEntrevista(is.dataEntrevista))}, ${dataBr(dataDeEntrevista(is.dataEntrevista))}` : 'Sem data de entrevista');
+
+const VISOES: { value: Visao; label: string; icon: string }[] = [
+  { value: 'tabela', label: 'Tabela', icon: 'table_rows' },
+  { value: 'calendario', label: 'Calendário', icon: 'calendar_month' },
+];
+
+/** Alternância Tabela · Calendário só com ícones (radiogroup no estilo do Segmented; rótulo em aria-label e title). */
+const AlternarVisao: React.FC<{ value: Visao; onChange: (v: Visao) => void }> = ({ value, onChange }) => {
+  const raiz = useRef<HTMLDivElement>(null);
+  const aoTecla = (e: React.KeyboardEvent) => {
+    const passo = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+    if (!passo) return;
+    e.preventDefault();
+    const i = (VISOES.findIndex(o => o.value === value) + passo + VISOES.length) % VISOES.length;
+    onChange(VISOES[i].value);
+    requestAnimationFrame(() => raiz.current?.querySelectorAll<HTMLElement>('[role="radio"]')[i]?.focus());
+  };
+  return (
+    <div ref={raiz} role="radiogroup" aria-label="Forma de visualização" onKeyDown={aoTecla} className="inline-flex shrink-0 gap-1 p-1 rounded-lg bg-thead border border-line">
+      {VISOES.map(o => {
+        const ativo = o.value === value;
+        return (
+          <button
+            key={o.value} type="button" role="radio" aria-checked={ativo} aria-label={o.label} title={o.label} tabIndex={ativo ? 0 : -1}
+            onClick={() => onChange(o.value)}
+            className={`inline-flex items-center justify-center w-10 h-10 rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${ativo ? 'bg-navy text-white' : 'text-ink-3 hover:bg-white hover:text-navy'}`}
+          >
+            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{o.icon}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
 
 export const Inspecoes: React.FC = () => {
   const nav = useNav();
@@ -89,7 +125,7 @@ export const Inspecoes: React.FC = () => {
   const [peritos, setPeritos] = useState<PeritoIS[]>([]);
 
   const [visao, setVisao] = useState<Visao>('tabela');
-  const [filtro, setFiltro] = useState<FiltroSituacao>('todas');
+  const [filtro, setFiltro] = useState<FiltroSituacao>('');
   const [busca, setBusca] = useState('');
   const [peritoFiltro, setPeritoFiltro] = useState('');
 
@@ -144,7 +180,6 @@ export const Inspecoes: React.FC = () => {
   }, [isIdDaRota, lista]);
 
   const totais = useMemo(() => ({
-    todas: lista?.length ?? 0,
     aberta: lista?.filter(i => i.situacao === 'aberta').length ?? 0,
     andamento: lista?.filter(i => i.situacao === 'andamento').length ?? 0,
     finalizada: lista?.filter(i => i.situacao === 'finalizada').length ?? 0,
@@ -154,7 +189,7 @@ export const Inspecoes: React.FC = () => {
   const filtrada = useMemo(() => {
     const termos = normalizarBusca(busca).split(/\s+/).filter(Boolean);
     return (lista ?? [])
-      .filter(i => (filtro === 'todas' ? true : i.situacao === filtro))
+      .filter(i => (filtro ? i.situacao === filtro : true))
       .filter(i => (peritoFiltro ? i.peritoUid === peritoFiltro : true))
       .filter(i => { const alvo = normalizarBusca(`${i.is} ${i.inspecionado} ${i.inspecionadoId} ${i.finalidade} ${i.peritoNome} ${STATUS_IS[statusEfetivoIS(i, hoje)].rotulo}`); return termos.every(t => alvo.includes(t)); });
   }, [lista, filtro, peritoFiltro, busca, hoje]);
@@ -279,12 +314,11 @@ export const Inspecoes: React.FC = () => {
       <Container size="data" className="py-6 md:py-8 pb-10 space-y-4">
         <PageHeader
           title="Inspeções de Saúde"
-          description="Cadastre IS, agende as entrevistas em slots de 20 minutos, acompanhe os prazos e gere as minutas de mensagem."
           actions={(
             <>
-              {ehAdmin && <Button variant="secondary" icon="tune" title="Turnos dos peritos" onClick={() => setTurnosAberto(true)}>Horários</Button>}
-              {podeBloquear && <Button variant="secondary" icon="block" onClick={() => setBloqueiosAberto(true)}>Bloqueios</Button>}
-              {podeCadastrar && <Button icon="add" onClick={() => setNovo({})}>Cadastrar IS</Button>}
+              {ehAdmin && <IconButton variant="secondary" icon="tune" label="Horários" onClick={() => setTurnosAberto(true)} />}
+              {podeBloquear && <IconButton variant="secondary" icon="block" label="Bloqueios" onClick={() => setBloqueiosAberto(true)} />}
+              {podeCadastrar && <Button icon="add" onClick={() => setNovo({})}>Abrir IS</Button>}
             </>
           )}
         />
@@ -300,33 +334,28 @@ export const Inspecoes: React.FC = () => {
           </button>
         )}
 
-        <div className="bg-white rounded-xl border border-line p-4 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Segmented<Visao>
-              ariaLabel="Forma de visualização" value={visao} onChange={setVisao}
-              options={[{ value: 'tabela', label: 'Tabela', icon: 'table_rows' }, { value: 'calendario', label: 'Calendário', icon: 'calendar_month' }]}
-            />
-            <select aria-label="Filtrar por perito" value={peritoFiltro} onChange={e => setPeritoFiltro(e.target.value)} className={`${controlClass} !w-auto min-w-[200px]`}>
-              <option value="">Todos os peritos</option>
-              {peritosFiltraveis.map(p => <option key={p.uid} value={p.uid}>{p.usuario}</option>)}
-            </select>
-          </div>
+        {/* Barra de filtros: Situação → Perito → Tabela/Calendário → Busca (uma linha no desktop largo). */}
+        <div className="bg-white rounded-xl border border-line p-3 flex flex-wrap xl:flex-nowrap items-center gap-2">
           {visao === 'tabela' && (
-            <>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
-                <input type="search" aria-label="Buscar IS" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nº da IS, inspecionado, NIP, finalidade, perito ou status…" className={`${controlClass} pl-10`} autoComplete="off" />
-              </div>
-              <Segmented<FiltroSituacao>
-                ariaLabel="Situação da IS" className="overflow-x-auto" value={filtro} onChange={setFiltro}
-                options={[
-                  { value: 'todas', label: 'Todas', badge: totais.todas, badgeTone: 'neutro' },
-                  { value: 'aberta', label: 'Abertas', badge: totais.aberta, badgeTone: 'neutro' },
-                  { value: 'andamento', label: 'Em andamento', badge: totais.andamento, badgeTone: 'neutro' },
-                  { value: 'finalizada', label: 'Finalizadas', badge: totais.finalizada, badgeTone: 'neutro' },
-                ]}
-              />
-            </>
+            <Segmented<FiltroSituacao>
+              ariaLabel="Situação da IS" className="w-full xl:w-auto overflow-x-auto shrink-0" value={filtro} onChange={setFiltro} onDesmarcar={() => setFiltro('')}
+              options={[
+                { value: 'aberta', label: 'Abertas', badge: totais.aberta, badgeTone: 'neutro' },
+                { value: 'andamento', label: 'Em andamento', badge: totais.andamento, badgeTone: 'neutro' },
+                { value: 'finalizada', label: 'Finalizadas', badge: totais.finalizada, badgeTone: 'neutro' },
+              ]}
+            />
+          )}
+          <select aria-label="Filtrar por perito" value={peritoFiltro} onChange={e => setPeritoFiltro(e.target.value)} className={`${controlClass} !w-auto flex-1 min-w-0 sm:flex-none sm:min-w-[12rem] xl:max-w-[14rem]`}>
+            <option value="">Todos os peritos</option>
+            {peritosFiltraveis.map(p => <option key={p.uid} value={p.uid}>{p.usuario}</option>)}
+          </select>
+          <AlternarVisao value={visao} onChange={setVisao} />
+          {visao === 'tabela' && (
+            <div className="relative flex-1 min-w-0 sm:flex-none sm:w-64 xl:w-72 xl:min-w-[10rem] xl:shrink">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
+              <input type="search" aria-label="Buscar IS" title="Busca por nº da IS, inspecionado, NIP, finalidade, perito ou status" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar…" className={`${controlClass} pl-10`} autoComplete="off" />
+            </div>
           )}
         </div>
 
