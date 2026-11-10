@@ -241,7 +241,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
   const maisDoDia = (d: string) => (podeAgendar && aceitaDia(d) ? () => setDialogo({ tipo: 'dia', data: d }) : undefined);
 
   return (
-    <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-stretch">
+    <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-stretch">
       {/* Painel: no desktop, mesma altura do calendário (posição absoluta na célula da grade) e rolagem própria. */}
       <div className="lg:relative lg:min-h-[24rem]">
         <div className="lg:absolute lg:inset-0">
@@ -275,7 +275,6 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
           <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-navy" aria-hidden="true" />JRS</span>
           <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-gold" aria-hidden="true" />MPI</span>
           {diasConcursos.length > 0 && <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-wine" aria-hidden="true" />Concurso (turno reservado)<span className="w-3 h-3 rounded-sm bg-green ml-1" aria-hidden="true" />dia encerrado</span>}
-          {podeAgendar && <span className="ml-auto hidden sm:inline">Arraste uma IS para outro dia para remarcar.</span>}
         </div>
 
         {modo === 'mes'

@@ -49,7 +49,6 @@ export const CalendarioPainelAbertas: React.FC<Props> = ({ abertas, hoje, onAgen
 
       <div id={idLista} className={`${abertoNoCelular ? 'block' : 'hidden'} lg:block flex-1 min-h-0 overflow-y-auto max-h-[60vh] lg:max-h-none border-t border-line lg:border-t-0`}>
         {topo && <div className="p-2 border-b border-line">{topo}</div>}
-        {onAgendar && abertas.length > 0 && <p className="px-3 pt-2 text-xs text-ink-3 hidden lg:block">Arraste um cartão para um dia do calendário para agendar.</p>}
         {abertas.length === 0 ? (
           <p className="px-3 py-4 text-sm text-ink-3">Nenhuma IS aberta aguardando agendamento.</p>
         ) : (
@@ -77,10 +76,10 @@ export const CalendarioPainelAbertas: React.FC<Props> = ({ abertas, hoje, onAgen
                       {nome.charAt(0) || '?'}
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-bold text-navy truncate" title={is.inspecionado}>{nome}</span>
-                      <span className={`flex items-center gap-1.5 text-xs ${atrasada ? 'text-wine font-semibold' : 'text-ink-3'}`}>
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${atrasada ? 'bg-wine' : is.amp === 'JRS' ? 'bg-navy' : 'bg-gold'}`} aria-hidden="true" />
-                        <span className="truncate" title={`${is.finalidade} · ${rotuloDiasEmAberto(dias)}${atrasada ? ' (atrasada)' : ''}`}>
+                      <span className="block text-sm font-bold text-navy break-words" title={is.inspecionado}>{nome}</span>
+                      <span className={`flex items-start gap-1.5 text-xs ${atrasada ? 'text-wine font-semibold' : 'text-ink-3'}`}>
+                        <span className={`w-2 h-2 mt-1 rounded-full shrink-0 ${atrasada ? 'bg-wine' : is.amp === 'JRS' ? 'bg-navy' : 'bg-gold'}`} aria-hidden="true" />
+                        <span className="min-w-0 break-words" title={`${is.finalidade} · ${rotuloDiasEmAberto(dias)}${atrasada ? ' (atrasada)' : ''}`}>
                           {finalidadeSemGrupo(is.finalidade, is.grupoFinalidade)} · {rotuloDiasEmAberto(dias)}
                         </span>
                       </span>
