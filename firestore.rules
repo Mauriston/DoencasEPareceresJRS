@@ -159,8 +159,9 @@ service cloud.firestore {
     match /periciasMenores/{id} {
       allow read: if isSignedIn();
       allow create: if (isMedico() || isMedicoGeral()) &&
-        request.resource.data.criadoPor == request.auth.uid &&
-        (request.resource.data.peritoUid == request.auth.uid || isAdmin());
+        // criadoPor é novo: versões antigas do app (PWA em cache) ainda não mandam o campo.
+        (!('criadoPor' in request.resource.data) || request.resource.data.criadoPor == request.auth.uid) &&
+        (!('peritoUid' in request.resource.data) || request.resource.data.peritoUid == request.auth.uid || isAdmin());
       allow update, delete: if isAdmin();
     }
 
