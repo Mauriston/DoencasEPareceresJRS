@@ -127,14 +127,32 @@ test('Inspeções: lista a IS semeada, filtra pela busca e abre o detalhe', asyn
   await detalhe.waitFor();
   await detalhe.getByText('Dados da IS').waitFor();
   await detalhe.getByText('Conclusão da IS').waitFor();
+  // Aberta sem data de entrevista: só a Finalidade é editável (menu em cascata); a Conclusão fica em leitura.
+  await detalhe.getByRole('button', { name: 'Finalidade' }).waitFor();
+  await detalhe.getByText('A Conclusão fica editável depois que a entrevista for agendada.').waitFor();
+  for (const campo of ['Laudo', 'Nº do TIS', 'DS-1a', 'Observações']) assert.equal(await detalhe.getByLabel(campo).count(), 0, `${campo} não editável`);
+  assert.equal(await detalhe.getByRole('combobox', { name: 'Restrições' }).count(), 0);
+  await p.context().close();
+});
+
+test('Inspeções: Conclusão da IS agendada grava sozinha (Observações) e o Nº do TIS/DS-1a esperam o Laudo', async () => {
+  const p = await novaPagina();
+  await entrar(p, MEDICO);
+  await p.goto(`${BASE}#/inspecoes`);
+  await p.getByRole('button', { name: `Abrir IS ${IS_AGENDADA_E2E.numero}` }).click();
+  const detalhe = p.getByRole('dialog', { name: `IS ${IS_AGENDADA_E2E.numero}` });
+  await detalhe.getByText('Conclusão da IS').waitFor();
   // Sem select de Status e sem "Salvar alterações": a Conclusão grava sozinha.
   assert.equal(await detalhe.getByRole('button', { name: 'Salvar alterações' }).count(), 0);
   assert.equal(await detalhe.getByLabel('Status').count(), 0);
+  // Com data de entrevista a Finalidade não é mais editável.
+  assert.equal(await detalhe.getByRole('button', { name: 'Finalidade' }).count(), 0);
   // Nº do TIS e DS-1a ficam desabilitados sem Laudo.
   assert.equal(await detalhe.getByLabel('Nº do TIS').isDisabled(), true);
   assert.equal(await detalhe.getByLabel('DS-1a').isDisabled(), true);
-  await detalhe.getByLabel('Observações').fill('Observação do E2E');
-  await detalhe.getByLabel('Observações').blur();
+  const obs = detalhe.getByLabel('Observações');
+  await obs.fill('Observação do E2E');
+  await obs.blur();
   await detalhe.getByText('Salvo', { exact: true }).waitFor();
   await p.context().close();
 });
@@ -143,9 +161,9 @@ test('Inspeções: Restrições (Verificações e Términos, sem laudo) — clic
   const p = await novaPagina();
   await entrar(p, MEDICO);
   await p.goto(`${BASE}#/inspecoes`);
-  await alternarSituacoes(p, ['Abertas']);
-  await p.getByRole('button', { name: `Abrir IS ${IS_E2E.numero}` }).click();
-  const detalhe = p.getByRole('dialog', { name: `IS ${IS_E2E.numero}` });
+  // IS agendada (a Conclusão só é editável com data de entrevista).
+  await p.getByRole('button', { name: `Abrir IS ${IS_AGENDADA_E2E.numero}` }).click();
+  const detalhe = p.getByRole('dialog', { name: `IS ${IS_AGENDADA_E2E.numero}` });
   const campo = detalhe.getByRole('combobox', { name: 'Restrições' });
   await campo.click();
   const lista = detalhe.getByRole('listbox', { name: 'Restrições' });
