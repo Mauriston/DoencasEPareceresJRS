@@ -8,7 +8,7 @@
 //     campos preenchidos aparecem como texto (rótulo + valor) e os vazios somem.
 // Rodapé (AcoesRodape: linha no desktop, FAB no mobile): Minuta MSG · Parecer · Gravar Entrevista (cada um
 // só quando cabe). Fecha no X ou fora.
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Drawer } from '../ui/Drawer';
 import { AcoesRodape, type AcaoRodape } from '../ui/AcoesRodape';
@@ -72,24 +72,6 @@ const LinhaTexto: React.FC<{ rotulo: string; valor: string }> = ({ rotulo, valor
   </dl>
 );
 
-/**
- * O Drawer só aceita título em texto: o chip do status vai para a barra do topo, ao lado do título,
- * por portal num elemento criado logo após o <h2> do painel.
- */
-const useVagaNoTitulo = (ancora: React.RefObject<HTMLElement | null>) => {
-  const [vaga, setVaga] = useState<HTMLElement | null>(null);
-  useLayoutEffect(() => {
-    const h2 = ancora.current?.closest('[role="dialog"]')?.querySelector('h2');
-    if (!h2?.parentElement) return;
-    const el = document.createElement('span');
-    el.className = 'shrink-0 flex items-center';
-    h2.insertAdjacentElement('afterend', el);
-    setVaga(el);
-    return () => { el.remove(); };
-  }, [ancora]);
-  return vaga;
-};
-
 const ATRASO_AUTOSAVE_MS = 1000;
 
 /** Campos da Conclusão sempre como texto (docs antigos podem não ter algum). */
@@ -139,8 +121,6 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const travado = conclusaoTravada(is.status);
   const editavel = permissoes.editar && !travado;
   const somenteLeitura = !editavel;
-  const ancoraRef = useRef<HTMLDivElement>(null);
-  const vagaTitulo = useVagaNoTitulo(ancoraRef);
 
   const [restricoesOpcoes, setRestricoesOpcoes] = useState<string[]>([]);
   const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
@@ -223,10 +203,10 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
       title={`IS ${is.is}`}
       icon="event_available"
       onClose={onClose}
+      tituloExtra={<StatusTag tone={info.tom}>{info.rotulo}</StatusTag>}
       footer={acoes.length > 0 ? <AcoesRodape acoes={acoes} /> : undefined}
     >
-      <div ref={ancoraRef} className="space-y-6">
-        {vagaTitulo && createPortal(<StatusTag tone={info.tom}>{info.rotulo}</StatusTag>, vagaTitulo)}
+      <div className="space-y-6">
 
         <section aria-labelledby={`dados-is-${is.id}`} className="space-y-3">
           <h3 id={`dados-is-${is.id}`} className="text-h3 font-bold text-navy">Dados da IS</h3>
