@@ -33,12 +33,14 @@ interface Props {
   onCriado: (nome: string, id: string) => void;
   /** Abas (Militares · Dep/Pens.) exibidas no topo quando o formulário é aberto pela página Inspecionados. */
   tabs?: React.ReactNode;
+  /** Print do SINAIS já escolhido (IS por foto): é lido assim que as listas de referência carregam. */
+  printInicial?: File;
 }
 
 type Erros = Record<string, string>;
 type VinculoForm = Vinculo | 'Inativo';
 
-export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs }) => {
+export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs, printInicial }) => {
   const [dados, setDados] = useState<CorposQuadros | null>(null);
   const [oms, setOms] = useState<OrganizacaoMilitar[]>([]);
   const [falhaCarga, setFalhaCarga] = useState('');
@@ -103,6 +105,12 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs }
       setLendoPrint(false);
     }
   };
+  const printInicialLido = useRef(false);
+  useEffect(() => {
+    if (!dados || !printInicial || printInicialLido.current) return;
+    printInicialLido.current = true;
+    void lerPrint(printInicial);
+  }, [dados, printInicial]); // eslint-disable-line react-hooks/exhaustive-deps
   // Desktop: Ctrl+V com uma imagem na área de transferência lê o print (só imagens; texto colado segue normal).
   useEffect(() => {
     const aoColar = (e: ClipboardEvent) => {
