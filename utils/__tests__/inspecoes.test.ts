@@ -60,3 +60,16 @@ describe('formatação', () => {
     expect(cpfValido('111.111.111-11')).toBe(false);
   });
 });
+
+describe('dia de concurso', () => {
+  it('ocupa a manhã até 10:50; os 3 últimos slots ficam livres', async () => {
+    const { bloqueioAtinge, fimDoDiaDeConcurso } = await import('../inspecoes');
+    const { bloqueiosDeConcursos } = await import('../../services/agendaConcursos');
+    expect(fimDoDiaDeConcurso()).toBe('10:50');
+    const [b] = bloqueiosDeConcursos([{ chave: 'c|2026-11-20', concursoId: 'c', nome: 'CPAEAM', data: '2026-11-20', total: 10, candidatos: [], encerrado: false }]);
+    expect(bloqueioAtinge(b, 'p1', '2026-11-20', '07:30')).toBe(true);
+    expect(bloqueioAtinge(b, 'p1', '2026-11-20', '10:30')).toBe(true);
+    expect(['10:50', '11:10', '11:30'].map(h => bloqueioAtinge(b, 'p1', '2026-11-20', h))).toEqual([false, false, false]);
+    expect(bloqueioAtinge(b, 'p1', '2026-11-20', '13:00')).toBe(false);
+  });
+});

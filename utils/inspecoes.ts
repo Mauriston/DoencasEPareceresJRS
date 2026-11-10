@@ -178,6 +178,11 @@ export const turnoDoSlot = (hhmm: string): Turno | null => {
 /** Slot válido = início exato de um slot de 20 min dentro de um dos turnos. */
 export const ehSlotValido = (hhmm: string): boolean => { const t = turnoDoSlot(hhmm); return !!t && slotsDoTurno(t).includes(hhmm); };
 
+/** Dia de concurso: ocupa a manhã, menos os últimos slots, que ficam livres para as demais IS. */
+export const SLOTS_LIVRES_DIA_CONCURSO = 3;
+/** Hora em que acaba a parte da manhã ocupada pelo concurso (10:50 com a manhã de 07:30 a 12:00). */
+export const fimDoDiaDeConcurso = (): string => slotsDoTurno('manha').slice(-SLOTS_LIVRES_DIA_CONCURSO)[0];
+
 export const horaFimSlot = (hhmm: string): string => hhmmDe(minutosDe(hhmm) + DURACAO_SLOT_MIN);
 
 // ---------------------------------------------------------------------------
@@ -199,6 +204,8 @@ export interface BloqueioAgenda {
   dataFim?: string;
   turno: Turno | 'dia';
   hora?: string;
+  /** Bloqueio de turno que acaba antes do fim do turno: vale só até esta hora (exclusiva), ex.: dia de concurso. */
+  horaFim?: string;
   peritoUid: string;
   peritoNome?: string;
   motivo: string;
@@ -215,6 +222,7 @@ export const bloqueioAtinge = (b: BloqueioAgenda, peritoUid: string, data: strin
   if (!bloqueioNoDia(b, data)) return false;
   if (b.peritoUid !== TODOS_PERITOS && b.peritoUid !== peritoUid) return false;
   if (b.hora) return b.hora === hhmm;
+  if (b.horaFim && hhmm >= b.horaFim) return false;
   return b.turno === 'dia' || b.turno === turnoDoSlot(hhmm);
 };
 

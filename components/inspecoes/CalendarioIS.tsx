@@ -23,7 +23,7 @@ import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import { carregarPeritos, type PeritoIS } from '../../services/peritosIS';
 import { tituloDiaConcurso, ehBloqueioDeConcurso, type DiaConcurso } from '../../services/agendaConcursos';
 import {
-  STATUS_IS, statusEfetivoIS, hojeISO, duracaoDaIS, horaFimEntrevista, somarDias, inicioDaSemana, nomeMes, nomeDiaCurto, nomeDiaSemana, ehDiaUtil, deISO, paraISO, bloqueioNoDia,
+  fimDoDiaDeConcurso, STATUS_IS, statusEfetivoIS, hojeISO, duracaoDaIS, horaFimEntrevista, somarDias, inicioDaSemana, nomeMes, nomeDiaCurto, nomeDiaSemana, ehDiaUtil, deISO, paraISO, bloqueioNoDia,
   dataDeEntrevista, horaDeEntrevista, minutosDe, hhmmDe, ehSlotValido, bloqueioAtinge, peritoAtendeNoTurno, TURNOS, DURACAO_SLOT_MIN,
   type BloqueioAgenda, type ConfigAgenda, type Turno,
 } from '../../utils/inspecoes';
@@ -57,7 +57,7 @@ interface Props {
   /** Perito filtrado ('' = todos). */
   peritoUid: string;
   onAbrir: (is: InspecaoRecord) => void;
-  /** Dias de concurso (Em andamento e Em breve): um evento ocupa o turno da manhã inteiro. */
+  /** Dias de concurso (Em andamento e Em breve): um evento ocupa a manhã até 10:50 (os 3 últimos slots ficam livres). */
   diasConcursos?: DiaConcurso[];
   /** Clique no cartão de um dia de concurso: abre a tabela do concurso. */
   onAbrirConcurso?: (concursoId: string) => void;
@@ -448,7 +448,7 @@ const ColunaDia: React.FC<{
       {/* bloqueios */}
       {diaBloqueios.map((b, idx) => {
         const ini = b.hora ? minutosDe(b.hora) : b.turno === 'dia' ? minutosDe('07:30') : minutosDe(TURNOS.find(t => t.id === b.turno)!.inicio);
-        const fim = b.hora ? ini + DURACAO_SLOT_MIN : b.turno === 'dia' ? minutosDe('17:00') : minutosDe(TURNOS.find(t => t.id === b.turno)!.fim);
+        const fim = b.hora ? ini + DURACAO_SLOT_MIN : b.horaFim ? minutosDe(b.horaFim) : b.turno === 'dia' ? minutosDe('17:00') : minutosDe(TURNOS.find(t => t.id === b.turno)!.fim);
         const titulo = `Bloqueado${b.peritoNome ? ` · ${b.peritoNome}` : b.peritoUid === '*' ? ' · todos os peritos' : ''}${b.motivo ? ` · ${b.motivo}` : ''}`;
         // Visão de todos os peritos: o bloqueio de um perito só vira uma etiqueta (motivo · nome), sem hachurar a coluna
         // inteira, porque os demais peritos continuam atendendo.
@@ -484,7 +484,7 @@ const ColunaDia: React.FC<{
         </div>
       )}
 
-      {/* concursos: um evento ocupa o turno da manhã inteiro */}
+      {/* concursos: um evento ocupa a manhã até 10:50 (os 3 últimos slots ficam livres) */}
       {concursosDoDia.map((c, idx) => {
         const clicavel = !!onAbrirConcurso;
         return (
@@ -496,7 +496,7 @@ const ColunaDia: React.FC<{
             title={`${tituloDiaConcurso(c)}${c.encerrado ? ' · dia encerrado' : ''}${clicavel ? ' · abrir a tabela do concurso' : ''}`}
             className={`absolute z-[5] rounded border px-1.5 py-1 text-left overflow-hidden text-xs font-bold leading-tight flex flex-col items-start justify-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${clicavel ? 'cursor-pointer hover:shadow-md' : 'cursor-default'} ${corConcurso(c)}`}
             // Dois ou mais concursos no mesmo dia ficam lado a lado, dividindo a largura (como no Google Agenda).
-            style={{ top: topo(minutosDe('07:30')) + 1, height: (minutosDe('12:00') - minutosDe('07:30')) * PX_POR_MIN - 2, left: `calc(${(idx / concursosDoDia.length) * 100}% + 2px)`, width: `calc(${100 / concursosDoDia.length}% - 4px)` }}
+            style={{ top: topo(minutosDe('07:30')) + 1, height: (minutosDe(fimDoDiaDeConcurso()) - minutosDe('07:30')) * PX_POR_MIN - 2, left: `calc(${(idx / concursosDoDia.length) * 100}% + 2px)`, width: `calc(${100 / concursosDoDia.length}% - 4px)` }}
           >
             <span className="inline-flex items-start gap-1"><span className="material-symbols-outlined text-[16px]" aria-hidden="true">{c.encerrado ? 'check_circle' : 'fact_check'}</span><span>{tituloDiaConcurso(c)}</span></span>
             <span className="block font-normal opacity-90">{c.encerrado ? 'Dia encerrado' : 'Turno da manhã reservado'}</span>

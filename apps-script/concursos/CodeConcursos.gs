@@ -724,7 +724,7 @@ function apiSincronizarEventoBloqueio(corpo) {
 
 /**
  * action=sincronizarEventosConcursos (POST): { idToken, dias[], concursosAtivos[] } — mantém na agenda "JRS/HNRe" UM evento por
- * dia de concurso agendado (07:30–12:00, o turno da manhã inteiro), com todos os usuários ativos do appweb como convidados
+ * dia de concurso agendado (07:30–10:50; os 3 últimos slots da manhã ficam livres para as demais IS), com todos os usuários ativos do appweb como convidados
  * ("convidados": e-mails Gmail; o convite é enviado por e-mail) e notificação 12 h antes. Cada item de "dias":
  * { chave ("{concursoId}|{AAAA-MM-DD}"), concursoId, data, titulo, descricao, encerrado }. Evento vermelho enquanto o dia está
  * aberto; verde (e título com ✅ na frente, já enviado em "titulo") quando o dia é encerrado. Os eventos são marcados com tags
@@ -770,7 +770,7 @@ function apiSincronizarEventosConcursos(corpo) {
     Object.keys(desejados).forEach(function(chave) {
       var d = desejados[chave];
       var ini = dataHoraAgenda(d.data, '07:30');
-      var term = dataHoraAgenda(d.data, '12:00');
+      var term = dataHoraAgenda(d.data, '10:50');
       var ev = existentes[chave];
       if (ev) {
         ev.setTitle(String(d.titulo));
