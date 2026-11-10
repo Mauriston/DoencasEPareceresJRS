@@ -1,0 +1,807 @@
+[
+    {
+        "finalidadeIS": "Anual de máquinas",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Benefícios",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Dependentes de Militares da ativa",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "OM do militar",
+                        "info": "Null"
+                    }
+                ]
+            },
+            {
+                "situacaoInspecionado": "Dependentes de Militares inativos",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "CPesFN ou SVPM ou OMAC",
+                        "info": "Null"
+                    }
+                ]
+            },
+            {
+                "situacaoInspecionado": "Militares Inativos",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DPM ou CPesFN",
+                        "info": "SVPM"
+                    }
+                ]
+            },
+            {
+                "situacaoInspecionado": "Pensionistas, ex-combatentes e seus Dependentes",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "SVPM",
+                        "info": "OM de Origem"
+                    }
+                ]
+            },
+            {
+                "situacaoInspecionado": "Servidores Civis e seus dependentes",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DPM-BSB",
+                        "info": "OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Controle Trienal",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Controle complementar de operador de reator nuclear",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa, Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DSM",
+                        "info": "Órgão de Pessoal, OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Cursos de carreira",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Deixar o SAM",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Deixar o SMI",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares temporários",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DN",
+                        "info": "OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Deixar o SMV",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares temporários",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DN",
+                        "info": "DPM, OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Deixar o SPG",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Engajamento",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares temporários",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal",
+                        "info": "OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Exame médico periódico - Servidor Civil",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Apto com restrições",
+                        "para": "OM sede da JRS",
+                        "info": "DPM-BSB, OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Horário especial ao Servidor Civil",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "OM de Origem",
+                        "info": "DPCvM"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Justiça e Disciplina",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal",
+                        "info": "OM de Origem, Demais OM relacionadas no Ofício de apresentação"
+                    }
+                ]
+            },
+            {
+                "situacaoInspecionado": "Militares temporários",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DN",
+                        "info": "OM de Origem, Demais OM relacionadas no Ofício de apresentação"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Licença para tratamento de saúde de pessoa da família",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa, Militares temporários",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "SDP",
+                        "info": "Órgão de Pessoal, OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Localidade Deficiente em Assistência Sanitária",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal",
+                        "info": "OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Manipulação de terapia antineoplásica",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa, Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DSM",
+                        "info": "Órgão de Pessoal, OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Missão Antártica",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa, Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "SECIRM",
+                        "info": "Órgão de Pessoal, OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Missão no Exterior",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": ""
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Operação com substâncias radioativas",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa, Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DSM",
+                        "info": "Órgão de Pessoal, OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Processo Administrativo de Civis (PAD)",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Propelentes e explosivos",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Prorrogação de Tempo de Serviço",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares temporários",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DN",
+                        "info": "DPM, OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Readaptação ao SPG",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Redistribuição no SPG",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Reengajamento",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares temporários",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal",
+                        "info": "OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Reintegração ao SPG",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Reversão ao SPG",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Revisão de Incapacidade Definitiva",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares Inativos",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DPM ou CPesFN",
+                        "info": "SVPM"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Revisão de Invalidez",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares Inativos",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DPM ou CPesFN",
+                        "info": "SVPM"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Revisão de Reforma",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares Inativos",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DPM ou CPesFN",
+                        "info": "SVPM"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Revisão de Reforma por incapacidade definitiva ou invalidez",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares inativos",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DPM ou CPesFN",
+                        "info": "SVPM"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Seleção complementar de operador de reator nuclear",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa, Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DSM",
+                        "info": "Órgão de Pessoal, OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Semestral de RX, substâncias radioativas e Terapia Antineoplásica",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa, Militares temporários",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "DSM",
+                        "info": "Órgão de Pessoal, OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Tarefa por Tempo Certo",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares inativos",
+                "laudos": [
+                    {
+                        "laudo": "Any",
+                        "para": "OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Término de Incapacidade",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa",
+                "laudos": [
+                    {
+                        "laudo": "Apto para o SAM",
+                        "para": "Órgão de Pessoal",
+                        "info": "SDP, OM de Origem"
+                    },
+                    {
+                        "laudo": "Apto para o SAM com restrições",
+                        "para": "Órgão de Pessoal",
+                        "info": "SDP, OM de Origem"
+                    },
+                    {
+                        "laudo": "Incapaz definitivamente para o SAM",
+                        "para": "Órgão de Pessoal",
+                        "info": "OM de Origem"
+                    },
+                    {
+                        "laudo": "Incapaz temporariamente para o SMV",
+                        "para": "DN",
+                        "info": "DPM, OM de Origem"
+                    }
+                ]
+            },
+            {
+                "situacaoInspecionado": "Militares temporários",
+                "laudos": [
+                    {
+                        "laudo": "Apto para o SMV",
+                        "para": "DN",
+                        "info": "DPM, OM de Origem"
+                    },
+                    {
+                        "laudo": "Apto para o SMV com restrições",
+                        "para": "DN",
+                        "info": "DPM, OM de Origem"
+                    },
+                    {
+                        "laudo": "Incapaz definitivamente para o SAM com amparo legal",
+                        "para": "DN + DPM",
+                        "info": "OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Término de Incapacidade - Servidor Civil",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Apto para o SPG",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    },
+                    {
+                        "laudo": "Apto para o SPG com restrições",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Término de Restrições",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa",
+                "laudos": [
+                    {
+                        "laudo": "Apto para o SAM",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    },
+                    {
+                        "laudo": "Apto para o SAM com restrições",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "SDP, OM de Origem"
+                    },
+                    {
+                        "laudo": "Apto para o SAM com restrições (...) em prorrogação...",
+                        "para": "Órgão de Pessoal, OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            },
+            {
+                "situacaoInspecionado": "Militares temporários",
+                "laudos": [
+                    {
+                        "laudo": "Apto para o SMV",
+                        "para": "DN",
+                        "info": "DPM, OM de Origem"
+                    },
+                    {
+                        "laudo": "Apto para o SMV com restrições",
+                        "para": "DN",
+                        "info": "DPM, OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Término de Restrições - Servidor Civil",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Apto para o SPG",
+                        "para": "Órgão de Pessoal + OM de Origem",
+                        "info": "Null"
+                    },
+                    {
+                        "laudo": "Apto para o SPG com restrições",
+                        "para": "Órgão de Pessoal + OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Verificação de Deficiência Funcional",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares da ativa",
+                "laudos": [
+                    {
+                        "laudo": "Apto para o SAM",
+                        "para": "Órgão de Pessoal",
+                        "info": "SDP, OM de Origem"
+                    },
+                    {
+                        "laudo": "Apto para o SAM com restrições",
+                        "para": "Órgão de Pessoal",
+                        "info": "OM de Origem"
+                    },
+                    {
+                        "laudo": "Incapaz definitivamente para a especialidade",
+                        "para": "Órgão de Pessoal",
+                        "info": "OM de Origem"
+                    },
+                    {
+                        "laudo": "Incapaz definitivamente para o SAM",
+                        "para": "Órgão de Pessoal",
+                        "info": "OM de Origem"
+                    },
+                    {
+                        "laudo": "Incapaz temporariamente para o SAM",
+                        "para": "SDP",
+                        "info": "Órgão de Pessoal, OM de Origem"
+                    }
+                ]
+            },
+            {
+                "situacaoInspecionado": "Militares temporários",
+                "laudos": [
+                    {
+                        "laudo": "Apto para o SMV",
+                        "para": "SDP",
+                        "info": "DPM, OM de Origem"
+                    },
+                    {
+                        "laudo": "Apto para o SMV com restrições",
+                        "para": "SDP",
+                        "info": "DPM, OM de Origem"
+                    },
+                    {
+                        "laudo": "Incapaz temporariamente para o SMV",
+                        "para": "DN",
+                        "info": "DPM, OM de Origem"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Verificação de Deficiência Funcional - SMI",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Militares temporários",
+                "laudos": [
+                    {
+                        "laudo": "Apto A",
+                        "para": "DN",
+                        "info": "OM de Origem"
+                    },
+                    {
+                        "laudo": "Incapaz B1",
+                        "para": "DN",
+                        "info": "OM de Origem"
+                    },
+                    {
+                        "laudo": "Incapaz B2",
+                        "para": "DN",
+                        "info": "OM de Origem"
+                    },
+                    {
+                        "laudo": "Incapaz C",
+                        "para": "DN",
+                        "info": "OM de Origem"
+                    },
+                    {
+                        "laudo": "Incapaz definitivamente para o SAM com amparo legal",
+                        "para": "DN + DPM",
+                        "info": "Servidor Civil"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "finalidadeIS": "Verificação de Deficiência Funcional - Servidor Civil",
+        "situacoes": [
+            {
+                "situacaoInspecionado": "Servidor Civil",
+                "laudos": [
+                    {
+                        "laudo": "Incapaz definitivamente para o SPG",
+                        "para": "Órgão de Pessoal",
+                        "info": "OM de Origem"
+                    },
+                    {
+                        "laudo": "Apto para o SPG com restrições",
+                        "para": "Órgão de Pessoal + OM de Origem",
+                        "info": "Null"
+                    },
+                    {
+                        "laudo": "Incapaz temporariamente para o SPG",
+                        "para": "OM de Origem",
+                        "info": "Null"
+                    }
+                ]
+            }
+        ]
+    }
+]

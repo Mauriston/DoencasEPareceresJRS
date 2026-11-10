@@ -64,7 +64,7 @@ export const camposResultado = (d: DadosMinutaResultado): MinutaCampos => campos
 export const minutaResultado = (d: DadosMinutaResultado): string => juntarMinuta(camposResultado(d));
 
 const dadosDeResultado = (d: DadosMinutaResultado): DadosMensagemResultado => ({
-  finalidade: d.finalidade, inspecionado: d.inspecionado, om: d.om, amp: d.amp, peritoNome: d.peritoNome,
+  finalidade: d.finalidade, grupoFinalidade: d.grupoFinalidade, inspecionado: d.inspecionado, om: d.om, amp: d.amp, peritoNome: d.peritoNome,
   dataLaudo: d.dataLaudo, laudo: d.laudo, tis: d.tis, ds1a: d.ds1a, feminino: d.feminino, vinculo: d.vinculo,
 });
 

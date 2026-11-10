@@ -319,6 +319,13 @@ Usuários (cadastro, permissões por perfil, redefinir senha, **excluir inativo*
 ### 7.10 Mensagens
 `Mensagens.tsx`: minutas de mensagens administrativas.
 
+**Destinatários (PARA/INFO) das mensagens de conclusão de IS** (10/11/2026). Fonte única: `data/destinatariosInspecoes.json`, extraído do item 2 do Anexo M da DGPM-406 (planilha "Destinatários das IS"), hierárquico — `finalidadeIS → situacaoInspecionado → laudo ("Any" = qualquer) → { para, info }`. Usos:
+- **Inspeções** (minuta de resultado): roteamento determinístico em `utils/destinatariosIS.ts` — finalidade cadastrada → finalidade do Anexo M (equivalências e grupo "Benefícios"/"Justiça e Disciplina"); situação pelo vínculo do cadastro (Carreira → ativa; Temporário/RM2 → temporários, com "Militares da ativa" de reserva; Inativo; Pensionista; Dependente pelo titular; servidor civil pela finalidade "- SC" ou laudo SPG, com a variante "- Servidor Civil"); laudo pelo início do texto, ignorando o período, com serviço deduzido da situação quando omitido. Sem decisão segura, PARA/INFO ficam "[preencher]".
+- **Sugestão por IA** (Firebase AI Logic, `services/destinatariosIA.ts`): quando PARA/INFO ficaram "[preencher]", a minuta oferece "Sugerir PARA/INFO (IA)". A IA só escolhe as três chaves da tabela; PARA/INFO vêm do JSON (`destinatariosPorChaves`) — a IA não escreve destinatários. Vão à IA só finalidade, grupo, vínculo, posto/quadro e laudo (sem nome, NIP ou OM).
+- **Mensagens** (imagens do TIS): o mesmo JSON é injetado no `PROMPT_MINUTA_MENSAGEM` (`config/promptsIA.ts`), com as regras dos três níveis.
+
+Para atualizar a norma: edite a planilha, exporte o JSON e substitua o arquivo; `utils/__tests__/destinatariosIS.test.ts` confere a estrutura e as finalidades do app.
+
 ### 7.11 Escala SVÇ
 `EscalaSpa.tsx` e `components/escala/ImportarEscalaCsv.tsx`; Firestore (`escalaSpa`, um documento por dia). Calendário mensal no desktop (cards que giram entre supervisão e plantões dia/noite; cores por dia útil, fim de semana/feriado e festas maiores — `utils/escalaSpa.ts`) e lista no celular. O Admin envia a escala em CSV (modelo próprio ou o CSV da aba *Agenda*); não há leitura da planilha nem do Google Agenda pelo app. O card **Próximos serviços** da Início cruza a escala com o login do usuário (`servicosDoUsuario`).
 
