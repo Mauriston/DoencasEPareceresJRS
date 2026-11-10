@@ -4,6 +4,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
+import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { carregarServicosHnre, normalizarBusca, type ServicoHnre } from '../../utils/corposQuadros';
 import { atualizarMilitar, type MilitarRecord } from '../../services/firestoreMilitares';
@@ -46,8 +47,8 @@ export const ServicoMilitarForm: React.FC<Props> = ({ militar, onClose, onSalvo 
       onClose={() => { if (!salvando) onClose(); }}
       footer={(
         <>
-          <Button variant="secondary" onClick={onClose} disabled={salvando}>Cancelar</Button>
-          <Button type="submit" form="form-servico-militar" icon="check" loading={salvando}>Salvar</Button>
+          <Button variant="secondary" className="max-md:hidden" onClick={onClose} disabled={salvando}>Cancelar</Button>
+          <AcoesRodape acoes={[{ id: 'salvar', rotulo: 'Salvar', icone: 'check', onClick: () => submeterFormulario('form-servico-militar'), loading: salvando }]} />
         </>
       )}
     >

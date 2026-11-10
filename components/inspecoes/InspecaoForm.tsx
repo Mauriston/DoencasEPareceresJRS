@@ -7,6 +7,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
+import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
@@ -168,8 +169,8 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
         onClose={() => { if (!salvando) onClose(); }}
         footer={(
           <>
-            <Button variant="secondary" onClick={onClose} disabled={salvando}>Cancelar</Button>
-            <Button type="submit" form="form-nova-is" icon="save" loading={salvando}>Cadastrar IS</Button>
+            <Button variant="secondary" className="max-md:hidden" onClick={onClose} disabled={salvando}>Cancelar</Button>
+            <AcoesRodape acoes={[{ id: 'salvar', rotulo: 'Cadastrar IS', icone: 'save', onClick: () => submeterFormulario('form-nova-is'), loading: salvando }]} />
           </>
         )}
       >

@@ -1,12 +1,13 @@
 // Ficheiro: components/concursos/SheetCandidatoMobile.tsx
 // Sheet do candidato no celular: Status/Observações editáveis conforme perfil, triagem, Nº TIS
-// somente leitura e as ações cabíveis (termos, reagendar, exames).
+// somente leitura, os documentos gerados e as ações cabíveis (termos, reagendar, exames) num FAB menu.
 import { CidPicker } from '../CidInaptidaoModal';
 import { IdmPicker } from '../MotivoIdmModal';
 import React from 'react';
 import { TriagemSecao } from './Triagem';
 import { urlVisualizacao } from '../../services/driveConcursos';
 import { SheetArrastavel } from '../ui/SheetArrastavel';
+import { AcoesRodape, type AcaoRodape } from '../ui/AcoesRodape';
 import { CandidatoStatusTag, StatusSelect } from '../ui/statusTheme';
 import { STATUS_OPTIONS, isoParaBR } from './compartilhado';
 import { type EstadoConcursoDetalhe } from './useConcursoDetalhe';
@@ -17,11 +18,35 @@ export const SheetCandidatoMobile: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s
     setCandidatoModalMobile, podeEditar, podeReagendarCandidato, showToast, gerandoCientIds,
     podeGerarCientificacao, gerarTermoCientificacao, podeSolicitarBase, podeEnviarExames,
     gerandoSolicitacaoIds, setEventosAlvo, statusPermiteSolicitacao, ehAdmin, ehMpi, mostrarSecaoTriagem,
-    setTriagemAlvo, temDocumentoGerado, destacarStatus, mostrarMenuAcoes, handleEnviarExames,
+    setTriagemAlvo, temDocumentoGerado, destacarStatus, handleEnviarExames,
     handleGerarSolicitacao, handleVerSolicitacao, handleEditarIS, handleLimparIS, handleGerarTermo,
     handleStatusChange, handleMotivoSelecionado, handleMotivoFechado, handleObservacoesBlur,
     handleOpenReagendamento,
   } = s;
+  // Ações cabíveis ao candidato, na ordem de antes; no celular viram o FAB menu do sheet.
+  const acoesDoCandidato = (c: typeof candidatos[number], podeGerarTermo: boolean): AcaoRodape[] => {
+    const acoes: AcaoRodape[] = [];
+    if (!c.termoRecursoUrl && podeGerarTermo) {
+      const gerando = gerandoTermoIds.has(c.id);
+      acoes.push({ id: 'termo-recurso', rotulo: gerando ? 'Gerando termo...' : 'Gerar Termo de Recurso', icone: 'gavel', loading: gerando, onClick: () => handleGerarTermo(c.id, c.nome) });
+    }
+    if (!c.termoCientificacaoUrl) {
+      if (gerandoCientIds.has(c.id)) acoes.push({ id: 'termo-cient', rotulo: 'Gerando termo de cientificação...', icone: 'assignment_turned_in', loading: true, onClick: () => {} });
+      else if (podeGerarCientificacao(c)) acoes.push({ id: 'termo-cient', rotulo: 'Gerar Termo de Cientificação', icone: 'assignment_turned_in', onClick: () => gerarTermoCientificacao(c.id, c.nome, c.status, false) });
+    }
+    if (podeSolicitarBase && statusPermiteSolicitacao(c) && !gerandoSolicitacaoIds.has(c.id)) {
+      acoes.push({ id: 'gerar-parecer', rotulo: 'Gerar Parecer', icone: 'stethoscope', variante: 'secondary', onClick: () => { setCandidatoModalMobile(null); handleGerarSolicitacao('parecer', c); } });
+      acoes.push({ id: 'gerar-exames', rotulo: 'Gerar Exames', icone: 'lab_research', variante: 'secondary', onClick: () => { setCandidatoModalMobile(null); handleGerarSolicitacao('exames', c); } });
+    }
+    // Ler os exames transcritos é só no desktop (a tela cheia precisa da largura).
+    if (podeEnviarExames) acoes.push({ id: 'enviar-exames', rotulo: 'Enviar Exames (PDF)', icone: 'lab_profile', variante: 'secondary', onClick: () => handleEnviarExames(c) });
+    if (ehAdmin) acoes.push({ id: 'eventos', rotulo: 'Registro de Eventos', icone: 'history', variante: 'secondary', onClick: () => { setCandidatoModalMobile(null); setEventosAlvo({ id: c.id, nome: c.nome }); } });
+    if (ehAdmin && c.finalizado) acoes.push({ id: 'editar', rotulo: 'Editar', icone: 'edit', variante: 'secondary', onClick: () => handleEditarIS(c) });
+    if (ehAdmin && temDocumentoGerado(c)) acoes.push({ id: 'limpar', rotulo: 'Limpar', icone: 'ink_eraser', variante: 'destructive', onClick: () => handleLimparIS(c) });
+    if (podeReagendarCandidato(c)) acoes.push({ id: 'reagendar', rotulo: 'Reagendar', icone: 'event_repeat', variante: 'secondary', onClick: () => { setCandidatoModalMobile(null); handleOpenReagendamento(c); } });
+    return acoes;
+  };
+
   return (
     <>
       {candidatoModalMobile && (() => {
@@ -70,7 +95,7 @@ export const SheetCandidatoMobile: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s
                   )}
                 </div>
               ) : (
-                <div className="flex-1 overflow-y-auto p-5 pb-8 space-y-5">
+                <div data-sheet-corpo="" className="flex-1 overflow-y-auto p-5 pb-8 space-y-5">
                 {c.finalizado && (
                   <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
                     <span className="material-symbols-outlined text-[20px] text-green-700" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
@@ -120,43 +145,21 @@ export const SheetCandidatoMobile: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s
                   <p className="text-sm font-semibold text-ink">{c.numTIS || '-'}</p>
                 </div>
 
-                {(podeGerarTermo || c.termoRecursoUrl || c.termoCientificacaoUrl || gerandoCientIds.has(c.id) || podeGerarCientificacao(c) || mostrarMenuAcoes(c) || podeReagendarCandidato(c)) && (
+                {/* Documentos já gerados: abrem numa nova janela (as ações ficam no FAB). */}
+                {(c.termoRecursoUrl || c.termoCientificacaoUrl || c.solicitacoesParecer.length > 0 || c.solicitacoesExames.length > 0) && (
                   <div className="pt-2 space-y-2">
-                    {c.termoRecursoUrl ? (
+                    {c.termoRecursoUrl && (
                       <a href={urlVisualizacao(c.termoRecursoUrl)} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[20px]">description</span>
                         <span>Visualizar Termo de Recurso e Cientificação</span>
                       </a>
-                    ) : podeGerarTermo ? (
-                      <button type="button" disabled={gerandoTermoIds.has(c.id)} onClick={() => handleGerarTermo(c.id, c.nome)} className="w-full px-4 py-3 bg-wine-50 text-wine-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:cursor-wait disabled:opacity-80" aria-busy={gerandoTermoIds.has(c.id)}>
-                        <span className={`material-symbols-outlined text-[20px] ${gerandoTermoIds.has(c.id) ? 'animate-spin' : ''}`}>{gerandoTermoIds.has(c.id) ? 'progress_activity' : 'gavel'}</span>
-                        <span>{gerandoTermoIds.has(c.id) ? 'Gerando termo...' : 'Gerar Termo de Recurso'}</span>
-                      </button>
-                    ) : null}
-                    {c.termoCientificacaoUrl ? (
+                    )}
+                    {c.termoCientificacaoUrl && (
                       <a href={urlVisualizacao(c.termoCientificacaoUrl)} target="_blank" rel="noopener noreferrer" className="w-full px-4 py-3 bg-green-50 text-green-800 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-[20px]">assignment_turned_in</span>
                         <span>Visualizar Termo de Cientificação</span>
                       </a>
-                    ) : gerandoCientIds.has(c.id) ? (
-                      <div className="w-full px-4 py-3 bg-wine-50 text-wine-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2 opacity-80" aria-busy="true">
-                        <span className="material-symbols-outlined text-[20px] animate-spin">progress_activity</span>
-                        <span>Gerando termo de cientificação...</span>
-                      </div>
-                    ) : podeGerarCientificacao(c) ? (
-                      <button type="button" onClick={() => gerarTermoCientificacao(c.id, c.nome, c.status, false)} className="w-full px-4 py-3 bg-wine-50 text-wine-800 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
-                        <span className="material-symbols-outlined text-[20px]">assignment_turned_in</span>
-                        <span>Gerar Termo de Cientificação</span>
-                      </button>
-                    ) : null}
-                    {podeSolicitarBase && statusPermiteSolicitacao(c) && !gerandoSolicitacaoIds.has(c.id) && (['parecer', 'exames'] as const).map(tipo => {
-                      return (
-                        <button key={tipo} type="button" onClick={() => { setCandidatoModalMobile(null); handleGerarSolicitacao(tipo, c); }} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-navy border border-line">
-                          <span className="material-symbols-outlined text-[20px]">{tipo === 'parecer' ? 'stethoscope' : 'lab_research'}</span>
-                          <span>{tipo === 'parecer' ? 'Gerar Parecer' : 'Gerar Exames'}</span>
-                        </button>
-                      );
-                    })}
+                    )}
                     {[
                       ...c.solicitacoesParecer.map((d, i) => ({ tipo: 'parecer' as const, d, chave: `p${i}` })),
                       ...c.solicitacoesExames.map((d, i) => ({ tipo: 'exames' as const, d, chave: `e${i}` })),
@@ -166,41 +169,11 @@ export const SheetCandidatoMobile: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s
                         <span className="min-w-0 truncate">{tipo === 'parecer' ? 'Ver Parecer' : 'Ver Exames'} · {d.rotulo}</span>
                       </button>
                     ))}
-                    {/* Ler os exames transcritos é só no desktop (a tela cheia precisa da largura). */}
-                    {podeEnviarExames && (
-                      <button type="button" onClick={() => handleEnviarExames(c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-navy border border-line">
-                        <span className="material-symbols-outlined text-[20px]">lab_profile</span>
-                        <span>Enviar Exames (PDF)</span>
-                      </button>
-                    )}
-                    {ehAdmin && (
-                      <button type="button" onClick={() => { setCandidatoModalMobile(null); setEventosAlvo({ id: c.id, nome: c.nome }); }} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-navy border border-line">
-                        <span className="material-symbols-outlined text-[20px]">history</span>
-                        <span>Registro de Eventos</span>
-                      </button>
-                    )}
-                    {ehAdmin && c.finalizado && (
-                      <button type="button" onClick={() => handleEditarIS(c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-white text-navy border border-line">
-                        <span className="material-symbols-outlined text-[20px]">edit</span>
-                        <span>Editar</span>
-                      </button>
-                    )}
-                    {ehAdmin && temDocumentoGerado(c) && (
-                      <button type="button" onClick={() => handleLimparIS(c)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-wine-50 text-wine-700">
-                        <span className="material-symbols-outlined text-[20px]">ink_eraser</span>
-                        <span>Limpar</span>
-                      </button>
-                    )}
-                    {podeReagendarCandidato(c) && (
-                      <button type="button" onClick={() => { setCandidatoModalMobile(null); handleOpenReagendamento(c); }} className="w-full px-4 py-3 bg-green-50 text-green-700 rounded-xl text-sm font-bold flex items-center justify-center gap-2">
-                        <span className="material-symbols-outlined text-[20px]">event_repeat</span>
-                        <span>Reagendar</span>
-                      </button>
-                    )}
                   </div>
                 )}
                 </div>
               )}
+              {!motivoNoSheet && <AcoesRodape acoes={acoesDoCandidato(c, podeGerarTermo)} />}
             </SheetArrastavel>
           </div>
         );

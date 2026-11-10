@@ -17,6 +17,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
+import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
@@ -312,8 +313,8 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
         onClose={() => { if (!salvando) onClose(); }}
         footer={(
           <>
-            <Button variant="secondary" onClick={onClose} disabled={salvando}>Cancelar</Button>
-            <Button type="submit" form="form-nova-pericia" icon="check" loading={salvando} disabled={!!processando || !vdf}>Registrar</Button>
+            <Button variant="secondary" className="max-md:hidden" onClick={onClose} disabled={salvando}>Cancelar</Button>
+            <AcoesRodape acoes={[{ id: 'salvar', rotulo: 'Registrar', icone: 'check', onClick: () => submeterFormulario('form-nova-pericia'), loading: salvando, disabled: !!processando || !vdf }]} />
           </>
         )}
       >

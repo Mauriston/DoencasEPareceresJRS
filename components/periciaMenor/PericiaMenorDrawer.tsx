@@ -4,6 +4,7 @@
 import React from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
+import { AcoesRodape } from '../ui/AcoesRodape';
 import { LinkPdf } from '../ui/LinkPdf';
 import { PericiaStatusTags, registroPericia } from '../ui/PericiaStatusTags';
 import { extrairNomeInspecionado } from '../../utils/format';
@@ -33,8 +34,8 @@ export const PericiaMenorDrawer: React.FC<Props> = ({ pericia: p, titulo = 'Per�
       onClose={onClose}
       footer={(
         <>
-          <Button variant="secondary" onClick={onClose}>Fechar</Button>
-          <Button icon="history" onClick={onHistorico}>Histórico do militar</Button>
+          <Button variant="secondary" className="max-md:hidden" onClick={onClose}>Fechar</Button>
+          <AcoesRodape acoes={[{ id: 'historico', rotulo: 'Histórico do militar', icone: 'history', onClick: onHistorico }]} />
         </>
       )}
     >

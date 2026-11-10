@@ -6,7 +6,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
-import { MPI, SECRETARIA, MEDICO, SENHA, CONCURSO, INSPECIONADO, IS_E2E, PARECER_E2E, PERICIA_E2E } from './dados.mjs';
+import { MPI, SECRETARIA, MEDICO, SENHA, CONCURSO, INSPECIONADO, IS_E2E, IS_AGENDADA_E2E, PARECER_E2E, PERICIA_E2E } from './dados.mjs';
 
 const BASE = process.env.E2E_BASE_URL || 'http://127.0.0.1:3100/DoencasEPareceresJRS/';
 let navegador;
@@ -141,11 +141,11 @@ test('Inspeções: o menu da linha não tem mais "Ver detalhes" e a tabela não 
   await p.context().close();
 });
 
-test('Inspeções: o formulário "Cadastrar IS" valida os campos obrigatórios sem gravar nada', async () => {
+test('Inspeções: "+ Abrir IS" abre o formulário que valida os campos obrigatórios sem gravar nada', async () => {
   const p = await novaPagina();
   await entrar(p, MEDICO);
   await p.goto(`${BASE}#/inspecoes`);
-  await p.getByRole('button', { name: 'Cadastrar IS' }).click();
+  await p.getByRole('button', { name: 'Abrir IS', exact: true }).click();
   const dialogo = p.getByRole('dialog', { name: 'Cadastrar IS' });
   await dialogo.getByRole('button', { name: 'Cadastrar IS' }).click();
   await dialogo.getByText('Informe o número da IS (somente dígitos).').waitFor();
@@ -155,6 +155,39 @@ test('Inspeções: o formulário "Cadastrar IS" valida os campos obrigatórios s
   await dialogo.getByLabel('Nº da IS').fill(String(IS_E2E.numero));
   await dialogo.getByRole('button', { name: 'Cadastrar IS' }).click();
   await dialogo.getByText(`Já existe a IS nº ${IS_E2E.numero}.`).waitFor();
+  await p.context().close();
+});
+
+test('Inspeções: filtros de situação sem "Todas" (clique de novo limpa), botões só ícone e rich tooltip no calendário', async () => {
+  const p = await novaPagina();
+  await entrar(p, MEDICO);
+  await p.goto(`${BASE}#/inspecoes`);
+  const aberta = p.getByRole('button', { name: `Abrir IS ${IS_E2E.numero}` });
+  const agendada = p.getByRole('button', { name: `Abrir IS ${IS_AGENDADA_E2E.numero}` });
+  await aberta.waitFor();
+  await agendada.waitFor();
+  // Sem subtítulo e sem o botão "Todas"; nenhuma situação marcada = todas.
+  assert.equal(await p.getByText('Cadastre IS, agende as entrevistas').count(), 0);
+  const situacao = p.getByRole('radiogroup', { name: 'Situação da IS' });
+  assert.equal(await situacao.getByRole('radio', { name: /^Todas/ }).count(), 0);
+  assert.equal(await situacao.getByRole('radio', { checked: true }).count(), 0);
+  const abertas = situacao.getByRole('radio', { name: /^Abertas/ });
+  await abertas.click();
+  await agendada.waitFor({ state: 'detached' });
+  await aberta.waitFor();
+  await abertas.click(); // clicar de novo no selecionado limpa o filtro
+  await agendada.waitFor();
+  assert.equal(await situacao.getByRole('radio', { checked: true }).count(), 0);
+
+  // Calendário (ícone) abre em Mês; o hover numa IS mostra o rich tooltip.
+  await p.getByRole('radio', { name: 'Calendário' }).click();
+  await p.getByRole('radio', { name: 'Mês', checked: true }).waitFor();
+  await p.getByRole('button', { name: /AGENDADO DE TESTE/ }).first().hover();
+  const dica = p.getByRole('tooltip');
+  await dica.waitFor();
+  for (const t of ['Inspecionado', 'Finalidade', IS_AGENDADA_E2E.finalidade, 'Perito', MEDICO.usuario, 'Status', 'Agendada']) await dica.getByText(t, { exact: true }).waitFor();
+  await p.mouse.move(5, 5);
+  await dica.waitFor({ state: 'detached' });
   await p.context().close();
 });
 
