@@ -217,15 +217,15 @@ export const Inspecoes: React.FC = () => {
     } else avisar(`IS ${is.is} cadastrada.`);
   };
 
-  /** IS por foto: criada ou atualizada; com horário reservado, sincroniza o Google Agenda. Abre o detalhe. */
-  const aoSalvarPorFoto = (is: InspecaoRecord, criada: boolean, agendaReservada: boolean) => {
+  /** IS por foto (lote): cada IS gravada com horário reservado sincroniza o Google Agenda. */
+  const aoGravarPorFoto = (is: InspecaoRecord, _criada: boolean, reservada: boolean) => {
+    if (reservada) sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS ${is.is} gravada, mas o Google Agenda não foi atualizado: ${r.erro}`, 'error'); });
+  };
+  /** Lote gravado: fecha o painel; com uma IS só, abre o detalhe dela. */
+  const aoConcluirPorFoto = (gravadas: number, unica: InspecaoRecord | null) => {
     setPorFoto(false);
-    const feito = `IS ${is.is} ${criada ? 'cadastrada' : 'atualizada'}`;
-    if (agendaReservada) {
-      avisar(`${feito}. Sincronizando com o Google Agenda…`);
-      sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`${feito}, mas o Google Agenda não foi atualizado: ${r.erro}`, 'error'); else avisar(`${feito} e sincronizada com o Google Agenda.`); });
-    } else avisar(`${feito}.`);
-    setDetalheId(is.id);
+    avisar(unica ? `IS ${unica.is} gravada.` : `${gravadas} IS gravada${gravadas !== 1 ? 's' : ''}.`);
+    if (unica) setDetalheId(unica.id);
   };
 
   /** Muda o status por uma ação do menu (Falta, Restituição, Reabrir IS) e atualiza o Google Agenda se a situação mudar. */
@@ -411,7 +411,7 @@ export const Inspecoes: React.FC = () => {
         <ISPorFotoForm
           militares={militares} peritos={peritos} config={config} bloqueios={bloqueiosTodos} inspecoes={lista ?? []}
           usuario={{ uid: usuario.uid, usuario: usuario.usuario, perfil: usuario.perfil }}
-          podeCadastrarInspecionado={podeCadastrarInspecionado} onClose={() => setPorFoto(false)} onSalva={aoSalvarPorFoto}
+          podeCadastrarInspecionado={podeCadastrarInspecionado} onClose={() => setPorFoto(false)} onGravada={aoGravarPorFoto} onConcluido={aoConcluirPorFoto}
         />
       )}
 
