@@ -249,7 +249,7 @@ test('Inspeções: agenda com filtros de Situação (caixas + "Todas") e Períod
   await aberta.waitFor();
   // Hoje: a agendada volta.
   await p.getByRole('button', { name: /^Período:/ }).click();
-  await periodo.getByRole('radio', { name: 'Hoje' }).check();
+  await periodo.getByRole('radio', { name: 'Hoje' }).click(); // escolher fecha o popover
   await periodo.waitFor({ state: 'detached' });
   await agendada.waitFor();
 
