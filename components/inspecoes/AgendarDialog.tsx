@@ -6,7 +6,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
-import { ChoiceGroup } from '../ui/ChoiceGroup';
+import { AvatarRadioGroup } from '../ui/AvatarRadioGroup';
+import { opcaoAvatarDoPerito } from './InspecaoForm';
 import { SeletorHorario, slotsLivresDoDia } from './SeletorHorario';
 import { CalendarioDisponibilidade } from './CalendarioDisponibilidade';
 import { agendarInspecao, type InspecaoRecord } from '../../services/firestoreInspecoes';
@@ -126,10 +127,10 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
               <p role="alert" className="text-sm font-semibold text-wine">Nenhum perito {inspecao.amp === 'JRS' ? 'da JRS' : 'do MPI'} tem horário livre em {dataBr(data)}. Escolha outra data.</p>
             )}
             {data && peritosDoDia.length >= 1 && (
-              <ChoiceGroup<string>
+              <AvatarRadioGroup<string>
                 label="Perito" value={peritoUid}
-                onChange={v => { setPeritoUid(v); setHora(''); setErro(''); }}
-                options={peritosDoDia.map(p => ({ value: p.uid, label: p.usuario, avatar: { nome: p.usuario, imageProfile: p.imageProfile } }))}
+                onChange={v => { if (v !== peritoUid) { setPeritoUid(v); setHora(''); } setErro(''); }}
+                options={peritosDoDia.map(opcaoAvatarDoPerito)}
               />
             )}
 

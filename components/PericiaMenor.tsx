@@ -190,7 +190,7 @@ export const PericiaMenor: React.FC = () => {
                         <button type="button" onClick={() => setDetalheId(p.id)} className="w-full text-left px-4 py-3 space-y-1 hover:bg-thead">
                           <span className="block text-xs text-ink-3"><span className="font-semibold text-ink-2">{dataBR(ref.data)}</span> · {dias(ref.dias)}{p.homologacao ? ' homolog.' : ''}{medico ? ` · ${medico}` : ''}</span>
                           <span className="block min-w-0">{nomeDe(p)}</span>
-                          <span className="block text-xs text-ink-2 break-words">{cid}</span>
+                          <span className="block text-xs font-bold text-ink break-words">{cid}</span>
                           <span className="block pt-0.5"><TagsDispensa tipos={tipos} /></span>
                         </button>
                       </li>
@@ -219,8 +219,8 @@ export const PericiaMenor: React.FC = () => {
                             <td className="px-4 py-3 align-top">
                               <button type="button" onClick={e => { e.stopPropagation(); setDetalheId(p.id); }} className="text-left w-full" aria-label={`Abrir detalhe ${t.singular === 'atestado' ? 'do atestado' : 'da perícia'} de ${extrairNomeInspecionado(p.inspecionado)}`}>{nomeDe(p)}</button>
                             </td>
-                            <td className="px-4 py-3 align-top whitespace-nowrap text-ink-2">{medico || '—'}</td>
-                            <td className="px-4 py-3 align-top text-ink-2">{cid}</td>
+                            <td className="px-4 py-3 align-top whitespace-nowrap font-bold text-ink">{medico || '—'}</td>
+                            <td className="px-4 py-3 align-top font-bold text-ink">{cid}</td>
                             <td className="px-4 py-3 align-top"><TagsDispensa tipos={tipos} /></td>
                           </tr>
                         ))}

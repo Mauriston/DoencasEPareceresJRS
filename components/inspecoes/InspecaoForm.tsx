@@ -2,7 +2,7 @@
 // "Cadastrar IS": barra lateral à direita (desktop) ou bottom sheet (mobile). Campos: Nº da IS, data de
 // abertura, inspecionado (autocomplete na base INSPECIONADOS, com "Cadastrar novo"), finalidade (todas,
 // no menu em cascata por grupo), AMP (definido pela finalidade: JRS ou MPI), perito (cards com avatar dos
-// usuários médicos do AMP — AvatarRadioGroup) e, opcionalmente, já a data/hora da entrevista (slots de 20 min). A IS nasce "Aberta", ou
+// usuários médicos do AMP — AvatarRadioGroup, com "JRS"/"MPI" na 2ª linha) e, opcionalmente, já a data/hora da entrevista (slots de 20 min). A IS nasce "Aberta", ou
 // "Agendada" quando a entrevista já é marcada no cadastro.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
@@ -10,7 +10,7 @@ import { Button } from '../ui/Button';
 import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
-import { AvatarRadioGroup } from '../ui/AvatarRadioGroup';
+import { AvatarRadioGroup, type AvatarRadioOption } from '../ui/AvatarRadioGroup';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { FinalidadeDropdown, type GrupoFinalidadeExtra } from '../ExamesGuide';
 import { CadastroInspecionado } from '../militares/CadastroInspecionado';
@@ -20,7 +20,41 @@ import { formatNip } from '../../utils/format';
 import { hojeISO, ocupadosDe, duracaoDoGrupo, peritoAtendeNoTurno, turnoDoSlot, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
 import type { MilitarRecord } from '../../services/firestoreMilitares';
 import { criarInspecao, idDaIs, type AmpIS, type InspecaoRecord } from '../../services/firestoreInspecoes';
-import { peritosDoAmp, ampDaFinalidade, type PeritoIS } from '../../services/peritosIS';
+import { peritosDoAmp, ampDaFinalidade, perfilAtendeAmp, type PeritoIS } from '../../services/peritosIS';
+
+/** Card do perito (AvatarRadioGroup): login em destaque e, na 2ª linha, o AMP do perfil (user_medicos_mpi → MPI; Admin e user_medicos → JRS). */
+export const opcaoAvatarDoPerito = (p: PeritoIS): AvatarRadioOption<string> => ({
+  value: p.uid, label: p.usuario, imageProfile: p.imageProfile, nomeAvatar: p.nome || p.usuario,
+  secundaria: perfilAtendeAmp(p.perfil, 'MPI') ? 'MPI' : 'JRS',
+});
+
+/** Finalidade escolhida no menu: nome, grupo e AMP de competência. */
+export interface FinalidadeEscolhida { finalidade: string; grupo: string; amp: AmpIS }
+
+/** Finalidades de IS por grupo (public/finalidadesIS.json) para o menu em cascata, e a busca do grupo/AMP de uma finalidade. */
+export const useFinalidadesIS = (ativo = true) => {
+  const [grupos, setGrupos] = useState<GrupoFinalidadeIS[]>([]);
+  useEffect(() => { if (ativo) carregarFinalidadesIS().then(setGrupos).catch(() => setGrupos([])); }, [ativo]);
+  // Todas as finalidades, por grupo (sem filtrar pelo vínculo/título do inspecionado).
+  const gruposMenu: GrupoFinalidadeExtra[] = useMemo(
+    () => grupos.map(g => ({ nome: g.grupo, finalidades: g.finalidades.map(f => f.nome) })),
+    [grupos],
+  );
+  const achar = (nome: string): FinalidadeEscolhida | null => {
+    for (const g of grupos) { const f = g.finalidades.find(x => x.nome === nome); if (f) return { finalidade: f.nome, grupo: g.grupo, amp: ampDaFinalidade(f.amp) }; }
+    return null;
+  };
+  return { gruposMenu, achar };
+};
+
+/** Campo "Finalidade" (menu em cascata por grupo) — o mesmo no cadastro e no detalhe da IS aberta. */
+export const CampoFinalidadeIS: React.FC<{ value: string; onChange: (nome: string) => void; gruposMenu: GrupoFinalidadeExtra[]; required?: boolean; erro?: string }> = ({ value, onChange, gruposMenu, required, erro }) => (
+  <div>
+    <label htmlFor="finalidade-select" className="block text-xs font-semibold text-ink-3 mb-1">Finalidade{required && <span className="text-wine ml-0.5" aria-hidden="true">*</span>}</label>
+    <FinalidadeDropdown value={value} onChange={onChange} placeholder="Selecione a finalidade da IS" gruposProprios={gruposMenu} erro={!!erro} />
+    {erro && <p role="alert" className="mt-1 text-xs font-semibold text-wine">{erro}</p>}
+  </div>
+);
 
 interface Props {
   militares: MilitarRecord[];
@@ -49,7 +83,6 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
   const [cadastrando, setCadastrando] = useState(false);
   const [recemCadastradoId, setRecemCadastradoId] = useState('');
   const [finalidade, setFinalidade] = useState('');
-  const [grupos, setGrupos] = useState<GrupoFinalidadeIS[]>([]);
   const [amp, setAmp] = useState<AmpIS | ''>('');
   const [peritoUid, setPeritoUid] = useState(inicial?.peritoUid ?? '');
   const [data, setData] = useState(inicial?.dataEntrevista?.slice(0, 10) ?? '');
@@ -58,7 +91,7 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
   const [erros, setErros] = useState<Erros>({});
   const [salvando, setSalvando] = useState(false);
 
-  useEffect(() => { carregarFinalidadesIS().then(setGrupos).catch(() => setGrupos([])); }, []);
+  const { gruposMenu, achar } = useFinalidadesIS();
   const limpar = (k: string) => setErros(e => (e[k] ? { ...e, [k]: '' } : e));
 
   // Inspecionado recém-cadastrado: assim que aparece na lista, já vem selecionado.
@@ -73,16 +106,8 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
     busca: normalizarBusca(`${m.inspecionado} ${m.om} ${m.id}`),
   })), [militares]);
 
-  // Todas as finalidades, por grupo (sem filtrar pelo vínculo/título do inspecionado).
-  const gruposFinalidade: GrupoFinalidadeExtra[] = useMemo(
-    () => grupos.map(g => ({ nome: g.grupo, finalidades: g.finalidades.map(f => f.nome) })),
-    [grupos],
-  );
-  const achada = useMemo(() => {
-    for (const g of grupos) { const f = g.finalidades.find(x => x.nome === finalidade); if (f) return { grupo: g.grupo, ...f }; }
-    return null;
-  }, [grupos, finalidade]);
-  const ampCompetente: AmpIS | '' = achada ? ampDaFinalidade(achada.amp) : '';
+  const achada = useMemo(() => achar(finalidade), [gruposMenu, finalidade]); // eslint-disable-line react-hooks/exhaustive-deps
+  const ampCompetente: AmpIS | '' = achada ? achada.amp : '';
 
   // O AMP é o da competência da finalidade; trocar de finalidade pode invalidar o perito.
   const peritosDoAmpAtual = useMemo(() => (ampCompetente ? peritosDoAmp(peritos, ampCompetente) : []), [peritos, ampCompetente]);
@@ -189,11 +214,7 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
             aoNaoEncontrar={podeCadastrarInspecionado ? { rotulo: 'Cadastrar novo', onClick: () => setCadastrando(true) } : undefined}
           />
 
-          <div>
-            <label className="block text-xs font-semibold text-ink-3 mb-1">Finalidade<span className="text-wine ml-0.5" aria-hidden="true">*</span></label>
-            <FinalidadeDropdown value={finalidade} onChange={v => { setFinalidade(v); limpar('finalidade'); }} placeholder="Selecione a finalidade da IS" gruposProprios={gruposFinalidade} erro={!!erros.finalidade} />
-            {erros.finalidade && <p role="alert" className="mt-1 text-xs font-semibold text-wine">{erros.finalidade}</p>}
-          </div>
+          <CampoFinalidadeIS required value={finalidade} onChange={v => { setFinalidade(v); limpar('finalidade'); }} gruposMenu={gruposMenu} erro={erros.finalidade} />
 
           <ChoiceGroup<AmpIS>
             label="AMP de competência" value={amp} onChange={() => { /* definido pela finalidade */ }}
@@ -209,10 +230,7 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
                   <AvatarRadioGroup<string>
                     label={`Perito (${ampCompetente === 'JRS' ? 'Admin e médicos JRS' : 'médicos MPI'})`} error={erros.perito}
                     value={peritoUid} onChange={v => { if (v !== peritoUid) { setPeritoUid(v); setHora(''); } limpar('perito'); }}
-                    options={peritosDoAmpAtual.map(p => ({
-                      value: p.uid, label: p.usuario, imageProfile: p.imageProfile, nomeAvatar: p.nome || p.usuario,
-                      secundaria: p.nome && p.nome.trim().toUpperCase() !== p.usuario.trim().toUpperCase() ? p.nome : undefined,
-                    }))}
+                    options={peritosDoAmpAtual.map(opcaoAvatarDoPerito)}
                   />
                 )}
             </div>

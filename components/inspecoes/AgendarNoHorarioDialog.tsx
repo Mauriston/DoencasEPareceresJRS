@@ -7,7 +7,8 @@ import React, { useMemo, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { Segmented } from '../ui/Segmented';
-import { ChoiceGroup } from '../ui/ChoiceGroup';
+import { AvatarRadioGroup } from '../ui/AvatarRadioGroup';
+import { opcaoAvatarDoPerito } from './InspecaoForm';
 import { StatusTag } from '../ui/StatusTag';
 import { controlClass } from '../ui/Field';
 import { estadoDoSlot, slotsLivresDoDia, SeletorHorario } from './SeletorHorario';
@@ -155,9 +156,9 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
             {escolhida && (candidatos.length === 0
               ? <p role="alert" className="text-sm font-semibold text-wine">Nenhum perito do AMP {escolhida.amp} está disponível {soDia ? 'neste dia' : 'neste horário'} (turno não configurado, bloqueio ou horário ocupado).</p>
               : (
-                <ChoiceGroup<string>
-                  label="Perito" value={peritoUid} onChange={v => { setPeritoUid(v); setHoraEscolhida(''); setErro(''); }}
-                  options={candidatos.map(p => ({ value: p.uid, label: p.usuario, avatar: { nome: p.usuario, imageProfile: p.imageProfile } }))}
+                <AvatarRadioGroup<string>
+                  label="Perito" value={peritoUid} onChange={v => { if (v !== peritoUid) { setPeritoUid(v); setHoraEscolhida(''); } setErro(''); }}
+                  options={candidatos.map(opcaoAvatarDoPerito)}
                 />
               ))}
             {soDia && escolhida && peritoUid && candidatos.some(p => p.uid === peritoUid) && (

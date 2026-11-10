@@ -331,27 +331,23 @@ export const Inspecoes: React.FC = () => {
           </button>
         )}
 
-        {/* Barra de filtros: Situação → Período → Perito → Tabela/Calendário → Busca (uma linha no desktop largo).
-            Situação, Período e Busca só valem para a Tabela (o calendário tem navegação própria). */}
-        <div className="bg-white rounded-xl border border-line p-3 flex flex-wrap xl:flex-nowrap items-center gap-2">
-          {visao === 'tabela' && (
-            <>
-              <FiltroSituacaoIS value={situacoes} onChange={setSituacoes} contadores={totais} className="flex-1 min-w-[9rem] sm:flex-none sm:w-48 xl:w-44 xl:shrink-0" />
-              <FiltroPeriodo value={periodo} onChange={setPeriodo} className="flex-1 min-w-[9rem] sm:flex-none sm:w-52 xl:w-48 xl:shrink-0" />
-            </>
-          )}
-          <select aria-label="Filtrar por perito" value={peritoFiltro} onChange={e => setPeritoFiltro(e.target.value)} className={`${controlClass} !w-auto flex-1 min-w-0 sm:flex-none sm:min-w-[12rem] xl:max-w-[14rem]`}>
-            <option value="">Todos os peritos</option>
-            {peritosFiltraveis.map(p => <option key={p.uid} value={p.uid}>{p.usuario}</option>)}
-          </select>
-          <AlternarVisao value={visao} onChange={setVisao} />
-          {visao === 'tabela' && (
+        {/* Barra de filtros (só na Tabela): Situação → Período → Perito → Tabela/Calendário → Busca (uma linha no
+            desktop largo). No Calendário não há filtros: a alternância Tabela/Calendário vai para a barra do calendário. */}
+        {visao === 'tabela' && (
+          <div className="bg-white rounded-xl border border-line p-3 flex flex-wrap xl:flex-nowrap items-center gap-2">
+            <FiltroSituacaoIS value={situacoes} onChange={setSituacoes} contadores={totais} className="flex-1 min-w-[9rem] sm:flex-none sm:w-48 xl:w-44 xl:shrink-0" />
+            <FiltroPeriodo value={periodo} onChange={setPeriodo} className="flex-1 min-w-[9rem] sm:flex-none sm:w-52 xl:w-48 xl:shrink-0" />
+            <select aria-label="Filtrar por perito" value={peritoFiltro} onChange={e => setPeritoFiltro(e.target.value)} className={`${controlClass} !w-auto flex-1 min-w-0 sm:flex-none sm:min-w-[12rem] xl:max-w-[14rem]`}>
+              <option value="">Todos os peritos</option>
+              {peritosFiltraveis.map(p => <option key={p.uid} value={p.uid}>{p.usuario}</option>)}
+            </select>
+            <AlternarVisao value={visao} onChange={setVisao} />
             <div className="relative flex-1 min-w-0 sm:flex-none sm:w-64 xl:w-72 xl:min-w-[10rem] xl:shrink">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
               <input type="search" aria-label="Buscar IS" title="Busca por nº da IS, inspecionado, NIP, finalidade, perito ou status" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar…" className={`${controlClass} pl-10`} autoComplete="off" />
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {erroCarga ? (
           <p role="alert" className="bg-white rounded-xl border border-line p-6 text-sm font-semibold text-wine">{erroCarga}</p>
@@ -359,7 +355,8 @@ export const Inspecoes: React.FC = () => {
           <p className="bg-white rounded-xl border border-line p-10 text-center text-sm text-ink-3" role="status">Carregando inspeções…</p>
         ) : visao === 'calendario' ? (
           <CalendarioIS
-            inspecoes={lista} bloqueios={bloqueiosTodos} config={config} peritoUid={peritoFiltro} diasConcursos={diasConcursos}
+            inspecoes={lista} bloqueios={bloqueiosTodos} config={config} peritoUid="" diasConcursos={diasConcursos}
+            controleVisao={<AlternarVisao value={visao} onChange={setVisao} />}
             onAbrirConcurso={podeVerConcursos ? id => nav?.navigate(concursoPath(id)) : undefined}
             onAbrir={is => setDetalheId(is.id)}
             onNovoNoHorario={podeAgendar ? setHorarioVazio : undefined}
@@ -418,9 +415,9 @@ export const Inspecoes: React.FC = () => {
 
       {horarioVazio && (
         <AgendarNoHorarioDialog
-          dataHora={horarioVazio} peritoFiltro={peritoFiltro} inspecoes={lista ?? []} peritos={peritos} config={config} bloqueios={bloqueiosTodos}
+          dataHora={horarioVazio} peritoFiltro="" inspecoes={lista ?? []} peritos={peritos} config={config} bloqueios={bloqueiosTodos}
           podeCadastrar={podeCadastrar && (ehAdmin || horarioVazio.slice(0, 10) >= hoje)}
-          onNova={() => { setNovo({ dataEntrevista: horarioVazio, peritoUid: peritoFiltro || undefined }); setHorarioVazio(null); }}
+          onNova={() => { setNovo({ dataEntrevista: horarioVazio }); setHorarioVazio(null); }}
           onClose={() => setHorarioVazio(null)}
           onAgendada={(msg, tom) => { setHorarioVazio(null); avisar(msg, tom); }}
         />

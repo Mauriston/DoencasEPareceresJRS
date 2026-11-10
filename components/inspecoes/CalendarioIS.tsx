@@ -72,6 +72,8 @@ interface Props {
   onTrocarPerito?: (is: InspecaoRecord, dataHora: string) => void;
   /** Avisos (resultado do agendamento, arraste recusado etc.). */
   onAviso?: (msg: string, tom?: 'success' | 'error') => void;
+  /** Controle extra na barra de topo, à esquerda do Dia/Semana/Mês (ex.: a alternância Tabela/Calendário). */
+  controleVisao?: React.ReactNode;
 }
 
 const titulo = (modo: Modo, ancora: string): string => {
@@ -103,7 +105,7 @@ type Alvo = { data: string; hhmm: string | null } | null;
 
 type Dialogo = { tipo: 'agendar'; is: InspecaoRecord; data?: string; hora?: string } | { tipo: 'dia'; data: string } | null;
 
-export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, onReagendar, onAviso, diasConcursos = [], onAbrirConcurso }) => {
+export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, onReagendar, onAviso, diasConcursos = [], onAbrirConcurso, controleVisao }) => {
   const [modo, setModo] = useState<Modo>('mes');
   const [ancora, setAncora] = useState(() => diaUtilOuProximo(hojeISO()));
   const hoje = hojeISO();
@@ -265,10 +267,13 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
             <button type="button" onClick={() => navegar(1)} aria-label="Próximo período" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>
             <h2 className="text-h3 font-bold text-navy ml-1 first-letter:uppercase" aria-live="polite">{titulo(modo, ancora)}</h2>
           </div>
-          <Segmented<Modo>
-            ariaLabel="Visão do calendário" value={modo} onChange={setModo}
-            options={[{ value: 'dia', label: 'Dia' }, { value: 'semana', label: 'Semana' }, { value: 'mes', label: 'Mês' }]}
-          />
+          <div className="flex items-center gap-2">
+            {controleVisao}
+            <Segmented<Modo>
+              ariaLabel="Visão do calendário" value={modo} onChange={setModo}
+              options={[{ value: 'dia', label: 'Dia' }, { value: 'semana', label: 'Semana' }, { value: 'mes', label: 'Mês' }]}
+            />
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 border-b border-line text-xs text-ink-3" aria-label="Legenda de cores por AMP">
