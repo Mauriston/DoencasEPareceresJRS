@@ -56,7 +56,7 @@ export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, 
           </button>
         </div>
         <div data-sheet-corpo="" className="p-5 overflow-y-auto flex-1 text-sm text-ink">{children}</div>
-        {footer && <div data-sheet-rodape="" className="px-5 py-3 border-t border-line flex flex-col-reverse sm:flex-row sm:justify-end gap-2 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{footer}</div>}
+        {footer && <div data-sheet-rodape="" className="px-5 py-3 border-t border-line flex flex-col-reverse sm:flex-row sm:flex-wrap sm:justify-end gap-2 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{footer}</div>}
       </SheetArrastavel>
     </div>
   );

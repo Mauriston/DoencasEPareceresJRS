@@ -135,15 +135,13 @@ export const AcoesRodape: React.FC<Props> = ({ acoes, className = '' }) => {
   if (!acoes.length) return null;
 
   if (isDesktop) {
-    return (
-      <div className={`flex flex-row flex-wrap justify-end gap-2 ${className}`}>
-        {acoes.map(a => (
-          <Button key={a.id} variant={a.variante ?? 'primary'} icon={a.icone} onClick={a.onClick} disabled={a.disabled} loading={a.loading}>
-            {a.rotulo}
-          </Button>
-        ))}
-      </div>
-    );
+    const botoes = acoes.map(a => (
+      <Button key={a.id} variant={a.variante ?? 'primary'} icon={a.icone} onClick={a.onClick} disabled={a.disabled} loading={a.loading}>
+        {a.rotulo}
+      </Button>
+    ));
+    // Sem className, os botões entram direto no flex do rodapé (alinhados aos vizinhos, ex.: "Cancelar").
+    return className ? <div className={`flex flex-row flex-wrap items-center justify-end gap-2 ${className}`}>{botoes}</div> : <>{botoes}</>;
   }
 
   if (acoes.length === 1) {

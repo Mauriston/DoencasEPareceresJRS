@@ -6,6 +6,7 @@
 import React, { useMemo, useState } from 'react';
 import { ESPECIALIDADES_MEDICAS } from '../data/especialidadesMedicas';
 import { SheetArrastavel } from './ui/SheetArrastavel';
+import { AcoesRodape } from './ui/AcoesRodape';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 
 const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -29,7 +30,7 @@ const Shell: React.FC<{ titulo: string; icone: string; onClose: () => void; chil
           <span className="material-symbols-outlined text-[20px]">close</span>
         </button>
       </div>
-      <div className="p-5 overflow-y-auto space-y-3">{children}</div>
+      <div data-sheet-corpo="" className="p-5 overflow-y-auto space-y-3">{children}</div>
     </SheetArrastavel>
   </div>
   );
@@ -38,19 +39,10 @@ const Shell: React.FC<{ titulo: string; icone: string; onClose: () => void; chil
 const campoTexto = 'w-full px-4 py-3 text-sm rounded-xl border border-ink-5 bg-white focus:outline-none focus:border-navy transition-colors';
 const rotulo = 'block text-xs font-bold text-ink-3 uppercase tracking-wider mb-1.5';
 
+// Desktop: botão no fim do formulário; mobile: FAB "extended" do sheet.
 const BotaoGerar: React.FC<{ habilitado: boolean; onClick: () => void }> = ({ habilitado, onClick }) => (
-  <div className="flex items-center justify-end pt-1">
-    <button
-      type="button"
-      disabled={!habilitado}
-      onClick={onClick}
-      className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-navy"
-    >
-      Gerar documento
-    </button>
-  </div>
+  <AcoesRodape className="pt-1" acoes={[{ id: 'gerar', rotulo: 'Gerar documento', icone: 'description', onClick, disabled: !habilitado }]} />
 );
-
 interface ParecerModalProps {
   candidatoNome: string;
   onGerar: (dados: { especialidade: string; historico: string }) => void;
