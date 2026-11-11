@@ -23,7 +23,7 @@ import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import { carregarPeritos, type PeritoIS } from '../../services/peritosIS';
 import { tituloDiaConcurso, ehBloqueioDeConcurso, type DiaConcurso } from '../../services/agendaConcursos';
 import {
-  fimDoDiaDeConcurso, STATUS_IS, statusEfetivoIS, hojeISO, duracaoDaIS, horaFimEntrevista, somarDias, inicioDaSemana, nomeMes, nomeDiaCurto, nomeDiaSemana, ehDiaUtil, deISO, paraISO, bloqueioNoDia,
+  STATUS_IS, statusEfetivoIS, hojeISO, duracaoDaIS, horaFimEntrevista, somarDias, inicioDaSemana, nomeMes, nomeDiaCurto, nomeDiaSemana, ehDiaUtil, deISO, paraISO, bloqueioNoDia,
   dataDeEntrevista, horaDeEntrevista, minutosDe, hhmmDe, ehSlotValido, bloqueioAtinge, peritoAtendeNoTurno, TURNOS, DURACAO_SLOT_MIN,
   type BloqueioAgenda, type ConfigAgenda, type Turno,
 } from '../../utils/inspecoes';
@@ -57,7 +57,7 @@ interface Props {
   /** Perito filtrado ('' = todos). */
   peritoUid: string;
   onAbrir: (is: InspecaoRecord) => void;
-  /** Dias de concurso (Em andamento e Em breve): um evento ocupa a manhã até 10:50 (os 3 últimos slots ficam livres). */
+  /** Dias de concurso (Em andamento e Em breve): etiqueta no cabeçalho do dia (semana/dia) e no mês; não bloqueiam slots. */
   diasConcursos?: DiaConcurso[];
   /** Clique no cartão de um dia de concurso: abre a tabela do concurso. */
   onAbrirConcurso?: (concursoId: string) => void;
@@ -279,7 +279,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 border-b border-line text-xs text-ink-3" aria-label="Legenda de cores por AMP">
           <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-navy" aria-hidden="true" />JRS</span>
           <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-gold" aria-hidden="true" />MPI</span>
-          {diasConcursos.length > 0 && <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-wine" aria-hidden="true" />Concurso (turno reservado)<span className="w-3 h-3 rounded-sm bg-green ml-1" aria-hidden="true" />dia encerrado</span>}
+          {diasConcursos.length > 0 && <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-wine" aria-hidden="true" />Concurso (não bloqueia a agenda)<span className="w-3 h-3 rounded-sm bg-green ml-1" aria-hidden="true" />dia encerrado</span>}
         </div>
 
         {modo === 'mes'
@@ -297,6 +297,16 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
                           <span className="block text-xs font-semibold text-ink-3 uppercase">{nomeDiaCurto(d)}</span>
                           <span className={`inline-flex w-9 h-9 items-center justify-center rounded-full text-h3 font-bold ${d === hoje ? 'bg-navy text-white' : 'text-navy'}`}>{Number(d.slice(8))}</span>
                         </button>
+                        {(concursosPorDia.get(d) ?? []).map(c => (
+                          <button
+                            key={c.chave} type="button" disabled={!onAbrirConcurso} onClick={() => onAbrirConcurso?.(c.concursoId)}
+                            title={`${tituloDiaConcurso(c)}${c.encerrado ? ' · dia encerrado' : ''}${onAbrirConcurso ? ' · abrir a tabela do concurso' : ''}`}
+                            className={`mx-1 mb-1 flex items-center gap-1 rounded border px-1 text-xs font-bold truncate w-[calc(100%-0.5rem)] text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${onAbrirConcurso ? 'hover:shadow-md' : 'cursor-default'} ${corConcurso(c)}`}
+                          >
+                            <span className="material-symbols-outlined text-[14px]" aria-hidden="true">{c.encerrado ? 'check_circle' : 'fact_check'}</span>
+                            <span className="truncate">{tituloDiaConcurso(c)}</span>
+                          </button>
+                        ))}
                         {mais && (
                           <button type="button" onClick={mais} aria-label={`Agendar IS aberta em ${Number(d.slice(8))} de ${nomeMes(d)}`} title="Agendar IS neste dia" className={`absolute top-1 right-1 ${CLASSE_MAIS_DIA}`}>
                             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">add</span>
@@ -316,7 +326,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
                     <ColunaDia
                       key={d} data={d} hoje={hoje} inspecoes={porDia.get(d) ?? []} bloqueios={bloqueios} config={config} peritoUid={peritoUid} onAbrir={onAbrir} onNovoNoHorario={onNovoNoHorario}
                       propsArraste={propsArraste} propsAlvo={propsAlvoColuna(d)} alvo={alvo?.data === d ? alvo : null} arrastando={arraste?.is ?? null}
-                      concursosDoDia={concursosPorDia.get(d) ?? []} onAbrirConcurso={onAbrirConcurso} propsDica={propsDica}
+                      propsDica={propsDica}
                     />
                   ))}
                 </div>
@@ -377,13 +387,11 @@ const ColunaDia: React.FC<{
   /** Alvo do arraste nesta coluna (dia inteiro ou horário). */
   alvo: Alvo;
   arrastando: InspecaoRecord | null;
-  concursosDoDia: DiaConcurso[];
-  onAbrirConcurso?: (concursoId: string) => void;
   propsDica: PropsDica;
-}> = ({ data, hoje, inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, propsArraste, propsAlvo, alvo, arrastando, concursosDoDia, onAbrirConcurso, propsDica }) => {
+}> = ({ data, hoje, inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, propsArraste, propsAlvo, alvo, arrastando, propsDica }) => {
   const agora = new Date();
   const minAgora = agora.getHours() * 60 + agora.getMinutes();
-  // Os bloqueios gerados pelos dias de concurso aparecem como o próprio cartão do concurso (abaixo), não hachurados.
+  // Dias de concurso não bloqueiam slots (a etiqueta fica no cabeçalho do dia); filtro mantido por segurança.
   const diaBloqueios = bloqueios.filter(b => !ehBloqueioDeConcurso(b) && bloqueioNoDia(b, data) && (!peritoUid || b.peritoUid === '*' || b.peritoUid === peritoUid));
 
   const aoClicarVazio = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -483,26 +491,6 @@ const ColunaDia: React.FC<{
           <span className="w-2 h-2 -ml-1 rounded-full bg-wine" /><span className="flex-1 border-t-2 border-wine" />
         </div>
       )}
-
-      {/* concursos: um evento ocupa a manhã até 10:50 (os 3 últimos slots ficam livres) */}
-      {concursosDoDia.map((c, idx) => {
-        const clicavel = !!onAbrirConcurso;
-        return (
-          <button
-            key={c.chave}
-            type="button"
-            disabled={!clicavel}
-            onClick={e => { e.stopPropagation(); onAbrirConcurso?.(c.concursoId); }}
-            title={`${tituloDiaConcurso(c)}${c.encerrado ? ' · dia encerrado' : ''}${clicavel ? ' · abrir a tabela do concurso' : ''}`}
-            className={`absolute z-[5] rounded border px-1.5 py-1 text-left overflow-hidden text-xs font-bold leading-tight flex flex-col items-start justify-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${clicavel ? 'cursor-pointer hover:shadow-md' : 'cursor-default'} ${corConcurso(c)}`}
-            // Dois ou mais concursos no mesmo dia ficam lado a lado, dividindo a largura (como no Google Agenda).
-            style={{ top: topo(minutosDe('07:30')) + 1, height: (minutosDe(fimDoDiaDeConcurso()) - minutosDe('07:30')) * PX_POR_MIN - 2, left: `calc(${(idx / concursosDoDia.length) * 100}% + 2px)`, width: `calc(${100 / concursosDoDia.length}% - 4px)` }}
-          >
-            <span className="inline-flex items-start gap-1"><span className="material-symbols-outlined text-[16px]" aria-hidden="true">{c.encerrado ? 'check_circle' : 'fact_check'}</span><span>{tituloDiaConcurso(c)}</span></span>
-            <span className="block font-normal opacity-90">{c.encerrado ? 'Dia encerrado' : 'Turno da manhã reservado'}</span>
-          </button>
-        );
-      })}
 
       {/* IS */}
       {posicoes.map(({ is, ini: min, col, total }) => {
