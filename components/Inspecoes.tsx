@@ -41,7 +41,6 @@ import type { ParecerRecord } from '../services/firestorePareceres';
 import { mostraMinutaMsg, fasesDeEntrevista } from './inspecoes/InspecaoDetalhe';
 import { restituicaoDoStatus } from '../utils/conclusaoIS';
 import { podeArrastarIS } from '../utils/calendarioIS';
-import { bloqueiosDeConcursos } from '../services/agendaConcursos';
 import { useDiasConcursos, useSincronizarAgendaConcursos } from '../hooks/useDiasConcursos';
 import { concursoPath } from '../config/routes';
 import { carregarPeritos, type PeritoIS } from '../services/peritosIS';
@@ -161,8 +160,9 @@ export const Inspecoes: React.FC = () => {
   useEffect(() => { carregarPeritos().then(setPeritos).catch(() => setPeritos([])); }, []);
 
   const hoje = hojeISO();
-  // Dias de concurso bloqueiam o turno da manhã inteiro para todos os peritos (além dos bloqueios cadastrados).
-  const bloqueiosTodos = useMemo(() => [...bloqueios, ...bloqueiosDeConcursos(diasConcursos)], [bloqueios, diasConcursos]);
+  // Dias de concurso não bloqueiam mais a agenda: só os bloqueios cadastrados valem (o concurso aparece no calendário
+  // como aviso no cabeçalho do dia).
+  const bloqueiosTodos = bloqueios;
   const podeVerConcursos = canAccessPage('concursosJRS', perfil);
 
   // Google Agenda: quem agenda mantém os eventos dos dias de concurso (com aviso de erro nesta página).
@@ -305,7 +305,6 @@ export const Inspecoes: React.FC = () => {
     const restituicao = restituicaoDoStatus(is.status);
     if (restituicao && podeEditar && !ehSecretaria) itens.push({ rotulo: restituicao.rotulo, icone: 'undo', onClick: () => { mudarStatus(is, restituicao.status, `IS ${is.is}: ${restituicao.rotulo}.`); } });
     if (podeMinuta && mostraMinutaMsg(is)) itens.push({ rotulo: 'Minuta MSG', icone: 'mail', onClick: () => setMinuta(is) });
-    if (podeParecer && fasesDeEntrevista(is)) itens.push({ rotulo: 'Parecer', icone: 'assignment_add', onClick: () => setParecerPara({ is }) });
     if (podeAgendar && is.dataEntrevista && is.status !== 'cancelada' && !(is.agendaSincronizada && is.eventoAgendaId)) itens.push({ rotulo: 'Sincronizar com o Google Agenda', icone: 'sync', onClick: () => { sincronizar(is); } });
     if (ehAdmin && is.status === 'tis_assinado') itens.push({ rotulo: 'Reabrir IS', icone: 'lock_open', onClick: () => { mudarStatus(is, 'assinaturas_pendentes', `IS ${is.is} reaberta.`); } });
     if ((ehAdmin || ehSecretaria) && podeCancelarIS(is, hoje)) itens.push({ rotulo: 'Cancelar IS', icone: 'cancel', perigo: true, onClick: () => setConfirmando({ tipo: 'cancelar', is }) });
@@ -398,6 +397,7 @@ export const Inspecoes: React.FC = () => {
             podeTrocarPerito={is => !['cancelada', 'tis_assinado'].includes(is.status)}
             onTrocarPerito={podeAgendar ? is => setTrocandoPerito({ is, dataHora: is.dataEntrevista, modo: 'troca' }) : undefined}
             itensDe={itensDe}
+            onNomeCopiado={(nome, ok) => avisar(ok ? `Nome copiado: ${nome}` : 'Não foi possível copiar; selecione o nome e copie manualmente.', ok ? 'success' : 'error')}
           />
         )}
       </Container>

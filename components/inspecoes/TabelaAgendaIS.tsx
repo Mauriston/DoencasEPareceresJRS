@@ -2,13 +2,14 @@
 // Visão Tabela das Inspeções de Saúde no formato "agenda": à esquerda, a data da entrevista (dia do mês
 // grande; dia da semana e mês/ano abaixo; hoje em círculo navy); à direita, as IS do dia, uma por linha,
 // com hora, status (StatusTag do status efetivo), inspecionado (OM e nº da IS menores), finalidade,
-// perito (clique troca o perito) e o menu ⋮. Divisores só entre dias. No topo, o grupo "Não agendadas" (IS sem data de
+// perito (clique troca o perito) e o menu ⋮. Clique no nome do inspecionado copia o nome completo. Divisores só entre dias. No topo, o grupo "Não agendadas" (IS sem data de
 // entrevista). No celular, cada dia vira um cartão com a data no cabeçalho e as IS em itens compactos.
 import React from 'react';
 import { MenuAcoes, type ItemMenu } from '../ui/MenuAcoes';
 import { StatusTag } from '../ui/StatusTag';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import type { DiaAgendaIS } from '../../utils/agendaIS';
+import { copiarTexto } from './CampoCopiavel';
 import { horaDeEntrevista, nomeDiaSemana, nomeMes, type TomStatus } from '../../utils/inspecoes';
 
 export interface TabelaAgendaISProps {
@@ -24,6 +25,8 @@ export interface TabelaAgendaISProps {
   onTrocarPerito?: (is: InspecaoRecord) => void;
   podeTrocarPerito: (is: InspecaoRecord) => boolean;
   itensDe: (is: InspecaoRecord) => ItemMenu[];
+  /** Resultado da cópia do nome (clique no nome do inspecionado), para o aviso da página. */
+  onNomeCopiado?: (nome: string, ok: boolean) => void;
 }
 
 const maiuscula = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
@@ -63,7 +66,7 @@ const CelulaData: React.FC<{ data: string | null; hoje: string; total: number }>
   );
 };
 
-export const TabelaAgendaIS: React.FC<TabelaAgendaISProps> = ({ grupos, hoje, nomeDe, omDe, statusDe, prazoDe, onAbrir, onTrocarPerito, podeTrocarPerito, itensDe }) => {
+export const TabelaAgendaIS: React.FC<TabelaAgendaISProps> = ({ grupos, hoje, nomeDe, omDe, statusDe, prazoDe, onAbrir, onTrocarPerito, podeTrocarPerito, itensDe, onNomeCopiado }) => {
   const perito = (is: InspecaoRecord, classe = '') => {
     if (onTrocarPerito && podeTrocarPerito(is)) {
       return (
@@ -126,7 +129,15 @@ export const TabelaAgendaIS: React.FC<TabelaAgendaISProps> = ({ grupos, hoje, no
                     </td>
                     <td className={`align-top pr-4 ${py}`}>
                       <span className="flex flex-col justify-center min-h-[44px] min-w-0">
-                        <span className="block font-semibold text-ink truncate leading-tight" title={nome}>{nome}</span>
+                        <button
+                          type="button"
+                          onClick={async e => { e.stopPropagation(); onNomeCopiado?.(nome, await copiarTexto(nome)); }}
+                          title={`${nome} · clique para copiar o nome`}
+                          aria-label={`Copiar o nome ${nome}`}
+                          className="block max-w-full font-semibold text-ink truncate leading-tight text-left cursor-copy hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded"
+                        >
+                          {nome}
+                        </button>
                         <span className="block text-xs text-ink-3 truncate leading-tight">{linhaOmIS(om, is)}</span>
                       </span>
                     </td>
