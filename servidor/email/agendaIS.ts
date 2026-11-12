@@ -16,6 +16,7 @@ import { TEMPLATE_AGENDA_IS } from './templateAgendaIS';
 import { TEMPLATE_ANEXO_AGENDA_IS } from './templateAnexoAgendaIS';
 import { FONTE_MONTSERRAT_DATA_URI, LOGO_MARINHA_DATA_URI } from './recursosAnexo';
 import { CONFIG_EMAIL_RESULTADO } from './resultadoIS';
+import { assinaturaSupervisor, assinaturaTexto, destinatariosFixos, juntarEmails, type DadosAssinatura } from './comum';
 import {
   assuntoAgendaIS, caminhoPdfAgendaIS, dataBrDeIso, dataIsoValida, dataTituloDeIso, decidirEnvioAutomatico, destinatariosAgendaIS,
   hojeEmRecife, horaDe, type UsuarioParaEmail,
@@ -95,15 +96,13 @@ const dadosComuns = (a: AgendaDoDia): DadosTemplate => ({
 });
 
 /** Assunto, HTML (sem JavaScript), texto simples e HTML do anexo. Exportada para os testes. */
-export const montarEmailAgenda = (a: AgendaDoDia) => {
+export const montarEmailAgenda = (a: AgendaDoDia, assinatura: DadosAssinatura = assinaturaSupervisor()) => {
   const c = CONFIG_EMAIL_RESULTADO;
   const html = renderizarTemplate(TEMPLATE_AGENDA_IS, {
     ...dadosComuns(a),
     vocativo: CONFIG_EMAIL_AGENDA.vocativo,
     fecho: CONFIG_EMAIL_AGENDA.fecho,
-    mostrar_supervisor: true,
-    supervisor_nome: c.supervisorNome, supervisor_posto: c.supervisorPosto,
-    presidente_nome: c.presidenteNome, presidente_posto: c.presidentePosto,
+    ...assinatura,
     banner_url: c.bannerUrl, logo_rodape_url: c.logoRodapeUrl, app_imagem_url: CONFIG_EMAIL_AGENDA.appImagemUrl,
   });
   const htmlAnexo = renderizarTemplate(TEMPLATE_ANEXO_AGENDA_IS, { ...dadosComuns(a), fonte_montserrat: FONTE_MONTSERRAT_DATA_URI, logo_rodape: LOGO_MARINHA_DATA_URI });
@@ -116,9 +115,7 @@ export const montarEmailAgenda = (a: AgendaDoDia) => {
       : ['Não há Inspeções de Saúde agendadas para esta data.']),
     ...(a.concursos.length ? ['', 'INSPEÇÕES DE SAÚDE DE CONCURSOS', ...a.concursos.map(k => `${k.concurso} · ${k.matricula} · ${k.candidato}`)] : []),
     '', `App JRS/HNRe: ${APP_URL}`, '',
-    CONFIG_EMAIL_AGENDA.fecho, '',
-    c.supervisorNome, c.supervisorPosto, 'Supervisor', '',
-    c.presidenteNome, c.presidentePosto, 'Presidente', '',
+    assinaturaTexto(assinatura, CONFIG_EMAIL_AGENDA.fecho), '',
     'Hospital Naval de Recife - Junta Regular de Saúde',
     `(81) 3036-9073 / ${c.emailJrs}`,
     'Avenida Cruz Cabugá 1200, Santo Amaro, Recife/PE',
@@ -135,8 +132,14 @@ export const enviarAgendaIS = async (db: Firestore, bucket: BucketPdf, data: str
   if (!dataIsoValida(data)) throw new ErroContaGoogle('falha', 'Data inválida (use AAAA-MM-DD).');
   const agenda = await coletarAgenda(db, data);
   const usuarios = (await db.collection('usuarios').get()).docs.map(d => d.data() as UsuarioParaEmail);
-  const { para, cc } = destinatariosAgendaIS(usuarios, CONFIG_EMAIL_RESULTADO.emailJrs);
-  const { assunto, html, texto, htmlAnexo } = montarEmailAgenda(agenda);
+  // Fixos (config/emails, editáveis em Configurações) + dinâmicos (médicos e Gmail da equipe).
+  const fixos = await destinatariosFixos(db, 'agendaIS');
+  const dinamicos = destinatariosAgendaIS(usuarios, '');
+  const para = juntarEmails([fixos.para, dinamicos.para]);
+  const cc = juntarEmails([fixos.cc, dinamicos.cc], para);
+  const cco = juntarEmails([fixos.cco], [...para, ...cc]);
+  // E-mail interno da junta: assinaturas fixas do Supervisor e do Presidente (config/emails), manual ou automático.
+  const { assunto, html, texto, htmlAnexo } = montarEmailAgenda(agenda, assinaturaSupervisor(fixos.config));
 
   const pdf = await htmlParaPdf(htmlAnexo);
   const pdfCaminho = caminhoPdfAgendaIS(data);
@@ -144,7 +147,7 @@ export const enviarAgendaIS = async (db: Firestore, bucket: BucketPdf, data: str
   await bucket.file(pdfCaminho).save(pdf, { contentType: 'application/pdf', resumable: false, metadata: { cacheControl: 'private, no-store' } });
 
   await enviarEmail(db, {
-    para: para.join(', '), cc: cc.length ? cc.join(', ') : undefined, responderPara: CONFIG_EMAIL_RESULTADO.emailJrs,
+    para: para.join(', '), cc: cc.length ? cc.join(', ') : undefined, cco: cco.length ? cco.join(', ') : undefined, responderPara: fixos.responderPara,
     assunto, html, texto, nomeRemetente: CONFIG_EMAIL_AGENDA.nomeRemetente,
     anexo: { nome: `IS_AGENDADAS_${dataBrDeIso(data).replace(/\//g, '-')}.pdf`, bytes: pdf },
   });

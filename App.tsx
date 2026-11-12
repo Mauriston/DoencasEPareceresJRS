@@ -43,6 +43,7 @@ import { useIsDesktop } from './hooks/useIsDesktop';
 const paginaLazy = <K extends string>(carregar: () => Promise<Record<K, React.ComponentType<any>>>, nome: K) =>
   lazy(() => carregar().then(m => ({ default: m[nome] })));
 const Perfil = paginaLazy(() => import('./components/Perfil'), 'Perfil');
+const Configuracoes = paginaLazy(() => import('./components/Configuracoes'), 'Configuracoes');
 const DiseaseGuide = paginaLazy(() => import('./components/DiseaseGuide'), 'DiseaseGuide');
 const LawReference = paginaLazy(() => import('./components/LawReference'), 'LawReference');
 const DGPM406Guide = paginaLazy(() => import('./components/DGPM406Guide'), 'DGPM406Guide');
@@ -391,6 +392,8 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
 
       // USUÁRIOS PAGE - Restricted for non-admin
       case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement /> : <AccessDenied pagina="Usuários" />;
+      // Configurações gerais (menu do avatar): só o Admin.
+      case 'configuracoes': return authUser?.perfil === 'admin' ? <Configuracoes /> : <AccessDenied pagina="Configurações" />;
 
       default: return <Home />;
     }

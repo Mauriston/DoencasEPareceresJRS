@@ -11,6 +11,7 @@ import { ChoiceGroup } from '../ui/ChoiceGroup';
 import { estadoDoSlot } from './SeletorHorario';
 import { agendarInspecao, atualizarInspecao, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { sincronizarAgendaIS } from '../../services/agendaGoogleIS';
+import { avisarAgendamento } from '../../services/emailAgendamentoIS';
 import { peritosDoAmp, type PeritoIS } from '../../services/peritosIS';
 import {
   ocupadosDe, duracaoDaIS, peritoAtendeNoTurno, turnoDoSlot, TURNOS, dataBr, dataDeEntrevista, horaDeEntrevista, nomeDiaSemana, dataHoraBr,
@@ -60,6 +61,8 @@ export const TrocarPeritoDialog: React.FC<Props> = ({ inspecao, dataHora, modo =
       const sync = await sincronizarAgendaIS({ ...inspecao, ...novo, status, situacao: 'andamento' });
       const base = modo === 'troca' ? `IS ${inspecao.is}: perito ${perito.usuario}.` : `IS ${inspecao.is} reagendada para ${dataHoraBr(dataHora)} com ${perito.usuario}.`;
       onConcluido(sync.ok ? base : `${base} Mas o Google Agenda não foi atualizado: ${sync.erro}`, sync.ok ? 'success' : 'error');
+      // Nova data/hora (arraste): a página pergunta se envia o e-mail de agendamento. Só trocar o perito não conta.
+      if (dataHora !== inspecao.dataEntrevista) avisarAgendamento({ ...inspecao, status }, dataHora);
     } catch (e: any) {
       setErro(e?.message || 'Não foi possível reagendar.');
       setSalvando(false);

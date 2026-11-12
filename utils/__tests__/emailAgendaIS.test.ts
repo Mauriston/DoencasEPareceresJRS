@@ -76,6 +76,10 @@ describe('montarEmailAgenda', () => {
       expect(h).not.toContain('Não há Inspeções de Saúde agendadas');
     }
     expect(r.html).not.toContain('authuser');
+    // E-mail interno: assinaturas fixas do Supervisor e do Presidente.
+    expect(r.html).toContain('Por ordem de:');
+    expect(r.html).toContain('Alessandro Giorginis Fidelis de Souza');
+    expect(r.html).toContain('Mauriston Renan Martins Silva');
     expect(r.htmlAnexo.match(/<section class="page"/g)).toHaveLength(2);
     // Inspecionado: no e-mail só o nome; no PDF, posto/quadro, NIP e nome.
     expect(r.html).toContain('>CARLOS ANTONIO PEREIRA DA SILVA</span>');

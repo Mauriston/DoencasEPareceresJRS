@@ -31,6 +31,8 @@ export const Breadcrumbs: React.FC<{ className?: string }> = ({ className = '' }
       crumbs.push({ label: subitem.label, to: pathForView(view) });
     } else if (view === 'perfil') {
       crumbs.push({ label: 'Meu perfil', to: '/perfil' });
+    } else if (view === 'configuracoes') {
+      crumbs.push({ label: 'Configurações', to: '/configuracoes' });
     }
     crumbs.push(...extras);
   }

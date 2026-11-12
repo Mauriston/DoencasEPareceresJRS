@@ -20,6 +20,8 @@ export interface RouteDef {
 export const ROUTES: RouteDef[] = [
   { view: 'home', path: '/' },
   { view: 'perfil', path: '/perfil' },
+  // Configurações gerais do app (só Admin; menu do avatar).
+  { view: 'configuracoes', path: '/configuracoes' },
   { view: 'guide', path: '/beneficios/doencas/:doencaId?/:diagnosticoIdx?' },
   { view: 'portaria', path: '/beneficios/portaria' },
   { view: 'concursos', path: '/concursos/indices' },
@@ -82,6 +84,7 @@ const BASE_PATHS: Record<NavItem, string> = {
   splash: '/',
   home: '/',
   perfil: '/perfil',
+  configuracoes: '/configuracoes',
   guide: '/beneficios/doencas',
   portaria: '/beneficios/portaria',
   concursos: '/concursos/indices',

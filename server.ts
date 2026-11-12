@@ -650,6 +650,15 @@ async function startServer() {
   // Resultado da IS ao inspecionado (só IS com TIS assinado; Admin e Secretaria): servidor/email/resultadoIS.ts.
   app.post("/api/email/resultado-is", rotaGoogle("email-resultado-is", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/resultadoIS")).enviarResultadoIS(db, b.isId, b.email, quem.uid)) }), true));
+  // E-mail de agendamento ao inspecionado (Benefícios, Verificações e Términos; Admin e Secretaria): servidor/email/agendamentoIS.ts.
+  app.post("/api/email/agendamento-is", rotaGoogle("email-agendamento-is", ["admin", "user_secretaria"], async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/agendamentoIS")).enviarAgendamentoIS(db, b.isId, b.email, quem.uid)) }), true));
+  // E-mail de faltas às IS dos inspecionados do HNRe (Admin e Secretaria): servidor/email/faltasHNRe.ts.
+  app.post("/api/email/faltas-hnre", rotaGoogle("email-faltas-hnre", ["admin", "user_secretaria"], async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/faltasHNRe")).enviarFaltasHNRe(db, b.isIds, quem.uid)) }), true));
+  // E-mail de candidatos inaptos de concurso à EAMPE (Admin e Secretaria): servidor/email/inaptosConcurso.ts.
+  app.post("/api/email/inaptos-concurso", rotaGoogle("email-inaptos-concurso", ["admin", "user_secretaria"], async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/inaptosConcurso")).enviarInaptosConcurso(db, b.concursoId, b.candidatoIds, quem.uid)) }), true));
   // E-mail "IS AGENDADAS EM dd/mm/aaaa" (servidor/email/agendaIS.ts). Manual: só o Admin escolhe o dia.
   const bucketStorage = async () => {
     const { adminApp } = await getFirebaseAdmin();

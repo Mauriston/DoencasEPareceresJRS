@@ -24,6 +24,7 @@ import { observarConcursos, type ConcursoRecord } from '../services/firestoreCon
 import { observarPareceres, statusEfetivo, type ParecerRecord } from '../services/firestorePareceres';
 import { observarInspecoes, observarBloqueios, type InspecaoRecord } from '../services/firestoreInspecoes';
 import { MiniCalendarioIS } from './inspecoes/MiniCalendarioIS';
+import { CardFaltasHNRe } from './inspecoes/CardFaltasHNRe';
 import { EnviarExamesModal } from './concursos/ExamesCandidato';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
 import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, diasEntre, TODOS_PERITOS, type BloqueioAgenda } from '../utils/inspecoes';
@@ -360,6 +361,9 @@ export const Home: React.FC = () => {
                 )}
               </Secao>
             )}
+
+            {/* Faltas do HNRe ainda não comunicadas à Divisão de Pessoal (só Admin e Secretaria; some sem pendências). */}
+            {podeInspecoes && (perfil === 'admin' || ehSecretaria) && <CardFaltasHNRe inspecoes={inspecoes} Secao={Secao} />}
 
             {podeInspecoes && (
               <Secao id="home-proximas" titulo="Próximas Inspeções" acao={<Link to="/inspecoes" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver inspeções</Link>}>

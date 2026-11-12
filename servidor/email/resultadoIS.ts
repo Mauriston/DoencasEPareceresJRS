@@ -10,21 +10,22 @@ import { ErroContaGoogle } from '../google/contaGoogle';
 import { enviarEmail } from '../google/impressao';
 import { TEMPLATE_RESULTADO_IS } from './templateResultadoIS';
 import { renderizarTemplate, type DadosTemplate } from './template';
+import { assinaturaDe, assinaturaSemSignatario, assinaturaTexto, destinatariosFixos, juntarEmails, type DadosAssinatura } from './comum';
 
 const APP_URL = (process.env.APP_URL || 'https://mauriston.github.io/DoencasEPareceresJRS/').replace(/\/?$/, '/');
 
-/** Textos fixos do e-mail (podem ser trocados por variável de ambiente do Cloud Run). */
+/**
+ * Textos e imagens comuns aos e-mails (podem ser trocados por variável de ambiente do Cloud Run).
+ * Destinatários fixos, Reply-To e assinatura do Presidente vêm de config/emails (servidor/email/comum.ts).
+ */
 export const CONFIG_EMAIL_RESULTADO = {
   nomeRemetente: 'JRS-HNRe',
+  /** Só o texto do rodapé da versão em texto simples (o Reply-To vem da configuração). */
   emailJrs: process.env.EMAIL_JRS || 'hnre.jrs@marinha.mil.br',
   bannerUrl: process.env.EMAIL_BANNER_URL || 'https://i.imgur.com/Btu1CAG.png',
   logoRodapeUrl: process.env.EMAIL_LOGO_RODAPE_URL || `${APP_URL}email/logo-marinha-fundo-claro.png`,
   instanciaRecurso: 'Junta Superior Distrital (JSD/COM3ºDN)',
   prazoRecursoDias: 45,
-  supervisorNome: process.env.JRS_SUPERVISOR_NOME || 'Alessandro Giorginis Fidelis de Souza',
-  supervisorPosto: process.env.JRS_SUPERVISOR_POSTO || 'Suboficial-RM1-EF',
-  presidenteNome: process.env.JRS_PRESIDENTE_NOME || 'Mauriston Renan Martins Silva',
-  presidentePosto: process.env.JRS_PRESIDENTE_POSTO || 'Capitão-Tenente (Md)',
 };
 
 export { renderizarTemplate, type DadosTemplate } from './template';
@@ -61,7 +62,7 @@ export interface ISParaEmail {
 }
 
 /** Monta assunto, HTML e texto simples do e-mail (sem enviar). Exportada para os testes. */
-export const montarEmailResultado = (is: ISParaEmail, om?: string) => {
+export const montarEmailResultado = (is: ISParaEmail, om?: string, assinatura: DadosAssinatura = assinaturaSemSignatario()) => {
   const c = CONFIG_EMAIL_RESULTADO;
   const inspecionado = [String(is.inspecionado || '').trim(), om ? `(${om})` : ''].filter(Boolean).join(' ');
   const finalidade = String(is.finalidade || '').trim();
@@ -79,11 +80,7 @@ export const montarEmailResultado = (is: ISParaEmail, om?: string) => {
     restricoes: restricoes.map(item => ({ item })),
     instancia_recurso: c.instanciaRecurso,
     prazo_recurso_dias: c.prazoRecursoDias,
-    mostrar_supervisor: true,
-    supervisor_nome: c.supervisorNome,
-    supervisor_posto: c.supervisorPosto,
-    presidente_nome: c.presidenteNome,
-    presidente_posto: c.presidentePosto,
+    ...assinatura,
     banner_url: c.bannerUrl,
     logo_rodape_url: c.logoRodapeUrl,
   };
@@ -106,9 +103,7 @@ export const montarEmailResultado = (is: ISParaEmail, om?: string) => {
     '- Orientações: https://www.marinha.mil.br/cpmm/sites/www.marinha.mil.br.cpmm/files/arquivo/orientacoes%20carta%20de%20servico%20cpmm.pdf',
     '- Site oficial do CPMM: https://www.marinha.mil.br/cpmm/carta-usuario-cpmm',
     'E-mail para envio do requerimento: cpmm.secom@marinha.mil.br · Telefone do CPMM: (21) 2126-5398', '',
-    'Respeitosamente,', '',
-    'Por ordem de:', c.supervisorNome, c.supervisorPosto, 'Supervisor', '',
-    c.presidenteNome, c.presidentePosto, 'Presidente', '',
+    assinaturaTexto(assinatura), '',
     'Hospital Naval de Recife - Junta Regular de Saúde',
     `(81) 3036-9073 / ${c.emailJrs}`,
     'Avenida Cruz Cabugá 1200, Santo Amaro, Recife/PE',
@@ -146,9 +141,13 @@ export const enviarResultadoIS = async (db: Firestore, isIdBruto: unknown, email
   if (!para) throw new ErroContaGoogle('falha', 'O inspecionado não tem e-mail cadastrado. Informe o e-mail.');
   if (!emailValido(para)) throw new ErroContaGoogle('falha', 'E-mail do inspecionado inválido.');
 
-  const { assunto, html, texto } = montarEmailResultado(is, militar?.om);
+  const fixos = await destinatariosFixos(db, 'resultadoIS');
+  const { assunto, html, texto } = montarEmailResultado(is, militar?.om, await assinaturaDe(db, uid, fixos.config));
+  const paraTodos = juntarEmails([para, fixos.para]);
+  const cc = juntarEmails([fixos.cc], paraTodos);
+  const cco = juntarEmails([fixos.cco], [...paraTodos, ...cc]);
   await enviarEmail(db, {
-    para, cco: CONFIG_EMAIL_RESULTADO.emailJrs, responderPara: CONFIG_EMAIL_RESULTADO.emailJrs,
+    para: paraTodos.join(', '), cc: cc.length ? cc.join(', ') : undefined, cco: cco.length ? cco.join(', ') : undefined, responderPara: fixos.responderPara,
     assunto, html, texto, nomeRemetente: CONFIG_EMAIL_RESULTADO.nomeRemetente,
   });
 
