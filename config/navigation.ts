@@ -79,7 +79,7 @@ export const getNavCategories = (
     });
   }
 
-  // Ajuda: "Sobre o app" (matriz de permissões; padrão: todos menos user_medicos_geral).
+  // Ajuda: "Sobre o app" (matriz de permissões; começa só para o Admin).
   const sobre = pageMap.get('sobre')!;
   if (canAccessPage('sobre', perfil)) {
     categories.push({

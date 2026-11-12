@@ -24,7 +24,7 @@ export const ROUTES: RouteDef[] = [
   { view: 'configuracoes', path: '/configuracoes' },
   // Férias e afastamentos (Admin, médicos JRS/MPI e Secretaria; menu Administração).
   { view: 'ferias', path: '/ferias' },
-  // Sobre o app: principais funcionalidades por área (todos os perfis, menos user_medicos_geral, por padrão).
+  // Sobre o app: principais funcionalidades por área (começa só para o Admin; liberada por perfil na matriz).
   { view: 'sobre', path: '/sobre' },
   { view: 'guide', path: '/beneficios/doencas/:doencaId?/:diagnosticoIdx?' },
   { view: 'portaria', path: '/beneficios/portaria' },

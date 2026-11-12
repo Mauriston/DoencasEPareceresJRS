@@ -1,6 +1,6 @@
 // Ficheiro: components/Sobre.tsx
-// Página "Sobre o app" (menu lateral → Ajuda): as principais funcionalidades do app, por área, em cards. Por padrão
-// para todos os perfis menos user_medicos_geral (matriz de permissões, página 'sobre'). O texto fica em
+// Página "Sobre o app" (menu lateral → Ajuda): as principais funcionalidades do app, por área, em cards. Começa
+// oculta (só o Admin vê); o Admin libera por perfil na matriz de permissões (página 'sobre'). O texto fica em
 // config/sobre.ts; o botão "Abrir" de cada área só aparece para quem acessa a página correspondente.
 import React from 'react';
 import { Link } from 'react-router-dom';
