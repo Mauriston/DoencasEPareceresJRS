@@ -1,5 +1,6 @@
 // Ficheiro: components/Configuracoes.tsx
-// Configurações gerais do app (só Admin; menu do avatar → Configurações). Ajustes que antes exigiam editar o
+// Configurações gerais do app (só Admin; menu do avatar → Configurações). Seções: e-mails automáticos, turnos dos
+// peritos na agenda das IS (config/agendaIS; components/configuracoes/TurnosPeritos.tsx) e testes de e-mail. Ajustes que antes exigiam editar o
 // repositório e que valem para todos os perfis. Por ora: os e-mails automáticos (config/emails) — destinatários
 // fixos PARA / CC / CCO de cada e-mail, o "Responder para" de todos, as assinaturas do Presidente e do Supervisor e a
 // saudações dos e-mails de faltas e do NAC; e os testes de e-mail (dados fictícios, só aos destinatários de teste). O servidor lê
@@ -11,6 +12,7 @@ import { Field } from './ui/Field';
 import { Toast } from './ui/Toast';
 import { NavContext } from '../context/NavContext';
 import { ListaEmails } from './configuracoes/ListaEmails';
+import { TurnosPeritos } from './configuracoes/TurnosPeritos';
 import { observarConfigEmails, salvarConfigEmails } from '../services/configEmails';
 import { enviarEmailTeste } from '../services/emailTeste';
 import { CONFIG_EMAILS_PADRAO, TIPOS_EMAIL, type ConfigEmails, type DestinatariosEmail, type TipoEmail } from '../config/emails';
@@ -168,6 +170,12 @@ export const Configuracoes: React.FC = () => {
                 </Cartao>
               ))}
             </div>
+          </div>
+
+          <div>
+            <h2 className="text-h2 font-bold text-navy mb-1">Agenda das IS — turnos dos peritos</h2>
+            <p className="text-sm text-ink-3 mb-4">Horários de atendimento de cada médico perito (antes no botão "Horários" de Inspeções de Saúde). Salvos à parte, em "Salvar turnos".</p>
+            <TurnosPeritos onAviso={avisar} />
           </div>
 
           <div>

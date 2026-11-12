@@ -35,7 +35,6 @@ import { BotaoEnviarEmail } from './inspecoes/BotaoEnviarEmail';
 import { emailDoInspecionado } from '../services/emailResultadoIS';
 import { CalendarioIS } from './inspecoes/CalendarioIS';
 import { BloqueiosDialog } from './inspecoes/BloqueiosDialog';
-import { AgendaConfigDialog } from './inspecoes/AgendaConfigDialog';
 import { NovoParecerForm } from './pareceres/NovoParecerForm';
 import { useNav } from '../context/NavContext';
 import { canUseFeature, canAccessPage } from '../config/permissions';
@@ -164,7 +163,6 @@ export const Inspecoes: React.FC = () => {
   const [confirmando, setConfirmando] = useState<{ tipo: 'falta' | 'cancelar'; is: InspecaoRecord } | null>(null);
   const [apagando, setApagando] = useState<InspecaoRecord | null>(null);
   const [bloqueiosAberto, setBloqueiosAberto] = useState(false);
-  const [turnosAberto, setTurnosAberto] = useState(false);
   const [emailAgendaAberto, setEmailAgendaAberto] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
 
@@ -381,7 +379,6 @@ export const Inspecoes: React.FC = () => {
           title="Inspeções de Saúde"
           actions={(
             <>
-              {ehAdmin && <IconButton variant="secondary" icon="tune" label="Horários" onClick={() => setTurnosAberto(true)} />}
               {podeBloquear && <IconButton variant="secondary" icon="block" label="Bloqueios" onClick={() => setBloqueiosAberto(true)} />}
               {podeCadastrar && <IconButton variant="secondary" icon="photo_camera" label="IS por foto" onClick={() => setPorFoto(true)} />}
               {(ehAdmin || ehSecretaria) && (
@@ -598,12 +595,6 @@ export const Inspecoes: React.FC = () => {
           hoje={hoje} inspecoes={lista ?? []} diasConcursos={diasConcursos}
           onClose={() => setEmailAgendaAberto(false)}
           onEnviado={(msg, tom) => { setEmailAgendaAberto(false); avisar(msg, tom); }}
-        />
-      )}
-      {turnosAberto && ehAdmin && (
-        <AgendaConfigDialog
-          peritos={peritosFiltraveis} config={config}
-          onClose={() => setTurnosAberto(false)} onSalvo={() => { setTurnosAberto(false); avisar('Turnos dos peritos salvos.'); }}
         />
       )}
     </div>
