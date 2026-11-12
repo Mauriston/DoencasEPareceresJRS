@@ -228,7 +228,8 @@ export const Militares: React.FC = () => {
                       {selecionavel && <label className="shrink-0 -ml-2 w-11 h-11 flex items-center justify-center"><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy" /></label>}
                       <button type="button" onClick={() => setDetalhe(m)} className="min-w-0 flex-1 text-left" aria-label={`Abrir detalhes de ${m.nome}`}>
                         <span className="block text-sm font-bold text-navy break-words">{m.nome}</span>
-                        <span className="block text-xs text-ink-3">{m.pgq} · {formatNip(m.nip)}</span>
+                        <span className="block text-xs text-ink-3">{formatNip(m.nip)} · {m.pgq}</span>
+                        {soHnre && m.servico_label && <span className="block text-xs text-ink-3">{m.servico_label}</span>}
                         {tipoDoInspecionado(m) === 'dependente' && m.titularNome && <span className="block text-xs text-ink-3">Titular: {m.titularNome}</span>}
                       </button>
                       {ehAdmin ? (
@@ -250,13 +251,14 @@ export const Militares: React.FC = () => {
                       {selecionavel && (<th scope="col" className="pl-4 pr-0 py-3 w-10">
                         <input type="checkbox" checked={todosMarcados} onChange={alternarTodos} aria-label={`Selecionar todos os ${filtrada.length} militares da lista`} title="Selecionar todos da lista" className="w-5 h-5 accent-navy align-middle" />
                       </th>)}
+                      <th scope="col" className="px-4 py-3 text-left font-semibold">NIP</th>
+                      <th scope="col" aria-sort={ariaSort('pgq')} className="px-4 py-3 text-left font-semibold">
+                        <button type="button" onClick={() => ordenarPor('pgq')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">Posto/Graduação<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('pgq')}</span></button>
+                      </th>
                       <th scope="col" aria-sort={ariaSort('nome')} className="px-4 py-3 text-left font-semibold">
                         <button type="button" onClick={() => ordenarPor('nome')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">Nome<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('nome')}</span></button>
                       </th>
-                                            <th scope="col" aria-sort={ariaSort('pgq')} className="px-4 py-3 text-left font-semibold">
-                        <button type="button" onClick={() => ordenarPor('pgq')} className="inline-flex items-center gap-1 min-h-[44px] font-semibold">P/G/Q<span className="material-symbols-outlined text-[16px]" aria-hidden="true">{iconeOrdem('pgq')}</span></button>
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-left font-semibold">NIP</th>
+                      {soHnre && <th scope="col" className="px-4 py-3 text-left font-semibold">Serviço HNRe</th>}
                       <th scope="col" className="px-4 py-3 text-left font-semibold">Status</th>
                       <th scope="col" className="pr-2 py-3 w-14 text-right font-semibold"><span className="sr-only">Ações</span></th>
                     </tr>
@@ -265,9 +267,10 @@ export const Militares: React.FC = () => {
                     {visiveis.map(m => (
                       <tr key={m.id} onClick={() => setDetalhe(m)} className={`cursor-pointer hover:bg-thead transition-colors ${selecionados.has(m.id) ? 'bg-thead' : ''} ${m.ativo ? '' : 'text-ink-3'}`}>
                         {selecionavel && <td className="pl-4 pr-0 py-2" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy align-middle" /></td>}
-                        <td className="px-4 py-2 font-semibold text-navy"><button type="button" onClick={e => { e.stopPropagation(); setDetalhe(m); }} className="text-left" aria-label={`Abrir detalhes de ${m.nome}`}>{m.nome}</button>{tipoDoInspecionado(m) === 'dependente' && m.titularNome && <span className="block text-xs font-normal text-ink-3">Titular: {m.titularNome}</span>}</td>
-                        <td className="px-4 py-2 whitespace-nowrap">{m.pgq}</td>
                         <td className="px-4 py-2 font-mono whitespace-nowrap">{formatNip(m.nip)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap">{m.pgq}</td>
+                        <td className="px-4 py-2 font-semibold text-navy"><button type="button" onClick={e => { e.stopPropagation(); setDetalhe(m); }} className="text-left" aria-label={`Abrir detalhes de ${m.nome}`}>{m.nome}</button>{tipoDoInspecionado(m) === 'dependente' && m.titularNome && <span className="block text-xs font-normal text-ink-3">Titular: {m.titularNome}</span>}</td>
+                        {soHnre && <td className="px-4 py-2 text-ink-2">{m.servico_label || <span className="text-ink-4">—</span>}</td>}
                         <td className="px-4 py-2" onClick={e => e.stopPropagation()}>
                           {ehAdmin ? (
                             <button type="button" onClick={() => alternarAtivo(m)} title={m.ativo ? 'Clique para inativar' : 'Clique para ativar'} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="min-h-[44px] flex items-center">
