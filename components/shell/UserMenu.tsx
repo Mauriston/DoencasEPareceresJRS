@@ -1,5 +1,5 @@
 // Ficheiro: components/shell/UserMenu.tsx
-// Avatar, rótulos de perfil e menu do usuário (Perfil / Logout), extraídos do
+// Avatar, rótulos de perfil e menu do usuário (Perfil / Notificações / Configurações — só Admin — / Logout), extraídos do
 // antigo Header para serem usados pela topbar, pela sidebar mobile e pelos
 // modais que listam usuários.
 import React, { useContext, useState } from 'react';
@@ -99,6 +99,22 @@ const VisualizarComo: React.FC<{ atual: string; onEscolher: (perfil: string | nu
   );
 };
 
+/** Item "Configurações" (só Admin): navega pelo NavContext, então vale para a topbar e para a sidebar. */
+const ItemConfiguracoes: React.FC = () => {
+  const nav = useContext(NavContext);
+  if (nav?.authUser?.perfil !== 'admin') return null;
+  return (
+    <button
+      type="button" role="menuitem"
+      onClick={() => { nav.setIsAvatarMenuOpen(false); nav.setIsMobileMenuOpen(false); nav.setCurrentView('configuracoes'); }}
+      className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-ink hover:bg-thead flex items-center gap-2.5 transition-colors"
+    >
+      <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">settings</span>
+      <span>Configurações</span>
+    </button>
+  );
+};
+
 export const UserDropdownContent: React.FC<UserDropdownContentProps> = ({ authUser, onPerfilClick, onLogoutClick, naoLidas = 0, onNotificacoesClick, perfilReal, verComo, onVerComo }) => (
   <div role="menu" className="w-60 bg-white text-ink rounded-xl shadow-lg border border-line py-1.5 animate-fade-in divide-y divide-line">
     <div className="px-4 py-2.5 flex items-center gap-2.5">
@@ -120,6 +136,7 @@ export const UserDropdownContent: React.FC<UserDropdownContentProps> = ({ authUs
           {naoLidas > 0 && <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-wine text-white text-xs font-bold leading-5 text-center">{naoLidas > 99 ? '99+' : naoLidas}</span>}
         </button>
       )}
+      <ItemConfiguracoes />
       {perfilReal === 'admin' && onVerComo && <VisualizarComo atual={verComo || 'admin'} onEscolher={onVerComo} />}
       <button type="button" role="menuitem" onClick={onLogoutClick} className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-wine hover:bg-wine/10 flex items-center gap-2.5 transition-colors">
         <span className="material-symbols-outlined text-[20px]" aria-hidden="true">logout</span>
