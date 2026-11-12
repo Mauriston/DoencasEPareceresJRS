@@ -584,13 +584,13 @@ async function startServer() {
   // Sem a conta autorizada (ou sem o cliente OAuth configurado), as rotas respondem 503 com
   // codigo "google_indisponivel" e o app usa o Apps Script, como antes (services/googleServidor.ts).
   const urlServidor = (req: express.Request) => `https://${req.get("host")}`;
-  const rotaGoogle = (rota: string, perfis: string[], acao: (db: import("firebase-admin/firestore").Firestore, b: any) => Promise<unknown>, sensivel = false) =>
+  const rotaGoogle = (rota: string, perfis: string[], acao: (db: import("firebase-admin/firestore").Firestore, b: any, quem: { uid: string; perfil: string }) => Promise<unknown>, sensivel = false) =>
     async (req: express.Request, res: express.Response) => {
       const quem = await exigirUsuario(req, res, rota, perfis);
       if (!quem) return;
       try {
         const { adminDb } = await getFirebaseAdmin();
-        const r = await acao(adminDb, req.body || {});
+        const r = await acao(adminDb, req.body || {}, quem);
         // E-mails de impressão: operação sensível (como ACOES_SENSIVEIS no Apps Script).
         if (sensivel) void auditarServidor("operacao_sensivel", rota, quem.uid);
         res.json({ success: true, ...(r && typeof r === "object" ? r : {}) });
@@ -647,6 +647,9 @@ async function startServer() {
     await (await import("./servidor/google/impressao")).enviarSolicitacaoConcursoImpressao(db, b);
     return { enviado: true };
   }, true));
+  // Resultado da IS ao inspecionado (só IS com TIS assinado; Admin e Secretaria): servidor/email/resultadoIS.ts.
+  app.post("/api/email/resultado-is", rotaGoogle("email-resultado-is", ["admin", "user_secretaria"], async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/resultadoIS")).enviarResultadoIS(db, b.isId, b.email, quem.uid)) }), true));
   app.post("/api/agenda/evento-is", rotaGoogle("agenda-evento-is", PERFIS_EQUIPE, async (db, b) =>
     (await import("./servidor/google/agenda")).sincronizarEventoIS(db, b)));
   app.post("/api/agenda/evento-bloqueio", rotaGoogle("agenda-evento-bloqueio", PERFIS_EQUIPE, async (db, b) =>

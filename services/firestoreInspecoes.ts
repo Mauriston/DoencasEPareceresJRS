@@ -61,6 +61,10 @@ export interface InspecaoDoc {
   eventoAgendaId?: string;
   /** Falso quando a última sincronização com o Google Agenda falhou. */
   agendaSincronizada?: boolean;
+  /** E-mail do resultado ao inspecionado (gravado pelo servidor — servidor/email/resultadoIS.ts). */
+  emailResultadoPara?: string;
+  emailResultadoEnviadoEm?: Timestamp | null;
+  emailResultadoEnviadoPor?: string;
   criadoPor: string;
   criadoEm: Timestamp | null;
   atualizadoEm?: Timestamp | null;

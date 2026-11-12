@@ -55,7 +55,13 @@ const baixarDoDrive = async (db: Firestore, fileId: string): Promise<{ nome: str
 const cabecalhoUtf8 = (t: string) => `=?UTF-8?B?${Buffer.from(t, 'utf8').toString('base64')}?=`;
 const base64Linhas = (b: Buffer) => b.toString('base64').replace(/.{76}/g, '$&\r\n');
 
-export interface Email { para: string; cc?: string; assunto: string; texto: string; html: string; nomeRemetente: string; anexo?: { nome: string; bytes: Buffer } }
+export interface Email {
+  para: string; cc?: string;
+  /** Cópia oculta (Bcc): a Gmail API entrega e tira o cabeçalho da mensagem. */
+  cco?: string;
+  /** "Responder para" (Reply-To): qualquer endereço, sem verificação. */
+  responderPara?: string;
+  assunto: string; texto: string; html: string; nomeRemetente: string; anexo?: { nome: string; bytes: Buffer } }
 
 /** Monta a mensagem MIME (texto + HTML + PDF anexo). Exportada para os testes. */
 export const montarMime = (e: Email, contaRemetente: string): string => {
@@ -65,6 +71,8 @@ export const montarMime = (e: Email, contaRemetente: string): string => {
     `From: ${cabecalhoUtf8(e.nomeRemetente)} <${contaRemetente}>`,
     `To: ${e.para}`,
     ...(e.cc ? [`Cc: ${e.cc}`] : []),
+    ...(e.cco ? [`Bcc: ${e.cco}`] : []),
+    ...(e.responderPara ? [`Reply-To: ${e.responderPara}`] : []),
     `Subject: ${cabecalhoUtf8(e.assunto)}`,
     'MIME-Version: 1.0',
     `Content-Type: multipart/mixed; boundary="${limite}"`,
