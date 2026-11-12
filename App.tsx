@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useReducer, useRef, useMemo, lazy, Suspense } from 'react';
 import { Navigate, useLocation, useNavigate, useNavigationType, useRoutes } from 'react-router-dom';
 import { Login } from './components/Login';
-import { chaveAcessos, somarAcesso } from './utils/acessoRapido';
+import { registrarAcessoPagina } from './services/acessoRapido';
 import { hojeISO as hojeISOAcesso } from './utils/inspecoes';
 import { Home } from './components/Home';
 import { Sidebar } from './components/shell/Sidebar';
@@ -352,14 +352,11 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
     if (navigationType !== 'POP') mainRef.current?.focus({ preventScroll: true });
   }, [location.pathname]);
 
-  // Acesso rápido da Início: conta os acessos às páginas (por dia, neste aparelho) para a renovação semanal.
+  // Acesso rápido da Início: conta os acessos às páginas (por dia, no Firestore, por usuário) para a renovação
+  // quinzenal. Falha silenciosa: sem a contagem, o card fica com a escolha do usuário.
   useEffect(() => {
     if (!authUser?.uid || currentView === 'home') return;
-    try {
-      const chave = chaveAcessos(authUser.uid);
-      const atual = JSON.parse(localStorage.getItem(chave) || '{}');
-      localStorage.setItem(chave, JSON.stringify(somarAcesso(atual, currentView, hojeISOAcesso())));
-    } catch { /* sem localStorage: o card fica com a escolha do usuário */ }
+    registrarAcessoPagina(authUser.uid, currentView, hojeISOAcesso()).catch(() => { /* silencioso */ });
   }, [currentView, authUser?.uid]);
 
   // F31: a topbar ganha sombra quando o conteúdo rola por baixo dela

@@ -1,7 +1,7 @@
 // Card "Agenda de inspeções" (utils/agendaHome.ts) e "Acesso rápido" (utils/acessoRapido.ts) da Início.
 import { describe, it, expect } from 'vitest';
 import { eventosDoDia, marcasDoDia, type ISAgenda } from '../agendaHome';
-import { resolverAcessoRapido, somarAcesso, contarAcessos, lerEscolha } from '../acessoRapido';
+import { resolverAcessoRapido, contarAcessos, diasForaDaJanela, inicioDaQuinzena, lerEscolha } from '../acessoRapido';
 
 const is = (id: string, hora: string, extra: Partial<ISAgenda> = {}): ISAgenda => ({
   id, is: Number(id), inspecionado: `CT (Md) 12.3456.78 FULANO ${id}`, dataEntrevista: `2026-11-12T${hora}`, status: 'agendada',
@@ -56,15 +56,19 @@ describe('acesso rápido', () => {
     expect(resolverAcessoRapido({ salvo: null, disponiveis: ['inspecoes', 'guide'] as any, contagem: {}, hoje: '2026-11-12', padrao }).ids).toEqual(['guide']);
   });
 
-  it('renova uma vez por semana pelas mais acessadas (mais de 6 páginas)', () => {
+  it('renova uma vez por quinzena pelas mais acessadas (mais de 6 páginas)', () => {
     const contagem = { escala: 9, ferias: 5, inspecoes: 50, guide: 1 } as any;
     const r = resolverAcessoRapido({ salvo: { ids: padrao, semana: '2026-11-02' }, disponiveis: muitas, contagem, hoje: '2026-11-12', padrao });
     expect(r.ids.slice(0, 3)).toEqual(['escala', 'ferias', 'guide']);
     expect(r.ids).toHaveLength(6);
     expect(r.salvar?.semana).toBe('2026-11-09');
-    // Na mesma semana (ou depois de editar), vale a escolha guardada.
+    // Na mesma quinzena (ou depois de editar), vale a escolha guardada; também na 2ª semana da quinzena.
     const r2 = resolverAcessoRapido({ salvo: { ids: ['pareceres'] as any, semana: '2026-11-09' }, disponiveis: muitas, contagem, hoje: '2026-11-12', padrao });
     expect(r2).toEqual({ ids: ['pareceres'] });
+    const r3 = resolverAcessoRapido({ salvo: { ids: ['pareceres'] as any, semana: '2026-11-09' }, disponiveis: muitas, contagem, hoje: '2026-11-20', padrao });
+    expect(r3).toEqual({ ids: ['pareceres'] });
+    const r4 = resolverAcessoRapido({ salvo: { ids: ['pareceres'] as any, semana: '2026-11-09' }, disponiveis: muitas, contagem, hoje: '2026-11-23', padrao });
+    expect(r4.salvar?.semana).toBe('2026-11-23');
   });
 
   it('com 6 páginas ou menos não renova', () => {
@@ -74,12 +78,18 @@ describe('acesso rápido', () => {
     expect(r.ids).toEqual(['guide', 'exames', 'pareceres']);
   });
 
+  it('quinzenas de 14 dias começando na segunda-feira', () => {
+    expect(inicioDaQuinzena('2026-11-09')).toBe('2026-11-09');
+    expect(inicioDaQuinzena('2026-11-22')).toBe('2026-11-09');
+    expect(inicioDaQuinzena('2026-11-23')).toBe('2026-11-23');
+    expect(inicioDaQuinzena('2026-01-05')).toBe('2026-01-05');
+    expect(inicioDaQuinzena('2025-12-31')).toBe('2025-12-22');
+  });
+
   it('conta os acessos dos últimos 28 dias e lê o formato antigo', () => {
-    let a = somarAcesso({ '2026-10-01': { guide: 7 } }, 'pareceres', '2026-11-12');
-    a = somarAcesso(a, 'pareceres', '2026-11-12');
-    a = somarAcesso(a, 'inspecoes', '2026-11-12');
-    expect(a['2026-10-01']).toBeUndefined();
-    expect(contarAcessos(a, '2026-11-12')).toEqual({ pareceres: 2 });
+    const a = { '2026-10-01': { guide: 7 }, '2026-11-12': { pareceres: 2 }, '2026-10-20': { guide: 1 } } as any;
+    expect(contarAcessos(a, '2026-11-12')).toEqual({ pareceres: 2, guide: 1 });
+    expect(diasForaDaJanela(a, '2026-11-12')).toEqual(['2026-10-01']);
     expect(lerEscolha('["guide"]')).toEqual({ ids: ['guide'], semana: '' });
     expect(lerEscolha('lixo')).toBeNull();
   });

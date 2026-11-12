@@ -26,12 +26,13 @@ import { observarPareceres, statusEfetivo, type ParecerRecord } from '../service
 import { observarInspecoes, type InspecaoRecord } from '../services/firestoreInspecoes';
 import { observarAfastamentos, type AfastamentoRecord } from '../services/afastamentos';
 import { podeVerFerias, statusEfetivo as statusDoAfastamento } from '../utils/afastamentos';
-import { MAX_RAPIDO, FORA_DO_RAPIDO, chaveEscolha, chaveAcessos, lerEscolha, contarAcessos, resolverAcessoRapido, type EscolhaRapido } from '../utils/acessoRapido';
+import { MAX_RAPIDO, FORA_DO_RAPIDO, chaveEscolhaLocal, lerEscolha, contarAcessos, diasForaDaJanela, inicioDaQuinzena, resolverAcessoRapido, type EscolhaRapido } from '../utils/acessoRapido';
+import { observarAcessoRapido, salvarEscolhaRapido, podarAcessos, type DocAcessoRapido } from '../services/acessoRapido';
 import { AgendaInspecoesCard } from './home/AgendaInspecoesCard';
 import { CardFaltasHNRe } from './inspecoes/CardFaltasHNRe';
 import { EnviarExamesModal } from './concursos/ExamesCandidato';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
-import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, inicioDaSemana } from '../utils/inspecoes';
+import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr } from '../utils/inspecoes';
 import { observarPericiasMenores, statusPericia, dataBR, type PericiaMenorRecord } from '../services/firestorePericiasMenores';
 import { extrairNomeInspecionado } from '../utils/format';
 import { useIsDesktop } from '../hooks/useIsDesktop';
@@ -292,31 +293,37 @@ export const Home: React.FC = () => {
     });
   }
 
-  // Acesso rápido: escolha do usuário (até 6, guardada no aparelho) ou o padrão do perfil; para quem acessa mais de
-  // 6 páginas, renovado toda semana pelas mais acessadas (utils/acessoRapido.ts). Inspeções de Saúde nunca entra.
-  const chaveRapido = chaveEscolha(authUser?.uid ?? '');
-  const [escolhidas, setEscolhidas] = useState<EscolhaRapido | null>(() => {
-    try { return lerEscolha(localStorage.getItem(chaveRapido)); } catch { return null; }
-  });
+  // Acesso rápido: escolha do usuário ou o padrão do perfil; para quem acessa mais de 6 páginas, renovado a cada
+  // quinzena pelas mais acessadas (utils/acessoRapido.ts). Escolha e acessos no Firestore, por usuário
+  // (services/acessoRapido.ts). Inspeções de Saúde nunca entra.
+  const uid = authUser?.uid ?? '';
+  const [docRapido, setDocRapido] = useState<DocAcessoRapido | null>(null);
+  useEffect(() => (uid ? observarAcessoRapido(uid, setDocRapido, () => setDocRapido({ escolha: null, acessos: {} })) : undefined), [uid]);
   const [editandoRapido, setEditandoRapido] = useState(false);
   const [rascunho, setRascunho] = useState<NavItem[]>([]);
   const mapa = new Map(paginas.map(p => [p.id, p]));
+  const idsPaginas = paginas.map(p => p.id).join(',');
   const resolvidoRapido = useMemo(() => {
-    let contagem = {};
-    try { contagem = contarAcessos(JSON.parse(localStorage.getItem(chaveAcessos(authUser?.uid ?? '')) || '{}'), hoje); } catch { /* sem contagem */ }
-    return resolverAcessoRapido({ salvo: escolhidas, disponiveis: paginas.map(p => p.id), contagem, hoje, padrao: PADRAO_RAPIDO });
-  }, [escolhidas, paginas.map(p => p.id).join(','), hoje, authUser?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Renovação da semana: guarda a nova escolha (até a próxima segunda-feira ou a próxima edição).
+    if (!docRapido) return null;
+    // Primeira vez no Firestore: aproveita a escolha antiga guardada neste aparelho.
+    let salvo = docRapido.escolha;
+    if (!salvo) { try { salvo = lerEscolha(localStorage.getItem(chaveEscolhaLocal(uid))); } catch { /* sem localStorage */ } }
+    return resolverAcessoRapido({ salvo, disponiveis: paginas.map(p => p.id), contagem: contarAcessos(docRapido.acessos, hoje), hoje, padrao: PADRAO_RAPIDO });
+  }, [docRapido, idsPaginas, hoje, uid]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Renovação da quinzena: guarda a nova escolha; e apaga os dias de acesso fora da janela de 28 dias.
   useEffect(() => {
-    if (!resolvidoRapido.salvar) return;
-    try { localStorage.setItem(chaveRapido, JSON.stringify(resolvidoRapido.salvar)); } catch { /* sem localStorage */ }
-    setEscolhidas(resolvidoRapido.salvar);
-  }, [resolvidoRapido.salvar, chaveRapido]);
-  const rapido = resolvidoRapido.ids.filter(id => mapa.has(id)).map(id => mapa.get(id)!);
+    if (!uid || !resolvidoRapido?.salvar) return;
+    salvarEscolhaRapido(uid, resolvidoRapido.salvar).catch(() => { /* tenta de novo na próxima abertura */ });
+  }, [uid, resolvidoRapido?.salvar?.semana, resolvidoRapido?.salvar?.ids.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!uid || !docRapido) return;
+    podarAcessos(uid, diasForaDaJanela(docRapido.acessos, hoje)).catch(() => { /* silencioso */ });
+  }, [uid, docRapido, hoje]);
+  const rapido = (resolvidoRapido?.ids ?? []).filter(id => mapa.has(id)).map(id => mapa.get(id)!);
   const salvarRapido = () => {
-    const escolha: EscolhaRapido = { ids: rascunho, semana: inicioDaSemana(hoje) };
-    setEscolhidas(escolha);
-    try { localStorage.setItem(chaveRapido, JSON.stringify(escolha)); } catch { /* sem localStorage */ }
+    const escolha: EscolhaRapido = { ids: rascunho, semana: inicioDaQuinzena(hoje) };
+    setDocRapido(d => (d ? { ...d, escolha } : d));
+    salvarEscolhaRapido(uid, escolha).catch(() => { /* a escolha volta ao recarregar */ });
     setEditandoRapido(false);
   };
   const renovaRapido = paginas.filter(p => !FORA_DO_RAPIDO.includes(p.id)).length > MAX_RAPIDO;
@@ -580,8 +587,8 @@ export const Home: React.FC = () => {
           footer={<><Button variant="secondary" onClick={() => setEditandoRapido(false)}>Cancelar</Button><Button onClick={salvarRapido}>Salvar</Button></>}
         >
           <p className="text-ink-3 mb-3">
-            Escolha até {MAX_RAPIDO} páginas. A escolha fica guardada neste aparelho.
-            {renovaRapido && ' Toda segunda-feira o card é renovado com as páginas que você mais acessou nas últimas 4 semanas.'}
+            Escolha até {MAX_RAPIDO} páginas. A escolha fica guardada na sua conta.
+            {renovaRapido && ' A cada 15 dias o card é renovado com as páginas que você mais acessou nas últimas 4 semanas.'}
           </p>
           <ul className="space-y-1" role="group" aria-label="Páginas do acesso rápido">
             {paginas.map(p => {

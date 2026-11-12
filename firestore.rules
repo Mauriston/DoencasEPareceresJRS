@@ -315,6 +315,13 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
+    // Acesso rápido da Início (utils/acessoRapido.ts, services/acessoRapido.ts): a escolha do card e a contagem
+    // de acessos às páginas dos últimos 28 dias, por usuário (acompanha o usuário em qualquer aparelho). Cada
+    // usuário só lê e grava o PRÓPRIO documento.
+    match /acessoRapido/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
     // ---------------------------------------------------------------------
     // Permissões por funcionalidade (matriz editada pelo Admin em Usuários,
     // documento config/permissoes). As regras leem a MESMA matriz da tela:

@@ -9,7 +9,6 @@
 // Regras dos eventos em utils/agendaHome.ts.
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { StatusTag } from '../ui/StatusTag';
 import { controlClass } from '../ui/Field';
 import { concursoPath } from '../../config/routes';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
@@ -39,7 +38,6 @@ const CartaoEvento: React.FC<{ e: EventoAgenda; to?: string }> = ({ e, to }) => 
         <span className="text-sm font-bold text-navy truncate">{e.titulo}</span>
       </span>
       <span className="flex items-center gap-3 min-w-0 text-xs text-ink-3">
-        <StatusTag tone={e.tag.tom} className="shrink-0">{e.tag.rotulo}</StatusTag>
         <span className="inline-flex items-center gap-1 shrink-0 tabular-nums">
           <span className="material-symbols-outlined text-[16px]" aria-hidden="true">schedule</span>{e.hora}
         </span>
