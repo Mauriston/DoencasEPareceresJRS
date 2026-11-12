@@ -87,7 +87,7 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
       const base = `IS ${inspecao.is} ${status === 'reagendada' ? 'reagendada' : 'agendada'} para ${dataHoraBr(dataEntrevista)}.`;
       if (!sync.ok) onAgendada(`${base} Mas o Google Agenda não foi atualizado: ${sync.erro}`, 'error');
       else onAgendada(sync.semConvidado ? `${base} O perito não tem Gmail cadastrado e não foi convidado no Google Agenda.` : `${base} Evento criado no Google Agenda.`);
-      // Benefícios / Verificações e Términos: a página pergunta se envia o e-mail de agendamento.
+      // Verificações e Términos: a página pergunta se envia o e-mail de agendamento.
       avisarAgendamento({ ...inspecao, status }, dataEntrevista);
     } catch (e: any) {
       setErro(e?.message || 'Não foi possível agendar.');

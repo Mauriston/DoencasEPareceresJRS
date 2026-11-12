@@ -1,5 +1,5 @@
 // Ficheiro: components/inspecoes/EnviarAgendamentoDialog.tsx
-// E-mail "AGENDAMENTO DE INSPEÇÃO DE SAÚDE" ao inspecionado (finalidades dos grupos Benefícios e Verificações e
+// E-mail "AGENDAMENTO DE INSPEÇÃO DE SAÚDE" ao inspecionado (SÓ finalidades do grupo Verificações e
 // Términos — servidor/email/agendamentoIS.ts). Abre de dois jeitos:
 //  - "agendamento": logo depois de agendar/reagendar a IS, perguntando se envia (Enviar · Agora não);
 //  - "menu": pelo item "Enviar e-mail de agendamento" do menu ⋮ (Admin e Secretaria).
@@ -12,7 +12,7 @@ import { Field } from '../ui/Field';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import { enviarAgendamentoISPorEmail } from '../../services/emailAgendamentoIS';
 import { emailValido } from '../../services/emailResultadoIS';
-import { dataHoraDoAgendamento, modeloDoGrupo } from '../../utils/emailAgendamentoIS';
+import { dataHoraDoAgendamento } from '../../utils/emailAgendamentoIS';
 
 interface Props {
   inspecao: InspecaoRecord;
@@ -33,7 +33,6 @@ export const EnviarAgendamentoDialog: React.FC<Props> = ({ inspecao, emailCadast
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
   const { data, hora } = dataHoraDoAgendamento(inspecao.dataEntrevista);
-  const beneficios = modeloDoGrupo(inspecao.grupoFinalidade) === 'beneficios';
 
   const enviar = async () => {
     if (!emailCadastrado && !emailValido(email)) { setErroEmail('Informe um e-mail válido.'); return; }
@@ -62,7 +61,7 @@ export const EnviarAgendamentoDialog: React.FC<Props> = ({ inspecao, emailCadast
     >
       <div className="space-y-4">
         {origem === 'agendamento' && (
-          <p className="text-sm text-ink">IS {inspecao.is} agendada. Enviar ao inspecionado a confirmação do agendamento{beneficios ? ', com a lista de documentos exigidos para Benefícios' : ', com as orientações de VDF e Términos'}?</p>
+          <p className="text-sm text-ink">IS {inspecao.is} agendada. Enviar ao inspecionado a confirmação do agendamento, com as orientações de VDF e Términos?</p>
         )}
         <dl className="space-y-1.5 rounded-xl border border-line bg-paper p-3">
           <Linha rotulo="Inspecionado">{inspecao.inspecionado}</Linha>

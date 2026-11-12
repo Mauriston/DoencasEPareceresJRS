@@ -7,18 +7,19 @@ import { assinaturaSemSignatario } from '../../servidor/email/comum';
 const placeholder = /\{\{[#^/]?\w+\}\}/;
 
 describe('regras', () => {
-  it('modelo pelo grupo da finalidade', () => {
-    expect(modeloDoGrupo('Benefícios')).toBe('beneficios');
+  it('só Verificações e Términos tem e-mail de agendamento (Benefícios não)', () => {
+    expect(modeloDoGrupo('Benefícios')).toBeNull();
     expect(modeloDoGrupo('Verificações e Términos')).toBe('verificacoes');
     expect(modeloDoGrupo('Controle Periódico')).toBeNull();
     expect(modeloDoGrupo(undefined)).toBeNull();
   });
   it('elegível: grupo certo, com data e hora, não cancelada', () => {
-    const base = { grupoFinalidade: 'Benefícios', dataEntrevista: '2026-11-13T13:40', status: 'agendada' };
+    const base = { grupoFinalidade: 'Verificações e Términos', dataEntrevista: '2026-11-13T13:40', status: 'agendada' };
     expect(ehElegivelAgendamento(base)).toBe(true);
     expect(ehElegivelAgendamento({ ...base, dataEntrevista: '' })).toBe(false);
     expect(ehElegivelAgendamento({ ...base, status: 'cancelada' })).toBe(false);
     expect(ehElegivelAgendamento({ ...base, grupoFinalidade: 'Ingresso' })).toBe(false);
+    expect(ehElegivelAgendamento({ ...base, grupoFinalidade: 'Benefícios' })).toBe(false);
   });
   it('um envio por data/hora: reagendada, pode enviar de novo', () => {
     expect(agendamentoJaEnviado({ dataEntrevista: '2026-11-13T13:40', emailAgendamentoDataEntrevista: '2026-11-13T13:40' })).toBe(true);
@@ -48,20 +49,10 @@ describe('montarEmailAgendamento', () => {
     expect(r.html).not.toContain('Doença Prevista em Lei');
   });
 
-  it('Benefícios: tabela das Doenças Previstas em Lei e finalidade dinâmica', () => {
-    const r = montarEmailAgendamento({ ...is, finalidade: 'Isenção de Imposto de Renda', grupoFinalidade: 'Benefícios' });
-    expect(r.modelo).toBe('beneficios');
-    expect(r.html).not.toMatch(placeholder);
-    expect(r.html).toContain('Doença Prevista em Lei');
-    expect(r.html).toContain('Isenção de Imposto de Renda');
-    expect(r.html).not.toContain('Concessão de Benefícios');
-    expect(r.html).toContain('30 minutos de antecedência');
-  });
-
   it('assinatura: sem signatário (Admin) não há "Por ordem de"; com signatário, aparece', () => {
-    const sem = montarEmailAgendamento({ ...is, grupoFinalidade: 'Benefícios' });
+    const sem = montarEmailAgendamento({ ...is, grupoFinalidade: 'Verificações e Términos' });
     expect(sem.html).not.toContain('Por ordem de');
-    const com = montarEmailAgendamento({ ...is, grupoFinalidade: 'Benefícios' }, {
+    const com = montarEmailAgendamento({ ...is, grupoFinalidade: 'Verificações e Términos' }, {
       ...assinaturaSemSignatario(), mostrar_signatario: true, signatario_nome: 'Fulano de Tal', signatario_posto: 'Suboficial-RM1-EF', signatario_cargo: 'Supervisor',
     });
     expect(com.html).toContain('Por ordem de:');
@@ -69,7 +60,8 @@ describe('montarEmailAgendamento', () => {
     expect(com.texto).toContain('Por ordem de:\nFulano de Tal');
   });
 
-  it('grupo sem e-mail de agendamento: erro', () => {
+  it('grupo sem e-mail de agendamento (inclusive Benefícios): erro', () => {
     expect(() => montarEmailAgendamento({ ...is, grupoFinalidade: 'Ingresso' })).toThrow();
+    expect(() => montarEmailAgendamento({ ...is, grupoFinalidade: 'Benefícios' })).toThrow();
   });
 });

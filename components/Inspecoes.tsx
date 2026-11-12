@@ -325,7 +325,7 @@ export const Inspecoes: React.FC = () => {
     const restituicao = restituicaoDoStatus(is.status);
     if (restituicao && podeEditar && !ehSecretaria) itens.push({ rotulo: restituicao.rotulo, icone: 'undo', onClick: () => { mudarStatus(is, restituicao.status, `IS ${is.is}: ${restituicao.rotulo}.`); } });
     if (podeMinuta && mostraMinutaMsg(is)) itens.push({ rotulo: 'Minuta MSG', icone: 'mail', onClick: () => setMinuta(is) });
-    // E-mail de agendamento ao inspecionado (Benefícios, Verificações e Términos): Admin e Secretaria; um por data/hora.
+    // E-mail de agendamento ao inspecionado (só Verificações e Términos): Admin e Secretaria; um por data/hora.
     if ((ehAdmin || ehSecretaria) && ehElegivelAgendamento(is)) {
       itens.push(agendamentoJaEnviado(is)
         ? { rotulo: 'E-mail de agendamento enviado', icone: 'mark_email_read', desabilitado: true, dica: `Para ${is.emailAgendamentoPara}`, onClick: () => {} }
