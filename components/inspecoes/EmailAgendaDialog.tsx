@@ -65,7 +65,7 @@ export const EmailAgendaDialog: React.FC<Props> = ({ hoje, inspecoes, diasConcur
   return (
     <Dialog
       title="E-mail das IS agendadas"
-      icon="schedule_send"
+      icon="outgoing_mail"
       size="md"
       onClose={() => { if (!enviando) onClose(); }}
       footer={(

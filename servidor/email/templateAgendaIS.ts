@@ -11,7 +11,8 @@
 //   {{#tem_concursos}}…{{/tem_concursos}} bloco "INSPEÇÕES DE SAÚDE DE CONCURSOS" — só quando há candidatos no dia
 //   {{#concursos}}…{{/concursos}}         cada item: {{concurso}} {{matricula}} {{candidato}}
 //   {{fecho}}              "ATT/RPT,"
-//   {{#mostrar_supervisor}}…{{/mostrar_supervisor}} · {{supervisor_nome}} {{supervisor_posto}} {{presidente_nome}} {{presidente_posto}}
+//   {{#mostrar_signatario}}…{{/mostrar_signatario}} (1ª assinatura = quem enviou; some para o Admin e no envio automático)
+//   {{signatario_nome}} {{signatario_posto}} {{signatario_cargo}} {{presidente_nome}} {{presidente_posto}} (servidor/email/comum.ts)
 //   {{banner_url}} · {{logo_rodape_url}} · {{app_imagem_url}} (brasão do HNRe, public/email/brasao-hnre-app.png)
 //
 // O bloco "APP JRS/HNRe" (Acessar o App · Add Google Agenda), os contatos e o endereço do rodapé são fixos.
@@ -103,11 +104,12 @@ export const TEMPLATE_AGENDA_IS = `<!DOCTYPE html>
 <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%">
 <tbody><tr><td style="padding:25px 0 10px 0;color:#050F41">
 <p style="margin:0 0 18px 0;font-size:16px;font-weight:700">{{fecho}}</p>
-{{#mostrar_supervisor}}
-<p style="margin:0;font-size:18px;font-weight:700">{{supervisor_nome}}</p>
-<p style="margin:0;font-size:14px;font-weight:700;color:#555555">{{supervisor_posto}}</p>
-<p style="margin:0 0 20px 0;font-size:14px;color:#555555">Supervisor</p>
-{{/mostrar_supervisor}}
+{{#mostrar_signatario}}
+<p style="margin:0 0 8px 0;font-size:14px;font-style:italic;color:#555555">Por ordem de:</p>
+<p style="margin:0;font-size:18px;font-weight:700">{{signatario_nome}}</p>
+<p style="margin:0;font-size:14px;font-weight:700;color:#555555">{{signatario_posto}}</p>
+<p style="margin:0 0 20px 0;font-size:14px;color:#555555">{{signatario_cargo}}</p>
+{{/mostrar_signatario}}
 <p style="margin:0;font-size:18px;font-weight:700">{{presidente_nome}}</p>
 <p style="margin:0;font-size:14px;font-weight:700;color:#555555">{{presidente_posto}}</p>
 <p style="margin:0;font-size:14px;color:#555555">Presidente</p>

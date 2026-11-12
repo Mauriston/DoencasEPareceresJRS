@@ -14,8 +14,8 @@
 //   {{#restricoes}}{{item}}{{/restricoes}}    itens já pontuados: "X;" … penúltimo "Y; e" … último "Z."
 //   {{instancia_recurso}}     "Junta Superior Distrital (JSD/COM3ºDN)"
 //   {{prazo_recurso_dias}}    45
-//   {{#mostrar_supervisor}}…{{/mostrar_supervisor}}   assinatura dupla ("Por ordem de:")
-//   {{supervisor_nome}} · {{supervisor_posto}} · {{presidente_nome}} · {{presidente_posto}}
+//   {{#mostrar_signatario}}…{{/mostrar_signatario}}   1ª assinatura = quem enviou ("Por ordem de:"); some para o Admin
+//   {{signatario_nome}} · {{signatario_posto}} · {{signatario_cargo}} · {{presidente_nome}} · {{presidente_posto}} (servidor/email/comum.ts)
 //   {{banner_url}}            URL pública absoluta do banner do cabeçalho
 //   {{logo_rodape_url}}       URL pública absoluta da logo MB para fundo claro (public/email/, 780×113, exibida a 260 px)
 //
@@ -95,12 +95,12 @@ Caso discorde do laudo, tem o direito de interpor recurso de 1ª instância à <
 <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;border-top:1px solid #e0e0e0">
 <tbody><tr><td style="padding:25px 0 10px 0;color:#050F41">
 <p style="margin:0 0 18px 0;font-size:16px;font-weight:700">Respeitosamente,</p>
-{{#mostrar_supervisor}}
+{{#mostrar_signatario}}
 <p style="margin:0 0 8px 0;font-size:14px;font-style:italic;color:#555555">Por ordem de:</p>
-<p style="margin:0;font-size:18px;font-weight:700">{{supervisor_nome}}</p>
-<p style="margin:0;font-size:14px;font-weight:700;color:#555555">{{supervisor_posto}}</p>
-<p style="margin:0 0 20px 0;font-size:14px;color:#555555">Supervisor</p>
-{{/mostrar_supervisor}}
+<p style="margin:0;font-size:18px;font-weight:700">{{signatario_nome}}</p>
+<p style="margin:0;font-size:14px;font-weight:700;color:#555555">{{signatario_posto}}</p>
+<p style="margin:0 0 20px 0;font-size:14px;color:#555555">{{signatario_cargo}}</p>
+{{/mostrar_signatario}}
 <p style="margin:0;font-size:18px;font-weight:700">{{presidente_nome}}</p>
 <p style="margin:0;font-size:14px;font-weight:700;color:#555555">{{presidente_posto}}</p>
 <p style="margin:0;font-size:14px;color:#555555">Presidente</p>

@@ -65,6 +65,13 @@ export interface InspecaoDoc {
   emailResultadoPara?: string;
   emailResultadoEnviadoEm?: Timestamp | null;
   emailResultadoEnviadoPor?: string;
+  /** E-mail de agendamento ao inspecionado (servidor/email/agendamentoIS.ts): a data/hora a que se refere o envio. */
+  emailAgendamentoPara?: string;
+  emailAgendamentoDataEntrevista?: string;
+  emailAgendamentoEnviadoEm?: Timestamp | null;
+  /** Comunicação de falta (HNRe; servidor/email/faltasHNRe.ts): a data da entrevista a que se refere o envio. */
+  emailFaltaDataEntrevista?: string;
+  emailFaltaEnviadoEm?: Timestamp | null;
   criadoPor: string;
   criadoEm: Timestamp | null;
   atualizadoEm?: Timestamp | null;

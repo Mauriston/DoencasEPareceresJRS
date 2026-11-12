@@ -28,6 +28,7 @@ import { AgendarNoHorarioDialog } from './inspecoes/AgendarNoHorarioDialog';
 import { MinutaDialog } from './inspecoes/MinutaDialog';
 import { EnviarResultadoDialog } from './inspecoes/EnviarResultadoDialog';
 import { EmailAgendaDialog } from './inspecoes/EmailAgendaDialog';
+import { BotaoEmailFaltas } from './inspecoes/BotaoEmailFaltas';
 import { emailDoInspecionado } from '../services/emailResultadoIS';
 import { CalendarioIS } from './inspecoes/CalendarioIS';
 import { BloqueiosDialog } from './inspecoes/BloqueiosDialog';
@@ -342,7 +343,8 @@ export const Inspecoes: React.FC = () => {
           title="Inspeções de Saúde"
           actions={(
             <>
-              {ehAdmin && <IconButton variant="secondary" icon="schedule_send" label="E-mail das IS agendadas" onClick={() => setEmailAgendaAberto(true)} />}
+              {(ehAdmin || ehSecretaria) && <BotaoEmailFaltas inspecoes={lista ?? []} militares={militares} onAviso={avisar} />}
+              {ehAdmin && <IconButton variant="secondary" icon="outgoing_mail" label="E-mail das IS agendadas" onClick={() => setEmailAgendaAberto(true)} />}
               {ehAdmin && <IconButton variant="secondary" icon="tune" label="Horários" onClick={() => setTurnosAberto(true)} />}
               {podeBloquear && <IconButton variant="secondary" icon="block" label="Bloqueios" onClick={() => setBloqueiosAberto(true)} />}
               {podeCadastrar && <IconButton variant="secondary" icon="photo_camera" label="IS por foto" onClick={() => setPorFoto(true)} />}
