@@ -161,7 +161,9 @@ export const Inspecoes: React.FC = () => {
   /** E-mails de agendamento a oferecer (depois de agendar) ou pedidos pelo menu ⋮; mostrados um por vez. */
   const [filaAgendamento, setFilaAgendamento] = useState<(AgendamentoFeito & { origem: 'agendamento' | 'menu' })[]>([]);
   // A pergunta depois de agendar é só para Admin e Secretaria (quem envia o e-mail de agendamento).
-  const perguntaAgendamento = ehAdmin || ehSecretaria;
+  // E-mails da IS (matriz de permissões: inspecoes.enviarEmails; padrão Admin e Secretaria).
+  const podeEmails = canUseFeature('inspecoes.enviarEmails', perfil);
+  const perguntaAgendamento = podeEmails;
   useEffect(() => {
     if (!perguntaAgendamento) return;
     return observarAgendamentos(a => setFilaAgendamento(f => (f.some(x => x.isId === a.isId && x.dataEntrevista === a.dataEntrevista) ? f : [...f, { ...a, origem: 'agendamento' }])));
@@ -347,7 +349,7 @@ export const Inspecoes: React.FC = () => {
     // Os e-mails (agendamento, resultado, faltas, NAC) ficam só no menu do botão "Enviar Email" do cabeçalho.
     if (podeAgendar && is.dataEntrevista && is.status !== 'cancelada' && !(is.agendaSincronizada && is.eventoAgendaId)) itens.push({ rotulo: 'Sincronizar com o Google Agenda', icone: 'sync', onClick: () => { sincronizar(is); } });
     if (ehAdmin && is.status === 'tis_assinado') itens.push({ rotulo: 'Reabrir IS', icone: 'lock_open', onClick: () => { mudarStatus(is, 'assinaturas_pendentes', `IS ${is.is} reaberta.`); } });
-    if ((ehAdmin || ehSecretaria) && podeCancelarIS(is, hoje)) itens.push({ rotulo: 'Cancelar IS', icone: 'cancel', perigo: true, onClick: () => setConfirmando({ tipo: 'cancelar', is }) });
+    if (canUseFeature('inspecoes.cancelar', perfil) && podeCancelarIS(is, hoje)) itens.push({ rotulo: 'Cancelar IS', icone: 'cancel', perigo: true, onClick: () => setConfirmando({ tipo: 'cancelar', is }) });
     if (ehAdmin) itens.push({ rotulo: 'Apagar IS', icone: 'delete', perigo: true, onClick: () => setApagando(is) });
     return itens;
   };
@@ -389,7 +391,7 @@ export const Inspecoes: React.FC = () => {
           actions={(
             <>
               {podeBloquear && <IconButton variant="secondary" icon="block" label="Bloqueios" onClick={() => setBloqueiosAberto(true)} />}
-              {(ehAdmin || ehSecretaria) && (
+              {podeEmails && (
                 <BotaoEnviarEmail
                   inspecoes={lista ?? []} militares={militares} hoje={hoje}
                   podeEmailAgenda={ehAdmin} onEmailAgenda={() => setEmailAgendaAberto(true)}
@@ -505,7 +507,7 @@ export const Inspecoes: React.FC = () => {
           onAviso={avisar}
           emails={(
             <EmailsDaIS
-              is={detalhe} om={omDe(detalhe)} hoje={hoje} podeEnviar={ehAdmin || ehSecretaria}
+              is={detalhe} om={omDe(detalhe)} hoje={hoje} podeEnviar={podeEmails}
               onEnviarAgendamento={is => setFilaAgendamento(f => [...f, { isId: is.id, dataEntrevista: is.dataEntrevista, origem: 'menu' }])}
               onEnviarResultado={setEnviandoResultado}
               onAviso={avisar}

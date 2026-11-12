@@ -4,6 +4,7 @@
 // desabilitado. O clique abre a seleção múltipla dos pendentes (todos marcados) e envia o e-mail
 // "{concurso} - Candidatos Inaptos" (servidor/email/inaptosConcurso.ts).
 import React, { useMemo, useState } from 'react';
+import { canUseFeature } from '../../config/permissions';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import type { CandidatoRecord, ConcursoRecord } from '../../services/firestoreConcursos';
@@ -23,7 +24,7 @@ export const BotaoEmailInaptos: React.FC<Props> = ({ concurso, candidatos, perfi
     [candidatos],
   );
   const [aberto, setAberto] = useState(false);
-  if (!(perfil === 'admin' || perfil === 'user_secretaria') || !concursoAceitaEmailInaptos(concurso.status)) return null;
+  if (!canUseFeature('concursosJRS.enviarEmailInaptos', perfil) || !concursoAceitaEmailInaptos(concurso.status)) return null;
   return (
     <>
       <span className="relative inline-flex">
