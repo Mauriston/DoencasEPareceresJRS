@@ -93,7 +93,7 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
       const base = `IS ${escolhida.is} agendada para ${dataHoraBr(dataEntrevista)}.`;
       if (!sync.ok) onAgendada(`${base} Mas o Google Agenda não foi atualizado: ${sync.erro}`, 'error');
       else onAgendada(sync.semConvidado ? `${base} O perito não tem Gmail cadastrado e não foi convidado.` : `${base} Evento criado no Google Agenda.`);
-      // Benefícios / Verificações e Términos: a página pergunta se envia o e-mail de agendamento.
+      // Verificações e Términos: a página pergunta se envia o e-mail de agendamento.
       avisarAgendamento({ ...escolhida, status }, dataEntrevista);
     } catch (e: any) {
       setErro(e?.message || 'Não foi possível agendar.');

@@ -73,7 +73,7 @@ Sidebar fixa (recolhível) com as categorias Trabalho, Consulta, Formação e Ad
 
 | **Badge em botão de ícone** | `IconButton` com `badge` (faltas do HNRe em Inspeções; inaptos na página do concurso) | Cápsula `bg-wine` texto branco 12 px bold, mín. 20 px, `ring-2 ring-white`, no canto superior direito; "99+" acima de 99; o total entra no rótulo acessível. Sem pendências, o botão fica desabilitado |
 | **Seleção múltipla para envio** | Diálogos de faltas do HNRe e de inaptos | `Dialog` com lista rolável de caixas de seleção (todas marcadas), "Marcar/Desmarcar todas" e o total no botão *Enviar* |
-| **Pergunta depois de agendar** | IS de Benefícios e Verificações e Términos (só Admin e Secretaria) | `Dialog` *Enviar e-mail de agendamento?* (Enviar / Agora não), com o campo de e-mail quando o cadastro não tem; vários agendamentos seguidos entram numa fila e aparecem um por vez |
+| **Pergunta depois de agendar** | IS de Verificações e Términos (só Admin e Secretaria) | `Dialog` *Enviar e-mail de agendamento?* (Enviar / Agora não), com o campo de e-mail quando o cadastro não tem; vários agendamentos seguidos entram numa fila e aparecem um por vez |
 | **Lista de e-mails em chips** | *Configurações* (só Admin) | Campo que aceita Enter, vírgula, ponto e vírgula ou sair do campo para virar chip removível; inválido fica com erro inline `wine`. Um cartão por e-mail com PARA/CC/CCO, a nota "Acrescentados automaticamente" e *Restaurar padrões*; *Salvar* e *Descartar* no cabeçalho, *Salvar* só com mudança e sem erro |
 
 #### E-mails da JRS (HTML para o Zimbra)

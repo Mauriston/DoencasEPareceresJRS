@@ -1,7 +1,6 @@
 // Ficheiro: servidor/email/agendamentoIS.ts
-// E-mail "AGENDAMENTO DE INSPEÇÃO DE SAÚDE" ao inspecionado, para as finalidades dos grupos Benefícios
-// (documentos das Doenças Previstas em Lei) e Verificações e Términos (VDF, Término de Incapacidade e de
-// Restrições), pela Gmail API da conta Google da JRS. Rota POST /api/email/agendamento-is { isId, email? }.
+// E-mail "AGENDAMENTO DE INSPEÇÃO DE SAÚDE" ao inspecionado, SÓ para as finalidades do grupo Verificações e
+// Términos (VDF, Término de Incapacidade e de Restrições — decisão do Presidente da JRS; Benefícios não recebe), pela Gmail API da conta Google da JRS. Rota POST /api/email/agendamento-is { isId, email? }.
 //  - PARA: e-mail do cadastro do inspecionado; sem e-mail, o informado no app (gravado no cadastro).
 //  - CC: fixos de config/emails + e-mail institucional (@marinha.mil.br) do médico da IS. CCO: fixos.
 //  - Remetente "JRS/HNRe", Reply-To = caixa da JRS (configuração), assinatura dinâmica (servidor/email/comum.ts).
@@ -13,7 +12,6 @@ import { enviarEmail } from '../google/impressao';
 import { renderizarTemplate } from './template';
 import { CONFIG_EMAIL_RESULTADO, emailValido } from './resultadoIS';
 import { assinaturaDe, assinaturaSemSignatario, assinaturaTexto, destinatariosFixos, juntarEmails, type DadosAssinatura } from './comum';
-import { TEMPLATE_AGENDAMENTO_BENEFICIOS } from './templateAgendamentoBeneficios';
 import { TEMPLATE_AGENDAMENTO_VERIFICACOES } from './templateAgendamentoVerificacoes';
 import {
   ASSUNTO_AGENDAMENTO_IS, agendamentoJaEnviado, dataHoraDoAgendamento, ehElegivelAgendamento, modeloDoGrupo,
@@ -30,15 +28,15 @@ export interface ISParaAgendamentoEmail {
   dataEntrevista?: string;
 }
 
-/** Assunto, HTML (sem JavaScript) e texto simples, pelo grupo da finalidade. Exportada para os testes. */
+/** Assunto, HTML (sem JavaScript) e texto simples (só Verificações e Términos). Exportada para os testes. */
 export const montarEmailAgendamento = (is: ISParaAgendamentoEmail, assinatura: DadosAssinatura = assinaturaSemSignatario()) => {
   const modelo = modeloDoGrupo(is.grupoFinalidade);
-  if (!modelo) throw new ErroContaGoogle('falha', 'A finalidade desta IS não tem e-mail de agendamento (só Benefícios e Verificações e Términos).');
+  if (!modelo) throw new ErroContaGoogle('falha', 'A finalidade desta IS não tem e-mail de agendamento (só Verificações e Términos).');
   const { data, hora } = dataHoraDoAgendamento(String(is.dataEntrevista || ''));
   if (!data) throw new ErroContaGoogle('falha', 'A IS não tem data de entrevista.');
   const inspecionado = String(is.inspecionado || '').trim();
   const finalidade = String(is.finalidade || '').trim();
-  const html = renderizarTemplate(modelo === 'beneficios' ? TEMPLATE_AGENDAMENTO_BENEFICIOS : TEMPLATE_AGENDAMENTO_VERIFICACOES, {
+  const html = renderizarTemplate(TEMPLATE_AGENDAMENTO_VERIFICACOES, {
     inspecionado, finalidade_is: finalidade, data, hora,
     banner_url: CONFIG_EMAIL_RESULTADO.bannerUrl, logo_rodape_url: CONFIG_EMAIL_RESULTADO.logoRodapeUrl,
     ...assinatura,
@@ -46,13 +44,11 @@ export const montarEmailAgendamento = (is: ISParaAgendamentoEmail, assinatura: D
   const texto = [
     'Prezado(a) Senhor(a),', '',
     'CONFIRMAÇÃO DE AGENDAMENTO DE INSPEÇÃO DE SAÚDE',
-    `Inspecionado: ${modelo === 'beneficios' ? 'Sr(a). ' : ''}${inspecionado}`,
+    `Inspecionado: ${inspecionado}`,
     `Finalidade IS: ${finalidade}`,
     `Data: ${data}`,
     `Hora: ${hora}`, '',
-    modelo === 'beneficios'
-      ? 'Apresente no dia agendado o laudo ou relatório médico atualizado (data, nome completo, CRM, carimbo legível, assinatura e CID com a data do diagnóstico) e os exames exigidos para a doença (Anexo V da DGPM-406). A falta de documentos pode encerrar a IS por INSUFICIÊNCIA DOCUMENTAL. Compareça com 30 minutos de antecedência.'
-      : 'Traga documento de identidade, PMI ou Guia Sanitária, cartão de vacinas e todos os relatórios, atestados e exames relacionados à sua condição atual. Militares da ativa devem estar fardados. O não comparecimento à IS agendada pode ser caracterizado como contravenção disciplinar (alínea e do item 2.3.3 da DGPM-406).',
+    'Traga documento de identidade, PMI ou Guia Sanitária, cartão de vacinas e todos os relatórios, atestados e exames relacionados à sua condição atual. Militares da ativa devem estar fardados. O não comparecimento à IS agendada pode ser caracterizado como contravenção disciplinar (alínea e do item 2.3.3 da DGPM-406).',
     'Impossibilidade de presença: informe a secretaria com antecedência mínima de cinco dias úteis.', '',
     'Local: Junta Regular de Saúde do Hospital Naval de Recife (JRS/HNRe) — Avenida Cruz Cabugá 1200, Santo Amaro, Recife-PE.', '',
     assinaturaTexto(assinatura, 'Respeitosamente / Atenciosamente,'), '',
@@ -73,7 +69,7 @@ export const enviarAgendamentoIS = async (db: Firestore, isIdBruto: unknown, ema
   const snapIs = await refIs.get();
   if (!snapIs.exists) throw new ErroContaGoogle('falha', 'IS não encontrada.');
   const is = snapIs.data() as ISParaAgendamentoEmail & { status?: string; inspecionadoId?: string; peritoUid?: string; emailAgendamentoDataEntrevista?: string; emailAgendamentoPara?: string };
-  if (!modeloDoGrupo(is.grupoFinalidade)) throw new ErroContaGoogle('falha', 'A finalidade desta IS não tem e-mail de agendamento (só Benefícios e Verificações e Términos).');
+  if (!modeloDoGrupo(is.grupoFinalidade)) throw new ErroContaGoogle('falha', 'A finalidade desta IS não tem e-mail de agendamento (só Verificações e Términos).');
   if (!ehElegivelAgendamento(is)) throw new ErroContaGoogle('falha', 'A IS precisa estar agendada (com data e hora da entrevista) e não cancelada.');
   if (agendamentoJaEnviado(is)) throw new ErroContaGoogle('falha', `O e-mail deste agendamento já foi enviado para ${is.emailAgendamentoPara || 'o inspecionado'}.`);
 

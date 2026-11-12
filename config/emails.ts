@@ -58,7 +58,7 @@ export const CONFIG_EMAILS_PADRAO: ConfigEmails = {
 export const TIPOS_EMAIL: { tipo: TipoEmail; rotulo: string; assunto: string; dinamicos: string }[] = [
   { tipo: 'resultadoIS', rotulo: 'Resultado da IS ao inspecionado', assunto: 'RESULTADO DE INSPEÇÃO DE SAÚDE', dinamicos: 'PARA: e-mail do inspecionado.' },
   { tipo: 'agendaIS', rotulo: 'IS agendadas do dia seguinte (18h)', assunto: 'IS AGENDADAS EM dd/mm/aaaa', dinamicos: 'PARA: e-mails institucionais dos médicos e do MPI. CC: Gmail do Admin, médicos, MPI e Secretaria. Assinaturas fixas: Supervisor e Presidente.' },
-  { tipo: 'agendamentoIS', rotulo: 'Agendamento de IS (Benefícios, Verificações e Términos)', assunto: 'AGENDAMENTO DE INSPEÇÃO DE SAÚDE', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mail institucional do médico da IS.' },
+  { tipo: 'agendamentoIS', rotulo: 'Agendamento de IS (Verificações e Términos)', assunto: 'AGENDAMENTO DE INSPEÇÃO DE SAÚDE', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mail institucional do médico da IS.' },
   { tipo: 'faltasHNRe', rotulo: 'Faltas às IS (inspecionados do HNRe)', assunto: 'COMUNICAÇÃO DE FALTAS A INSPEÇÕES DE SAÚDE', dinamicos: 'CC: e-mails dos inspecionados, quando cadastrados.' },
   { tipo: 'inaptosConcurso', rotulo: 'Candidatos inaptos de concurso (EAMPE)', assunto: '{concurso} - Candidatos Inaptos', dinamicos: 'Nenhum.' },
 ];
