@@ -25,7 +25,7 @@ export const TEMPLATE_FALTAS_HNRE = `<!DOCTYPE html>
 <tr><td style="padding:0;text-align:center;background-color:#050f41;width:100%"><img src="{{banner_url}}" width="960" style="width:100%;max-width:960px;height:auto;display:block;border:0" alt="Cabeçalho Hospital Naval de Recife - Junta Regular de Saúde"></td></tr>
 <tr>
 <td style="background-color:#ffffff;padding:40px 50px 10px;text-align:left;font-family:'Carlito','Calibri',Arial,sans-serif;font-size:16px;line-height:1.6;color:#333333;width:100%">
-<p style="margin:0 0 20px;font-size:18px"><strong>&emsp;&emsp;Prezada CT (S) Luciana Madruga e demais Militares da Divisão de Pessoal,</strong></p>
+<p style="margin:0 0 20px;font-size:18px"><strong>&emsp;&emsp;{{saudacao}}</strong></p>
 <p style="margin:0 0 25px;text-align:justify">&emsp;&emsp;<span style="font-size:13pt">Em atenção à alínea <span style="text-decoration:underline">a</span> do item 2.3.3 da DGPM-406 9ª REV MOD 3 e no intuito de contribuir na faina dessa Divisão de Pessoal sobre controle dos prazos periciais e de certificação do efetivo comparecimento da Tripulação às IS formalmente agendadas, <strong>PTC lista de Militares que faltaram às IS agendadas para as medidas administrativas no que couber:</strong></span></p>
 <table border="0" cellpadding="8" cellspacing="0" width="100%" style="width:100%;border:1px solid #dddddd;font-size:13px;line-height:1.4;border-collapse:collapse;margin:25px 0">
 <thead>

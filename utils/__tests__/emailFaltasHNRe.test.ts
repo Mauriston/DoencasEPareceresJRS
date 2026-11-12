@@ -60,3 +60,11 @@ describe('montarEmailFaltas', () => {
     expect(c.texto).toContain('Secretário');
   });
 });
+
+describe('saudação configurável', () => {
+  it('usa a saudação da configuração', () => {
+    const r = montarEmailFaltas([], undefined, 'Prezado CT Fulano,');
+    expect(r.html).toContain('Prezado CT Fulano,');
+    expect(r.html).not.toContain('Luciana');
+  });
+});

@@ -1,7 +1,8 @@
 // Ficheiro: components/Configuracoes.tsx
 // Configurações gerais do app (só Admin; menu do avatar → Configurações). Ajustes que antes exigiam editar o
 // repositório e que valem para todos os perfis. Por ora: os e-mails automáticos (config/emails) — destinatários
-// fixos PARA / CC / CCO de cada e-mail, o "Responder para" de todos e a assinatura do Presidente. O servidor lê
+// fixos PARA / CC / CCO de cada e-mail, o "Responder para" de todos, as assinaturas do Presidente e do Supervisor e a
+// saudação do e-mail de faltas. O servidor lê
 // o documento a cada envio (servidor/email/comum.ts): a mudança vale no próximo e-mail, sem publicar nada.
 import React, { useContext, useEffect, useState } from 'react';
 import { Page } from './ui/Page';
@@ -112,7 +113,18 @@ export const Configuracoes: React.FC = () => {
                     {a => <input {...a} value={rascunho.assinatura.presidentePosto} onChange={e => setRascunho({ ...rascunho, assinatura: { ...rascunho.assinatura, presidentePosto: e.target.value } })} />}
                   </Field>
                 </div>
-                <p className="text-xs text-ink-3 mt-3">A primeira assinatura ("Por ordem de:") é a de quem envia o e-mail, com o nome, o posto e o cargo do cadastro em Usuários; não aparece quando quem envia é o Admin nem no envio automático.</p>
+                <div className="grid gap-4 md:grid-cols-3 mt-4">
+                  <Field label="Supervisor — nome completo" required error={erros.supervisorNome}>
+                    {a => <input {...a} value={rascunho.assinatura.supervisorNome} onChange={e => setRascunho({ ...rascunho, assinatura: { ...rascunho.assinatura, supervisorNome: e.target.value } })} />}
+                  </Field>
+                  <Field label="Supervisor — posto/graduação" required error={erros.supervisorPosto}>
+                    {a => <input {...a} value={rascunho.assinatura.supervisorPosto} onChange={e => setRascunho({ ...rascunho, assinatura: { ...rascunho.assinatura, supervisorPosto: e.target.value } })} />}
+                  </Field>
+                  <Field label="Supervisor — cargo" required error={erros.supervisorCargo}>
+                    {a => <input {...a} value={rascunho.assinatura.supervisorCargo} onChange={e => setRascunho({ ...rascunho, assinatura: { ...rascunho.assinatura, supervisorCargo: e.target.value } })} />}
+                  </Field>
+                </div>
+                <p className="text-xs text-ink-3 mt-3">A primeira assinatura ("Por ordem de:") é a de quem envia o e-mail, com o nome, o posto e o cargo do cadastro em Usuários; não aparece quando quem envia é o Admin. No e-mail interno das IS agendadas (18h ou envio manual), as assinaturas são fixas: Supervisor e Presidente.</p>
               </Cartao>
 
               {TIPOS_EMAIL.map(t => (
@@ -128,6 +140,11 @@ export const Configuracoes: React.FC = () => {
                     ))}
                   </div>
                   <p className="text-xs text-ink-3 mt-3"><strong>Acrescentados automaticamente:</strong> {t.dinamicos}</p>
+                  {t.tipo === 'faltasHNRe' && (
+                    <Field label="Saudação" required error={erros.saudacaoFaltasHNRe} className="mt-4" help="Primeira linha do e-mail (encarregada da Divisão de Pessoal do HNRe).">
+                      {a => <input {...a} value={rascunho.saudacaoFaltasHNRe} onChange={e => setRascunho({ ...rascunho, saudacaoFaltasHNRe: e.target.value })} />}
+                    </Field>
+                  )}
                 </Cartao>
               ))}
             </div>

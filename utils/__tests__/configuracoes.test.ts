@@ -22,8 +22,8 @@ describe('validação e comparação', () => {
     expect(configIgual(CONFIG_EMAILS_PADRAO, structuredClone(CONFIG_EMAILS_PADRAO))).toBe(true);
   });
   it('Reply-To e assinatura obrigatórios', () => {
-    const c = { ...CONFIG_EMAILS_PADRAO, responderPara: 'x', assinatura: { presidenteNome: ' ', presidentePosto: '' } };
-    expect(Object.keys(errosConfigEmails(c)).sort()).toEqual(['presidenteNome', 'presidentePosto', 'responderPara']);
+    const c = { ...CONFIG_EMAILS_PADRAO, responderPara: 'x', saudacaoFaltasHNRe: ' ', assinatura: { ...CONFIG_EMAILS_PADRAO.assinatura, presidenteNome: ' ', presidentePosto: '', supervisorCargo: '' } };
+    expect(Object.keys(errosConfigEmails(c)).sort()).toEqual(['presidenteNome', 'presidentePosto', 'responderPara', 'saudacaoFaltasHNRe', 'supervisorCargo']);
     expect(configIgual(c, CONFIG_EMAILS_PADRAO)).toBe(false);
   });
 });

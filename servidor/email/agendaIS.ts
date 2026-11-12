@@ -16,7 +16,7 @@ import { TEMPLATE_AGENDA_IS } from './templateAgendaIS';
 import { TEMPLATE_ANEXO_AGENDA_IS } from './templateAnexoAgendaIS';
 import { FONTE_MONTSERRAT_DATA_URI, LOGO_MARINHA_DATA_URI } from './recursosAnexo';
 import { CONFIG_EMAIL_RESULTADO } from './resultadoIS';
-import { assinaturaDe, assinaturaSemSignatario, assinaturaTexto, destinatariosFixos, juntarEmails, type DadosAssinatura } from './comum';
+import { assinaturaSupervisor, assinaturaTexto, destinatariosFixos, juntarEmails, type DadosAssinatura } from './comum';
 import {
   assuntoAgendaIS, caminhoPdfAgendaIS, dataBrDeIso, dataIsoValida, dataTituloDeIso, decidirEnvioAutomatico, destinatariosAgendaIS,
   hojeEmRecife, horaDe, type UsuarioParaEmail,
@@ -96,7 +96,7 @@ const dadosComuns = (a: AgendaDoDia): DadosTemplate => ({
 });
 
 /** Assunto, HTML (sem JavaScript), texto simples e HTML do anexo. Exportada para os testes. */
-export const montarEmailAgenda = (a: AgendaDoDia, assinatura: DadosAssinatura = assinaturaSemSignatario()) => {
+export const montarEmailAgenda = (a: AgendaDoDia, assinatura: DadosAssinatura = assinaturaSupervisor()) => {
   const c = CONFIG_EMAIL_RESULTADO;
   const html = renderizarTemplate(TEMPLATE_AGENDA_IS, {
     ...dadosComuns(a),
@@ -138,8 +138,8 @@ export const enviarAgendaIS = async (db: Firestore, bucket: BucketPdf, data: str
   const para = juntarEmails([fixos.para, dinamicos.para]);
   const cc = juntarEmails([fixos.cc, dinamicos.cc], para);
   const cco = juntarEmails([fixos.cco], [...para, ...cc]);
-  // Envio automático (uid 'agendador') e do Admin: só a assinatura do Presidente.
-  const { assunto, html, texto, htmlAnexo } = montarEmailAgenda(agenda, await assinaturaDe(db, quem.automatico ? null : quem.uid, fixos.config));
+  // E-mail interno da junta: assinaturas fixas do Supervisor e do Presidente (config/emails), manual ou automático.
+  const { assunto, html, texto, htmlAnexo } = montarEmailAgenda(agenda, assinaturaSupervisor(fixos.config));
 
   const pdf = await htmlParaPdf(htmlAnexo);
   const pdfCaminho = caminhoPdfAgendaIS(data);

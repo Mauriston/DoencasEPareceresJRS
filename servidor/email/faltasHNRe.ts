@@ -12,6 +12,7 @@ import { enviarEmail } from '../google/impressao';
 import { renderizarTemplate } from './template';
 import { TEMPLATE_FALTAS_HNRE } from './templateFaltasHNRe';
 import { CONFIG_EMAIL_RESULTADO, dataNaval } from './resultadoIS';
+import { CONFIG_EMAILS_PADRAO } from '../../config/emails';
 import { assinaturaDe, assinaturaSemSignatario, assinaturaTexto, destinatariosFixos, juntarEmails, type DadosAssinatura } from './comum';
 import { ehOmHnre, faltaSemEmail, separarNomeGuerra, type ISParaFalta } from '../../utils/emailFaltasHNRe';
 
@@ -23,7 +24,7 @@ const MAX_IS = 100;
 export interface FaltaParaEmail { numero_is: string; dataEntrevista: string; inspecionado: string; nomeGuerra?: string; finalidade: string }
 
 /** Assunto, HTML (sem JavaScript) e texto simples. Exportada para os testes. */
-export const montarEmailFaltas = (faltas: FaltaParaEmail[], assinatura: DadosAssinatura = assinaturaSemSignatario()) => {
+export const montarEmailFaltas = (faltas: FaltaParaEmail[], assinatura: DadosAssinatura = assinaturaSemSignatario(), saudacao: string = CONFIG_EMAILS_PADRAO.saudacaoFaltasHNRe) => {
   const linhas = faltas.map((f, i) => {
     const m = separarNomeGuerra(f.inspecionado, f.nomeGuerra);
     return {
@@ -36,12 +37,13 @@ export const montarEmailFaltas = (faltas: FaltaParaEmail[], assinatura: DadosAss
   });
   const html = renderizarTemplate(TEMPLATE_FALTAS_HNRE, {
     faltas: linhas,
+    saudacao,
     ...assinatura,
     banner_url: CONFIG_EMAIL_RESULTADO.bannerUrl,
     logo_rodape_url: CONFIG_EMAIL_RESULTADO.logoRodapeUrl,
   });
   const texto = [
-    'Prezada CT (S) Luciana Madruga e demais Militares da Divisão de Pessoal,', '',
+    saudacao, '',
     'Em atenção à alínea a do item 2.3.3 da DGPM-406 9ª REV MOD 3 e no intuito de contribuir na faina dessa Divisão de Pessoal sobre controle dos prazos periciais e de certificação do efetivo comparecimento da Tripulação às IS formalmente agendadas, PTC lista de Militares que faltaram às IS agendadas para as medidas administrativas no que couber:', '',
     'IS · DATA · MILITAR · FINALIDADE',
     ...linhas.map(l => `${l.numero_is} · ${l.data} · ${l.militar_antes}${l.militar_guerra}${l.militar_depois} · ${l.finalidade}`), '',
@@ -87,7 +89,7 @@ export const enviarFaltasHNRe = async (db: Firestore, isIdsBruto: unknown, uid: 
     inspecionado: String(i.inspecionado || ''),
     nomeGuerra: militares.get(String(i.inspecionadoId || ''))?.nomeGuerra,
     finalidade: String(i.finalidade || ''),
-  })), await assinaturaDe(db, uid, fixos.config));
+  })), await assinaturaDe(db, uid, fixos.config), fixos.config.saudacaoFaltasHNRe);
 
   await enviarEmail(db, {
     para: para.join(', '), cc: cc.length ? cc.join(', ') : undefined, cco: cco.length ? cco.join(', ') : undefined,

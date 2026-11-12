@@ -73,7 +73,7 @@ Sidebar fixa (recolhível) com as categorias Trabalho, Consulta, Formação e Ad
 
 | **Badge em botão de ícone** | `IconButton` com `badge` (faltas do HNRe em Inspeções; inaptos na página do concurso) | Cápsula `bg-wine` texto branco 12 px bold, mín. 20 px, `ring-2 ring-white`, no canto superior direito; "99+" acima de 99; o total entra no rótulo acessível. Sem pendências, o botão fica desabilitado |
 | **Seleção múltipla para envio** | Diálogos de faltas do HNRe e de inaptos | `Dialog` com lista rolável de caixas de seleção (todas marcadas), "Marcar/Desmarcar todas" e o total no botão *Enviar* |
-| **Pergunta depois de agendar** | IS de Benefícios e Verificações e Términos | `Dialog` *Enviar e-mail de agendamento?* (Enviar / Agora não), com o campo de e-mail quando o cadastro não tem; vários agendamentos seguidos entram numa fila e aparecem um por vez |
+| **Pergunta depois de agendar** | IS de Benefícios e Verificações e Términos (só Admin e Secretaria) | `Dialog` *Enviar e-mail de agendamento?* (Enviar / Agora não), com o campo de e-mail quando o cadastro não tem; vários agendamentos seguidos entram numa fila e aparecem um por vez |
 | **Lista de e-mails em chips** | *Configurações* (só Admin) | Campo que aceita Enter, vírgula, ponto e vírgula ou sair do campo para virar chip removível; inválido fica com erro inline `wine`. Um cartão por e-mail com PARA/CC/CCO, a nota "Acrescentados automaticamente" e *Restaurar padrões*; *Salvar* e *Descartar* no cabeçalho, *Salvar* só com mudança e sem erro |
 
 #### E-mails da JRS (HTML para o Zimbra)
@@ -87,7 +87,7 @@ Os e-mails automáticos seguem os templates do Claude Design (`servidor/email/te
 - **Rodapé:** faixa `#e8e8e8` com a logo da Marinha (fundo claro, 260 px) e os contatos da JRS; no celular (`@media` até 600 px) as colunas empilham.
 - **Anexo em PDF da agenda:** A4 paisagem, cabeçalho "HOSPITAL NAVAL DE RECIFE / JUNTA REGULAR DE SAÚDE" em Montserrat 800/700 com linha navy de 3 px, tabela no mesmo padrão do e-mail e o rodapé cinza encostado na base da página; a página de concursos só existe quando há candidatos no dia.
 - **Remetentes:** *JRS-HNRe* (resultado ao inspecionado) e *JRS/HNRe* (agenda, agendamento, faltas e inaptos) — sem espaços, para o Zimbra mostrar o nome inteiro na lista de mensagens.
-- **Assinatura:** "Respeitosamente / Atenciosamente,"; se quem enviou não é o Admin, "Por ordem de:" (itálico cinza) com nome (18 px bold navy), posto/graduação (bold) e cargo; depois a do Presidente.
+- **Assinatura:** "Respeitosamente / Atenciosamente,"; se quem enviou não é o Admin, "Por ordem de:" (itálico cinza) com nome (18 px bold navy), posto/graduação (bold) e cargo; depois a do Presidente. No e-mail das IS agendadas, Supervisor e Presidente fixos.
 
 ### 0.5 Notificações do sistema
 

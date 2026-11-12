@@ -36,6 +36,15 @@ export const assinaturaSemSignatario = (config: ConfigEmails = CONFIG_EMAILS_PAD
   presidente_nome: config.assinatura.presidenteNome, presidente_posto: config.assinatura.presidentePosto,
 });
 
+/** Supervisor ("Por ordem de:") e Presidente fixos — e-mail interno das IS agendadas, manual ou automático. */
+export const assinaturaSupervisor = (config: ConfigEmails = CONFIG_EMAILS_PADRAO): DadosAssinatura => ({
+  mostrar_signatario: true,
+  signatario_nome: config.assinatura.supervisorNome,
+  signatario_posto: config.assinatura.supervisorPosto,
+  signatario_cargo: config.assinatura.supervisorCargo,
+  presidente_nome: config.assinatura.presidenteNome, presidente_posto: config.assinatura.presidentePosto,
+});
+
 /** Monta a assinatura a partir do usuário que disparou (uid) — null/'agendador' = envio automático. */
 export const assinaturaDe = async (db: Firestore, uid: string | null, config?: ConfigEmails): Promise<DadosAssinatura> => {
   const cfg = config ?? await lerConfigEmails(db);

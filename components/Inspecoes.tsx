@@ -154,7 +154,12 @@ export const Inspecoes: React.FC = () => {
   const [enviandoResultado, setEnviandoResultado] = useState<InspecaoRecord | null>(null);
   /** E-mails de agendamento a oferecer (depois de agendar) ou pedidos pelo menu ⋮; mostrados um por vez. */
   const [filaAgendamento, setFilaAgendamento] = useState<(AgendamentoFeito & { origem: 'agendamento' | 'menu' })[]>([]);
-  useEffect(() => observarAgendamentos(a => setFilaAgendamento(f => (f.some(x => x.isId === a.isId && x.dataEntrevista === a.dataEntrevista) ? f : [...f, { ...a, origem: 'agendamento' }]))), []);
+  // A pergunta depois de agendar é só para Admin e Secretaria (quem envia o e-mail de agendamento).
+  const perguntaAgendamento = ehAdmin || ehSecretaria;
+  useEffect(() => {
+    if (!perguntaAgendamento) return;
+    return observarAgendamentos(a => setFilaAgendamento(f => (f.some(x => x.isId === a.isId && x.dataEntrevista === a.dataEntrevista) ? f : [...f, { ...a, origem: 'agendamento' }])));
+  }, [perguntaAgendamento]);
   const [parecerPara, setParecerPara] = useState<{ is: InspecaoRecord; inicial?: ParecerRecord } | null>(null);
   const [confirmando, setConfirmando] = useState<{ tipo: 'falta' | 'cancelar'; is: InspecaoRecord } | null>(null);
   const [apagando, setApagando] = useState<InspecaoRecord | null>(null);
