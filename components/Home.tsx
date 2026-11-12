@@ -490,7 +490,7 @@ export const Home: React.FC = () => {
             )}
 
             {mostraFerias && ferias.length > 0 && (
-              <Secao id="home-ferias" titulo="Próximas férias">
+              <Secao id="home-ferias" titulo="Próximas férias" link="/ferias">
                 <ul className="divide-y divide-line">
                   {ferias.slice(0, 6).map(({ a: f, st }) => (
                     <li key={f.id} className="flex items-center gap-3 px-4 min-h-[56px] py-2">
@@ -503,7 +503,7 @@ export const Home: React.FC = () => {
                     </li>
                   ))}
                 </ul>
-                {ferias.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{ferias.length - 6} período{ferias.length - 6 !== 1 ? 's' : ''} de férias na página Férias.</p>}
+                {ferias.length > 6 && <Link to="/ferias" className="block px-4 py-2 min-h-[44px] text-xs font-bold text-blue underline underline-offset-2 hover:text-navy border-t border-line">+{ferias.length - 6} período{ferias.length - 6 !== 1 ? 's' : ''} de férias na página Férias</Link>}
               </Secao>
             )}
 
