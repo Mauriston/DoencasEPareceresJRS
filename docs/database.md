@@ -11,7 +11,7 @@ A persistência do **Guia Médico Naval — JRS/HNRe** está distribuída entre:
 3. **Google Drive** (via Apps Script `CodeConcursos.gs`) — PDFs dos concursos, dos pedidos de parecer e dos exames dos candidatos;
 4. **Firebase Authentication** — contas de login (e-mail sintético derivado do usuário; ver `services/firebaseAuth.ts`);
 5. **JSON e TypeScript estáticos** — catálogos (`public/*.json`) e conteúdo normativo no bundle;
-6. **`localStorage`** — preferências por aparelho (acesso rápido, convite de notificações adiado, aviso de triagem, token do push).
+6. **`localStorage`** — preferências por aparelho (acesso rápido — `jrs_acesso_rapido_{uid}` — e acessos às páginas dos últimos 28 dias — `jrs_acessos_paginas_{uid}`, convite de notificações adiado, aviso de triagem, token do push).
 
 O acesso ao Firestore é feito direto do navegador pelo SDK do Firebase, protegido pelas regras em `firestore.rules` (versionadas no repositório e publicadas no console ou com `firebase deploy --only firestore:rules`). O servidor no Cloud Run (`server.ts`, Firebase Admin SDK) só escreve o que o cliente não pode: notificações, controle de repetição e operações de Admin.
 

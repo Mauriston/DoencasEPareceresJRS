@@ -254,7 +254,7 @@ sequenceDiagram
 
 - `NavContext`: usuário (com o "Visualizar como" do Admin), perfil real, avisos, contagem de notificações não lidas, navegação e menus.
 - Estado das telas: local, com assinaturas em tempo real do Firestore.
-- `localStorage`: preferências por aparelho (acesso rápido, convite de notificações adiado, contagem do aviso de triagem, token do push, tutorial de instalação).
+- `localStorage`: preferências por aparelho (acesso rápido e a contagem de acessos às páginas dos últimos 28 dias, convite de notificações adiado, contagem do aviso de triagem, token do push, tutorial de instalação).
 
 ### 6.4 Camada de serviços
 
@@ -289,7 +289,7 @@ sequenceDiagram
 ## 7. Módulos funcionais
 
 ### 7.1 Início
-Painel de trabalho: *Precisa de atenção* (pareceres atrasados, IS de hoje, concursos em andamento e do dia, **IS de concurso atrasadas**, senha temporária), *Últimos documentos gerados* (só Secretaria), **Próximos serviços** (Escala SVÇ do usuário), Pareceres não concluídos, Perícias Menores Vigentes (as 4 mais antigas; o badge do título mostra o total), Acesso rápido, Agenda de inspeções, **Próximas férias** (coluna direita; página Férias) e Avisos. Para `user_medicos_geral`: sem Próximas férias e com **Últimos atestados** (os registrados pelo usuário).
+Painel de trabalho: *Precisa de atenção* (pareceres atrasados, IS de hoje, concursos em andamento e do dia, **IS de concurso atrasadas**, senha temporária), *Últimos documentos gerados* (só Secretaria), **Próximos serviços** (Escala SVÇ do usuário), **Agenda de inspeções** (abaixo de *Precisa de atenção*: calendário + eventos do dia, concursos como um evento por turno — `components/home/AgendaInspecoesCard.tsx`, `utils/agendaHome.ts`), Pareceres não concluídos, Perícias Menores Vigentes (as 4 mais antigas; o badge do título mostra o total), Acesso rápido (renovação semanal pelas páginas mais acessadas, sem Inspeções de Saúde — `utils/acessoRapido.ts`), **Próximas férias** (coluna direita; página Férias) e Avisos. Para `user_medicos_geral`: sem Próximas férias e com **Últimos atestados** (os registrados pelo usuário).
 
 ### 7.2 Inspeções de Saúde e agenda
 `Inspecoes.tsx` e `components/inspecoes/`: cadastro das IS (exceto concursos), tabela agrupada ou calendário Dia/Semana/Mês, agendamento por perito em slots (transação em `agendaSlots`), bloqueios de horário/turno/período, minutas e sincronização com o Google Agenda "JRS/HNRe" (servidor; Apps Script de reserva). Os dias de concurso ocupam o turno da manhã de todos os peritos. **Entrevista gravada** (08/11/2026, ADR-014): no detalhe da IS, a junta (Admin e `user_medicos`) grava a entrevista pelo celular (no computador, "Enviar para o meu celular" manda um push que abre a IS no app do celular); o servidor transcreve com separação de falantes e o Gemini organiza a anamnese, revisada e editada no app (`components/inspecoes/entrevista/`, `services/entrevistasIS.ts`, `utils/entrevistas.ts`).

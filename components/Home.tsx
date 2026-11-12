@@ -26,11 +26,12 @@ import { observarPareceres, statusEfetivo, type ParecerRecord } from '../service
 import { observarInspecoes, type InspecaoRecord } from '../services/firestoreInspecoes';
 import { observarAfastamentos, type AfastamentoRecord } from '../services/afastamentos';
 import { podeVerFerias, statusEfetivo as statusDoAfastamento } from '../utils/afastamentos';
-import { MiniCalendarioIS } from './inspecoes/MiniCalendarioIS';
+import { MAX_RAPIDO, FORA_DO_RAPIDO, chaveEscolha, chaveAcessos, lerEscolha, contarAcessos, resolverAcessoRapido, type EscolhaRapido } from '../utils/acessoRapido';
+import { AgendaInspecoesCard } from './home/AgendaInspecoesCard';
 import { CardFaltasHNRe } from './inspecoes/CardFaltasHNRe';
 import { EnviarExamesModal } from './concursos/ExamesCandidato';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
-import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr } from '../utils/inspecoes';
+import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, inicioDaSemana } from '../utils/inspecoes';
 import { observarPericiasMenores, statusPericia, dataBR, type PericiaMenorRecord } from '../services/firestorePericiasMenores';
 import { extrairNomeInspecionado } from '../utils/format';
 import { useIsDesktop } from '../hooks/useIsDesktop';
@@ -62,7 +63,6 @@ interface Atencao {
 }
 
 const PADRAO_RAPIDO: NavItem[] = ['guide', 'exames', 'dgpm406', 'concursosJRS', 'concursos'];
-const MAX_RAPIDO = 6;
 
 const saudacao = (): string => {
   const h = new Date().getHours();
@@ -292,23 +292,34 @@ export const Home: React.FC = () => {
     });
   }
 
-  // Acesso rápido: escolha do usuário (até 6, guardada no aparelho) ou o padrão do perfil.
-  const chaveRapido = `jrs_acesso_rapido_${authUser?.uid ?? ''}`;
-  const [escolhidas, setEscolhidas] = useState<NavItem[] | null>(() => {
-    try { const s = localStorage.getItem(chaveRapido); return s ? JSON.parse(s) : null; } catch { return null; }
+  // Acesso rápido: escolha do usuário (até 6, guardada no aparelho) ou o padrão do perfil; para quem acessa mais de
+  // 6 páginas, renovado toda semana pelas mais acessadas (utils/acessoRapido.ts). Inspeções de Saúde nunca entra.
+  const chaveRapido = chaveEscolha(authUser?.uid ?? '');
+  const [escolhidas, setEscolhidas] = useState<EscolhaRapido | null>(() => {
+    try { return lerEscolha(localStorage.getItem(chaveRapido)); } catch { return null; }
   });
   const [editandoRapido, setEditandoRapido] = useState(false);
   const [rascunho, setRascunho] = useState<NavItem[]>([]);
   const mapa = new Map(paginas.map(p => [p.id, p]));
-  const rapido = (escolhidas ?? [...PADRAO_RAPIDO, ...paginas.map(p => p.id)])
-    .filter((id, i, a) => mapa.has(id) && a.indexOf(id) === i)
-    .slice(0, MAX_RAPIDO)
-    .map(id => mapa.get(id)!);
+  const resolvidoRapido = useMemo(() => {
+    let contagem = {};
+    try { contagem = contarAcessos(JSON.parse(localStorage.getItem(chaveAcessos(authUser?.uid ?? '')) || '{}'), hoje); } catch { /* sem contagem */ }
+    return resolverAcessoRapido({ salvo: escolhidas, disponiveis: paginas.map(p => p.id), contagem, hoje, padrao: PADRAO_RAPIDO });
+  }, [escolhidas, paginas.map(p => p.id).join(','), hoje, authUser?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Renovação da semana: guarda a nova escolha (até a próxima segunda-feira ou a próxima edição).
+  useEffect(() => {
+    if (!resolvidoRapido.salvar) return;
+    try { localStorage.setItem(chaveRapido, JSON.stringify(resolvidoRapido.salvar)); } catch { /* sem localStorage */ }
+    setEscolhidas(resolvidoRapido.salvar);
+  }, [resolvidoRapido.salvar, chaveRapido]);
+  const rapido = resolvidoRapido.ids.filter(id => mapa.has(id)).map(id => mapa.get(id)!);
   const salvarRapido = () => {
-    setEscolhidas(rascunho);
-    try { localStorage.setItem(chaveRapido, JSON.stringify(rascunho)); } catch { /* sem localStorage */ }
+    const escolha: EscolhaRapido = { ids: rascunho, semana: inicioDaSemana(hoje) };
+    setEscolhidas(escolha);
+    try { localStorage.setItem(chaveRapido, JSON.stringify(escolha)); } catch { /* sem localStorage */ }
     setEditandoRapido(false);
   };
+  const renovaRapido = paginas.filter(p => !FORA_DO_RAPIDO.includes(p.id)).length > MAX_RAPIDO;
 
   const mostrarAvisos = !!nav?.avisos?.casosPendente || !!nav?.avisos?.pwaPendente;
 
@@ -360,6 +371,13 @@ export const Home: React.FC = () => {
                 <EmptyState icon="task_alt" title="Nada pendente" description={podeConcursos ? 'Não há pareceres atrasados, inspeções de hoje nem concursos em andamento ou de hoje para você agora.' : 'Nada pendente para você agora.'} />
               )}
             </Secao>
+
+            {/* Agenda de inspeções: calendário + eventos do dia (concursos como um evento por turno). */}
+            {podeInspecoes && (
+              <Secao id="home-agenda" titulo="Agenda de inspeções">
+                <AgendaInspecoesCard inspecoes={inspecoes} diasConcursos={diasConcursos} concursosClicaveis={podeConcursos} />
+              </Secao>
+            )}
 
             {ehSecretaria && (
               <Secao
@@ -487,11 +505,6 @@ export const Home: React.FC = () => {
               </div>
             </Secao>
 
-            {podeInspecoes && (
-              <Secao id="home-agenda" titulo="Agenda de inspeções" link="/inspecoes?visao=calendario">
-                <MiniCalendarioIS inspecoes={inspecoes} diasConcursos={diasConcursos} concursosClicaveis={podeConcursos} />
-              </Secao>
-            )}
 
             {mostraFerias && ferias.length > 0 && (
               <Secao id="home-ferias" titulo="Próximas férias" link="/ferias">
@@ -566,14 +579,19 @@ export const Home: React.FC = () => {
           title="Acesso rápido" icon="bolt" onClose={() => setEditandoRapido(false)}
           footer={<><Button variant="secondary" onClick={() => setEditandoRapido(false)}>Cancelar</Button><Button onClick={salvarRapido}>Salvar</Button></>}
         >
-          <p className="text-ink-3 mb-3">Escolha até {MAX_RAPIDO} páginas. A escolha fica guardada neste aparelho.</p>
+          <p className="text-ink-3 mb-3">
+            Escolha até {MAX_RAPIDO} páginas. A escolha fica guardada neste aparelho.
+            {renovaRapido && ' Toda segunda-feira o card é renovado com as páginas que você mais acessou nas últimas 4 semanas.'}
+          </p>
           <ul className="space-y-1" role="group" aria-label="Páginas do acesso rápido">
             {paginas.map(p => {
-              const marcado = rascunho.includes(p.id);
-              const cheio = !marcado && rascunho.length >= MAX_RAPIDO;
+              // Inspeções de Saúde nunca entra no Acesso rápido: aparece sempre desabilitada.
+              const proibida = FORA_DO_RAPIDO.includes(p.id);
+              const marcado = !proibida && rascunho.includes(p.id);
+              const cheio = proibida || (!marcado && rascunho.length >= MAX_RAPIDO);
               return (
                 <li key={p.id}>
-                  <label className={`flex items-center gap-3 min-h-[44px] px-2 rounded-lg ${cheio ? 'opacity-50' : 'cursor-pointer hover:bg-thead'}`}>
+                  <label className={`flex items-center gap-3 min-h-[44px] px-2 rounded-lg ${cheio ? 'opacity-50' : 'cursor-pointer hover:bg-thead'}`} title={proibida ? 'Inspeções de Saúde não entra no Acesso rápido.' : undefined}>
                     <input type="checkbox" checked={marcado} disabled={cheio} onChange={() => setRascunho(r => (marcado ? r.filter(x => x !== p.id) : [...r, p.id]))} className="w-5 h-5 accent-navy" />
                     <span className="material-symbols-outlined text-[20px] text-ink-3" aria-hidden="true">{p.icon}</span>
                     <span className="text-sm font-semibold text-ink">{p.label}</span>

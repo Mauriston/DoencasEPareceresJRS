@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useReducer, useRef, useMemo, lazy, Suspense } from 'react';
 import { Navigate, useLocation, useNavigate, useNavigationType, useRoutes } from 'react-router-dom';
 import { Login } from './components/Login';
+import { chaveAcessos, somarAcesso } from './utils/acessoRapido';
+import { hojeISO as hojeISOAcesso } from './utils/inspecoes';
 import { Home } from './components/Home';
 import { Sidebar } from './components/shell/Sidebar';
 import { Topbar } from './components/shell/Topbar';
@@ -349,6 +351,16 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
     mainRef.current?.scrollTo({ top: 0 });
     if (navigationType !== 'POP') mainRef.current?.focus({ preventScroll: true });
   }, [location.pathname]);
+
+  // Acesso rápido da Início: conta os acessos às páginas (por dia, neste aparelho) para a renovação semanal.
+  useEffect(() => {
+    if (!authUser?.uid || currentView === 'home') return;
+    try {
+      const chave = chaveAcessos(authUser.uid);
+      const atual = JSON.parse(localStorage.getItem(chave) || '{}');
+      localStorage.setItem(chave, JSON.stringify(somarAcesso(atual, currentView, hojeISOAcesso())));
+    } catch { /* sem localStorage: o card fica com a escolha do usuário */ }
+  }, [currentView, authUser?.uid]);
 
   // F31: a topbar ganha sombra quando o conteúdo rola por baixo dela
   // (o container que rola é o <main>, não a janela).
