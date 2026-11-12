@@ -115,6 +115,13 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Coleção "emailsAgendaIS": registro do e-mail "IS AGENDADAS" (um doc por data, AAAA-MM-DD), gravado só pelo
+    // servidor (Admin SDK — servidor/email/agendaIS.ts). O Admin lê para ver, no modal de envio, os dias já enviados.
+    match /emailsAgendaIS/{data} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     match /documentos_gerados/{id} {
       allow read: if isAdmin() || isSecretaria();
       allow create: if isSignedIn() && request.resource.data.criadoPorUid == request.auth.uid &&

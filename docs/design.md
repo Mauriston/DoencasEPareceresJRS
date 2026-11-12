@@ -2,7 +2,7 @@
 
 > **Nota:** a identidade visual vigente é a do sistema de design JRS/HNRe implementado a partir da *Auditoria Frontend* (tokens em `styles/tokens.css`, paleta em `tailwind.config.js`, primitivos em `components/ui`). Onde este documento divergir (raios, sombras, tipografia, ouro/verde), prevalece o `docs/auditoria-frontend.md`.
 
-## 0. Estado atual do design system (atualizado em 06/11/2026)
+## 0. Estado atual do design system (atualizado em 12/11/2026)
 
 > As seções 1 a 17 vêm da análise original do visual (antes da auditoria de frontend de 15–16/10/2026). **Onde houver conflito, valem esta seção e o código** (`tailwind.config.js`, `styles/tokens.css`, `components/ui/`). O build falha com classes fora do DS (`scripts/verificar-ds.mjs`).
 
@@ -62,6 +62,26 @@ Sidebar fixa (recolhível) com as categorias Trabalho, Consulta, Formação e Ad
 | **Lista "Programação"** | Escala SVÇ (celular) | Um bloco por dia (data à esquerda) com linhas Supervisão · Dia · Noite e retém em `ink-3`; linhas do usuário destacadas; rola até hoje |
 | **Card com badge de total** | Início: Perícias Menores Vigentes | Mostra só as 4 mais antigas; o total real vai no badge `wine` do título (`Secao` com `badge`) e o rodapé diz "+N em …" |
 | **Últimos atestados (celular)** | Início do `user_medicos_geral` | Linha enxuta: nome e "Fim: dd/mm/aaaa" só nos vigentes; chip só com a bolinha (`wine` vigente, `green` concluída) e o texto para leitor de tela |
+
+### 0.4.2 Padrões adicionados em 11 e 12/11/2026
+
+| Padrão | Onde | Como |
+|---|---|---|
+| **Item de menu desabilitado com dica** | `MenuAcoes` (menu ⋮ da IS: "Resultado já enviado por e-mail") | `desabilitado`: texto `ink-4`, `cursor-not-allowed`, `aria-disabled` (continua focável e anunciado; o clique não faz nada). `dica`: segunda linha em `xs` `ink-3`, truncada (texto inteiro no `title`) |
+| **Envio de e-mail com confirmação** | *Enviar resultado por e-mail* (IS com TIS assinado) | `Dialog` md com ícone `forward_to_inbox`: resumo da IS em `dl` sobre `bg-paper`, destinatário em negrito; sem e-mail no cadastro, `Field` obrigatório com ajuda "será salvo no cadastro"; rodapé Cancelar · Enviar e-mail (`send`) |
+| **Escolha de dia com lista do mês** | *E-mail das IS agendadas* (`IconButton` `schedule_send`, só Admin, à esquerda de *Horários*) | `Dialog` md: campo de data (ajuda com o dia da semana e o feriado, se houver) e, abaixo, lista rolável (`max-h-64`, borda `line`, divisores) dos dias do mês atual com IS — linha de 44 px com "dd/mm/aaaa (DIA)", "N IS · N de concursos" e a marca `mark_email_read` "Enviado"; o dia escolhido fica `bg-navy` com texto branco. Já enviado, o botão vira "Reenviar e-mail" com aviso de que o PDF é substituído |
+
+#### E-mails da JRS (HTML para o Zimbra)
+
+Os e-mails automáticos seguem os templates do Claude Design (`servidor/email/template*.ts`) e **não usam JavaScript** (o Zimbra da Marinha não executa scripts): HTML com tabelas e estilos inline, largura máxima 820 px, fundo `#f4f6f9`, cartão branco com sombra leve, fonte **Carlito → Calibri → Arial**, texto navy `#050F41`.
+
+- **Cabeçalho:** banner do HNRe (imagem pública) sobre `#050F41`.
+- **Títulos de seção:** 24 px bold, sublinhado `2px #FAB932` (ouro). Tabelas com cabeçalho em 11 px bold `#555555` e linha `2px` navy; linhas separadas por `1px #e0e0e0`.
+- **Destaques:** quadro `#f4f6f9` com barra lateral `4px` navy (resultado da IS, "APP JRS/HNRe"); quadro de alerta `#fff5f5` com barra `#c62828` (prazo de recurso); data em "pílula" navy com texto branco.
+- **Botões:** links com `display:inline-block`, 44 px de altura útil, primário navy cheio e secundário contornado navy.
+- **Rodapé:** faixa `#e8e8e8` com a logo da Marinha (fundo claro, 260 px) e os contatos da JRS; no celular (`@media` até 600 px) as colunas empilham.
+- **Anexo em PDF da agenda:** A4 paisagem, cabeçalho "HOSPITAL NAVAL DE RECIFE / JUNTA REGULAR DE SAÚDE" em Montserrat 800/700 com linha navy de 3 px, tabela no mesmo padrão do e-mail e o rodapé cinza encostado na base da página; a página de concursos só existe quando há candidatos no dia.
+- **Remetentes:** *JRS-HNRe* (resultado ao inspecionado) e *JRS/HNRe* (agenda) — sem espaços, para o Zimbra mostrar o nome inteiro na lista de mensagens.
 
 ### 0.5 Notificações do sistema
 

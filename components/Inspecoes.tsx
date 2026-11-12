@@ -27,6 +27,7 @@ import { TrocarPeritoDialog } from './inspecoes/TrocarPeritoDialog';
 import { AgendarNoHorarioDialog } from './inspecoes/AgendarNoHorarioDialog';
 import { MinutaDialog } from './inspecoes/MinutaDialog';
 import { EnviarResultadoDialog } from './inspecoes/EnviarResultadoDialog';
+import { EmailAgendaDialog } from './inspecoes/EmailAgendaDialog';
 import { emailDoInspecionado } from '../services/emailResultadoIS';
 import { CalendarioIS } from './inspecoes/CalendarioIS';
 import { BloqueiosDialog } from './inspecoes/BloqueiosDialog';
@@ -152,6 +153,7 @@ export const Inspecoes: React.FC = () => {
   const [apagando, setApagando] = useState<InspecaoRecord | null>(null);
   const [bloqueiosAberto, setBloqueiosAberto] = useState(false);
   const [turnosAberto, setTurnosAberto] = useState(false);
+  const [emailAgendaAberto, setEmailAgendaAberto] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
 
   const avisar = (msg: string, tone: 'success' | 'error' = 'success') => { setToast({ msg, tone }); window.setTimeout(() => setToast(null), tone === 'error' ? 7000 : 4500); };
@@ -340,6 +342,7 @@ export const Inspecoes: React.FC = () => {
           title="Inspeções de Saúde"
           actions={(
             <>
+              {ehAdmin && <IconButton variant="secondary" icon="schedule_send" label="E-mail das IS agendadas" onClick={() => setEmailAgendaAberto(true)} />}
               {ehAdmin && <IconButton variant="secondary" icon="tune" label="Horários" onClick={() => setTurnosAberto(true)} />}
               {podeBloquear && <IconButton variant="secondary" icon="block" label="Bloqueios" onClick={() => setBloqueiosAberto(true)} />}
               {podeCadastrar && <IconButton variant="secondary" icon="photo_camera" label="IS por foto" onClick={() => setPorFoto(true)} />}
@@ -532,6 +535,13 @@ export const Inspecoes: React.FC = () => {
           peritos={peritosFiltraveis} config={config} bloqueios={bloqueios}
           usuario={{ uid: usuario.uid, usuario: usuario.usuario, perfil: usuario.perfil }}
           onClose={() => setBloqueiosAberto(false)} onAviso={avisar}
+        />
+      )}
+      {emailAgendaAberto && ehAdmin && (
+        <EmailAgendaDialog
+          hoje={hoje} inspecoes={lista ?? []} diasConcursos={diasConcursos}
+          onClose={() => setEmailAgendaAberto(false)}
+          onEnviado={(msg, tom) => { setEmailAgendaAberto(false); avisar(msg, tom); }}
         />
       )}
       {turnosAberto && ehAdmin && (

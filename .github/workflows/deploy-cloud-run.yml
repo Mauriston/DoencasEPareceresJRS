@@ -17,6 +17,10 @@ name: Deploy API to Cloud Run
 #                        e-mails de impressão e sincronizar o Google Agenda pela
 #                        conta Google da JRS (servidor/google/; ver
 #                        docs/configuracao.md). Sem eles, o app usa o Apps Script.
+#     AGENDADOR_TOKEN (opcional) - token (mín. 32 caracteres; openssl rand -hex 32)
+#                        que o Cloud Scheduler envia ao disparar o e-mail "IS
+#                        AGENDADAS" das 18h (scripts/agendador/configurar-email-agenda.sh).
+#                        Sem ele, o envio automático fica desligado; o manual segue.
 #   Variables (opcional):
 #     ALLOWED_ORIGIN   - origem do frontend publicado, se for diferente de
 #                        https://mauriston.github.io (ex.: domínio próprio)
@@ -71,6 +75,7 @@ jobs:
             GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
             GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
             GOOGLE_OAUTH_CLIENT_SECRET=${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+            AGENDADOR_TOKEN=${{ secrets.AGENDADOR_TOKEN }}
             ALLOWED_ORIGIN=${{ vars.ALLOWED_ORIGIN || 'https://mauriston.github.io' }}
             SPEECH_LOCALIZACAO=${{ vars.SPEECH_LOCALIZACAO || 'us' }}
 

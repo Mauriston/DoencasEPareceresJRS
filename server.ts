@@ -650,6 +650,37 @@ async function startServer() {
   // Resultado da IS ao inspecionado (só IS com TIS assinado; Admin e Secretaria): servidor/email/resultadoIS.ts.
   app.post("/api/email/resultado-is", rotaGoogle("email-resultado-is", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/resultadoIS")).enviarResultadoIS(db, b.isId, b.email, quem.uid)) }), true));
+  // E-mail "IS AGENDADAS EM dd/mm/aaaa" (servidor/email/agendaIS.ts). Manual: só o Admin escolhe o dia.
+  const bucketStorage = async () => {
+    const { adminApp } = await getFirebaseAdmin();
+    const { getStorage } = await import("firebase-admin/storage");
+    return getStorage(adminApp).bucket(BUCKET_STORAGE);
+  };
+  app.post("/api/email/agenda-is", rotaGoogle("email-agenda-is", ["admin"], async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/agendaIS")).enviarAgendaIS(db, await bucketStorage(), String(b.data || ""), { uid: quem.uid, automatico: false })) }), true));
+  // Automático: o Cloud Scheduler chama às 18h (Recife) de domingo a quinta, com o cabeçalho X-Agendador-Token
+  // = AGENDADOR_TOKEN (scripts/agendador/configurar-email-agenda.sh). Sem token configurado, a rota fica desligada.
+  app.post("/api/agendador/agenda-is", async (req, res) => {
+    const esperado = process.env.AGENDADOR_TOKEN || "";
+    const recebido = String(req.get("X-Agendador-Token") || "");
+    const { timingSafeEqual } = await import("node:crypto");
+    const ok = esperado.length >= 32 && recebido.length === esperado.length && timingSafeEqual(Buffer.from(recebido), Buffer.from(esperado));
+    if (!ok) {
+      void auditarServidor("acesso_negado", "agendador-agenda-is", "", esperado ? "token_invalido" : "agendador_desligado");
+      res.status(esperado ? 401 : 503).json({ success: false, error: "Agendador não autorizado." });
+      return;
+    }
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      const r = await (await import("./servidor/email/agendaIS")).envioAutomaticoAgendaIS(adminDb, await bucketStorage());
+      if (r.enviado) void auditarServidor("operacao_sensivel", "agendador-agenda-is", "agendador");
+      res.json({ success: true, ...r });
+    } catch (error: any) {
+      logErroSeguro("Agendador agenda-is", error);
+      // 500: o Cloud Scheduler tenta de novo (o envio de uma data só sai uma vez).
+      res.status(500).json({ success: false, error: error?.message || "Falha no envio automático." });
+    }
+  });
   app.post("/api/agenda/evento-is", rotaGoogle("agenda-evento-is", PERFIS_EQUIPE, async (db, b) =>
     (await import("./servidor/google/agenda")).sincronizarEventoIS(db, b)));
   app.post("/api/agenda/evento-bloqueio", rotaGoogle("agenda-evento-bloqueio", PERFIS_EQUIPE, async (db, b) =>

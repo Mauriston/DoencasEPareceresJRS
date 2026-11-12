@@ -16,7 +16,7 @@ RUN npm run build
 # ffmpeg converte o áudio da entrevista da IS em FLAC mono 16 kHz (servidor/entrevistas/audio.ts).
 FROM node:22-bookworm-slim
 RUN apt-get update \
- && apt-get install -y --no-install-recommends chromium fonts-crosextra-carlito fonts-liberation ffmpeg \
+ && apt-get install -y --no-install-recommends chromium fonts-crosextra-carlito fonts-liberation fonts-noto-color-emoji ffmpeg \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production

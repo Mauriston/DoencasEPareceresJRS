@@ -55,7 +55,7 @@ describe('montarEmailResultado', () => {
     expect(html).toContain('<li style="margin-bottom:4px">Carregar peso; e</li>');
     expect(html).toContain('em até 45 dias');
     expect(html).toContain(CONFIG_EMAIL_RESULTADO.logoRodapeUrl);
-    expect(assunto).toBe('Resultado de IS — FIM VDF Fato Novo — 2SG-CO 07.3644.15 PAULO ANDRE DIAS DOS SANTOS (EAMPE)');
+    expect(assunto).toBe('RESULTADO DE INSPEÇÃO DE SAÚDE');
     expect(texto).toContain('Laudo: "Apto para o SAM com restrições por 90 dias."');
   });
 
