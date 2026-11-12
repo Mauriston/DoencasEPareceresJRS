@@ -37,6 +37,7 @@ import {
   consumirNotifDaUrl, ouvirCliquesDoPush, type NotificacaoRecord,
 } from './services/notificacoesPush';
 import { useIsDesktop } from './hooks/useIsDesktop';
+import { podeVerFerias } from './utils/afastamentos';
 
 // Carregamento sob demanda (code splitting por rota): cada página vira um chunk próprio, baixado
 // só quando a rota é aberta. Home e Login ficam no pacote principal (primeira tela).
@@ -44,6 +45,7 @@ const paginaLazy = <K extends string>(carregar: () => Promise<Record<K, React.Co
   lazy(() => carregar().then(m => ({ default: m[nome] })));
 const Perfil = paginaLazy(() => import('./components/Perfil'), 'Perfil');
 const Configuracoes = paginaLazy(() => import('./components/Configuracoes'), 'Configuracoes');
+const Ferias = paginaLazy(() => import('./components/Ferias'), 'Ferias');
 const DiseaseGuide = paginaLazy(() => import('./components/DiseaseGuide'), 'DiseaseGuide');
 const LawReference = paginaLazy(() => import('./components/LawReference'), 'LawReference');
 const DGPM406Guide = paginaLazy(() => import('./components/DGPM406Guide'), 'DGPM406Guide');
@@ -394,6 +396,8 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement /> : <AccessDenied pagina="Usuários" />;
       // Configurações gerais (menu do avatar): só o Admin.
       case 'configuracoes': return authUser?.perfil === 'admin' ? <Configuracoes /> : <AccessDenied pagina="Configurações" />;
+      // Férias e afastamentos: usuários da JRS (Admin, médicos JRS/MPI e Secretaria); só o Admin altera.
+      case 'ferias': return podeVerFerias(authUser?.perfil) ? <Ferias /> : <AccessDenied pagina="Férias" />;
 
       default: return <Home />;
     }

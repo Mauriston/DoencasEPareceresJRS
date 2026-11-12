@@ -99,6 +99,20 @@ service firebase.storage {
       allow read, update, delete: if false;
     }
 
+    // Documentos das férias e afastamentos (página Férias; services/afastamentos.ts): afastamentos/{id}/{arquivo},
+    // PDF ou imagem até 15 MB. A equipe da JRS (Admin, médicos JRS/MPI e Secretaria) lê; só o Admin envia e apaga.
+    match /afastamentos/{afastamentoId}/{arquivo} {
+      allow read: if request.auth != null
+        && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
+      allow create: if request.auth != null
+        && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil == 'admin'
+        && request.resource.size < 15 * 1024 * 1024
+        && (request.resource.contentType == 'application/pdf' || request.resource.contentType.matches('image/.*'));
+      allow delete: if request.auth != null
+        && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil == 'admin';
+      allow update: if false;
+    }
+
     // Exames da IS (PDFs; services/examesIS.ts): inspecoes/{isId}/exames/{exameId}.pdf. A equipe
     // (Admin, médicos JRS/MPI e Secretaria) lê; envia (PDF até 15 MB) e apaga enquanto a IS não está finalizada.
     match /inspecoes/{isId}/exames/{arquivo} {

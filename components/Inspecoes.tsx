@@ -7,7 +7,7 @@
 // formato do Google Agenda. As IS com entrevista marcada são sincronizadas com a agenda "JRS/HNRe" do Google
 // Agenda, com o perito como convidado (ver services/agendaGoogleIS.ts).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
 import { IconButton } from './ui/IconButton';
@@ -15,7 +15,7 @@ import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
 import { ConfirmDialog } from './ui/Dialog';
 import { controlClass } from './ui/Field';
-import { type ItemMenu } from './ui/MenuAcoes';
+import { MenuAcoes, type ItemMenu } from './ui/MenuAcoes';
 import { TabelaAgendaIS } from './inspecoes/TabelaAgendaIS';
 import { FiltroSituacaoIS } from './inspecoes/FiltroSituacaoIS';
 import { FiltroPeriodo, type FiltroPeriodoValor } from './inspecoes/FiltroPeriodo';
@@ -32,6 +32,7 @@ import { avisarAgendamento, observarAgendamentos, type AgendamentoFeito } from '
 import { agendamentoJaEnviado, ehElegivelAgendamento } from '../utils/emailAgendamentoIS';
 import { EmailAgendaDialog } from './inspecoes/EmailAgendaDialog';
 import { BotaoEnviarEmail } from './inspecoes/BotaoEnviarEmail';
+import { EmailsDaIS } from './inspecoes/EmailsDaIS';
 import { emailDoInspecionado } from '../services/emailResultadoIS';
 import { CalendarioIS } from './inspecoes/CalendarioIS';
 import { BloqueiosDialog } from './inspecoes/BloqueiosDialog';
@@ -126,7 +127,9 @@ export const Inspecoes: React.FC = () => {
   const [militares, setMilitares] = useState<MilitarRecord[]>([]);
   const [peritos, setPeritos] = useState<PeritoIS[]>([]);
 
-  const [visao, setVisao] = useState<Visao>('tabela');
+  // Visão inicial pela URL (?visao=calendario — ex.: cabeçalho do card "Agenda de inspeções" da Início).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [visao, setVisao] = useState<Visao>(() => (searchParams.get('visao') === 'calendario' ? 'calendario' : 'tabela'));
   // Filtros da visão Tabela (o calendário tem navegação própria). Padrão: Em andamento · Este mês.
   const [situacoes, setSituacoes] = useState<SituacaoIS[]>(['andamento']);
   const [periodo, setPeriodo] = useState<FiltroPeriodoValor>({ id: 'mes' });
@@ -171,6 +174,14 @@ export const Inspecoes: React.FC = () => {
   useEffect(() => observarInspecoes(setLista, e => setErroCarga(e.message || 'Não foi possível carregar as inspeções.')), []);
   useEffect(() => observarBloqueios(setBloqueios), []);
   useEffect(() => observarConfigAgenda(setConfig), []);
+  // Atalho da Início ("+ Abrir IS"): ?novo=manual abre o formulário; ?novo=print, a IS por foto. Respeita a permissão.
+  useEffect(() => {
+    const novoParam = searchParams.get('novo');
+    if (!novoParam) return;
+    if (podeCadastrar) { if (novoParam === 'print') setPorFoto(true); else setNovo({}); }
+    const resto = new URLSearchParams(searchParams); resto.delete('novo');
+    setSearchParams(resto, { replace: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => observarMilitares(setMilitares), []);
   useEffect(() => { carregarPeritos().then(setPeritos).catch(() => setPeritos([])); }, []);
 
@@ -323,19 +334,7 @@ export const Inspecoes: React.FC = () => {
     const restituicao = restituicaoDoStatus(is.status);
     if (restituicao && podeEditar && !ehSecretaria) itens.push({ rotulo: restituicao.rotulo, icone: 'undo', onClick: () => { mudarStatus(is, restituicao.status, `IS ${is.is}: ${restituicao.rotulo}.`); } });
     if (podeMinuta && mostraMinutaMsg(is)) itens.push({ rotulo: 'Minuta MSG', icone: 'mail', onClick: () => setMinuta(is) });
-    // E-mail de agendamento ao inspecionado (só Verificações e Términos): Admin e Secretaria; um por data/hora.
-    if ((ehAdmin || ehSecretaria) && ehElegivelAgendamento(is)) {
-      itens.push(agendamentoJaEnviado(is)
-        ? { rotulo: 'E-mail de agendamento enviado', icone: 'mark_email_read', desabilitado: true, dica: `Para ${is.emailAgendamentoPara}`, onClick: () => {} }
-        : { rotulo: 'Enviar e-mail de agendamento', icone: 'forward_to_inbox', onClick: () => setFilaAgendamento(f => [...f, { isId: is.id, dataEntrevista: is.dataEntrevista, origem: 'menu' }]) });
-    }
-    // Resultado ao inspecionado por e-mail: só IS finalizada com TIS assinado; só Admin e Secretaria.
-    // Já enviado: o item fica visível, mas desabilitado, com o destinatário na dica.
-    if ((ehAdmin || ehSecretaria) && is.status === 'tis_assinado') {
-      itens.push(is.emailResultadoPara
-        ? { rotulo: 'Resultado já enviado por e-mail', icone: 'mark_email_read', desabilitado: true, dica: `Para ${is.emailResultadoPara}`, onClick: () => {} }
-        : { rotulo: 'Enviar resultado por e-mail', icone: 'forward_to_inbox', onClick: () => setEnviandoResultado(is) });
-    }
+    // Os e-mails (agendamento, resultado, faltas, NAC) ficam só no menu do botão "Enviar Email" do cabeçalho.
     if (podeAgendar && is.dataEntrevista && is.status !== 'cancelada' && !(is.agendaSincronizada && is.eventoAgendaId)) itens.push({ rotulo: 'Sincronizar com o Google Agenda', icone: 'sync', onClick: () => { sincronizar(is); } });
     if (ehAdmin && is.status === 'tis_assinado') itens.push({ rotulo: 'Reabrir IS', icone: 'lock_open', onClick: () => { mudarStatus(is, 'assinaturas_pendentes', `IS ${is.is} reaberta.`); } });
     if ((ehAdmin || ehSecretaria) && podeCancelarIS(is, hoje)) itens.push({ rotulo: 'Cancelar IS', icone: 'cancel', perigo: true, onClick: () => setConfirmando({ tipo: 'cancelar', is }) });
@@ -380,16 +379,24 @@ export const Inspecoes: React.FC = () => {
           actions={(
             <>
               {podeBloquear && <IconButton variant="secondary" icon="block" label="Bloqueios" onClick={() => setBloqueiosAberto(true)} />}
-              {podeCadastrar && <IconButton variant="secondary" icon="photo_camera" label="IS por foto" onClick={() => setPorFoto(true)} />}
               {(ehAdmin || ehSecretaria) && (
                 <BotaoEnviarEmail
                   inspecoes={lista ?? []} militares={militares} hoje={hoje}
                   podeEmailAgenda={ehAdmin} onEmailAgenda={() => setEmailAgendaAberto(true)}
                   onEnviarAgendamento={is => setFilaAgendamento(f => [...f, { isId: is.id, dataEntrevista: is.dataEntrevista, origem: 'menu' }])}
+                  onEnviarResultado={setEnviandoResultado}
                   onAviso={avisar}
                 />
               )}
-              {podeCadastrar && <Button icon="add" onClick={() => setNovo({})}>Abrir IS</Button>}
+              {podeCadastrar && (
+                <MenuAcoes
+                  rotulo="Abrir IS" botao={{ texto: 'Abrir IS', icone: 'add', primario: true }}
+                  itens={[
+                    { rotulo: 'Manualmente', icone: 'edit_note', onClick: () => setNovo({}) },
+                    { rotulo: 'Enviar print', icone: 'photo_camera', onClick: () => setPorFoto(true) },
+                  ]}
+                />
+              )}
             </>
           )}
         />
@@ -486,6 +493,14 @@ export const Inspecoes: React.FC = () => {
           onDuplicarParecer={p => setParecerPara({ is: detalhe, inicial: p })}
           onSituacaoMudou={is => { sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS atualizada, mas o Google Agenda não: ${r.erro}`, 'error'); }); }}
           onAviso={avisar}
+          emails={(
+            <EmailsDaIS
+              is={detalhe} om={omDe(detalhe)} hoje={hoje} podeEnviar={ehAdmin || ehSecretaria}
+              onEnviarAgendamento={is => setFilaAgendamento(f => [...f, { isId: is.id, dataEntrevista: is.dataEntrevista, origem: 'menu' }])}
+              onEnviarResultado={setEnviandoResultado}
+              onAviso={avisar}
+            />
+          )}
         />
       )}
 

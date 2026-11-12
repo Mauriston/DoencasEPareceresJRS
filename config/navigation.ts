@@ -7,6 +7,7 @@
 import { NavItem } from '../types';
 import { PAGE_DEFS, canAccessPage } from './permissions';
 import { termosPericia } from './termosPericia';
+import { podeVerFerias } from '../utils/afastamentos';
 
 export interface NavSubItem {
   id: NavItem;
@@ -63,15 +64,18 @@ export const getNavCategories = (
       })),
   })).filter(cat => cat.subitems.length > 0);
 
-  if (perfil === 'admin') {
+  // Administração: "Férias" para os usuários da JRS (Admin, médicos JRS/MPI e Secretaria); "Usuários" só para o Admin.
+  const administracao: NavSubItem[] = [
+    ...(podeVerFerias(perfil) ? [{ id: 'ferias' as NavItem, label: 'Férias', icon: 'beach_access', subtitle: 'Férias e afastamentos dos usuários da JRS.' }] : []),
+    ...(perfil === 'admin' ? [{ id: 'usuarios' as NavItem, label: 'Usuários', icon: 'group', subtitle: 'Gerencie usuários e permissões de acesso.' }] : []),
+  ];
+  if (administracao.length) {
     categories.push({
       id: 'administracao',
       label: 'Administração',
       icon: 'admin_panel_settings',
-      subtitle: 'Gestão de usuários e permissões.',
-      subitems: [
-        { id: 'usuarios', label: 'Usuários', icon: 'group', subtitle: 'Gerencie usuários e permissões de acesso.' },
-      ],
+      subtitle: 'Férias e afastamentos; gestão de usuários e permissões.',
+      subitems: administracao,
     });
   }
 

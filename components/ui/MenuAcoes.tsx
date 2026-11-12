@@ -18,7 +18,7 @@ export interface ItemMenu {
 }
 
 /** Gatilho em forma de botão com texto (em vez dos três pontinhos). */
-export interface BotaoMenu { texto: string; icone: string; badge?: number }
+export interface BotaoMenu { texto: string; icone: string; badge?: number; /** Botão primário (navy cheio); padrão: secundário. */ primario?: boolean }
 
 export const MenuAcoes: React.FC<{ rotulo: string; itens: ItemMenu[]; botao?: BotaoMenu }> = ({ rotulo, itens, botao: gatilho }) => {
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
@@ -65,7 +65,7 @@ export const MenuAcoes: React.FC<{ rotulo: string; itens: ItemMenu[]; botao?: Bo
         <button
           ref={botao} type="button" onClick={alternar} aria-haspopup="menu" aria-expanded={!!pos}
           aria-label={gatilho.badge ? `${rotulo} (${gatilho.badge} pendente${gatilho.badge > 1 ? 's' : ''})` : rotulo}
-          className="relative inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+          className={`relative inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold border border-navy transition-colors ${gatilho.primario ? 'bg-navy text-white hover:bg-navy-hover' : 'bg-white text-navy hover:bg-thead'} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold`}
         >
           <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{gatilho.icone}</span>
           {gatilho.texto}

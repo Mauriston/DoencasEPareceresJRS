@@ -62,6 +62,8 @@ interface Props {
   /** A situação (Em andamento/Finalizada) mudou: o evento do Google Agenda muda de título e cor. */
   onSituacaoMudou: (is: InspecaoRecord) => void;
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
+  /** Seção de e-mails da IS (botões de envio e cards dos já enviados — EmailsDaIS), montada pela página. */
+  emails?: React.ReactNode;
 }
 
 /** Minuta MSG: com Nº do TIS e DS-1a, ou IS cancelada. */
@@ -126,7 +128,7 @@ const useCampoAuto = (remoto: string, salvar: (valor: string) => void) => {
 
 type EstadoGravacao = 'ocioso' | 'salvando' | 'salvo' | 'erro';
 
-export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes, onClose, onMinuta, onSolicitarParecer, onDuplicarParecer, onSituacaoMudou, onAviso }) => {
+export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes, onClose, onMinuta, onSolicitarParecer, onDuplicarParecer, onSituacaoMudou, onAviso, emails }) => {
   const nav = useNav();
   const efetivo = statusEfetivoIS(is);
   const info = STATUS_IS[efetivo];
@@ -255,6 +257,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
       ))}
     </div>
     <ExamesDaIS isId={is.id} podeApagar={podeEnviarExames} onAviso={onAviso} />
+    {emails}
     </>
   );
 

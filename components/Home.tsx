@@ -1,14 +1,15 @@
 // Ficheiro: components/Home.tsx
 // Início como PAINEL DE TRABALHO (auditoria v2, N4/G3/L4): "Precisa de atenção" (pareceres
-// atrasados, perícias vigentes, concurso em andamento, IS marcadas para hoje, senha temporária),
+// atrasados, concurso em andamento, IS marcadas para hoje, senha temporária),
 // "Últimos documentos gerados" (só Secretaria: fila do que foi enviado para impressão),
-// "Próximas Inspeções", "Pareceres não concluídos" e "Perícias Menores Vigentes" (cada um só aparece
+// "Pareceres não concluídos" e "Perícias Menores Vigentes" (cada um só aparece
 // quando há itens), "Acesso rápido" (até 6 páginas, editável e guardado no
 // aparelho), "Próximas férias" e "Avisos" (Casos Periciais e instalação do app — antes eram diálogos em
 // sequência no login). O menu lateral já lista as páginas: a Home não o repete.
 // Tudo respeita a matriz de permissões: cada bloco só aparece para quem tem acesso.
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { MenuAcoes } from './ui/MenuAcoes';
 import { Container } from './ui/Page';
 import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
@@ -22,12 +23,14 @@ import { canAccessPage, canUseFeature } from '../config/permissions';
 import { pathForView, concursoPath, concursosDiaPath } from '../config/routes';
 import { observarConcursos, type ConcursoRecord } from '../services/firestoreConcursos';
 import { observarPareceres, statusEfetivo, type ParecerRecord } from '../services/firestorePareceres';
-import { observarInspecoes, observarBloqueios, type InspecaoRecord } from '../services/firestoreInspecoes';
+import { observarInspecoes, type InspecaoRecord } from '../services/firestoreInspecoes';
+import { observarAfastamentos, type AfastamentoRecord } from '../services/afastamentos';
+import { podeVerFerias, statusEfetivo as statusDoAfastamento } from '../utils/afastamentos';
 import { MiniCalendarioIS } from './inspecoes/MiniCalendarioIS';
 import { CardFaltasHNRe } from './inspecoes/CardFaltasHNRe';
 import { EnviarExamesModal } from './concursos/ExamesCandidato';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
-import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, diasEntre, TODOS_PERITOS, type BloqueioAgenda } from '../utils/inspecoes';
+import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr } from '../utils/inspecoes';
 import { observarPericiasMenores, statusPericia, dataBR, type PericiaMenorRecord } from '../services/firestorePericiasMenores';
 import { extrairNomeInspecionado } from '../utils/format';
 import { useIsDesktop } from '../hooks/useIsDesktop';
@@ -70,11 +73,17 @@ const dataPorExtenso = (): string => {
   return t.charAt(0).toUpperCase() + t.slice(1);
 };
 
-const Secao: React.FC<{ id: string; titulo: string; badge?: number; badgeRotulo?: string; acao?: React.ReactNode; children: React.ReactNode }> = ({ id, titulo, badge, badgeRotulo = 'pendentes', acao, children }) => (
+/** Card da Início. Com `link`, o título (cabeçalho) leva à página correspondente. */
+const Secao: React.FC<{ id: string; titulo: string; badge?: number; badgeRotulo?: string; acao?: React.ReactNode; link?: string; children: React.ReactNode }> = ({ id, titulo, badge, badgeRotulo = 'pendentes', acao, link, children }) => (
   <section aria-labelledby={id} className="bg-white border border-line rounded-xl">
     <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-2">
       <h2 id={id} className="text-h3 font-bold text-navy flex items-center gap-2">
-        {titulo}
+        {link ? (
+          <Link to={link} className="inline-flex items-center gap-1 min-h-[44px] -my-2 hover:underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded">
+            {titulo}
+            <span className="material-symbols-outlined text-[20px] text-ink-4" aria-hidden="true">chevron_right</span>
+          </Link>
+        ) : titulo}
         {!!badge && <span className="min-w-[24px] h-6 px-2 rounded-full bg-wine text-white text-xs font-bold leading-6 text-center" aria-label={`${badge} ${badgeRotulo}`}>{badge}</span>}
       </h2>
       {acao}
@@ -151,7 +160,9 @@ export const Home: React.FC = () => {
   const podePareceres = canAccessPage('pareceres', perfil);
   const podeInspecoes = canAccessPage('inspecoes', perfil);
   const podePericiaMenor = canAccessPage('pericia-menor', perfil);
-  const podeGerarParecer = podePareceres && canUseFeature('pareceres.gerar', perfil);
+  // Botão primário da Início: "+ Abrir IS" (substitui "Novo parecer"), para quem pode cadastrar IS.
+  const podeAbrirIS = podeInspecoes && canUseFeature('inspecoes.cadastrar', perfil);
+  const navegar = useNavigate();
   const podeNovaPericia = canUseFeature('pericia-menor.novo', perfil);
   const termosPm = termosPericia(perfil);
   const podeEnviarExames = podeConcursos && canUseFeature('concursosJRS.enviarExamesCandidato', perfil);
@@ -170,7 +181,7 @@ export const Home: React.FC = () => {
   useEffect(() => (podePareceres ? observarPareceres(setPareceres, () => { /* silencioso */ }) : undefined), [podePareceres]);
   const atrasados = useMemo(() => pareceres.filter(p => statusEfetivo(p) === 'atrasado'), [pareceres]);
 
-  // Inspeções de Saúde agendadas: "Próximas Inspeções", item de atenção (hoje) e mini calendário.
+  // Inspeções de Saúde agendadas: item de atenção (hoje) e mini calendário (o card "Próximas Inspeções" saiu).
   const [inspecoes, setInspecoes] = useState<InspecaoRecord[]>([]);
   useEffect(() => (podeInspecoes ? observarInspecoes(setInspecoes, () => { /* silencioso */ }) : undefined), [podeInspecoes]);
   // Quem acessa Concursos: além da agenda, alimenta o item "IS de concurso atrasadas" de Precisa de atenção.
@@ -207,16 +218,18 @@ export const Home: React.FC = () => {
   useEffect(() => (podeEscala ? observarEscalaAPartirDe(hoje, 62, setEscala, () => { /* silencioso */ }) : undefined), [podeEscala, hoje]);
   const meusServicos = useMemo(() => servicosDoUsuario(escala, authUser?.usuario).slice(0, 5), [escala, authUser?.usuario]);
 
-  // Próximas férias: bloqueios da agenda com motivo "FÉRIAS" (sem distinguir acento/caixa) ainda não
-  // terminados, os mais próximos primeiro. Só para Admin, médicos JRS/MPI e Secretaria (não para
-  // user_medicos_geral); o card só aparece quando há registro.
-  const mostraFerias = ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'].includes(perfil || '');
-  const [bloqueios, setBloqueios] = useState<BloqueioAgenda[]>([]);
-  useEffect(() => observarBloqueios(setBloqueios, () => { /* silencioso */ }), []);
-  const ferias = useMemo(() => bloqueios
-    // Registro incompleto (sem data de início ou sem motivo) não entra: o card não pode derrubar a Início.
-    .filter(b => b.data && /\bferias\b/.test((b.motivo ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()) && (b.dataFim || b.data) >= hoje)
-    .sort((a, b) => a.data.localeCompare(b.data) || (a.peritoNome ?? '').localeCompare(b.peritoNome ?? '')), [bloqueios, hoje]);
+  // Férias (página Férias, coleção "afastamentos"): só o tipo Férias com status "Em gozo" ou "Gozada" (status
+  // automático, utils/afastamentos.ts) — em gozo primeiro, depois as gozadas mais recentes. Só para Admin, médicos
+  // JRS/MPI e Secretaria; o card só aparece quando há registro.
+  const mostraFerias = podeVerFerias(perfil);
+  const [afastamentos, setAfastamentos] = useState<AfastamentoRecord[]>([]);
+  useEffect(() => (mostraFerias ? observarAfastamentos(setAfastamentos, () => { /* silencioso */ }) : undefined), [mostraFerias]);
+  const ferias = useMemo(() => afastamentos
+    .filter(a => a.tipo === 'ferias' && a.dataInicio && a.dataFim)
+    .map(a => ({ a, st: statusDoAfastamento(a, hoje) }))
+    .filter(x => x.st === 'em_gozo' || x.st === 'gozada')
+    .sort((x, y) => (x.st === y.st ? (x.st === 'em_gozo' ? x.a.dataInicio.localeCompare(y.a.dataInicio) : y.a.dataFim.localeCompare(x.a.dataFim)) : x.st === 'em_gozo' ? -1 : 1)),
+  [afastamentos, hoje]);
 
   // Últimos documentos gerados (só Secretaria): fila do que foi enviado para impressão e ainda não abriu.
   const ehSecretaria = perfil === 'user_secretaria';
@@ -270,14 +283,7 @@ export const Home: React.FC = () => {
       tag: 'Hoje', tom: feitas === totalHoje ? 'success' : 'attention', to: concursosDiaPath(hoje),
     });
   }
-  if (podePericiaMenor && periciaMenorVigentes > 0) {
-    atencao.push({
-      id: 'pm', icone: 'personal_injury', titulo: termosPm.pagina === 'Atestados'
-        ? `${periciaMenorVigentes} atestado${periciaMenorVigentes !== 1 ? 's' : ''} vigente${periciaMenorVigentes !== 1 ? 's' : ''}`
-        : `${periciaMenorVigentes} perícia${periciaMenorVigentes !== 1 ? 's' : ''} menor${periciaMenorVigentes !== 1 ? 'es' : ''} vigente${periciaMenorVigentes !== 1 ? 's' : ''}`,
-      detalhe: periciaMenorVigentes === 1 ? 'Militar com dispensa em curso' : 'Militares com dispensa em curso', tag: 'Vigente', tom: 'danger', to: '/pericia-menor/historico',
-    });
-  }
+  // Perícias menores vigentes não entram em "Precisa de atenção": ficam só no card próprio (Perícias Menores Vigentes).
   if (podeConcursos && emAndamento.length > 0) {
     atencao.push({
       id: 'concurso', icone: 'fact_check', titulo: emAndamento.length === 1 ? emAndamento[0].nome : `${emAndamento.length} concursos em andamento`,
@@ -313,11 +319,19 @@ export const Home: React.FC = () => {
           <p className="eyebrow">{dataPorExtenso()}</p>
           <h1 className="text-display font-extrabold text-navy">{saudacao()}, {primeiroNome || 'Perito'}</h1>
         </div>
-        {(podeNovaPericia && podePericiaMenor || podeGerarParecer || mostrarEnviarExames) && (
+        {(podeNovaPericia && podePericiaMenor || podeAbrirIS || mostrarEnviarExames) && (
           <div className="flex flex-col-reverse sm:flex-row gap-2">
-            {mostrarEnviarExames && <button type="button" onClick={() => setEnviarExames(true)} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">lab_profile</span>Enviar exames de concurso</button>}
-            {podeNovaPericia && podePericiaMenor && <Link to="/pericia-menor?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">personal_injury</span>{termosPm.novo}</Link>}
-            {podeGerarParecer && <Link to="/pareceres?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>Novo parecer</Link>}
+            {mostrarEnviarExames && <button type="button" onClick={() => setEnviarExames(true)} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>Exames Concursos</button>}
+            {podeNovaPericia && podePericiaMenor && <Link to="/pericia-menor?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>{termosPm.pagina === 'Atestados' ? 'Atestado' : 'Perícia Menor'}</Link>}
+            {podeAbrirIS && (
+              <MenuAcoes
+                rotulo="Abrir IS" botao={{ texto: 'Abrir IS', icone: 'add', primario: true }}
+                itens={[
+                  { rotulo: 'Manualmente', icone: 'edit_note', onClick: () => navegar('/inspecoes?novo=manual') },
+                  { rotulo: 'Enviar print', icone: 'photo_camera', onClick: () => navegar('/inspecoes?novo=print') },
+                ]}
+              />
+            )}
           </div>
         )}
       </header>
@@ -343,7 +357,7 @@ export const Home: React.FC = () => {
                   ))}
                 </ul>
               ) : (
-                <EmptyState icon="task_alt" title="Nada pendente" description={podeConcursos ? 'Não há pareceres atrasados, perícias vigentes, inspeções de hoje nem concursos em andamento ou de hoje para você agora.' : 'Nada pendente para você agora.'} />
+                <EmptyState icon="task_alt" title="Nada pendente" description={podeConcursos ? 'Não há pareceres atrasados, inspeções de hoje nem concursos em andamento ou de hoje para você agora.' : 'Nada pendente para você agora.'} />
               )}
             </Secao>
 
@@ -364,33 +378,6 @@ export const Home: React.FC = () => {
 
             {/* Faltas do HNRe ainda não comunicadas à Divisão de Pessoal (só Admin e Secretaria; some sem pendências). */}
             {podeInspecoes && (perfil === 'admin' || ehSecretaria) && <CardFaltasHNRe inspecoes={inspecoes} Secao={Secao} />}
-
-            {podeInspecoes && (
-              <Secao id="home-proximas" titulo="Próximas Inspeções" acao={<Link to="/inspecoes" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver inspeções</Link>}>
-                {proximas.length === 0 ? (
-                  <EmptyState icon="event_available" title="Nenhuma inspeção agendada" description="As IS com entrevista marcada aparecem aqui." />
-                ) : (
-                  <ul className="divide-y divide-line">
-                    {proximas.slice(0, 6).map(i => {
-                      const ehHoje = dataDeEntrevista(i.dataEntrevista) === hoje;
-                      return (
-                        <li key={i.id}>
-                          <Link to="/inspecoes" className="flex items-center gap-3 px-4 min-h-[56px] py-2 hover:bg-thead transition-colors">
-                            <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">event_available</span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-sm font-bold text-navy truncate">{nomeDe(i)}</span>
-                              <span className="block text-xs text-ink-3 truncate">IS {i.is} · {i.finalidade} · {i.amp}{i.peritoNome ? ` · ${i.peritoNome}` : ''}</span>
-                            </span>
-                            <span className="text-xs text-ink-3 shrink-0 text-right">{ehHoje ? <strong className="text-navy">Hoje</strong> : dataBr(dataDeEntrevista(i.dataEntrevista)).slice(0, 5)} · {horaDeEntrevista(i.dataEntrevista)}</span>
-                            <span className="material-symbols-outlined text-[20px] text-ink-4" aria-hidden="true">chevron_right</span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </Secao>
-            )}
 
             {podePareceres && naoConcluidos.length > 0 && (
               <Secao id="home-pareceres" titulo={`Pareceres não concluídos (${naoConcluidos.length})`} acao={<Link to="/pareceres" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver pareceres</Link>}>
@@ -500,32 +487,27 @@ export const Home: React.FC = () => {
               </div>
             </Secao>
 
-            {mostraFerias && ferias.length > 0 && (
-              <Secao id="home-ferias" titulo="Próximas férias">
-                <ul className="divide-y divide-line">
-                  {ferias.slice(0, 6).map(f => {
-                    const fim = f.dataFim || f.data;
-                    const emCurso = f.data <= hoje;
-                    const dias = diasEntre(f.data, fim) + 1;
-                    return (
-                      <li key={f.id} className="flex items-center gap-3 px-4 min-h-[56px] py-2">
-                        <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">beach_access</span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-bold text-navy truncate">{f.peritoUid === TODOS_PERITOS ? 'Todos os peritos' : (f.peritoNome || 'Perito')}</span>
-                          <span className="block text-xs text-ink-3 truncate">{fim === f.data ? dataBr(f.data) : `${dataBr(f.data)} a ${dataBr(fim)}`} · {dias} dia{dias !== 1 ? 's' : ''}</span>
-                        </span>
-                        {emCurso && <StatusTag tone="attention" className="shrink-0">Em férias</StatusTag>}
-                      </li>
-                    );
-                  })}
-                </ul>
-                {ferias.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{ferias.length - 6} período{ferias.length - 6 !== 1 ? 's' : ''} de férias.</p>}
+            {podeInspecoes && (
+              <Secao id="home-agenda" titulo="Agenda de inspeções" link="/inspecoes?visao=calendario">
+                <MiniCalendarioIS inspecoes={inspecoes} diasConcursos={diasConcursos} concursosClicaveis={podeConcursos} />
               </Secao>
             )}
 
-            {podeInspecoes && (
-              <Secao id="home-agenda" titulo="Agenda de inspeções">
-                <MiniCalendarioIS inspecoes={inspecoes} diasConcursos={diasConcursos} concursosClicaveis={podeConcursos} />
+            {mostraFerias && ferias.length > 0 && (
+              <Secao id="home-ferias" titulo="Próximas férias" link="/ferias">
+                <ul className="divide-y divide-line">
+                  {ferias.slice(0, 6).map(({ a: f, st }) => (
+                    <li key={f.id} className="flex items-center gap-3 px-4 min-h-[56px] py-2">
+                      <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">beach_access</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold text-navy truncate">{f.usuario}</span>
+                        <span className="block text-xs text-ink-3 truncate">{dataBr(f.dataInicio)} a {dataBr(f.dataFim)} · {f.duracaoDias} dia{f.duracaoDias !== 1 ? 's' : ''}{f.referencia ? ` · ref. ${f.referencia}` : ''}</span>
+                      </span>
+                      <StatusTag tone={st === 'em_gozo' ? 'attention' : 'muted'} className="shrink-0">{st === 'em_gozo' ? 'Em gozo' : 'Gozada'}</StatusTag>
+                    </li>
+                  ))}
+                </ul>
+                {ferias.length > 6 && <Link to="/ferias" className="block px-4 py-2 min-h-[44px] text-xs font-bold text-blue underline underline-offset-2 hover:text-navy border-t border-line">+{ferias.length - 6} período{ferias.length - 6 !== 1 ? 's' : ''} de férias na página Férias</Link>}
               </Secao>
             )}
 

@@ -148,6 +148,7 @@ O **Cloud Firestore** é a fonte principal (detalhes em `docs/database.md`, seç
 | `index.html` / `index.tsx` | Documento base, manifesto, montagem do React e leitura do token de login por QR | HTML + React DOM |
 | `components/Raiz.tsx` | Desvio entre o app autenticado e as páginas públicas | React |
 | `App.tsx` | Shell autenticado: sessão, permissões, avisos pós-login (senha, notificações, triagem), histórico de notificações | React + TypeScript |
+| `components/Ferias.tsx` e `components/ferias/` | Página Férias (Administração): férias e afastamentos da JRS em tabela e timeline (Gantt); formulário do Admin com leitura do documento pela IA (Firebase AI Logic) e geração de bloqueio na agenda das IS e evento no Google Agenda | React + Firestore + Storage + Gemini |
 | `components/shell/` | Sidebar, topbar, breadcrumb, busca global e menu do usuário (com badge de notificações) | React |
 | `components/ui/` | Primitivos do design system (Dialog, Drawer, Button, StatusTag, Toast…) | React + Tailwind |
 | `components/` (telas) | Início, Inspeções, Inspecionados, Concursos, Pareceres, Perícia Menor/Atestados, Escala SVÇ, Formação, Usuários, Perfil | React |
@@ -288,7 +289,7 @@ sequenceDiagram
 ## 7. Módulos funcionais
 
 ### 7.1 Início
-Painel de trabalho: *Precisa de atenção* (pareceres atrasados, perícias vigentes, IS de hoje, concursos em andamento e do dia, **IS de concurso atrasadas**, senha temporária), *Últimos documentos gerados* (só Secretaria), **Próximos serviços** (Escala SVÇ do usuário), Próximas Inspeções, Pareceres não concluídos, Perícias Menores Vigentes (as 4 mais antigas; o badge do título mostra o total), Acesso rápido, **Próximas férias** (coluna direita), Agenda de inspeções e Avisos. Para `user_medicos_geral`: sem Próximas férias e com **Últimos atestados** (os registrados pelo usuário).
+Painel de trabalho: *Precisa de atenção* (pareceres atrasados, IS de hoje, concursos em andamento e do dia, **IS de concurso atrasadas**, senha temporária), *Últimos documentos gerados* (só Secretaria), **Próximos serviços** (Escala SVÇ do usuário), Pareceres não concluídos, Perícias Menores Vigentes (as 4 mais antigas; o badge do título mostra o total), Acesso rápido, Agenda de inspeções, **Próximas férias** (coluna direita; página Férias) e Avisos. Para `user_medicos_geral`: sem Próximas férias e com **Últimos atestados** (os registrados pelo usuário).
 
 ### 7.2 Inspeções de Saúde e agenda
 `Inspecoes.tsx` e `components/inspecoes/`: cadastro das IS (exceto concursos), tabela agrupada ou calendário Dia/Semana/Mês, agendamento por perito em slots (transação em `agendaSlots`), bloqueios de horário/turno/período, minutas e sincronização com o Google Agenda "JRS/HNRe" (servidor; Apps Script de reserva). Os dias de concurso ocupam o turno da manhã de todos os peritos. **Entrevista gravada** (08/11/2026, ADR-014): no detalhe da IS, a junta (Admin e `user_medicos`) grava a entrevista pelo celular (no computador, "Enviar para o meu celular" manda um push que abre a IS no app do celular); o servidor transcreve com separação de falantes e o Gemini organiza a anamnese, revisada e editada no app (`components/inspecoes/entrevista/`, `services/entrevistasIS.ts`, `utils/entrevistas.ts`).

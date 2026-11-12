@@ -241,10 +241,13 @@ export interface NovoBloqueio {
   criadoPor: string;
 }
 
-export const criarBloqueio = async (b: NovoBloqueio): Promise<void> => {
+/** Cria o bloqueio e devolve o id (o afastamento da página Férias guarda o id para apagar o bloqueio depois). */
+export const criarBloqueio = async (b: NovoBloqueio & { afastamentoId?: string }): Promise<string> => {
   const dados: Record<string, unknown> = { ...b, criadoEm: serverTimestamp() };
   Object.keys(dados).forEach(k => { if (dados[k] === undefined) delete dados[k]; });
-  await setDoc(doc(db, COL_BLOQUEIOS, novoId()), dados);
+  const id = novoId();
+  await setDoc(doc(db, COL_BLOQUEIOS, id), dados);
+  return id;
 };
 
 export const apagarBloqueio = (id: string) => deleteDoc(doc(db, COL_BLOQUEIOS, id));
