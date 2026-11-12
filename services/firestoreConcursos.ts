@@ -83,6 +83,8 @@ export interface CandidatoRecord {
   examesEnviadoEm: string;
   /** Triagem lançada pelo MPI (botão "TRIAR"); null enquanto não triado. */
   triagem: TriagemRecord | null;
+  /** Data/hora ISO do e-mail de inaptos à EAMPE (gravado só pelo servidor — servidor/email/inaptosConcurso.ts); '' = não enviado. */
+  emailInaptoEnviadoEm: string;
 }
 
 export interface SolicitacaoDoc {
@@ -160,6 +162,7 @@ const toCandidatoRecord = (id: string, data: any): CandidatoRecord => ({
   examesPdfUrls: Array.isArray(data.examesPdfUrls) ? data.examesPdfUrls.filter((u: unknown) => typeof u === 'string' && u) : [],
   examesEnviadoEm: data.examesEnviadoEm || '',
   triagem: lerTriagem(data.triagem),
+  emailInaptoEnviadoEm: data.emailInaptoEnviadoEm ? (typeof data.emailInaptoEnviadoEm.toDate === 'function' ? data.emailInaptoEnviadoEm.toDate().toISOString() : String(data.emailInaptoEnviadoEm)) : '',
 });
 
 export const listarConcursos = async (): Promise<ConcursoRecord[]> => {

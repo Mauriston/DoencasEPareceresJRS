@@ -23,6 +23,7 @@ import { TabelaCandidatos } from './TabelaCandidatos';
 import { ListaCandidatosMobile } from './ListaCandidatosMobile';
 import { SheetCandidatoMobile } from './SheetCandidatoMobile';
 import { MenuAcoesCandidato } from './MenuAcoesCandidato';
+import { BotaoEmailInaptos } from './BotaoEmailInaptos';
 
 export { type ConcursoDetalheProps };
 
@@ -204,6 +205,7 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
                 <span>{candidatos.filter(c => c.finalizado).length} de {total} finalizados</span>
               </span>
             )}
+            actions={concurso ? <BotaoEmailInaptos concurso={concurso} candidatos={candidatos} perfil={perfil} onAviso={showToast} /> : undefined}
           />
         </Container>
 
