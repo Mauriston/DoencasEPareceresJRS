@@ -1,6 +1,6 @@
 // Ficheiro: components/Home.tsx
 // Início como PAINEL DE TRABALHO (auditoria v2, N4/G3/L4): "Precisa de atenção" (pareceres
-// atrasados, perícias vigentes, concurso em andamento, IS marcadas para hoje, senha temporária),
+// atrasados, concurso em andamento, IS marcadas para hoje, senha temporária),
 // "Últimos documentos gerados" (só Secretaria: fila do que foi enviado para impressão),
 // "Pareceres não concluídos" e "Perícias Menores Vigentes" (cada um só aparece
 // quando há itens), "Acesso rápido" (até 6 páginas, editável e guardado no
@@ -280,14 +280,7 @@ export const Home: React.FC = () => {
       tag: 'Hoje', tom: feitas === totalHoje ? 'success' : 'attention', to: concursosDiaPath(hoje),
     });
   }
-  if (podePericiaMenor && periciaMenorVigentes > 0) {
-    atencao.push({
-      id: 'pm', icone: 'personal_injury', titulo: termosPm.pagina === 'Atestados'
-        ? `${periciaMenorVigentes} atestado${periciaMenorVigentes !== 1 ? 's' : ''} vigente${periciaMenorVigentes !== 1 ? 's' : ''}`
-        : `${periciaMenorVigentes} perícia${periciaMenorVigentes !== 1 ? 's' : ''} menor${periciaMenorVigentes !== 1 ? 'es' : ''} vigente${periciaMenorVigentes !== 1 ? 's' : ''}`,
-      detalhe: periciaMenorVigentes === 1 ? 'Militar com dispensa em curso' : 'Militares com dispensa em curso', tag: 'Vigente', tom: 'danger', to: '/pericia-menor/historico',
-    });
-  }
+  // Perícias menores vigentes não entram em "Precisa de atenção": ficam só no card próprio (Perícias Menores Vigentes).
   if (podeConcursos && emAndamento.length > 0) {
     atencao.push({
       id: 'concurso', icone: 'fact_check', titulo: emAndamento.length === 1 ? emAndamento[0].nome : `${emAndamento.length} concursos em andamento`,
@@ -353,7 +346,7 @@ export const Home: React.FC = () => {
                   ))}
                 </ul>
               ) : (
-                <EmptyState icon="task_alt" title="Nada pendente" description={podeConcursos ? 'Não há pareceres atrasados, perícias vigentes, inspeções de hoje nem concursos em andamento ou de hoje para você agora.' : 'Nada pendente para você agora.'} />
+                <EmptyState icon="task_alt" title="Nada pendente" description={podeConcursos ? 'Não há pareceres atrasados, inspeções de hoje nem concursos em andamento ou de hoje para você agora.' : 'Nada pendente para você agora.'} />
               )}
             </Secao>
 
