@@ -111,6 +111,22 @@ export const janelaDeMeses = (de: string, ate: string): JanelaTimeline => {
   return { inicio: meses[0].inicio, fim: somarDias(ultimo.inicio, ultimo.dias - 1), meses };
 };
 
+/** Filtro de período da página Férias: semestre (jan–jun / jul–dez) ou ano civil de hoje. */
+export type PeriodoFerias = 'semestre' | 'ano';
+export const PERIODOS_FERIAS: { id: PeriodoFerias; rotulo: string }[] = [
+  { id: 'semestre', rotulo: 'Este semestre' },
+  { id: 'ano', rotulo: 'Este ano' },
+];
+export const PERIODO_PADRAO: PeriodoFerias = 'ano';
+export const intervaloDoPeriodo = (periodo: PeriodoFerias, hoje: string): { inicio: string; fim: string } => {
+  const y = hoje.slice(0, 4);
+  if (periodo === 'ano') return { inicio: `${y}-01-01`, fim: `${y}-12-31` };
+  return Number(hoje.slice(5, 7)) <= 6 ? { inicio: `${y}-01-01`, fim: `${y}-06-30` } : { inicio: `${y}-07-01`, fim: `${y}-12-31` };
+};
+/** O afastamento toca o período (basta um dia em comum). */
+export const tocaPeriodo = (a: { dataInicio: string; dataFim: string }, p: { inicio: string; fim: string }): boolean =>
+  a.dataInicio <= p.fim && a.dataFim >= p.inicio;
+
 /** Escalas da Timeline: meses mostrados antes e depois de hoje (hoje sempre no meio). */
 export const ESCALAS_TIMELINE = [
   { id: 'bimestral', rotulo: 'Bimestral', mesesCadaLado: 1 },

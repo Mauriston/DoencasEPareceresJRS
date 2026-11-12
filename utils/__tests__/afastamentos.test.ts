@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   dataFimDe, statusEfetivo, statusAoGravar, grupoDoPerfil, geraBloqueioNaAgenda, podeVerFerias, tituloEventoAfastamento,
-  janelaDeMeses, posicaoNaJanela, diasEntre, janelaCentrada,
+  janelaDeMeses, posicaoNaJanela, diasEntre, janelaCentrada, intervaloDoPeriodo, tocaPeriodo,
 } from '../afastamentos';
 import { casarUsuario } from '../../components/ferias/AfastamentoForm';
 import { resultadoPendente, elegivelResultado } from '../emailResultadoIS';
@@ -81,6 +81,19 @@ describe('timeline centrada em hoje', () => {
     const j = janelaCentrada('2026-08-31', 6);
     expect(j.inicio).toBe('2026-02-28');
     expect(j.fim).toBe('2027-02-28');
+  });
+});
+
+describe('filtro de período', () => {
+  it('este semestre e este ano', () => {
+    expect(intervaloDoPeriodo('ano', '2026-11-12')).toEqual({ inicio: '2026-01-01', fim: '2026-12-31' });
+    expect(intervaloDoPeriodo('semestre', '2026-11-12')).toEqual({ inicio: '2026-07-01', fim: '2026-12-31' });
+    expect(intervaloDoPeriodo('semestre', '2026-06-30')).toEqual({ inicio: '2026-01-01', fim: '2026-06-30' });
+  });
+  it('afastamento que toca o período entra (inclusive o que atravessa a virada)', () => {
+    const ano = intervaloDoPeriodo('ano', '2026-11-12');
+    expect(tocaPeriodo({ dataInicio: '2026-12-20', dataFim: '2027-01-10' }, ano)).toBe(true);
+    expect(tocaPeriodo({ dataInicio: '2027-01-02', dataFim: '2027-01-10' }, ano)).toBe(false);
   });
 });
 

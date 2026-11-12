@@ -1,7 +1,8 @@
 // Ficheiro: components/Ferias.tsx
 // Página FÉRIAS (menu lateral → Administração → "Férias"): férias e afastamentos (Férias, LTS, LIC Adm) dos usuários
 // da JRS — Admin, user_medicos, user_medicos_mpi e user_secretaria veem; só o Admin cria, edita e apaga.
-// Filtros multi-seleção (chips) por tipo e status — ao abrir: todos os tipos e todos os status menos Gozada.
+// Filtros: período (Este semestre / Este ano — padrão; "×" limpa) e, em multi-seleção com chips, tipo e status —
+// ao abrir: todos os tipos e todos os status menos Gozada. Valem para as duas visões.
 // Duas visões: Tabela (ordem crescente de início) e Timeline (Gantt centrado em hoje; escala padrão quadrimestral). Status automático
 // (Gozada / Em gozo) e data fim calculada (utils/afastamentos.ts). Gravar gera bloqueio na agenda das IS para os
 // médicos e evento no Google Agenda para todos (services/afastamentos.ts).
@@ -15,6 +16,7 @@ import { StatusTag } from './ui/StatusTag';
 import { MenuAcoes } from './ui/MenuAcoes';
 import { Segmented } from './ui/Segmented';
 import { MultiSelectCombobox } from './ui/MultiSelectCombobox';
+import { controlClass } from './ui/Field';
 import { Avatar } from './shell/UserMenu';
 import { PdfFullscreenModal } from './PdfFullscreenModal';
 import { AfastamentoForm } from './ferias/AfastamentoForm';
@@ -23,7 +25,7 @@ import { useNav } from '../context/NavContext';
 import { listUsuarios, type UsuarioRecord } from '../services/firestoreUsuarios';
 import { observarAfastamentos, apagarAfastamento, urlArquivoAfastamento, type AfastamentoRecord } from '../services/afastamentos';
 import {
-  ESCALA_PADRAO, GRUPOS_AFASTAMENTO, PERFIS_JRS, STATUS_AFASTAMENTO, TIPOS_AFASTAMENTO, grupoDoPerfil, rotuloTipo, statusEfetivo,
+  ESCALA_PADRAO, PERIODOS_FERIAS, PERIODO_PADRAO, intervaloDoPeriodo, tocaPeriodo, type PeriodoFerias, GRUPOS_AFASTAMENTO, PERFIS_JRS, STATUS_AFASTAMENTO, TIPOS_AFASTAMENTO, grupoDoPerfil, rotuloTipo, statusEfetivo,
   type EscalaTimeline, type StatusAfastamento, type TipoAfastamento,
 } from '../utils/afastamentos';
 import { dataBr, hojeISO } from '../utils/inspecoes';
@@ -40,6 +42,7 @@ export const Ferias: React.FC = () => {
   const [usuarios, setUsuarios] = useState<UsuarioRecord[]>([]);
   const [visao, setVisao] = useState<Visao>('tabela');
   const [escala, setEscala] = useState<EscalaTimeline>(ESCALA_PADRAO);
+  const [fPeriodo, setFPeriodo] = useState<PeriodoFerias | ''>(PERIODO_PADRAO);
   // Filtro inicial (sempre que a página abre): todos os tipos e todos os status menos Gozada.
   const [fTipos, setFTipos] = useState<TipoAfastamento[]>(() => TIPOS_AFASTAMENTO.map(t => t.id));
   const [fStatus, setFStatus] = useState<StatusAfastamento[]>(() => STATUS_AFASTAMENTO.map(st => st.id).filter(id => id !== 'gozada'));
@@ -56,9 +59,11 @@ export const Ferias: React.FC = () => {
   const fotos = useMemo(() => new Map(usuarios.map(u => [u.id, u.imageProfile || ''])), [usuarios]);
 
   // Nenhum chip num filtro = sem restrição por ele.
+  const intervalo = useMemo(() => (fPeriodo ? intervaloDoPeriodo(fPeriodo, hoje) : null), [fPeriodo, hoje]);
   const filtrados = useMemo(() => (lista ?? []).filter(a =>
-    (!fTipos.length || fTipos.includes(a.tipo))
-    && (!fStatus.length || fStatus.includes(statusEfetivo(a, hoje)))), [lista, fTipos, fStatus, hoje]);
+    (!intervalo || tocaPeriodo(a, intervalo))
+    && (!fTipos.length || fTipos.includes(a.tipo))
+    && (!fStatus.length || fStatus.includes(statusEfetivo(a, hoje)))), [lista, intervalo, fTipos, fStatus, hoje]);
   // Tabela: ordem crescente da data de início.
   const ordenados = useMemo(() => [...filtrados].sort((a, b) => a.dataInicio.localeCompare(b.dataInicio) || a.usuario.localeCompare(b.usuario, 'pt-BR')), [filtrados]);
 
@@ -97,6 +102,21 @@ export const Ferias: React.FC = () => {
         />
 
         <div className="bg-white rounded-xl border border-line p-3 flex flex-wrap items-end gap-3">
+          <div className="w-full md:w-56 shrink-0">
+            <label htmlFor="ferias-periodo" className="block text-xs font-semibold text-ink-3 mb-1">Período</label>
+            <div className="relative">
+              <select id="ferias-periodo" className={`${controlClass} ${fPeriodo ? 'pr-16' : ''}`} value={fPeriodo} onChange={e => setFPeriodo(e.target.value as PeriodoFerias | '')}>
+                <option value="">Todos os períodos</option>
+                {PERIODOS_FERIAS.map(p => <option key={p.id} value={p.id}>{p.rotulo}</option>)}
+              </select>
+              {fPeriodo && (
+                <button type="button" onClick={() => setFPeriodo('')} aria-label="Limpar filtro de período" title="Limpar"
+                  className="absolute right-8 top-1/2 -translate-y-1/2 w-8 h-8 inline-flex items-center justify-center rounded-full text-ink-3 hover:bg-thead hover:text-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
+                  <span className="material-symbols-outlined text-[18px]" aria-hidden="true">close</span>
+                </button>
+              )}
+            </div>
+          </div>
           {filtroChips<TipoAfastamento>('Tipo', TIPOS_AFASTAMENTO.map(t => ({ id: t.id, rotulo: t.curto })), fTipos, setFTipos)}
           {filtroChips<StatusAfastamento>('Status', STATUS_AFASTAMENTO, fStatus, setFStatus)}
           <div className="ml-auto">
