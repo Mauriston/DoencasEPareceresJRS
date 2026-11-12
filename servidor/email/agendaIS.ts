@@ -35,7 +35,14 @@ const COL_REGISTRO = 'emailsAgendaIS';
 /** Mínimo do bucket do Storage (firebase-admin) usado aqui. */
 export interface BucketPdf { file(caminho: string): { save(dados: Buffer, opcoes: Record<string, unknown>): Promise<unknown> } }
 
-export interface ItemAgenda { hora: string; nome: string; om: string; numero_is: string; finalidade: string; medico: string }
+/** `nome`: "POSTO NIP NOME" (anexo em PDF); `nome_completo`: só o nome (corpo do e-mail). */
+export interface ItemAgenda { hora: string; nome: string; nome_completo: string; om: string; numero_is: string; finalidade: string; medico: string }
+
+/** "2SG-HN 09.0169.88 EVERTON DA COSTA BRAGA" → "EVERTON DA COSTA BRAGA" (sem posto/quadro e NIP). */
+export const nomeSemPostoNip = (inspecionado: string): string => {
+  const t = String(inspecionado || '').trim();
+  return t.replace(/^.*?\d{2}\.\d{4}\.\d{2}\s*/, '') || t;
+};
 export interface ItemConcurso { concurso: string; matricula: string; candidato: string }
 export interface AgendaDoDia { data: string; agendamentos: ItemAgenda[]; concursos: ItemConcurso[] }
 
@@ -51,13 +58,15 @@ export const coletarAgenda = async (db: Firestore, data: string): Promise<Agenda
 
   const ids = [...new Set(lista.map(i => String(i.inspecionadoId || '')).filter(Boolean))];
   const oms = new Map<string, string>();
+  const nomes = new Map<string, string>();
   if (ids.length) {
     const docs = await db.getAll(...ids.map(id => db.collection('militares').doc(id)));
-    docs.forEach(d => { if (d.exists) oms.set(d.id, String(d.data()?.om || '')); });
+    docs.forEach(d => { if (d.exists) { oms.set(d.id, String(d.data()?.om || '')); nomes.set(d.id, String(d.data()?.nome || '')); } });
   }
   const agendamentos: ItemAgenda[] = lista.map(i => ({
     hora: horaDe(i.dataEntrevista),
     nome: maiusculas(i.inspecionado),
+    nome_completo: maiusculas(nomes.get(String(i.inspecionadoId || '')) || nomeSemPostoNip(i.inspecionado)),
     om: oms.get(String(i.inspecionadoId || '')) || '—',
     numero_is: String(i.is ?? ''),
     finalidade: String(i.finalidade || ''),
@@ -103,7 +112,7 @@ export const montarEmailAgenda = (a: AgendaDoDia) => {
     `INF as Inspeções de Saúde agendadas para ${dataBrDeIso(a.data)}, conforme relação abaixo:`, '',
     `INSPEÇÕES DE SAÚDE · ${dataTituloDeIso(a.data)}`,
     ...(a.agendamentos.length
-      ? a.agendamentos.map(i => `${i.hora} · ${i.nome} (${i.om} · ${i.numero_is}) · ${i.finalidade} · ${i.medico}`)
+      ? a.agendamentos.map(i => `${i.hora} · ${i.nome_completo} (${i.om} · ${i.numero_is}) · ${i.finalidade} · ${i.medico}`)
       : ['Não há Inspeções de Saúde agendadas para esta data.']),
     ...(a.concursos.length ? ['', 'INSPEÇÕES DE SAÚDE DE CONCURSOS', ...a.concursos.map(k => `${k.concurso} · ${k.matricula} · ${k.candidato}`)] : []),
     '', `App JRS/HNRe: ${APP_URL}`, '',

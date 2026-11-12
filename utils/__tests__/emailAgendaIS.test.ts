@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   decidirEnvioAutomatico, destinatariosAgendaIS, assuntoAgendaIS, caminhoPdfAgendaIS, dataTituloDeIso, hojeEmRecife, dataIsoValida, somarDias,
 } from '../emailAgendaIS';
-import { montarEmailAgenda } from '../../servidor/email/agendaIS';
+import { montarEmailAgenda, nomeSemPostoNip } from '../../servidor/email/agendaIS';
 import { renderizarTemplate } from '../../servidor/email/template';
 
 describe('calendário do envio automático (18h, Recife)', () => {
@@ -59,7 +59,7 @@ describe('renderizador', () => {
 describe('montarEmailAgenda', () => {
   const agenda = {
     data: '2026-11-13',
-    agendamentos: [{ hora: '13:00', nome: '3SG-PT 07.3836.57 CARLOS ANTONIO PEREIRA DA SILVA', om: 'HNRe', numero_is: '1253621', finalidade: 'Término de Restrições', medico: 'CT JÚLIO CÉSAR' }],
+    agendamentos: [{ hora: '13:00', nome: '3SG-PT 07.3836.57 CARLOS ANTONIO PEREIRA DA SILVA', nome_completo: 'CARLOS ANTONIO PEREIRA DA SILVA', om: 'HNRe', numero_is: '1253621', finalidade: 'Término de Restrições', medico: 'CT JÚLIO CÉSAR' }],
     concursos: [{ concurso: 'CP-C-FSD-FN-TI/2027', matricula: '65599-8', candidato: 'DAYVID RUAN DA SILVA OLIVEIRA' }],
   };
   const placeholder = /\{\{[#^/]?\w+\}\}/;
@@ -77,6 +77,16 @@ describe('montarEmailAgenda', () => {
     }
     expect(r.html).not.toContain('authuser');
     expect(r.htmlAnexo.match(/<section class="page"/g)).toHaveLength(2);
+    // Inspecionado: no e-mail só o nome; no PDF, posto/quadro, NIP e nome.
+    expect(r.html).toContain('>CARLOS ANTONIO PEREIRA DA SILVA</span>');
+    expect(r.html).not.toContain('07.3836.57');
+    expect(r.htmlAnexo).toContain('3SG-PT 07.3836.57 CARLOS ANTONIO PEREIRA DA SILVA');
+  });
+
+  it('nome sem posto e NIP', () => {
+    expect(nomeSemPostoNip('2SG-HN 09.0169.88 EVERTON DA COSTA BRAGA')).toBe('EVERTON DA COSTA BRAGA');
+    expect(nomeSemPostoNip('CT (Md) 12.3456.78 FULANO DE TAL')).toBe('FULANO DE TAL');
+    expect(nomeSemPostoNip('SEM NIP')).toBe('SEM NIP');
   });
 
   it('sem IS nem concursos: e-mail sai com o aviso, sem o bloco de concursos; anexo com uma página', () => {
