@@ -22,8 +22,8 @@ const CAMPOS: { chave: keyof DestinatariosEmail; rotulo: string }[] = [
   { chave: 'cco', rotulo: 'Cópia oculta (CCO)' },
 ];
 
-const Cartao: React.FC<{ titulo: string; subtitulo?: React.ReactNode; acao?: React.ReactNode; children: React.ReactNode }> = ({ titulo, subtitulo, acao, children }) => (
-  <section className="bg-white rounded-xl border border-line p-4 md:p-5">
+const Cartao: React.FC<{ titulo: string; subtitulo?: React.ReactNode; acao?: React.ReactNode; className?: string; children: React.ReactNode }> = ({ titulo, subtitulo, acao, className = '', children }) => (
+  <section className={`bg-white rounded-xl border border-line p-4 md:p-5 ${className}`}>
     <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
       <div className="min-w-0">
         <h3 className="text-base font-bold text-navy">{titulo}</h3>
@@ -53,7 +53,7 @@ export const Configuracoes: React.FC = () => {
 
   if (!rascunho || !salvo) {
     return (
-      <Page size="form" title="Configurações" description="Configurações gerais do app (Admin).">
+      <Page size="data" title="Configurações" description="Configurações gerais do app (Admin).">
         <p className={`text-sm ${erroCarga ? 'font-semibold text-wine' : 'text-ink-3'}`}>{erroCarga || 'Carregando…'}</p>
       </Page>
     );
@@ -114,10 +114,11 @@ export const Configuracoes: React.FC = () => {
           <div>
             <h2 className="text-h2 font-bold text-navy mb-1">E-mails automáticos</h2>
             <p className="text-sm text-ink-3 mb-4">Destinatários fixos de cada e-mail. Os destinatários que dependem da IS ou dos usuários são acrescentados automaticamente pelo servidor.</p>
-            <div className="space-y-4">
-              <Cartao titulo="Geral" subtitulo="Valem para todos os e-mails.">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Responder para (Reply-To)" required error={erros.responderPara} className="md:col-span-2">
+            {/* Dois cartões por linha a partir de telas largas; "Geral" ocupa a linha inteira. */}
+            <div className="grid gap-4 lg:grid-cols-2 items-start">
+              <Cartao titulo="Geral" subtitulo="Valem para todos os e-mails." className="lg:col-span-2">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Field label="Responder para (Reply-To)" required error={erros.responderPara}>
                     {a => <input {...a} type="email" value={rascunho.responderPara} onChange={e => setRascunho({ ...rascunho, responderPara: e.target.value.trim().toLowerCase() })} />}
                   </Field>
                   <Field label="Presidente da JRS — nome completo" required error={erros.presidenteNome} help="Última assinatura de todos os e-mails.">
@@ -173,14 +174,16 @@ export const Configuracoes: React.FC = () => {
             <h2 className="text-h2 font-bold text-navy mb-1">Testes de e-mail</h2>
             <p className="text-sm text-ink-3 mb-4">Envia cada e-mail com dados fictícios, pelos mesmos templates do envio real, só para os destinatários abaixo (sem cópia oculta). O assunto leva "[TESTE]". Nenhuma IS, candidato ou cadastro é alterado.</p>
             <Cartao titulo="Destinatários dos testes" subtitulo="Salve antes de testar se mudar a lista.">
-              <div className="space-y-3">
+              <div className="grid gap-3 md:grid-cols-2 items-start">
+                <div>
                 <ListaEmails rotulo="Para" emails={rascunho.testes.para} onChange={l => setRascunho({ ...rascunho, testes: { ...rascunho.testes, para: l } })} />
-                {erros.testesPara && <p role="alert" className="text-xs font-semibold text-wine">{erros.testesPara}</p>}
+                  {erros.testesPara && <p role="alert" className="text-xs font-semibold text-wine mt-1">{erros.testesPara}</p>}
+                </div>
                 <ListaEmails rotulo="Cópia (CC)" emails={rascunho.testes.cc} onChange={l => setRascunho({ ...rascunho, testes: { ...rascunho.testes, cc: l } })} />
               </div>
-              <ul className="mt-4 divide-y divide-line rounded-xl border border-line">
+              <ul className="mt-4 grid md:grid-cols-2 gap-px bg-line rounded-xl border border-line overflow-hidden">
                 {TIPOS_EMAIL.map(t => (
-                  <li key={t.tipo} className="flex flex-wrap items-center gap-3 px-3 py-2">
+                  <li key={t.tipo} className="flex flex-wrap items-center gap-3 px-3 py-2 bg-white">
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold text-ink">{t.rotulo}</span>
                       <span className="block text-xs text-ink-3">{t.assunto}</span>
