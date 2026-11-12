@@ -32,6 +32,7 @@ import { avisarAgendamento, observarAgendamentos, type AgendamentoFeito } from '
 import { agendamentoJaEnviado, ehElegivelAgendamento } from '../utils/emailAgendamentoIS';
 import { EmailAgendaDialog } from './inspecoes/EmailAgendaDialog';
 import { BotaoEnviarEmail } from './inspecoes/BotaoEnviarEmail';
+import { EmailsDaIS } from './inspecoes/EmailsDaIS';
 import { emailDoInspecionado } from '../services/emailResultadoIS';
 import { CalendarioIS } from './inspecoes/CalendarioIS';
 import { BloqueiosDialog } from './inspecoes/BloqueiosDialog';
@@ -492,6 +493,14 @@ export const Inspecoes: React.FC = () => {
           onDuplicarParecer={p => setParecerPara({ is: detalhe, inicial: p })}
           onSituacaoMudou={is => { sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS atualizada, mas o Google Agenda não: ${r.erro}`, 'error'); }); }}
           onAviso={avisar}
+          emails={(
+            <EmailsDaIS
+              is={detalhe} om={omDe(detalhe)} hoje={hoje} podeEnviar={ehAdmin || ehSecretaria}
+              onEnviarAgendamento={is => setFilaAgendamento(f => [...f, { isId: is.id, dataEntrevista: is.dataEntrevista, origem: 'menu' }])}
+              onEnviarResultado={setEnviandoResultado}
+              onAviso={avisar}
+            />
+          )}
         />
       )}
 
