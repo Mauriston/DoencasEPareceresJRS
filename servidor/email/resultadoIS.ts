@@ -146,7 +146,9 @@ export const enviarResultadoIS = async (db: Firestore, isIdBruto: unknown, email
   const refIs = db.collection('inspecoes').doc(isId);
   const snapIs = await refIs.get();
   if (!snapIs.exists) throw new ErroContaGoogle('falha', 'IS não encontrada.');
-  const is = snapIs.data() as ISParaEmail & { status?: string; inspecionadoId?: string };
+  const is = snapIs.data() as ISParaEmail & { status?: string; inspecionadoId?: string; emailResultadoPara?: string };
+  // Envio único: depois do primeiro, o item fica desabilitado no menu e o servidor recusa outro.
+  if (is.emailResultadoPara) throw new ErroContaGoogle('falha', `O resultado desta IS já foi enviado para ${is.emailResultadoPara}.`);
   if (is.status !== 'tis_assinado') throw new ErroContaGoogle('falha', 'Só é possível enviar o resultado de IS finalizada (TIS assinado).');
   if (!String(is.laudo || '').trim()) throw new ErroContaGoogle('falha', 'A IS não tem laudo registrado.');
 

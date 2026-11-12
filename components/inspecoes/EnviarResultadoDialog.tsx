@@ -12,7 +12,7 @@ import { emailValido, enviarResultadoISPorEmail } from '../../services/emailResu
 import { separarRestricoes } from '../../utils/conclusaoIS';
 
 interface Props {
-  inspecao: InspecaoRecord & { emailResultadoPara?: string };
+  inspecao: InspecaoRecord;
   /** E-mail do cadastro do inspecionado ('' = sem e-mail cadastrado). */
   emailCadastrado: string;
   onClose: () => void;
@@ -73,7 +73,6 @@ export const EnviarResultadoDialog: React.FC<Props> = ({ inspecao, emailCadastra
         )}
 
         <p className="text-xs text-ink-3">Remetente: HNRe - Junta Regular de Saúde · cópia oculta para hnre.jrs@marinha.mil.br.</p>
-        {inspecao.emailResultadoPara && <p className="text-xs font-semibold text-ink-2">O resultado já foi enviado antes para {inspecao.emailResultadoPara}.</p>}
         {erro && <p role="alert" className="text-sm font-semibold text-wine">{erro}</p>}
       </div>
     </Dialog>
