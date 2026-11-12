@@ -27,6 +27,9 @@ import { TrocarPeritoDialog } from './inspecoes/TrocarPeritoDialog';
 import { AgendarNoHorarioDialog } from './inspecoes/AgendarNoHorarioDialog';
 import { MinutaDialog } from './inspecoes/MinutaDialog';
 import { EnviarResultadoDialog } from './inspecoes/EnviarResultadoDialog';
+import { EnviarAgendamentoDialog } from './inspecoes/EnviarAgendamentoDialog';
+import { avisarAgendamento, observarAgendamentos, type AgendamentoFeito } from '../services/emailAgendamentoIS';
+import { agendamentoJaEnviado, ehElegivelAgendamento } from '../utils/emailAgendamentoIS';
 import { EmailAgendaDialog } from './inspecoes/EmailAgendaDialog';
 import { BotaoEmailFaltas } from './inspecoes/BotaoEmailFaltas';
 import { emailDoInspecionado } from '../services/emailResultadoIS';
@@ -149,6 +152,9 @@ export const Inspecoes: React.FC = () => {
   const [horarioVazio, setHorarioVazio] = useState<string | null>(null);
   const [minuta, setMinuta] = useState<InspecaoRecord | null>(null);
   const [enviandoResultado, setEnviandoResultado] = useState<InspecaoRecord | null>(null);
+  /** E-mails de agendamento a oferecer (depois de agendar) ou pedidos pelo menu ⋮; mostrados um por vez. */
+  const [filaAgendamento, setFilaAgendamento] = useState<(AgendamentoFeito & { origem: 'agendamento' | 'menu' })[]>([]);
+  useEffect(() => observarAgendamentos(a => setFilaAgendamento(f => (f.some(x => x.isId === a.isId && x.dataEntrevista === a.dataEntrevista) ? f : [...f, { ...a, origem: 'agendamento' }]))), []);
   const [parecerPara, setParecerPara] = useState<{ is: InspecaoRecord; inicial?: ParecerRecord } | null>(null);
   const [confirmando, setConfirmando] = useState<{ tipo: 'falta' | 'cancelar'; is: InspecaoRecord } | null>(null);
   const [apagando, setApagando] = useState<InspecaoRecord | null>(null);
@@ -216,6 +222,7 @@ export const Inspecoes: React.FC = () => {
 
   const aoCriada = (is: InspecaoRecord) => {
     setNovo(null);
+    if (is.dataEntrevista) avisarAgendamento(is, is.dataEntrevista);
     if (is.dataEntrevista) {
       avisar(`IS ${is.is} cadastrada e agendada. Sincronizando com o Google Agenda…`);
       sincronizarAgendaIS(is).then(r => {
@@ -228,6 +235,7 @@ export const Inspecoes: React.FC = () => {
   /** IS por foto (lote): cada IS gravada com horário reservado sincroniza o Google Agenda. */
   const aoGravarPorFoto = (is: InspecaoRecord, _criada: boolean, reservada: boolean) => {
     if (reservada) sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS ${is.is} gravada, mas o Google Agenda não foi atualizado: ${r.erro}`, 'error'); });
+    if (reservada && is.dataEntrevista) avisarAgendamento(is, is.dataEntrevista);
   };
   /** Lote gravado: fecha o painel; com uma IS só, abre o detalhe dela. */
   const aoConcluirPorFoto = (gravadas: number, unica: InspecaoRecord | null) => {
@@ -292,6 +300,7 @@ export const Inspecoes: React.FC = () => {
       const status = await agendarInspecao(is, novo);
       const r = await sincronizarAgendaIS({ ...is, ...novo, status, situacao: 'andamento' });
       avisar(r.ok ? `IS ${is.is} reagendada para ${dataHoraBr(dataEntrevista)}.` : `IS ${is.is} reagendada, mas o Google Agenda não foi atualizado: ${r.erro}`, r.ok ? 'success' : 'error');
+      avisarAgendamento({ ...is, status }, dataEntrevista);
     } catch (e: any) {
       avisar(e?.message || 'Não foi possível reagendar.', 'error');
     }
@@ -311,6 +320,12 @@ export const Inspecoes: React.FC = () => {
     const restituicao = restituicaoDoStatus(is.status);
     if (restituicao && podeEditar && !ehSecretaria) itens.push({ rotulo: restituicao.rotulo, icone: 'undo', onClick: () => { mudarStatus(is, restituicao.status, `IS ${is.is}: ${restituicao.rotulo}.`); } });
     if (podeMinuta && mostraMinutaMsg(is)) itens.push({ rotulo: 'Minuta MSG', icone: 'mail', onClick: () => setMinuta(is) });
+    // E-mail de agendamento ao inspecionado (Benefícios, Verificações e Términos): Admin e Secretaria; um por data/hora.
+    if ((ehAdmin || ehSecretaria) && ehElegivelAgendamento(is)) {
+      itens.push(agendamentoJaEnviado(is)
+        ? { rotulo: 'E-mail de agendamento enviado', icone: 'mark_email_read', desabilitado: true, dica: `Para ${is.emailAgendamentoPara}`, onClick: () => {} }
+        : { rotulo: 'Enviar e-mail de agendamento', icone: 'forward_to_inbox', onClick: () => setFilaAgendamento(f => [...f, { isId: is.id, dataEntrevista: is.dataEntrevista, origem: 'menu' }]) });
+    }
     // Resultado ao inspecionado por e-mail: só IS finalizada com TIS assinado; só Admin e Secretaria.
     // Já enviado: o item fica visível, mas desabilitado, com o destinatário na dica.
     if ((ehAdmin || ehSecretaria) && is.status === 'tis_assinado') {
@@ -324,6 +339,24 @@ export const Inspecoes: React.FC = () => {
     if (ehAdmin) itens.push({ rotulo: 'Apagar IS', icone: 'delete', perigo: true, onClick: () => setApagando(is) });
     return itens;
   };
+
+  // E-mail de agendamento: o 1º da fila cuja IS já está na lista (a gravação pode chegar um instante depois).
+  // Sai da fila quando a IS mudou de data, foi cancelada ou o e-mail daquela data já foi enviado.
+  const agendamentoAtual = useMemo(() => {
+    const item = filaAgendamento[0];
+    const is = item && lista?.find(i => i.id === item.isId);
+    return item && is ? { item, is } : null;
+  }, [filaAgendamento, lista]);
+  useEffect(() => {
+    if (!agendamentoAtual) return;
+    const { item, is } = agendamentoAtual;
+    const descartar = is.dataEntrevista === item.dataEntrevista
+      ? !ehElegivelAgendamento(is) || agendamentoJaEnviado(is)
+      // Reagendada de novo antes de responder: vale só o aviso mais novo da mesma IS.
+      : filaAgendamento.slice(1).some(x => x.isId === item.isId);
+    if (descartar) setFilaAgendamento(f => f.slice(1));
+  }, [agendamentoAtual, filaAgendamento]);
+  const proximoAgendamento = () => setFilaAgendamento(f => f.slice(1));
 
   // ----- apresentação -----
 
@@ -495,6 +528,16 @@ export const Inspecoes: React.FC = () => {
           onClose={() => setMinuta(null)} onAviso={avisar}
         />
       ))}
+
+      {agendamentoAtual && agendamentoAtual.is.dataEntrevista === agendamentoAtual.item.dataEntrevista && ehElegivelAgendamento(agendamentoAtual.is) && !agendamentoJaEnviado(agendamentoAtual.is) && (
+        <EnviarAgendamentoDialog
+          key={`${agendamentoAtual.item.isId}|${agendamentoAtual.item.dataEntrevista}`}
+          inspecao={agendamentoAtual.is} origem={agendamentoAtual.item.origem}
+          emailCadastrado={emailDoInspecionado(militares.find(m => m.id === agendamentoAtual.is.inspecionadoId))}
+          onClose={proximoAgendamento}
+          onEnviado={(msg, tom) => { proximoAgendamento(); avisar(msg, tom); }}
+        />
+      )}
 
       {enviandoResultado && (
         <EnviarResultadoDialog
