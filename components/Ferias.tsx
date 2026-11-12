@@ -25,7 +25,7 @@ import { useNav } from '../context/NavContext';
 import { listUsuarios, type UsuarioRecord } from '../services/firestoreUsuarios';
 import { observarAfastamentos, apagarAfastamento, urlArquivoAfastamento, type AfastamentoRecord } from '../services/afastamentos';
 import {
-  ESCALA_PADRAO, PERIODO_PADRAO, intervaloDoPeriodo, tocaPeriodo, type PeriodoFerias, PERFIS_JRS, STATUS_AFASTAMENTO, TIPOS_AFASTAMENTO, rotuloTipo, statusEfetivo,
+  ESCALA_PADRAO, PERIODO_PADRAO, intervaloDoPeriodo, tocaPeriodo, type PeriodoFerias, PERFIS_JRS, STATUS_AFASTAMENTO, TIPOS_AFASTAMENTO, rotuloTipo, statusEfetivo, TOM_TIPO,
   type EscalaTimeline, type StatusAfastamento, type TipoAfastamento,
 } from '../utils/afastamentos';
 import { dataBr, hojeISO } from '../utils/inspecoes';
@@ -162,7 +162,7 @@ export const Ferias: React.FC = () => {
                             <span className="min-w-0 font-bold text-navy truncate">{a.usuario}</span>
                           </span>
                         </td>
-                        <td className="px-3 py-2 font-semibold text-ink">{rotuloTipo(a.tipo)}</td>
+                        <td className="px-3 py-2"><StatusTag tone={TOM_TIPO[a.tipo]}>{rotuloTipo(a.tipo)}</StatusTag></td>
                         <td className="px-3 py-2 tabular-nums whitespace-nowrap">{dataBr(a.dataInicio)} a {dataBr(a.dataFim)}</td>
                         <td className="px-3 py-2 tabular-nums text-right">{a.duracaoDias}</td>
                         <td className="px-3 py-2"><StatusTag tone={st.tom}>{st.rotulo}</StatusTag></td>
@@ -205,7 +205,7 @@ export const Ferias: React.FC = () => {
                         <p className="font-bold text-navy truncate flex-1">{a.usuario}</p>
                         <StatusTag tone={st.tom} className="shrink-0">{st.rotulo}</StatusTag>
                       </div>
-                      <p className="text-sm text-ink">{rotuloTipo(a.tipo)} · {a.duracaoDias} dia{a.duracaoDias !== 1 ? 's' : ''}</p>
+                      <p className="flex items-center gap-2 text-sm text-ink mt-0.5"><StatusTag tone={TOM_TIPO[a.tipo]}>{rotuloTipo(a.tipo)}</StatusTag>{a.duracaoDias} dia{a.duracaoDias !== 1 ? 's' : ''}</p>
                       <p className="text-xs text-ink-3 tabular-nums">{dataBr(a.dataInicio)} a {dataBr(a.dataFim)}{a.tipo === 'ferias' && a.referencia ? ` · Ano: ${a.referencia}` : ''}{a.motivo ? ` · ${a.motivo}` : ''}</p>
                       {!!a.arquivos?.length && (
                         <div className="flex flex-wrap gap-2 mt-1">
