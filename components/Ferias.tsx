@@ -1,7 +1,8 @@
 // Ficheiro: components/Ferias.tsx
 // Página FÉRIAS (menu lateral → Administração → "Férias"): férias e afastamentos (Férias, LTS, LIC Adm) dos usuários
 // da JRS — Admin, user_medicos, user_medicos_mpi e user_secretaria veem; só o Admin cria, edita e apaga.
-// Duas visões: Tabela (filtros por usuário, grupo, tipo e status) e Timeline (Gantt anual). Status automático
+// Filtros multi-seleção (chips) por tipo e status — ao abrir: todos os tipos e todos os status menos Gozada.
+// Duas visões: Tabela (ordem crescente de início) e Timeline (Gantt centrado em hoje; escala padrão quadrimestral). Status automático
 // (Gozada / Em gozo) e data fim calculada (utils/afastamentos.ts). Gravar gera bloqueio na agenda das IS para os
 // médicos e evento no Google Agenda para todos (services/afastamentos.ts).
 import React, { useEffect, useMemo, useState } from 'react';
@@ -13,16 +14,17 @@ import { EmptyState } from './ui/EmptyState';
 import { StatusTag } from './ui/StatusTag';
 import { MenuAcoes } from './ui/MenuAcoes';
 import { Segmented } from './ui/Segmented';
-import { controlClass } from './ui/Field';
+import { MultiSelectCombobox } from './ui/MultiSelectCombobox';
 import { Avatar } from './shell/UserMenu';
+import { PdfFullscreenModal } from './PdfFullscreenModal';
 import { AfastamentoForm } from './ferias/AfastamentoForm';
 import { TimelineAfastamentos } from './ferias/TimelineAfastamentos';
 import { useNav } from '../context/NavContext';
 import { listUsuarios, type UsuarioRecord } from '../services/firestoreUsuarios';
 import { observarAfastamentos, apagarAfastamento, urlArquivoAfastamento, type AfastamentoRecord } from '../services/afastamentos';
 import {
-  GRUPOS_AFASTAMENTO, PERFIS_JRS, STATUS_AFASTAMENTO, TIPOS_AFASTAMENTO, grupoDoPerfil, rotuloTipo, statusEfetivo,
-  type GrupoAfastamento, type StatusAfastamento, type TipoAfastamento,
+  ESCALA_PADRAO, GRUPOS_AFASTAMENTO, PERFIS_JRS, STATUS_AFASTAMENTO, TIPOS_AFASTAMENTO, grupoDoPerfil, rotuloTipo, statusEfetivo,
+  type EscalaTimeline, type StatusAfastamento, type TipoAfastamento,
 } from '../utils/afastamentos';
 import { dataBr, hojeISO } from '../utils/inspecoes';
 
@@ -37,13 +39,14 @@ export const Ferias: React.FC = () => {
   const [erroCarga, setErroCarga] = useState('');
   const [usuarios, setUsuarios] = useState<UsuarioRecord[]>([]);
   const [visao, setVisao] = useState<Visao>('tabela');
-  const [ano, setAno] = useState(Number(hoje.slice(0, 4)));
-  const [fUsuario, setFUsuario] = useState('');
-  const [fGrupo, setFGrupo] = useState<GrupoAfastamento | ''>('');
-  const [fTipo, setFTipo] = useState<TipoAfastamento | ''>('');
-  const [fStatus, setFStatus] = useState<StatusAfastamento | ''>('');
+  const [escala, setEscala] = useState<EscalaTimeline>(ESCALA_PADRAO);
+  // Filtro inicial (sempre que a página abre): todos os tipos e todos os status menos Gozada.
+  const [fTipos, setFTipos] = useState<TipoAfastamento[]>(() => TIPOS_AFASTAMENTO.map(t => t.id));
+  const [fStatus, setFStatus] = useState<StatusAfastamento[]>(() => STATUS_AFASTAMENTO.map(st => st.id).filter(id => id !== 'gozada'));
   const [form, setForm] = useState<{ atual?: AfastamentoRecord } | null>(null);
   const [apagando, setApagando] = useState<AfastamentoRecord | null>(null);
+  // Documento aberto em tela cheia (PDF ou imagem).
+  const [documento, setDocumento] = useState<{ titulo: string; url: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
 
   useEffect(() => observarAfastamentos(setLista, () => setErroCarga('Não foi possível carregar as férias e afastamentos.')), []);
@@ -52,20 +55,15 @@ export const Ferias: React.FC = () => {
   const avisar = (msg: string, tone: 'success' | 'error' = 'success') => { setToast({ msg, tone }); window.setTimeout(() => setToast(null), tone === 'error' ? 7000 : 4500); };
   const fotos = useMemo(() => new Map(usuarios.map(u => [u.id, u.imageProfile || ''])), [usuarios]);
 
+  // Nenhum chip num filtro = sem restrição por ele.
   const filtrados = useMemo(() => (lista ?? []).filter(a =>
-    (!fUsuario || a.usuarioUid === fUsuario)
-    && (!fGrupo || grupoDoPerfil(a.perfil) === fGrupo)
-    && (!fTipo || a.tipo === fTipo)
-    && (!fStatus || statusEfetivo(a, hoje) === fStatus)), [lista, fUsuario, fGrupo, fTipo, fStatus, hoje]);
-  // Tabela: em curso e futuros primeiro (por início); gozados depois (mais recentes primeiro).
-  const ordenados = useMemo(() => [...filtrados].sort((a, b) => {
-    const ga = statusEfetivo(a, hoje) === 'gozada'; const gb = statusEfetivo(b, hoje) === 'gozada';
-    if (ga !== gb) return ga ? 1 : -1;
-    return ga ? b.dataInicio.localeCompare(a.dataInicio) : a.dataInicio.localeCompare(b.dataInicio);
-  }), [filtrados, hoje]);
+    (!fTipos.length || fTipos.includes(a.tipo))
+    && (!fStatus.length || fStatus.includes(statusEfetivo(a, hoje)))), [lista, fTipos, fStatus, hoje]);
+  // Tabela: ordem crescente da data de início.
+  const ordenados = useMemo(() => [...filtrados].sort((a, b) => a.dataInicio.localeCompare(b.dataInicio) || a.usuario.localeCompare(b.usuario, 'pt-BR')), [filtrados]);
 
   const abrirArquivo = async (a: AfastamentoRecord['arquivos'][number]) => {
-    try { window.open(await urlArquivoAfastamento(a), '_blank', 'noopener'); } catch { avisar('Não foi possível abrir o arquivo.', 'error'); }
+    try { setDocumento({ titulo: a.nome, url: await urlArquivoAfastamento(a) }); } catch { avisar('Não foi possível abrir o arquivo.', 'error'); }
   };
   const confirmarApagar = async () => {
     if (!apagando) return;
@@ -74,15 +72,19 @@ export const Ferias: React.FC = () => {
     catch (e: any) { avisar(e?.message || 'Não foi possível apagar.', 'error'); }
   };
 
-  const filtroSelect = <T extends string>(rotulo: string, valor: T | '', set: (v: T | '') => void, opcoes: { id: string; rotulo: string }[]) => (
-    <label className="flex flex-col gap-1 min-w-[10rem] flex-1 md:flex-none">
-      <span className="text-xs font-semibold text-ink-3">{rotulo}</span>
-      <select className={controlClass} value={valor} onChange={e => set(e.target.value as T | '')}>
-        <option value="">Todos</option>
-        {opcoes.map(o => <option key={o.id} value={o.id}>{o.rotulo}</option>)}
-      </select>
-    </label>
+  // Multi-select com chips: o componente trabalha com rótulos; aqui converte para os ids.
+  const filtroChips = <T extends string>(rotulo: string, opcoes: readonly { id: T; rotulo: string }[], valor: T[], set: (v: T[]) => void) => (
+    <MultiSelectCombobox
+      label={rotulo}
+      className="min-w-[14rem] flex-1"
+      placeholder="Todos"
+      opcoes={opcoes.map(o => o.rotulo)}
+      selecionadas={opcoes.filter(o => valor.includes(o.id)).map(o => o.rotulo)}
+      onChange={rots => set(opcoes.filter(o => rots.includes(o.rotulo)).map(o => o.id))}
+    />
   );
+  const referencia = (a: AfastamentoRecord): string =>
+    a.tipo === 'ferias' ? (a.referencia ? `Ano: ${a.referencia}` : '—') : a.tipo === 'lic_adm' ? (a.motivo || '—') : '—';
 
   return (
     <div className="flex flex-col flex-1">
@@ -95,10 +97,8 @@ export const Ferias: React.FC = () => {
         />
 
         <div className="bg-white rounded-xl border border-line p-3 flex flex-wrap items-end gap-3">
-          {filtroSelect('Usuário', fUsuario, setFUsuario, [...usuarios].sort((a, b) => a.usuario.localeCompare(b.usuario, 'pt-BR')).map(u => ({ id: u.id, rotulo: u.usuario })))}
-          {filtroSelect<GrupoAfastamento>('Grupo', fGrupo, setFGrupo, GRUPOS_AFASTAMENTO)}
-          {filtroSelect<TipoAfastamento>('Tipo', fTipo, setFTipo, TIPOS_AFASTAMENTO.map(t => ({ id: t.id, rotulo: t.curto })))}
-          {filtroSelect<StatusAfastamento>('Status', fStatus, setFStatus, STATUS_AFASTAMENTO)}
+          {filtroChips<TipoAfastamento>('Tipo', TIPOS_AFASTAMENTO.map(t => ({ id: t.id, rotulo: t.curto })), fTipos, setFTipos)}
+          {filtroChips<StatusAfastamento>('Status', STATUS_AFASTAMENTO, fStatus, setFStatus)}
           <div className="ml-auto">
             <Segmented<Visao>
               ariaLabel="Visualização"
@@ -113,7 +113,7 @@ export const Ferias: React.FC = () => {
         {lista === null && !erroCarga && <p className="text-sm text-ink-3">Carregando…</p>}
 
         {lista !== null && visao === 'timeline' && (
-          <TimelineAfastamentos afastamentos={filtrados} fotos={fotos} ano={ano} onAno={setAno} hoje={hoje} onAbrir={ehAdmin ? a => setForm({ atual: a }) : undefined} />
+          <TimelineAfastamentos afastamentos={filtrados} fotos={fotos} escala={escala} onEscala={setEscala} hoje={hoje} onAbrir={ehAdmin ? a => setForm({ atual: a }) : undefined} />
         )}
 
         {lista !== null && visao === 'tabela' && (ordenados.length === 0 ? (
@@ -154,7 +154,7 @@ export const Ferias: React.FC = () => {
                         <td className="px-3 py-2 tabular-nums whitespace-nowrap">{dataBr(a.dataInicio)} a {dataBr(a.dataFim)}</td>
                         <td className="px-3 py-2 tabular-nums text-right">{a.duracaoDias}</td>
                         <td className="px-3 py-2"><StatusTag tone={st.tom}>{st.rotulo}</StatusTag></td>
-                        <td className="px-3 py-2 text-ink-2">{a.tipo === 'ferias' ? (a.referencia || '—') : a.tipo === 'lic_adm' ? (a.motivo || '—') : '—'}</td>
+                        <td className="px-3 py-2 text-ink-2">{referencia(a)}</td>
                         <td className="px-3 py-2">
                           {a.arquivos?.length ? (
                             <span className="flex flex-wrap gap-1">
@@ -194,7 +194,7 @@ export const Ferias: React.FC = () => {
                         <StatusTag tone={st.tom} className="shrink-0">{st.rotulo}</StatusTag>
                       </div>
                       <p className="text-sm text-ink">{rotuloTipo(a.tipo)} · {a.duracaoDias} dia{a.duracaoDias !== 1 ? 's' : ''}</p>
-                      <p className="text-xs text-ink-3 tabular-nums">{dataBr(a.dataInicio)} a {dataBr(a.dataFim)}{a.referencia ? ` · ref. ${a.referencia}` : ''}{a.motivo ? ` · ${a.motivo}` : ''}</p>
+                      <p className="text-xs text-ink-3 tabular-nums">{dataBr(a.dataInicio)} a {dataBr(a.dataFim)}{a.tipo === 'ferias' && a.referencia ? ` · Ano: ${a.referencia}` : ''}{a.motivo ? ` · ${a.motivo}` : ''}</p>
                       {!!a.arquivos?.length && (
                         <div className="flex flex-wrap gap-2 mt-1">
                           {a.arquivos.map(f => <button key={f.caminho} type="button" onClick={() => abrirArquivo(f)} className="min-h-[44px] text-xs font-bold text-blue underline underline-offset-2 truncate max-w-full">{f.nome}</button>)}
@@ -222,6 +222,7 @@ export const Ferias: React.FC = () => {
           onSalvo={(msg, tom) => { setForm(null); avisar(msg, tom); }}
         />
       )}
+      {documento && <PdfFullscreenModal title={documento.titulo} url={documento.url} onClose={() => setDocumento(null)} />}
       {apagando && (
         <ConfirmDialog
           title="Apagar férias / afastamento"

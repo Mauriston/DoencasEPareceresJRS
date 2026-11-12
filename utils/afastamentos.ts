@@ -111,6 +111,41 @@ export const janelaDeMeses = (de: string, ate: string): JanelaTimeline => {
   return { inicio: meses[0].inicio, fim: somarDias(ultimo.inicio, ultimo.dias - 1), meses };
 };
 
+/** Escalas da Timeline: meses mostrados antes e depois de hoje (hoje sempre no meio). */
+export const ESCALAS_TIMELINE = [
+  { id: 'bimestral', rotulo: 'Bimestral', mesesCadaLado: 1 },
+  { id: 'quadrimestral', rotulo: 'Quadrimestral', mesesCadaLado: 2 },
+  { id: 'semestral', rotulo: 'Semestral', mesesCadaLado: 3 },
+  { id: 'anual', rotulo: 'Anual', mesesCadaLado: 6 },
+] as const;
+export type EscalaTimeline = typeof ESCALAS_TIMELINE[number]['id'];
+export const ESCALA_PADRAO: EscalaTimeline = 'quadrimestral';
+
+/** Mesma data N meses adiante/atrás (dia ajustado ao fim do mês quando não existe, ex.: 31/03 − 1 mês = 28/02). */
+const somarMeses = (iso: string, n: number): string => {
+  const p = partes(iso)!;
+  const alvo = new Date(Date.UTC(p.y, p.mes - 1 + n, 1));
+  const ultimo = new Date(Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth() + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth(), Math.min(p.d, ultimo))).toISOString().slice(0, 10);
+};
+
+/**
+ * Janela centrada em hoje: de (hoje − N meses) a (hoje + N meses). Os meses das pontas entram cortados
+ * (só os dias dentro da janela), para que a linha de hoje fique no meio.
+ */
+export const janelaCentrada = (hoje: string, mesesCadaLado: number): JanelaTimeline => {
+  const inicio = somarMeses(hoje, -mesesCadaLado);
+  const fim = somarMeses(hoje, mesesCadaLado);
+  const inteiros = janelaDeMeses(inicio, fim);
+  const meses = inteiros.meses.map(m => {
+    const fimMes = somarDias(m.inicio, m.dias - 1);
+    const de = m.inicio < inicio ? inicio : m.inicio;
+    const ate = fimMes > fim ? fim : fimMes;
+    return { ...m, inicio: de, dias: diasEntre(de, ate) + 1 };
+  });
+  return { inicio, fim, meses };
+};
+
 /** Posição da barra na janela, em % (esquerda e largura), cortada nas bordas; null se fora da janela. */
 export const posicaoNaJanela = (j: Pick<JanelaTimeline, 'inicio' | 'fim'>, inicio: string, fim: string): { esquerda: number; largura: number } | null => {
   if (fim < j.inicio || inicio > j.fim) return null;
