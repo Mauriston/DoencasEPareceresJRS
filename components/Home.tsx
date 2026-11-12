@@ -2,7 +2,7 @@
 // Início como PAINEL DE TRABALHO (auditoria v2, N4/G3/L4): "Precisa de atenção" (pareceres
 // atrasados, perícias vigentes, concurso em andamento, IS marcadas para hoje, senha temporária),
 // "Últimos documentos gerados" (só Secretaria: fila do que foi enviado para impressão),
-// "Próximas Inspeções", "Pareceres não concluídos" e "Perícias Menores Vigentes" (cada um só aparece
+// "Pareceres não concluídos" e "Perícias Menores Vigentes" (cada um só aparece
 // quando há itens), "Acesso rápido" (até 6 páginas, editável e guardado no
 // aparelho), "Próximas férias" e "Avisos" (Casos Periciais e instalação do app — antes eram diálogos em
 // sequência no login). O menu lateral já lista as páginas: a Home não o repete.
@@ -172,7 +172,7 @@ export const Home: React.FC = () => {
   useEffect(() => (podePareceres ? observarPareceres(setPareceres, () => { /* silencioso */ }) : undefined), [podePareceres]);
   const atrasados = useMemo(() => pareceres.filter(p => statusEfetivo(p) === 'atrasado'), [pareceres]);
 
-  // Inspeções de Saúde agendadas: "Próximas Inspeções", item de atenção (hoje) e mini calendário.
+  // Inspeções de Saúde agendadas: item de atenção (hoje) e mini calendário (o card "Próximas Inspeções" saiu).
   const [inspecoes, setInspecoes] = useState<InspecaoRecord[]>([]);
   useEffect(() => (podeInspecoes ? observarInspecoes(setInspecoes, () => { /* silencioso */ }) : undefined), [podeInspecoes]);
   // Quem acessa Concursos: além da agenda, alimenta o item "IS de concurso atrasadas" de Precisa de atenção.
@@ -319,8 +319,8 @@ export const Home: React.FC = () => {
         </div>
         {(podeNovaPericia && podePericiaMenor || podeGerarParecer || mostrarEnviarExames) && (
           <div className="flex flex-col-reverse sm:flex-row gap-2">
-            {mostrarEnviarExames && <button type="button" onClick={() => setEnviarExames(true)} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">lab_profile</span>Enviar exames de concurso</button>}
-            {podeNovaPericia && podePericiaMenor && <Link to="/pericia-menor?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">personal_injury</span>{termosPm.novo}</Link>}
+            {mostrarEnviarExames && <button type="button" onClick={() => setEnviarExames(true)} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>Exames Concursos</button>}
+            {podeNovaPericia && podePericiaMenor && <Link to="/pericia-menor?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>{termosPm.pagina === 'Atestados' ? 'Atestado' : 'Perícia Menor'}</Link>}
             {podeGerarParecer && <Link to="/pareceres?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>Novo parecer</Link>}
           </div>
         )}
@@ -368,33 +368,6 @@ export const Home: React.FC = () => {
 
             {/* Faltas do HNRe ainda não comunicadas à Divisão de Pessoal (só Admin e Secretaria; some sem pendências). */}
             {podeInspecoes && (perfil === 'admin' || ehSecretaria) && <CardFaltasHNRe inspecoes={inspecoes} Secao={Secao} />}
-
-            {podeInspecoes && (
-              <Secao id="home-proximas" titulo="Próximas Inspeções" acao={<Link to="/inspecoes" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver inspeções</Link>}>
-                {proximas.length === 0 ? (
-                  <EmptyState icon="event_available" title="Nenhuma inspeção agendada" description="As IS com entrevista marcada aparecem aqui." />
-                ) : (
-                  <ul className="divide-y divide-line">
-                    {proximas.slice(0, 6).map(i => {
-                      const ehHoje = dataDeEntrevista(i.dataEntrevista) === hoje;
-                      return (
-                        <li key={i.id}>
-                          <Link to="/inspecoes" className="flex items-center gap-3 px-4 min-h-[56px] py-2 hover:bg-thead transition-colors">
-                            <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">event_available</span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-sm font-bold text-navy truncate">{nomeDe(i)}</span>
-                              <span className="block text-xs text-ink-3 truncate">IS {i.is} · {i.finalidade} · {i.amp}{i.peritoNome ? ` · ${i.peritoNome}` : ''}</span>
-                            </span>
-                            <span className="text-xs text-ink-3 shrink-0 text-right">{ehHoje ? <strong className="text-navy">Hoje</strong> : dataBr(dataDeEntrevista(i.dataEntrevista)).slice(0, 5)} · {horaDeEntrevista(i.dataEntrevista)}</span>
-                            <span className="material-symbols-outlined text-[20px] text-ink-4" aria-hidden="true">chevron_right</span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </Secao>
-            )}
 
             {podePareceres && naoConcluidos.length > 0 && (
               <Secao id="home-pareceres" titulo={`Pareceres não concluídos (${naoConcluidos.length})`} acao={<Link to="/pareceres" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver pareceres</Link>}>
@@ -504,6 +477,12 @@ export const Home: React.FC = () => {
               </div>
             </Secao>
 
+            {podeInspecoes && (
+              <Secao id="home-agenda" titulo="Agenda de inspeções">
+                <MiniCalendarioIS inspecoes={inspecoes} diasConcursos={diasConcursos} concursosClicaveis={podeConcursos} />
+              </Secao>
+            )}
+
             {mostraFerias && ferias.length > 0 && (
               <Secao id="home-ferias" titulo="Próximas férias">
                 <ul className="divide-y divide-line">
@@ -519,12 +498,6 @@ export const Home: React.FC = () => {
                   ))}
                 </ul>
                 {ferias.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{ferias.length - 6} período{ferias.length - 6 !== 1 ? 's' : ''} de férias na página Férias.</p>}
-              </Secao>
-            )}
-
-            {podeInspecoes && (
-              <Secao id="home-agenda" titulo="Agenda de inspeções">
-                <MiniCalendarioIS inspecoes={inspecoes} diasConcursos={diasConcursos} concursosClicaveis={podeConcursos} />
               </Secao>
             )}
 
