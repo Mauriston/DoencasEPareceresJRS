@@ -72,11 +72,17 @@ const dataPorExtenso = (): string => {
   return t.charAt(0).toUpperCase() + t.slice(1);
 };
 
-const Secao: React.FC<{ id: string; titulo: string; badge?: number; badgeRotulo?: string; acao?: React.ReactNode; children: React.ReactNode }> = ({ id, titulo, badge, badgeRotulo = 'pendentes', acao, children }) => (
+/** Card da Início. Com `link`, o título (cabeçalho) leva à página correspondente. */
+const Secao: React.FC<{ id: string; titulo: string; badge?: number; badgeRotulo?: string; acao?: React.ReactNode; link?: string; children: React.ReactNode }> = ({ id, titulo, badge, badgeRotulo = 'pendentes', acao, link, children }) => (
   <section aria-labelledby={id} className="bg-white border border-line rounded-xl">
     <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-2">
       <h2 id={id} className="text-h3 font-bold text-navy flex items-center gap-2">
-        {titulo}
+        {link ? (
+          <Link to={link} className="inline-flex items-center gap-1 min-h-[44px] -my-2 hover:underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded">
+            {titulo}
+            <span className="material-symbols-outlined text-[20px] text-ink-4" aria-hidden="true">chevron_right</span>
+          </Link>
+        ) : titulo}
         {!!badge && <span className="min-w-[24px] h-6 px-2 rounded-full bg-wine text-white text-xs font-bold leading-6 text-center" aria-label={`${badge} ${badgeRotulo}`}>{badge}</span>}
       </h2>
       {acao}
@@ -478,7 +484,7 @@ export const Home: React.FC = () => {
             </Secao>
 
             {podeInspecoes && (
-              <Secao id="home-agenda" titulo="Agenda de inspeções">
+              <Secao id="home-agenda" titulo="Agenda de inspeções" link="/inspecoes?visao=calendario">
                 <MiniCalendarioIS inspecoes={inspecoes} diasConcursos={diasConcursos} concursosClicaveis={podeConcursos} />
               </Secao>
             )}

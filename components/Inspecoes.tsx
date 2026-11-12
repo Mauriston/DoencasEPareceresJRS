@@ -7,7 +7,7 @@
 // formato do Google Agenda. As IS com entrevista marcada são sincronizadas com a agenda "JRS/HNRe" do Google
 // Agenda, com o perito como convidado (ver services/agendaGoogleIS.ts).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
 import { IconButton } from './ui/IconButton';
@@ -126,7 +126,9 @@ export const Inspecoes: React.FC = () => {
   const [militares, setMilitares] = useState<MilitarRecord[]>([]);
   const [peritos, setPeritos] = useState<PeritoIS[]>([]);
 
-  const [visao, setVisao] = useState<Visao>('tabela');
+  // Visão inicial pela URL (?visao=calendario — ex.: cabeçalho do card "Agenda de inspeções" da Início).
+  const [searchParams] = useSearchParams();
+  const [visao, setVisao] = useState<Visao>(() => (searchParams.get('visao') === 'calendario' ? 'calendario' : 'tabela'));
   // Filtros da visão Tabela (o calendário tem navegação própria). Padrão: Em andamento · Este mês.
   const [situacoes, setSituacoes] = useState<SituacaoIS[]>(['andamento']);
   const [periodo, setPeriodo] = useState<FiltroPeriodoValor>({ id: 'mes' });
