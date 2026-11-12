@@ -2,7 +2,7 @@
 // E-mail "Resultado de Inspeção de Saúde" ao inspecionado, pela Gmail API da conta Google da JRS
 // (a mesma dos e-mails de impressão — servidor/google/impressao.ts). Só IS com TIS assinado. O servidor
 // lê a IS e o cadastro do inspecionado no Firestore (o app manda só o id da IS e, quando o cadastro não
-// tem e-mail, o e-mail informado — que fica gravado no cadastro). Remetente "HNRe - Junta Regular de Saúde",
+// tem e-mail, o e-mail informado — que fica gravado no cadastro). Remetente "Junta Regular de Saúde - HNRe",
 // cópia oculta para a caixa da JRS e "Responder para" a mesma caixa. HTML puro (Zimbra não roda JavaScript).
 import type { Firestore } from 'firebase-admin/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -14,7 +14,7 @@ const APP_URL = (process.env.APP_URL || 'https://mauriston.github.io/DoencasEPar
 
 /** Textos fixos do e-mail (podem ser trocados por variável de ambiente do Cloud Run). */
 export const CONFIG_EMAIL_RESULTADO = {
-  nomeRemetente: 'HNRe - Junta Regular de Saúde',
+  nomeRemetente: 'Junta Regular de Saúde - HNRe',
   emailJrs: process.env.EMAIL_JRS || 'hnre.jrs@marinha.mil.br',
   bannerUrl: process.env.EMAIL_BANNER_URL || 'https://i.imgur.com/Btu1CAG.png',
   logoRodapeUrl: process.env.EMAIL_LOGO_RODAPE_URL || `${APP_URL}email/logo-marinha-fundo-claro.png`,
