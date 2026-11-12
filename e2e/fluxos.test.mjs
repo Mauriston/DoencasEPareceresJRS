@@ -203,11 +203,14 @@ test('Inspeções: o menu da linha não tem mais "Ver detalhes" e a tabela não 
   await p.context().close();
 });
 
-test('Inspeções: "+ Abrir IS" abre o formulário que valida os campos obrigatórios sem gravar nada', async () => {
+test('Inspeções: "+ Abrir IS" → "Manualmente" abre o formulário que valida os campos obrigatórios sem gravar nada', async () => {
   const p = await novaPagina();
   await entrar(p, MEDICO);
   await p.goto(`${BASE}#/inspecoes`);
+  // "Abrir IS" é um botão com menu: Manualmente · Enviar print.
   await p.getByRole('button', { name: 'Abrir IS', exact: true }).click();
+  await p.getByRole('menuitem', { name: 'Enviar print' }).waitFor();
+  await p.getByRole('menuitem', { name: 'Manualmente' }).click();
   const dialogo = p.getByRole('dialog', { name: 'Cadastrar IS' });
   await dialogo.getByRole('button', { name: 'Cadastrar IS' }).click();
   await dialogo.getByText('Informe o número da IS (somente dígitos).').waitFor();
