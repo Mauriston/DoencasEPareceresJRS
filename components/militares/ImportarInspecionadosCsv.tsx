@@ -1,36 +1,46 @@
 // Ficheiro: components/militares/ImportarInspecionadosCsv.tsx
 // "Importar CSV" da página Inspecionados (exclusivo do Admin): cadastra novos militares em lote a partir
-// de um CSV com as colunas nip | vinculo | posto | nomeCompleto | om | nasc. Mostra uma prévia
-// (novos, já cadastrados, repetidos no arquivo e com erro) antes de gravar; só os "novos" são gravados.
+// de um CSV com as colunas do cadastro (utils/importarInspecionados.ts): dados básicos, Serviço do HNRe e
+// "Informações adicionais" dos oficiais médicos do HNRe. Mostra uma prévia
+// (novos, a completar, já cadastrados, repetidos no arquivo e com erro) antes de gravar. Grava os novos e, nos já
+// cadastrados, só preenche os campos que estão vazios no banco (nada é sobrescrito); os demais são ignorados.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import { StatusTag, type StatusTone } from '../ui/StatusTag';
-import { criarMilitaresEmLote, type MilitarRecord } from '../../services/firestoreMilitares';
-import { carregarCorposQuadros, carregarOms, type CorposQuadros } from '../../utils/corposQuadros';
+import { criarMilitaresEmLote, atualizarMilitaresEmLote, type MilitarDoc, type MilitarRecord } from '../../services/firestoreMilitares';
+import { carregarCorposQuadros, carregarOms, carregarServicosHnre, type CorposQuadros, type ServicoHnre } from '../../utils/corposQuadros';
 import {
-  interpretarCsvInspecionados, MODELO_CSV_INSPECIONADOS, COLUNAS_CSV_INSPECIONADOS,
+  interpretarCsvInspecionados, MODELO_CSV_INSPECIONADOS, COLUNAS_OBRIGATORIAS_CSV,
   type ResultadoImportacao, type SituacaoLinha,
 } from '../../utils/importarInspecionados';
 
 interface Props {
   existentes: MilitarRecord[];
   onClose: () => void;
-  onImportado: (n: number) => void;
+  /** Quantos foram cadastrados e quantos tiveram dados completados. */
+  onImportado: (novos: number, atualizados: number) => void;
 }
 
 const ROTULO: Record<SituacaoLinha, { texto: string; tone: StatusTone }> = {
   novo: { texto: 'Novo', tone: 'success' },
+  atualizar: { texto: 'Completar dados', tone: 'navyOutline' },
   existente: { texto: 'Já cadastrado', tone: 'muted' },
   duplicado: { texto: 'Repetido no arquivo', tone: 'attention' },
   erro: { texto: 'Erro', tone: 'danger' },
 };
-const ORDEM: SituacaoLinha[] = ['erro', 'duplicado', 'novo', 'existente'];
+const ORDEM: SituacaoLinha[] = ['erro', 'duplicado', 'novo', 'atualizar', 'existente'];
+const ROTULO_CAMPO: Partial<Record<keyof MilitarDoc, string>> = {
+  dataNascimento: 'data de nascimento', email: 'e-mail', celular: 'celular', servico_label: 'serviço do HNRe',
+  nomeGuerra: 'nome de guerra', especialidade: 'especialidade', rqe: 'RQE', crm: 'CRM', emailPessoal: 'e-mail pessoal',
+  cpf: 'CPF', identidadeMilitar: 'identidade militar',
+};
 const MAX_PREVIA = 300;
 
 export const ImportarInspecionadosCsv: React.FC<Props> = ({ existentes, onClose, onImportado }) => {
   const [postos, setPostos] = useState<CorposQuadros['postos']>();
   const [oms, setOms] = useState<Set<string>>();
+  const [servicos, setServicos] = useState<ServicoHnre[]>();
   const [texto, setTexto] = useState<string | null>(null);
   const [arquivo, setArquivo] = useState('');
   const [erro, setErro] = useState('');
@@ -39,19 +49,20 @@ export const ImportarInspecionadosCsv: React.FC<Props> = ({ existentes, onClose,
   const [filtro, setFiltro] = useState<SituacaoLinha | 'todos'>('todos');
 
   useEffect(() => { carregarCorposQuadros().then(d => setPostos(d.postos)).catch(() => { /* sem validação de posto */ }); }, []);
+  useEffect(() => { carregarServicosHnre().then(setServicos).catch(() => { /* grava o serviço como veio */ }); }, []);
   useEffect(() => { carregarOms().then(l => setOms(new Set(l.map(o => o.sigla)))).catch(() => { /* sem validação de OM */ }); }, []);
 
-  const ids = useMemo(() => new Set(existentes.map(m => m.id)), [existentes]);
+  const ids = useMemo(() => new Map<string, MilitarRecord>(existentes.map(m => [m.id, m])), [existentes]);
 
   // Reinterpreta quando chegam as listas de referência ou a base muda (NIPs "já cadastrados").
   const { resultado, erroLeitura } = useMemo<{ resultado: ResultadoImportacao | null; erroLeitura: string }>(() => {
     if (texto === null) return { resultado: null, erroLeitura: '' };
     try {
-      return { resultado: interpretarCsvInspecionados(texto, { existentes: ids, postos, omsConhecidas: oms }), erroLeitura: '' };
+      return { resultado: interpretarCsvInspecionados(texto, { existentes: ids, postos, omsConhecidas: oms, servicosHnre: servicos }), erroLeitura: '' };
     } catch (e: any) {
       return { resultado: null, erroLeitura: e?.message || 'Não foi possível ler o CSV.' };
     }
-  }, [texto, ids, postos, oms]);
+  }, [texto, ids, postos, oms, servicos]);
 
   const lerArquivo = async (f: File | null) => {
     setErro(''); setTexto(null); setFiltro('todos'); setArquivo(f?.name ?? '');
@@ -75,11 +86,15 @@ export const ImportarInspecionadosCsv: React.FC<Props> = ({ existentes, onClose,
   };
 
   const importar = async () => {
-    if (!resultado || resultado.novos.length === 0) return;
+    if (!resultado || totalGravar === 0) return;
     setGravando(true); setErro(''); setProgresso(0);
     try {
-      const n = await criarMilitaresEmLote(resultado.novos, setProgresso);
-      onImportado(n);
+      const n = resultado.novos.length ? await criarMilitaresEmLote(resultado.novos, setProgresso) : 0;
+      if (resultado.atualizacoes.length) {
+        await atualizarMilitaresEmLote(resultado.atualizacoes);
+        setProgresso(n + resultado.atualizacoes.length);
+      }
+      onImportado(n, resultado.atualizacoes.length);
     } catch (e: any) {
       setErro(e?.message || 'Falha ao gravar. Parte do lote pode ter sido gravada — reabra a importação para conferir.');
     } finally {
@@ -93,6 +108,12 @@ export const ImportarInspecionadosCsv: React.FC<Props> = ({ existentes, onClose,
     return [...base].sort((a, b) => ORDEM.indexOf(a.situacao) - ORDEM.indexOf(b.situacao) || a.linha - b.linha);
   }, [resultado, filtro]);
   const totalNovos = resultado?.novos.length ?? 0;
+  const totalAtualizar = resultado?.atualizacoes.length ?? 0;
+  const totalGravar = totalNovos + totalAtualizar;
+  const rotuloGravar = [
+    totalNovos && `${totalNovos} novo${totalNovos !== 1 ? 's' : ''}`,
+    totalAtualizar && `completar ${totalAtualizar}`,
+  ].filter(Boolean).join(' e ') || 'nada';
 
   return (
     <Dialog
@@ -104,8 +125,8 @@ export const ImportarInspecionadosCsv: React.FC<Props> = ({ existentes, onClose,
       footer={(
         <>
           <Button variant="secondary" onClick={onClose} disabled={gravando}>Cancelar</Button>
-          <Button icon="group_add" onClick={importar} loading={gravando} disabled={totalNovos === 0}>
-            {gravando ? `Gravando ${progresso}/${totalNovos}…` : `Importar ${totalNovos} novo${totalNovos !== 1 ? 's' : ''}`}
+          <Button icon="group_add" onClick={importar} loading={gravando} disabled={totalGravar === 0}>
+            {gravando ? `Gravando ${progresso}/${totalGravar}…` : `Importar ${rotuloGravar}`}
           </Button>
         </>
       )}
@@ -113,12 +134,22 @@ export const ImportarInspecionadosCsv: React.FC<Props> = ({ existentes, onClose,
       <div className="space-y-4">
         <div className="text-ink-3 space-y-1">
           <p>
-            Cadastra militares em lote. O CSV deve ter cabeçalho com as colunas{' '}
-            {COLUNAS_CSV_INSPECIONADOS.map((c, i) => <React.Fragment key={c}>{i > 0 && ', '}<code className="font-mono text-navy">{c}</code></React.Fragment>)}{' '}
-            (separador vírgula ou ponto e vírgula). <strong>vinculo</strong>: Carreira ou Temporário; <strong>posto</strong>: P/G/Q como
-            no cadastro (ex.: GR, CB-EF, CT (Md)); <strong>nasc</strong>: DD/MM/AAAA (opcional).
+            Cadastra militares em lote. Baixe o modelo: ele traz todas as colunas do cadastro (separador ponto e vírgula).
+            Obrigatórias:{' '}
+            {COLUNAS_OBRIGATORIAS_CSV.map((c, i) => <React.Fragment key={c}>{i > 0 && ', '}<code className="font-mono text-navy">{c}</code></React.Fragment>)}.
+            {' '}<strong>vinculo</strong>: Carreira, Temporário ou Inativo; <strong>posto</strong>: P/G/Q como no cadastro (ex.: GR, CB-EF, CT (Md));
+            {' '}<strong>nasc</strong> (data de nascimento): DD/MM/AAAA; <strong>situacao</strong>: RM1 ou Refº (só Inativo).
           </p>
-          <p>NIPs já cadastrados e linhas com erro são ignorados; os novos entram como <strong>ativos</strong>, sem e-mail.</p>
+          <p>
+            <strong>servicoHnre</strong> só vale para a OM HNRe (ex.: <code className="font-mono text-navy">JRS (HNRe-02.2)</code>). As
+            Informações adicionais (nome de guerra, especialidade, RQE, CRM, e-mail pessoal, CPF e identidade militar) só valem
+            para oficial médico do HNRe; nos demais são ignoradas com aviso.
+          </p>
+          <p>
+            Os novos entram como <strong>ativos</strong>. NIP já cadastrado: a linha é ignorada, salvo se trouxer dados que
+            faltam no cadastro (ex.: data de nascimento, e-mail, celular) — aí só esses campos são preenchidos; nada do que já
+            está gravado é alterado. Linhas com erro são ignoradas.
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -171,6 +202,7 @@ export const ImportarInspecionadosCsv: React.FC<Props> = ({ existentes, onClose,
                       <td className="px-3 py-1.5 font-semibold text-navy">{l.nome}</td>
                       <td className="px-3 py-1.5 whitespace-nowrap">{l.om}</td>
                       <td className="px-3 py-1.5">
+                        {l.patch && <span className="block text-navy font-semibold">Preenche: {Object.keys(l.patch).map(c => ROTULO_CAMPO[c as keyof MilitarDoc] ?? c).join(', ')}.</span>}
                         {l.erros.map(e => <span key={e} className="block text-wine font-semibold">{e}</span>)}
                         {l.avisos.map(a => <span key={a} className="block text-ink-3">{a}</span>)}
                       </td>

@@ -60,3 +60,16 @@ export const formatDataBr = (iso: string | undefined | null): string => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
   return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
 };
+
+/** Idade em anos completos na data de referência (AAAA-MM-DD; padrão hoje). Null se a data for inválida ou futura. */
+export const idadeEmAnos = (nascIso: string | undefined | null, refIso?: string): number | null => {
+  const n = /^(\d{4})-(\d{2})-(\d{2})$/.exec(nascIso || '');
+  if (!n) return null;
+  const hoje = new Date();
+  const r = /^(\d{4})-(\d{2})-(\d{2})$/.exec(refIso || '');
+  const [ay, am, ad] = r ? [Number(r[1]), Number(r[2]), Number(r[3])] : [hoje.getFullYear(), hoje.getMonth() + 1, hoje.getDate()];
+  const [ny, nm, nd] = [Number(n[1]), Number(n[2]), Number(n[3])];
+  let idade = ay - ny;
+  if (am < nm || (am === nm && ad < nd)) idade--;
+  return idade >= 0 ? idade : null;
+};

@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   dataFimDe, statusEfetivo, statusAoGravar, grupoDoPerfil, geraBloqueioNaAgenda, podeVerFerias, tituloEventoAfastamento,
-  janelaDeMeses, posicaoNaJanela, diasEntre,
+  janelaDeMeses, posicaoNaJanela, diasEntre, janelaCentrada, intervaloDoPeriodo, tocaPeriodo,
 } from '../afastamentos';
 import { casarUsuario } from '../../components/ferias/AfastamentoForm';
 import { resultadoPendente, elegivelResultado } from '../emailResultadoIS';
@@ -63,6 +63,37 @@ describe('timeline', () => {
     expect(posicaoNaJanela(j, '2027-01-01', '2027-12-31')).toEqual({ esquerda: 0, largura: 100 });
     expect(posicaoNaJanela(j, '2026-12-20', '2027-01-10')!.esquerda).toBe(0);
     expect(posicaoNaJanela(j, '2026-01-01', '2026-02-01')).toBeNull();
+  });
+});
+
+describe('timeline centrada em hoje', () => {
+  it('quadrimestral: 2 meses antes e 2 depois, hoje no meio', () => {
+    const j = janelaCentrada('2026-11-12', 2);
+    expect(j.inicio).toBe('2026-09-12');
+    expect(j.fim).toBe('2027-01-12');
+    expect(j.meses.map(m => m.rotulo)).toEqual(['SET/26', 'OUT/26', 'NOV/26', 'DEZ/26', 'JAN/27']);
+    expect(j.meses[0].dias).toBe(19);
+    expect(j.meses[4].dias).toBe(12);
+    expect(j.meses.reduce((s, m) => s + m.dias, 0)).toBe(diasEntre(j.inicio, j.fim) + 1);
+    expect(posicaoNaJanela(j, '2026-11-12', '2026-11-12')!.esquerda).toBeCloseTo(50, 0);
+  });
+  it('anual: 6 meses de cada lado; fim de mês ajustado', () => {
+    const j = janelaCentrada('2026-08-31', 6);
+    expect(j.inicio).toBe('2026-02-28');
+    expect(j.fim).toBe('2027-02-28');
+  });
+});
+
+describe('filtro de período', () => {
+  it('este semestre e este ano', () => {
+    expect(intervaloDoPeriodo('ano', '2026-11-12')).toEqual({ inicio: '2026-01-01', fim: '2026-12-31' });
+    expect(intervaloDoPeriodo('semestre', '2026-11-12')).toEqual({ inicio: '2026-07-01', fim: '2026-12-31' });
+    expect(intervaloDoPeriodo('semestre', '2026-06-30')).toEqual({ inicio: '2026-01-01', fim: '2026-06-30' });
+  });
+  it('afastamento que toca o período entra (inclusive o que atravessa a virada)', () => {
+    const ano = intervaloDoPeriodo('ano', '2026-11-12');
+    expect(tocaPeriodo({ dataInicio: '2026-12-20', dataFim: '2027-01-10' }, ano)).toBe(true);
+    expect(tocaPeriodo({ dataInicio: '2027-01-02', dataFim: '2027-01-10' }, ano)).toBe(false);
   });
 });
 
