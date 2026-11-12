@@ -659,6 +659,12 @@ async function startServer() {
   // E-mail de candidatos inaptos de concurso à EAMPE (Admin e Secretaria): servidor/email/inaptosConcurso.ts.
   app.post("/api/email/inaptos-concurso", rotaGoogle("email-inaptos-concurso", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/inaptosConcurso")).enviarInaptosConcurso(db, b.concursoId, b.candidatoIds, quem.uid)) }), true));
+  // E-mail ao NAC: IS finalizadas de Verificações e Términos (Admin e Secretaria): servidor/email/nac.ts.
+  app.post("/api/email/nac", rotaGoogle("email-nac", ["admin", "user_secretaria"], async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/nac")).enviarNac(db, b.isIds, quem.uid)) }), true));
+  // E-mails de teste (Configurações; só Admin): dados fictícios, só para os destinatários de teste: servidor/email/teste.ts.
+  app.post("/api/email/teste", rotaGoogle("email-teste", ["admin"], async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/teste")).enviarEmailTeste(db, b.tipo, quem.uid)) })));
   // E-mail "IS AGENDADAS EM dd/mm/aaaa" (servidor/email/agendaIS.ts). Manual: só o Admin escolhe o dia.
   const bucketStorage = async () => {
     const { adminApp } = await getFirebaseAdmin();

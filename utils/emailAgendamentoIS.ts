@@ -34,3 +34,11 @@ export const dataHoraDoAgendamento = (dataEntrevista: string): { data: string; h
   const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(dataEntrevista || ''));
   return m ? { data: `${m[3]}/${m[2]}/${m[1]}`, hora: `${m[4]}:${m[5]}` } : { data: '', hora: '' };
 };
+
+/**
+ * Pendente no menu "Enviar Email" (badge): IS elegível, agendada ou reagendada para hoje ou depois e sem o e-mail
+ * desta data/hora (`hoje` = AAAA-MM-DD). Entrevistas já passadas não contam.
+ */
+export const agendamentoPendente = (is: ISParaAgendamento, hoje: string): boolean =>
+  ehElegivelAgendamento(is) && !agendamentoJaEnviado(is) && (is.status === 'agendada' || is.status === 'reagendada')
+  && String(is.dataEntrevista || '').slice(0, 10) >= hoje;

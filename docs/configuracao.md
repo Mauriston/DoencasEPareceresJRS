@@ -78,7 +78,7 @@ Constantes que continuam no código por serem públicas e estáveis: `FIREBASE_P
 |---|---|
 | Escala SVÇ | enviada pelo Admin em CSV (coleção `escalaSpa`); a planilha de origem (aba *Agenda*) não é lida pelo app |
 | Matriz de permissões | Firestore `config/permissoes` (editada em *Usuários*); padrões em `config/permissions.ts` |
-| Turnos dos peritos | Firestore `config/agendaIS` |
+| Turnos dos peritos | Firestore `config/agendaIS` (editados em *Configurações → Agenda das IS — turnos dos peritos*, só Admin) |
 | Catálogos | `public/*.json` (CID, OMs, corpos e quadros, finalidades, restrições, serviços do HNRe) |
 
 ## 6. Ao mudar algo

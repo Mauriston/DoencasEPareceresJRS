@@ -72,6 +72,9 @@ export interface InspecaoDoc {
   /** Comunicação de falta (HNRe; servidor/email/faltasHNRe.ts): a data da entrevista a que se refere o envio. */
   emailFaltaDataEntrevista?: string;
   emailFaltaEnviadoEm?: Timestamp | null;
+  /** E-mail ao NAC (IS finalizada de Verificações e Términos; servidor/email/nac.ts). */
+  emailNacEnviadoEm?: Timestamp | null;
+  emailNacEnviadoPor?: string;
   criadoPor: string;
   criadoEm: Timestamp | null;
   atualizadoEm?: Timestamp | null;

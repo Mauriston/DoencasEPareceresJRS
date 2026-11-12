@@ -1,10 +1,9 @@
 // Ficheiro: components/concursos/BotaoEmailInaptos.tsx
-// Botão "E-mail de inaptos (EAMPE)" no cabeçalho da página do concurso (à direita; só concurso Em andamento,
+// Botão primário "+ Email Inaptos" no cabeçalho da página do concurso (à direita; só concurso Em andamento,
 // só Admin e Secretaria). Badge = candidatos INAPTO com o e-mail ainda não enviado; sem pendências, fica
 // desabilitado. O clique abre a seleção múltipla dos pendentes (todos marcados) e envia o e-mail
 // "{concurso} - Candidatos Inaptos" (servidor/email/inaptosConcurso.ts).
 import React, { useMemo, useState } from 'react';
-import { IconButton } from '../ui/IconButton';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
 import type { CandidatoRecord, ConcursoRecord } from '../../services/firestoreConcursos';
@@ -27,10 +26,19 @@ export const BotaoEmailInaptos: React.FC<Props> = ({ concurso, candidatos, perfi
   if (!(perfil === 'admin' || perfil === 'user_secretaria') || !concursoAceitaEmailInaptos(concurso.status)) return null;
   return (
     <>
-      <IconButton
-        variant="secondary" icon="forward_to_inbox" label="E-mail de inaptos (EAMPE)" badge={pendentes.length}
-        disabled={pendentes.length === 0} onClick={() => setAberto(true)}
-      />
+      <span className="relative inline-flex">
+        <Button
+          icon="add" disabled={pendentes.length === 0} onClick={() => setAberto(true)}
+          aria-label={`Email Inaptos (EAMPE)${pendentes.length ? ` — ${pendentes.length} pendente${pendentes.length > 1 ? 's' : ''}` : ''}`}
+        >
+          Email Inaptos
+        </Button>
+        {pendentes.length > 0 && (
+          <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-wine text-white text-xs font-bold leading-5 text-center ring-2 ring-white">
+            {pendentes.length > 99 ? '99+' : pendentes.length}
+          </span>
+        )}
+      </span>
       {aberto && (
         <DialogEmailInaptos
           concurso={concurso} pendentes={pendentes}

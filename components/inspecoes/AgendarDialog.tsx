@@ -115,7 +115,7 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
         {candidatos.length === 0 ? (
           <p role="alert" className="text-sm font-semibold text-wine">Não há perito ativo para o AMP {inspecao.amp}.</p>
         ) : !proximaLivre ? (
-          <p role="alert" className="text-sm font-semibold text-wine">Nenhuma data livre nos próximos meses para o AMP {inspecao.amp}. O Admin define os turnos dos peritos em "Turnos dos peritos".</p>
+          <p role="alert" className="text-sm font-semibold text-wine">Nenhuma data livre nos próximos meses para o AMP {inspecao.amp}. O Admin define os turnos dos peritos em Configurações → "Agenda das IS — turnos dos peritos".</p>
         ) : (
           <>
             <div>

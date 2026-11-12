@@ -65,7 +65,7 @@ export const SeletorHorario: React.FC<Props> = ({ peritoUid, data, onData, hora,
       {data && !diaUtil && <p className="text-xs font-semibold text-wine" role="status">{nomeDiaSemana(data)} não tem expediente de IS. Escolha um dia útil.</p>}
       {data && diaUtil && !peritoUid && <p className="text-xs text-ink-3" role="status">Escolha o perito para ver os horários.</p>}
       {data && diaUtil && peritoUid && !algumTurno && (
-        <p className="text-xs font-semibold text-wine" role="status">O perito não atende em {nomeDiaSemana(data)} ({dataBr(data)}). O Admin define os turnos de cada perito em "Turnos dos peritos".</p>
+        <p className="text-xs font-semibold text-wine" role="status">O perito não atende em {nomeDiaSemana(data)} ({dataBr(data)}). O Admin define os turnos de cada perito em Configurações → "Agenda das IS — turnos dos peritos".</p>
       )}
 
       {data && diaUtil && peritoUid && algumTurno && (
