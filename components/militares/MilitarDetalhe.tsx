@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { StatusTag } from '../ui/StatusTag';
-import { formatNip, formatCelular, formatCpf, formatIdentidadeMilitar, formatDataBr } from '../../utils/format';
+import { formatNip, formatCelular, formatCpf, formatIdentidadeMilitar, formatDataBr, idadeEmAnos } from '../../utils/format';
 import { tipoDoInspecionado, type MilitarRecord } from '../../services/firestoreMilitares';
 import { observarPareceres, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
 import { observarInspecoesDoInspecionado, type InspecaoRecord } from '../../services/firestoreInspecoes';
@@ -55,7 +55,9 @@ export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => v
   const temHistorico = pareceres.length > 0 || pericias.length > 0 || inspecoes.length > 0;
   const agora = useMemo(() => Date.now(), []);
 
-  const extras = [m.nomeGuerra, m.especialidade, m.emailPessoal, m.celular, m.dataNascimento, m.cpf, m.identidadeMilitar, m.crm, m.rqe].some(Boolean);
+  // Data de nascimento e idade só aparecem quando a data está cadastrada (Linha some com valor vazio).
+  const idade = idadeEmAnos(m.dataNascimento);
+  const extras = [m.nomeGuerra, m.especialidade, m.emailPessoal, m.celular, m.cpf, m.identidadeMilitar, m.crm, m.rqe].some(Boolean);
   return (
     <Drawer
       title={tipoDoInspecionado(m) === 'dependente' ? 'Detalhes do dependente' : tipoDoInspecionado(m) === 'pensionista' ? 'Detalhes do pensionista' : 'Detalhes do militar'}
@@ -82,6 +84,8 @@ export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => v
           <Linha rotulo="Titular" valor={m.titularNome ? `${m.titularPosto ?? ''} ${m.titularNome}`.trim() : undefined} />
           <Linha rotulo="OM" valor={m.om} />
           {tipoDoInspecionado(m) === 'militar' && <Linha rotulo="Vínculo" valor={m.temporario ? 'Temporário' : (m.rm1 || m.refo) ? 'Inativo' : 'Carreira'} />}
+          <Linha rotulo="Data de nascimento" valor={formatDataBr(m.dataNascimento)} />
+          <Linha rotulo="Idade" valor={idade !== null ? `${idade} ano${idade !== 1 ? 's' : ''}` : undefined} />
           <Linha rotulo="E-mail" valor={m.email} />
           <Linha rotulo="Serviço do HNRe" valor={m.servico_label} />
         </dl>
@@ -96,7 +100,6 @@ export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => v
               <Linha rotulo="CRM-PE" valor={m.crm} />
               <Linha rotulo="E-mail pessoal" valor={m.emailPessoal} />
               <Linha rotulo="Celular" valor={formatCelular(m.celular)} />
-              <Linha rotulo="Data de nascimento" valor={formatDataBr(m.dataNascimento)} />
               <Linha rotulo="CPF" valor={formatCpf(m.cpf)} mono />
               <Linha rotulo="Identidade militar" valor={formatIdentidadeMilitar(m.identidadeMilitar)} mono />
             </dl>

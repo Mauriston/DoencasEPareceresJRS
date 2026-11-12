@@ -302,7 +302,7 @@ export const Militares: React.FC = () => {
           onCancel={() => setApagando(null)}
         />
       )}
-      {importando && ehAdmin && lista && <ImportarInspecionadosCsv existentes={lista} onClose={() => setImportando(false)} onImportado={n => { setImportando(false); avisar(`${n} inspecionado${n !== 1 ? 's' : ''} importado${n !== 1 ? 's' : ''}.`); }} />}
+      {importando && ehAdmin && lista && <ImportarInspecionadosCsv existentes={lista} onClose={() => setImportando(false)} onImportado={(n, a) => { setImportando(false); avisar([n && `${n} inspecionado${n !== 1 ? 's' : ''} importado${n !== 1 ? 's' : ''}`, a && `${a} cadastro${a !== 1 ? 's' : ''} completado${a !== 1 ? 's' : ''}`].filter(Boolean).join(' e ') + '.'); }} />}
       {novo && <CadastroInspecionado onClose={() => setNovo(false)} onCriado={nome => { setNovo(false); avisar(`${nome} cadastrado.`); }} />}
       {lote === 'posto' && postos && <PromocaoEmLote militares={escolhidos} postos={postos} onClose={() => setLote(null)} onAplicado={n => { setLote(null); setSelecionados(new Set()); avisar(`Posto atualizado em ${n} militar${n !== 1 ? 'es' : ''}.`); }} onErro={m => avisar(m, 'error')} />}
       {lote === 'servico' && <ServicoEmLote militares={escolhidos} onClose={() => setLote(null)} onAplicado={n => { setLote(null); setSelecionados(new Set()); avisar(`Serviço do HNRe atualizado em ${n} militar${n !== 1 ? 'es' : ''}.`); }} onErro={m => avisar(m, 'error')} />}
