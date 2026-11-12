@@ -10,9 +10,10 @@
 //   - agendamentoIS:   PARA = e-mail do inspecionado; CC += institucional do médico da IS.
 //   - faltasHNRe:      CC += e-mails dos inspecionados (quando cadastrados).
 //   - inaptosConcurso: nenhum.
+//   - nac:             CC += institucionais dos user_medicos_geral com cargo "SMI".
 // "Responder para" (Reply-To) é sempre a caixa da JRS (`responderPara`).
 
-export type TipoEmail = 'resultadoIS' | 'agendaIS' | 'agendamentoIS' | 'faltasHNRe' | 'inaptosConcurso';
+export type TipoEmail = 'resultadoIS' | 'agendaIS' | 'agendamentoIS' | 'faltasHNRe' | 'inaptosConcurso' | 'nac';
 
 export interface DestinatariosEmail { para: string[]; cc: string[]; cco: string[] }
 
@@ -29,6 +30,10 @@ export interface ConfigEmails {
   assinatura: AssinaturaPresidente;
   /** Saudação do e-mail de faltas do HNRe (encarregada da Divisão de Pessoal). */
   saudacaoFaltasHNRe: string;
+  /** Saudação do e-mail ao NAC (Núcleo de Avaliação e Controle). */
+  saudacaoNac: string;
+  /** Destinatários dos e-mails de TESTE (Configurações → Testes); sem CCO. */
+  testes: { para: string[]; cc: string[] };
   destinatarios: Record<TipoEmail, DestinatariosEmail>;
 }
 
@@ -41,6 +46,8 @@ export const CONFIG_EMAILS_PADRAO: ConfigEmails = {
     supervisorNome: 'Alessandro Giorginis Fidelis de Souza', supervisorPosto: 'Suboficial-RM1-EF', supervisorCargo: 'Supervisor',
   },
   saudacaoFaltasHNRe: 'Prezada CT (S) Luciana Madruga e demais Militares da Divisão de Pessoal,',
+  saudacaoNac: 'Prezada CT (S) Luciana Madruga e demais Militares do NAC,',
+  testes: { para: ['mauriston.martins@marinha.mil.br'], cc: ['mauriston@oncoortopedia.com'] },
   destinatarios: {
     resultadoIS: { para: [], cc: [], cco: [CAIXA_JRS] },
     agendaIS: { para: [CAIXA_JRS], cc: [], cco: [] },
@@ -51,6 +58,7 @@ export const CONFIG_EMAILS_PADRAO: ConfigEmails = {
       cco: [],
     },
     inaptosConcurso: { para: ['eampe.concursos@marinha.mil.br'], cc: [CAIXA_JRS], cco: [] },
+    nac: { para: ['luciana.madruga@marinha.mil.br'], cc: [CAIXA_JRS], cco: [] },
   },
 };
 
@@ -60,6 +68,7 @@ export const TIPOS_EMAIL: { tipo: TipoEmail; rotulo: string; assunto: string; di
   { tipo: 'agendaIS', rotulo: 'IS agendadas do dia seguinte (18h)', assunto: 'IS AGENDADAS EM dd/mm/aaaa', dinamicos: 'PARA: e-mails institucionais dos médicos e do MPI. CC: Gmail do Admin, médicos, MPI e Secretaria. Assinaturas fixas: Supervisor e Presidente.' },
   { tipo: 'agendamentoIS', rotulo: 'Agendamento de IS (Verificações e Términos)', assunto: 'AGENDAMENTO DE INSPEÇÃO DE SAÚDE', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mail institucional do médico da IS.' },
   { tipo: 'faltasHNRe', rotulo: 'Faltas às IS (inspecionados do HNRe)', assunto: 'COMUNICAÇÃO DE FALTAS A INSPEÇÕES DE SAÚDE', dinamicos: 'CC: e-mails dos inspecionados, quando cadastrados.' },
+  { tipo: 'nac', rotulo: 'NAC — IS de Verificações e Términos finalizadas', assunto: 'INSPEÇÕES DE SAÚDE VDF E TÉRMINOS', dinamicos: 'CC: e-mails institucionais dos user_medicos_geral com cargo "SMI".' },
   { tipo: 'inaptosConcurso', rotulo: 'Candidatos inaptos de concurso (EAMPE)', assunto: '{concurso} - Candidatos Inaptos', dinamicos: 'Nenhum.' },
 ];
 
@@ -93,6 +102,11 @@ export const mesclarConfigEmails = (salvo: unknown): ConfigEmails => {
       supervisorCargo: String(s.assinatura?.supervisorCargo || '').trim() || p.assinatura.supervisorCargo,
     },
     saudacaoFaltasHNRe: String(s.saudacaoFaltasHNRe || '').trim() || p.saudacaoFaltasHNRe,
+    saudacaoNac: String(s.saudacaoNac || '').trim() || p.saudacaoNac,
+    testes: {
+      para: s.testes?.para !== undefined && normalizarLista(s.testes.para).length ? normalizarLista(s.testes.para) : p.testes.para,
+      cc: s.testes?.cc !== undefined ? normalizarLista(s.testes.cc) : p.testes.cc,
+    },
     destinatarios,
   };
 };

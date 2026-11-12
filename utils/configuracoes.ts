@@ -20,7 +20,7 @@ export const removerEmail = (lista: string[], email: string): string[] => lista.
 export const configIgual = (a: ConfigEmails, b: ConfigEmails): boolean => JSON.stringify(a) === JSON.stringify(b);
 
 /** Erros que impedem salvar (Reply-To, assinaturas e saudação obrigatórios). */
-export type ErrosConfigEmails = Partial<Record<'responderPara' | 'presidenteNome' | 'presidentePosto' | 'supervisorNome' | 'supervisorPosto' | 'supervisorCargo' | 'saudacaoFaltasHNRe', string>>;
+export type ErrosConfigEmails = Partial<Record<'responderPara' | 'presidenteNome' | 'presidentePosto' | 'supervisorNome' | 'supervisorPosto' | 'supervisorCargo' | 'saudacaoFaltasHNRe' | 'saudacaoNac' | 'testesPara', string>>;
 
 export const errosConfigEmails = (c: ConfigEmails): ErrosConfigEmails => {
   const e: ErrosConfigEmails = {};
@@ -31,5 +31,7 @@ export const errosConfigEmails = (c: ConfigEmails): ErrosConfigEmails => {
   if (!c.assinatura.supervisorPosto.trim()) e.supervisorPosto = 'Informe o posto/graduação do Supervisor.';
   if (!c.assinatura.supervisorCargo.trim()) e.supervisorCargo = 'Informe o cargo do Supervisor.';
   if (!c.saudacaoFaltasHNRe.trim()) e.saudacaoFaltasHNRe = 'Informe a saudação.';
+  if (!c.saudacaoNac.trim()) e.saudacaoNac = 'Informe a saudação.';
+  if (!c.testes.para.length) e.testesPara = 'Informe ao menos um destinatário para os testes.';
   return e;
 };

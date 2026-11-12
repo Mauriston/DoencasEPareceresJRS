@@ -115,6 +115,8 @@ O backend tem duas partes, publicadas separadamente:
 | `POST /api/email/agendamento-is` | `{ isId, email? }` → **"AGENDAMENTO DE INSPEÇÃO DE SAÚDE"** ao inspecionado, **só** para finalidades do grupo *Verificações e Términos* (Benefícios e os demais grupos não recebem). PARA: inspecionado (o e-mail informado é gravado no cadastro); CC: fixos + institucional do médico da IS. Um envio por data/hora (`emailAgendamentoDataEntrevista`). Admin e Secretaria (o app pergunta depois de agendar e oferece o item no menu ⋮). Auditada |
 | `POST /api/email/faltas-hnre` | `{ isIds }` → **"COMUNICAÇÃO DE FALTAS A INSPEÇÕES DE SAÚDE"** à Divisão de Pessoal do HNRe; relê cada IS e envia só as pendentes (status *faltou*, OM HNRe, falta ainda não comunicada); CC + e-mails dos inspecionados. Admin e Secretaria. Auditada |
 | `POST /api/email/inaptos-concurso` | `{ concursoId, candidatoIds }` → **"{concurso} - Candidatos Inaptos"** à EAMPE; só concurso *em andamento* e candidatos INAPTO ainda não comunicados. Admin e Secretaria. Auditada |
+| `POST /api/email/nac` | `{ isIds }` → **"INSPEÇÕES DE SAÚDE VDF E TÉRMINOS"** ao NAC com anexo em PDF (Chromium); relê cada IS e envia só as pendentes (TIS assinado, grupo Verificações e Términos, sem `emailNacEnviadoEm`); período = laudo mais antigo → mais recente; CC + institucionais dos `user_medicos_geral` com cargo SMI. Admin e Secretaria. Auditada |
+| `POST /api/email/teste` | `{ tipo }` → e-mail de teste com dados fictícios (resultado, agenda, agendamento, faltas, inaptos ou NAC), pelos mesmos templates, só para `config/emails.testes` (sem CCO), assunto com "[TESTE]"; não lê nem grava dados. Só Admin |
 | `POST /api/agenda/evento-is` · `/evento-bloqueio` · `/concursos` | Sincronização da agenda "JRS/HNRe" pela Calendar API (mesmas cores, convites e lembrete de 12 h; ids antigos do CalendarApp continuam valendo). Perfis da equipe |
 | `POST /api/arquivos/baixar` | Repasse de arquivos do Firebase Storage (PDFs, fotos de perfil, infográficos) para redes que bloqueiam `firebasestorage.googleapis.com` — ex.: Firefox nos PCs da Marinha. Exige usuário ativo; só as pastas liberadas em `storage.rules` (`utils/arquivosPermitidos.ts`). O cliente monta um `blob:` (`services/arquivosStorage.ts`) e cai para a URL direta se o repasse falhar |
 | `POST /api/gemini/analyze-image` | Leitura de imagem pelo Gemini (exige usuário ativo) |
@@ -379,6 +381,8 @@ E-mails gerados pelo servidor a partir de templates do Claude Design (`servidor/
 - **Resultado da IS ao inspecionado** — `/api/email/resultado-is` (Admin e Secretaria, IS com TIS assinado, envio único);
 - **Agendamento de IS** — `/api/email/agendamento-is` (template `templateAgendamentoVerificacoes.ts`; só Verificações e Términos);
 - **Faltas do HNRe** — `/api/email/faltas-hnre` (`templateFaltasHNRe.ts`);
+- **NAC (IS finalizadas de Verificações e Términos)** — `/api/email/nac` (`templateNac.ts` e anexo `templateAnexoNac.ts`; aviso de acesso restrito e assinatura do Presidente embutidos em `recursosAnexo.ts`);
+- **Testes de e-mail** — `/api/email/teste` (`servidor/email/teste.ts`);
 - **Inaptos de concurso à EAMPE** — `/api/email/inaptos-concurso` (`templateInaptosConcurso.ts`);
 - **IS agendadas do dia seguinte** — `/api/agendador/agenda-is` (Cloud Scheduler) e `/api/email/agenda-is` (Admin); anexo em PDF gerado pelo Chromium a partir de `templateAnexoAgendaIS.ts` (fonte e logo embutidas em `recursosAnexo.ts`, porque o gerador não acessa a rede) e guardado no Storage.
 

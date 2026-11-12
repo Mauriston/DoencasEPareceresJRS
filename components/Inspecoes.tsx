@@ -31,7 +31,7 @@ import { EnviarAgendamentoDialog } from './inspecoes/EnviarAgendamentoDialog';
 import { avisarAgendamento, observarAgendamentos, type AgendamentoFeito } from '../services/emailAgendamentoIS';
 import { agendamentoJaEnviado, ehElegivelAgendamento } from '../utils/emailAgendamentoIS';
 import { EmailAgendaDialog } from './inspecoes/EmailAgendaDialog';
-import { BotaoEmailFaltas } from './inspecoes/BotaoEmailFaltas';
+import { BotaoEnviarEmail } from './inspecoes/BotaoEnviarEmail';
 import { emailDoInspecionado } from '../services/emailResultadoIS';
 import { CalendarioIS } from './inspecoes/CalendarioIS';
 import { BloqueiosDialog } from './inspecoes/BloqueiosDialog';
@@ -381,11 +381,17 @@ export const Inspecoes: React.FC = () => {
           title="Inspeções de Saúde"
           actions={(
             <>
-              {(ehAdmin || ehSecretaria) && <BotaoEmailFaltas inspecoes={lista ?? []} militares={militares} onAviso={avisar} />}
-              {ehAdmin && <IconButton variant="secondary" icon="outgoing_mail" label="E-mail das IS agendadas" onClick={() => setEmailAgendaAberto(true)} />}
               {ehAdmin && <IconButton variant="secondary" icon="tune" label="Horários" onClick={() => setTurnosAberto(true)} />}
               {podeBloquear && <IconButton variant="secondary" icon="block" label="Bloqueios" onClick={() => setBloqueiosAberto(true)} />}
               {podeCadastrar && <IconButton variant="secondary" icon="photo_camera" label="IS por foto" onClick={() => setPorFoto(true)} />}
+              {(ehAdmin || ehSecretaria) && (
+                <BotaoEnviarEmail
+                  inspecoes={lista ?? []} militares={militares} hoje={hoje}
+                  podeEmailAgenda={ehAdmin} onEmailAgenda={() => setEmailAgendaAberto(true)}
+                  onEnviarAgendamento={is => setFilaAgendamento(f => [...f, { isId: is.id, dataEntrevista: is.dataEntrevista, origem: 'menu' }])}
+                  onAviso={avisar}
+                />
+              )}
               {podeCadastrar && <Button icon="add" onClick={() => setNovo({})}>Abrir IS</Button>}
             </>
           )}

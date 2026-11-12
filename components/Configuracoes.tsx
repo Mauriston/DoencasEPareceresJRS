@@ -2,7 +2,7 @@
 // Configurações gerais do app (só Admin; menu do avatar → Configurações). Ajustes que antes exigiam editar o
 // repositório e que valem para todos os perfis. Por ora: os e-mails automáticos (config/emails) — destinatários
 // fixos PARA / CC / CCO de cada e-mail, o "Responder para" de todos, as assinaturas do Presidente e do Supervisor e a
-// saudação do e-mail de faltas. O servidor lê
+// saudações dos e-mails de faltas e do NAC; e os testes de e-mail (dados fictícios, só aos destinatários de teste). O servidor lê
 // o documento a cada envio (servidor/email/comum.ts): a mudança vale no próximo e-mail, sem publicar nada.
 import React, { useContext, useEffect, useState } from 'react';
 import { Page } from './ui/Page';
@@ -12,6 +12,7 @@ import { Toast } from './ui/Toast';
 import { NavContext } from '../context/NavContext';
 import { ListaEmails } from './configuracoes/ListaEmails';
 import { observarConfigEmails, salvarConfigEmails } from '../services/configEmails';
+import { enviarEmailTeste } from '../services/emailTeste';
 import { CONFIG_EMAILS_PADRAO, TIPOS_EMAIL, type ConfigEmails, type DestinatariosEmail, type TipoEmail } from '../config/emails';
 import { configIgual, errosConfigEmails } from '../utils/configuracoes';
 
@@ -40,6 +41,7 @@ export const Configuracoes: React.FC = () => {
   const [rascunho, setRascunho] = useState<ConfigEmails | null>(null);
   const [erroCarga, setErroCarga] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [testando, setTestando] = useState<TipoEmail | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
 
   useEffect(() => observarConfigEmails(
@@ -65,6 +67,18 @@ export const Configuracoes: React.FC = () => {
   const restaurar = (tipo: TipoEmail) =>
     setRascunho(r => r && ({ ...r, destinatarios: { ...r.destinatarios, [tipo]: { ...CONFIG_EMAILS_PADRAO.destinatarios[tipo] } } }));
   const ehPadrao = (tipo: TipoEmail) => JSON.stringify(rascunho.destinatarios[tipo]) === JSON.stringify(CONFIG_EMAILS_PADRAO.destinatarios[tipo]);
+
+  const testar = async (tipo: TipoEmail) => {
+    setTestando(tipo);
+    try {
+      const r = await enviarEmailTeste(tipo);
+      avisar(`E-mail de teste enviado para ${[...r.para, ...r.cc].join(', ')}.`);
+    } catch (e: any) {
+      avisar(e?.message || 'Não foi possível enviar o e-mail de teste.', 'error');
+    } finally {
+      setTestando(null);
+    }
+  };
 
   const salvar = async () => {
     if (temErro) return;
@@ -145,9 +159,38 @@ export const Configuracoes: React.FC = () => {
                       {a => <input {...a} value={rascunho.saudacaoFaltasHNRe} onChange={e => setRascunho({ ...rascunho, saudacaoFaltasHNRe: e.target.value })} />}
                     </Field>
                   )}
+                  {t.tipo === 'nac' && (
+                    <Field label="Saudação" required error={erros.saudacaoNac} className="mt-4" help="Primeira linha do e-mail (encarregada do NAC).">
+                      {a => <input {...a} value={rascunho.saudacaoNac} onChange={e => setRascunho({ ...rascunho, saudacaoNac: e.target.value })} />}
+                    </Field>
+                  )}
                 </Cartao>
               ))}
             </div>
+          </div>
+
+          <div>
+            <h2 className="text-h2 font-bold text-navy mb-1">Testes de e-mail</h2>
+            <p className="text-sm text-ink-3 mb-4">Envia cada e-mail com dados fictícios, pelos mesmos templates do envio real, só para os destinatários abaixo (sem cópia oculta). O assunto leva "[TESTE]". Nenhuma IS, candidato ou cadastro é alterado.</p>
+            <Cartao titulo="Destinatários dos testes" subtitulo="Salve antes de testar se mudar a lista.">
+              <div className="space-y-3">
+                <ListaEmails rotulo="Para" emails={rascunho.testes.para} onChange={l => setRascunho({ ...rascunho, testes: { ...rascunho.testes, para: l } })} />
+                {erros.testesPara && <p role="alert" className="text-xs font-semibold text-wine">{erros.testesPara}</p>}
+                <ListaEmails rotulo="Cópia (CC)" emails={rascunho.testes.cc} onChange={l => setRascunho({ ...rascunho, testes: { ...rascunho.testes, cc: l } })} />
+              </div>
+              <ul className="mt-4 divide-y divide-line rounded-xl border border-line">
+                {TIPOS_EMAIL.map(t => (
+                  <li key={t.tipo} className="flex flex-wrap items-center gap-3 px-3 py-2">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-ink">{t.rotulo}</span>
+                      <span className="block text-xs text-ink-3">{t.assunto}</span>
+                    </span>
+                    <Button variant="secondary" icon="send" loading={testando === t.tipo} disabled={!!testando || alterado} onClick={() => testar(t.tipo)}>Enviar teste</Button>
+                  </li>
+                ))}
+              </ul>
+              {alterado && <p className="text-xs text-ink-3 mt-2">Salve as alterações para habilitar os testes.</p>}
+            </Cartao>
           </div>
 
         </div>
