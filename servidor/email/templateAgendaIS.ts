@@ -6,7 +6,7 @@
 //   {{vocativo}}           "Prezados Militares da JRS,"
 //   {{data_extenso}}       DD/MM/AAAA
 //   {{data_titulo}}        "13/11/2026 (SEXTA-FEIRA)"
-//   {{#agendamentos}}…{{/agendamentos}}   por hora; cada item: {{hora}} {{nome}} {{om}} {{numero_is}} {{finalidade}} {{medico}}
+//   {{#agendamentos}}…{{/agendamentos}}   por hora; cada item: {{hora}} {{nome_completo}} (só o nome) {{om}} {{numero_is}} {{finalidade}} {{medico}}
 //   {{^agendamentos}}…{{/agendamentos}}   linha "Não há Inspeções de Saúde agendadas" (o e-mail sai mesmo sem IS)
 //   {{#tem_concursos}}…{{/tem_concursos}} bloco "INSPEÇÕES DE SAÚDE DE CONCURSOS" — só quando há candidatos no dia
 //   {{#concursos}}…{{/concursos}}         cada item: {{concurso}} {{matricula}} {{candidato}}
@@ -50,7 +50,7 @@ export const TEMPLATE_AGENDA_IS = `<!DOCTYPE html>
 <tr>
 <td valign="top" width="56" style="width:56px;padding:11px 10px 11px 0;border-bottom:1px solid #e0e0e0;font-size:16px;font-weight:700;white-space:nowrap">{{hora}}</td>
 <td valign="top" style="padding:11px 10px 11px 0;border-bottom:1px solid #e0e0e0">
-<span style="display:block;font-weight:700;font-size:14px">{{nome}}</span>
+<span style="display:block;font-weight:700;font-size:14px">{{nome_completo}}</span>
 <span style="display:block;font-size:12px;color:#555555">{{om}} · {{numero_is}}</span>
 </td>
 <td valign="top" style="padding:11px 10px 11px 0;border-bottom:1px solid #e0e0e0;font-size:14px;color:#333333">{{finalidade}}</td>

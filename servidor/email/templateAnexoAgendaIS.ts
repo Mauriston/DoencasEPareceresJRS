@@ -2,7 +2,7 @@
 // Anexo em PDF do e-mail "IS agendadas" (A4 paisagem), criado no Claude Design ("Anexo Agenda IS - JRS").
 // Gerado no servidor pelo Chromium (servidor/documentos/gerarPdf.ts, sem rede): a fonte Montserrat e a logo
 // do rodapé entram como data: URI ({{fonte_montserrat}}, {{logo_rodape}}). Mesmos placeholders do e-mail
-// ({{data_titulo}}, {{#agendamentos}}…, {{#tem_concursos}}…, {{#concursos}}…); a página dos concursos só
+// ({{data_titulo}}, {{#agendamentos}}… — aqui {{nome}} é "POSTO NIP NOME"; no e-mail, só o nome —, {{#tem_concursos}}…, {{#concursos}}…); a página dos concursos só
 // existe quando há candidatos no dia.
 export const TEMPLATE_ANEXO_AGENDA_IS = `<!doctype html>
 <html lang="pt-BR">
