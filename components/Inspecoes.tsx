@@ -127,7 +127,7 @@ export const Inspecoes: React.FC = () => {
   const [peritos, setPeritos] = useState<PeritoIS[]>([]);
 
   // Visão inicial pela URL (?visao=calendario — ex.: cabeçalho do card "Agenda de inspeções" da Início).
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [visao, setVisao] = useState<Visao>(() => (searchParams.get('visao') === 'calendario' ? 'calendario' : 'tabela'));
   // Filtros da visão Tabela (o calendário tem navegação própria). Padrão: Em andamento · Este mês.
   const [situacoes, setSituacoes] = useState<SituacaoIS[]>(['andamento']);
@@ -173,6 +173,14 @@ export const Inspecoes: React.FC = () => {
   useEffect(() => observarInspecoes(setLista, e => setErroCarga(e.message || 'Não foi possível carregar as inspeções.')), []);
   useEffect(() => observarBloqueios(setBloqueios), []);
   useEffect(() => observarConfigAgenda(setConfig), []);
+  // Atalho da Início ("+ Abrir IS"): ?novo=manual abre o formulário; ?novo=print, a IS por foto. Respeita a permissão.
+  useEffect(() => {
+    const novoParam = searchParams.get('novo');
+    if (!novoParam) return;
+    if (podeCadastrar) { if (novoParam === 'print') setPorFoto(true); else setNovo({}); }
+    const resto = new URLSearchParams(searchParams); resto.delete('novo');
+    setSearchParams(resto, { replace: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => observarMilitares(setMilitares), []);
   useEffect(() => { carregarPeritos().then(setPeritos).catch(() => setPeritos([])); }, []);
 

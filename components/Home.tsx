@@ -8,7 +8,8 @@
 // sequência no login). O menu lateral já lista as páginas: a Home não o repete.
 // Tudo respeita a matriz de permissões: cada bloco só aparece para quem tem acesso.
 import React, { useContext, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { MenuAcoes } from './ui/MenuAcoes';
 import { Container } from './ui/Page';
 import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
@@ -159,7 +160,9 @@ export const Home: React.FC = () => {
   const podePareceres = canAccessPage('pareceres', perfil);
   const podeInspecoes = canAccessPage('inspecoes', perfil);
   const podePericiaMenor = canAccessPage('pericia-menor', perfil);
-  const podeGerarParecer = podePareceres && canUseFeature('pareceres.gerar', perfil);
+  // Botão primário da Início: "+ Abrir IS" (substitui "Novo parecer"), para quem pode cadastrar IS.
+  const podeAbrirIS = podeInspecoes && canUseFeature('inspecoes.cadastrar', perfil);
+  const navegar = useNavigate();
   const podeNovaPericia = canUseFeature('pericia-menor.novo', perfil);
   const termosPm = termosPericia(perfil);
   const podeEnviarExames = podeConcursos && canUseFeature('concursosJRS.enviarExamesCandidato', perfil);
@@ -316,11 +319,19 @@ export const Home: React.FC = () => {
           <p className="eyebrow">{dataPorExtenso()}</p>
           <h1 className="text-display font-extrabold text-navy">{saudacao()}, {primeiroNome || 'Perito'}</h1>
         </div>
-        {(podeNovaPericia && podePericiaMenor || podeGerarParecer || mostrarEnviarExames) && (
+        {(podeNovaPericia && podePericiaMenor || podeAbrirIS || mostrarEnviarExames) && (
           <div className="flex flex-col-reverse sm:flex-row gap-2">
             {mostrarEnviarExames && <button type="button" onClick={() => setEnviarExames(true)} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>Exames Concursos</button>}
             {podeNovaPericia && podePericiaMenor && <Link to="/pericia-menor?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-white text-navy border border-navy hover:bg-thead transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>{termosPm.pagina === 'Atestados' ? 'Atestado' : 'Perícia Menor'}</Link>}
-            {podeGerarParecer && <Link to="/pareceres?novo=1" className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover transition-colors"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">add</span>Novo parecer</Link>}
+            {podeAbrirIS && (
+              <MenuAcoes
+                rotulo="Abrir IS" botao={{ texto: 'Abrir IS', icone: 'add', primario: true }}
+                itens={[
+                  { rotulo: 'Manualmente', icone: 'edit_note', onClick: () => navegar('/inspecoes?novo=manual') },
+                  { rotulo: 'Enviar print', icone: 'photo_camera', onClick: () => navegar('/inspecoes?novo=print') },
+                ]}
+              />
+            )}
           </div>
         )}
       </header>

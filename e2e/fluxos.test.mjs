@@ -223,6 +223,17 @@ test('Inspeções: "+ Abrir IS" → "Manualmente" abre o formulário que valida 
   await p.context().close();
 });
 
+test('Início: "+ Abrir IS" (no lugar de "Novo parecer") leva ao formulário de Inspeções', async () => {
+  const p = await novaPagina();
+  await entrar(p, MEDICO);
+  await p.goto(`${BASE}#/`);
+  assert.equal(await p.getByRole('link', { name: 'Novo parecer' }).count(), 0);
+  await p.getByRole('button', { name: 'Abrir IS', exact: true }).click();
+  await p.getByRole('menuitem', { name: 'Manualmente' }).click();
+  await p.getByRole('dialog', { name: 'Cadastrar IS' }).waitFor();
+  await p.context().close();
+});
+
 test('Inspeções: agenda com filtros de Situação (caixas + "Todas") e Período, botões só ícone e rich tooltip no calendário', async () => {
   const p = await novaPagina();
   await entrar(p, MEDICO);
