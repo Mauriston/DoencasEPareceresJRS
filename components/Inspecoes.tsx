@@ -309,7 +309,12 @@ export const Inspecoes: React.FC = () => {
     if (restituicao && podeEditar && !ehSecretaria) itens.push({ rotulo: restituicao.rotulo, icone: 'undo', onClick: () => { mudarStatus(is, restituicao.status, `IS ${is.is}: ${restituicao.rotulo}.`); } });
     if (podeMinuta && mostraMinutaMsg(is)) itens.push({ rotulo: 'Minuta MSG', icone: 'mail', onClick: () => setMinuta(is) });
     // Resultado ao inspecionado por e-mail: só IS finalizada com TIS assinado; só Admin e Secretaria.
-    if ((ehAdmin || ehSecretaria) && is.status === 'tis_assinado') itens.push({ rotulo: is.emailResultadoPara ? 'Reenviar resultado por e-mail' : 'Enviar resultado por e-mail', icone: 'forward_to_inbox', onClick: () => setEnviandoResultado(is) });
+    // Já enviado: o item fica visível, mas desabilitado, com o destinatário na dica.
+    if ((ehAdmin || ehSecretaria) && is.status === 'tis_assinado') {
+      itens.push(is.emailResultadoPara
+        ? { rotulo: 'Resultado já enviado por e-mail', icone: 'mark_email_read', desabilitado: true, dica: `Para ${is.emailResultadoPara}`, onClick: () => {} }
+        : { rotulo: 'Enviar resultado por e-mail', icone: 'forward_to_inbox', onClick: () => setEnviandoResultado(is) });
+    }
     if (podeAgendar && is.dataEntrevista && is.status !== 'cancelada' && !(is.agendaSincronizada && is.eventoAgendaId)) itens.push({ rotulo: 'Sincronizar com o Google Agenda', icone: 'sync', onClick: () => { sincronizar(is); } });
     if (ehAdmin && is.status === 'tis_assinado') itens.push({ rotulo: 'Reabrir IS', icone: 'lock_open', onClick: () => { mudarStatus(is, 'assinaturas_pendentes', `IS ${is.is} reaberta.`); } });
     if ((ehAdmin || ehSecretaria) && podeCancelarIS(is, hoje)) itens.push({ rotulo: 'Cancelar IS', icone: 'cancel', perigo: true, onClick: () => setConfirmando({ tipo: 'cancelar', is }) });

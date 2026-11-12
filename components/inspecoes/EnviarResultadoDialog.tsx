@@ -1,7 +1,7 @@
 // Ficheiro: components/inspecoes/EnviarResultadoDialog.tsx
 // Confirmação do "Enviar resultado por e-mail" (IS com TIS assinado; Admin e Secretaria): mostra o resumo
 // da IS e o destinatário (e-mail do cadastro do inspecionado). Sem e-mail no cadastro, pede o e-mail —
-// que o servidor grava no cadastro ao enviar. Remetente "HNRe - Junta Regular de Saúde", cópia oculta
+// que o servidor grava no cadastro ao enviar. Remetente "JRS-HNRe", cópia oculta
 // para a caixa da JRS (servidor/email/resultadoIS.ts).
 import React, { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
@@ -12,7 +12,7 @@ import { emailValido, enviarResultadoISPorEmail } from '../../services/emailResu
 import { separarRestricoes } from '../../utils/conclusaoIS';
 
 interface Props {
-  inspecao: InspecaoRecord & { emailResultadoPara?: string };
+  inspecao: InspecaoRecord;
   /** E-mail do cadastro do inspecionado ('' = sem e-mail cadastrado). */
   emailCadastrado: string;
   onClose: () => void;
@@ -72,8 +72,7 @@ export const EnviarResultadoDialog: React.FC<Props> = ({ inspecao, emailCadastra
           </Field>
         )}
 
-        <p className="text-xs text-ink-3">Remetente: HNRe - Junta Regular de Saúde · cópia oculta para hnre.jrs@marinha.mil.br.</p>
-        {inspecao.emailResultadoPara && <p className="text-xs font-semibold text-ink-2">O resultado já foi enviado antes para {inspecao.emailResultadoPara}.</p>}
+        <p className="text-xs text-ink-3">Remetente: JRS-HNRe · cópia oculta para hnre.jrs@marinha.mil.br.</p>
         {erro && <p role="alert" className="text-sm font-semibold text-wine">{erro}</p>}
       </div>
     </Dialog>

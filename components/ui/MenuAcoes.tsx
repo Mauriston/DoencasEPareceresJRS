@@ -9,6 +9,10 @@ export interface ItemMenu {
   icone: string;
   onClick: () => void;
   perigo?: boolean;
+  /** Item visível mas inativo (aria-disabled: continua focável e anunciado, o clique não faz nada). */
+  desabilitado?: boolean;
+  /** Linha menor abaixo do rótulo (ex.: por que o item está desabilitado). */
+  dica?: string;
 }
 
 export const MenuAcoes: React.FC<{ rotulo: string; itens: ItemMenu[] }> = ({ rotulo, itens }) => {
@@ -62,12 +66,15 @@ export const MenuAcoes: React.FC<{ rotulo: string; itens: ItemMenu[] }> = ({ rot
         <div ref={menu} role="menu" aria-label={rotulo} style={{ position: 'fixed', top: pos.top, right: pos.right }} className="z-dialog min-w-[180px] bg-white border border-line rounded-lg shadow-xl py-1">
           {itens.map(i => (
             <button
-              key={i.rotulo} type="button" role="menuitem"
-              onClick={() => { setPos(null); i.onClick(); }}
-              className={`w-full min-h-[44px] px-4 flex items-center gap-3 text-sm font-semibold text-left hover:bg-thead focus:bg-thead focus:outline-none ${i.perigo ? 'text-wine' : 'text-ink'}`}
+              key={i.rotulo} type="button" role="menuitem" aria-disabled={i.desabilitado || undefined}
+              onClick={() => { if (i.desabilitado) return; setPos(null); i.onClick(); }}
+              className={`w-full min-h-[44px] px-4 py-1.5 flex items-center gap-3 text-sm font-semibold text-left focus:outline-none ${i.desabilitado ? 'text-ink-4 cursor-not-allowed focus:bg-thead' : `hover:bg-thead focus:bg-thead ${i.perigo ? 'text-wine' : 'text-ink'}`}`}
             >
               <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{i.icone}</span>
-              {i.rotulo}
+              <span className="flex flex-col min-w-0">
+                {i.rotulo}
+                {i.dica && <span className="text-xs font-normal text-ink-3 max-w-[16rem] truncate" title={i.dica}>{i.dica}</span>}
+              </span>
             </button>
           ))}
         </div>

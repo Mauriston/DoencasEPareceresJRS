@@ -67,7 +67,7 @@ describe('montarEmailResultado', () => {
 
 describe('montarMime com cópia oculta e "responder para"', () => {
   it('inclui Bcc e Reply-To', () => {
-    const mime = montarMime({ para: 'x@example.com', cco: 'jrs@example.com', responderPara: 'jrs@example.com', assunto: 'A', texto: 't', html: '<p>h</p>', nomeRemetente: 'HNRe - Junta Regular de Saúde' }, 'conta@example.com');
+    const mime = montarMime({ para: 'x@example.com', cco: 'jrs@example.com', responderPara: 'jrs@example.com', assunto: 'A', texto: 't', html: '<p>h</p>', nomeRemetente: 'JRS-HNRe' }, 'conta@example.com');
     expect(mime).toContain('Bcc: jrs@example.com');
     expect(mime).toContain('Reply-To: jrs@example.com');
     expect(mime).not.toContain('Cc:');
