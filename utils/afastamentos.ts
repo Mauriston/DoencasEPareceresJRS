@@ -117,7 +117,10 @@ export const PERIODOS_FERIAS: { id: PeriodoFerias; rotulo: string }[] = [
   { id: 'semestre', rotulo: 'Este semestre' },
   { id: 'ano', rotulo: 'Este ano' },
 ];
-export const PERIODO_PADRAO: PeriodoFerias = 'ano';
+/** Ao abrir a página: sem filtro de período (todos os períodos). */
+export const PERIODO_PADRAO: PeriodoFerias | '' = '';
+/** Chip do tipo na tabela (mesmas cores das barras da Timeline: Férias azul-marinho, LTS vinho, LIC Adm dourado). */
+export const TOM_TIPO: Record<TipoAfastamento, 'navy' | 'danger' | 'attention'> = { ferias: 'navy', lts: 'danger', lic_adm: 'attention' };
 export const intervaloDoPeriodo = (periodo: PeriodoFerias, hoje: string): { inicio: string; fim: string } => {
   const y = hoje.slice(0, 4);
   if (periodo === 'ano') return { inicio: `${y}-01-01`, fim: `${y}-12-31` };

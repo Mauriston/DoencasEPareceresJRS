@@ -11,11 +11,13 @@ interface FiltroPopoverProps {
   /** Resumo da seleção mostrado no botão, ex.: "Em andamento", "2 situações". */
   resumo: string;
   className?: string;
+  /** Mostra um × no campo que limpa o filtro (ex.: período da página Férias). */
+  onLimpar?: () => void;
   /** Conteúdo do popover; recebe `fechar` para fechar após uma escolha. */
   children: (fechar: () => void) => React.ReactNode;
 }
 
-export const FiltroPopover: React.FC<FiltroPopoverProps> = ({ nome, icone, resumo, className = '', children }) => {
+export const FiltroPopover: React.FC<FiltroPopoverProps> = ({ nome, icone, resumo, className = '', onLimpar, children }) => {
   const [aberto, setAberto] = useState(false);
   const raiz = useRef<HTMLDivElement>(null);
   const botao = useRef<HTMLButtonElement>(null);
@@ -43,8 +45,17 @@ export const FiltroPopover: React.FC<FiltroPopoverProps> = ({ nome, icone, resum
       >
         <span className="material-symbols-outlined text-[20px] text-ink-3" aria-hidden="true">{icone}</span>
         <span className="flex-1 min-w-0 truncate text-left font-semibold">{resumo}</span>
+        {onLimpar && <span className="w-8 shrink-0" aria-hidden="true" />}
         <span className={`material-symbols-outlined text-[20px] text-ink-3 transition-transform ${aberto ? 'rotate-180' : ''}`} aria-hidden="true">expand_more</span>
       </button>
+      {onLimpar && (
+        <button
+          type="button" onClick={() => { onLimpar(); setAberto(false); }} aria-label={`Limpar filtro de ${nome.toLowerCase()}`} title="Limpar"
+          className="absolute right-8 top-1/2 -translate-y-1/2 w-8 h-8 inline-flex items-center justify-center rounded-full text-ink-3 hover:bg-thead hover:text-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
+        >
+          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">close</span>
+        </button>
+      )}
       {aberto && (
         <div ref={painel} id={id} role="dialog" aria-label={nome} className="absolute left-0 top-full mt-1 z-dropdown min-w-full w-max max-w-[calc(100vw-2rem)] bg-white border border-line rounded-lg shadow-xl py-1">
           {children(fechar)}

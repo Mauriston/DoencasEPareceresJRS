@@ -97,10 +97,7 @@ export const TimelineAfastamentos: React.FC<Props> = ({ afastamentos, fotos, esc
                 <div className="w-64 shrink-0 flex items-center gap-2 px-3 py-2">
                   <span className={`w-1 self-stretch rounded-full ${MARCA_GRUPO[grupo]}`} aria-hidden="true" />
                   <Avatar nome={u.usuario} imageProfile={fotos.get(u.usuarioUid)} size={32} tone="light" />
-                  <span className="min-w-0">
-                    <span className="block text-sm font-bold text-navy truncate">{u.usuario}</span>
-                    <span className="block text-xs text-ink-3">{GRUPOS_AFASTAMENTO.find(g => g.id === grupo)!.rotulo}{bloco.length > 1 ? ` · ${bloco.length} afastamentos` : ''}</span>
-                  </span>
+                  <span className="min-w-0 text-sm font-bold text-navy truncate">{u.usuario}</span>
                 </div>
                 <div className="flex-1 flex flex-col">
                   {bloco.map(a => {

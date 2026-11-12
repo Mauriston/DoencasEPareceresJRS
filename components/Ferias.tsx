@@ -1,8 +1,8 @@
 // Ficheiro: components/Ferias.tsx
 // Página FÉRIAS (menu lateral → Administração → "Férias"): férias e afastamentos (Férias, LTS, LIC Adm) dos usuários
 // da JRS — Admin, user_medicos, user_medicos_mpi e user_secretaria veem; só o Admin cria, edita e apaga.
-// Filtros: período (Este semestre / Este ano — padrão; "×" limpa) e, em multi-seleção com chips, tipo e status —
-// ao abrir: todos os tipos e todos os status menos Gozada. Valem para as duas visões.
+// Filtros no padrão da página Inspeções: período (Este semestre / Este ano — padrão; "×" limpa), tipo e status em
+// caixas com contadores — ao abrir: todos os tipos e todos os status menos Gozada. Valem para as duas visões.
 // Duas visões: Tabela (ordem crescente de início) e Timeline (Gantt centrado em hoje; escala padrão quadrimestral). Status automático
 // (Gozada / Em gozo) e data fim calculada (utils/afastamentos.ts). Gravar gera bloqueio na agenda das IS para os
 // médicos e evento no Google Agenda para todos (services/afastamentos.ts).
@@ -15,8 +15,8 @@ import { EmptyState } from './ui/EmptyState';
 import { StatusTag } from './ui/StatusTag';
 import { MenuAcoes } from './ui/MenuAcoes';
 import { Segmented } from './ui/Segmented';
-import { MultiSelectCombobox } from './ui/MultiSelectCombobox';
-import { controlClass } from './ui/Field';
+import { FiltroCaixas } from './inspecoes/FiltroCaixas';
+import { FiltroPeriodo } from './inspecoes/FiltroPeriodo';
 import { Avatar } from './shell/UserMenu';
 import { PdfFullscreenModal } from './PdfFullscreenModal';
 import { AfastamentoForm } from './ferias/AfastamentoForm';
@@ -25,7 +25,7 @@ import { useNav } from '../context/NavContext';
 import { listUsuarios, type UsuarioRecord } from '../services/firestoreUsuarios';
 import { observarAfastamentos, apagarAfastamento, urlArquivoAfastamento, type AfastamentoRecord } from '../services/afastamentos';
 import {
-  ESCALA_PADRAO, PERIODOS_FERIAS, PERIODO_PADRAO, intervaloDoPeriodo, tocaPeriodo, type PeriodoFerias, GRUPOS_AFASTAMENTO, PERFIS_JRS, STATUS_AFASTAMENTO, TIPOS_AFASTAMENTO, grupoDoPerfil, rotuloTipo, statusEfetivo,
+  ESCALA_PADRAO, PERIODO_PADRAO, intervaloDoPeriodo, tocaPeriodo, type PeriodoFerias, PERFIS_JRS, STATUS_AFASTAMENTO, TIPOS_AFASTAMENTO, rotuloTipo, statusEfetivo, TOM_TIPO,
   type EscalaTimeline, type StatusAfastamento, type TipoAfastamento,
 } from '../utils/afastamentos';
 import { dataBr, hojeISO } from '../utils/inspecoes';
@@ -58,12 +58,21 @@ export const Ferias: React.FC = () => {
   const avisar = (msg: string, tone: 'success' | 'error' = 'success') => { setToast({ msg, tone }); window.setTimeout(() => setToast(null), tone === 'error' ? 7000 : 4500); };
   const fotos = useMemo(() => new Map(usuarios.map(u => [u.id, u.imageProfile || ''])), [usuarios]);
 
-  // Nenhum chip num filtro = sem restrição por ele.
+  // Filtros no padrão da página Inspeções: nenhuma caixa marcada = nada aparece. Contadores de cada opção sobre os
+  // demais filtros (o de Tipo conta com período + status; o de Status, com período + tipo).
   const intervalo = useMemo(() => (fPeriodo ? intervaloDoPeriodo(fPeriodo, hoje) : null), [fPeriodo, hoje]);
-  const filtrados = useMemo(() => (lista ?? []).filter(a =>
-    (!intervalo || tocaPeriodo(a, intervalo))
-    && (!fTipos.length || fTipos.includes(a.tipo))
-    && (!fStatus.length || fStatus.includes(statusEfetivo(a, hoje)))), [lista, intervalo, fTipos, fStatus, hoje]);
+  const noPeriodo = useMemo(() => (lista ?? []).filter(a => !intervalo || tocaPeriodo(a, intervalo)), [lista, intervalo]);
+  const contTipos = useMemo(() => {
+    const c: Partial<Record<TipoAfastamento, number>> = {};
+    noPeriodo.filter(a => fStatus.includes(statusEfetivo(a, hoje))).forEach(a => { c[a.tipo] = (c[a.tipo] ?? 0) + 1; });
+    return c;
+  }, [noPeriodo, fStatus, hoje]);
+  const contStatus = useMemo(() => {
+    const c: Partial<Record<StatusAfastamento, number>> = {};
+    noPeriodo.filter(a => fTipos.includes(a.tipo)).forEach(a => { const st = statusEfetivo(a, hoje); c[st] = (c[st] ?? 0) + 1; });
+    return c;
+  }, [noPeriodo, fTipos, hoje]);
+  const filtrados = useMemo(() => noPeriodo.filter(a => fTipos.includes(a.tipo) && fStatus.includes(statusEfetivo(a, hoje))), [noPeriodo, fTipos, fStatus, hoje]);
   // Tabela: ordem crescente da data de início.
   const ordenados = useMemo(() => [...filtrados].sort((a, b) => a.dataInicio.localeCompare(b.dataInicio) || a.usuario.localeCompare(b.usuario, 'pt-BR')), [filtrados]);
 
@@ -77,17 +86,6 @@ export const Ferias: React.FC = () => {
     catch (e: any) { avisar(e?.message || 'Não foi possível apagar.', 'error'); }
   };
 
-  // Multi-select com chips: o componente trabalha com rótulos; aqui converte para os ids.
-  const filtroChips = <T extends string>(rotulo: string, opcoes: readonly { id: T; rotulo: string }[], valor: T[], set: (v: T[]) => void) => (
-    <MultiSelectCombobox
-      label={rotulo}
-      className="min-w-[14rem] flex-1"
-      placeholder="Todos"
-      opcoes={opcoes.map(o => o.rotulo)}
-      selecionadas={opcoes.filter(o => valor.includes(o.id)).map(o => o.rotulo)}
-      onChange={rots => set(opcoes.filter(o => rots.includes(o.rotulo)).map(o => o.id))}
-    />
-  );
   const referencia = (a: AfastamentoRecord): string =>
     a.tipo === 'ferias' ? (a.referencia ? `Ano: ${a.referencia}` : '—') : a.tipo === 'lic_adm' ? (a.motivo || '—') : '—';
 
@@ -101,24 +99,21 @@ export const Ferias: React.FC = () => {
           actions={ehAdmin ? <Button icon="add" onClick={() => setForm({})}>Nova férias / afastamento</Button> : undefined}
         />
 
-        <div className="bg-white rounded-xl border border-line p-3 flex flex-wrap items-end gap-3">
-          <div className="w-full md:w-56 shrink-0">
-            <label htmlFor="ferias-periodo" className="block text-xs font-semibold text-ink-3 mb-1">Período</label>
-            <div className="relative">
-              <select id="ferias-periodo" className={`${controlClass} ${fPeriodo ? 'pr-16' : ''}`} value={fPeriodo} onChange={e => setFPeriodo(e.target.value as PeriodoFerias | '')}>
-                <option value="">Todos os períodos</option>
-                {PERIODOS_FERIAS.map(p => <option key={p.id} value={p.id}>{p.rotulo}</option>)}
-              </select>
-              {fPeriodo && (
-                <button type="button" onClick={() => setFPeriodo('')} aria-label="Limpar filtro de período" title="Limpar"
-                  className="absolute right-8 top-1/2 -translate-y-1/2 w-8 h-8 inline-flex items-center justify-center rounded-full text-ink-3 hover:bg-thead hover:text-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
-                  <span className="material-symbols-outlined text-[18px]" aria-hidden="true">close</span>
-                </button>
-              )}
-            </div>
-          </div>
-          {filtroChips<TipoAfastamento>('Tipo', TIPOS_AFASTAMENTO.map(t => ({ id: t.id, rotulo: t.curto })), fTipos, setFTipos)}
-          {filtroChips<StatusAfastamento>('Status', STATUS_AFASTAMENTO, fStatus, setFStatus)}
+        <div className="bg-white rounded-xl border border-line p-3 flex flex-wrap items-center gap-3">
+          <FiltroPeriodo
+            value={fPeriodo ? { id: fPeriodo } : null} onChange={v => setFPeriodo(v.id as PeriodoFerias)} onLimpar={() => setFPeriodo('')}
+            opcoes={['semestre', 'ano']} className="flex-1 min-w-[11rem] sm:flex-none sm:w-56"
+          />
+          <FiltroCaixas<TipoAfastamento>
+            nome="Tipo" icone="category" rotuloTodas="Todos" rotuloNenhum="Nenhum" resumoVarios={n => `${n} tipos`}
+            opcoes={TIPOS_AFASTAMENTO.map(t => ({ id: t.id, rotulo: t.curto }))} value={fTipos} onChange={setFTipos} contadores={contTipos}
+            className="flex-1 min-w-[9rem] sm:flex-none sm:w-48"
+          />
+          <FiltroCaixas<StatusAfastamento>
+            nome="Status" icone="filter_list" rotuloTodas="Todos" rotuloNenhum="Nenhum" resumoVarios={n => `${n} status`}
+            opcoes={STATUS_AFASTAMENTO} value={fStatus} onChange={setFStatus} contadores={contStatus}
+            className="flex-1 min-w-[9rem] sm:flex-none sm:w-52"
+          />
           <div className="ml-auto">
             <Segmented<Visao>
               ariaLabel="Visualização"
@@ -164,13 +159,10 @@ export const Ferias: React.FC = () => {
                         <td className="px-4 py-2">
                           <span className="flex items-center gap-2 min-w-0">
                             <Avatar nome={a.usuario} imageProfile={fotos.get(a.usuarioUid)} size={32} tone="light" />
-                            <span className="min-w-0">
-                              <span className="block font-bold text-navy truncate">{a.usuario}</span>
-                              <span className="block text-xs text-ink-3">{GRUPOS_AFASTAMENTO.find(g => g.id === grupoDoPerfil(a.perfil))!.rotulo}</span>
-                            </span>
+                            <span className="min-w-0 font-bold text-navy truncate">{a.usuario}</span>
                           </span>
                         </td>
-                        <td className="px-3 py-2 font-semibold text-ink">{rotuloTipo(a.tipo)}</td>
+                        <td className="px-3 py-2"><StatusTag tone={TOM_TIPO[a.tipo]}>{rotuloTipo(a.tipo)}</StatusTag></td>
                         <td className="px-3 py-2 tabular-nums whitespace-nowrap">{dataBr(a.dataInicio)} a {dataBr(a.dataFim)}</td>
                         <td className="px-3 py-2 tabular-nums text-right">{a.duracaoDias}</td>
                         <td className="px-3 py-2"><StatusTag tone={st.tom}>{st.rotulo}</StatusTag></td>
@@ -213,7 +205,7 @@ export const Ferias: React.FC = () => {
                         <p className="font-bold text-navy truncate flex-1">{a.usuario}</p>
                         <StatusTag tone={st.tom} className="shrink-0">{st.rotulo}</StatusTag>
                       </div>
-                      <p className="text-sm text-ink">{rotuloTipo(a.tipo)} · {a.duracaoDias} dia{a.duracaoDias !== 1 ? 's' : ''}</p>
+                      <p className="flex items-center gap-2 text-sm text-ink mt-0.5"><StatusTag tone={TOM_TIPO[a.tipo]}>{rotuloTipo(a.tipo)}</StatusTag>{a.duracaoDias} dia{a.duracaoDias !== 1 ? 's' : ''}</p>
                       <p className="text-xs text-ink-3 tabular-nums">{dataBr(a.dataInicio)} a {dataBr(a.dataFim)}{a.tipo === 'ferias' && a.referencia ? ` · Ano: ${a.referencia}` : ''}{a.motivo ? ` · ${a.motivo}` : ''}</p>
                       {!!a.arquivos?.length && (
                         <div className="flex flex-wrap gap-2 mt-1">

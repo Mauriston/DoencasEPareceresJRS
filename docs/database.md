@@ -11,7 +11,7 @@ A persistência do **Guia Médico Naval — JRS/HNRe** está distribuída entre:
 3. **Google Drive** (via Apps Script `CodeConcursos.gs`) — PDFs dos concursos, dos pedidos de parecer e dos exames dos candidatos;
 4. **Firebase Authentication** — contas de login (e-mail sintético derivado do usuário; ver `services/firebaseAuth.ts`);
 5. **JSON e TypeScript estáticos** — catálogos (`public/*.json`) e conteúdo normativo no bundle;
-6. **`localStorage`** — preferências por aparelho (acesso rápido, convite de notificações adiado, aviso de triagem, token do push).
+6. **`localStorage`** — preferências por aparelho (escolha antiga do acesso rápido — `jrs_acesso_rapido_{uid}`, migrada para a coleção `acessoRapido` —, convite de notificações adiado, aviso de triagem, token do push).
 
 O acesso ao Firestore é feito direto do navegador pelo SDK do Firebase, protegido pelas regras em `firestore.rules` (versionadas no repositório e publicadas no console ou com `firebase deploy --only firestore:rules`). O servidor no Cloud Run (`server.ts`, Firebase Admin SDK) só escreve o que o cliente não pode: notificações, controle de repetição e operações de Admin.
 
@@ -177,6 +177,7 @@ Regras: Firestore — leitura autenticada, escrita só Admin; Storage (`legislac
 | `usuarios` | UID do Firebase Auth | `usuario` (login, ex.: `CT MAURISTON`), `nome`, `postoGraduacao`, `cargo`, `nip`, `crmPe`, `rqe`, `email`, `gmail`, `celular`, `perfil` (`admin` \| `user_medicos` \| `user_medicos_mpi` \| `user_secretaria` \| `user_medicos_geral`), `ativo`, `imageProfile`, `senhaTemporaria`, `pwaTutorialConcluido` |
 | `usuarios_publicos` | UID | Réplica mínima (`usuario`, `ativo`) para o menu de login, legível sem autenticação |
 | `config/permissoes` | documento único | Matriz de páginas e funcionalidades por perfil (editada pelo Admin em *Usuários*) |
+| `acessoRapido` | UID | Card *Acesso rápido* da Início: `escolha` (`ids` das páginas e `semana` = segunda-feira de início da quinzena em que foi definida) e `acessos` (`{ "AAAA-MM-DD": { pagina: n } }`, últimos 28 dias; os dias mais antigos são apagados). Renovação quinzenal pelas mais acessadas em `utils/acessoRapido.ts` |
 | `militares` | NIP só dígitos | Inspecionados (página *Inspecionados*): `tipo` (militar, dependente ou pensionista; dependente traz `titularId/Nome/Posto`), `om`, `temporario`, `pgq`, `nip`, `nome`, `inspecionado` (`{pgq} {nip} {nome}`), `email`, `ativo`, `rm1`, `refo`, `servico_label` (só HNRe), `nomeGuerra` e `especialidade` (oficiais médicos do HNRe) |
 
 - O próprio usuário só altera e-mail, Gmail, celular, foto, `senhaTemporaria` e `pwaTutorialConcluido`. Perfil, nome, NIP e cargo só o Admin altera.
@@ -291,6 +292,7 @@ O cliente só avisa o servidor (`/api/notificacoes/evento`); o servidor confere 
 | `legislacao`, `videos`, `infograficos`, `apresentacoes`, `quesitosParecer`, `config` | autenticado | Admin |
 | `visualizacoesExtras` | Admin | o próprio registro |
 | `casos_periciais_resultados` | o dono | o dono |
+| `acessoRapido` | o dono | o dono |
 
 ### Concursos: regras por funcionalidade e por campo
 

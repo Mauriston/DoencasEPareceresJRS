@@ -100,6 +100,8 @@ const casos = [
   upd('Médico Geral define o Serviço do HNRe', 'user_medicos_geral', { servico_label: 'X (HNRe-00.0)' }, 'ALLOW', null, 'militares/12345678', { nome: 'X', servico_label: '' }),
   upd('Médico Geral altera nome do militar', 'user_medicos_geral', { nome: 'Y' }, 'DENY', null, 'militares/12345678', { nome: 'X', servico_label: '' }),
   cre('Médico Geral cria pedido de parecer', 'user_medicos_geral', 'pareceres/p1', 'DENY'),
+  cre('Usuário grava o próprio Acesso rápido', 'user_secretaria', 'acessoRapido/u1', 'ALLOW'),
+  cre('Usuário grava o Acesso rápido de outro', 'admin', 'acessoRapido/u2', 'DENY'),
   cre('Médico Geral cria IS', 'user_medicos_geral', 'inspecoes/9001', 'DENY'),
   cre('Médico Geral cria concurso', 'user_medicos_geral', 'concursos/c9', 'DENY'),
   cre('Admin grava a escala do SPA', 'admin', 'escalaSpa/2026-11-06', 'ALLOW'),

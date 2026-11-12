@@ -10,9 +10,9 @@ import { PERIODOS, intervaloDoPeriodo, rotuloDoPeriodo, type Intervalo, type Per
 
 export interface FiltroPeriodoValor { id: PeriodoId; custom?: Intervalo }
 
-const PainelPeriodo: React.FC<{ value: FiltroPeriodoValor; onChange: (v: FiltroPeriodoValor) => void; fechar: () => void }> = ({ value, onChange, fechar }) => {
-  const [escolha, setEscolha] = useState<PeriodoId>(value.id);
-  const inicial = value.custom ?? intervaloDoPeriodo('mes');
+const PainelPeriodo: React.FC<{ value: FiltroPeriodoValor | null; onChange: (v: FiltroPeriodoValor) => void; fechar: () => void; opcoes?: PeriodoId[] }> = ({ value, onChange, fechar, opcoes }) => {
+  const [escolha, setEscolha] = useState<PeriodoId | null>(value?.id ?? null);
+  const inicial = value?.custom ?? intervaloDoPeriodo('mes');
   const [inicio, setInicio] = useState(inicial.inicio);
   const [fim, setFim] = useState(inicial.fim);
   const nome = useId();
@@ -28,7 +28,7 @@ const PainelPeriodo: React.FC<{ value: FiltroPeriodoValor; onChange: (v: FiltroP
     <div>
       <fieldset>
         <legend className="sr-only">Período da entrevista</legend>
-        {PERIODOS.map(p => (
+        {PERIODOS.filter(p => !opcoes || opcoes.includes(p.id)).map(p => (
           <label key={p.id} className="flex items-center gap-3 min-h-[44px] px-3 cursor-pointer hover:bg-thead">
             <input type="radio" name={nome} className="w-5 h-5 shrink-0 accent-navy" checked={escolha === p.id} onChange={() => escolher(p.id)} onClick={() => { if (p.id !== 'custom' && escolha === p.id) fechar(); }} />
             <span className={`text-sm ${escolha === p.id ? 'font-bold text-navy' : 'font-semibold text-ink'}`}>{p.rotulo}</span>
@@ -60,8 +60,15 @@ const PainelPeriodo: React.FC<{ value: FiltroPeriodoValor; onChange: (v: FiltroP
   );
 };
 
-export const FiltroPeriodo: React.FC<{ value: FiltroPeriodoValor; onChange: (v: FiltroPeriodoValor) => void; className?: string }> = ({ value, onChange, className }) => (
-  <FiltroPopover nome="Período" icone="date_range" resumo={rotuloDoPeriodo(value.id, value.custom)} className={className}>
-    {fechar => <PainelPeriodo value={value} onChange={onChange} fechar={fechar} />}
+/**
+ * `opcoes` restringe a lista (ex.: Férias: só Este semestre e Este ano); com `onLimpar`, o campo ganha um × e
+ * `value` pode ser null (sem filtro de período: "Todos os períodos").
+ */
+export const FiltroPeriodo: React.FC<{
+  value: FiltroPeriodoValor | null; onChange: (v: FiltroPeriodoValor) => void; className?: string;
+  opcoes?: PeriodoId[]; onLimpar?: () => void;
+}> = ({ value, onChange, className, opcoes, onLimpar }) => (
+  <FiltroPopover nome="Período" icone="date_range" resumo={value ? rotuloDoPeriodo(value.id, value.custom) : 'Todos os períodos'} className={className} onLimpar={value ? onLimpar : undefined}>
+    {fechar => <PainelPeriodo value={value} onChange={onChange} fechar={fechar} opcoes={opcoes} />}
   </FiltroPopover>
 );

@@ -131,8 +131,12 @@ export const Inspecoes: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [visao, setVisao] = useState<Visao>(() => (searchParams.get('visao') === 'calendario' ? 'calendario' : 'tabela'));
   // Filtros da visão Tabela (o calendário tem navegação própria). Padrão: Em andamento · Este mês.
-  const [situacoes, setSituacoes] = useState<SituacaoIS[]>(['andamento']);
-  const [periodo, setPeriodo] = useState<FiltroPeriodoValor>({ id: 'mes' });
+  // ?dia=AAAA-MM-DD (card "Agenda de inspeções" da Início): lista das IS daquele dia (Hoje, ou o dia como período
+  // customizado), em andamento e finalizadas.
+  const diaParam = /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get('dia') ?? '') ? searchParams.get('dia')! : '';
+  const [situacoes, setSituacoes] = useState<SituacaoIS[]>(() => (diaParam ? ['andamento', 'finalizada'] : ['andamento']));
+  const [periodo, setPeriodo] = useState<FiltroPeriodoValor>(() => (
+    !diaParam ? { id: 'mes' } : diaParam === hojeISO() ? { id: 'hoje' } : { id: 'custom', custom: { inicio: diaParam, fim: diaParam } }));
   const [busca, setBusca] = useState('');
   const [peritoFiltro, setPeritoFiltro] = useState('');
 
@@ -181,7 +185,13 @@ export const Inspecoes: React.FC = () => {
     if (podeCadastrar) { if (novoParam === 'print') setPorFoto(true); else setNovo({}); }
     const resto = new URLSearchParams(searchParams); resto.delete('novo');
     setSearchParams(resto, { replace: true });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
+  // O ?dia= já virou filtro: tira da URL para não prender a tela nele.
+  useEffect(() => {
+    if (!searchParams.get('dia')) return;
+    const resto = new URLSearchParams(searchParams); resto.delete('dia');
+    setSearchParams(resto, { replace: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => observarMilitares(setMilitares), []);
   useEffect(() => { carregarPeritos().then(setPeritos).catch(() => setPeritos([])); }, []);
 
