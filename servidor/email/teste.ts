@@ -1,6 +1,6 @@
 // Ficheiro: servidor/email/teste.ts
-// E-mails de TESTE (Configurações → Testes de e-mail; só Admin): monta cada e-mail automático com dados de exemplo
-// fictícios, pelos mesmos templates e funções do envio real, e envia só para os destinatários de teste de
+// E-mails de TESTE (Configurações → Testes de e-mail; só Admin): monta cada e-mail automático com dados fictícios
+// gerados ALEATORIAMENTE a cada envio (nomes, NIP, IS, datas, finalidades, laudos, quantidade de linhas), pelos mesmos templates e funções do envio real, e envia só para os destinatários de teste de
 // config/emails (`testes.para` e `testes.cc`; padrão: o Presidente da JRS), sem CCO. Assunto com "[TESTE]".
 // Não lê nem grava IS, candidatos, cadastros ou Storage. Rota POST /api/email/teste { tipo }.
 import type { Firestore } from 'firebase-admin/firestore';
@@ -19,49 +19,80 @@ import type { TipoEmail } from '../../config/emails';
 
 export const TIPOS_TESTE: TipoEmail[] = ['resultadoIS', 'agendaIS', 'agendamentoIS', 'faltasHNRe', 'inaptosConcurso', 'nac'];
 
-/** Data AAAA-MM-DD somada de `dias` a partir de hoje (exemplos com datas plausíveis). */
-const dia = (dias: number) => new Date(Date.now() + dias * 86_400_000).toISOString().slice(0, 10);
+// ---------------------------------------------------------------- Dados fictícios aleatórios
 
-/** Monta o e-mail de teste do tipo (exportada para os testes): assunto, html, texto e, se houver, o anexo. */
-export const montarEmailTeste = (tipo: TipoEmail, assinatura: Parameters<typeof montarEmailResultado>[2], config = undefined as undefined | Awaited<ReturnType<typeof lerConfigEmails>>) => {
+/** Gerador de números (0 ≤ x < 1); os testes passam um com semente para ficar determinístico. */
+export type Aleatorio = () => number;
+
+const NOMES = ['CARLOS', 'ANA', 'JOAO', 'MARIA', 'PAULO', 'JULIANA', 'RAFAEL', 'FERNANDA', 'BRUNO', 'PATRICIA', 'DIEGO', 'CAMILA', 'LUCAS', 'LETICIA', 'MARCOS', 'BEATRIZ', 'THIAGO', 'RENATA', 'VICTOR', 'INGRIDE'];
+const MEIOS = ['ANTONIO', 'LUIZ', 'AMANDA', 'HENRIQUE', 'CRISTINA', 'EDUARDO', 'GOMES', 'ALVES', 'RIBEIRO', 'FERREIRA', 'DE SOUZA', 'DA COSTA'];
+const SOBRENOMES = ['SILVA', 'SANTOS', 'OLIVEIRA', 'PEREIRA', 'LIMA', 'CARVALHO', 'MELO', 'BARBOSA', 'CAVALCANTI', 'ARAUJO', 'NASCIMENTO', 'MONTEIRO', 'ALBUQUERQUE', 'LEAO'];
+const POSTOS = ['MN-SE', 'CB-EL', 'CB-MO', '3SG-PT', '3SG-EP', '2SG-ES', '2SG-CO', '1SG-HN', 'SO-EF', '1T (T)', 'CT (Md)'];
+const OMS = ['HNRe', 'EAMPE', 'CPPE', 'CPPB', 'Com3ºDN', 'BNN', 'CEFAN', 'CPAL'];
+const FINALIDADES_VT = ['Verificação de Deficiência Funcional', 'Término de Restrições', 'Término de Incapacidade', 'VDF - Fato Novo'];
+const LAUDOS = [
+  'Apto para o SAM', 'Apto para o SAM com restrições por 30 dias', 'Apto para o SAM com restrições por 90 dias',
+  'Incapaz temporariamente para o SAM, necessitando de 30 dias de LTS', 'Incapaz temporariamente para o SAM, necessitando de 60 dias de LTS',
+];
+const RESTRICOES = ['Serviço Noturno', 'Carregar peso', 'Serviço Armado', 'Formatura', 'Marchas', 'Embarque', 'Esforços físicos intensos e extenuantes'];
+const CONCURSOS = ['CP-C-FSD-FN-TI/2027', 'CPAEAM/2027', 'CP-CAP/2027', 'CPA-QC-CA/2027'];
+const PERITOS = ['CT MAURISTON', 'CT JÚLIO CÉSAR', '1T MÔNICA VIRGÍNIA', '2T CASSUNDÉ'];
+
+/** Fábrica de dados fictícios a partir de um gerador (aleatório por padrão). */
+export const ficticios = (rnd: Aleatorio = Math.random) => {
+  const int = (min: number, max: number) => min + Math.floor(rnd() * (max - min + 1));
+  const um = <T>(l: readonly T[]): T => l[int(0, l.length - 1)];
+  const varios = <T>(l: readonly T[], n: number): T[] => [...l].sort(() => rnd() - 0.5).slice(0, n);
+  const d2 = (n: number) => String(n).padStart(2, '0');
+  const nome = () => `${um(NOMES)} ${um(MEIOS)} ${um(SOBRENOMES)}${rnd() < 0.5 ? ` ${um(SOBRENOMES)}` : ''}`;
+  const nip = () => `${d2(int(1, 25))}.${String(int(0, 9999)).padStart(4, '0')}.${d2(int(0, 99))}`;
+  const pessoa = () => { const n = nome(); return { nome: n, inspecionado: `${um(POSTOS)} ${nip()} ${n}` }; };
+  const numeroIs = () => String(int(1_200_000, 1_299_999));
+  const dia = (deMin: number, deMax: number) => new Date(Date.now() + int(deMin, deMax) * 86_400_000).toISOString().slice(0, 10);
+  const hora = () => `${d2(um([7, 8, 9, 10, 13, 14, 15, 16]))}:${um(['00', '20', '40'])}`;
+  const matricula = () => `${int(60_000, 69_999)}-${int(0, 9)}`;
+  return { int, um, varios, nome, nip, pessoa, numeroIs, dia, hora, matricula, perito: () => um(PERITOS), om: () => um(OMS), finalidade: () => um(FINALIDADES_VT), laudo: () => um(LAUDOS), concurso: () => um(CONCURSOS), restricoes: (n: number) => varios(RESTRICOES, n) };
+};
+
+/** Monta o e-mail de teste do tipo com dados fictícios aleatórios (exportada para os testes): assunto, html, texto e, se houver, o anexo. */
+export const montarEmailTeste = (tipo: TipoEmail, assinatura: Parameters<typeof montarEmailResultado>[2], config = undefined as undefined | Awaited<ReturnType<typeof lerConfigEmails>>, rnd: Aleatorio = Math.random) => {
+  const f = ficticios(rnd);
+  const lista = <T>(min: number, max: number, gerar: () => T): T[] => Array.from({ length: f.int(min, max) }, gerar);
   switch (tipo) {
-    case 'resultadoIS':
+    case 'resultadoIS': {
+      const p = f.pessoa();
+      const laudo = f.laudo();
       return montarEmailResultado({
-        is: 1245271, finalidade: 'FIM VDF Fato Novo', inspecionado: '2SG-CO 07.3644.15 PAULO ANDRE DIAS DOS SANTOS', tis: '026.000.57079',
-        dataLaudo: dia(-1), laudo: 'Apto para o SAM com restrições por 90 dias.', restricoes: 'Serviço Noturno; Carregar peso; Serviço Armado',
-      }, 'EAMPE', assinatura);
+        is: f.numeroIs(), finalidade: f.finalidade(), inspecionado: p.inspecionado, tis: `026.000.${f.int(10_000, 99_999)}`,
+        dataLaudo: f.dia(-5, -1), laudo, restricoes: /restri/i.test(laudo) ? f.restricoes(f.int(1, 4)).join('; ') : '',
+      }, f.om(), assinatura);
+    }
     case 'agendaIS': {
-      const r = montarEmailAgenda({
-        data: dia(1),
-        agendamentos: [
-          { hora: '13:00', nome: '3SG-PT 07.3836.57 CARLOS ANTONIO PEREIRA DA SILVA', nome_completo: 'CARLOS ANTONIO PEREIRA DA SILVA', om: 'HNRe', numero_is: '1253621', finalidade: 'Verificação de Deficiência Funcional', medico: 'CT MAURISTON' },
-          { hora: '13:40', nome: 'CB-EL 08.0299.97 VICTOR GOMES DE SOUZA LEAO', nome_completo: 'VICTOR GOMES DE SOUZA LEAO', om: 'EAMPE', numero_is: '1252891', finalidade: 'Término de Restrições', medico: 'CT MAURISTON' },
-        ],
-        concursos: [{ concurso: 'CP-C-FSD-FN-TI/2027', matricula: '65599-8', candidato: 'DAYVID RUAN DA SILVA OLIVEIRA' }],
-      }, config ? assinaturaSupervisor(config) : assinaturaSupervisor());
+      const agendamentos = lista(0, 6, () => { const p = f.pessoa(); return { hora: f.hora(), nome: p.inspecionado, nome_completo: p.nome, om: f.om(), numero_is: f.numeroIs(), finalidade: f.finalidade(), medico: f.perito() }; })
+        .sort((a, b) => a.hora.localeCompare(b.hora));
+      const concurso = f.concurso();
+      const concursos = rnd() < 0.5 ? lista(1, 4, () => ({ concurso, matricula: f.matricula(), candidato: f.nome() })) : [];
+      const r = montarEmailAgenda({ data: f.dia(1, 1), agendamentos, concursos }, config ? assinaturaSupervisor(config) : assinaturaSupervisor());
       return { ...r, anexoNome: 'IS_AGENDADAS_TESTE.pdf' };
     }
-    case 'agendamentoIS':
+    case 'agendamentoIS': {
+      const p = f.pessoa();
       return montarEmailAgendamento({
-        is: 1253621, inspecionado: '3SG-PT 07.3836.57 CARLOS ANTONIO PEREIRA DA SILVA', finalidade: 'Verificação de Deficiência Funcional',
-        grupoFinalidade: 'Verificações e Términos', dataEntrevista: `${dia(3)}T13:40`,
+        is: f.numeroIs(), inspecionado: p.inspecionado, finalidade: f.finalidade(), grupoFinalidade: 'Verificações e Términos', dataEntrevista: `${f.dia(1, 10)}T${f.hora()}`,
       }, assinatura);
+    }
     case 'faltasHNRe':
-      return montarEmailFaltas([
-        { numero_is: '1234813', dataEntrevista: `${dia(-2)}T08:00`, inspecionado: 'CT (Md) 13.0450.24 MAURISTON RENAN MARTINS SILVA', nomeGuerra: 'MAURISTON', finalidade: 'Verificação de Deficiência Funcional' },
-        { numero_is: '1234814', dataEntrevista: `${dia(-1)}T10:50`, inspecionado: '3SG-PT 07.3836.57 CARLOS ANTONIO PEREIRA DA SILVA', finalidade: 'Término de Restrições' },
-      ], assinatura, config?.saudacaoFaltasHNRe);
+      return montarEmailFaltas(lista(1, 5, () => {
+        const p = f.pessoa();
+        return { numero_is: f.numeroIs(), dataEntrevista: `${f.dia(-10, -1)}T${f.hora()}`, inspecionado: p.inspecionado, nomeGuerra: p.nome.split(' ')[0], finalidade: f.finalidade() };
+      }).sort((a, b) => a.dataEntrevista.localeCompare(b.dataEntrevista)), assinatura, config?.saudacaoFaltasHNRe);
     case 'inaptosConcurso':
-      return montarEmailInaptos('CP-C-FSD-FN-TI/2027', [
-        { matricula: '65599-8', candidato: 'DAYVID RUAN DA SILVA OLIVEIRA', dataAgendamento: dia(-3) },
-        { matricula: '63143-5', candidato: 'ERIVALDO ALVES DA SILVA JUNIOR', dataAgendamento: dia(-3) },
-      ], assinatura);
+      return montarEmailInaptos(f.concurso(), lista(1, 5, () => ({ matricula: f.matricula(), candidato: f.nome(), dataAgendamento: f.dia(-10, -1) })), assinatura);
     case 'nac': {
-      const r = montarEmailNac([
-        { dataLaudo: dia(-9), inspecionado: '3SG-PT 07.3836.57 CARLOS ANTONIO PEREIRA DA SILVA', om: 'HNRe', numero_is: '1253621', finalidade: 'Verificação de Deficiência Funcional', laudo: 'Incapaz temporariamente para o SAM, necessitando de 30 dias de LTS' },
-        { dataLaudo: dia(-5), inspecionado: '2SG-ES 10.1229.74 INGRIDE AMANDA RIBEIRO DOS SANTOS', om: 'HNRe', numero_is: '1252680', finalidade: 'Término de Restrições', laudo: 'Apto para o SAM' },
-        { dataLaudo: dia(-1), inspecionado: '3SG-EP 12.0374.60 JOAO PAULO FERREIRA MELO', om: 'EAMPE', numero_is: '1252674', finalidade: 'Término de Restrições', laudo: 'Apto para o SAM com restrições por 30 dias' },
-      ], assinatura, config?.saudacaoNac);
+      const r = montarEmailNac(lista(2, 14, () => {
+        const p = f.pessoa();
+        return { dataLaudo: f.dia(-20, -1), inspecionado: p.inspecionado, nomeCompleto: p.nome, om: f.om(), numero_is: f.numeroIs(), finalidade: f.finalidade(), laudo: f.laudo() };
+      }), assinatura, config?.saudacaoNac);
       return { ...r, anexoNome: r.arquivo };
     }
     default:

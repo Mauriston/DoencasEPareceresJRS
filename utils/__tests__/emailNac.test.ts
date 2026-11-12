@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { pendenteNac, pendentesNac, periodoNac, paginarNac, ehCargoSmi, LINHAS_POR_PAGINA } from '../emailNac';
 import { agendamentoPendente } from '../emailAgendamentoIS';
 import { montarEmailNac, ccSmi } from '../../servidor/email/nac';
-import { montarEmailTeste, TIPOS_TESTE } from '../../servidor/email/teste';
+import { montarEmailTeste, TIPOS_TESTE, ficticios } from '../../servidor/email/teste';
 import { assinaturaSemSignatario } from '../../servidor/email/comum';
 import { CONFIG_EMAILS_PADRAO, mesclarConfigEmails } from '../../config/emails';
 
@@ -70,6 +70,14 @@ describe('montarEmailNac', () => {
     expect(r.htmlAnexo).toContain('3SG-PT 07.3836.57 CARLOS ANTONIO PEREIRA DA SILVA');
     expect(r.htmlAnexo).toContain('IS 1253621');
   });
+  it('anexo com várias páginas: assinatura do Presidente só na última', () => {
+    const muitos = Array.from({ length: 20 }, (_, i) => ({ ...itens[0], numero_is: String(1250000 + i), dataLaudo: `2026-10-${String(i + 1).padStart(2, '0')}` }));
+    const a = montarEmailNac(muitos).htmlAnexo;
+    const paginas = a.split('<section class="page"').slice(1);
+    expect(paginas.length).toBeGreaterThan(1);
+    paginas.forEach((pg, i) => expect(pg.includes('alt="Mauriston Renan Martins Silva · Capitão-Tenente (Md) · Presidente"'), `página ${i + 1}`).toBe(i === paginas.length - 1));
+    expect(a).toContain(`Página 1 de ${paginas.length}`);
+  });
   it('ordem pela data do laudo e assinatura do Presidente na última página do anexo', () => {
     expect(r.html.indexOf('CARLOS')).toBeLessThan(r.html.indexOf('JOAO'));
     expect(r.htmlAnexo.match(/data:image\/png;base64/g)!.length).toBeGreaterThanOrEqual(3);
@@ -90,9 +98,19 @@ describe('agendamento pendente (badge do "Enviar Email")', () => {
 });
 
 describe('e-mails de teste', () => {
-  it('todos os tipos montam sem placeholder nem JavaScript', () => {
-    for (const tipo of TIPOS_TESTE) {
-      const r = montarEmailTeste(tipo, assinaturaSemSignatario(), mesclarConfigEmails(undefined)) as { assunto: string; html: string; htmlAnexo?: string };
+  // Gerador com semente (determinístico nos testes); no servidor é Math.random.
+  const semente = (n: number) => () => { n = (n * 1103515245 + 12345) % 2147483648; return n / 2147483648; };
+
+  it('dados fictícios variam a cada geração', () => {
+    const a = ficticios(semente(1)).pessoa();
+    const b = ficticios(semente(2)).pessoa();
+    expect(a.inspecionado).not.toBe(b.inspecionado);
+    expect(a.inspecionado).toMatch(/\d{2}\.\d{4}\.\d{2} /);
+    expect(a.inspecionado.endsWith(a.nome)).toBe(true);
+  });
+  it('todos os tipos montam sem placeholder nem JavaScript (várias sementes)', () => {
+    for (let n = 1; n <= 20; n++) for (const tipo of TIPOS_TESTE) {
+      const r = montarEmailTeste(tipo, assinaturaSemSignatario(), mesclarConfigEmails(undefined), semente(n)) as { assunto: string; html: string; htmlAnexo?: string };
       expect(r.assunto, tipo).toBeTruthy();
       expect(r.html, tipo).not.toMatch(placeholder);
       expect(r.html, tipo).not.toMatch(/<script|javascript:/i);
