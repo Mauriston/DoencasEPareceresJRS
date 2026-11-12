@@ -12,7 +12,7 @@ import { logErroSeguro } from '../utils/logSeguro';
 
 const db = getFirestore(app);
 
-export type AcaoSensivel = 'militar.excluir' | 'militar.importarCsv' | 'inspecao.excluir' | 'documento.gerar' | 'config.alterar';
+export type AcaoSensivel = 'militar.excluir' | 'militar.importarCsv' | 'inspecao.excluir' | 'documento.gerar' | 'config.alterar' | 'afastamento.criar' | 'afastamento.alterar' | 'afastamento.apagar';
 
 export const registrarAcaoSensivel = async (acao: AcaoSensivel, alvo: string): Promise<void> => {
   const ator = obterAtorAuditoria();

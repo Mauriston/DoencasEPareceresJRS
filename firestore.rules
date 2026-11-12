@@ -241,6 +241,13 @@ service cloud.firestore {
     // Coleção "bloqueiosAgenda": bloqueios de horário/turno da agenda das IS. Admin e
     // Secretaria bloqueiam qualquer perito; um médico a quem o Admin liberou a funcionalidade
     // só bloqueia os PRÓPRIOS horários (peritoUid = seu uid).
+    // Coleção "afastamentos": férias e afastamentos (Férias, LTS, LIC Adm) dos usuários da JRS (página Férias;
+    // services/afastamentos.ts). A equipe (Admin, médicos JRS/MPI e Secretaria) lê; só o Admin cria, altera e apaga.
+    match /afastamentos/{id} {
+      allow read: if isEquipe();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /bloqueiosAgenda/{id} {
       allow read: if isSignedIn();
       allow create: if isAdmin() || isSecretaria() || (isMedico() && request.resource.data.peritoUid == request.auth.uid);

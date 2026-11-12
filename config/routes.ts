@@ -22,6 +22,8 @@ export const ROUTES: RouteDef[] = [
   { view: 'perfil', path: '/perfil' },
   // Configurações gerais do app (só Admin; menu do avatar).
   { view: 'configuracoes', path: '/configuracoes' },
+  // Férias e afastamentos (Admin, médicos JRS/MPI e Secretaria; menu Administração).
+  { view: 'ferias', path: '/ferias' },
   { view: 'guide', path: '/beneficios/doencas/:doencaId?/:diagnosticoIdx?' },
   { view: 'portaria', path: '/beneficios/portaria' },
   { view: 'concursos', path: '/concursos/indices' },
@@ -85,6 +87,7 @@ const BASE_PATHS: Record<NavItem, string> = {
   home: '/',
   perfil: '/perfil',
   configuracoes: '/configuracoes',
+  ferias: '/ferias',
   guide: '/beneficios/doencas',
   portaria: '/beneficios/portaria',
   concursos: '/concursos/indices',

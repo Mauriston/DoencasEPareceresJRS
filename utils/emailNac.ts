@@ -1,7 +1,7 @@
 // Ficheiro: utils/emailNac.ts
 // Regras puras do e-mail "INSPEÇÕES DE SAÚDE VDF E TÉRMINOS" ao NAC (Núcleo de Avaliação e Controle) — servidor em
 // servidor/email/nac.ts; testes em utils/__tests__/emailNac.test.ts:
-//  - pendente = IS finalizada (TIS assinado) do grupo "Verificações e Términos" ainda sem e-mail ao NAC;
+//  - pendente = IS em situação "Finalizada" (não cancelada) do grupo "Verificações e Términos" ainda sem e-mail ao NAC;
 //  - período do e-mail/anexo = data do laudo mais antiga e mais recente das IS enviadas;
 //  - paginação do anexo (A4 paisagem): 9 linhas por página, com espaço para a assinatura na última.
 
@@ -10,15 +10,16 @@ export const ASSUNTO_NAC = 'INSPEÇÕES DE SAÚDE VDF E TÉRMINOS';
 const semAcento = (t: string) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 export interface ISParaNac {
+  situacao?: string;
   status?: string;
   grupoFinalidade?: string;
   dataLaudo?: string;
   emailNacEnviadoEm?: unknown;
 }
 
-/** IS finalizada (TIS assinado) de Verificações e Términos ainda não enviada ao NAC. */
+/** IS em situação "Finalizada" (não cancelada) de Verificações e Términos ainda não enviada ao NAC. */
 export const pendenteNac = (is: ISParaNac): boolean =>
-  is.status === 'tis_assinado' && semAcento(is.grupoFinalidade || '') === 'verificacoes e terminos' && !is.emailNacEnviadoEm;
+  (is.situacao === 'finalizada' || is.status === 'tis_assinado') && is.status !== 'cancelada' && semAcento(is.grupoFinalidade || '') === 'verificacoes e terminos' && !is.emailNacEnviadoEm;
 
 /** Pendentes ordenadas pela data do laudo (mais antiga primeiro). */
 export const pendentesNac = <T extends ISParaNac>(lista: T[]): T[] =>

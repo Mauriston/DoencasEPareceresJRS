@@ -148,6 +148,7 @@ O **Cloud Firestore** é a fonte principal (detalhes em `docs/database.md`, seç
 | `index.html` / `index.tsx` | Documento base, manifesto, montagem do React e leitura do token de login por QR | HTML + React DOM |
 | `components/Raiz.tsx` | Desvio entre o app autenticado e as páginas públicas | React |
 | `App.tsx` | Shell autenticado: sessão, permissões, avisos pós-login (senha, notificações, triagem), histórico de notificações | React + TypeScript |
+| `components/Ferias.tsx` e `components/ferias/` | Página Férias (Administração): férias e afastamentos da JRS em tabela e timeline (Gantt); formulário do Admin com leitura do documento pela IA (Firebase AI Logic) e geração de bloqueio na agenda das IS e evento no Google Agenda | React + Firestore + Storage + Gemini |
 | `components/shell/` | Sidebar, topbar, breadcrumb, busca global e menu do usuário (com badge de notificações) | React |
 | `components/ui/` | Primitivos do design system (Dialog, Drawer, Button, StatusTag, Toast…) | React + Tailwind |
 | `components/` (telas) | Início, Inspeções, Inspecionados, Concursos, Pareceres, Perícia Menor/Atestados, Escala SVÇ, Formação, Usuários, Perfil | React |

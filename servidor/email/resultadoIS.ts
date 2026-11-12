@@ -10,6 +10,7 @@ import { ErroContaGoogle } from '../google/contaGoogle';
 import { enviarEmail } from '../google/impressao';
 import { TEMPLATE_RESULTADO_IS } from './templateResultadoIS';
 import { renderizarTemplate, type DadosTemplate } from './template';
+import { elegivelResultado } from '../../utils/emailResultadoIS';
 import { assinaturaDe, assinaturaSemSignatario, assinaturaTexto, destinatariosFixos, juntarEmails, type DadosAssinatura } from './comum';
 
 const APP_URL = (process.env.APP_URL || 'https://mauriston.github.io/DoencasEPareceresJRS/').replace(/\/?$/, '/');
@@ -130,7 +131,7 @@ export const enviarResultadoIS = async (db: Firestore, isIdBruto: unknown, email
   const is = snapIs.data() as ISParaEmail & { status?: string; inspecionadoId?: string; emailResultadoPara?: string };
   // Envio único: depois do primeiro, o item fica desabilitado no menu e o servidor recusa outro.
   if (is.emailResultadoPara) throw new ErroContaGoogle('falha', `O resultado desta IS já foi enviado para ${is.emailResultadoPara}.`);
-  if (is.status !== 'tis_assinado') throw new ErroContaGoogle('falha', 'Só é possível enviar o resultado de IS finalizada (TIS assinado).');
+  if (!elegivelResultado(is as never)) throw new ErroContaGoogle('falha', 'Só é possível enviar o resultado de IS finalizada de Verificações e Términos ou de Benefícios.');
   if (!String(is.laudo || '').trim()) throw new ErroContaGoogle('falha', 'A IS não tem laudo registrado.');
 
   const refMilitar = is.inspecionadoId ? db.collection('militares').doc(String(is.inspecionadoId)) : null;
