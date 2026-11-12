@@ -9,6 +9,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { ErroContaGoogle } from '../google/contaGoogle';
 import { enviarEmail } from '../google/impressao';
 import { TEMPLATE_RESULTADO_IS } from './templateResultadoIS';
+import { renderizarTemplate, type DadosTemplate } from './template';
 
 const APP_URL = (process.env.APP_URL || 'https://mauriston.github.io/DoencasEPareceresJRS/').replace(/\/?$/, '/');
 
@@ -26,25 +27,10 @@ export const CONFIG_EMAIL_RESULTADO = {
   presidentePosto: process.env.JRS_PRESIDENTE_POSTO || 'Capitão-Tenente (Md)',
 };
 
-// ---------------------------------------------------------------- Template (subconjunto do Mustache)
+export { renderizarTemplate, type DadosTemplate } from './template';
 
-const escHtml = (t: unknown) => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
-type Valor = string | number | boolean | Record<string, unknown>[] | undefined;
-export type DadosTemplate = Record<string, Valor>;
-
-/**
- * Preenche o template: {{nome}} (sempre escapado para HTML) e seções {{#nome}}…{{/nome}} — booleano
- * (mostra ou não) ou lista (repete o miolo para cada item, com os campos do item). Exportada para os testes.
- */
-export const renderizarTemplate = (template: string, dados: DadosTemplate): string => {
-  const secoes = template.replace(/\{\{#(\w+)\}\}\n?([\s\S]*?)\{\{\/\1\}\}\n?/g, (_m, nome: string, miolo: string) => {
-    const v = dados[nome];
-    if (Array.isArray(v)) return v.map(item => renderizarTemplate(miolo, { ...dados, ...(item as DadosTemplate) })).join('');
-    return v ? renderizarTemplate(miolo, dados) : '';
-  });
-  return secoes.replace(/\{\{(\w+)\}\}/g, (_m, nome: string) => escHtml(dados[nome]));
-};
+/** Assunto fixo do e-mail de resultado. */
+export const ASSUNTO_RESULTADO_IS = 'RESULTADO DE INSPEÇÃO DE SAÚDE';
 
 // ---------------------------------------------------------------- Dados da IS
 
@@ -128,7 +114,7 @@ export const montarEmailResultado = (is: ISParaEmail, om?: string) => {
     'Avenida Cruz Cabugá 1200, Santo Amaro, Recife/PE',
   ].join('\n');
   return {
-    assunto: `Resultado de IS — ${finalidade} — ${inspecionado}`,
+    assunto: ASSUNTO_RESULTADO_IS,
     html: renderizarTemplate(TEMPLATE_RESULTADO_IS, dados),
     texto,
   };

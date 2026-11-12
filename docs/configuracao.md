@@ -28,9 +28,11 @@
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | cliente OAuth "Aplicativo da Web" (`jrs-app-web`) da conta Google da JRS: e-mails de impressão e Google Agenda pelo servidor (ADR-013). Sem eles, o app usa o Apps Script | **secrets** de mesmo nome do GitHub → `deploy-cloud-run.yml` |
 | `URL_PUBLICA_SERVIDOR` | opcional: base do URI de retorno do OAuth (padrão: o host do Cloud Run) | definida à mão no serviço, se preciso |
 | `ID_PASTA_PARECERES`, `ID_PASTA_RAIZ_CONCURSOS`, `ID_AGENDA_JRS_HNRE`, `EMAIL_IMPRESSAO`, `EMAILS_COPIA_IMPRESSAO` | opcionais: os mesmos valores do Apps Script (padrão no código, `servidor/google/`) | definidas à mão no serviço, se preciso |
+| `AGENDADOR_TOKEN` | token (mín. 32 caracteres) que o Cloud Scheduler envia no cabeçalho `X-Agendador-Token` ao disparar o e-mail "IS AGENDADAS" das 18h. Sem ele, `/api/agendador/agenda-is` fica desligada (o envio manual do Admin continua) | **secret** `AGENDADOR_TOKEN` do GitHub → `deploy-cloud-run.yml` |
+| `EMAIL_JRS`, `EMAIL_BANNER_URL`, `EMAIL_LOGO_RODAPE_URL`, `EMAIL_APP_IMAGEM_URL`, `JRS_SUPERVISOR_NOME`, `JRS_SUPERVISOR_POSTO`, `JRS_PRESIDENTE_NOME`, `JRS_PRESIDENTE_POSTO` | opcionais: caixa da JRS, imagens e assinaturas dos e-mails de resultado e da agenda de IS (padrões em `servidor/email/`) | definidas à mão no serviço, se preciso |
 | `APP_URL`, `PORT`, `NODE_ENV` | URL do app (links das notificações), porta e modo | padrão do Cloud Run / do código |
 
-Serviço `jrs-hnre-api`, região `southamerica-east1`, 1 GiB de memória (`deploy-cloud-run.yml`). A imagem (Debian) traz o Chromium e as fontes Carlito/Liberation dos documentos em PDF (`CHROMIUM_PATH=/usr/bin/chromium`). A service account do Cloud Run precisa de *Firebase Cloud Messaging API Admin* (push).
+Serviço `jrs-hnre-api`, região `southamerica-east1`, 1 GiB de memória (`deploy-cloud-run.yml`). A imagem (Debian) traz o Chromium e as fontes Carlito/Liberation dos documentos em PDF (e a Noto Color Emoji, para os ícones do rodapé do anexo da agenda de IS) (`CHROMIUM_PATH=/usr/bin/chromium`). A service account do Cloud Run precisa de *Firebase Cloud Messaging API Admin* (push).
 
 ## 3. GitHub (Settings → Secrets and variables → Actions)
 
@@ -40,6 +42,7 @@ Serviço `jrs-hnre-api`, região `southamerica-east1`, 1 GiB de memória (`deplo
 | `GCP_PROJECT_ID` | secret | Deploy do Cloud Run |
 | `GEMINI_API_KEY` | secret | Variável do Cloud Run |
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` | secret | Variáveis do Cloud Run (conta Google da JRS no servidor) |
+| `AGENDADOR_TOKEN` | secret (opcional) | Variável do Cloud Run; o mesmo valor vai no job do Cloud Scheduler (seção 9) |
 | `FIREBASE_RULES_SA_KEY` | secret (opcional) | Teste e publicação das regras (papel *Firebase Rules Admin*) |
 | `BACKUP_SA_KEY` | secret (opcional) | Workflow *Backup do Firestore* (papel *Cloud Datastore Owner*) |
 | `API_BASE_URL` | variável | URL do Cloud Run no build do app (`VITE_API_BASE_URL`) |
@@ -114,3 +117,17 @@ Configuração única da gravação da entrevista da IS (ADR-014): o servidor tr
 Variáveis opcionais do Cloud Run (padrões no código, `servidor/entrevistas/`): `SPEECH_LOCALIZACAO` (padrão `us`), `GEMINI_MODELO_ENTREVISTA` (padrão `gemini-3.5-flash`), `GEMINI_LOCALIZACAO` (padrão `global`), `SPEECH_DIARIZACAO_LIMITES` (`0` desliga os limites de 2–4 falantes) e `FFMPEG_PATH` (conversão para FLAC; padrão `ffmpeg` da imagem).
 
 Para testar: no celular, entre como um usuário `user_medicos`, abra uma IS → **Entrevista gravada → Gravar entrevista**, grave alguns segundos e acompanhe a situação (*Transcrevendo* → *Organizando* → *Pronta*).
+
+## 9. E-mail das IS agendadas (Cloud Scheduler, 18h)
+
+O e-mail **"IS AGENDADAS EM dd/mm/aaaa"** (`servidor/email/agendaIS.ts`) sai sozinho às **18h (America/Recife), de domingo a quinta**, com as IS do dia seguinte — mesmo sem IS agendadas — e **não sai em véspera de feriado** (nacional, PE ou Recife; `utils/emailAgendaIS.ts`). Usa a conta Google do servidor (seção 7) e grava o PDF no Storage em `agendaIS/{ano}/IS_AGENDADAS_{data}.pdf` (a conta de serviço do Cloud Run precisa gravar no bucket — o papel *Storage Object Admin* da seção 8 já cobre). Configuração única:
+
+1. Gere um token: `openssl rand -hex 32`.
+2. **GitHub → Secrets**: crie `AGENDADOR_TOKEN` com esse valor e rode o workflow *Deploy API to Cloud Run*.
+3. Com o `gcloud` autenticado numa conta com *Cloud Scheduler Admin* (`roles/cloudscheduler.admin`) e permissão de ler o serviço do Cloud Run, rode:
+   `AGENDADOR_TOKEN='<o mesmo valor>' bash scripts/agendador/configurar-email-agenda.sh`
+   O script ativa a API do Cloud Scheduler e cria (ou atualiza) o job `email-agenda-is` em `southamerica-east1` (`0 18 * * 0-4`, fuso America/Recife, até 3 novas tentativas). Pode ser rodado de novo.
+4. Para testar na hora: `gcloud scheduler jobs run email-agenda-is --location=southamerica-east1`. O servidor decide se envia: fora de domingo–quinta, em véspera de feriado ou se o automático daquela data já saiu, responde `enviado: false` com o motivo.
+
+Para trocar o token: atualize o secret, rode o deploy e rode o script de novo com o valor novo. O registro dos envios fica em `emailsAgendaIS/{AAAA-MM-DD}` (Firestore; só o Admin lê no app). O Admin também envia na hora pela página Inspeções de Saúde (ícone *E-mail das IS agendadas*).
+

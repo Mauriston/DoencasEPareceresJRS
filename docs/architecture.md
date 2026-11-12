@@ -2,7 +2,7 @@
 
 ## 1. Visão geral
 
-> **Atualizado em 06/11/2026.**
+> **Atualizado em 12/11/2026.**
 
 O **Guia Médico Naval — JRS/HNRe** é uma aplicação web de página única (*Single Page Application* — SPA), instalável como PWA, voltada ao apoio das atividades médico-periciais da Junta Regular de Saúde do Hospital Naval de Recife.
 
@@ -38,6 +38,8 @@ flowchart LR
     AIL[Firebase AI Logic<br/>Vertex AI · gemini-3.5-flash]
     APPCHECK[App Check<br/>reCAPTCHA Enterprise]
     STATIC[JSON e conteúdo estático<br/>no bundle/public]
+    SCHED[Cloud Scheduler<br/>18h dom–qui]
+    GMAIL[Gmail API · Calendar API<br/>conta Google da JRS]
 
     U -->|HTTPS| FE
     FE --> STATIC
@@ -52,6 +54,9 @@ flowchart LR
     RUN -->|Admin SDK| AUTH
     RUN -->|envio| FCM
     RUN --> GEMINI
+    SCHED -->|X-Agendador-Token| RUN
+    RUN -->|e-mails e agenda| GMAIL
+    RUN -->|PDF da agenda de IS| ST
     FCM -->|push| SW
     SW -->|notificação| U
     GAS --> GW
@@ -104,7 +109,9 @@ O backend tem duas partes, publicadas separadamente:
 | `POST /api/entrevistas/enviar-para-celular` | `{ isId }` → push "Gravar entrevista — IS {nº}" só para os celulares do próprio usuário (menos o aparelho que pediu), com link `APP_URL?notif=id#/inspecoes/{isId}/entrevista`; `{ enviados }`, ou 409 sem celular com notificações ativadas (ADR-014). Só Admin e `user_medicos` |
 | `POST /api/entrevistas/ouvir` | Devolve o áudio da entrevista (binário) enquanto existir (90 dias). O Storage nega leitura pelo app; o repasse `/api/arquivos/baixar` nunca serve `entrevistas/`. Só Admin e `user_medicos` |
 | `POST /api/impressao/parecer` · `/termo-recurso` · `/solicitacao-concurso` | "Enviar para impressão" pela Gmail API (mesmos destinatários, assuntos, textos e anexo do Apps Script; o PDF é lido do Drive e precisa estar sob PARECERES ou CONCURSOS). Parecer: só médicos; demais: equipe. Operação sensível (auditada) |
-| `POST /api/email/resultado-is` | `{ isId, email? }` → e-mail "Resultado de Inspeção de Saúde" ao inspecionado pela Gmail API (template HTML puro do Claude Design em `servidor/email/templateResultadoIS.ts`, compatível com o Zimbra). Só IS com TIS assinado; remetente "JRS-HNRe", Bcc e Reply-To `hnre.jrs@marinha.mil.br`. Sem e-mail no cadastro, usa o informado e grava em `militares/{id}.email`; registra `emailResultadoPara/EnviadoEm/EnviadoPor` na IS. Envio único: já enviado, o item do menu ⋮ fica desabilitado (com o destinatário) e a rota recusa novo envio. Só Admin e Secretaria. Operação sensível (auditada). Sem reserva no Apps Script |
+| `POST /api/email/resultado-is` | `{ isId, email? }` → e-mail "RESULTADO DE INSPEÇÃO DE SAÚDE" (assunto) ao inspecionado pela Gmail API (template HTML puro do Claude Design em `servidor/email/templateResultadoIS.ts`, compatível com o Zimbra). Só IS com TIS assinado; remetente "JRS-HNRe", Bcc e Reply-To `hnre.jrs@marinha.mil.br`. Sem e-mail no cadastro, usa o informado e grava em `militares/{id}.email`; registra `emailResultadoPara/EnviadoEm/EnviadoPor` na IS. Envio único: já enviado, o item do menu ⋮ fica desabilitado (com o destinatário) e a rota recusa novo envio. Só Admin e Secretaria. Operação sensível (auditada). Sem reserva no Apps Script |
+| `POST /api/email/agenda-is` | `{ data }` (AAAA-MM-DD) → e-mail **"IS AGENDADAS EM dd/mm/aaaa"** com as IS da data e, só quando há candidatos agendados, as IS de concursos (`servidor/email/agendaIS.ts`; templates do Claude Design em `servidor/email/templateAgendaIS.ts` e `templateAnexoAgendaIS.ts`, HTML puro). Anexo em PDF (A4 paisagem, Chromium) gravado no Storage em `agendaIS/{ano}/IS_AGENDADAS_{data}.pdf` — mesmo caminho a cada envio (sem duplicar). Remetente "JRS/HNRe", Reply-To `hnre.jrs@marinha.mil.br`; PARA: caixa da JRS + institucionais dos `user_medicos`/`user_medicos_mpi`; CC: Gmail de Admin, médicos, MPI e Secretaria. Registra em `emailsAgendaIS/{data}`. Só Admin. Operação sensível (auditada) |
+| `POST /api/agendador/agenda-is` | Disparo automático pelo **Cloud Scheduler** (18h America/Recife, domingo a quinta; `scripts/agendador/configurar-email-agenda.sh`), sem token do Firebase: exige o cabeçalho `X-Agendador-Token` = `AGENDADOR_TOKEN` (comparação em tempo constante; sem a variável, a rota responde 503). Manda a agenda de amanhã, salvo em véspera de feriado (`utils/emailAgendaIS.ts`) e se o automático daquela data já saiu; sem IS, o e-mail sai do mesmo jeito |
 | `POST /api/agenda/evento-is` · `/evento-bloqueio` · `/concursos` | Sincronização da agenda "JRS/HNRe" pela Calendar API (mesmas cores, convites e lembrete de 12 h; ids antigos do CalendarApp continuam valendo). Perfis da equipe |
 | `POST /api/arquivos/baixar` | Repasse de arquivos do Firebase Storage (PDFs, fotos de perfil, infográficos) para redes que bloqueiam `firebasestorage.googleapis.com` — ex.: Firefox nos PCs da Marinha. Exige usuário ativo; só as pastas liberadas em `storage.rules` (`utils/arquivosPermitidos.ts`). O cliente monta um `blob:` (`services/arquivosStorage.ts`) e cai para a URL direta se o repasse falhar |
 | `POST /api/gemini/analyze-image` | Leitura de imagem pelo Gemini (exige usuário ativo) |
@@ -121,7 +128,8 @@ O **Cloud Firestore** é a fonte principal (detalhes em `docs/database.md`, seç
 ### 3.4 Integrações
 
 - Firebase Authentication, Firestore, Storage e Cloud Messaging;
-- Cloud Run (servidor `server.ts`);
+- Cloud Run (servidor `server.ts`), com Gmail API, Calendar API e Drive API pela conta Google da JRS (e-mails de impressão, de resultado da IS e da agenda de IS; Google Agenda);
+- Cloud Scheduler (job `email-agenda-is`: e-mail das IS agendadas às 18h, domingo a quinta);
 - Google Apps Script Web App (Drive, Docs, Gmail, Agenda);
 - Gemini: Firebase AI Logic / Vertex AI (no app) e Gemini API (servidor);
 - provedores de mídia: YouTube (vídeos), Google Slides/Canva/GitHub Pages (apresentações), Imgur.
@@ -360,6 +368,11 @@ As ações `gerarTermoRecurso`, `gerarTermoCientificacao`, `gerarSolicitacaoPare
 1. o servidor gera o PDF em HTML + CSS (`/api/documentos/*`, ADR-012);
 2. o Apps Script grava o PDF na pasta do Drive (concurso/candidato ou inspecionado) e devolve a URL de visualização;
 3. o app grava a URL no Firestore; para os documentos com automação de e-mail, envia o PDF para a impressão (servidor; Apps Script de reserva).
+
+E-mails gerados pelo servidor a partir de templates do Claude Design (`servidor/email/`, HTML puro para o Zimbra, preenchidos por um subconjunto do Mustache em `servidor/email/template.ts`, com todo valor escapado):
+
+- **Resultado da IS ao inspecionado** — `/api/email/resultado-is` (Admin e Secretaria, IS com TIS assinado, envio único);
+- **IS agendadas do dia seguinte** — `/api/agendador/agenda-is` (Cloud Scheduler) e `/api/email/agenda-is` (Admin); anexo em PDF gerado pelo Chromium a partir de `templateAnexoAgendaIS.ts` (fonte e logo embutidas em `recursosAnexo.ts`, porque o gerador não acessa a rede) e guardado no Storage.
 
 ### 8.4 Segurança
 
