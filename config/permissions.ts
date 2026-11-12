@@ -50,6 +50,10 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'infograficos', label: 'Infográficos', icon: 'image', subtitle: 'Resumos ilustrados para consultas rápidas.' },
   { id: 'apresentacoes', label: 'Apresentações', icon: 'slideshow', subtitle: 'Apresentações de slides sobre os processos das IS.' },
   { id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list', subtitle: 'Trilha de estudos para capacitação dos AMP.' },
+  // Administração: férias e afastamentos dos usuários da JRS (criar, editar e apagar continuam só com o Admin).
+  { id: 'ferias', label: 'Férias', icon: 'beach_access', subtitle: 'Férias e afastamentos dos usuários da JRS.' },
+  // Ajuda: o que o app faz, por área (página "Sobre o app").
+  { id: 'sobre', label: 'Sobre o app', icon: 'info', subtitle: 'As principais funcionalidades do app, por área.' },
 ];
 
 // Perfil novo (user_medicos_mpi) começa espelhando os defaults de
@@ -73,6 +77,9 @@ export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {
   infograficos: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
   apresentacoes: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
   roteiro: { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  // Férias: a equipe da JRS (as regras do Firestore só deixam a equipe ler os afastamentos).
+  ferias: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  sobre: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
 };
 
 export type FeatureKey =
@@ -89,12 +96,15 @@ export type FeatureKey =
   | 'concursosJRS.gerarTermoRecurso'
   | 'concursosJRS.solicitarParecerExames'
   | 'concursosJRS.enviarExamesCandidato'
+  | 'concursosJRS.enviarEmailInaptos'
   | 'inspecoes.cadastrar'
   | 'inspecoes.agendar'
   | 'inspecoes.editar'
   | 'inspecoes.gerarMinuta'
   | 'inspecoes.bloquearAgenda'
   | 'inspecoes.enviarExames'
+  | 'inspecoes.enviarEmails'
+  | 'inspecoes.cancelar'
   | 'militares.cadastrar'
   | 'pareceres.gerar'
   | 'pericia-menor.novo'
@@ -120,11 +130,14 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'concursosJRS.gerarTermoRecurso', label: 'Gerar Termo de Recurso (a visualização do termo já gerado é liberada a todos)', group: 'Concursos' },
   { id: 'concursosJRS.solicitarParecerExames', label: 'Solicitar Parecer / Exames (menu ⋮ da planilha; a visualização é só de quem tem o menu)', group: 'Concursos' },
   { id: 'concursosJRS.enviarExamesCandidato', label: 'Enviar exames do candidato em PDF (salva no Drive e transcreve com IA; a leitura da transcrição é liberada a todos)', group: 'Concursos' },
+  { id: 'concursosJRS.enviarEmailInaptos', label: 'Enviar e-mail dos candidatos inaptos (botão "+ Email Inaptos" do concurso em andamento)', group: 'Concursos' },
   { id: 'inspecoes.cadastrar', label: 'Cadastrar nova IS (a lista e o calendário são vistos por quem acessa a página)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.agendar', label: 'Agendar e reagendar IS (escolher perito, data e horário)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.editar', label: 'Editar IS: status, laudo, restrições, TIS, DS-1a e observações', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.gerarMinuta', label: 'Gerar Minuta de Mensagem (cancelamento de IS atrasada)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.enviarExames', label: 'Enviar exames em PDF da IS (a IA identifica o exame e transcreve o laudo; não vale para IS finalizada)', group: 'Inspeções de Saúde' },
+  { id: 'inspecoes.enviarEmails', label: 'Enviar e-mails da IS: agendamento, resultado, faltas do HNRe e NAC (menu "Enviar Email", detalhe da IS e card de faltas da Início; o e-mail "IS agendadas" do dia é só do Admin)', group: 'Inspeções de Saúde' },
+  { id: 'inspecoes.cancelar', label: 'Cancelar IS (menu ⋮ da IS)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.bloquearAgenda', label: 'Bloquear horários e turnos da agenda (perfis médicos só bloqueiam os próprios turnos; a configuração de turnos dos peritos é só do Admin)', group: 'Inspeções de Saúde' },
   { id: 'militares.cadastrar', label: 'Cadastrar novo inspecionado (Militares e Dep/Pens.); editar, apagar e inativar continuam só com o Admin', group: 'Inspecionados' },
   { id: 'pareceres.gerar', label: 'Gerar Pedido de Parecer e marcar como concluído (a lista de pareceres é vista por quem acessa a página)', group: 'Pareceres' },
@@ -152,6 +165,10 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'concursosJRS.solicitarParecerExames': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
   // Enviar os exames entregues pelo candidato é trabalho de recepção/secretaria tanto quanto dos médicos.
   'concursosJRS.enviarExamesCandidato': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  // E-mails e cancelamento: por padrão Admin e Secretaria (como antes de virarem configuráveis).
+  'concursosJRS.enviarEmailInaptos': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
+  'inspecoes.enviarEmails': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
+  'inspecoes.cancelar': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
   'inspecoes.cadastrar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   'inspecoes.agendar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   'inspecoes.editar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },

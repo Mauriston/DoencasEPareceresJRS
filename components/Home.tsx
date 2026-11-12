@@ -25,7 +25,7 @@ import { observarConcursos, type ConcursoRecord } from '../services/firestoreCon
 import { observarPareceres, statusEfetivo, type ParecerRecord } from '../services/firestorePareceres';
 import { observarInspecoes, type InspecaoRecord } from '../services/firestoreInspecoes';
 import { observarAfastamentos, type AfastamentoRecord } from '../services/afastamentos';
-import { podeVerFerias, statusEfetivo as statusDoAfastamento } from '../utils/afastamentos';
+import { statusEfetivo as statusDoAfastamento } from '../utils/afastamentos';
 import { MAX_RAPIDO, FORA_DO_RAPIDO, chaveEscolhaLocal, lerEscolha, contarAcessos, diasForaDaJanela, inicioDaQuinzena, resolverAcessoRapido, type EscolhaRapido } from '../utils/acessoRapido';
 import { observarAcessoRapido, salvarEscolhaRapido, podarAcessos, type DocAcessoRapido } from '../services/acessoRapido';
 import { AgendaInspecoesCard } from './home/AgendaInspecoesCard';
@@ -222,7 +222,7 @@ export const Home: React.FC = () => {
   // Férias (página Férias, coleção "afastamentos"): só o tipo Férias com status "Em gozo" ou "Confirmada" (status
   // automático, utils/afastamentos.ts; gozadas e programadas não entram) — em gozo primeiro, depois as confirmadas
   // pela data de início. Só para Admin, médicos JRS/MPI e Secretaria; o card só aparece quando há registro.
-  const mostraFerias = podeVerFerias(perfil);
+  const mostraFerias = canAccessPage('ferias', perfil);
   const [afastamentos, setAfastamentos] = useState<AfastamentoRecord[]>([]);
   useEffect(() => (mostraFerias ? observarAfastamentos(setAfastamentos, () => { /* silencioso */ }) : undefined), [mostraFerias]);
   const ferias = useMemo(() => afastamentos
@@ -402,7 +402,7 @@ export const Home: React.FC = () => {
             )}
 
             {/* Faltas do HNRe ainda não comunicadas à Divisão de Pessoal (só Admin e Secretaria; some sem pendências). */}
-            {podeInspecoes && (perfil === 'admin' || ehSecretaria) && <CardFaltasHNRe inspecoes={inspecoes} Secao={Secao} />}
+            {podeInspecoes && canUseFeature('inspecoes.enviarEmails', perfil) && <CardFaltasHNRe inspecoes={inspecoes} Secao={Secao} />}
 
             {podePareceres && naoConcluidos.length > 0 && (
               <Secao id="home-pareceres" titulo={`Pareceres não concluídos (${naoConcluidos.length})`} acao={<Link to="/pareceres" className="text-sm font-bold text-blue underline underline-offset-2 hover:text-navy">Ver pareceres</Link>}>
