@@ -219,17 +219,17 @@ export const Home: React.FC = () => {
   useEffect(() => (podeEscala ? observarEscalaAPartirDe(hoje, 62, setEscala, () => { /* silencioso */ }) : undefined), [podeEscala, hoje]);
   const meusServicos = useMemo(() => servicosDoUsuario(escala, authUser?.usuario).slice(0, 5), [escala, authUser?.usuario]);
 
-  // Férias (página Férias, coleção "afastamentos"): só o tipo Férias com status "Em gozo" ou "Gozada" (status
-  // automático, utils/afastamentos.ts) — em gozo primeiro, depois as gozadas mais recentes. Só para Admin, médicos
-  // JRS/MPI e Secretaria; o card só aparece quando há registro.
+  // Férias (página Férias, coleção "afastamentos"): só o tipo Férias com status "Em gozo" ou "Confirmada" (status
+  // automático, utils/afastamentos.ts; gozadas e programadas não entram) — em gozo primeiro, depois as confirmadas
+  // pela data de início. Só para Admin, médicos JRS/MPI e Secretaria; o card só aparece quando há registro.
   const mostraFerias = podeVerFerias(perfil);
   const [afastamentos, setAfastamentos] = useState<AfastamentoRecord[]>([]);
   useEffect(() => (mostraFerias ? observarAfastamentos(setAfastamentos, () => { /* silencioso */ }) : undefined), [mostraFerias]);
   const ferias = useMemo(() => afastamentos
     .filter(a => a.tipo === 'ferias' && a.dataInicio && a.dataFim)
     .map(a => ({ a, st: statusDoAfastamento(a, hoje) }))
-    .filter(x => x.st === 'em_gozo' || x.st === 'gozada')
-    .sort((x, y) => (x.st === y.st ? (x.st === 'em_gozo' ? x.a.dataInicio.localeCompare(y.a.dataInicio) : y.a.dataFim.localeCompare(x.a.dataFim)) : x.st === 'em_gozo' ? -1 : 1)),
+    .filter(x => x.st === 'em_gozo' || x.st === 'confirmada')
+    .sort((x, y) => (x.st === y.st ? 0 : x.st === 'em_gozo' ? -1 : 1) || x.a.dataInicio.localeCompare(y.a.dataInicio)),
   [afastamentos, hoje]);
 
   // Últimos documentos gerados (só Secretaria): fila do que foi enviado para impressão e ainda não abriu.
@@ -523,7 +523,7 @@ export const Home: React.FC = () => {
                         <span className="block text-sm font-bold text-navy truncate">{f.usuario}</span>
                         <span className="block text-xs text-ink-3 truncate">{dataBr(f.dataInicio)} a {dataBr(f.dataFim)} · {f.duracaoDias} dia{f.duracaoDias !== 1 ? 's' : ''}{f.referencia ? ` · ref. ${f.referencia}` : ''}</span>
                       </span>
-                      <StatusTag tone={st === 'em_gozo' ? 'attention' : 'muted'} className="shrink-0">{st === 'em_gozo' ? 'Em gozo' : 'Gozada'}</StatusTag>
+                      <StatusTag tone={st === 'em_gozo' ? 'attention' : 'navy'} className="shrink-0">{st === 'em_gozo' ? 'Em gozo' : 'Confirmada'}</StatusTag>
                     </li>
                   ))}
                 </ul>
