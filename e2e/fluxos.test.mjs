@@ -355,9 +355,8 @@ test('Perícia Menor: lista o registro semeado, busca, abre o detalhe e o formul
   await p.getByRole('heading', { name: 'Perícia Menor' }).waitFor();
   const abrir = p.getByRole('button', { name: `Abrir detalhe da perícia de ${INSPECIONADO.nome}` });
   await abrir.waitFor();
-  // Colunas na ordem do Presidente: Data · Inspecionado · Médico · CID · Dispensas.
-  assert.deepEqual(await p.locator('table thead th').allInnerTexts(), ['Data', 'Inspecionado', 'Médico', 'CID', 'Dispensas']);
-  await p.locator('table').getByText('CT Teste Medico').waitFor();
+  // Tabela enxuta (auditoria v3, 5c): Inspecionado · CID · Tipo · Término · Hist.; data e médico vão para o painel.
+  assert.deepEqual(await p.locator('table thead th').allInnerTexts(), ['Inspecionado', 'CID', 'Tipo', 'Término', 'Hist.']);
 
   const busca = p.getByLabel('Buscar perícia menor');
   await busca.fill('NADA-COM-ESSE-TEXTO');
@@ -365,10 +364,19 @@ test('Perícia Menor: lista o registro semeado, busca, abre o detalhe e o formul
   await busca.fill('M54');
   await abrir.waitFor();
   await abrir.click();
-  await p.getByRole('dialog', { name: 'Perícia menor' }).waitFor();
+  // ≥ 1280 px: painel lateral (mestre-detalhe, sem backdrop) com as abas Esta perícia · Histórico; a seleção vai para a URL.
+  const painel = p.getByRole('region', { name: `Perícia menor de ${INSPECIONADO.nome}` });
+  await painel.waitFor();
+  await p.waitForURL(/[?&]sel=/);
+  await painel.getByRole('tab', { name: /Histórico/ }).click();
+  await painel.getByRole('tab', { name: /Histórico/, selected: true }).waitFor();
+  await painel.getByRole('tab', { name: 'Esta perícia' }).click();
+  await painel.getByText('Emissor, perito e registro').click();
+  await painel.getByText('CT Teste Medico').waitFor();
   await p.keyboard.press('Escape');
+  await painel.waitFor({ state: 'detached' });
 
-  await p.getByRole('button', { name: 'Novo', exact: true }).click();
+  await p.getByRole('button', { name: 'Perícia Menor', exact: true }).click();
   const form = p.getByRole('dialog', { name: 'Nova perícia menor' });
   await form.waitFor();
   // Abas Registrar/Homologar; todos os campos visíveis; foto só (e obrigatória) na homologação.
@@ -380,6 +388,21 @@ test('Perícia Menor: lista o registro semeado, busca, abre o detalhe e o formul
   await form.getByRole('tab', { name: 'Homologar atestado' }).click();
   await form.getByRole('button', { name: 'Fotografar atestado' }).waitFor();
   await form.getByLabel(/Tempo homologado/).waitFor();
+  await p.context().close();
+});
+
+test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha mostra IS, parecer e perícia', async () => {
+  const p = await novaPagina();
+  await entrar(p, MEDICO);
+  await p.goto(`${BASE}#/pericia-menor/historico/${INSPECIONADO.nip}`);
+  await p.waitForURL(new RegExp(`#/inspecionados/${INSPECIONADO.nip}$`));
+  await p.getByRole('heading', { name: INSPECIONADO.nome }).waitFor();
+  const linha = p.getByRole('tablist', { name: 'Filtrar a linha do tempo' });
+  for (const aba of [/^Tudo/, /^IS/, /^Pareceres/, /^Perícias/]) await linha.getByRole('tab', { name: aba }).waitFor();
+  await p.getByRole('button', { name: /Perícia menor registrada/ }).first().click();
+  await p.getByRole('region', { name: `Perícia menor de ${INSPECIONADO.nome}` }).waitFor();
+  // Registro de eventos é só do Admin.
+  assert.equal(await p.getByText('Registro de eventos').count(), 0);
   await p.context().close();
 });
 

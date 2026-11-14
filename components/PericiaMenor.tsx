@@ -116,7 +116,7 @@ export const PericiaMenor: React.FC = () => {
       nome: extrairNomeInspecionado(p.inspecionado), hist: contagemHist.get(chaveMilitar(p)) ?? 1,
     }))
     .sort((a, b) => compararParaLista(a.p, b.p, hoje)), [lista, hoje, cidAbrev, contagemHist]);
-  const oms = useMemo(() => [...new Set(comStatus.map(x => x.p.om).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [comStatus]);
+  const oms = useMemo(() => [...new Set<string>(comStatus.map(x => x.p.om).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [comStatus]);
   const minhaPericia = (p: PericiaMenorRecord) => p.peritoUid === uid || p.criadoPor === uid;
 
   // Contagens das abas respeitam os demais filtros (tipo, minhas, OM e busca).
