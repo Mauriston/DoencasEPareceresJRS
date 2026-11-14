@@ -19,6 +19,7 @@ import firebaseConfig from '../firebase-applet-config.json';
 import { app, auth } from './firebaseAuth';
 import { chamarServidor } from './apiClient';
 import { isIOS, isStandalone } from '../utils/pwa';
+import type { AcaoNotificavelId } from '../config/notificacoesAcoes';
 
 const db = getFirestore(app);
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || '';
@@ -131,8 +132,8 @@ export const desvincularAparelho = async (): Promise<void> => {
 };
 
 export type EventoNotificacao =
-  | { tipo: 'login' }
   | { tipo: 'teste' }
+  | { tipo: 'acao'; acao: AcaoNotificavelId; alvoId?: string }
   | { tipo: 'status-alterado'; concursoId: string; candidatoId: string }
   | { tipo: 'is-finalizada'; concursoId: string; candidatoId: string };
 
@@ -160,11 +161,22 @@ export const notificarEvento = async (evento: EventoNotificacao): Promise<void> 
   }
 };
 
+/**
+ * Avisa os outros usuários de uma ação feita no app (catálogo em
+ * config/notificacoesAcoes.ts). O servidor confere a permissão de quem fez,
+ * monta o texto e notifica só quem também pode executar a mesma ação.
+ * `alvoId` = id do concurso ou da IS, quando a ação tem alvo.
+ */
+export const notificarAcao = (acao: AcaoNotificavelId, alvoId?: string): void => {
+  void notificarEvento({ tipo: 'acao', acao, ...(alvoId ? { alvoId } : {}) });
+};
+
 // ---------------------------------------------------------------------------
 // Histórico (menu do avatar): o servidor grava cada notificação também em
 //   usuarios/{uid}/notificacoes/{id}  { titulo, corpo, rota, lida, em }
 // O badge do avatar conta as não lidas. Tocar no item do menu ou no push
-// (o link traz ?notif=id) marca como lida.
+// (o link traz ?notif=id) marca como lida; "Marcar todas como lidas" apaga
+// todas do histórico.
 
 export interface NotificacaoRecord {
   id: string;
@@ -201,10 +213,11 @@ export const observarNotificacoes = (
 export const marcarNotificacaoLida = (uid: string, id: string) =>
   updateDoc(doc(db, 'usuarios', uid, 'notificacoes', id), { lida: true }).catch(e => console.error('Falha ao marcar notificação como lida:', e));
 
-export const marcarTodasLidas = async (uid: string, ids: string[]): Promise<void> => {
+/** "Marcar todas como lidas": as notificações saem de vez do histórico do usuário. */
+export const apagarTodasNotificacoes = async (uid: string, ids: string[]): Promise<void> => {
   for (let i = 0; i < ids.length; i += 400) {
     const batch = writeBatch(db);
-    ids.slice(i, i + 400).forEach(id => batch.update(doc(db, 'usuarios', uid, 'notificacoes', id), { lida: true }));
+    ids.slice(i, i + 400).forEach(id => batch.delete(doc(db, 'usuarios', uid, 'notificacoes', id)));
     await batch.commit();
   }
 };

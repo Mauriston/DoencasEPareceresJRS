@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { app } from './firebaseAuth';
+import { notificarAcao } from './notificacoesPush';
 import { gerarComGemini, lerJsonIA, arquivoParaBase64IA } from './geminiAI';
 import { novoId } from '../utils/dados';
 import { itensDaLeitura, TIPOS_DOCUMENTO, type ItemExame, type LeituraExameIA } from '../utils/examesIS';
@@ -105,6 +106,7 @@ export const gravarExameIS = async (
     await deleteObject(r).catch(() => { /* fica órfão no Storage; não há o que fazer */ });
     throw e;
   }
+  notificarAcao('is.examesEnviados', isId);
   return id;
 };
 

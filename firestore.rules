@@ -95,7 +95,9 @@ service cloud.firestore {
       allow read: if isSignedIn() && request.auth.uid == uid;
       allow update: if isSignedIn() && request.auth.uid == uid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lida']);
-      allow create, delete: if false;
+      // "Marcar todas como lidas" apaga as notificações do próprio usuário.
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+      allow create: if false;
     }
 
     // Fila de impressão da Secretaria (Início): documentos enviados por e-mail

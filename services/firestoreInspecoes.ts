@@ -14,6 +14,7 @@ import {
 import { novoId } from '../utils/dados';
 import { app } from './firebaseAuth';
 import { registrarAcaoSensivel } from './auditoriaAcoes';
+import { notificarAcao } from './notificacoesPush';
 import {
   chaveSlot, chavesOcupadas, duracaoDoGrupo, situacaoDoStatus, statusAoAgendar, TODOS_PERITOS,
   type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS, type Turno,
@@ -141,12 +142,15 @@ export const criarInspecao = async (dados: NovaInspecao): Promise<string> => {
   const status: StatusIS = dados.dataEntrevista ? 'agendada' : 'aberta';
   const completo = { ...dados, is: Number(id), status, situacao: situacaoDoStatus(status) };
   await gravarComSlot(id, completo, dados.dataEntrevista ? { peritoUid: dados.peritoUid, dataEntrevista: dados.dataEntrevista, grupoFinalidade: dados.grupoFinalidade } : null, null, true);
+  notificarAcao('is.cadastrada', id);
   return id;
 };
 
 /** Atualiza campos que não mexem na agenda (laudo, restrições, TIS, DS-1a, observações, status…). */
-export const atualizarInspecao = (id: string, patch: Partial<InspecaoDoc>) =>
-  updateDoc(doc(db, COL, id), { ...patch, ...(patch.status ? { situacao: situacaoDoStatus(patch.status) } : {}), atualizadoEm: serverTimestamp() } as Record<string, unknown>);
+export const atualizarInspecao = async (id: string, patch: Partial<InspecaoDoc>): Promise<void> => {
+  await updateDoc(doc(db, COL, id), { ...patch, ...(patch.status ? { situacao: situacaoDoStatus(patch.status) } : {}), atualizadoEm: serverTimestamp() } as Record<string, unknown>);
+  notificarAcao('is.editada', id);
+};
 
 /** Marca o resultado da sincronização com o Google Agenda. */
 export const registrarSincronizacaoAgenda = (id: string, patch: { eventoAgendaId?: string; agendaSincronizada: boolean }) =>
@@ -169,6 +173,7 @@ export const agendarInspecao = async (atual: InspecaoRecord, novo: Agendamento):
   const status: StatusIS = statusAoAgendar(atual, novo.dataEntrevista);
   const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(atual.id, { ...novo, status, situacao: situacaoDoStatus(status) }, { peritoUid: novo.peritoUid, dataEntrevista: novo.dataEntrevista, grupoFinalidade: atual.grupoFinalidade }, slotAntigo, false);
+  notificarAcao('is.agendada', atual.id);
   return status;
 };
 
@@ -188,6 +193,7 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
   if (!atual) {
     const completo = { ...dados, is: Number(id), observacoes: '', situacao: situacaoDoStatus(dados.status) };
     await gravarComSlot(id, completo, slotNovo, null, true);
+    notificarAcao('is.importada', id);
     return { ...completo, id, criadoEm: null };
   }
   const { criadoPor: _c, ...resto } = dados;
@@ -196,6 +202,7 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
   const mudouData = !!dados.dataEntrevista && dados.dataEntrevista !== atual.dataEntrevista;
   const slotAntigo = mudouData && atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(id, patch, mudouData ? slotNovo : null, slotAntigo, false);
+  notificarAcao('is.editada', id);
   return { ...atual, ...(patch as Partial<InspecaoDoc>) };
 };
 
@@ -205,6 +212,7 @@ export const cancelarInspecao = async (atual: InspecaoRecord): Promise<void> => 
   await gravarComSlot(atual.id, {
     status: 'cancelada', situacao: situacaoDoStatus('cancelada'),
   }, null, slotAntigo, false);
+  notificarAcao('is.cancelada', atual.id);
 };
 
 /** Apaga a IS (só Admin) e libera o horário. */
@@ -212,6 +220,7 @@ export const apagarInspecao = async (atual: InspecaoRecord): Promise<void> => {
   if (atual.dataEntrevista) await Promise.all(refsSlots(atual).map(r => deleteDoc(r).catch(() => { /* slot já liberado */ })));
   await deleteDoc(doc(db, COL, atual.id));
   void registrarAcaoSensivel('inspecao.excluir', 'inspecoes');
+  notificarAcao('is.apagada', atual.id);
 };
 
 export const inspecaoExiste = async (id: string): Promise<boolean> => (await getDoc(doc(db, COL, id))).exists();
@@ -265,4 +274,7 @@ export const observarConfigAgenda = (onData: (config: ConfigAgenda) => void, onE
     err => onError?.(err),
   );
 
-export const salvarConfigAgenda = (peritos: ConfigAgenda) => setDoc(CONFIG_REF, { peritos, atualizadoEm: serverTimestamp() });
+export const salvarConfigAgenda = async (peritos: ConfigAgenda): Promise<void> => {
+  await setDoc(CONFIG_REF, { peritos, atualizadoEm: serverTimestamp() });
+  notificarAcao('is.configAgenda');
+};

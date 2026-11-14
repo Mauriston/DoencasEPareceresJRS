@@ -59,7 +59,16 @@ const exa = (nome, perfil, method, situacao, esperado, patch = {}) => ({ nome, t
   ...(method === 'create' ? {} : { resource: { data: exaNovo } }),
   functionMocks: mocksExa(perfil, situacao),
 } });
+const notif = (nome, path, esperado) => ({ nome, tc: {
+  expectation: esperado,
+  request: { auth: { uid: 'u1' }, path: `${DB}/${path}`, method: 'delete' },
+  resource: { data: { titulo: 'x', corpo: 'y', rota: '/', lida: false } },
+  functionMocks: mocks('user_medicos'),
+} });
 const casos = [
+  // "Marcar todas como lidas" apaga as notificações — só as do próprio usuário.
+  notif('Usuário apaga a própria notificação', 'usuarios/u1/notificacoes/n1', 'ALLOW'),
+  notif('Usuário apaga notificação de outro', 'usuarios/u2/notificacoes/n1', 'DENY'),
   upd('MPI grava triagem', 'user_medicos_mpi', { triagem: { altura: '1,75' } }, 'ALLOW'),
   upd('Médico JRS grava triagem', 'user_medicos', { triagem: { altura: '1,75' } }, 'DENY'),
   upd('Secretaria grava triagem', 'user_secretaria', { triagem: { altura: '1,75' } }, 'DENY'),

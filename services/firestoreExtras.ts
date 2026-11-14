@@ -15,6 +15,7 @@ import { novoId } from '../utils/dados';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { app, auth } from './firebaseAuth';
 import { ApiError, chamarServidor } from './apiClient';
+import { notificarAcao } from './notificacoesPush';
 
 const db = getFirestore(app);
 const COL_VIDEOS = 'videos';
@@ -78,6 +79,7 @@ export const observarVideos = (onData: (lista: VideoRecord[]) => void, onError?:
 /** Cria o vídeo com id = id do YouTube (impede duplicar o mesmo vídeo). */
 export const criarVideo = async (dados: { youtubeId: string; titulo: string; thumbnailUrl: string; criadoPor: string }): Promise<void> => {
   await setDoc(doc(db, COL_VIDEOS, dados.youtubeId), { ...dados, criadoEm: serverTimestamp() });
+  notificarAcao('video.publicado');
 };
 
 export const apagarVideo = async (id: string): Promise<void> => {
@@ -107,6 +109,7 @@ export const criarInfografico = async (titulo: string, arquivo: File, criadoPor:
   await uploadBytes(arq, arquivo, { contentType: arquivo.type || 'image/jpeg' });
   const imageUrl = await getDownloadURL(arq);
   await setDoc(novo, { titulo: titulo.trim(), imagePath, imageUrl, criadoPor, criadoEm: serverTimestamp() });
+  notificarAcao('infografico.publicado');
 };
 
 export const apagarInfografico = async (item: InfograficoRecord): Promise<void> => {
@@ -204,6 +207,7 @@ export const observarApresentacoes = (onData: (lista: ApresentacaoRecord[]) => v
 
 export const criarApresentacao = async (dados: Omit<ApresentacaoRecord, 'id' | 'criadoEm'>): Promise<void> => {
   await setDoc(doc(db, COL_APRESENTACOES, novoId()), { ...dados, titulo: dados.titulo.trim(), criadoEm: serverTimestamp() });
+  notificarAcao('apresentacao.publicada');
 };
 
 export const apagarApresentacao = async (id: string): Promise<void> => {

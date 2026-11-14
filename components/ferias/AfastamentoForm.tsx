@@ -14,6 +14,7 @@ import {
   type AfastamentoRecord, type ArquivoAfastamento,
 } from '../../services/afastamentos';
 import { extrairDadosAfastamento } from '../../services/afastamentoIA';
+import { notificarAcao } from '../../services/notificacoesPush';
 import {
   TIPOS_AFASTAMENTO, dataFimDe, dataValida, diasEntre, geraBloqueioNaAgenda, rotuloStatus, statusEfetivo,
   type StatusAfastamento, type TipoAfastamento,
@@ -117,6 +118,7 @@ export const AfastamentoForm: React.FC<Props> = ({ usuarios, atual, hoje, autor,
       const r = atual
         ? await atualizarAfastamento(atual, dados, [...arquivos, ...enviados], autor, hoje)
         : await criarAfastamento(id, dados, [...arquivos, ...enviados], autor, hoje);
+      notificarAcao('afastamento.registrado');
       const base = `${atual ? 'Afastamento atualizado' : 'Afastamento registrado'}: ${usuario.usuario}, ${dataBr(dataInicio)} a ${dataBr(dataFim)}.`;
       onSalvo(r.agendaSincronizada ? base : `${base} O Google Agenda não foi atualizado agora.`, r.agendaSincronizada ? 'success' : 'error');
     } catch (err: any) {

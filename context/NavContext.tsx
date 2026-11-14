@@ -38,7 +38,7 @@ export interface NavContextType {
   abrirInstalacaoApp: () => void;
   /** Notificações não lidas do usuário (badge do avatar). */
   notificacoesNaoLidas: number;
-  /** Abre a lista de notificações (item do menu do avatar). Ausente para quem não recebe notificações (user_medicos_geral). */
+  /** Abre a lista de notificações (item do menu do avatar). Ausente fora do app logado. */
   abrirNotificacoes?: () => void;
   updateAuthUser: (patch: Partial<AuthUser>) => void;
   handleLogout: () => void;

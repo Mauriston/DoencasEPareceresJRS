@@ -5,6 +5,8 @@ import { logErroSeguro, descreverErro } from "./utils/logSeguro";
 import { higienizarParaIA, base64ValidoParaIA } from "./utils/minimizacaoIA";
 import { caminhoArquivoValido } from "./utils/arquivosPermitidos";
 import { PERFIS_ENTREVISTA } from "./config/entrevistas";
+import { type FeatureKey, type MatrizPermissoesArmazenada } from "./config/permissoesPadrao";
+import { acaoNotificavel, perfilExecuta, ROTA_DA_PAGINA, type AcaoNotificavel } from "./config/notificacoesAcoes";
 
 // Firebase Admin (credenciais padrão do Cloud Run), inicializado sob demanda.
 async function getFirebaseAdmin() {
@@ -270,8 +272,8 @@ async function startServer() {
   // evitada (coleção "notificacoes_enviadas", só acessível pelo servidor).
   // Os tokens dos aparelhos ficam em "tokens_push/{token}" com o uid do dono.
   const APP_URL = (process.env.APP_URL || "https://mauriston.github.io/DoencasEPareceresJRS/").replace(/\/?$/, "/");
-  // Só segura chamadas duplicadas do mesmo acesso (ex.: recarga imediata).
-  const INTERVALO_AVISO_LOGIN_MS = 60_000;
+  // Repetição da mesma ação (mesmo usuário, mesmo alvo) dentro desta janela não gera novo aviso.
+  const INTERVALO_PADRAO_ACAO_MS = 30_000;
 
   /** Grava a chave de "já enviado"; false se outra requisição já enviou. */
   const marcarEnvio = async (adminDb: any, chave: string): Promise<boolean> => {
@@ -336,10 +338,14 @@ async function startServer() {
     return { aparelhos: tokens.length, enviados, erros };
   };
 
-  const uidsAtivos = async (adminDb: any, filtro?: (u: any) => boolean): Promise<Set<string>> => {
-    const snap = await adminDb.collection("usuarios").get();
-    // "user_medicos_geral" (demais médicos do HNRe) não recebe notificações do app.
-    return new Set(snap.docs.filter((d: any) => d.data().ativo !== false && d.data().perfil !== "user_medicos_geral" && (!filtro || filtro(d.data()))).map((d: any) => d.id));
+  // Matriz de permissões salva pelo Admin (config/permissoes), somada aos padrões de config/permissoesPadrao.
+  const lerMatrizPermissoes = async (adminDb: any): Promise<MatrizPermissoesArmazenada | null> =>
+    ((await adminDb.collection("config").doc("permissoes").get()).data() as MatrizPermissoesArmazenada | undefined) || null;
+
+  /** Usuários ativos cujo perfil pode executar a ação — só eles são notificados dela. */
+  const uidsQuePodemExecutar = async (adminDb: any, req: { pagina: string; feature?: FeatureKey; soAdmin?: boolean }): Promise<Set<string>> => {
+    const [snap, matriz] = await Promise.all([adminDb.collection("usuarios").get(), lerMatrizPermissoes(adminDb)]);
+    return new Set(snap.docs.filter((d: any) => d.data().ativo !== false && perfilExecuta(matriz, d.data().perfil, req)).map((d: any) => d.id));
   };
 
   const hojeRecife = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Recife" }).format(new Date()); // AAAA-MM-DD
@@ -363,18 +369,48 @@ async function startServer() {
       const nomeAtor = String(ator.usuario || ator.nome || "Usuário");
       const tipo = String(req.body?.tipo || "");
 
-      // "{{usuario}} logado." — só para o Admin, quando um não-Admin abre o app.
-      if (tipo === "login") {
-        if (ator.perfil === "admin") { res.json({ success: true, enviado: false }); return; }
-        const ref = adminDb.collection("notificacoes_enviadas").doc(`login_${decoded.uid}`);
+      // O aviso "{{usuario}} logado." ao Admin foi descontinuado: versões antigas do app
+      // em cache ainda podem mandar o evento — é aceito e ignorado.
+      if (tipo === "login") { res.json({ success: true, enviado: false }); return; }
+
+      // Ações do app (catálogo em config/notificacoesAcoes.ts). O texto vem do
+      // catálogo, nunca do navegador; só quem pode executar a ação é avisado.
+      if (tipo === "acao") {
+        const acaoId = String(req.body?.acao || "");
+        const acao: AcaoNotificavel | null = acaoNotificavel(acaoId);
+        const alvoId = String(req.body?.alvoId || "").slice(0, 120);
+        if (!acao || alvoId.includes("/") || (acao.alvo !== "nenhum" && !alvoId)) {
+          res.status(400).json({ success: false, error: "Evento inválido." });
+          return;
+        }
+        const matriz = await lerMatrizPermissoes(adminDb);
+        // Quem não pode executar a ação não dispara aviso (a gravação em si já
+        // é barrada pelas regras do Firestore): ignora sem erro.
+        if (!perfilExecuta(matriz, ator.perfil, acao)) { res.json({ success: true, enviado: false }); return; }
+        // Anti-repetição por usuário + ação + alvo.
+        const chave = `acao_${decoded.uid}_${acaoId}_${alvoId || "-"}`.replace(/[^\w.-]/g, "_").slice(0, 400);
+        const ref = adminDb.collection("notificacoes_enviadas").doc(chave);
         const ultimo = (await ref.get()).data()?.em?.toDate?.() as Date | undefined;
-        if (ultimo && Date.now() - ultimo.getTime() < INTERVALO_AVISO_LOGIN_MS) { res.json({ success: true, enviado: false }); return; }
+        if (ultimo && Date.now() - ultimo.getTime() < (acao.intervaloMs ?? INTERVALO_PADRAO_ACAO_MS)) { res.json({ success: true, enviado: false }); return; }
         await ref.set({ em: new Date() });
-        await enviarPush(adminDb, { uids: await uidsAtivos(adminDb, u => u.perfil === "admin") }, {
-          titulo: "Acesso ao app",
-          corpo: `${nomeAtor} logado.`,
-        });
-        res.json({ success: true, enviado: true });
+
+        let rota = ROTA_DA_PAGINA[acao.pagina] || "/";
+        let nomeConcurso = "";
+        let numeroIs = "";
+        if (acao.alvo === "concurso") {
+          const c = await adminDb.collection("concursos").doc(alvoId).get();
+          nomeConcurso = String(c.data()?.nome || alvoId);
+          rota = `/concursos/${encodeURIComponent(alvoId)}`;
+        } else if (acao.alvo === "is") {
+          const i = await adminDb.collection("inspecoes").doc(alvoId).get();
+          numeroIs = String(i.data()?.is || alvoId);
+          rota = i.exists ? `/inspecoes/${encodeURIComponent(alvoId)}` : "/inspecoes";
+        }
+        const corpo = acao.texto.replace("{ator}", nomeAtor).replace("{concurso}", nomeConcurso).replace("{is}", numeroIs);
+        const destino = await uidsQuePodemExecutar(adminDb, acao);
+        destino.delete(decoded.uid);
+        if (destino.size) await enviarPush(adminDb, { uids: destino }, { titulo: acao.titulo, corpo, rota });
+        res.json({ success: true, enviado: destino.size > 0 });
         return;
       }
 
@@ -393,8 +429,8 @@ async function startServer() {
         if (!concursoSnap.exists || !cand) { res.json({ success: true, enviados: [] }); return; }
         const nomeConcurso = String(concursoSnap.data()?.nome || concursoId);
         const rota = `/concursos/${encodeURIComponent(concursoId)}`;
-        // Todos os usuários ativos, menos quem realizou o evento.
-        const todos = await uidsAtivos(adminDb);
+        // Quem pode lançar status/finalizar IS na planilha, menos quem realizou o evento.
+        const todos = await uidsQuePodemExecutar(adminDb, { pagina: "concursosJRS", feature: "concursosJRS.editarDadosTabela" });
         todos.delete(decoded.uid);
         const data = String(cand.dataAgendamento || "");
         const enviados: string[] = [];
