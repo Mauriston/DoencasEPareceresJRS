@@ -766,16 +766,16 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
 
   const dateFilterLabel =
     dateFilterMode === 'hoje' ? 'Hoje' :
-    dateFilterMode === 'semana' ? 'Esta Semana' :
+    dateFilterMode === 'semana' ? 'Esta semana' :
     dateFilterMode === 'personalizado' && dateFilterCustom ? isoParaBR(dateFilterCustom) :
-    'Data: Todos';
+    'Todas as datas';
 
   const chipFilters: { key: string; label: string; value: number; filterValue: string; corAtivo: string }[] = [
     { key: 'apto', label: 'Aptos', value: countApto, filterValue: 'APTO', corAtivo: 'bg-navy border-navy text-white' },
     { key: 'inapto', label: 'Inaptos', value: countInapto, filterValue: 'INAPTO', corAtivo: 'bg-navy border-navy text-white' },
     { key: 'insuf', label: 'IDM', value: countInsuf, filterValue: 'INSUF DOCUMENTAL', corAtivo: 'bg-navy border-navy text-white' },
     { key: 'faltou', label: 'Faltas', value: countFaltou, filterValue: 'FALTOU', corAtivo: 'bg-navy border-navy text-white' },
-    { key: 'nao-finalizados', label: 'Não Finalizados', value: countNaoFinalizados, filterValue: 'nao-finalizados', corAtivo: 'bg-navy border-navy text-white' },
+    { key: 'nao-finalizados', label: 'Não finalizados', value: countNaoFinalizados, filterValue: 'nao-finalizados', corAtivo: 'bg-navy border-navy text-white' },
   ];
 
   const sugestoesCandidatos = useMemo(() => {

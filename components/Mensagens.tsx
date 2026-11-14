@@ -1,6 +1,9 @@
 // Ficheiro: components/Mensagens.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Container, PageHeader } from './ui/Page';
+import { Button, ButtonLink } from './ui/Button';
+import { Card } from './ui/Card';
+import { IconButton } from './ui/IconButton';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { chamarScript } from '../services/apiClient';
 import { gerarComGemini } from '../services/geminiAI';
@@ -146,15 +149,11 @@ export const Mensagens: React.FC = () => {
   return (
     <div className="flex flex-col flex-1 relative">
 
-      <Container size="form" className="py-6 md:py-8 pb-10 space-y-5">
+      <Container size="form" className="py-6 md:py-8 pb-10 space-y-6">
         <PageHeader title="Mensagens" description="Minutas das mensagens de IS auxiliadas por IA." />
 
 
-        <div className="bg-white rounded-2xl border border-line p-5 space-y-4">
-          <h2 className="font-heading font-bold text-navy text-base flex items-center gap-2 border-b border-line pb-2">
-            <span className="material-symbols-outlined text-navy">add_photo_alternate</span>
-            Imagens da IS
-          </h2>
+        <Card as="section" titleAs="h2" title="Imagens da IS" className="space-y-4">
 
           <p className="text-xs text-ink-3 leading-relaxed">
             Adicione <strong>2 imagens por IS</strong>: a 1ª com os <strong>dados da inspeção</strong> e a 2ª com o <strong>resultado/laudo</strong>.
@@ -164,11 +163,11 @@ export const Mensagens: React.FC = () => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-line rounded-xl py-8 flex flex-col items-center justify-center gap-2 text-ink-3 hover:border-navy hover:text-navy transition-colors bg-paper/50 active:scale-[0.98]"
+            className="w-full border-2 border-dashed border-line rounded-lg py-8 flex flex-col items-center justify-center gap-2 text-ink-3 hover:border-navy hover:text-navy transition-colors bg-paper/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
           >
-            <span className="material-symbols-outlined text-[40px]">photo_camera</span>
+            <span className="material-symbols-outlined text-[40px]" aria-hidden="true">photo_camera</span>
             <span className="text-sm font-semibold">Tirar foto ou selecionar imagem</span>
-            <span className="text-xs opacity-60">
+            <span className="text-xs">
               {isDesktop ? 'Galeria · Arquivos · Colar (Ctrl+V)' : 'Câmera · Galeria · Arquivos do dispositivo'}
             </span>
           </button>
@@ -187,9 +186,9 @@ export const Mensagens: React.FC = () => {
                 const img1 = images[isIdx * 2];
                 const img2 = images[isIdx * 2 + 1];
                 return (
-                  <div key={isIdx} className="bg-paper rounded-xl p-3 border border-line">
-                    <p className="text-xs font-bold text-navy/50 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-xs">assignment</span>
+                  <div key={isIdx} className="bg-paper rounded-lg p-3 border border-line">
+                    <p className="eyebrow mb-2 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px]" aria-hidden="true">assignment</span>
                       IS {isIdx + 1}
                       {!img2 && <span className="text-gold-600 font-semibold">· aguardando Img 2</span>}
                     </p>
@@ -206,14 +205,10 @@ export const Mensagens: React.FC = () => {
                               <span className="absolute top-1.5 left-1.5 bg-navy/75 text-white text-xs font-bold px-1.5 py-0.5 rounded backdrop-blur-sm">
                                 Img {offset + 1}
                               </span>
-                              <button
-                                type="button"
-                                onClick={() => removeImage(isIdx * 2 + offset)}
-                                aria-label="Remover imagem" title="Remover imagem"
-                                className="absolute top-1 right-1 bg-wine text-white rounded-full w-11 h-11 flex items-center justify-center hover:bg-wine-dark transition-colors "
-                              >
-                                <span className="material-symbols-outlined text-[20px]">close</span>
-                              </button>
+                              <IconButton
+                                icon="close" label={`Remover imagem ${offset + 1} da IS ${isIdx + 1}`} variant="overlay" size="sm"
+                                className="absolute top-1 right-1" onClick={() => removeImage(isIdx * 2 + offset)}
+                              />
                             </>
                           ) : (
                             <div className="w-full aspect-video border-2 border-dashed border-gold-200 rounded-lg flex flex-col items-center justify-center gap-1 bg-gold-50/50 text-gold-400">
@@ -231,95 +226,48 @@ export const Mensagens: React.FC = () => {
               <div className="flex items-center justify-between pt-1 px-1">
                 <span className="text-xs text-ink-3 flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-sm">photo_library</span>
-                  {images.length} imagem{images.length !== 1 ? 's' : ''} · {numIS} IS completa{numIS !== 1 ? 's' : ''}
+                  {images.length} {images.length === 1 ? 'imagem' : 'imagens'} · {numIS} {numIS === 1 ? 'IS completa' : 'IS completas'}
                   {hasOddImage && (
                     <span className="text-gold-600 font-semibold">· par incompleto</span>
                   )}
                 </span>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="text-xs text-wine-500 hover:text-wine-600 font-semibold flex items-center gap-1 transition-colors"
-                >
-                  <span className="material-symbols-outlined text-sm">delete</span>
-                  Limpar tudo
-                </button>
+                <Button variant="ghost" size="sm" icon="delete" className="!text-wine" onClick={handleReset}>Limpar tudo</Button>
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
         {error && (
-          <div className="bg-wine-50 border border-wine-200 text-wine-700 text-sm p-4 rounded-xl flex items-start gap-2.5">
+          <div role="alert" className="bg-wine-50 border border-wine-200 text-wine-700 text-sm p-4 rounded-xl flex items-start gap-2.5">
             <span className="material-symbols-outlined text-wine-500 text-[18px] shrink-0 mt-0.5">error</span>
             <p className="leading-relaxed">{error}</p>
           </div>
         )}
 
         {!minuta && (
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={isLoading || images.length === 0 || hasOddImage}
-            className="w-full py-4 bg-navy text-white font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-navy/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm"
-          >
-            {isLoading ? (
-              <>
-                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
-                Analisando e gerando minuta...
-              </>
-            ) : (
-              <>
-                <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
-                Gerar Minuta
-              </>
-            )}
-          </button>
+          <Button icon="auto_awesome" fullWidth loading={isLoading} disabled={images.length === 0 || hasOddImage} onClick={handleGenerate}>
+            {isLoading ? 'Analisando e gerando minuta…' : 'Gerar minuta'}
+          </Button>
         )}
 
         {isLoading && (
           <p className="text-center text-xs text-ink-3 animate-pulse -mt-2">
-            O Gemini AI está analisando as imagens e redigindo a minuta. Pode levar alguns segundos...
+            O Gemini AI está analisando as imagens e redigindo a minuta. Pode levar alguns segundos…
           </p>
         )}
 
         {minuta && (
-          <div className="bg-white rounded-2xl border border-line overflow-hidden animate-fade-in">
-            <div className="bg-navy px-5 py-3.5 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-white">
-                <span className="material-symbols-outlined text-[18px] text-gold">task_alt</span>
-                <span className="font-heading font-bold text-sm uppercase tracking-wide">Minuta Gerada</span>
-              </div>
-              <div className="flex items-center gap-3">
-                {docUrl && (
-                  <a href={docUrl} target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors" title="Abrir no Google Docs">
-                    <span className="material-symbols-outlined text-[20px]">open_in_new</span>
-                  </a>
-                )}
-                <button type="button" onClick={handleCopy} className="text-white/60 hover:text-white transition-colors" title="Copiar texto">
-                  <span className="material-symbols-outlined text-[20px]">{copied ? 'check_circle' : 'content_copy'}</span>
-                </button>
-              </div>
-            </div>
+          <Card as="section" padding="none" titleAs="h2" title="Minuta gerada" className="animate-fade-in">
+            <pre className="px-5 pb-5 text-sm text-navy whitespace-pre-wrap font-body leading-relaxed border-b border-line">{minuta}</pre>
 
-            <pre className="p-5 text-sm text-navy whitespace-pre-wrap font-body leading-relaxed border-b border-line">{minuta}</pre>
-
-            <div className="px-5 py-4 flex gap-2.5">
-              {docUrl && (
-                <a href={docUrl} target="_blank" rel="noopener noreferrer" className="flex-1 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-green-700 transition-colors active:scale-[0.97]">
-                  <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                  Abrir no Drive
-                </a>
-              )}
-              <button type="button" onClick={handleCopy} className="flex-1 py-2.5 bg-thead text-ink rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-line transition-colors active:scale-[0.97]">
-                <span className="material-symbols-outlined text-[16px]">{copied ? 'check' : 'content_copy'}</span>
-                {copied ? 'Copiado!' : 'Copiar'}
-              </button>
-              <button type="button" onClick={handleReset} className="py-2.5 px-4 bg-thead text-ink-3 rounded-lg text-sm font-semibold hover:bg-line transition-colors active:scale-[0.97]" title="Nova minuta">
-                <span className="material-symbols-outlined text-[16px]">refresh</span>
-              </button>
+            {/* Uma primária por região (B4): Abrir no Drive; copiar e nova minuta como secundárias. */}
+            <div className="px-5 py-4 flex flex-wrap gap-2">
+              <Button variant="ghost" icon="refresh" onClick={handleReset}>Nova minuta</Button>
+              <span className="flex-1" />
+              <Button variant={docUrl ? 'secondary' : 'primary'} icon={copied ? 'check' : 'content_copy'} onClick={handleCopy}>{copied ? 'Copiado' : 'Copiar'}</Button>
+              {docUrl && <ButtonLink href={docUrl} icon="open_in_new">Abrir no Drive</ButtonLink>}
             </div>
-          </div>
+          </Card>
         )}
       </Container>
     </div>

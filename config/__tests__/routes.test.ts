@@ -67,6 +67,7 @@ describe('mapa de rotas (config/routes.ts)', () => {
     expect(ehRotaPublica('/publico/doencas')).toBe(true);
     expect(ehRotaPublica('/publico/doencas/cegueira/0')).toBe(true);
     expect(ehRotaPublica('/publico/portaria')).toBe(true);
+    expect(ehRotaPublica('/publico/sobre')).toBe(true);
     expect(ehRotaPublica('/inspecoes')).toBe(false);
     expect(viewForPath('/publico/doencas')).toBeUndefined();
   });

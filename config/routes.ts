@@ -27,7 +27,7 @@ export const ROUTES: RouteDef[] = [
   { view: 'painel', path: '/painel' },
   // Férias e afastamentos (Admin, médicos JRS/MPI e Secretaria; menu Administração).
   { view: 'ferias', path: '/ferias' },
-  // Sobre o app: principais funcionalidades por área (começa só para o Admin; liberada por perfil na matriz).
+  // Sobre o app: principais funcionalidades por área (liberada a todos por padrão; ajustável na matriz).
   { view: 'sobre', path: '/sobre' },
   { view: 'guide', path: '/beneficios/doencas/:doencaId?/:diagnosticoIdx?' },
   { view: 'portaria', path: '/beneficios/portaria' },
@@ -141,8 +141,11 @@ export const viewForPath = (pathname: string): NavItem | undefined =>
 // conteúdo já vem estático no bundle (constants.ts e content/*.md).
 export const PUBLICO_DOENCAS = '/publico/doencas';
 export const PUBLICO_PORTARIA = '/publico/portaria';
+// Página informativa sobre o app (auditoria v3, 6e): só texto e capturas com dados fictícios; sem
+// nenhum caminho para dentro do app (ShellPublico variante "informativo").
+export const PUBLICO_SOBRE = '/publico/sobre';
 
-const PADROES_PUBLICOS = [`${PUBLICO_DOENCAS}/:doencaId?/:diagnosticoIdx?`, PUBLICO_PORTARIA];
+const PADROES_PUBLICOS = [`${PUBLICO_DOENCAS}/:doencaId?/:diagnosticoIdx?`, PUBLICO_PORTARIA, PUBLICO_SOBRE];
 
 /** A URL é de uma das páginas públicas (não passa pela tela de login). */
 export const ehRotaPublica = (pathname: string): boolean =>

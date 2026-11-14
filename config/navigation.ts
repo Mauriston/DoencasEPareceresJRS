@@ -81,7 +81,7 @@ export const getNavCategories = (
     });
   }
 
-  // Ajuda: "Sobre o app" (matriz de permissões; começa só para o Admin).
+  // Ajuda: "Sobre o app" (matriz de permissões; liberada a todos por padrão).
   const sobre = pageMap.get('sobre')!;
   if (canAccessPage('sobre', perfil)) {
     categories.push({

@@ -277,26 +277,74 @@ export const Inspecoes: React.FC = () => {
     setDetalheId(null);
   }, [isIdDaRota, lista]);
 
-  const intervalo = useMemo(() => intervaloDoPeriodo(periodo.id, hoje, periodo.custom), [periodo, hoje]);
+  const intervalo = useMemo(() => (periodo ? intervaloDoPeriodo(periodo.id, hoje, periodo.custom) : null), [periodo, hoje]);
+  // Minhas = o usuário como perito; senão o perito do chip (?perito=uid).
+  const peritoAlvo = minhas ? (usuario?.uid ?? '') : peritoParam;
 
-  // Perito + período + busca (sem a situação): base dos contadores do filtro de situação.
-  const semSituacao = useMemo(() => {
+  // Perito + período + busca (sem aba nem chips): base das contagens das abas e dos chips.
+  const base = useMemo(() => {
     const termos = normalizarBusca(busca).split(/\s+/).filter(Boolean);
     return (lista ?? [])
-      .filter(i => (peritoFiltro ? i.peritoUid === peritoFiltro : true))
-      .filter(i => passaNoPeriodo(i, intervalo))
+      .filter(i => (peritoAlvo ? i.peritoUid === peritoAlvo : true))
+      .filter(i => (intervalo ? passaNoPeriodo(i, intervalo) : true))
       .filter(i => { const alvo = normalizarBusca(`${i.is} ${i.inspecionado} ${i.inspecionadoId} ${i.finalidade} ${i.peritoNome} ${STATUS_IS[statusEfetivoIS(i, hoje)].rotulo}`); return termos.every(t => alvo.includes(t)); });
-  }, [lista, peritoFiltro, intervalo, busca, hoje]);
+  }, [lista, peritoAlvo, intervalo, busca, hoje]);
 
-  const totais = useMemo(() => ({
-    aberta: semSituacao.filter(i => i.situacao === 'aberta').length,
-    andamento: semSituacao.filter(i => i.situacao === 'andamento').length,
-    finalizada: semSituacao.filter(i => i.situacao === 'finalizada').length,
-    atrasadas: lista?.filter(i => statusEfetivoIS(i, hoje) === 'atrasada').length ?? 0,
-  }), [semSituacao, lista, hoje]);
+  const ativasBase = useMemo(() => base.filter(i => i.situacao !== 'finalizada'), [base]);
+  const finalizadasBase = useMemo(() => ordenarFinalizadasIS(base.filter(i => i.situacao === 'finalizada')), [base]);
+  const contagens = useMemo(() => ({
+    ativas: ativasBase.length,
+    finalizadas: finalizadasBase.length,
+    atrasadas: ativasBase.filter(i => statusEfetivoIS(i, hoje) === 'atrasada').length,
+    semAgendamento: ativasBase.filter(i => !i.dataEntrevista).length,
+  }), [ativasBase, finalizadasBase, hoje]);
 
-  // Agenda: não agendadas no topo; depois um grupo por dia da entrevista (crescente; no dia, pela hora).
-  const grupos = useMemo(() => agruparAgendaIS(semSituacao.filter(i => situacoes.includes(i.situacao))), [semSituacao, situacoes]);
+  // Ordem de trabalho (Ativas) ou meses (Finalizadas, paginadas).
+  const grupos: GrupoIS[] = useMemo(() => {
+    if (aba === 'finalizadas') return agruparFinalizadasIS(finalizadasBase.slice(0, limiteFinalizadas));
+    const filtradas = situacao === 'atrasadas' ? ativasBase.filter(i => statusEfetivoIS(i, hoje) === 'atrasada')
+      : situacao === 'sem_agendamento' ? ativasBase.filter(i => !i.dataEntrevista) : ativasBase;
+    return agruparAtivasIS(filtradas, hoje);
+  }, [aba, situacao, ativasBase, finalizadasBase, limiteFinalizadas, hoje]);
+  const restantesFinalizadas = aba === 'finalizadas' ? Math.max(0, finalizadasBase.length - limiteFinalizadas) : 0;
+  const filtrosAtivos = !!situacao && situacao !== 'finalizadas' || !!peritoAlvo || !!periodo || !!busca;
+  const limparFiltros = () => { mudarURL({ situacao: aba === 'finalizadas' ? 'finalizadas' : null, perito: null, minhas: null }); setPeriodo(null); setBusca(''); };
+
+  /** Cabeçalho do dia: turno de concurso, bloqueios (todos os peritos ou do perito filtrado), férias e afastamentos. */
+  const avisosDoDia = (data: string): AvisoDiaIS[] => [
+    ...diasConcursos.filter(c => c.data === data).map(c => ({ chave: c.chave, icone: 'fact_check', texto: `Concurso: ${tituloDiaConcurso(c)}` })),
+    ...bloqueios
+      .filter(b => !ehBloqueioDeConcurso(b) && bloqueioNoDia(b, data) && (!peritoAlvo || b.peritoUid === '*' || b.peritoUid === peritoAlvo))
+      .map(b => ({ chave: b.id, icone: b.dataFim && b.dataFim !== b.data ? 'event_busy' : 'block', texto: textoBloqueio(b) })),
+  ];
+
+  // Celular, quem agenda: 1º horário livre (de algum perito, ou do filtrado) em cada intervalo entre IS do dia.
+  const ocupados = useMemo(() => (desktop || !podeAgendar ? new Set<string>() : ocupadosDe(lista ?? [])), [desktop, podeAgendar, lista]);
+  const livresDoGrupo = (g: GrupoIS): Map<string, string> => {
+    const livres = new Map<string, string>();
+    const data = g.data;
+    if (!data || data < hoje || !ehDiaUtil(data)) return livres;
+    const agora = new Date();
+    const minAgora = agora.getHours() * 60 + agora.getMinutes();
+    const candidatos = peritoAlvo ? peritos.filter(p => p.uid === peritoAlvo) : peritos;
+    const livre = (hhmm: string) => {
+      const t = turnoDoSlot(hhmm);
+      if (!t || (data === hoje && minutosDe(hhmm) <= minAgora)) return false;
+      return candidatos.some(p => estadoDoSlot(p.uid, data, hhmm, peritoAtendeNoTurno(config, p.uid, data, t), bloqueios, ocupados) === 'livre');
+    };
+    const slots = TURNOS.flatMap(t => slotsDoTurno(t.id));
+    const itens = g.itens.filter(i => i.dataEntrevista);
+    itens.forEach((is, idx) => {
+      const proxima = itens[idx + 1];
+      if (!proxima) return;
+      const hora = horaDeEntrevista(is.dataEntrevista);
+      const fim = minutosDe(hora) + duracaoDaIS(is);
+      const inicioProxima = minutosDe(horaDeEntrevista(proxima.dataEntrevista));
+      const slot = slots.find(h => minutosDe(h) >= fim && minutosDe(h) + 20 <= inicioProxima && livre(h));
+      if (slot) livres.set(is.id, slot);
+    });
+    return livres;
+  };
 
   // ----- ações -----
 
@@ -434,32 +482,86 @@ export const Inspecoes: React.FC = () => {
 
   // ----- apresentação -----
 
-  const statusDe = (is: InspecaoRecord) => STATUS_IS[statusEfetivoIS(is, hoje)];
-  const prazoTexto = (is: InspecaoRecord): string | null => {
-    if (is.status !== 'aberta' || is.dataEntrevista) return null;
-    return `${diasEmAberto(is.dataAbertura, hoje)}/${prazoAtrasoDias(is.grupoFinalidade)} dias`;
-  };
-
   const peritosFiltraveis = peritos;
+  const emails = useEmailsIS({
+    inspecoes: lista ?? [], militares, hoje,
+    podeEmailAgenda: ehAdmin, onEmailAgenda: () => setEmailAgendaAberto(true),
+    onEnviarAgendamento: is => setFilaAgendamento(f => [...f, { isId: is.id, dataEntrevista: is.dataEntrevista, origem: 'menu' }]),
+    onEnviarResultado: setEnviandoResultado,
+    onAviso: avisar,
+  });
+  // ⋮ do cabeçalho (3b/M1): Bloqueios e os e-mails da JRS (com as pendências em cada item).
+  const itensMais: ItemMenu[] = [
+    ...(podeBloquear ? [{ rotulo: 'Bloqueios da agenda', icone: 'block', onClick: () => setBloqueiosAberto(true) }] : []),
+    ...(podeEmails ? emails.itens : []),
+  ];
+  const menuMais = itensMais.length > 0
+    ? <MenuAcoes rotulo={emails.total && podeEmails ? `Mais ações (${emails.total} e-mail${emails.total !== 1 ? 's' : ''} pendente${emails.total !== 1 ? 's' : ''})` : 'Mais ações'} itens={itensMais} />
+    : null;
+
+  const nomePeritoFiltro = peritoParam ? (peritos.find(p => p.uid === peritoParam)?.usuario ?? 'Perito') : '';
+  const souPerito = !!usuario && peritos.some(p => p.uid === usuario.uid);
+  const abas: { id: Aba; rotulo: string; n: number }[] = [
+    { id: 'ativas', rotulo: 'Ativas', n: contagens.ativas },
+    { id: 'finalizadas', rotulo: 'Finalizadas', n: contagens.finalizadas },
+  ];
+  const aoTeclaAbas = (e: React.KeyboardEvent) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const proxima: Aba = aba === 'ativas' ? 'finalizadas' : 'ativas';
+    irParaAba(proxima);
+    requestAnimationFrame(() => document.getElementById(`inspecoes-aba-${proxima}`)?.focus());
+  };
+  const badge = (n: number, alerta = false) => (
+    <span className={`min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full text-xs font-bold tabular-nums ${alerta ? 'bg-wine text-white' : 'bg-thead text-ink-3 border border-line'}`}>{n}</span>
+  );
+
+  const conteudoLista = erroCarga ? (
+    <p role="alert" className="bg-white rounded-xl border border-line md:border-0 md:border-t md:rounded-none p-6 text-sm font-semibold text-wine">{erroCarga}</p>
+  ) : lista === null ? (
+    <p className="bg-white rounded-xl border border-line md:border-0 md:border-t md:rounded-none p-10 text-center text-sm text-ink-3" role="status">Carregando inspeções…</p>
+  ) : grupos.length === 0 ? (
+    <div className="bg-white rounded-xl border border-line md:border-0 md:border-t md:rounded-none">
+      <EmptyState
+        icon="event_available" title="Nenhuma IS encontrada"
+        description={lista.length === 0 ? 'Cadastre a primeira IS para começar.' : 'Ajuste os filtros, o período ou a busca.'}
+        action={filtrosAtivos ? <Button variant="secondary" onClick={limparFiltros}>Limpar filtros</Button> : undefined}
+      />
+    </div>
+  ) : (
+    <TabelaAgendaIS
+      grupos={grupos} hoje={hoje}
+      nomeDe={is => nomeCurto(is.inspecionado)} omDe={omDe}
+      onAbrir={is => setDetalheId(is.id)}
+      podeTrocarPerito={is => !['cancelada', 'tis_assinado'].includes(is.status)}
+      onTrocarPerito={podeAgendar ? is => setTrocandoPerito({ is, dataHora: is.dataEntrevista, modo: 'troca' }) : undefined}
+      itensDe={itensDe}
+      onNomeCopiado={(nome, ok) => avisar(ok ? `Nome copiado: ${nome}` : 'Não foi possível copiar; selecione o nome e copie manualmente.', ok ? 'success' : 'error')}
+      avisosDe={avisosDoDia}
+      livresDe={podeAgendar && !desktop && aba === 'ativas' ? livresDoGrupo : undefined}
+      onAgendarHorario={podeAgendar ? setHorarioVazio : undefined}
+      rodape={restantesFinalizadas > 0 ? (
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Button variant="ghost" size="sm" icon="expand_more" onClick={() => setLimiteFinalizadas(l => l + PAGINA_FINALIZADAS)}>
+            Mostrar mais {Math.min(PAGINA_FINALIZADAS, restantesFinalizadas)} finalizadas
+          </Button>
+          <span className="text-xs text-ink-3 tabular-nums">{limiteFinalizadas} de {finalizadasBase.length}</span>
+        </span>
+      ) : undefined}
+    />
+  );
 
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
-      <Container size="data" className="py-6 md:py-8 pb-10 space-y-4">
+      <Container size="data" className={`py-6 md:py-8 ${podeCadastrar ? 'pb-28 md:pb-10' : 'pb-10'} space-y-4`}>
         <PageHeader
           title="Inspeções de Saúde"
-          actions={(
-            <>
-              {podeBloquear && <IconButton variant="secondary" icon="block" label="Bloqueios" onClick={() => setBloqueiosAberto(true)} />}
-              {podeEmails && (
-                <BotaoEnviarEmail
-                  inspecoes={lista ?? []} militares={militares} hoje={hoje}
-                  podeEmailAgenda={ehAdmin} onEmailAgenda={() => setEmailAgendaAberto(true)}
-                  onEnviarAgendamento={is => setFilaAgendamento(f => [...f, { isId: is.id, dataEntrevista: is.dataEntrevista, origem: 'menu' }])}
-                  onEnviarResultado={setEnviandoResultado}
-                  onAviso={avisar}
-                />
-              )}
+          description="Cadastro, agenda e prazos das IS (exceto concursos)."
+          actions={menuMais || podeCadastrar ? (
+            // Celular: o ⋮ vai para a linha das abas e "Abrir IS" vira o FAB.
+            <div className="hidden md:flex items-center gap-2">
+              {menuMais}
               {podeCadastrar && (
                 <MenuAcoes
                   rotulo="Abrir IS" botao={{ texto: 'Abrir IS', icone: 'add', primario: true }}
@@ -469,73 +571,103 @@ export const Inspecoes: React.FC = () => {
                   ]}
                 />
               )}
-            </>
-          )}
+            </div>
+          ) : undefined}
         />
 
-        {totais.atrasadas > 0 && (
-          <button
-            type="button"
-            onClick={() => { setVisao('tabela'); setSituacoes(['aberta']); setBusca('atrasada'); }}
-            className="w-full text-left bg-wine/10 border border-wine/30 rounded-xl px-4 py-3 text-sm font-semibold text-wine flex items-center gap-2 min-h-[44px]"
-          >
-            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">warning</span>
-            {totais.atrasadas} IS atrasada{totais.atrasadas !== 1 ? 's' : ''} (abertas e sem agendamento além do prazo). Toque para ver.
-          </button>
-        )}
-
-        {/* Barra de filtros (só na Tabela): Situação → Período → Perito → Tabela/Calendário → Busca (uma linha no
-            desktop largo). No Calendário não há filtros: a alternância Tabela/Calendário vai para a barra do calendário. */}
-        {visao === 'tabela' && (
-          <div className="bg-white rounded-xl border border-line p-3 flex flex-wrap xl:flex-nowrap items-center gap-2">
-            <FiltroSituacaoIS value={situacoes} onChange={setSituacoes} contadores={totais} className="flex-1 min-w-[9rem] sm:flex-none sm:w-48 xl:w-44 xl:shrink-0" />
-            <FiltroPeriodo value={periodo} onChange={setPeriodo} className="flex-1 min-w-[9rem] sm:flex-none sm:w-52 xl:w-48 xl:shrink-0" />
-            <select aria-label="Filtrar por perito" value={peritoFiltro} onChange={e => setPeritoFiltro(e.target.value)} className={`${controlClass} !w-auto flex-1 min-w-0 sm:flex-none sm:min-w-[12rem] xl:max-w-[14rem]`}>
-              <option value="">Todos os peritos</option>
-              {peritosFiltraveis.map(p => <option key={p.uid} value={p.uid}>{p.usuario}</option>)}
-            </select>
-            <AlternarVisao value={visao} onChange={setVisao} />
-            <div className="relative flex-1 min-w-0 sm:flex-none sm:w-64 xl:w-72 xl:min-w-[10rem] xl:shrink">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
-              <input type="search" aria-label="Buscar IS" title="Busca por nº da IS, inspecionado, NIP, finalidade, perito ou status" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar…" className={`${controlClass} pl-10`} autoComplete="off" />
-            </div>
-          </div>
-        )}
-
-        {erroCarga ? (
-          <p role="alert" className="bg-white rounded-xl border border-line p-6 text-sm font-semibold text-wine">{erroCarga}</p>
-        ) : lista === null ? (
-          <p className="bg-white rounded-xl border border-line p-10 text-center text-sm text-ink-3" role="status">Carregando inspeções…</p>
-        ) : visao === 'calendario' ? (
-          <CalendarioIS
-            inspecoes={lista} bloqueios={bloqueiosTodos} config={config} peritoUid="" diasConcursos={diasConcursos}
-            controleVisao={<AlternarVisao value={visao} onChange={setVisao} />}
-            onAbrirConcurso={podeVerConcursos ? id => nav?.navigate(concursoPath(id)) : undefined}
-            onAbrir={is => setDetalheId(is.id)}
-            onNovoNoHorario={podeAgendar ? setHorarioVazio : undefined}
-            onReagendar={podeAgendar ? reagendarArrastando : undefined}
-            onTrocarPerito={podeAgendar ? (is, dataHora) => setTrocandoPerito({ is, dataHora, modo: 'arraste' }) : undefined}
-            onAviso={avisar}
-          />
-        ) : grupos.length === 0 ? (
-          <div className="bg-white rounded-xl border border-line">
-            <EmptyState
-              icon="event_available" title="Nenhuma IS encontrada"
-              description={lista.length === 0 ? 'Cadastre a primeira IS para começar.' : situacoes.length === 0 ? 'Selecione ao menos uma situação.' : 'Ajuste a situação, o período, o perito ou a busca.'}
-            />
-          </div>
+        {visaoEfetiva === 'calendario' ? (
+          erroCarga ? <p role="alert" className="bg-white rounded-xl border border-line p-6 text-sm font-semibold text-wine">{erroCarga}</p>
+            : lista === null ? <p className="bg-white rounded-xl border border-line p-10 text-center text-sm text-ink-3" role="status">Carregando inspeções…</p>
+              : (
+                <CalendarioIS
+                  inspecoes={lista} bloqueios={bloqueiosTodos} config={config} peritoUid="" diasConcursos={diasConcursos}
+                  controleVisao={<AlternarVisao value={visao} onChange={setVisao} />}
+                  onAbrirConcurso={podeVerConcursos ? id => nav?.navigate(concursoPath(id)) : undefined}
+                  onAbrir={is => setDetalheId(is.id)}
+                  onNovoNoHorario={podeAgendar ? setHorarioVazio : undefined}
+                  onReagendar={podeAgendar ? reagendarArrastando : undefined}
+                  onTrocarPerito={podeAgendar ? (is, dataHora) => setTrocandoPerito({ is, dataHora, modo: 'arraste' }) : undefined}
+                  onAviso={avisar}
+                />
+              )
         ) : (
-          <TabelaAgendaIS
-            grupos={grupos} hoje={hoje}
-            nomeDe={is => nomeCurto(is.inspecionado)} omDe={omDe} statusDe={statusDe} prazoDe={prazoTexto}
-            onAbrir={is => setDetalheId(is.id)}
-            podeTrocarPerito={is => !['cancelada', 'tis_assinado'].includes(is.status)}
-            onTrocarPerito={podeAgendar ? is => setTrocandoPerito({ is, dataHora: is.dataEntrevista, modo: 'troca' }) : undefined}
-            itensDe={itensDe}
-            onNomeCopiado={(nome, ok) => avisar(ok ? `Nome copiado: ${nome}` : 'Não foi possível copiar; selecione o nome e copie manualmente.', ok ? 'success' : 'error')}
-          />
+          <section aria-label="Lista de IS" className="md:bg-white md:border md:border-line md:rounded-xl md:overflow-clip">
+            {/* Abas sublinhadas (ouro = ativa) com a contagem · vista só com ícone (G2) · ⋮ no celular. */}
+            <div className="flex items-end justify-between gap-2 border-b border-line md:px-4">
+              <div role="tablist" aria-label="Situação das IS" className="flex gap-1" onKeyDown={aoTeclaAbas}>
+                {abas.map(t => {
+                  const ativa = aba === t.id;
+                  return (
+                    <button
+                      key={t.id} type="button" role="tab" id={`inspecoes-aba-${t.id}`} aria-selected={ativa} aria-controls="inspecoes-lista" tabIndex={ativa ? 0 : -1}
+                      onClick={() => irParaAba(t.id)}
+                      className={`inline-flex items-center gap-2 h-12 px-3 -mb-px border-b-[3px] text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${ativa ? 'border-gold text-navy' : 'border-transparent text-ink-3 hover:text-navy'}`}
+                    >
+                      {t.rotulo}
+                      <span className={`min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full text-xs tabular-nums ${ativa ? 'bg-navy text-white' : 'bg-thead text-ink-3'}`}>{t.n}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-1 pb-1.5">
+                {desktop && <AlternarVisao value={visao} onChange={setVisao} />}
+                {!desktop && menuMais}
+              </div>
+            </div>
+
+            {/* Busca e filtros em chips — no celular, uma linha só com rolagem lateral (M3); a busca abre pelo ícone. */}
+            <div className="py-3 md:px-4 flex flex-col md:flex-row md:items-center gap-2">
+              <SearchField
+                value={busca} onChange={setBusca} label="Buscar IS" placeholder="Nº da IS, inspecionado, NIP ou finalidade" autoComplete="off"
+                className={`${buscaAberta || busca ? '' : 'hidden'} md:block md:flex-1 md:min-w-[14rem] md:max-w-md`}
+              />
+              <div className="flex items-center gap-2 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible md:flex-wrap [scrollbar-width:none]">
+                <IconButton
+                  icon={buscaAberta ? 'search_off' : 'search'} label={buscaAberta ? 'Fechar a busca' : 'Buscar'} variant="secondary"
+                  className="md:hidden shrink-0" aria-expanded={buscaAberta} onClick={() => setBuscaAberta(a => !a)}
+                />
+                {(contagens.atrasadas > 0 || situacao === 'atrasadas') && (
+                  <FilterChip ativo={situacao === 'atrasadas'} icon="warning" onAlternar={() => alternarSituacao('atrasadas')} className="shrink-0">
+                    Atrasadas {badge(contagens.atrasadas, true)}
+                  </FilterChip>
+                )}
+                <FilterChip ativo={situacao === 'sem_agendamento'} icon="event_busy" onAlternar={() => alternarSituacao('sem_agendamento')} className="shrink-0">
+                  Sem agendamento {badge(contagens.semAgendamento)}
+                </FilterChip>
+                {(souPerito || minhas) && (
+                  <FilterChip ativo={minhas} icon="person" onAlternar={() => mudarURL({ minhas: minhas ? null : '1', perito: null })} className="shrink-0">Minhas</FilterChip>
+                )}
+                <FiltroPopover variante="chip" nome="Perito" icone="stethoscope" resumo={nomePeritoFiltro || 'Perito'} ativo={!!peritoParam}>
+                  {fechar => (
+                    <fieldset>
+                      <legend className="sr-only">Perito</legend>
+                      {[{ uid: '', usuario: 'Todos os peritos' }, ...peritosFiltraveis].map(p => (
+                        <label key={p.uid || 'todos'} className="flex items-center gap-3 min-h-10 px-3 cursor-pointer hover:bg-thead">
+                          <input
+                            type="radio" name="inspecoes-perito" className="w-5 h-5 shrink-0 accent-navy" checked={peritoParam === p.uid && !minhas || (!p.uid && !peritoParam && !minhas)}
+                            onChange={() => { mudarURL({ perito: p.uid || null, minhas: null }); fechar(); }}
+                          />
+                          <span className={`text-sm ${peritoParam === p.uid ? 'font-bold text-navy' : 'font-semibold text-ink'}`}>{p.usuario}</span>
+                        </label>
+                      ))}
+                    </fieldset>
+                  )}
+                </FiltroPopover>
+                <FiltroPeriodo variante="chip" value={periodo} onChange={setPeriodo} onLimpar={() => setPeriodo(null)} />
+              </div>
+            </div>
+
+            <div id="inspecoes-lista" role="tabpanel" aria-labelledby={`inspecoes-aba-${aba}`}>{conteudoLista}</div>
+          </section>
         )}
       </Container>
+
+      {/* Celular: "Abrir IS" como FAB, só para quem cadastra IS (4d); "Enviar print" na pilha. */}
+      <FabAcoes acoes={[
+        { id: 'abrir-is', rotulo: 'Abrir IS', icone: 'add', onClick: () => setNovo({}), permitido: podeCadastrar },
+        { id: 'is-print', rotulo: 'Enviar print', icone: 'photo_camera', onClick: () => setPorFoto(true), permitido: podeCadastrar },
+      ]} />
+      {podeEmails && emails.dialogos}
 
       {novo && usuario && (
         <InspecaoForm

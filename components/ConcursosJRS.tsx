@@ -2,7 +2,8 @@
 // Página Concursos: alterna entre a lista, a planilha de um concurso, a criação (/concursos/novo) e as
 // visões de um dia (/concursos/dia/AAAA-MM-DD) e de IS atrasadas (/concursos/atrasadas).
 import React, { useEffect, useState } from 'react';
-import { Container } from './ui/Page';
+import { Container, PageHeader } from './ui/Page';
+import { Card } from './ui/Card';
 import { useParams } from 'react-router-dom';
 import { useBreadcrumbs } from '../context/BreadcrumbContext';
 import { hojeISO } from '../utils/inspecoes';
@@ -23,24 +24,40 @@ import { ConcursoDetalhe } from './concursos/ConcursoDetalhe';
 // DIA DE CONCURSO — candidatos agendados no dia, uma tabela por concurso (linhas agrupadas por concurso)
 // =========================================================================
 
+const Carregando: React.FC = () => (
+  <div className="flex justify-center py-16" role="status" aria-label="Carregando"><span className="material-symbols-outlined animate-spin text-[32px] text-navy" aria-hidden="true">progress_activity</span></div>
+);
+
+/** P2: a rota tem o seu h1 (PageHeader) e cada concurso entra como seção h2 (ConcursoDetalhe embutido). */
+const CabecalhoRota: React.FC<{ title: string; description?: string }> = ({ title, description }) => (
+  <Container size="data" className="pt-6 md:pt-8">
+    <PageHeader title={title} description={description} className="mb-0" />
+  </Container>
+);
+
 const ConcursosDia: React.FC<{ data: string }> = ({ data }) => {
   const nav = useNav();
   const { dias, concursosAtivos } = useDiasConcursos();
   useBreadcrumbs([{ label: isoParaBR(data) }]);
   const doDia = dias.filter(d => d.data === data);
+  const totalDia = doDia.reduce((s, d) => s + d.total, 0);
   return (
     <div>
-      {concursosAtivos === null ? (
-        <div className="flex justify-center py-16" role="status" aria-label="Carregando"><span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span></div>
-      ) : doDia.length === 0 ? (
-        <Container size="data" className="pt-6 md:pt-8">
-          <div className="bg-white rounded-xl border border-line">
-            <EmptyState icon="event_busy" title={`Nenhum concurso agendado em ${isoParaBR(data)}`} description="Volte à lista e escolha um dia marcado no calendário." />
-          </div>
+      <CabecalhoRota
+        title={`Concursos de ${isoParaBR(data).slice(0, 5)}`}
+        description={concursosAtivos === null ? undefined : doDia.length === 0 ? isoParaBR(data) : `${isoParaBR(data)} · ${doDia.length} concurso${doDia.length === 1 ? '' : 's'} · ${totalDia} candidato${totalDia === 1 ? '' : 's'}`}
+      />
+      {concursosAtivos === null ? <Carregando /> : doDia.length === 0 ? (
+        <Container size="data" className="pt-6">
+          <Card padding="none">
+            <EmptyState icon="event_busy" title={`Nenhum concurso agendado em ${isoParaBR(data)}`} description="Volte à lista e escolha um dia em Próximos dias." />
+          </Card>
         </Container>
       ) : (
         doDia.map(d => (
-          <ConcursoDetalhe key={d.concursoId} concursoId={d.concursoId} dataFixa={data} embutido onVoltar={() => nav?.navigate('/concursos')} />
+          <section key={d.concursoId} aria-label={d.nome}>
+            <ConcursoDetalhe concursoId={d.concursoId} dataFixa={data} embutido onVoltar={() => nav?.navigate('/concursos')} />
+          </section>
         ))
       )}
     </div>
@@ -56,17 +73,21 @@ const ConcursosAtrasadas: React.FC = () => {
   const concursoIds = [...new Set(dias.filter(d => d.data < hoje && d.candidatos.some(c => !c.finalizado)).map(d => d.concursoId))];
   return (
     <div>
-      {concursosAtivos === null ? (
-        <div className="flex justify-center py-16" role="status" aria-label="Carregando"><span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span></div>
-      ) : concursoIds.length === 0 ? (
-        <Container size="data" className="pt-6 md:pt-8">
-          <div className="bg-white rounded-xl border border-line">
+      <CabecalhoRota
+        title="IS de concurso atrasadas"
+        description={concursosAtivos === null ? undefined : 'Candidatos agendados até ontem e ainda não finalizados.'}
+      />
+      {concursosAtivos === null ? <Carregando /> : concursoIds.length === 0 ? (
+        <Container size="data" className="pt-6">
+          <Card padding="none">
             <EmptyState icon="event_available" title="Nenhuma IS atrasada" description="Todas as IS de concurso agendadas até ontem já foram finalizadas." />
-          </div>
+          </Card>
         </Container>
       ) : (
         concursoIds.map(id => (
-          <ConcursoDetalhe key={id} concursoId={id} apenasAtrasadas embutido onVoltar={() => nav?.navigate('/concursos')} />
+          <section key={id}>
+            <ConcursoDetalhe concursoId={id} apenasAtrasadas embutido onVoltar={() => nav?.navigate('/concursos')} />
+          </section>
         ))
       )}
     </div>

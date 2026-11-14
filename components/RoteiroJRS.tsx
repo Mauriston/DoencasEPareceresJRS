@@ -1,6 +1,8 @@
 // Ficheiro: components/RoteiroJRS.tsx
 import React, { useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
+import { Card } from './ui/Card';
+import { IconButton } from './ui/IconButton';
 import { getDriveEmbedUrl, isGoogleDriveUrl } from '../utils/googleDrive';
 import { 
   MonitorPlay, FileText, Image as ImageIcon, PlayCircle, 
@@ -217,10 +219,10 @@ export const RoteiroJRS: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       
-      <Container size="reading" className="py-6 md:py-8 pb-10 ">
+      <Container size="reading" className="py-6 md:py-8 pb-10 space-y-6">
         <PageHeader title="Roteiro JRS" description="Trilha de estudos para capacitação dos AMP." />
 
-        <div className="mb-4 bg-white p-5 rounded-2xl border border-line/60">
+        <Card>
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-ink font-body leading-relaxed">
@@ -228,26 +230,28 @@ export const RoteiroJRS: React.FC = () => {
               </p>
             </div>
             <div className="text-navy p-1 flex-shrink-0">
-              <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>school</span>
+              <span className="material-symbols-outlined" style={{ fontSize: '28px' }} aria-hidden="true">school</span>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {ROTEIRO_DATA.modulos.map((mod) => {
             const isExpanded = expandedModule === mod.modulo_id;
 
             return (
-              <div key={mod.modulo_id} className="bg-white rounded-2xl border border-line/60 overflow-hidden transition-all duration-300">
-                <button 
+              <Card key={mod.modulo_id} padding="none">
+                <button
+                  type="button"
                   onClick={() => toggleModule(mod.modulo_id)}
-                  className={`w-full group flex items-center justify-between p-4 transition-colors focus:outline-none cursor-pointer ${isExpanded ? 'bg-paper/50' : 'hover:bg-paper/80'}`}
+                  aria-expanded={isExpanded}
+                  className={`w-full group flex items-center justify-between p-4 transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold ${isExpanded ? 'bg-paper/50' : 'hover:bg-paper/80'}`}
                 >
                   <div className="flex flex-col pr-4 flex-1 text-left">
-                    <h3 className={`font-heading font-bold text-sm leading-snug mb-1 transition-colors ${isExpanded ? 'text-navy' : 'text-navy group-hover:text-navy'}`}>
+                    <h3 className="text-h3 text-navy mb-1">
                       {mod.modulo}
                     </h3>
-                    <p className="text-ink-3 font-body text-xs font-medium leading-relaxed uppercase">
+                    <p className="text-ink-3 text-xs font-medium leading-relaxed">
                       Módulo {mod.modulo_id}
                     </p>
                   </div>
@@ -259,16 +263,17 @@ export const RoteiroJRS: React.FC = () => {
                 {isExpanded && (
                   <div className="bg-white border-t border-line divide-y divide-line flex flex-col">
                     {mod.materiais.map((mat, idx) => (
-                      <button 
+                      <button
                         key={idx}
+                        type="button"
                         onClick={() => handleMaterialClick(mat.url)}
-                        className="group flex items-center justify-between py-3 px-4 hover:bg-paper transition-colors focus:outline-none cursor-pointer text-left"
+                        className="group flex items-center justify-between py-3 px-4 hover:bg-paper transition-colors cursor-pointer text-left focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold"
                       >
                         <div className="flex flex-col pr-3 flex-1 min-w-0">
-                          <h4 className="text-navy font-heading font-bold text-sm leading-tight mb-0.5 group-hover:text-blue-600 transition-colors">
+                          <h4 className="text-navy font-bold text-sm leading-tight mb-0.5 group-hover:text-blue-600 transition-colors">
                             {mat.titulo}
                           </h4>
-                          <p className="text-ink-3 font-body text-xs leading-relaxed line-clamp-1 uppercase tracking-wider font-semibold">
+                          <p className="text-ink-3 text-xs leading-relaxed line-clamp-1 font-semibold">
                             {mat.formato}
                           </p>
                         </div>
@@ -279,7 +284,7 @@ export const RoteiroJRS: React.FC = () => {
                     ))}
                   </div>
                 )}
-              </div>
+              </Card>
             );
           })}
         </div>
@@ -288,12 +293,7 @@ export const RoteiroJRS: React.FC = () => {
       {activeVideoUrl && (
         <div className="fixed inset-0 z-dialog bg-black/95 flex flex-col items-center justify-center p-4 animate-fade-in backdrop-blur-sm">
           <div className="w-full max-w-4xl relative">
-            <button 
-              onClick={() => setActiveVideoUrl(null)} 
-              className="absolute -top-12 right-0 text-white hover:text-ink-5 bg-white/10 p-2 rounded-full transition-colors"
-            >
-              <X size={24} />
-            </button>
+            <IconButton icon="close" label="Fechar vídeo" variant="overlay" className="absolute -top-12 right-0" onClick={() => setActiveVideoUrl(null)} />
             <div className="aspect-video w-full rounded-xl overflow-hidden shadow-2xl bg-black border border-navy">
               <iframe 
                 src={activeVideoUrl} 
@@ -309,12 +309,7 @@ export const RoteiroJRS: React.FC = () => {
       {activeImageUrl && (
         <div className="fixed inset-0 z-dialog bg-black/95 flex flex-col items-center justify-center p-4 animate-fade-in backdrop-blur-sm">
           <div className="relative w-full h-full max-w-5xl flex items-center justify-center">
-            <button 
-              onClick={() => setActiveImageUrl(null)} 
-              className="absolute top-4 right-4 text-white hover:text-ink-5 bg-white/10 p-2 rounded-full transition-colors z-10"
-            >
-              <X size={24} />
-            </button>
+            <IconButton icon="close" label="Fechar imagem" variant="overlay" className="absolute top-4 right-4 z-10" onClick={() => setActiveImageUrl(null)} />
             <img
               src={activeImageUrl}
               alt="Visualização em ecrã inteiro"
@@ -326,16 +321,11 @@ export const RoteiroJRS: React.FC = () => {
 
       {activePdfUrl && (
         <div className="fixed inset-0 z-dialog bg-black/95 flex flex-col p-4 animate-fade-in backdrop-blur-sm">
-          <button
-            onClick={() => setActivePdfUrl(null)}
-            className="self-end text-white hover:text-ink-5 bg-white/10 p-2 rounded-full transition-colors mb-2 shrink-0"
-          >
-            <X size={24} />
-          </button>
+          <IconButton icon="close" label="Fechar documento" variant="overlay" className="self-end mb-2" onClick={() => setActivePdfUrl(null)} />
           <iframe
             src={activePdfUrl}
             title="Documento"
-            className="flex-1 w-full rounded-xl bg-white shadow-2xl border-0"
+            className="flex-1 w-full rounded-xl bg-placa shadow-2xl border-0"
           />
         </div>
       )}

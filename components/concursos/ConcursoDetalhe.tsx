@@ -259,22 +259,15 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
         <div className="bg-white p-2 rounded-xl border border-line">
         <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 md:gap-3">
           <div className="relative md:w-72 md:shrink-0">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-ink-3 text-[20px]">search</span>
-            <input
-              type="text"
+            <SearchField
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={setSearch}
               onFocus={() => setMostrarSugestoes(true)}
               onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
+              label="Buscar candidato"
               placeholder="Buscar por matrícula ou nome"
               autoComplete="off"
-              className="w-full pl-11 pr-11 h-11 md:h-10 text-sm font-body rounded-lg border border-line bg-paper focus:bg-white focus:outline-none focus:border-navy transition-all"
             />
-            {search && (
-              <button onClick={() => setSearch('')} aria-label="Limpar busca" className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 md:w-10 md:h-10 flex items-center justify-center text-ink-3 hover:text-navy">
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            )}
             {mostrarSugestoes && sugestoesCandidatos.length > 0 && (
               <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-line py-1.5 z-dropdown animate-fade-in max-h-64 overflow-y-auto">
                 {sugestoesCandidatos.map(c => (
@@ -291,46 +284,27 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
               </div>
             )}
           </div>
-
-          {/* Chip filters: só no desktop (tabela) — na lista mobile ficam só
-              a busca por nome e o filtro de data. */}
+          {/* Filtros de resultado (FilterChip do DS, com a contagem); no celular rolam numa linha. */}
           <div className="flex items-center gap-2 overflow-x-auto md:overflow-visible md:flex-wrap md:flex-1">
-            {chipFilters.map(chip => {
-              const isActive = statusKpiFilter === chip.filterValue;
-              return (
-                <button
-                  key={chip.key}
-                  type="button"
-                  onClick={() => toggleStatusKpiFilter(chip.filterValue)}
-                  className={`px-3 min-h-[44px] md:min-h-[40px] rounded-full text-sm font-bold border transition-all flex items-center gap-2 whitespace-nowrap ${isActive ? chip.corAtivo : 'bg-white text-ink border-line hover:border-ink-5'}`}
-                >
-                  <span>{chip.label}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-black ${isActive ? 'bg-white/25' : 'bg-thead'}`}>{chip.value}</span>
-                </button>
-              );
-            })}
+            {chipFilters.map(chip => (
+              <FilterChip key={chip.key} ativo={statusKpiFilter === chip.filterValue} onAlternar={() => toggleStatusKpiFilter(chip.filterValue)} className="shrink-0">
+                {chip.label}
+                <span className="min-w-5 h-5 px-1.5 rounded-full text-xs font-bold tabular-nums inline-flex items-center justify-center bg-line text-ink">{chip.value}</span>
+              </FilterChip>
+            ))}
           </div>
 
-          <div className="relative shrink-0 md:w-40 md:ml-auto">
-            <button
-              type="button"
-              onClick={() => setShowDateMenu(prev => !prev)}
-              className={`w-full px-4 h-11 md:h-10 text-sm font-bold rounded-lg border flex items-center justify-center space-x-2 whitespace-nowrap ${dateFilterMode !== 'todos' ? 'bg-navy text-white border-navy' : 'bg-paper text-ink border-line hover:bg-thead'}`}
-            >
-              <span className="material-symbols-outlined text-[20px]">event</span>
-              <span>{dateFilterLabel}</span>
-            </button>
-            {showDateMenu && (
-              <>
-                <div className="fixed inset-0 z-dropdown" onClick={() => setShowDateMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-line p-1.5 z-dropdown animate-fade-in space-y-0.5">
-                  <button type="button" onClick={() => { setDateFilterMode('todos'); setDateFilterCustom(null); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-ink hover:bg-thead">Todos</button>
-                  <button type="button" onClick={() => { setDateFilterMode('hoje'); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-ink hover:bg-thead">Hoje</button>
-                  <button type="button" onClick={() => { setDateFilterMode('semana'); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-ink hover:bg-thead">Esta Semana</button>
-                  <button type="button" onClick={() => { setShowDateMenu(false); setShowDateCalendar(true); loadDatasAgendamento(); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-ink hover:bg-thead">Personalizado...</button>
-                </div>
-              </>
-            )}
+          <div className="shrink-0 md:ml-auto">
+            <MenuAcoes
+              rotulo="Filtrar por data"
+              botao={{ texto: dateFilterLabel, icone: 'event', primario: dateFilterMode !== 'todos' }}
+              itens={[
+                { rotulo: 'Todas as datas', icone: 'calendar_month', onClick: () => { setDateFilterMode('todos'); setDateFilterCustom(null); } },
+                { rotulo: 'Hoje', icone: 'today', onClick: () => setDateFilterMode('hoje') },
+                { rotulo: 'Esta semana', icone: 'date_range', onClick: () => setDateFilterMode('semana') },
+                { rotulo: 'Escolher data…', icone: 'edit_calendar', onClick: () => { setShowDateCalendar(true); loadDatasAgendamento(); } },
+              ]}
+            />
           </div>
         </div>
         </div>
@@ -339,29 +313,16 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
 
         <Container size="data" className="pt-2 space-y-4">
         {showDateCalendar && (
-          <div className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-sm overflow-hidden flex flex-col">
-              <div className="p-4 bg-navy text-white flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="material-symbols-outlined text-[20px] text-gold">event</span>
-                  <h3 className="font-heading font-bold text-sm">Escolher Data</h3>
-                </div>
-                <button onClick={() => setShowDateCalendar(false)} className="text-ink-5 hover:text-white p-1 rounded-lg hover:bg-white/10">
-                  <span className="material-symbols-outlined text-[20px]">close</span>
-                </button>
-              </div>
-              <div className="p-4">
-                <CalendarioAgendamento
-                  datas={datasAgendamento}
-                  loading={loadingDatasAgendamento}
-                  onSelect={(dataISO) => { setDateFilterMode('personalizado'); setDateFilterCustom(dataISO); setShowDateCalendar(false); }}
-                />
-              </div>
-            </div>
-          </div>
+          <Dialog title="Escolher data" icon="event" onClose={() => setShowDateCalendar(false)}>
+            <CalendarioAgendamento
+              datas={datasAgendamento}
+              loading={loadingDatasAgendamento}
+              onSelect={(dataISO) => { setDateFilterMode('personalizado'); setDateFilterCustom(dataISO); setShowDateCalendar(false); }}
+            />
+          </Dialog>
         )}
 
-        <div className="bg-white rounded-2xl border border-line/60 overflow-clip">
+        <div className="bg-white rounded-xl border border-line overflow-clip">
           {loading ? (
             <div className="p-12 text-center text-ink-3 flex flex-col items-center space-y-2">
               <span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span>
@@ -372,7 +333,7 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
               <span className="material-symbols-outlined text-[36px] text-wine-500">error</span>
               <p className="text-sm font-bold text-ink">Não foi possível carregar os candidatos</p>
               <p className="text-xs text-ink-3 max-w-sm">{loadError}</p>
-              <button type="button" onClick={carregarTudo} className="mt-2 px-4 py-2 bg-navy text-white rounded-lg text-xs font-bold">Tentar novamente</button>
+              <Button size="sm" icon="refresh" onClick={carregarTudo} className="mt-2">Tentar novamente</Button>
             </div>
           ) : filteredCandidatos.length === 0 ? (
             <div className="p-12 text-center text-ink-3 flex flex-col items-center space-y-2">
@@ -394,42 +355,22 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
       </div>
 
       {reagendandoCandidato && (
-        <div className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-sm overflow-hidden flex flex-col">
-            <div className="p-4 bg-navy text-white flex items-center justify-between">
-              <div className="flex items-center space-x-2 min-w-0">
-                <span className="material-symbols-outlined text-[20px] text-gold shrink-0">event_repeat</span>
-                <h3 className="font-heading font-bold text-sm truncate">Reagendar {reagendandoCandidato.nome}</h3>
-              </div>
-              <button onClick={() => setReagendandoCandidato(null)} disabled={confirmandoReagendamento} className="text-ink-5 hover:text-white p-1 rounded-lg hover:bg-white/10 shrink-0">
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-            <div className="p-4">
-              {!loadingDatasAgendamento && datasAgendamento.length === 0 ? (
-                <div className="text-center py-4 space-y-3">
-                  <p className="text-sm text-ink-3">
-                    Este concurso ainda não tem um período de IS configurado, por isso não há datas disponíveis para reagendamento.
-                  </p>
-                  {podeAbrirEncerrar ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowDefinirPeriodoModal(true)}
-                      className="px-4 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors inline-flex items-center space-x-1.5"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">event</span>
-                      <span>Definir Período de Agendamento</span>
-                    </button>
-                  ) : (
-                    <p className="text-sm text-ink-3">Peça a um Admin para configurar o período deste concurso.</p>
-                  )}
-                </div>
+        <Dialog title={`Reagendar ${reagendandoCandidato.nome}`} icon="event_repeat" travado={confirmandoReagendamento} onClose={() => setReagendandoCandidato(null)}>
+          {!loadingDatasAgendamento && datasAgendamento.length === 0 ? (
+            <div className="text-center py-4 space-y-3">
+              <p className="text-sm text-ink-3">
+                Este concurso ainda não tem um período de IS configurado, por isso não há datas disponíveis para reagendamento.
+              </p>
+              {podeAbrirEncerrar ? (
+                <Button icon="event" onClick={() => setShowDefinirPeriodoModal(true)}>Definir período de agendamento</Button>
               ) : (
-                <CalendarioAgendamento datas={datasAgendamento} loading={loadingDatasAgendamento || confirmandoReagendamento} onSelect={handleSelecionarDataReagendamento} />
+                <p className="text-sm text-ink-3">Peça a um Admin para configurar o período deste concurso.</p>
               )}
             </div>
-          </div>
-        </div>
+          ) : (
+            <CalendarioAgendamento datas={datasAgendamento} loading={loadingDatasAgendamento || confirmandoReagendamento} onSelect={handleSelecionarDataReagendamento} />
+          )}
+        </Dialog>
       )}
 
       {showDefinirPeriodoModal && (

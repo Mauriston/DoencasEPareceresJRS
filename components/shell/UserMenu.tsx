@@ -7,6 +7,7 @@ import { NavContext } from '../../context/NavContext';
 import { useTema, adotarTemaDoPerfil } from '../../hooks/useTema';
 import { updateUsuarioProfile } from '../../services/firestoreUsuarios';
 import { useUrlArquivo } from '../../services/arquivosStorage';
+import { canAccessPage } from '../../config/permissions';
 
 export const PERFIL_LABELS: Record<string, string> = {
   admin: 'Administrador',
@@ -101,6 +102,22 @@ const VisualizarComo: React.FC<{ atual: string; onEscolher: (perfil: string | nu
   );
 };
 
+/** Item "Sobre o app" (auditoria v3, SB1): as funções do app que o perfil usa. Navega pelo NavContext (topbar e sidebar). */
+const ItemSobre: React.FC = () => {
+  const nav = useContext(NavContext);
+  if (!nav || !canAccessPage('sobre', nav.authUser?.perfil)) return null;
+  return (
+    <button
+      type="button" role="menuitem"
+      onClick={() => { nav.setIsAvatarMenuOpen(false); nav.setIsMobileMenuOpen(false); nav.setCurrentView('sobre'); }}
+      className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-ink hover:bg-thead flex items-center gap-2.5 transition-colors"
+    >
+      <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">info</span>
+      <span>Sobre o app</span>
+    </button>
+  );
+};
+
 /** Atalho lua/sol: alterna Claro ↔ Escuro sem abrir o perfil (a variante fica em Meu perfil → Aparência). */
 const ItemTema: React.FC = () => {
   const nav = useContext(NavContext);
@@ -143,6 +160,7 @@ export const UserDropdownContent: React.FC<UserDropdownContentProps> = ({ authUs
           {naoLidas > 0 && <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-wine text-white text-xs font-bold leading-5 text-center">{naoLidas > 99 ? '99+' : naoLidas}</span>}
         </button>
       )}
+      <ItemSobre />
       {perfilReal === 'admin' && onVerComo && <VisualizarComo atual={verComo || 'admin'} onEscolher={onVerComo} />}
       <button type="button" role="menuitem" onClick={onLogoutClick} className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-wine hover:bg-wine/10 flex items-center gap-2.5 transition-colors">
         <span className="material-symbols-outlined text-[20px]" aria-hidden="true">logout</span>

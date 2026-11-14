@@ -42,7 +42,7 @@ export const Sobre: React.FC = () => {
       />
       <IndiceChips itens={indice} rotulo="Áreas desta página" className="mb-8 md:mb-10" />
 
-      <div className="flex flex-col gap-16 @container">
+      <div className="flex flex-col gap-16">
         {destaques.map(({ area, pagina }, i) => (
           <LinhaArea
             key={area.id}
