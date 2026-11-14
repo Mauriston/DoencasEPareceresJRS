@@ -258,7 +258,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs, 
             </div>
             {erroPrint && <p role="alert" className="mt-2 text-xs font-semibold text-wine">{erroPrint}</p>}
             {avisosPrint.length > 0 && (
-              <ul className="mt-2 space-y-0.5 text-xs text-ink-2 list-disc pl-5">
+              <ul className="mt-2 space-y-0.5 text-xs text-ink list-disc pl-5">
                 {avisosPrint.map(a => <li key={a}>{a}</li>)}
               </ul>
             )}
@@ -327,7 +327,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs, 
           </Field>
 
           <Field label="NIP" required error={erros.nip}>
-            {a => <input {...a} type="text" inputMode="numeric" value={nip} onChange={e => { setNip(formatNip(e.target.value)); limpar('nip'); }} placeholder="00.0000.00" maxLength={10} className={`${a.className} font-mono`} />}
+            {a => <input {...a} type="text" inputMode="numeric" value={nip} onChange={e => { setNip(formatNip(e.target.value)); limpar('nip'); }} placeholder="00.0000.00" maxLength={10} className={`${a.className} tabular-nums`} />}
           </Field>
 
           <Autocomplete

@@ -37,7 +37,7 @@ const Linha: React.FC<{ rotulo: string; valor?: string | null; mono?: boolean }>
   return (
     <div>
       <dt className="text-xs font-semibold text-ink-3">{rotulo}</dt>
-      <dd className={`text-sm text-ink break-words ${mono ? 'font-mono' : ''}`}>{valor}</dd>
+      <dd className={`text-sm text-ink break-words ${mono ? 'tabular-nums' : ''}`}>{valor}</dd>
     </div>
   );
 };
@@ -72,7 +72,7 @@ export const MilitarDetalhe: React.FC<{ militar: MilitarRecord; onClose: () => v
           </div>
           <div className="min-w-0">
             <p className="text-base font-bold text-navy break-words">{m.nome}</p>
-            <p className="text-sm text-ink-2">{m.pgq}</p>
+            <p className="text-sm text-ink">{m.pgq}</p>
             <div className="mt-1"><StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag></div>
           </div>
         </div>

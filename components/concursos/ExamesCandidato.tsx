@@ -209,7 +209,7 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
         <>
           <div className="bg-green-50 border border-green-200 rounded-xl p-3 space-y-1">
             <p className="text-sm font-bold text-green-800">PDF salvo no Drive.</p>
-            <p className="text-xs text-green-800 font-mono break-all">{resultado.nomeArquivo}</p>
+            <p className="text-xs text-green-800 tabular-nums break-all">{resultado.nomeArquivo}</p>
           </div>
           {resultado.erroExtracao ? (
             <div className="bg-wine-50 border border-wine-200 rounded-xl p-3 text-sm text-wine-700">
@@ -240,11 +240,11 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
   );
 
   const acoes = etapa === 'concluido' ? (
-    <button type="button" onClick={onClose} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm">Concluir</button>
+    <button type="button" onClick={onClose} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors ">Concluir</button>
   ) : (
     <>
       <button type="button" disabled={travado} onClick={onClose} className="px-4 py-2.5 rounded-lg border border-line text-sm font-bold text-ink hover:bg-thead transition-colors disabled:opacity-50">Cancelar</button>
-      <button type="button" disabled={!file || !destino || travado} onClick={handleEnviar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
+      <button type="button" disabled={!file || !destino || travado} onClick={handleEnviar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
         {travado ? 'Enviando...' : 'Enviar e transcrever'}
       </button>
     </>
@@ -337,7 +337,7 @@ const BlocoExame: React.FC<{ exame: ExameCandidato }> = ({ exame }) => {
             {exame.itens.map((item, i) => (
               <li key={`${item.nome}-${i}`} className="flex items-center gap-2 py-1 border-b border-line/70">
                 <span className="min-w-0 flex-1 text-sm text-ink truncate" title={item.nome}>{item.nome}</span>
-                <span className="text-sm font-bold text-navy font-mono">{item.valor}</span>
+                <span className="text-sm font-bold text-navy tabular-nums">{item.valor}</span>
                 <BotaoCopiar texto={textoItem(item)} titulo={`Copiar ${item.nome}`} />
               </li>
             ))}
@@ -446,7 +446,7 @@ export const ExamesTranscritosModal: React.FC<ExamesTranscritosModalProps> = ({ 
                   href={urlDownload(envio.pdfUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover transition-colors shadow-sm"
+                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover transition-colors "
                 >
                   <span className="material-symbols-outlined text-[20px]" aria-hidden="true">download</span>
                   {pdfs.length === 1 ? 'Download Exames PDF' : `Download PDF ${i + 1}`}

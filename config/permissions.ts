@@ -52,6 +52,8 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list', subtitle: 'Trilha de estudos para capacitação dos AMP.' },
   // Administração: férias e afastamentos dos usuários da JRS (criar, editar e apagar continuam só com o Admin).
   { id: 'ferias', label: 'Férias', icon: 'beach_access', subtitle: 'Férias e afastamentos dos usuários da JRS.' },
+  // Painel: "como estamos no período" (tendências e comparações); na sidebar logo abaixo de Início.
+  { id: 'painel', label: 'Painel', icon: 'monitoring', subtitle: 'Indicadores do período: IS, perícias, concursos e uso do app.' },
   // Ajuda: o que o app faz, por área (página "Sobre o app").
   { id: 'sobre', label: 'Sobre o app', icon: 'info', subtitle: 'As principais funcionalidades do app, por área.' },
 ];
@@ -81,6 +83,8 @@ export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {
   ferias: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   // Sobre o app: começa oculta para todos (o Admin sempre vê); liberar por perfil em Usuários quando for publicada.
   sobre: { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
+  // Painel: a equipe da JRS (cada seção ainda respeita a permissão da página de origem); fora o Médicos Geral.
+  painel: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
 };
 
 export type FeatureKey =

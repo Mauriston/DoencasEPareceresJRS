@@ -40,9 +40,9 @@ export const CampoCopiavel: React.FC<Props> = ({ rotulo, valor, onChange, multil
       </div>
       <div className={multilinha ? 'flex items-start gap-2 flex-1 min-h-0' : 'flex items-center gap-2'}>
         {multilinha ? (
-          <textarea id={id} value={valor} onChange={e => onChange(e.target.value)} className={`${controlClass} h-full min-h-[240px] resize-none font-mono text-xs leading-relaxed`} />
+          <textarea id={id} value={valor} onChange={e => onChange(e.target.value)} className={`${controlClass} h-full min-h-[240px] resize-none tabular-nums text-xs leading-relaxed`} />
         ) : (
-          <input id={id} type="text" value={valor} onChange={e => onChange(e.target.value)} className={`${controlClass} font-mono text-xs whitespace-nowrap overflow-x-auto`} />
+          <input id={id} type="text" value={valor} onChange={e => onChange(e.target.value)} className={`${controlClass} tabular-nums text-xs whitespace-nowrap overflow-x-auto`} />
         )}
         <IconButton icon={copiado ? 'check' : 'content_copy'} label={`Copiar ${rotulo.replace(/:$/, '')}`} variant="secondary" onClick={copiar} />
       </div>

@@ -193,7 +193,7 @@ export const Infograficos: React.FC = () => {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
             {infograficos!.map(item => (
-              <div key={item.id} className="relative group bg-white rounded-xl border border-line/60 shadow-sm flex flex-col hover:shadow-md hover:border-navy transition-all">
+              <div key={item.id} className="relative group bg-white rounded-xl border border-line/60 flex flex-col hover:border-navy transition-all">
                 <button type="button" onClick={() => abrir(item)} className="flex flex-col w-full text-left focus:outline-none">
                   <div className="w-full aspect-[4/5] bg-thead overflow-hidden rounded-t-xl">
                     <ImagemArquivo src={item.imageUrl} alt="" loading="lazy" className="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform" />

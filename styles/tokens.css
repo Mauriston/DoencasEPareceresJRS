@@ -1,29 +1,381 @@
-/* Tokens do DS JRS/HNRe expostos como variáveis CSS (os mesmos valores do
-   tailwind.config.js — use as classes utilitárias; as variáveis servem a CSS
-   escrito à mão, como o .md-content). Decisão registrada: o app adota o azul
-   marinho #050F41 do MIV MB (o deck do CONGES usa #121C4B). */
+/* Ficheiro: styles/tokens.css — GERADO a partir da tabela 4f da auditoria v3 (tema escuro).
+   Tokens do DS JRS/HNRe como variáveis CSS. As cores do tailwind.config.js apontam para
+   --c-<cor> (triplets RGB, com suporte a alpha: rgb(var(--c-navy) / <alpha-value>)), então as
+   classes de sempre (bg-white, text-navy, border-line…) trocam de valor com o tema.
+   Tema: <html data-theme="light|dark" data-variante="marinho|grafite|oled"> (script no index.html).
+   No escuro: white → surface, navy → action (#DCE4F4, primário invertido, texto navy por cima
+   via text-white → surface), paper/thead → surface-2, ink-* → texto claro.
+   Decisão registrada: o app adota o azul marinho #050F41 do MIV MB (o deck do CONGES usa #121C4B). */
 :root {
-  --navy: #050f41;
-  --navy-hover: #01002b;
-  --navy-pressed: #020020;
-  --blue: #1c4587;
-  --gold: #fab932;
-  --gold-ink: #8a6100;
-  --green: #079551;
-  --green-dark: #04643b;
-  --wine: #85200c;
-  --wine-dark: #6b1a0a;
+  --c-navy: 5 15 65;
+  --c-navy-hover: 1 0 43;
+  --c-navy-pressed: 2 0 32;
+  --c-white: 255 255 255;
+  --c-black: 0 0 0;
+  --c-canvas: 242 244 248;
+  --c-surface: 255 255 255;
+  --c-surface-2: 247 248 250;
+  --c-paper: 247 248 250;
+  --c-thead: 242 244 248;
+  --c-line: 227 230 237;
+  --c-ink: 61 68 96;
+  --c-ink-3: 90 98 122;
+  --c-ink-4: 138 147 172;
+  --c-ink-5: 185 191 209;
+  --c-gold-50: 254 248 231;
+  --c-gold-100: 253 240 204;
+  --c-gold-200: 252 227 160;
+  --c-gold-300: 251 208 112;
+  --c-gold-400: 250 185 50;
+  --c-gold-500: 217 154 26;
+  --c-gold-600: 138 97 0;
+  --c-gold-700: 138 97 0;
+  --c-gold-800: 110 77 0;
+  --c-gold-900: 77 53 0;
+  --c-gold: 250 185 50;
+  --c-gold-ink: 138 97 0;
+  --c-green-50: 232 246 239;
+  --c-green-100: 208 238 223;
+  --c-green-200: 167 221 193;
+  --c-green-300: 111 196 154;
+  --c-green-400: 51 168 116;
+  --c-green-500: 7 149 81;
+  --c-green-600: 7 149 81;
+  --c-green-700: 4 100 59;
+  --c-green-800: 4 100 59;
+  --c-green-900: 3 71 42;
+  --c-green: 7 149 81;
+  --c-wine-50: 251 239 236;
+  --c-wine-100: 246 220 214;
+  --c-wine-200: 235 187 176;
+  --c-wine-300: 217 142 126;
+  --c-wine-400: 192 103 90;
+  --c-wine-500: 133 32 12;
+  --c-wine-600: 133 32 12;
+  --c-wine-700: 107 26 10;
+  --c-wine-800: 107 26 10;
+  --c-wine-900: 79 19 8;
+  --c-wine: 133 32 12;
+  --c-wine-dark: 107 26 10;
+  --c-blue-50: 238 242 250;
+  --c-blue-100: 220 228 244;
+  --c-blue-200: 188 203 232;
+  --c-blue-300: 143 168 213;
+  --c-blue-400: 92 127 188;
+  --c-blue-500: 28 69 135;
+  --c-blue-600: 28 69 135;
+  --c-blue-700: 22 56 112;
+  --c-blue-800: 18 44 88;
+  --c-blue-900: 12 29 58;
 
-  --ink-1: #050f41;
-  --ink-2: #3d4460;
-  --ink-3: #5a627a;
-  --ink-4: #8a93ac;
-  --line: #e3e6ed;
-  --paper: #f7f8fa;
-  --thead: #f2f4f8;
+  /* Papéis semânticos (hex) — para CSS escrito à mão. */
+  --canvas: #F2F4F8;
+  --surface: #FFFFFF;
+  --surface-2: #F7F8FA;
+  --line: #E3E6ED;
+  --text: #050F41;
+  --text-muted: #5A627A;
+  --action: #050F41;
+  --on-action: #FFFFFF;
+  --success: #04643B;
+  --danger: #85200C;
+  --attention: #8A6100;
+  --link: #1c4587;
+
+  /* Hex usados pelo CSS à mão (.md-content, scrollbar…): seguem o tema sozinhos. */
+  --navy: rgb(var(--c-navy));
+  --navy-hover: rgb(var(--c-navy-hover));
+  --navy-pressed: rgb(var(--c-navy-pressed));
+  --blue: rgb(var(--c-blue-600));
+  --gold: #fab932;
+  --gold-ink: rgb(var(--c-gold-ink));
+  --green: rgb(var(--c-green));
+  --green-dark: rgb(var(--c-green-700));
+  --wine: rgb(var(--c-wine));
+  --wine-dark: rgb(var(--c-wine-dark));
+  --ink-1: var(--text);
+  --ink-2: rgb(var(--c-ink));
+  --ink-3: rgb(var(--c-ink-3));
+  --ink-4: rgb(var(--c-ink-4));
+  --paper: rgb(var(--c-paper));
+  --thead: rgb(var(--c-thead));
 
   --radius-control: 8px;
   --radius-card: 14px;
   --shadow-overlay: 0 3px 12px rgba(18, 28, 75, 0.08);
+  /* Distância do FAB ao rodapé (a barra inferior do celular pode somar a sua altura). */
+  --fab-bottom: calc(1rem + env(safe-area-inset-bottom));
+  color-scheme: light;
+}
 
+/* ── Tema escuro · A Marinho noturno (padrão do escuro) ── */
+:root[data-theme="dark"] {
+  --c-navy: 220 228 244;
+  --c-navy-hover: 232 237 248;
+  --c-navy-pressed: 189 197 217;
+  --c-white: 15 23 64;
+  --c-black: 0 0 0;
+  --c-canvas: 7 12 42;
+  --c-surface: 15 23 64;
+  --c-surface-2: 24 34 90;
+  --c-paper: 24 34 90;
+  --c-thead: 24 34 90;
+  --c-line: 40 52 102;
+  --c-ink: 201 206 224;
+  --c-ink-3: 163 171 198;
+  --c-ink-4: 107 115 147;
+  --c-ink-5: 77 88 131;
+  --c-gold-50: 48 46 62;
+  --c-gold-100: 62 55 61;
+  --c-gold-200: 90 75 60;
+  --c-gold-300: 144 112 56;
+  --c-gold-400: 250 185 50;
+  --c-gold-500: 251 208 112;
+  --c-gold-600: 251 208 112;
+  --c-gold-700: 251 208 112;
+  --c-gold-800: 252 220 148;
+  --c-gold-900: 253 229 176;
+  --c-gold: 250 185 50;
+  --c-gold-ink: 251 208 112;
+  --c-green-50: 20 43 71;
+  --c-green-100: 22 52 74;
+  --c-green-200: 27 69 81;
+  --c-green-300: 35 103 93;
+  --c-green-400: 51 168 116;
+  --c-green-500: 111 196 154;
+  --c-green-600: 111 196 154;
+  --c-green-700: 111 196 154;
+  --c-green-800: 147 211 179;
+  --c-green-900: 176 223 199;
+  --c-green: 111 196 154;
+  --c-wine-50: 40 34 68;
+  --c-wine-100: 50 39 69;
+  --c-wine-200: 72 49 72;
+  --c-wine-300: 112 67 78;
+  --c-wine-400: 192 103 90;
+  --c-wine-500: 227 154 138;
+  --c-wine-600: 227 154 138;
+  --c-wine-700: 227 154 138;
+  --c-wine-800: 234 179 167;
+  --c-wine-900: 240 199 191;
+  --c-wine: 227 154 138;
+  --c-wine-dark: 189 130 125;
+  --c-blue-50: 26 38 81;
+  --c-blue-100: 30 44 89;
+  --c-blue-200: 40 56 104;
+  --c-blue-300: 57 80 132;
+  --c-blue-400: 92 127 188;
+  --c-blue-500: 143 168 213;
+  --c-blue-600: 143 168 213;
+  --c-blue-700: 143 168 213;
+  --c-blue-800: 171 190 224;
+  --c-blue-900: 193 207 232;
+
+  /* Papéis semânticos (hex) — para CSS escrito à mão. */
+  --canvas: #070C2A;
+  --surface: #0F1740;
+  --surface-2: #18225A;
+  --line: #283466;
+  --text: #E8EBF5;
+  --text-muted: #A3ABC6;
+  --action: #DCE4F4;
+  --on-action: #050F41;
+  --success: #6FC49A;
+  --danger: #E39A8A;
+  --attention: #FBD070;
+  --link: #8FA8D5;
+
+  /* Sem sombra no escuro: a elevação vem da superfície; sobreposições ganham borda line. */
+  --shadow-overlay: 0 0 0 1px rgb(var(--c-line));
+  color-scheme: dark;
+}
+
+/* ── B Grafite neutro ── */
+:root[data-theme="dark"][data-variante="grafite"] {
+  --c-navy: 220 228 244;
+  --c-navy-hover: 232 237 248;
+  --c-navy-pressed: 191 198 213;
+  --c-white: 27 29 35;
+  --c-black: 0 0 0;
+  --c-canvas: 17 18 22;
+  --c-surface: 27 29 35;
+  --c-surface-2: 37 40 48;
+  --c-paper: 37 40 48;
+  --c-thead: 37 40 48;
+  --c-line: 48 51 60;
+  --c-ink: 205 207 214;
+  --c-ink-3: 166 170 182;
+  --c-ink-4: 113 116 126;
+  --c-ink-5: 83 87 97;
+  --c-gold-50: 58 51 37;
+  --c-gold-100: 72 60 38;
+  --c-gold-200: 98 79 40;
+  --c-gold-300: 150 115 43;
+  --c-gold-400: 250 185 50;
+  --c-gold-500: 251 208 112;
+  --c-gold-600: 251 208 112;
+  --c-gold-700: 251 208 112;
+  --c-gold-800: 252 220 148;
+  --c-gold-900: 253 229 176;
+  --c-gold: 250 185 50;
+  --c-gold-ink: 251 208 112;
+  --c-green-50: 30 48 46;
+  --c-green-100: 32 57 51;
+  --c-green-200: 35 73 61;
+  --c-green-300: 40 105 80;
+  --c-green-400: 51 168 116;
+  --c-green-500: 111 196 154;
+  --c-green-600: 111 196 154;
+  --c-green-700: 111 196 154;
+  --c-green-800: 147 211 179;
+  --c-green-900: 176 223 199;
+  --c-green: 111 196 154;
+  --c-wine-50: 50 39 43;
+  --c-wine-100: 60 44 46;
+  --c-wine-200: 80 53 53;
+  --c-wine-300: 118 70 65;
+  --c-wine-400: 192 103 90;
+  --c-wine-500: 227 154 138;
+  --c-wine-600: 227 154 138;
+  --c-wine-700: 227 154 138;
+  --c-wine-800: 234 179 167;
+  --c-wine-900: 240 199 191;
+  --c-wine: 227 154 138;
+  --c-wine-dark: 191 132 119;
+  --c-blue-50: 36 43 56;
+  --c-blue-100: 40 49 66;
+  --c-blue-200: 48 60 84;
+  --c-blue-300: 63 83 119;
+  --c-blue-400: 92 127 188;
+  --c-blue-500: 143 168 213;
+  --c-blue-600: 143 168 213;
+  --c-blue-700: 143 168 213;
+  --c-blue-800: 171 190 224;
+  --c-blue-900: 193 207 232;
+
+  /* Papéis semânticos (hex) — para CSS escrito à mão. */
+  --canvas: #111216;
+  --surface: #1B1D23;
+  --surface-2: #252830;
+  --line: #30333C;
+  --text: #ECEDF1;
+  --text-muted: #A6AAB6;
+  --action: #DCE4F4;
+  --on-action: #050F41;
+  --success: #6FC49A;
+  --danger: #E39A8A;
+  --attention: #FBD070;
+  --link: #8FA8D5;
+}
+
+/* ── C Plantão (OLED) ── */
+:root[data-theme="dark"][data-variante="oled"] {
+  --c-navy: 201 210 230;
+  --c-navy-hover: 220 226 239;
+  --c-navy-pressed: 172 180 197;
+  --c-white: 10 10 13;
+  --c-black: 0 0 0;
+  --c-canvas: 0 0 0;
+  --c-surface: 10 10 13;
+  --c-surface-2: 20 20 25;
+  --c-paper: 20 20 25;
+  --c-thead: 20 20 25;
+  --c-line: 36 36 43;
+  --c-ink: 189 193 203;
+  --c-ink-3: 154 159 173;
+  --c-ink-4: 99 102 112;
+  --c-ink-5: 71 73 82;
+  --c-gold-50: 44 35 18;
+  --c-gold-100: 58 45 20;
+  --c-gold-200: 87 66 25;
+  --c-gold-300: 142 106 33;
+  --c-gold-400: 250 185 50;
+  --c-gold-500: 242 197 92;
+  --c-gold-600: 242 197 92;
+  --c-gold-700: 242 197 92;
+  --c-gold-800: 245 212 133;
+  --c-gold-900: 248 223 165;
+  --c-gold: 250 185 50;
+  --c-gold-ink: 242 197 92;
+  --c-green-50: 16 32 27;
+  --c-green-100: 18 42 34;
+  --c-green-200: 23 61 46;
+  --c-green-300: 33 97 70;
+  --c-green-400: 51 168 116;
+  --c-green-500: 93 184 139;
+  --c-green-600: 93 184 139;
+  --c-green-700: 93 184 139;
+  --c-green-800: 134 202 168;
+  --c-green-900: 166 216 191;
+  --c-green: 93 184 139;
+  --c-wine-50: 35 23 24;
+  --c-wine-100: 46 29 28;
+  --c-wine-200: 68 40 38;
+  --c-wine-300: 110 61 55;
+  --c-wine-400: 192 103 90;
+  --c-wine-500: 217 142 126;
+  --c-wine-600: 217 142 126;
+  --c-wine-700: 217 142 126;
+  --c-wine-800: 227 170 158;
+  --c-wine-900: 234 193 184;
+  --c-wine: 217 142 126;
+  --c-wine-dark: 180 118 106;
+  --c-blue-50: 21 26 38;
+  --c-blue-100: 26 33 48;
+  --c-blue-200: 36 47 69;
+  --c-blue-300: 55 74 109;
+  --c-blue-400: 92 127 188;
+  --c-blue-500: 143 168 213;
+  --c-blue-600: 143 168 213;
+  --c-blue-700: 143 168 213;
+  --c-blue-800: 171 190 224;
+  --c-blue-900: 193 207 232;
+
+  /* Papéis semânticos (hex) — para CSS escrito à mão. */
+  --canvas: #000000;
+  --surface: #0A0A0D;
+  --surface-2: #141419;
+  --line: #24242B;
+  --text: #D9DCE4;
+  --text-muted: #9A9FAD;
+  --action: #C9D2E6;
+  --on-action: #050F41;
+  --success: #5DB88B;
+  --danger: #D98E7E;
+  --attention: #F2C55C;
+  --link: #8FA8D5;
+}
+
+/* Superfícies "da casa" no escuro (sidebar, faixas de título de diálogo, splash de login):
+   continuam escuras com texto branco, em vez de inverter como o botão primário. Marque com
+   data-marca; faixas div.bg-navy.text-white (não botões) entram automaticamente. */
+:root[data-theme="dark"] :is([data-marca], aside.bg-navy, main.bg-navy, .bg-navy.text-white:not(button, a, [role="button"], [role="radio"], [role="tab"], [role="menuitem"]), .bg-navy:not(button, a, [role="button"], [role="radio"], [role="tab"]):has(> .text-white, > * > .text-white)) {
+  --c-navy: 5 15 65;
+  --c-navy-hover: 25 34 80;
+  --c-navy-pressed: 4 12 52;
+  --c-white: 255 255 255;
+  --c-ink-5: 185 191 209;
+  --c-ink-3: 163 171 198;
+  color: rgb(255 255 255);
+  background-color: rgb(var(--c-navy));
+}
+:root[data-theme="dark"][data-variante="grafite"] :is([data-marca], aside.bg-navy, main.bg-navy, .bg-navy.text-white:not(button, a, [role="button"], [role="radio"], [role="tab"], [role="menuitem"]), .bg-navy:not(button, a, [role="button"], [role="radio"], [role="tab"]):has(> .text-white, > * > .text-white)) {
+  --c-navy: 11 12 15;
+  --c-navy-hover: 31 31 34;
+  --c-navy-pressed: 9 10 12;
+  --c-white: 255 255 255;
+  --c-ink-5: 185 191 209;
+  --c-ink-3: 166 170 182;
+  color: rgb(255 255 255);
+  background-color: rgb(var(--c-navy));
+}
+:root[data-theme="dark"][data-variante="oled"] :is([data-marca], aside.bg-navy, main.bg-navy, .bg-navy.text-white:not(button, a, [role="button"], [role="radio"], [role="tab"], [role="menuitem"]), .bg-navy:not(button, a, [role="button"], [role="radio"], [role="tab"]):has(> .text-white, > * > .text-white)) {
+  --c-navy: 0 0 0;
+  --c-navy-hover: 20 20 20;
+  --c-navy-pressed: 0 0 0;
+  --c-white: 255 255 255;
+  --c-ink-5: 185 191 209;
+  --c-ink-3: 154 159 173;
+  color: rgb(255 255 255);
+  background-color: rgb(var(--c-navy));
 }

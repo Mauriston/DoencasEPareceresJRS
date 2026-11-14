@@ -171,7 +171,7 @@ export const Login: React.FC = () => {
                   inputMode="numeric"
                   value={nip}
                   onChange={e => { setNip(formatNip(e.target.value)); setLoginError(''); setAjudaSenha(null); }}
-                  className={`${campoClass} font-mono`}
+                  className={`${campoClass} tabular-nums`}
                   placeholder="00.0000.00"
                   maxLength={10}
                   autoComplete="username"

@@ -56,7 +56,7 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
             const isBrasao = law.imageUrl.includes('brasao-da-republica');
 
             return (
-              <div key={law.id} className="relative group bg-white rounded-xl border border-line/60 hover:border-navy hover:shadow-md transition-all overflow-hidden flex items-center justify-between">
+              <div key={law.id} className="relative group bg-white rounded-xl border border-line/60 hover:border-navy transition-all overflow-hidden flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => abrir(law)}

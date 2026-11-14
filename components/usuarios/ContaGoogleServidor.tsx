@@ -46,7 +46,7 @@ export const ContaGoogleServidor: React.FC = () => {
     : <StatusTag tone="attention">Não autorizada</StatusTag>;
 
   return (
-    <section className="bg-white p-4 rounded-2xl shadow-sm border border-line/60 flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <section className="bg-white p-4 rounded-2xl border border-line/60 flex flex-col md:flex-row md:items-center justify-between gap-3">
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="material-symbols-outlined text-navy text-[20px]" aria-hidden="true">mail</span>

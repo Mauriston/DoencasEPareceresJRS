@@ -63,7 +63,7 @@ export const ModalRegistroEventos: React.FC<{ concursoId: string; candidato: { i
                 <span className="text-sm font-bold text-navy">{ev.acao}</span>
                 <span className="text-xs text-ink-3 whitespace-nowrap">{formatarDataHora(ev.em)}</span>
               </div>
-              {ev.detalhe && <p className="text-sm text-ink-2 break-words mt-0.5">{ev.detalhe}</p>}
+              {ev.detalhe && <p className="text-sm text-ink break-words mt-0.5">{ev.detalhe}</p>}
               <p className="text-xs text-ink-3 mt-0.5">por {ev.usuario || ev.nome || '—'}</p>
             </li>
           ))}
@@ -248,7 +248,7 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
                     className="w-full text-left px-4 py-2 hover:bg-paper flex items-center justify-between gap-2"
                   >
                     <span className="text-sm font-semibold text-navy truncate">{c.nome}</span>
-                    <span className="text-xs font-mono text-ink-3 shrink-0">{c.id}</span>
+                    <span className="text-xs tabular-nums text-ink-3 shrink-0">{c.id}</span>
                   </button>
                 ))}
               </div>
@@ -324,7 +324,7 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm border border-line/60 overflow-clip">
+        <div className="bg-white rounded-2xl border border-line/60 overflow-clip">
           {loading ? (
             <div className="p-12 text-center text-ink-3 flex flex-col items-center space-y-2">
               <span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span>
@@ -378,7 +378,7 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
                     <button
                       type="button"
                       onClick={() => setShowDefinirPeriodoModal(true)}
-                      className="px-4 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm inline-flex items-center space-x-1.5"
+                      className="px-4 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors inline-flex items-center space-x-1.5"
                     >
                       <span className="material-symbols-outlined text-[16px]">event</span>
                       <span>Definir Período de Agendamento</span>

@@ -87,7 +87,7 @@ const VisualizarComo: React.FC<{ atual: string; onEscolher: (perfil: string | nu
             <button
               key={p} type="button" role="menuitemradio" aria-checked={atual === p}
               onClick={() => onEscolher(p === 'admin' ? null : p)}
-              className={`w-full text-left pl-11 pr-4 min-h-[40px] text-sm hover:bg-thead flex items-center gap-2 transition-colors ${atual === p ? 'font-bold text-navy' : 'text-ink-2'}`}
+              className={`w-full text-left pl-11 pr-4 min-h-[40px] text-sm hover:bg-thead flex items-center gap-2 transition-colors ${atual === p ? 'font-bold text-navy' : 'text-ink'}`}
             >
               <span className="flex-1">{PERFIL_LABELS[p]}</span>
               {atual === p && <span className="material-symbols-outlined text-[18px] text-green-700" aria-hidden="true">check</span>}

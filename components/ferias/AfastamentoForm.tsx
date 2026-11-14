@@ -148,7 +148,7 @@ export const AfastamentoForm: React.FC<Props> = ({ usuarios, atual, hoje, autor,
             <input type="file" accept="application/pdf,image/*" multiple className="sr-only" onChange={e => { anexar(e.target.files); e.target.value = ''; }} />
           </label>
           {lendo && <p role="status" className="text-xs font-semibold text-navy flex items-center gap-1"><span className="material-symbols-outlined text-[16px] animate-spin" aria-hidden="true">progress_activity</span>Lendo o documento com IA…</p>}
-          {leitura && <p role="status" className="text-xs text-ink-2">{leitura}</p>}
+          {leitura && <p role="status" className="text-xs text-ink">{leitura}</p>}
           {(arquivos.length > 0 || novos.length > 0) && (
             <ul className="space-y-1">
               {arquivos.map(a => (

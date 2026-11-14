@@ -117,7 +117,7 @@ export const TimelineAfastamentos: React.FC<Props> = ({ afastamentos, fotos, esc
                           onFocus={e => mostrar(a, e.currentTarget)} onBlur={() => setDica(null)}
                           aria-label={`${a.usuario}: ${rotuloTipo(a.tipo)} de ${dataBr(a.dataInicio)} a ${dataBr(a.dataFim)} (${a.duracaoDias} dias), ${st.rotulo}`}
                           style={{ left: `${pos.esquerda}%`, width: `max(${pos.largura}%, 6px)` }}
-                          className={`absolute top-1/2 -translate-y-1/2 h-7 rounded-md px-2 text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis text-left shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${BARRA_TIPO[a.tipo]} ${st.id === 'gozada' ? 'opacity-60' : ''}`}
+                          className={`absolute top-1/2 -translate-y-1/2 h-7 rounded-md px-2 text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${BARRA_TIPO[a.tipo]} ${st.id === 'gozada' ? 'opacity-60' : ''}`}
                         >
                           {rotuloTipo(a.tipo)}
                         </button>

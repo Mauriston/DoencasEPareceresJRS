@@ -119,7 +119,7 @@ export const ImageScanner: React.FC = () => {
                   )}
 
                   {result && (
-                    <div className="bg-white p-4 rounded-xl border border-navy/20 shadow-sm">
+                    <div className="bg-white p-4 rounded-xl border border-navy/20 ">
                       <h4 className="font-heading font-bold text-navy mb-2 flex items-center text-base border-b pb-2">
                         <span className="material-symbols-outlined mr-2 text-navy">check_circle</span>
                         Resultado da Análise

@@ -42,7 +42,7 @@ const NotificacoesCard: React.FC<{ usuario: string }> = ({ usuario }) => {
   const { titulo, texto } = TEXTO_NOTIFICACOES[estado];
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-line/60 p-5 space-y-3">
+    <div className="bg-white rounded-2xl border border-line/60 p-5 space-y-3">
       <h3 className="font-heading font-bold text-sm text-navy flex items-center gap-2">
         <span className="material-symbols-outlined text-[18px]">notifications</span>
         Notificações
@@ -71,7 +71,7 @@ const NotificacoesCard: React.FC<{ usuario: string }> = ({ usuario }) => {
             type="button"
             onClick={ativar}
             disabled={ativando}
-            className="px-5 py-2.5 bg-navy hover:bg-navy-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5"
+            className="px-5 py-2.5 bg-navy hover:bg-navy-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5"
           >
             <span className="material-symbols-outlined text-[16px]">notifications_active</span>
             <span>{ativando ? 'Ativando...' : 'Ativar notificações'}</span>
@@ -175,16 +175,16 @@ export const Perfil: React.FC = () => {
 
       <div className="space-y-5">
         {/* FOTO DE PERFIL EM DESTAQUE */}
-        <div className="bg-white rounded-2xl shadow-sm border border-line/60 p-6 flex flex-col items-center">
+        <div className="bg-white rounded-2xl border border-line/60 p-6 flex flex-col items-center">
           <div className="relative">
             {authUser?.imageProfile ? (
               <img
                 src={authUser.imageProfile}
                 alt={authUser?.nome}
-                className="w-28 h-28 rounded-full object-cover border-4 border-line shadow-sm"
+                className="w-28 h-28 rounded-full object-cover border-4 border-line "
               />
             ) : (
-              <div className="w-28 h-28 rounded-full bg-thead border-4 border-line shadow-sm flex items-center justify-center">
+              <div className="w-28 h-28 rounded-full bg-thead border-4 border-line flex items-center justify-center">
                 <span className="material-symbols-outlined text-[56px] text-ink-3">person</span>
               </div>
             )}
@@ -192,7 +192,7 @@ export const Perfil: React.FC = () => {
               type="button"
               onClick={handleImageClick}
               disabled={uploading}
-              className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-navy hover:bg-navy-hover text-white flex items-center justify-center shadow-md border-2 border-white transition-colors disabled:opacity-50"
+              className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-navy hover:bg-navy-hover text-white flex items-center justify-center border-2 border-white transition-colors disabled:opacity-50"
               title="Alterar foto de perfil"
             >
               <span className="material-symbols-outlined text-[18px]">
@@ -206,7 +206,7 @@ export const Perfil: React.FC = () => {
         </div>
 
         {/* DADOS FUNCIONAIS (SOMENTE LEITURA) */}
-        <div className="bg-white rounded-2xl shadow-sm border border-line/60 p-5">
+        <div className="bg-white rounded-2xl border border-line/60 p-5">
           <h3 className="font-heading font-bold text-sm text-navy mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">badge</span>
             Dados Funcionais
@@ -222,7 +222,7 @@ export const Perfil: React.FC = () => {
         </div>
 
         {/* CONTATO (EDITÁVEL) */}
-        <form onSubmit={handleSalvarContato} className="bg-white rounded-2xl shadow-sm border border-line/60 p-5 space-y-4">
+        <form onSubmit={handleSalvarContato} className="bg-white rounded-2xl border border-line/60 p-5 space-y-4">
           <h3 className="font-heading font-bold text-sm text-navy flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">contact_mail</span>
             Informações de Contato
@@ -246,7 +246,7 @@ export const Perfil: React.FC = () => {
             <button
               type="submit"
               disabled={savingContato}
-              className="px-5 py-2.5 bg-navy hover:bg-navy-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5"
+              className="px-5 py-2.5 bg-navy hover:bg-navy-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5"
             >
               <span className="material-symbols-outlined text-[16px]">save</span>
               <span>{savingContato ? 'Salvando...' : 'Salvar Contato'}</span>
@@ -258,7 +258,7 @@ export const Perfil: React.FC = () => {
         {authUser && authUser.perfil !== 'user_medicos_geral' && <NotificacoesCard usuario={authUser.usuario} />}
 
         {/* ALTERAR SENHA (SOMENTE O PRÓPRIO USUÁRIO) */}
-        <form onSubmit={handleSalvarSenha} className="bg-white rounded-2xl shadow-sm border border-line/60 p-5 space-y-4">
+        <form onSubmit={handleSalvarSenha} className="bg-white rounded-2xl border border-line/60 p-5 space-y-4">
           <h3 className="font-heading font-bold text-sm text-navy flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">lock</span>
             Alterar Senha
@@ -283,7 +283,7 @@ export const Perfil: React.FC = () => {
             <button
               type="submit"
               disabled={savingSenha}
-              className="px-5 py-2.5 bg-navy hover:bg-navy-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors shadow-sm flex items-center space-x-1.5"
+              className="px-5 py-2.5 bg-navy hover:bg-navy-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5"
             >
               <span className="material-symbols-outlined text-[16px]">key</span>
               <span>{savingSenha ? 'Salvando...' : 'Alterar Senha'}</span>

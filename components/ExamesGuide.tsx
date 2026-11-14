@@ -87,7 +87,7 @@ export const ExamesGuide: React.FC = () => {
       <Container size="reading" className="py-6 md:py-8 pb-10 space-y-5">
         <PageHeader title="Exames mínimos" description="Exames mínimos por finalidade de IS observando o sexo e a idade, de acordo com o Anexo O da DGPM-406." />
 
-        <div id="exames-config-card" className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-line flex flex-col space-y-4">
+        <div id="exames-config-card" className="bg-white p-5 md:p-6 rounded-xl border border-line flex flex-col space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-[1fr_140px] md:gap-4 space-y-4 md:space-y-0">
             <div className="flex flex-col space-y-2">
               <span className="text-sm font-bold text-navy uppercase tracking-wider flex items-center gap-1">
@@ -100,7 +100,7 @@ export const ExamesGuide: React.FC = () => {
                     id={`gender-btn-${g.toLowerCase()}`}
                     type="button"
                     className={`py-2.5 md:py-3 text-base font-bold rounded-lg transition-all flex items-center justify-center gap-1 focus:outline-none ${
-                      genero === g ? 'bg-navy text-white shadow-md' : 'bg-thead text-ink hover:bg-line'
+                      genero === g ? 'bg-navy text-white ' : 'bg-thead text-ink hover:bg-line'
                     }`}
                     onClick={() => setGenero(g)}
                   >
@@ -135,7 +135,7 @@ export const ExamesGuide: React.FC = () => {
           </div>
         </div>
 
-        <div id="exams-card" className="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-line flex flex-col space-y-4">
+        <div id="exams-card" className="bg-white p-5 md:p-6 rounded-xl border border-line flex flex-col space-y-4">
           <div className="flex items-center justify-between border-b border-line pb-3 flex-wrap gap-2">
             <h3 className="font-heading font-bold text-navy text-base tracking-wider flex items-center gap-2">
               <span className="material-symbols-outlined text-navy" style={{ fontSize: '22px' }}>
@@ -143,7 +143,7 @@ export const ExamesGuide: React.FC = () => {
               </span>
               Relação de Exames Mínimos
             </h3>
-            <span className="text-sm bg-navy/5 text-navy px-2.5 py-1 rounded-full font-bold font-mono">
+            <span className="text-sm bg-navy/5 text-navy px-2.5 py-1 rounded-full font-bold tabular-nums">
               {totalExames} exames
             </span>
           </div>
@@ -216,7 +216,7 @@ export const ExamesGuide: React.FC = () => {
               <p className="text-xs font-bold text-ink-3 uppercase tracking-wider">Observações</p>
               <p className="text-sm text-ink leading-relaxed whitespace-pre-line">{obsModal.texto}</p>
               <div className="flex justify-end">
-                <button type="button" onClick={() => setObsModal(null)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Fechar</button>
+                <button type="button" onClick={() => setObsModal(null)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors ">Fechar</button>
               </div>
             </div>
           </div>

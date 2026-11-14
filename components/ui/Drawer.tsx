@@ -51,7 +51,7 @@ export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, 
             <h2 id={titleId} className="font-heading font-extrabold text-h2 text-navy truncate min-w-0">{title}</h2>
             {tituloExtra && <div className="shrink-0 flex items-center">{tituloExtra}</div>}
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0 w-11 h-11 -mr-2 flex items-center justify-center rounded-lg text-ink-3 hover:text-navy hover:bg-thead transition-colors">
+          <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0 w-10 h-10 -mr-2 flex items-center justify-center rounded-lg text-ink-3 hover:text-navy hover:bg-thead transition-colors">
             <span className="material-symbols-outlined text-[24px]" aria-hidden="true">close</span>
           </button>
         </div>

@@ -125,7 +125,7 @@ export const PericiaMenor: React.FC = () => {
   }
 
   const dataCelula = (ref: { data: string; dias: number }, homologacao?: boolean) => (
-    <><span className="block text-ink-2 font-semibold">{dataBR(ref.data)}</span><span className="block text-xs text-ink-3" title={homologacao ? 'Dias homologados' : 'Dias de dispensa'}>{dias(ref.dias)}{homologacao ? ' homolog.' : ''}</span></>
+    <><span className="block text-ink font-semibold">{dataBR(ref.data)}</span><span className="block text-xs text-ink-3" title={homologacao ? 'Dias homologados' : 'Dias de dispensa'}>{dias(ref.dias)}{homologacao ? ' homolog.' : ''}</span></>
   );
 
   return (
@@ -188,7 +188,7 @@ export const PericiaMenor: React.FC = () => {
                     {filtrada.map(({ p, ref, tipos, medico, cid }) => (
                       <li key={p.id}>
                         <button type="button" onClick={() => setDetalheId(p.id)} className="w-full text-left px-4 py-3 space-y-1 hover:bg-thead">
-                          <span className="block text-xs text-ink-3"><span className="font-semibold text-ink-2">{dataBR(ref.data)}</span> · {dias(ref.dias)}{p.homologacao ? ' homolog.' : ''}{medico ? ` · ${medico}` : ''}</span>
+                          <span className="block text-xs text-ink-3"><span className="font-semibold text-ink">{dataBR(ref.data)}</span> · {dias(ref.dias)}{p.homologacao ? ' homolog.' : ''}{medico ? ` · ${medico}` : ''}</span>
                           <span className="block min-w-0">{nomeDe(p)}</span>
                           <span className="block text-xs font-bold text-ink break-words">{cid}</span>
                           <span className="block pt-0.5"><TagsDispensa tipos={tipos} /></span>

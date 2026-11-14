@@ -51,7 +51,7 @@ export const NotificacoesPainel: React.FC<Props> = ({ lista, onAbrir, onMarcarTo
                 <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.lida ? 'bg-transparent' : 'bg-wine'}`} aria-hidden="true" />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className={`text-sm truncate ${n.lida ? 'font-semibold text-ink-2' : 'font-bold text-navy'}`}>{n.titulo}</span>
+                    <span className={`text-sm truncate ${n.lida ? 'font-semibold text-ink' : 'font-bold text-navy'}`}>{n.titulo}</span>
                     <span className="text-xs text-ink-3 shrink-0">{quando(n.em)}</span>
                   </span>
                   <span className={`block text-sm leading-snug mt-0.5 ${n.lida ? 'text-ink-3' : 'text-ink'}`}>{n.corpo}</span>

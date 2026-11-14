@@ -166,7 +166,7 @@ export const Ferias: React.FC = () => {
                         <td className="px-3 py-2 tabular-nums whitespace-nowrap">{dataBr(a.dataInicio)} a {dataBr(a.dataFim)}</td>
                         <td className="px-3 py-2 tabular-nums text-right">{a.duracaoDias}</td>
                         <td className="px-3 py-2"><StatusTag tone={st.tom}>{st.rotulo}</StatusTag></td>
-                        <td className="px-3 py-2 text-ink-2">{referencia(a)}</td>
+                        <td className="px-3 py-2 text-ink">{referencia(a)}</td>
                         <td className="px-3 py-2">
                           {a.arquivos?.length ? (
                             <span className="flex flex-wrap gap-1">

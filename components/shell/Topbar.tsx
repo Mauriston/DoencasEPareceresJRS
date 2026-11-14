@@ -1,9 +1,10 @@
 // Ficheiro: components/shell/Topbar.tsx
-// Topbar clara e única do app: menu (celular) · trilha de navegação · busca
-// global · menu do usuário. O título da página NÃO fica aqui — mora no
-// PageHeader da própria página (antes era repetido na topbar e no H2).
-import React, { useContext } from 'react';
-import { NavContext } from '../../context/NavContext';
+// Topbar clara e única do app: trilha de navegação · busca global · menu do usuário.
+// Desktop: a trilha completa; o título (h1) mora no PageHeader da página.
+// Celular (auditoria v3, M9/4b): "‹" para o pai + o título da página como h1 (registrado pelo
+// PageHeader via useTituloPagina — ver TituloPagina.tsx). O menu (drawer) abre pelo item
+// "Menu" da barra inferior (BarraInferior.tsx), que fica sob o polegar — o ☰ da topbar saiu.
+import React from 'react';
 import { Breadcrumbs } from './Breadcrumbs';
 import { GlobalSearch } from './GlobalSearch';
 import { UserMenu } from './UserMenu';
@@ -13,23 +14,12 @@ interface TopbarProps {
   rolou: boolean;
 }
 
-export const Topbar: React.FC<TopbarProps> = ({ rolou }) => {
-  const nav = useContext(NavContext);
-  return (
-    <header
-      className={`relative z-topbar shrink-0 h-14 bg-white border-b border-line flex items-center gap-2 md:gap-4 px-2 md:px-6 transition-shadow duration-200 ${rolou ? 'shadow-lg' : ''}`}
-    >
-      <button
-        type="button"
-        onClick={() => nav?.setIsMobileMenuOpen(true)}
-        aria-label="Abrir menu"
-        className="md:hidden w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead shrink-0"
-      >
-        <span className="material-symbols-outlined text-[24px]" aria-hidden="true">menu</span>
-      </button>
-      <Breadcrumbs className="flex-1" />
-      <GlobalSearch className="md:w-56 xl:w-72 shrink-0" />
-      <UserMenu />
-    </header>
-  );
-};
+export const Topbar: React.FC<TopbarProps> = ({ rolou }) => (
+  <header
+    className={`relative z-topbar shrink-0 h-14 bg-white border-b border-line flex items-center gap-2 md:gap-4 pl-3 pr-2 md:px-6 transition-shadow duration-200 ${rolou ? 'shadow-lg' : ''}`}
+  >
+    <Breadcrumbs className="flex-1" />
+    <GlobalSearch className="md:w-56 xl:w-72 shrink-0" />
+    <UserMenu />
+  </header>
+);

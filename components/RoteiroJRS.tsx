@@ -220,7 +220,7 @@ export const RoteiroJRS: React.FC = () => {
       <Container size="reading" className="py-6 md:py-8 pb-10 ">
         <PageHeader title="Roteiro JRS" description="Trilha de estudos para capacitação dos AMP." />
 
-        <div className="mb-4 bg-white p-5 rounded-2xl shadow-sm border border-line/60">
+        <div className="mb-4 bg-white p-5 rounded-2xl border border-line/60">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm text-ink font-body leading-relaxed">
@@ -238,7 +238,7 @@ export const RoteiroJRS: React.FC = () => {
             const isExpanded = expandedModule === mod.modulo_id;
 
             return (
-              <div key={mod.modulo_id} className="bg-white rounded-2xl shadow-sm border border-line/60 overflow-hidden transition-all duration-300">
+              <div key={mod.modulo_id} className="bg-white rounded-2xl border border-line/60 overflow-hidden transition-all duration-300">
                 <button 
                   onClick={() => toggleModule(mod.modulo_id)}
                   className={`w-full group flex items-center justify-between p-4 transition-colors focus:outline-none cursor-pointer ${isExpanded ? 'bg-paper/50' : 'hover:bg-paper/80'}`}
@@ -272,7 +272,7 @@ export const RoteiroJRS: React.FC = () => {
                             {mat.formato}
                           </p>
                         </div>
-                        <div className="flex-shrink-0 text-ink-3 group-hover:text-blue-600 p-2 rounded-full bg-paper group-hover:bg-blue-50 border border-line shadow-sm transition-all">
+                        <div className="flex-shrink-0 text-ink-3 group-hover:text-blue-600 p-2 rounded-full bg-paper group-hover:bg-blue-50 border border-line transition-all">
                           {getIconForFormat(mat.formato)}
                         </div>
                       </button>

@@ -343,7 +343,7 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
                     {!lendo && (
                       <button
                         type="button" onClick={() => remover(f.id)} aria-label={`Remover foto ${i + 1}`}
-                        className="absolute top-1 right-1 bg-wine text-white rounded-full w-11 h-11 flex items-center justify-center hover:bg-wine-dark shadow-sm"
+                        className="absolute top-1 right-1 bg-wine text-white rounded-full w-11 h-11 flex items-center justify-center hover:bg-wine-dark "
                       >
                         <span className="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
                       </button>
@@ -472,7 +472,7 @@ const CartaoIS: React.FC<CartaoProps> = ({ item, atual, militar, peritos, config
             </div>
           )}
           {p.avisos.length > 0 && (
-            <ul className="space-y-0.5 text-xs text-ink-2 list-disc pl-5">
+            <ul className="space-y-0.5 text-xs text-ink list-disc pl-5">
               {p.avisos.map(a => <li key={a}>{a}</li>)}
             </ul>
           )}
@@ -531,10 +531,10 @@ const CartaoIS: React.FC<CartaoProps> = ({ item, atual, militar, peritos, config
                   {p.temDados && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <Field label="Nº do TIS">
-                        {a => <input {...a} type="text" value={c.tis} onChange={e => onCampos({ tis: e.target.value.trim() })} className={`${a.className} font-mono`} autoComplete="off" />}
+                        {a => <input {...a} type="text" value={c.tis} onChange={e => onCampos({ tis: e.target.value.trim() })} className={`${a.className} tabular-nums`} autoComplete="off" />}
                       </Field>
                       <Field label="DS-1a">
-                        {a => <input {...a} type="text" value={c.ds1a} disabled={!c.tis.trim()} onChange={e => onCampos({ ds1a: e.target.value.trim().toUpperCase() })} className={`${a.className} font-mono uppercase`} autoComplete="off" />}
+                        {a => <input {...a} type="text" value={c.ds1a} disabled={!c.tis.trim()} onChange={e => onCampos({ ds1a: e.target.value.trim().toUpperCase() })} className={`${a.className} tabular-nums uppercase`} autoComplete="off" />}
                       </Field>
                     </div>
                   )}

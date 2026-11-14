@@ -83,7 +83,7 @@ export const EmailAgendaDialog: React.FC<Props> = ({ hoje, inspecoes, diasConcur
         </Field>
 
         {registro && (
-          <p role="status" className="text-xs font-semibold text-ink-2">
+          <p role="status" className="text-xs font-semibold text-ink">
             Já enviado{registro.envios > 1 ? ` ${registro.envios} vezes` : ''} (último em {quando(registro)}). Reenviar substitui o PDF dessa data, sem duplicar.
           </p>
         )}
@@ -110,7 +110,7 @@ export const EmailAgendaDialog: React.FC<Props> = ({ hoje, inspecoes, diasConcur
                         </span>
                       </span>
                       {env && (
-                        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${sel ? 'text-white' : 'text-ink-2'}`} title={`Enviado em ${quando(env)}`}>
+                        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${sel ? 'text-white' : 'text-ink'}`} title={`Enviado em ${quando(env)}`}>
                           <span className="material-symbols-outlined text-[18px]" aria-hidden="true">mark_email_read</span>
                           Enviado
                         </span>

@@ -71,7 +71,7 @@ export const ImportarEscalaCsv: React.FC<Props> = ({ onClose, onImportado }) => 
       <div className="space-y-4">
         <div className="text-ink-3 space-y-1">
           <p>
-            Uma linha por serviço, com as colunas {COLUNAS_CSV_ESCALA.map((c, i) => <React.Fragment key={c}>{i > 0 && ', '}<code className="font-mono text-navy">{c}</code></React.Fragment>)}.
+            Uma linha por serviço, com as colunas {COLUNAS_CSV_ESCALA.map((c, i) => <React.Fragment key={c}>{i > 0 && ', '}<code className="tabular-nums text-navy">{c}</code></React.Fragment>)}.
             <strong className="text-ink"> SERVICO</strong>: Supervisão, DIA ou NOITE; nos plantões, os dois médicos separados por vírgula.
           </p>
           <p>Também aceita o CSV exportado da aba <strong className="text-ink">Agenda</strong> da planilha (colunas Início, SVC, Medico e Retens). Dias já registrados são atualizados; o restante é mantido.</p>
@@ -101,7 +101,7 @@ export const ImportarEscalaCsv: React.FC<Props> = ({ onClose, onImportado }) => 
             {resultado.erros.length > 0 && (
               <div className="rounded-lg border border-wine/30 bg-wine/5 p-3">
                 <p className="text-xs font-bold text-wine mb-1">{resultado.erros.length} linha{resultado.erros.length !== 1 ? 's' : ''} ignorada{resultado.erros.length !== 1 ? 's' : ''}:</p>
-                <ul className="text-xs text-ink-2 space-y-0.5 max-h-32 overflow-y-auto">
+                <ul className="text-xs text-ink space-y-0.5 max-h-32 overflow-y-auto">
                   {resultado.erros.slice(0, 50).map(e => <li key={e.linha}>Linha {e.linha}: {e.motivo}</li>)}
                 </ul>
               </div>

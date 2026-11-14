@@ -198,7 +198,7 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Nº da IS" required error={erros.numero}>
-              {a => <input {...a} type="text" inputMode="numeric" value={numero} onChange={e => { setNumero(e.target.value.replace(/\D/g, '')); limpar('numero'); }} className={`${a.className} font-mono`} autoComplete="off" />}
+              {a => <input {...a} type="text" inputMode="numeric" value={numero} onChange={e => { setNumero(e.target.value.replace(/\D/g, '')); limpar('numero'); }} className={`${a.className} tabular-nums`} autoComplete="off" />}
             </Field>
             <Field label="Data de abertura" required error={erros.dataAbertura}>
               {a => <input {...a} type="date" max={hojeISO()} value={dataAbertura} onChange={e => { setDataAbertura(e.target.value); limpar('dataAbertura'); }} />}

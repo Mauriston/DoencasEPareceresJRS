@@ -213,7 +213,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                   type="button"
                   disabled={!file || processando}
                   onClick={handleProcessar}
-                  className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center space-x-1 disabled:opacity-50"
+                  className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors flex items-center space-x-1 disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[16px]">upload</span>
                   <span>Processar Mensagem</span>
@@ -281,7 +281,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                         value={c.id}
                         onChange={e => atualizarCandidatoEditavel(i, 'id', e.target.value)}
                         placeholder="Matrícula"
-                        className="w-28 shrink-0 px-2 py-1.5 text-xs font-mono rounded-lg border border-line focus:outline-none focus:border-navy"
+                        className="w-28 shrink-0 px-2 py-1.5 text-xs tabular-nums rounded-lg border border-line focus:outline-none focus:border-navy"
                       />
                       <input
                         type="text"
@@ -310,7 +310,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                       {textoTranscrito && (
                         <details className="text-xs text-ink-3">
                           <summary className="cursor-pointer font-semibold text-center">Ver texto transcrito do PDF</summary>
-                          <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-paper border border-line p-2 font-mono">{textoTranscrito}</pre>
+                          <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-paper border border-line p-2 tabular-nums">{textoTranscrito}</pre>
                         </details>
                       )}
                     </div>
@@ -324,7 +324,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                   type="button"
                   disabled={processando}
                   onClick={handleConfirmarCriacao}
-                  className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
+                  className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
                 >
                   {processando ? 'Criando concurso...' : 'Confirmar e Criar Concurso'}
                 </button>
@@ -385,7 +385,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                   type="button"
                   disabled={!agendamentoViavel || processando}
                   onClick={handleConfirmarAgendamento}
-                  className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
+                  className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
                 >
                   {processando ? 'Confirmando...' : 'Confirmar Agendamento e Gerar Minuta'}
                 </button>
@@ -402,7 +402,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
               </div>
               {minuta && (
                 <>
-                  <textarea readOnly value={minuta} rows={12} className="w-full px-3.5 py-2.5 rounded-lg border border-ink-5 text-sm font-mono text-navy focus:outline-none resize-none whitespace-pre-wrap" />
+                  <textarea readOnly value={minuta} rows={12} className="w-full px-3.5 py-2.5 rounded-lg border border-ink-5 text-sm tabular-nums text-navy focus:outline-none resize-none whitespace-pre-wrap" />
                   <button type="button" onClick={() => handleCopiarTexto(minuta)} className="px-4 py-2.5 rounded-xl border border-line text-sm font-bold text-ink hover:bg-thead transition-colors flex items-center space-x-1">
                     <span className="material-symbols-outlined text-[16px]">content_copy</span>
                     <span>Copiar Minuta</span>
@@ -413,7 +413,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                 <p className="text-sm text-ink-3">O concurso ficará com status "Em Breve" até um Admin abri-lo.</p>
               )}
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Concluir</button>
+                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors ">Concluir</button>
               </div>
             </>
           )}

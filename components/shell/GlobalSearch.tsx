@@ -128,7 +128,7 @@ export const GlobalSearch: React.FC<{ className?: string }> = ({ className = '' 
             onFocus={() => setAberto(true)}
             onKeyDown={aoTecla}
             autoComplete="off"
-            className="w-full min-h-[40px] md:min-h-[40px] pl-10 pr-3 rounded-lg border border-line bg-thead text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:bg-white focus:border-navy [&::-webkit-search-cancel-button]:hidden"
+            className="w-full min-h-[40px] md:min-h-[40px] pl-10 pr-3 rounded-lg border border-line bg-thead text-base md:text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:bg-white focus:border-navy [&::-webkit-search-cancel-button]:hidden"
           />
         </div>
         {expandidoMobile && (

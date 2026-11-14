@@ -267,10 +267,10 @@ export const Militares: React.FC = () => {
                     {visiveis.map(m => (
                       <tr key={m.id} onClick={() => setDetalhe(m)} className={`cursor-pointer hover:bg-thead transition-colors ${selecionados.has(m.id) ? 'bg-thead' : ''} ${m.ativo ? '' : 'text-ink-3'}`}>
                         {selecionavel && <td className="pl-4 pr-0 py-2" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy align-middle" /></td>}
-                        <td className="px-4 py-2 font-mono whitespace-nowrap">{formatNip(m.nip)}</td>
+                        <td className="px-4 py-2 tabular-nums whitespace-nowrap">{formatNip(m.nip)}</td>
                         <td className="px-4 py-2 whitespace-nowrap">{m.pgq}</td>
                         <td className="px-4 py-2 font-semibold text-navy"><button type="button" onClick={e => { e.stopPropagation(); setDetalhe(m); }} className="text-left" aria-label={`Abrir detalhes de ${m.nome}`}>{m.nome}</button>{tipoDoInspecionado(m) === 'dependente' && m.titularNome && <span className="block text-xs font-normal text-ink-3">Titular: {m.titularNome}</span>}</td>
-                        {soHnre && <td className="px-4 py-2 text-ink-2">{m.servico_label || <span className="text-ink-4">—</span>}</td>}
+                        {soHnre && <td className="px-4 py-2 text-ink">{m.servico_label || <span className="text-ink-4">—</span>}</td>}
                         <td className="px-4 py-2" onClick={e => e.stopPropagation()}>
                           {ehAdmin ? (
                             <button type="button" onClick={() => alternarAtivo(m)} title={m.ativo ? 'Clique para inativar' : 'Clique para ativar'} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="min-h-[44px] flex items-center">
@@ -426,7 +426,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
             </Field>
           )}
           <Field label="NIP" required error={erros.nip}>
-            {a => <input {...a} type="text" inputMode="numeric" value={nip} onChange={e => setNip(formatNip(e.target.value))} maxLength={10} className={`${a.className} font-mono`} />}
+            {a => <input {...a} type="text" inputMode="numeric" value={nip} onChange={e => setNip(formatNip(e.target.value))} maxLength={10} className={`${a.className} tabular-nums`} />}
           </Field>
         </div>
         {ehMilitar && (

@@ -53,7 +53,7 @@ export const ServicoMilitarForm: React.FC<Props> = ({ militar, onClose, onSalvo 
       )}
     >
       <form id="form-servico-militar" onSubmit={salvar} noValidate className="space-y-4">
-        <p className="text-sm text-ink-2">Serviço (setor) do HNRe em que <strong className="text-navy">{militar.inspecionado}</strong> serve.</p>
+        <p className="text-sm text-ink">Serviço (setor) do HNRe em que <strong className="text-navy">{militar.inspecionado}</strong> serve.</p>
         <Autocomplete
           label="Serviço do HNRe" required error={erro} placeholder="Digite o nome ou o código do serviço"
           valor={texto} opcoes={opcoes}

@@ -113,9 +113,9 @@ export const Pareceres: React.FC = () => {
   };
   const quando = (p: ParecerRecord, status: StatusParecer) => {
     const d = formatarData(p);
-    if (status === 'concluido') return <><span className="block text-ink-2">{d}</span><span className="block text-xs text-ink-3">concluído{p.concluidoEm?.toDate ? ` ${p.concluidoEm.toDate().toLocaleDateString('pt-BR').slice(0, 5)}` : ''}</span></>;
+    if (status === 'concluido') return <><span className="block text-ink">{d}</span><span className="block text-xs text-ink-3">concluído{p.concluidoEm?.toDate ? ` ${p.concluidoEm.toDate().toLocaleDateString('pt-BR').slice(0, 5)}` : ''}</span></>;
     const dias = diasDesde(p, agora);
-    return <><span className="block text-ink-2">{d}</span><span className={`block text-xs ${status === 'atrasado' ? 'font-semibold text-wine' : 'text-ink-3'}`}>{dias === 0 ? 'hoje' : `há ${dias} dia${dias !== 1 ? 's' : ''}`}</span></>;
+    return <><span className="block text-ink">{d}</span><span className={`block text-xs ${status === 'atrasado' ? 'font-semibold text-wine' : 'text-ink-3'}`}>{dias === 0 ? 'hoje' : `há ${dias} dia${dias !== 1 ? 's' : ''}`}</span></>;
   };
 
   return (
@@ -179,7 +179,7 @@ export const Pareceres: React.FC = () => {
                         <span className="min-w-0">{nomeDe(p)}</span>
                         <StatusTag tone={STATUS_PARECER[status].tom}>{STATUS_PARECER[status].rotulo}</StatusTag>
                       </span>
-                      <span className="block text-xs text-ink-2">{p.especialidade} · {p.finalidade}</span>
+                      <span className="block text-xs text-ink">{p.especialidade} · {p.finalidade}</span>
                       <span className="block text-xs text-ink-3">{formatarData(p)}</span>
                     </button>
                     {p.pdfUrl && <IconButton icon="print" variant="secondary" label={`Enviar para impressão o parecer de ${extrairNomeInspecionado(p.inspecionado)}`} onClick={() => pedirImpressao(p)} />}
@@ -208,7 +208,7 @@ export const Pareceres: React.FC = () => {
                         <td className="px-4 py-3 align-top">
                           <button type="button" onClick={e => { e.stopPropagation(); setDetalheId(p.id); }} className="text-left w-full" aria-label={`Abrir detalhe do parecer de ${extrairNomeInspecionado(p.inspecionado)}`}>{nomeDe(p)}</button>
                         </td>
-                        <td className="px-4 py-3 align-top"><span className="block text-ink-2">{p.especialidade}</span><span className="block text-xs text-ink-3">{p.finalidade}</span></td>
+                        <td className="px-4 py-3 align-top"><span className="block text-ink">{p.especialidade}</span><span className="block text-xs text-ink-3">{p.finalidade}</span></td>
                         <td className="px-4 py-3 align-top whitespace-nowrap"><StatusTag tone={STATUS_PARECER[status].tom}>{STATUS_PARECER[status].rotulo}</StatusTag></td>
                         <td className="px-4 py-3 align-top whitespace-nowrap">{quando(p, status)}</td>
                         <td className="px-4 py-2 align-top text-center">

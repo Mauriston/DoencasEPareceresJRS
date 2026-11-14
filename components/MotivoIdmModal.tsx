@@ -103,7 +103,7 @@ export const IdmPicker: React.FC<IdmPickerProps> = ({ candidatoNome, observacoes
           type="button"
           disabled={ordenados.length === 0}
           onClick={() => onConfirm(ordenados.join(SEPARADOR))}
-          className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-navy"
+          className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-navy"
         >
           Confirmar
         </button>

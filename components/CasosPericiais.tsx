@@ -401,11 +401,11 @@ export const CasosPericiais: React.FC = () => {
   };
 
   const getOptionStyle = (key: string, savedAnswer: string | null = selectedAnswer) => {
-    if (savedAnswer === null) return "bg-white border-line hover:border-navy hover:shadow-md cursor-pointer font-normal text-ink";
+    if (savedAnswer === null) return "bg-white border-line hover:border-navy cursor-pointer font-normal text-ink";
     const isCorrect = key.toUpperCase() === currentCase.gabarito.toUpperCase();
     const isSelected = key.toUpperCase() === savedAnswer.toUpperCase();
-    if (isCorrect) return "bg-green-100 border-green-500 text-green-900 font-bold shadow-sm";
-    if (isSelected && !isCorrect) return "bg-wine-50 border-wine-400 text-wine-900 font-bold shadow-sm";
+    if (isCorrect) return "bg-green-100 border-green-500 text-green-900 font-bold ";
+    if (isSelected && !isCorrect) return "bg-wine-50 border-wine-400 text-wine-900 font-bold ";
     return "bg-paper border-line opacity-60 cursor-default font-normal text-ink-3";
   };
 
@@ -452,7 +452,7 @@ export const CasosPericiais: React.FC = () => {
               <span className="text-sm font-bold text-ink-3 uppercase tracking-wider">Caso {currentIndex + 1} de {totalCases}</span>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-line/80 shadow-sm">
+            <div className="bg-white p-5 rounded-2xl border border-line/80 ">
               <p className="text-navy font-heading text-[16px]  leading-relaxed font-semibold">{currentCase.enunciado}</p>
             </div>
 
@@ -539,11 +539,11 @@ export const CasosPericiais: React.FC = () => {
       <Container size="form" className="py-6 md:py-8 pb-10 space-y-6">
         <PageHeader title="Revisão dos casos" description="Seu resultado nos casos periciais comentados." actions={<Button variant="secondary" icon="restart_alt" onClick={handleRestart}>Refazer casos</Button>} />
 
-        <div className="bg-white p-6 rounded-2xl border border-line/60 shadow-sm text-center flex flex-col items-center">
+        <div className="bg-white p-6 rounded-2xl border border-line/60 text-center flex flex-col items-center">
           <h2 className="text-sm font-bold text-ink-3 tracking-wider mb-2">Nota Final</h2>
           <div className={`text-6xl font-black ${gradeNum >= 7 ? 'text-green-700' : gradeNum >= 5 ? 'text-gold-600' : 'text-wine-500'}`}>{displayGrade}</div>
           <p className="text-ink-3 mt-3 font-medium font-body">Você acertou <strong className="text-navy">{correctCount}</strong> de {totalCases} questões.</p>
-          <button onClick={handleDownloadPDF} className="mt-6 flex items-center gap-2 bg-navy text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md hover:scale-105 transition-transform">
+          <button onClick={handleDownloadPDF} className="mt-6 flex items-center gap-2 bg-navy text-white px-6 py-2.5 rounded-full font-bold text-sm hover:scale-105 transition-transform">
             <Download size={18} />
             Baixar PDF
           </button>
@@ -553,7 +553,7 @@ export const CasosPericiais: React.FC = () => {
           const uAns = userAnswers[index];
           const isUserCorrect = uAns?.toUpperCase() === caso.gabarito.toUpperCase();
           return (
-            <div key={index} className="bg-white p-5 rounded-2xl border border-line/80 shadow-sm">
+            <div key={index} className="bg-white p-5 rounded-2xl border border-line/80 ">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-navy font-heading">Caso {caso.caso}</h3>
                 {isUserCorrect
@@ -567,8 +567,8 @@ export const CasosPericiais: React.FC = () => {
                   const isGab = key.toUpperCase() === caso.gabarito.toUpperCase();
                   const isUser = uAns?.toUpperCase() === key.toUpperCase();
                   let style = "bg-paper border-line text-ink-3 opacity-60";
-                  if (isGab) style = "bg-green-100 border-green-500 text-green-900 font-bold shadow-sm";
-                  else if (isUser && !isGab) style = "bg-wine-50 border-wine-400 text-wine-900 font-bold shadow-sm";
+                  if (isGab) style = "bg-green-100 border-green-500 text-green-900 font-bold ";
+                  else if (isUser && !isGab) style = "bg-wine-50 border-wine-400 text-wine-900 font-bold ";
                   return (
                     <div key={key} className={`w-full text-left p-3 rounded-xl border text-sm font-body leading-relaxed flex items-start gap-3 ${style}`}>
                       <div className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5 ${isGab ? 'bg-green-500 text-white border-green-500' : isUser ? 'bg-wine-500 text-white border-wine-500' : 'border-line'}`}>{key.toUpperCase()}</div>

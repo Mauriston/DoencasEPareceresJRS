@@ -2,7 +2,7 @@
 // Trilha de navegação da topbar: Início › Página › (níveis extras
 // declarados pela página). Substitui o título centralizado "Categoria - Subitem"
 // e o botão circular flutuante de voltar — cada nível é um link/rota. No
-// celular, mostra só o nível pai (‹ Pai) e o nível atual para caber na barra.
+// celular, mostra só o "‹" para o pai e o título da página (h1 — ver TituloPagina.tsx).
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { NavContext } from '../../context/NavContext';
@@ -10,12 +10,14 @@ import { useBreadcrumbExtras, type Crumb } from '../../context/BreadcrumbContext
 import { findCategoryForView, getNavCategories } from '../../config/navigation';
 import { pathForView } from '../../config/routes';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
+import { useTituloNaTopbar } from './TituloPagina';
 
 export const Breadcrumbs: React.FC<{ className?: string }> = ({ className = '' }) => {
   const nav = useContext(NavContext);
   const extras = useBreadcrumbExtras();
   const isDesktop = useIsDesktop();
   const view = nav?.currentView || 'home';
+  const tituloPagina = useTituloNaTopbar();
 
   const crumbs: Crumb[] = [];
   if (view === 'home') {
@@ -43,20 +45,25 @@ export const Breadcrumbs: React.FC<{ className?: string }> = ({ className = '' }
   const pai = [...crumbs.slice(0, ultimo)].reverse().find(c => c.to);
 
   return (
-    <nav aria-label="Trilha de navegação" className={`min-w-0 ${className}`}>
-      {/* Celular: ‹ Pai · Atual */}
-      <div className="md:hidden flex items-center gap-1 min-w-0">
+    <div className={`min-w-0 ${className}`}>
+      {/* Celular (M9): só o "‹" para o pai e o título da página. Quando a página registrou o título
+          (useTituloPagina, via PageHeader), ele vira o <h1> aqui e o PageHeader esconde o seu abaixo de md. */}
+      <div className="md:hidden flex items-center gap-0.5 min-w-0">
         {pai ? (
-          <Link to={pai.to!} className="inline-flex items-center gap-0.5 min-h-[44px] pr-2 text-sm font-semibold text-ink-3 shrink-0">
-            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">chevron_left</span>
-            {pai.label}
+          <Link to={pai.to!} aria-label={`Voltar para ${pai.label}`} title={pai.label} className="inline-flex items-center justify-center w-11 h-11 -ml-1 rounded-lg text-navy hover:bg-thead shrink-0">
+            <span className="material-symbols-outlined text-[24px]" aria-hidden="true">chevron_left</span>
           </Link>
         ) : null}
-        <span aria-current="page" className="text-sm font-bold text-navy truncate">{crumbs[ultimo].label}</span>
+        {tituloPagina ? (
+          <h1 className="text-base font-bold text-navy truncate">{tituloPagina}</h1>
+        ) : (
+          <span aria-current="page" className="text-base font-bold text-navy truncate">{crumbs[ultimo].label}</span>
+        )}
       </div>
 
       {/* Desktop: trilha completa */}
-      <ol className="hidden md:flex items-center gap-1 min-w-0 text-sm">
+      <nav aria-label="Trilha de navegação" className="hidden md:block min-w-0">
+      <ol className="flex items-center gap-1 min-w-0 text-sm">
         {crumbs.map((c, i) => (
           <li key={`${c.label}-${i}`} className="flex items-center gap-1 min-w-0">
             {i > 0 && <span className="material-symbols-outlined text-[16px] text-ink-4 shrink-0" aria-hidden="true">chevron_right</span>}
@@ -72,6 +79,7 @@ export const Breadcrumbs: React.FC<{ className?: string }> = ({ className = '' }
           </li>
         ))}
       </ol>
-    </nav>
+      </nav>
+    </div>
   );
 };

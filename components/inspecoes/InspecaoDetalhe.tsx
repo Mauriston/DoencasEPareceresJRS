@@ -294,7 +294,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                     <LinhaTabela rotulo="Encaminhamento">{encaminhamento === 'jsd' ? 'JSD' : 'Auditoria'}</LinhaTabela>
                   )}
                   {restricoesGravadas.length > 0 && <LinhaTabela rotulo="Restrições">{restricoesGravadas.join(', ')}</LinhaTabela>}
-                  <LinhaTabela rotulo="Nº do TIS">{is.tis?.trim() ? <span className="font-mono">{is.tis}</span> : ''}</LinhaTabela>
+                  <LinhaTabela rotulo="Nº do TIS">{is.tis?.trim() ? <span className="tabular-nums">{is.tis}</span> : ''}</LinhaTabela>
                   <LinhaTabela rotulo="DS-1a">{is.ds1a?.trim() || ''}</LinhaTabela>
                   {textoObservacoes && <LinhaTabela rotulo="Observações"><span className="whitespace-pre-line">{textoObservacoes}</span></LinhaTabela>}
                   <LinhaTabela rotulo="Status"><StatusTag tone={info.tom}>{info.rotulo}</StatusTag></LinhaTabela>
@@ -352,7 +352,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                   )}
                   {comEncaminhamento && encaminhamento && <Linha rotulo="Encaminhamento" className="col-span-2">{encaminhamento === 'jsd' ? 'JSD' : 'Auditoria'}</Linha>}
                   {restricoesGravadas.length > 0 && <Linha rotulo="Restrições" className="col-span-2">{restricoesGravadas.join(', ')}</Linha>}
-                  {is.tis?.trim() && <Linha rotulo="Nº do TIS"><span className="font-mono">{is.tis}</span></Linha>}
+                  {is.tis?.trim() && <Linha rotulo="Nº do TIS"><span className="tabular-nums">{is.tis}</span></Linha>}
                   {is.ds1a?.trim() && <Linha rotulo="DS-1a">{is.ds1a}</Linha>}
                   {textoObservacoes && <Linha rotulo="Observações" className="col-span-2"><span className="whitespace-pre-line">{textoObservacoes}</span></Linha>}
                 </dl>
@@ -386,7 +386,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                 <input
                   {...a} type="text" inputMode="numeric" value={tis.valor} disabled={!is.laudo?.trim()}
                   onChange={e => { tis.onChange(formatTis(e.target.value, tis.valor)); setErroTis(''); }} onBlur={tis.onBlur}
-                  placeholder={`${prefixoAnoTis()}.000.0`} maxLength={14} className={`${a.className} font-mono`}
+                  placeholder={`${prefixoAnoTis()}.000.0`} maxLength={14} className={`${a.className} tabular-nums`}
                 />
               )}
             </Field>

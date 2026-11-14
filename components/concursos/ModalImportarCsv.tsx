@@ -91,7 +91,7 @@ export const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) =
                 <p className="text-sm font-bold text-green-800">Concurso "{nomeConcurso}" importado com sucesso ({candidatos.length} candidato(s)).</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={() => onClose(concursoIdCriado)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Ver Concurso</button>
+                <button type="button" onClick={() => onClose(concursoIdCriado)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors ">Ver Concurso</button>
               </div>
             </>
           ) : (
@@ -155,7 +155,7 @@ export const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) =
                   type="button"
                   disabled={processando || candidatos.length === 0}
                   onClick={handleImportar}
-                  className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
+                  className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
                 >
                   {processando ? 'Importando...' : 'Importar Concurso'}
                 </button>

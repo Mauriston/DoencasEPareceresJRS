@@ -71,7 +71,7 @@ export const SheetCandidatoMobile: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s
               <div className="px-5 py-3 flex items-center justify-between gap-3 shrink-0 border-b border-line/70">
                 <div className="min-w-0">
                   <h3 className="font-heading font-bold text-base text-navy truncate">{c.nome}</h3>
-                  <p className="text-xs text-ink-3 font-mono truncate">{c.id}{c.dataAgendamento ? ` · ${isoParaBR(c.dataAgendamento)}` : ''}</p>
+                  <p className="text-xs text-ink-3 tabular-nums truncate">{c.id}{c.dataAgendamento ? ` · ${isoParaBR(c.dataAgendamento)}` : ''}</p>
                 </div>
                 {!sheetTravado && (
                   <button onClick={fecharSheet} aria-label="Fechar" className="text-ink-3 hover:text-navy p-1.5 rounded-lg hover:bg-line/60 transition-colors shrink-0">

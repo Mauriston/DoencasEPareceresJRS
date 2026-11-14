@@ -155,7 +155,7 @@ export const DGPM406Guide: React.FC = () => {
   // Card fixo à esquerda (desktop) com a lista de capítulos ou de anexos (conforme
   // o documento aberto), para navegar entre eles sem voltar à grade.
   const navCard = (heading: string, children: React.ReactNode) => (
-    <div className="bg-white rounded-2xl border border-line/60 shadow-sm p-3 max-h-[calc(100vh-140px)] overflow-y-auto">
+    <div className="bg-white rounded-2xl border border-line/60 p-3 max-h-[calc(100vh-140px)] overflow-y-auto">
       <h3 className="text-xs font-bold text-ink-3 tracking-wider px-2 pb-2 mb-1 border-b border-line">
         {heading}
       </h3>
@@ -233,7 +233,7 @@ export const DGPM406Guide: React.FC = () => {
             indica o que o clique faz: abre o PDF (file_open) ou navega para a
             página renderizada (chevron). Anexos: mesma tabela no desktop. */}
         {activeTab === 'capitulos' && (
-          <div className="hidden md:block bg-white rounded-2xl border border-line/60 shadow-sm overflow-hidden">
+          <div className="hidden md:block bg-white rounded-2xl border border-line/60 overflow-hidden">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-paper/80 border-b border-line text-xs font-bold text-navy uppercase tracking-wider">
@@ -259,7 +259,7 @@ export const DGPM406Guide: React.FC = () => {
           </div>
         )}
         {activeTab === 'anexos' && (
-          <div className="hidden md:block bg-white rounded-2xl border border-line/60 shadow-sm overflow-hidden">
+          <div className="hidden md:block bg-white rounded-2xl border border-line/60 overflow-hidden">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-paper/80 border-b border-line text-xs font-bold text-navy uppercase tracking-wider">
@@ -291,7 +291,7 @@ export const DGPM406Guide: React.FC = () => {
                 key={item.id}
                 type="button"
                 onClick={() => handleChapterClick(item)}
-                className="group flex items-center gap-3 bg-white rounded-xl border border-line/60 px-4 py-3 hover:shadow-md hover:border-navy transition-all duration-200 cursor-pointer text-left"
+                className="group flex items-center gap-3 bg-white rounded-xl border border-line/60 px-4 py-3 hover:border-navy transition-all duration-200 cursor-pointer text-left"
               >
                 <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors shrink-0">
                   {item.mdKey ? 'single_arrow' : 'file_open'}
@@ -312,7 +312,7 @@ export const DGPM406Guide: React.FC = () => {
                 key={item.id}
                 type="button"
                 onClick={() => handleAnexoClick(item)}
-                className="group flex items-center gap-3 bg-white rounded-xl border border-line/60 px-4 py-3 hover:shadow-md hover:border-navy transition-all duration-200 cursor-pointer text-left"
+                className="group flex items-center gap-3 bg-white rounded-xl border border-line/60 px-4 py-3 hover:border-navy transition-all duration-200 cursor-pointer text-left"
               >
                 <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors shrink-0">
                   {item.mdKey ? 'single_arrow' : 'file_open'}

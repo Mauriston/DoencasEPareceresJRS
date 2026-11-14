@@ -56,7 +56,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, hoje }) 
         <PageHeader title={person} description={om ? `Histórico de ${t.plural} · OM: ${om}` : `Histórico de ${t.plural}`} />
 
 
-        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 space-y-3">
+        <div className="bg-white rounded-2xl border border-line p-4 space-y-3">
           <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-navy">assignment</span>
             {Plural} realizad{t.plural === 'atestados' ? 'os' : 'as'}
@@ -75,7 +75,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, hoje }) 
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 space-y-3">
+        <div className="bg-white rounded-2xl border border-line p-4 space-y-3">
           <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-navy">event_busy</span>
             Dias de Dispensa
@@ -94,7 +94,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, hoje }) 
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-line shadow-sm p-4 space-y-3">
+        <div className="bg-white rounded-2xl border border-line p-4 space-y-3">
           <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px] text-navy">warning</span>
             Dias em Restrições
@@ -114,7 +114,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, hoje }) 
         </div>
 
         {stats.topCids.length > 0 && (
-          <div className="bg-white rounded-2xl border border-line shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-line p-4">
             <h3 className="text-xs font-bold text-navy tracking-wider flex items-center gap-2 mb-3">
               <span className="material-symbols-outlined text-[16px] text-green-700">diagnosis</span>
               Principais CID
@@ -122,7 +122,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, hoje }) 
             <div className="space-y-1.5">
               {stats.topCids.map(([cid, count]) => (
                 <div key={cid} className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-navy w-20 shrink-0">{cid}</span>
+                  <span className="tabular-nums text-xs font-bold text-navy w-20 shrink-0">{cid}</span>
                   <div className="flex-1 bg-thead rounded-full h-1.5">
                     <div className="bg-green h-1.5 rounded-full" style={{ width: `${(count / stats.topCids[0][1]) * 100}%` }} />
                   </div>
@@ -133,7 +133,7 @@ export const PericiaMenorDetalhe: React.FC<Props> = ({ person, records, hoje }) 
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-line shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-line overflow-hidden">
           <div className="bg-navy/5 px-4 py-2.5 border-b border-line">
             <h3 className="text-xs font-bold text-navy tracking-wider">Histórico de {Plural}</h3>
           </div>

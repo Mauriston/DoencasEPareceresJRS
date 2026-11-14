@@ -90,6 +90,7 @@ const BASE_PATHS: Record<NavItem, string> = {
   perfil: '/perfil',
   configuracoes: '/configuracoes',
   ferias: '/ferias',
+  painel: '/painel',
   sobre: '/sobre',
   guide: '/beneficios/doencas',
   portaria: '/beneficios/portaria',

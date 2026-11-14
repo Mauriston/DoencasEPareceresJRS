@@ -150,7 +150,7 @@ export const Mensagens: React.FC = () => {
         <PageHeader title="Mensagens" description="Minutas das mensagens de IS auxiliadas por IA." />
 
 
-        <div className="bg-white rounded-2xl border border-line shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-line p-5 space-y-4">
           <h2 className="font-heading font-bold text-navy text-base flex items-center gap-2 border-b border-line pb-2">
             <span className="material-symbols-outlined text-navy">add_photo_alternate</span>
             Imagens da IS
@@ -210,7 +210,7 @@ export const Mensagens: React.FC = () => {
                                 type="button"
                                 onClick={() => removeImage(isIdx * 2 + offset)}
                                 aria-label="Remover imagem" title="Remover imagem"
-                                className="absolute top-1 right-1 bg-wine text-white rounded-full w-11 h-11 flex items-center justify-center hover:bg-wine-dark transition-colors shadow-sm"
+                                className="absolute top-1 right-1 bg-wine text-white rounded-full w-11 h-11 flex items-center justify-center hover:bg-wine-dark transition-colors "
                               >
                                 <span className="material-symbols-outlined text-[20px]">close</span>
                               </button>
@@ -261,7 +261,7 @@ export const Mensagens: React.FC = () => {
             type="button"
             onClick={handleGenerate}
             disabled={isLoading || images.length === 0 || hasOddImage}
-            className="w-full py-4 bg-navy text-white font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-navy/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md text-sm"
+            className="w-full py-4 bg-navy text-white font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-navy/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed text-sm"
           >
             {isLoading ? (
               <>
@@ -284,7 +284,7 @@ export const Mensagens: React.FC = () => {
         )}
 
         {minuta && (
-          <div className="bg-white rounded-2xl border border-line shadow-sm overflow-hidden animate-fade-in">
+          <div className="bg-white rounded-2xl border border-line overflow-hidden animate-fade-in">
             <div className="bg-navy px-5 py-3.5 flex items-center justify-between">
               <div className="flex items-center gap-2 text-white">
                 <span className="material-symbols-outlined text-[18px] text-gold">task_alt</span>

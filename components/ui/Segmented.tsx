@@ -63,14 +63,14 @@ export function Segmented<T extends string>({ options, value, onChange, ariaLabe
             {...(aba ? { id: `${idBase}-aba-${o.value}`, 'aria-selected': ativo, 'aria-controls': `${idBase}-painel` } : { 'aria-checked': ativo })}
             tabIndex={ativo || (nenhumAtivo && o === options[0]) ? 0 : -1}
             onClick={() => (ativo && onDesmarcar ? onDesmarcar() : onChange(o.value))}
-            className={`${fullWidth ? 'flex-1' : ''} inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-md text-sm font-bold whitespace-nowrap transition-colors ${
+            className={`${fullWidth ? 'flex-1' : ''} inline-flex items-center justify-center gap-2 min-h-8 px-4 rounded-md text-sm font-bold whitespace-nowrap transition-colors ${
               ativo ? 'bg-navy text-white' : 'text-ink-3 hover:bg-white hover:text-navy'
             }`}
           >
             {o.icon && <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{o.icon}</span>}
             {o.label}
             {o.badge !== undefined && o.badge > 0 && (
-              <span className={`min-w-5 h-5 px-1 rounded-full text-xs font-bold flex items-center justify-center ${ativo ? 'bg-white text-navy' : o.badgeTone === 'neutro' ? 'bg-line text-ink-2' : 'bg-wine text-white'}`}>{o.badge}</span>
+              <span className={`min-w-5 h-5 px-1 rounded-full text-xs font-bold flex items-center justify-center ${ativo ? 'bg-white text-navy' : o.badgeTone === 'neutro' ? 'bg-line text-ink' : 'bg-wine text-white'}`}>{o.badge}</span>
             )}
           </button>
         );

@@ -108,7 +108,7 @@ export const Configuracoes: React.FC = () => {
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
       <Page size="form" title="Configurações" description="Configurações gerais do app, iguais para todos os perfis. Só o Admin vê e altera." actions={acoes}>
         <div className="space-y-6">
-          <div className="flex items-start gap-2 rounded-xl border border-line bg-paper p-3 text-sm text-ink-2">
+          <div className="flex items-start gap-2 rounded-xl border border-line bg-paper p-3 text-sm text-ink">
             <span className="material-symbols-outlined text-[20px] text-navy shrink-0" aria-hidden="true">info</span>
             <p>O servidor lê estas configurações a cada envio: depois de salvar, a mudança vale no próximo e-mail, sem publicar nada.</p>
           </div>
@@ -148,7 +148,7 @@ export const Configuracoes: React.FC = () => {
                 <Cartao
                   key={t.tipo}
                   titulo={t.rotulo}
-                  subtitulo={<>Assunto: <strong className="text-ink-2">{t.assunto}</strong></>}
+                  subtitulo={<>Assunto: <strong className="text-ink">{t.assunto}</strong></>}
                   acao={<Button variant="ghost" icon="restart_alt" disabled={ehPadrao(t.tipo)} onClick={() => restaurar(t.tipo)}>Restaurar padrões</Button>}
                 >
                   <div className="space-y-3">

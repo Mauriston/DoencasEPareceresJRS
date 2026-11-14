@@ -8,30 +8,21 @@
 // vinho = erro, vigente com prazo, destrutivo · ink = texto e metadados.
 // Só existem as cores do DS: navy, gold (com escala 50–900), green, wine
 // (escala 50–900), ink (texto e metadados), blue (azul de apoio), line/paper/
-// thead/canvas. Os apelidos do Tailwind (gray, slate, red, amber) foram
+// thead/canvas, surface/surface-2 e placa (branco fixo). Valores em styles/tokens.css. Os apelidos do Tailwind (gray, slate, red, amber) foram
 // removidos — usar uma dessas classes não compila mais (scripts/verificar-ds.mjs
 // falha o build).
 
-const vinho = {
-  50: '#FBEFEC', 100: '#F6DCD6', 200: '#EBBBB0', 300: '#D98E7E', 400: '#C0675A',
-  500: '#85200C', 600: '#85200C', 700: '#6B1A0A', 800: '#6B1A0A', 900: '#4F1308',
-};
+// Cores TEMATIZÁVEIS (auditoria v3, 4f): cada cor aponta para uma variável RGB de
+// styles/tokens.css (--c-<nome>), com suporte a alpha (bg-navy/10). Os hex do tema
+// claro e das três variantes do escuro (Marinho · Grafite · OLED) vivem lá.
+// No escuro: white → surface, navy → action (primário invertido), paper/thead → surface-2.
+const v = (nome) => `rgb(var(--c-${nome}) / <alpha-value>)`;
+const escala = (nome) => Object.fromEntries([50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map(n => [n, v(`${nome}-${n}`)]));
 
-const ouro = {
-  50: '#FEF8E7', 100: '#FDF0CC', 200: '#FCE3A0', 300: '#FBD070', 400: '#FAB932',
-  500: '#D99A1A', 600: '#8A6100', 700: '#8A6100', 800: '#6E4D00', 900: '#4D3500',
-};
-
-const verde = {
-  DEFAULT: '#079551',
-  50: '#E8F6EF', 100: '#D0EEDF', 200: '#A7DDC1', 300: '#6FC49A', 400: '#33A874',
-  500: '#079551', 600: '#079551', 700: '#04643B', 800: '#04643B', 900: '#03472A',
-};
-
-const azulApoio = {
-  50: '#EEF2FA', 100: '#DCE4F4', 200: '#BCCBE8', 300: '#8FA8D5', 400: '#5C7FBC',
-  500: '#1c4587', 600: '#1c4587', 700: '#163870', 800: '#122C58', 900: '#0C1D3A',
-};
+const vinho = escala('wine');
+const ouro = escala('gold');
+const verde = { DEFAULT: v('green'), ...escala('green') };
+const azulApoio = { DEFAULT: v('blue-600'), ...escala('blue') }; // text-blue = link (azul de apoio)
 
 import containerQueries from '@tailwindcss/container-queries';
 
@@ -47,18 +38,23 @@ export default {
     colors: {
       transparent: 'transparent',
       current: 'currentColor',
-      white: '#ffffff',
-      black: '#000000',
-      navy: { DEFAULT: '#050F41', hover: '#01002B', pressed: '#020020' },
-      gold: { ...ouro, DEFAULT: '#FAB932', ink: '#8A6100' },
-      'gold-ink': '#8A6100',
+      // white = superfície (cards, campos, topbar) e texto sobre cor cheia; no escuro vira --surface.
+      white: v('white'),
+      black: v('black'),
+      // Branco que NÃO muda com o tema: placa de imagens/PDF/brasão e texto sobre mídia/preto.
+      placa: '#ffffff',
+      navy: { DEFAULT: v('navy'), hover: v('navy-hover'), pressed: v('navy-pressed') },
+      gold: { ...ouro, DEFAULT: v('gold'), ink: v('gold-ink') },
+      'gold-ink': v('gold-ink'),
       green: verde,
-      wine: { DEFAULT: '#85200C', dark: '#6B1A0A', ...vinho },
-      ink: { DEFAULT: '#3D4460', 3: '#5A627A', 4: '#8A93AC', 5: '#B9BFD1' },
-      line: '#E3E6ED',
-      paper: '#F7F8FA',
-      thead: '#F2F4F8',
-      canvas: '#F2F4F8', // fundo das telas (cards brancos por cima)
+      wine: { DEFAULT: v('wine'), dark: v('wine-dark'), ...vinho },
+      ink: { DEFAULT: v('ink'), 3: v('ink-3'), 4: v('ink-4'), 5: v('ink-5') },
+      line: v('line'),
+      paper: v('paper'),
+      thead: v('thead'),
+      canvas: v('canvas'), // fundo das telas (cards brancos por cima)
+      // Papéis semânticos explícitos (preferir em código novo de superfície).
+      surface: { DEFAULT: v('surface'), 2: v('surface-2') },
       blue: azulApoio,
     },
     fontFamily: {
@@ -67,8 +63,7 @@ export default {
       heading: ['Montserrat', 'system-ui', 'sans-serif'],
       body: ['Montserrat', 'system-ui', 'sans-serif'],
       slogan: ['Montserrat', 'system-ui', 'sans-serif'],
-      // Sem webfont: a Roboto Mono nunca foi carregada e caía sempre no monoespaçado do sistema.
-      mono: ['ui-monospace', '"SF Mono"', 'Menlo', 'Consolas', 'monospace'],
+      // Sem font-mono (auditoria v3, G5): números alinhados = Montserrat + tabular-nums.
     },
     // Escala tipográfica com PAPÉIS (auditoria v2, V1) — nomes semânticos em vez de apelidos
     // numéricos que colidiam (lg = xl, 2xl = 3xl = 4xl):
@@ -78,11 +73,12 @@ export default {
       xs: ['0.75rem', { lineHeight: '1.5' }],
       sm: ['0.875rem', { lineHeight: '1.5' }],
       base: ['1rem', { lineHeight: '1.6' }],
-      h3: ['1rem', { lineHeight: '1.4' }],
-      h2: ['1.25rem', { lineHeight: '1.3' }],
-      h1: ['1.5rem', { lineHeight: '1.25' }],
-      kpi: ['1.5rem', { lineHeight: '1.1' }],
-      display: ['2rem', { lineHeight: '1.15' }],
+      // Os papéis de título já trazem o peso (h3/h2 700 · h1/kpi/display 800); font-* explícito sobrepõe.
+      h3: ['1rem', { lineHeight: '1.4', fontWeight: '700' }],
+      h2: ['1.25rem', { lineHeight: '1.3', fontWeight: '700' }],
+      h1: ['1.5rem', { lineHeight: '1.25', fontWeight: '800' }],
+      kpi: ['1.5rem', { lineHeight: '1.1', fontWeight: '800' }],
+      display: ['2rem', { lineHeight: '1.15', fontWeight: '800' }],
       // Números-herói (nota dos Casos Periciais) — fora da escala de texto.
       '5xl': ['3rem', { lineHeight: '1' }],
       '6xl': ['3.5rem', { lineHeight: '1' }],
@@ -106,16 +102,17 @@ export default {
       '3xl': '14px',
       full: '9999px',
     },
-    // Uma sombra só, e só para sobreposições (menus, diálogos, toasts, FABs).
+    // Uma sombra só, e só para sobreposições (menus, diálogos, toasts, FABs). No escuro a
+    // variável vira uma borda line (sem sombra; a elevação vem da superfície).
     boxShadow: {
       '2xs': 'none',
       xs: 'none',
       sm: 'none',
       DEFAULT: 'none',
       md: 'none',
-      lg: '0 3px 12px rgba(18, 28, 75, 0.08)',
-      xl: '0 3px 12px rgba(18, 28, 75, 0.08)',
-      '2xl': '0 3px 12px rgba(18, 28, 75, 0.08)',
+      lg: 'var(--shadow-overlay)',
+      xl: 'var(--shadow-overlay)',
+      '2xl': 'var(--shadow-overlay)',
       inner: 'none',
       none: 'none',
     },

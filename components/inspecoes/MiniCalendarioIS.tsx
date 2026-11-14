@@ -107,7 +107,7 @@ export const MiniCalendarioIS: React.FC<Props> = ({ inspecoes, diasConcursos = [
               const corpo = (
                 <>
                   <span className={`w-2 h-2 rounded-full shrink-0 ${c.encerrado ? 'bg-green' : 'bg-wine'}`} aria-hidden="true" />
-                  <span className="font-mono font-bold text-navy shrink-0">07:30–12:00</span>
+                  <span className="tabular-nums font-bold text-navy shrink-0">07:30–12:00</span>
                   <span className="text-ink min-w-0 break-words">{tituloDiaConcurso(c)}{c.encerrado ? ' · encerrado' : ''}</span>
                 </>
               );
@@ -129,7 +129,7 @@ export const MiniCalendarioIS: React.FC<Props> = ({ inspecoes, diasConcursos = [
               <li key={i.id}>
                 <Link to="/inspecoes" className="flex items-center gap-2 min-h-[32px] text-sm hover:underline">
                   <span className={`w-2 h-2 rounded-full shrink-0 ${i.amp === 'JRS' ? 'bg-navy' : 'bg-gold'}`} aria-hidden="true" />
-                  <span className="font-mono font-bold text-navy shrink-0">{horaDeEntrevista(i.dataEntrevista)}</span>
+                  <span className="tabular-nums font-bold text-navy shrink-0">{horaDeEntrevista(i.dataEntrevista)}</span>
                   <span className="truncate text-ink">{nomeCurto(i.inspecionado)}</span>
                 </Link>
               </li>

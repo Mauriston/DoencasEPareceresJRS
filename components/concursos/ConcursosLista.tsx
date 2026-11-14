@@ -343,14 +343,14 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
                   <div className="divide-y divide-line border border-line rounded-xl overflow-hidden">
                     {pendentesFinalizacao.map(p => (
                       <div key={p.id} className="p-2.5 text-sm flex items-center justify-between">
-                        <span className="font-mono font-bold text-navy">{p.id}</span>
+                        <span className="tabular-nums font-bold text-navy">{p.id}</span>
                         <span className="text-ink">{p.nome}</span>
                       </div>
                     ))}
                   </div>
                 </>
               ) : (
-                <textarea readOnly value={minutaResultados ?? ''} rows={16} className="w-full px-3.5 py-2.5 rounded-lg border border-ink-5 text-sm font-mono text-navy focus:outline-none resize-none whitespace-pre-wrap" />
+                <textarea readOnly value={minutaResultados ?? ''} rows={16} className="w-full px-3.5 py-2.5 rounded-lg border border-ink-5 text-sm tabular-nums text-navy focus:outline-none resize-none whitespace-pre-wrap" />
               )}
               <div className="pt-2 flex items-center justify-end space-x-2">
                 {minutaResultados && (
@@ -359,7 +359,7 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
                     <span>Copiar Minuta</span>
                   </button>
                 )}
-                <button type="button" onClick={() => { setMinutaResultados(null); setPendentesFinalizacao(null); }} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Fechar</button>
+                <button type="button" onClick={() => { setMinutaResultados(null); setPendentesFinalizacao(null); }} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors ">Fechar</button>
               </div>
             </div>
           </div>
@@ -513,7 +513,7 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
                             <button type="button" onClick={e => { e.stopPropagation(); onSelecionar(c.id); }} className="text-left font-bold text-navy hover:underline min-h-[44px]">{c.nome}</button>
                           </td>
                           <td className="py-2 px-4"><ConcursoStatusTag status={c.status} /></td>
-                          <td className="py-2 px-4 text-ink-2 whitespace-nowrap">{c.periodoInicioISO ? `${isoParaBR(c.periodoInicioISO)} a ${isoParaBR(c.periodoFimISO)}` : '—'}</td>
+                          <td className="py-2 px-4 text-ink whitespace-nowrap">{c.periodoInicioISO ? `${isoParaBR(c.periodoInicioISO)} a ${isoParaBR(c.periodoFimISO)}` : '—'}</td>
                           <td className="py-2 px-4 text-center font-bold text-navy">{celulaNumericaTabela(c.totalCandidatos, c.status)}</td>
                           <td className="py-2 px-4 text-center font-bold text-green-700">{sc ? celulaNumericaTabela(sc.apto, c.status) : (loadingStatusCounts ? '…' : '—')}</td>
                           <td className="py-2 px-4 text-center font-bold text-wine">{sc ? celulaNumericaTabela(sc.inapto, c.status) : (loadingStatusCounts ? '…' : '—')}</td>
@@ -553,7 +553,7 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
                             <ProgressBar className="mt-2" atual={contagem.finalizados} total={contagem.total} unidade="finalizados" />
                           )}
                           {c.periodoInicioISO && (
-                            <p className="text-sm text-ink-2 mt-1">{isoParaBR(c.periodoInicioISO)} a {isoParaBR(c.periodoFimISO)}</p>
+                            <p className="text-sm text-ink mt-1">{isoParaBR(c.periodoInicioISO)} a {isoParaBR(c.periodoFimISO)}</p>
                           )}
                         </div>
                       </div>

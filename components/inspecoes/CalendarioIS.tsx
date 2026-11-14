@@ -301,7 +301,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
                           <button
                             key={c.chave} type="button" disabled={!onAbrirConcurso} onClick={() => onAbrirConcurso?.(c.concursoId)}
                             title={`${tituloDiaConcurso(c)}${c.encerrado ? ' · dia encerrado' : ''}${onAbrirConcurso ? ' · abrir a tabela do concurso' : ''}`}
-                            className={`mx-1 mb-1 flex items-center gap-1 rounded border px-1 text-xs font-bold truncate w-[calc(100%-0.5rem)] text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${onAbrirConcurso ? 'hover:shadow-md' : 'cursor-default'} ${corConcurso(c)}`}
+                            className={`mx-1 mb-1 flex items-center gap-1 rounded border px-1 text-xs font-bold truncate w-[calc(100%-0.5rem)] text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${onAbrirConcurso ? '' : 'cursor-default'} ${corConcurso(c)}`}
                           >
                             <span className="material-symbols-outlined text-[14px]" aria-hidden="true">{c.encerrado ? 'check_circle' : 'fact_check'}</span>
                             <span className="truncate">{tituloDiaConcurso(c)}</span>
@@ -319,7 +319,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
                 <div className="grid" style={{ gridTemplateColumns: `56px repeat(${dias.length}, minmax(0, 1fr))` }}>
                   <div className="relative" style={{ height: ALTURA_GRADE }} aria-hidden="true">
                     {HORAS.map(h => (
-                      <span key={h} className="absolute right-2 -translate-y-1/2 text-xs text-ink-3 font-mono" style={{ top: (h * 60 - INICIO_GRADE) * PX_POR_MIN }}>{h > 7 ? `${String(h).padStart(2, '0')}:00` : ''}</span>
+                      <span key={h} className="absolute right-2 -translate-y-1/2 text-xs text-ink-3 tabular-nums" style={{ top: (h * 60 - INICIO_GRADE) * PX_POR_MIN }}>{h > 7 ? `${String(h).padStart(2, '0')}:00` : ''}</span>
                     ))}
                   </div>
                   {dias.map(d => (
@@ -503,10 +503,10 @@ const ColunaDia: React.FC<{
             onClick={e => { e.stopPropagation(); onAbrir(is); }}
             {...arraste}
             {...propsDica(is)}
-            className={`absolute z-10 px-1.5 rounded border text-left overflow-hidden text-xs leading-tight hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold select-none ${arraste.draggable ? 'cursor-grab active:cursor-grabbing' : ''} ${arrastando?.id === is.id ? 'opacity-40' : ''} ${corAmp(is.amp)}`}
+            className={`absolute z-10 px-1.5 rounded border text-left overflow-hidden text-xs leading-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold select-none ${arraste.draggable ? 'cursor-grab active:cursor-grabbing' : ''} ${arrastando?.id === is.id ? 'opacity-40' : ''} ${corAmp(is.amp)}`}
             style={{ top: topo(min) + 1, height: duracao * PX_POR_MIN - 2, left: `calc(${(col / total) * 100}% + 2px)`, width: `calc(${100 / total}% - 4px)` }}
           >
-            <span className="font-bold font-mono">{horaDeEntrevista(is.dataEntrevista)}</span> <span className="font-semibold">{nomeCurto(is.inspecionado)}</span>
+            <span className="font-bold tabular-nums">{horaDeEntrevista(is.dataEntrevista)}</span> <span className="font-semibold">{nomeCurto(is.inspecionado)}</span>
           </button>
         );
       })}
@@ -564,7 +564,7 @@ const VisaoMes: React.FC<{
                       const arraste = propsArraste(is);
                       return (
                         <button key={is.id} type="button" onClick={() => onAbrir(is)} {...arraste} {...propsDica(is)} className={`block w-full text-left truncate rounded border px-1 text-xs ${arraste.draggable ? 'cursor-grab active:cursor-grabbing' : ''} ${arrastandoId === is.id ? 'opacity-40' : ''} ${corAmp(is.amp)}`}>
-                          <span className="font-mono font-bold">{horaDeEntrevista(is.dataEntrevista)}</span> {nomeCurto(is.inspecionado)}
+                          <span className="tabular-nums font-bold">{horaDeEntrevista(is.dataEntrevista)}</span> {nomeCurto(is.inspecionado)}
                         </button>
                       );
                     })}

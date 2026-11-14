@@ -326,7 +326,7 @@ const FiltroSelect: React.FC<{
         <span className="material-symbols-outlined text-[18px] md:text-[20px]">filter_list</span>
         Filtrar por
       </label>
-      <div className={`relative flex items-center bg-white border-2 ${cor.borda} rounded-xl shadow-sm transition-colors`}>
+      <div className={`relative flex items-center bg-white border-2 ${cor.borda} rounded-xl transition-colors`}>
         <select
           className="w-full bg-transparent text-navy py-3 md:py-4 pl-4 md:pl-5 pr-14 rounded-lg font-bold focus:outline-none text-base appearance-none cursor-pointer font-body"
           value={value}
@@ -440,7 +440,7 @@ export const ConcursosGuide: React.FC = () => {
             <div className="space-y-3.5 md:space-y-4">
               <FiltroSelect accent="navy" value={activeIndice} onChange={setActiveIndice} options={indicesList} />
               {currentIndice && (
-                <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-line/60 space-y-5">
+                <div className="bg-white p-5 md:p-8 rounded-2xl border border-line/60 space-y-5">
                   <h3 className="flex items-center gap-2.5 text-h2 font-heading font-bold text-navy pb-3 border-b border-line">
                     {currentIndice.icon}
                     {currentIndice.title}
@@ -455,7 +455,7 @@ export const ConcursosGuide: React.FC = () => {
             <div className="space-y-3.5 md:space-y-4">
               <FiltroSelect accent="red" value={activeInaptidao} onChange={setActiveInaptidao} options={inaptidaoCategories} />
               {currentInaptidao && (
-                <div className="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-line/60">
+                <div className="bg-white p-5 md:p-8 rounded-2xl border border-line/60">
                   <h3 className="flex items-center gap-2.5 text-h2 font-heading font-bold text-wine-700 pb-3 mb-4 border-b border-line">
                     <span className="material-symbols-outlined text-[26px] md:text-[30px] shrink-0">{currentInaptidao.icon}</span>
                     {currentInaptidao.title}

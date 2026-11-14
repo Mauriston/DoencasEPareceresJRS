@@ -134,7 +134,7 @@ export const Videos: React.FC = () => {
         ) : (
           <div className="grid grid-cols-2 gap-3 max-w-4xl mx-auto">
             {videos!.map(video => (
-              <div key={video.id} className="relative group bg-white rounded-lg shadow-sm border border-line/60 flex flex-col hover:shadow-md hover:border-navy transition-all animate-fade-in">
+              <div key={video.id} className="relative group bg-white rounded-lg border border-line/60 flex flex-col hover:border-navy transition-all animate-fade-in">
                 <button type="button" className="flex flex-col w-full text-left focus:outline-none active:scale-[0.98] transition-transform" onClick={() => abrir(video)}>
                   <div className="w-full aspect-video bg-black relative flex-shrink-0 rounded-t-lg overflow-hidden">
                     <img src={video.thumbnailUrl} alt={`Thumbnail de ${video.titulo}`} className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />

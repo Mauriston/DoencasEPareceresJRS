@@ -7,6 +7,8 @@ import { hojeISO as hojeISOAcesso } from './utils/inspecoes';
 import { Home } from './components/Home';
 import { Sidebar } from './components/shell/Sidebar';
 import { Topbar } from './components/shell/Topbar';
+import { BarraInferior } from './components/shell/BarraInferior';
+import { TituloPaginaProvider } from './components/shell/TituloPagina';
 import { BreadcrumbProvider } from './context/BreadcrumbContext';
 import { ALIASES, ROUTES, destinoDoAlias, pathForView, viewForPath } from './config/routes';
 import { Dialog } from './components/ui/Dialog';
@@ -487,6 +489,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       {/* Mantém o Google Agenda em dia com os dias de concurso, em qualquer página (a de Inspeções faz a sua própria). */}
       <SincronizadorAgendaConcursos ativo={canAccessPage('inspecoes', authUser.perfil) && canUseFeature('inspecoes.agendar', authUser.perfil) && currentView !== 'inspecoes'} />
       <BreadcrumbProvider>
+      <TituloPaginaProvider>
       <div className="fixed inset-0 flex bg-canvas text-ink overflow-hidden antialiased">
         <button
           type="button"
@@ -503,14 +506,18 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
           <main id="conteudo" ref={mainRef} tabIndex={-1} className="flex-1 min-h-0 overflow-y-auto focus:outline-none">
             <div ref={sentinelaRef} className="h-px -mb-px" aria-hidden="true" />
             {/* Única transição de troca de tela (CSS, 150 ms); Page e as telas não repetem o fade. */}
-            <div key={currentView} className="flex flex-col min-h-full w-full animate-fade-in">
+            {/* Folga embaixo no celular (barra inferior, 4e): calc(78px + área segura), publicada pela BarraInferior. */}
+            <div key={currentView} className="flex flex-col min-h-full w-full animate-fade-in pb-[var(--tabbar-folga,0px)] md:pb-0">
               <Suspense fallback={<div className="flex flex-1 items-center justify-center py-24" role="status" aria-label="Carregando a página"><div className="w-8 h-8 border-2 border-navy/20 border-t-navy rounded-full animate-spin" /></div>}>
                 {rotas}
               </Suspense>
             </div>
           </main>
         </div>
+        {/* Celular: destinos do perfil + Menu, oculta ao rolar (mesmo contêiner do `rolou`). */}
+        <BarraInferior alvo={mainRef} />
       </div>
+      </TituloPaginaProvider>
       </BreadcrumbProvider>
 
       {mostrarAlertaSenha && (

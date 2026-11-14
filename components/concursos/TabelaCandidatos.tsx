@@ -83,7 +83,7 @@ export const TabelaCandidatos: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s }) 
                                   <p className="font-semibold text-ink flex items-center gap-2 flex-wrap">
                                     <button type="button" onClick={() => setDetalheCandidatoId(c.id)} className="text-left" title="Ver detalhes da IS">{c.nome}</button>
                                   </p>
-                                  <p className="text-xs font-mono text-ink-3 flex items-center gap-2">
+                                  <p className="text-xs tabular-nums text-ink-3 flex items-center gap-2">
                                     <span>{c.id}</span>
                                     <button type="button" onClick={() => handleCopiarNomeCandidato(c.nome)} aria-label={`Copiar nome de ${c.nome}`} title="Copiar nome" className="inline-flex items-center justify-center w-6 h-6 rounded text-navy hover:bg-thead">
                                       <span className="material-symbols-outlined text-[16px]" aria-hidden="true">content_copy</span>
@@ -114,7 +114,7 @@ export const TabelaCandidatos: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s }) 
                                   {numTisHabilitado ? (
                                     <input key={`tis-${c.id}-${numTisResetKey}`} type="text" defaultValue={c.numTIS} onBlur={e => handleNumTisBlur(c, e.target.value)} className="w-full px-2 py-1.5 text-sm rounded-lg border border-line bg-paper focus:outline-none focus:border-navy focus:bg-white" placeholder="-" />
                                   ) : editavel ? (
-                                    c.numTIS ? <span className="block text-sm text-ink-2">{c.numTIS}</span> : null
+                                    c.numTIS ? <span className="block text-sm text-ink">{c.numTIS}</span> : null
                                   ) : (c.numTIS || '-')}
                                 </td>
                                 <td className="py-3.5 px-4 text-right whitespace-nowrap">

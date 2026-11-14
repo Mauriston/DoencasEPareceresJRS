@@ -79,7 +79,7 @@ export const EscalaSpa: React.FC = () => {
   const Nome: React.FC<{ n?: string; forte?: boolean }> = ({ n, forte }) => {
     const texto = n ? nomeExibicao(n) : '—';
     return (
-      <span title={n ? texto : undefined} className={`inline-block max-w-full truncate align-bottom ${souEu(n) ? 'bg-gold/30 rounded px-0.5 -mx-0.5' : ''} ${forte ? 'font-extrabold text-navy' : 'font-semibold text-ink-2'}`}>{texto}</span>
+      <span title={n ? texto : undefined} className={`inline-block max-w-full truncate align-bottom ${souEu(n) ? 'bg-gold/30 rounded px-0.5 -mx-0.5' : ''} ${forte ? 'font-extrabold text-navy' : 'font-semibold text-ink'}`}>{texto}</span>
     );
   };
   const dupla = (lista?: string[]) => (lista && lista.length
@@ -119,7 +119,7 @@ export const EscalaSpa: React.FC = () => {
           const cor = corDoDia(k);
           const rotulo = `${pad(d)}/${MES_ABR[mes.m]}`;
           const faceBase = `[grid-area:1/1] [backface-visibility:hidden] rounded-md px-2 pt-1.5 pb-1 flex flex-col gap-1 min-w-0 ${FUNDO[cor]} ${k === hoje ? 'outline outline-2 outline-gold -outline-offset-2' : ''}`;
-          const data = <div className="text-center text-xs font-semibold text-ink-2 mb-0.5"><span title={fer[k] ? `Feriado: ${fer[k]}` : undefined} className={fer[k] ? 'cursor-help' : ''}>{rotulo}</span></div>;
+          const data = <div className="text-center text-xs font-semibold text-ink mb-0.5"><span title={fer[k] ? `Feriado: ${fer[k]}` : undefined} className={fer[k] ? 'cursor-help' : ''}>{rotulo}</span></div>;
           const frenteSupervisao = (
             <>
               {data}

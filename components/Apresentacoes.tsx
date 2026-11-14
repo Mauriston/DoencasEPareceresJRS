@@ -200,7 +200,7 @@ export const Apresentacoes: React.FC = () => {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             {itens!.map(item => (
-              <div key={item.id} className="relative group bg-white rounded-lg shadow-sm border border-line/60 flex flex-col hover:shadow-md hover:border-navy transition-all animate-fade-in">
+              <div key={item.id} className="relative group bg-white rounded-lg border border-line/60 flex flex-col hover:border-navy transition-all animate-fade-in">
                 <button type="button" onClick={() => abrir(item)} className="flex flex-col w-full text-left focus:outline-none active:scale-[0.98] transition-transform">
                   <div className="relative w-full rounded-t-lg overflow-hidden">
                     <Capa src={item.thumbnailUrl} />

@@ -78,7 +78,7 @@ export const EmailNacDialog: React.FC<Props> = ({ pendentes, onClose, onEnviado 
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold text-ink break-words">{i.inspecionado}</span>
                       <span className="block text-xs text-ink-3">IS {i.is} · laudo {dataBrNac(i.dataLaudo) || '—'} · {i.finalidade}</span>
-                      {i.laudo && <span className="block text-xs text-ink-2 break-words">{i.laudo}</span>}
+                      {i.laudo && <span className="block text-xs text-ink break-words">{i.laudo}</span>}
                     </span>
                   </label>
                 </li>

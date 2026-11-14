@@ -141,7 +141,7 @@ export const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArqui
               </label>
               <div className="pt-2 flex items-center justify-end space-x-2">
                 <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">Cancelar</button>
-                <button type="button" disabled={!file || processando} onClick={handleProcessar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50">Processar Mensagem</button>
+                <button type="button" disabled={!file || processando} onClick={handleProcessar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50">Processar Mensagem</button>
               </div>
             </>
           )}
@@ -158,7 +158,7 @@ export const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArqui
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800">Confira os dados extraídos antes de arquivar a mensagem.</div>
               <div>
                 <label className="text-sm font-bold text-ink-3 uppercase tracking-wider block mb-1">Data-Hora</label>
-                <input type="text" value={cabecalho.dataHora} onChange={e => setCabecalho({ ...cabecalho, dataHora: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm font-mono text-navy focus:outline-none focus:border-navy" />
+                <input type="text" value={cabecalho.dataHora} onChange={e => setCabecalho({ ...cabecalho, dataHora: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm tabular-nums text-navy focus:outline-none focus:border-navy" />
               </div>
               <div>
                 <label className="text-sm font-bold text-ink-3 uppercase tracking-wider block mb-1">Remetente</label>
@@ -176,7 +176,7 @@ export const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArqui
               </div>
               <div className="pt-2 flex items-center justify-end space-x-2">
                 <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">Cancelar</button>
-                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
+                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
                   {processando ? 'Arquivando...' : 'Arquivar Mensagem'}
                 </button>
               </div>
@@ -189,7 +189,7 @@ export const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArqui
                 <p className="text-sm font-bold text-green-800">Mensagem arquivada com sucesso.</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={onClose} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm">Concluir</button>
+                <button type="button" onClick={onClose} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors ">Concluir</button>
               </div>
             </>
           )}
@@ -272,7 +272,7 @@ export const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ conc
                     href={selecionada.fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-3 py-2 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm flex items-center space-x-1.5 shrink-0"
+                    className="px-3 py-2 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors flex items-center space-x-1.5 shrink-0"
                   >
                     <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                     <span>Abrir Mensagem</span>
@@ -323,7 +323,7 @@ export const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ conc
               <tbody className="divide-y divide-line text-sm">
                 {mensagens.map(m => (
                   <tr key={m.id} onClick={() => setSelecionada(m)} className="hover:bg-paper cursor-pointer transition-colors">
-                    <td className="py-3 px-4 font-mono text-ink whitespace-nowrap">{m.dataHora}</td>
+                    <td className="py-3 px-4 tabular-nums text-ink whitespace-nowrap">{m.dataHora}</td>
                     <td className="py-3 px-4 text-ink font-semibold whitespace-nowrap">{m.proposito || '-'}</td>
                     <td className="py-3 px-4 text-ink font-semibold">{m.sender || '-'}</td>
                     <td className="py-3 px-4 text-ink">{m.subject || '-'}</td>
@@ -403,7 +403,7 @@ export const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendam
                 <p className="text-sm font-bold text-green-800">{editando ? 'Período atualizado com sucesso. O calendário de reagendamento já reflete o novo período.' : 'Período definido com sucesso. O calendário de reagendamento já está liberado.'}</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={() => onClose(true)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Concluir</button>
+                <button type="button" onClick={() => onClose(true)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors ">Concluir</button>
               </div>
             </>
           ) : (
@@ -430,7 +430,7 @@ export const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendam
               </div>
               <div className="pt-2 flex items-center justify-end space-x-2">
                 <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">Cancelar</button>
-                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
+                <button type="button" disabled={processando} onClick={handleConfirmar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
                   {processando ? 'Salvando...' : 'Confirmar'}
                 </button>
               </div>
@@ -513,7 +513,7 @@ export const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = (
                 <p className="text-sm font-bold text-green-800">Candidato "{nome.trim().toUpperCase()}" adicionado com sucesso.</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={() => onClose(true)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Concluir</button>
+                <button type="button" onClick={() => onClose(true)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors ">Concluir</button>
               </div>
             </>
           ) : (
@@ -525,7 +525,7 @@ export const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = (
                   value={matricula}
                   onChange={e => setMatricula(e.target.value)}
                   placeholder="Ex.: 550039-7"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm font-mono text-navy focus:outline-none focus:border-navy"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm tabular-nums text-navy focus:outline-none focus:border-navy"
                 />
               </div>
               <div>
@@ -559,7 +559,7 @@ export const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = (
               </div>
               <div className="pt-2 flex items-center justify-end space-x-2">
                 <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">Cancelar</button>
-                <button type="button" disabled={salvando} onClick={handleSalvar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
+                <button type="button" disabled={salvando} onClick={handleSalvar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
                   {salvando ? 'Adicionando...' : 'Adicionar Candidato'}
                 </button>
               </div>
