@@ -15,7 +15,8 @@ describe('mapa de rotas (config/routes.ts)', () => {
     expect(viewForPath('/mensagens')).toBe('mensagens');
     expect(viewForPath('/normas/dgpm-406')).toBe('dgpm406');
     expect(viewForPath('/extras/roteiro')).toBe('roteiro');
-    expect(viewForPath('/usuarios')).toBe('usuarios');
+    expect(viewForPath('/administracao')).toBe('usuarios');
+    expect(viewForPath('/administracao/perfis')).toBe('usuarios');
   });
 
   it('rotas estáticas de /concursos vêm antes da dinâmica /concursos/:concursoId', () => {
@@ -66,6 +67,7 @@ describe('mapa de rotas (config/routes.ts)', () => {
     expect(ehRotaPublica('/publico/doencas')).toBe(true);
     expect(ehRotaPublica('/publico/doencas/cegueira/0')).toBe(true);
     expect(ehRotaPublica('/publico/portaria')).toBe(true);
+    expect(ehRotaPublica('/publico/sobre')).toBe(true);
     expect(ehRotaPublica('/inspecoes')).toBe(false);
     expect(viewForPath('/publico/doencas')).toBeUndefined();
   });
@@ -79,6 +81,8 @@ describe('aliases estáveis', () => {
     expect(destinoDoAlias('/estudo/')).toBe('/extras/roteiro');
     expect(destinoDoAlias('/exames')).toBe('/concursos/exames');
     expect(destinoDoAlias('/dgpm-406')).toBe('/normas/dgpm-406');
+    expect(destinoDoAlias('/usuarios')).toBe('/administracao/usuarios');
+    expect(destinoDoAlias('/configuracoes')).toBe('/administracao/emails');
   });
 
   it('caminhos que não são alias não são tocados (inclusive as rotas atuais)', () => {

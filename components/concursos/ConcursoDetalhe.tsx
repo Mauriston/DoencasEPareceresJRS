@@ -5,6 +5,11 @@ import { MotivoIdmModal } from '../MotivoIdmModal';
 import { ResponsavelTermoModal } from '../ResponsavelTermoModal';
 import React, { useEffect, useState } from 'react';
 import { Container, PageHeader } from '../ui/Page';
+import { FabAcoes } from '../ui/Fab';
+import { MenuAcoes } from '../ui/MenuAcoes';
+import { FilterChip } from '../ui/FilterChip';
+import { SearchField } from '../ui/Field';
+import { canUseFeature } from '../../config/permissions';
 import { SolicitarParecerModal, SolicitarExamesModal } from '../SolicitacaoModais';
 import { CandidatoDetalhe } from './CandidatoDetalhe';
 import { TriagemFormulario, TriagemSecao } from './Triagem';
@@ -17,7 +22,7 @@ import { ConfirmDialog } from '../ui/Dialog';
 import { Toast } from '../ui/Toast';
 import { CandidatoStatusTag, ConcursoStatusTag } from '../ui/statusTheme';
 import { CalendarioAgendamento } from './compartilhado';
-import { ModalDefinirPeriodoAgendamento } from './ModaisConcurso';
+import { ModalAdicionarCandidato, ModalDefinirPeriodoAgendamento } from './ModaisConcurso';
 import { useConcursoDetalhe, type ConcursoDetalheProps } from './useConcursoDetalhe';
 import { TabelaCandidatos } from './TabelaCandidatos';
 import { ListaCandidatosMobile } from './ListaCandidatosMobile';
@@ -63,7 +68,7 @@ export const ModalRegistroEventos: React.FC<{ concursoId: string; candidato: { i
                 <span className="text-sm font-bold text-navy">{ev.acao}</span>
                 <span className="text-xs text-ink-3 whitespace-nowrap">{formatarDataHora(ev.em)}</span>
               </div>
-              {ev.detalhe && <p className="text-sm text-ink-2 break-words mt-0.5">{ev.detalhe}</p>}
+              {ev.detalhe && <p className="text-sm text-ink break-words mt-0.5">{ev.detalhe}</p>}
               <p className="text-xs text-ink-3 mt-0.5">por {ev.usuario || ev.nome || '—'}</p>
             </li>
           ))}
@@ -82,14 +87,36 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
     setDateFilterMode, setDateFilterCustom, showDateMenu, setShowDateMenu, showDateCalendar,
     setShowDateCalendar, toastMessage, confirmDialog, setConfirmDialog, motivoModal, datasAgendamento,
     loadingDatasAgendamento, reagendandoCandidato, setReagendandoCandidato, confirmandoReagendamento,
-    candidatoModalMobile, isDesktop, scrollContainerRef, mostrarBotaoTopo, toolbarRef, toolbarAltura,
-    rolarAoTopo, showToast, carregarTudo, loadDatasAgendamento, enviarExamesAlvo, setEnviarExamesAlvo,
+    candidatoModalMobile, isDesktop, scrollContainerRef, toolbarRef, toolbarAltura,
+    showToast, carregarTudo, loadDatasAgendamento, enviarExamesAlvo, setEnviarExamesAlvo,
     verExamesAlvo, setVerExamesAlvo, solicitacaoModal, setSolicitacaoModal, detalheCandidatoId,
     setDetalheCandidatoId, eventosAlvo, setEventosAlvo, ehAdmin, ehMpi, mostrarSecaoTriagem, triagemAlvo,
     setTriagemAlvo, handleSalvarTriagem, handleVerExames, gerarSolicitacao, handleResponsavelEscolhido,
     handleMotivoSelecionado, handleMotivoFechado, handleSelecionarDataReagendamento, toggleStatusKpiFilter,
     filteredCandidatos, total, dateFilterLabel, chipFilters, sugestoesCandidatos,
   } = s;
+  // FAB / ações do cabeçalho (auditoria v3, 4d): + Candidato (principal) e Enviar exames, pela permissão do perfil
+  // e pela situação do concurso. Só na planilha de UM concurso (não nas páginas do dia e de atrasadas).
+  const [adicionarCandidatoAberto, setAdicionarCandidatoAberto] = useState(false);
+  const [enviarExamesAberto, setEnviarExamesAberto] = useState(false);
+  const podeCandidato = !embutido && !!concurso && canUseFeature('concursosJRS.adicionarCandidato', perfil) && (concurso.status === 'em_andamento' || concurso.status === 'em_breve');
+  const podeExames = !embutido && !!concurso && canUseFeature('concursosJRS.enviarExamesCandidato', perfil) && concurso.status === 'em_andamento';
+  const finalizados = candidatos.filter(c => c.finalizado).length;
+  const descricao = (
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+      {concurso && concurso.status !== 'em_andamento' && <ConcursoStatusTag status={concurso.status} />}
+      <span>{total} candidato{total === 1 ? '' : 's'}</span>
+      <span aria-hidden="true">·</span>
+      <span>{finalizados} de {total} finalizado{total === 1 ? '' : 's'}</span>
+    </span>
+  );
+  const acoesCabecalho = (
+    <>
+      {concurso && <BotaoEmailInaptos concurso={concurso} candidatos={candidatos} perfil={perfil} onAviso={showToast} />}
+      {podeExames && <Button variant="secondary" icon="upload_file" onClick={() => setEnviarExamesAberto(true)} className="hidden md:inline-flex">Enviar exames</Button>}
+      {podeCandidato && <Button icon="person_add" onClick={() => setAdicionarCandidatoAberto(true)} className="hidden md:inline-flex">Adicionar candidato</Button>}
+    </>
+  );
 
   return (
     <div className="flex flex-col flex-1 relative">
@@ -180,33 +207,43 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
         />
       )}
 
-      {!isDesktop && mostrarBotaoTopo && (
-        <button
-          type="button"
-          onClick={rolarAoTopo}
-          className="md:hidden fixed bottom-6 right-4 z-sticky w-11 h-11 rounded-full bg-navy text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform"
-          aria-label="Voltar ao topo"
-          title="Voltar ao topo"
-        >
-          <span className="material-symbols-outlined text-[22px]">arrow_upward</span>
-        </button>
+      {/* M7: sem "voltar ao topo" flutuante — o canto é do FAB (+ Candidato); a trilha e o gesto do sistema cobrem a volta. */}
+      {adicionarCandidatoAberto && concurso && (
+        <ModalAdicionarCandidato
+          concursoId={concursoId}
+          concursoNome={concurso.nome}
+          onClose={atualizado => { setAdicionarCandidatoAberto(false); if (atualizado) carregarTudo(); }}
+        />
+      )}
+      {enviarExamesAberto && concurso && (
+        <EnviarExamesModal
+          concursos={[concurso]}
+          usuarioNome={nav?.authUser?.nome}
+          onClose={() => { setEnviarExamesAberto(false); carregarTudo(); }}
+        />
+      )}
+      {!embutido && (
+        <FabAcoes acoes={[
+          { id: 'candidato', rotulo: 'Candidato', ariaLabel: 'Adicionar candidato', icone: 'add', onClick: () => setAdicionarCandidatoAberto(true), permitido: podeCandidato },
+          { id: 'exames', rotulo: 'Enviar exames', icone: 'upload_file', onClick: () => setEnviarExamesAberto(true), permitido: podeExames },
+        ]} />
       )}
 
-      <div ref={scrollContainerRef} style={{ '--toolbar-h': `${toolbarAltura}px` } as React.CSSProperties} className="pb-10 w-full flex-1">
-        <Container size="data" className="pt-6 md:pt-8">
-          {/* F49: título à esquerda, status por extenso e andamento escritos; sem hífen nem elementos absolutos. */}
-          <PageHeader
-            title={concurso?.nome || 'Concurso'}
-            description={(
-              <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-                {concurso && <ConcursoStatusTag status={concurso.status} />}
-                <span>{total} candidato{total === 1 ? '' : 's'}</span>
-                <span aria-hidden="true">·</span>
-                <span>{candidatos.filter(c => c.finalizado).length} de {total} finalizados</span>
-              </span>
-            )}
-            actions={concurso ? <BotaoEmailInaptos concurso={concurso} candidatos={candidatos} perfil={perfil} onAviso={showToast} /> : undefined}
-          />
+      <div ref={scrollContainerRef} style={{ '--toolbar-h': `${toolbarAltura}px` } as React.CSSProperties} className={`${embutido ? 'pb-6' : 'pb-28 md:pb-10'} w-full flex-1`}>
+        <Container size="data" className={embutido ? "pt-2" : "pt-6 md:pt-8"}>
+          {/* F49: título à esquerda, andamento escrito. P2: embutido (páginas do dia e de atrasadas) o concurso é
+              uma seção h2 — o h1 é o PageHeader da rota. A situação só aparece quando não é "Em andamento" (C3). */}
+          {embutido ? (
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-h2 text-navy">{concurso?.nome || 'Concurso'}</h2>
+                <div className="text-sm text-ink-3 mt-1">{descricao}</div>
+              </div>
+              <div className="flex flex-row flex-wrap items-center gap-2 shrink-0">{acoesCabecalho}</div>
+            </div>
+          ) : (
+            <PageHeader title={concurso?.nome || 'Concurso'} description={descricao} actions={acoesCabecalho} />
+          )}
         </Container>
 
         {/* Toolbar compacta e fixa no desktop: o título rola junto com a
@@ -222,22 +259,15 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
         <div className="bg-white p-2 rounded-xl border border-line">
         <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-2 md:gap-3">
           <div className="relative md:w-72 md:shrink-0">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-ink-3 text-[20px]">search</span>
-            <input
-              type="text"
+            <SearchField
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={setSearch}
               onFocus={() => setMostrarSugestoes(true)}
               onBlur={() => setTimeout(() => setMostrarSugestoes(false), 150)}
+              label="Buscar candidato"
               placeholder="Buscar por matrícula ou nome"
               autoComplete="off"
-              className="w-full pl-11 pr-11 h-11 md:h-10 text-sm font-body rounded-lg border border-line bg-paper focus:bg-white focus:outline-none focus:border-navy transition-all"
             />
-            {search && (
-              <button onClick={() => setSearch('')} aria-label="Limpar busca" className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 md:w-10 md:h-10 flex items-center justify-center text-ink-3 hover:text-navy">
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            )}
             {mostrarSugestoes && sugestoesCandidatos.length > 0 && (
               <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-line py-1.5 z-dropdown animate-fade-in max-h-64 overflow-y-auto">
                 {sugestoesCandidatos.map(c => (
@@ -248,52 +278,33 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
                     className="w-full text-left px-4 py-2 hover:bg-paper flex items-center justify-between gap-2"
                   >
                     <span className="text-sm font-semibold text-navy truncate">{c.nome}</span>
-                    <span className="text-xs font-mono text-ink-3 shrink-0">{c.id}</span>
+                    <span className="text-xs tabular-nums text-ink-3 shrink-0">{c.id}</span>
                   </button>
                 ))}
               </div>
             )}
           </div>
-
-          {/* Chip filters: só no desktop (tabela) — na lista mobile ficam só
-              a busca por nome e o filtro de data. */}
+          {/* Filtros de resultado (FilterChip do DS, com a contagem); no celular rolam numa linha. */}
           <div className="flex items-center gap-2 overflow-x-auto md:overflow-visible md:flex-wrap md:flex-1">
-            {chipFilters.map(chip => {
-              const isActive = statusKpiFilter === chip.filterValue;
-              return (
-                <button
-                  key={chip.key}
-                  type="button"
-                  onClick={() => toggleStatusKpiFilter(chip.filterValue)}
-                  className={`px-3 min-h-[44px] md:min-h-[40px] rounded-full text-sm font-bold border transition-all flex items-center gap-2 whitespace-nowrap ${isActive ? chip.corAtivo : 'bg-white text-ink border-line hover:border-ink-5'}`}
-                >
-                  <span>{chip.label}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-black ${isActive ? 'bg-white/25' : 'bg-thead'}`}>{chip.value}</span>
-                </button>
-              );
-            })}
+            {chipFilters.map(chip => (
+              <FilterChip key={chip.key} ativo={statusKpiFilter === chip.filterValue} onAlternar={() => toggleStatusKpiFilter(chip.filterValue)} className="shrink-0">
+                {chip.label}
+                <span className="min-w-5 h-5 px-1.5 rounded-full text-xs font-bold tabular-nums inline-flex items-center justify-center bg-line text-ink">{chip.value}</span>
+              </FilterChip>
+            ))}
           </div>
 
-          <div className="relative shrink-0 md:w-40 md:ml-auto">
-            <button
-              type="button"
-              onClick={() => setShowDateMenu(prev => !prev)}
-              className={`w-full px-4 h-11 md:h-10 text-sm font-bold rounded-lg border flex items-center justify-center space-x-2 whitespace-nowrap ${dateFilterMode !== 'todos' ? 'bg-navy text-white border-navy' : 'bg-paper text-ink border-line hover:bg-thead'}`}
-            >
-              <span className="material-symbols-outlined text-[20px]">event</span>
-              <span>{dateFilterLabel}</span>
-            </button>
-            {showDateMenu && (
-              <>
-                <div className="fixed inset-0 z-dropdown" onClick={() => setShowDateMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-line p-1.5 z-dropdown animate-fade-in space-y-0.5">
-                  <button type="button" onClick={() => { setDateFilterMode('todos'); setDateFilterCustom(null); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-ink hover:bg-thead">Todos</button>
-                  <button type="button" onClick={() => { setDateFilterMode('hoje'); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-ink hover:bg-thead">Hoje</button>
-                  <button type="button" onClick={() => { setDateFilterMode('semana'); setShowDateMenu(false); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-ink hover:bg-thead">Esta Semana</button>
-                  <button type="button" onClick={() => { setShowDateMenu(false); setShowDateCalendar(true); loadDatasAgendamento(); }} className="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold text-ink hover:bg-thead">Personalizado...</button>
-                </div>
-              </>
-            )}
+          <div className="shrink-0 md:ml-auto">
+            <MenuAcoes
+              rotulo="Filtrar por data"
+              botao={{ texto: dateFilterLabel, icone: 'event', primario: dateFilterMode !== 'todos' }}
+              itens={[
+                { rotulo: 'Todas as datas', icone: 'calendar_month', onClick: () => { setDateFilterMode('todos'); setDateFilterCustom(null); } },
+                { rotulo: 'Hoje', icone: 'today', onClick: () => setDateFilterMode('hoje') },
+                { rotulo: 'Esta semana', icone: 'date_range', onClick: () => setDateFilterMode('semana') },
+                { rotulo: 'Escolher data…', icone: 'edit_calendar', onClick: () => { setShowDateCalendar(true); loadDatasAgendamento(); } },
+              ]}
+            />
           </div>
         </div>
         </div>
@@ -302,29 +313,16 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
 
         <Container size="data" className="pt-2 space-y-4">
         {showDateCalendar && (
-          <div className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-sm overflow-hidden flex flex-col">
-              <div className="p-4 bg-navy text-white flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="material-symbols-outlined text-[20px] text-gold">event</span>
-                  <h3 className="font-heading font-bold text-sm">Escolher Data</h3>
-                </div>
-                <button onClick={() => setShowDateCalendar(false)} className="text-ink-5 hover:text-white p-1 rounded-lg hover:bg-white/10">
-                  <span className="material-symbols-outlined text-[20px]">close</span>
-                </button>
-              </div>
-              <div className="p-4">
-                <CalendarioAgendamento
-                  datas={datasAgendamento}
-                  loading={loadingDatasAgendamento}
-                  onSelect={(dataISO) => { setDateFilterMode('personalizado'); setDateFilterCustom(dataISO); setShowDateCalendar(false); }}
-                />
-              </div>
-            </div>
-          </div>
+          <Dialog title="Escolher data" icon="event" onClose={() => setShowDateCalendar(false)}>
+            <CalendarioAgendamento
+              datas={datasAgendamento}
+              loading={loadingDatasAgendamento}
+              onSelect={(dataISO) => { setDateFilterMode('personalizado'); setDateFilterCustom(dataISO); setShowDateCalendar(false); }}
+            />
+          </Dialog>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm border border-line/60 overflow-clip">
+        <div className="bg-white rounded-xl border border-line overflow-clip">
           {loading ? (
             <div className="p-12 text-center text-ink-3 flex flex-col items-center space-y-2">
               <span className="material-symbols-outlined animate-spin text-[32px] text-navy">progress_activity</span>
@@ -335,7 +333,7 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
               <span className="material-symbols-outlined text-[36px] text-wine-500">error</span>
               <p className="text-sm font-bold text-ink">Não foi possível carregar os candidatos</p>
               <p className="text-xs text-ink-3 max-w-sm">{loadError}</p>
-              <button type="button" onClick={carregarTudo} className="mt-2 px-4 py-2 bg-navy text-white rounded-lg text-xs font-bold">Tentar novamente</button>
+              <Button size="sm" icon="refresh" onClick={carregarTudo} className="mt-2">Tentar novamente</Button>
             </div>
           ) : filteredCandidatos.length === 0 ? (
             <div className="p-12 text-center text-ink-3 flex flex-col items-center space-y-2">
@@ -357,42 +355,22 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
       </div>
 
       {reagendandoCandidato && (
-        <div className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-sm overflow-hidden flex flex-col">
-            <div className="p-4 bg-navy text-white flex items-center justify-between">
-              <div className="flex items-center space-x-2 min-w-0">
-                <span className="material-symbols-outlined text-[20px] text-gold shrink-0">event_repeat</span>
-                <h3 className="font-heading font-bold text-sm truncate">Reagendar {reagendandoCandidato.nome}</h3>
-              </div>
-              <button onClick={() => setReagendandoCandidato(null)} disabled={confirmandoReagendamento} className="text-ink-5 hover:text-white p-1 rounded-lg hover:bg-white/10 shrink-0">
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-            <div className="p-4">
-              {!loadingDatasAgendamento && datasAgendamento.length === 0 ? (
-                <div className="text-center py-4 space-y-3">
-                  <p className="text-sm text-ink-3">
-                    Este concurso ainda não tem um período de IS configurado, por isso não há datas disponíveis para reagendamento.
-                  </p>
-                  {podeAbrirEncerrar ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowDefinirPeriodoModal(true)}
-                      className="px-4 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm inline-flex items-center space-x-1.5"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">event</span>
-                      <span>Definir Período de Agendamento</span>
-                    </button>
-                  ) : (
-                    <p className="text-sm text-ink-3">Peça a um Admin para configurar o período deste concurso.</p>
-                  )}
-                </div>
+        <Dialog title={`Reagendar ${reagendandoCandidato.nome}`} icon="event_repeat" travado={confirmandoReagendamento} onClose={() => setReagendandoCandidato(null)}>
+          {!loadingDatasAgendamento && datasAgendamento.length === 0 ? (
+            <div className="text-center py-4 space-y-3">
+              <p className="text-sm text-ink-3">
+                Este concurso ainda não tem um período de IS configurado, por isso não há datas disponíveis para reagendamento.
+              </p>
+              {podeAbrirEncerrar ? (
+                <Button icon="event" onClick={() => setShowDefinirPeriodoModal(true)}>Definir período de agendamento</Button>
               ) : (
-                <CalendarioAgendamento datas={datasAgendamento} loading={loadingDatasAgendamento || confirmandoReagendamento} onSelect={handleSelecionarDataReagendamento} />
+                <p className="text-sm text-ink-3">Peça a um Admin para configurar o período deste concurso.</p>
               )}
             </div>
-          </div>
-        </div>
+          ) : (
+            <CalendarioAgendamento datas={datasAgendamento} loading={loadingDatasAgendamento || confirmandoReagendamento} onSelect={handleSelecionarDataReagendamento} />
+          )}
+        </Dialog>
       )}
 
       {showDefinirPeriodoModal && (

@@ -130,7 +130,7 @@ export const MenuCascata: React.FC<Props> = ({ grupos, value, onChange, placehol
         className={`w-full flex items-center justify-between gap-3 border rounded-lg text-left transition-colors focus:outline-none focus:ring-1 ${erro ? 'border-wine focus:border-wine focus:ring-wine' : `${aberto ? 'border-navy ring-1 ring-navy' : 'border-line'} focus:border-navy focus:ring-navy`} ${destaque ? 'bg-paper p-3 shadow-inner' : 'bg-white min-h-[44px] px-3 py-1.5'}`}
       >
         <span className="min-w-0">
-          {grupoDoValor && <span className="block text-[11px] font-bold text-ink-3 uppercase tracking-label leading-tight">{grupoDoValor}</span>}
+          {grupoDoValor && <span className="block text-xs font-bold text-ink-3 uppercase tracking-label leading-tight">{grupoDoValor}</span>}
           <span className={`block leading-snug ${value ? `text-navy ${destaque ? 'text-base font-semibold' : 'text-sm font-semibold'}` : `text-ink-4 ${destaque ? 'text-base' : 'text-sm'}`}`}>{value || placeholder}</span>
         </span>
         <Icone nome="arrow_drop_down" className={`text-[24px] text-ink-3 transition-transform duration-200 ${aberto ? 'rotate-180' : ''}`} />

@@ -6,6 +6,8 @@
 import React, { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
+import { IconButton } from '../ui/IconButton';
+import { controlClass } from '../ui/Field';
 
 /** Lista editável de quesitos (um campo por quesito, com mover/remover/incluir). */
 export const ListaQuesitos: React.FC<{ lista: string[]; onChange: (l: string[]) => void }> = ({ lista, onChange }) => {
@@ -25,12 +27,12 @@ export const ListaQuesitos: React.FC<{ lista: string[]; onChange: (l: string[]) 
             <span className="shrink-0 w-7 pt-3 text-sm font-bold text-navy text-right" aria-hidden="true">{i + 1}.</span>
             <textarea
               aria-label={`Quesito ${i + 1}`} value={q} onChange={e => alterar(i, e.target.value)} rows={Math.max(2, q.split('\n').length)}
-              className="flex-1 min-w-0 min-h-[44px] bg-white border border-line rounded-lg px-3 py-2 text-sm text-ink focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
+              className={`${controlClass} flex-1`}
             />
             <div className="shrink-0 flex flex-col sm:flex-row">
-              <button type="button" onClick={() => mover(i, -1)} disabled={i === 0} aria-label={`Subir quesito ${i + 1}`} className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-ink-2 hover:bg-thead disabled:opacity-30"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">arrow_upward</span></button>
-              <button type="button" onClick={() => mover(i, 1)} disabled={i === lista.length - 1} aria-label={`Descer quesito ${i + 1}`} className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-ink-2 hover:bg-thead disabled:opacity-30"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">arrow_downward</span></button>
-              <button type="button" onClick={() => remover(i)} aria-label={`Remover quesito ${i + 1}`} className="w-11 h-11 inline-flex items-center justify-center rounded-lg text-wine hover:bg-wine/10"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">delete</span></button>
+              <IconButton icon="arrow_upward" label={`Subir quesito ${i + 1}`} variant="ghost" onClick={() => mover(i, -1)} disabled={i === 0} />
+              <IconButton icon="arrow_downward" label={`Descer quesito ${i + 1}`} variant="ghost" onClick={() => mover(i, 1)} disabled={i === lista.length - 1} />
+              <IconButton icon="delete" label={`Remover quesito ${i + 1}`} variant="ghost" className="!text-wine hover:!bg-wine/10" onClick={() => remover(i)} />
             </div>
           </li>
         ))}

@@ -59,6 +59,15 @@ const exa = (nome, perfil, method, situacao, esperado, patch = {}) => ({ nome, t
   ...(method === 'create' ? {} : { resource: { data: exaNovo } }),
   functionMocks: mocksExa(perfil, situacao),
 } });
+// Eventos por inspecionado (militares/{nip}/eventos/{id}); `em` = hora do servidor (request.time).
+const HORA = '2026-11-14T12:00:00Z';
+const evtNovo = { acao: 'ficha.abrir', ref: '', uid: 'u1', usuario: 'CT TESTE', em: HORA };
+const evt = (nome, perfil, method, patch, esperado) => ({ nome, tc: {
+  expectation: esperado,
+  request: { auth: { uid: 'u1' }, path: `${DB}/militares/12345678/eventos/e1`, method, time: HORA, ...(patch ? { resource: { data: { ...evtNovo, ...patch } } } : {}) },
+  ...(method === 'create' ? {} : { resource: { data: evtNovo } }),
+  functionMocks: mocks(perfil),
+} });
 const notif = (nome, path, esperado) => ({ nome, tc: {
   expectation: esperado,
   request: { auth: { uid: 'u1' }, path: `${DB}/${path}`, method: 'delete' },
@@ -111,6 +120,20 @@ const casos = [
   cre('Médico Geral cria pedido de parecer', 'user_medicos_geral', 'pareceres/p1', 'DENY'),
   cre('Usuário grava o próprio Acesso rápido', 'user_secretaria', 'acessoRapido/u1', 'ALLOW'),
   cre('Usuário grava o Acesso rápido de outro', 'admin', 'acessoRapido/u2', 'DENY'),
+  // Uso do app (uso_diario): só as próprias chaves, uma página e +1 por gravação.
+  ...[
+    ['Usuário cria o dia do uso com os próprios contadores', 'create', null, { paginas: { home: 1 }, acessosPorUsuario: { u1: 1 } }, 'ALLOW'],
+    ['Usuário grava contador de outro no uso', 'create', null, { paginas: { home: 1 }, acessosPorUsuario: { u2: 1 } }, 'DENY'],
+    ['Usuário soma 1 acesso no uso', 'update', { paginas: { home: 3 }, acessosPorUsuario: { u1: 2, u2: 1 } }, { paginas: { home: 4 }, acessosPorUsuario: { u1: 3, u2: 1 } }, 'ALLOW'],
+    ['Usuário soma 5 acessos de uma vez no uso', 'update', { acessosPorUsuario: { u1: 2 } }, { acessosPorUsuario: { u1: 7 } }, 'DENY'],
+    ['Usuário mexe em duas páginas no uso', 'update', { paginas: { home: 1, inspecoes: 1 } }, { paginas: { home: 2, inspecoes: 2 } }, 'DENY'],
+    ['Usuário grava campo estranho no uso', 'create', null, { nome: 'FULANO' }, 'DENY'],
+  ].map(([nome, method, atual, novo, esperado]) => ({ nome, tc: {
+    expectation: esperado,
+    request: { auth: { uid: 'u1' }, path: `${DB}/uso_diario/2026-11-14`, method, resource: { data: novo } },
+    ...(atual ? { resource: { data: atual } } : {}),
+    functionMocks: mocks('user_secretaria'),
+  } })),
   cre('Médico Geral cria IS', 'user_medicos_geral', 'inspecoes/9001', 'DENY'),
   cre('Médico Geral cria concurso', 'user_medicos_geral', 'concursos/c9', 'DENY'),
   cre('Admin grava a escala do SPA', 'admin', 'escalaSpa/2026-11-06', 'ALLOW'),
@@ -162,6 +185,17 @@ const casos = [
   exa('Apagar exame de IS finalizada', 'admin', 'delete', 'finalizada', 'DENY'),
   exa('Médico Geral lê exame', 'user_medicos_geral', 'get', 'andamento', 'DENY'),
   exa('Alterar exame', 'admin', 'update', 'andamento', 'DENY', {}),
+  // Eventos por inspecionado (militares/{nip}/eventos): todos gravam em nome próprio, só metadados; só o Admin lê.
+  evt('Médico Geral registra evento da ficha (abriu a ficha)', 'user_medicos_geral', 'create', {}, 'ALLOW'),
+  evt('Secretaria registra evento de IS', 'user_secretaria', 'create', { acao: 'is.agendar', ref: 'IS 1312' }, 'ALLOW'),
+  evt('Evento em nome de outro usuário', 'user_medicos', 'create', { uid: 'u2' }, 'DENY'),
+  evt('Evento com CID (campo extra)', 'user_medicos', 'create', { cid: 'M54.5' }, 'DENY'),
+  evt('Evento com hora do cliente', 'user_medicos', 'create', { em: '2020-01-01T00:00:00Z' }, 'DENY'),
+  evt('Evento com ref longa (texto livre)', 'user_medicos', 'create', { ref: 'x'.repeat(61) }, 'DENY'),
+  evt('Admin lê eventos do inspecionado', 'admin', 'get', null, 'ALLOW'),
+  evt('Médico lê eventos do inspecionado', 'user_medicos', 'get', null, 'DENY'),
+  evt('Admin altera evento', 'admin', 'update', {}, 'DENY'),
+  evt('Admin apaga evento', 'admin', 'delete', null, 'DENY'),
 ];
 (async () => {
   const c = await new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] }).getClient();

@@ -12,6 +12,14 @@ import { SheetArrastavel } from '../ui/SheetArrastavel';
 import { AcoesRodape } from '../ui/AcoesRodape';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
+import { Container } from '../ui/Page';
+import { Card } from '../ui/Card';
+import { Button, ButtonLink } from '../ui/Button';
+import { FilterChip } from '../ui/FilterChip';
+import { GradePainel } from '../ui/Grade';
+import { PdfFullscreenModal } from '../PdfFullscreenModal';
+import { getDriveEmbedUrl } from '../../utils/googleDrive';
+import { AbasSituacao } from './AbasSituacao';
 import {
   listarCandidatos, listarExamesCandidato, salvarExamesCandidato,
   type CandidatoRecord, type ConcursoRecord, type ExamesEnvioRecord,
@@ -209,7 +217,7 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
         <>
           <div className="bg-green-50 border border-green-200 rounded-xl p-3 space-y-1">
             <p className="text-sm font-bold text-green-800">PDF salvo no Drive.</p>
-            <p className="text-xs text-green-800 font-mono break-all">{resultado.nomeArquivo}</p>
+            <p className="text-xs text-green-800 tabular-nums break-all">{resultado.nomeArquivo}</p>
           </div>
           {resultado.erroExtracao ? (
             <div className="bg-wine-50 border border-wine-200 rounded-xl p-3 text-sm text-wine-700">
@@ -218,7 +226,7 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
             </div>
           ) : (
             <p className="text-sm text-ink-3">
-              <strong className="text-navy">{resultado.extraidos?.exames.length ?? 0} exame(s)</strong> transcrito(s).
+              <strong className="text-navy">{(resultado.extraidos?.exames.length ?? 0) === 1 ? '1 exame' : `${resultado.extraidos?.exames.length ?? 0} exames`}</strong> {(resultado.extraidos?.exames.length ?? 0) === 1 ? 'transcrito' : 'transcritos'}.
               Use o botão de exames na linha do candidato para ler e copiar cada um.
             </p>
           )}
@@ -240,17 +248,17 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
   );
 
   const acoes = etapa === 'concluido' ? (
-    <button type="button" onClick={onClose} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm">Concluir</button>
+    <Button onClick={onClose}>Concluir</Button>
   ) : (
     <>
-      <button type="button" disabled={travado} onClick={onClose} className="px-4 py-2.5 rounded-lg border border-line text-sm font-bold text-ink hover:bg-thead transition-colors disabled:opacity-50">Cancelar</button>
-      <button type="button" disabled={!file || !destino || travado} onClick={handleEnviar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50">
+      <Button variant="ghost" disabled={travado} onClick={onClose}>Cancelar</Button>
+      <Button icon="upload_file" loading={travado} disabled={!file || !destino || travado} onClick={handleEnviar}>
         {travado ? 'Enviando...' : 'Enviar e transcrever'}
-      </button>
+      </Button>
     </>
   );
 
-  const titulo = 'Enviar Exames do Candidato';
+  const titulo = 'Enviar exames do candidato';
   const subtitulo = destino ? `${destino.candidatoNome} · ${destino.concursoNome}` : 'Escolha o candidato e o PDF';
 
   if (!isDesktop) {
@@ -337,7 +345,7 @@ const BlocoExame: React.FC<{ exame: ExameCandidato }> = ({ exame }) => {
             {exame.itens.map((item, i) => (
               <li key={`${item.nome}-${i}`} className="flex items-center gap-2 py-1 border-b border-line/70">
                 <span className="min-w-0 flex-1 text-sm text-ink truncate" title={item.nome}>{item.nome}</span>
-                <span className="text-sm font-bold text-navy font-mono">{item.valor}</span>
+                <span className="text-sm font-bold text-navy tabular-nums">{item.valor}</span>
                 <BotaoCopiar texto={textoItem(item)} titulo={`Copiar ${item.nome}`} />
               </li>
             ))}
@@ -397,9 +405,76 @@ export const ExamesTranscritosModal: React.FC<ExamesTranscritosModalProps> = ({ 
   const textoTudo = useMemo(() => exames.map(({ exame }) => textoCopiaExame(exame)).join('\n\n\n'), [exames]);
   const pdfs = useMemo(() => (envios ?? []).filter(e => e.pdfUrl), [envios]);
 
+  // L2/4c: Container de dados (1200) + padrão B — transcrição (8) e laudo em PDF (4). No celular, as duas
+  // partes alternam por abas (Transcrição · Laudo) em vez de empilhar.
+  const [aba, setAba] = useState<'transcricao' | 'laudo'>('transcricao');
+  const [laudoTelaCheia, setLaudoTelaCheia] = useState<{ titulo: string; url: string } | null>(null);
+  const isDesktop = useIsDesktop();
+  const [pdfSel, setPdfSel] = useState(0);
+  const pdfAtual = pdfs[Math.min(pdfSel, Math.max(0, pdfs.length - 1))];
+  const embedAtual = pdfAtual ? getDriveEmbedUrl(pdfAtual.pdfUrl) : null;
+  const rotuloPdf = (i: number) => (pdfs.length === 1 ? 'Laudo (PDF)' : `PDF ${i + 1}`);
+  const nExames = exames.length;
+
+  const transcricao = (
+    <div className="space-y-4">
+      {envios !== null && nExames === 0 && !erro && (
+        <p className="text-sm text-ink-3">Nenhum exame transcrito para este candidato.</p>
+      )}
+      {nExames > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm text-ink-3 mr-auto">{nExames === 1 ? '1 exame transcrito.' : `${nExames} exames transcritos.`}</p>
+          <BotaoCopiar texto={textoTudo} rotulo="Copiar todos" titulo="Copiar todos os exames" className="min-h-9 px-3 bg-white border border-line" />
+        </div>
+      )}
+      <div className="@container">
+        <div className="grid grid-cols-1 @2xl:grid-cols-2 gap-4 items-start">
+          {exames.map(({ exame, chave }) => <BlocoExame key={chave} exame={exame} />)}
+        </div>
+      </div>
+    </div>
+  );
+
+  const laudo = (
+    <div className="space-y-4 @split:sticky @split:top-4">
+      {observacoes.length > 0 && (
+        <div className="bg-gold/10 border border-gold/40 rounded-xl p-3">
+          <p className="eyebrow text-navy mb-1">Confira no PDF</p>
+          <ul className="list-disc pl-4 space-y-0.5 text-sm text-ink">
+            {observacoes.map((o, i) => <li key={i}>{o}</li>)}
+          </ul>
+        </div>
+      )}
+      <Card padding="none" as="section" title="Laudo" titleAs="h3">
+        {pdfs.length === 0 ? (
+          <p className="px-5 pb-4 text-sm text-ink-3">Nenhum PDF enviado.</p>
+        ) : (
+          <div className="px-5 pb-4 space-y-3">
+            {pdfs.length > 1 && (
+              <div className="flex flex-wrap gap-2" role="group" aria-label="PDF exibido">
+                {pdfs.map((envio, i) => (
+                  <FilterChip key={envio.id} ativo={i === pdfSel} onAlternar={() => setPdfSel(i)}>{rotuloPdf(i)}</FilterChip>
+                ))}
+              </div>
+            )}
+            {pdfAtual && embedAtual && (
+              <iframe key={embedAtual} src={embedAtual} title={`${rotuloPdf(pdfSel)} de ${candidatoNome}`} className="w-full h-[60dvh] rounded-lg border border-line bg-placa" />
+            )}
+            {pdfAtual && (
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" size="sm" icon="open_in_full" onClick={() => setLaudoTelaCheia({ titulo: `${rotuloPdf(pdfSel)} — ${candidatoNome}`, url: embedAtual || pdfAtual.pdfUrl })}>Tela cheia</Button>
+                <ButtonLink variant="secondary" size="sm" icon="download" href={urlDownload(pdfAtual.pdfUrl)} target="_blank" rel="noopener noreferrer">Baixar PDF</ButtonLink>
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 z-dialog bg-canvas flex flex-col animate-fade-in">
-      <div className="px-4 py-3 bg-navy text-white flex items-center justify-between gap-2 shrink-0">
+    <div role="dialog" aria-modal="true" aria-label={`Exames transcritos de ${candidatoNome}`} className="fixed inset-0 z-dialog bg-canvas flex flex-col animate-fade-in">
+      <div data-marca="" className="px-4 py-3 bg-navy text-white flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <span className="material-symbols-outlined text-[20px] text-gold shrink-0" aria-hidden="true">lab_profile</span>
           <div className="min-w-0">
@@ -413,57 +488,34 @@ export const ExamesTranscritosModal: React.FC<ExamesTranscritosModalProps> = ({ 
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-[1700px] p-4 space-y-4">
-          {erro && <div className="bg-wine-50 border border-wine-200 rounded-xl p-3 text-sm text-wine-700 font-semibold">{erro}</div>}
+        <Container size="data" className="py-4 md:py-6 space-y-4">
+          {erro && <div role="alert" className="bg-wine-50 border border-wine-200 rounded-xl p-3 text-sm text-wine-700 font-semibold">{erro}</div>}
 
-          {envios === null && !erro && (
-            <div className="text-center py-10 text-ink-3 space-y-2">
+          {envios === null && !erro ? (
+            <div className="text-center py-10 text-ink-3 space-y-2" role="status">
               <span className="material-symbols-outlined animate-spin text-[32px] text-navy" aria-hidden="true">progress_activity</span>
               <p className="text-sm font-semibold">Carregando os exames...</p>
             </div>
+          ) : isDesktop ? (
+            <GradePainel principal={transcricao} apoio={laudo} rotuloApoio="Laudo em PDF" />
+          ) : (
+            <>
+              <AbasSituacao
+                idBase="exames-candidato"
+                ariaLabel="Parte dos exames"
+                value={aba}
+                onChange={setAba}
+                abas={[{ value: 'transcricao', label: 'Transcrição', contagem: nExames }, { value: 'laudo', label: 'Laudo', contagem: pdfs.length }]}
+                className="border-b border-line"
+              />
+              <div id="exames-candidato-painel" role="tabpanel" aria-labelledby={`exames-candidato-aba-${aba}`}>
+                {aba === 'transcricao' ? transcricao : laudo}
+              </div>
+            </>
           )}
-
-          {envios !== null && exames.length === 0 && !erro && (
-            <p className="text-sm text-ink-3">Nenhum exame transcrito para este candidato.</p>
-          )}
-
-          {observacoes.length > 0 && (
-            <div className="bg-gold/10 border border-gold/40 rounded-xl p-3">
-              <p className="text-xs font-bold text-navy uppercase tracking-wider mb-1">Confira no PDF</p>
-              <ul className="list-disc pl-4 space-y-0.5 text-sm text-ink">
-                {observacoes.map((o, i) => <li key={i}>{o}</li>)}
-              </ul>
-            </div>
-          )}
-
-          {(exames.length > 0 || pdfs.length > 0) && (
-            <div className="flex flex-wrap items-center gap-2">
-              {exames.length > 0 && <p className="text-sm text-ink-3 mr-auto">{exames.length} exame(s) transcrito(s).</p>}
-              {/* Um botão por PDF enviado — o candidato pode ter entregue os exames em mais de um. */}
-              {pdfs.map((envio, i) => (
-                <a
-                  key={envio.id}
-                  href={urlDownload(envio.pdfUrl)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover transition-colors shadow-sm"
-                >
-                  <span className="material-symbols-outlined text-[20px]" aria-hidden="true">download</span>
-                  {pdfs.length === 1 ? 'Download Exames PDF' : `Download PDF ${i + 1}`}
-                </a>
-              ))}
-              {exames.length > 0 && (
-                <BotaoCopiar texto={textoTudo} rotulo="Copiar todos" titulo="Copiar todos os exames" className="min-h-[44px] px-3 bg-white border border-line" />
-              )}
-            </div>
-          )}
-
-          {/* Duas colunas a partir de lg: aproveita a largura do desktop e corta pela metade a rolagem. */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-            {exames.map(({ exame, chave }) => <BlocoExame key={chave} exame={exame} />)}
-          </div>
-        </div>
+        </Container>
       </div>
+      {laudoTelaCheia && <PdfFullscreenModal title={laudoTelaCheia.titulo} url={laudoTelaCheia.url} onClose={() => setLaudoTelaCheia(null)} />}
     </div>
   );
 };

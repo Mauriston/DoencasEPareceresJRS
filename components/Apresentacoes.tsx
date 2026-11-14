@@ -9,6 +9,8 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { Loader2 } from './ui/icons';
 import { Container, PageHeader } from './ui/Page';
+import { Card } from './ui/Card';
+import { GradeCards } from './ui/Grade';
 import { Dialog } from './ui/Dialog';
 import { Button } from './ui/Button';
 import { Field } from './ui/Field';
@@ -49,12 +51,12 @@ const ApresentacaoFullscreen: React.FC<{ item: ApresentacaoRecord; onClose: () =
     return () => { document.body.style.overflow = anterior; };
   }, []);
   const telaCheia = () => { quadro.current?.requestFullscreen?.().catch(() => { /* navegador sem suporte */ }); };
-  const botao = 'w-11 h-11 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors';
+  const botao = 'w-11 h-11 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold';
 
   return (
     <div role="dialog" aria-modal="true" aria-label={item.titulo} className="fixed inset-0 z-dialog bg-navy flex flex-col animate-fade-in pb-env-safe">
       <div className="flex-shrink-0 w-full h-[56px] flex items-center justify-between gap-2 px-4 text-white">
-        <h2 className="flex-1 min-w-0 font-heading text-[16px] font-semibold truncate">{item.titulo}</h2>
+        <h2 className="flex-1 min-w-0 text-h3 truncate">{item.titulo}</h2>
         <div className="flex items-center gap-1.5">
           <button type="button" onClick={telaCheia} className={botao} title="Tela cheia" aria-label="Tela cheia"><span className="material-symbols-outlined text-[22px]" aria-hidden="true">fullscreen</span></button>
           <a href={item.url} target="_blank" rel="noopener noreferrer" className={botao} title="Abrir em nova aba" aria-label="Abrir em nova aba"><span className="material-symbols-outlined text-[20px]" aria-hidden="true">open_in_new</span></a>
@@ -182,10 +184,10 @@ export const Apresentacoes: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1 relative">
-      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
+      <Container size="data" className={`py-6 md:py-8 ${ehAdmin ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
         <PageHeader
           title="Apresentações" description="Apresentações de slides sobre os processos das IS."
-          actions={ehAdmin ? <IconButton icon="add_to_queue" label="Adicionar apresentação" onClick={() => setNovo(true)} /> : undefined}
+          fab={ehAdmin ? { icon: 'add_to_queue', label: 'Adicionar apresentação', onClick: () => setNovo(true) } : undefined}
         />
 
         {itens === null && !erro ? (
@@ -198,26 +200,26 @@ export const Apresentacoes: React.FC = () => {
         ) : itens!.length === 0 ? (
           <div className="text-center py-16 text-ink-3">Nenhuma apresentação disponível no momento.</div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+          <GradeCards>
             {itens!.map(item => (
-              <div key={item.id} className="relative group bg-white rounded-lg shadow-sm border border-line/60 flex flex-col hover:shadow-md hover:border-navy transition-all animate-fade-in">
-                <button type="button" onClick={() => abrir(item)} className="flex flex-col w-full text-left focus:outline-none active:scale-[0.98] transition-transform">
-                  <div className="relative w-full rounded-t-lg overflow-hidden">
+              <Card key={item.id} padding="none" className="relative group flex flex-col hover:border-navy transition-colors animate-fade-in">
+                <button type="button" onClick={() => abrir(item)} className="flex flex-col w-full text-left rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold">
+                  <div className="relative w-full overflow-hidden">
                     <Capa src={item.thumbnailUrl} />
                     <span className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                       <span className="material-symbols-outlined text-[40px] text-white opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true">play_circle</span>
                     </span>
                   </div>
-                  <div className="flex-1 p-3 min-w-0 rounded-b-lg">
-                    <h3 className="text-xs md:text-sm font-heading font-bold text-navy leading-snug line-clamp-3">{item.titulo}</h3>
-                    <p className="mt-1 text-[11px] text-ink-3">{PLATAFORMA[item.plataforma] ?? ''}</p>
+                  <div className="flex-1 p-4 min-w-0">
+                    <h3 className="text-h3 text-navy line-clamp-3">{item.titulo}</h3>
+                    <p className="mt-1 text-xs text-ink-3">{PLATAFORMA[item.plataforma] ?? ''}</p>
                   </div>
                 </button>
                 {ehAdmin && <VisualizacoesBadge lista={visualizacoes[item.id] ?? []} className="absolute top-1.5 left-1.5" />}
-                {ehAdmin && <IconButton icon="delete" label={`Remover apresentação ${item.titulo}`} variant="overlay" className="absolute top-1.5 right-1.5" onClick={() => setApagando(item)} />}
-              </div>
+                {ehAdmin && <IconButton icon="delete" label={`Remover apresentação ${item.titulo}`} variant="overlay" size="sm" className="absolute top-1.5 right-1.5" onClick={() => setApagando(item)} />}
+              </Card>
             ))}
-          </div>
+          </GradeCards>
         )}
       </Container>
 

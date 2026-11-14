@@ -67,8 +67,13 @@ const PainelPeriodo: React.FC<{ value: FiltroPeriodoValor | null; onChange: (v: 
 export const FiltroPeriodo: React.FC<{
   value: FiltroPeriodoValor | null; onChange: (v: FiltroPeriodoValor) => void; className?: string;
   opcoes?: PeriodoId[]; onLimpar?: () => void;
-}> = ({ value, onChange, className, opcoes, onLimpar }) => (
-  <FiltroPopover nome="Período" icone="date_range" resumo={value ? rotuloDoPeriodo(value.id, value.custom) : 'Todos os períodos'} className={className} onLimpar={value ? onLimpar : undefined}>
+  /** 'chip': filtro em chip (lista de Inspeções); ativo quando há período. */
+  variante?: 'campo' | 'chip';
+}> = ({ value, onChange, className, opcoes, onLimpar, variante }) => (
+  <FiltroPopover
+    nome="Período" icone="date_range" resumo={value ? rotuloDoPeriodo(value.id, value.custom) : 'Todos os períodos'} className={className}
+    onLimpar={value ? onLimpar : undefined} variante={variante} ativo={!!value}
+  >
     {fechar => <PainelPeriodo value={value} onChange={onChange} fechar={fechar} opcoes={opcoes} />}
   </FiltroPopover>
 );

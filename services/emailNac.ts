@@ -1,7 +1,8 @@
 // Ficheiro: services/emailNac.ts
-// E-mail "INSPEÇÕES DE SAÚDE VDF E TÉRMINOS" ao NAC (menu "Enviar Email" de Inspeções; Admin e Secretaria): o servidor
+// E-mail "INSPEÇÕES DE SAÚDE VDF E TÉRMINOS" ao NAC (menu "Enviar e-mail" de Inspeções; Admin e Secretaria): o servidor
 // (servidor/email/nac.ts) monta o e-mail e o anexo em PDF das IS escolhidas e envia pela conta Google da JRS.
 import { ApiError, chamarServidor } from './apiClient';
+import { registrarUsoAcao } from './usoDiario';
 import { notificarAcao } from './notificacoesPush';
 
 export interface ResultadoEnvioNac { enviados: number; para: string[]; cc: string[]; periodo: { inicio: string; fim: string } }
@@ -9,6 +10,7 @@ export interface ResultadoEnvioNac { enviados: number; para: string[]; cc: strin
 export const enviarEmailNac = async (isIds: string[]): Promise<ResultadoEnvioNac> => {
   try {
     const { success: _s, enviado: _e, ...r } = await chamarServidor<ResultadoEnvioNac & { success: boolean; enviado: boolean }>('/api/email/nac', { isIds }, { timeoutMs: 180_000 });
+    registrarUsoAcao('email_enviar');
     notificarAcao('is.emailNac');
     return r;
   } catch (e) {

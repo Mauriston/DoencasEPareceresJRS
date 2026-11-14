@@ -2,7 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>JRS/HNRe</title>
     <!-- Ícone da aba do navegador (favicon) -->
     <link rel="icon" type="image/png" href="https://i.imgur.com/8HeAdv4.png" />
@@ -21,7 +21,29 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="JRS/HNRe App" />
-    <meta name="theme-color" content="#050F41" />
+    <!-- Barra de status: uma cor por esquema do sistema; o script abaixo (e hooks/useTema.ts) troca
+         as duas quando o usuário força Claro/Escuro em Meu perfil → Aparência. -->
+    <meta name="theme-color" content="#050F41" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#070C2A" media="(prefers-color-scheme: dark)" />
+    <!-- Tema antes do React montar (sem clarão branco ao abrir o PWA à noite). Mesma lógica de hooks/useTema.ts. -->
+    <script>
+      (function () {
+        var p = {};
+        try { p = JSON.parse(localStorage.getItem('jrs-tema') || '{}') || {}; } catch (e) {}
+        var modo = p.modo === 'claro' || p.modo === 'escuro' ? p.modo : 'sistema';
+        var variante = p.variante === 'grafite' || p.variante === 'oled' ? p.variante : 'marinho';
+        var escuro = modo === 'escuro' || (modo === 'sistema' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var raiz = document.documentElement;
+        raiz.setAttribute('data-theme', escuro ? 'dark' : 'light');
+        raiz.setAttribute('data-variante', variante);
+        var cor = { marinho: '#070C2A', grafite: '#111216', oled: '#000000' }[variante];
+        var metas = document.querySelectorAll('meta[name="theme-color"]');
+        for (var i = 0; i < metas.length; i++) {
+          if (modo === 'sistema') metas[i].content = metas[i].media.indexOf('dark') >= 0 ? cor : '#050F41';
+          else metas[i].content = escuro ? cor : '#050F41';
+        }
+      })();
+    </script>
     <!-- Twitter Meta Tags -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="JRS/HNRe" />

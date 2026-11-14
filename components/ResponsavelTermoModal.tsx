@@ -5,6 +5,7 @@
 // avatar e o campo "usuario" do cadastro (ex.: "CT MAURISTON").
 import React, { useEffect, useState } from 'react';
 import { Avatar } from './shell/UserMenu';
+import { Button } from './ui/Button';
 import { listUsuarios, UsuarioRecord } from '../services/firestoreUsuarios';
 
 // Ordem de antiguidade dos médicos da JRS (do mais antigo ao mais moderno), pelo campo
@@ -55,7 +56,7 @@ export const ResponsavelTermoModal: React.FC<ResponsavelTermoModalProps> = ({ ca
       <div className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="p-4 bg-navy text-white flex items-center space-x-2">
           <span className="material-symbols-outlined text-[20px] text-gold">stethoscope</span>
-          <h3 className="font-heading font-bold text-sm">Médico responsável pela IS</h3>
+          <h3 className="text-h3">Médico responsável pela IS</h3>
         </div>
         <div className="p-5 space-y-4">
           <p className="text-sm text-ink leading-relaxed">
@@ -75,7 +76,7 @@ export const ResponsavelTermoModal: React.FC<ResponsavelTermoModalProps> = ({ ca
                   key={m.id}
                   type="button"
                   onClick={() => onSelect(m)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-line bg-paper hover:bg-navy hover:text-white hover:border-navy text-navy transition-colors text-left"
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-line bg-paper hover:bg-navy hover:text-white hover:border-navy text-navy transition-colors text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold`}
                 >
                   {/* Avatar maior que a linha (margem negativa) para não aumentar a altura do botão. */}
                   <span className="-my-1.5 shrink-0 flex"><Avatar nome={m.nome} imageProfile={m.imageProfile} size={48} /></span>
@@ -86,7 +87,7 @@ export const ResponsavelTermoModal: React.FC<ResponsavelTermoModalProps> = ({ ca
           )}
 
           <div className="flex justify-end">
-            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">Cancelar</button>
+            <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           </div>
         </div>
       </div>

@@ -11,17 +11,10 @@ import { auth } from './firebaseAuth';
 import { chamarServidor } from './apiClient';
 import { urlDoApp } from '../utils/pwa';
 
-const HASH_KEY = 'h';
+import { consumirTokenDaUrl, HASH_KEY_HANDOFF as HASH_KEY } from '../utils/handoffUrl';
 
-/** Lê (e remove da barra de endereço) um token de handoff presente na URL. */
-export const consumirTokenDaUrl = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  const token = params.get(HASH_KEY);
-  if (!token) return null;
-  window.history.replaceState(null, '', window.location.pathname + window.location.search);
-  return token;
-};
+// A leitura do token na URL mora em utils/handoffUrl.ts (sem Firebase, usada pelo index.tsx).
+export { consumirTokenDaUrl };
 
 export const entrarComToken = (token: string) => signInWithCustomToken(auth, token);
 

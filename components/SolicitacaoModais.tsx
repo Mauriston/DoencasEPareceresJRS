@@ -8,6 +8,7 @@ import { ESPECIALIDADES_MEDICAS } from '../data/especialidadesMedicas';
 import { SheetArrastavel } from './ui/SheetArrastavel';
 import { AcoesRodape } from './ui/AcoesRodape';
 import { useIsDesktop } from '../hooks/useIsDesktop';
+import { controlClass } from './ui/Field';
 
 const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -24,20 +25,21 @@ const Shell: React.FC<{ titulo: string; icone: string; onClose: () => void; chil
       <div className="p-4 bg-navy text-white flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center space-x-2">
           <span className="material-symbols-outlined text-[20px] text-gold">{icone}</span>
-          <h3 className="font-heading font-bold text-sm">{titulo}</h3>
+          <h3 className="text-h3">{titulo}</h3>
         </div>
-        <button type="button" onClick={onClose} aria-label="Fechar" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
-          <span className="material-symbols-outlined text-[20px]">close</span>
+        <button type="button" onClick={onClose} aria-label="Fechar" title="Fechar" className="w-10 h-10 inline-flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
+          <span className="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
         </button>
       </div>
-      <div data-sheet-corpo="" className="p-5 overflow-y-auto space-y-3">{children}</div>
+      <div data-sheet-corpo="" className="p-5 overflow-y-auto space-y-4">{children}</div>
     </SheetArrastavel>
   </div>
   );
 };
 
-const campoTexto = 'w-full px-4 py-3 text-sm rounded-xl border border-ink-5 bg-white focus:outline-none focus:border-navy transition-colors';
-const rotulo = 'block text-xs font-bold text-ink-3 uppercase tracking-wider mb-1.5';
+// Campo e rótulo do DS (Field.tsx) — mesmo controle das demais telas (auditoria v3, O2).
+const campoTexto = controlClass;
+const rotulo = 'block text-xs font-semibold text-ink-3 mb-1';
 
 // Desktop: botão no fim do formulário; mobile: FAB "extended" do sheet.
 const BotaoGerar: React.FC<{ habilitado: boolean; onClick: () => void }> = ({ habilitado, onClick }) => (
@@ -73,8 +75,9 @@ export const SolicitarParecerModal: React.FC<ParecerModalProps> = ({ candidatoNo
       </p>
 
       <div className="relative">
-        <label className={rotulo}>Especialidade</label>
+        <label htmlFor="parecer-especialidade" className={rotulo}>Especialidade</label>
         <input
+          id="parecer-especialidade"
           type="text"
           value={busca}
           placeholder="Digite para buscar a especialidade..."
@@ -92,7 +95,7 @@ export const SolicitarParecerModal: React.FC<ParecerModalProps> = ({ candidatoNo
                 key={e}
                 type="button"
                 onClick={() => escolher(e)}
-                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-paper ${e === especialidade ? 'font-bold text-navy' : 'text-ink'}`}
+                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-paper focus-visible:bg-paper focus-visible:outline-none ${e === especialidade ? 'font-bold text-navy' : 'text-ink'}`}
               >
                 {e}
               </button>
@@ -102,8 +105,9 @@ export const SolicitarParecerModal: React.FC<ParecerModalProps> = ({ candidatoNo
       </div>
 
       <div>
-        <label className={rotulo}>Histórico</label>
+        <label htmlFor="parecer-historico" className={rotulo}>Histórico</label>
         <textarea
+          id="parecer-historico"
           value={historico}
           onChange={e => setHistorico(e.target.value)}
           rows={5}
@@ -133,8 +137,9 @@ export const SolicitarExamesModal: React.FC<ExamesModalProps> = ({ candidatoNome
       </p>
 
       <div>
-        <label className={rotulo}>Exames solicitados</label>
+        <label htmlFor="exames-solicitados" className={rotulo}>Exames solicitados</label>
         <textarea
+          id="exames-solicitados"
           value={exames}
           onChange={e => setExames(e.target.value)}
           rows={6}

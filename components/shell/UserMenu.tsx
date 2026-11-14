@@ -1,10 +1,13 @@
 // Ficheiro: components/shell/UserMenu.tsx
-// Avatar, rótulos de perfil e menu do usuário (Perfil / Notificações / Configurações — só Admin — / Logout), extraídos do
+// Avatar, rótulos de perfil e menu do usuário (Perfil / Notificações / Logout; as Configurações foram para Administração), extraídos do
 // antigo Header para serem usados pela topbar, pela sidebar mobile e pelos
 // modais que listam usuários.
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { NavContext } from '../../context/NavContext';
+import { useTema, adotarTemaDoPerfil } from '../../hooks/useTema';
+import { updateUsuarioProfile } from '../../services/firestoreUsuarios';
 import { useUrlArquivo } from '../../services/arquivosStorage';
+import { canAccessPage } from '../../config/permissions';
 
 export const PERFIL_LABELS: Record<string, string> = {
   admin: 'Administrador',
@@ -87,7 +90,7 @@ const VisualizarComo: React.FC<{ atual: string; onEscolher: (perfil: string | nu
             <button
               key={p} type="button" role="menuitemradio" aria-checked={atual === p}
               onClick={() => onEscolher(p === 'admin' ? null : p)}
-              className={`w-full text-left pl-11 pr-4 min-h-[40px] text-sm hover:bg-thead flex items-center gap-2 transition-colors ${atual === p ? 'font-bold text-navy' : 'text-ink-2'}`}
+              className={`w-full text-left pl-11 pr-4 min-h-[40px] text-sm hover:bg-thead flex items-center gap-2 transition-colors ${atual === p ? 'font-bold text-navy' : 'text-ink'}`}
             >
               <span className="flex-1">{PERFIL_LABELS[p]}</span>
               {atual === p && <span className="material-symbols-outlined text-[18px] text-green-700" aria-hidden="true">check</span>}
@@ -99,18 +102,38 @@ const VisualizarComo: React.FC<{ atual: string; onEscolher: (perfil: string | nu
   );
 };
 
-/** Item "Configurações" (só Admin): navega pelo NavContext, então vale para a topbar e para a sidebar. */
-const ItemConfiguracoes: React.FC = () => {
+/** Item "Sobre o app" (auditoria v3, SB1): as funções do app que o perfil usa. Navega pelo NavContext (topbar e sidebar). */
+const ItemSobre: React.FC = () => {
   const nav = useContext(NavContext);
-  if (nav?.authUser?.perfil !== 'admin') return null;
+  if (!nav || !canAccessPage('sobre', nav.authUser?.perfil)) return null;
   return (
     <button
       type="button" role="menuitem"
-      onClick={() => { nav.setIsAvatarMenuOpen(false); nav.setIsMobileMenuOpen(false); nav.setCurrentView('configuracoes'); }}
+      onClick={() => { nav.setIsAvatarMenuOpen(false); nav.setIsMobileMenuOpen(false); nav.setCurrentView('sobre'); }}
       className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-ink hover:bg-thead flex items-center gap-2.5 transition-colors"
     >
-      <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">settings</span>
-      <span>Configurações</span>
+      <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">info</span>
+      <span>Sobre o app</span>
+    </button>
+  );
+};
+
+/** Atalho lua/sol: alterna Claro ↔ Escuro sem abrir o perfil (a variante fica em Meu perfil → Aparência). */
+const ItemTema: React.FC = () => {
+  const nav = useContext(NavContext);
+  const tema = useTema();
+  const escuro = tema.efetivo === 'dark';
+  return (
+    <button
+      type="button" role="menuitem"
+      onClick={() => {
+        const p = tema.alternar();
+        if (nav?.authUser?.uid) updateUsuarioProfile(nav.authUser.uid, { aparencia: p }).catch(() => {});
+      }}
+      className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-ink hover:bg-thead flex items-center gap-2.5 transition-colors"
+    >
+      <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">{escuro ? 'light_mode' : 'dark_mode'}</span>
+      <span>{escuro ? 'Tema claro' : 'Tema escuro'}</span>
     </button>
   );
 };
@@ -129,6 +152,7 @@ export const UserDropdownContent: React.FC<UserDropdownContentProps> = ({ authUs
         <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">account_circle</span>
         <span>Perfil</span>
       </button>
+      <ItemTema />
       {onNotificacoesClick && (
         <button type="button" role="menuitem" onClick={onNotificacoesClick} className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-ink hover:bg-thead flex items-center gap-2.5 transition-colors">
           <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">notifications</span>
@@ -136,7 +160,7 @@ export const UserDropdownContent: React.FC<UserDropdownContentProps> = ({ authUs
           {naoLidas > 0 && <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-wine text-white text-xs font-bold leading-5 text-center">{naoLidas > 99 ? '99+' : naoLidas}</span>}
         </button>
       )}
-      <ItemConfiguracoes />
+      <ItemSobre />
       {perfilReal === 'admin' && onVerComo && <VisualizarComo atual={verComo || 'admin'} onEscolher={onVerComo} />}
       <button type="button" role="menuitem" onClick={onLogoutClick} className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-wine hover:bg-wine/10 flex items-center gap-2.5 transition-colors">
         <span className="material-symbols-outlined text-[20px]" aria-hidden="true">logout</span>
@@ -152,6 +176,8 @@ export const UserMenu: React.FC = () => {
   const authUser = nav?.authUser || null;
   const aberto = nav?.isAvatarMenuOpen || false;
   const setAberto = nav?.setIsAvatarMenuOpen || (() => {});
+  // Preferência de tema salva no perfil vale neste aparelho se ele ainda não tem uma.
+  useEffect(() => { adotarTemaDoPerfil(authUser?.aparencia); }, [authUser?.aparencia]);
 
   return (
     <div className="relative shrink-0">

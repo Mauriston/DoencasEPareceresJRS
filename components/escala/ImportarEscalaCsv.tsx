@@ -4,7 +4,7 @@
 // Firestore (coleção "escalaSpa", um documento por dia, mesclando com o que já existe).
 import React, { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
-import { Button } from '../ui/Button';
+import { Button, buttonClass } from '../ui/Button';
 import { gravarEscala } from '../../services/firestoreEscala';
 import { lerCsvEscala, MODELO_CSV_ESCALA, COLUNAS_CSV_ESCALA, nomeExibicao, type ResultadoCsvEscala } from '../../utils/escalaSpa';
 
@@ -71,13 +71,13 @@ export const ImportarEscalaCsv: React.FC<Props> = ({ onClose, onImportado }) => 
       <div className="space-y-4">
         <div className="text-ink-3 space-y-1">
           <p>
-            Uma linha por serviço, com as colunas {COLUNAS_CSV_ESCALA.map((c, i) => <React.Fragment key={c}>{i > 0 && ', '}<code className="font-mono text-navy">{c}</code></React.Fragment>)}.
+            Uma linha por serviço, com as colunas {COLUNAS_CSV_ESCALA.map((c, i) => <React.Fragment key={c}>{i > 0 && ', '}<code className="tabular-nums text-navy">{c}</code></React.Fragment>)}.
             <strong className="text-ink"> SERVICO</strong>: Supervisão, DIA ou NOITE; nos plantões, os dois médicos separados por vírgula.
           </p>
           <p>Também aceita o CSV exportado da aba <strong className="text-ink">Agenda</strong> da planilha (colunas Início, SVC, Medico e Retens). Dias já registrados são atualizados; o restante é mantido.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-gold">
+          <label className={`${buttonClass('primary')} cursor-pointer has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-gold`}>
             <span className="material-symbols-outlined text-[20px]" aria-hidden="true">upload_file</span>
             {arquivo ? 'Trocar arquivo' : 'Selecionar CSV'}
             <input type="file" accept=".csv,text/csv,text/plain" className="sr-only" disabled={gravando} onChange={e => { void ler(e.target.files?.[0] ?? null); e.target.value = ''; }} />
@@ -101,7 +101,7 @@ export const ImportarEscalaCsv: React.FC<Props> = ({ onClose, onImportado }) => 
             {resultado.erros.length > 0 && (
               <div className="rounded-lg border border-wine/30 bg-wine/5 p-3">
                 <p className="text-xs font-bold text-wine mb-1">{resultado.erros.length} linha{resultado.erros.length !== 1 ? 's' : ''} ignorada{resultado.erros.length !== 1 ? 's' : ''}:</p>
-                <ul className="text-xs text-ink-2 space-y-0.5 max-h-32 overflow-y-auto">
+                <ul className="text-xs text-ink space-y-0.5 max-h-32 overflow-y-auto">
                   {resultado.erros.slice(0, 50).map(e => <li key={e.linha}>Linha {e.linha}: {e.motivo}</li>)}
                 </ul>
               </div>

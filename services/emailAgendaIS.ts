@@ -5,6 +5,7 @@
 import { getFirestore, collection, onSnapshot, type Timestamp } from 'firebase/firestore';
 import { app } from './firebaseAuth';
 import { ApiError, chamarServidor } from './apiClient';
+import { registrarUsoAcao } from './usoDiario';
 import { notificarAcao } from './notificacoesPush';
 
 const db = getFirestore(app);
@@ -32,6 +33,7 @@ export interface ResultadoEnvioAgenda { data: string; para: string[]; cc: string
 export const enviarEmailAgendaIS = async (data: string): Promise<ResultadoEnvioAgenda> => {
   try {
     const { success: _s, ...r } = await chamarServidor<ResultadoEnvioAgenda & { success: boolean }>('/api/email/agenda-is', { data }, { timeoutMs: 180_000 });
+    registrarUsoAcao('email_enviar');
     notificarAcao('is.emailAgendaDia');
     return r;
   } catch (e) {

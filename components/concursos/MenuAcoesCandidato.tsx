@@ -17,7 +17,7 @@ export const MenuAcoesCandidato: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s }
         if (!c) return null;
         const gerando = gerandoSolicitacaoIds.has(c.id);
         const classeItem = 'w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-left text-navy hover:bg-paper disabled:text-ink-5 disabled:cursor-not-allowed disabled:hover:bg-transparent';
-        // Gerar Parecer/Exames só aparecem quando podem ser usados (nunca desabilitados).
+        // Gerar parecer/Exames só aparecem quando podem ser usados (nunca desabilitados).
         const mostrarGerar = podeSolicitarBase && statusPermiteSolicitacao(c) && !gerando;
         const docsVer = [
           ...c.solicitacoesParecer.map((d, i) => ({ tipo: 'parecer' as const, d, chave: `p${i}` })),
@@ -45,11 +45,11 @@ export const MenuAcoesCandidato: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s }
                 <>
                   <button type="button" role="menuitem" onClick={() => handleGerarSolicitacao('parecer', c)} className={classeItem}>
                     <span className="material-symbols-outlined text-[20px]">stethoscope</span>
-                    <span>Gerar Parecer</span>
+                    <span>Gerar parecer</span>
                   </button>
                   <button type="button" role="menuitem" onClick={() => handleGerarSolicitacao('exames', c)} className={classeItem}>
                     <span className="material-symbols-outlined text-[20px]">lab_research</span>
-                    <span>Gerar Exames</span>
+                    <span>Gerar exames</span>
                   </button>
                 </>
               )}
@@ -59,7 +59,7 @@ export const MenuAcoesCandidato: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s }
                   {docsVer.map(({ tipo, d, chave }) => (
                     <button key={chave} type="button" role="menuitem" onClick={() => handleVerSolicitacao(d)} className={classeItem}>
                       <span className="material-symbols-outlined text-[20px] text-green-700">{tipo === 'parecer' ? 'clinical_notes' : 'lab_panel'}</span>
-                      <span className="min-w-0 truncate">{tipo === 'parecer' ? 'Ver Parecer' : 'Ver Exames'} · {d.rotulo}</span>
+                      <span className="min-w-0 truncate">{tipo === 'parecer' ? 'Ver parecer' : 'Ver exames'} · {d.rotulo}</span>
                     </button>
                   ))}
                 </>

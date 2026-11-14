@@ -55,6 +55,8 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list', subtitle: 'Trilha de estudos para capacitação dos AMP.' },
   // Administração: férias e afastamentos dos usuários da JRS (criar, editar e apagar continuam só com o Admin).
   { id: 'ferias', label: 'Férias', icon: 'beach_access', subtitle: 'Férias e afastamentos dos usuários da JRS.' },
+  // Painel: "como estamos no período" (tendências e comparações); na sidebar logo abaixo de Início.
+  { id: 'painel', label: 'Painel', icon: 'monitoring', subtitle: 'Indicadores do período: IS, perícias, concursos e uso do app.' },
   // Ajuda: o que o app faz, por área (página "Sobre o app").
   { id: 'sobre', label: 'Sobre o app', icon: 'info', subtitle: 'As principais funcionalidades do app, por área.' },
 ];
@@ -69,14 +71,14 @@ export interface FeatureDef {
 
 export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'concursosJRS.editarDadosTabela', label: 'Editar Status/Observações/Nº TIS na tabela', group: 'Concursos' },
-  { id: 'concursosJRS.registrarMensagemPDF', label: 'Registrar Mensagem (PDF): criar concurso, candidatos e agendamento', group: 'Concursos' },
+  { id: 'concursosJRS.registrarMensagemPDF', label: 'Registrar mensagem (PDF): criar concurso, candidatos e agendamento', group: 'Concursos' },
   { id: 'concursosJRS.reagendar', label: 'Reagendar candidato', group: 'Concursos' },
   { id: 'concursosJRS.gerarMinutaResultados', label: 'Gerar Minuta de Resultados', group: 'Concursos' },
-  { id: 'concursosJRS.importarCsv', label: 'Importar Concurso (CSV)', group: 'Concursos' },
-  { id: 'concursosJRS.abrirEncerrarConcurso', label: 'Alterar Status do Concurso (Abrir/Encerrar/Em Breve)', group: 'Concursos' },
-  { id: 'concursosJRS.registrarMensagemArquivo', label: 'Registrar Mensagem: arquivar mensagem em concurso existente', group: 'Concursos' },
+  { id: 'concursosJRS.importarCsv', label: 'Importar concurso (CSV)', group: 'Concursos' },
+  { id: 'concursosJRS.abrirEncerrarConcurso', label: 'Alterar status do Concurso (Abrir/Encerrar/Em breve)', group: 'Concursos' },
+  { id: 'concursosJRS.registrarMensagemArquivo', label: 'Registrar mensagem: arquivar mensagem em concurso existente', group: 'Concursos' },
   { id: 'concursosJRS.listarMensagens', label: 'Listar Mensagens arquivadas do concurso', group: 'Concursos' },
-  { id: 'concursosJRS.adicionarCandidato', label: 'Adicionar Candidato manualmente (concurso Em Andamento/Em Breve)', group: 'Concursos' },
+  { id: 'concursosJRS.adicionarCandidato', label: 'Adicionar candidato manualmente (concurso Em andamento/Em breve)', group: 'Concursos' },
   { id: 'concursosJRS.visualizarTabela', label: 'Alternar para visão em tabela (lista de concursos, desktop)', group: 'Concursos' },
   { id: 'concursosJRS.gerarTermoRecurso', label: 'Gerar Termo de Recurso (a visualização do termo já gerado é liberada a todos)', group: 'Concursos' },
   { id: 'concursosJRS.solicitarParecerExames', label: 'Solicitar Parecer / Exames (menu ⋮ da planilha; a visualização é só de quem tem o menu)', group: 'Concursos' },
@@ -87,7 +89,7 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'inspecoes.editar', label: 'Editar IS: status, laudo, restrições, TIS, DS-1a e observações', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.gerarMinuta', label: 'Gerar Minuta de Mensagem (cancelamento de IS atrasada)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.enviarExames', label: 'Enviar exames em PDF da IS (a IA identifica o exame e transcreve o laudo; não vale para IS finalizada)', group: 'Inspeções de Saúde' },
-  { id: 'inspecoes.enviarEmails', label: 'Enviar e-mails da IS: agendamento, resultado, faltas do HNRe e NAC (menu "Enviar Email", detalhe da IS e card de faltas da Início; o e-mail "IS agendadas" do dia é só do Admin)', group: 'Inspeções de Saúde' },
+  { id: 'inspecoes.enviarEmails', label: 'Enviar e-mails da IS: agendamento, resultado, faltas do HNRe e NAC (menu "Enviar e-mail", detalhe da IS e card de faltas da Início; o e-mail "IS agendadas" do dia é só do Admin)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.cancelar', label: 'Cancelar IS (menu ⋮ da IS)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.bloquearAgenda', label: 'Bloquear horários e turnos da agenda (perfis médicos só bloqueiam os próprios turnos; a configuração de turnos dos peritos é só do Admin)', group: 'Inspeções de Saúde' },
   { id: 'militares.cadastrar', label: 'Cadastrar novo inspecionado (Militares e Dep/Pens.); editar, apagar e inativar continuam só com o Admin', group: 'Inspecionados' },

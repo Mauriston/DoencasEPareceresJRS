@@ -55,8 +55,8 @@ export const TimelineAfastamentos: React.FC<Props> = ({ afastamentos, fotos, esc
   };
 
   return (
-    <div className="bg-white rounded-xl border border-line overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-line">
+    <div className="bg-white rounded-xl border border-line overflow-clip">
+      <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 border-b border-line">
         <Segmented<EscalaTimeline>
           ariaLabel="Escala da timeline"
           value={escala}
@@ -78,7 +78,7 @@ export const TimelineAfastamentos: React.FC<Props> = ({ afastamentos, fotos, esc
         <div className="min-w-[900px]">
           {/* Cabeçalho dos meses */}
           <div className="flex border-b border-line bg-thead">
-            <div className="w-64 shrink-0 px-4 py-2 text-xs font-bold text-ink-3">USUÁRIO</div>
+            <div className="w-64 shrink-0 px-4 py-2 text-xs font-bold text-ink-3">Usuário</div>
             <div className="flex-1 flex">
               {janela.meses.map(m => (
                 <div key={m.chave} style={{ width: `${(m.dias / totalDias) * 100}%` }} className="py-2 text-center text-xs font-bold text-ink-3 border-l border-line overflow-hidden whitespace-nowrap">{m.rotulo}</div>
@@ -117,7 +117,7 @@ export const TimelineAfastamentos: React.FC<Props> = ({ afastamentos, fotos, esc
                           onFocus={e => mostrar(a, e.currentTarget)} onBlur={() => setDica(null)}
                           aria-label={`${a.usuario}: ${rotuloTipo(a.tipo)} de ${dataBr(a.dataInicio)} a ${dataBr(a.dataFim)} (${a.duracaoDias} dias), ${st.rotulo}`}
                           style={{ left: `${pos.esquerda}%`, width: `max(${pos.largura}%, 6px)` }}
-                          className={`absolute top-1/2 -translate-y-1/2 h-7 rounded-md px-2 text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis text-left shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${BARRA_TIPO[a.tipo]} ${st.id === 'gozada' ? 'opacity-60' : ''}`}
+                          className={`absolute top-1/2 -translate-y-1/2 h-7 rounded-md px-2 text-xs font-bold whitespace-nowrap overflow-hidden text-ellipsis text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${BARRA_TIPO[a.tipo]} ${st.id === 'gozada' ? 'opacity-60' : ''}`}
                         >
                           {rotuloTipo(a.tipo)}
                         </button>

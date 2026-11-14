@@ -63,23 +63,25 @@ export const getNavCategories = (
       })),
   })).filter(cat => cat.subitems.length > 0);
 
-  // Administração: "Férias" (matriz de permissões; padrão: Admin, médicos JRS/MPI e Secretaria); "Usuários" só para o Admin.
+  // Sistema (auditoria v3, 8b): "Administração" (só Admin — usuários, perfis e permissões, e-mails, agenda das IS,
+  // integrações e registro de alterações; components/administracao/) e "Férias" (matriz de permissões; padrão:
+  // Admin, médicos JRS/MPI e Secretaria). O id da página de Administração continua 'usuarios' (rota /administracao).
   const ferias = pageMap.get('ferias')!;
-  const administracao: NavSubItem[] = [
+  const sistema: NavSubItem[] = [
+    ...(perfil === 'admin' ? [{ id: 'usuarios' as NavItem, label: 'Administração', icon: 'admin_panel_settings', subtitle: 'Usuários, permissões e ajustes do app.' }] : []),
     ...(canAccessPage('ferias', perfil) ? [{ id: ferias.id, label: ferias.label, icon: ferias.icon, subtitle: ferias.subtitle }] : []),
-    ...(perfil === 'admin' ? [{ id: 'usuarios' as NavItem, label: 'Usuários', icon: 'group', subtitle: 'Gerencie usuários e permissões de acesso.' }] : []),
   ];
-  if (administracao.length) {
+  if (sistema.length) {
     categories.push({
       id: 'administracao',
-      label: 'Administração',
+      label: 'Sistema',
       icon: 'admin_panel_settings',
-      subtitle: 'Férias e afastamentos; gestão de usuários e permissões.',
-      subitems: administracao,
+      subtitle: 'Administração do app (só Admin); férias e afastamentos.',
+      subitems: sistema,
     });
   }
 
-  // Ajuda: "Sobre o app" (matriz de permissões; começa só para o Admin).
+  // Ajuda: "Sobre o app" (matriz de permissões; liberada a todos por padrão).
   const sobre = pageMap.get('sobre')!;
   if (canAccessPage('sobre', perfil)) {
     categories.push({

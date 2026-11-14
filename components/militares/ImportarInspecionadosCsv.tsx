@@ -136,12 +136,12 @@ export const ImportarInspecionadosCsv: React.FC<Props> = ({ existentes, onClose,
           <p>
             Cadastra militares em lote. Baixe o modelo: ele traz todas as colunas do cadastro (separador ponto e vírgula).
             Obrigatórias:{' '}
-            {COLUNAS_OBRIGATORIAS_CSV.map((c, i) => <React.Fragment key={c}>{i > 0 && ', '}<code className="font-mono text-navy">{c}</code></React.Fragment>)}.
+            {COLUNAS_OBRIGATORIAS_CSV.map((c, i) => <React.Fragment key={c}>{i > 0 && ', '}<code className="tabular-nums text-navy">{c}</code></React.Fragment>)}.
             {' '}<strong>vinculo</strong>: Carreira, Temporário ou Inativo; <strong>posto</strong>: P/G/Q como no cadastro (ex.: GR, CB-EF, CT (Md));
             {' '}<strong>nasc</strong> (data de nascimento): DD/MM/AAAA; <strong>situacao</strong>: RM1 ou Refº (só Inativo).
           </p>
           <p>
-            <strong>servicoHnre</strong> só vale para a OM HNRe (ex.: <code className="font-mono text-navy">JRS (HNRe-02.2)</code>). As
+            <strong>servicoHnre</strong> só vale para a OM HNRe (ex.: <code className="tabular-nums text-navy">JRS (HNRe-02.2)</code>). As
             Informações adicionais (nome de guerra, especialidade, RQE, CRM, e-mail pessoal, CPF e identidade militar) só valem
             para oficial médico do HNRe; nos demais são ignoradas com aviso.
           </p>
@@ -197,7 +197,7 @@ export const ImportarInspecionadosCsv: React.FC<Props> = ({ existentes, onClose,
                     <tr key={l.linha}>
                       <td className="px-3 py-1.5 text-ink-3">{l.linha}</td>
                       <td className="px-3 py-1.5 whitespace-nowrap"><StatusTag tone={ROTULO[l.situacao].tone}>{ROTULO[l.situacao].texto}</StatusTag></td>
-                      <td className="px-3 py-1.5 font-mono whitespace-nowrap">{l.nip}</td>
+                      <td className="px-3 py-1.5 tabular-nums whitespace-nowrap">{l.nip}</td>
                       <td className="px-3 py-1.5 whitespace-nowrap">{l.pgq}</td>
                       <td className="px-3 py-1.5 font-semibold text-navy">{l.nome}</td>
                       <td className="px-3 py-1.5 whitespace-nowrap">{l.om}</td>

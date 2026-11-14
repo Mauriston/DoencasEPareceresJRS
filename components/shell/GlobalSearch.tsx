@@ -10,6 +10,7 @@ import { canAccessPage } from '../../config/permissions';
 import { doencaPath, pathForView } from '../../config/routes';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { DISEASES } from '../../constants';
+import { DOENCAS_PORTARIA, portariaPathSecao } from '../../utils/portaria';
 
 interface Resultado {
   id: string;
@@ -47,7 +48,11 @@ export const GlobalSearch: React.FC<{ className?: string }> = ({ className = '' 
         id: `g-${d.id}-${i}`, rotulo: g.name, contexto: `em ${d.name}`, icone: 'diagnosis', to: doencaPath(d.id, i),
       })) : []),
     ]);
-    return [...paginas, ...doencas];
+    // Seções da Portaria GM-MD nº 3.551/2021 (uma por doença) — abrem a Portaria já na seção (?secao=…).
+    const portaria = !canAccessPage('portaria', perfil) ? [] : DOENCAS_PORTARIA.map(d => ({
+      id: `pt-${d.secao}`, rotulo: d.nome, contexto: 'Portaria GM-MD 3.551', icone: 'article', to: portariaPathSecao(pathForView('portaria'), d.secao),
+    }));
+    return [...paginas, ...doencas, ...portaria];
   };
 
   const resultados = (() => {
@@ -128,7 +133,7 @@ export const GlobalSearch: React.FC<{ className?: string }> = ({ className = '' 
             onFocus={() => setAberto(true)}
             onKeyDown={aoTecla}
             autoComplete="off"
-            className="w-full min-h-[40px] md:min-h-[40px] pl-10 pr-3 rounded-lg border border-line bg-thead text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:bg-white focus:border-navy [&::-webkit-search-cancel-button]:hidden"
+            className="w-full min-h-[40px] md:min-h-[40px] pl-10 pr-3 rounded-lg border border-line bg-thead text-base md:text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:bg-white focus:border-navy [&::-webkit-search-cancel-button]:hidden"
           />
         </div>
         {expandidoMobile && (

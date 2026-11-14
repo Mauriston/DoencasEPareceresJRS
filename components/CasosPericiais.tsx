@@ -1,8 +1,13 @@
 // Ficheiro: components/CasosPericiais.tsx
 import React, { useContext, useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Page, Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import { Dialog } from './ui/Dialog';
+import { FabAcoes } from './ui/Fab';
+import { IconButton } from './ui/IconButton';
+import { ProgressBar } from './ui/ProgressBar';
+import { getMainScroller } from '../utils/dom';
 import { NavContext } from '../context/NavContext';
 import { useBackToTop } from '../hooks/useBackToTop';
 import { getCasosResultado, saveCasosResultado } from '../services/firestoreCasos';
@@ -359,6 +364,7 @@ export const CasosPericiais: React.FC = () => {
     if (currentIndex < totalCases - 1) {
       setCurrentIndex(prev => prev + 1);
       setSelectedAnswer(null);
+      getMainScroller()?.scrollTo({ top: 0 });
       return;
     }
 
@@ -390,6 +396,7 @@ export const CasosPericiais: React.FC = () => {
     setUserAnswers([]);
     setShowModal(false);
     setPhase('quiz');
+    getMainScroller()?.scrollTo({ top: 0 });
   };
 
   const handleDownloadPDF = () => {
@@ -401,11 +408,11 @@ export const CasosPericiais: React.FC = () => {
   };
 
   const getOptionStyle = (key: string, savedAnswer: string | null = selectedAnswer) => {
-    if (savedAnswer === null) return "bg-white border-line hover:border-navy hover:shadow-md cursor-pointer font-normal text-ink";
+    if (savedAnswer === null) return "bg-white border-line hover:border-navy cursor-pointer font-normal text-ink";
     const isCorrect = key.toUpperCase() === currentCase.gabarito.toUpperCase();
     const isSelected = key.toUpperCase() === savedAnswer.toUpperCase();
-    if (isCorrect) return "bg-green-100 border-green-500 text-green-900 font-bold shadow-sm";
-    if (isSelected && !isCorrect) return "bg-wine-50 border-wine-400 text-wine-900 font-bold shadow-sm";
+    if (isCorrect) return "bg-green-100 border-green-500 text-green-900 font-bold ";
+    if (isSelected && !isCorrect) return "bg-wine-50 border-wine-400 text-wine-900 font-bold ";
     return "bg-paper border-line opacity-60 cursor-default font-normal text-ink-3";
   };
 
@@ -420,7 +427,7 @@ export const CasosPericiais: React.FC = () => {
   if (phase === 'intro') {
     return (
       <Page size="form" title="Casos periciais" description="Teste seus conhecimentos com casos comentados, fundamentados na DGPM-406.">
-        <div className="bg-white border border-line rounded-xl p-6 flex flex-col items-center text-center">
+        <Card className="flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-xl bg-thead flex items-center justify-center mb-5 text-navy">
             <span className="material-symbols-outlined text-[32px]" aria-hidden="true">quiz</span>
           </div>
@@ -430,107 +437,94 @@ export const CasosPericiais: React.FC = () => {
           <p className="text-sm text-ink leading-relaxed mb-6">
             Resolvê-los ajuda a fixar os principais critérios e procedimentos médico-periciais, sendo uma ótima revisão antes de atuar em uma Junta. Depois de iniciado, é preciso concluir todos os casos para ver o resultado, que fica salvo no seu perfil.
           </p>
-          <Button icon="play_arrow" fullWidth onClick={() => setPhase('quiz')}>Iniciar</Button>
-        </div>
+          <Button icon="play_arrow" fullWidth onClick={() => setPhase('quiz')}>Iniciar casos</Button>
+        </Card>
       </Page>
     );
   }
 
   if (phase === 'quiz') {
-    return createPortal(
-      <div className="fixed inset-0 z-dialog bg-canvas flex flex-col">
-        <div className="h-14 shrink-0 bg-navy flex items-center justify-center px-4">
-          <h1 className="text-white font-heading font-bold text-sm tracking-wide truncate">Teste seus conhecimentos</h1>
-        </div>
-        <div className="w-full h-1.5 bg-line shrink-0">
-          <div className="h-full bg-green transition-all duration-500 ease-out" style={{ width: `${progressPercentage}%` }} />
-        </div>
+    const ultimo = currentIndex >= totalCases - 1;
+    const rotuloProximo = ultimo ? 'Finalizar' : 'Próximo caso';
+    return (
+      <div className="flex flex-col flex-1 relative">
+        <Container size="form" className="py-6 md:py-8 pb-28 md:pb-10 space-y-6">
+          {/* Auditoria v3 (3b/P5): a prova usa o PageHeader; o progresso vai na descrição. */}
+          <PageHeader
+            title="Casos periciais"
+            description={<ProgressBar atual={currentIndex + 1} total={totalCases} unidade="casos" className="w-56 max-w-full" />}
+          />
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-4 space-y-6 max-w-3xl mx-auto w-full pb-32">
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-sm font-bold text-ink-3 uppercase tracking-wider">Caso {currentIndex + 1} de {totalCases}</span>
-            </div>
+          <Card>
+            <h2 className="text-xs font-semibold text-ink-3 mb-2">Caso {currentIndex + 1} de {totalCases}</h2>
+            <p className="text-base text-navy font-semibold leading-relaxed">{currentCase.enunciado}</p>
+          </Card>
 
-            <div className="bg-white p-5 rounded-2xl border border-line/80 shadow-sm">
-              <p className="text-navy font-heading text-[16px]  leading-relaxed font-semibold">{currentCase.enunciado}</p>
-            </div>
-
-            <div className="space-y-3">
-              {Object.entries(currentCase.alternativas).map(([key, text]) => (
-                <button
-                  key={key}
-                  onClick={() => handleSelect(key)}
-                  disabled={selectedAnswer !== null}
-                  className={`w-full text-left p-4 rounded-xl border transition-all duration-300 text-base font-body leading-relaxed flex items-start gap-3 focus:outline-none ${getOptionStyle(key)}`}
-                >
-                  <div className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5 ${
-                    selectedAnswer === null ? 'border-ink-5 text-ink-3 bg-paper' :
-                    key.toUpperCase() === currentCase.gabarito.toUpperCase() ? 'border-green-500 bg-green-500 text-white' :
-                    (key.toUpperCase() === selectedAnswer.toUpperCase() ? 'border-wine-500 bg-wine-500 text-white' : 'border-line text-ink-5')
-                  }`}>{key.toUpperCase()}</div>
-                  <span className="flex-1 mt-0.5">{text}</span>
-                </button>
-              ))}
-            </div>
-
-            {selectedAnswer !== null && (
-              <div className="animate-fade-in bg-gold-50/80 border border-gold-200 p-5 rounded-2xl mt-6 relative overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gold-400"></div>
-                <h3 className="text-base font-bold font-heading text-navy mb-2 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px] text-gold-600">lightbulb</span>
-                  Análise Pericial
-                </h3>
-                <p className="text-base text-navy font-body leading-relaxed">{currentCase.explicacao}</p>
-              </div>
-            )}
+          <div className="space-y-4" role="group" aria-label="Alternativas">
+            {Object.entries(currentCase.alternativas).map(([key, text]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => handleSelect(key)}
+                disabled={selectedAnswer !== null}
+                className={`w-full text-left p-4 rounded-lg border transition-colors text-base leading-relaxed flex items-start gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${getOptionStyle(key)}`}
+              >
+                <div className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5 ${
+                  selectedAnswer === null ? 'border-ink-5 text-ink-3 bg-paper' :
+                  key.toUpperCase() === currentCase.gabarito.toUpperCase() ? 'border-green-500 bg-green-500 text-white' :
+                  (key.toUpperCase() === selectedAnswer.toUpperCase() ? 'border-wine-500 bg-wine-500 text-white' : 'border-line text-ink-5')
+                }`}>{key.toUpperCase()}</div>
+                <span className="flex-1 mt-0.5">{text}</span>
+              </button>
+            ))}
           </div>
-        </div>
 
-        {selectedAnswer !== null && (
-          <button
-            type="button"
-            onClick={handleNext}
-            className="fixed bottom-6 right-4 bg-navy text-white shadow-lg rounded-full min-h-[44px] pl-4 pr-3 gap-2 hover:bg-navy-hover active:scale-95 transition-all z-10 flex items-center justify-center text-sm font-bold animate-fade-in"
-          >
-            {currentIndex < totalCases - 1 ? 'Próximo caso' : 'Finalizar'}
-            {currentIndex < totalCases - 1 ? <ChevronRight size={22} /> : <CheckCircle size={22} />}
-          </button>
+          {selectedAnswer !== null && (
+            <div className="animate-fade-in bg-gold-50 border border-gold-200 p-5 rounded-xl relative overflow-hidden" role="status">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gold-400"></div>
+              <h3 className="text-h3 text-navy mb-2 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-gold-600" aria-hidden="true">lightbulb</span>
+                Análise pericial
+              </h3>
+              <p className="text-base text-navy leading-relaxed">{currentCase.explicacao}</p>
+            </div>
+          )}
+
+          {/* Desktop: a ação de avançar fica no fim do caso; no celular, FAB padrão (M7). */}
+          {selectedAnswer !== null && (
+            <div className="hidden md:flex justify-end">
+              <Button icon={ultimo ? 'check_circle' : 'chevron_right'} onClick={handleNext} loading={saving}>{rotuloProximo}</Button>
+            </div>
+          )}
+        </Container>
+
+        {selectedAnswer !== null && !showModal && (
+          <FabAcoes acoes={[{ id: 'proximo', rotulo: rotuloProximo, icone: ultimo ? 'check_circle' : 'chevron_right', onClick: handleNext }]} />
         )}
 
         {showModal && (
-          <div className="fixed inset-0 z-dialog flex items-center justify-center bg-navy/70 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="bg-white rounded-[32px] shadow-2xl p-8 w-full max-w-sm flex flex-col items-center text-center relative overflow-hidden">
-              <div className={`absolute -top-16 -right-16 w-32 h-32 rounded-full opacity-20 blur-2xl ${gradeNum >= 7 ? 'bg-green-500' : 'bg-wine-500'}`}></div>
-              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-navy shadow-inner">
-                <span className="material-symbols-outlined text-[28px]">workspace_premium</span>
-              </div>
-              <h2 className="text-h1 font-heading font-black text-navy mb-1">Desempenho</h2>
-              <p className="text-ink-3 font-medium font-body text-base mb-6">Você completou todos os casos!</p>
-              <div className="relative mb-8">
-                <svg className="w-32 h-32 transform -rotate-90">
+          <Dialog
+            title="Desempenho" icon="workspace_premium" size="sm" travado
+            onClose={() => { setShowModal(false); setPhase('results'); }}
+            footer={<Button icon="visibility" fullWidth onClick={() => { setShowModal(false); setPhase('results'); }}>Ver resultado</Button>}
+          >
+            <div className="flex flex-col items-center text-center">
+              <p className="text-ink-3 font-medium text-base mb-6">Você completou todos os casos!</p>
+              <div className="relative mb-6">
+                <svg className="w-32 h-32 transform -rotate-90" aria-hidden="true">
                   <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-ink-5" />
                   <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="377" strokeDashoffset={377 - (377 * gradeNum) / 10} className={`${gradeNum >= 7 ? 'text-green-700' : gradeNum >= 5 ? 'text-gold-600' : 'text-wine-500'} transition-all duration-1000 ease-out`} strokeLinecap="round" />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className={`text-5xl font-black ${gradeNum >= 7 ? 'text-green-700' : gradeNum >= 5 ? 'text-gold-600' : 'text-wine-500'}`}>{displayGrade}</span>
+                  <span className={`text-5xl font-black tabular-nums ${gradeNum >= 7 ? 'text-green-700' : gradeNum >= 5 ? 'text-gold-600' : 'text-wine-500'}`}>{displayGrade}</span>
                 </div>
               </div>
-              <p className="text-ink font-body mb-6">Você acertou <strong>{correctCount}</strong> de <strong>{totalCases}</strong> questões.</p>
-              <button
-                type="button"
-                onClick={() => { setShowModal(false); setPhase('results'); }}
-                className="w-full py-3.5 bg-navy hover:bg-navy-hover text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-              >
-                <Eye size={18} />
-                Ver Resultado
-              </button>
-              {saving && <p className="text-sm text-ink-3 mt-3">Salvando resultado...</p>}
+              <p className="text-ink">Você acertou <strong>{correctCount}</strong> de <strong>{totalCases}</strong> {totalCases === 1 ? 'questão' : 'questões'}.</p>
+              {saving && <p className="text-sm text-ink-3 mt-3">Salvando resultado…</p>}
             </div>
-          </div>
+          </Dialog>
         )}
-      </div>,
-      document.body
+      </div>
     );
   }
 
@@ -539,58 +533,57 @@ export const CasosPericiais: React.FC = () => {
       <Container size="form" className="py-6 md:py-8 pb-10 space-y-6">
         <PageHeader title="Revisão dos casos" description="Seu resultado nos casos periciais comentados." actions={<Button variant="secondary" icon="restart_alt" onClick={handleRestart}>Refazer casos</Button>} />
 
-        <div className="bg-white p-6 rounded-2xl border border-line/60 shadow-sm text-center flex flex-col items-center">
-          <h2 className="text-sm font-bold text-ink-3 tracking-wider mb-2">Nota Final</h2>
-          <div className={`text-6xl font-black ${gradeNum >= 7 ? 'text-green-700' : gradeNum >= 5 ? 'text-gold-600' : 'text-wine-500'}`}>{displayGrade}</div>
+        <Card className="text-center flex flex-col items-center">
+          <h2 className="text-h2 text-navy mb-2">Nota final</h2>
+          <div className={`text-6xl font-black tabular-nums ${gradeNum >= 7 ? 'text-green-700' : gradeNum >= 5 ? 'text-gold-600' : 'text-wine-500'}`}>{displayGrade}</div>
           <p className="text-ink-3 mt-3 font-medium font-body">Você acertou <strong className="text-navy">{correctCount}</strong> de {totalCases} questões.</p>
-          <button onClick={handleDownloadPDF} className="mt-6 flex items-center gap-2 bg-navy text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-md hover:scale-105 transition-transform">
-            <Download size={18} />
-            Baixar PDF
-          </button>
-        </div>
+          <Button icon="download" className="mt-6" onClick={handleDownloadPDF}>Baixar PDF</Button>
+        </Card>
 
         {CASOS_DATA.map((caso, index) => {
           const uAns = userAnswers[index];
           const isUserCorrect = uAns?.toUpperCase() === caso.gabarito.toUpperCase();
           return (
-            <div key={index} className="bg-white p-5 rounded-2xl border border-line/80 shadow-sm">
+            <Card key={index}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-navy font-heading">Caso {caso.caso}</h3>
+                <h3 className="text-h3 text-navy">Caso {caso.caso}</h3>
                 {isUserCorrect
                   ? <div className="flex items-center gap-1 text-green-700 bg-green-50 px-2 py-1 rounded-md text-xs font-bold"><CheckCircle size={14} /> Acertou</div>
                   : <div className="flex items-center gap-1 text-wine-600 bg-wine-50 px-2 py-1 rounded-md text-xs font-bold"><XCircle size={14} /> Errou</div>
                 }
               </div>
-              <p className="text-navy font-heading text-base leading-relaxed font-semibold mb-4">{caso.enunciado}</p>
+              <p className="text-navy text-base leading-relaxed font-semibold mb-4">{caso.enunciado}</p>
               <div className="space-y-2">
                 {Object.entries(caso.alternativas).map(([key, text]) => {
                   const isGab = key.toUpperCase() === caso.gabarito.toUpperCase();
                   const isUser = uAns?.toUpperCase() === key.toUpperCase();
                   let style = "bg-paper border-line text-ink-3 opacity-60";
-                  if (isGab) style = "bg-green-100 border-green-500 text-green-900 font-bold shadow-sm";
-                  else if (isUser && !isGab) style = "bg-wine-50 border-wine-400 text-wine-900 font-bold shadow-sm";
+                  if (isGab) style = "bg-green-100 border-green-500 text-green-900 font-bold ";
+                  else if (isUser && !isGab) style = "bg-wine-50 border-wine-400 text-wine-900 font-bold ";
                   return (
-                    <div key={key} className={`w-full text-left p-3 rounded-xl border text-sm font-body leading-relaxed flex items-start gap-3 ${style}`}>
+                    <div key={key} className={`w-full text-left p-3 rounded-lg border text-sm leading-relaxed flex items-start gap-3 ${style}`}>
                       <div className={`flex-shrink-0 w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold mt-0.5 ${isGab ? 'bg-green-500 text-white border-green-500' : isUser ? 'bg-wine-500 text-white border-wine-500' : 'border-line'}`}>{key.toUpperCase()}</div>
                       <span className="flex-1 mt-0.5">{text}</span>
                     </div>
                   );
                 })}
               </div>
-              <div className="bg-gold-50/80 border border-gold-200 p-4 rounded-xl mt-5 relative overflow-hidden">
+              <div className="bg-gold-50 border border-gold-200 p-4 rounded-lg mt-5 relative overflow-hidden">
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-gold-400"></div>
-                <h4 className="text-xs font-bold font-heading text-gold-800 mb-1">Análise Pericial</h4>
-                <p className="text-sm text-navy font-body leading-relaxed">{caso.explicacao}</p>
+                <h4 className="text-xs font-bold text-gold-800 mb-1">Análise pericial</h4>
+                <p className="text-sm text-navy leading-relaxed">{caso.explicacao}</p>
               </div>
-            </div>
+            </Card>
           );
         })}
-            </Container>
+      </Container>
+      {/* Voltar ao topo (M7): mesma posição do FAB (--fab-bottom + área segura), sem pílula própria. */}
       {showScrollTop && (
-        <button type="button" onClick={scrollToTop} className="fixed bottom-6 right-4 bg-navy text-white shadow-lg rounded-full min-h-[44px] pl-3 pr-4 gap-2 hover:bg-navy-hover active:scale-95 transition-all z-sticky flex items-center justify-center text-sm font-bold animate-fade-in">
-          <ArrowUp size={20} />
-          Topo
-        </button>
+        <IconButton
+          icon="arrow_upward" label="Voltar ao topo" variant="secondary" onClick={scrollToTop}
+          className="fixed right-[calc(1rem+env(safe-area-inset-right))] z-sticky shadow-lg animate-fade-in"
+          style={{ bottom: 'var(--fab-bottom, calc(16px + env(safe-area-inset-bottom)))' }}
+        />
       )}
     </div>
   );

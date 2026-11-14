@@ -155,7 +155,7 @@ export const DepPensCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs }
                 <ChoiceGroup<SexoInspecionado> label="Sexo" required emLinha options={OPCOES_SEXO} value={sexo} onChange={v => { setSexo(v); limpar('sexo'); }} error={erros.sexo} />
 
                 <Field label="NIP" required error={erros.nip}>
-                  {a => <input {...a} type="text" inputMode="numeric" value={nip} onChange={e => { setNip(formatNip(e.target.value)); limpar('nip'); }} placeholder="00.0000.00" maxLength={10} className={`${a.className} font-mono`} />}
+                  {a => <input {...a} type="text" inputMode="numeric" value={nip} onChange={e => { setNip(formatNip(e.target.value)); limpar('nip'); }} placeholder="00.0000.00" maxLength={10} className={`${a.className} tabular-nums`} />}
                 </Field>
               </>
             )}

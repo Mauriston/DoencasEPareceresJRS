@@ -2,10 +2,11 @@
 // Página Legislação: itens vindos do Firestore (coleção "legislacao"); o clique
 // abre o PDF do Firebase Storage num modal em tela cheia.
 import React, { useEffect, useState } from 'react';
-import { Info } from './ui/icons';
 import { Container, PageHeader } from './ui/Page';
 import { PdfFullscreenModal } from './PdfFullscreenModal';
-import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import { GradeCards } from './ui/Grade';
+import { IconButton } from './ui/IconButton';
 import { Toast } from './ui/Toast';
 import { LegislacaoForm } from './LegislacaoForm';
 import { listarLegislacao, LegislacaoDoc } from '../services/firestoreLegislacao';
@@ -43,25 +44,25 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
 
   return (
     <div className="flex flex-col flex-1">
-      <Container size="data" className="py-6 md:py-8 pb-10 ">
+      <Container size="data" className={`py-6 md:py-8 ${podeCadastrar ? 'pb-28 md:pb-10' : 'pb-10'}`}>
         <PageHeader title="Legislação" description="Pesquise as leis que fundamentam as inspeções de saúde."
-          actions={podeCadastrar ? <Button icon="add" onClick={() => setNovo(true)}>Novo</Button> : undefined}
+          fab={podeCadastrar ? { icon: 'add', label: 'Cadastrar lei', onClick: () => setNovo(true) } : undefined}
         />
 
         {erro && <p className="text-sm text-ink-3">Não foi possível carregar a legislação.</p>}
         {!erro && itens === null && <p className="text-sm text-ink-3">Carregando…</p>}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+        <GradeCards colunas={3}>
           {(itens ?? []).map((law) => {
             const isBrasao = law.imageUrl.includes('brasao-da-republica');
 
             return (
-              <div key={law.id} className="relative group bg-white rounded-xl border border-line/60 hover:border-navy hover:shadow-md transition-all overflow-hidden flex items-center justify-between">
+              <Card key={law.id} padding="none" className="relative group hover:border-navy transition-colors flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => abrir(law)}
                   disabled={abrindo === law.id}
-                  className="flex-1 min-w-0 flex items-center gap-3 p-4 active:bg-paper transition-colors focus:outline-none cursor-pointer text-left disabled:opacity-60"
+                  className="flex-1 min-w-0 flex items-center gap-3 p-4 hover:bg-paper transition-colors cursor-pointer text-left disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold"
                 >
                   <div className="w-10 h-10 flex-shrink-0 bg-paper rounded-full overflow-hidden border border-line flex items-center justify-center p-0.5">
                     <img
@@ -75,7 +76,7 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
                   </div>
 
                   <div className="flex flex-col flex-1 min-w-0">
-                    <h3 className="text-navy font-heading font-bold text-sm leading-snug mb-0.5 group-hover:text-navy transition-colors">
+                    <h3 className="text-h3 text-navy mb-0.5">
                       {law.legislacao}
                     </h3>
                     <p className="text-ink-3 font-body text-xs font-medium leading-relaxed">
@@ -84,18 +85,18 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
                   </div>
                 </button>
 
-                <button
-                  type="button"
+                <IconButton
+                  icon="info"
+                  label={`Ementa: ${law.providencias}`}
+                  variant="ghost"
+                  size="sm"
+                  className="mr-3"
                   onClick={() => alert(law.providencias)}
-                  title={law.providencias}
-                  className="text-ink-3 hover:text-navy transition-colors flex-shrink-0 focus:outline-none p-1.5 mr-3"
-                >
-                  <Info size={18} />
-                </button>
-              </div>
+                />
+              </Card>
             );
           })}
-        </div>
+        </GradeCards>
       </Container>
       <Toast message={aviso} />
       {novo && (

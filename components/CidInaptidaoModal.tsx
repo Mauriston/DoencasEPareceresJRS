@@ -4,6 +4,8 @@
 // inaptidão (autocomplete em public/cid.json) e, ao clicar numa opção, o
 // DESCRABREV escolhido é entregue a quem abriu o modal (vira as Observações).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from './ui/Button';
+import { controlClass } from './ui/Field';
 
 interface CidItem {
   SUBCAT: string;
@@ -110,7 +112,7 @@ export const CidPicker: React.FC<CidPickerProps> = ({ candidatoNome, onSelect, o
       ) : (
         <>
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none">search</span>
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
             <input
               ref={inputRef}
               type="text"
@@ -118,7 +120,8 @@ export const CidPicker: React.FC<CidPickerProps> = ({ candidatoNome, onSelect, o
               disabled={!cids}
               onChange={e => setBusca(e.target.value)}
               placeholder={cids ? 'Digite o código ou a descrição do CID...' : 'Carregando tabela de CID...'}
-              className="w-full pl-10 pr-3 py-3 text-sm font-semibold rounded-xl border border-ink-5 focus:outline-none focus:border-navy disabled:bg-paper"
+              aria-label="Buscar CID"
+              className={`${controlClass} pl-10 font-semibold`}
             />
           </div>
 
@@ -134,7 +137,7 @@ export const CidPicker: React.FC<CidPickerProps> = ({ candidatoNome, onSelect, o
                 <li className="px-4 py-3 text-xs text-ink-3">Nenhum CID encontrado.</li>
               ) : resultados.map(c => (
                 <li key={c.SUBCAT}>
-                  <button type="button" onClick={() => onSelect(c.DESCRABREV)} className="w-full text-left px-4 py-2.5 hover:bg-paper focus:bg-paper focus:outline-none">
+                  <button type="button" onClick={() => onSelect(c.DESCRABREV)} className="w-full text-left px-4 py-2.5 hover:bg-paper focus-visible:bg-paper focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold">
                     <span className="block text-sm font-bold text-navy">{c.SUBCAT}</span>
                     <span className="block text-xs text-ink-3 leading-snug">{c.DESCRICAO}</span>
                   </button>
@@ -147,7 +150,7 @@ export const CidPicker: React.FC<CidPickerProps> = ({ candidatoNome, onSelect, o
 
       {erro && (
         <div className="flex justify-end">
-          <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">Fechar</button>
+          <Button variant="ghost" onClick={onClose}>Fechar</Button>
         </div>
       )}
     </div>
@@ -174,11 +177,11 @@ export const CidInaptidaoModal: React.FC<CidInaptidaoModalProps> = ({ candidatoN
       <div className="p-4 bg-navy text-white flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center space-x-2">
           <span className="material-symbols-outlined text-[20px] text-gold">medical_information</span>
-          <h3 className="font-heading font-bold text-sm">CID da inaptidão</h3>
+          <h3 className="text-h3">CID da inaptidão</h3>
         </div>
         {!obrigatorio && (
-          <button type="button" onClick={onClose} aria-label="Fechar" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
-            <span className="material-symbols-outlined text-[20px]">close</span>
+          <button type="button" onClick={onClose} aria-label="Fechar" title="Fechar" className="w-10 h-10 inline-flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
+            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
           </button>
         )}
       </div>

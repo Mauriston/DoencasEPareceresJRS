@@ -14,6 +14,8 @@ import {
 import { novoId } from '../utils/dados';
 import { app } from './firebaseAuth';
 import { registrarAcaoSensivel } from './auditoriaAcoes';
+import { registrarUsoAcao } from './usoDiario';
+import { registrarEventoInspecionado } from './eventosInspecionado';
 import { notificarAcao } from './notificacoesPush';
 import {
   chaveSlot, chavesOcupadas, duracaoDoGrupo, situacaoDoStatus, statusAoAgendar, TODOS_PERITOS,
@@ -142,6 +144,9 @@ export const criarInspecao = async (dados: NovaInspecao): Promise<string> => {
   const status: StatusIS = dados.dataEntrevista ? 'agendada' : 'aberta';
   const completo = { ...dados, is: Number(id), status, situacao: situacaoDoStatus(status) };
   await gravarComSlot(id, completo, dados.dataEntrevista ? { peritoUid: dados.peritoUid, dataEntrevista: dados.dataEntrevista, grupoFinalidade: dados.grupoFinalidade } : null, null, true);
+  registrarUsoAcao('is_cadastrar');
+  if (dados.dataEntrevista) registrarUsoAcao('is_agendar');
+  registrarEventoInspecionado(dados.inspecionadoId, 'is.cadastrar', `IS ${id}`);
   notificarAcao('is.cadastrada', id);
   return id;
 };
@@ -173,6 +178,8 @@ export const agendarInspecao = async (atual: InspecaoRecord, novo: Agendamento):
   const status: StatusIS = statusAoAgendar(atual, novo.dataEntrevista);
   const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(atual.id, { ...novo, status, situacao: situacaoDoStatus(status) }, { peritoUid: novo.peritoUid, dataEntrevista: novo.dataEntrevista, grupoFinalidade: atual.grupoFinalidade }, slotAntigo, false);
+  registrarUsoAcao('is_agendar');
+  registrarEventoInspecionado(atual.inspecionadoId, 'is.agendar', `IS ${atual.id}`);
   notificarAcao('is.agendada', atual.id);
   return status;
 };
@@ -193,6 +200,7 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
   if (!atual) {
     const completo = { ...dados, is: Number(id), observacoes: '', situacao: situacaoDoStatus(dados.status) };
     await gravarComSlot(id, completo, slotNovo, null, true);
+    registrarEventoInspecionado(dados.inspecionadoId, 'is.cadastrar', `IS ${id}`);
     notificarAcao('is.importada', id);
     return { ...completo, id, criadoEm: null };
   }

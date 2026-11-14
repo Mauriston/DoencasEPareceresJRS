@@ -146,7 +146,7 @@ export const CalendarioAgendamento: React.FC<CalendarioAgendamentoProps> = ({ da
               key={i}
               type="button"
               onClick={() => onSelect(iso)}
-              title={`${info.dataFormatada} — ${info.quantidadeAgendados} agendado(s)`}
+              title={`${info.dataFormatada} — ${info.quantidadeAgendados} agendado${info.quantidadeAgendados === 1 ? '' : 's'}`}
               className="aspect-square min-h-[44px] flex flex-col items-center justify-center rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover transition-colors cursor-pointer"
             >
               <span>{dia}</span>

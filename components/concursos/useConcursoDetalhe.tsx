@@ -533,7 +533,7 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
     if ((candidato.termoCientificacaoUrl || candidato.termoRecursoUrl) && novoStatus !== candidato.status) {
       const termoApagado = candidato.termoRecursoUrl ? 'Termo de Recurso e Cientificação' : 'Termo de Cientificação de Resultado';
       setConfirmDialog({
-        title: 'Alterar Status',
+        title: 'Alterar status',
         message: `${candidato.nome} já possui ${termoApagado} gerado. Ao alterar o Status, o termo gerado será apagado. Deseja continuar?`,
         confirmLabel: 'Alterar e apagar termo',
         onConfirm: () => {
@@ -549,7 +549,7 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
   const aplicarMudancaStatus = (candidato: CandidatoRecord, novoStatus: string) => {
     if (novoStatus === 'INAPTO' && candidato.status !== 'INAPTO') {
       setConfirmDialog({
-        title: 'Confirmar Status',
+        title: 'Confirmar status',
         message: `Registrar ${candidato.nome} como inapto hoje (${new Date().toLocaleDateString('pt-BR')})?`,
         confirmLabel: 'Confirmar',
         onConfirm: async () => {
@@ -671,7 +671,7 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
     if (!reagendandoCandidato) return;
     const candidato = reagendandoCandidato;
     setConfirmDialog({
-      title: 'Confirmar Reagendamento',
+      title: 'Confirmar reagendamento',
       message: `Reagendar ${candidato.nome} para ${isoParaBR(dataISO)}?`,
       confirmLabel: 'Reagendar',
       onConfirm: async () => {
@@ -766,16 +766,16 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
 
   const dateFilterLabel =
     dateFilterMode === 'hoje' ? 'Hoje' :
-    dateFilterMode === 'semana' ? 'Esta Semana' :
+    dateFilterMode === 'semana' ? 'Esta semana' :
     dateFilterMode === 'personalizado' && dateFilterCustom ? isoParaBR(dateFilterCustom) :
-    'Data: Todos';
+    'Todas as datas';
 
   const chipFilters: { key: string; label: string; value: number; filterValue: string; corAtivo: string }[] = [
     { key: 'apto', label: 'Aptos', value: countApto, filterValue: 'APTO', corAtivo: 'bg-navy border-navy text-white' },
     { key: 'inapto', label: 'Inaptos', value: countInapto, filterValue: 'INAPTO', corAtivo: 'bg-navy border-navy text-white' },
     { key: 'insuf', label: 'IDM', value: countInsuf, filterValue: 'INSUF DOCUMENTAL', corAtivo: 'bg-navy border-navy text-white' },
     { key: 'faltou', label: 'Faltas', value: countFaltou, filterValue: 'FALTOU', corAtivo: 'bg-navy border-navy text-white' },
-    { key: 'nao-finalizados', label: 'Não Finalizados', value: countNaoFinalizados, filterValue: 'nao-finalizados', corAtivo: 'bg-navy border-navy text-white' },
+    { key: 'nao-finalizados', label: 'Não finalizados', value: countNaoFinalizados, filterValue: 'nao-finalizados', corAtivo: 'bg-navy border-navy text-white' },
   ];
 
   const sugestoesCandidatos = useMemo(() => {

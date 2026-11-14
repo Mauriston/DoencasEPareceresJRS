@@ -981,7 +981,7 @@ Já feitos em 31/10/2026: publicação das regras no CI (com teste antes); restr
 |---|---|---|
 | 19/10 | Inspeções de Saúde: tabela, calendário, agendamento por perito, bloqueios, Google Agenda | `Inspecoes.tsx`, `components/inspecoes/` |
 | 19/10 | Dias de concurso no calendário e no Google Agenda (turno da manhã) | `services/agendaConcursos.ts` |
-| 19/10 | Início como painel (Próximas Inspeções, IS de hoje, mini calendário) | `Home.tsx` |
+| 19/10 | Início como painel (Próximas inspeções, IS de hoje, mini calendário) | `Home.tsx` |
 | 21/10 | Páginas públicas das Doenças de Lei e da Portaria | `components/publico/` |
 | 22/10 | Exames do candidato em PDF com transcrição pelo Gemini | `components/concursos/ExamesCandidato.tsx` |
 | 24/10 | Excluir usuário inativo | `/api/admin/excluir-usuario` |

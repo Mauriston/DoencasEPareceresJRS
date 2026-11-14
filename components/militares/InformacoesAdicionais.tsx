@@ -141,10 +141,10 @@ export const InformacoesAdicionais: React.FC<Props> = ({ valor, onChange, medico
                 {a => <input {...a} type="email" value={valor.emailPessoal} onChange={e => set({ emailPessoal: e.target.value })} autoComplete="off" />}
               </Field>
               <Field label="CPF" error={erros.cpf}>
-                {a => <input {...a} type="text" inputMode="numeric" placeholder="000.000.000-00" value={valor.cpf} onChange={e => set({ cpf: formatCpf(e.target.value) })} maxLength={14} className={`${a.className} font-mono`} autoComplete="off" />}
+                {a => <input {...a} type="text" inputMode="numeric" placeholder="000.000.000-00" value={valor.cpf} onChange={e => set({ cpf: formatCpf(e.target.value) })} maxLength={14} className={`${a.className} tabular-nums`} autoComplete="off" />}
               </Field>
               <Field label="Identidade militar" error={erros.identidadeMilitar}>
-                {a => <input {...a} type="text" inputMode="numeric" placeholder="000000-0" value={valor.identidadeMilitar} onChange={e => set({ identidadeMilitar: formatIdentidadeMilitar(e.target.value) })} maxLength={8} className={`${a.className} font-mono`} autoComplete="off" />}
+                {a => <input {...a} type="text" inputMode="numeric" placeholder="000000-0" value={valor.identidadeMilitar} onChange={e => set({ identidadeMilitar: formatIdentidadeMilitar(e.target.value) })} maxLength={8} className={`${a.className} tabular-nums`} autoComplete="off" />}
               </Field>
               <Field label="CRM-PE">
                 {a => <input {...a} type="text" inputMode="numeric" value={valor.crm} onChange={e => set({ crm: e.target.value.replace(/\D/g, '').slice(0, 8) })} autoComplete="off" />}

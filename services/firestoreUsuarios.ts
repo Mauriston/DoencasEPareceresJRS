@@ -1,7 +1,7 @@
 // Ficheiro: services/firestoreUsuarios.ts
 // CRUD da coleção "usuarios" no Firestore (projeto jrs-app-web). Id do
 // documento = UID do Firebase Authentication (ver firebaseAuth.ts).
-import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, collection } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, collection, type Timestamp } from 'firebase/firestore';
 import { app } from './firebaseAuth';
 
 const db = getFirestore(app);
@@ -24,6 +24,10 @@ export interface UsuarioDoc {
   senhaTemporaria: boolean;
   /** Tutorial "adicionar ícone à tela inicial" já concluído (em qualquer dispositivo). */
   pwaTutorialConcluido?: boolean;
+  /** Tema da interface (Meu perfil → Aparência): { modo: 'sistema'|'claro'|'escuro', variante: 'marinho'|'grafite'|'oled' }. */
+  aparencia?: { modo: string; variante: string };
+  /** Último acesso ao app (serverTimestamp; gravado por services/usoDiario.ts uma vez por sessão). */
+  ultimoAcesso?: Timestamp;
 }
 
 export type UsuarioRecord = UsuarioDoc & { id: string };

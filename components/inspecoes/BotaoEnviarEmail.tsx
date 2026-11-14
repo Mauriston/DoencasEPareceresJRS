@@ -1,5 +1,5 @@
 // Ficheiro: components/inspecoes/BotaoEnviarEmail.tsx
-// Botão "Enviar Email" do cabeçalho de Inspeções de Saúde (imediatamente à esquerda de "Abrir IS"; Admin e
+// Botão "Enviar e-mail" do cabeçalho de Inspeções de Saúde (imediatamente à esquerda de "Abrir IS"; Admin e
 // Secretaria): menu suspenso com os e-mails da JRS e, à direita de cada item, quantos estão pendentes. O badge do
 // botão soma as pendências de agendamento, resultado, faltas (HNRe) e NAC.
 //  - E-mails de agendamento: IS de Verificações e Términos agendadas sem o e-mail daquela data (lista → envio individual).
@@ -7,6 +7,8 @@
 //  - E-mail de faltas (HNRe): mantém a regra — desabilitado sem faltas pendentes.
 //  - E-mail ao NAC: IS finalizadas de Verificações e Términos ainda não enviadas.
 //  - IS agendadas do dia seguinte (só Admin): o envio manual do e-mail diário (sem contador).
+// useEmailsIS devolve os mesmos itens e diálogos para entrarem em outro menu (o ⋮ do cabeçalho de Inspeções —
+// auditoria v3, 3b/M1); BotaoEnviarEmail é o botão "Enviar e-mail" com esses itens.
 import React, { useMemo, useState } from 'react';
 import { MenuAcoes, type ItemMenu } from '../ui/MenuAcoes';
 import { EmailFaltasDialog } from './EmailFaltasDialog';
@@ -36,7 +38,8 @@ export interface BotaoEnviarEmailProps {
 
 type Aberto = 'agendamentos' | 'resultados' | 'faltas' | 'nac' | null;
 
-export const BotaoEnviarEmail: React.FC<BotaoEnviarEmailProps> = ({ inspecoes, militares, hoje, podeEmailAgenda, onEmailAgenda, onEnviarAgendamento, onEnviarResultado, onAviso }) => {
+/** Itens de e-mail (com contadores), o total de pendências e os diálogos que eles abrem (renderize `dialogos`). */
+export const useEmailsIS = ({ inspecoes, militares, hoje, podeEmailAgenda, onEmailAgenda, onEnviarAgendamento, onEnviarResultado, onAviso }: BotaoEnviarEmailProps): { itens: ItemMenu[]; total: number; dialogos: React.ReactNode } => {
   const [aberto, setAberto] = useState<Aberto>(null);
   const faltas = useMemo(() => {
     const omPorId = new Map<string, string>(militares.map(m => [m.id, m.om]));
@@ -63,9 +66,8 @@ export const BotaoEnviarEmail: React.FC<BotaoEnviarEmailProps> = ({ inspecoes, m
 
   const fechar = (msg?: string, tom?: 'success' | 'error') => { setAberto(null); if (msg) onAviso(msg, tom); };
 
-  return (
+  const dialogos = (
     <>
-      <MenuAcoes rotulo="Enviar Email" botao={{ texto: 'Enviar Email', icone: 'mail', badge: total }} itens={itens} />
       {aberto === 'agendamentos' && (
         <EscolherISDialog
           titulo="E-mails de agendamento pendentes" icone="forward_to_inbox" pendentes={agendamentos}
@@ -84,6 +86,17 @@ export const BotaoEnviarEmail: React.FC<BotaoEnviarEmailProps> = ({ inspecoes, m
       )}
       {aberto === 'faltas' && <EmailFaltasDialog pendentes={faltas} onClose={() => fechar()} onEnviado={fechar} />}
       {aberto === 'nac' && <EmailNacDialog pendentes={nac} onClose={() => fechar()} onEnviado={fechar} />}
+    </>
+  );
+  return { itens, total, dialogos };
+};
+
+export const BotaoEnviarEmail: React.FC<BotaoEnviarEmailProps> = props => {
+  const { itens, total, dialogos } = useEmailsIS(props);
+  return (
+    <>
+      <MenuAcoes rotulo="Enviar e-mail" botao={{ texto: 'Enviar e-mail', icone: 'mail', badge: total }} itens={itens} />
+      {dialogos}
     </>
   );
 };

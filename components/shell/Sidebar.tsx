@@ -1,16 +1,20 @@
 // Ficheiro: components/shell/Sidebar.tsx
 // Barra lateral com os menus principais (as mesmas categorias e a mesma matriz
-// de permissões da Página Inicial — `getNavCategories`). No desktop ela é FIXA:
+// de permissões da Página inicial — `getNavCategories`). No desktop ela é FIXA:
 // 240px com rótulos sempre visíveis, e um botão explícito "Recolher menu" a
 // reduz a um trilho de 64px — não há mais expansão no hover empurrando o
 // conteúdo. Abaixo de 768px vira um drawer aberto pelo botão da topbar.
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { NavContext } from '../../context/NavContext';
 import { getNavCategories, type NavCategory } from '../../config/navigation';
+import { PAGE_DEFS, canAccessPage } from '../../config/permissions';
+import type { NavItem } from '../../types';
 import { pathForView } from '../../config/routes';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
+import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
 import { Avatar, UserDropdownContent, PERFIL_LABELS } from './UserMenu';
+import { ID_DRAWER_MENU } from './BarraInferior';
 import iconeJrs from '../../assets/icone-jrs.png';
 
 const CHAVE_RECOLHIDA = 'jrs_sidebar_recolhida';
@@ -39,6 +43,22 @@ export const Sidebar: React.FC = () => {
   const categories = getNavCategories(authUser?.perfil, nav?.periciaMenorVigentes || 0, isDesktop);
 
   const [recolhida, setRecolhida] = useState<boolean>(lerPreferencia);
+
+  // Drawer do celular (aberto pelo "Menu" da barra inferior): Esc fecha; ao abrir, o foco vai
+  // para o botão de fechar; ao fechar, volta para quem o abriu.
+  const fecharDrawerRef = useRef<HTMLButtonElement>(null);
+  const abriuDrawer = useRef<HTMLElement | null>(null);
+  useEscapeEmpilhado(() => setIsMobileMenuOpen(false), isMobileMenuOpen && !isAvatarMenuOpen);
+  useEffect(() => {
+    if (isDesktop) return;
+    if (isMobileMenuOpen) {
+      abriuDrawer.current = document.activeElement as HTMLElement | null;
+      fecharDrawerRef.current?.focus();
+    } else if (abriuDrawer.current) {
+      if (document.activeElement === document.body || !document.activeElement) abriuDrawer.current.focus?.();
+      abriuDrawer.current = null;
+    }
+  }, [isMobileMenuOpen, isDesktop]);
 
   const alternarRecolhida = () => {
     setRecolhida(prev => {
@@ -86,28 +106,39 @@ export const Sidebar: React.FC = () => {
     );
   };
 
-  const renderInicio = (variante: 'desktop' | 'drawer') => {
+  // Links do topo, acima dos grupos: Início e, logo abaixo, o Painel (auditoria v3, 7a — "como estamos
+  // no período"). No celular, o Painel só aparece aqui no Menu (não ocupa espaço da barra inferior).
+  const painelDef = PAGE_DEFS.find(p => p.id === ('painel' as NavItem));
+  const mostrarPainel = !!painelDef && canAccessPage('painel', authUser?.perfil);
+  const renderLinkTopo = (variante: 'desktop' | 'drawer', item: { id: NavItem; to: string; label: string; icon: string }) => {
     const rail = variante === 'desktop' && recolhida;
-    const ativo = currentView === 'home';
+    const ativo = currentView === item.id;
     return (
       <Link
-        to="/"
-        title="Início"
-        aria-label={rail ? 'Início' : undefined}
+        key={item.id}
+        to={item.to}
+        title={item.label}
+        aria-label={rail ? item.label : undefined}
         aria-current={ativo ? 'page' : undefined}
         className={`relative w-full flex items-center ${variante === 'drawer' ? 'h-11' : 'h-10'} px-5 transition-colors whitespace-nowrap ${
           ativo ? 'bg-white/10 text-white font-bold' : 'text-white/80 hover:bg-white/10 hover:text-white font-semibold'
         }`}
       >
         {ativo && <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-gold rounded-r-full" aria-hidden="true" />}
-        <span className="material-symbols-outlined text-[24px] shrink-0" aria-hidden="true">home</span>
-        {!rail && <span className="ml-3 text-sm truncate">Início</span>}
+        <span className="material-symbols-outlined text-[24px] shrink-0" aria-hidden="true">{item.icon}</span>
+        {!rail && <span className="ml-3 text-sm truncate">{item.label}</span>}
       </Link>
     );
   };
+  const renderInicio = (variante: 'desktop' | 'drawer') => (
+    <>
+      {renderLinkTopo(variante, { id: 'home', to: '/', label: 'Início', icon: 'home' })}
+      {mostrarPainel && renderLinkTopo(variante, { id: 'painel' as NavItem, to: '/painel', label: painelDef!.label, icon: painelDef!.icon || 'monitoring' })}
+    </>
+  );
 
   const Marca: React.FC<{ rail?: boolean }> = ({ rail = false }) => (
-    <Link to="/" title="Página Inicial" className="flex flex-col items-center justify-center gap-1.5 py-4 shrink-0 border-b border-white/10">
+    <Link to="/" title="Página inicial" className="flex flex-col items-center justify-center gap-1.5 py-4 shrink-0 border-b border-white/10">
       <span className="w-9 h-9 bg-white rounded-lg p-1 flex items-center justify-center shrink-0">
         <img src={iconeJrs} alt="JRS/HNRe" className="h-full w-full object-contain" />
       </span>
@@ -144,8 +175,11 @@ export const Sidebar: React.FC = () => {
         <div className="md:hidden fixed inset-0 z-drawer bg-navy/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsMobileMenuOpen(false)} />
       )}
       <aside
+        id={ID_DRAWER_MENU}
         aria-label="Menu principal"
-        className={`md:hidden fixed top-0 left-0 h-full w-[280px] bg-navy text-white z-drawer shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
+        // Fechado: fora da tela e fora da ordem de foco.
+        inert={!isMobileMenuOpen}
+        className={`md:hidden fixed top-0 left-0 h-full w-[min(280px,calc(100vw-56px))] pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] bg-navy text-white z-drawer shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -153,6 +187,7 @@ export const Sidebar: React.FC = () => {
           <Marca />
           <button
             type="button"
+            ref={fecharDrawerRef}
             onClick={() => setIsMobileMenuOpen(false)}
             className="absolute right-2 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-white/80 hover:text-white transition-colors"
             aria-label="Fechar menu"
@@ -185,7 +220,7 @@ export const Sidebar: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)}
-            className="w-full border-t border-white/10 px-4 py-3 flex items-center justify-end gap-3 text-right hover:bg-white/5 transition-colors"
+            className="w-full border-t border-white/10 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-end gap-3 text-right hover:bg-white/5 transition-colors"
           >
             <span className="min-w-0 flex flex-col items-end leading-tight">
               <span className="text-sm font-bold text-white truncate max-w-[170px]">{authUser?.usuario || 'Usuário'}</span>

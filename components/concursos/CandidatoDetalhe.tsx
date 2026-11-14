@@ -16,7 +16,7 @@ const Linha: React.FC<{ rotulo: string; valor?: string | null; mono?: boolean }>
   return (
     <div>
       <dt className="text-xs font-semibold text-ink-3">{rotulo}</dt>
-      <dd className={`text-sm text-ink break-words whitespace-pre-wrap ${mono ? 'font-mono' : ''}`}>{valor}</dd>
+      <dd className={`text-sm text-ink break-words whitespace-pre-wrap ${mono ? 'tabular-nums' : ''}`}>{valor}</dd>
     </div>
   );
 };
@@ -100,7 +100,7 @@ export const CandidatoDetalhe: React.FC<Props> = ({ candidato: c, concursoId, co
       <div className="space-y-5">
         <div>
           <p className="text-base font-bold text-navy break-words">{c.nome}</p>
-          <p className="text-sm text-ink-2 font-mono">{c.id}</p>
+          <p className="text-sm text-ink tabular-nums">{c.id}</p>
           <div className="mt-1 flex items-center gap-2 flex-wrap">
             {statusTag}
             {c.finalizado && <span className="text-xs font-semibold text-green-800">IS finalizada</span>}

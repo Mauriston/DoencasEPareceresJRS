@@ -171,7 +171,7 @@ export const Login: React.FC = () => {
                   inputMode="numeric"
                   value={nip}
                   onChange={e => { setNip(formatNip(e.target.value)); setLoginError(''); setAjudaSenha(null); }}
-                  className={`${campoClass} font-mono`}
+                  className={`${campoClass} tabular-nums`}
                   placeholder="00.0000.00"
                   maxLength={10}
                   autoComplete="username"
@@ -206,7 +206,7 @@ export const Login: React.FC = () => {
                 type="submit"
                 disabled={desabilitado}
                 aria-busy={loginLoading || undefined}
-                className="w-full min-h-[44px] bg-white text-navy font-bold text-sm rounded-xl px-4 py-3.5 border-0 transition-colors hover:bg-white/90 active:bg-white/80 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full min-h-[44px] bg-white text-navy font-bold text-sm rounded-lg px-4 py-3.5 border-0 transition-colors hover:bg-white/90 active:bg-white/80 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
               >
                 {loginLoading ? 'Verificando…' : 'Entrar'}
               </button>

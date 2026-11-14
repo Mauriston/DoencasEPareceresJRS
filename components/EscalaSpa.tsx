@@ -1,7 +1,7 @@
 // Ficheiro: components/EscalaSpa.tsx
 // Página "Escala SVÇ": escala de serviço do SPA (coleção "escalaSpa", enviada pelo Admin em CSV).
 //  - Desktop: calendário do mês no mesmo estilo da página de supervisão (github.com/Mauriston/escalasupervisao):
-//    grade navy, dias úteis em branco, sábados/domingos/feriados em rosa e festas maiores em lilás, hoje com
+//    grade navy, dias úteis em branco, sábados/domingos/feriados em vinho claro e festas maiores em azul claro, hoje com
 //    contorno dourado. Tocar num dia GIRA todos os cards (como um jogo da memória): numa face a supervisão
 //    (escalado + retém), na outra os plantões de 12 h (D: … · N: …). A face inicial é a do serviço do usuário.
 //  - Celular: lista por dia, como a "Programação" do Google Agenda (Supervisão · Dia · Noite).
@@ -9,6 +9,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import { IconButton } from './ui/IconButton';
+import { controlClass } from './ui/Field';
 import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
 import { useNav } from '../context/NavContext';
@@ -23,9 +26,10 @@ const SEMANA = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'];
 const pad = (n: number) => String(n).padStart(2, '0');
 const CHAVE_MES = 'jrs_escala_mes';
 
-/** Fundo do card por cor do dia (valores da página de supervisão). */
-const FUNDO: Record<CorDia, string> = { branca: 'bg-white', vermelha: 'bg-[#F3DEDA]', roxa: 'bg-[#E6DDF5]' };
-const PONTO: Record<CorDia, string> = { branca: 'bg-line', vermelha: 'bg-[#D9A79E]', roxa: 'bg-[#A891D6]' };
+/** Fundo do card por cor do dia — tokens do DS (seguem o tema escuro), mantendo a distinção da página
+ *  de supervisão: fim de semana/feriado em vinho claro (era #F3DEDA) e festas maiores em azul claro (era #E6DDF5). */
+const FUNDO: Record<CorDia, string> = { branca: 'bg-white', vermelha: 'bg-wine-50', roxa: 'bg-blue-50' };
+const PONTO: Record<CorDia, string> = { branca: 'bg-line', vermelha: 'bg-wine-300', roxa: 'bg-blue-300' };
 
 type Face = 'supervisao' | 'plantao';
 
@@ -79,7 +83,7 @@ export const EscalaSpa: React.FC = () => {
   const Nome: React.FC<{ n?: string; forte?: boolean }> = ({ n, forte }) => {
     const texto = n ? nomeExibicao(n) : '—';
     return (
-      <span title={n ? texto : undefined} className={`inline-block max-w-full truncate align-bottom ${souEu(n) ? 'bg-gold/30 rounded px-0.5 -mx-0.5' : ''} ${forte ? 'font-extrabold text-navy' : 'font-semibold text-ink-2'}`}>{texto}</span>
+      <span title={n ? texto : undefined} className={`inline-block max-w-full truncate align-bottom ${souEu(n) ? 'bg-gold/30 rounded px-0.5 -mx-0.5' : ''} ${forte ? 'font-extrabold text-navy' : 'font-semibold text-ink'}`}>{texto}</span>
     );
   };
   const dupla = (lista?: string[]) => (lista && lista.length
@@ -89,16 +93,14 @@ export const EscalaSpa: React.FC = () => {
   // ---- Seletor de mês (‹ Mês/Ano ›) ----
   const seletor = (
     <div className="flex items-center gap-2">
-      <button type="button" onClick={() => irPara(mes.y, mes.m - 1)} aria-label="Mês anterior" className="w-10 h-11 rounded-lg border border-line bg-white text-navy font-bold hover:bg-thead">‹</button>
-      <div className="flex rounded-lg border-[1.5px] border-navy overflow-hidden bg-gold/20">
-        <select aria-label="Mês" value={mes.m} onChange={e => irPara(mes.y, Number(e.target.value))} className="bg-transparent px-2.5 min-h-[44px] font-extrabold text-navy border-r border-navy/25 cursor-pointer">
-          {MESES.map((nome, i) => <option key={nome} value={i}>{nome}</option>)}
-        </select>
-        <select aria-label="Ano" value={mes.y} onChange={e => irPara(Number(e.target.value), mes.m)} className="bg-transparent px-2.5 min-h-[44px] font-extrabold text-navy cursor-pointer">
-          {anos.map(a => <option key={a} value={a}>{a}</option>)}
-        </select>
-      </div>
-      <button type="button" onClick={() => irPara(mes.y, mes.m + 1)} aria-label="Próximo mês" className="w-10 h-11 rounded-lg border border-line bg-white text-navy font-bold hover:bg-thead">›</button>
+      <IconButton icon="chevron_left" label="Mês anterior" variant="secondary" onClick={() => irPara(mes.y, mes.m - 1)} />
+      <select aria-label="Mês" value={mes.m} onChange={e => irPara(mes.y, Number(e.target.value))} className={`${controlClass} !w-auto font-bold text-navy cursor-pointer`}>
+        {MESES.map((nome, i) => <option key={nome} value={i}>{nome}</option>)}
+      </select>
+      <select aria-label="Ano" value={mes.y} onChange={e => irPara(Number(e.target.value), mes.m)} className={`${controlClass} !w-auto font-bold text-navy cursor-pointer tabular-nums`}>
+        {anos.map(a => <option key={a} value={a}>{a}</option>)}
+      </select>
+      <IconButton icon="chevron_right" label="Próximo mês" variant="secondary" onClick={() => irPara(mes.y, mes.m + 1)} />
     </div>
   );
 
@@ -106,7 +108,7 @@ export const EscalaSpa: React.FC = () => {
   const offset = new Date(mes.y, mes.m, 1).getDay();
   const celulas = Math.ceil((offset + totalDias) / 7) * 7;
   const calendario = (
-    <div className="bg-white rounded-xl border border-line overflow-hidden">
+    <Card padding="none">
       <div className="grid grid-cols-7 gap-2 px-3.5 py-2 bg-thead border-b border-line">
         {SEMANA.map(s => <div key={s} className="text-center text-xs font-bold tracking-wide text-ink-3">{s}</div>)}
       </div>
@@ -119,19 +121,19 @@ export const EscalaSpa: React.FC = () => {
           const cor = corDoDia(k);
           const rotulo = `${pad(d)}/${MES_ABR[mes.m]}`;
           const faceBase = `[grid-area:1/1] [backface-visibility:hidden] rounded-md px-2 pt-1.5 pb-1 flex flex-col gap-1 min-w-0 ${FUNDO[cor]} ${k === hoje ? 'outline outline-2 outline-gold -outline-offset-2' : ''}`;
-          const data = <div className="text-center text-xs font-semibold text-ink-2 mb-0.5"><span title={fer[k] ? `Feriado: ${fer[k]}` : undefined} className={fer[k] ? 'cursor-help' : ''}>{rotulo}</span></div>;
+          const data = <div className="text-center text-xs font-semibold text-ink mb-0.5"><span title={fer[k] ? `Feriado: ${fer[k]}` : undefined} className={fer[k] ? 'cursor-help' : ''}>{rotulo}</span></div>;
           const frenteSupervisao = (
             <>
               {data}
-              <span className="text-[13px] leading-tight text-navy text-pretty"><Nome n={e?.supervisor} forte /></span>
-              <span className="text-[10px] leading-snug text-ink-3 text-pretty">Retém: <Nome n={e?.retemSupervisao} /></span>
+              <span className="text-sm leading-tight text-navy text-pretty"><Nome n={e?.supervisor} forte /></span>
+              <span className="text-xs leading-snug text-ink-3 text-pretty">Retém: <Nome n={e?.retemSupervisao} /></span>
             </>
           );
           const frentePlantao = (
             <>
               {data}
-              <span className="text-[11px] leading-snug text-pretty"><b className="text-ink-3">D: </b>{dupla(e?.dia)}</span>
-              <span className="text-[11px] leading-snug text-pretty"><b className="text-ink-3">N: </b>{dupla(e?.noite)}</span>
+              <span className="text-xs leading-snug text-pretty"><b className="text-ink-3">D: </b>{dupla(e?.dia)}</span>
+              <span className="text-xs leading-snug text-pretty"><b className="text-ink-3">N: </b>{dupla(e?.noite)}</span>
             </>
           );
           const [frente, verso] = inicial === 'supervisao' ? [frenteSupervisao, frentePlantao] : [frentePlantao, frenteSupervisao];
@@ -142,7 +144,7 @@ export const EscalaSpa: React.FC = () => {
               className="text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded-md"
             >
               <div
-                className={`grid min-h-[84px] h-full transition-transform duration-500 [transform-style:preserve-3d] ${virado ? '[transform:rotateY(180deg)]' : ''}`}
+                className={`grid min-h-[96px] h-full transition-transform duration-500 [transform-style:preserve-3d] ${virado ? '[transform:rotateY(180deg)]' : ''}`}
                 style={{ transitionDelay: `${(i % 7) * 25 + Math.floor(i / 7) * 15}ms` }}
               >
                 <div className={faceBase}>{frente}</div>
@@ -152,7 +154,7 @@ export const EscalaSpa: React.FC = () => {
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 
   // ---- Celular: lista por dia (Supervisão · Dia · Noite) ----
@@ -165,7 +167,7 @@ export const EscalaSpa: React.FC = () => {
     </div>
   );
   const lista = (
-    <ul className="bg-white rounded-xl border border-line divide-y divide-line overflow-hidden">
+    <ul className="bg-white rounded-xl border border-line divide-y divide-line overflow-clip">
       {Array.from({ length: totalDias }, (_, i) => {
         const d = i + 1;
         const k = chaveDia(mes.y, mes.m, d);
@@ -174,15 +176,15 @@ export const EscalaSpa: React.FC = () => {
         const dow = new Date(mes.y, mes.m, d).getDay();
         const ehHoje = k === hoje;
         return (
-          <li key={k} ref={ehHoje ? refHoje : undefined} className={`flex gap-3 px-3 py-2.5 scroll-mt-20 ${ehHoje ? 'shadow-[inset_3px_0_0_#FAB932]' : ''}`}>
+          <li key={k} ref={ehHoje ? refHoje : undefined} className={`flex gap-3 px-3 py-2.5 scroll-mt-20 ${ehHoje ? 'shadow-[inset_3px_0_0_rgb(var(--c-gold-400))]' : ''}`}>
             <div className="w-11 shrink-0 text-center pt-0.5">
               <div className={`mx-auto w-9 h-9 rounded-full flex items-center justify-center text-base font-extrabold ${ehHoje ? 'bg-navy text-white' : 'text-navy'}`}>{d}</div>
-              <div className="text-[11px] font-semibold text-ink-3 flex items-center justify-center gap-1">
+              <div className="text-xs font-semibold text-ink-3 flex items-center justify-center gap-1">
                 <span className={`w-1.5 h-1.5 rounded-full ${PONTO[cor]}`} aria-hidden="true" />{SEMANA[dow]}
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              {fer[k] && <p className="text-[11px] font-semibold text-wine mb-0.5">{fer[k]}</p>}
+              {fer[k] && <p className="text-xs font-semibold text-wine mb-0.5">{fer[k]}</p>}
               {e ? (
                 <>
                   {linhaEvento('Supervisão', <><Nome n={e.supervisor} forte />{e.retemSupervisao && <span className="text-xs text-ink-3"> · <span className="inline-block max-w-full whitespace-nowrap">Retém: <Nome n={e.retemSupervisao} /></span></span>}</>, souEu(e.supervisor) || souEu(e.retemSupervisao))}
@@ -200,7 +202,7 @@ export const EscalaSpa: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast} tone="success" />
-      <Container size="data" className="py-6 md:py-8 pb-10 space-y-4">
+      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
         <PageHeader
           title="Escala SVÇ"
           description="Supervisão do SPA (24 h, com retém) e plantões de 12 h (dia e noite)."
@@ -223,13 +225,13 @@ export const EscalaSpa: React.FC = () => {
         </div>
 
         {erro ? (
-          <p role="alert" className="p-6 bg-white rounded-xl border border-line text-sm font-semibold text-wine">{erro}</p>
+          <Card role="alert" className="text-sm font-semibold text-wine">{erro}</Card>
         ) : dias === null ? (
-          <p className="p-10 text-center text-sm text-ink-3 bg-white rounded-xl border border-line" role="status">Carregando a escala…</p>
+          <Card role="status" className="p-10 text-center text-sm text-ink-3">Carregando a escala…</Card>
         ) : dias.length === 0 ? (
-          <div className="bg-white rounded-xl border border-line">
+          <Card padding="none">
             <EmptyState icon="calendar_month" title={`Sem escala para ${MESES[mes.m].toLowerCase()} de ${mes.y}`} description={ehAdmin ? 'Envie o CSV da escala do mês pelo botão "Enviar escala".' : 'A escala deste mês ainda não foi publicada.'} />
-          </div>
+          </Card>
         ) : isDesktop ? calendario : lista}
       </Container>
 

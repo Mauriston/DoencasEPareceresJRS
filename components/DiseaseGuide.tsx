@@ -5,14 +5,19 @@ import { Disease, Diagnosis } from '../types';
 import { ChevronRight, Info, Brain, HeartPulse, EyeOff, Radiation, Accessibility, Stethoscope, Ribbon, X, Download, ArrowLeft } from './ui/icons';
 import { jsPDF } from 'jspdf';
 import { Container, PageHeader } from './ui/Page';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { NavContext } from '../context/NavContext';
 import { canAccessPage } from '../config/permissions';
 import { pathForView, PUBLICO_DOENCAS, PUBLICO_PORTARIA } from '../config/routes';
 import { EmptyState } from './ui/EmptyState';
 import { useBreadcrumbs } from '../context/BreadcrumbContext';
 import { doencaPath } from '../config/routes';
+import { portariaPathSecao, secaoDaDoenca } from '../utils/portaria';
 import { Button } from './ui/Button';
+import { ButtonLink } from './ui/Button';
+import { Card } from './ui/Card';
+import { GradeCards } from './ui/Grade';
+import { SearchField } from './ui/Field';
 import { Dialog } from './ui/Dialog';
 import { StatusTag, type StatusTone } from './ui/StatusTag';
 import { controlClass, controlErrorClass } from './ui/Field';
@@ -100,9 +105,20 @@ function getStageText(globalScore: number) {
 
 const TOM_ESTAGIO: Record<number, StatusTone> = { 0: 'success', 0.5: 'neutral', 1: 'attention', 2: 'danger', 3: 'danger' };
 
+// Escalas (CDR, Webster, Child-Pugh) abrem em ?escala=… sobre a rota da doença (auditoria v3, P3):
+// a trilha Doenças de Lei › Doença › Escala é a navegação para cima — sem "Voltar" nas ações, que
+// ficam só com o que age na página (Imprimir; o cálculo e a cópia ficam na barra do resultado).
+type EscalaId = 'cdr' | 'webster' | 'childpugh';
+const ESCALAS: Record<EscalaId, string> = { cdr: 'CDR Score', webster: 'Escala de Webster', childpugh: 'Child-Pugh' };
+const ehEscala = (v: string | null): v is EscalaId => v === 'cdr' || v === 'webster' || v === 'childpugh';
+
+const BotaoImprimir: React.FC = () => (
+  <Button variant="secondary" icon="print" onClick={() => window.print()}>Imprimir</Button>
+);
+
 // Calculadora CDR dentro do shell (auditoria v2, C1): página com Page/Card, cada domínio um grupo de
 // rádios de 44 px acessível por teclado e leitor de tela, resultado num painel fixo no fim do fluxo.
-const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const CdrCalculator: React.FC = () => {
   const [scores, setScores] = useState({ M: 0, O: 0, JSP: 0, RC: 0, LP: 0, CP: 0 });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -120,14 +136,14 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   return (
     <div className="flex flex-col flex-1">
-      <Container size="form" className="py-6 md:py-8 pb-6 space-y-5">
+      <Container size="form" className="py-6 md:py-8 pb-6 space-y-4">
         <PageHeader
           title="CDR Score"
           description="Calculadora do Clinical Dementia Rating, validada em português."
-          actions={<Button variant="secondary" icon="arrow_back" onClick={onClose}>Voltar à doença</Button>}
+          actions={<BotaoImprimir />}
         />
         {cdrData.map(cat => (
-          <div key={cat.id} role="radiogroup" aria-labelledby={`cdr-${cat.id}`} className="bg-white border border-line rounded-xl overflow-hidden">
+          <Card padding="none" key={cat.id} role="radiogroup" aria-labelledby={`cdr-${cat.id}`}>
             <h2 id={`cdr-${cat.id}`} className="text-h3 font-bold text-navy px-4 pt-4 pb-2">{cat.nome} <span className="text-ink-3 font-normal">{cat.sigla}</span></h2>
             <div className="flex flex-col">
               {cat.opcoes.map(opt => {
@@ -144,7 +160,7 @@ const CdrCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 );
               })}
             </div>
-          </div>
+          </Card>
         ))}
       </Container>
 
@@ -264,7 +280,7 @@ function getWebsterGrau(total: number): { titulo: string; tom: StatusTone } {
 
 // Calculadora de Webster no mesmo padrão da CDR: rádios de 44 px por domínio e painel fixo com o
 // total. Começa sem marcações (como a planilha): o resultado só é dado com os 10 itens preenchidos.
-const WebsterCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const WebsterCalculator: React.FC = () => {
   const [scores, setScores] = useState<Record<number, number>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -282,14 +298,14 @@ const WebsterCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   return (
     <div className="flex flex-col flex-1">
-      <Container size="form" className="py-6 md:py-8 pb-6 space-y-5">
+      <Container size="form" className="py-6 md:py-8 pb-6 space-y-4">
         <PageHeader
           title="Escala de Webster"
           description="Webster Rating Scale for Parkinson’s Disease: 10 domínios, de 0 a 3 pontos cada."
-          actions={<Button variant="secondary" icon="arrow_back" onClick={onClose}>Voltar à doença</Button>}
+          actions={<BotaoImprimir />}
         />
         {websterData.map(cat => (
-          <div key={cat.id} role="radiogroup" aria-labelledby={`webster-${cat.id}`} className="bg-white border border-line rounded-xl overflow-hidden">
+          <Card padding="none" key={cat.id} role="radiogroup" aria-labelledby={`webster-${cat.id}`}>
             <h2 id={`webster-${cat.id}`} className="text-h3 font-bold text-navy px-4 pt-4 pb-2"><span className="text-ink-3 font-normal">{cat.id}.</span> {cat.nome}</h2>
             <div className="flex flex-col">
               {cat.opcoes.map((desc, pt) => {
@@ -306,7 +322,7 @@ const WebsterCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 );
               })}
             </div>
-          </div>
+          </Card>
         ))}
       </Container>
 
@@ -385,7 +401,7 @@ const lerNumero = (txt: string) => {
   return txt.trim() !== '' && Number.isFinite(v) && v >= 0 ? v : null;
 };
 
-const ChildPughCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const ChildPughCalculator: React.FC = () => {
   const [valores, setValores] = useState<Record<string, string>>({ bili: '', alb: '', inr: '' });
   const [clinico, setClinico] = useState<Record<string, number>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -410,14 +426,14 @@ const ChildPughCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => 
 
   return (
     <div className="flex flex-col flex-1">
-      <Container size="form" className="py-6 md:py-8 pb-6 space-y-5">
+      <Container size="form" className="py-6 md:py-8 pb-6 space-y-4">
         <PageHeader
           title="Child-Pugh"
           description="Classificação de Child-Turcotte-Pugh: 5 variáveis, de 1 a 3 pontos cada."
-          actions={<Button variant="secondary" icon="arrow_back" onClick={onClose}>Voltar à doença</Button>}
+          actions={<BotaoImprimir />}
         />
         {childPughLab.map((v, i) => (
-          <div key={v.id} className="bg-white border border-line rounded-xl p-4">
+          <Card key={v.id} padding="sm">
             <label htmlFor={`cp-${v.id}`} className="block text-h3 font-bold text-navy mb-3">{v.nome}{v.unidade && <span className="text-ink-3 font-normal"> ({v.unidade})</span>}</label>
             <div className="flex items-center gap-3">
               <input
@@ -433,10 +449,10 @@ const ChildPughCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => 
               />
               <span className={`shrink-0 text-xs font-bold px-2 py-1 rounded tabular-nums ${labPontos[i] !== null ? 'bg-navy text-white' : 'bg-thead text-ink-3'}`}>{labPontos[i] !== null ? '+' + labPontos[i] : '—'}</span>
             </div>
-          </div>
+          </Card>
         ))}
         {childPughClinico.map(cat => (
-          <div key={cat.id} role="radiogroup" aria-labelledby={`cp-${cat.id}`} className="bg-white border border-line rounded-xl overflow-hidden">
+          <Card padding="none" key={cat.id} role="radiogroup" aria-labelledby={`cp-${cat.id}`}>
             <h2 id={`cp-${cat.id}`} className="text-h3 font-bold text-navy px-4 pt-4 pb-2">
               {cat.id === 'encef' ? (
                 <button type="button" onClick={() => setIsEncefOpen(true)} className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-blue focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded">
@@ -461,7 +477,7 @@ const ChildPughCalculator: React.FC<{ onClose: () => void }> = ({ onClose }) => 
                 );
               })}
             </div>
-          </div>
+          </Card>
         ))}
       </Container>
 
@@ -575,6 +591,10 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
   const navigate = useNavigate();
   const nav = useContext(NavContext);
   const { doencaId, diagnosticoIdx } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const escalaParam = searchParams.get('escala');
+  const calculadoraAberta: EscalaId | null = ehEscala(escalaParam) ? escalaParam : null;
+  const setCalculadoraAberta = (escala: EscalaId) => { setSearchParams({ escala }); window.scrollTo?.(0, 0); };
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const selectedDisease: Disease | null = DISEASES.find(d => d.id === doencaId) ?? null;
@@ -584,11 +604,15 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
   const documentos = selectedDiagnosis?.documents ?? selectedDisease?.documents ?? [];
   // Mesma tela em dois endereços: /beneficios/doencas (app) e /publico/doencas.
   const dPath = (id: string, idx?: number) => doencaPath(id, idx, publico ? PUBLICO_DOENCAS : undefined);
-  useBreadcrumbs(
-    !selectedDisease ? [] :
+  const migalhasDoenca = !selectedDisease ? [] :
     selectedDiagnosis && selectedDisease.diagnoses.length > 1
-      ? [{ label: selectedDisease.name, to: dPath(selectedDisease.id) }, { label: selectedDiagnosis.name }]
-      : [{ label: selectedDisease.name }]
+      ? [{ label: selectedDisease.name, to: dPath(selectedDisease.id) }, { label: selectedDiagnosis.name, to: dPath(selectedDisease.id, diagIdx) }]
+      : [{ label: selectedDisease.name, to: dPath(selectedDisease.id) }];
+  // Com uma escala aberta: Doenças de Lei › Doença (› Diagnóstico) › Escala; sem ela, o último nível é texto.
+  useBreadcrumbs(
+    selectedDisease && calculadoraAberta
+      ? [...migalhasDoenca, { label: ESCALAS[calculadoraAberta] }]
+      : migalhasDoenca.map((c, i) => (i === migalhasDoenca.length - 1 ? { label: c.label } : c))
   );
   const [expandedDiseaseId, setExpandedDiseaseId] = useState<string | null>(null);
   const [isPragmatismModalOpen, setIsPragmatismModalOpen] = useState(false);
@@ -601,7 +625,6 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
   const [isCatCModalOpen, setIsCatCModalOpen] = useState(false);
   const [isBavModalOpen, setIsBavModalOpen] = useState(false);
   const [isBavImageExpanded, setIsBavImageExpanded] = useState(false);
-  const [calculadoraAberta, setCalculadoraAberta] = useState<'cdr' | 'webster' | 'childpugh' | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   // Checklist de documentos reunidos: guardado neste aparelho, por doença/diagnóstico.
   const [docsMarcados, setDocsMarcados] = useState<Set<number>>(new Set());
@@ -612,7 +635,8 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
     return proximo;
   });
   const podeVerPortaria = publico || canAccessPage('portaria', nav?.authUser?.perfil);
-  const portariaPath = publico ? PUBLICO_PORTARIA : pathForView('portaria');
+  // "Ler a Portaria" abre direto na doença (?secao=…), não no topo.
+  const portariaPath = portariaPathSecao(publico ? PUBLICO_PORTARIA : pathForView('portaria'), secaoDaDoenca(selectedDisease?.id));
 
   useEffect(() => {
     setIsCopied(false);
@@ -679,9 +703,9 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
     }
   };
 
-  if (calculadoraAberta === 'cdr') return <CdrCalculator onClose={() => setCalculadoraAberta(null)} />;
-  if (calculadoraAberta === 'webster') return <WebsterCalculator onClose={() => setCalculadoraAberta(null)} />;
-  if (calculadoraAberta === 'childpugh') return <ChildPughCalculator onClose={() => setCalculadoraAberta(null)} />;
+  if (selectedDisease && calculadoraAberta === 'cdr') return <CdrCalculator />;
+  if (selectedDisease && calculadoraAberta === 'webster') return <WebsterCalculator />;
+  if (selectedDisease && calculadoraAberta === 'childpugh') return <ChildPughCalculator />;
 
   // PAGE LEVEL 2: Diagnoses List for a specific disease
   if (selectedDisease && !selectedDiagnosis) {
@@ -690,18 +714,18 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
         <Container size="reading" className="py-6 md:py-8 pb-10 space-y-6">
           <PageHeader title={selectedDisease.name} description="Selecione o diagnóstico pericial associado" />
 
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 gap-4">
             {selectedDisease.diagnoses.map((diagnosis, idx) => (
               <Link
                 key={idx}
                 to={dPath(selectedDisease.id, idx)}
-                className="bg-white rounded-xl p-4 border border-line hover:border-navy transition-colors flex items-center justify-between gap-3 min-h-[64px] group"
+                className="bg-white rounded-xl p-4 border border-line hover:border-navy transition-colors flex items-center justify-between gap-3 min-h-[64px] group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
               >
                 <span className="flex items-center gap-3.5 min-w-0">
                   <span className="w-10 h-10 rounded-lg bg-thead flex items-center justify-center shrink-0 [&>svg]:text-navy">
                     {getDiseaseIcon(selectedDisease.name)}
                   </span>
-                  <span className="text-base font-bold text-navy">{diagnosis.name}</span>
+                  <span className="text-h3 text-navy">{diagnosis.name}</span>
                 </span>
                 <ChevronRight size={20} className="text-ink-4 group-hover:text-navy shrink-0" />
               </Link>
@@ -719,8 +743,6 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
     const isParkinson = selectedDisease.id === "doenca_de_parkinson";
     const isHepatopatia = selectedDisease.id === "hepatopatias_graves";
     const totalDocs = documentos.length;
-    const secao = 'bg-white rounded-xl p-5 md:p-6 border border-line';
-    const tituloSecao = 'font-heading font-bold text-h2 text-navy mb-3 pb-2 border-b border-line';
     return (
       <div className="flex flex-col flex-1 relative">
         <Container size="data" className="@container py-6 md:py-8 pb-6 md:pb-10">
@@ -729,37 +751,29 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
             description={selectedDisease.diagnoses.length > 1 ? `Diagnóstico pericial: ${selectedDiagnosis.name}` : undefined}
           />
 
-          <div className="@split:grid @split:grid-cols-12 @split:gap-8 @split:items-start space-y-6 @split:space-y-0">
+          <div className="@split:grid @split:grid-cols-12 @split:gap-6 @split:items-start space-y-6 @split:space-y-0">
             <div className="@split:col-span-8 space-y-6 min-w-0">
-              <section className={secao}>
-                <h2 className={tituloSecao}>Definição
-                </h2>
+              <Card as="section" titleAs="h2" title="Definição">
                 <p className="text-base text-ink leading-relaxed">{selectedDisease.definition}</p>
-              </section>
+              </Card>
 
               {selectedDisease.sections?.map(sec => (
-                <section key={sec.title} className={secao}>
-                  <h2 className={tituloSecao}>{sec.title}
-                  </h2>
+                <Card as="section" key={sec.title} titleAs="h2" title={sec.title}>
                   <ul className="space-y-2 list-disc pl-5 marker:text-navy">
                     {sec.items.map((item, idx) => <li key={idx} className="text-base text-ink leading-relaxed">{item}</li>)}
                   </ul>
-                </section>
+                </Card>
               ))}
 
               {isHepatopatia && (
-                <section className={secao}>
-                  <h2 className={tituloSecao}>Classificação de Child-Pugh
-                  </h2>
+                <Card as="section" titleAs="h2" title="Classificação de Child-Pugh">
                   <p className="text-sm text-ink-3 mb-4">A classe de Child-Pugh estima a gravidade da doença hepática e fundamenta o enquadramento como doença prevista em lei.</p>
                   <Button icon="calculate" fullWidth onClick={() => setCalculadoraAberta('childpugh')}>Child-Pugh Score Calculator</Button>
-                </section>
+                </Card>
               )}
 
               {selectedDisease.name === "SIDA/AIDS" && (
-                <section className={secao}>
-                  <h2 className={tituloSecao}>Classificação
-                  </h2>
+                <Card as="section" titleAs="h2" title="Classificação">
                   <div className="overflow-x-auto scroll-x-visible">
                     <table className="w-full text-left text-sm text-ink border-collapse border border-line">
                       <thead className="bg-thead text-navy">
@@ -780,30 +794,24 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                     </table>
                   </div>
                   <p className="text-sm text-ink-3 italic mt-3">A3, B3 e C são considerados SIDA/AIDS.</p>
-                </section>
+                </Card>
               )}
 
               {isDemencia && (
-                <section className={secao}>
-                  <h2 className={tituloSecao}>Avaliação de cognição
-                  </h2>
+                <Card as="section" titleAs="h2" title="Avaliação de cognição">
                   <p className="text-sm text-ink-3 mb-4">A avaliação do escore CDR é fundamental para quantificar a gravidade do comprometimento cognitivo.</p>
                   <Button icon="calculate" fullWidth onClick={() => setCalculadoraAberta('cdr')}>CDR Score Calculator</Button>
-                </section>
+                </Card>
               )}
 
               {isParkinson && (
-                <section className={secao}>
-                  <h2 className={tituloSecao}>Avaliação da incapacidade
-                  </h2>
+                <Card as="section" titleAs="h2" title="Avaliação da incapacidade">
                   <p className="text-sm text-ink-3 mb-4">A Escala de Webster quantifica o grau de incapacidade na Doença de Parkinson e fundamenta o enquadramento como doença prevista em lei.</p>
                   <Button icon="calculate" fullWidth onClick={() => setCalculadoraAberta('webster')}>Webster Rating Scale Calculator</Button>
-                </section>
+                </Card>
               )}
 
-              <section className={secao}>
-                <h2 className={tituloSecao}>Critérios de gravidade
-                </h2>
+              <Card as="section" titleAs="h2" title="Critérios de gravidade">
                 <ol className="space-y-4">
                   {selectedDiagnosis.criteria.map((item, idx) => (
                     <li key={idx} className="flex items-start gap-3 text-base text-ink">
@@ -812,12 +820,10 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                     </li>
                   ))}
                 </ol>
-              </section>
+              </Card>
 
               {isParkinson && (
-                <section className={secao}>
-                  <h2 className={tituloSecao}>O portador de Doença de Parkinson será enquadrado enquanto Doença Prevista em Lei:
-                  </h2>
+                <Card as="section" titleAs="h2" title="O portador de Doença de Parkinson será enquadrado enquanto Doença Prevista em Lei:">
                   <ol className="space-y-4">
                     {[
                       'Quando as manifestações clínicas e a evolução da doença determinarem o impedimento ao desempenho das atividades laborativas e realização das atividades normais da vida diária;',
@@ -830,14 +836,12 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                       </li>
                     ))}
                   </ol>
-                </section>
+                </Card>
               )}
             </div>
 
             <aside className="@split:col-span-4 @split:sticky @split:top-6 space-y-4 min-w-0" aria-label="Documentos e ações">
-              <section className={secao}>
-                <h2 className={tituloSecao}>Documentos necessários
-                </h2>
+              <Card as="section" titleAs="h2" title="Documentos necessários">
                 <p className="text-xs font-semibold text-ink-3 mb-2" aria-live="polite">{docsMarcados.size} de {totalDocs} reunidos</p>
                 <ul className="space-y-1">
                   {documentos.map((item, idx) => (
@@ -854,7 +858,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                     </li>
                   ))}
                 </ul>
-              </section>
+              </Card>
 
               {/* Na versão pública a coluna vale para todas as larguras (é onde o
                   link da Portaria aparece no celular) e não traz PDF nem cópia,
@@ -863,10 +867,9 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                 {!publico && <Button icon="download" fullWidth onClick={handleDownloadPDF}>Baixar PDF</Button>}
                 {!publico && <Button variant="secondary" icon={isCopied ? 'done_all' : 'content_copy'} disabled={isCopied} fullWidth onClick={handleCopy}>{isCopied ? 'Copiado' : 'Copiar texto'}</Button>}
                 {podeVerPortaria && (
-                  <Link to={portariaPath} className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold text-navy hover:bg-thead transition-colors">
-                    <span className="material-symbols-outlined text-[20px]" aria-hidden="true">article</span>
+                  <ButtonLink to={portariaPath} variant="ghost" icon="article" fullWidth className="whitespace-normal text-center">
                     Ler a Portaria GM-MD nº 3.551/2021
-                  </Link>
+                  </ButtonLink>
                 )}
               </div>
             </aside>
@@ -890,26 +893,22 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
   const tituloTipo: Record<string, string> = { disease: 'Doenças', diagnosis: 'Diagnósticos', criterion: 'Critérios' };
   return (
     <div className="flex flex-col flex-1">
-      <Container size="data" className="@container py-6 md:py-8 pb-10 space-y-6">
+      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
         <PageHeader title="Doenças previstas em lei" description="Verifique as definições, os critérios clínicos e os documentos necessários para o enquadramento." />
 
-        <div className="relative max-w-form">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            aria-label="Buscar doença, diagnóstico ou critério"
-            placeholder="Buscar por doença, diagnóstico ou critério…"
-            autoComplete="off"
-            className="w-full min-h-[44px] pl-10 pr-4 rounded-lg border border-line bg-white text-sm text-ink placeholder:text-ink-3 focus:outline-none focus:border-navy focus:ring-1 focus:ring-navy"
-          />
-        </div>
+        <SearchField
+          className="max-w-form"
+          value={searchQuery}
+          onChange={setSearchQuery}
+          label="Buscar doença, diagnóstico ou critério"
+          placeholder="Buscar por doença, diagnóstico ou critério…"
+          autoComplete="off"
+        />
 
         {consultaAtiva ? (
           <div className="space-y-5" role="region" aria-label="Resultados da busca" aria-live="polite">
             {searchResults.length === 0 ? (
-              <div className="bg-white border border-line rounded-xl"><EmptyState icon="search_off" title="Nenhum resultado" description={`Nada encontrado para “${searchQuery}”.`} /></div>
+              <Card padding="none"><EmptyState icon="search_off" title="Nenhum resultado" description={`Nada encontrado para “${searchQuery}”.`} /></Card>
             ) : (['disease', 'diagnosis', 'criterion'] as const).map(tipo => {
               const itens = searchResults.filter(r => r.type === tipo).slice(0, 12);
               if (itens.length === 0) return null;
@@ -919,7 +918,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                   <ul className="bg-white border border-line rounded-xl divide-y divide-line overflow-clip">
                     {itens.map(r => (
                       <li key={r.id}>
-                        <button type="button" onClick={() => handleSearchResultClick(r)} className="w-full text-left px-4 min-h-[52px] py-2.5 hover:bg-thead transition-colors">
+                        <button type="button" onClick={() => handleSearchResultClick(r)} className="w-full text-left px-4 min-h-[52px] py-2.5 hover:bg-thead transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold">
                           <span className="block text-sm font-bold text-navy">{r.name}</span>
                           {r.sub && <span className="block text-xs text-ink-3 mt-0.5">{r.sub}</span>}
                         </button>
@@ -931,9 +930,9 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
             })}
           </div>
         ) : (
-          <div className="grid grid-cols-1 @2xl:grid-cols-2 @4xl:grid-cols-3 gap-4">
+          <GradeCards colunas={3}>
             {DISEASES.map((disease) => (
-              <Link key={disease.id} to={dPath(disease.id)} className="bg-white rounded-xl border border-line hover:border-navy transition-colors p-4 flex items-center justify-between gap-2 min-h-[64px]">
+              <Link key={disease.id} to={dPath(disease.id)} className="bg-white rounded-xl border border-line hover:border-navy transition-colors p-4 flex items-center justify-between gap-2 min-h-[64px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">
                 <span className="flex items-center gap-3 min-w-0">
                   {getDiseaseIcon(disease.name)}
                   <span className="text-navy font-heading text-base font-semibold truncate">
@@ -943,7 +942,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
                 <ChevronRight size={20} className="text-ink-4 shrink-0" />
               </Link>
             ))}
-          </div>
+          </GradeCards>
         )}
       </Container>
     </div>

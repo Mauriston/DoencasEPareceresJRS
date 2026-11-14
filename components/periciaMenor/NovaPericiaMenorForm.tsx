@@ -40,6 +40,8 @@ interface Props {
   titulo?: string;
   onClose: () => void;
   onRegistrado: (nome: string) => void;
+  /** Pré-preenchimento: id (NIP só dígitos) do militar — "Nova perícia para ele" (detalhe e Ficha do inspecionado). */
+  militarInicial?: string;
 }
 
 type Erros = Record<string, string>;
@@ -54,7 +56,7 @@ const rotuloPerito = (p: PeritoPericiaMenor) => `${p.usuario || p.nome}${p.nip ?
 const AvisoMax: React.FC<{ visivel: boolean }> = ({ visivel }) =>
   visivel ? <p role="status" className="mt-1 text-right text-xs font-semibold text-wine">Máx {MAX_DIAS_PERICIA} dias</p> : null;
 
-export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia menor', onClose, onRegistrado }) => {
+export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia menor', onClose, onRegistrado, militarInicial }) => {
   const nav = useNav();
   const usuario = nav?.authUser;
   const [hoje] = useState(() => hojeISO());
@@ -72,7 +74,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
   const [militarId, setMilitarId] = useState('');
   const [militarTexto, setMilitarTexto] = useState('');
   const [cadastrando, setCadastrando] = useState(false);
-  const [recemCadastradoId, setRecemCadastradoId] = useState('');
+  const [recemCadastradoId, setRecemCadastradoId] = useState(militarInicial ?? '');
   const [editandoServico, setEditandoServico] = useState(false);
   const [anteriores, setAnteriores] = useState<PericiaMenorRecord[]>([]);
 

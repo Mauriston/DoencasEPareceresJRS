@@ -1,7 +1,7 @@
 // Ficheiro: components/inspecoes/EmailsDaIS.tsx
 // Seção "E-mails" da barra lateral de detalhe da IS:
 //  - Botões de envio (só Admin e Secretaria), cada um SÓ quando a IS se qualifica pelas mesmas regras do menu
-//    "Enviar Email" — agendamento (Verificações e Términos, de hoje em diante, sem o e-mail desta data), resultado
+//    "Enviar e-mail" — agendamento (Verificações e Términos, de hoje em diante, sem o e-mail desta data), resultado
 //    (Finalizada, Verificações e Términos ou Benefícios, com laudo), falta (HNRe) e NAC. Já enviado = botão some.
 //  - Cards (sem clique) dos e-mails já enviados desta IS, com destinatário e data.
 import React, { useState } from 'react';

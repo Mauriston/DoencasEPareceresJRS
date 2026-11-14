@@ -14,7 +14,20 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import iconeJrs from '../../assets/icone-jrs.png';
 
-export const ShellPublico: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+// Variantes (auditoria v3, 6e):
+// - "consulta" (padrão): Doenças de Lei e Portaria — com o botão "Acessar o app" e o rodapé normativo.
+// - "informativo": a página pública sobre o app — SEM caminho para dentro do app (sem "Acessar o app"),
+//   com a navegação da própria página no cabeçalho (`navegacao`) e o rodapé próprio (`rodape`).
+interface ShellPublicoProps {
+  children: React.ReactNode;
+  variante?: 'consulta' | 'informativo';
+  /** Só no informativo: links/botões que navegam dentro da própria página. */
+  navegacao?: React.ReactNode;
+  /** Só no informativo: conteúdo do rodapé (no lugar do texto normativo). */
+  rodape?: React.ReactNode;
+}
+
+export const ShellPublico: React.FC<ShellPublicoProps> = ({ children, variante = 'consulta', navegacao, rodape }) => (
   <div className="fixed inset-0 flex flex-col bg-canvas text-ink overflow-hidden antialiased">
     <a
       href="#conteudo"
@@ -36,13 +49,15 @@ export const ShellPublico: React.FC<{ children: React.ReactNode }> = ({ children
           <p className="hidden md:block text-base font-bold leading-tight truncate">Hospital Naval de Recife</p>
           <p className="hidden md:block text-xs text-white/70 truncate">Junta Regular de Saúde</p>
         </div>
-        <Link
-          to="/"
-          className="shrink-0 inline-flex items-center justify-center gap-2 min-h-[44px] px-3 md:px-4 rounded-lg border border-white/30 text-sm font-bold text-white hover:bg-white/10 transition-colors"
-        >
-          <span className="material-symbols-outlined text-[20px]" aria-hidden="true">login</span>
-          <span className="hidden sm:inline">Acessar o app</span>
-        </Link>
+        {variante === 'informativo' ? navegacao : (
+          <Link
+            to="/"
+            className="shrink-0 inline-flex items-center justify-center gap-2 min-h-[44px] px-3 md:px-4 rounded-lg border border-white/30 text-sm font-bold text-white hover:bg-white/10 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">login</span>
+            <span className="hidden sm:inline">Acessar o app</span>
+          </Link>
+        )}
       </div>
     </header>
     {/* Acento institucional: divisor em Amarelo Ouro sob a faixa Azul Marinha. */}
@@ -52,17 +67,19 @@ export const ShellPublico: React.FC<{ children: React.ReactNode }> = ({ children
       <div className="flex flex-col min-h-full w-full">
         {children}
         <footer className="shrink-0 border-t border-line bg-white px-4 md:px-6 py-6">
-          <div className="mx-auto w-full max-w-data flex flex-col gap-2">
-            <p className="text-sm font-bold text-navy">Hospital Naval de Recife · Marinha do Brasil</p>
-            <p className="text-xs text-ink-3 leading-relaxed">
-              Consulta à legislação e às normas técnicas periciais, aberta aos peritos e médicos das demais
-              Organizações Militares. Reproduz apenas conteúdo normativo de publicação oficial — não contém
-              dados de inspecionados nem informação clínica individual.
-            </p>
-            <p className="text-xs text-ink-3">
-              Em caso de divergência, prevalece o texto publicado no Diário Oficial da União.
-            </p>
-          </div>
+          {variante === 'informativo' ? rodape : (
+            <div className="mx-auto w-full max-w-data flex flex-col gap-2">
+              <p className="text-sm font-bold text-navy">Hospital Naval de Recife · Marinha do Brasil</p>
+              <p className="text-xs text-ink-3 leading-relaxed">
+                Consulta à legislação e às normas técnicas periciais, aberta aos peritos e médicos das demais
+                Organizações Militares. Reproduz apenas conteúdo normativo de publicação oficial — não contém
+                dados de inspecionados nem informação clínica individual.
+              </p>
+              <p className="text-xs text-ink-3">
+                Em caso de divergência, prevalece o texto publicado no Diário Oficial da União.
+              </p>
+            </div>
+          )}
         </footer>
       </div>
     </main>

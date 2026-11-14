@@ -1,5 +1,5 @@
 // Ficheiro: components/concursos/BotaoEmailInaptos.tsx
-// Botão primário "+ Email Inaptos" no cabeçalho da página do concurso (à direita; só concurso Em andamento,
+// Botão secundário "E-mail de inaptos" (B4: a primária da página é "Adicionar candidato") no cabeçalho da página do concurso (à direita; só concurso Em andamento,
 // só Admin e Secretaria). Badge = candidatos INAPTO com o e-mail ainda não enviado; sem pendências, fica
 // desabilitado. O clique abre a seleção múltipla dos pendentes (todos marcados) e envia o e-mail
 // "{concurso} - Candidatos Inaptos" (servidor/email/inaptosConcurso.ts).
@@ -29,10 +29,10 @@ export const BotaoEmailInaptos: React.FC<Props> = ({ concurso, candidatos, perfi
     <>
       <span className="relative inline-flex">
         <Button
-          icon="add" disabled={pendentes.length === 0} onClick={() => setAberto(true)}
-          aria-label={`Email Inaptos (EAMPE)${pendentes.length ? ` — ${pendentes.length} pendente${pendentes.length > 1 ? 's' : ''}` : ''}`}
+          variant="secondary" icon="mail" disabled={pendentes.length === 0} onClick={() => setAberto(true)}
+          aria-label={`E-mail de inaptos (EAMPE)${pendentes.length ? ` — ${pendentes.length} pendente${pendentes.length > 1 ? 's' : ''}` : ''}`}
         >
-          Email Inaptos
+          E-mail de inaptos
         </Button>
         {pendentes.length > 0 && (
           <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-wine text-white text-xs font-bold leading-5 text-center ring-2 ring-white">

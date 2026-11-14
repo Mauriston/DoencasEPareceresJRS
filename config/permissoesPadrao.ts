@@ -30,7 +30,10 @@ export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {
   // Férias: a equipe da JRS (as regras do Firestore só deixam a equipe ler os afastamentos).
   ferias: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   // Sobre o app: começa oculta para todos (o Admin sempre vê); liberar por perfil em Usuários quando for publicada.
-  sobre: { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
+  // Sobre o app: liberada a todos os perfis (auditoria v3, SB1).
+  sobre: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: true },
+  // Painel (indicadores do período): todos menos o Médicos Geral.
+  painel: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
 };
 
 export type FeatureKey =

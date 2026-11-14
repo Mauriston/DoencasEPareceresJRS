@@ -9,6 +9,7 @@ import {
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { app } from './firebaseAuth';
+import { registrarUsoAcao } from './usoDiario';
 import { notificarAcao } from './notificacoesPush';
 import { gerarComGemini, lerJsonIA, arquivoParaBase64IA } from './geminiAI';
 import { novoId } from '../utils/dados';
@@ -86,6 +87,7 @@ export const lerExameComIA = async (arquivo: File): Promise<{ itens: ItemExame[]
   });
   const itens = itensDaLeitura(lerJsonIA<LeituraExameIA>(r, 'A IA não conseguiu ler o PDF.'));
   if (!itens.length) throw new Error('Nenhum documento médico encontrado no PDF.');
+  registrarUsoAcao('exame_ia');
   return { itens, textoIncompleto: r.cortada };
 };
 

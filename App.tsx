@@ -2,13 +2,13 @@
 import React, { useState, useEffect, useReducer, useRef, useMemo, lazy, Suspense } from 'react';
 import { Navigate, useLocation, useNavigate, useNavigationType, useRoutes } from 'react-router-dom';
 import { Login } from './components/Login';
-import { registrarAcessoPagina } from './services/acessoRapido';
-import { hojeISO as hojeISOAcesso } from './utils/inspecoes';
 import { Home } from './components/Home';
 import { Sidebar } from './components/shell/Sidebar';
 import { Topbar } from './components/shell/Topbar';
+import { BarraInferior } from './components/shell/BarraInferior';
+import { TituloPaginaProvider } from './components/shell/TituloPagina';
 import { BreadcrumbProvider } from './context/BreadcrumbContext';
-import { ALIASES, ROUTES, destinoDoAlias, pathForView, viewForPath } from './config/routes';
+import { ALIASES, FICHA_PATH, ROUTES, destinoDoAlias, pathForView, viewForPath } from './config/routes';
 import { Dialog } from './components/ui/Dialog';
 import { Button } from './components/ui/Button';
 import { EmptyState } from './components/ui/EmptyState';
@@ -39,13 +39,13 @@ import {
   consumirNotifDaUrl, ouvirCliquesDoPush, type NotificacaoRecord,
 } from './services/notificacoesPush';
 import { useIsDesktop } from './hooks/useIsDesktop';
+import { useUsoDiario } from './hooks/useUsoDiario';
 
 // Carregamento sob demanda (code splitting por rota): cada página vira um chunk próprio, baixado
 // só quando a rota é aberta. Home e Login ficam no pacote principal (primeira tela).
 const paginaLazy = <K extends string>(carregar: () => Promise<Record<K, React.ComponentType<any>>>, nome: K) =>
   lazy(() => carregar().then(m => ({ default: m[nome] })));
 const Perfil = paginaLazy(() => import('./components/Perfil'), 'Perfil');
-const Configuracoes = paginaLazy(() => import('./components/Configuracoes'), 'Configuracoes');
 const Ferias = paginaLazy(() => import('./components/Ferias'), 'Ferias');
 const Sobre = paginaLazy(() => import('./components/Sobre'), 'Sobre');
 const DiseaseGuide = paginaLazy(() => import('./components/DiseaseGuide'), 'DiseaseGuide');
@@ -64,9 +64,12 @@ const PericiaMenor = paginaLazy(() => import('./components/PericiaMenor'), 'Peri
 const EscalaSpa = paginaLazy(() => import('./components/EscalaSpa'), 'EscalaSpa');
 const Mensagens = paginaLazy(() => import('./components/Mensagens'), 'Mensagens');
 const RoteiroJRS = paginaLazy(() => import('./components/RoteiroJRS'), 'RoteiroJRS');
-const UsuariosManagement = paginaLazy(() => import('./components/UsuariosManagement'), 'UsuariosManagement');
+const Administracao = paginaLazy(() => import('./components/administracao/Administracao'), 'Administracao');
 const Militares = paginaLazy(() => import('./components/Militares'), 'Militares');
+// Ficha do inspecionado: o acesso é por seção (permissões checadas na própria página).
+const FichaInspecionado = paginaLazy(() => import('./components/ficha/FichaInspecionado'), 'FichaInspecionado');
 const Inspecoes = paginaLazy(() => import('./components/Inspecoes'), 'Inspecoes');
+const Painel = paginaLazy(() => import('./components/painel/Painel'), 'Painel');
 
 /** Redireciona um alias de config/routes.ts para a rota canônica (replace, sem entrar no histórico). */
 const RedirecionarAlias: React.FC = () => {
@@ -109,6 +112,7 @@ const buildAuthUser = (profile: UsuarioRecord): AuthUser => ({
   imageProfile: profile.imageProfile,
   senhaTemporaria: !!profile.senhaTemporaria,
   pwaTutorialConcluido: !!profile.pwaTutorialConcluido,
+  aparencia: profile.aparencia,
 });
 
 // Quem abriu o app tocando num push chega com ?notif=<id>: lido (e removido da
@@ -336,12 +340,8 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
     if (navigationType !== 'POP') mainRef.current?.focus({ preventScroll: true });
   }, [location.pathname]);
 
-  // Acesso rápido da Início: conta os acessos às páginas (por dia, no Firestore, por usuário) para a renovação
-  // quinzenal. Falha silenciosa: sem a contagem, o card fica com a escolha do usuário.
-  useEffect(() => {
-    if (!authUser?.uid || currentView === 'home') return;
-    registrarAcessoPagina(authUser.uid, currentView, hojeISOAcesso()).catch(() => { /* silencioso */ });
-  }, [currentView, authUser?.uid]);
+  // Medição de uso do app (uso_diario, só contagens; seção Uso do app do Painel): todas as páginas, inclusive a Início.
+  useUsoDiario(authUser?.uid, currentView);
 
   // F31: a topbar ganha sombra quando o conteúdo rola por baixo dela
   // (o container que rola é o <main>, não a janela).
@@ -385,13 +385,14 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       case 'inspecoes': return can('inspecoes') ? <Inspecoes /> : <AccessDenied pagina={paginaLabel('inspecoes')} />;
       case 'militares': return can('militares') ? <Militares /> : <AccessDenied pagina={paginaLabel('militares')} />;
 
-      // USUÁRIOS PAGE - Restricted for non-admin
-      case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement /> : <AccessDenied pagina="Usuários" />;
-      // Configurações gerais (menu do avatar): só o Admin.
-      case 'configuracoes': return authUser?.perfil === 'admin' ? <Configuracoes /> : <AccessDenied pagina="Configurações" />;
+      // Administração (/administracao/{secao}: usuários, perfis, e-mails, agenda, integrações, registro): só o Admin.
+      case 'usuarios': return authUser?.perfil === 'admin' ? <Administracao /> : <AccessDenied pagina="Administração" />;
+      // Sem rota própria desde a Administração (/configuracoes é alias de /administracao/emails).
+      case 'configuracoes': return authUser?.perfil === 'admin' ? <Administracao /> : <AccessDenied pagina="Administração" />;
       // Férias e afastamentos: usuários da JRS (Admin, médicos JRS/MPI e Secretaria); só o Admin altera.
       case 'ferias': return canAccessPage('ferias', authUser?.perfil) ? <Ferias /> : <AccessDenied pagina="Férias" />;
       case 'sobre': return canAccessPage('sobre', authUser?.perfil) ? <Sobre /> : <AccessDenied pagina="Sobre o app" />;
+      case 'painel': return can('painel') ? <Painel /> : <AccessDenied pagina={paginaLabel('painel')} />;
 
       default: return <Home />;
     }
@@ -399,14 +400,14 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
 
   // Hook antes de qualquer retorno antecipado (ordem de hooks estável).
   const rotas = useRoutes([
-    ...ROUTES.map(r => ({ path: r.path, element: renderView(r.view) })),
+    ...ROUTES.map(r => ({ path: r.path, element: r.path === FICHA_PATH ? <FichaInspecionado /> : renderView(r.view) })),
     // Aliases estáveis (/doencas, /estudo…) redirecionam para a rota canônica.
     ...ALIASES.flatMap(a => [a.de, `${a.de}/*`]).map(path => ({ path, element: <RedirecionarAlias /> })),
     {
       path: '*',
       element: (
         <Page title="Página não encontrada" size="form">
-          <EmptyState icon="travel_explore" title="Esse endereço não existe" description="A página pode ter sido movida. Volte à Página Inicial ou use a busca no topo." action={<Button icon="home" onClick={() => navigate('/')}>Ir para a Página Inicial</Button>} />
+          <EmptyState icon="travel_explore" title="Esse endereço não existe" description="A página pode ter sido movida. Volte à Página inicial ou use a busca no topo." action={<Button icon="home" onClick={() => navigate('/')}>Ir para a Página inicial</Button>} />
         </Page>
       ),
     },
@@ -471,6 +472,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       {/* Mantém o Google Agenda em dia com os dias de concurso, em qualquer página (a de Inspeções faz a sua própria). */}
       <SincronizadorAgendaConcursos ativo={canAccessPage('inspecoes', authUser.perfil) && canUseFeature('inspecoes.agendar', authUser.perfil) && currentView !== 'inspecoes'} />
       <BreadcrumbProvider>
+      <TituloPaginaProvider>
       <div className="fixed inset-0 flex bg-canvas text-ink overflow-hidden antialiased">
         <button
           type="button"
@@ -487,14 +489,18 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
           <main id="conteudo" ref={mainRef} tabIndex={-1} className="flex-1 min-h-0 overflow-y-auto focus:outline-none">
             <div ref={sentinelaRef} className="h-px -mb-px" aria-hidden="true" />
             {/* Única transição de troca de tela (CSS, 150 ms); Page e as telas não repetem o fade. */}
-            <div key={currentView} className="flex flex-col min-h-full w-full animate-fade-in">
+            {/* Folga embaixo no celular (barra inferior, 4e): calc(78px + área segura), publicada pela BarraInferior. */}
+            <div key={currentView} className="flex flex-col min-h-full w-full animate-fade-in pb-[var(--tabbar-folga,0px)] md:pb-0">
               <Suspense fallback={<div className="flex flex-1 items-center justify-center py-24" role="status" aria-label="Carregando a página"><div className="w-8 h-8 border-2 border-navy/20 border-t-navy rounded-full animate-spin" /></div>}>
                 {rotas}
               </Suspense>
             </div>
           </main>
         </div>
+        {/* Celular: destinos do perfil + Menu, oculta ao rolar (mesmo contêiner do `rolou`). */}
+        <BarraInferior alvo={mainRef} />
       </div>
+      </TituloPaginaProvider>
       </BreadcrumbProvider>
 
       {mostrarAlertaSenha && (

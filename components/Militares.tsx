@@ -24,6 +24,8 @@ import { enviarFotoMilitar } from '../services/militarFoto';
 import { observarMilitares, atualizarMilitar, renomearMilitar, atualizarMilitaresEmLote, apagarMilitar, tipoDoInspecionado, OPCOES_SEXO, type MilitarRecord, type SexoInspecionado, type TipoInspecionado } from '../services/firestoreMilitares';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
+import { fichaPath } from '../config/routes';
+import { useNavigate } from 'react-router-dom';
 import { carregarOms, carregarCorposQuadros, carregarServicosHnre, normalizarBusca, montarInspecionado, separarPosto, aplicarSituacaoAoPgq, ehOficialMedico, omEhHnre, type OrganizacaoMilitar, type CorposQuadros, type PostoInfo, type ServicoHnre, type SituacaoMilitar } from '../utils/corposQuadros';
 import { formatNip, formatCelular } from '../utils/format';
 import { hojeISO } from '../utils/dados';
@@ -44,6 +46,7 @@ const PAGINA = 100;
 
 export const Militares: React.FC = () => {
   const nav = useNav();
+  const navigate = useNavigate();
   const perfil = nav?.authUser?.perfil;
   const ehAdmin = perfil === 'admin';
   // Editar, apagar, ativar/inativar e ações em lote são só do Admin (firestore.rules); os demais perfis
@@ -130,7 +133,8 @@ export const Militares: React.FC = () => {
   };
 
   const itensDe = (m: MilitarRecord) => [
-    { rotulo: 'Ver detalhes', icone: 'badge', onClick: () => setDetalhe(m) },
+    { rotulo: 'Abrir ficha', icone: 'id_card', onClick: () => navigate(fichaPath(m.id)) },
+    { rotulo: 'Ver prévia', icone: 'badge', onClick: () => setDetalhe(m) },
     ...(ehAdmin ? [
       { rotulo: 'Editar', icone: 'edit', onClick: () => setEditando(m) },
       { rotulo: 'Apagar', icone: 'delete', perigo: true, onClick: () => setApagando(m) },
@@ -269,10 +273,10 @@ export const Militares: React.FC = () => {
                     {visiveis.map(m => (
                       <tr key={m.id} onClick={() => setDetalhe(m)} className={`cursor-pointer hover:bg-thead transition-colors ${selecionados.has(m.id) ? 'bg-thead' : ''} ${m.ativo ? '' : 'text-ink-3'}`}>
                         {selecionavel && <td className="pl-4 pr-0 py-2" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy align-middle" /></td>}
-                        <td className="px-4 py-2 font-mono whitespace-nowrap">{formatNip(m.nip)}</td>
+                        <td className="px-4 py-2 tabular-nums whitespace-nowrap">{formatNip(m.nip)}</td>
                         <td className="px-4 py-2 whitespace-nowrap">{m.pgq}</td>
                         <td className="px-4 py-2 font-semibold text-navy"><button type="button" onClick={e => { e.stopPropagation(); setDetalhe(m); }} className="text-left" aria-label={`Abrir detalhes de ${m.nome}`}>{m.nome}</button>{tipoDoInspecionado(m) === 'dependente' && m.titularNome && <span className="block text-xs font-normal text-ink-3">Titular: {m.titularNome}</span>}</td>
-                        {soHnre && <td className="px-4 py-2 text-ink-2">{m.servico_label || <span className="text-ink-4">—</span>}</td>}
+                        {soHnre && <td className="px-4 py-2 text-ink">{m.servico_label || <span className="text-ink-4">—</span>}</td>}
                         <td className="px-4 py-2" onClick={e => e.stopPropagation()}>
                           {ehAdmin ? (
                             <button type="button" onClick={() => alternarAtivo(m)} title={m.ativo ? 'Clique para inativar' : 'Clique para ativar'} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="min-h-[44px] flex items-center">
@@ -337,7 +341,8 @@ export const Militares: React.FC = () => {
 
 // ---------------------------------------------------------------------------
 
-const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[]; postos?: CorposQuadros['postos']; onClose: () => void; onSalvo: (nome: string) => void }> = ({ militar, oms, postos, onClose, onSalvo }) => {
+/** Edição do cadastro (só Admin) — também usada pelo ⋮ da Ficha do inspecionado. */
+export const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[]; postos?: CorposQuadros['postos']; onClose: () => void; onSalvo: (nome: string) => void }> = ({ militar, oms, postos, onClose, onSalvo }) => {
   const [nome, setNome] = useState(militar.nome);
   const [sexo, setSexo] = useState<SexoInspecionado | ''>(militar.sexo ?? '');
   const [nip, setNip] = useState(formatNip(militar.nip));
@@ -430,7 +435,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
             </Field>
           )}
           <Field label="NIP" required error={erros.nip}>
-            {a => <input {...a} type="text" inputMode="numeric" value={nip} onChange={e => setNip(formatNip(e.target.value))} maxLength={10} className={`${a.className} font-mono`} />}
+            {a => <input {...a} type="text" inputMode="numeric" value={nip} onChange={e => setNip(formatNip(e.target.value))} maxLength={10} className={`${a.className} tabular-nums`} />}
           </Field>
         </div>
         {ehMilitar && (

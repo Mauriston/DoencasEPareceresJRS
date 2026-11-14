@@ -1,6 +1,6 @@
 // Ficheiro: components/LegislacaoForm.tsx
 // Sidebar (Drawer) para cadastrar uma nova legislação: dados + upload do PDF
-// para o Firebase Storage. Só o Admin chega aqui (botão "Novo" da página).
+// para o Firebase Storage. Só o Admin chega aqui (botão "Cadastrar lei" da página).
 import React, { useState } from 'react';
 import { Drawer } from './ui/Drawer';
 import { Button } from './ui/Button';

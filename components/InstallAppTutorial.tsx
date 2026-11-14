@@ -4,6 +4,7 @@
 // são desenhadas em HTML/CSS (não são prints reais), com o ponto de toque
 // destacado em cada etapa.
 import React, { useState } from 'react';
+import { Button } from './ui/Button';
 import { PlataformaTutorial } from '../utils/pwa';
 
 import iconeJrs from '../assets/icone-jrs.png';
@@ -265,7 +266,7 @@ export const InstallAppTutorial: React.FC<Props> = ({ plataformaInicial, onClose
       <div role="dialog" aria-modal="true" aria-label="Como adicionar o ícone à tela inicial"
         className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-sm max-h-full overflow-y-auto">
         <div className="p-4 flex flex-col items-center text-center">
-          <h3 className="font-heading font-bold text-sm text-navy mb-2">Ícone na tela inicial</h3>
+          <h3 className="text-h3 text-navy mb-2">Ícone na tela inicial</h3>
 
           <div className="flex items-center gap-1 mb-3 p-0.5 rounded-full bg-thead">
             {PLATAFORMAS.map(p => (
@@ -273,7 +274,8 @@ export const InstallAppTutorial: React.FC<Props> = ({ plataformaInicial, onClose
                 key={p.id}
                 type="button"
                 onClick={() => { setPlataforma(p.id); setIndice(0); }}
-                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-colors ${
+                aria-pressed={plataforma === p.id}
+                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${
                   plataforma === p.id ? 'bg-navy text-white' : 'text-ink-3'
                 }`}
               >
@@ -298,20 +300,11 @@ export const InstallAppTutorial: React.FC<Props> = ({ plataformaInicial, onClose
 
           <div className="flex items-center gap-2 w-full">
             {indice === 0 ? (
-              <button type="button" onClick={onClose}
-                className="flex-1 px-4 py-2.5 rounded-lg border border-line text-sm font-bold text-ink hover:bg-paper transition-colors">
-                Depois
-              </button>
+              <Button variant="ghost" className="flex-1" onClick={onClose}>Depois</Button>
             ) : (
-              <button type="button" onClick={() => setIndice(indice - 1)}
-                className="flex-1 px-4 py-2.5 rounded-xl border border-line text-sm font-bold text-ink hover:bg-paper transition-colors">
-                Voltar
-              </button>
+              <Button variant="ghost" className="flex-1" onClick={() => setIndice(indice - 1)}>Voltar</Button>
             )}
-            <button type="button" onClick={() => (ultimo ? onComplete() : setIndice(indice + 1))}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-navy hover:bg-navy-hover text-white text-sm font-bold transition-colors">
-              {ultimo ? 'Concluir' : 'Próximo'}
-            </button>
+            <Button className="flex-1" onClick={() => (ultimo ? onComplete() : setIndice(indice + 1))}>{ultimo ? 'Concluir' : 'Próximo'}</Button>
           </div>
         </div>
       </div>

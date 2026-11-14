@@ -36,7 +36,7 @@ export const dataHoraDoAgendamento = (dataEntrevista: string): { data: string; h
 };
 
 /**
- * Pendente no menu "Enviar Email" (badge): IS elegível, agendada ou reagendada para hoje ou depois e sem o e-mail
+ * Pendente no menu "Enviar e-mail" (badge): IS elegível, agendada ou reagendada para hoje ou depois e sem o e-mail
  * desta data/hora (`hoje` = AAAA-MM-DD). Entrevistas já passadas não contam.
  */
 export const agendamentoPendente = (is: ISParaAgendamento, hoje: string): boolean =>

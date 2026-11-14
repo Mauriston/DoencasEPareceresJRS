@@ -28,8 +28,8 @@ const Tempo: React.FC<{ seg?: number; onOuvir?: (seg: number) => void }> = ({ se
   if (typeof seg !== 'number') return null;
   const t = formatarTempo(seg);
   return onOuvir
-    ? <button type="button" onClick={() => onOuvir(seg)} className="font-mono text-xs font-bold text-navy underline min-h-[24px]" aria-label={`Ouvir a partir de ${t}`}>{t}</button>
-    : <span className="font-mono text-xs text-ink-3">{t}</span>;
+    ? <button type="button" onClick={() => onOuvir(seg)} className="tabular-nums text-xs font-bold text-navy underline min-h-[24px]" aria-label={`Ouvir a partir de ${t}`}>{t}</button>
+    : <span className="tabular-nums text-xs text-ink-3">{t}</span>;
 };
 
 export const ResultadoAnamnese: React.FC<Props> = ({ anamnese, finalidade, mapaFalantes, onOuvir }) => {

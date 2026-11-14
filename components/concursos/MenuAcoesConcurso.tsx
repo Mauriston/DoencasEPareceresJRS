@@ -1,7 +1,7 @@
 // Ficheiro: components/concursos/MenuAcoesConcurso.tsx
 // Menu ⋮ de cada concurso (cards e tabela da lista), montado conforme as permissões e o status.
-import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React from 'react';
+import { MenuAcoes, type ItemMenu } from '../ui/MenuAcoes';
 import { type ConcursoRecord } from '../../services/firestoreConcursos';
 
 export interface ItemMenuAcao {
@@ -26,7 +26,7 @@ export interface MenuAcoesConcursoProps {
   minutaHabilitada: boolean;
   temPeriodoConfigurado: boolean;
   temMensagensRegistradas: boolean;
-  /** Perfil Admin: pode editar o período das IS mesmo com o concurso "Em Andamento" e já com lançamentos. */
+  /** Perfil Admin: pode editar o período das IS mesmo com o concurso "Em andamento" e já com lançamentos. */
   ehAdmin?: boolean;
   onAbrir: () => void;
   onVoltarParaEmBreve: () => void;
@@ -46,121 +46,73 @@ export const construirItensMenuConcurso = ({
 }: MenuAcoesConcursoProps): ItemMenuAcao[] => {
   const itens: ItemMenuAcao[] = [];
   if (podeAbrirEncerrar && status === 'encerrado') {
-    itens.push({ key: 'abrir', label: 'Reabrir Concurso', icon: 'play_circle', onClick: onAbrir });
+    itens.push({ key: 'abrir', label: 'Reabrir concurso', icon: 'play_circle', onClick: onAbrir });
   }
-  // Para "Em Breve" o card já tem um botão próprio ("Abrir Concurso") logo
+  // Para "Em breve" o card já tem um botão próprio ("Abrir concurso") logo
   // abaixo — o menu de 3 pontos não repete essa ação.
   if (podeAbrirEncerrar && status === 'em_andamento') {
     // Itens sem utilidade no momento (sem lançamento para voltar, ou nem
     // todos finalizados para encerrar) não aparecem — diferente da Minuta
     // Resultados, que continua sendo mostrada desabilitada com o motivo.
     if (podeVoltarParaEmBreve) {
-      itens.push({ key: 'em-breve', label: 'Em Breve', icon: 'undo', onClick: onVoltarParaEmBreve });
+      itens.push({ key: 'em-breve', label: 'Voltar para em breve', icon: 'undo', onClick: onVoltarParaEmBreve });
     }
     if (podeEncerrar) {
-      itens.push({ key: 'encerrar', label: 'Encerrar Concurso', icon: 'stop_circle', onClick: onEncerrar });
+      itens.push({ key: 'encerrar', label: 'Encerrar concurso', icon: 'stop_circle', onClick: onEncerrar });
     }
   }
-  // Minuta Resultados só aparece com o concurso "Em Andamento" — some tanto
+  // Minuta de resultados só aparece com o concurso "Em andamento" — some tanto
   // da tabela quanto do menu de 3 pontos do card quando "Encerrado" (e
-  // nunca apareceu quando "Em Breve").
+  // nunca apareceu quando "Em breve").
   if (podeGerarMinutaResultados && status === 'em_andamento') {
     itens.push({
-      key: 'minuta', label: 'Minuta Resultados', icon: 'outgoing_mail', onClick: onMinutaResultados,
+      key: 'minuta', label: 'Minuta de resultados', icon: 'outgoing_mail', onClick: onMinutaResultados,
       disabled: !minutaHabilitada, title: minutaHabilitada ? undefined : 'Só é possível gerar a minuta quando todos os candidatos estiverem finalizados.',
     });
   }
   // "Editar" (período já configurado) só aparece enquanto o concurso não
   // tiver lançamentos de dados — mudar o período depois disso invalidaria
   // os dados já lançados. "Definir" (primeira vez) não tem essa restrição.
-  // Exceção exclusiva do Admin: com o concurso "Em Andamento" o período das
+  // Exceção exclusiva do Admin: com o concurso "Em andamento" o período das
   // IS continua editável mesmo após lançamentos (as datas já agendadas dos
   // candidatos são preservadas no calendário — ver definirPeriodoAgendamento).
   const adminEditaEmAndamento = ehAdmin && status === 'em_andamento';
   if ((podeAbrirEncerrar || adminEditaEmAndamento) && status !== 'encerrado' && (!temPeriodoConfigurado || podeVoltarParaEmBreve || adminEditaEmAndamento)) {
     itens.push({
       key: 'periodo-agendamento',
-      label: temPeriodoConfigurado ? 'Editar Período das IS' : 'Definir Período de Agendamento',
+      label: temPeriodoConfigurado ? 'Editar período das IS' : 'Definir período de agendamento',
       icon: temPeriodoConfigurado ? 'edit_calendar' : 'calendar_add_on', onClick: onDefinirPeriodoAgendamento,
     });
   }
   if (podeAdicionarCandidato && (status === 'em_andamento' || status === 'em_breve')) {
-    itens.push({ key: 'adicionar-candidato', label: 'Adicionar Candidato', icon: 'person_add', onClick: onAdicionarCandidato });
+    itens.push({ key: 'adicionar-candidato', label: 'Adicionar candidato', icon: 'person_add', onClick: onAdicionarCandidato });
   }
   // Exames do candidato: só enquanto o concurso recebe candidatos (não faz
   // sentido anexar exames a um concurso encerrado).
   if (podeEnviarExames && status === 'em_andamento') {
-    itens.push({ key: 'enviar-exames', label: 'Enviar Exames do Candidato', icon: 'lab_profile', onClick: onEnviarExames });
+    itens.push({ key: 'enviar-exames', label: 'Enviar exames', icon: 'lab_profile', onClick: onEnviarExames });
   }
   if (podeRegistrarMensagemArquivo && status !== 'encerrado') {
-    itens.push({ key: 'registrar-msg', label: 'Registrar Mensagem', icon: 'upload', onClick: onRegistrarMensagem });
+    itens.push({ key: 'registrar-msg', label: 'Registrar mensagem', icon: 'upload', onClick: onRegistrarMensagem });
   }
   // "Listar Mensagens" não aparece desabilitado: só entra no menu quando já
   // existe pelo menos uma mensagem arquivada para o concurso.
   if (podeListarMensagens && temMensagensRegistradas) {
-    itens.push({ key: 'listar-msg', label: 'Listar Mensagens', icon: 'stacked_email', onClick: onListarMensagens });
+    itens.push({ key: 'listar-msg', label: 'Listar mensagens', icon: 'stacked_email', onClick: onListarMensagens });
   }
   return itens;
 };
 
-export const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps> = (props) => {
-  const [aberto, setAberto] = useState(false);
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
+/** Itens no formato do MenuAcoes do DS (desabilitado continua visível e anunciado, com a dica do motivo). */
+export const itensMenuAcoesConcurso = (props: MenuAcoesConcursoProps): ItemMenu[] =>
+  construirItensMenuConcurso(props).map(item => ({
+    rotulo: item.label, icone: item.icon, onClick: item.onClick, desabilitado: item.disabled, dica: item.disabled ? item.title : undefined,
+  }));
 
-  useEffect(() => {
-    if (!aberto) return;
-    const fechar = () => setAberto(false);
-    window.addEventListener('scroll', fechar, true);
-    window.addEventListener('resize', fechar);
-    return () => {
-      window.removeEventListener('scroll', fechar, true);
-      window.removeEventListener('resize', fechar);
-    };
-  }, [aberto]);
-
-  const itens = construirItensMenuConcurso(props);
-
+/** Menu ⋮ do concurso (MenuAcoes do DS: portal, teclado, Esc). */
+export const MenuAcoesConcurso: React.FC<MenuAcoesConcursoProps & { nome?: string }> = (props) => {
+  const { nome } = props;
+  const itens = itensMenuAcoesConcurso(props);
   if (itens.length === 0) return null;
-
-  const abrirMenu = () => {
-    const rect = btnRef.current?.getBoundingClientRect();
-    if (rect) setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
-    setAberto(true);
-  };
-
-  return (
-    <div className="relative shrink-0" onClick={e => e.stopPropagation()}>
-      <button ref={btnRef} type="button" aria-label="Ações do concurso" aria-haspopup="menu" aria-expanded={aberto} onClick={() => (aberto ? setAberto(false) : abrirMenu())} className="w-11 h-11 -m-2 flex items-center justify-center rounded-lg text-ink-3 hover:text-navy hover:bg-thead transition-colors">
-        <span className="material-symbols-outlined text-[22px]" aria-hidden="true">more_vert</span>
-      </button>
-      {aberto && pos && createPortal(
-        <>
-          {/* Renderizado via portal (fora do card, que tem overflow-hidden para os
-              cantos arredondados) e posicionado em "fixed" a partir do botão —
-              senão o menu era cortado pela borda do próprio card. */}
-          <div className="fixed inset-0 z-dropdown" onClick={() => setAberto(false)} />
-          <div
-            role="menu" className="fixed w-64 bg-white rounded-xl shadow-xl border border-line p-1.5 z-dropdown animate-fade-in space-y-0.5"
-            style={{ top: pos.top, right: pos.right }}
-          >
-            {itens.map(item => (
-              <button
-                key={item.key}
-                type="button"
-                disabled={item.disabled}
-                title={item.title}
-                onClick={() => { setAberto(false); item.onClick(); }}
-                role="menuitem" className="w-full text-left px-3 min-h-[44px] rounded-lg text-sm font-semibold text-navy hover:bg-thead flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-              >
-                <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </>,
-        document.body
-      )}
-    </div>
-  );
+  return <MenuAcoes rotulo={nome ? `Ações do concurso ${nome}` : 'Ações do concurso'} itens={itens} size="sm" />;
 };

@@ -1,7 +1,7 @@
 // Ficheiro: components/inspecoes/entrevista/SecaoEntrevista.tsx
-// Cards "Entrevista Gravada" da Conclusão da IS (só Admin e user_medicos — quem monta decide com
+// Cards "Entrevista gravada" da Conclusão da IS (só Admin e user_medicos — quem monta decide com
 // `podeUsarEntrevista`): um card compacto por entrevista (data, sem hora), que abre o resultado; some
-// quando não há entrevista. A gravação é pedida pelo botão "Gravar Entrevista" do rodapé do detalhe
+// quando não há entrevista. A gravação é pedida pelo botão "Gravar entrevista" do rodapé do detalhe
 // (estado `gravacao` no pai): no celular abre o fluxo de gravação; no computador, o envio por
 // notificação para o celular. Pela rota /inspecoes/:isId/entrevista (o push leva a ela), o fluxo abre
 // sozinho uma vez. Enquanto montada, avança o processamento da entrevista em andamento
@@ -35,7 +35,7 @@ const ROTA_GRAVAR = '/inspecoes/:isId/entrevista';
 /** Card compacto (não ocupa a largura toda): título e, abaixo, a data em menor destaque. */
 export const cardConclusaoClass = 'inline-flex items-center gap-2 rounded-lg border border-line bg-white hover:bg-thead px-3 py-2 min-h-[44px] text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold';
 
-/** Pedido do rodapé "Gravar Entrevista": grava no aparelho que tem microfone; senão, envia para o celular. */
+/** Pedido do rodapé "Gravar entrevista": grava no aparelho que tem microfone; senão, envia para o celular. */
 export const pedidoDeGravacao = (): PedidoGravacao => (podeGravarNoDispositivo() ? 'fluxo' : 'celular');
 
 export const SecaoEntrevista: React.FC<Props> = ({ is, gravacao, onGravacao }) => {
@@ -89,7 +89,7 @@ export const SecaoEntrevista: React.FC<Props> = ({ is, gravacao, onGravacao }) =
         <span key={en.id} className={`${cardConclusaoClass} hover:bg-white`}>
           <span className="material-symbols-outlined text-[20px] text-ink-4 shrink-0" aria-hidden="true">cloud_off</span>
           <span className="min-w-0">
-            <span className="block text-sm font-bold text-ink">Entrevista Gravada</span>
+            <span className="block text-sm font-bold text-ink">Entrevista gravada</span>
             <span className="block text-xs text-ink-3">{dataCurta(en)} · não enviada</span>
           </span>
           {pendentesLocais.has(en.id) && podeGravar && (
@@ -100,7 +100,7 @@ export const SecaoEntrevista: React.FC<Props> = ({ is, gravacao, onGravacao }) =
         <button key={en.id} type="button" onClick={() => setAbertaId(en.id)} className={cardConclusaoClass}>
           <span className="material-symbols-outlined text-[20px] text-navy shrink-0" aria-hidden="true">record_voice_over</span>
           <span className="min-w-0">
-            <span className="block text-sm font-bold text-navy">Entrevista Gravada</span>
+            <span className="block text-sm font-bold text-navy">Entrevista gravada</span>
             <span className="block text-xs text-ink-3">{dataCurta(en)}{en.situacao !== 'pronta' ? ` · ${rotuloSituacao(en.situacao).toLowerCase()}` : ''}</span>
           </span>
         </button>

@@ -6,6 +6,8 @@
 // sem filtro de sexo ou idade. As escolhas viram o texto das Observações.
 import React, { useMemo, useState } from 'react';
 import examesData from '../data/anexoOExamesMinimos.json';
+import { Button } from './ui/Button';
+import { controlClass } from './ui/Field';
 
 interface GrupoFinalidade {
   Finalidades_Inspecao: {
@@ -68,7 +70,7 @@ export const IdmPicker: React.FC<IdmPickerProps> = ({ candidatoNome, observacoes
         type="button"
         aria-expanded={aberto}
         onClick={() => setAberto(a => !a)}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-left rounded-xl border border-ink-5 bg-white hover:border-navy focus:outline-none focus:border-navy transition-colors"
+        className={`${controlClass} flex items-center justify-between gap-3 font-semibold text-left hover:border-navy`}
       >
         <span className={`min-w-0 truncate ${ordenados.length === 0 ? 'text-ink-3' : 'text-navy'}`}>{resumo}</span>
         <span className={`material-symbols-outlined text-[20px] text-ink-3 shrink-0 transition-transform ${aberto ? 'rotate-180' : ''}`}>expand_more</span>
@@ -78,7 +80,7 @@ export const IdmPicker: React.FC<IdmPickerProps> = ({ candidatoNome, observacoes
         <div className="max-h-[40vh] overflow-y-auto rounded-xl border border-line bg-white">
           {GRUPOS_EXAMES.map(g => (
             <div key={g.grupo}>
-              <p className="px-4 pt-3 pb-1 text-xs font-bold text-ink-3 uppercase tracking-wider sticky top-0 bg-white">{g.grupo}</p>
+              <p className="eyebrow px-4 pt-3 pb-1 sticky top-0 bg-white">{g.grupo}</p>
               {g.exames.map(exame => {
                 const marcado = selecionados.includes(exame);
                 return (
@@ -99,14 +101,7 @@ export const IdmPicker: React.FC<IdmPickerProps> = ({ candidatoNome, observacoes
       )}
 
       <div className="flex items-center justify-end">
-        <button
-          type="button"
-          disabled={ordenados.length === 0}
-          onClick={() => onConfirm(ordenados.join(SEPARADOR))}
-          className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-navy"
-        >
-          Confirmar
-        </button>
+        <Button icon="check" disabled={ordenados.length === 0} onClick={() => onConfirm(ordenados.join(SEPARADOR))}>Confirmar</Button>
       </div>
     </div>
   );
@@ -130,11 +125,11 @@ export const MotivoIdmModal: React.FC<MotivoIdmModalProps> = ({ obrigatorio, onC
       <div className="p-4 bg-navy text-white flex items-center justify-between gap-2 shrink-0">
         <div className="flex items-center space-x-2">
           <span className="material-symbols-outlined text-[20px] text-gold">assignment_late</span>
-          <h3 className="font-heading font-bold text-sm">Motivo da IDM</h3>
+          <h3 className="text-h3">Motivo da IDM</h3>
         </div>
         {!obrigatorio && (
-          <button type="button" onClick={onClose} aria-label="Fechar" className="p-1 rounded-lg hover:bg-white/10 transition-colors">
-            <span className="material-symbols-outlined text-[20px]">close</span>
+          <button type="button" onClick={onClose} aria-label="Fechar" title="Fechar" className="w-10 h-10 inline-flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
+            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
           </button>
         )}
       </div>

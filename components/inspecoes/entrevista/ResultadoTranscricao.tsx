@@ -34,10 +34,10 @@ export const ResultadoTranscricao: React.FC<Props> = ({ falas, mapaFalantes, onO
               <div className="flex items-center gap-2 text-xs">
                 <span className="font-bold text-navy">{f.nome}</span>
                 {onOuvir ? (
-                  <button type="button" onClick={() => onOuvir(f.inicioSeg)} className="font-mono font-bold text-navy underline min-h-[24px]" aria-label={`Ouvir a partir de ${formatarTempo(f.inicioSeg)}`}>
+                  <button type="button" onClick={() => onOuvir(f.inicioSeg)} className="tabular-nums font-bold text-navy underline min-h-[24px]" aria-label={`Ouvir a partir de ${formatarTempo(f.inicioSeg)}`}>
                     {formatarTempo(f.inicioSeg)}
                   </button>
-                ) : <span className="font-mono text-ink-3">{formatarTempo(f.inicioSeg)}</span>}
+                ) : <span className="tabular-nums text-ink-3">{formatarTempo(f.inicioSeg)}</span>}
               </div>
               <p className="text-sm text-ink mt-0.5 whitespace-pre-line">{f.texto}</p>
             </li>

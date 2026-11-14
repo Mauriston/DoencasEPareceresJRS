@@ -16,14 +16,14 @@
   }
   body {
     font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
-    background-color: #f2f4f8;
-    color: #3d4460;
+    background-color: rgb(var(--c-canvas));
+    color: rgb(var(--c-ink));
     font-size: 0.875rem;
     line-height: 1.5;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Montserrat', system-ui, sans-serif;
-    color: #050f41;
+    color: var(--text);
   }
   /* Foco visível e consistente em toda a interface (ouro = foco). */
   :focus-visible {
@@ -187,6 +187,182 @@
   background: var(--paper);
 }
 
+.md-content th[scope="row"] {
+  font-weight: 600;
+}
+
+.md-content td,
+.md-content th {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Texto normativo estruturado (.md-norma, opt-in do MarkdownContent; auditoria v3 §10) ── */
+
+/* Âncoras (seção, título, item) não ficam sob a topbar/barra fixa. */
+.md-norma [id],
+.portaria-texto [id] {
+  scroll-margin-top: 72px;
+}
+
+.md-norma h2 {
+  font-size: 1.25rem;
+}
+
+.md-norma h3 {
+  font-size: 1.125rem;
+  margin-top: 1.75rem;
+}
+
+.md-norma h4 {
+  font-size: 1rem;
+  margin-top: 1.25rem;
+}
+
+.md-norma h5,
+.md-norma h6 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+/* Parágrafo numerado: número em coluna própria (recuo deslocado). */
+.md-norma .md-item {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  margin: 0 0 0.85rem;
+  border-radius: 0 6px 6px 0;
+}
+
+.md-norma .md-item-num {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ink-3);
+  padding-top: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.md-norma .md-item-corpo > :last-child {
+  margin-bottom: 0;
+}
+
+/* Item de destino ao chegar por link (?item=4.2). */
+.md-norma .md-alvo {
+  background: rgb(250 185 50 / 0.14);
+  box-shadow: -12px 0 0 rgb(250 185 50 / 0.14), inset 3px 0 0 var(--gold);
+}
+
+/* Alíneas: sem bolinha, a letra numa coluna. */
+.md-norma ol.md-alineas {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.4rem 0 0.85rem;
+}
+
+.md-norma ol.md-alineas > li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  margin-bottom: 0.3rem;
+}
+
+.md-norma ol.md-alineas ol.md-alineas {
+  margin: 0.3rem 0 0.3rem;
+}
+
+.md-norma .md-alinea-marcador {
+  font-weight: 700;
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.md-norma .md-alinea-corpo > p:last-child {
+  margin-bottom: 0;
+}
+
+/* Quadro "Conceito" (item x.1): o mesmo nas 17 doenças. */
+.md-norma .md-conceito {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--navy);
+  background: var(--paper);
+  border-radius: 0 10px 10px 0;
+}
+
+.md-norma .md-conceito-rotulo {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-1);
+}
+
+.md-norma .md-conceito > :last-child {
+  margin-bottom: 0;
+}
+
+/* Tabela: contêiner com borda e rolagem lateral no celular. */
+.md-norma .md-tabela {
+  margin: 0 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.md-norma .md-tabela table {
+  margin: 0;
+  min-width: 32rem;
+}
+
+.md-norma .md-tabela th,
+.md-norma .md-tabela td {
+  border: none;
+  border-top: 1px solid var(--line);
+  padding: 0.5rem 0.75rem;
+}
+
+.md-norma .md-tabela thead th {
+  border-top: none;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+.md-norma .md-simnao {
+  text-align: center;
+  font-weight: 700;
+  color: var(--ink-1);
+}
+
+.md-norma .md-nao {
+  color: var(--ink-3);
+}
+
+/* Busca no texto: ocorrências e a atual. */
+.md-content mark.md-busca {
+  background: rgb(250 185 50 / 0.35);
+  color: inherit;
+  border-radius: 2px;
+}
+
+.md-content mark.md-busca-atual {
+  background: var(--gold);
+  color: #050f41;
+  box-shadow: 0 0 0 2px var(--gold);
+}
+
+/* Portaria: espaço entre as seções (doenças e Cap. IV). */
+.portaria-doenca {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 767px) {
+  .md-norma .md-item {
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+  }
+}
+
 /* Barra de rolagem horizontal sempre visível e estilizada — usada em
    modais/tabelas mais largos que a tela, para o usuário perceber que dá
    para rolar para os lados (muitos navegadores mobile escondem a barra
@@ -231,7 +407,7 @@ th[role="button"],
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #1c4587;
+  color: var(--blue);
 }
 
 /* Alvo de toque mínimo de 44px (WCAG 2.5.5 / DS): só em telas de toque, para
@@ -252,6 +428,42 @@ th[role="button"],
   }
 }
 
+
+/* ── Tema escuro (auditoria v3, 4f) ──────────────────────────────────────────────
+   As cores trocam sozinhas pelas variáveis de styles/tokens.css; aqui ficam só os ajustes
+   que a troca de variável não resolve. PDFs gerados, e-mails e minutas não mudam. */
+/* Imagens, infográficos, miniaturas de PDF e o brasão mantêm a placa branca; fotos um pouco
+   atenuadas para não ofuscar. data-sem-placa dispensa a placa (ex.: foto de perfil). */
+:root[data-theme="dark"] img:not([data-sem-placa]),
+:root[data-theme="dark"] iframe,
+:root[data-theme="dark"] embed,
+:root[data-theme="dark"] object,
+:root[data-theme="dark"] .placa-branca {
+  background-color: #fff;
+}
+:root[data-theme="dark"] img { filter: brightness(0.9); }
+/* Sobre as superfícies "da casa" (splash de login, sidebar, faixas navy) a imagem já está num fundo escuro de propósito. */
+:root[data-theme="dark"] :is([data-marca], main.bg-navy, aside.bg-navy) img { background-color: transparent; filter: none; }
+/* Véus de fundo em navy (sidebar mobile) ficam pretos, não claros. */
+:root[data-theme="dark"] :is(.bg-navy\/40, .bg-navy\/50, .bg-navy\/60, .bg-navy\/70, .bg-navy\/80, .bg-navy\/90) {
+  background-color: rgb(0 0 0 / 0.6);
+}
+/* Texto branco sobre preto/mídia (visor de recorte, botões sobre foto) continua branco. */
+:root[data-theme="dark"] :is(.bg-black, .bg-black\/55, .bg-black\/75, .hover\:bg-black\/75:hover) {
+  --c-white: 255 255 255;
+}
+/* Cor cheia clara (ouro, ou o primário invertido) mantém texto navy escuro por cima. */
+:root[data-theme="dark"] :is(.bg-gold, .bg-gold-300, .bg-gold-400) {
+  --c-navy: 5 15 65;
+  --c-ink: 5 15 65;
+}
+
+/* Primário invertido: fundo claro (#DCE4F4) com texto navy (14,3:1) — on-action. */
+:root[data-theme="dark"] :is(button, a, [role="button"], [role="radio"], [role="tab"], [role="menuitem"]):is(.bg-navy, .hover\:bg-navy:hover) {
+  --c-white: 5 15 65;
+}
+
+/* Números alinhados (G5): Montserrat com algarismos tabulares — use a utilitária tabular-nums. */
 
 /* Splash de login (Splash Login JRS): brasão flutuante e dica pulsante. */
 @keyframes icone-flutuar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }

@@ -85,7 +85,7 @@ export const SeletorHorario: React.FC<Props> = ({ peritoUid, data, onData, hora,
                       aria-pressed={ativo}
                       onClick={() => onHora(s.hhmm)}
                       title={s.estado === 'ocupado' ? 'Ocupado por outra IS' : s.estado === 'bloqueado' ? 'Horário bloqueado' : s.estado === 'nao_cabe' ? `Não cabe no turno (${duracao} min)` : undefined}
-                      className={`min-h-[44px] rounded-lg border text-sm font-bold font-mono transition-colors ${
+                      className={`min-h-[44px] rounded-lg border text-sm font-bold tabular-nums transition-colors ${
                         ativo ? 'bg-navy text-white border-navy'
                           : s.estado === 'ocupado' ? 'bg-thead text-ink-4 border-line line-through cursor-not-allowed'
                           : s.estado === 'bloqueado' ? 'bg-wine/10 text-wine border-wine/30 cursor-not-allowed'
