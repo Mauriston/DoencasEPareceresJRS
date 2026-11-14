@@ -150,14 +150,14 @@ export const TabelaCandidatos: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s }) 
 
                                   {/* Exames entregues pelo candidato: só aparece depois do envio, com o badge da quantidade transcrita. */}
                                   {c.examesQtd > 0 && (
-                                    <button type="button" onClick={() => handleVerExames(c)} className="relative p-2 ml-1 text-blue-700 bg-blue-50 hover:bg-blue-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title={`Ver os ${c.examesQtd} exame(s) transcrito(s)`}>
+                                    <button type="button" onClick={() => handleVerExames(c)} className="relative p-2 ml-1 text-blue-700 bg-blue-50 hover:bg-blue-700 hover:text-white rounded-xl transition-colors cursor-pointer inline-flex" title={c.examesQtd === 1 ? 'Ver o exame transcrito' : `Ver os ${c.examesQtd} exames transcritos`}>
                                       <span className="material-symbols-outlined text-[22px]">lab_profile</span>
                                       <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-blue-700 text-white text-xs font-bold leading-none flex items-center justify-center ring-2 ring-white">{c.examesQtd}</span>
                                     </button>
                                   )}
 
                                   {mostrarMenuAcoes(c) && (
-                                    <button type="button" onClick={e => abrirMenuAcoes(e, c.id)} className="relative p-2 ml-1 text-ink bg-thead hover:bg-navy hover:text-white rounded-xl transition-colors cursor-pointer" title={qtdSolicitacoes(c) ? `Mais ações — ${qtdSolicitacoes(c)} documento(s) gerado(s)` : 'Mais ações'} aria-haspopup="menu" aria-expanded={menuAcoes?.id === c.id}>
+                                    <button type="button" onClick={e => abrirMenuAcoes(e, c.id)} className="relative p-2 ml-1 text-ink bg-thead hover:bg-navy hover:text-white rounded-xl transition-colors cursor-pointer" title={qtdSolicitacoes(c) ? `Mais ações — ${qtdSolicitacoes(c) === 1 ? '1 documento gerado' : `${qtdSolicitacoes(c)} documentos gerados`}` : 'Mais ações'} aria-haspopup="menu" aria-expanded={menuAcoes?.id === c.id}>
                                       <span className={`material-symbols-outlined text-[22px] ${gerandoSolicitacaoIds.has(c.id) ? 'animate-spin' : ''}`}>{gerandoSolicitacaoIds.has(c.id) ? 'progress_activity' : 'more_vert'}</span>
                                       {qtdSolicitacoes(c) > 0 && (
                                         <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-green-700 text-white text-xs font-bold leading-none flex items-center justify-center ring-2 ring-white">{qtdSolicitacoes(c)}</span>

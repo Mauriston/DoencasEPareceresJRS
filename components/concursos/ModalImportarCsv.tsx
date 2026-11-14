@@ -16,8 +16,8 @@ export interface ModalImportarCsvProps {
 
 export const STATUS_IMPORTACAO_OPTIONS: { value: ConcursoRecord['status']; label: string }[] = [
   { value: 'encerrado', label: 'Encerrado' },
-  { value: 'em_andamento', label: 'Em Andamento' },
-  { value: 'em_breve', label: 'Em Breve' },
+  { value: 'em_andamento', label: 'Em andamento' },
+  { value: 'em_breve', label: 'Em breve' },
 ];
 
 export const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) => {
@@ -88,7 +88,7 @@ export const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) =
           {concursoIdCriado ? (
             <>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                <p className="text-sm font-bold text-green-800">Concurso "{nomeConcurso}" importado com sucesso ({candidatos.length} candidato(s)).</p>
+                <p className="text-sm font-bold text-green-800">Concurso "{nomeConcurso}" importado com sucesso ({candidatos.length} candidato{candidatos.length === 1 ? '' : 's'}).</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
                 <button type="button" onClick={() => onClose(concursoIdCriado)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors ">Ver Concurso</button>
@@ -145,7 +145,7 @@ export const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) =
                   <input type="file" accept=".csv,text/csv" className="hidden" onChange={e => handleSelecionarArquivo(e.target.files?.[0] || null)} />
                 </label>
                 {candidatos.length > 0 && (
-                  <p className="text-sm text-green-700 font-bold mt-1.5">{candidatos.length} candidato(s) identificado(s).</p>
+                  <p className="text-sm text-green-700 font-bold mt-1.5">{candidatos.length === 1 ? '1 candidato identificado.' : `${candidatos.length} candidatos identificados.`}</p>
                 )}
               </div>
 

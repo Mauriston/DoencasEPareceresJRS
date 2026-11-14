@@ -376,7 +376,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
               </div>
 
               <div className={`rounded-xl p-3 text-sm font-bold ${agendamentoViavel ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-gold-50 border border-gold-200 text-gold-800'}`}>
-                {quantidadeCoberta} / {totalPendentes} candidatos cobertos com {datasSelecionadas.size} data(s) × {quantidadePorDia || 0} por dia
+                {quantidadeCoberta} / {totalPendentes} candidatos cobertos com {datasSelecionadas.size} {datasSelecionadas.size === 1 ? "data" : "datas"} × {quantidadePorDia || 0} por dia
               </div>
 
               <div className="pt-2 flex items-center justify-end space-x-2">
@@ -410,7 +410,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                 </>
               )}
               {!isAdmin && (
-                <p className="text-sm text-ink-3">O concurso ficará com status "Em Breve" até um Admin abri-lo.</p>
+                <p className="text-sm text-ink-3">O concurso ficará com situação "Em breve" até um Admin abri-lo.</p>
               )}
               <div className="pt-2 flex items-center justify-end">
                 <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors ">Concluir</button>

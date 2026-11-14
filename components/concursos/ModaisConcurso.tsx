@@ -550,7 +550,7 @@ export const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = (
                   >
                     <option value="">Agendar depois</option>
                     {datas.map(d => (
-                      <option key={d.data} value={d.data}>{d.dataFormatada} ({d.diaSemana}) — {d.quantidadeAgendados} agendado(s)</option>
+                      <option key={d.data} value={d.data}>{d.dataFormatada} ({d.diaSemana}) — {d.quantidadeAgendados} agendado{d.quantidadeAgendados === 1 ? '' : 's'}</option>
                     ))}
                   </select>
                 )}
