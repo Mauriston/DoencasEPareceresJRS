@@ -8,7 +8,7 @@
 // (⋮ · secundária · primária por último), alinhadas ao topo. A primária pode
 // vir em `fab`: no celular vira FAB (canto inferior direito).
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { FabAcoes } from './Fab';
 import { Button, ButtonLink } from './Button';
 import { useTituloPagina } from '../shell/TituloPagina';
 
@@ -55,24 +55,9 @@ export interface PageHeaderProps {
   className?: string;
 }
 
-const FabPagina: React.FC<{ fab: PageHeaderFab }> = ({ fab }) => {
-  const cls =
-    'md:hidden fixed right-4 bottom-[var(--fab-bottom)] z-10 inline-flex items-center gap-2 h-14 pl-4 pr-5 rounded-xl ' +
-    'bg-navy text-white text-sm font-bold shadow-lg border border-navy hover:bg-navy-hover active:bg-navy-pressed ' +
-    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:opacity-50';
-  const conteudo = (
-    <>
-      <span className={`material-symbols-outlined text-[24px] ${fab.loading ? 'animate-spin' : ''}`} aria-hidden="true">{fab.loading ? 'progress_activity' : fab.icon}</span>
-      {fab.label}
-    </>
-  );
-  return fab.to && !fab.disabled
-    ? <ButtonLinkFab to={fab.to} className={cls}>{conteudo}</ButtonLinkFab>
-    : <button type="button" data-page-fab onClick={fab.onClick} disabled={fab.disabled || fab.loading} aria-busy={fab.loading || undefined} className={cls}>{conteudo}</button>;
-};
-
-const ButtonLinkFab: React.FC<{ to: string; className: string; children: React.ReactNode }> = ({ to, className, children }) => (
-  <Link to={to} data-page-fab className={className}>{children}</Link>
+/** A primária no celular: o FAB padrão do app (components/ui/Fab.tsx — transição, pilha, --fab-bottom). */
+const FabPagina: React.FC<{ fab: PageHeaderFab }> = ({ fab }) => (
+  <FabAcoes acoes={[{ id: 'principal', rotulo: fab.label, icone: fab.icon, onClick: fab.onClick, to: fab.to, disabled: fab.disabled, loading: fab.loading }]} />
 );
 
 export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, actions, fab, className = '' }) => {

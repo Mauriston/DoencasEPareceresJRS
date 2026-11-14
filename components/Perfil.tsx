@@ -106,9 +106,10 @@ const AparenciaCard: React.FC<{ uid?: string }> = ({ uid }) => {
     if (uid) updateUsuarioProfile(uid, { aparencia: novo }).catch(() => { /* fica só neste aparelho */ });
   };
   return (
-    <Card as="section" title="Aparência" className="space-y-4">
+    <Card as="section" title="Aparência">
+      <div className="space-y-4">
       <div>
-        <p id="aparencia-modo" className="text-xs font-semibold text-ink-3 mb-1">Tema</p>
+        <p className="text-xs font-semibold text-ink-3 mb-1">Tema</p>
         <Segmented<ModoTema>
           ariaLabel="Tema"
           value={tema.modo}
@@ -134,6 +135,7 @@ const AparenciaCard: React.FC<{ uid?: string }> = ({ uid }) => {
           ]}
         />
         <p className="mt-1 text-xs text-ink-3">{VARIANTES_DESCRICAO[tema.variante]}</p>
+      </div>
       </div>
     </Card>
   );

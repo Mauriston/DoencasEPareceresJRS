@@ -41,6 +41,7 @@ import {
   consumirNotifDaUrl, ouvirCliquesDoPush, type NotificacaoRecord,
 } from './services/notificacoesPush';
 import { useIsDesktop } from './hooks/useIsDesktop';
+import { useUsoDiario } from './hooks/useUsoDiario';
 
 // Carregamento sob demanda (code splitting por rota): cada página vira um chunk próprio, baixado
 // só quando a rota é aberta. Home e Login ficam no pacote principal (primeira tela).
@@ -69,6 +70,7 @@ const RoteiroJRS = paginaLazy(() => import('./components/RoteiroJRS'), 'RoteiroJ
 const UsuariosManagement = paginaLazy(() => import('./components/UsuariosManagement'), 'UsuariosManagement');
 const Militares = paginaLazy(() => import('./components/Militares'), 'Militares');
 const Inspecoes = paginaLazy(() => import('./components/Inspecoes'), 'Inspecoes');
+const Painel = paginaLazy(() => import('./components/painel/Painel'), 'Painel');
 
 /** Redireciona um alias de config/routes.ts para a rota canônica (replace, sem entrar no histórico). */
 const RedirecionarAlias: React.FC = () => {
@@ -361,6 +363,8 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
     if (!authUser?.uid || currentView === 'home') return;
     registrarAcessoPagina(authUser.uid, currentView, hojeISOAcesso()).catch(() => { /* silencioso */ });
   }, [currentView, authUser?.uid]);
+  // Medição de uso do app (uso_diario, só contagens; seção Uso do app do Painel): todas as páginas, inclusive a Início.
+  useUsoDiario(authUser?.uid, currentView);
 
   // F31: a topbar ganha sombra quando o conteúdo rola por baixo dela
   // (o container que rola é o <main>, não a janela).
@@ -411,6 +415,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       // Férias e afastamentos: usuários da JRS (Admin, médicos JRS/MPI e Secretaria); só o Admin altera.
       case 'ferias': return canAccessPage('ferias', authUser?.perfil) ? <Ferias /> : <AccessDenied pagina="Férias" />;
       case 'sobre': return canAccessPage('sobre', authUser?.perfil) ? <Sobre /> : <AccessDenied pagina="Sobre o app" />;
+      case 'painel': return can('painel') ? <Painel /> : <AccessDenied pagina={paginaLabel('painel')} />;
 
       default: return <Home />;
     }

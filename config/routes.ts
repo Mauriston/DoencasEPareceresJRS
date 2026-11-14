@@ -20,6 +20,8 @@ export interface RouteDef {
 export const ROUTES: RouteDef[] = [
   { view: 'home', path: '/' },
   { view: 'perfil', path: '/perfil' },
+  // Painel: indicadores do período por seção (components/painel/; permissão de página 'painel').
+  { view: 'painel', path: '/painel' },
   // Configurações gerais do app (só Admin; menu do avatar).
   { view: 'configuracoes', path: '/configuracoes' },
   // Férias e afastamentos (Admin, médicos JRS/MPI e Secretaria; menu Administração).
