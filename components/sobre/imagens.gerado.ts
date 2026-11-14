@@ -35,9 +35,19 @@ export const IMAGENS_GERADAS: Record<string, DimensaoImagem> = {
     "w": 860,
     "h": 1469
   },
+  "telas/concursos-celular": {
+    "w": 390,
+    "h": 844,
+    "escuro": true
+  },
   "telas/concursos-desktop": {
     "w": 1280,
     "h": 800,
+    "escuro": true
+  },
+  "telas/inicio-celular": {
+    "w": 390,
+    "h": 844,
     "escuro": true
   },
   "telas/inicio-desktop": {
@@ -45,9 +55,19 @@ export const IMAGENS_GERADAS: Record<string, DimensaoImagem> = {
     "h": 800,
     "escuro": true
   },
+  "telas/inspecoes-celular": {
+    "w": 390,
+    "h": 844,
+    "escuro": true
+  },
   "telas/inspecoes-desktop": {
     "w": 1280,
     "h": 800,
+    "escuro": true
+  },
+  "telas/pericias-celular": {
+    "w": 390,
+    "h": 844,
     "escuro": true
   },
   "telas/pericias-desktop": {
