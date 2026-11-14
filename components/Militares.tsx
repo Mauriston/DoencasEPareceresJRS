@@ -21,7 +21,7 @@ import { ImportarInspecionadosCsv } from './militares/ImportarInspecionadosCsv';
 import { MilitarDetalhe } from './militares/MilitarDetalhe';
 import { InformacoesAdicionais, adicionaisDoMilitar, adicionaisParaPatch, validarAdicionais, type Adicionais } from './militares/InformacoesAdicionais';
 import { enviarFotoMilitar } from '../services/militarFoto';
-import { observarMilitares, atualizarMilitar, renomearMilitar, atualizarMilitaresEmLote, apagarMilitar, tipoDoInspecionado, type MilitarRecord, type TipoInspecionado } from '../services/firestoreMilitares';
+import { observarMilitares, atualizarMilitar, renomearMilitar, atualizarMilitaresEmLote, apagarMilitar, tipoDoInspecionado, OPCOES_SEXO, type MilitarRecord, type SexoInspecionado, type TipoInspecionado } from '../services/firestoreMilitares';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
 import { carregarOms, carregarCorposQuadros, carregarServicosHnre, normalizarBusca, montarInspecionado, separarPosto, aplicarSituacaoAoPgq, ehOficialMedico, omEhHnre, type OrganizacaoMilitar, type CorposQuadros, type PostoInfo, type ServicoHnre, type SituacaoMilitar } from '../utils/corposQuadros';
@@ -339,6 +339,7 @@ export const Militares: React.FC = () => {
 
 const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[]; postos?: CorposQuadros['postos']; onClose: () => void; onSalvo: (nome: string) => void }> = ({ militar, oms, postos, onClose, onSalvo }) => {
   const [nome, setNome] = useState(militar.nome);
+  const [sexo, setSexo] = useState<SexoInspecionado | ''>(militar.sexo ?? '');
   const [nip, setNip] = useState(formatNip(militar.nip));
   const [pgq, setPgq] = useState(militar.pgq);
   const [email, setEmail] = useState(militar.email);
@@ -382,7 +383,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
       if (medico && adicionais.fotoNova) extras.fotoUrl = await enviarFotoMilitar(militar.id, adicionais.fotoNova);
       const alteracoes = {
         ...extras,
-        nome: nomeFinal, nip, pgq: pgqFinal, email: email.trim().toLowerCase(), ativo: ativo === 'Ativo',
+        nome: nomeFinal, ...(sexo ? { sexo } : {}), nip, pgq: pgqFinal, email: email.trim().toLowerCase(), ativo: ativo === 'Ativo',
         celular: celular.replace(/\D/g, ''), dataNascimento,
         inspecionado: montarInspecionado(pgqFinal, nip, nomeFinal),
         ...(ehMilitar ? { om: omSigla, temporario: vinculo === 'Temporário', rm1: situacao === 'RM1', refo: situacao === 'Refº' } : {}),
@@ -417,6 +418,7 @@ const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[
         <Field label="Nome completo" required error={erros.nome}>
           {a => <input {...a} type="text" value={nome} onChange={e => setNome(e.target.value.toUpperCase())} className={`${a.className} uppercase`} autoComplete="off" />}
         </Field>
+        <ChoiceGroup<SexoInspecionado> label="Sexo" emLinha options={OPCOES_SEXO} value={sexo} onChange={setSexo} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {tipo === 'dependente' ? (
             <Field label="Titular" help="O titular não pode ser alterado; para trocar, cadastre um novo dependente.">

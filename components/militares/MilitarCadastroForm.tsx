@@ -25,7 +25,7 @@ import {
   type CorposQuadros, type OrganizacaoMilitar, type Vinculo,
 } from '../../utils/corposQuadros';
 import { InformacoesAdicionais, ADICIONAIS_VAZIO, adicionaisParaPatch, validarAdicionais, type Adicionais } from './InformacoesAdicionais';
-import { criarMilitar, atualizarMilitar } from '../../services/firestoreMilitares';
+import { criarMilitar, atualizarMilitar, OPCOES_SEXO, type SexoInspecionado } from '../../services/firestoreMilitares';
 import { enviarFotoMilitar } from '../../services/militarFoto';
 
 interface Props {
@@ -55,6 +55,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs, 
   const [espTexto, setEspTexto] = useState('');
   const [espSigla, setEspSigla] = useState('');
   const [nome, setNome] = useState('');
+  const [sexo, setSexo] = useState<SexoInspecionado | ''>('');
   const [nip, setNip] = useState('');
   const [omTexto, setOmTexto] = useState('');
   const [omSigla, setOmSigla] = useState('');
@@ -184,6 +185,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs, 
     if (categoria === 'Oficial' && !quadroEscolhido) e.quadro = 'Selecione o quadro.';
     if (categoria === 'Praça' && especialidades.length > 0 && !espSigla) e.especialidade = 'Escolha a especialidade na lista.';
     if (!nome.trim()) e.nome = 'Informe o nome completo.';
+    if (!sexo) e.sexo = 'Informe o sexo.';
     if (!nipCompleto) e.nip = 'Informe o NIP no formato 00.0000.00.';
     if (!omSigla && !situacao) e.om = 'Escolha a OM na lista.';
     if (celular && celular.replace(/\D/g, '').length < 10) e.celular = 'Informe o DDD e o número.';
@@ -205,7 +207,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs, 
       const nomeFinal = nome.trim().toUpperCase();
       const extras = hnre ? adicionaisParaPatch(adicionais, medico) : {};
       const id = await criarMilitar({
-        om: omSigla, temporario: vinculo === 'Temporário', pgq, nip, nome: nomeFinal,
+        om: omSigla, temporario: vinculo === 'Temporário', pgq, nip, nome: nomeFinal, ...(sexo ? { sexo } : {}),
         inspecionado: montarInspecionado(pgq, nip, nomeFinal), email: email.trim().toLowerCase(), ativo: true,
         celular: celular.replace(/\D/g, ''), dataNascimento, rm1: situacao === 'RM1', refo: situacao === 'Refº', ...extras,
       });
@@ -325,6 +327,8 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs, 
           <Field label="Nome completo" required error={erros.nome}>
             {a => <input {...a} type="text" value={nome} onChange={e => { setNome(e.target.value.toUpperCase()); limpar('nome'); }} className={`${a.className} uppercase`} autoComplete="off" />}
           </Field>
+
+          <ChoiceGroup<SexoInspecionado> label="Sexo" required emLinha options={OPCOES_SEXO} value={sexo} onChange={v => { setSexo(v); limpar('sexo'); }} error={erros.sexo} />
 
           <Field label="NIP" required error={erros.nip}>
             {a => <input {...a} type="text" inputMode="numeric" value={nip} onChange={e => { setNip(formatNip(e.target.value)); limpar('nip'); }} placeholder="00.0000.00" maxLength={10} className={`${a.className} font-mono`} />}

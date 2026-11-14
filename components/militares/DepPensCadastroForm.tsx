@@ -16,7 +16,7 @@ import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { MilitarCadastroForm } from './MilitarCadastroForm';
 import { formatNip } from '../../utils/format';
 import { carregarCorposQuadros, montarInspecionado, normalizarBusca, separarPosto, type CorposQuadros, type PostoInfo } from '../../utils/corposQuadros';
-import { criarMilitar, observarMilitares, tipoDoInspecionado, type MilitarRecord } from '../../services/firestoreMilitares';
+import { criarMilitar, observarMilitares, tipoDoInspecionado, OPCOES_SEXO, type MilitarRecord, type SexoInspecionado } from '../../services/firestoreMilitares';
 
 interface Props {
   onClose: () => void;
@@ -37,6 +37,7 @@ export const DepPensCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs }
   const [cadastrandoTitular, setCadastrandoTitular] = useState(false);
   const [recemCadastradoId, setRecemCadastradoId] = useState('');
   const [nome, setNome] = useState('');
+  const [sexo, setSexo] = useState<SexoInspecionado | ''>('');
   const [nip, setNip] = useState('');
   const [posto, setPosto] = useState('');
   const [erros, setErros] = useState<Erros>({});
@@ -78,6 +79,7 @@ export const DepPensCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs }
     if (!subtipo) e.subtipo = 'Escolha Dependente ou Pensionista.';
     if (subtipo === 'dependente' && !titular) e.titular = 'Escolha o titular na lista.';
     if (subtipo && !nomeFinal) e.nome = 'Informe o nome completo.';
+    if (subtipo && !sexo) e.sexo = 'Informe o sexo.';
     if (subtipo && nip.length !== 10) e.nip = 'Informe o NIP no formato 00.0000.00.';
     if (subtipo === 'pensionista' && !posto) e.posto = 'Selecione o posto/graduação.';
     return e;
@@ -94,7 +96,7 @@ export const DepPensCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs }
     if (!subtipo) return;
     setSalvando(true);
     try {
-      const base = { temporario: false, pgq, nip, nome: nomeFinal, inspecionado: montarInspecionado(pgq, nip, nomeFinal), email: '', ativo: true, tipo: subtipo };
+      const base = { temporario: false, pgq, nip, nome: nomeFinal, ...(sexo ? { sexo } : {}), inspecionado: montarInspecionado(pgq, nip, nomeFinal), email: '', ativo: true, tipo: subtipo };
       const id = await criarMilitar(subtipo === 'dependente' && titular
         ? { ...base, om: titular.om, titularId: titular.id, titularNome: titular.nome, titularPosto: postoTitular }
         : { ...base, om: '' });
@@ -149,6 +151,8 @@ export const DepPensCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs }
                 <Field label={subtipo === 'dependente' ? 'Nome do dependente' : 'Nome completo'} required error={erros.nome}>
                   {a => <input {...a} type="text" value={nome} onChange={e => { setNome(e.target.value.toUpperCase()); limpar('nome'); }} className={`${a.className} uppercase`} autoComplete="off" />}
                 </Field>
+
+                <ChoiceGroup<SexoInspecionado> label="Sexo" required emLinha options={OPCOES_SEXO} value={sexo} onChange={v => { setSexo(v); limpar('sexo'); }} error={erros.sexo} />
 
                 <Field label="NIP" required error={erros.nip}>
                   {a => <input {...a} type="text" inputMode="numeric" value={nip} onChange={e => { setNip(formatNip(e.target.value)); limpar('nip'); }} placeholder="00.0000.00" maxLength={10} className={`${a.className} font-mono`} />}
