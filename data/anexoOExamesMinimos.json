@@ -73,12 +73,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -137,6 +131,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -218,12 +218,6 @@
                 "Observacoes": "Periodicidade trienal"
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": "Periodicidade anual"
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -288,6 +282,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": "Periodicidade anual"
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -369,12 +369,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -433,6 +427,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -520,12 +520,6 @@
                 "Observacoes": "Periodicidade trienal"
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": "Periodicidade anual"
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -590,6 +584,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": "Periodicidade anual"
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -671,12 +671,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -735,6 +729,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -816,12 +816,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -880,6 +874,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -967,12 +967,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -1037,6 +1031,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -1124,12 +1124,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -1194,6 +1188,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -1263,12 +1263,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -1321,6 +1315,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -1528,12 +1528,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -1580,6 +1574,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -1673,12 +1673,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -1737,6 +1731,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -1835,12 +1835,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -1893,6 +1887,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -1968,12 +1968,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -2026,6 +2020,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -2118,12 +2118,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -2182,6 +2176,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Ecocardiograma bidimensional com Doppler",
                 "Condicao_Genero": null,
@@ -2299,12 +2299,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -2381,6 +2375,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Ecocardiograma bidimensional com Doppler",
                 "Condicao_Genero": null,
@@ -2507,12 +2507,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -2571,6 +2565,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -2645,12 +2645,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -2697,6 +2691,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -2804,12 +2804,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -2856,6 +2850,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
@@ -2937,12 +2937,6 @@
                 "Observacoes": null
               },
               {
-                "Exame": "Colpocitologia oncótica",
-                "Condicao_Genero": "Feminino",
-                "Condicao_Idade_Minima": null,
-                "Observacoes": null
-              },
-              {
                 "Exame": "Creatinina",
                 "Condicao_Genero": null,
                 "Condicao_Idade_Minima": null,
@@ -2995,6 +2989,12 @@
           {
             "Grupo_Exame": "Outros exames",
             "Exames": [
+              {
+                "Exame": "Colpocitologia oncótica",
+                "Condicao_Genero": "Feminino",
+                "Condicao_Idade_Minima": null,
+                "Observacoes": null
+              },
               {
                 "Exame": "Eletrocardiograma",
                 "Condicao_Genero": null,
