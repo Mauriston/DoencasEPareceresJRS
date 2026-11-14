@@ -48,7 +48,6 @@ import { useUsoDiario } from './hooks/useUsoDiario';
 const paginaLazy = <K extends string>(carregar: () => Promise<Record<K, React.ComponentType<any>>>, nome: K) =>
   lazy(() => carregar().then(m => ({ default: m[nome] })));
 const Perfil = paginaLazy(() => import('./components/Perfil'), 'Perfil');
-const Configuracoes = paginaLazy(() => import('./components/Configuracoes'), 'Configuracoes');
 const Ferias = paginaLazy(() => import('./components/Ferias'), 'Ferias');
 const Sobre = paginaLazy(() => import('./components/Sobre'), 'Sobre');
 const DiseaseGuide = paginaLazy(() => import('./components/DiseaseGuide'), 'DiseaseGuide');
@@ -67,7 +66,7 @@ const PericiaMenor = paginaLazy(() => import('./components/PericiaMenor'), 'Peri
 const EscalaSpa = paginaLazy(() => import('./components/EscalaSpa'), 'EscalaSpa');
 const Mensagens = paginaLazy(() => import('./components/Mensagens'), 'Mensagens');
 const RoteiroJRS = paginaLazy(() => import('./components/RoteiroJRS'), 'RoteiroJRS');
-const UsuariosManagement = paginaLazy(() => import('./components/UsuariosManagement'), 'UsuariosManagement');
+const Administracao = paginaLazy(() => import('./components/administracao/Administracao'), 'Administracao');
 const Militares = paginaLazy(() => import('./components/Militares'), 'Militares');
 // Ficha do inspecionado: o acesso é por seção (permissões checadas na própria página).
 const FichaInspecionado = paginaLazy(() => import('./components/ficha/FichaInspecionado'), 'FichaInspecionado');
@@ -410,10 +409,10 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       case 'inspecoes': return can('inspecoes') ? <Inspecoes /> : <AccessDenied pagina={paginaLabel('inspecoes')} />;
       case 'militares': return can('militares') ? <Militares /> : <AccessDenied pagina={paginaLabel('militares')} />;
 
-      // USUÁRIOS PAGE - Restricted for non-admin
-      case 'usuarios': return authUser?.perfil === 'admin' ? <UsuariosManagement /> : <AccessDenied pagina="Usuários" />;
-      // Configurações gerais (menu do avatar): só o Admin.
-      case 'configuracoes': return authUser?.perfil === 'admin' ? <Configuracoes /> : <AccessDenied pagina="Configurações" />;
+      // Administração (/administracao/{secao}: usuários, perfis, e-mails, agenda, integrações, registro): só o Admin.
+      case 'usuarios': return authUser?.perfil === 'admin' ? <Administracao /> : <AccessDenied pagina="Administração" />;
+      // Sem rota própria desde a Administração (/configuracoes é alias de /administracao/emails).
+      case 'configuracoes': return authUser?.perfil === 'admin' ? <Administracao /> : <AccessDenied pagina="Administração" />;
       // Férias e afastamentos: usuários da JRS (Admin, médicos JRS/MPI e Secretaria); só o Admin altera.
       case 'ferias': return canAccessPage('ferias', authUser?.perfil) ? <Ferias /> : <AccessDenied pagina="Férias" />;
       case 'sobre': return canAccessPage('sobre', authUser?.perfil) ? <Sobre /> : <AccessDenied pagina="Sobre o app" />;
