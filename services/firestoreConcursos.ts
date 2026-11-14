@@ -719,6 +719,16 @@ export const definirPeriodoAgendamento = async (concursoId: string, periodoInici
     throw new Error('Nenhum dia útil encontrado no período informado.');
   }
 
+  // Calendário = dias úteis do novo período + as datas já agendadas dos
+  // candidatos (mesma regra da criação do concurso). Assim a edição do período
+  // com o concurso "Em Andamento" não deixa candidato com data órfã.
+  const datasCalendario = new Map<string, Date>();
+  diasUteis.forEach(d => datasCalendario.set(formatarChaveData(d), d));
+  (await listarCandidatos(concursoId)).forEach(c => {
+    if (c.dataAgendamento && !datasCalendario.has(c.dataAgendamento)) datasCalendario.set(c.dataAgendamento, parseChaveData(c.dataAgendamento));
+  });
+  const datas = Array.from(datasCalendario.entries());
+
   const antigosSnap = await getDocs(agendamentosCol(concursoId));
   for (let i = 0; i < antigosSnap.docs.length; i += 400) {
     const lote = writeBatch(db);
@@ -726,10 +736,9 @@ export const definirPeriodoAgendamento = async (concursoId: string, periodoInici
     await lote.commit();
   }
 
-  for (let i = 0; i < diasUteis.length; i += 400) {
+  for (let i = 0; i < datas.length; i += 400) {
     const lote = writeBatch(db);
-    diasUteis.slice(i, i + 400).forEach(d => {
-      const chave = formatarChaveData(d);
+    datas.slice(i, i + 400).forEach(([chave, d]) => {
       lote.set(doc(agendamentosCol(concursoId), chave), { diaSemana: NOMES_DIAS_SEMANA[d.getDay()] });
     });
     await lote.commit();

@@ -101,7 +101,7 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
   const [gerandoMinuta, setGerandoMinuta] = useState(false);
   const [registrarMensagemAlvo, setRegistrarMensagemAlvo] = useState<{ id: string; nome: string; criadoEm?: string } | null>(null);
   const [listarMensagensAlvo, setListarMensagensAlvo] = useState<{ id: string; nome: string } | null>(null);
-  const [periodoAgendamentoAlvo, setPeriodoAgendamentoAlvo] = useState<{ id: string; nome: string } | null>(null);
+  const [periodoAgendamentoAlvo, setPeriodoAgendamentoAlvo] = useState<{ id: string; nome: string; inicioISO: string; fimISO: string } | null>(null);
   const [adicionarCandidatoAlvo, setAdicionarCandidatoAlvo] = useState<{ id: string; nome: string } | null>(null);
   // Envio dos exames de um candidato pelo menu ⋮ do concurso: o candidato é
   // escolhido no próprio diálogo (autocomplete com os candidatos do concurso).
@@ -282,13 +282,14 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
       minutaHabilitada: c.status === 'encerrado' || podeEncerrar,
       temPeriodoConfigurado: !!c.periodoInicioISO,
       temMensagensRegistradas: !!mensagensCount[c.id],
+      ehAdmin: perfil === 'admin',
       onAbrir: () => handleAbrir(c.id, c.nome),
       onVoltarParaEmBreve: () => handleVoltarParaEmBreve(c.id, c.nome),
       onEncerrar: () => handleEncerrar(c.id, c.nome),
       onMinutaResultados: () => handleMinutaResultados(c.id),
       onRegistrarMensagem: () => setRegistrarMensagemAlvo({ id: c.id, nome: c.nome, criadoEm: c.criadoEm }),
       onListarMensagens: () => setListarMensagensAlvo({ id: c.id, nome: c.nome }),
-      onDefinirPeriodoAgendamento: () => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome }),
+      onDefinirPeriodoAgendamento: () => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome, inicioISO: c.periodoInicioISO, fimISO: c.periodoFimISO }),
       onAdicionarCandidato: () => setAdicionarCandidatoAlvo({ id: c.id, nome: c.nome }),
       onEnviarExames: () => setEnviarExamesConcurso(c),
     };
@@ -384,7 +385,9 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
         <ModalDefinirPeriodoAgendamento
           concursoId={periodoAgendamentoAlvo.id}
           concursoNome={periodoAgendamentoAlvo.nome}
-          onClose={() => setPeriodoAgendamentoAlvo(null)}
+          periodoInicioAtualISO={periodoAgendamentoAlvo.inicioISO}
+          periodoFimAtualISO={periodoAgendamentoAlvo.fimISO}
+          onClose={(atualizado) => { setPeriodoAgendamentoAlvo(null); if (atualizado) onRecarregar(); }}
         />
       )}
       {enviarExamesConcurso && (

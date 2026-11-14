@@ -352,18 +352,23 @@ export const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ conc
 export interface ModalDefinirPeriodoAgendamentoProps {
   concursoId: string;
   concursoNome: string;
+  /** Período atual (AAAA-MM-DD), quando já configurado — pré-preenche o modal no modo "Editar". */
+  periodoInicioAtualISO?: string;
+  periodoFimAtualISO?: string;
   onClose: (atualizado?: boolean) => void;
 }
 
-export const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendamentoProps> = ({ concursoId, concursoNome, onClose }) => {
-  const [periodoInicio, setPeriodoInicio] = useState('');
-  const [periodoFim, setPeriodoFim] = useState('');
+export const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendamentoProps> = ({ concursoId, concursoNome, periodoInicioAtualISO = '', periodoFimAtualISO = '', onClose }) => {
+  const editando = !!periodoInicioAtualISO;
+  const [periodoInicio, setPeriodoInicio] = useState(periodoInicioAtualISO);
+  const [periodoFim, setPeriodoFim] = useState(periodoFimAtualISO);
   const [erro, setErro] = useState<string | null>(null);
   const [processando, setProcessando] = useState(false);
   const [concluido, setConcluido] = useState(false);
 
   const handleConfirmar = async () => {
     if (!periodoInicio || !periodoFim) { setErro('Informe as duas datas do período.'); return; }
+    if (periodoFim < periodoInicio) { setErro('A data de fim não pode ser anterior à data de início.'); return; }
     setErro(null);
     setProcessando(true);
     try {
@@ -381,7 +386,7 @@ export const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendam
       <div className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
         <div className="p-4 bg-navy text-white flex items-center justify-between shrink-0">
           <div className="min-w-0">
-            <h3 className="font-heading font-bold text-sm truncate">Definir Período de Agendamento</h3>
+            <h3 className="font-heading font-bold text-sm truncate">{editando ? 'Editar Período das IS' : 'Definir Período de Agendamento'}</h3>
             <p className="text-xs text-white/70 truncate">{concursoNome}</p>
           </div>
           <button onClick={() => onClose(concluido)} className="text-ink-5 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0">
@@ -395,7 +400,7 @@ export const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendam
           {concluido ? (
             <>
               <div className="bg-green-50 border border-green-200 rounded-xl p-3">
-                <p className="text-sm font-bold text-green-800">Período definido com sucesso. O calendário de reagendamento já está liberado.</p>
+                <p className="text-sm font-bold text-green-800">{editando ? 'Período atualizado com sucesso. O calendário de reagendamento já reflete o novo período.' : 'Período definido com sucesso. O calendário de reagendamento já está liberado.'}</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
                 <button type="button" onClick={() => onClose(true)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors shadow-sm">Concluir</button>
@@ -407,6 +412,12 @@ export const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendam
                 Informe o período das IS deste concurso para gerar os dias úteis disponíveis para reagendamento. Se o
                 concurso já tiver um calendário configurado, ele será substituído pelo novo período.
               </p>
+              {editando && (
+                <p className="text-sm text-ink-3">
+                  As datas em que já há candidatos agendados são mantidas no calendário, mesmo que fiquem fora do novo
+                  período — nenhum agendamento existente é apagado.
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-bold text-ink-3 uppercase tracking-wider block mb-1">Início</label>
