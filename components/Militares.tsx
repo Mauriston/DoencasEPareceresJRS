@@ -29,6 +29,7 @@ import { useNavigate } from 'react-router-dom';
 import { carregarOms, carregarCorposQuadros, carregarServicosHnre, normalizarBusca, montarInspecionado, separarPosto, aplicarSituacaoAoPgq, ehOficialMedico, omEhHnre, type OrganizacaoMilitar, type CorposQuadros, type PostoInfo, type ServicoHnre, type SituacaoMilitar } from '../utils/corposQuadros';
 import { formatNip, formatCelular } from '../utils/format';
 import { hojeISO } from '../utils/dados';
+import { notificarAcao } from '../services/notificacoesPush';
 
 type Filtro = 'todos' | 'ativos' | 'inativos';
 type FiltroTipo = 'todos' | TipoInspecionado;
@@ -112,6 +113,7 @@ export const Militares: React.FC = () => {
   const alternarAtivo = async (m: MilitarRecord) => {
     try {
       await atualizarMilitar(m.id, { ativo: !m.ativo });
+      notificarAcao('militar.editado');
       avisar(`${m.nome} agora está ${m.ativo ? 'inativo' : 'ativo'}.`);
     } catch (e: any) {
       avisar(e?.message || 'Não foi possível alterar o status.', 'error');
@@ -393,7 +395,7 @@ export const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoM
       // O id do cadastro é o NIP só com dígitos: NIP novo = documento movido para o id novo.
       const idNovo = nip.replace(/\D/g, '');
       if (idNovo !== militar.id) await renomearMilitar(militar.id, idNovo, alteracoes);
-      else await atualizarMilitar(militar.id, alteracoes);
+      else { await atualizarMilitar(militar.id, alteracoes); notificarAcao('militar.editado'); }
       onSalvo(nomeFinal);
     } catch (err: any) {
       setErros({ geral: err?.message || 'Não foi possível salvar.' });

@@ -271,7 +271,7 @@ export const Perfil: React.FC = () => {
         <AparenciaCard uid={authUser?.uid} />
 
         {/* NOTIFICAÇÕES PUSH (POR APARELHO) */}
-        {authUser && authUser.perfil !== 'user_medicos_geral' && <NotificacoesCard usuario={authUser.usuario} />}
+        {authUser && <NotificacoesCard usuario={authUser.usuario} />}
 
         {/* ALTERAR SENHA (SOMENTE O PRÓPRIO USUÁRIO) */}
         <form onSubmit={handleSalvarSenha}>

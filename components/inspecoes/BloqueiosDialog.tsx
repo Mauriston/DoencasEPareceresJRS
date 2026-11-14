@@ -10,6 +10,7 @@ import { Field } from '../ui/Field';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
 import { StatusTag } from '../ui/StatusTag';
 import { criarBloqueio, apagarBloqueio } from '../../services/firestoreInspecoes';
+import { notificarAcao } from '../../services/notificacoesPush';
 import { criarEventoBloqueioAgenda, removerEventoBloqueioAgenda } from '../../services/agendaGoogleIS';
 import type { PeritoIS } from '../../services/peritosIS';
 import {
@@ -96,6 +97,7 @@ export const BloqueiosDialog: React.FC<Props> = ({ peritos, config, bloqueios, u
         peritoUid, peritoNome: nomeDoPerito,
         motivo: motivo.trim(), criadoPor: usuario.usuario,
       });
+      notificarAcao('is.agendaBloqueada');
       onAviso(`Bloqueio criado.${avisoAgenda}`, avisoAgenda ? 'error' : 'success');
       setMotivo(''); setHora(''); setDataFim('');
     } catch (err: any) {
@@ -112,6 +114,7 @@ export const BloqueiosDialog: React.FC<Props> = ({ peritos, config, bloqueios, u
         try { await removerEventoBloqueioAgenda(b.eventoAgendaId); } catch (errAgenda: any) { avisoAgenda = ` Mas o evento do Google Agenda não foi removido: ${errAgenda?.message || 'erro'}`; }
       }
       await apagarBloqueio(b.id);
+      notificarAcao('is.agendaLiberada');
       onAviso(`Bloqueio removido.${avisoAgenda}`, avisoAgenda ? 'error' : 'success');
     }
     catch (err: any) { onAviso(err?.message || 'Não foi possível remover o bloqueio.', 'error'); }

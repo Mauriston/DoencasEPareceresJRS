@@ -14,6 +14,7 @@ import { novoId } from '../utils/dados';
 import { camposIdDrive } from '../utils/googleDrive';
 import { app } from './firebaseAuth';
 import { registrarEventoInspecionado } from './eventosInspecionado';
+import { notificarAcao } from './notificacoesPush';
 
 const db = getFirestore(app);
 const COL = 'pareceres';
@@ -96,9 +97,12 @@ export const registrarParecer = async (id: string, dados: Omit<ParecerDoc, 'cria
   await setDoc(doc(db, COL, id), { ...dados, ...camposIdDrive(dados.pdfUrl), status: 'solicitado', criadoEm: serverTimestamp() });
   // Registro por inspecionado (sem especialidade, finalidade nem texto do pedido).
   registrarEventoInspecionado(dados.militarId, 'parecer.gerar', dados.is ? `Parecer da IS ${dados.is}` : 'Pedido de parecer');
+  notificarAcao('parecer.gerado');
 };
 
-export const marcarConcluido = (id: string, concluido: boolean, porNome: string) =>
-  updateDoc(doc(db, COL, id), concluido
+export const marcarConcluido = async (id: string, concluido: boolean, porNome: string): Promise<void> => {
+  await updateDoc(doc(db, COL, id), concluido
     ? { status: 'concluido', concluidoEm: serverTimestamp(), concluidoPor: porNome }
     : { status: 'solicitado', concluidoEm: null, concluidoPor: '' });
+  if (concluido) notificarAcao('parecer.concluido');
+};

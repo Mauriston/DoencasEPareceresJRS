@@ -6,6 +6,7 @@ import { getFirestore, collection, onSnapshot, type Timestamp } from 'firebase/f
 import { app } from './firebaseAuth';
 import { ApiError, chamarServidor } from './apiClient';
 import { registrarUsoAcao } from './usoDiario';
+import { notificarAcao } from './notificacoesPush';
 
 const db = getFirestore(app);
 
@@ -33,6 +34,7 @@ export const enviarEmailAgendaIS = async (data: string): Promise<ResultadoEnvioA
   try {
     const { success: _s, ...r } = await chamarServidor<ResultadoEnvioAgenda & { success: boolean }>('/api/email/agenda-is', { data }, { timeoutMs: 180_000 });
     registrarUsoAcao('email_enviar');
+    notificarAcao('is.emailAgendaDia');
     return r;
   } catch (e) {
     if (e instanceof ApiError && e.status === 503) throw new ApiError('negocio', 'A conta Google da JRS não está autorizada no servidor. Autorize-a em Usuários.', 503);

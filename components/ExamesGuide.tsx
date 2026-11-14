@@ -44,8 +44,6 @@ const FINALIDADES = GRUPOS_FINALIDADE.flatMap(g =>
   g.Finalidades_Inspecao.map(f => ({ ...f, nome: limparNome(f.Finalidade_Inspecao) }))
 );
 
-const FINALIDADE_PADRAO = 'Ingresso SAM / SMV (oriundos do meio civil)';
-
 // Menu de finalidades (Exames mínimos, Inspeções de Saúde, Pareceres): menu em cascata compacto
 // (ui/MenuCascata) com os grupos do Anexo O — ou os grupos de quem o usa.
 /** Grupo de finalidades acrescentado ao menu por quem o usa (ex.: Pareceres), além dos do Anexo O. `gruposProprios` substitui o Anexo O por inteiro. */
@@ -60,18 +58,20 @@ export const FinalidadeDropdown: React.FC<{ value: string; onChange: (nome: stri
 };
 
 export const ExamesGuide: React.FC = () => {
-  const [genero, setGenero] = useState<'Masculino' | 'Feminino'>('Masculino');
-  const [idade, setIdade] = useState<string>('30');
-  const [selectedFinalidade, setSelectedFinalidade] = useState<string>(
-    FINALIDADES.some(f => f.nome === FINALIDADE_PADRAO) ? FINALIDADE_PADRAO : FINALIDADES[0].nome
-  );
+  // A página abre com os três campos em branco; a relação de exames só aparece
+  // depois de informados sexo, idade e finalidade.
+  const [genero, setGenero] = useState<'Masculino' | 'Feminino' | ''>('');
+  const [idade, setIdade] = useState<string>('');
+  const [selectedFinalidade, setSelectedFinalidade] = useState<string>('');
   const [obsModal, setObsModal] = useState<{ exame: string; texto: string } | null>(null);
 
   const activeInspecao = FINALIDADES.find(f => f.nome === selectedFinalidade);
-  const parsedIdade = parseInt(idade, 10) || 0;
+  const parsedIdade = parseInt(idade, 10);
+  const idadeValida = idade.trim() !== '' && Number.isFinite(parsedIdade) && parsedIdade >= 0 && parsedIdade <= 120;
+  const camposPreenchidos = !!genero && idadeValida && !!activeInspecao;
 
   const gruposFiltrados = useMemo(() => {
-    if (!activeInspecao) return [];
+    if (!camposPreenchidos || !activeInspecao) return [];
     return activeInspecao.Grupos_Exame
       .map(g => ({
         nome: g.Grupo_Exame,
@@ -82,7 +82,7 @@ export const ExamesGuide: React.FC = () => {
         }),
       }))
       .filter(g => g.exames.length > 0);
-  }, [activeInspecao, genero, parsedIdade]);
+  }, [camposPreenchidos, activeInspecao, genero, parsedIdade]);
 
   const totalExames = gruposFiltrados.reduce((n, g) => n + g.exames.length, 0);
 
@@ -123,8 +123,16 @@ export const ExamesGuide: React.FC = () => {
             <label htmlFor="finalidade-select" className="block text-xs font-semibold text-ink-3 mb-1">Finalidade da inspeção</label>
             <FinalidadeDropdown value={selectedFinalidade} onChange={setSelectedFinalidade} />
           </div>
+
+          {!camposPreenchidos && (
+            <p id="exames-preencher-aviso" className="text-sm text-ink-3 flex items-center gap-1.5">
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px] flex-shrink-0">info</span>
+              Informe o sexo, a idade e a finalidade para ver os exames mínimos.
+            </p>
+          )}
         </Card>
 
+        {camposPreenchidos && (
         <Card
           id="exams-card"
           titleAs="h2"
@@ -178,6 +186,7 @@ export const ExamesGuide: React.FC = () => {
             </div>
           )}
         </Card>
+        )}
       </Container>
 
       {obsModal && (

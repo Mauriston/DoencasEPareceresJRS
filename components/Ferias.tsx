@@ -24,6 +24,7 @@ import { AfastamentoForm } from './ferias/AfastamentoForm';
 import { TimelineAfastamentos } from './ferias/TimelineAfastamentos';
 import { useNav } from '../context/NavContext';
 import { listUsuarios, type UsuarioRecord } from '../services/firestoreUsuarios';
+import { notificarAcao } from '../services/notificacoesPush';
 import { observarAfastamentos, apagarAfastamento, urlArquivoAfastamento, type AfastamentoRecord } from '../services/afastamentos';
 import {
   ESCALA_PADRAO, PERIODO_PADRAO, intervaloDoPeriodo, tocaPeriodo, type PeriodoFerias, PERFIS_JRS, STATUS_AFASTAMENTO, TIPOS_AFASTAMENTO, rotuloTipo, statusEfetivo, TOM_TIPO,
@@ -83,7 +84,7 @@ export const Ferias: React.FC = () => {
   const confirmarApagar = async () => {
     if (!apagando) return;
     const a = apagando; setApagando(null);
-    try { await apagarAfastamento(a); avisar(`Afastamento de ${a.usuario} apagado (bloqueio e evento removidos).`); }
+    try { await apagarAfastamento(a); notificarAcao('afastamento.apagado'); avisar(`Afastamento de ${a.usuario} apagado (bloqueio e evento removidos).`); }
     catch (e: any) { avisar(e?.message || 'Não foi possível apagar.', 'error'); }
   };
 

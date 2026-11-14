@@ -21,7 +21,7 @@ import { parseTimestamp, timestampISO } from '../utils/dados';
 import { app } from './firebaseAuth';
 import { registrarEvento } from './auditoriaIS';
 import { removerPdfPorUrl } from './driveConcursos';
-import { notificarEvento } from './notificacoesPush';
+import { notificarEvento, notificarAcao } from './notificacoesPush';
 import type { ExameCandidato, ExamesExtraidos, PacienteExames } from '../utils/examesCandidato';
 import { lerTriagem, type TriagemDados, type TriagemRecord } from '../utils/triagem';
 import {
@@ -323,6 +323,7 @@ export const criarConcursoDaMensagem = async (params: {
   for (const op of operacoes) await op();
   await flush();
 
+  notificarAcao('concurso.criado', concursoId);
   return { concursoId, diasUteis };
 };
 
@@ -393,6 +394,7 @@ export const importarConcursoDeCsv = async (
   for (const op of operacoes) await op();
   await flush();
 
+  notificarAcao('concurso.importado', concursoId);
   return { concursoId };
 };
 
@@ -409,6 +411,7 @@ export const criarCandidato = async (concursoId: string, id: string, nome: strin
   await setDoc(candidatoRef(concursoId, id), dados);
   await updateDoc(concursoRef(concursoId), { totalCandidatos: (await listarCandidatos(concursoId)).length });
   await registrarEvento(concursoId, id, 'Candidato adicionado', dataAgendamento ? `Agendado para ${formatarDataSimples(new Date(`${dataAgendamento}T12:00:00`))}` : '');
+  notificarAcao('concurso.candidatoAdicionado', concursoId);
   return toCandidatoRecord(id, dados);
 };
 
@@ -485,6 +488,10 @@ export const atualizarCandidato = async (
 
   // Auditoria: um evento por campo alterado (e a finalização, se ocorreu).
   const rot = (v: string) => v || '(vazio)';
+  // Aviso genérico de edição da planilha (agrupado por 15 min no servidor);
+  // Inapto/IDM e a conclusão do dia têm avisos próprios, logo abaixo.
+  const avisoProprio = (proximo.status === 'INAPTO' || proximo.status === 'INSUF DOCUMENTAL') && proximo.status !== atual.status;
+  if (!avisoProprio) notificarAcao('concurso.planilhaEditada', concursoId);
   if (proximo.status !== undefined && proximo.status !== atual.status) {
     await registrarEvento(concursoId, id, 'Status alterado', `${rot(atual.status)} → ${rot(proximo.status)}`);
     // Push: Inapto e IDM avisam todos assim que o status é lançado.
@@ -525,6 +532,7 @@ export const reagendarCandidato = async (concursoId: string, id: string, dataISO
   if (atual.termoRecursoUrl) void removerPdfPorUrl(atual.termoRecursoUrl);
   await updateDoc(candidatoRef(concursoId, id), proximo);
   await registrarEvento(concursoId, id, 'IS reagendada', `${atual.dataAgendamento ? formatarDataSimples(new Date(`${atual.dataAgendamento}T12:00:00`)) : '(sem data)'} → ${formatarDataSimples(new Date(`${dataISO}T12:00:00`))}`);
+  notificarAcao('concurso.reagendado', concursoId);
   return { ...atual, ...proximo };
 };
 
@@ -701,10 +709,16 @@ export const gerarMinutaResultados = async (
 };
 
 /** Abre o concurso (Em breve → Em andamento). Exclusivo do Admin (UI). */
-export const abrirConcurso = (concursoId: string) => updateDoc(concursoRef(concursoId), { status: 'em_andamento' as ConcursoStatus });
+export const abrirConcurso = async (concursoId: string) => {
+  await updateDoc(concursoRef(concursoId), { status: 'em_andamento' as ConcursoStatus });
+  notificarAcao('concurso.aberto', concursoId);
+};
 
 /** Volta o concurso de Em andamento para Em breve (correção de status). Exclusivo do Admin (UI). */
-export const voltarParaEmBreve = (concursoId: string) => updateDoc(concursoRef(concursoId), { status: 'em_breve' as ConcursoStatus });
+export const voltarParaEmBreve = async (concursoId: string) => {
+  await updateDoc(concursoRef(concursoId), { status: 'em_breve' as ConcursoStatus });
+  notificarAcao('concurso.emBreve', concursoId);
+};
 
 /**
  * Define (ou redefine) o período de IS de um concurso e gera o calendário de
@@ -748,6 +762,7 @@ export const definirPeriodoAgendamento = async (concursoId: string, periodoInici
     periodoInicioISO: formatarChaveData(periodoInicio),
     periodoFimISO: formatarChaveData(periodoFim),
   });
+  notificarAcao('concurso.periodo', concursoId);
 };
 
 /** Encerra o concurso, só quando todos os candidatos estão finalizados. Exclusivo do Admin (UI). */
@@ -757,6 +772,7 @@ export const encerrarConcurso = async (concursoId: string) => {
     throw new Error('Ainda há candidatos não finalizados. Encerre apenas quando todos estiverem finalizados.');
   }
   await updateDoc(concursoRef(concursoId), { status: 'encerrado' as ConcursoStatus });
+  notificarAcao('concurso.encerrado', concursoId);
 };
 
 /** Grava (ou corrige) a triagem da IS. IS finalizada não aceita mais alteração. */
@@ -768,6 +784,7 @@ export const salvarTriagem = async (concursoId: string, candidatoId: string, dad
   const triagem: TriagemRecord = { ...dados, atualizadoEm: timestampISO(), atualizadoPor: usuario };
   await updateDoc(candidatoRef(concursoId, candidatoId), { triagem });
   await registrarEvento(concursoId, candidatoId, jaTinha ? 'Triagem alterada' : 'Triagem registrada');
+  notificarAcao('concurso.triagem', concursoId);
   return triagem;
 };
 
@@ -810,6 +827,7 @@ export const registrarSolicitacao = async (
   };
   await updateDoc(candidatoRef(concursoId, id), proximo);
   await registrarEvento(concursoId, id, tipo === 'parecer' ? 'Pedido de Parecer gerado' : 'Solicitação de Exames gerada', doc.rotulo);
+  notificarAcao('concurso.solicitacao', concursoId);
   return { ...atual, ...proximo };
 };
 
@@ -883,6 +901,7 @@ export const salvarExamesCandidato = async (
     concursoId, candidatoId, 'Exames do candidato enviados',
     `${envio.nomeArquivo}${exames.length ? ` · ${exames.length} exame(s) transcrito(s)` : ' · sem transcrição'}`,
   );
+  notificarAcao('concurso.examesEnviados', concursoId);
   return { ...atual, ...proximo };
 };
 
@@ -944,12 +963,14 @@ export const limparIS = async (concursoId: string, id: string): Promise<Candidat
   ].filter(Boolean);
   await Promise.all(urls.map(removerPdfPorUrl));
   await registrarEvento(concursoId, id, 'IS limpa (Admin)', `Status anterior: ${atual.status || '(vazio)'}`);
+  notificarAcao('concurso.isLimpa', concursoId);
   return { ...atual, ...proximo };
 };
 
 export const salvarTermoRecurso = async (concursoId: string, candidatoId: string, url: string) => {
   await updateDoc(candidatoRef(concursoId, candidatoId), { recurso: true, termoRecursoUrl: url });
   await registrarEvento(concursoId, candidatoId, 'Termo de Recurso gerado');
+  notificarAcao('concurso.termoRecurso', concursoId);
 };
 
 /**
@@ -995,6 +1016,7 @@ export const arquivarMensagem = async (concursoId: string, cabecalho: CabecalhoM
     subject: cabecalho.subject,
     texto: cabecalho.texto,
   });
+  notificarAcao('concurso.mensagemArquivada', concursoId);
 };
 
 export interface EstatisticaConcursoStatus {

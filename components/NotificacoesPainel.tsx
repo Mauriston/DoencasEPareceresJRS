@@ -2,6 +2,7 @@
 // Lista das notificações recebidas pelo usuário (item "Notificações" do menu
 // do avatar). Tocar num item marca como lida e abre a tela do aviso (ex.: o
 // concurso); as não lidas vêm destacadas e somam no badge do avatar.
+// "Marcar todas como lidas" apaga todas as notificações do histórico.
 import React from 'react';
 import { Dialog } from './ui/Dialog';
 import { Button } from './ui/Button';
@@ -28,14 +29,13 @@ const quando = (d: Date | null): string => {
 };
 
 export const NotificacoesPainel: React.FC<Props> = ({ lista, onAbrir, onMarcarTodas, onClose }) => {
-  const naoLidas = lista.filter(n => !n.lida).length;
   return (
     <Dialog
       title="Notificações"
       icon="notifications"
       size="md"
       onClose={onClose}
-      footer={naoLidas > 0 ? <Button variant="secondary" icon="done_all" onClick={onMarcarTodas}>Marcar todas como lidas</Button> : undefined}
+      footer={lista.length > 0 ? <Button variant="secondary" icon="done_all" onClick={onMarcarTodas}>Marcar todas como lidas</Button> : undefined}
     >
       {lista.length === 0 ? (
         <p className="text-ink-3 text-center py-6">Nenhuma notificação por enquanto.</p>

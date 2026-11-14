@@ -6,12 +6,14 @@
 //    calendário). A página Inspeções de Saúde escuta e pergunta se envia o e-mail ao inspecionado.
 import { ApiError, chamarServidor } from './apiClient';
 import { registrarUsoAcao } from './usoDiario';
+import { notificarAcao } from './notificacoesPush';
 import { ehElegivelAgendamento, type ISParaAgendamento } from '../utils/emailAgendamentoIS';
 
 export const enviarAgendamentoISPorEmail = async (isId: string, email?: string): Promise<{ para: string; emailSalvo: boolean }> => {
   try {
     const r = await chamarServidor<{ para: string; emailSalvo: boolean }>('/api/email/agendamento-is', { isId, ...(email ? { email: email.trim() } : {}) });
     registrarUsoAcao('email_enviar');
+    notificarAcao('is.emailAgendamento', isId);
     return { para: r.para, emailSalvo: !!r.emailSalvo };
   } catch (e) {
     if (e instanceof ApiError && e.status === 503) {

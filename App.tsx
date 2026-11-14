@@ -35,7 +35,7 @@ import { getCasosResultado } from './services/firestoreCasos';
 import { observarPericiasMenores, statusPericia } from './services/firestorePericiasMenores';
 import { definirAtorAuditoria } from './services/auditoriaIS';
 import {
-  notificarEvento, desvincularAparelho, observarNotificacoes, marcarNotificacaoLida, marcarTodasLidas,
+  desvincularAparelho, observarNotificacoes, marcarNotificacaoLida, apagarTodasNotificacoes,
   consumirNotifDaUrl, ouvirCliquesDoPush, type NotificacaoRecord,
 } from './services/notificacoesPush';
 import { useIsDesktop } from './hooks/useIsDesktop';
@@ -181,13 +181,13 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   // Histórico de notificações do usuário (badge do avatar e lista do menu).
   const [notificacoes, setNotificacoes] = useState<NotificacaoRecord[]>([]);
   const [notificacoesAbertas, setNotificacoesAbertas] = useState(false);
-  // "user_medicos_geral" (demais médicos do HNRe) não recebe notificações: sem histórico,
-  // sem badge, sem item "Notificações" no menu e sem o convite para ativá-las.
-  const semNotificacoes = authUserReal?.perfil === 'user_medicos_geral';
+  // Todos os perfis recebem notificações, mas só das ações que o próprio perfil
+  // pode executar (o servidor filtra pela matriz de permissões — ver
+  // config/notificacoesAcoes.ts). Ex.: user_medicos_geral só ouve da Perícia Menor.
   useEffect(() => {
-    if (!authUserReal || semNotificacoes) { setNotificacoes([]); return; }
+    if (!authUserReal) { setNotificacoes([]); return; }
     return observarNotificacoes(authUserReal.uid, setNotificacoes);
-  }, [authUserReal?.uid, semNotificacoes]);
+  }, [authUserReal?.uid]);
   useEffect(() => {
     if (authUserReal && NOTIF_ABERTA_PELO_PUSH) void marcarNotificacaoLida(authUserReal.uid, NOTIF_ABERTA_PELO_PUSH);
   }, [authUserReal?.uid]);
@@ -209,22 +209,6 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
     try { localStorage.setItem(chave, String(vistos + 1)); } catch { /* sem localStorage */ }
     setAvisoTriagem(true);
   }, [authUser?.uid, authUser?.perfil]);
-
-  // Push "{{usuario}} logado." para o Admin a cada acesso: ao abrir o app e
-  // ao voltar para ele depois de 5 min em segundo plano (o PWA no celular
-  // costuma ficar aberto, sem recarregar).
-  useEffect(() => {
-    if (!authUserReal || authUserReal.perfil === 'admin') return;
-    void notificarEvento({ tipo: 'login' });
-    let escondidoDesde = 0;
-    const aoMudar = () => {
-      if (document.visibilityState === 'hidden') { escondidoDesde = Date.now(); return; }
-      if (escondidoDesde && Date.now() - escondidoDesde >= 5 * 60_000) void notificarEvento({ tipo: 'login' });
-      escondidoDesde = 0;
-    };
-    document.addEventListener('visibilitychange', aoMudar);
-    return () => document.removeEventListener('visibilitychange', aoMudar);
-  }, [authUserReal?.uid]);
 
   useEffect(() => {
     if (!authUser) {
@@ -472,7 +456,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
         avisos: { casosPendente, pwaPendente },
         abrirInstalacaoApp: () => setPwaDialogAberto(true),
         notificacoesNaoLidas,
-        abrirNotificacoes: semNotificacoes ? undefined : () => { setIsAvatarMenuOpen(false); setIsMobileMenuOpen(false); setNotificacoesAbertas(true); },
+        abrirNotificacoes: () => { setIsAvatarMenuOpen(false); setIsMobileMenuOpen(false); setNotificacoesAbertas(true); },
         perfilReal: authUserReal?.perfil,
         verComo: authUserReal?.perfil === 'admin' ? verComo : null,
         setVerComo,
@@ -541,7 +525,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
         <NotificacoesPainel
           lista={notificacoes}
           onClose={() => setNotificacoesAbertas(false)}
-          onMarcarTodas={() => { void marcarTodasLidas(authUser.uid, notificacoes.filter(n => !n.lida).map(n => n.id)); }}
+          onMarcarTodas={() => { void apagarTodasNotificacoes(authUser.uid, notificacoes.map(n => n.id)).catch(e => console.error('Falha ao apagar notificações:', e)); }}
           onAbrir={n => {
             if (!n.lida) void marcarNotificacaoLida(authUser.uid, n.id);
             setNotificacoesAbertas(false);
@@ -550,12 +534,12 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
         />
       )}
 
-      {!semNotificacoes && <NotificacoesConvite
+      <NotificacoesConvite
         key={authUser.uid}
         usuario={authUserReal?.usuario || authUser.usuario}
         aguardar={mostrarAlertaSenha || pwaDialogAberto || avisoTriagem}
         onInstalarApp={() => setPwaDialogAberto(true)}
-      />}
+      />
 
       {avisoTriagem && !mostrarAlertaSenha && (
         <Dialog
