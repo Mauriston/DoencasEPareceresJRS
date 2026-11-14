@@ -340,7 +340,7 @@ test('Pareceres: a Secretaria não acessa a página (acesso negado)', async () =
   const p = await novaPagina();
   await entrar(p, SECRETARIA);
   await p.goto(`${BASE}#/pareceres`);
-  await p.getByText(/Acesso não autorizado/).first().waitFor();
+  await p.getByText(/Acesso não autorizado/).filter({ visible: true }).first().waitFor();
   assert.equal(await p.getByLabel('Buscar parecer').count(), 0);
   await p.context().close();
 });

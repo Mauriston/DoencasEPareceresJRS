@@ -9,6 +9,7 @@ import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/fire
 import { app } from './firebaseAuth';
 import { obterAtorAuditoria } from './auditoriaIS';
 import { logErroSeguro } from '../utils/logSeguro';
+import { registrarUsoAcao, TIPO_DA_ACAO_SENSIVEL } from './usoDiario';
 
 const db = getFirestore(app);
 
@@ -17,6 +18,8 @@ export type AcaoSensivel = 'militar.excluir' | 'militar.importarCsv' | 'inspecao
 export const registrarAcaoSensivel = async (acao: AcaoSensivel, alvo: string): Promise<void> => {
   const ator = obterAtorAuditoria();
   if (!ator) return;
+  // Contagem agregada do uso do app (uso_diario; só o tipo da ação).
+  registrarUsoAcao(TIPO_DA_ACAO_SENSIVEL[acao]);
   try {
     await addDoc(collection(db, 'auditoria_acoes'), {
       acao, alvo: String(alvo).slice(0, 60), uid: ator.uid, usuario: ator.usuario, em: serverTimestamp(),

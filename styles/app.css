@@ -442,6 +442,8 @@ th[role="button"],
   background-color: #fff;
 }
 :root[data-theme="dark"] img { filter: brightness(0.9); }
+/* Sobre as superfícies "da casa" (splash de login, sidebar, faixas navy) a imagem já está num fundo escuro de propósito. */
+:root[data-theme="dark"] :is([data-marca], main.bg-navy, aside.bg-navy) img { background-color: transparent; filter: none; }
 /* Véus de fundo em navy (sidebar mobile) ficam pretos, não claros. */
 :root[data-theme="dark"] :is(.bg-navy\/40, .bg-navy\/50, .bg-navy\/60, .bg-navy\/70, .bg-navy\/80, .bg-navy\/90) {
   background-color: rgb(0 0 0 / 0.6);
@@ -454,6 +456,11 @@ th[role="button"],
 :root[data-theme="dark"] :is(.bg-gold, .bg-gold-300, .bg-gold-400) {
   --c-navy: 5 15 65;
   --c-ink: 5 15 65;
+}
+
+/* Primário invertido: fundo claro (#DCE4F4) com texto navy (14,3:1) — on-action. */
+:root[data-theme="dark"] :is(button, a, [role="button"], [role="radio"], [role="tab"], [role="menuitem"]):is(.bg-navy, .hover\:bg-navy:hover) {
+  --c-white: 5 15 65;
 }
 
 /* Números alinhados (G5): Montserrat com algarismos tabulares — use a utilitária tabular-nums. */

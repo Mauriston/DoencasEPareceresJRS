@@ -102,6 +102,20 @@ const casos = [
   cre('Médico Geral cria pedido de parecer', 'user_medicos_geral', 'pareceres/p1', 'DENY'),
   cre('Usuário grava o próprio Acesso rápido', 'user_secretaria', 'acessoRapido/u1', 'ALLOW'),
   cre('Usuário grava o Acesso rápido de outro', 'admin', 'acessoRapido/u2', 'DENY'),
+  // Uso do app (uso_diario): só as próprias chaves, uma página e +1 por gravação.
+  ...[
+    ['Usuário cria o dia do uso com os próprios contadores', 'create', null, { paginas: { home: 1 }, acessosPorUsuario: { u1: 1 } }, 'ALLOW'],
+    ['Usuário grava contador de outro no uso', 'create', null, { paginas: { home: 1 }, acessosPorUsuario: { u2: 1 } }, 'DENY'],
+    ['Usuário soma 1 acesso no uso', 'update', { paginas: { home: 3 }, acessosPorUsuario: { u1: 2, u2: 1 } }, { paginas: { home: 4 }, acessosPorUsuario: { u1: 3, u2: 1 } }, 'ALLOW'],
+    ['Usuário soma 5 acessos de uma vez no uso', 'update', { acessosPorUsuario: { u1: 2 } }, { acessosPorUsuario: { u1: 7 } }, 'DENY'],
+    ['Usuário mexe em duas páginas no uso', 'update', { paginas: { home: 1, inspecoes: 1 } }, { paginas: { home: 2, inspecoes: 2 } }, 'DENY'],
+    ['Usuário grava campo estranho no uso', 'create', null, { nome: 'FULANO' }, 'DENY'],
+  ].map(([nome, method, atual, novo, esperado]) => ({ nome, tc: {
+    expectation: esperado,
+    request: { auth: { uid: 'u1' }, path: `${DB}/uso_diario/2026-11-14`, method, resource: { data: novo } },
+    ...(atual ? { resource: { data: atual } } : {}),
+    functionMocks: mocks('user_secretaria'),
+  } })),
   cre('Médico Geral cria IS', 'user_medicos_geral', 'inspecoes/9001', 'DENY'),
   cre('Médico Geral cria concurso', 'user_medicos_geral', 'concursos/c9', 'DENY'),
   cre('Admin grava a escala do SPA', 'admin', 'escalaSpa/2026-11-06', 'ALLOW'),

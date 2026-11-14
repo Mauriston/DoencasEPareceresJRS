@@ -63,7 +63,10 @@ service cloud.firestore {
       allow update: if isAdmin() ||
         (isSignedIn() && request.auth.uid == uid &&
          request.resource.data.diff(resource.data).affectedKeys()
-           .hasOnly(['email', 'gmail', 'celular', 'imageProfile', 'senhaTemporaria', 'pwaTutorialConcluido', 'aparencia']));
+           .hasOnly(['email', 'gmail', 'celular', 'imageProfile', 'senhaTemporaria', 'pwaTutorialConcluido', 'aparencia', 'ultimoAcesso']) &&
+         // ultimoAcesso (services/usoDiario.ts): só a hora do servidor, nunca um valor escolhido pelo cliente.
+         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['ultimoAcesso']) ||
+          request.resource.data.ultimoAcesso == request.time));
       allow delete: if isAdmin();
     }
 
@@ -320,6 +323,29 @@ service cloud.firestore {
     // usuário só lê e grava o PRÓPRIO documento.
     match /acessoRapido/{uid} {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Uso do app (seção "Uso do app" do Painel; services/usoDiario.ts): um documento agregado por dia
+    // (id AAAA-MM-DD) com contadores — paginas{pagina: n}, acessosPorUsuario{uid: n},
+    // acoesPorUsuario{uid: {tipo: n}} e ultimo{uid: timestamp}. Só contagens: nunca nome de inspecionado,
+    // NIP, CID ou conteúdo. Só o Admin lê e apaga (retenção de 12 meses, podada pelo Painel). Cada gravação
+    // de usuário autenticado só mexe nas PRÓPRIAS chaves, em no máximo uma página, com o próprio contador
+    // de acessos subindo no máximo 1 e "ultimo" = hora do servidor.
+    function usoSoMeu(antes, depois) {
+      return depois.keys().hasOnly(['paginas', 'acessosPorUsuario', 'acoesPorUsuario', 'ultimo']) &&
+        depois.get('acessosPorUsuario', {}).diff(antes.get('acessosPorUsuario', {})).affectedKeys().hasOnly([request.auth.uid]) &&
+        depois.get('acoesPorUsuario', {}).diff(antes.get('acoesPorUsuario', {})).affectedKeys().hasOnly([request.auth.uid]) &&
+        depois.get('ultimo', {}).diff(antes.get('ultimo', {})).affectedKeys().hasOnly([request.auth.uid]) &&
+        depois.get('paginas', {}).diff(antes.get('paginas', {})).affectedKeys().size() <= 1 &&
+        depois.get('acessosPorUsuario', {}).get(request.auth.uid, 0) >= antes.get('acessosPorUsuario', {}).get(request.auth.uid, 0) &&
+        depois.get('acessosPorUsuario', {}).get(request.auth.uid, 0) <= antes.get('acessosPorUsuario', {}).get(request.auth.uid, 0) + 1 &&
+        (!depois.get('ultimo', {}).diff(antes.get('ultimo', {})).affectedKeys().hasAny([request.auth.uid]) ||
+          depois.ultimo[request.auth.uid] == request.time);
+    }
+    match /uso_diario/{dia} {
+      allow read, delete: if isAdmin();
+      allow create: if isSignedIn() && dia.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') && usoSoMeu({}, request.resource.data);
+      allow update: if isSignedIn() && usoSoMeu(resource.data, request.resource.data);
     }
 
     // ---------------------------------------------------------------------

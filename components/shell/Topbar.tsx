@@ -16,7 +16,7 @@ interface TopbarProps {
 
 export const Topbar: React.FC<TopbarProps> = ({ rolou }) => (
   <header
-    className={`relative z-topbar shrink-0 h-14 bg-white border-b border-line flex items-center gap-2 md:gap-4 pl-3 pr-2 md:px-6 transition-shadow duration-200 ${rolou ? 'shadow-lg' : ''}`}
+    className={`relative z-topbar shrink-0 h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-white border-b border-line flex items-center gap-2 md:gap-4 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] md:px-6 transition-shadow duration-200 ${rolou ? 'shadow-lg' : ''}`}
   >
     <Breadcrumbs className="flex-1" />
     <GlobalSearch className="md:w-56 xl:w-72 shrink-0" />

@@ -109,6 +109,7 @@ export const AREAS_SOBRE: AreaSobre[] = [
       'Precisa de atenção: pareceres atrasados, IS de hoje, concursos em andamento e IS de concurso atrasadas.',
       'Agenda de inspeções com os eventos do dia e acesso rápido às páginas mais usadas.',
       'Notificações no celular e no computador, mesmo com o app fechado.',
+      'Painel com as tendências do período (IS, perícias e concursos). O uso do app é medido só em contagens — páginas abertas e ações por usuário, sem nenhum dado de inspecionado —, visíveis apenas ao Admin e guardadas por 12 meses.',
     ],
   },
 ];

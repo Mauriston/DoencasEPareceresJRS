@@ -14,6 +14,7 @@ import {
 import { novoId } from '../utils/dados';
 import { app } from './firebaseAuth';
 import { registrarAcaoSensivel } from './auditoriaAcoes';
+import { registrarUsoAcao } from './usoDiario';
 import {
   chaveSlot, chavesOcupadas, duracaoDoGrupo, situacaoDoStatus, statusAoAgendar, TODOS_PERITOS,
   type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS, type Turno,
@@ -141,6 +142,8 @@ export const criarInspecao = async (dados: NovaInspecao): Promise<string> => {
   const status: StatusIS = dados.dataEntrevista ? 'agendada' : 'aberta';
   const completo = { ...dados, is: Number(id), status, situacao: situacaoDoStatus(status) };
   await gravarComSlot(id, completo, dados.dataEntrevista ? { peritoUid: dados.peritoUid, dataEntrevista: dados.dataEntrevista, grupoFinalidade: dados.grupoFinalidade } : null, null, true);
+  registrarUsoAcao('is_cadastrar');
+  if (dados.dataEntrevista) registrarUsoAcao('is_agendar');
   return id;
 };
 
@@ -169,6 +172,7 @@ export const agendarInspecao = async (atual: InspecaoRecord, novo: Agendamento):
   const status: StatusIS = statusAoAgendar(atual, novo.dataEntrevista);
   const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(atual.id, { ...novo, status, situacao: situacaoDoStatus(status) }, { peritoUid: novo.peritoUid, dataEntrevista: novo.dataEntrevista, grupoFinalidade: atual.grupoFinalidade }, slotAntigo, false);
+  registrarUsoAcao('is_agendar');
   return status;
 };
 

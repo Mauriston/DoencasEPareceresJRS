@@ -3,12 +3,14 @@
 // o servidor (servidor/email/faltasHNRe.ts) monta a comunicação das faltas escolhidas e envia pela conta Google
 // da JRS. Sem a conta autorizada no servidor (503), o app explica que o Admin precisa autorizá-la.
 import { ApiError, chamarServidor } from './apiClient';
+import { registrarUsoAcao } from './usoDiario';
 
 export interface ResultadoEnvioFaltas { enviados: number; para: string[]; cc: string[] }
 
 export const enviarEmailFaltasHNRe = async (isIds: string[]): Promise<ResultadoEnvioFaltas> => {
   try {
     const { success: _s, enviado: _e, ...r } = await chamarServidor<ResultadoEnvioFaltas & { success: boolean; enviado: boolean }>('/api/email/faltas-hnre', { isIds });
+    registrarUsoAcao('email_enviar');
     return r;
   } catch (e) {
     if (e instanceof ApiError && e.status === 503) throw new ApiError('negocio', 'A conta Google da JRS não está autorizada no servidor. Peça ao Admin para autorizá-la em Usuários.', 503);
