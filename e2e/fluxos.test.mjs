@@ -41,14 +41,8 @@ const abrirConcurso = async (pagina) => {
   await pagina.getByText('CANDIDATO DE HOJE').first().waitFor();
 };
 
-// Inspeções: a Tabela abre em "Em andamento" · "Este mês"; alterna as situações indicadas no dropdown de Situação.
-const alternarSituacoes = async (pagina, nomes) => {
-  await pagina.getByRole('button', { name: /^Situação:/ }).click();
-  const painel = pagina.getByRole('dialog', { name: 'Situação' });
-  for (const n of nomes) await painel.getByRole('checkbox', { name: new RegExp(`^${n}`) }).click();
-  await pagina.keyboard.press('Escape');
-  await painel.waitFor({ state: 'detached' });
-};
+// Inspeções: a Lista abre na aba "Ativas" (abertas + em andamento), sem filtro de período; filtros em chips.
+const abaInspecoes = (pagina, nome) => pagina.getByRole('tab', { name: new RegExp(`^${nome}`) });
 
 test('página pública das Doenças de Lei abre sem login', async () => {
   const p = await novaPagina();
@@ -114,7 +108,7 @@ test('Inspeções: lista a IS semeada, filtra pela busca e abre o detalhe', asyn
   await entrar(p, MEDICO);
   await p.goto(`${BASE}#/inspecoes`);
   await p.getByRole('heading', { name: 'Inspeções de Saúde' }).waitFor();
-  await alternarSituacoes(p, ['Abertas']); // a IS semeada está aberta (não agendada)
+  // A IS semeada está aberta (não agendada): aparece na aba Ativas, no grupo "Abertas · sem agendamento".
   const abrir = p.getByRole('button', { name: `Abrir IS ${IS_E2E.numero}` });
   await abrir.waitFor();
 
@@ -196,7 +190,6 @@ test('Inspeções: o menu da linha não tem mais "Ver detalhes" e a tabela não 
   const p = await novaPagina();
   await entrar(p, MEDICO);
   await p.goto(`${BASE}#/inspecoes`);
-  await alternarSituacoes(p, ['Abertas']);
   await p.getByRole('button', { name: `Abrir IS ${IS_E2E.numero}` }).waitFor();
   assert.equal(await p.getByRole('columnheader', { name: 'Entrevista' }).count(), 0);
   await p.locator(`button[aria-label="Ações da IS ${IS_E2E.numero}"]:visible`).first().click();
@@ -236,39 +229,46 @@ test('Início: "+ Abrir IS" (no lugar de "Novo parecer") leva ao formulário de 
   await p.context().close();
 });
 
-test('Inspeções: agenda com filtros de Situação (caixas + "Todas") e Período, botões só ícone e rich tooltip no calendário', async () => {
+test('Inspeções: abas Ativas/Finalizadas, chips de filtro e Período, botões só ícone e rich tooltip no calendário', async () => {
   const p = await novaPagina();
   await entrar(p, MEDICO);
   await p.goto(`${BASE}#/inspecoes`);
   const aberta = p.getByRole('button', { name: `Abrir IS ${IS_E2E.numero}` });
   const agendada = p.getByRole('button', { name: `Abrir IS ${IS_AGENDADA_E2E.numero}` });
-  // Padrão: só "Em andamento" · "Este mês" — a agendada (hoje) aparece, a aberta não.
+  // Padrão: aba Ativas · todos os períodos — a agendada (hoje) e a aberta (sem agendamento) aparecem.
+  assert.equal(await abaInspecoes(p, 'Ativas').getAttribute('aria-selected'), 'true');
   await agendada.waitFor();
-  assert.equal(await aberta.count(), 0);
-  assert.equal(await p.getByText('Cadastre IS, agende as entrevistas').count(), 0);
-  const botaoSituacao = p.getByRole('button', { name: /^Situação:/ });
-  assert.equal(await botaoSituacao.getAttribute('aria-label'), 'Situação: Em andamento');
-  assert.equal(await p.getByRole('button', { name: /^Período:/ }).getAttribute('aria-label'), 'Período: Este mês');
-  // Agenda: o dia de hoje é o cabeçalho do grupo da IS agendada.
-  await p.getByRole('rowheader', { name: /hoje/ }).waitFor();
-
-  // "Todas" marca as três situações; a aberta (não agendada) vai para o grupo do topo.
-  await botaoSituacao.click();
-  const painel = p.getByRole('dialog', { name: 'Situação' });
-  await painel.getByRole('checkbox', { name: 'Todas' }).click();
-  for (const n of ['Abertas', 'Em andamento', 'Finalizadas']) assert.equal(await painel.getByRole('checkbox', { name: new RegExp(`^${n}`) }).isChecked(), true);
   await aberta.waitFor();
-  await p.getByRole('rowheader', { name: /Não agendadas/ }).waitFor();
-  // Desmarcar "Todas" limpa tudo.
-  await painel.getByRole('checkbox', { name: 'Todas' }).click();
-  await p.getByText('Selecione ao menos uma situação.').waitFor();
-  await painel.getByRole('checkbox', { name: /^Abertas/ }).click();
-  await p.keyboard.press('Escape');
-  assert.equal(await botaoSituacao.getAttribute('aria-label'), 'Situação: Abertas');
+  assert.equal(await p.getByText('Cadastre IS, agende as entrevistas').count(), 0);
+  assert.equal(await p.getByRole('button', { name: /^Período:/ }).getAttribute('aria-label'), 'Período: Todos os períodos');
+  // Sem o banner "Toque para ver" (I1): Atrasadas é um chip de filtro.
+  assert.equal(await p.getByText(/Toque para ver/).count(), 0);
+  // Ordem de trabalho: Hoje primeiro; as abertas sem agendamento num grupo próprio.
+  await p.getByRole('rowheader', { name: /^Hoje/ }).waitFor();
+  await p.getByRole('rowheader', { name: /sem agendamento/ }).waitFor();
+
+  // Chip "Sem agendamento": só a aberta; vai para a URL (?situacao=sem_agendamento).
+  const semAgendamento = p.getByRole('button', { name: /^Sem agendamento/ });
+  await semAgendamento.click();
+  assert.equal(await semAgendamento.getAttribute('aria-pressed'), 'true');
+  await agendada.waitFor({ state: 'detached' });
+  await aberta.waitFor();
+  assert.match(p.url(), /situacao=sem_agendamento/);
+  await semAgendamento.click();
+  await agendada.waitFor();
+
+  // Aba Finalizadas: nenhuma das duas; volta para Ativas.
+  await abaInspecoes(p, 'Finalizadas').click();
+  await agendada.waitFor({ state: 'detached' });
+  assert.equal(await aberta.count(), 0);
+  await abaInspecoes(p, 'Ativas').click();
+  await agendada.waitFor();
+
+  // Deep link do Painel/Início: ?situacao=sem_agendamento abre já filtrado.
+  await p.goto(`${BASE}#/inspecoes?situacao=sem_agendamento`);
   await aberta.waitFor();
   assert.equal(await agendada.count(), 0);
-  await alternarSituacoes(p, ['Em andamento']);
-  assert.equal(await botaoSituacao.getAttribute('aria-label'), 'Situação: 2 situações');
+  await p.goto(`${BASE}#/inspecoes`);
   await agendada.waitFor();
 
   // Período customizado no passado: some a agendada; a não agendada continua.
@@ -290,8 +290,9 @@ test('Inspeções: agenda com filtros de Situação (caixas + "Todas") e Períod
   // Calendário (ícone) abre em Mês; o hover numa IS mostra o rich tooltip.
   await p.getByRole('radio', { name: 'Calendário' }).click();
   await p.getByRole('radio', { name: 'Mês', checked: true }).waitFor();
-  // Situação e Período só valem para a Tabela.
-  assert.equal(await p.getByRole('button', { name: /^(Situação|Período):/ }).count(), 0);
+  // Abas e Período só valem para a Lista.
+  assert.equal(await p.getByRole('button', { name: /^(Perito|Período):/ }).count(), 0);
+  assert.equal(await p.getByRole('tab', { name: /^Ativas/ }).count(), 0);
   // No Calendário não há barra de filtros (nem perito/busca); a alternância fica na barra do calendário.
   assert.equal(await p.getByLabel('Filtrar por perito').count(), 0);
   assert.equal(await p.getByLabel('Buscar IS').count(), 0);
