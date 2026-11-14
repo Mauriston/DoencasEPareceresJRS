@@ -34,5 +34,25 @@ export const IMAGENS_GERADAS: Record<string, DimensaoImagem> = {
   "emails/resultadoIS": {
     "w": 860,
     "h": 1469
+  },
+  "telas/concursos-desktop": {
+    "w": 1280,
+    "h": 800,
+    "escuro": true
+  },
+  "telas/inicio-desktop": {
+    "w": 1280,
+    "h": 800,
+    "escuro": true
+  },
+  "telas/inspecoes-desktop": {
+    "w": 1280,
+    "h": 800,
+    "escuro": true
+  },
+  "telas/pericias-desktop": {
+    "w": 1280,
+    "h": 800,
+    "escuro": true
   }
 };

@@ -6,13 +6,13 @@
 //
 //   npx firebase emulators:exec --only auth,firestore --project demo-jrs "npx tsx scripts/sobre/gerar-capturas.ts"
 //
-// Precisa das portas 8080 (Firestore), 9099 (Auth) e 3101 (app) livres. Depois de gerar, as dimensões vão
+// Precisa das portas 8080 (Firestore), 9099 (Auth) e 3101 (app) livres. APARELHOS=desktop,celular (padrão:
+// os dois) limita a geração; o manifesto é atualizado ao fim de cada aparelho (dá para rodar em partes). Depois de gerar, as dimensões vão
 // para components/sobre/imagens.gerado.ts e a página troca a moldura pela imagem.
 import { spawn } from 'node:child_process';
 import type { Browser, BrowserContext, Page } from 'playwright';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp } from 'firebase-admin/app';
-// @ts-expect-error módulo .mjs sem tipos (dados do E2E)
 import { semear, semearTelas, MEDICO, SENHA, HOJE } from '../../e2e/dados.mjs';
 import { abrirChromium, atualizarManifesto, gravarWebp, pngParaWebp, type DimensaoImagem } from './util';
 
@@ -97,7 +97,8 @@ const fechar = async (pagina: Page) => {
 
 const capturar = async (navegador: Browser) => {
   const manifesto: Record<string, DimensaoImagem> = {};
-  for (const [aparelho, opcoes] of Object.entries(APARELHOS)) {
+  const escolhidos = (process.env.APARELHOS || 'desktop,celular').split(',');
+  for (const [aparelho, opcoes] of Object.entries(APARELHOS).filter(([a]) => escolhidos.includes(a))) {
     for (const escala of [1, 2] as const) {
       const contexto: BrowserContext = await navegador.newContext({ ...opcoes, deviceScaleFactor: escala, locale: 'pt-BR', timezoneId: 'America/Recife' });
       const pagina = await contexto.newPage();
@@ -120,6 +121,7 @@ const capturar = async (navegador: Browser) => {
       }
       await contexto.close();
     }
+    atualizarManifesto(manifesto);
   }
   return manifesto;
 };
