@@ -26,6 +26,8 @@ export interface MenuAcoesConcursoProps {
   minutaHabilitada: boolean;
   temPeriodoConfigurado: boolean;
   temMensagensRegistradas: boolean;
+  /** Perfil Admin: pode editar o período das IS mesmo com o concurso "Em Andamento" e já com lançamentos. */
+  ehAdmin?: boolean;
   onAbrir: () => void;
   onVoltarParaEmBreve: () => void;
   onEncerrar: () => void;
@@ -39,7 +41,7 @@ export interface MenuAcoesConcursoProps {
 
 export const construirItensMenuConcurso = ({
   status, podeAbrirEncerrar, podeGerarMinutaResultados, podeRegistrarMensagemArquivo, podeListarMensagens, podeAdicionarCandidato, podeEnviarExames,
-  podeEncerrar, podeVoltarParaEmBreve, minutaHabilitada, temPeriodoConfigurado, temMensagensRegistradas,
+  podeEncerrar, podeVoltarParaEmBreve, minutaHabilitada, temPeriodoConfigurado, temMensagensRegistradas, ehAdmin = false,
   onAbrir, onVoltarParaEmBreve, onEncerrar, onMinutaResultados, onRegistrarMensagem, onListarMensagens, onDefinirPeriodoAgendamento, onAdicionarCandidato, onEnviarExames,
 }: MenuAcoesConcursoProps): ItemMenuAcao[] => {
   const itens: ItemMenuAcao[] = [];
@@ -71,10 +73,14 @@ export const construirItensMenuConcurso = ({
   // "Editar" (período já configurado) só aparece enquanto o concurso não
   // tiver lançamentos de dados — mudar o período depois disso invalidaria
   // os dados já lançados. "Definir" (primeira vez) não tem essa restrição.
-  if (podeAbrirEncerrar && status !== 'encerrado' && (!temPeriodoConfigurado || podeVoltarParaEmBreve)) {
+  // Exceção exclusiva do Admin: com o concurso "Em Andamento" o período das
+  // IS continua editável mesmo após lançamentos (as datas já agendadas dos
+  // candidatos são preservadas no calendário — ver definirPeriodoAgendamento).
+  const adminEditaEmAndamento = ehAdmin && status === 'em_andamento';
+  if ((podeAbrirEncerrar || adminEditaEmAndamento) && status !== 'encerrado' && (!temPeriodoConfigurado || podeVoltarParaEmBreve || adminEditaEmAndamento)) {
     itens.push({
       key: 'periodo-agendamento',
-      label: temPeriodoConfigurado ? 'Editar Período de Agendamento' : 'Definir Período de Agendamento',
+      label: temPeriodoConfigurado ? 'Editar Período das IS' : 'Definir Período de Agendamento',
       icon: temPeriodoConfigurado ? 'edit_calendar' : 'calendar_add_on', onClick: onDefinirPeriodoAgendamento,
     });
   }
