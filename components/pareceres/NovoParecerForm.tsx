@@ -8,6 +8,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
+import { IconButton } from '../ui/IconButton';
 import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
@@ -191,7 +192,7 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, vinculoIS, 
             {militar && (
               <p className="mt-1 text-xs text-ink-3">
                 {verTodasFinalidades ? 'Mostrando todas as finalidades.' : `Finalidades disponíveis para o vínculo ${vinculoDoMilitar(militar)}.`}{' '}
-                <button type="button" onClick={() => setVerTodasFinalidades(v => !v)} className="font-semibold text-navy underline min-h-[24px]">
+                <button type="button" onClick={() => setVerTodasFinalidades(v => !v)} className="font-semibold text-navy underline min-h-[24px] rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
                   {verTodasFinalidades ? 'Filtrar pelo vínculo' : 'Ver todas'}
                 </button>
               </p>
@@ -206,13 +207,7 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, vinculoIS, 
           <div>
             <div className="flex items-center justify-between gap-2 mb-1">
               <span className="block text-xs font-semibold text-ink-3">Quesitos<span className="text-wine ml-0.5" aria-hidden="true">*</span></span>
-              <button
-                type="button" onClick={() => setEditandoQuesitos(true)} disabled={!modelo}
-                aria-label="Editar quesitos" title="Editar quesitos"
-                className="w-11 h-11 -my-2 -mr-2 inline-flex items-center justify-center rounded-lg text-navy hover:bg-thead disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
-              >
-                <span className="material-symbols-outlined text-[20px]" aria-hidden="true">edit</span>
-              </button>
+              <IconButton icon="edit" label="Editar quesitos" variant="ghost" size="sm" className="!text-navy" onClick={() => setEditandoQuesitos(true)} disabled={!modelo} />
             </div>
             {quesitos.length > 0 ? (
               <ol aria-invalid={erros.quesitos ? true : undefined} className="list-decimal pl-5 space-y-1.5 text-sm text-ink bg-thead border border-line rounded-lg py-3 pr-3 max-h-64 overflow-y-auto">

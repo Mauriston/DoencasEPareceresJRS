@@ -55,8 +55,8 @@ export const TimelineAfastamentos: React.FC<Props> = ({ afastamentos, fotos, esc
   };
 
   return (
-    <div className="bg-white rounded-xl border border-line overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-line">
+    <div className="bg-white rounded-xl border border-line overflow-clip">
+      <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 border-b border-line">
         <Segmented<EscalaTimeline>
           ariaLabel="Escala da timeline"
           value={escala}
@@ -78,7 +78,7 @@ export const TimelineAfastamentos: React.FC<Props> = ({ afastamentos, fotos, esc
         <div className="min-w-[900px]">
           {/* Cabeçalho dos meses */}
           <div className="flex border-b border-line bg-thead">
-            <div className="w-64 shrink-0 px-4 py-2 text-xs font-bold text-ink-3">USUÁRIO</div>
+            <div className="w-64 shrink-0 px-4 py-2 text-xs font-bold text-ink-3">Usuário</div>
             <div className="flex-1 flex">
               {janela.meses.map(m => (
                 <div key={m.chave} style={{ width: `${(m.dias / totalDias) * 100}%` }} className="py-2 text-center text-xs font-bold text-ink-3 border-l border-line overflow-hidden whitespace-nowrap">{m.rotulo}</div>

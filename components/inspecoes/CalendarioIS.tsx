@@ -5,7 +5,11 @@
 // quando há um perito filtrado, os turnos em que ele não atende esmaecidos. Clicar numa IS abre os
 // detalhes; clicar num horário livre (quem pode agendar) abre o agendamento nesse horário (IS aberta ou
 // nova IS); o botão "+" de um dia abre o agendamento de uma IS aberta naquele dia.
-// À esquerda, o painel das IS abertas ainda sem entrevista (com o mini calendário no topo na visão Dia).
+// À esquerda, o painel das IS abertas ainda sem entrevista (com o mini calendário no topo na visão Dia): padrão D
+// (4 + 8 colunas) com o gatilho @split (largura útil ≥ 960 px, auditoria v3 · L1/CAL2); abaixo dele o painel vai
+// para DEPOIS da grade, recolhido, e não a empurra para baixo da dobra.
+// A página só renderiza o calendário a partir de md (768 px · 4g). Semana só a partir de 1024 px (as 5 colunas
+// cabem sem rolar); no tablet ficam Dia e Mês.
 // Arrastar (HTML5 drag-and-drop) um cartão do painel para um dia/horário — ou uma IS agendada ainda sem
 // laudo, TIS e DS-1a (ver podeArrastarIS) — abre o diálogo de agendamento/reagendamento já com a nova
 // data; a transação de agendamento valida perito e slot. Os cartões mostram só a hora e o nome do
@@ -88,6 +92,19 @@ const titulo = (modo: Modo, ancora: string): string => {
 };
 
 const nomeCurto = nomeCurtoInspecionado;
+
+/** Janela ≥ 1024 px (a visão Semana só aparece a partir daí). */
+const useSemanaCabe = (): boolean => {
+  const consulta = '(min-width: 1024px)';
+  const [cabe, setCabe] = useState(() => typeof window === 'undefined' || window.matchMedia(consulta).matches);
+  useEffect(() => {
+    const mql = window.matchMedia(consulta);
+    const aoMudar = () => setCabe(mql.matches);
+    mql.addEventListener('change', aoMudar);
+    return () => mql.removeEventListener('change', aoMudar);
+  }, []);
+  return cabe;
+};
 /** O próprio dia, se útil; senão a próxima segunda. */
 const diaUtilOuProximo = (d: string): string => (ehDiaUtil(d) ? d : somarDias(d, deISO(d).getDay() === 6 ? 2 : 1));
 
@@ -106,7 +123,10 @@ type Alvo = { data: string; hhmm: string | null } | null;
 type Dialogo = { tipo: 'agendar'; is: InspecaoRecord; data?: string; hora?: string } | { tipo: 'dia'; data: string } | null;
 
 export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, peritoUid, onAbrir, onNovoNoHorario, onReagendar, onAviso, diasConcursos = [], onAbrirConcurso, controleVisao }) => {
-  const [modo, setModo] = useState<Modo>('mes');
+  const [modoEscolhido, setModo] = useState<Modo>('mes');
+  const semanaCabe = useSemanaCabe();
+  // Tablet (768–1023 px): sem Semana; quem estava em Semana passa a ver o Dia.
+  const modo: Modo = modoEscolhido === 'semana' && !semanaCabe ? 'dia' : modoEscolhido;
   const [ancora, setAncora] = useState(() => diaUtilOuProximo(hojeISO()));
   const hoje = hojeISO();
   const rolagem = useRef<HTMLDivElement>(null);
@@ -243,10 +263,13 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
   const maisDoDia = (d: string) => (podeAgendar && aceitaDia(d) ? () => setDialogo({ tipo: 'dia', data: d }) : undefined);
 
   return (
-    <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[19rem_minmax(0,1fr)] lg:items-stretch">
-      {/* Painel: no desktop, mesma altura do calendário (posição absoluta na célula da grade) e rolagem própria. */}
-      <div className="lg:relative lg:min-h-[24rem]">
-        <div className="lg:absolute lg:inset-0">
+    <>
+    <div className="@container">
+    <div className="grid grid-cols-1 @split:grid-cols-12 gap-6 @split:items-stretch">
+      {/* Painel (4/12): em @split, mesma altura do calendário (posição absoluta na célula) e rolagem própria;
+          abaixo de @split, depois do calendário (order) — não empurra a grade. */}
+      <div className="min-w-0 order-2 @split:order-none @split:col-span-4 @split:relative @split:min-h-[24rem]">
+        <div className="@split:absolute @split:inset-0">
           <CalendarioPainelAbertas
             abertas={abertas} hoje={hoje} onAbrir={onAbrir}
             onAgendar={podeAgendar ? is => setDialogo({ tipo: 'agendar', is }) : undefined}
@@ -259,7 +282,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-line overflow-clip min-w-0">
+      <div className="bg-white rounded-xl border border-line overflow-clip min-w-0 @split:col-span-8">
         <div className="flex flex-wrap items-center justify-between gap-2 p-3 border-b border-line">
           <div className="flex items-center gap-1 min-w-0">
             <Button variant="secondary" onClick={irHoje}>Hoje</Button>
@@ -271,7 +294,9 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
             {controleVisao}
             <Segmented<Modo>
               ariaLabel="Visão do calendário" value={modo} onChange={setModo}
-              options={[{ value: 'dia', label: 'Dia' }, { value: 'semana', label: 'Semana' }, { value: 'mes', label: 'Mês' }]}
+              options={semanaCabe
+                ? [{ value: 'dia', label: 'Dia' }, { value: 'semana', label: 'Semana' }, { value: 'mes', label: 'Mês' }]
+                : [{ value: 'dia', label: 'Dia' }, { value: 'mes', label: 'Mês' }]}
             />
           </div>
         </div>
@@ -286,7 +311,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
           ? <VisaoMes ancora={ancora} hoje={hoje} porDia={porDia} bloqueios={bloqueios} peritoUid={peritoUid} onAbrir={onAbrir} concursosPorDia={concursosPorDia} onAbrirConcurso={onAbrirConcurso} propsDica={propsDica} propsArraste={propsArraste} propsAlvoDia={propsAlvoDia} alvo={alvo} arrastandoId={arraste?.is.id ?? null} maisDoDia={maisDoDia} onDia={d => { setAncora(d); setModo('dia'); }} />
           : (
             <div ref={rolagem} className="overflow-auto max-h-[70vh]">
-              <div className="min-w-[640px]">
+              <div className={modo === 'semana' ? 'min-w-[640px]' : ''}>
                 <div className="sticky top-0 z-20 grid bg-white border-b border-line" style={{ gridTemplateColumns: `56px repeat(${dias.length}, minmax(0, 1fr))` }}>
                   <div />
                   {dias.map(d => {
@@ -334,6 +359,8 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
             </div>
           )}
       </div>
+    </div>
+    </div>
 
       {dica && !arraste && (
         <TooltipIS
@@ -360,7 +387,7 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
           podeCadastrar={false} onNova={fecharDialogo} onClose={fecharDialogo} onAgendada={concluido}
         />
       )}
-    </div>
+    </>
   );
 };
 
@@ -528,7 +555,7 @@ const VisaoMes: React.FC<{
   const semanas = semanasUteisDoMes(ancora);
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[560px]">
+      <div className="min-w-[480px]">
         <div className="grid grid-cols-5 border-b border-line bg-thead text-xs font-semibold text-ink-3 uppercase">
           {['seg', 'ter', 'qua', 'qui', 'sex'].map(n => <div key={n} className="px-2 py-2 text-center">{n}</div>)}
         </div>

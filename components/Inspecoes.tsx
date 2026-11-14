@@ -1,11 +1,19 @@
 // Ficheiro: components/Inspecoes.tsx
 // Página INSPEÇÕES DE SAÚDE: cadastro das IS (exceto as de concursos), agendamento das entrevistas em
 // slots de 20 min por perito, acompanhamento de prazos e minutas de mensagem. O status muda sozinho
-// (Conclusão da IS no detalhe; Falta, Restituição, Reabrir e Cancelar IS no menu ⋮ da linha). Visão inicial em tabela
-// no formato "agenda" (um grupo por dia da entrevista; no topo, as não agendadas — ver inspecoes/TabelaAgendaIS),
-// filtrada por situação (padrão: Em andamento) e período (padrão: Este mês), com alternância para calendário no
-// formato do Google Agenda. As IS com entrevista marcada são sincronizadas com a agenda "JRS/HNRe" do Google
-// Agenda, com o perito como convidado (ver services/agendaGoogleIS.ts).
+// (Conclusão da IS no detalhe; Falta, Restituição, Reabrir e Cancelar IS no menu ⋮ da linha).
+// Lista (auditoria v3, 2b): abas sublinhadas Ativas · Finalizadas (com contagem) e filtros em chips — Atrasadas,
+// Sem agendamento, Minhas, Perito, Período —, numa linha rolável no celular (M3). Uma tabela só, na ordem de
+// trabalho: Hoje → próximos dias → entrevistados aguardando conclusão → abertas sem agendamento; Finalizadas por
+// mês, paginadas ("Mostrar mais"). Ver inspecoes/TabelaAgendaIS e inspecoes/listaIS.
+// Calendário (formato do Google Agenda) só a partir de md (4g): no celular a página força a Lista, mesmo com a
+// preferência salva ou ?visao=calendario. Cabeçalho: ⋮ (Bloqueios e E-mails) · "Abrir IS" por último; no celular,
+// FAB "Abrir IS" para quem tem inspecoes.cadastrar (4d).
+// Filtros pela URL (contadores da Início e do Painel):
+//   ?situacao=atrasadas | sem_agendamento | finalizadas | hoje   (hoje vira o período "Hoje" e sai da URL)
+//   ?perito=<uid> · ?minhas=1 · ?dia=AAAA-MM-DD (período daquele dia) · ?visao=calendario|tabela · ?novo=manual|print
+// As IS com entrevista marcada são sincronizadas com a agenda "JRS/HNRe" do Google Agenda, com o perito como
+// convidado (ver services/agendaGoogleIS.ts).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
@@ -14,11 +22,15 @@ import { IconButton } from './ui/IconButton';
 import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
 import { ConfirmDialog } from './ui/Dialog';
-import { controlClass } from './ui/Field';
+import { SearchField } from './ui/Field';
+import { FilterChip } from './ui/FilterChip';
+import { FabAcoes } from './ui/Fab';
 import { MenuAcoes, type ItemMenu } from './ui/MenuAcoes';
-import { TabelaAgendaIS } from './inspecoes/TabelaAgendaIS';
-import { FiltroSituacaoIS } from './inspecoes/FiltroSituacaoIS';
+import { TabelaAgendaIS, type AvisoDiaIS } from './inspecoes/TabelaAgendaIS';
 import { FiltroPeriodo, type FiltroPeriodoValor } from './inspecoes/FiltroPeriodo';
+import { FiltroPopover } from './inspecoes/FiltroPopover';
+import { agruparAtivasIS, agruparFinalizadasIS, ordenarFinalizadasIS, type GrupoIS } from './inspecoes/listaIS';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 import { InspecaoForm } from './inspecoes/InspecaoForm';
 import { ISPorFotoForm } from './inspecoes/ISPorFotoForm';
 import { InspecaoDetalhe } from './inspecoes/InspecaoDetalhe';
@@ -31,7 +43,7 @@ import { EnviarAgendamentoDialog } from './inspecoes/EnviarAgendamentoDialog';
 import { avisarAgendamento, observarAgendamentos, type AgendamentoFeito } from '../services/emailAgendamentoIS';
 import { agendamentoJaEnviado, ehElegivelAgendamento } from '../utils/emailAgendamentoIS';
 import { EmailAgendaDialog } from './inspecoes/EmailAgendaDialog';
-import { BotaoEnviarEmail } from './inspecoes/BotaoEnviarEmail';
+import { useEmailsIS } from './inspecoes/BotaoEnviarEmail';
 import { EmailsDaIS } from './inspecoes/EmailsDaIS';
 import { emailDoInspecionado } from '../services/emailResultadoIS';
 import { CalendarioIS } from './inspecoes/CalendarioIS';
@@ -49,6 +61,8 @@ import { mostraMinutaMsg, fasesDeEntrevista } from './inspecoes/InspecaoDetalhe'
 import { restituicaoDoStatus } from '../utils/conclusaoIS';
 import { podeArrastarIS } from '../utils/calendarioIS';
 import { useDiasConcursos, useSincronizarAgendaConcursos } from '../hooks/useDiasConcursos';
+import { tituloDiaConcurso, ehBloqueioDeConcurso } from '../services/agendaConcursos';
+import { estadoDoSlot } from './inspecoes/SeletorHorario';
 import { concursoPath } from '../config/routes';
 import { carregarPeritos, type PeritoIS } from '../services/peritosIS';
 import { sincronizarAgendaIS, removerEventoAgendaIS } from '../services/agendaGoogleIS';
@@ -56,14 +70,32 @@ import { minutaCancelamento, minutaResultadoDaIS } from '../utils/minutasIS';
 import { postoDoInspecionado, sugerirDestinatariosIA } from '../services/destinatariosIA';
 import { normalizarBusca } from '../utils/corposQuadros';
 import {
-  STATUS_IS, statusEfetivoIS, diasEmAberto, prazoAtrasoDias, dataHoraBr, hojeISO,
-  podeCancelarIS, situacaoDoStatus,
-  type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS,
+  STATUS_IS, statusEfetivoIS, dataHoraBr, hojeISO, podeCancelarIS, situacaoDoStatus, bloqueioNoDia, ehDiaUtil,
+  TURNOS, slotsDoTurno, minutosDe, horaDeEntrevista, duracaoDaIS, peritoAtendeNoTurno, ocupadosDe, turnoDoSlot,
+  type BloqueioAgenda, type ConfigAgenda, type StatusIS,
 } from '../utils/inspecoes';
 import { intervaloDoPeriodo } from '../utils/periodos';
-import { agruparAgendaIS, passaNoPeriodo } from '../utils/agendaIS';
+import { passaNoPeriodo } from '../utils/agendaIS';
 
 type Visao = 'tabela' | 'calendario';
+type Aba = 'ativas' | 'finalizadas';
+/** ?situacao= que vira estado da lista (os demais valores são consumidos e saem da URL). */
+type SituacaoURL = 'atrasadas' | 'sem_agendamento' | 'finalizadas';
+const SITUACOES_URL: SituacaoURL[] = ['atrasadas', 'sem_agendamento', 'finalizadas'];
+/** Finalizadas por página ("Mostrar mais"). */
+const PAGINA_FINALIZADAS = 30;
+const CHAVE_VISAO = 'jrs_inspecoes_visao';
+const lerVisaoSalva = (): Visao => { try { return localStorage.getItem(CHAVE_VISAO) === 'calendario' ? 'calendario' : 'tabela'; } catch { return 'tabela'; } };
+const diaDoParam = (v: string | null): string => (/^\d{4}-\d{2}-\d{2}$/.test(v ?? '') ? v! : '');
+const periodoDoDia = (dia: string, hoje: string): FiltroPeriodoValor => (dia === hoje ? { id: 'hoje' } : { id: 'custom', custom: { inicio: dia, fim: dia } });
+
+/** Texto do bloqueio no cabeçalho do dia (bloqueio de turno/horário, férias e afastamentos). */
+const textoBloqueio = (b: BloqueioAgenda): string => {
+  const quem = b.peritoUid === '*' ? 'todos os peritos' : (b.peritoNome || 'perito');
+  if (b.dataFim && b.dataFim !== b.data) return `${b.motivo || 'Afastamento'} · ${quem}`;
+  const quando = b.hora ? `${b.hora} bloqueado` : b.turno === 'manha' ? 'Manhã bloqueada' : b.turno === 'tarde' ? 'Tarde bloqueada' : 'Dia bloqueado';
+  return `${quando}${b.horaFim ? ` até ${b.horaFim}` : ''} · ${quem}${b.motivo ? ` — ${b.motivo}` : ''}`;
+};
 
 /** IS finalizadas de concursos não entram aqui; aqui só as cadastradas na página. */
 const nomeCurto = (inspecionado: string): string => inspecionado.replace(/^.*?\d{2}\.\d{4}\.\d{2}\s*/, '') || inspecionado;
@@ -92,7 +124,7 @@ const AlternarVisao: React.FC<{ value: Visao; onChange: (v: Visao) => void }> = 
           <button
             key={o.value} type="button" role="radio" aria-checked={ativo} aria-label={o.label} title={o.label} tabIndex={ativo ? 0 : -1}
             onClick={() => onChange(o.value)}
-            className={`inline-flex items-center justify-center w-10 h-10 rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${ativo ? 'bg-navy text-white' : 'text-ink-3 hover:bg-white hover:text-navy'}`}
+            className={`inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${ativo ? 'bg-navy text-white' : 'text-ink-3 hover:bg-white hover:text-navy'}`}
           >
             <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{o.icon}</span>
           </button>
@@ -127,18 +159,42 @@ export const Inspecoes: React.FC = () => {
   const [militares, setMilitares] = useState<MilitarRecord[]>([]);
   const [peritos, setPeritos] = useState<PeritoIS[]>([]);
 
-  // Visão inicial pela URL (?visao=calendario — ex.: cabeçalho do card "Agenda de inspeções" da Início).
+  // Visão: ?visao= (ex.: cabeçalho do card "Agenda de inspeções" da Início) ou a última escolhida neste navegador.
+  // Abaixo de md não há calendário (4g): a visão efetiva é sempre a Lista.
+  const desktop = useIsDesktop();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [visao, setVisao] = useState<Visao>(() => (searchParams.get('visao') === 'calendario' ? 'calendario' : 'tabela'));
-  // Filtros da visão Tabela (o calendário tem navegação própria). Padrão: Em andamento · Este mês.
-  // ?dia=AAAA-MM-DD (card "Agenda de inspeções" da Início): lista das IS daquele dia (Hoje, ou o dia como período
-  // customizado), em andamento e finalizadas.
-  const diaParam = /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get('dia') ?? '') ? searchParams.get('dia')! : '';
-  const [situacoes, setSituacoes] = useState<SituacaoIS[]>(() => (diaParam ? ['andamento', 'finalizada'] : ['andamento']));
-  const [periodo, setPeriodo] = useState<FiltroPeriodoValor>(() => (
-    !diaParam ? { id: 'mes' } : diaParam === hojeISO() ? { id: 'hoje' } : { id: 'custom', custom: { inicio: diaParam, fim: diaParam } }));
+  const [visao, setVisaoEstado] = useState<Visao>(() => {
+    const v = searchParams.get('visao');
+    return v === 'calendario' || v === 'tabela' ? v : lerVisaoSalva();
+  });
+  const setVisao = (v: Visao) => { setVisaoEstado(v); try { localStorage.setItem(CHAVE_VISAO, v); } catch { /* sem localStorage */ } };
+  const visaoEfetiva: Visao = desktop ? visao : 'tabela';
+
+  // Filtros da Lista (o calendário tem navegação própria). Aba, chips Atrasadas/Sem agendamento, perito e Minhas
+  // ficam na URL (deep link da Início e do Painel); período e busca, no estado. Padrão: Ativas · todos os períodos.
+  // ?dia=AAAA-MM-DD (card "Agenda de inspeções" da Início) e ?situacao=hoje viram o período e saem da URL.
+  const situacaoParam = searchParams.get('situacao');
+  const situacao: SituacaoURL | null = SITUACOES_URL.includes(situacaoParam as SituacaoURL) ? situacaoParam as SituacaoURL : null;
+  const aba: Aba = situacao === 'finalizadas' ? 'finalizadas' : 'ativas';
+  const minhas = searchParams.get('minhas') === '1';
+  const peritoParam = searchParams.get('perito') ?? '';
+  const [periodo, setPeriodo] = useState<FiltroPeriodoValor | null>(() => {
+    const dia = diaDoParam(searchParams.get('dia'));
+    return dia ? periodoDoDia(dia, hojeISO()) : situacaoParam === 'hoje' ? { id: 'hoje' } : null;
+  });
   const [busca, setBusca] = useState('');
-  const [peritoFiltro, setPeritoFiltro] = useState('');
+  const [buscaAberta, setBuscaAberta] = useState(false);
+  const [limiteFinalizadas, setLimiteFinalizadas] = useState(PAGINA_FINALIZADAS);
+  /** Muda vários parâmetros da URL numa chamada só (null remove). */
+  const mudarURL = (mudancas: Record<string, string | null>) => {
+    setSearchParams(prev => {
+      const proximo = new URLSearchParams(prev);
+      Object.entries(mudancas).forEach(([k, v]) => { if (v === null || v === '') proximo.delete(k); else proximo.set(k, v); });
+      return proximo;
+    }, { replace: true });
+  };
+  const irParaAba = (a: Aba) => { mudarURL({ situacao: a === 'finalizadas' ? 'finalizadas' : null }); setLimiteFinalizadas(PAGINA_FINALIZADAS); };
+  const alternarSituacao = (s: 'atrasadas' | 'sem_agendamento') => mudarURL({ situacao: situacao === s ? null : s });
 
   const [novo, setNovo] = useState<{ dataEntrevista?: string; peritoUid?: string } | null>(null);
   const [porFoto, setPorFoto] = useState(false);
@@ -180,20 +236,24 @@ export const Inspecoes: React.FC = () => {
   useEffect(() => observarInspecoes(setLista, e => setErroCarga(e.message || 'Não foi possível carregar as inspeções.')), []);
   useEffect(() => observarBloqueios(setBloqueios), []);
   useEffect(() => observarConfigAgenda(setConfig), []);
+  // ?dia=, ?situacao=hoje, ?visao= e ?novo= viram estado e saem da URL (também quando a Início/Painel navega para cá
+  // com a página já aberta). No celular, ?visao=calendario cai na Lista (do dia, se vier ?dia=).
   // Atalho da Início ("+ Abrir IS"): ?novo=manual abre o formulário; ?novo=print, a IS por foto. Respeita a permissão.
   useEffect(() => {
+    const dia = diaDoParam(searchParams.get('dia'));
+    const hojeParam = searchParams.get('situacao') === 'hoje';
+    const v = searchParams.get('visao');
     const novoParam = searchParams.get('novo');
-    if (!novoParam) return;
-    if (podeCadastrar) { if (novoParam === 'print') setPorFoto(true); else setNovo({}); }
-    const resto = new URLSearchParams(searchParams); resto.delete('novo');
+    if (!searchParams.has('dia') && !hojeParam && !v && !novoParam) return;
+    if (dia) setPeriodo(periodoDoDia(dia, hojeISO()));
+    else if (hojeParam) setPeriodo({ id: 'hoje' });
+    if (v === 'calendario' || v === 'tabela') setVisao(v);
+    if (novoParam && podeCadastrar) { if (novoParam === 'print') setPorFoto(true); else setNovo({}); }
+    const resto = new URLSearchParams(searchParams);
+    resto.delete('dia'); resto.delete('visao'); resto.delete('novo');
+    if (hojeParam) resto.delete('situacao');
     setSearchParams(resto, { replace: true });
-  }, []);
-  // O ?dia= já virou filtro: tira da URL para não prender a tela nele.
-  useEffect(() => {
-    if (!searchParams.get('dia')) return;
-    const resto = new URLSearchParams(searchParams); resto.delete('dia');
-    setSearchParams(resto, { replace: true });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => observarMilitares(setMilitares), []);
   useEffect(() => { carregarPeritos().then(setPeritos).catch(() => setPeritos([])); }, []);
 

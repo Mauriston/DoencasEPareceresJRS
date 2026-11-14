@@ -56,7 +56,7 @@ export const ParecerDetalhe: React.FC<Props> = ({ parecer: p, podeGerar, onClose
       <div className="space-y-5">
         <div className="space-y-1">
           {prefixo && <p className="text-xs font-semibold text-ink-3">{prefixo}</p>}
-          <h3 className="text-h2 font-extrabold text-navy break-words">{nome}</h3>
+          <h3 className="text-h2 text-navy break-words">{nome}</h3>
           <StatusTag tone={STATUS_PARECER[status].tom}>
             {STATUS_PARECER[status].rotulo}{status === 'atrasado' ? ` · ${dias} dias` : ''}
           </StatusTag>
@@ -88,7 +88,7 @@ export const ParecerDetalhe: React.FC<Props> = ({ parecer: p, podeGerar, onClose
 
         <button
           type="button" onClick={onAbrirPdf} disabled={!p.pdfUrl}
-          className="w-full flex items-center gap-3 p-3 rounded-lg border border-line hover:border-navy text-left transition-colors disabled:opacity-50"
+          className="w-full flex items-center gap-3 p-3 rounded-lg border border-line hover:border-navy text-left transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
         >
           <span className="material-symbols-outlined text-[28px] text-navy shrink-0" aria-hidden="true">picture_as_pdf</span>
           <span className="min-w-0 flex-1">

@@ -10,7 +10,7 @@ import { Topbar } from './components/shell/Topbar';
 import { BarraInferior } from './components/shell/BarraInferior';
 import { TituloPaginaProvider } from './components/shell/TituloPagina';
 import { BreadcrumbProvider } from './context/BreadcrumbContext';
-import { ALIASES, ROUTES, destinoDoAlias, pathForView, viewForPath } from './config/routes';
+import { ALIASES, FICHA_PATH, ROUTES, destinoDoAlias, pathForView, viewForPath } from './config/routes';
 import { Dialog } from './components/ui/Dialog';
 import { Button } from './components/ui/Button';
 import { EmptyState } from './components/ui/EmptyState';
@@ -69,6 +69,8 @@ const Mensagens = paginaLazy(() => import('./components/Mensagens'), 'Mensagens'
 const RoteiroJRS = paginaLazy(() => import('./components/RoteiroJRS'), 'RoteiroJRS');
 const UsuariosManagement = paginaLazy(() => import('./components/UsuariosManagement'), 'UsuariosManagement');
 const Militares = paginaLazy(() => import('./components/Militares'), 'Militares');
+// Ficha do inspecionado: o acesso é por seção (permissões checadas na própria página).
+const FichaInspecionado = paginaLazy(() => import('./components/ficha/FichaInspecionado'), 'FichaInspecionado');
 const Inspecoes = paginaLazy(() => import('./components/Inspecoes'), 'Inspecoes');
 const Painel = paginaLazy(() => import('./components/painel/Painel'), 'Painel');
 
@@ -423,7 +425,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
 
   // Hook antes de qualquer retorno antecipado (ordem de hooks estável).
   const rotas = useRoutes([
-    ...ROUTES.map(r => ({ path: r.path, element: renderView(r.view) })),
+    ...ROUTES.map(r => ({ path: r.path, element: r.path === FICHA_PATH ? <FichaInspecionado /> : renderView(r.view) })),
     // Aliases estáveis (/doencas, /estudo…) redirecionam para a rota canônica.
     ...ALIASES.flatMap(a => [a.de, `${a.de}/*`]).map(path => ({ path, element: <RedirecionarAlias /> })),
     {

@@ -3,7 +3,7 @@
 // inicial, inspecionado e, abaixo, um ponto colorido + finalidade · dias em aberto; atrasada em vinho).
 // Quem pode agendar arrasta um cartão para um dia/horário do calendário ou usa o botão "Agendar…" do
 // cartão (alternativa acessível ao arraste). No topo, opcionalmente, o mini calendário (visão Dia).
-// No celular o painel vira uma seção recolhível acima do calendário.
+// Abaixo de @split (largura útil < 960 px) o painel vira uma seção recolhível depois do calendário (CAL2).
 import React, { useState } from 'react';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import { diasEmAberto } from '../../utils/inspecoes';
@@ -30,24 +30,24 @@ export const CalendarioPainelAbertas: React.FC<Props> = ({ abertas, hoje, onAgen
   const idLista = 'calendario-painel-abertas';
 
   return (
-    <aside aria-label="IS abertas aguardando agendamento" className="bg-white rounded-xl border border-line overflow-clip flex flex-col lg:h-full lg:min-h-0">
+    <aside aria-label="IS abertas aguardando agendamento" className="bg-white rounded-xl border border-line overflow-clip flex flex-col @split:h-full @split:min-h-0">
       {/* Cabeçalho: no celular, recolhe/expande o painel. */}
       <button
         type="button"
         onClick={() => setAbertoNoCelular(a => !a)}
         aria-expanded={abertoNoCelular}
         aria-controls={idLista}
-        className="lg:hidden flex items-center justify-between gap-2 w-full min-h-[44px] px-3 py-2 text-left"
+        className="@split:hidden flex items-center justify-between gap-2 w-full min-h-[44px] px-3 py-2 text-left"
       >
         <span className="text-sm font-bold text-navy">Aguardando agendamento <span className="ml-1 text-xs font-bold text-ink-3 bg-thead border border-line rounded-full px-2 py-0.5">{abertas.length}</span></span>
         <span className="material-symbols-outlined text-[22px] text-navy" aria-hidden="true">{abertoNoCelular ? 'expand_less' : 'expand_more'}</span>
       </button>
-      <h2 className="hidden lg:flex items-center gap-2 px-3 py-3 border-b border-line text-sm font-bold text-navy">
+      <h2 className="hidden @split:flex items-center gap-2 px-3 py-3 border-b border-line text-sm font-bold text-navy">
         Aguardando agendamento
         <span className="text-xs font-bold text-ink-3 bg-thead border border-line rounded-full px-2 py-0.5">{abertas.length}</span>
       </h2>
 
-      <div id={idLista} className={`${abertoNoCelular ? 'block' : 'hidden'} lg:block flex-1 min-h-0 overflow-y-auto max-h-[60vh] lg:max-h-none border-t border-line lg:border-t-0`}>
+      <div id={idLista} className={`${abertoNoCelular ? 'block' : 'hidden'} @split:block flex-1 min-h-0 overflow-y-auto max-h-[60vh] @split:max-h-none border-t border-line @split:border-t-0`}>
         {topo && <div className="p-2 border-b border-line">{topo}</div>}
         {abertas.length === 0 ? (
           <p className="px-3 py-4 text-sm text-ink-3">Nenhuma IS aberta aguardando agendamento.</p>

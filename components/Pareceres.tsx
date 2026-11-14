@@ -12,7 +12,8 @@ import { FilterChip } from './ui/FilterChip';
 import { StatusTag } from './ui/StatusTag';
 import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
-import { controlClass } from './ui/Field';
+import { controlClass, SearchField } from './ui/Field';
+import { Card } from './ui/Card';
 import { NovoParecerForm } from './pareceres/NovoParecerForm';
 import { QuesitosConfig } from './pareceres/QuesitosConfig';
 import { ParecerDetalhe, STATUS_PARECER, diasDesde } from './pareceres/ParecerDetalhe';
@@ -27,6 +28,10 @@ import { extrairNomeInspecionado } from '../utils/format';
 
 type Filtro = 'todos' | StatusParecer;
 
+const SITUACAO_URL: Record<string, Filtro> = {
+  atrasado: 'atrasado', atrasados: 'atrasado', solicitado: 'solicitado', solicitados: 'solicitado', concluido: 'concluido', concluidos: 'concluido',
+};
+
 const solicitanteDe = (p: ParecerRecord): string => p.solicitanteUsuario || p.solicitanteNome;
 
 const formatarData = (p: ParecerRecord): string => p.criadoEm?.toDate?.().toLocaleDateString('pt-BR') ?? 'agora';
@@ -39,7 +44,11 @@ export const Pareceres: React.FC = () => {
 
   const [lista, setLista] = useState<ParecerRecord[] | null>(null);
   const [erroCarga, setErroCarga] = useState('');
-  const [filtro, setFiltro] = useState<Filtro>('todos');
+  // Situação na URL (/pareceres?situacao=atrasados|solicitados|concluidos), para os contadores da
+  // Início e do Painel abrirem a lista já filtrada. Aceita singular ou plural.
+  const [situacaoParam, setSituacaoParam] = useQueryParam('situacao');
+  const filtro: Filtro = SITUACAO_URL[situacaoParam ?? ''] ?? 'todos';
+  const setFiltro = (f: Filtro) => setSituacaoParam(f === 'todos' ? null : `${f}s`, { replace: true });
   const [busca, setBusca] = useState('');
   const [especialidade, setEspecialidade] = useState('');
   const [soMeus, setSoMeus] = useState(false);
@@ -118,33 +127,33 @@ export const Pareceres: React.FC = () => {
     return <><span className="block text-ink">{d}</span><span className={`block text-xs ${status === 'atrasado' ? 'font-semibold text-wine' : 'text-ink-3'}`}>{dias === 0 ? 'hoje' : `há ${dias} dia${dias !== 1 ? 's' : ''}`}</span></>;
   };
 
+  // Células compartilhadas entre a lista do celular e a tabela do desktop (auditoria v3, M10):
+  // o mesmo dado sai da mesma função nas duas larguras.
+  const tagStatus = (status: StatusParecer) => <StatusTag tone={STATUS_PARECER[status].tom}>{STATUS_PARECER[status].rotulo}</StatusTag>;
+  const botaoImprimir = (p: ParecerRecord) => (p.pdfUrl
+    ? <IconButton icon="print" variant="secondary" size="sm" label={`Enviar para impressão o parecer de ${extrairNomeInspecionado(p.inspecionado)}`} onClick={e => { e.stopPropagation(); pedirImpressao(p); }} />
+    : null);
+
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} acao={toast?.acao} />
-      <Container size="data" className="py-6 md:py-8 pb-10 space-y-4">
+      <Container size="data" className={`py-6 md:py-8 ${podeGerar ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
         <PageHeader
           title="Pareceres"
           description="Pedidos de parecer por especialidade e o andamento de cada um."
-          actions={(
-            <>
-              {ehAdmin && <Button variant="secondary" icon="tune" onClick={() => setConfig(true)}>Quesitos</Button>}
-              {podeGerar && <Button icon="add" onClick={() => setNovo(true)}>Novo parecer</Button>}
-            </>
-          )}
+          actions={ehAdmin ? <Button variant="secondary" icon="tune" onClick={() => setConfig(true)}>Quesitos</Button> : undefined}
+          fab={podeGerar ? { icon: 'add', label: 'Novo parecer', onClick: () => setNovo(true) } : undefined}
         />
 
-        <div className="bg-white rounded-xl border border-line p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
-              <input type="search" aria-label="Buscar parecer" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Inspecionado ou NIP…" className={`${controlClass} pl-10`} autoComplete="off" />
-            </div>
+        <Card padding="sm" className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <SearchField className="flex-1" label="Buscar parecer" value={busca} onChange={setBusca} placeholder="Inspecionado ou NIP…" autoComplete="off" />
             <select aria-label="Filtrar por especialidade" value={especialidade} onChange={e => setEspecialidade(e.target.value)} className={`${controlClass} sm:w-56`}>
               <option value="">Todas as especialidades</option>
               {especialidades.map(e => <option key={e} value={e}>{e}</option>)}
             </select>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <Segmented
               ariaLabel="Situação do parecer"
               className="overflow-x-auto"
@@ -159,9 +168,9 @@ export const Pareceres: React.FC = () => {
             />
             {podeGerar && <FilterChip ativo={soMeus} icon="person" onAlternar={() => setSoMeus(v => !v)}>Minhas solicitações</FilterChip>}
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl border border-line overflow-clip">
+        <Card padding="none">
           {erroCarga ? (
             <p role="alert" className="p-6 text-sm font-semibold text-wine">{erroCarga}</p>
           ) : lista === null ? (
@@ -174,15 +183,15 @@ export const Pareceres: React.FC = () => {
               <ul className="md:hidden divide-y divide-line">
                 {filtrada.map(({ p, status }) => (
                   <li key={p.id} className="flex items-center gap-1 pr-3">
-                    <button type="button" onClick={() => setDetalheId(p.id)} className="flex-1 min-w-0 text-left px-4 py-3 space-y-1 hover:bg-thead">
+                    <button type="button" onClick={() => setDetalheId(p.id)} className="flex-1 min-w-0 text-left px-4 py-3 space-y-1 hover:bg-thead focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold">
                       <span className="flex items-start justify-between gap-2">
                         <span className="min-w-0">{nomeDe(p)}</span>
-                        <StatusTag tone={STATUS_PARECER[status].tom}>{STATUS_PARECER[status].rotulo}</StatusTag>
+                        {tagStatus(status)}
                       </span>
                       <span className="block text-xs text-ink">{p.especialidade} · {p.finalidade}</span>
-                      <span className="block text-xs text-ink-3">{formatarData(p)}</span>
+                      <span className="block text-xs">{quando(p, status)}</span>
                     </button>
-                    {p.pdfUrl && <IconButton icon="print" variant="secondary" label={`Enviar para impressão o parecer de ${extrairNomeInspecionado(p.inspecionado)}`} onClick={() => pedirImpressao(p)} />}
+                    {botaoImprimir(p)}
                   </li>
                 ))}
               </ul>
@@ -203,26 +212,26 @@ export const Pareceres: React.FC = () => {
                       <tr
                         key={p.id}
                         onClick={() => setDetalheId(p.id)}
-                        className={`cursor-pointer hover:bg-thead transition-colors ${p.id === detalheId ? 'bg-thead shadow-[inset_3px_0_0_#FAB932]' : ''}`}
+                        className={`cursor-pointer hover:bg-thead transition-colors ${p.id === detalheId ? 'bg-thead shadow-[inset_3px_0_0_rgb(var(--c-gold-400))]' : ''}`}
                       >
                         <td className="px-4 py-3 align-top">
-                          <button type="button" onClick={e => { e.stopPropagation(); setDetalheId(p.id); }} className="text-left w-full" aria-label={`Abrir detalhe do parecer de ${extrairNomeInspecionado(p.inspecionado)}`}>{nomeDe(p)}</button>
+                          <button type="button" onClick={e => { e.stopPropagation(); setDetalheId(p.id); }} className="text-left w-full rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold" aria-label={`Abrir detalhe do parecer de ${extrairNomeInspecionado(p.inspecionado)}`}>{nomeDe(p)}</button>
                         </td>
                         <td className="px-4 py-3 align-top"><span className="block text-ink">{p.especialidade}</span><span className="block text-xs text-ink-3">{p.finalidade}</span></td>
-                        <td className="px-4 py-3 align-top whitespace-nowrap"><StatusTag tone={STATUS_PARECER[status].tom}>{STATUS_PARECER[status].rotulo}</StatusTag></td>
+                        <td className="px-4 py-3 align-top whitespace-nowrap">{tagStatus(status)}</td>
                         <td className="px-4 py-3 align-top whitespace-nowrap">{quando(p, status)}</td>
                         <td className="px-4 py-2 align-top text-center">
-                          {p.pdfUrl && <IconButton icon="print" variant="secondary" label={`Enviar para impressão o parecer de ${extrairNomeInspecionado(p.inspecionado)}`} onClick={e => { e.stopPropagation(); pedirImpressao(p); }} />}
+                          {botaoImprimir(p)}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="px-4 py-3 border-t border-line text-xs text-ink-3" role="status">{filtrada.length} parecer{filtrada.length !== 1 ? 'es' : ''}</div>
+              <div className="px-4 py-3 border-t border-line text-xs text-ink-3" role="status">{filtrada.length} {filtrada.length === 1 ? 'parecer' : 'pareceres'}</div>
             </>
           )}
-        </div>
+        </Card>
       </Container>
 
       {detalhe && (

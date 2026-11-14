@@ -15,6 +15,7 @@ import { novoId } from '../utils/dados';
 import { app } from './firebaseAuth';
 import { registrarAcaoSensivel } from './auditoriaAcoes';
 import { registrarUsoAcao } from './usoDiario';
+import { registrarEventoInspecionado } from './eventosInspecionado';
 import {
   chaveSlot, chavesOcupadas, duracaoDoGrupo, situacaoDoStatus, statusAoAgendar, TODOS_PERITOS,
   type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS, type Turno,
@@ -144,6 +145,7 @@ export const criarInspecao = async (dados: NovaInspecao): Promise<string> => {
   await gravarComSlot(id, completo, dados.dataEntrevista ? { peritoUid: dados.peritoUid, dataEntrevista: dados.dataEntrevista, grupoFinalidade: dados.grupoFinalidade } : null, null, true);
   registrarUsoAcao('is_cadastrar');
   if (dados.dataEntrevista) registrarUsoAcao('is_agendar');
+  registrarEventoInspecionado(dados.inspecionadoId, 'is.cadastrar', `IS ${id}`);
   return id;
 };
 
@@ -173,6 +175,7 @@ export const agendarInspecao = async (atual: InspecaoRecord, novo: Agendamento):
   const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(atual.id, { ...novo, status, situacao: situacaoDoStatus(status) }, { peritoUid: novo.peritoUid, dataEntrevista: novo.dataEntrevista, grupoFinalidade: atual.grupoFinalidade }, slotAntigo, false);
   registrarUsoAcao('is_agendar');
+  registrarEventoInspecionado(atual.inspecionadoId, 'is.agendar', `IS ${atual.id}`);
   return status;
 };
 
@@ -192,6 +195,7 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
   if (!atual) {
     const completo = { ...dados, is: Number(id), observacoes: '', situacao: situacaoDoStatus(dados.status) };
     await gravarComSlot(id, completo, slotNovo, null, true);
+    registrarEventoInspecionado(dados.inspecionadoId, 'is.cadastrar', `IS ${id}`);
     return { ...completo, id, criadoEm: null };
   }
   const { criadoPor: _c, ...resto } = dados;

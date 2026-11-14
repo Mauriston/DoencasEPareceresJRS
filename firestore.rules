@@ -152,6 +152,22 @@ service cloud.firestore {
       allow update: if isAdmin() || ((isMedico() || isMedicoGeral()) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['servico_label', 'atualizadoEm']));
       allow delete: if isAdmin();
+
+      // Registro de eventos POR INSPECIONADO (services/eventosInspecionado.ts; auditoria v3, seção 9):
+      // { acao, ref, uid, usuario, em } — só metadados, nunca laudo, CID ou texto. Inclui a auditoria
+      // de leitura "abriu a ficha". Qualquer usuário autenticado grava em SEU nome, com a hora do
+      // servidor; só o Admin lê; ninguém edita nem apaga.
+      match /eventos/{eventoId} {
+        allow create: if isSignedIn() &&
+          request.resource.data.keys().hasOnly(['acao', 'ref', 'uid', 'usuario', 'em']) &&
+          request.resource.data.uid == request.auth.uid &&
+          request.resource.data.acao is string && request.resource.data.acao.size() <= 40 &&
+          request.resource.data.ref is string && request.resource.data.ref.size() <= 60 &&
+          request.resource.data.usuario is string && request.resource.data.usuario.size() <= 80 &&
+          request.resource.data.em == request.time;
+        allow read: if isAdmin();
+        allow update, delete: if false;
+      }
     }
 
     // Coleção "escalaSpa": escala de serviço do SPA, um documento por dia (id = AAAA-MM-DD), com a

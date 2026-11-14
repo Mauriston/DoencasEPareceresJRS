@@ -5,7 +5,7 @@
 // automáticos (utils/afastamentos.ts). Médicos ganham bloqueio na agenda das IS; todos, o evento no Google Agenda.
 import React, { useMemo, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
-import { Button } from '../ui/Button';
+import { Button, buttonClass } from '../ui/Button';
 import { Field } from '../ui/Field';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
 import type { UsuarioRecord } from '../../services/firestoreUsuarios';
@@ -142,7 +142,7 @@ export const AfastamentoForm: React.FC<Props> = ({ usuarios, atual, hoje, autor,
         <div className="rounded-xl border border-line bg-paper p-3 space-y-2">
           <p className="text-sm font-semibold text-ink">Documentos (opcional)</p>
           <p className="text-xs text-ink-3">PDF ou foto (CP de férias, portaria, papeleta de LTS…). Ao anexar, a IA lê o documento e preenche os campos.</p>
-          <label className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-lg border border-navy bg-white text-sm font-bold text-navy cursor-pointer hover:bg-thead">
+          <label className={`${buttonClass('secondary')} cursor-pointer has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-gold`}>
             <span className="material-symbols-outlined text-[20px]" aria-hidden="true">upload_file</span>
             Anexar documento
             <input type="file" accept="application/pdf,image/*" multiple className="sr-only" onChange={e => { anexar(e.target.files); e.target.value = ''; }} />
@@ -154,7 +154,7 @@ export const AfastamentoForm: React.FC<Props> = ({ usuarios, atual, hoje, autor,
               {arquivos.map(a => (
                 <li key={a.caminho} className="flex items-center gap-2 text-sm">
                   <span className="material-symbols-outlined text-[18px] text-wine" aria-hidden="true">picture_as_pdf</span>
-                  <button type="button" onClick={() => abrir(a)} className="min-w-0 flex-1 truncate text-left text-blue underline underline-offset-2">{a.nome}</button>
+                  <button type="button" onClick={() => abrir(a)} className="min-w-0 flex-1 truncate text-left text-blue underline underline-offset-2 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">{a.nome}</button>
                   <Button variant="ghost" icon="close" onClick={() => setArquivos(l => l.filter(x => x.caminho !== a.caminho))} aria-label={`Remover ${a.nome}`}>Remover</Button>
                 </li>
               ))}

@@ -59,6 +59,15 @@ const exa = (nome, perfil, method, situacao, esperado, patch = {}) => ({ nome, t
   ...(method === 'create' ? {} : { resource: { data: exaNovo } }),
   functionMocks: mocksExa(perfil, situacao),
 } });
+// Eventos por inspecionado (militares/{nip}/eventos/{id}); `em` = hora do servidor (request.time).
+const HORA = '2026-11-14T12:00:00Z';
+const evtNovo = { acao: 'ficha.abrir', ref: '', uid: 'u1', usuario: 'CT TESTE', em: HORA };
+const evt = (nome, perfil, method, patch, esperado) => ({ nome, tc: {
+  expectation: esperado,
+  request: { auth: { uid: 'u1' }, path: `${DB}/militares/12345678/eventos/e1`, method, time: HORA, ...(patch ? { resource: { data: { ...evtNovo, ...patch } } } : {}) },
+  ...(method === 'create' ? {} : { resource: { data: evtNovo } }),
+  functionMocks: mocks(perfil),
+} });
 const casos = [
   upd('MPI grava triagem', 'user_medicos_mpi', { triagem: { altura: '1,75' } }, 'ALLOW'),
   upd('Médico JRS grava triagem', 'user_medicos', { triagem: { altura: '1,75' } }, 'DENY'),
@@ -167,6 +176,17 @@ const casos = [
   exa('Apagar exame de IS finalizada', 'admin', 'delete', 'finalizada', 'DENY'),
   exa('Médico Geral lê exame', 'user_medicos_geral', 'get', 'andamento', 'DENY'),
   exa('Alterar exame', 'admin', 'update', 'andamento', 'DENY', {}),
+  // Eventos por inspecionado (militares/{nip}/eventos): todos gravam em nome próprio, só metadados; só o Admin lê.
+  evt('Médico Geral registra evento da ficha (abriu a ficha)', 'user_medicos_geral', 'create', {}, 'ALLOW'),
+  evt('Secretaria registra evento de IS', 'user_secretaria', 'create', { acao: 'is.agendar', ref: 'IS 1312' }, 'ALLOW'),
+  evt('Evento em nome de outro usuário', 'user_medicos', 'create', { uid: 'u2' }, 'DENY'),
+  evt('Evento com CID (campo extra)', 'user_medicos', 'create', { cid: 'M54.5' }, 'DENY'),
+  evt('Evento com hora do cliente', 'user_medicos', 'create', { em: '2020-01-01T00:00:00Z' }, 'DENY'),
+  evt('Evento com ref longa (texto livre)', 'user_medicos', 'create', { ref: 'x'.repeat(61) }, 'DENY'),
+  evt('Admin lê eventos do inspecionado', 'admin', 'get', null, 'ALLOW'),
+  evt('Médico lê eventos do inspecionado', 'user_medicos', 'get', null, 'DENY'),
+  evt('Admin altera evento', 'admin', 'update', {}, 'DENY'),
+  evt('Admin apaga evento', 'admin', 'delete', null, 'DENY'),
 ];
 (async () => {
   const c = await new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] }).getClient();

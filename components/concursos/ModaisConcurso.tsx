@@ -6,6 +6,8 @@ import { criarCandidato, listarDatasAgendamento, listarMensagens, arquivarMensag
 import { extrairMensagemComGemini, salvarMensagemNoDrive, type PastaConcurso } from '../../services/driveConcursos';
 import { parseChaveData, type CabecalhoMensagem } from '../../utils/concursosUtils';
 import { interpretarMensagem } from './compartilhado';
+import { Dialog } from '../ui/Dialog';
+import { Button } from '../ui/Button';
 
 // =========================================================================
 // LISTA DE CONCURSOS
@@ -25,31 +27,27 @@ export interface ModalKpiBarChartProps {
 export const ModalKpiBarChart: React.FC<ModalKpiBarChartProps> = ({ titulo, corBarra, itens, onSelecionarConcurso, onClose }) => {
   const max = Math.max(1, ...itens.map(i => i.quantidade));
   return (
-    <div className="fixed inset-0 z-dialog bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="p-4 bg-navy text-white flex items-center justify-between shrink-0">
-          <h3 className="font-heading font-bold text-sm">{titulo} — Top 4 Concursos</h3>
-          <button onClick={onClose} className="text-ink-5 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
-        <div className="p-5 space-y-4 overflow-y-auto">
-          {itens.length === 0 ? (
-            <p className="text-sm text-ink-3 text-center py-6">Nenhuma ocorrência no ano corrente.</p>
-          ) : itens.map(item => (
-            <button key={item.concursoId} type="button" onClick={() => { onSelecionarConcurso(item.concursoId); onClose(); }} className="w-full text-left group">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-bold text-navy group-hover:underline truncate pr-2">{item.concursoNome}</span>
-                <span className="text-sm font-black text-ink shrink-0">{item.quantidade}</span>
-              </div>
-              <div className="h-3 bg-thead rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${corBarra}`} style={{ width: `${(item.quantidade / max) * 100}%` }} />
-              </div>
-            </button>
+    <Dialog title={`${titulo} — concursos com mais ocorrências`} icon="bar_chart" size="sm" onClose={onClose} footer={<Button variant="secondary" onClick={onClose}>Fechar</Button>}>
+      {itens.length === 0 ? (
+        <p className="text-sm text-ink-3 text-center py-6">Nenhuma ocorrência neste filtro.</p>
+      ) : (
+        <ul className="space-y-4">
+          {itens.map(item => (
+            <li key={item.concursoId}>
+              <button type="button" onClick={() => { onSelecionarConcurso(item.concursoId); onClose(); }} className="w-full text-left group rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">
+                <span className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-bold text-navy group-hover:underline truncate pr-2">{item.concursoNome}</span>
+                  <span className="text-sm font-extrabold text-ink tabular-nums shrink-0">{item.quantidade}</span>
+                </span>
+                <span className="block h-3 bg-thead rounded-full overflow-hidden">
+                  <span className={`block h-full rounded-full ${corBarra}`} style={{ width: `${(item.quantidade / max) * 100}%` }} />
+                </span>
+              </button>
+            </li>
           ))}
-        </div>
-      </div>
-    </div>
+        </ul>
+      )}
+    </Dialog>
   );
 };
 

@@ -17,13 +17,14 @@ export interface RouteDef {
 }
 
 /** Rotas estáticas ANTES das dinâmicas que compartilham o prefixo (ex.: /concursos/indices vs /concursos/:id). */
+/** Padrão da rota da Ficha do inspecionado (NIP só dígitos). */
+export const FICHA_PATH = '/inspecionados/:nip';
+
 export const ROUTES: RouteDef[] = [
   { view: 'home', path: '/' },
   { view: 'perfil', path: '/perfil' },
   // Painel: indicadores do período por seção (components/painel/; permissão de página 'painel').
   { view: 'painel', path: '/painel' },
-  // Configurações gerais do app (só Admin; menu do avatar).
-  { view: 'configuracoes', path: '/configuracoes' },
   // Férias e afastamentos (Admin, médicos JRS/MPI e Secretaria; menu Administração).
   { view: 'ferias', path: '/ferias' },
   // Sobre o app: principais funcionalidades por área (começa só para o Admin; liberada por perfil na matriz).
@@ -47,8 +48,13 @@ export const ROUTES: RouteDef[] = [
   { view: 'infograficos', path: '/extras/infograficos' },
   { view: 'apresentacoes', path: '/extras/apresentacoes' },
   { view: 'roteiro', path: '/extras/roteiro' },
-  { view: 'usuarios', path: '/usuarios' },
+  // Administração (só Admin; auditoria v3, 8b): /administracao/{secao} — usuarios, perfis, emails, agenda,
+  // integracoes, registro (components/administracao/). As páginas antigas /usuarios e /configuracoes são aliases.
+  { view: 'usuarios', path: '/administracao/:secao?' },
   { view: 'militares', path: '/inspecionados' },
+  // Ficha do inspecionado (auditoria v3, seção 9): seções por permissão — o acesso é decidido na própria
+  // página (components/ficha/FichaInspecionado.tsx), não pela página Inspecionados.
+  { view: 'militares', path: FICHA_PATH },
   // Endereço antigo da página (antes "Militares"): continua abrindo a mesma tela.
   { view: 'militares', path: '/militares' },
 ];
@@ -77,6 +83,9 @@ export const ALIASES: AliasRota[] = [
   { de: '/videos', para: '/extras/videos' },
   { de: '/infograficos', para: '/extras/infograficos' },
   { de: '/apresentacoes', para: '/extras/apresentacoes' },
+  // Antigas páginas soltas de Usuários e Configurações → área Administração.
+  { de: '/usuarios', para: '/administracao/usuarios' },
+  { de: '/configuracoes', para: '/administracao/emails' },
 ];
 
 /** Destino canônico de um alias (mantendo o sufixo), ou undefined quando o caminho não é um alias. */
@@ -90,7 +99,7 @@ const BASE_PATHS: Record<NavItem, string> = {
   splash: '/',
   home: '/',
   perfil: '/perfil',
-  configuracoes: '/configuracoes',
+  configuracoes: '/administracao/emails',
   ferias: '/ferias',
   painel: '/painel',
   sobre: '/sobre',
@@ -112,7 +121,7 @@ const BASE_PATHS: Record<NavItem, string> = {
   infograficos: '/extras/infograficos',
   apresentacoes: '/extras/apresentacoes',
   roteiro: '/extras/roteiro',
-  usuarios: '/usuarios',
+  usuarios: '/administracao',
   militares: '/inspecionados',
 };
 
@@ -148,5 +157,10 @@ export const concursoPath = (concursoId: string): string => `/concursos/${encode
 /** Detalhe de uma IS (e, opcionalmente, uma ação — ex.: 'entrevista', que abre a gravação no celular). */
 export const inspecaoPath = (isId: string, acao?: string): string =>
   `/inspecoes/${encodeURIComponent(isId)}${acao ? `/${encodeURIComponent(acao)}` : ''}`;
+/** Subpágina da Administração (só Admin). */
+export type SecaoAdministracao = 'usuarios' | 'perfis' | 'emails' | 'agenda' | 'integracoes' | 'registro';
+export const administracaoPath = (secao?: SecaoAdministracao): string => (secao ? `/administracao/${secao}` : '/administracao');
+/** Ficha do inspecionado (id = NIP só dígitos). */
+export const fichaPath = (nip: string): string => `/inspecionados/${encodeURIComponent(nip)}`;
 export const periciaMenorPath = (aba: 'novo' | 'historico', pessoa?: string): string =>
   `/pericia-menor/${aba}${pessoa ? `/${encodeURIComponent(pessoa)}` : ''}`;

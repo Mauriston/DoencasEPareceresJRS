@@ -1,5 +1,5 @@
 // Ficheiro: components/shell/UserMenu.tsx
-// Avatar, rótulos de perfil e menu do usuário (Perfil / Notificações / Configurações — só Admin — / Logout), extraídos do
+// Avatar, rótulos de perfil e menu do usuário (Perfil / Notificações / Logout; as Configurações foram para Administração), extraídos do
 // antigo Header para serem usados pela topbar, pela sidebar mobile e pelos
 // modais que listam usuários.
 import React, { useContext, useEffect, useState } from 'react';
@@ -101,22 +101,6 @@ const VisualizarComo: React.FC<{ atual: string; onEscolher: (perfil: string | nu
   );
 };
 
-/** Item "Configurações" (só Admin): navega pelo NavContext, então vale para a topbar e para a sidebar. */
-const ItemConfiguracoes: React.FC = () => {
-  const nav = useContext(NavContext);
-  if (nav?.authUser?.perfil !== 'admin') return null;
-  return (
-    <button
-      type="button" role="menuitem"
-      onClick={() => { nav.setIsAvatarMenuOpen(false); nav.setIsMobileMenuOpen(false); nav.setCurrentView('configuracoes'); }}
-      className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-ink hover:bg-thead flex items-center gap-2.5 transition-colors"
-    >
-      <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">settings</span>
-      <span>Configurações</span>
-    </button>
-  );
-};
-
 /** Atalho lua/sol: alterna Claro ↔ Escuro sem abrir o perfil (a variante fica em Meu perfil → Aparência). */
 const ItemTema: React.FC = () => {
   const nav = useContext(NavContext);
@@ -159,7 +143,6 @@ export const UserDropdownContent: React.FC<UserDropdownContentProps> = ({ authUs
           {naoLidas > 0 && <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-wine text-white text-xs font-bold leading-5 text-center">{naoLidas > 99 ? '99+' : naoLidas}</span>}
         </button>
       )}
-      <ItemConfiguracoes />
       {perfilReal === 'admin' && onVerComo && <VisualizarComo atual={verComo || 'admin'} onEscolher={onVerComo} />}
       <button type="button" role="menuitem" onClick={onLogoutClick} className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-wine hover:bg-wine/10 flex items-center gap-2.5 transition-colors">
         <span className="material-symbols-outlined text-[20px]" aria-hidden="true">logout</span>

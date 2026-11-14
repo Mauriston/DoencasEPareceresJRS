@@ -8,7 +8,8 @@
 // médicos e evento no Google Agenda para todos (services/afastamentos.ts).
 import React, { useEffect, useMemo, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
-import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import { IconButton } from './ui/IconButton';
 import { Toast } from './ui/Toast';
 import { ConfirmDialog } from './ui/Dialog';
 import { EmptyState } from './ui/EmptyState';
@@ -89,17 +90,54 @@ export const Ferias: React.FC = () => {
   const referencia = (a: AfastamentoRecord): string =>
     a.tipo === 'ferias' ? (a.referencia ? `Ano: ${a.referencia}` : '—') : a.tipo === 'lic_adm' ? (a.motivo || '—') : '—';
 
+  // Definição única das células (tabela no desktop e cartão no celular — auditoria v3, M10).
+  const statusDe = (a: AfastamentoRecord) => STATUS_AFASTAMENTO.find(s => s.id === statusEfetivo(a, hoje))!;
+  const celula = {
+    usuario: (a: AfastamentoRecord) => (
+      <span className="flex items-center gap-2 min-w-0">
+        <Avatar nome={a.usuario} imageProfile={fotos.get(a.usuarioUid)} size={32} tone="light" />
+        <span className="min-w-0 font-bold text-navy truncate">{a.usuario}</span>
+      </span>
+    ),
+    tipo: (a: AfastamentoRecord) => <StatusTag tone={TOM_TIPO[a.tipo]}>{rotuloTipo(a.tipo)}</StatusTag>,
+    periodo: (a: AfastamentoRecord) => `${dataBr(a.dataInicio)} a ${dataBr(a.dataFim)}`,
+    status: (a: AfastamentoRecord) => { const st = statusDe(a); return <StatusTag tone={st.tom}>{st.rotulo}</StatusTag>; },
+    arquivos: (a: AfastamentoRecord) => (a.arquivos?.length ? (
+      <span className="flex flex-wrap gap-1">
+        {a.arquivos.map(f => (
+          <IconButton key={f.caminho} icon={f.tipo === 'application/pdf' ? 'picture_as_pdf' : 'image'} label={`Abrir ${f.nome}`} variant="ghost" size="sm" className="!text-wine" onClick={() => abrirArquivo(f)} />
+        ))}
+      </span>
+    ) : <span className="text-ink-4">—</span>),
+    acoes: (a: AfastamentoRecord) => (
+      <MenuAcoes rotulo={`Ações do afastamento de ${a.usuario}`} size="sm" itens={[
+        { rotulo: 'Editar', icone: 'edit', onClick: () => setForm({ atual: a }) },
+        { rotulo: 'Apagar', icone: 'delete', perigo: true, onClick: () => setApagando(a) },
+      ]} />
+    ),
+  };
+  const colunas: { id: string; titulo: string; celula: (a: AfastamentoRecord) => React.ReactNode; alinhar?: 'direita'; oculto?: boolean; classe?: string }[] = [
+    { id: 'usuario', titulo: 'Usuário', celula: celula.usuario },
+    { id: 'tipo', titulo: 'Tipo', celula: celula.tipo },
+    { id: 'periodo', titulo: 'Período', celula: celula.periodo, classe: 'tabular-nums whitespace-nowrap' },
+    { id: 'dias', titulo: 'Dias', celula: a => a.duracaoDias, alinhar: 'direita', classe: 'tabular-nums' },
+    { id: 'status', titulo: 'Status', celula: celula.status },
+    { id: 'referencia', titulo: 'Referência / motivo', celula: referencia, classe: 'text-ink' },
+    { id: 'arquivos', titulo: 'Arquivos', celula: celula.arquivos },
+    ...(ehAdmin ? [{ id: 'acoes', titulo: 'Ações', celula: celula.acoes, alinhar: 'direita' as const, oculto: true }] : []),
+  ];
+
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
-      <Container size="data" className="py-6 md:py-8 pb-10 space-y-4">
+      <Container size="data" className={`py-6 md:py-8 ${ehAdmin ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
         <PageHeader
           title="Férias"
           description="Férias e afastamentos (Férias, LTS e LIC Adm) dos usuários da JRS."
-          actions={ehAdmin ? <Button icon="add" onClick={() => setForm({})}>Nova férias / afastamento</Button> : undefined}
+          fab={ehAdmin ? { icon: 'add', label: 'Registrar afastamento', onClick: () => setForm({}) } : undefined}
         />
 
-        <div className="bg-white rounded-xl border border-line p-3 flex flex-wrap items-center gap-3">
+        <Card padding="sm" className="flex flex-wrap items-center gap-4">
           <FiltroPeriodo
             value={fPeriodo ? { id: fPeriodo } : null} onChange={v => setFPeriodo(v.id as PeriodoFerias)} onLimpar={() => setFPeriodo('')}
             opcoes={['semestre', 'ano']} className="flex-1 min-w-[11rem] sm:flex-none sm:w-56"
@@ -122,7 +160,7 @@ export const Ferias: React.FC = () => {
               options={[{ value: 'tabela', label: 'Tabela', icon: 'table_rows' }, { value: 'timeline', label: 'Timeline', icon: 'view_timeline' }]}
             />
           </div>
-        </div>
+        </Card>
 
         {erroCarga && <p role="alert" className="text-sm font-semibold text-wine">{erroCarga}</p>}
         {lista === null && !erroCarga && <p className="text-sm text-ink-3">Carregando…</p>}
@@ -132,96 +170,53 @@ export const Ferias: React.FC = () => {
         )}
 
         {lista !== null && visao === 'tabela' && (ordenados.length === 0 ? (
-          <EmptyState icon="beach_access" title="Nenhuma férias ou afastamento" description={lista.length ? 'Nada com os filtros escolhidos.' : (ehAdmin ? 'Registre em "Nova férias / afastamento".' : 'Nada registrado ainda.')} />
+          <EmptyState icon="beach_access" title="Nenhuma férias ou afastamento" description={lista.length ? 'Nada com os filtros escolhidos.' : (ehAdmin ? 'Registre em "Registrar afastamento".' : 'Nada registrado ainda.')} />
         ) : (
           <>
-            {/* Desktop: tabela */}
-            <div className="hidden md:block bg-white rounded-xl border border-line overflow-clip">
+            {/* Desktop: tabela. As células vêm de COLUNAS (definição única, auditoria v3 M10),
+                as mesmas que montam o cartão do celular abaixo. */}
+            <Card padding="none" className="hidden md:block">
               <table className="w-full text-sm">
                 <caption className="sr-only">Férias e afastamentos</caption>
                 <thead className="bg-thead text-left text-xs font-bold text-ink-3">
                   <tr>
-                    <th scope="col" className="px-4 py-3">USUÁRIO</th>
-                    <th scope="col" className="px-3 py-3">TIPO</th>
-                    <th scope="col" className="px-3 py-3">PERÍODO</th>
-                    <th scope="col" className="px-3 py-3 text-right">DIAS</th>
-                    <th scope="col" className="px-3 py-3">STATUS</th>
-                    <th scope="col" className="px-3 py-3">REFERÊNCIA / MOTIVO</th>
-                    <th scope="col" className="px-3 py-3">ARQUIVOS</th>
-                    {ehAdmin && <th scope="col" className="px-3 py-3"><span className="sr-only">Ações</span></th>}
+                    {colunas.map(c => (
+                      <th key={c.id} scope="col" className={`${c.id === 'usuario' ? 'px-4' : 'px-3'} py-3 ${c.alinhar === 'direita' ? 'text-right' : ''}`}>
+                        {c.oculto ? <span className="sr-only">{c.titulo}</span> : c.titulo}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
-                  {ordenados.map(a => {
-                    const st = STATUS_AFASTAMENTO.find(s => s.id === statusEfetivo(a, hoje))!;
-                    return (
-                      <tr key={a.id} className="hover:bg-thead">
-                        <td className="px-4 py-2">
-                          <span className="flex items-center gap-2 min-w-0">
-                            <Avatar nome={a.usuario} imageProfile={fotos.get(a.usuarioUid)} size={32} tone="light" />
-                            <span className="min-w-0 font-bold text-navy truncate">{a.usuario}</span>
-                          </span>
-                        </td>
-                        <td className="px-3 py-2"><StatusTag tone={TOM_TIPO[a.tipo]}>{rotuloTipo(a.tipo)}</StatusTag></td>
-                        <td className="px-3 py-2 tabular-nums whitespace-nowrap">{dataBr(a.dataInicio)} a {dataBr(a.dataFim)}</td>
-                        <td className="px-3 py-2 tabular-nums text-right">{a.duracaoDias}</td>
-                        <td className="px-3 py-2"><StatusTag tone={st.tom}>{st.rotulo}</StatusTag></td>
-                        <td className="px-3 py-2 text-ink">{referencia(a)}</td>
-                        <td className="px-3 py-2">
-                          {a.arquivos?.length ? (
-                            <span className="flex flex-wrap gap-1">
-                              {a.arquivos.map(f => (
-                                <button key={f.caminho} type="button" onClick={() => abrirArquivo(f)} title={f.nome} aria-label={`Abrir ${f.nome}`} className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-wine hover:bg-thead focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
-                                  <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{f.tipo === 'application/pdf' ? 'picture_as_pdf' : 'image'}</span>
-                                </button>
-                              ))}
-                            </span>
-                          ) : <span className="text-ink-4">—</span>}
-                        </td>
-                        {ehAdmin && (
-                          <td className="px-3 py-2 text-right">
-                            <MenuAcoes rotulo={`Ações do afastamento de ${a.usuario}`} itens={[
-                              { rotulo: 'Editar', icone: 'edit', onClick: () => setForm({ atual: a }) },
-                              { rotulo: 'Apagar', icone: 'delete', perigo: true, onClick: () => setApagando(a) },
-                            ]} />
-                          </td>
-                        )}
-                      </tr>
-                    );
-                  })}
+                  {ordenados.map(a => (
+                    <tr key={a.id} className="hover:bg-thead">
+                      {colunas.map(c => (
+                        <td key={c.id} className={`${c.id === 'usuario' ? 'px-4' : 'px-3'} py-2 ${c.alinhar === 'direita' ? 'text-right' : ''} ${c.classe ?? ''}`}>{c.celula(a)}</td>
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
-            </div>
+            </Card>
 
-            {/* Celular: cartões */}
-            <ul className="md:hidden space-y-2">
-              {ordenados.map(a => {
-                const st = STATUS_AFASTAMENTO.find(s => s.id === statusEfetivo(a, hoje))!;
-                return (
-                  <li key={a.id} className="bg-white rounded-xl border border-line p-3 flex items-start gap-3">
-                    <Avatar nome={a.usuario} imageProfile={fotos.get(a.usuarioUid)} size={36} tone="light" />
-                    <div className="min-w-0 flex-1">
+            {/* Celular: cartões com as mesmas células. */}
+            <ul className="md:hidden space-y-4">
+              {ordenados.map(a => (
+                <li key={a.id}>
+                  <Card padding="sm" className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-bold text-navy truncate flex-1">{a.usuario}</p>
-                        <StatusTag tone={st.tom} className="shrink-0">{st.rotulo}</StatusTag>
+                        <div className="min-w-0 flex-1">{celula.usuario(a)}</div>
+                        <span className="shrink-0">{celula.status(a)}</span>
                       </div>
-                      <p className="flex items-center gap-2 text-sm text-ink mt-0.5"><StatusTag tone={TOM_TIPO[a.tipo]}>{rotuloTipo(a.tipo)}</StatusTag>{a.duracaoDias} dia{a.duracaoDias !== 1 ? 's' : ''}</p>
-                      <p className="text-xs text-ink-3 tabular-nums">{dataBr(a.dataInicio)} a {dataBr(a.dataFim)}{a.tipo === 'ferias' && a.referencia ? ` · Ano: ${a.referencia}` : ''}{a.motivo ? ` · ${a.motivo}` : ''}</p>
-                      {!!a.arquivos?.length && (
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {a.arquivos.map(f => <button key={f.caminho} type="button" onClick={() => abrirArquivo(f)} className="min-h-[44px] text-xs font-bold text-blue underline underline-offset-2 truncate max-w-full">{f.nome}</button>)}
-                        </div>
-                      )}
+                      <p className="flex items-center gap-2 text-sm text-ink">{celula.tipo(a)}{a.duracaoDias} {a.duracaoDias === 1 ? 'dia' : 'dias'}</p>
+                      <p className="text-xs text-ink-3 tabular-nums">{celula.periodo(a)}{referencia(a) !== '—' ? ` · ${referencia(a)}` : ''}</p>
+                      {!!a.arquivos?.length && celula.arquivos(a)}
                     </div>
-                    {ehAdmin && (
-                      <MenuAcoes rotulo={`Ações do afastamento de ${a.usuario}`} itens={[
-                        { rotulo: 'Editar', icone: 'edit', onClick: () => setForm({ atual: a }) },
-                        { rotulo: 'Apagar', icone: 'delete', perigo: true, onClick: () => setApagando(a) },
-                      ]} />
-                    )}
-                  </li>
-                );
-              })}
+                    {ehAdmin && celula.acoes(a)}
+                  </Card>
+                </li>
+              ))}
             </ul>
           </>
         ))}

@@ -13,6 +13,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { camposIdDrive } from '../utils/googleDrive';
 import { app } from './firebaseAuth';
 import { registrarUsoAcao } from './usoDiario';
+import { registrarEventoInspecionado } from './eventosInspecionado';
 
 const db = getFirestore(app);
 const COL = 'periciasMenores';
@@ -118,4 +119,5 @@ export type NovaPericiaMenor = Omit<PericiaMenorDoc, 'criadoEm' | 'dataTermino'>
 export const registrarPericiaMenor = async (id: string, dados: NovaPericiaMenor): Promise<void> => {
   await setDoc(doc(db, COL, id), { ...dados, ...camposIdDrive(dados.pdfUrl), dataTermino: calcularDataTermino(dados.dataAtestado, dados.tempoHomologado), criadoEm: serverTimestamp() });
   registrarUsoAcao('pericia_registrar');
+  registrarEventoInspecionado(dados.militarId, 'pericia.registrar', `Perícia de ${dataBR(dados.dataAtestado)}`);
 };

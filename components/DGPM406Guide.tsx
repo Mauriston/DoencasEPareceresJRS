@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { useQueryParam } from '../hooks/useQueryParam';
 import { Segmented } from './ui/Segmented';
+import { Card } from './ui/Card';
 import { MarkdownDocPage } from './MarkdownDocPage';
 import { StoragePdfIconButton, StoragePdfFab } from './StoragePdfButtons';
 import { useStoragePdf } from '../hooks/useStoragePdf';
@@ -155,8 +156,8 @@ export const DGPM406Guide: React.FC = () => {
   // Card fixo à esquerda (desktop) com a lista de capítulos ou de anexos (conforme
   // o documento aberto), para navegar entre eles sem voltar à grade.
   const navCard = (heading: string, children: React.ReactNode) => (
-    <div className="bg-white rounded-2xl border border-line/60 p-3 max-h-[calc(100vh-140px)] overflow-y-auto">
-      <h3 className="text-xs font-bold text-ink-3 tracking-wider px-2 pb-2 mb-1 border-b border-line">
+    <div className="bg-white rounded-xl border border-line p-3 max-h-[calc(100vh-140px)] overflow-y-auto">
+      <h3 className="eyebrow px-2 pb-2 mb-1 border-b border-line">
         {heading}
       </h3>
       <nav className="space-y-0.5">{children}</nav>
@@ -164,7 +165,7 @@ export const DGPM406Guide: React.FC = () => {
   );
 
   const navButtonClass = (active: boolean) =>
-    `w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold leading-snug transition-colors ${
+    `w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold leading-snug transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold ${
       active ? 'bg-navy text-white' : 'text-ink hover:bg-thead'
     }`;
 
@@ -229,107 +230,34 @@ export const DGPM406Guide: React.FC = () => {
         </div>
 
 
-        {/* Capítulos: tabela no desktop e lista de itens no mobile. O ícone
-            indica o que o clique faz: abre o PDF (file_open) ou navega para a
-            página renderizada (chevron). Anexos: mesma tabela no desktop. */}
-        {activeTab === 'capitulos' && (
-          <div className="hidden md:block bg-white rounded-2xl border border-line/60 overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-paper/80 border-b border-line text-xs font-bold text-navy uppercase tracking-wider">
-                  <th className="py-3 px-4 w-44">Capítulo</th>
-                  <th className="py-3 px-4">Título</th>
-                  <th className="py-3 px-4 w-12"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {CHAPTERS.map(item => (
-                  <tr key={item.id} onClick={() => handleChapterClick(item)} className="group hover:bg-paper cursor-pointer transition-colors">
-                    <td className="py-3 px-4 text-sm font-heading font-bold text-navy group-hover:text-navy whitespace-nowrap transition-colors">{item.chapter}</td>
-                    <td className="py-3 px-4 text-xs font-medium text-ink-3 uppercase">{item.title}</td>
-                    <td className="py-3 px-4 text-right">
-                      <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors align-middle">
-                        {item.mdKey ? 'chevron_right' : 'file_open'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {activeTab === 'anexos' && (
-          <div className="hidden md:block bg-white rounded-2xl border border-line/60 overflow-hidden">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-paper/80 border-b border-line text-xs font-bold text-navy uppercase tracking-wider">
-                  <th className="py-3 px-4 w-44">Anexo</th>
-                  <th className="py-3 px-4">Título</th>
-                  <th className="py-3 px-4 w-12"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {ANEXOS.map(item => (
-                  <tr key={item.id} onClick={() => handleAnexoClick(item)} className="group hover:bg-paper cursor-pointer transition-colors">
-                    <td className="py-3 px-4 text-sm font-heading font-bold text-navy group-hover:text-navy whitespace-nowrap transition-colors">{item.anexo}</td>
-                    <td className="py-3 px-4 text-xs font-medium text-ink-3 uppercase">{item.title}</td>
-                    <td className="py-3 px-4 text-right">
-                      <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors align-middle">
-                        {item.mdKey ? 'chevron_right' : 'file_open'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 md:hidden">
-          {activeTab === 'capitulos' ? (
-            CHAPTERS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handleChapterClick(item)}
-                className="group flex items-center gap-3 bg-white rounded-xl border border-line/60 px-4 py-3 hover:border-navy transition-all duration-200 cursor-pointer text-left"
-              >
-                <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors shrink-0">
-                  {item.mdKey ? 'single_arrow' : 'file_open'}
-                </span>
-                <div className="flex flex-col min-w-0 flex-1">
-                  <h3 className="text-navy font-heading font-bold text-sm leading-snug group-hover:text-navy transition-colors">
-                    {item.chapter}
-                  </h3>
-                  <p className="text-ink-3 font-body text-xs font-medium leading-relaxed line-clamp-2">
-                    {item.title}
-                  </p>
-                </div>
-              </button>
-            ))
-          ) : (
-            ANEXOS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => handleAnexoClick(item)}
-                className="group flex items-center gap-3 bg-white rounded-xl border border-line/60 px-4 py-3 hover:border-navy transition-all duration-200 cursor-pointer text-left"
-              >
-                <span className="material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors shrink-0">
-                  {item.mdKey ? 'single_arrow' : 'file_open'}
-                </span>
-                <div className="flex flex-col min-w-0 flex-1">
-                  <h3 className="text-navy font-heading font-bold text-sm leading-snug group-hover:text-navy transition-colors">
-                    {item.anexo}
-                  </h3>
-                  <p className="text-ink-3 font-body text-xs font-medium leading-relaxed line-clamp-2">
-                    {item.title}
-                  </p>
-                </div>
-              </button>
-            ))
-          )}
-        </div>
-            </Container>
+        {/* Uma lista só para todas as larguras (auditoria v3, M10/L6): antes havia tabela
+            (md+) e cards (celular) em paralelo, e o md:grid-cols-2 dos cards nunca aparecia
+            (bloco md:hidden). O ícone indica o que o clique faz: abre o PDF (file_open) ou
+            navega para a página renderizada (chevron). */}
+        <Card padding="none" as="div">
+          <ul className="divide-y divide-line">
+            {(activeTab === 'capitulos'
+              ? CHAPTERS.map(item => ({ id: item.id, rotulo: item.chapter, titulo: item.title, md: !!item.mdKey, abrir: () => handleChapterClick(item) }))
+              : ANEXOS.map(item => ({ id: item.id, rotulo: item.anexo, titulo: item.title, md: !!item.mdKey, abrir: () => handleAnexoClick(item) }))
+            ).map(item => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={item.abrir}
+                  className="group w-full text-left grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[11rem_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 px-4 py-3 min-h-[52px] hover:bg-paper transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold"
+                >
+                  <span className="text-sm font-bold text-navy md:whitespace-nowrap">{item.rotulo}</span>
+                  <span className="row-start-2 md:row-start-auto text-xs font-medium text-ink-3 line-clamp-2 md:line-clamp-none">{item.titulo}</span>
+                  <span className="row-span-2 md:row-span-1 col-start-2 md:col-start-3 material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors" aria-hidden="true">
+                    {item.md ? 'chevron_right' : 'file_open'}
+                  </span>
+                  {!item.md && <span className="sr-only">(abre o PDF)</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </Container>
     </div>
   );
 };

@@ -50,6 +50,14 @@ export const TIPO_DA_ACAO_SENSIVEL: Record<AcaoSensivel, TipoAcaoUso> = {
   'config.alterar': 'config',
   'afastamento.criar': 'afastamento',
   'afastamento.alterar': 'afastamento',
+  // Administração (usuários e permissões): contam como ajuste de configuração.
+  'permissoes.alterar': 'config',
+  'usuario.criar': 'config',
+  'usuario.editar': 'config',
+  'usuario.perfil': 'config',
+  'usuario.ativacao': 'config',
+  'usuario.excluir': 'exclusao',
+  'usuario.senha': 'config',
 };
 
 /** ultimoAcesso no documento do usuário (firestore.rules só aceita request.time). */

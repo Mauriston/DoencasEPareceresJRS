@@ -5,6 +5,11 @@ import { MotivoIdmModal } from '../MotivoIdmModal';
 import { ResponsavelTermoModal } from '../ResponsavelTermoModal';
 import React, { useEffect, useState } from 'react';
 import { Container, PageHeader } from '../ui/Page';
+import { FabAcoes } from '../ui/Fab';
+import { MenuAcoes } from '../ui/MenuAcoes';
+import { FilterChip } from '../ui/FilterChip';
+import { SearchField } from '../ui/Field';
+import { canUseFeature } from '../../config/permissions';
 import { SolicitarParecerModal, SolicitarExamesModal } from '../SolicitacaoModais';
 import { CandidatoDetalhe } from './CandidatoDetalhe';
 import { TriagemFormulario, TriagemSecao } from './Triagem';
@@ -17,7 +22,7 @@ import { ConfirmDialog } from '../ui/Dialog';
 import { Toast } from '../ui/Toast';
 import { CandidatoStatusTag, ConcursoStatusTag } from '../ui/statusTheme';
 import { CalendarioAgendamento } from './compartilhado';
-import { ModalDefinirPeriodoAgendamento } from './ModaisConcurso';
+import { ModalAdicionarCandidato, ModalDefinirPeriodoAgendamento } from './ModaisConcurso';
 import { useConcursoDetalhe, type ConcursoDetalheProps } from './useConcursoDetalhe';
 import { TabelaCandidatos } from './TabelaCandidatos';
 import { ListaCandidatosMobile } from './ListaCandidatosMobile';
@@ -82,14 +87,36 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
     setDateFilterMode, setDateFilterCustom, showDateMenu, setShowDateMenu, showDateCalendar,
     setShowDateCalendar, toastMessage, confirmDialog, setConfirmDialog, motivoModal, datasAgendamento,
     loadingDatasAgendamento, reagendandoCandidato, setReagendandoCandidato, confirmandoReagendamento,
-    candidatoModalMobile, isDesktop, scrollContainerRef, mostrarBotaoTopo, toolbarRef, toolbarAltura,
-    rolarAoTopo, showToast, carregarTudo, loadDatasAgendamento, enviarExamesAlvo, setEnviarExamesAlvo,
+    candidatoModalMobile, isDesktop, scrollContainerRef, toolbarRef, toolbarAltura,
+    showToast, carregarTudo, loadDatasAgendamento, enviarExamesAlvo, setEnviarExamesAlvo,
     verExamesAlvo, setVerExamesAlvo, solicitacaoModal, setSolicitacaoModal, detalheCandidatoId,
     setDetalheCandidatoId, eventosAlvo, setEventosAlvo, ehAdmin, ehMpi, mostrarSecaoTriagem, triagemAlvo,
     setTriagemAlvo, handleSalvarTriagem, handleVerExames, gerarSolicitacao, handleResponsavelEscolhido,
     handleMotivoSelecionado, handleMotivoFechado, handleSelecionarDataReagendamento, toggleStatusKpiFilter,
     filteredCandidatos, total, dateFilterLabel, chipFilters, sugestoesCandidatos,
   } = s;
+  // FAB / ações do cabeçalho (auditoria v3, 4d): + Candidato (principal) e Enviar exames, pela permissão do perfil
+  // e pela situação do concurso. Só na planilha de UM concurso (não nas páginas do dia e de atrasadas).
+  const [adicionarCandidatoAberto, setAdicionarCandidatoAberto] = useState(false);
+  const [enviarExamesAberto, setEnviarExamesAberto] = useState(false);
+  const podeCandidato = !embutido && !!concurso && canUseFeature('concursosJRS.adicionarCandidato', perfil) && (concurso.status === 'em_andamento' || concurso.status === 'em_breve');
+  const podeExames = !embutido && !!concurso && canUseFeature('concursosJRS.enviarExamesCandidato', perfil) && concurso.status === 'em_andamento';
+  const finalizados = candidatos.filter(c => c.finalizado).length;
+  const descricao = (
+    <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+      {concurso && concurso.status !== 'em_andamento' && <ConcursoStatusTag status={concurso.status} />}
+      <span>{total} candidato{total === 1 ? '' : 's'}</span>
+      <span aria-hidden="true">·</span>
+      <span>{finalizados} de {total} finalizado{total === 1 ? '' : 's'}</span>
+    </span>
+  );
+  const acoesCabecalho = (
+    <>
+      {concurso && <BotaoEmailInaptos concurso={concurso} candidatos={candidatos} perfil={perfil} onAviso={showToast} />}
+      {podeExames && <Button variant="secondary" icon="upload_file" onClick={() => setEnviarExamesAberto(true)} className="hidden md:inline-flex">Enviar exames</Button>}
+      {podeCandidato && <Button icon="person_add" onClick={() => setAdicionarCandidatoAberto(true)} className="hidden md:inline-flex">Adicionar candidato</Button>}
+    </>
+  );
 
   return (
     <div className="flex flex-col flex-1 relative">
@@ -180,33 +207,43 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
         />
       )}
 
-      {!isDesktop && mostrarBotaoTopo && (
-        <button
-          type="button"
-          onClick={rolarAoTopo}
-          className="md:hidden fixed bottom-6 right-4 z-sticky w-11 h-11 rounded-full bg-navy text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform"
-          aria-label="Voltar ao topo"
-          title="Voltar ao topo"
-        >
-          <span className="material-symbols-outlined text-[22px]">arrow_upward</span>
-        </button>
+      {/* M7: sem "voltar ao topo" flutuante — o canto é do FAB (+ Candidato); a trilha e o gesto do sistema cobrem a volta. */}
+      {adicionarCandidatoAberto && concurso && (
+        <ModalAdicionarCandidato
+          concursoId={concursoId}
+          concursoNome={concurso.nome}
+          onClose={atualizado => { setAdicionarCandidatoAberto(false); if (atualizado) carregarTudo(); }}
+        />
+      )}
+      {enviarExamesAberto && concurso && (
+        <EnviarExamesModal
+          concursos={[concurso]}
+          usuarioNome={nav?.authUser?.nome}
+          onClose={() => { setEnviarExamesAberto(false); carregarTudo(); }}
+        />
+      )}
+      {!embutido && (
+        <FabAcoes acoes={[
+          { id: 'candidato', rotulo: 'Candidato', ariaLabel: 'Adicionar candidato', icone: 'add', onClick: () => setAdicionarCandidatoAberto(true), permitido: podeCandidato },
+          { id: 'exames', rotulo: 'Enviar exames', icone: 'upload_file', onClick: () => setEnviarExamesAberto(true), permitido: podeExames },
+        ]} />
       )}
 
-      <div ref={scrollContainerRef} style={{ '--toolbar-h': `${toolbarAltura}px` } as React.CSSProperties} className="pb-10 w-full flex-1">
+      <div ref={scrollContainerRef} style={{ '--toolbar-h': `${toolbarAltura}px` } as React.CSSProperties} className={`${embutido ? 'pb-6' : 'pb-28 md:pb-10'} w-full flex-1`}>
         <Container size="data" className="pt-6 md:pt-8">
-          {/* F49: título à esquerda, status por extenso e andamento escritos; sem hífen nem elementos absolutos. */}
-          <PageHeader
-            title={concurso?.nome || 'Concurso'}
-            description={(
-              <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-                {concurso && <ConcursoStatusTag status={concurso.status} />}
-                <span>{total} candidato{total === 1 ? '' : 's'}</span>
-                <span aria-hidden="true">·</span>
-                <span>{candidatos.filter(c => c.finalizado).length} de {total} finalizados</span>
-              </span>
-            )}
-            actions={concurso ? <BotaoEmailInaptos concurso={concurso} candidatos={candidatos} perfil={perfil} onAviso={showToast} /> : undefined}
-          />
+          {/* F49: título à esquerda, andamento escrito. P2: embutido (páginas do dia e de atrasadas) o concurso é
+              uma seção h2 — o h1 é o PageHeader da rota. A situação só aparece quando não é "Em andamento" (C3). */}
+          {embutido ? (
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-h2 text-navy">{concurso?.nome || 'Concurso'}</h2>
+                <div className="text-sm text-ink-3 mt-1">{descricao}</div>
+              </div>
+              <div className="flex flex-row flex-wrap items-center gap-2 shrink-0">{acoesCabecalho}</div>
+            </div>
+          ) : (
+            <PageHeader title={concurso?.nome || 'Concurso'} description={descricao} actions={acoesCabecalho} />
+          )}
         </Container>
 
         {/* Toolbar compacta e fixa no desktop: o título rola junto com a

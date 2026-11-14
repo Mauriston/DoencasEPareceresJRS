@@ -9,7 +9,7 @@ export const enviarEmailTeste = async (tipo: TipoEmail): Promise<{ para: string[
     const r = await chamarServidor<{ para: string[]; cc: string[] }>('/api/email/teste', { tipo }, { timeoutMs: 180_000 });
     return { para: r.para, cc: r.cc };
   } catch (e) {
-    if (e instanceof ApiError && e.status === 503) throw new ApiError('negocio', 'A conta Google da JRS não está autorizada no servidor. Autorize-a em Usuários.', 503);
+    if (e instanceof ApiError && e.status === 503) throw new ApiError('negocio', 'A conta Google da JRS não está autorizada no servidor. Autorize-a em Administração › Integrações.', 503);
     if (e instanceof ApiError && e.status === 404) throw new ApiError('negocio', 'O servidor ainda não tem os e-mails de teste. Tente de novo após a próxima publicação.', 404);
     throw e;
   }

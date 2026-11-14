@@ -28,10 +28,11 @@ const entrar = async (pagina, usuario) => {
   await pagina.getByLabel('NIP').fill(usuario.nip.replace(/\D/g, ''));
   await pagina.getByLabel('Senha').fill(SENHA);
   await pagina.getByRole('button', { name: /entrar/i }).click();
-  await pagina.getByText(/Bom dia|Boa tarde|Boa noite/).first().waitFor();
+  // Início (painel do dia): o h1 "Início" do PageHeader.
+  await pagina.getByRole('heading', { level: 1, name: 'Início' }).first().waitFor();
   // Aviso da triagem (MPI, 3 primeiros acessos): fecha para seguir.
   const entendi = pagina.getByRole('button', { name: 'Entendi' });
-  // O aviso aparece um instante depois da saudação: espera um pouco em vez de testar só uma vez.
+  // O aviso aparece um instante depois da Início: espera um pouco em vez de testar só uma vez.
   await entendi.click({ timeout: 4_000 }).catch(() => { /* sem aviso para este perfil */ });
 };
 
@@ -60,7 +61,8 @@ test('página pública das Doenças de Lei abre sem login', async () => {
 test('MPI entra pelo NIP e a Início mostra a IS de concurso atrasada', async () => {
   const p = await novaPagina();
   await entrar(p, MPI);
-  await p.getByText('1 IS de concurso atrasada').waitFor();
+  // Na faixa "Hoje" (contador) ou, quando a faixa do perfil já está cheia, em "Pendências · por atraso".
+  await p.getByText('1 IS de concurso atrasada').or(p.getByRole('link', { name: /^1 · IS de concurso atrasadas/ })).first().waitFor();
   await p.context().close();
 });
 

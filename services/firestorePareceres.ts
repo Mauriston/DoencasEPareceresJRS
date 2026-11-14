@@ -13,6 +13,7 @@ import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, serverTim
 import { novoId } from '../utils/dados';
 import { camposIdDrive } from '../utils/googleDrive';
 import { app } from './firebaseAuth';
+import { registrarEventoInspecionado } from './eventosInspecionado';
 
 const db = getFirestore(app);
 const COL = 'pareceres';
@@ -79,8 +80,23 @@ export const observarPareceresDaIS = (isId: string, onData: (lista: ParecerRecor
     err => onError?.(err),
   );
 
-export const registrarParecer = (id: string, dados: Omit<ParecerDoc, 'criadoEm' | 'status'>) =>
-  setDoc(doc(db, COL, id), { ...dados, ...camposIdDrive(dados.pdfUrl), status: 'solicitado', criadoEm: serverTimestamp() });
+/** Pedidos de parecer de um inspecionado (militarId = NIP só dígitos), do mais recente para o mais antigo —
+ *  consulta por NIP, sem ler a coleção inteira (Ficha do inspecionado, auditoria v3 MF2). */
+export const observarPareceresDoMilitar = (militarId: string, onData: (lista: ParecerRecord[]) => void, onError?: (e: Error) => void) =>
+  onSnapshot(
+    query(collection(db, COL), where('militarId', '==', militarId)),
+    snap => onData(snap.docs
+      .map(d => ({ id: d.id, ...(d.data() as ParecerDoc) }))
+      .filter(p => typeof p.inspecionado === 'string' && p.inspecionado !== '')
+      .sort((a, b) => (b.criadoEm?.toMillis?.() ?? Date.now()) - (a.criadoEm?.toMillis?.() ?? Date.now()))),
+    err => onError?.(err),
+  );
+
+export const registrarParecer = async (id: string, dados: Omit<ParecerDoc, 'criadoEm' | 'status'>) => {
+  await setDoc(doc(db, COL, id), { ...dados, ...camposIdDrive(dados.pdfUrl), status: 'solicitado', criadoEm: serverTimestamp() });
+  // Registro por inspecionado (sem especialidade, finalidade nem texto do pedido).
+  registrarEventoInspecionado(dados.militarId, 'parecer.gerar', dados.is ? `Parecer da IS ${dados.is}` : 'Pedido de parecer');
+};
 
 export const marcarConcluido = (id: string, concluido: boolean, porNome: string) =>
   updateDoc(doc(db, COL, id), concluido

@@ -7,6 +7,7 @@ import { getFirestore, collection, doc, getDoc, getDocs, query, where, setDoc, u
 import { app } from './firebaseAuth';
 import { normalizarNip } from '../utils/dados';
 import { registrarAcaoSensivel } from './auditoriaAcoes';
+import { registrarEventoInspecionado } from './eventosInspecionado';
 import type { VinculoFinalidade } from '../utils/corposQuadros';
 
 const db = getFirestore(app);
@@ -72,8 +73,13 @@ export const criarMilitar = async (dados: MilitarDoc): Promise<string> => {
   const ref = doc(db, COL, id);
   if ((await getDoc(ref)).exists()) throw new Error('Já existe um militar cadastrado com este NIP.');
   await setDoc(ref, { ...dados, criadoEm: serverTimestamp(), atualizadoEm: serverTimestamp() });
+  registrarEventoInspecionado(id, 'cadastro.criar', 'Cadastro');
   return id;
 };
+
+/** Um cadastro (id = NIP só dígitos); `null` quando não existe. Ficha do inspecionado. */
+export const observarMilitar = (id: string, onData: (m: MilitarRecord | null) => void, onError?: (e: Error) => void) =>
+  onSnapshot(doc(db, COL, id), snap => onData(snap.exists() ? { id: snap.id, ...(snap.data() as MilitarDoc) } : null), err => onError?.(err));
 
 /**
  * Cria vários cadastros de uma vez (importação CSV do Admin). Lotes de até 400 gravações; quem chama
@@ -103,8 +109,10 @@ export const apagarMilitar = async (id: string) => {
   void registrarAcaoSensivel('militar.excluir', 'militares');
 };
 
-export const atualizarMilitar = (id: string, patch: Partial<MilitarDoc>) =>
-  updateDoc(doc(db, COL, id), { ...patch, atualizadoEm: serverTimestamp() } as Record<string, unknown>);
+export const atualizarMilitar = async (id: string, patch: Partial<MilitarDoc>) => {
+  await updateDoc(doc(db, COL, id), { ...patch, atualizadoEm: serverTimestamp() } as Record<string, unknown>);
+  registrarEventoInspecionado(id, 'cadastro.editar', 'Cadastro');
+};
 
 /**
  * Troca o NIP de um cadastro: o id do documento é o NIP só com dígitos, então mudar o NIP exige mover o
@@ -125,6 +133,7 @@ export const renomearMilitar = async (idAntigo: string, idNovo: string, patch: P
   inspecoes.forEach(i => lote.update(i.ref, { inspecionadoId: idNovo }));
   lote.delete(antigo.ref);
   await lote.commit();
+  registrarEventoInspecionado(idNovo, 'cadastro.editar', 'NIP alterado');
 };
 
 /** Atualiza vários cadastros de uma vez (ex.: promoção em lote). Lotes de até 400 gravações. */
