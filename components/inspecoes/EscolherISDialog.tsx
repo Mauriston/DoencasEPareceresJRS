@@ -1,5 +1,5 @@
 // Ficheiro: components/inspecoes/EscolherISDialog.tsx
-// Lista de IS com e-mail individual pendente (menu "Enviar Email" de Inspeções): agendamento (IS de Verificações e
+// Lista de IS com e-mail individual pendente (menu "Enviar e-mail" de Inspeções): agendamento (IS de Verificações e
 // Términos agendadas, de hoje em diante) e resultado (IS finalizadas de Verificações e Términos ou Benefícios).
 // "Enviar" em cada linha abre o diálogo de envio daquela IS (EnviarAgendamentoDialog / EnviarResultadoDialog).
 import React from 'react';

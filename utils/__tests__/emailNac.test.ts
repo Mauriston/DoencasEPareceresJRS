@@ -85,7 +85,7 @@ describe('montarEmailNac', () => {
   });
 });
 
-describe('agendamento pendente (badge do "Enviar Email")', () => {
+describe('agendamento pendente (badge do "Enviar e-mail")', () => {
   const base = { grupoFinalidade: VT, status: 'agendada', dataEntrevista: '2026-11-13T13:40' };
   it('agendada de hoje em diante, sem e-mail desta data', () => {
     expect(agendamentoPendente(base, '2026-11-12')).toBe(true);

@@ -3,6 +3,7 @@
 // candidatos e agendamento (página /concursos/novo).
 import React, { useState } from 'react';
 import { Container, PageHeader } from '../ui/Page';
+import { controlClass } from '../ui/Field';
 import { criarConcursoDaMensagem, novoConcursoId, listarDatasAgendamento, obterContextoAgendamento, confirmarAgendamento, type DataAgendamentoInfo } from '../../services/firestoreConcursos';
 import { extrairMensagemComGemini, salvarMensagemNoDrive } from '../../services/driveConcursos';
 import { parseChaveData, type CabecalhoMensagem, type CandidatoBasico } from '../../utils/concursosUtils';
@@ -216,7 +217,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                   className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors flex items-center space-x-1 disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[16px]">upload</span>
-                  <span>Processar Mensagem</span>
+                  <span>Processar mensagem</span>
                 </button>
               </div>
             </>
@@ -247,18 +248,18 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                   value={nomeConcurso}
                   onChange={e => setNomeConcurso(e.target.value)}
                   placeholder="Ex.: CPAEM/2026"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-base font-bold text-navy focus:outline-none focus:border-navy"
+                  className={`${controlClass} font-bold text-navy`}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-bold text-ink-3 uppercase tracking-wider block mb-1">Período JRS — início</label>
-                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-ink-5 text-sm focus:outline-none focus:border-navy" />
+                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className={`${controlClass}`} />
                 </div>
                 <div>
                   <label className="text-sm font-bold text-ink-3 uppercase tracking-wider block mb-1">Período JRS — fim</label>
-                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-ink-5 text-sm focus:outline-none focus:border-navy" />
+                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className={`${controlClass}`} />
                 </div>
               </div>
               {!periodoInicio && (
@@ -345,7 +346,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                   min={1}
                   value={quantidadePorDia}
                   onChange={e => setQuantidadePorDia(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm font-bold text-navy focus:outline-none focus:border-navy"
+                  className={`${controlClass} font-bold text-navy`}
                 />
               </div>
 
@@ -380,7 +381,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
               </div>
 
               <div className="pt-2 flex items-center justify-end space-x-2">
-                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-4 py-2.5 rounded-xl border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">Agendar Depois</button>
+                <button type="button" onClick={() => onClose(concursoId || undefined)} className="px-4 py-2.5 rounded-xl border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">Agendar depois</button>
                 <button
                   type="button"
                   disabled={!agendamentoViavel || processando}
@@ -405,7 +406,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                   <textarea readOnly value={minuta} rows={12} className="w-full px-3.5 py-2.5 rounded-lg border border-ink-5 text-sm tabular-nums text-navy focus:outline-none resize-none whitespace-pre-wrap" />
                   <button type="button" onClick={() => handleCopiarTexto(minuta)} className="px-4 py-2.5 rounded-xl border border-line text-sm font-bold text-ink hover:bg-thead transition-colors flex items-center space-x-1">
                     <span className="material-symbols-outlined text-[16px]">content_copy</span>
-                    <span>Copiar Minuta</span>
+                    <span>Copiar minuta</span>
                   </button>
                 </>
               )}

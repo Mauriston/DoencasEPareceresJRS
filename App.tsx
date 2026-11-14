@@ -2,8 +2,6 @@
 import React, { useState, useEffect, useReducer, useRef, useMemo, lazy, Suspense } from 'react';
 import { Navigate, useLocation, useNavigate, useNavigationType, useRoutes } from 'react-router-dom';
 import { Login } from './components/Login';
-import { registrarAcessoPagina } from './services/acessoRapido';
-import { hojeISO as hojeISOAcesso } from './utils/inspecoes';
 import { Home } from './components/Home';
 import { Sidebar } from './components/shell/Sidebar';
 import { Topbar } from './components/shell/Topbar';
@@ -358,12 +356,6 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
     if (navigationType !== 'POP') mainRef.current?.focus({ preventScroll: true });
   }, [location.pathname]);
 
-  // Acesso rápido da Início: conta os acessos às páginas (por dia, no Firestore, por usuário) para a renovação
-  // quinzenal. Falha silenciosa: sem a contagem, o card fica com a escolha do usuário.
-  useEffect(() => {
-    if (!authUser?.uid || currentView === 'home') return;
-    registrarAcessoPagina(authUser.uid, currentView, hojeISOAcesso()).catch(() => { /* silencioso */ });
-  }, [currentView, authUser?.uid]);
   // Medição de uso do app (uso_diario, só contagens; seção Uso do app do Painel): todas as páginas, inclusive a Início.
   useUsoDiario(authUser?.uid, currentView);
 
@@ -431,7 +423,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       path: '*',
       element: (
         <Page title="Página não encontrada" size="form">
-          <EmptyState icon="travel_explore" title="Esse endereço não existe" description="A página pode ter sido movida. Volte à Página Inicial ou use a busca no topo." action={<Button icon="home" onClick={() => navigate('/')}>Ir para a Página Inicial</Button>} />
+          <EmptyState icon="travel_explore" title="Esse endereço não existe" description="A página pode ter sido movida. Volte à Página inicial ou use a busca no topo." action={<Button icon="home" onClick={() => navigate('/')}>Ir para a Página inicial</Button>} />
         </Page>
       ),
     },

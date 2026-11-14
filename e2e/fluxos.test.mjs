@@ -250,11 +250,13 @@ test('Inspeções: abas Ativas/Finalizadas, chips de filtro e Período, botões 
   // Chip "Sem agendamento": só a aberta; vai para a URL (?situacao=sem_agendamento).
   const semAgendamento = p.getByRole('button', { name: /^Sem agendamento/ });
   await semAgendamento.click();
-  assert.equal(await semAgendamento.getAttribute('aria-pressed'), 'true');
+  // O chip só muda depois da navegação (setSearchParams é uma transition do React Router): espera o estado pressionado.
+  await p.getByRole('button', { name: /^Sem agendamento/, pressed: true }).waitFor();
   await agendada.waitFor({ state: 'detached' });
   await aberta.waitFor();
   assert.match(p.url(), /situacao=sem_agendamento/);
   await semAgendamento.click();
+  await p.getByRole('button', { name: /^Sem agendamento/, pressed: false }).waitFor();
   await agendada.waitFor();
 
   // Aba Finalizadas: nenhuma das duas; volta para Ativas.

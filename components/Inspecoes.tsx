@@ -196,7 +196,7 @@ export const Inspecoes: React.FC = () => {
   const irParaAba = (a: Aba) => { mudarURL({ situacao: a === 'finalizadas' ? 'finalizadas' : null }); setLimiteFinalizadas(PAGINA_FINALIZADAS); };
   const alternarSituacao = (s: 'atrasadas' | 'sem_agendamento') => mudarURL({ situacao: situacao === s ? null : s });
 
-  const [novo, setNovo] = useState<{ dataEntrevista?: string; peritoUid?: string } | null>(null);
+  const [novo, setNovo] = useState<{ dataEntrevista?: string; peritoUid?: string; inspecionadoId?: string } | null>(null);
   const [porFoto, setPorFoto] = useState(false);
   const [detalheId, setDetalheIdEstado] = useState<string | null>(null);
   // Deep link /inspecoes/{isId}[/{acao}] (ex.: QR "Abrir no celular" da gravação da entrevista): abre o
@@ -239,6 +239,7 @@ export const Inspecoes: React.FC = () => {
   // ?dia=, ?situacao=hoje, ?visao= e ?novo= viram estado e saem da URL (também quando a Início/Painel navega para cá
   // com a página já aberta). No celular, ?visao=calendario cai na Lista (do dia, se vier ?dia=).
   // Atalho da Início ("+ Abrir IS"): ?novo=manual abre o formulário; ?novo=print, a IS por foto. Respeita a permissão.
+  // Da Ficha do inspecionado: ?novo=manual&inspecionado=<nip> abre o formulário já com o inspecionado escolhido.
   useEffect(() => {
     const dia = diaDoParam(searchParams.get('dia'));
     const hojeParam = searchParams.get('situacao') === 'hoje';
@@ -248,9 +249,10 @@ export const Inspecoes: React.FC = () => {
     if (dia) setPeriodo(periodoDoDia(dia, hojeISO()));
     else if (hojeParam) setPeriodo({ id: 'hoje' });
     if (v === 'calendario' || v === 'tabela') setVisao(v);
-    if (novoParam && podeCadastrar) { if (novoParam === 'print') setPorFoto(true); else setNovo({}); }
+    const inspecionadoParam = searchParams.get('inspecionado')?.trim() || '';
+    if (novoParam && podeCadastrar) { if (novoParam === 'print') setPorFoto(true); else setNovo(inspecionadoParam ? { inspecionadoId: inspecionadoParam } : {}); }
     const resto = new URLSearchParams(searchParams);
-    resto.delete('dia'); resto.delete('visao'); resto.delete('novo');
+    resto.delete('dia'); resto.delete('visao'); resto.delete('novo'); resto.delete('inspecionado');
     if (hojeParam) resto.delete('situacao');
     setSearchParams(resto, { replace: true });
   }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -454,7 +456,7 @@ export const Inspecoes: React.FC = () => {
     const restituicao = restituicaoDoStatus(is.status);
     if (restituicao && podeEditar && !ehSecretaria) itens.push({ rotulo: restituicao.rotulo, icone: 'undo', onClick: () => { mudarStatus(is, restituicao.status, `IS ${is.is}: ${restituicao.rotulo}.`); } });
     if (podeMinuta && mostraMinutaMsg(is)) itens.push({ rotulo: 'Minuta MSG', icone: 'mail', onClick: () => setMinuta(is) });
-    // Os e-mails (agendamento, resultado, faltas, NAC) ficam só no menu do botão "Enviar Email" do cabeçalho.
+    // Os e-mails (agendamento, resultado, faltas, NAC) ficam só no menu do botão "Enviar e-mail" do cabeçalho.
     if (podeAgendar && is.dataEntrevista && is.status !== 'cancelada' && !(is.agendaSincronizada && is.eventoAgendaId)) itens.push({ rotulo: 'Sincronizar com o Google Agenda', icone: 'sync', onClick: () => { sincronizar(is); } });
     if (ehAdmin && is.status === 'tis_assinado') itens.push({ rotulo: 'Reabrir IS', icone: 'lock_open', onClick: () => { mudarStatus(is, 'assinaturas_pendentes', `IS ${is.is} reaberta.`); } });
     if (canUseFeature('inspecoes.cancelar', perfil) && podeCancelarIS(is, hoje)) itens.push({ rotulo: 'Cancelar IS', icone: 'cancel', perigo: true, onClick: () => setConfirmando({ tipo: 'cancelar', is }) });

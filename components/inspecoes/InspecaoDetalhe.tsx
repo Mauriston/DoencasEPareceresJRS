@@ -12,7 +12,7 @@
 // numa tabela vertical (rótulo | valor) e, abaixo, os cards da entrevista gravada e dos pareceres.
 // Exames: PDFs enviados pelo rodapé ("Exames", até a IS ser finalizada); a IA identifica o documento e o
 // laudo fica na íntegra para copiar (exames/ExamesDaIS).
-// Rodapé (AcoesRodape: linha no desktop, FAB no mobile): Minuta MSG · Parecer · Exames · Gravar Entrevista (cada um
+// Rodapé (AcoesRodape: linha no desktop, FAB no mobile): Minuta MSG · Parecer · Exames · Gravar entrevista (cada um
 // só quando cabe). Fecha no X ou fora.
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -69,7 +69,7 @@ interface Props {
 
 /** Minuta MSG: com Nº do TIS e DS-1a, ou IS cancelada. */
 export const mostraMinutaMsg = (is: Pick<InspecaoRecord, 'tis' | 'ds1a' | 'status'>): boolean => (!!is.tis?.trim() && !!is.ds1a?.trim()) || is.status === 'cancelada';
-/** Parecer e Gravar Entrevista: só com a IS Agendada ou Reagendada. */
+/** Parecer e Gravar entrevista: só com a IS Agendada ou Reagendada. */
 export const fasesDeEntrevista = (is: Pick<InspecaoRecord, 'status'>): boolean => is.status === 'agendada' || is.status === 'reagendada';
 
 const Linha: React.FC<{ rotulo: string; children?: React.ReactNode; className?: string }> = ({ rotulo, children, className = '' }) => (
@@ -229,7 +229,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
     ...(permissoes.minuta && mostraMinutaMsg(is) ? [{ id: 'minuta', rotulo: 'Minuta MSG', icone: 'mail', variante: 'secondary' as const, onClick: onMinuta }] : []),
     ...(permissoes.parecer && fasesDeEntrevista(is) ? [{ id: 'parecer', rotulo: 'Parecer', icone: 'assignment_add', variante: 'secondary' as const, onClick: onSolicitarParecer }] : []),
     ...(podeEnviarExames ? [{ id: 'exames', rotulo: 'Exames', icone: 'upload_file', variante: 'secondary' as const, onClick: () => setEnviandoExames(true) }] : []),
-    ...(permissoes.entrevista && fasesDeEntrevista(is) ? [{ id: 'gravar', rotulo: 'Gravar Entrevista', icone: 'mic', variante: 'primary' as const, onClick: () => setGravacao(pedidoDeGravacao()) }] : []),
+    ...(permissoes.entrevista && fasesDeEntrevista(is) ? [{ id: 'gravar', rotulo: 'Gravar entrevista', icone: 'mic', variante: 'primary' as const, onClick: () => setGravacao(pedidoDeGravacao()) }] : []),
   ];
 
   const encaminhamento = encaminhamentoDoStatus(is.status);
@@ -251,7 +251,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
         <button key={p.id} type="button" onClick={() => setParecerAbertoId(p.id)} className={cardConclusaoClass}>
           <span className="material-symbols-outlined text-[20px] text-navy shrink-0" aria-hidden="true">assignment</span>
           <span className="min-w-0">
-            <span className="block text-sm font-bold text-navy">Parecer Solicitado</span>
+            <span className="block text-sm font-bold text-navy">Parecer solicitado</span>
             <span className="block text-xs text-ink-3">{dataParecer(p)}{statusEfetivo(p) === 'concluido' ? ' · concluído' : ''}</span>
           </span>
         </button>

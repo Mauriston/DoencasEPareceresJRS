@@ -8,6 +8,7 @@ import { parseChaveData, type CabecalhoMensagem } from '../../utils/concursosUti
 import { interpretarMensagem } from './compartilhado';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
+import { controlClass } from '../ui/Field';
 
 // =========================================================================
 // LISTA DE CONCURSOS
@@ -52,7 +53,7 @@ export const ModalKpiBarChart: React.FC<ModalKpiBarChartProps> = ({ titulo, corB
 };
 
 // -------------------------------------------------------------------------
-// Modal "Registrar Mensagem" — arquiva UMA mensagem qualquer de um concurso
+// Modal "Registrar mensagem" — arquiva UMA mensagem qualquer de um concurso
 // já existente (reagendamento, resultado de recurso etc.), diferente do
 // fluxo que cria um concurso novo a partir da mensagem de apresentação.
 // -------------------------------------------------------------------------
@@ -113,7 +114,7 @@ export const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArqui
       <div className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
         <div className="p-4 bg-navy text-white flex items-center justify-between shrink-0">
           <div className="min-w-0">
-            <h3 className="font-heading font-bold text-sm truncate">Registrar Mensagem</h3>
+            <h3 className="font-heading font-bold text-sm truncate">Registrar mensagem</h3>
             <p className="text-xs text-white/70 truncate">{concursoNome}</p>
           </div>
           <button onClick={onClose} className="text-ink-5 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0">
@@ -139,7 +140,7 @@ export const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArqui
               </label>
               <div className="pt-2 flex items-center justify-end space-x-2">
                 <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">Cancelar</button>
-                <button type="button" disabled={!file || processando} onClick={handleProcessar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50">Processar Mensagem</button>
+                <button type="button" disabled={!file || processando} onClick={handleProcessar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50">Processar mensagem</button>
               </div>
             </>
           )}
@@ -156,19 +157,19 @@ export const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArqui
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800">Confira os dados extraídos antes de arquivar a mensagem.</div>
               <div>
                 <label className="text-sm font-bold text-ink-3 uppercase tracking-wider block mb-1">Data-Hora</label>
-                <input type="text" value={cabecalho.dataHora} onChange={e => setCabecalho({ ...cabecalho, dataHora: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm tabular-nums text-navy focus:outline-none focus:border-navy" />
+                <input type="text" value={cabecalho.dataHora} onChange={e => setCabecalho({ ...cabecalho, dataHora: e.target.value })} className={`${controlClass} tabular-nums text-navy`} />
               </div>
               <div>
                 <label className="text-sm font-bold text-ink-3 uppercase tracking-wider block mb-1">Remetente</label>
-                <input type="text" value={cabecalho.sender} onChange={e => setCabecalho({ ...cabecalho, sender: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm text-navy focus:outline-none focus:border-navy" />
+                <input type="text" value={cabecalho.sender} onChange={e => setCabecalho({ ...cabecalho, sender: e.target.value })} className={`${controlClass} text-navy`} />
               </div>
               <div>
                 <label className="text-sm font-bold text-ink-3 uppercase tracking-wider block mb-1">Assunto</label>
-                <input type="text" value={cabecalho.subject} onChange={e => setCabecalho({ ...cabecalho, subject: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm text-navy focus:outline-none focus:border-navy" />
+                <input type="text" value={cabecalho.subject} onChange={e => setCabecalho({ ...cabecalho, subject: e.target.value })} className={`${controlClass} text-navy`} />
               </div>
               <div>
                 <label className="text-sm font-bold text-ink-3 uppercase tracking-wider block mb-1">Tipo</label>
-                <select value={cabecalho.purpose || 'Outros'} onChange={e => setCabecalho({ ...cabecalho, purpose: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm font-bold text-navy focus:outline-none focus:border-navy">
+                <select value={cabecalho.purpose || 'Outros'} onChange={e => setCabecalho({ ...cabecalho, purpose: e.target.value })} className={`${controlClass} font-bold text-navy`}>
                   {PROPOSITO_MENSAGEM_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
@@ -248,7 +249,7 @@ export const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ conc
               </button>
             )}
             <div className="min-w-0">
-              <h3 className="font-heading font-bold text-sm truncate">Mensagens Arquivadas</h3>
+              <h3 className="font-heading font-bold text-sm truncate">Mensagens arquivadas</h3>
               <p className="text-xs text-white/70 truncate">{concursoNome}</p>
             </div>
           </div>
@@ -273,7 +274,7 @@ export const ModalListarMensagens: React.FC<ModalListarMensagensProps> = ({ conc
                     className="px-3 py-2 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors flex items-center space-x-1.5 shrink-0"
                   >
                     <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                    <span>Abrir Mensagem</span>
+                    <span>Abrir mensagem</span>
                   </a>
                 )}
               </div>
@@ -419,11 +420,11 @@ export const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendam
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-bold text-ink-3 uppercase tracking-wider block mb-1">Início</label>
-                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-ink-5 text-sm focus:outline-none focus:border-navy" />
+                  <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} className={`${controlClass}`} />
                 </div>
                 <div>
                   <label className="text-sm font-bold text-ink-3 uppercase tracking-wider block mb-1">Fim</label>
-                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border border-ink-5 text-sm focus:outline-none focus:border-navy" />
+                  <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} className={`${controlClass}`} />
                 </div>
               </div>
               <div className="pt-2 flex items-center justify-end space-x-2">
@@ -441,8 +442,8 @@ export const ModalDefinirPeriodoAgendamento: React.FC<ModalDefinirPeriodoAgendam
 };
 
 // -------------------------------------------------------------------------
-// Modal "Adicionar Candidato" — inclui manualmente um candidato num
-// concurso já Em Andamento ou Em Breve, perguntando a data de agendamento
+// Modal "Adicionar candidato" — inclui manualmente um candidato num
+// concurso já Em andamento ou Em breve, perguntando a data de agendamento
 // dentre as já configuradas (calendário de dias úteis do período).
 // -------------------------------------------------------------------------
 export interface ModalAdicionarCandidatoProps {
@@ -494,7 +495,7 @@ export const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = (
       <div className="bg-white rounded-2xl shadow-2xl border border-line w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
         <div className="p-4 bg-navy text-white flex items-center justify-between shrink-0">
           <div className="min-w-0">
-            <h3 className="font-heading font-bold text-sm truncate">Adicionar Candidato</h3>
+            <h3 className="font-heading font-bold text-sm truncate">Adicionar candidato</h3>
             <p className="text-xs text-white/70 truncate">{concursoNome}</p>
           </div>
           <button onClick={() => onClose(concluido)} className="text-ink-5 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors shrink-0">
@@ -523,7 +524,7 @@ export const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = (
                   value={matricula}
                   onChange={e => setMatricula(e.target.value)}
                   placeholder="Ex.: 550039-7"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm tabular-nums text-navy focus:outline-none focus:border-navy"
+                  className={`${controlClass} tabular-nums text-navy`}
                 />
               </div>
               <div>
@@ -533,7 +534,7 @@ export const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = (
                   value={nome}
                   onChange={e => setNome(e.target.value.toUpperCase())}
                   placeholder="NOME COMPLETO"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm font-bold text-navy focus:outline-none focus:border-navy"
+                  className={`${controlClass} font-bold text-navy`}
                 />
               </div>
               <div>
@@ -546,7 +547,7 @@ export const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = (
                   <select
                     value={dataAgendamento}
                     onChange={e => setDataAgendamento(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm text-navy focus:outline-none focus:border-navy"
+                    className={`${controlClass} text-navy`}
                   >
                     <option value="">Agendar depois</option>
                     {datas.map(d => (
@@ -558,7 +559,7 @@ export const ModalAdicionarCandidato: React.FC<ModalAdicionarCandidatoProps> = (
               <div className="pt-2 flex items-center justify-end space-x-2">
                 <button type="button" onClick={() => onClose()} className="px-4 py-2.5 rounded-xl border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">Cancelar</button>
                 <button type="button" disabled={salvando} onClick={handleSalvar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50">
-                  {salvando ? 'Adicionando...' : 'Adicionar Candidato'}
+                  {salvando ? 'Adicionando...' : 'Adicionar candidato'}
                 </button>
               </div>
             </>

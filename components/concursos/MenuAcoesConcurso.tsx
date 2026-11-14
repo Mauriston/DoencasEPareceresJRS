@@ -26,7 +26,7 @@ export interface MenuAcoesConcursoProps {
   minutaHabilitada: boolean;
   temPeriodoConfigurado: boolean;
   temMensagensRegistradas: boolean;
-  /** Perfil Admin: pode editar o período das IS mesmo com o concurso "Em Andamento" e já com lançamentos. */
+  /** Perfil Admin: pode editar o período das IS mesmo com o concurso "Em andamento" e já com lançamentos. */
   ehAdmin?: boolean;
   onAbrir: () => void;
   onVoltarParaEmBreve: () => void;
@@ -48,7 +48,7 @@ export const construirItensMenuConcurso = ({
   if (podeAbrirEncerrar && status === 'encerrado') {
     itens.push({ key: 'abrir', label: 'Reabrir concurso', icon: 'play_circle', onClick: onAbrir });
   }
-  // Para "Em Breve" o card já tem um botão próprio ("Abrir Concurso") logo
+  // Para "Em breve" o card já tem um botão próprio ("Abrir concurso") logo
   // abaixo — o menu de 3 pontos não repete essa ação.
   if (podeAbrirEncerrar && status === 'em_andamento') {
     // Itens sem utilidade no momento (sem lançamento para voltar, ou nem
@@ -61,9 +61,9 @@ export const construirItensMenuConcurso = ({
       itens.push({ key: 'encerrar', label: 'Encerrar concurso', icon: 'stop_circle', onClick: onEncerrar });
     }
   }
-  // Minuta Resultados só aparece com o concurso "Em Andamento" — some tanto
+  // Minuta de resultados só aparece com o concurso "Em andamento" — some tanto
   // da tabela quanto do menu de 3 pontos do card quando "Encerrado" (e
-  // nunca apareceu quando "Em Breve").
+  // nunca apareceu quando "Em breve").
   if (podeGerarMinutaResultados && status === 'em_andamento') {
     itens.push({
       key: 'minuta', label: 'Minuta de resultados', icon: 'outgoing_mail', onClick: onMinutaResultados,
@@ -73,7 +73,7 @@ export const construirItensMenuConcurso = ({
   // "Editar" (período já configurado) só aparece enquanto o concurso não
   // tiver lançamentos de dados — mudar o período depois disso invalidaria
   // os dados já lançados. "Definir" (primeira vez) não tem essa restrição.
-  // Exceção exclusiva do Admin: com o concurso "Em Andamento" o período das
+  // Exceção exclusiva do Admin: com o concurso "Em andamento" o período das
   // IS continua editável mesmo após lançamentos (as datas já agendadas dos
   // candidatos são preservadas no calendário — ver definirPeriodoAgendamento).
   const adminEditaEmAndamento = ehAdmin && status === 'em_andamento';

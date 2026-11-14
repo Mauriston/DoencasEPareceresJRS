@@ -26,7 +26,7 @@ export const AccessDenied: React.FC<AccessDeniedProps> = ({ pagina }) => {
           {pagina ? <>A página <strong className="text-navy">{pagina}</strong> não está liberada para o perfil <strong className="text-navy">{perfilLabel}</strong>.</> : <>Esta página não está liberada para o perfil <strong className="text-navy">{perfilLabel}</strong>.</>}
           {' '}Se precisar de acesso, solicite a liberação ao administrador do sistema.
         </p>
-        <Button icon="home" onClick={() => nav?.setCurrentView('home')}>Ir para a Página Inicial</Button>
+        <Button icon="home" onClick={() => nav?.setCurrentView('home')}>Ir para a Página inicial</Button>
       </div>
     </Page>
   );

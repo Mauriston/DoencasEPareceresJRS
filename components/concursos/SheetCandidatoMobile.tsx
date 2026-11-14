@@ -7,6 +7,7 @@ import React from 'react';
 import { TriagemSecao } from './Triagem';
 import { urlVisualizacao } from '../../services/driveConcursos';
 import { SheetArrastavel } from '../ui/SheetArrastavel';
+import { controlClass } from '../ui/Field';
 import { AcoesRodape, type AcaoRodape } from '../ui/AcoesRodape';
 import { CandidatoStatusTag, StatusSelect } from '../ui/statusTheme';
 import { STATUS_OPTIONS, isoParaBR } from './compartilhado';
@@ -35,8 +36,8 @@ export const SheetCandidatoMobile: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s
       else if (podeGerarCientificacao(c)) acoes.push({ id: 'termo-cient', rotulo: 'Gerar Termo de Cientificação', icone: 'assignment_turned_in', onClick: () => gerarTermoCientificacao(c.id, c.nome, c.status, false) });
     }
     if (podeSolicitarBase && statusPermiteSolicitacao(c) && !gerandoSolicitacaoIds.has(c.id)) {
-      acoes.push({ id: 'gerar-parecer', rotulo: 'Gerar Parecer', icone: 'stethoscope', variante: 'secondary', onClick: () => { setCandidatoModalMobile(null); handleGerarSolicitacao('parecer', c); } });
-      acoes.push({ id: 'gerar-exames', rotulo: 'Gerar Exames', icone: 'lab_research', variante: 'secondary', onClick: () => { setCandidatoModalMobile(null); handleGerarSolicitacao('exames', c); } });
+      acoes.push({ id: 'gerar-parecer', rotulo: 'Gerar parecer', icone: 'stethoscope', variante: 'secondary', onClick: () => { setCandidatoModalMobile(null); handleGerarSolicitacao('parecer', c); } });
+      acoes.push({ id: 'gerar-exames', rotulo: 'Gerar exames', icone: 'lab_research', variante: 'secondary', onClick: () => { setCandidatoModalMobile(null); handleGerarSolicitacao('exames', c); } });
     }
     // Ler os exames transcritos é só no desktop (a tela cheia precisa da largura).
     if (podeEnviarExames) acoes.push({ id: 'enviar-exames', rotulo: 'Enviar Exames (PDF)', icone: 'lab_profile', variante: 'secondary', onClick: () => handleEnviarExames(c) });
@@ -132,7 +133,7 @@ export const SheetCandidatoMobile: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s
                       onBlur={e => handleObservacoesBlur(c, e.target.value)}
                       rows={5}
                       placeholder="Sem observações."
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-sm text-ink focus:outline-none focus:border-navy resize-none"
+                      className={`${controlClass} text-ink resize-none`}
                     />
                   ) : (
                     <p className="text-sm text-ink whitespace-pre-wrap leading-relaxed">{c.observacoes || 'Sem observações.'}</p>
@@ -166,7 +167,7 @@ export const SheetCandidatoMobile: React.FC<{ s: EstadoConcursoDetalhe }> = ({ s
                     ].map(({ tipo, d, chave }) => (
                       <button key={chave} type="button" onClick={() => handleVerSolicitacao(d)} className="w-full px-4 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-green-50 text-green-800">
                         <span className="material-symbols-outlined text-[20px]">{tipo === 'parecer' ? 'clinical_notes' : 'lab_panel'}</span>
-                        <span className="min-w-0 truncate">{tipo === 'parecer' ? 'Ver Parecer' : 'Ver Exames'} · {d.rotulo}</span>
+                        <span className="min-w-0 truncate">{tipo === 'parecer' ? 'Ver parecer' : 'Ver exames'} · {d.rotulo}</span>
                       </button>
                     ))}
                   </div>

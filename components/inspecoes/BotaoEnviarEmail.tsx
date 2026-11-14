@@ -1,5 +1,5 @@
 // Ficheiro: components/inspecoes/BotaoEnviarEmail.tsx
-// Botão "Enviar Email" do cabeçalho de Inspeções de Saúde (imediatamente à esquerda de "Abrir IS"; Admin e
+// Botão "Enviar e-mail" do cabeçalho de Inspeções de Saúde (imediatamente à esquerda de "Abrir IS"; Admin e
 // Secretaria): menu suspenso com os e-mails da JRS e, à direita de cada item, quantos estão pendentes. O badge do
 // botão soma as pendências de agendamento, resultado, faltas (HNRe) e NAC.
 //  - E-mails de agendamento: IS de Verificações e Términos agendadas sem o e-mail daquela data (lista → envio individual).
@@ -8,7 +8,7 @@
 //  - E-mail ao NAC: IS finalizadas de Verificações e Términos ainda não enviadas.
 //  - IS agendadas do dia seguinte (só Admin): o envio manual do e-mail diário (sem contador).
 // useEmailsIS devolve os mesmos itens e diálogos para entrarem em outro menu (o ⋮ do cabeçalho de Inspeções —
-// auditoria v3, 3b/M1); BotaoEnviarEmail é o botão "Enviar Email" com esses itens.
+// auditoria v3, 3b/M1); BotaoEnviarEmail é o botão "Enviar e-mail" com esses itens.
 import React, { useMemo, useState } from 'react';
 import { MenuAcoes, type ItemMenu } from '../ui/MenuAcoes';
 import { EmailFaltasDialog } from './EmailFaltasDialog';
@@ -95,7 +95,7 @@ export const BotaoEnviarEmail: React.FC<BotaoEnviarEmailProps> = props => {
   const { itens, total, dialogos } = useEmailsIS(props);
   return (
     <>
-      <MenuAcoes rotulo="Enviar Email" botao={{ texto: 'Enviar Email', icone: 'mail', badge: total }} itens={itens} />
+      <MenuAcoes rotulo="Enviar e-mail" botao={{ texto: 'Enviar e-mail', icone: 'mail', badge: total }} itens={itens} />
       {dialogos}
     </>
   );

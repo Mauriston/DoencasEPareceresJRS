@@ -53,7 +53,7 @@ export function AbasSublinhadas<T extends string>({ abas, ativa, onChange, rotul
           <button
             key={a.id} type="button" role="tab" id={`${idBase}-aba-${a.id}`} aria-selected={sel} aria-controls={`${idBase}-painel`} tabIndex={sel ? 0 : -1}
             onClick={() => onChange(a.id)}
-            className={`shrink-0 inline-flex items-center gap-1.5 min-h-10 text-sm font-bold border-b-2 -mb-px transition-colors ${sel ? 'border-gold text-navy' : 'border-transparent text-ink-3 hover:text-navy'}`}
+            className={`shrink-0 inline-flex items-center gap-1.5 min-h-10 text-sm font-bold border-b-[3px] -mb-px transition-colors ${sel ? 'border-gold text-navy' : 'border-transparent text-ink-3 hover:text-navy'}`}
           >
             {a.rotulo}
             {a.contagem !== undefined && <span className="min-w-5 h-5 px-1.5 rounded-full bg-thead text-ink-3 text-xs inline-flex items-center justify-center tabular-nums">{a.contagem}</span>}

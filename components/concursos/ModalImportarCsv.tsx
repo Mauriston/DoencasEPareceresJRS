@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { importarConcursoDeCsv, definirPeriodoAgendamento, type ConcursoRecord } from '../../services/firestoreConcursos';
 import { criarEstruturaConcursoNoDrive } from '../../services/driveConcursos';
 import { parseChaveData, interpretarCsvCandidatosDataBase, type CandidatoImportadoCsv } from '../../utils/concursosUtils';
+import { controlClass } from '../ui/Field';
 
 // =========================================================================
 // MODAL "IMPORTAR CONCURSO (CSV)" — cria um concurso direto de um CSV no
@@ -75,7 +76,7 @@ export const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) =
         <div className="p-4 bg-navy text-white flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2">
             <span className="material-symbols-outlined text-[22px] text-gold">table_view</span>
-            <h3 className="font-heading font-bold text-sm">Importar Concurso (CSV)</h3>
+            <h3 className="font-heading font-bold text-sm">Importar concurso (CSV)</h3>
           </div>
           <button onClick={() => onClose(concursoIdCriado || undefined)} className="text-ink-5 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -91,7 +92,7 @@ export const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) =
                 <p className="text-sm font-bold text-green-800">Concurso "{nomeConcurso}" importado com sucesso ({candidatos.length} candidato{candidatos.length === 1 ? '' : 's'}).</p>
               </div>
               <div className="pt-2 flex items-center justify-end">
-                <button type="button" onClick={() => onClose(concursoIdCriado)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors ">Ver Concurso</button>
+                <button type="button" onClick={() => onClose(concursoIdCriado)} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-xl text-sm font-bold transition-colors ">Ver concurso</button>
               </div>
             </>
           ) : (
@@ -157,7 +158,7 @@ export const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) =
                   onClick={handleImportar}
                   className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
                 >
-                  {processando ? 'Importando...' : 'Importar Concurso'}
+                  {processando ? 'Importando...' : 'Importar concurso'}
                 </button>
               </div>
             </>

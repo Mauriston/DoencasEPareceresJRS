@@ -144,7 +144,7 @@ export const BarraResultado: React.FC<{ resumo: ResumoConcurso }> = ({ resumo })
       <dl className="grid grid-cols-5 gap-1">
         {SEGMENTOS.map(s => (
           <div key={s.k} className="min-w-0">
-            <dt className="flex items-center gap-1 text-[11px] font-semibold text-ink-3 truncate">
+            <dt className="flex items-center gap-1 text-xs font-semibold text-ink-3 truncate">
               <span className={`w-2 h-2 rounded-sm shrink-0 ${s.cor} ${s.k === 'pendentes' ? 'ring-1 ring-inset ring-ink-5' : ''}`} aria-hidden="true" />
               {s.label}
             </dt>
@@ -249,7 +249,7 @@ export const ProximosDias: React.FC<ProximosDiasProps> = ({ dias, onSelecionarDi
                   className="w-full grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2 text-left hover:bg-thead transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold"
                 >
                   <span className={`text-center leading-tight rounded-lg py-1 ${ehHoje ? 'bg-navy text-white' : 'bg-thead text-navy'}`} aria-hidden="true">
-                    <span className="block text-[11px] font-semibold uppercase">{DIAS_SEMANA[deISO(data).getDay()]}</span>
+                    <span className="block text-xs font-semibold uppercase">{DIAS_SEMANA[deISO(data).getDay()]}</span>
                     <span className="block text-h2 font-extrabold tabular-nums">{Number(data.slice(8, 10))}</span>
                   </span>
                   <span className="min-w-0" aria-hidden="true">

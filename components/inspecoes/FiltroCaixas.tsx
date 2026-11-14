@@ -1,7 +1,7 @@
 // Ficheiro: components/inspecoes/FiltroCaixas.tsx
 // Filtro de múltipla escolha no padrão da barra das Inspeções de Saúde: botão (ícone + resumo + seta) que abre um
 // popover com caixas de seleção, a opção "Todas"/"Todos" (marca/desmarca tudo) e contadores ao lado de cada opção.
-// Usado pela Situação das IS (FiltroSituacaoIS) e pelos filtros de Tipo e Status da página Férias.
+// Usado pelos filtros de Tipo e Status da página Férias.
 import React from 'react';
 import { FiltroPopover } from './FiltroPopover';
 

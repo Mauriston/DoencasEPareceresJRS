@@ -1,5 +1,5 @@
 // Ficheiro: services/emailNac.ts
-// E-mail "INSPEÇÕES DE SAÚDE VDF E TÉRMINOS" ao NAC (menu "Enviar Email" de Inspeções; Admin e Secretaria): o servidor
+// E-mail "INSPEÇÕES DE SAÚDE VDF E TÉRMINOS" ao NAC (menu "Enviar e-mail" de Inspeções; Admin e Secretaria): o servidor
 // (servidor/email/nac.ts) monta o e-mail e o anexo em PDF das IS escolhidas e envia pela conta Google da JRS.
 import { ApiError, chamarServidor } from './apiClient';
 import { registrarUsoAcao } from './usoDiario';

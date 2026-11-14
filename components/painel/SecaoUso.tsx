@@ -6,6 +6,7 @@
 import React, { useMemo } from 'react';
 import { resumoUso, variacao, type JanelaPainel, type UsoDia, type UsuarioUso } from '../../utils/painel';
 import { PAGE_DEFS, ROLES } from '../../config/permissions';
+import { administracaoPath } from '../../config/routes';
 import { GradePainel } from '../ui/Grade';
 import { GraficoLinhas, MapaCalor, type SerieGrafico } from './graficos';
 import { AcaoTexto, baixarCsv, Bloco, CabecalhoSecao, fmtNum, fmtPct, fmtQuando, KpiDelta, Legenda, LinhaKpis, ListaBarras, SemDados } from './partes';
@@ -54,7 +55,7 @@ export const SecaoUso: React.FC<Props> = ({ dias, usuarios, janela, hoje, deskto
           hint={r.acessos.porDia != null ? `≈ ${fmtNum(r.acessos.porDia)} por dia` : undefined} />
         <KpiDelta label={desktop ? 'Ações registradas' : 'Ações'} value={fmtNum(r.acoes.atual)} variacao={variacao(r.acoes.atual, r.acoes.anterior)} vs={vs}
           hint="cadastros, agendamentos, e-mails…" />
-        <KpiDelta label={desktop ? 'Sem acesso há 30 dias' : 'Inativos 30 d'} value={fmtNum(r.semAcesso30)} hint={r.semAcesso30 === 1 ? 'usuário ativo' : 'usuários ativos'} to="/usuarios" />
+        <KpiDelta label={desktop ? 'Sem acesso há 30 dias' : 'Inativos 30 d'} value={fmtNum(r.semAcesso30)} hint={r.semAcesso30 === 1 ? 'usuário ativo' : 'usuários ativos'} to={`${administracaoPath('usuarios')}?situacao=sem-acesso-30`} />
         <KpiDelta label="Mais usado" value={r.maisUsado ? rotuloPagina(r.maisUsado.pagina) : '—'} hint={r.maisUsado ? `${fmtPct(r.maisUsado.pct)} dos acessos` : undefined} soDesktop />
       </LinhaKpis>
       <GradePainel

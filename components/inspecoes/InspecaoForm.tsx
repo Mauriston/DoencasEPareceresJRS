@@ -67,8 +67,8 @@ interface Props {
   podeCadastrarInspecionado: boolean;
   /** Quem agenda a entrevista já no cadastro (permissão inspecoes.agendar). */
   podeAgendar: boolean;
-  /** Pré-preenchimento ao clicar num horário livre do calendário. */
-  inicial?: { dataEntrevista?: string; peritoUid?: string };
+  /** Pré-preenchimento ao clicar num horário livre do calendário, ou o inspecionado (id = NIP) vindo da Ficha. */
+  inicial?: { dataEntrevista?: string; peritoUid?: string; inspecionadoId?: string };
   onClose: () => void;
   onCriada: (is: InspecaoRecord) => void;
 }
@@ -81,7 +81,8 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
   const [militar, setMilitar] = useState<MilitarRecord | null>(null);
   const [militarTexto, setMilitarTexto] = useState('');
   const [cadastrando, setCadastrando] = useState(false);
-  const [recemCadastradoId, setRecemCadastradoId] = useState('');
+  // Também o inspecionado pré-escolhido (Ficha → Abrir IS): é selecionado assim que a lista o tiver.
+  const [recemCadastradoId, setRecemCadastradoId] = useState(inicial?.inspecionadoId ?? '');
   const [finalidade, setFinalidade] = useState('');
   const [amp, setAmp] = useState<AmpIS | ''>('');
   const [peritoUid, setPeritoUid] = useState(inicial?.peritoUid ?? '');

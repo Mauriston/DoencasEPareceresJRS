@@ -37,8 +37,8 @@ const COL_CONCURSOS = 'concursos';
 export type ConcursoStatus = 'em_breve' | 'em_andamento' | 'encerrado';
 
 export const STATUS_LABELS: Record<ConcursoStatus, string> = {
-  em_breve: 'Em Breve',
-  em_andamento: 'Em Andamento',
+  em_breve: 'Em breve',
+  em_andamento: 'Em andamento',
   encerrado: 'Encerrado',
 };
 
@@ -700,10 +700,10 @@ export const gerarMinutaResultados = async (
   return { bloqueado: false, minuta: texto.join('\n') };
 };
 
-/** Abre o concurso (Em Breve → Em Andamento). Exclusivo do Admin (UI). */
+/** Abre o concurso (Em breve → Em andamento). Exclusivo do Admin (UI). */
 export const abrirConcurso = (concursoId: string) => updateDoc(concursoRef(concursoId), { status: 'em_andamento' as ConcursoStatus });
 
-/** Volta o concurso de Em Andamento para Em Breve (correção de status). Exclusivo do Admin (UI). */
+/** Volta o concurso de Em andamento para Em breve (correção de status). Exclusivo do Admin (UI). */
 export const voltarParaEmBreve = (concursoId: string) => updateDoc(concursoRef(concursoId), { status: 'em_breve' as ConcursoStatus });
 
 /**
@@ -721,7 +721,7 @@ export const definirPeriodoAgendamento = async (concursoId: string, periodoInici
 
   // Calendário = dias úteis do novo período + as datas já agendadas dos
   // candidatos (mesma regra da criação do concurso). Assim a edição do período
-  // com o concurso "Em Andamento" não deixa candidato com data órfã.
+  // com o concurso "Em andamento" não deixa candidato com data órfã.
   const datasCalendario = new Map<string, Date>();
   diasUteis.forEach(d => datasCalendario.set(formatarChaveData(d), d));
   (await listarCandidatos(concursoId)).forEach(c => {

@@ -49,7 +49,7 @@ export const VisualizacoesBadge: React.FC<{ lista: VisualizacaoExtra[]; classNam
             {lista.map(v => (
               <li key={v.id} className="flex items-baseline justify-between gap-2 px-3 py-1.5">
                 <span className="min-w-0 truncate text-xs font-semibold text-ink">{v.nome}</span>
-                <span className="shrink-0 text-[11px] text-ink-3">{v.vezes > 1 ? `${v.vezes}× · ` : ''}{quando(v)}</span>
+                <span className="shrink-0 text-xs text-ink-3">{v.vezes > 1 ? `${v.vezes}× · ` : ''}{quando(v)}</span>
               </li>
             ))}
           </ul>

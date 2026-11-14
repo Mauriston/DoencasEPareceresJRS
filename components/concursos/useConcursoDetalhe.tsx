@@ -533,7 +533,7 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
     if ((candidato.termoCientificacaoUrl || candidato.termoRecursoUrl) && novoStatus !== candidato.status) {
       const termoApagado = candidato.termoRecursoUrl ? 'Termo de Recurso e Cientificação' : 'Termo de Cientificação de Resultado';
       setConfirmDialog({
-        title: 'Alterar Status',
+        title: 'Alterar status',
         message: `${candidato.nome} já possui ${termoApagado} gerado. Ao alterar o Status, o termo gerado será apagado. Deseja continuar?`,
         confirmLabel: 'Alterar e apagar termo',
         onConfirm: () => {
@@ -549,7 +549,7 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
   const aplicarMudancaStatus = (candidato: CandidatoRecord, novoStatus: string) => {
     if (novoStatus === 'INAPTO' && candidato.status !== 'INAPTO') {
       setConfirmDialog({
-        title: 'Confirmar Status',
+        title: 'Confirmar status',
         message: `Registrar ${candidato.nome} como inapto hoje (${new Date().toLocaleDateString('pt-BR')})?`,
         confirmLabel: 'Confirmar',
         onConfirm: async () => {
@@ -671,7 +671,7 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
     if (!reagendandoCandidato) return;
     const candidato = reagendandoCandidato;
     setConfirmDialog({
-      title: 'Confirmar Reagendamento',
+      title: 'Confirmar reagendamento',
       message: `Reagendar ${candidato.nome} para ${isoParaBR(dataISO)}?`,
       confirmLabel: 'Reagendar',
       onConfirm: async () => {

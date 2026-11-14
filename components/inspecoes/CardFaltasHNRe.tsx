@@ -5,6 +5,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Toast } from '../ui/Toast';
+import { Button } from '../ui/Button';
 import { EmailFaltasDialog } from './EmailFaltasDialog';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import { observarMilitares, type MilitarRecord } from '../../services/firestoreMilitares';
@@ -54,9 +55,7 @@ export const CardFaltasHNRe: React.FC<Props> = ({ inspecoes, Secao }) => {
           </ul>
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t border-line">
             <span className="text-xs text-ink-3">{pendentes.length > MAX_LINHAS ? `+${pendentes.length - MAX_LINHAS} em Inspeções de Saúde` : 'Ainda não comunicadas à Divisão de Pessoal'}</span>
-            <button type="button" onClick={() => setAberto(true)} className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover transition-colors">
-              <span className="material-symbols-outlined text-[20px]" aria-hidden="true">unsubscribe</span>Enviar e-mail
-            </button>
+            <Button icon="unsubscribe" onClick={() => setAberto(true)}>Enviar e-mail</Button>
           </div>
         </Secao>
       )}

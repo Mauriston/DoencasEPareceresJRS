@@ -75,7 +75,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, acti
         )}
       </div>
       {(actions || fab) && (
-        <div className="flex flex-row flex-wrap items-center md:justify-end gap-2 shrink-0">
+        <div className="flex flex-row flex-wrap items-center justify-end gap-2 shrink-0">
           {actions}
           {fab && (
             fab.to

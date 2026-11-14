@@ -9,6 +9,7 @@ import { NavContext } from '../../context/NavContext';
 import { useBreadcrumbExtras, type Crumb } from '../../context/BreadcrumbContext';
 import { findCategoryForView, getNavCategories } from '../../config/navigation';
 import { pathForView } from '../../config/routes';
+import { PAGE_DEFS } from '../../config/permissions';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useTituloNaTopbar } from './TituloPagina';
 
@@ -35,6 +36,10 @@ export const Breadcrumbs: React.FC<{ className?: string }> = ({ className = '' }
       crumbs.push({ label: 'Meu perfil', to: '/perfil' });
     } else if (view === 'configuracoes') {
       crumbs.push({ label: 'Configurações', to: '/configuracoes' });
+    } else {
+      // Páginas fora dos grupos do menu (ex.: Painel, logo abaixo de Início): o rótulo vem das PAGE_DEFS.
+      const def = PAGE_DEFS.find(p => p.id === view);
+      if (def) crumbs.push({ label: def.label, to: pathForView(view) });
     }
     crumbs.push(...extras);
   }

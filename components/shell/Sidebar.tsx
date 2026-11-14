@@ -1,6 +1,6 @@
 // Ficheiro: components/shell/Sidebar.tsx
 // Barra lateral com os menus principais (as mesmas categorias e a mesma matriz
-// de permissões da Página Inicial — `getNavCategories`). No desktop ela é FIXA:
+// de permissões da Página inicial — `getNavCategories`). No desktop ela é FIXA:
 // 240px com rótulos sempre visíveis, e um botão explícito "Recolher menu" a
 // reduz a um trilho de 64px — não há mais expansão no hover empurrando o
 // conteúdo. Abaixo de 768px vira um drawer aberto pelo botão da topbar.
@@ -138,7 +138,7 @@ export const Sidebar: React.FC = () => {
   );
 
   const Marca: React.FC<{ rail?: boolean }> = ({ rail = false }) => (
-    <Link to="/" title="Página Inicial" className="flex flex-col items-center justify-center gap-1.5 py-4 shrink-0 border-b border-white/10">
+    <Link to="/" title="Página inicial" className="flex flex-col items-center justify-center gap-1.5 py-4 shrink-0 border-b border-white/10">
       <span className="w-9 h-9 bg-white rounded-lg p-1 flex items-center justify-center shrink-0">
         <img src={iconeJrs} alt="JRS/HNRe" className="h-full w-full object-contain" />
       </span>
