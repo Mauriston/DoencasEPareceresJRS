@@ -21,6 +21,7 @@ import { AcoesRodape, type AcaoRodape } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
 import { Segmented } from '../ui/Segmented';
 import { StatusTag } from '../ui/StatusTag';
+import { tomStatusIS } from './listaIS';
 import { MultiSelectCombobox } from '../ui/MultiSelectCombobox';
 import { SecaoEntrevista, cardConclusaoClass, pedidoDeGravacao, type PedidoGravacao } from './entrevista/SecaoEntrevista';
 import { ParecerDetalhe } from '../pareceres/ParecerDetalhe';
@@ -266,7 +267,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
       title={`IS ${is.is}`}
       icon="event_available"
       onClose={onClose}
-      tituloExtra={<StatusTag tone={info.tom}>{info.rotulo}</StatusTag>}
+      tituloExtra={<StatusTag tone={tomStatusIS(efetivo)}>{info.rotulo}</StatusTag>}
       footer={acoes.length > 0 ? <AcoesRodape acoes={acoes} /> : undefined}
     >
       {somenteLeitura ? (
@@ -297,7 +298,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                   <LinhaTabela rotulo="Nº do TIS">{is.tis?.trim() ? <span className="tabular-nums">{is.tis}</span> : ''}</LinhaTabela>
                   <LinhaTabela rotulo="DS-1a">{is.ds1a?.trim() || ''}</LinhaTabela>
                   {textoObservacoes && <LinhaTabela rotulo="Observações"><span className="whitespace-pre-line">{textoObservacoes}</span></LinhaTabela>}
-                  <LinhaTabela rotulo="Status"><StatusTag tone={info.tom}>{info.rotulo}</StatusTag></LinhaTabela>
+                  <LinhaTabela rotulo="Status"><StatusTag tone={tomStatusIS(efetivo)}>{info.rotulo}</StatusTag></LinhaTabela>
                 </tbody>
               </table>
             </div>

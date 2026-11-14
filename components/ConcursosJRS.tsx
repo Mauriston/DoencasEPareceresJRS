@@ -31,7 +31,7 @@ const Carregando: React.FC = () => (
 /** P2: a rota tem o seu h1 (PageHeader) e cada concurso entra como seção h2 (ConcursoDetalhe embutido). */
 const CabecalhoRota: React.FC<{ title: string; description?: string }> = ({ title, description }) => (
   <Container size="data" className="pt-6 md:pt-8">
-    <PageHeader title={title} description={description} className="mb-0" />
+    <PageHeader title={title} description={description} />
   </Container>
 );
 

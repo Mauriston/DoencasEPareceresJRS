@@ -1,18 +1,25 @@
 // Ficheiro: components/publico/AppPublico.tsx
-// App das páginas públicas (sem login): só as duas telas de conteúdo
-// normativo, dentro do ShellPublico. Não monta NavContext, permissões,
-// Firebase Auth nem listeners do Firestore — nada aqui depende de sessão.
-import React, { useEffect, useRef } from 'react';
+// App das páginas públicas (sem login): as duas telas de conteúdo
+// normativo, dentro do ShellPublico, e a página informativa sobre o app
+// (#/publico/sobre, que traz o próprio ShellPublico na variante "informativo").
+// Não monta NavContext, permissões, Firebase Auth nem listeners do Firestore —
+// nada aqui depende de sessão. As telas são carregadas sob demanda: a página
+// sobre o app não baixa nem inicia o Firebase (a Portaria usa o Storage).
+import React, { Suspense, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigationType, useRoutes } from 'react-router-dom';
-import { DiseaseGuide } from '../DiseaseGuide';
-import { PortariaGuide } from '../PortariaGuide';
 import { ShellPublico } from './ShellPublico';
-import { PUBLICO_DOENCAS, PUBLICO_PORTARIA } from '../../config/routes';
+import { PUBLICO_DOENCAS, PUBLICO_PORTARIA, PUBLICO_SOBRE } from '../../config/routes';
 import { getMainScroller } from '../../utils/dom';
 
 // No app, voltar um nível é função das migalhas da Topbar, que o shell
 // público não tem. Aqui o caminho de volta é o próprio endereço sem o último
 // segmento: /publico/doencas/:id/:idx → /publico/doencas/:id → /publico/doencas.
+const DiseaseGuide = React.lazy(() => import('../DiseaseGuide').then(m => ({ default: m.DiseaseGuide })));
+const PortariaGuide = React.lazy(() => import('../PortariaGuide').then(m => ({ default: m.PortariaGuide })));
+const SobrePublico = React.lazy(() => import('../sobre/SobrePublico'));
+
+const Carregando: React.FC = () => <div className="flex-1 min-h-[50vh]" aria-busy="true" />;
+
 const VoltarPublico: React.FC = () => {
   const { pathname } = useLocation();
   if (!pathname.startsWith(`${PUBLICO_DOENCAS}/`)) return null;
@@ -48,11 +55,16 @@ export const AppPublico: React.FC = () => {
     primeiroRender.current = false;
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Página sobre o app: shell próprio (variante "informativo", sem "Acessar o app").
+  if (location.pathname === PUBLICO_SOBRE) {
+    return <Suspense fallback={<div className="fixed inset-0 bg-canvas" aria-busy="true" />}><SobrePublico /></Suspense>;
+  }
+
   return (
     <ShellPublico>
       <div key={location.pathname} className="flex flex-col flex-1 w-full animate-fade-in">
         <VoltarPublico />
-        {rotas}
+        <Suspense fallback={<Carregando />}>{rotas}</Suspense>
       </div>
     </ShellPublico>
   );

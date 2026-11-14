@@ -7,7 +7,8 @@
 //   768–1279 px painel não modal à direita; < 768 px bottom sheet.
 // A seleção fica na URL (?sel=<id>&aba=historico). A antiga página de histórico do militar
 // (/pericia-menor/historico/<nip>) virou a Ficha do inspecionado (/inspecionados/<nip>).
-// Filtros por URL (Início/Painel): ?situacao=vigentes|concluidas · ?tipo=dispensa|restricoes · ?minhas=1 · ?om=<sigla>
+// Filtros por URL (Início/Painel): ?situacao=vigentes|concluidas · ?tipo=dispensa|restricoes · ?minhas=1 (perito/quem registrou)
+// · ?om=<sigla> · ?mes=atual (atestado do mês corrente)
 // Atalhos: ?novo=1 (abre o formulário) · ?novo=1&militar=<nip> (já preenchido).
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useParams, useSearchParams } from 'react-router-dom';
@@ -59,6 +60,7 @@ export const PericiaMenor: React.FC = () => {
   const tipo: FiltroTipo = tipoUrl === 'dispensa' || tipoUrl === 'restricoes' ? tipoUrl : '';
   const minhas = params.get('minhas') === '1';
   const om = params.get('om') ?? '';
+  const mesAtual = params.get('mes') === 'atual';
   const sel = params.get('sel');
   const abaDetalhe: AbaPericia = params.get('aba') === 'historico' ? 'historico' : 'esta';
 
@@ -124,8 +126,9 @@ export const PericiaMenor: React.FC = () => {
       .filter(x => !tipo || x.tipo === tipo)
       .filter(x => !minhas || minhaPericia(x.p))
       .filter(x => !om || x.p.om === om)
+      .filter(x => !mesAtual || (x.p.dataAtestado || '').slice(0, 7) === hoje.slice(0, 7))
       .filter(x => { const alvo = normalizarBusca(`${x.p.inspecionado} ${x.p.militarId} ${x.p.cid} ${x.cidRotulo} ${x.p.om} ${x.medico}`); return termos.every(w => alvo.includes(w)); });
-  }, [comStatus, tipo, minhas, om, busca, uid]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [comStatus, tipo, minhas, om, mesAtual, busca, uid, hoje]); // eslint-disable-line react-hooks/exhaustive-deps
   const totais = useMemo(() => ({
     vigentes: filtradaSemSituacao.filter(x => x.vigente).length,
     concluidas: filtradaSemSituacao.filter(x => !x.vigente).length,
@@ -285,7 +288,8 @@ export const PericiaMenor: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2">
                 <FilterChip ativo={tipo === 'dispensa'} onAlternar={() => definir({ tipo: tipo === 'dispensa' ? null : 'dispensa' }, true)}>Dispensa total</FilterChip>
                 <FilterChip ativo={tipo === 'restricoes'} onAlternar={() => definir({ tipo: tipo === 'restricoes' ? null : 'restricoes' }, true)}>Restrições</FilterChip>
-                {podeNovo && <FilterChip ativo={minhas} icon="person" onAlternar={() => definir({ minhas: minhas ? null : '1' }, true)}>Minhas</FilterChip>}
+                {mesAtual && <FilterChip ativo icon="calendar_month" onAlternar={() => definir({ mes: null }, true)}>Este mês</FilterChip>}
+                {(podeNovo || minhas) && <FilterChip ativo={minhas} icon="person" onAlternar={() => definir({ minhas: minhas ? null : '1' }, true)}>Minhas</FilterChip>}
                 <label className="sr-only" htmlFor="pm-filtro-om">OM</label>
                 <select id="pm-filtro-om" value={om} onChange={e => definir({ om: e.target.value || null }, true)} className={`${controlClass} !w-auto min-w-[8rem]`}>
                   <option value="">Todas as OM</option>

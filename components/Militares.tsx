@@ -24,6 +24,8 @@ import { enviarFotoMilitar } from '../services/militarFoto';
 import { observarMilitares, atualizarMilitar, renomearMilitar, atualizarMilitaresEmLote, apagarMilitar, tipoDoInspecionado, type MilitarRecord, type TipoInspecionado } from '../services/firestoreMilitares';
 import { useNav } from '../context/NavContext';
 import { canUseFeature } from '../config/permissions';
+import { fichaPath } from '../config/routes';
+import { useNavigate } from 'react-router-dom';
 import { carregarOms, carregarCorposQuadros, carregarServicosHnre, normalizarBusca, montarInspecionado, separarPosto, aplicarSituacaoAoPgq, ehOficialMedico, omEhHnre, type OrganizacaoMilitar, type CorposQuadros, type PostoInfo, type ServicoHnre, type SituacaoMilitar } from '../utils/corposQuadros';
 import { formatNip, formatCelular } from '../utils/format';
 import { hojeISO } from '../utils/dados';
@@ -43,6 +45,7 @@ const PAGINA = 100;
 
 export const Militares: React.FC = () => {
   const nav = useNav();
+  const navigate = useNavigate();
   const perfil = nav?.authUser?.perfil;
   const ehAdmin = perfil === 'admin';
   // Editar, apagar, ativar/inativar e ações em lote são só do Admin (firestore.rules); os demais perfis
@@ -128,7 +131,8 @@ export const Militares: React.FC = () => {
   };
 
   const itensDe = (m: MilitarRecord) => [
-    { rotulo: 'Ver detalhes', icone: 'badge', onClick: () => setDetalhe(m) },
+    { rotulo: 'Abrir ficha', icone: 'id_card', onClick: () => navigate(fichaPath(m.id)) },
+    { rotulo: 'Ver prévia', icone: 'badge', onClick: () => setDetalhe(m) },
     ...(ehAdmin ? [
       { rotulo: 'Editar', icone: 'edit', onClick: () => setEditando(m) },
       { rotulo: 'Apagar', icone: 'delete', perigo: true, onClick: () => setApagando(m) },
@@ -335,7 +339,8 @@ export const Militares: React.FC = () => {
 
 // ---------------------------------------------------------------------------
 
-const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[]; postos?: CorposQuadros['postos']; onClose: () => void; onSalvo: (nome: string) => void }> = ({ militar, oms, postos, onClose, onSalvo }) => {
+/** Edição do cadastro (só Admin) — também usada pelo ⋮ da Ficha do inspecionado. */
+export const MilitarEdicao: React.FC<{ militar: MilitarRecord; oms: OrganizacaoMilitar[]; postos?: CorposQuadros['postos']; onClose: () => void; onSalvo: (nome: string) => void }> = ({ militar, oms, postos, onClose, onSalvo }) => {
   const [nome, setNome] = useState(militar.nome);
   const [nip, setNip] = useState(formatNip(militar.nip));
   const [pgq, setPgq] = useState(militar.pgq);

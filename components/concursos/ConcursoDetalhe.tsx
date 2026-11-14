@@ -230,7 +230,7 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
       )}
 
       <div ref={scrollContainerRef} style={{ '--toolbar-h': `${toolbarAltura}px` } as React.CSSProperties} className={`${embutido ? 'pb-6' : 'pb-28 md:pb-10'} w-full flex-1`}>
-        <Container size="data" className="pt-6 md:pt-8">
+        <Container size="data" className={embutido ? "pt-2" : "pt-6 md:pt-8"}>
           {/* F49: título à esquerda, andamento escrito. P2: embutido (páginas do dia e de atrasadas) o concurso é
               uma seção h2 — o h1 é o PageHeader da rota. A situação só aparece quando não é "Em andamento" (C3). */}
           {embutido ? (

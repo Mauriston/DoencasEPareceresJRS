@@ -219,11 +219,11 @@ export const Home: React.FC = () => {
       dica: terminamHoje ? `${terminamHoje} termina${terminamHoje !== 1 ? 'm' : ''} hoje` : 'Nenhuma termina hoje',
     },
     {
-      id: 'meus-vigentes', rotulo: 'Atestados vigentes', valor: meusVigentes.length, to: '/pericia-menor?situacao=vigentes', permitido: podeHistoricoPm && ehMedicoGeral,
+      id: 'meus-vigentes', rotulo: 'Atestados vigentes', valor: meusVigentes.length, to: '/pericia-menor?situacao=vigentes&minhas=1', permitido: podeHistoricoPm && ehMedicoGeral,
       dica: `Emitidos por mim${meusVigentes.some(p => p.dataTermino === hoje) ? ` · ${meusVigentes.filter(p => p.dataTermino === hoje).length} terminam hoje` : ''}`,
     },
     {
-      id: 'meus-no-mes', rotulo: 'Atestados no mês', valor: meusNoMes, to: '/pericia-menor', permitido: podeHistoricoPm && ehMedicoGeral,
+      id: 'meus-no-mes', rotulo: 'Atestados no mês', valor: meusNoMes, to: '/pericia-menor?minhas=1&mes=atual', permitido: podeHistoricoPm && ehMedicoGeral,
       dica: `Emitidos por mim em ${nomeMes(hoje)}`,
     },
     {

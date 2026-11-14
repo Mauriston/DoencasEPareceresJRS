@@ -2,6 +2,9 @@ import { emailInstitucionalValido, MSG_EMAIL_INSTITUCIONAL } from '../utils/emai
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Page } from './ui/Page';
 import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import { IconButton } from './ui/IconButton';
+import { Field } from './ui/Field';
 import { Segmented } from './ui/Segmented';
 import { useTema, type ModoTema, type VarianteEscuro } from '../hooks/useTema';
 import { Toast } from './ui/Toast';
@@ -12,8 +15,6 @@ import { trocarSenha, mapAuthErrorMessage } from '../services/firebaseAuth';
 import { updateUsuarioProfile } from '../services/firestoreUsuarios';
 import { estadoNotificacoes, ativarNotificacoes, testarNotificacao, type EstadoNotificacoes } from '../services/notificacoesPush';
 
-const inputClass = 'w-full px-3.5 py-2.5 rounded-xl border border-ink-5 text-xs font-semibold text-navy focus:outline-none focus:border-navy transition-colors';
-const labelClass = 'text-xs font-bold text-ink-3 uppercase tracking-wider block mb-1';
 
 const TEXTO_NOTIFICACOES: Record<EstadoNotificacoes, { titulo: string; texto: string }> = {
   ativadas: { titulo: 'Ativadas neste aparelho', texto: 'Você recebe aqui os avisos da JRS mesmo com o app fechado. Para receber em outro aparelho, ative também nele.' },
@@ -45,24 +46,12 @@ const NotificacoesCard: React.FC<{ usuario: string }> = ({ usuario }) => {
   const { titulo, texto } = TEXTO_NOTIFICACOES[estado];
 
   return (
-    <div className="bg-white rounded-2xl border border-line/60 p-5 space-y-3">
-      <h3 className="font-heading font-bold text-sm text-navy flex items-center gap-2">
-        <span className="material-symbols-outlined text-[18px]">notifications</span>
-        Notificações
-      </h3>
+    <Card as="section" title="Notificações" className="space-y-3">
       <p className={`text-sm font-bold ${estado === 'ativadas' ? 'text-green' : estado === 'bloqueadas' ? 'text-wine' : 'text-navy'}`}>{titulo}</p>
       <p className="text-xs text-ink-3 leading-relaxed">{texto}</p>
       {estado === 'ativadas' && (
         <div className="pt-2 flex flex-col items-end gap-2">
-          <button
-            type="button"
-            onClick={testar}
-            disabled={testando}
-            className="px-5 py-2.5 border border-navy text-navy hover:bg-navy/5 disabled:opacity-50 rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5"
-          >
-            <span className="material-symbols-outlined text-[16px]">send</span>
-            <span>{testando ? 'Enviando...' : 'Enviar notificação de teste'}</span>
-          </button>
+          <Button variant="secondary" icon="send" loading={testando} onClick={testar}>{testando ? 'Enviando…' : 'Enviar notificação de teste'}</Button>
           {resultadoTeste && (
             <p className={`text-xs font-semibold self-stretch ${resultadoTeste.ok ? 'text-green' : 'text-wine'}`}>{resultadoTeste.msg}</p>
           )}
@@ -70,24 +59,16 @@ const NotificacoesCard: React.FC<{ usuario: string }> = ({ usuario }) => {
       )}
       {estado === 'pendente' && (
         <div className="pt-2 flex justify-end">
-          <button
-            type="button"
-            onClick={ativar}
-            disabled={ativando}
-            className="px-5 py-2.5 bg-navy hover:bg-navy-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5"
-          >
-            <span className="material-symbols-outlined text-[16px]">notifications_active</span>
-            <span>{ativando ? 'Ativando...' : 'Ativar notificações'}</span>
-          </button>
+          <Button icon="notifications_active" loading={ativando} onClick={ativar}>{ativando ? 'Ativando…' : 'Ativar notificações'}</Button>
         </div>
       )}
-    </div>
+    </Card>
   );
 };
 
 const InfoField: React.FC<{ label: string; value?: string }> = ({ label, value }) => (
   <div>
-    <span className="text-xs font-bold text-ink-3 uppercase tracking-wider block">{label}</span>
+    <span className="text-xs font-semibold text-ink-3 block">{label}</span>
     <span className="text-sm font-semibold text-navy">{value || '—'}</span>
   </div>
 );
@@ -225,9 +206,9 @@ export const Perfil: React.FC = () => {
     <Page size="form" title="Meu perfil" description="Seus dados de contato, foto, aparência e senha de acesso.">
       <Toast message={toast?.msg ?? null} tone={toast?.type === 'error' ? 'error' : 'success'} />
 
-      <div className="space-y-5">
+      <div className="space-y-6">
         {/* FOTO DE PERFIL EM DESTAQUE */}
-        <div className="bg-white rounded-2xl border border-line/60 p-6 flex flex-col items-center">
+        <Card className="flex flex-col items-center">
           <div className="relative">
             {authUser?.imageProfile ? (
               <img
@@ -240,29 +221,23 @@ export const Perfil: React.FC = () => {
                 <span className="material-symbols-outlined text-[56px] text-ink-3">person</span>
               </div>
             )}
-            <button
-              type="button"
+            <IconButton
+              icon={uploading ? 'progress_activity' : 'photo_camera'}
+              label="Alterar foto de perfil"
+              variant="primary"
+              size="sm"
               onClick={handleImageClick}
               disabled={uploading}
-              className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-navy hover:bg-navy-hover text-white flex items-center justify-center border-2 border-white transition-colors disabled:opacity-50"
-              title="Alterar foto de perfil"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                {uploading ? 'progress_activity' : 'photo_camera'}
-              </span>
-            </button>
+              className={`absolute bottom-0 right-0 !rounded-full ring-2 ring-white ${uploading ? '[&>span]:animate-spin' : ''}`}
+            />
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
           </div>
-          <h2 className="mt-4 font-heading font-bold text-base text-navy text-center">{authUser?.nome}</h2>
+          <h2 className="mt-4 text-h2 text-navy text-center">{authUser?.nome}</h2>
           <p className="text-xs text-ink-3 font-semibold">{authUser?.postoGraduacao || authUser?.usuario}</p>
-        </div>
+        </Card>
 
         {/* DADOS FUNCIONAIS (SOMENTE LEITURA) */}
-        <div className="bg-white rounded-2xl border border-line/60 p-5">
-          <h3 className="font-heading font-bold text-sm text-navy mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">badge</span>
-            Dados Funcionais
-          </h3>
+        <Card as="section" title="Dados funcionais">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <InfoField label="Usuário" value={authUser?.usuario} />
             <InfoField label="Posto/Graduação" value={authUser?.postoGraduacao} />
@@ -271,39 +246,25 @@ export const Perfil: React.FC = () => {
             <InfoField label="CRM-PE" value={authUser?.crmPe} />
             <InfoField label="RQE" value={authUser?.rqe} />
           </div>
-        </div>
+        </Card>
 
         {/* CONTATO (EDITÁVEL) */}
-        <form onSubmit={handleSalvarContato} className="bg-white rounded-2xl border border-line/60 p-5 space-y-4">
-          <h3 className="font-heading font-bold text-sm text-navy flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">contact_mail</span>
-            Informações de Contato
-          </h3>
+        <form onSubmit={handleSalvarContato}>
+          <Card as="section" title="Informações de contato" className="space-y-4">
+            <Field label="E-mail institucional" error={!emailInstitucionalValido(email) ? MSG_EMAIL_INSTITUCIONAL : undefined}>
+              {a => <input {...a} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="nome@marinha.mil.br" />}
+            </Field>
+            <Field label="E-mail Google (Gmail)">
+              {a => <input {...a} type="email" value={gmail} onChange={e => setGmail(e.target.value)} placeholder="nome@gmail.com" />}
+            </Field>
+            <Field label="Celular">
+              {a => <input {...a} type="tel" inputMode="tel" value={celular} onChange={e => setCelular(formatCelular(e.target.value))} placeholder="(00) 00000-0000" maxLength={15} />}
+            </Field>
 
-          <div>
-            <label className={labelClass}>E-mail Institucional</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputClass} placeholder="nome@marinha.mil.br" aria-invalid={!emailInstitucionalValido(email) || undefined} />
-            {!emailInstitucionalValido(email) && <p role="alert" className="mt-1 text-xs font-semibold text-wine">{MSG_EMAIL_INSTITUCIONAL}</p>}
-          </div>
-          <div>
-            <label className={labelClass}>E-mail Google (Gmail)</label>
-            <input type="email" value={gmail} onChange={e => setGmail(e.target.value)} className={inputClass} placeholder="nome@gmail.com" />
-          </div>
-          <div>
-            <label className={labelClass}>Celular</label>
-            <input type="text" value={celular} onChange={e => setCelular(formatCelular(e.target.value))} className={inputClass} placeholder="(00) 00000-0000" maxLength={15} />
-          </div>
-
-          <div className="pt-2 flex justify-end">
-            <button
-              type="submit"
-              disabled={savingContato}
-              className="px-5 py-2.5 bg-navy hover:bg-navy-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5"
-            >
-              <span className="material-symbols-outlined text-[16px]">save</span>
-              <span>{savingContato ? 'Salvando...' : 'Salvar Contato'}</span>
-            </button>
-          </div>
+            <div className="pt-2 flex justify-end">
+              <Button type="submit" icon="save" loading={savingContato}>{savingContato ? 'Salvando…' : 'Salvar contato'}</Button>
+            </div>
+          </Card>
         </form>
 
         {/* APARÊNCIA (TEMA) */}
@@ -313,37 +274,24 @@ export const Perfil: React.FC = () => {
         {authUser && authUser.perfil !== 'user_medicos_geral' && <NotificacoesCard usuario={authUser.usuario} />}
 
         {/* ALTERAR SENHA (SOMENTE O PRÓPRIO USUÁRIO) */}
-        <form onSubmit={handleSalvarSenha} className="bg-white rounded-2xl border border-line/60 p-5 space-y-4">
-          <h3 className="font-heading font-bold text-sm text-navy flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">lock</span>
-            Alterar Senha
-          </h3>
-
-          <div>
-            <label className={labelClass}>Senha Atual</label>
-            <input type="password" value={senhaAtual} onChange={e => setSenhaAtual(e.target.value)} className={inputClass} autoComplete="current-password" required />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className={labelClass}>Nova Senha</label>
-              <input type="password" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} className={inputClass} placeholder="Mínimo 6 caracteres" autoComplete="new-password" required />
+        <form onSubmit={handleSalvarSenha}>
+          <Card as="section" title="Alterar senha" className="space-y-4">
+            <Field label="Senha atual" required>
+              {a => <input {...a} type="password" value={senhaAtual} onChange={e => setSenhaAtual(e.target.value)} autoComplete="current-password" required />}
+            </Field>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Nova senha" required help="Mínimo 6 caracteres">
+                {a => <input {...a} type="password" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} autoComplete="new-password" required />}
+              </Field>
+              <Field label="Confirmar nova senha" required>
+                {a => <input {...a} type="password" value={confirmaSenha} onChange={e => setConfirmaSenha(e.target.value)} autoComplete="new-password" required />}
+              </Field>
             </div>
-            <div>
-              <label className={labelClass}>Confirmar Nova Senha</label>
-              <input type="password" value={confirmaSenha} onChange={e => setConfirmaSenha(e.target.value)} className={inputClass} autoComplete="new-password" required />
-            </div>
-          </div>
 
-          <div className="pt-2 flex justify-end">
-            <button
-              type="submit"
-              disabled={savingSenha}
-              className="px-5 py-2.5 bg-navy hover:bg-navy-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors flex items-center space-x-1.5"
-            >
-              <span className="material-symbols-outlined text-[16px]">key</span>
-              <span>{savingSenha ? 'Salvando...' : 'Alterar Senha'}</span>
-            </button>
-          </div>
+            <div className="pt-2 flex justify-end">
+              <Button type="submit" icon="key" loading={savingSenha}>{savingSenha ? 'Salvando…' : 'Alterar senha'}</Button>
+            </div>
+          </Card>
         </form>
       </div>
     </Page>
