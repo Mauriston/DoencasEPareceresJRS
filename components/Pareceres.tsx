@@ -61,6 +61,9 @@ export const Pareceres: React.FC = () => {
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error'; acao?: { rotulo: string; onClick: () => void } } | null>(null);
   const [agora] = useState(() => Date.now());
   const [novoParam, setNovoParam] = useQueryParam('novo');
+  // /pareceres?novo=1&militar=<nip> (link da Ficha do inspecionado): abre o formulário já com o militar.
+  const [militarParam, setMilitarParam] = useQueryParam('militar');
+  const [prefill, setPrefill] = useState<{ militarId: string; finalidade: string } | null>(null);
 
   const avisar = (msg: string, tone: 'success' | 'error' = 'success', acao?: { rotulo: string; onClick: () => void }) => {
     setToast({ msg, tone, acao });
@@ -70,7 +73,11 @@ export const Pareceres: React.FC = () => {
   useEffect(() => observarPareceres(setLista, e => setErroCarga(e.message || 'Não foi possível carregar os pareceres.')), []);
   // Atalho da Início: /pareceres?novo=1 abre o formulário de novo parecer.
   useEffect(() => {
-    if (novoParam === '1') { if (podeGerar) setNovo(true); setNovoParam(null, { replace: true }); }
+    if (novoParam === '1') {
+      if (podeGerar) { setPrefill(militarParam ? { militarId: militarParam, finalidade: '' } : null); setNovo(true); }
+      setNovoParam(null, { replace: true });
+      if (militarParam) setMilitarParam(null, { replace: true });
+    }
   }, [novoParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const comStatus = useMemo(() => (lista ?? []).map(p => ({ p, status: statusEfetivo(p, agora) })), [lista, agora]);
@@ -247,9 +254,10 @@ export const Pareceres: React.FC = () => {
       {novo && podeGerar && (
         <NovoParecerForm
           inicial={duplicando}
-          onClose={() => { setNovo(false); setDuplicando(null); }}
+          prefill={prefill ?? undefined}
+          onClose={() => { setNovo(false); setDuplicando(null); setPrefill(null); }}
           onGerado={(nome, pdfUrl) => {
-            setNovo(false); setDuplicando(null);
+            setNovo(false); setDuplicando(null); setPrefill(null);
             setImpressao({ alvo: { nome, pdfUrl, remetente: nav?.authUser?.usuario || nav?.authUser?.nome || '' }, aposGerar: true });
           }}
         />

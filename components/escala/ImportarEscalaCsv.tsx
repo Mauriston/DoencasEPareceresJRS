@@ -4,7 +4,7 @@
 // Firestore (coleção "escalaSpa", um documento por dia, mesclando com o que já existe).
 import React, { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
-import { Button } from '../ui/Button';
+import { Button, buttonClass } from '../ui/Button';
 import { gravarEscala } from '../../services/firestoreEscala';
 import { lerCsvEscala, MODELO_CSV_ESCALA, COLUNAS_CSV_ESCALA, nomeExibicao, type ResultadoCsvEscala } from '../../utils/escalaSpa';
 
@@ -77,7 +77,7 @@ export const ImportarEscalaCsv: React.FC<Props> = ({ onClose, onImportado }) => 
           <p>Também aceita o CSV exportado da aba <strong className="text-ink">Agenda</strong> da planilha (colunas Início, SVC, Medico e Retens). Dias já registrados são atualizados; o restante é mantido.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex items-center gap-2 min-h-[44px] px-4 rounded-lg text-sm font-bold bg-navy text-white border border-navy hover:bg-navy-hover cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-gold">
+          <label className={`${buttonClass('primary')} cursor-pointer has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-gold`}>
             <span className="material-symbols-outlined text-[20px]" aria-hidden="true">upload_file</span>
             {arquivo ? 'Trocar arquivo' : 'Selecionar CSV'}
             <input type="file" accept=".csv,text/csv,text/plain" className="sr-only" disabled={gravando} onChange={e => { void ler(e.target.files?.[0] ?? null); e.target.value = ''; }} />

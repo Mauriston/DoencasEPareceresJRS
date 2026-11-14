@@ -10,6 +10,7 @@ import { canAccessPage } from '../../config/permissions';
 import { doencaPath, pathForView } from '../../config/routes';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { DISEASES } from '../../constants';
+import { DOENCAS_PORTARIA, portariaPathSecao } from '../../utils/portaria';
 
 interface Resultado {
   id: string;
@@ -47,7 +48,11 @@ export const GlobalSearch: React.FC<{ className?: string }> = ({ className = '' 
         id: `g-${d.id}-${i}`, rotulo: g.name, contexto: `em ${d.name}`, icone: 'diagnosis', to: doencaPath(d.id, i),
       })) : []),
     ]);
-    return [...paginas, ...doencas];
+    // Seções da Portaria GM-MD nº 3.551/2021 (uma por doença) — abrem a Portaria já na seção (?secao=…).
+    const portaria = !canAccessPage('portaria', perfil) ? [] : DOENCAS_PORTARIA.map(d => ({
+      id: `pt-${d.secao}`, rotulo: d.nome, contexto: 'Portaria GM-MD 3.551', icone: 'article', to: portariaPathSecao(pathForView('portaria'), d.secao),
+    }));
+    return [...paginas, ...doencas, ...portaria];
   };
 
   const resultados = (() => {

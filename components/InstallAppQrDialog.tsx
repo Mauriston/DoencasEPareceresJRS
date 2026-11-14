@@ -2,6 +2,7 @@
 // Aviso exibido no desktop: QR code que abre o app no celular já logado
 // (ver services/handoff.ts) e inicia o tutorial de ícone na tela inicial.
 import React, { useCallback, useEffect, useState } from 'react';
+import { Button } from './ui/Button';
 import QRCode from 'qrcode';
 import { montarUrlQr } from '../services/handoff';
 
@@ -40,7 +41,7 @@ export const InstallAppQrDialog: React.FC<Props> = ({ onClose, onAlreadyInstalle
           <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mb-3">
             <span className="material-symbols-outlined text-[28px] text-green-700">install_mobile</span>
           </div>
-          <h3 className="font-heading font-bold text-sm text-navy mb-1.5">Leve o app para o seu celular</h3>
+          <h3 className="text-h3 text-navy mb-1.5">Leve o app para o seu celular</h3>
           <p className="text-sm text-ink-3 mb-3">
             Aponte a câmera do celular para o QR code. O app abrirá
             {comLogin ? ' já com o seu login' : ' no navegador'} e um passo a passo mostrará como colocar o
@@ -70,14 +71,8 @@ export const InstallAppQrDialog: React.FC<Props> = ({ onClose, onAlreadyInstalle
           </p>
 
           <div className="flex items-center gap-2 w-full">
-            <button type="button" onClick={onClose}
-              className="flex-1 px-4 py-2.5 rounded-lg border border-line text-sm font-bold text-ink hover:bg-paper transition-colors">
-              Agora não
-            </button>
-            <button type="button" onClick={onAlreadyInstalled}
-              className="flex-1 px-4 py-2.5 rounded-lg bg-navy hover:bg-navy-hover text-white text-sm font-bold transition-colors">
-              Já instalei
-            </button>
+            <Button variant="ghost" className="flex-1" onClick={onClose}>Agora não</Button>
+            <Button className="flex-1" onClick={onAlreadyInstalled}>Já instalei</Button>
           </div>
         </div>
       </div>

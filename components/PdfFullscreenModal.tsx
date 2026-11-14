@@ -30,11 +30,11 @@ export const PdfFullscreenModal: React.FC<PdfFullscreenModalProps> = ({ title, u
             rel="noopener noreferrer"
             title="Abrir em nova aba"
             aria-label="Abrir em nova aba"
-            className="w-11 h-11 rounded-lg hover:bg-white/10 transition-colors flex items-center justify-center"
+            className="w-11 h-11 rounded-lg hover:bg-white/10 transition-colors flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
           >
             <span className="material-symbols-outlined text-[20px]" aria-hidden="true">open_in_new</span>
           </a>
-          <button type="button" onClick={onClose} title="Fechar" aria-label="Fechar" autoFocus className="w-11 h-11 rounded-lg hover:bg-white/10 transition-colors flex items-center justify-center">
+          <button type="button" onClick={onClose} title="Fechar" aria-label="Fechar" autoFocus className="w-11 h-11 rounded-lg hover:bg-white/10 transition-colors flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
             <span className="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
           </button>
         </div>
