@@ -5,6 +5,7 @@
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes } from 'firebase/storage';
 import { app } from './firebaseAuth';
+import { notificarAcao } from './notificacoesPush';
 
 const db = getFirestore(app);
 
@@ -58,5 +59,6 @@ export const criarLegislacao = async (dados: NovaLegislacao, arquivo: File, orde
     imageUrl: dados.imageUrl?.trim() || IMAGEM_PADRAO_LEGISLACAO,
     pdfPath,
   });
+  notificarAcao('legislacao.publicada');
   return id;
 };

@@ -7,6 +7,7 @@ import { getFirestore, collection, doc, getDoc, getDocs, query, where, setDoc, u
 import { app } from './firebaseAuth';
 import { normalizarNip } from '../utils/dados';
 import { registrarAcaoSensivel } from './auditoriaAcoes';
+import { notificarAcao } from './notificacoesPush';
 import type { VinculoFinalidade } from '../utils/corposQuadros';
 
 const db = getFirestore(app);
@@ -72,6 +73,7 @@ export const criarMilitar = async (dados: MilitarDoc): Promise<string> => {
   const ref = doc(db, COL, id);
   if ((await getDoc(ref)).exists()) throw new Error('Já existe um militar cadastrado com este NIP.');
   await setDoc(ref, { ...dados, criadoEm: serverTimestamp(), atualizadoEm: serverTimestamp() });
+  notificarAcao('militar.cadastrado');
   return id;
 };
 
@@ -94,6 +96,7 @@ export const criarMilitaresEmLote = async (docs: MilitarDoc[], aoProgredir?: (gr
     aoProgredir?.(gravados);
   }
   void registrarAcaoSensivel('militar.importarCsv', 'militares');
+  if (gravados) notificarAcao('militar.importados');
   return gravados;
 };
 
@@ -101,6 +104,7 @@ export const criarMilitaresEmLote = async (docs: MilitarDoc[], aoProgredir?: (gr
 export const apagarMilitar = async (id: string) => {
   await deleteDoc(doc(db, COL, id));
   void registrarAcaoSensivel('militar.excluir', 'militares');
+  notificarAcao('militar.apagado');
 };
 
 export const atualizarMilitar = (id: string, patch: Partial<MilitarDoc>) =>
@@ -125,6 +129,7 @@ export const renomearMilitar = async (idAntigo: string, idNovo: string, patch: P
   inspecoes.forEach(i => lote.update(i.ref, { inspecionadoId: idNovo }));
   lote.delete(antigo.ref);
   await lote.commit();
+  notificarAcao('militar.editado');
 };
 
 /** Atualiza vários cadastros de uma vez (ex.: promoção em lote). Lotes de até 400 gravações. */
@@ -135,6 +140,7 @@ export const atualizarMilitaresEmLote = async (itens: { id: string; patch: Parti
       lote.update(doc(db, COL, id), { ...patch, atualizadoEm: serverTimestamp() } as Record<string, unknown>));
     await lote.commit();
   }
+  if (itens.length) notificarAcao('militar.editado');
 };
 
 /** Vínculo do inspecionado para filtrar as finalidades de IS (public/finalidadesIS.json). */

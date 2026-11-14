@@ -3,6 +3,7 @@
 // e-mail com o template da JRS (servidor/email/) e envia pela conta Google da JRS. Sem Apps Script de
 // reserva: sem a conta autorizada no servidor (503), o app explica que o Admin precisa autorizá-la.
 import { ApiError, chamarServidor } from './apiClient';
+import { notificarAcao } from './notificacoesPush';
 
 /** E-mail do cadastro do inspecionado (institucional; senão, o pessoal). */
 export const emailDoInspecionado = (m?: { email?: string; emailPessoal?: string }): string =>
@@ -14,6 +15,7 @@ export const emailValido = (e: string): boolean => /^[^\s@,;<>"]+@[^\s@,;<>"]+\.
 export const enviarResultadoISPorEmail = async (isId: string, email?: string): Promise<{ para: string; emailSalvo: boolean }> => {
   try {
     const r = await chamarServidor<{ para: string; emailSalvo: boolean }>('/api/email/resultado-is', { isId, ...(email ? { email: email.trim() } : {}) });
+    notificarAcao('is.emailResultado', isId);
     return { para: r.para, emailSalvo: !!r.emailSalvo };
   } catch (e) {
     if (e instanceof ApiError && e.status === 503) {
