@@ -16,6 +16,12 @@ const COL = 'militares';
 /** Tipo de inspecionado; documentos antigos não têm o campo e valem como 'militar'. */
 export type TipoInspecionado = 'militar' | 'dependente' | 'pensionista';
 
+export type SexoInspecionado = 'Masculino' | 'Feminino';
+export const OPCOES_SEXO: { value: SexoInspecionado; label: string }[] = [
+  { value: 'Masculino', label: 'Masculino' },
+  { value: 'Feminino', label: 'Feminino' },
+];
+
 export const tipoDoInspecionado = (m: { tipo?: TipoInspecionado }): TipoInspecionado => m.tipo ?? 'militar';
 
 export interface MilitarDoc {
@@ -31,6 +37,8 @@ export interface MilitarDoc {
   pgq: string;
   nip: string;
   nome: string;
+  /** Sexo do inspecionado (cadastros antigos foram preenchidos pela análise do nome; pode faltar). */
+  sexo?: SexoInspecionado;
   /** `${pgq} ${nip} ${nome}` */
   inspecionado: string;
   email: string;
