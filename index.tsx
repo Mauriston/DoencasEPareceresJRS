@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { Raiz } from './components/Raiz';
 import { ErroFatal } from './components/ErroFatal';
-import { consumirTokenDaUrl } from './services/handoff';
+import { consumirTokenDaUrl } from './utils/handoffUrl';
 import './styles/app.css';
 
 // Depois de uma nova publicação, uma aba aberta com a versão anterior não encontra mais os arquivos
