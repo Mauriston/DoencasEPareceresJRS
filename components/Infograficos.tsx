@@ -6,6 +6,8 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { Loader2, Download, Share2, X } from './ui/icons';
 import { Container, PageHeader } from './ui/Page';
+import { Card } from './ui/Card';
+import { GradeCards } from './ui/Grade';
 import { Dialog } from './ui/Dialog';
 import { Button } from './ui/Button';
 import { Field } from './ui/Field';
@@ -122,11 +124,11 @@ const InfograficoFullscreen: React.FC<{ item: InfograficoRecord; onClose: () => 
   return (
     <div role="dialog" aria-modal="true" aria-label={item.titulo} className="fixed inset-0 z-dialog bg-navy flex flex-col animate-fade-in pb-env-safe">
       <div className="flex-shrink-0 w-full h-[56px] flex items-center justify-between gap-2 px-4 text-white">
-        <h2 className="flex-1 min-w-0 font-heading text-[16px] font-semibold truncate uppercase tracking-wide">{item.titulo}</h2>
+        <h2 className="flex-1 min-w-0 text-h3 truncate">{item.titulo}</h2>
         <div className="flex items-center gap-1.5">
-          <button onClick={handleDownload} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors" title="Baixar" aria-label="Baixar"><Download size={18} /></button>
-          <button onClick={handleShare} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors" title="Compartilhar" aria-label="Compartilhar"><Share2 size={18} /></button>
-          <button onClick={onClose} className="w-11 h-11 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-colors" title="Fechar" aria-label="Fechar"><X size={20} /></button>
+          <button type="button" onClick={handleDownload} className="w-11 h-11 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" title="Baixar" aria-label="Baixar"><Download size={18} /></button>
+          <button type="button" onClick={handleShare} className="w-11 h-11 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" title="Compartilhar" aria-label="Compartilhar"><Share2 size={18} /></button>
+          <button type="button" onClick={onClose} className="w-11 h-11 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold" title="Fechar" aria-label="Fechar"><X size={20} /></button>
         </div>
       </div>
       <div className="flex-1 overflow-auto w-full flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
@@ -175,10 +177,10 @@ export const Infograficos: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1">
-      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
+      <Container size="data" className={`py-6 md:py-8 ${ehAdmin ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
         <PageHeader
           title="Infográficos" description="Resumos ilustrados para consultas rápidas."
-          actions={ehAdmin ? <IconButton icon="add_photo_alternate" label="Adicionar infográfico" onClick={() => setNovo(true)} /> : undefined}
+          fab={ehAdmin ? { icon: 'add_photo_alternate', label: 'Adicionar infográfico', onClick: () => setNovo(true) } : undefined}
         />
 
         {infograficos === null && !erro ? (
@@ -191,20 +193,20 @@ export const Infograficos: React.FC = () => {
         ) : infograficos!.length === 0 ? (
           <div className="text-center py-16 text-ink-3 font-body">Nenhum infográfico disponível no momento.</div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+          <GradeCards>
             {infograficos!.map(item => (
-              <div key={item.id} className="relative group bg-white rounded-xl border border-line/60 flex flex-col hover:border-navy transition-all">
-                <button type="button" onClick={() => abrir(item)} className="flex flex-col w-full text-left focus:outline-none">
-                  <div className="w-full aspect-[4/5] bg-thead overflow-hidden rounded-t-xl">
+              <Card key={item.id} padding="none" className="relative group flex flex-col hover:border-navy transition-colors">
+                <button type="button" onClick={() => abrir(item)} className="flex flex-col w-full text-left rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold">
+                  <div className="w-full aspect-[4/5] bg-thead overflow-hidden">
                     <ImagemArquivo src={item.imageUrl} alt="" loading="lazy" className="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform" />
                   </div>
-                  <h3 className="p-3 text-sm font-bold text-navy font-heading leading-snug line-clamp-3">{item.titulo}</h3>
+                  <h3 className="p-4 text-h3 text-navy line-clamp-3">{item.titulo}</h3>
                 </button>
                 {ehAdmin && <VisualizacoesBadge lista={visualizacoes[item.id] ?? []} className="absolute top-1.5 left-1.5" />}
-                {ehAdmin && <IconButton icon="delete" label={`Remover infográfico ${item.titulo}`} variant="overlay" className="absolute top-1.5 right-1.5" onClick={() => setApagando(item)} />}
-              </div>
+                {ehAdmin && <IconButton icon="delete" label={`Remover infográfico ${item.titulo}`} variant="overlay" size="sm" className="absolute top-1.5 right-1.5" onClick={() => setApagando(item)} />}
+              </Card>
             ))}
-          </div>
+          </GradeCards>
         )}
       </Container>
 

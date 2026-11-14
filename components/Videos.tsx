@@ -6,6 +6,8 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { Loader2, Play, X } from './ui/icons';
 import { Container, PageHeader } from './ui/Page';
+import { Card } from './ui/Card';
+import { GradeCards } from './ui/Grade';
 import { Dialog } from './ui/Dialog';
 import { Button } from './ui/Button';
 import { Field } from './ui/Field';
@@ -116,10 +118,10 @@ export const Videos: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1 relative">
-      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
+      <Container size="data" className={`py-6 md:py-8 ${ehAdmin ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
         <PageHeader
           title="Vídeos" description="Vídeos sobre os processos das IS."
-          actions={ehAdmin ? <IconButton icon="add_link" label="Adicionar vídeo" onClick={() => setNovo(true)} /> : undefined}
+          fab={ehAdmin ? { icon: 'add_link', label: 'Adicionar vídeo', onClick: () => setNovo(true) } : undefined}
         />
 
         {videos === null && !erro ? (
@@ -132,36 +134,38 @@ export const Videos: React.FC = () => {
         ) : videos!.length === 0 ? (
           <div className="text-center py-16 text-ink-3">Nenhum vídeo disponível no momento.</div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 max-w-4xl mx-auto">
+          <GradeCards>
             {videos!.map(video => (
-              <div key={video.id} className="relative group bg-white rounded-lg border border-line/60 flex flex-col hover:border-navy transition-all animate-fade-in">
-                <button type="button" className="flex flex-col w-full text-left focus:outline-none active:scale-[0.98] transition-transform" onClick={() => abrir(video)}>
-                  <div className="w-full aspect-video bg-black relative flex-shrink-0 rounded-t-lg overflow-hidden">
+              <Card key={video.id} padding="none" className="relative group flex flex-col hover:border-navy transition-colors animate-fade-in">
+                <button type="button" className="flex flex-col w-full text-left rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold" onClick={() => abrir(video)}>
+                  <div className="w-full aspect-video bg-black relative flex-shrink-0 overflow-hidden">
                     <img src={video.thumbnailUrl} alt={`Thumbnail de ${video.titulo}`} className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                      <div className="w-10 h-10 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg pl-1 group-hover:scale-110 transition-transform">
+                      <div className="w-10 h-10 bg-placa/95 rounded-full flex items-center justify-center pl-1">
                         <Play size={18} className="text-navy" />
                       </div>
                     </div>
                   </div>
-                  <div className="flex-1 p-3 flex flex-col items-center justify-center min-w-0 bg-white rounded-b-lg">
-                    <h3 className="text-xs font-heading font-bold text-navy leading-snug line-clamp-3 text-center">{video.titulo}</h3>
+                  <div className="flex-1 p-4 min-w-0">
+                    <h3 className="text-h3 text-navy line-clamp-3">{video.titulo}</h3>
                   </div>
                 </button>
                 {ehAdmin && <VisualizacoesBadge lista={visualizacoes[video.id] ?? []} className="absolute top-1.5 left-1.5" />}
-                {ehAdmin && <IconButton icon="delete" label={`Remover vídeo ${video.titulo}`} variant="overlay" className="absolute top-1.5 right-1.5" onClick={() => setApagando(video)} />}
-              </div>
+                {ehAdmin && <IconButton icon="delete" label={`Remover vídeo ${video.titulo}`} variant="overlay" size="sm" className="absolute top-1.5 right-1.5" onClick={() => setApagando(video)} />}
+              </Card>
             ))}
-          </div>
+          </GradeCards>
         )}
       </Container>
 
       {selectedVideo && (
         <div className="fixed inset-0 z-dialog flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-fade-in">
           <button
+            type="button"
             onClick={() => setSelectedVideo(null)}
             aria-label="Fechar vídeo"
-            className="absolute top-6 right-6 text-white p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors z-50 focus:outline-none"
+            title="Fechar vídeo"
+            className="absolute top-[calc(1.5rem+env(safe-area-inset-top))] right-6 text-placa p-2 bg-placa/10 rounded-full hover:bg-placa/20 transition-colors z-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
           >
             <X size={24} />
           </button>
