@@ -1,6 +1,9 @@
 import { emailInstitucionalValido, MSG_EMAIL_INSTITUCIONAL } from '../utils/emails';
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { Page } from './ui/Page';
+import { Card } from './ui/Card';
+import { Segmented } from './ui/Segmented';
+import { useTema, type ModoTema, type VarianteEscuro } from '../hooks/useTema';
 import { Toast } from './ui/Toast';
 import { NavContext } from '../context/NavContext';
 import { uploadProfileImage } from '../services/profileImage';
@@ -89,6 +92,53 @@ const InfoField: React.FC<{ label: string; value?: string }> = ({ label, value }
   </div>
 );
 
+const VARIANTES_DESCRICAO: Record<VarianteEscuro, string> = {
+  marinho: 'Superfícies derivadas do azul marinho: mantém a identidade da Marinha.',
+  grafite: 'Cinzas neutros: melhor para leitura longa (normas, laudos).',
+  oled: 'Preto real: menos brilho e bateria em telas OLED, no plantão noturno.',
+};
+
+/** Meu perfil → Aparência (auditoria v3, 4f): Sistema · Claro · Escuro e a variante do escuro. */
+const AparenciaCard: React.FC<{ uid?: string }> = ({ uid }) => {
+  const tema = useTema();
+  const salvar = (p: Partial<{ modo: ModoTema; variante: VarianteEscuro }>) => {
+    const novo = tema.definir(p);
+    if (uid) updateUsuarioProfile(uid, { aparencia: novo }).catch(() => { /* fica só neste aparelho */ });
+  };
+  return (
+    <Card as="section" title="Aparência" className="space-y-4">
+      <div>
+        <p id="aparencia-modo" className="text-xs font-semibold text-ink-3 mb-1">Tema</p>
+        <Segmented<ModoTema>
+          ariaLabel="Tema"
+          value={tema.modo}
+          onChange={modo => salvar({ modo })}
+          options={[
+            { value: 'sistema', label: 'Sistema', icon: 'contrast' },
+            { value: 'claro', label: 'Claro', icon: 'light_mode' },
+            { value: 'escuro', label: 'Escuro', icon: 'dark_mode' },
+          ]}
+        />
+        <p className="mt-1 text-xs text-ink-3">“Sistema” segue o claro/escuro do aparelho. PDFs, e-mails e minutas não mudam.</p>
+      </div>
+      <div>
+        <p className="text-xs font-semibold text-ink-3 mb-1">Variante do tema escuro</p>
+        <Segmented<VarianteEscuro>
+          ariaLabel="Variante do tema escuro"
+          value={tema.variante}
+          onChange={variante => salvar({ variante })}
+          options={[
+            { value: 'marinho', label: 'Marinho' },
+            { value: 'grafite', label: 'Grafite' },
+            { value: 'oled', label: 'OLED' },
+          ]}
+        />
+        <p className="mt-1 text-xs text-ink-3">{VARIANTES_DESCRICAO[tema.variante]}</p>
+      </div>
+    </Card>
+  );
+};
+
 export const Perfil: React.FC = () => {
   const nav = useContext(NavContext);
   const authUser = nav?.authUser || null;
@@ -170,7 +220,7 @@ export const Perfil: React.FC = () => {
   };
 
   return (
-    <Page size="form" title="Meu perfil" description="Seus dados de contato, foto e senha de acesso.">
+    <Page size="form" title="Meu perfil" description="Seus dados de contato, foto, aparência e senha de acesso.">
       <Toast message={toast?.msg ?? null} tone={toast?.type === 'error' ? 'error' : 'success'} />
 
       <div className="space-y-5">
@@ -253,6 +303,9 @@ export const Perfil: React.FC = () => {
             </button>
           </div>
         </form>
+
+        {/* APARÊNCIA (TEMA) */}
+        <AparenciaCard uid={authUser?.uid} />
 
         {/* NOTIFICAÇÕES PUSH (POR APARELHO) */}
         {authUser && authUser.perfil !== 'user_medicos_geral' && <NotificacoesCard usuario={authUser.usuario} />}

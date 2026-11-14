@@ -17,6 +17,7 @@ export interface AuthUser {
   imageProfile?: string;
   senhaTemporaria?: boolean;
   pwaTutorialConcluido?: boolean;
+  aparencia?: { modo: string; variante: string };
 }
 
 export interface NavContextType {

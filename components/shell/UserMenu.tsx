@@ -2,8 +2,10 @@
 // Avatar, rótulos de perfil e menu do usuário (Perfil / Notificações / Configurações — só Admin — / Logout), extraídos do
 // antigo Header para serem usados pela topbar, pela sidebar mobile e pelos
 // modais que listam usuários.
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { NavContext } from '../../context/NavContext';
+import { useTema, adotarTemaDoPerfil } from '../../hooks/useTema';
+import { updateUsuarioProfile } from '../../services/firestoreUsuarios';
 import { useUrlArquivo } from '../../services/arquivosStorage';
 
 export const PERFIL_LABELS: Record<string, string> = {
@@ -115,6 +117,26 @@ const ItemConfiguracoes: React.FC = () => {
   );
 };
 
+/** Atalho lua/sol: alterna Claro ↔ Escuro sem abrir o perfil (a variante fica em Meu perfil → Aparência). */
+const ItemTema: React.FC = () => {
+  const nav = useContext(NavContext);
+  const tema = useTema();
+  const escuro = tema.efetivo === 'dark';
+  return (
+    <button
+      type="button" role="menuitem"
+      onClick={() => {
+        const p = tema.alternar();
+        if (nav?.authUser?.uid) updateUsuarioProfile(nav.authUser.uid, { aparencia: p }).catch(() => {});
+      }}
+      className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-ink hover:bg-thead flex items-center gap-2.5 transition-colors"
+    >
+      <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">{escuro ? 'light_mode' : 'dark_mode'}</span>
+      <span>{escuro ? 'Tema claro' : 'Tema escuro'}</span>
+    </button>
+  );
+};
+
 export const UserDropdownContent: React.FC<UserDropdownContentProps> = ({ authUser, onPerfilClick, onLogoutClick, naoLidas = 0, onNotificacoesClick, perfilReal, verComo, onVerComo }) => (
   <div role="menu" className="w-60 bg-white text-ink rounded-xl shadow-lg border border-line py-1.5 animate-fade-in divide-y divide-line">
     <div className="px-4 py-2.5 flex items-center gap-2.5">
@@ -129,6 +151,7 @@ export const UserDropdownContent: React.FC<UserDropdownContentProps> = ({ authUs
         <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">account_circle</span>
         <span>Perfil</span>
       </button>
+      <ItemTema />
       {onNotificacoesClick && (
         <button type="button" role="menuitem" onClick={onNotificacoesClick} className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-ink hover:bg-thead flex items-center gap-2.5 transition-colors">
           <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">notifications</span>
@@ -152,6 +175,8 @@ export const UserMenu: React.FC = () => {
   const authUser = nav?.authUser || null;
   const aberto = nav?.isAvatarMenuOpen || false;
   const setAberto = nav?.setIsAvatarMenuOpen || (() => {});
+  // Preferência de tema salva no perfil vale neste aparelho se ele ainda não tem uma.
+  useEffect(() => { adotarTemaDoPerfil(authUser?.aparencia); }, [authUser?.aparencia]);
 
   return (
     <div className="relative shrink-0">

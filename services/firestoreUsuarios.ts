@@ -24,6 +24,8 @@ export interface UsuarioDoc {
   senhaTemporaria: boolean;
   /** Tutorial "adicionar ícone à tela inicial" já concluído (em qualquer dispositivo). */
   pwaTutorialConcluido?: boolean;
+  /** Tema da interface (Meu perfil → Aparência): { modo: 'sistema'|'claro'|'escuro', variante: 'marinho'|'grafite'|'oled' }. */
+  aparencia?: { modo: string; variante: string };
 }
 
 export type UsuarioRecord = UsuarioDoc & { id: string };

@@ -111,6 +111,7 @@ const buildAuthUser = (profile: UsuarioRecord): AuthUser => ({
   imageProfile: profile.imageProfile,
   senhaTemporaria: !!profile.senhaTemporaria,
   pwaTutorialConcluido: !!profile.pwaTutorialConcluido,
+  aparencia: profile.aparencia,
 });
 
 // Quem abriu o app tocando num push chega com ?notif=<id>: lido (e removido da

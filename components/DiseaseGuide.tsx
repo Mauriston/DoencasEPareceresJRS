@@ -12,6 +12,7 @@ import { pathForView, PUBLICO_DOENCAS, PUBLICO_PORTARIA } from '../config/routes
 import { EmptyState } from './ui/EmptyState';
 import { useBreadcrumbs } from '../context/BreadcrumbContext';
 import { doencaPath } from '../config/routes';
+import { portariaPathSecao, secaoDaDoenca } from '../utils/portaria';
 import { Button } from './ui/Button';
 import { Dialog } from './ui/Dialog';
 import { StatusTag, type StatusTone } from './ui/StatusTag';
@@ -612,7 +613,8 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
     return proximo;
   });
   const podeVerPortaria = publico || canAccessPage('portaria', nav?.authUser?.perfil);
-  const portariaPath = publico ? PUBLICO_PORTARIA : pathForView('portaria');
+  // "Ler a Portaria" abre direto na doença (?secao=…), não no topo.
+  const portariaPath = portariaPathSecao(publico ? PUBLICO_PORTARIA : pathForView('portaria'), secaoDaDoenca(selectedDisease?.id));
 
   useEffect(() => {
     setIsCopied(false);

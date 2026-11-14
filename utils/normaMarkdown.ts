@@ -106,6 +106,13 @@ const inlineDoItem = (item: Tokens.ListItem): Token[] | undefined => {
 
 /** Tira o marcador ("a)", "1)", "(a)") do início do item; devolve o marcador ou null. */
 const extrairMarcador = (item: Tokens.ListItem, aplicar: boolean): string | null => {
+  // "- 1) texto": o CommonMark lê o "1)" como uma lista ordenada de um item dentro do item.
+  const aninhada = item.tokens[0] as Tokens.List | undefined;
+  if (aninhada?.type === 'list' && aninhada.ordered && aninhada.items.length === 1 && /^\s*\d+\)/.test(aninhada.items[0].raw)) {
+    const marcador = `${aninhada.start === '' ? 1 : aninhada.start})`;
+    if (aplicar) item.tokens = [...aninhada.items[0].tokens, ...item.tokens.slice(1)];
+    return marcador;
+  }
   const inline = inlineDoItem(item);
   if (!inline?.length) return null;
   const t0 = inline[0] as Token & ComTokens & { text?: string };

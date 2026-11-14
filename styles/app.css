@@ -187,6 +187,182 @@
   background: var(--paper);
 }
 
+.md-content th[scope="row"] {
+  font-weight: 600;
+}
+
+.md-content td,
+.md-content th {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Texto normativo estruturado (.md-norma, opt-in do MarkdownContent; auditoria v3 §10) ── */
+
+/* Âncoras (seção, título, item) não ficam sob a topbar/barra fixa. */
+.md-norma [id],
+.portaria-texto [id] {
+  scroll-margin-top: 72px;
+}
+
+.md-norma h2 {
+  font-size: 1.25rem;
+}
+
+.md-norma h3 {
+  font-size: 1.125rem;
+  margin-top: 1.75rem;
+}
+
+.md-norma h4 {
+  font-size: 1rem;
+  margin-top: 1.25rem;
+}
+
+.md-norma h5,
+.md-norma h6 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+/* Parágrafo numerado: número em coluna própria (recuo deslocado). */
+.md-norma .md-item {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  margin: 0 0 0.85rem;
+  border-radius: 0 6px 6px 0;
+}
+
+.md-norma .md-item-num {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ink-3);
+  padding-top: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.md-norma .md-item-corpo > :last-child {
+  margin-bottom: 0;
+}
+
+/* Item de destino ao chegar por link (?item=4.2). */
+.md-norma .md-alvo {
+  background: rgb(250 185 50 / 0.14);
+  box-shadow: -12px 0 0 rgb(250 185 50 / 0.14), inset 3px 0 0 var(--gold);
+}
+
+/* Alíneas: sem bolinha, a letra numa coluna. */
+.md-norma ol.md-alineas {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.4rem 0 0.85rem;
+}
+
+.md-norma ol.md-alineas > li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  margin-bottom: 0.3rem;
+}
+
+.md-norma ol.md-alineas ol.md-alineas {
+  margin: 0.3rem 0 0.3rem;
+}
+
+.md-norma .md-alinea-marcador {
+  font-weight: 700;
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.md-norma .md-alinea-corpo > p:last-child {
+  margin-bottom: 0;
+}
+
+/* Quadro "Conceito" (item x.1): o mesmo nas 17 doenças. */
+.md-norma .md-conceito {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--navy);
+  background: var(--paper);
+  border-radius: 0 10px 10px 0;
+}
+
+.md-norma .md-conceito-rotulo {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-1);
+}
+
+.md-norma .md-conceito > :last-child {
+  margin-bottom: 0;
+}
+
+/* Tabela: contêiner com borda e rolagem lateral no celular. */
+.md-norma .md-tabela {
+  margin: 0 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.md-norma .md-tabela table {
+  margin: 0;
+  min-width: 32rem;
+}
+
+.md-norma .md-tabela th,
+.md-norma .md-tabela td {
+  border: none;
+  border-top: 1px solid var(--line);
+  padding: 0.5rem 0.75rem;
+}
+
+.md-norma .md-tabela thead th {
+  border-top: none;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+.md-norma .md-simnao {
+  text-align: center;
+  font-weight: 700;
+  color: var(--ink-1);
+}
+
+.md-norma .md-nao {
+  color: var(--ink-3);
+}
+
+/* Busca no texto: ocorrências e a atual. */
+.md-content mark.md-busca {
+  background: rgb(250 185 50 / 0.35);
+  color: inherit;
+  border-radius: 2px;
+}
+
+.md-content mark.md-busca-atual {
+  background: var(--gold);
+  color: #050f41;
+  box-shadow: 0 0 0 2px var(--gold);
+}
+
+/* Portaria: espaço entre as seções (doenças e Cap. IV). */
+.portaria-doenca {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 767px) {
+  .md-norma .md-item {
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+  }
+}
+
 /* Barra de rolagem horizontal sempre visível e estilizada — usada em
    modais/tabelas mais largos que a tela, para o usuário perceber que dá
    para rolar para os lados (muitos navegadores mobile escondem a barra
