@@ -152,7 +152,13 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isEquipe() || isMedicoGeral();
       allow update: if isAdmin() || ((isMedico() || isMedicoGeral()) &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['servico_label', 'atualizadoEm']));
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['servico_label', 'atualizadoEm']))
+        // Abertura de IS com exames mínimos (components/inspecoes/InspecaoForm.tsx): a equipe completa a data de
+        // nascimento e o sexo que faltam no cadastro (só preenche campo vazio; corrigir continua com o Admin).
+        || (isEquipe()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dataNascimento', 'sexo', 'atualizadoEm'])
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['dataNascimento']) || resource.data.get('dataNascimento', '') == '')
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['sexo']) || resource.data.get('sexo', '') == ''));
       allow delete: if isAdmin();
 
       // Registro de eventos POR INSPECIONADO (services/eventosInspecionado.ts; auditoria v3, seção 9):

@@ -9,7 +9,7 @@
 //  - "bloqueiosAgenda": bloqueios de horário/turno (de todos os peritos ou de um perito).
 //  - config/agendaIS: turnos em que cada perito atende, por dia da semana (só o Admin grava).
 import {
-  getFirestore, collection, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, runTransaction, serverTimestamp, Timestamp,
+  getFirestore, collection, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot, runTransaction, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { novoId } from '../utils/dados';
 import { app } from './firebaseAuth';
@@ -17,6 +17,8 @@ import { registrarAcaoSensivel } from './auditoriaAcoes';
 import { registrarUsoAcao } from './usoDiario';
 import { registrarEventoInspecionado } from './eventosInspecionado';
 import { notificarAcao } from './notificacoesPush';
+import { apagarGuiasExames } from './guiasExames';
+import { patchEntregaGuias, type EstadoEntregaGuias } from '../utils/guiasExamesIS';
 import {
   chaveSlot, chavesOcupadas, duracaoDoGrupo, situacaoDoStatus, statusAoAgendar, TODOS_PERITOS,
   type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS, type Turno,
@@ -251,12 +253,25 @@ export const cancelarInspecao = async (atual: InspecaoRecord): Promise<void> => 
   notificarAcao('is.cancelada', atual.id);
 };
 
-/** Apaga a IS (só Admin) e libera o horário. */
+/** Apaga a IS (só Admin) e libera o horário. Antes, apaga as guias de exames no servidor (PDF; best effort). */
 export const apagarInspecao = async (atual: InspecaoRecord): Promise<void> => {
+  await apagarGuiasExames(atual.id);
   if (atual.dataEntrevista) await Promise.all(refsSlots(atual).map(r => deleteDoc(r).catch(() => { /* slot já liberado */ })));
   await deleteDoc(doc(db, COL, atual.id));
   void registrarAcaoSensivel('inspecao.excluir', 'inspecoes');
   notificarAcao('is.apagada', atual.id);
+};
+
+/**
+ * Caixa "Guias entregues ao inspecionado?" (detalhe da IS): marcar grava a entrega presencial de hoje (em segundo
+ * plano) e Aberta → Realizando Exames; desmarcar desfaz (Realizando Exames → Aberta). Regras: utils/guiasExamesIS.ts.
+ */
+export const registrarEntregaGuias = async (atual: InspecaoRecord & EstadoEntregaGuias, marcar: boolean, quem: string, hoje: string): Promise<void> => {
+  const patch = patchEntregaGuias(atual, marcar, quem, hoje);
+  const dados: Record<string, unknown> = Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, v === null ? deleteField() : v]));
+  if (typeof patch.status === 'string') dados.situacao = situacaoDoStatus(patch.status as StatusIS);
+  await updateDoc(doc(db, COL, atual.id), { ...dados, atualizadoEm: serverTimestamp() });
+  notificarAcao('is.editada', atual.id);
 };
 
 export const inspecaoExiste = async (id: string): Promise<boolean> => (await getDoc(doc(db, COL, id))).exists();
