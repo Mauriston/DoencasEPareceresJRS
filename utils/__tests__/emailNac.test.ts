@@ -92,7 +92,7 @@ describe('agendamento pendente (badge do "Enviar e-mail")', () => {
     expect(agendamentoPendente(base, '2026-11-13')).toBe(true);
     expect(agendamentoPendente(base, '2026-11-14')).toBe(false);
     expect(agendamentoPendente({ ...base, emailAgendamentoDataEntrevista: '2026-11-13T13:40' }, '2026-11-12')).toBe(false);
-    expect(agendamentoPendente({ ...base, grupoFinalidade: 'Benefícios' }, '2026-11-12')).toBe(false);
+    expect(agendamentoPendente({ ...base, grupoFinalidade: 'Benefícios' }, '2026-11-12')).toBe(true); // todos os grupos têm e-mail de agendamento
     expect(agendamentoPendente({ ...base, status: 'faltou' }, '2026-11-12')).toBe(false);
   });
 });
