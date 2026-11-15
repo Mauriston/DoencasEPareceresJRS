@@ -131,6 +131,8 @@ export default {
       keyframes: {
         'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
         'sheet-up': { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } },
+        // Top sheet (desce do topo — ex.: dados cadastrais na Ficha do inspecionado).
+        'sheet-down': { from: { transform: 'translateY(-100%)' }, to: { transform: 'translateY(0)' } },
         'backdrop-in': { from: { opacity: '0' }, to: { opacity: '1' } },
         'drawer-in': { from: { transform: 'translateX(100%)' }, to: { transform: 'translateX(0)' } },
         // Menu suspenso (padrão M3): cresce a partir do campo que o abriu.
@@ -146,6 +148,7 @@ export default {
       animation: {
         'fade-in': 'fade-in 0.15s ease-out',
         'sheet-up': 'sheet-up 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
+        'sheet-down': 'sheet-down 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
         'backdrop-in': 'backdrop-in 0.2s ease-out',
         'drawer-in': 'drawer-in 0.28s cubic-bezier(0.32, 0.72, 0, 1)',
         'menu-in': 'menu-in 0.16s cubic-bezier(0.2, 0, 0, 1)',
