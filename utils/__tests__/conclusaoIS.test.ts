@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  encaminhamentoDoStatus, juntarRestricoes, laudoAptoComRestricoes, laudoIncapacidadeDefinitivaSam, mostraEncaminhamento, mostraRestricoes,
+  encaminhamentoDoStatus, exigeCid, faltaCid, grupoComRestricoes, juntarRestricoes, laudoAptoComRestricoes, laudoMencionaRestricoes, patchCid, laudoIncapacidadeDefinitivaSam, mostraEncaminhamento, mostraRestricoes,
   opcoesDeRestricoes, patchConclusao, patchEncaminhamento, patchFinalidade, podeEditarConclusao, podeEditarFinalidade, restituicaoDoStatus,
   separarRestricoes, type EstadoConclusao,
 } from '../conclusaoIS';
@@ -36,12 +36,35 @@ describe('visibilidade', () => {
     expect(mostraEncaminhamento({ laudo: 'Incapaz definitivamente para o SAM', finalidade: 'Término de Incapacidade', grupoFinalidade: 'Verificações e Términos' })).toBe(true);
     expect(mostraEncaminhamento({ laudo: 'Incapaz definitivamente para o SAM', finalidade: 'Término de Restrições', grupoFinalidade: 'Verificações e Términos' })).toBe(false);
   });
-  it('Restrições: sempre em Verificações e Términos, qualquer que seja o Laudo', () => {
-    expect(mostraRestricoes({ grupoFinalidade: 'Verificações e Términos' })).toBe(true);
-    expect(mostraRestricoes(base)).toBe(true);
-    expect(mostraRestricoes({ ...base, laudo: 'Apto com restrições por 30 dias' } as EstadoConclusao)).toBe(true);
-    expect(mostraRestricoes({ grupoFinalidade: 'Benefícios' })).toBe(false);
-    expect(mostraRestricoes({ grupoFinalidade: '' })).toBe(false);
+  it('Restrições: Verificações e Términos E Laudo que menciona "restrições"', () => {
+    expect(mostraRestricoes(base)).toBe(false);
+    expect(mostraRestricoes({ ...base, laudo: 'Apto para o SAM' })).toBe(false);
+    expect(mostraRestricoes({ ...base, laudo: 'Apto para o SAM com restrições por 30 dias' })).toBe(true);
+    expect(mostraRestricoes({ ...base, laudo: 'APTO COM RESTRICOES' })).toBe(true);
+    expect(mostraRestricoes({ grupoFinalidade: 'Benefícios', laudo: 'Apto com restrições' })).toBe(false);
+    expect(mostraRestricoes({ grupoFinalidade: '', laudo: 'Apto com restrições' })).toBe(false);
+    expect(grupoComRestricoes('Verificações e Términos')).toBe(true);
+    expect(grupoComRestricoes('Benefícios')).toBe(false);
+  });
+  it('laudo menciona restrições (maiúsculas/acentos; singular; não casa com palavras parecidas)', () => {
+    expect(laudoMencionaRestricoes('Apto com Restrições por 30 dias')).toBe(true);
+    expect(laudoMencionaRestricoes('apto com restricao para marchas')).toBe(true);
+    expect(laudoMencionaRestricoes('Incapaz temporariamente, 30 dias de LTS')).toBe(false);
+    expect(laudoMencionaRestricoes('restritivo')).toBe(false);
+    expect(laudoMencionaRestricoes(undefined)).toBe(false);
+  });
+  it('CID: obrigatório em Verificações e Términos', () => {
+    expect(exigeCid(base)).toBe(true);
+    expect(exigeCid({ grupoFinalidade: 'Benefícios' })).toBe(false);
+    expect(faltaCid(base)).toBe(true);
+    expect(faltaCid({ ...base, cid: 'M54.5 Dor lombar baixa' })).toBe(false);
+    expect(faltaCid({ grupoFinalidade: 'Benefícios' })).toBe(false);
+  });
+  it('patchCid grava DESCRABREV e SUBCAT; igual não grava; fora do grupo não grava', () => {
+    expect(patchCid(base, { descrAbrev: 'M54.5 Dor lombar baixa', subcat: 'm545' })).toEqual({ cid: 'M54.5 Dor lombar baixa', cidCodigo: 'M545' });
+    expect(patchCid({ ...base, cid: 'M54.5 Dor lombar baixa' }, { descrAbrev: 'M54.5 Dor lombar baixa', subcat: 'M545' })).toEqual({});
+    expect(patchCid({ ...base, cid: 'M54.5 Dor lombar baixa' }, null)).toEqual({ cid: '', cidCodigo: '' });
+    expect(patchCid({ grupoFinalidade: 'Benefícios' }, { descrAbrev: 'M54.5 Dor lombar baixa', subcat: 'M545' })).toEqual({});
   });
 });
 
@@ -74,14 +97,15 @@ describe('patchConclusao', () => {
   it('Laudo igual não grava', () => {
     expect(patchConclusao({ ...base, laudo: 'Apto' }, 'laudo', 'Apto ', HOJE).patch).toEqual({});
   });
-  it('Laudo apagado apaga data, TIS e DS-1a (mantém as restrições) e volta para Agendada (ou Aberta)', () => {
+  it('Laudo apagado apaga data, TIS, DS-1a e restrições e volta para Agendada (ou Aberta)', () => {
     const atual = { ...base, status: 'tis_assinado' as const, laudo: 'Apto com restrições', dataLaudo: HOJE, restricoes: 'Marchas', tis: '026.000.1', ds1a: 'X' };
-    expect(patchConclusao(atual, 'laudo', '', HOJE).patch).toEqual({ laudo: '', dataLaudo: '', tis: '', ds1a: '', status: 'agendada', situacao: 'andamento' });
+    expect(patchConclusao(atual, 'laudo', '', HOJE).patch).toEqual({ laudo: '', dataLaudo: '', tis: '', ds1a: '', restricoes: '', status: 'agendada', situacao: 'andamento' });
     expect(patchConclusao({ ...atual, dataEntrevista: '' }, 'laudo', '', HOJE).patch.status).toBe('aberta');
   });
-  it('Restrições não dependem do Laudo; fora de Verificações e Términos são apagadas', () => {
+  it('Laudo que deixa de mencionar restrições as apaga; fora de Verificações e Términos também', () => {
     const atual = { ...base, status: 'votacao_pendente' as const, laudo: 'Apto com restrições por 30 dias', restricoes: 'Marchas' };
-    expect(patchConclusao(atual, 'laudo', 'Apto', HOJE).patch).toEqual({ laudo: 'Apto', dataLaudo: HOJE });
+    expect(patchConclusao(atual, 'laudo', 'Apto', HOJE).patch).toEqual({ laudo: 'Apto', dataLaudo: HOJE, restricoes: '' });
+    expect(patchConclusao(atual, 'laudo', 'Apto com restrições por 60 dias', HOJE).patch).toEqual({ laudo: 'Apto com restrições por 60 dias', dataLaudo: HOJE });
     const fora = { ...atual, grupoFinalidade: 'Benefícios' };
     expect(patchConclusao(fora, 'laudo', 'Apto', HOJE).patch).toEqual({ laudo: 'Apto', dataLaudo: HOJE, restricoes: '' });
     expect(patchConclusao(fora, 'laudo', '', HOJE).patch.restricoes).toBe('');
@@ -100,14 +124,19 @@ describe('patchConclusao', () => {
   it('DS-1a só com TIS; inserido → TIS assinado (Finalizada); apagado → Assinaturas pendentes', () => {
     const comLaudo = { ...base, status: 'votacao_pendente' as const, laudo: 'Apto' };
     expect(patchConclusao(comLaudo, 'ds1a', 'D', HOJE).patch).toEqual({});
-    const comTis = { ...comLaudo, status: 'assinaturas_pendentes' as const, tis: '026.000.1' };
+    const comTis = { ...comLaudo, status: 'assinaturas_pendentes' as const, tis: '026.000.1', cid: 'M54.5 Dor lombar baixa' };
     expect(patchConclusao(comTis, 'ds1a', 'D', HOJE).patch).toEqual({ ds1a: 'D', status: 'tis_assinado', situacao: 'finalizada' });
+    // Verificações e Términos sem CID: não finaliza.
+    expect(patchConclusao({ ...comTis, cid: '' }, 'ds1a', 'D', HOJE).patch).toEqual({});
+    expect(patchConclusao({ ...comTis, cid: '', grupoFinalidade: 'Benefícios' }, 'ds1a', 'D', HOJE).patch.status).toBe('tis_assinado');
     expect(patchConclusao({ ...comTis, status: 'tis_assinado', ds1a: 'D' }, 'ds1a', '', HOJE).patch).toEqual({ ds1a: '', status: 'assinaturas_pendentes', situacao: 'andamento' });
   });
-  it('Restrições só são gravadas se visíveis (sem exigir Laudo); Observações sempre', () => {
-    expect(patchConclusao({ ...base, grupoFinalidade: 'Benefícios' }, 'restricoes', 'Marchas', HOJE).patch).toEqual({});
-    expect(patchConclusao(base, 'restricoes', 'Marchas;Embarque', HOJE).patch).toEqual({ restricoes: 'Marchas; Embarque' });
-    expect(patchConclusao({ ...base, laudo: 'Apto', restricoes: 'Marchas; Embarque' }, 'restricoes', 'Embarque', HOJE).patch).toEqual({ restricoes: 'Embarque' });
+  it('Restrições só são gravadas se visíveis (Laudo com "restrições"); apagar sempre; Observações sempre', () => {
+    const comRestr = { ...base, laudo: 'Apto com restrições por 30 dias' };
+    expect(patchConclusao({ ...comRestr, grupoFinalidade: 'Benefícios' }, 'restricoes', 'Marchas', HOJE).patch).toEqual({});
+    expect(patchConclusao(base, 'restricoes', 'Marchas', HOJE).patch).toEqual({});
+    expect(patchConclusao(comRestr, 'restricoes', 'Marchas;Embarque', HOJE).patch).toEqual({ restricoes: 'Marchas; Embarque' });
+    expect(patchConclusao({ ...comRestr, restricoes: 'Marchas; Embarque' }, 'restricoes', 'Embarque', HOJE).patch).toEqual({ restricoes: 'Embarque' });
     expect(patchConclusao({ ...base, restricoes: 'Marchas' }, 'restricoes', '', HOJE).patch).toEqual({ restricoes: '' });
     expect(patchConclusao(base, 'observacoes', ' obs ', HOJE).patch).toEqual({ observacoes: 'obs' });
   });

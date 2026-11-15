@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  acharFinalidade, agruparPrints, ampDaJunta, tipoDoPrint, dataDoSinais, laudoDaConclusao, proporImportacao, restricoesDaConclusao,
+  acharFinalidade, agruparPrints, ampDaJunta, codigoCidDoSinais, conclusaoDaLeitura, dadosDaLeitura, preenchimentoDosPrints, tipoDoPrint, dataDoSinais, laudoDaConclusao, proporImportacao, restricoesDaConclusao,
   statusDaConclusao, statusDosDados, type DadosISSinais,
 } from '../importacaoIS';
 import { militarDoPreenchimento, preencherInspecionadoDoSinais } from '../inspecionadoSinais';
@@ -130,5 +130,39 @@ describe('várias fotos, várias IS', () => {
     const comData = proporImportacao(undefined, { ...foto2, dataLaudo: '01/10/2026' }, grupos, [], { inspecionadoId: '26075920', finalidade: '', dataAbertura: '2026-09-02' });
     expect(comData.proposta?.dataLaudo).toBe('2026-10-01');
     expect(proporImportacao(undefined, foto2, grupos, [], { inspecionadoId: '99999999', finalidade: '', dataAbertura: '' }).erro).toMatch(/NIP/);
+  });
+});
+
+describe('prints no detalhe da IS (completa só o que falta)', () => {
+  const atualIS = { inspecionadoId: '26075920', finalidade: 'Verificação de Deficiência Funcional', dataAbertura: '2026-09-02' };
+  const proposta = proporImportacao(foto1, foto2, grupos, ['Serviço Noturno'], atualIS).proposta!;
+  const vazia = { grupoFinalidade: 'Verificações e Términos', laudo: '', dataLaudo: '', restricoes: '', tis: '', ds1a: '', cid: '' };
+  it('CID do SINAIS → SUBCAT', () => {
+    expect(codigoCidDoSinais('M54.5')).toBe('M545');
+    expect(codigoCidDoSinais('cid f32.1 - episódio')).toBe('F321');
+    expect(codigoCidDoSinais('Z00')).toBe('Z00');
+    expect(codigoCidDoSinais('-')).toBe('');
+  });
+  it('IS vazia: completa tudo, na ordem', () => {
+    expect(preenchimentoDosPrints(vazia, proposta, ['M54.5'])).toEqual({
+      laudo: 'Apto para o SAM com restrições por 90 dias.', dataLaudo: '2026-09-21', cidCodigo: 'M545',
+      restricoes: 'Serviço Noturno; Carregar peso; Serviço Armado', tis: '026.000.48930', ds1a: '2026Z12DAEA',
+    });
+  });
+  it('não sobrescreve o que já está preenchido', () => {
+    const cheia = { ...vazia, laudo: 'Apto com restrições por 30 dias', dataLaudo: '2026-09-20', cid: 'F32.1 Episodio depress moderado', restricoes: 'Marchas' };
+    expect(preenchimentoDosPrints(cheia, proposta, ['M54.5'])).toEqual({ tis: '026.000.48930', ds1a: '2026Z12DAEA' });
+    expect(preenchimentoDosPrints({ ...cheia, tis: '026.000.1' }, proposta)).toEqual({ ds1a: '2026Z12DAEA' });
+  });
+  it('restrições só com laudo que as menciona; CID e restrições só em Verificações e Términos', () => {
+    expect(preenchimentoDosPrints({ ...vazia, laudo: 'Apto para o SAM' }, proposta).restricoes).toBeUndefined();
+    const fora = preenchimentoDosPrints({ ...vazia, grupoFinalidade: 'Benefícios' }, proposta, ['M54.5']);
+    expect(fora.cidCodigo).toBeUndefined();
+    expect(fora.restricoes).toBeUndefined();
+  });
+  it('a leitura do print leva os CID para a conclusão, não para os dados', () => {
+    const l = { tipo: 'conclusao', numInspecao: '1', cids: ['M54.5'], laudos: [] };
+    expect(conclusaoDaLeitura(l).cids).toEqual(['M54.5']);
+    expect('cids' in dadosDaLeitura(l)).toBe(false);
   });
 });

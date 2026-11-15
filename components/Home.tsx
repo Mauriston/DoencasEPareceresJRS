@@ -1,14 +1,17 @@
 // Ficheiro: components/Home.tsx
 // Início como PAINEL DO DIA (auditoria v3, 2a/2d/4b/4d):
 //  • PageHeader "Início" com a data na descrição (P1/H6 — sem saudação em 32 px); ações via Button/ButtonLink/
-//    MenuAcoes (B2) com a principal do perfil por último; no celular as mesmas ações vão para o FAB (FabAcoes);
+//    MenuAcoes (B2) com a principal do perfil por último; no celular as mesmas ações vão para o FAB (FabAcoes).
+//    "Enviar exames" saiu daqui para o cabeçalho de Concursos; "+ Perícia Menor/Atestado" só para o Médicos Geral;
 //  • faixa "Hoje" com até 4 contadores por perfil (ContadoresHoje): cada um declara a permissão e abre a lista já
 //    filtrada; 0 continua visível; vinho só com atraso > 0;
 //  • grade 8 + 4 (GradePainel): na principal, a agenda do dia (hora primeiro; cada linha abre a IS clicada — H4) e
 //    "Pendências · por atraso" (pareceres, IS e perícias numa lista só — no lugar de "Precisa de atenção", H1), além
 //    dos cards de perfil (documentos gerados da Secretaria, faltas do HNRe, últimos atestados do Médicos Geral);
 //    no apoio, o calendário do mês com legenda (H5), Próximas férias, Próximos serviços e Avisos.
-//  • No celular (4b): contadores, agenda, férias e o resto. "Acesso rápido" saiu (H2: repetia o menu).
+//  • No celular (< md): contadores (com seta: abrem outra página) → Pendências → Avisos → UM card com o calendário
+//    e, logo abaixo, a agenda do dia escolhido (clicar no dia filtra a agenda) → cards de perfil → Próximas férias
+//    por último. "Acesso rápido" saiu (H2: repetia o menu).
 // Tudo respeita a matriz de permissões: cada bloco só aparece para quem tem acesso.
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -36,7 +39,6 @@ import { AgendaDoDia } from './home/AgendaDoDia';
 import { CalendarioMes } from './home/CalendarioMes';
 import { Pendencias, type Pendencia } from './home/Pendencias';
 import { CardFaltasHNRe } from './inspecoes/CardFaltasHNRe';
-import { EnviarExamesModal } from './concursos/ExamesCandidato';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
 import { aguardaAgendamento, hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, diasEmAberto, prazoAtrasoDias, statusEfetivoIS, nomeMes } from '../utils/inspecoes';
 import { finalidadeSemGrupo, nomeCurtoInspecionado } from '../utils/calendarioIS';
@@ -118,18 +120,11 @@ export const Home: React.FC = () => {
   const podeNovaPericia = podePericiaMenor && canUseFeature('pericia-menor.novo', perfil);
   const termosPm = termosPericia(perfil);
   const ehAtestado = termosPm.pagina === 'Atestados';
-  const podeEnviarExames = podeConcursos && canUseFeature('concursosJRS.enviarExamesCandidato', perfil);
   const ehMedicoGeral = perfil === 'user_medicos_geral';
   const ehSecretaria = perfil === 'user_secretaria';
-  // Envio dos exames de um candidato direto da Início: o candidato é escolhido no
-  // próprio sheet, entre os dos concursos em andamento.
-  const [enviarExames, setEnviarExames] = useState(false);
-
   const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
   useEffect(() => (podeConcursos ? observarConcursos(setConcursos, () => { /* silencioso: não bloqueia a Início */ }) : undefined), [podeConcursos]);
   const emAndamento = concursos.filter(c => c.status === 'em_andamento');
-  // "Enviar exames" só existe quando há concurso em andamento: fora disso não há candidato a quem anexar os laudos.
-  const mostrarEnviarExames = podeEnviarExames && emAndamento.length > 0;
 
   const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
   useEffect(() => (podePareceres ? observarPareceres(setPareceres, () => { /* silencioso */ }) : undefined), [podePareceres]);
@@ -303,11 +298,12 @@ export const Home: React.FC = () => {
   const mostraPendencias = podePareceres || podeInspecoes || (podePericiaMenor && !ehMedicoGeral) || pendencias.length > 0;
 
   // ---- Ações (4d): a ordem é a prioridade; a principal é a 1ª permitida. ----
+  // "+ Perícia Menor/Atestado" só fica na Início para o Médicos Geral (os demais abrem pela própria página);
+  // "Enviar exames" fica no cabeçalho de Concursos.
   const rotuloPm = ehAtestado ? 'Atestado' : 'Perícia Menor';
   const acoes: AcaoFab[] = [
     { id: 'abrir-is', rotulo: 'Abrir IS', icone: 'add', to: '/inspecoes?novo=manual', permitido: podeAbrirIS },
-    { id: 'pm', rotulo: rotuloPm, icone: 'personal_injury', to: '/pericia-menor?novo=1', permitido: podeNovaPericia },
-    { id: 'exames', rotulo: 'Enviar exames', icone: 'upload_file', onClick: () => setEnviarExames(true), permitido: mostrarEnviarExames },
+    { id: 'pm', rotulo: rotuloPm, icone: 'personal_injury', to: '/pericia-menor?novo=1', permitido: podeNovaPericia && ehMedicoGeral },
   ];
   const permitidas = acoes.filter(a => a.permitido !== false);
   // No FAB a principal leva "+" (4d: "+ Perícia Menor", "+ Atestado").
@@ -363,18 +359,20 @@ export const Home: React.FC = () => {
   const avisoConcurso = podeConcursos && emAndamento.length > 0;
   const mostrarAvisos = avisoSenha || avisoConcurso || !!nav?.avisos?.casosPendente || !!nav?.avisos?.pwaPendente;
 
-  const principal = (
-    <div className="space-y-6">
-      {podeInspecoes && (
-        <AgendaDoDia
-          dia={diaAgenda} hoje={hoje} inspecoes={inspecoes} diasConcursos={diasConcursos}
-          concursosClicaveis={podeConcursos} onHoje={() => setDiaAgenda(hoje)}
-        />
-      )}
-      {/* Celular (4b): Próximas férias logo depois da agenda; no desktop ela fica na coluna de apoio. */}
-      {cardFerias('@split:hidden')}
-      {mostraPendencias && <Pendencias itens={pendencias} fontes={fontesPendencias} />}
+  const agenda = (embutido: boolean) => (
+    <AgendaDoDia
+      dia={diaAgenda} hoje={hoje} inspecoes={inspecoes} diasConcursos={diasConcursos}
+      concursosClicaveis={podeConcursos} onHoje={() => setDiaAgenda(hoje)} embutido={embutido}
+    />
+  );
+  const calendario = (embutido: boolean) => (
+    <CalendarioMes hoje={hoje} selecionado={diaAgenda} onSelecionar={setDiaAgenda} inspecoes={inspecoes} diasConcursos={diasConcursos} embutido={embutido} />
+  );
+  const cardPendencias = mostraPendencias ? <Pendencias itens={pendencias} fontes={fontesPendencias} /> : null;
 
+  // Cards de perfil (Secretaria, faltas do HNRe, atestados do Médicos Geral) — na coluna principal no desktop.
+  const cardsPerfil = (
+    <>
       {ehSecretaria && (
         <Secao
           id="home-documentos" titulo="Últimos documentos gerados" badge={documentos.length}
@@ -422,16 +420,11 @@ export const Home: React.FC = () => {
           {meusAtestados.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{meusAtestados.length - 6} em Atestados.</p>}
         </Secao>
       )}
-    </div>
+    </>
   );
 
-  const apoio = (
-    <div className="space-y-6">
-      {podeInspecoes && (
-        <CalendarioMes hoje={hoje} selecionado={diaAgenda} onSelecionar={setDiaAgenda} inspecoes={inspecoes} diasConcursos={diasConcursos} />
-      )}
-      {cardFerias('hidden @split:block')}
-
+  const cardEscala = (
+    <>
       {podeEscala && meusServicos.length > 0 && (
         <Secao id="home-escala" titulo="Próximos serviços" acao={<ButtonLink to={pathForView('escala')} variant="ghost" size="sm">Ver escala</ButtonLink>}>
           <ul>
@@ -454,7 +447,11 @@ export const Home: React.FC = () => {
           </ul>
         </Secao>
       )}
+    </>
+  );
 
+  const cardAvisos = (
+    <>
       {mostrarAvisos && (
         <Secao id="home-avisos" titulo="Avisos">
           <ul>
@@ -482,6 +479,44 @@ export const Home: React.FC = () => {
           </ul>
         </Secao>
       )}
+    </>
+  );
+
+  // Desktop (≥ md): grade 8 + 4 — agenda, pendências e cards de perfil na principal; calendário, férias,
+  // serviços e avisos no apoio. Se o container ainda empilhar (< @split), as férias sobem para logo após a agenda.
+  const principal = (
+    <div className="space-y-6">
+      {podeInspecoes && agenda(false)}
+      {cardFerias('@split:hidden')}
+      {cardPendencias}
+      {cardsPerfil}
+    </div>
+  );
+
+  const apoio = (
+    <div className="space-y-6">
+      {podeInspecoes && calendario(false)}
+      {cardFerias('hidden @split:block')}
+      {cardEscala}
+      {cardAvisos}
+    </div>
+  );
+
+  // Celular (< md): uma coluna — Pendências, Avisos, o calendário com a agenda do dia num só card (o dia
+  // escolhido no calendário filtra a agenda logo abaixo), cards de perfil e serviços, e as férias por último.
+  const colunaCelular = (
+    <div className="space-y-6">
+      {cardPendencias}
+      {cardAvisos}
+      {podeInspecoes && (
+        <div className="bg-white border border-line rounded-xl overflow-clip">
+          {calendario(true)}
+          {agenda(true)}
+        </div>
+      )}
+      {cardsPerfil}
+      {cardEscala}
+      {cardFerias('')}
     </div>
   );
 
@@ -491,19 +526,13 @@ export const Home: React.FC = () => {
 
       <div className="space-y-6">
         <ContadoresHoje contadores={contadores} />
-        <GradePainel principal={principal} apoio={apoio} rotuloApoio="Calendário, férias e avisos" />
+        {isDesktop
+          ? <GradePainel principal={principal} apoio={apoio} rotuloApoio="Calendário, férias e avisos" />
+          : colunaCelular}
       </div>
 
       {/* FAB (só no celular) com a principal do perfil; fora da grade (container query quebra position:fixed). */}
       <FabAcoes acoes={acoesFab} />
-
-      {enviarExames && (
-        <EnviarExamesModal
-          concursos={emAndamento}
-          usuarioNome={authUser?.nome}
-          onClose={() => setEnviarExames(false)}
-        />
-      )}
 
       {todosDocumentos && (
         <Dialog title={`Últimos documentos gerados (${documentos.length})`} icon="print" size="lg" onClose={() => setTodosDocumentos(false)}>

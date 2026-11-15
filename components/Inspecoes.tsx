@@ -7,14 +7,16 @@
 // trabalho: Hoje → próximos dias → entrevistados aguardando conclusão → abertas sem agendamento; Finalizadas por
 // mês, paginadas ("Mostrar mais"). Ver inspecoes/TabelaAgendaIS e inspecoes/listaIS.
 // Calendário (formato do Google Agenda) só a partir de md (4g): no celular a página força a Lista, mesmo com a
-// preferência salva ou ?visao=calendario. Cabeçalho: ⋮ (Bloqueios e E-mails) · "Abrir IS" por último; no celular,
-// FAB "Abrir IS" para quem tem inspecoes.cadastrar (4d).
+// preferência salva ou ?visao=calendario. Cabeçalho: "Enviar e-mails" (menu com as pendências de cada
+// lista; badge com a soma) · "Bloqueios" · "Abrir IS" por último. No celular: "E-mails" na linha das abas e o FAB "+"
+// com Abrir IS (manual) · Abrir IS (print do SINAIS) · Bloqueios (4d).
 // Filtros pela URL (contadores da Início e do Painel):
 //   ?situacao=atrasadas | sem_agendamento | finalizadas | hoje   (hoje vira o período "Hoje" e sai da URL)
 //   ?perito=<uid> · ?minhas=1 · ?dia=AAAA-MM-DD (período daquele dia) · ?visao=calendario|tabela · ?novo=manual|print
 // As IS com entrevista marcada são sincronizadas com a agenda "JRS/HNRe" do Google Agenda, com o perito como
 // convidado (ver services/agendaGoogleIS.ts).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { retomarAfastamentosPendentes } from '../services/afastamentosIS';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
@@ -240,6 +242,9 @@ export const Inspecoes: React.FC = () => {
   const avisar = (msg: string, tone: 'success' | 'error' = 'success') => { setToast({ msg, tone }); window.setTimeout(() => setToast(null), tone === 'error' ? 7000 : 4500); };
 
   useEffect(() => observarInspecoes(setLista, e => setErroCarga(e.message || 'Não foi possível carregar as inspeções.')), []);
+  // Afastamentos (LTS/Restrições) das Verificações e Términos que ficaram pendentes (aba fechada no meio,
+  // erro da IA abaixo do limite): quem edita IS retoma em segundo plano, até 3 por vez.
+  useEffect(() => { if (podeEditar && lista?.length) retomarAfastamentosPendentes(lista); }, [podeEditar, lista]);
   useEffect(() => observarBloqueios(setBloqueios), []);
   useEffect(() => observarConfigAgenda(setConfig), []);
   // ?dia=, ?situacao=hoje, ?visao= e ?novo= viram estado e saem da URL (também quando a Início/Painel navega para cá
@@ -510,14 +515,12 @@ export const Inspecoes: React.FC = () => {
     onEnviarResultadoBeneficios: setEnviandoBeneficios,
     onAviso: avisar,
   });
-  // ⋮ do cabeçalho (3b/M1): Bloqueios e os e-mails da JRS (com as pendências em cada item).
-  const itensMais: ItemMenu[] = [
-    ...(podeBloquear ? [{ rotulo: 'Bloqueios da agenda', icone: 'block', onClick: () => setBloqueiosAberto(true) }] : []),
-    ...(podeEmails ? emails.itens : []),
-  ];
-  const menuMais = itensMais.length > 0
-    ? <MenuAcoes rotulo={emails.total && podeEmails ? `Mais ações (${emails.total} e-mail${emails.total !== 1 ? 's' : ''} pendente${emails.total !== 1 ? 's' : ''})` : 'Mais ações'} itens={itensMais} />
-    : null;
+  // Cabeçalho (3b): "Enviar e-mails" — menu com os e-mails da JRS, a pendência de cada lista à direita e a soma
+  // no badge — e "Bloqueios" (bloqueio de turnos/horários da agenda). No celular o menu de e-mails fica na linha
+  // das abas (compacto, com o badge) e Bloqueios vai para a pilha do FAB.
+  const menuEmails = (compacto: boolean) => (podeEmails
+    ? <MenuAcoes rotulo="Enviar e-mails" size={compacto ? 'sm' : 'md'} botao={{ texto: compacto ? 'E-mails' : 'Enviar e-mails', icone: 'mail', badge: emails.total }} itens={emails.itens} />
+    : null);
 
   const nomePeritoFiltro = peritoParam ? (peritos.find(p => p.uid === peritoParam)?.usuario ?? 'Perito') : '';
   const souPerito = !!usuario && peritos.some(p => p.uid === usuario.uid);
@@ -574,14 +577,15 @@ export const Inspecoes: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
-      <Container size="data" className={`py-6 md:py-8 ${podeCadastrar ? 'pb-28 md:pb-10' : 'pb-10'} space-y-4`}>
+      <Container size="data" className={`py-6 md:py-8 ${podeCadastrar || podeBloquear ? 'pb-28 md:pb-10' : 'pb-10'} space-y-4`}>
         <PageHeader
           title="Inspeções de Saúde"
           description="Cadastro, agenda e prazos das IS (exceto concursos)."
-          actions={menuMais || podeCadastrar ? (
-            // Celular: o ⋮ vai para a linha das abas e "Abrir IS" vira o FAB.
+          actions={podeEmails || podeBloquear || podeCadastrar ? (
+            // Celular: "E-mails" vai para a linha das abas; Abrir IS e Bloqueios, para o FAB.
             <div className="hidden md:flex items-center gap-2">
-              {menuMais}
+              {menuEmails(false)}
+              {podeBloquear && <Button variant="secondary" icon="block" onClick={() => setBloqueiosAberto(true)}>Bloqueios</Button>}
               {podeCadastrar && (
                 <MenuAcoes
                   rotulo="Abrir IS" botao={{ texto: 'Abrir IS', icone: 'add', primario: true }}
@@ -631,7 +635,7 @@ export const Inspecoes: React.FC = () => {
               </div>
               <div className="flex items-center gap-1 pb-1.5">
                 {desktop && <AlternarVisao value={visao} onChange={setVisao} />}
-                {!desktop && menuMais}
+                {!desktop && menuEmails(true)}
               </div>
             </div>
 
@@ -682,10 +686,11 @@ export const Inspecoes: React.FC = () => {
         )}
       </Container>
 
-      {/* Celular: "Abrir IS" como FAB, só para quem cadastra IS (4d); "Enviar print" na pilha. */}
+      {/* Celular: FAB "+" (4d) com Abrir IS manual · Abrir IS pelo print do SINAIS · Bloqueios. */}
       <FabAcoes acoes={[
-        { id: 'abrir-is', rotulo: 'Abrir IS', icone: 'add', onClick: () => setNovo({}), permitido: podeCadastrar },
-        { id: 'is-print', rotulo: 'Enviar print', icone: 'photo_camera', onClick: () => setPorFoto(true), permitido: podeCadastrar },
+        { id: 'abrir-is', rotulo: 'Abrir IS', ariaLabel: 'Abrir IS manualmente', icone: 'add', onClick: () => setNovo({}), permitido: podeCadastrar },
+        { id: 'is-print', rotulo: 'Abrir IS', ariaLabel: 'Abrir IS pelo print do SINAIS', icone: 'photo_camera', onClick: () => setPorFoto(true), permitido: podeCadastrar },
+        { id: 'bloqueios', rotulo: 'Bloqueios', ariaLabel: 'Bloqueios da agenda', icone: 'block', onClick: () => setBloqueiosAberto(true), permitido: podeBloquear },
       ]} />
       {podeEmails && emails.dialogos}
 

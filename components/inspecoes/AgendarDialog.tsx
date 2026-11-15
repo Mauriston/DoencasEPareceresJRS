@@ -1,20 +1,19 @@
 // Ficheiro: components/inspecoes/AgendarDialog.tsx
-// Agendar / reagendar a entrevista de uma IS: escolhe o perito (do AMP de competência da finalidade),
-// a data e o horário (slots de 20 min livres). Grava o slot em transação e sincroniza o evento no
+// Agendar / reagendar a entrevista de uma IS: escolhe a data (calendário com os dias em que os peritos do
+// AMP de competência têm horário livre e a contagem de IS do dia), o perito com horário no dia e o
+// horário (slots de 20 min livres) — components/inspecoes/EscolhaEntrevista. Grava o slot em transação e sincroniza o evento no
 // Google Agenda "JRS/HNRe". Vindo do calendário (IS arrastada para um dia/horário), abre com a data — e,
 // se couber, o perito e o horário — já preenchidos; a transação de agendamento valida o slot.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
-import { AvatarRadioGroup } from '../ui/AvatarRadioGroup';
-import { opcaoAvatarDoPerito } from './InspecaoForm';
-import { SeletorHorario, slotsLivresDoDia } from './SeletorHorario';
-import { CalendarioDisponibilidade } from './CalendarioDisponibilidade';
+import { EscolhaEntrevista } from './EscolhaEntrevista';
+import { slotsLivresDoDia } from '../../utils/disponibilidadeAgenda';
 import { agendarInspecao, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { sincronizarAgendaIS } from '../../services/agendaGoogleIS';
 import { avisarAgendamento } from '../../services/emailAgendamentoIS';
 import { peritosDoAmp, type PeritoIS } from '../../services/peritosIS';
-import { ocupadosDe, duracaoDaIS, dataBr, dataHoraBr, hojeISO, somarDias, nomeDiaSemana, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
+import { ocupadosDe, duracaoDaIS, dataBr, dataHoraBr, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
 
 interface Props {
   inspecao: InspecaoRecord;
@@ -45,22 +44,6 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
   const duracao = duracaoDaIS(inspecao);
   const perito = candidatos.find(p => p.uid === peritoUid);
 
-  // Disponibilidade por AMP: um dia está livre se algum perito do AMP tem horário livre nele.
-  const peritosLivresNoDia = (d: string) => candidatos.filter(p => slotsLivresDoDia(p.uid, d, config, bloqueios, ocupados, duracao).length > 0);
-  const diaDisponivel = (d: string) => peritosLivresNoDia(d).length > 0;
-  const proximaLivre = useMemo(() => {
-    const hoje = hojeISO();
-    for (let i = 0; i < 180; i++) { const d = somarDias(hoje, i); if (diaDisponivel(d)) return d; }
-    return '';
-  }, [candidatos, config, bloqueios, ocupados]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Peritos do dia escolhido (os sem horário livre ficam ocultos); um só já vem selecionado.
-  const peritosDoDia = useMemo(() => (data ? peritosLivresNoDia(data) : []), [data, candidatos, config, bloqueios, ocupados]); // eslint-disable-line react-hooks/exhaustive-deps
-  const escolherData = (d: string) => {
-    setData(d); setHora(''); setErro('');
-    const livres = candidatos.filter(p => slotsLivresDoDia(p.uid, d, config, bloqueios, ocupados, duracao).length > 0);
-    setPeritoUid(livres.length === 1 ? livres[0].uid : livres.some(p => p.uid === peritoUid) ? peritoUid : '');
-  };
   const reagendando = !!inspecao.dataEntrevista;
 
   // Data vinda do calendário: escolhe o perito (o preferido, ou o único livre no dia) e o horário, se livre.
@@ -112,36 +95,12 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
         <p className="text-ink-3 break-words">{inspecao.inspecionado}<br />{inspecao.finalidade} · competência da {inspecao.amp}</p>
         {reagendando && <p className="text-xs text-ink-3">Entrevista atual: <strong>{dataHoraBr(inspecao.dataEntrevista)}</strong> ({inspecao.peritoNome}). O horário atual será liberado.</p>}
         {erro && <p role="alert" className="text-sm font-semibold text-wine">{erro}</p>}
-        {candidatos.length === 0 ? (
-          <p role="alert" className="text-sm font-semibold text-wine">Não há perito ativo para o AMP {inspecao.amp}.</p>
-        ) : !proximaLivre ? (
-          <p role="alert" className="text-sm font-semibold text-wine">Nenhuma data livre nos próximos meses para o AMP {inspecao.amp}. O Admin define os turnos dos peritos em Configurações → "Agenda das IS — turnos dos peritos".</p>
-        ) : (
-          <>
-            <div>
-              <span className="block text-xs font-semibold text-ink-3 mb-1">Data da entrevista (peritos {inspecao.amp === 'JRS' ? 'da JRS' : 'do MPI'})</span>
-              <CalendarioDisponibilidade valor={data} onChange={escolherData} disponivel={diaDisponivel} mesInicial={dataInicial || proximaLivre} />
-              {!data && (
-                <p className="mt-1 text-xs text-ink-3">Próxima data livre: <button type="button" onClick={() => escolherData(proximaLivre)} className="font-bold text-navy underline min-h-[24px]">{nomeDiaSemana(proximaLivre)}, {dataBr(proximaLivre)}</button></p>
-              )}
-            </div>
-
-            {data && peritosDoDia.length === 0 && (
-              <p role="alert" className="text-sm font-semibold text-wine">Nenhum perito {inspecao.amp === 'JRS' ? 'da JRS' : 'do MPI'} tem horário livre em {dataBr(data)}. Escolha outra data.</p>
-            )}
-            {data && peritosDoDia.length >= 1 && (
-              <AvatarRadioGroup<string>
-                label="Perito" value={peritoUid}
-                onChange={v => { if (v !== peritoUid) { setPeritoUid(v); setHora(''); } setErro(''); }}
-                options={peritosDoDia.map(opcaoAvatarDoPerito)}
-              />
-            )}
-
-            {data && peritoUid && (
-              <SeletorHorario semCampoData duracao={duracao} peritoUid={peritoUid} data={data} onData={setData} hora={hora} onHora={h => { setHora(h); setErro(''); }} config={config} bloqueios={bloqueios} ocupados={ocupados} />
-            )}
-          </>
-        )}
+        <EscolhaEntrevista
+          amp={inspecao.amp} candidatos={candidatos} config={config} bloqueios={bloqueios} ocupados={ocupados}
+          inspecoes={inspecoes} ignorarId={inspecao.id} duracao={duracao}
+          data={data} peritoUid={peritoUid} hora={hora} mesInicial={dataInicial}
+          onData={d => { setData(d); setErro(''); }} onPerito={uid => { setPeritoUid(uid); setErro(''); }} onHora={h => { setHora(h); setErro(''); }}
+        />
         {data && hora && <p className="text-xs font-semibold text-green-700">Nova entrevista: {dataBr(data)} às {hora} ({perito?.usuario}).</p>}
       </div>
     </Dialog>

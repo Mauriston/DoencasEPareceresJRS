@@ -282,7 +282,7 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
           peritoUid: perito?.uid ?? '', peritoNome: perito?.usuario ?? '', peritoGmail: perito?.gmail ?? '',
           inspecionadoId: militar.id, inspecionado: militar.inspecionado,
           laudo: conclusao ? c.laudo.trim() : '', dataLaudo: conclusao ? c.dataLaudo || hojeISO() : '',
-          restricoes: conclusao && mostraRestricoes({ grupoFinalidade: achada.grupo }) ? juntarRestricoes(separarRestricoes(c.restricoes)) : '',
+          restricoes: conclusao && mostraRestricoes({ grupoFinalidade: achada.grupo, laudo: c.laudo }) ? juntarRestricoes(separarRestricoes(c.restricoes)) : '',
           tis: conclusao ? c.tis.trim() : '', ds1a: conclusao && c.tis.trim() ? c.ds1a.trim().toUpperCase() : '',
           status, criadoPor: usuario.usuario,
         }, atual, reservar);
@@ -522,7 +522,7 @@ const CartaoIS: React.FC<CartaoProps> = ({ item, atual, militar, peritos, config
                   <Field label="Data do laudo">
                     {a => <input {...a} type="date" max={hojeISO()} value={c.dataLaudo} onChange={e => onCampos({ dataLaudo: e.target.value })} />}
                   </Field>
-                  {achada && mostraRestricoes({ grupoFinalidade: achada.grupo }) && (
+                  {achada && mostraRestricoes({ grupoFinalidade: achada.grupo, laudo: c.laudo }) && (
                     <MultiSelectCombobox
                       label="Restrições" opcoes={Array.from(new Set([...opcoesRestricoes, ...separarRestricoes(c.restricoes)]))}
                       selecionadas={separarRestricoes(c.restricoes)} onChange={l => onCampos({ restricoes: juntarRestricoes(l) })}

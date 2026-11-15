@@ -1,6 +1,7 @@
 // Ficheiro: services/examesIS.ts
 // Exames da IS: o usuário envia um ou mais PDFs no detalhe da IS; para cada um, a IA (Firebase AI Logic)
-// identifica o documento (exame, laudo, parecer…) e transcreve o laudo na íntegra; depois o PDF vai para o
+// identifica o documento (exame, laudo, parecer…), classifica o PDF (laudo de exame × atestado/relatório
+// médico — usado na Ficha do inspecionado) e transcreve o laudo na íntegra; depois o PDF vai para o
 // Storage (inspecoes/{isId}/exames/{exameId}.pdf) e a leitura para o Firestore
 // (inspecoes/{isId}/exames/{exameId}). A leitura vem antes do envio: um PDF que a IA não leu não deixa
 // documento pela metade. Envio e remoção só enquanto a IS não está finalizada (firestore.rules e storage.rules).
@@ -13,7 +14,7 @@ import { registrarUsoAcao } from './usoDiario';
 import { notificarAcao } from './notificacoesPush';
 import { gerarComGemini, lerJsonIA, arquivoParaBase64IA } from './geminiAI';
 import { novoId } from '../utils/dados';
-import { itensDaLeitura, TIPOS_DOCUMENTO, type ItemExame, type LeituraExameIA } from '../utils/examesIS';
+import { classificarExame, itensDaLeitura, CLASSES_EXAME, TIPOS_DOCUMENTO, type ClasseExame, type ItemExame, type LeituraExameIA } from '../utils/examesIS';
 
 const db = getFirestore(app);
 
@@ -28,6 +29,11 @@ export interface ExameISDoc {
   itens: ItemExame[];
   /** A resposta da IA foi cortada (documento muito longo): o texto pode estar incompleto. */
   textoIncompleto: boolean;
+  /** Laudo de exame × atestado/relatório médico (IA na mesma leitura; sem resposta válida, pelos tipos dos itens).
+   *  Ausente nos PDFs enviados antes de 15/11/2026 — ler com classeDoExame (utils/examesIS.ts). */
+  classificacao?: ClasseExame;
+  /** De onde veio a classificação: 'ia' ou 'tipos' (fallback). */
+  classificacaoOrigem?: 'ia' | 'tipos';
   enviadoPor: { uid: string; usuario: string };
   enviadoEm: Timestamp | null;
 }
@@ -60,10 +66,16 @@ const INSTRUCOES = [
   '  (endereço, telefone, site, códigos de autenticação, numeração de página).',
   'Laudos com várias páginas do mesmo exame são UM documento. Exames distintos no mesmo PDF são documentos distintos.',
   'Se o PDF não tiver documento médico, devolva a lista vazia.',
+  'Classifique também o PDF inteiro em "classificacao":',
+  '- laudo_exame: laudo ou resultado de exame complementar (imagem, laboratorial, funcional);',
+  '- atestado_relatorio: atestado médico, relatório/laudo do médico assistente ou parecer de especialista.',
+  'Se houver dos dois, use o que predomina no PDF.',
 ].join('\n');
 
+export interface LeituraExame { itens: ItemExame[]; textoIncompleto: boolean; classificacao: ClasseExame; classificacaoOrigem: 'ia' | 'tipos' }
+
 /** A IA lê o PDF e devolve os documentos identificados, com o laudo na íntegra. */
-export const lerExameComIA = async (arquivo: File): Promise<{ itens: ItemExame[]; textoIncompleto: boolean }> => {
+export const lerExameComIA = async (arquivo: File): Promise<LeituraExame> => {
   if (arquivo.size > MAX_PDF_EXAME_MB * 1024 * 1024) throw new Error(`PDF acima de ${MAX_PDF_EXAME_MB} MB.`);
   const r = await gerarComGemini({
     contexto: 'exame da IS (PDF)',
@@ -73,6 +85,7 @@ export const lerExameComIA = async (arquivo: File): Promise<{ itens: ItemExame[]
     maxOutputTokens: 32768,
     esquema: Schema => Schema.object({
       properties: {
+        classificacao: Schema.enumString({ enum: [...CLASSES_EXAME] }),
         documentos: Schema.array({
           items: Schema.object({
             properties: {
@@ -83,25 +96,31 @@ export const lerExameComIA = async (arquivo: File): Promise<{ itens: ItemExame[]
           }),
         }),
       },
+      // Opcional: sem ela (ou com valor inválido) a classificação vem dos tipos dos itens — nunca bloqueia o envio.
+      optionalProperties: ['classificacao'],
     }),
   });
-  const itens = itensDaLeitura(lerJsonIA<LeituraExameIA>(r, 'A IA não conseguiu ler o PDF.'));
+  const leitura = lerJsonIA<LeituraExameIA>(r, 'A IA não conseguiu ler o PDF.');
+  const itens = itensDaLeitura(leitura);
   if (!itens.length) throw new Error('Nenhum documento médico encontrado no PDF.');
   registrarUsoAcao('exame_ia');
-  return { itens, textoIncompleto: r.cortada };
+  const { classe, origem } = classificarExame(leitura?.classificacao, itens);
+  return { itens, textoIncompleto: r.cortada, classificacao: classe, classificacaoOrigem: origem };
 };
 
 /** Envia o PDF ao Storage e grava a leitura no Firestore. */
 export const gravarExameIS = async (
-  isId: string, arquivo: File, leitura: { itens: ItemExame[]; textoIncompleto: boolean }, usuario: { uid: string; usuario: string },
+  isId: string, arquivo: File, leitura: { itens: ItemExame[]; textoIncompleto: boolean; classificacao?: ClasseExame; classificacaoOrigem?: 'ia' | 'tipos' }, usuario: { uid: string; usuario: string },
 ): Promise<string> => {
   const id = novoId();
   const caminho = `inspecoes/${isId}/exames/${id}.pdf`;
   const r = ref(getStorage(app), caminho);
+  const classe = classificarExame(leitura.classificacao, leitura.itens);
   await uploadBytes(r, arquivo, { contentType: 'application/pdf' });
   try {
     await setDoc(doc(colecao(isId), id), {
       caminho, nomeArquivo: arquivo.name, bytes: arquivo.size, itens: leitura.itens, textoIncompleto: leitura.textoIncompleto,
+      classificacao: classe.classe, classificacaoOrigem: leitura.classificacaoOrigem ?? classe.origem,
       enviadoPor: usuario, enviadoEm: serverTimestamp(),
     });
   } catch (e) {

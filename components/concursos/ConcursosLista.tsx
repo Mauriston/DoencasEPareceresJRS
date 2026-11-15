@@ -112,9 +112,13 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
   const [listarMensagensAlvo, setListarMensagensAlvo] = useState<{ id: string; nome: string } | null>(null);
   const [periodoAgendamentoAlvo, setPeriodoAgendamentoAlvo] = useState<{ id: string; nome: string; inicioISO: string; fimISO: string } | null>(null);
   const [adicionarCandidatoAlvo, setAdicionarCandidatoAlvo] = useState<{ id: string; nome: string } | null>(null);
-  // Envio dos exames de um candidato pelo menu ⋮ do concurso: o candidato é
-  // escolhido no próprio diálogo (autocomplete com os candidatos do concurso).
-  const [enviarExamesConcurso, setEnviarExamesConcurso] = useState<ConcursoRecord | null>(null);
+  // Envio dos exames de um candidato: pelo menu ⋮ de um concurso (só os candidatos dele) ou pelo botão
+  // "Enviar exames" do cabeçalho (os de todos os concursos em andamento — antes ficava na Início). O
+  // candidato é escolhido no próprio diálogo (autocomplete).
+  const [enviarExamesConcursos, setEnviarExamesConcursos] = useState<ConcursoRecord[] | null>(null);
+  const emAndamento = useMemo(() => concursos.filter(c => c.status === 'em_andamento'), [concursos]);
+  // Só existe com concurso em andamento: fora disso não há candidato a quem anexar os laudos.
+  const mostrarEnviarExames = podeEnviarExames && emAndamento.length > 0;
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -310,7 +314,7 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
       onListarMensagens: () => setListarMensagensAlvo({ id: c.id, nome: c.nome }),
       onDefinirPeriodoAgendamento: () => setPeriodoAgendamentoAlvo({ id: c.id, nome: c.nome, inicioISO: c.periodoInicioISO, fimISO: c.periodoFimISO }),
       onAdicionarCandidato: () => setAdicionarCandidatoAlvo({ id: c.id, nome: c.nome }),
-      onEnviarExames: () => setEnviarExamesConcurso(c),
+      onEnviarExames: () => setEnviarExamesConcursos([c]),
     };
   };
 
@@ -488,11 +492,11 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
           onClose={(atualizado) => { setPeriodoAgendamentoAlvo(null); if (atualizado) onRecarregar(); }}
         />
       )}
-      {enviarExamesConcurso && (
+      {enviarExamesConcursos && (
         <EnviarExamesModal
-          concursos={[enviarExamesConcurso]}
+          concursos={enviarExamesConcursos}
           usuarioNome={navLista?.authUser?.nome}
-          onClose={() => setEnviarExamesConcurso(null)}
+          onClose={() => setEnviarExamesConcursos(null)}
         />
       )}
       {adicionarCandidatoAlvo && (
@@ -516,11 +520,24 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
         <PageHeader
           title="Concursos"
           description="Planilhas de controle dos candidatos de cada concurso."
-          actions={podeImportarCsv ? (
+          actions={podeImportarCsv || mostrarEnviarExames ? (
             <>
-              {/* Celular: Importar CSV no ⋮ (a primária vira FAB); desktop: secundária ao lado da primária. */}
-              <span className="md:hidden"><MenuAcoes rotulo="Mais ações" itens={[{ rotulo: 'Importar CSV', icone: 'upload_file', onClick: onImportarCsvClick }]} /></span>
-              <Button variant="secondary" icon="upload_file" onClick={onImportarCsvClick} className="hidden md:inline-flex">Importar CSV</Button>
+              {/* Celular: as secundárias no ⋮ (a primária vira FAB); desktop: secundárias ao lado da primária. */}
+              <span className="md:hidden">
+                <MenuAcoes
+                  rotulo="Mais ações"
+                  itens={[
+                    ...(mostrarEnviarExames ? [{ rotulo: 'Enviar exames', icone: 'lab_profile', onClick: () => setEnviarExamesConcursos(emAndamento) }] : []),
+                    ...(podeImportarCsv ? [{ rotulo: 'Importar CSV', icone: 'upload_file', onClick: onImportarCsvClick }] : []),
+                  ]}
+                />
+              </span>
+              {mostrarEnviarExames && (
+                <Button variant="secondary" icon="lab_profile" onClick={() => setEnviarExamesConcursos(emAndamento)} className="hidden md:inline-flex">Enviar exames</Button>
+              )}
+              {podeImportarCsv && (
+                <Button variant="secondary" icon="upload_file" onClick={onImportarCsvClick} className="hidden md:inline-flex">Importar CSV</Button>
+              )}
             </>
           ) : undefined}
           fab={podeRegistrarMensagem ? { icon: 'add', label: 'Novo concurso', onClick: onNovoConcursoClick } : undefined}

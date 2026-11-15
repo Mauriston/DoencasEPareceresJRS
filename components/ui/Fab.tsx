@@ -2,9 +2,12 @@
 // FAB padrão único do app (auditoria v3, 4d/M7). Um só desenho para o FAB das páginas
 // (<FabAcoes>) e para o das ações de sheet/drawer no celular (AcoesRodape):
 //  • 0 ações → nada (nem espaço reservado; nunca um botão desabilitado);
-//  • 1 ação  → FAB estendido (ícone + rótulo);
-//  • 2–3     → FAB estendido com a PRINCIPAL + "˄"; ao tocar, abre a pilha com as demais acima e a
-//              principal mais perto do polegar. Fecha ao tocar fora, ao escolher, com Esc ou ao trocar de rota.
+//  • página: FAB redondo SÓ COM ÍCONE (sem rótulo; o nome vai em aria-label):
+//      – 1 ação  → o ícone da ação (em geral "+");
+//      – 2+      → "+" que abre a pilha (speed-dial) com TODAS as ações em pílulas com rótulo, a
+//                  principal mais perto do polegar;
+//  • sheet/drawer: FAB estendido (ícone + rótulo); 2–3 → principal + "˄" que abre a pilha com as demais.
+//  A pilha fecha ao tocar fora, ao escolher, com Esc ou ao trocar de rota.
 // Posição: canto inferior direito, com área segura. O da página fica 16 px acima da barra inferior
 // e desce junto quando ela se oculta (variável --fab-bottom publicada pela BarraInferior, mesma
 // transição de 200 ms); z-index do token sticky. Só no celular (< md): no desktop as mesmas ações
@@ -46,6 +49,8 @@ const COR: Record<NonNullable<AcaoFab['variante']>, string> = {
   destructive: 'bg-white text-wine border border-wine hover:bg-wine-50',
 };
 const FOCO = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold';
+/** FAB redondo da página, só com ícone (56 px). */
+const REDONDO = 'inline-flex items-center justify-center w-14 h-14 rounded-2xl shadow-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
 const PILULA = 'inline-flex items-center gap-2 h-14 max-w-[calc(100vw-2rem)] pl-4 pr-5 shadow-lg text-sm font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
 
 /** Onde o FAB fica: na página (acompanha a barra inferior) ou num sheet/drawer (acima da área segura). */
@@ -70,7 +75,7 @@ interface FabFlutuanteProps {
   posicao: PosicaoFab;
 }
 
-/** O desenho do FAB (1 ação: estendido; 2+: estendido com "˄" e pilha). Use FabAcoes ou AcoesRodape. */
+/** O desenho do FAB (página: só ícone — 1 ação: o ícone dela; 2+: "+" e pilha · sheet: estendido). Use FabAcoes ou AcoesRodape. */
 export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -80,6 +85,8 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
   const menuId = useId();
   const principal = acoes[0];
   const varias = acoes.length > 1;
+  const soIcone = posicao === 'pagina';
+  const nome = (a: AcaoFab) => a.ariaLabel ?? a.rotulo;
 
   const fechar = useCallback((devolverFoco = true) => {
     setAberto(false);
@@ -109,11 +116,12 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
           onClick={() => executar(principal)}
           disabled={principal.disabled || principal.loading}
           aria-busy={principal.loading || undefined}
-          aria-label={principal.ariaLabel}
-          className={`${PILULA} rounded-2xl ${FOCO} ${COR[principal.variante ?? 'primary']}`}
+          aria-label={soIcone ? nome(principal) : principal.ariaLabel}
+          title={soIcone ? nome(principal) : undefined}
+          className={`${soIcone ? REDONDO : `${PILULA} rounded-2xl`} ${FOCO} ${COR[principal.variante ?? 'primary']}`}
         >
           <Icone acao={principal} />
-          <span className="truncate">{principal.rotulo}</span>
+          {!soIcone && <span className="truncate">{principal.rotulo}</span>}
         </button>
       </div>
     );
@@ -161,15 +169,19 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
         <button
           ref={fab}
           type="button"
-          aria-label={aberto ? 'Fechar ações' : `${principal.ariaLabel ?? principal.rotulo} e mais ${acoes.length - 1} ${acoes.length - 1 === 1 ? 'ação' : 'ações'}`}
+          aria-label={aberto ? 'Fechar ações' : soIcone
+            ? `Ações: ${acoes.map(nome).join(', ')}`
+            : `${nome(principal)} e mais ${acoes.length - 1} ${acoes.length - 1 === 1 ? 'ação' : 'ações'}`}
           aria-haspopup="menu"
           aria-expanded={aberto}
           aria-controls={aberto ? menuId : undefined}
           onClick={() => (aberto ? fechar() : setAberto(true))}
-          className={`${aberto ? 'w-14 justify-center rounded-full' : `${PILULA} rounded-2xl pr-3`} inline-flex items-center h-14 shadow-lg ${FOCO} ${COR.primary}`}
+          className={`${aberto ? 'w-14 justify-center rounded-full' : soIcone ? 'w-14 justify-center rounded-2xl' : `${PILULA} rounded-2xl pr-3`} inline-flex items-center h-14 shadow-lg ${FOCO} ${COR.primary}`}
         >
           {aberto ? (
             <span className="material-symbols-outlined text-[26px]" aria-hidden="true">close</span>
+          ) : soIcone ? (
+            <span className="material-symbols-outlined text-[26px]" aria-hidden="true">add</span>
           ) : (
             <>
               <Icone acao={principal} />
