@@ -3,7 +3,7 @@
 // que seguem em curso, de qualquer data), as Perícias Menores com atestado a partir de uma data e os candidatos
 // dos concursos em andamento ou com período de agendamento na janela. Leitura única (getDocs), sem listener:
 // o Painel mostra "atualizado há N min" e tem o botão Atualizar. Só os campos que o Painel usa saem daqui
-// (nada de nome de inspecionado ou NIP nos objetos agregados).
+// (nada de nome de inspecionado ou NIP nos objetos agregados; das guias, só se existem e quando/como foram entregues).
 import { getFirestore, collection, getDocs, query, where, type Timestamp } from 'firebase/firestore';
 import { app } from './firebaseAuth';
 import type { InspecaoDoc } from './firestoreInspecoes';
@@ -31,6 +31,12 @@ const paraISPainel = (id: string, d: InspecaoDoc): ISPainel => ({
   peritoNome: d.peritoNome || '',
   amp: d.amp === 'MPI' ? 'MPI' : 'JRS',
   emailFaltaDataEntrevista: d.emailFaltaDataEntrevista || '',
+  // Guias de exames e status Realizando Exames (só se lê se há guias e quando/como foram entregues).
+  temGuias: d.guiasExames != null,
+  guiasEntregues: !!d.guiasEntregues,
+  guiasEntreguesEm: d.guiasEntreguesEm || '',
+  guiasEntreguesVia: d.guiasEntreguesVia === 'email' ? 'email' : d.guiasEntreguesVia === 'presencial' ? 'presencial' : '',
+  emailGuiasEnviado: d.emailGuiasEnviadoEm != null,
 });
 
 /**

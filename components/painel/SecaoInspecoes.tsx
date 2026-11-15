@@ -1,16 +1,17 @@
 // Ficheiro: components/painel/SecaoInspecoes.tsx
 // Seção "Inspeções de Saúde" do Painel: abertas, finalizadas, tempo até o TIS, atrasadas e faltas no período,
-// a série de 12 meses, as etapas das IS em curso, as finalidades e a tabela por perito. Médicos começam nas
+// a série de 12 meses, as etapas das IS em curso, o bloco "Realizando exames" (guias entregues, tempos até a
+// entrega e até o agendamento, e-mail × presencial), as finalidades e a tabela por perito. Médicos começam nas
 // próprias IS e o MPI nas do MPI, com alternância para o total.
 import React, { useMemo, useState } from 'react';
 import {
-  aplicarRecorteIS, emCursoPorEtapa, porFinalidade, porPerito, recorteInicialIS, resumoIS, serieMensalIS, variacao,
+  aplicarRecorteIS, emCursoPorEtapa, porFinalidade, porPerito, recorteInicialIS, resumoExamesIS, resumoIS, serieMensalIS, variacao,
   type ISPainel, type JanelaPainel, type RecorteIS,
 } from '../../utils/painel';
 import { Segmented } from '../ui/Segmented';
 import { GradePainel } from '../ui/Grade';
 import { GraficoLinhas, type SerieGrafico } from './graficos';
-import { AcaoTexto, baixarCsv, Bloco, CabecalhoSecao, fmtDias, fmtNum, fmtPct, KpiDelta, Legenda, LinhaKpis, ListaBarras, SemDados } from './partes';
+import { AcaoTexto, baixarCsv, BarraSegmentada, Bloco, CabecalhoSecao, fmtDias, fmtNum, fmtPct, KpiDelta, Legenda, LinhaKpis, ListaBarras, SemDados } from './partes';
 import { destaqueDaJanela } from './periodo';
 
 const LISTA = '/inspecoes';
@@ -33,6 +34,7 @@ export const SecaoInspecoes: React.FC<Props> = ({ lista, janela, hoje, uid, perf
   const etapas = useMemo(() => emCursoPorEtapa(dados, hoje), [dados, hoje]);
   const finalidades = useMemo(() => porFinalidade(dados, janela), [dados, janela]);
   const peritos = useMemo(() => porPerito(dados, janela), [dados, janela]);
+  const ex = useMemo(() => resumoExamesIS(dados, janela), [dados, janela]);
   const vs = `vs. ${janela.rotuloAnterior}`;
   const pctFinalizadas = r.abertas.atual ? Math.round((r.finalizadas.atual / r.abertas.atual) * 100) : null;
 
@@ -69,10 +71,33 @@ export const SecaoInspecoes: React.FC<Props> = ({ lista, janela, hoje, uid, perf
         )}
         apoio={(
           <Bloco titulo={desktop ? 'Onde estão as IS em curso' : 'Em curso'}>
-            {etapas.length ? <ListaBarras itens={etapas.map(e => ({ ...e, to: LISTA }))} limite={desktop ? 9 : 3} rotuloVerTodas="Ver detalhes" /> : <SemDados texto="Nenhuma IS em curso." />}
+            {etapas.length ? <ListaBarras itens={etapas.map(e => ({ ...e, to: LISTA }))} limite={desktop ? 10 : 3} rotuloVerTodas="Ver detalhes" /> : <SemDados texto="Nenhuma IS em curso." />}
           </Bloco>
         )}
       />
+      <Bloco titulo="Realizando exames" acoes={<span className="text-xs text-ink-3">guias entregues ao inspecionado</span>}>
+        <LinhaKpis>
+          <KpiDelta label="Realizando exames agora" value={fmtNum(ex.agora)} hint={ex.aguardandoEntrega ? `${fmtNum(ex.aguardandoEntrega)} com guias a entregar` : 'aguardando agendamento'} to={LISTA} />
+          <KpiDelta label={desktop ? 'Entraram no período' : 'Entraram'} value={fmtNum(ex.entraram.atual)} variacao={variacao(ex.entraram.atual, ex.entraram.anterior)} vs={vs}
+            hint="guias entregues" to={LISTA} />
+          <KpiDelta label={desktop ? 'Abertura → entrega das guias' : 'Até as guias'} value={fmtDias(ex.aberturaAteGuias.atual)}
+            variacao={variacao(ex.aberturaAteGuias.atual, ex.aberturaAteGuias.anterior, 'abs', 'menor-melhor', 'dias')} vs={vs} hint="tempo médio" />
+          <KpiDelta label={desktop ? 'Entrega das guias → agendamento' : 'Até o agendamento'} value={fmtDias(ex.guiasAteAgendamento.atual)}
+            variacao={variacao(ex.guiasAteAgendamento.atual, ex.guiasAteAgendamento.anterior, 'abs', 'menor-melhor', 'dias')} vs={vs} hint="tempo médio até a data agendada" />
+          <KpiDelta label="Entregues por e-mail" value={fmtPct(ex.via.pctEmail.atual)} variacao={variacao(ex.via.pctEmail.atual, ex.via.pctEmail.anterior, 'pp')} vs={vs}
+            hint="das guias entregues no período" soDesktop />
+        </LinhaKpis>
+        {ex.entraram.atual > 0 ? (
+          <div className="flex flex-col gap-2">
+            <BarraSegmentada rotulo="Guias entregues no período por via" total={ex.entraram.atual}
+              partes={[{ nome: 'Por e-mail', valor: ex.via.email, classe: 'bg-navy' }, { nome: 'Presencialmente', valor: ex.via.presencial, classe: 'bg-blue-400' }]} />
+            <Legenda itens={[
+              { nome: `Por e-mail · ${fmtNum(ex.via.email)}`, classe: 'bg-navy', forma: 'bloco' },
+              { nome: `Presencialmente · ${fmtNum(ex.via.presencial)}`, classe: 'bg-blue-400', forma: 'bloco' },
+            ]} />
+          </div>
+        ) : <SemDados texto="Nenhuma entrega de guias no período." />}
+      </Bloco>
       {desktop && (
         <div className="@container">
           <div className="grid grid-cols-1 @split:grid-cols-12 gap-6 items-start">

@@ -18,7 +18,7 @@ import { avisarAgendamento } from '../../services/emailAgendamentoIS';
 import { peritosDoAmp, type PeritoIS } from '../../services/peritosIS';
 import { normalizarBusca } from '../../utils/corposQuadros';
 import {
-  STATUS_IS, statusEfetivoIS, ocupadosDe, duracaoDaIS, peritoAtendeNoTurno, turnoDoSlot, dataBr, dataDeEntrevista, horaDeEntrevista, nomeDiaSemana, dataHoraBr,
+  STATUS_IS, aguardaAgendamento, statusEfetivoIS, ocupadosDe, duracaoDaIS, peritoAtendeNoTurno, turnoDoSlot, dataBr, dataDeEntrevista, horaDeEntrevista, nomeDiaSemana, dataHoraBr,
   type BloqueioAgenda, type ConfigAgenda,
 } from '../../utils/inspecoes';
 
@@ -47,7 +47,7 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
   const hora = soDia ? '' : horaDeEntrevista(dataHora);
   // No modo dia não há "Nova IS" (o cadastro precisa do horário).
   const cadastrar = podeCadastrar && !soDia;
-  const abertas = useMemo(() => inspecoes.filter(i => i.status === 'aberta' && !i.dataEntrevista).sort((a, b) => a.dataAbertura.localeCompare(b.dataAbertura) || a.is - b.is), [inspecoes]);
+  const abertas = useMemo(() => inspecoes.filter(i => aguardaAgendamento(i.status) && !i.dataEntrevista).sort((a, b) => a.dataAbertura.localeCompare(b.dataAbertura) || a.is - b.is), [inspecoes]);
 
   const [modo, setModo] = useState<Modo>(abertas.length > 0 || !cadastrar ? 'aberta' : 'nova');
   const [busca, setBusca] = useState('');

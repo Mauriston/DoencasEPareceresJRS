@@ -7,13 +7,37 @@
 // Os destinatários DINÂMICOS não são configuráveis aqui — o servidor sempre os acrescenta:
 //   - resultadoIS:     PARA = e-mail do inspecionado.
 //   - agendaIS:        PARA += institucionais dos user_medicos/user_medicos_mpi; CC += Gmail de Admin, médicos, MPI e Secretaria.
-//   - agendamentoIS:   PARA = e-mail do inspecionado; CC += institucional do médico da IS.
 //   - faltasHNRe:      CC += e-mails dos inspecionados (quando cadastrados).
 //   - inaptosConcurso: nenhum.
 //   - nac:             CC += institucionais dos user_medicos_geral com cargo "SMI".
-// "Responder para" (Reply-To) é sempre a caixa da JRS (`responderPara`).
+//   - agendamentoIS / agendamentoGeral / aberturaIS: PARA = e-mail do inspecionado; CC += institucionais dos
+//                      user_secretaria + cópias pela OM do inspecionado (copiasPorOM: HNRe → Divisão de Pessoal; EAMPE).
+//   - agendamentoBeneficios / resultadoBeneficios: PARA = e-mail do inspecionado; CC += institucionais dos user_secretaria.
+//   - guiasInspecionado: PARA = e-mail do inspecionado; CC += institucional de quem disparou.
+//   - guiasSecretaria:   PARA = institucionais dos user_secretaria escolhidos; Reply-To = institucional de quem disparou.
+// "Responder para" (Reply-To) é a caixa da JRS (`responderPara`), exceto em guiasSecretaria.
 
-export type TipoEmail = 'resultadoIS' | 'agendaIS' | 'agendamentoIS' | 'faltasHNRe' | 'inaptosConcurso' | 'nac';
+export type TipoEmail =
+  | 'resultadoIS' | 'agendaIS' | 'agendamentoIS' | 'faltasHNRe' | 'inaptosConcurso' | 'nac'
+  // Novos (guias de exames, abertura, agendamento geral/benefícios e resultado de benefícios):
+  | 'guiasInspecionado' | 'guiasSecretaria' | 'aberturaIS' | 'agendamentoGeral' | 'agendamentoBeneficios' | 'resultadoBeneficios';
+
+/** Divisão de Pessoal do HNRe: cópia dos e-mails de abertura e de agendamento quando a OM do inspecionado é o HNRe. */
+export const EMAILS_DIVISAO_PESSOAL_HNRE = [
+  'luciana.madruga@marinha.mil.br', 'romero.andion@marinha.mil.br', 'daniel.barros2@marinha.mil.br', 'amanda.ribeiro@marinha.mil.br',
+];
+/** Cópia dos e-mails de abertura e de agendamento quando a OM do inspecionado é a EAMPE. */
+export const EMAILS_EAMPE = ['saskia.pordeus@marinha.mil.br'];
+
+const omNormalizada = (om: string): string => String(om || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+/** Cópias dinâmicas pela OM do inspecionado (abertura e agendamentos, exceto Benefícios): HNRe → Divisão de Pessoal; EAMPE → saskia.pordeus. */
+export const copiasPorOM = (om: string | undefined | null): string[] => {
+  const o = omNormalizada(String(om || ''));
+  if (o === 'HNRE' || o === 'HOSPITALNAVALDERECIFE') return [...EMAILS_DIVISAO_PESSOAL_HNRE];
+  if (o === 'EAMPE' || o.startsWith('EAMPE') || o === 'ESCOLADEAPRENDIZESMARINHEIROSDEPERNAMBUCO') return [...EMAILS_EAMPE];
+  return [];
+};
 
 export interface DestinatariosEmail { para: string[]; cc: string[]; cco: string[] }
 
@@ -51,7 +75,8 @@ export const CONFIG_EMAILS_PADRAO: ConfigEmails = {
   destinatarios: {
     resultadoIS: { para: [], cc: [], cco: [CAIXA_JRS] },
     agendaIS: { para: [CAIXA_JRS], cc: [], cco: [] },
-    agendamentoIS: { para: [], cc: [CAIXA_JRS], cco: [] },
+    // Cópias da Secretaria e pela OM são dinâmicas (copiasPorOM); nenhum fixo por padrão.
+    agendamentoIS: { para: [], cc: [], cco: [] },
     faltasHNRe: {
       para: ['luciana.madruga@marinha.mil.br', 'romero.andion@marinha.mil.br', 'daniel.barros2@marinha.mil.br', 'amanda.ribeiro@marinha.mil.br'],
       cc: ['fernanda.rocha@marinha.mil.br', CAIXA_JRS],
@@ -59,6 +84,12 @@ export const CONFIG_EMAILS_PADRAO: ConfigEmails = {
     },
     inaptosConcurso: { para: ['eampe.concursos@marinha.mil.br'], cc: [CAIXA_JRS], cco: [] },
     nac: { para: ['luciana.madruga@marinha.mil.br'], cc: [CAIXA_JRS], cco: [] },
+    guiasInspecionado: { para: [], cc: [], cco: [] },
+    guiasSecretaria: { para: [], cc: [], cco: [] },
+    aberturaIS: { para: [], cc: [], cco: [] },
+    agendamentoGeral: { para: [], cc: [], cco: [] },
+    agendamentoBeneficios: { para: [], cc: [], cco: [] },
+    resultadoBeneficios: { para: [], cc: [], cco: [] },
   },
 };
 
@@ -66,7 +97,13 @@ export const CONFIG_EMAILS_PADRAO: ConfigEmails = {
 export const TIPOS_EMAIL: { tipo: TipoEmail; rotulo: string; assunto: string; dinamicos: string }[] = [
   { tipo: 'resultadoIS', rotulo: 'Resultado da IS ao inspecionado', assunto: 'RESULTADO DE INSPEÇÃO DE SAÚDE', dinamicos: 'PARA: e-mail do inspecionado.' },
   { tipo: 'agendaIS', rotulo: 'IS agendadas do dia seguinte (18h)', assunto: 'IS AGENDADAS EM dd/mm/aaaa', dinamicos: 'PARA: e-mails institucionais dos médicos e do MPI. CC: Gmail do Admin, médicos, MPI e Secretaria. Assinaturas fixas: Supervisor e Presidente.' },
-  { tipo: 'agendamentoIS', rotulo: 'Agendamento de IS (Verificações e Términos)', assunto: 'AGENDAMENTO DE INSPEÇÃO DE SAÚDE', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mail institucional do médico da IS.' },
+  { tipo: 'agendamentoIS', rotulo: 'Agendamento de IS (Verificações e Términos)', assunto: 'AGENDAMENTO DE IS FIM {finalidade} - {inspecionado}', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mails institucionais da Secretaria; Divisão de Pessoal do HNRe (OM HNRe) ou EAMPE (OM EAMPE). Reagendamento: mesmo modelo, com o aviso de reagendamento.' },
+  { tipo: 'aberturaIS', rotulo: 'Abertura de IS ao inspecionado', assunto: 'ABERTURA DE IS FIM {finalidade} - {inspecionado}', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mails institucionais da Secretaria; Divisão de Pessoal do HNRe (OM HNRe) ou EAMPE (OM EAMPE).' },
+  { tipo: 'guiasInspecionado', rotulo: 'Guias dos exames ao inspecionado', assunto: 'GUIA DOS EXAMES PARA INSPEÇÃO DE SAÚDE', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mail institucional de quem enviou. Anexo: guias em PDF.' },
+  { tipo: 'guiasSecretaria', rotulo: 'Guias dos exames à SEC-JRS', assunto: 'EXAMES DE {inspecionado}', dinamicos: 'PARA: e-mails institucionais dos membros da Secretaria escolhidos. Remetente e Responder para: quem enviou. Anexo: guias em PDF.' },
+  { tipo: 'agendamentoGeral', rotulo: 'Agendamento de IS (demais finalidades)', assunto: 'AGENDAMENTO DE IS FIM {finalidade} - {inspecionado}', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mails institucionais da Secretaria; Divisão de Pessoal do HNRe (OM HNRe) ou EAMPE (OM EAMPE). Reagendamento: mesmo modelo, com o aviso de reagendamento.' },
+  { tipo: 'agendamentoBeneficios', rotulo: 'Agendamento de IS (Benefícios)', assunto: 'AGENDAMENTO DE IS FIM {finalidade} - {inspecionado}', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mails institucionais da Secretaria. Reagendamento: mesmo modelo, com o aviso de reagendamento.' },
+  { tipo: 'resultadoBeneficios', rotulo: 'Resultado de IS (Benefícios)', assunto: 'RESULTADO DE IS FIM {finalidade} - {inspecionado}', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mails institucionais da Secretaria. Três modelos: não enquadramento, enquadramento de militar inativo e enquadramento de não militar.' },
   { tipo: 'faltasHNRe', rotulo: 'Faltas às IS (inspecionados do HNRe)', assunto: 'COMUNICAÇÃO DE FALTAS A INSPEÇÕES DE SAÚDE', dinamicos: 'CC: e-mails dos inspecionados, quando cadastrados.' },
   { tipo: 'nac', rotulo: 'NAC — IS de Verificações e Términos finalizadas', assunto: 'INSPEÇÕES DE SAÚDE VDF E TÉRMINOS', dinamicos: 'CC: e-mails institucionais dos user_medicos_geral com cargo "SMI".' },
   { tipo: 'inaptosConcurso', rotulo: 'Candidatos inaptos de concurso (EAMPE)', assunto: '{concurso} - Candidatos Inaptos', dinamicos: 'Nenhum.' },

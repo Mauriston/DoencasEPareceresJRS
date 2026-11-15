@@ -1,10 +1,11 @@
 // Ficheiro: components/painel/SecaoUso.tsx
 // Seção "Uso do app" do Painel (só Admin): usuários ativos, acessos às páginas, ações registradas, página mais
 // usada e quem está sem acesso há 30 dias; acessos e ações por dia (28 dias), páginas mais acessadas, quem mais
-// acessa, ações por tipo, ações por usuário e tipo e uso por perfil. Só contagens (coleção uso_diario,
-// services/usoDiario.ts) — nada de conteúdo.
+// acessa, ações por tipo, ações por usuário e tipo e uso por perfil; e-mails enviados (todos os tipos) e guias
+// de exames geradas, com a série de 28 dias e os e-mails por tipo. Só contagens (coleção uso_diario,
+// services/usoDiario.ts) — nada de conteúdo, destinatário ou inspecionado.
 import React, { useMemo } from 'react';
-import { resumoUso, variacao, type JanelaPainel, type UsoDia, type UsuarioUso } from '../../utils/painel';
+import { enviosPorDia, resumoUso, rotuloTipoEmail, variacao, type JanelaPainel, type UsoDia, type UsuarioUso } from '../../utils/painel';
 import { PAGE_DEFS, ROLES } from '../../config/permissions';
 import { administracaoPath } from '../../config/routes';
 import { GradePainel } from '../ui/Grade';
@@ -14,6 +15,11 @@ import { AcaoTexto, baixarCsv, Bloco, CabecalhoSecao, fmtNum, fmtPct, fmtQuando,
 const SERIES: SerieGrafico[] = [
   { nome: 'Acessos', traco: 'stroke-navy', preenchimento: 'fill-navy' },
   { nome: 'Ações', traco: 'stroke-blue-400', preenchimento: 'fill-blue-400', tracejada: true },
+];
+
+const SERIES_ENVIOS: SerieGrafico[] = [
+  { nome: 'E-mails', traco: 'stroke-navy', preenchimento: 'fill-navy' },
+  { nome: 'Guias', traco: 'stroke-blue-400', preenchimento: 'fill-blue-400', tracejada: true },
 ];
 
 const ROTULO_PAGINA: Record<string, string> = { home: 'Início', painel: 'Painel', perfil: 'Perfil', usuarios: 'Usuários', configuracoes: 'Configurações', 'dgpm406-anexos': 'DGPM-406 (anexos)' };
@@ -31,6 +37,11 @@ export const SecaoUso: React.FC<Props> = ({ dias, usuarios, janela, hoje, deskto
   const exportar = () => baixarCsv(`uso-do-app-${janela.atual.inicio}-${janela.atual.fim}.csv`,
     ['Usuário', 'Perfil', 'Acessos', 'Ações', ...r.tipos.map(t => r.acoesPorTipo.find(a => a.chave === t)?.rotulo ?? t), 'Último acesso'],
     r.usuarios.map(u => [u.usuario, rotuloPerfil(u.perfil), u.acessos, u.acoes, ...r.tipos.map(t => u.porTipo[t] ?? 0), u.ultimo ? new Date(u.ultimo).toLocaleString('pt-BR') : '']));
+
+  const tiposEmail = r.emailsPorTipo.map(t => t.chave);
+  const exportarEnvios = () => baixarCsv(`envios-${janela.atual.inicio}-${janela.atual.fim}.csv`,
+    ['Dia', 'E-mails enviados', ...tiposEmail.map(rotuloTipoEmail), 'Guias geradas'],
+    enviosPorDia(dias, janela, tiposEmail));
 
   const topUsuarios = r.usuarios.slice(0, desktop ? 8 : 4);
   return (
@@ -109,6 +120,22 @@ export const SecaoUso: React.FC<Props> = ({ dias, usuarios, janela, hoje, deskto
           )}
           <Bloco className="@split:col-span-5" titulo="Ações por tipo">
             <ListaBarras itens={r.acoesPorTipo.map(a => ({ ...a, alerta: a.chave === 'exclusao' }))} limite={desktop ? 8 : 3} />
+          </Bloco>
+        </div>
+      </div>
+      <div className="@container">
+        <div className="grid grid-cols-1 @split:grid-cols-12 gap-6 items-start">
+          <Bloco className="@split:col-span-7" titulo={desktop ? 'E-mails enviados e guias geradas' : 'E-mails e guias'}
+            acoes={(r.emails.atual > 0 || r.guias.atual > 0) && <AcaoTexto icone="download" onClick={exportarEnvios}>Exportar CSV</AcaoTexto>}>
+            <div className="grid grid-cols-2 gap-3">
+              <KpiDelta label="E-mails enviados" value={fmtNum(r.emails.atual)} variacao={variacao(r.emails.atual, r.emails.anterior)} vs={vs} hint={desktop ? 'todos os tipos, pelo app' : undefined} />
+              <KpiDelta label="Guias geradas" value={fmtNum(r.guias.atual)} variacao={variacao(r.guias.atual, r.guias.anterior)} vs={vs} hint={desktop ? 'PDFs de guias de exames' : undefined} />
+            </div>
+            <Legenda itens={[{ nome: 'E-mails', classe: 'bg-navy' }, { nome: 'Guias', classe: 'bg-blue-400', forma: 'tracejada' }]} />
+            <GraficoLinhas titulo="E-mails enviados e guias geradas por dia, últimos 28 dias" pontos={r.envios28} series={SERIES_ENVIOS} cadaRotulo={4} altura={desktop ? 160 : 140} />
+          </Bloco>
+          <Bloco className="@split:col-span-5" titulo="E-mails por tipo">
+            <ListaBarras itens={r.emailsPorTipo} limite={desktop ? 12 : 4} />
           </Bloco>
         </div>
       </div>

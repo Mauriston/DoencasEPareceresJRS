@@ -16,6 +16,7 @@ import { TEMPLATE_AGENDA_IS } from './templateAgendaIS';
 import { TEMPLATE_ANEXO_AGENDA_IS } from './templateAnexoAgendaIS';
 import { FONTE_MONTSERRAT_DATA_URI, LOGO_MARINHA_DATA_URI } from './recursosAnexo';
 import { CONFIG_EMAIL_RESULTADO } from './resultadoIS';
+import { registrarUsoServidor } from './registroEmailsIS';
 import { assinaturaSupervisor, assinaturaTexto, destinatariosFixos, juntarEmails, type DadosAssinatura } from './comum';
 import {
   assuntoAgendaIS, caminhoPdfAgendaIS, dataBrDeIso, dataIsoValida, dataTituloDeIso, decidirEnvioAutomatico, destinatariosAgendaIS,
@@ -159,6 +160,8 @@ export const enviarAgendaIS = async (db: Firestore, bucket: BucketPdf, data: str
     ultimoEnvioEm: FieldValue.serverTimestamp(), ultimoEnvioPor: quem.uid, envios: FieldValue.increment(1),
     ...(quem.automatico ? { envioAutomaticoEm: FieldValue.serverTimestamp() } : {}),
   }, { merge: true });
+  // Contagem no uso do app (não é e-mail de uma IS: sem histórico na IS).
+  await registrarUsoServidor(db, quem.automatico ? 'agendador' : quem.uid, { email: 'agendaIS' });
   return { data, para, cc, totalIS: agenda.agendamentos.length, totalConcursos: agenda.concursos.length, pdfCaminho, reenvio };
 };
 

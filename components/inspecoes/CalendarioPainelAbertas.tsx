@@ -57,6 +57,7 @@ export const CalendarioPainelAbertas: React.FC<Props> = ({ abertas, hoje, onAgen
               const nome = nomeCurtoInspecionado(is.inspecionado);
               const dias = diasEmAberto(is.dataAbertura, hoje);
               const atrasada = abertaAtrasada(is, hoje);
+              const exames = is.status === 'realizando_exames';
               const arrastavel = !!onAgendar;
               return (
                 <li
@@ -69,7 +70,7 @@ export const CalendarioPainelAbertas: React.FC<Props> = ({ abertas, hoje, onAgen
                   <button
                     type="button"
                     onClick={() => onAbrir(is)}
-                    aria-label={`IS ${is.is}: ${nome}, ${is.finalidade}, ${rotuloDiasEmAberto(dias)} em aberto${atrasada ? ', atrasada' : ''}. Abrir detalhes`}
+                    aria-label={`IS ${is.is}: ${nome}, ${is.finalidade}, ${rotuloDiasEmAberto(dias)} em aberto${atrasada ? ', atrasada' : ''}${exames ? ', realizando exames' : ''}. Abrir detalhes`}
                     className={`flex-1 min-w-0 flex items-center gap-3 px-2 py-2 min-h-[44px] text-left rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${arrastavel ? 'cursor-grab active:cursor-grabbing' : ''}`}
                   >
                     <span className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-sm font-bold uppercase ${is.amp === 'JRS' ? 'bg-navy text-white' : 'bg-gold/30 text-gold-ink'}`} aria-hidden="true">
@@ -80,7 +81,7 @@ export const CalendarioPainelAbertas: React.FC<Props> = ({ abertas, hoje, onAgen
                       <span className={`flex items-start gap-1.5 text-xs ${atrasada ? 'text-wine font-semibold' : 'text-ink-3'}`}>
                         <span className={`w-2 h-2 mt-1 rounded-full shrink-0 ${atrasada ? 'bg-wine' : is.amp === 'JRS' ? 'bg-navy' : 'bg-gold'}`} aria-hidden="true" />
                         <span className="min-w-0 break-words" title={`${is.finalidade} · ${rotuloDiasEmAberto(dias)}${atrasada ? ' (atrasada)' : ''}`}>
-                          {finalidadeSemGrupo(is.finalidade, is.grupoFinalidade)} · {rotuloDiasEmAberto(dias)}
+                          {finalidadeSemGrupo(is.finalidade, is.grupoFinalidade)} · {rotuloDiasEmAberto(dias)}{exames ? ' · Realizando exames' : ''}
                         </span>
                       </span>
                     </span>

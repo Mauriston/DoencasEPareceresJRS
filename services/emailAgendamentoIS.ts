@@ -1,9 +1,10 @@
 // Ficheiro: services/emailAgendamentoIS.ts
-// E-mail "AGENDAMENTO DE INSPEÇÃO DE SAÚDE" (servidor/email/agendamentoIS.ts):
+// E-mail de agendamento/reagendamento da IS ao inspecionado (servidor/email/agendamentoIS.ts; todos os grupos —
+// Verificações e Términos, Benefícios e o modelo geral; variante de reagendamento decidida pelo servidor):
 //  - enviarAgendamentoISPorEmail: chama o servidor (conta Google da JRS; sem Apps Script de reserva);
 //  - avisarAgendamento / observarAgendamentos: aviso, dentro do app, de que uma IS acabou de ser agendada ou
 //    reagendada (AgendarDialog, AgendarNoHorarioDialog, TrocarPeritoDialog, IS nova com data, arraste no
-//    calendário). A página Inspeções de Saúde escuta e pergunta se envia o e-mail ao inspecionado.
+//    calendário). A página Inspeções de Saúde escuta e abre o dialog de confirmação (Enviar · Cancelar).
 import { ApiError, chamarServidor } from './apiClient';
 import { registrarUsoAcao } from './usoDiario';
 import { notificarAcao } from './notificacoesPush';
@@ -31,7 +32,7 @@ export interface AgendamentoFeito { isId: string; dataEntrevista: string }
 type Ouvinte = (a: AgendamentoFeito) => void;
 const ouvintes = new Set<Ouvinte>();
 
-/** Avisa que a IS foi agendada para `dataEntrevista` (só as finalidades com e-mail de agendamento). */
+/** Avisa que a IS foi agendada para `dataEntrevista` (elegível: com data, não cancelada — ehElegivelAgendamento). */
 export const avisarAgendamento = (is: { id: string } & ISParaAgendamento, dataEntrevista: string) => {
   if (!ehElegivelAgendamento({ ...is, dataEntrevista })) return;
   ouvintes.forEach(o => o({ isId: is.id, dataEntrevista }));

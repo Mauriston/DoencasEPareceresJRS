@@ -26,7 +26,26 @@ const APP_URL = (process.env.APP_URL || 'https://mauriston.github.io/DoencasEPar
 const semente = (n: number): Aleatorio => () => { n = (n * 1103515245 + 12345) % 2147483648; return n / 2147483648; };
 
 // Semente de cada tipo: escolhida para listas de tamanho médio (o e-mail mostra o modelo sem ficar enorme).
-const SEMENTES: Record<TipoEmail, number> = { resultadoIS: 7, agendaIS: 11, agendamentoIS: 3, faltasHNRe: 5, inaptosConcurso: 9, nac: 4 };
+const SEMENTES: Record<TipoEmail, number> = {
+  resultadoIS: 7, agendaIS: 11, agendamentoIS: 3, faltasHNRe: 5, inaptosConcurso: 9, nac: 4,
+  aberturaIS: 1, guiasInspecionado: 1, guiasSecretaria: 1, agendamentoGeral: 2, agendamentoBeneficios: 6, resultadoBeneficios: 8,
+};
+
+type Montado = { assunto: string; html: string; htmlAnexo?: string; variante?: string; modelo?: string };
+
+// Nos tipos com variantes (sorteadas pelo gerador), a página mostra a principal: abertura com guias de exames,
+// agendamento (não o reagendamento) e o não enquadramento de Benefícios.
+const SERVE: Partial<Record<TipoEmail, (r: Montado) => boolean>> = {
+  agendaIS: r => (r.html.match(/<tr/g) || []).length > 14, // agenda vazia não ilustra
+  aberturaIS: r => r.variante === 'exames',
+  agendamentoIS: r => r.variante === 'agendamento',
+  agendamentoGeral: r => r.variante === 'agendamento',
+  agendamentoBeneficios: r => r.variante === 'agendamento',
+  resultadoBeneficios: r => r.modelo === 'nao_enquadramento',
+};
+
+// Anexos sem prévia na página: as guias de exames levam a rubrica do Presidente e várias páginas A4.
+const SEM_IMAGEM_DO_ANEXO: TipoEmail[] = ['guiasInspecionado', 'guiasSecretaria'];
 
 const ASSINATURA_NEUTRA = `data:image/svg+xml;base64,${Buffer.from(
   '<svg xmlns="http://www.w3.org/2000/svg" width="440" height="264" viewBox="0 0 440 264"><path d="M60 170 C120 120 160 200 220 150 S320 120 380 160" fill="none" stroke="#9aa1b5" stroke-width="4" stroke-linecap="round"/></svg>',
@@ -37,17 +56,14 @@ const BANNER_SUBSTITUTO = '<svg xmlns="http://www.w3.org/2000/svg" width="820" h
   + '<text x="410" y="56" fill="#ffffff" font-family="Montserrat,Arial,sans-serif" font-size="24" font-weight="800" letter-spacing="3" text-anchor="middle">HOSPITAL NAVAL DE RECIFE</text>'
   + '<text x="410" y="86" fill="#FAB932" font-family="Montserrat,Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="3" text-anchor="middle">JUNTA REGULAR DE SAÚDE</text></svg>';
 
-type Montado = { assunto: string; html: string; htmlAnexo?: string };
-
-/** Escolhe a semente: a fixa do tipo, ou a 1ª a partir dela cujo e-mail tenha linhas (agenda vazia não ilustra). */
+/** Escolhe a semente: a fixa do tipo, ou a 1ª a partir dela cujo e-mail sirva (SERVE). */
 const montar = (tipo: TipoEmail): Montado => {
   // Só a assinatura institucional do Presidente aparece; o supervisor de serviço vira um nome genérico.
   const padrao = mesclarConfigEmails(undefined);
   const config = { ...padrao, assinatura: { ...padrao.assinatura, supervisorNome: 'Nome do Supervisor', supervisorPosto: 'Posto/Graduação' } };
   for (let n = SEMENTES[tipo]; n < SEMENTES[tipo] + 50; n++) {
     const r = montarEmailTeste(tipo, assinaturaSemSignatario(config), config, semente(n)) as Montado;
-    const linhas = (r.html.match(/<tr/g) || []).length;
-    if (tipo !== 'agendaIS' || linhas > 14) return r;
+    if (!SERVE[tipo] || SERVE[tipo]!(r)) return r;
   }
   return montarEmailTeste(tipo, assinaturaSemSignatario(config), config, semente(SEMENTES[tipo])) as Montado;
 };
@@ -56,7 +72,7 @@ const montar = (tipo: TipoEmail): Montado => {
 const fotografar = async (navegador: Browser, html: string, largura: number, nome: string): Promise<DimensaoImagem> => {
   let dim: DimensaoImagem = { w: largura, h: 0 };
   for (const escala of [1, 2] as const) {
-    const contexto = await navegador.newContext({ viewport: { width: largura, height: 800 }, deviceScaleFactor: escala });
+    const contexto = await navegador.newContext({ viewport: { width: largura, height: 400 }, deviceScaleFactor: escala });
     const pagina = await contexto.newPage();
     // Imagens do próprio app (logo, brasão) vêm de public/; o resto (banner externo) tenta a rede e, se não houver, segue sem.
     await pagina.route('**/*', async rota => {
@@ -91,7 +107,7 @@ try {
   for (const tipo of TIPOS_TESTE) {
     const r = montar(tipo);
     manifesto[`emails/${tipo}`] = await fotografar(navegador, r.html, 860, tipo);
-    if (r.htmlAnexo) {
+    if (r.htmlAnexo && !SEM_IMAGEM_DO_ANEXO.includes(tipo)) {
       const anexo = r.htmlAnexo.split(ASSINATURA_PRESIDENTE_DATA_URI).join(ASSINATURA_NEUTRA);
       manifesto[`emails/anexo-${tipo}`] = await fotografar(navegador, anexo, 1123, `anexo-${tipo}`);
     }

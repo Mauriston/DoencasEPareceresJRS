@@ -9,7 +9,7 @@
 //  - "bloqueiosAgenda": bloqueios de horário/turno (de todos os peritos ou de um perito).
 //  - config/agendaIS: turnos em que cada perito atende, por dia da semana (só o Admin grava).
 import {
-  getFirestore, collection, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, runTransaction, serverTimestamp, Timestamp,
+  getFirestore, collection, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot, runTransaction, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { novoId } from '../utils/dados';
 import { app } from './firebaseAuth';
@@ -17,6 +17,8 @@ import { registrarAcaoSensivel } from './auditoriaAcoes';
 import { registrarUsoAcao } from './usoDiario';
 import { registrarEventoInspecionado } from './eventosInspecionado';
 import { notificarAcao } from './notificacoesPush';
+import { apagarGuiasExames } from './guiasExames';
+import { patchEntregaGuias, type EstadoEntregaGuias } from '../utils/guiasExamesIS';
 import {
   chaveSlot, chavesOcupadas, duracaoDoGrupo, situacaoDoStatus, statusAoAgendar, TODOS_PERITOS,
   type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS, type Turno,
@@ -78,11 +80,41 @@ export interface InspecaoDoc {
   /** E-mail ao NAC (IS finalizada de Verificações e Términos; servidor/email/nac.ts). */
   emailNacEnviadoEm?: Timestamp | null;
   emailNacEnviadoPor?: string;
+  // ----- Guias de exames (só finalidades com exames mínimos no Anexo O; utils/guiasExames.ts) -----
+  /** Guias em PDF geradas no servidor (servidor/documentos/guiasExames/; Storage inspecoes/{id}/guias/guias-exames.pdf). */
+  guiasExames?: GuiasExamesIS | null;
+  /** Guias entregues ao inspecionado (caixa "Guias entregues ao inspecionado?" ou envio por e-mail). */
+  guiasEntregues?: boolean;
+  /** AAAA-MM-DD da entrega (data de hoje ao marcar; data do envio quando por e-mail). */
+  guiasEntreguesEm?: string;
+  guiasEntreguesVia?: 'presencial' | 'email';
+  guiasEntreguesPor?: string;
+  /** Último envio das guias por e-mail (inspecionado e/ou SEC-JRS): define "Enviar" × "Reenviar por e-mail". */
+  emailGuiasEnviadoEm?: Timestamp | null;
+  /** E-mail de abertura ao inspecionado (servidor/email/aberturaIS.ts). */
+  emailAberturaPara?: string;
+  emailAberturaEnviadoEm?: Timestamp | null;
+  /** E-mail de resultado de Benefícios (servidor/email/resultadoBeneficios.ts). */
+  emailResultadoBeneficiosEnviadoEm?: Timestamp | null;
+  emailResultadoBeneficiosModelo?: 'nao_enquadramento' | 'enquadramento_militar' | 'enquadramento_nao_militar';
   criadoPor: string;
   criadoEm: Timestamp | null;
   atualizadoEm?: Timestamp | null;
+  /** Quando a situação passou a "finalizada" (TIS assinado ou cancelada): conta os 15 dias para apagar as guias. */
+  finalizadaEm?: Timestamp | null;
 }
 export type InspecaoRecord = InspecaoDoc & { id: string };
+
+/** Guias de exames geradas (gravado pelo servidor; Admin SDK). */
+export interface GuiasExamesIS {
+  /** Caminho no Storage: inspecoes/{isId}/guias/guias-exames.pdf */
+  caminho: string;
+  /** Exames solicitados por grupo, na ordem das páginas (ver utils/guiasExames.ts). */
+  grupos: { grupo: string; exames: string[] }[];
+  paginas: number;
+  geradoEm: Timestamp | null;
+  geradoPor: string;
+}
 
 export const observarInspecoes = (onData: (lista: InspecaoRecord[]) => void, onError?: (e: Error) => void) =>
   onSnapshot(
@@ -151,9 +183,13 @@ export const criarInspecao = async (dados: NovaInspecao): Promise<string> => {
   return id;
 };
 
+/** `finalizadaEm` quando o status leva a IS à situação "finalizada" (limpeza das guias 15 dias depois, no servidor). */
+const marcaFinalizacao = (status: StatusIS | undefined): { finalizadaEm?: ReturnType<typeof serverTimestamp> } =>
+  status && situacaoDoStatus(status) === 'finalizada' ? { finalizadaEm: serverTimestamp() } : {};
+
 /** Atualiza campos que não mexem na agenda (laudo, restrições, TIS, DS-1a, observações, status…). */
 export const atualizarInspecao = async (id: string, patch: Partial<InspecaoDoc>): Promise<void> => {
-  await updateDoc(doc(db, COL, id), { ...patch, ...(patch.status ? { situacao: situacaoDoStatus(patch.status) } : {}), atualizadoEm: serverTimestamp() } as Record<string, unknown>);
+  await updateDoc(doc(db, COL, id), { ...patch, ...(patch.status ? { situacao: situacaoDoStatus(patch.status), ...marcaFinalizacao(patch.status) } : {}), atualizadoEm: serverTimestamp() } as Record<string, unknown>);
   notificarAcao('is.editada', id);
 };
 
@@ -199,7 +235,7 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
     ? { peritoUid: dados.peritoUid, dataEntrevista: dados.dataEntrevista, grupoFinalidade: dados.grupoFinalidade } : null;
   if (!atual) {
     const completo = { ...dados, is: Number(id), observacoes: '', situacao: situacaoDoStatus(dados.status) };
-    await gravarComSlot(id, completo, slotNovo, null, true);
+    await gravarComSlot(id, { ...completo, ...marcaFinalizacao(dados.status) }, slotNovo, null, true);
     registrarEventoInspecionado(dados.inspecionadoId, 'is.cadastrar', `IS ${id}`);
     notificarAcao('is.importada', id);
     return { ...completo, id, criadoEm: null };
@@ -207,6 +243,7 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
   const { criadoPor: _c, ...resto } = dados;
   const patch: Record<string, unknown> = Object.fromEntries(Object.entries(resto).filter(([k, v]) => k === 'status' || String(v ?? '').trim() !== ''));
   patch.situacao = situacaoDoStatus(dados.status);
+  if (atual.situacao !== 'finalizada') Object.assign(patch, marcaFinalizacao(dados.status));
   const mudouData = !!dados.dataEntrevista && dados.dataEntrevista !== atual.dataEntrevista;
   const slotAntigo = mudouData && atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(id, patch, mudouData ? slotNovo : null, slotAntigo, false);
@@ -218,17 +255,30 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
 export const cancelarInspecao = async (atual: InspecaoRecord): Promise<void> => {
   const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(atual.id, {
-    status: 'cancelada', situacao: situacaoDoStatus('cancelada'),
+    status: 'cancelada', situacao: situacaoDoStatus('cancelada'), ...marcaFinalizacao('cancelada'),
   }, null, slotAntigo, false);
   notificarAcao('is.cancelada', atual.id);
 };
 
-/** Apaga a IS (só Admin) e libera o horário. */
+/** Apaga a IS (só Admin) e libera o horário. Antes, apaga as guias de exames no servidor (PDF; best effort). */
 export const apagarInspecao = async (atual: InspecaoRecord): Promise<void> => {
+  await apagarGuiasExames(atual.id);
   if (atual.dataEntrevista) await Promise.all(refsSlots(atual).map(r => deleteDoc(r).catch(() => { /* slot já liberado */ })));
   await deleteDoc(doc(db, COL, atual.id));
   void registrarAcaoSensivel('inspecao.excluir', 'inspecoes');
   notificarAcao('is.apagada', atual.id);
+};
+
+/**
+ * Caixa "Guias entregues ao inspecionado?" (detalhe da IS): marcar grava a entrega presencial de hoje (em segundo
+ * plano) e Aberta → Realizando Exames; desmarcar desfaz (Realizando Exames → Aberta). Regras: utils/guiasExamesIS.ts.
+ */
+export const registrarEntregaGuias = async (atual: InspecaoRecord & EstadoEntregaGuias, marcar: boolean, quem: string, hoje: string): Promise<void> => {
+  const patch = patchEntregaGuias(atual, marcar, quem, hoje);
+  const dados: Record<string, unknown> = Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, v === null ? deleteField() : v]));
+  if (typeof patch.status === 'string') dados.situacao = situacaoDoStatus(patch.status as StatusIS);
+  await updateDoc(doc(db, COL, atual.id), { ...dados, atualizadoEm: serverTimestamp() });
+  notificarAcao('is.editada', atual.id);
 };
 
 export const inspecaoExiste = async (id: string): Promise<boolean> => (await getDoc(doc(db, COL, id))).exists();

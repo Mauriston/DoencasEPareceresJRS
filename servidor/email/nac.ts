@@ -20,6 +20,7 @@ import { CONFIG_EMAIL_RESULTADO } from './resultadoIS';
 import { nomeSemPostoNip } from './agendaIS';
 import { ASSINATURA_PRESIDENTE_DATA_URI, AVISO_ACESSO_RESTRITO_DATA_URI, FONTE_MONTSERRAT_DATA_URI, LOGO_MARINHA_DATA_URI } from './recursosAnexo';
 import { assinaturaDe, assinaturaSemSignatario, assinaturaTexto, destinatariosFixos, juntarEmails, type DadosAssinatura } from './comum';
+import { registrarEmailIS } from './registroEmailsIS';
 import { CONFIG_EMAILS_PADRAO } from '../../config/emails';
 import { ASSUNTO_NAC, dataBrNac, ehCargoSmi, paginarNac, pendenteNac, periodoNac } from '../../utils/emailNac';
 import { ehInstitucional } from '../../utils/emailAgendaIS';
@@ -126,5 +127,7 @@ export const enviarNac = async (db: Firestore, isIdsBruto: unknown, uid: string)
   const lote = db.batch();
   iss.forEach(({ ref }) => lote.update(ref, { emailNacEnviadoEm: FieldValue.serverTimestamp(), emailNacEnviadoPor: uid }));
   await lote.commit();
+  // Histórico em cada IS do lote (e contagem no uso do app, uma por IS).
+  await Promise.all(iss.map(({ ref }) => registrarEmailIS(db, ref.id, uid, { tipo: 'nac', assunto, para, cc })));
   return { enviados: iss.length, para, cc, periodo };
 };

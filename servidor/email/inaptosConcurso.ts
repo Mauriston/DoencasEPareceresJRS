@@ -11,6 +11,7 @@ import { enviarEmail } from '../google/impressao';
 import { renderizarTemplate } from './template';
 import { TEMPLATE_INAPTOS_CONCURSO } from './templateInaptosConcurso';
 import { CONFIG_EMAIL_RESULTADO } from './resultadoIS';
+import { registrarUsoServidor } from './registroEmailsIS';
 import { assinaturaDe, assinaturaSemSignatario, assinaturaTexto, destinatariosFixos, juntarEmails, type DadosAssinatura } from './comum';
 import { assuntoInaptos, concursoAceitaEmailInaptos, dataBrCurta, inaptoPendente } from '../../utils/emailInaptosConcurso';
 
@@ -76,5 +77,7 @@ export const enviarInaptosConcurso = async (db: Firestore, concursoIdBruto: unkn
   const lote = db.batch();
   pendentes.forEach(p => lote.update(p.ref, { emailInaptoEnviadoEm: FieldValue.serverTimestamp(), emailInaptoEnviadoPor: uid }));
   await lote.commit();
+  // Contagem no uso do app (e-mail de concurso, não de uma IS).
+  await registrarUsoServidor(db, uid, { email: 'inaptosConcurso' });
   return { enviados: pendentes.length, para, cc };
 };

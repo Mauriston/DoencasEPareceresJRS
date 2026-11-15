@@ -4,7 +4,11 @@
 // no menu em cascata por grupo), AMP (definido pela finalidade: JRS ou MPI), perito (cards com avatar dos
 // usuários médicos do AMP — AvatarRadioGroup, com "JRS"/"MPI" na 2ª linha) e, opcionalmente, já a data/hora da entrevista (slots de 20 min). A IS nasce "Aberta", ou
 // "Agendada" quando a entrevista já é marcada no cadastro.
-import React, { useEffect, useMemo, useState } from 'react';
+// Finalidade com exames mínimos (guias de exames — utils/guiasExamesIS.ts): se o cadastro do inspecionado não
+// tem data de nascimento e/ou sexo, o formulário pede (obrigatórios; o sexo vem sugerido pela IA a partir do
+// primeiro nome, para o usuário confirmar) e grava no cadastro (militares/{id}). As guias são geradas depois
+// de criada a IS (components/inspecoes/guias/PosCriacaoIS).
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer } from '../ui/Drawer';
 import { Button } from '../ui/Button';
 import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
@@ -18,7 +22,10 @@ import { SeletorHorario, estadoDoSlot } from './SeletorHorario';
 import { carregarFinalidadesIS, normalizarBusca, type GrupoFinalidadeIS } from '../../utils/corposQuadros';
 import { formatNip } from '../../utils/format';
 import { hojeISO, ocupadosDe, duracaoDoGrupo, peritoAtendeNoTurno, turnoDoSlot, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
-import type { MilitarRecord } from '../../services/firestoreMilitares';
+import { atualizarMilitar, OPCOES_SEXO, type MilitarRecord, type SexoInspecionado } from '../../services/firestoreMilitares';
+import { casarFinalidadeAnexoO, erroDataNascimento } from '../../utils/guiasExamesIS';
+import { finalidadeTemExamesMinimos } from '../../utils/guiasExames';
+import { sugerirSexoPeloNome } from '../../services/guiasExamesIA';
 import { criarInspecao, idDaIs, type AmpIS, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { peritosDoAmp, ampDaFinalidade, perfilAtendeAmp, type PeritoIS } from '../../services/peritosIS';
 
@@ -70,8 +77,12 @@ interface Props {
   /** Pré-preenchimento ao clicar num horário livre do calendário, ou o inspecionado (id = NIP) vindo da Ficha. */
   inicial?: { dataEntrevista?: string; peritoUid?: string; inspecionadoId?: string };
   onClose: () => void;
-  onCriada: (is: InspecaoRecord) => void;
+  /** `dados`: o que o formulário completou do cadastro (data de nascimento e sexo), para as guias de exames. */
+  onCriada: (is: InspecaoRecord, dados: DadosInspecionadoIS) => void;
 }
+
+/** Sexo e data de nascimento do inspecionado no momento da abertura (cadastro + o que o formulário pediu). */
+export interface DadosInspecionadoIS { sexo?: SexoInspecionado; dataNascimento?: string }
 
 type Erros = Record<string, string>;
 
@@ -89,6 +100,10 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
   const [data, setData] = useState(inicial?.dataEntrevista?.slice(0, 10) ?? '');
   const [hora, setHora] = useState(inicial?.dataEntrevista?.slice(11, 16) ?? '');
   const [observacoes, setObservacoes] = useState('');
+  // Guias de exames: data de nascimento e sexo que faltam no cadastro.
+  const [dataNascimento, setDataNascimento] = useState('');
+  const [sexo, setSexo] = useState<SexoInspecionado | ''>('');
+  const [sexoSugerido, setSexoSugerido] = useState(false);
   const [erros, setErros] = useState<Erros>({});
   const [salvando, setSalvando] = useState(false);
 
@@ -108,6 +123,25 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
   })), [militares]);
 
   const achada = useMemo(() => achar(finalidade), [gruposMenu, finalidade]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Finalidade com exames mínimos: pede o que falta no cadastro para as guias.
+  const temExamesMinimos = useMemo(() => { const f = casarFinalidadeAnexoO(finalidade); return !!f && finalidadeTemExamesMinimos(f); }, [finalidade]);
+  const pedirNascimento = temExamesMinimos && !!militar && !militar.dataNascimento;
+  const pedirSexo = temExamesMinimos && !!militar && !militar.sexo;
+  // Outro inspecionado: limpa o que foi digitado para o anterior.
+  useEffect(() => { setDataNascimento(''); setSexo(''); setSexoSugerido(false); }, [militar?.id]);
+  // Sem sexo no cadastro: a IA sugere pelo primeiro nome (uma vez por inspecionado); o usuário confirma.
+  const sugeridoPara = useRef('');
+  const sexoRef = useRef(sexo);
+  sexoRef.current = sexo;
+  useEffect(() => {
+    if (!pedirSexo || !militar || sugeridoPara.current === militar.id) return;
+    sugeridoPara.current = militar.id;
+    const id = militar.id;
+    sugerirSexoPeloNome(militar.nome).then(s => {
+      if (s && sugeridoPara.current === id && !sexoRef.current) { setSexo(s); setSexoSugerido(true); }
+    });
+  }, [pedirSexo, militar]);
   const ampCompetente: AmpIS | '' = achada ? achada.amp : '';
 
   // O AMP é o da competência da finalidade; trocar de finalidade pode invalidar o perito.
@@ -136,6 +170,8 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
     if (!dataAbertura) e.dataAbertura = 'Informe a data de abertura.';
     if (!militar) e.militar = 'Escolha o inspecionado na lista.';
     if (!finalidade) e.finalidade = 'Selecione a finalidade.';
+    if (pedirNascimento) { const erro = erroDataNascimento(dataNascimento, hojeISO()); if (erro) e.dataNascimento = erro; }
+    if (pedirSexo && !sexo) e.sexo = 'Informe o sexo.';
     if ((data || hora) && !perito) e.perito = 'Escolha o perito para agendar a entrevista.';
     if (data && !hora) e.hora = 'Escolha o horário da entrevista.';
     if (hora && !data) e.hora = 'Escolha a data da entrevista.';
@@ -168,13 +204,20 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
         dataLaudo: '', laudo: '', observacoes: observacoes.trim(), restricoes: '', tis: '', ds1a: '',
         criadoPor: usuario.usuario,
       });
+      // Completa o cadastro (best effort: a IS já está criada; as guias usam os dados de qualquer forma).
+      const completar = { ...(pedirNascimento ? { dataNascimento } : {}), ...(pedirSexo && sexo ? { sexo } : {}) };
+      if (Object.keys(completar).length) await atualizarMilitar(militar.id, completar).catch(() => { /* sem permissão ou offline */ });
+      const dadosInspecionado: DadosInspecionadoIS = {
+        sexo: (pedirSexo && sexo) || militar.sexo || undefined,
+        dataNascimento: (pedirNascimento && dataNascimento) || militar.dataNascimento || undefined,
+      };
       onCriada({
         id, is: Number(id), dataAbertura, dataEntrevista, finalidade, grupoFinalidade: achada.grupo, amp,
         peritoUid: perito?.uid ?? '', peritoNome: perito?.usuario ?? '', peritoGmail: perito?.gmail ?? '',
         inspecionadoId: militar.id, inspecionado: militar.inspecionado,
         situacao: dataEntrevista ? 'andamento' : 'aberta', status: dataEntrevista ? 'agendada' : 'aberta',
         dataLaudo: '', laudo: '', observacoes: observacoes.trim(), restricoes: '', tis: '', ds1a: '', criadoPor: usuario.usuario, criadoEm: null,
-      });
+      }, dadosInspecionado);
     } catch (err: any) {
       setErros({ geral: err?.message || 'Não foi possível cadastrar a IS.' });
       setSalvando(false);
@@ -216,6 +259,27 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
           />
 
           <CampoFinalidadeIS required value={finalidade} onChange={v => { setFinalidade(v); limpar('finalidade'); }} gruposMenu={gruposMenu} erro={erros.finalidade} />
+
+          {(pedirNascimento || pedirSexo) && (
+            <fieldset className="border border-line rounded-xl p-3 space-y-3 animate-fade-in">
+              <legend className="px-1 text-xs font-bold text-ink-3">Para as guias de exames</legend>
+              <p className="text-xs text-ink-3">Faltam no cadastro do inspecionado. Serão salvos no cadastro.</p>
+              {pedirNascimento && (
+                <Field label="Data de nascimento" required error={erros.dataNascimento}>
+                  {a => <input {...a} type="date" max={hojeISO()} value={dataNascimento} onChange={e => { setDataNascimento(e.target.value); limpar('dataNascimento'); }} />}
+                </Field>
+              )}
+              {pedirSexo && (
+                <div>
+                  <ChoiceGroup<SexoInspecionado>
+                    label="Sexo" required emLinha options={OPCOES_SEXO} value={sexo} error={erros.sexo}
+                    onChange={v => { setSexo(v); setSexoSugerido(false); limpar('sexo'); }}
+                  />
+                  {sexoSugerido && <p className="mt-1 text-xs text-ink-3">Sugerido pela IA a partir do nome. Confira.</p>}
+                </div>
+              )}
+            </fieldset>
+          )}
 
           <ChoiceGroup<AmpIS>
             label="AMP de competência" value={amp} onChange={() => { /* definido pela finalidade */ }}

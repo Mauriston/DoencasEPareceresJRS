@@ -616,6 +616,32 @@ async function startServer() {
     await responderPdf(res, "pedido-parecer", async () => (await import("./servidor/documentos/pedidoParecer")).docPedidoParecer(dados));
   });
 
+  // [rotas: guias de exames — pacote A] (gerar PDF, apagar ao excluir a IS, limpeza 15 dias após a finalização)
+  // Guias de exames da IS (servidor/documentos/guiasExames/): PDF único no Storage (inspecoes/{isId}/guias/) e
+  // resumo em inspecoes/{isId}.guiasExames. Gerar: equipe; apagar (ao excluir a IS): só Admin.
+  const rotaGuias = (rota: string, perfis: string[], acao: (db: import("firebase-admin/firestore").Firestore, bucket: import("./servidor/documentos/guiasExames/servico").Bucket, b: any, uid: string) => Promise<object>) =>
+    async (req: express.Request, res: express.Response) => {
+      const quem = await exigirUsuario(req, res, rota, perfis);
+      if (!quem) return;
+      const { ErroGuias } = await import("./servidor/documentos/guiasExames/servico");
+      try {
+        const { adminDb, adminApp } = await getFirebaseAdmin();
+        const { getStorage } = await import("firebase-admin/storage");
+        res.json({ success: true, ...(await acao(adminDb, getStorage(adminApp).bucket(BUCKET_STORAGE), req.body || {}, quem.uid)) });
+      } catch (error: any) {
+        if (error instanceof ErroGuias) {
+          res.status(error.status).json({ success: false, error: error.message });
+          return;
+        }
+        logErroSeguro(`Guias ${rota}`, error);
+        res.status(500).json({ success: false, error: "Não foi possível processar as guias de exames. Tente novamente." });
+      }
+    };
+  app.post("/api/documentos/guias-exames", rotaGuias("documentos-guias-exames", PERFIS_EQUIPE, async (db, bucket, b, uid) =>
+    (await import("./servidor/documentos/guiasExames/servico")).gerarGuiasExames(db, bucket, uid, b)));
+  app.post("/api/documentos/guias-exames/apagar", rotaGuias("documentos-guias-exames-apagar", ["admin"], async (db, bucket, b) =>
+    (await import("./servidor/documentos/guiasExames/servico")).apagarGuiasExames(db, bucket, b.isId)));
+
   // ---- Conta Google da JRS no servidor (e-mail de impressão e Google Agenda, no lugar do Apps Script) ----
   // Sem a conta autorizada (ou sem o cliente OAuth configurado), as rotas respondem 503 com
   // codigo "google_indisponivel" e o app usa o Apps Script, como antes (services/googleServidor.ts).
@@ -686,7 +712,26 @@ async function startServer() {
   // Resultado da IS ao inspecionado (só IS com TIS assinado; Admin e Secretaria): servidor/email/resultadoIS.ts.
   app.post("/api/email/resultado-is", rotaGoogle("email-resultado-is", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/resultadoIS")).enviarResultadoIS(db, b.isId, b.email, quem.uid)) }), true));
-  // E-mail de agendamento ao inspecionado (só Verificações e Términos; Admin e Secretaria): servidor/email/agendamentoIS.ts.
+  // [rotas: e-mails de guias e de abertura — pacote B1]
+  // Guias de exames (PDF do Storage em anexo) ao inspecionado e/ou à SEC-JRS (Admin e Secretaria): servidor/email/guiasIS.ts.
+  app.post("/api/email/guias-is", rotaGoogle("email-guias-is", ["admin", "user_secretaria"], async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/guiasIS")).enviarGuiasIS(db, await bucketStorage(), b, quem.uid)) }), true));
+  // Abertura da IS ao inspecionado (prazos e consequências; Admin e Secretaria): servidor/email/aberturaIS.ts.
+  app.post("/api/email/abertura-is", rotaGoogle("email-abertura-is", ["admin", "user_secretaria"], async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/aberturaIS")).enviarAberturaIS(db, b.isId, b.email, quem.uid)) }), true));
+  // Membros da SEC-JRS (user_secretaria ativos com institucional) para as caixas do dialog das guias; rótulo = usuario.
+  app.post("/api/secretaria/usuarios", async (req, res) => {
+    if (!(await exigirUsuario(req, res, "secretaria-usuarios", PERFIS_EQUIPE))) return;
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      res.json({ success: true, usuarios: await (await import("./servidor/email/guiasIS")).listarUsuariosSecretaria(adminDb) });
+    } catch (error: any) {
+      logErroSeguro("secretaria-usuarios", error);
+      res.status(500).json({ success: false, error: "Falha ao listar a Secretaria." });
+    }
+  });
+
+  // E-mail de agendamento/reagendamento ao inspecionado (todos os grupos: Verificações, Benefícios e geral; Admin e Secretaria): servidor/email/agendamentoIS.ts.
   app.post("/api/email/agendamento-is", rotaGoogle("email-agendamento-is", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/agendamentoIS")).enviarAgendamentoIS(db, b.isId, b.email, quem.uid)) }), true));
   // E-mail de faltas às IS dos inspecionados do HNRe (Admin e Secretaria): servidor/email/faltasHNRe.ts.
@@ -698,6 +743,11 @@ async function startServer() {
   // E-mail ao NAC: IS finalizadas de Verificações e Términos (Admin e Secretaria): servidor/email/nac.ts.
   app.post("/api/email/nac", rotaGoogle("email-nac", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/nac")).enviarNac(db, b.isIds, quem.uid)) }), true));
+  // [rotas: e-mails de agendamento geral/benefícios e resultado de benefícios — pacote B2]
+  // Resultado de IS de Benefícios (3 modelos; IS com Nº do TIS; Admin e Secretaria): servidor/email/resultadoBeneficios.ts.
+  app.post("/api/email/resultado-beneficios", rotaGoogle("email-resultado-beneficios", ["admin", "user_secretaria"], async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/resultadoBeneficios")).enviarResultadoBeneficios(db, b.isId, b.modelo, b.email, quem.uid)) }), true));
+
   // E-mails de teste (Configurações; só Admin): dados fictícios, só para os destinatários de teste: servidor/email/teste.ts.
   app.post("/api/email/teste", rotaGoogle("email-teste", ["admin"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/teste")).enviarEmailTeste(db, b.tipo, quem.uid)) })));
@@ -720,6 +770,13 @@ async function startServer() {
       void auditarServidor("acesso_negado", "agendador-agenda-is", "", esperado ? "token_invalido" : "agendador_desligado");
       res.status(esperado ? 401 : 503).json({ success: false, error: "Agendador não autorizado." });
       return;
+    }
+    // Pacote A: apaga as guias de exames das IS finalizadas há mais de 15 dias (best effort: nunca derruba o e-mail).
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      await (await import("./servidor/documentos/guiasExames/servico")).limparGuiasVencidas(adminDb, await bucketStorage());
+    } catch (error) {
+      logErroSeguro("Agendador limpeza de guias", error);
     }
     try {
       const { adminDb } = await getFirebaseAdmin();

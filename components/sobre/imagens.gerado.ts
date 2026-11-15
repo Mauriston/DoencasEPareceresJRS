@@ -3,9 +3,21 @@
 // Dimensões (px CSS, 1×) das imagens em public/sobre/. Imagem ausente daqui = a página mostra a moldura.
 export interface DimensaoImagem { w: number; h: number; escuro?: boolean }
 export const IMAGENS_GERADAS: Record<string, DimensaoImagem> = {
+  "emails/aberturaIS": {
+    "w": 860,
+    "h": 1147
+  },
   "emails/agendaIS": {
     "w": 860,
     "h": 1525
+  },
+  "emails/agendamentoBeneficios": {
+    "w": 860,
+    "h": 4197
+  },
+  "emails/agendamentoGeral": {
+    "w": 860,
+    "h": 644
   },
   "emails/agendamentoIS": {
     "w": 860,
@@ -17,11 +29,19 @@ export const IMAGENS_GERADAS: Record<string, DimensaoImagem> = {
   },
   "emails/anexo-nac": {
     "w": 1123,
-    "h": 800
+    "h": 794
   },
   "emails/faltasHNRe": {
     "w": 860,
     "h": 1173
+  },
+  "emails/guiasInspecionado": {
+    "w": 860,
+    "h": 915
+  },
+  "emails/guiasSecretaria": {
+    "w": 860,
+    "h": 574
   },
   "emails/inaptosConcurso": {
     "w": 860,
@@ -30,6 +50,10 @@ export const IMAGENS_GERADAS: Record<string, DimensaoImagem> = {
   "emails/nac": {
     "w": 860,
     "h": 1074
+  },
+  "emails/resultadoBeneficios": {
+    "w": 860,
+    "h": 1430
   },
   "emails/resultadoIS": {
     "w": 860,

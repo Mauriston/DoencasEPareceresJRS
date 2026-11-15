@@ -10,6 +10,9 @@
 //     automaticamente (regras puras em utils/conclusaoIS.ts).
 // Não editável (DS-1a/TIS assinado ou cancelada — até "Reabrir IS", Admin — ou sem permissão): os dados
 // numa tabela vertical (rótulo | valor) e, abaixo, os cards da entrevista gravada e dos pareceres.
+// E-mails: botões de envio (EmailsDaIS, montado pela página) e a seção "E-mails enviados" (emails/HistoricoEmailsIS),
+// visível a todos que acessam a página.
+// Guias de exames (finalidades com exames mínimos — guias/GuiasExamesCard): PDF, entrega ao inspecionado e envio por e-mail.
 // Exames: PDFs enviados pelo rodapé ("Exames", até a IS ser finalizada); a IA identifica o documento e o
 // laudo fica na íntegra para copiar (exames/ExamesDaIS).
 // Rodapé (AcoesRodape: linha no desktop, FAB no mobile): Minuta MSG · Parecer · Exames · Gravar entrevista (cada um
@@ -29,6 +32,8 @@ import { CampoFinalidadeIS, useFinalidadesIS } from './InspecaoForm';
 import { useNav } from '../../context/NavContext';
 import { ExamesDaIS } from './exames/ExamesDaIS';
 import { EnviarExamesISDialog } from './exames/EnviarExamesISDialog';
+import { HistoricoEmailsIS } from './emails/HistoricoEmailsIS';
+import { GuiasExamesCard } from './guias/GuiasExamesCard';
 import { atualizarInspecao, type InspecaoDoc, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { marcarConcluido, observarPareceresDaIS, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
 import { carregarRestricoesIS } from '../../utils/corposQuadros';
@@ -257,8 +262,10 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
         </button>
       ))}
     </div>
+    <GuiasExamesCard is={is} onAviso={onAviso} />
     <ExamesDaIS isId={is.id} podeApagar={podeEnviarExames} onAviso={onAviso} />
     {emails}
+    <HistoricoEmailsIS is={is} />
     </>
   );
 
