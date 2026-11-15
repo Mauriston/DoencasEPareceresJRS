@@ -11,7 +11,7 @@
 import { normalizarBusca, type GrupoFinalidadeIS } from './corposQuadros';
 import { dataCivilISO, normalizarNip } from './dados';
 import { GRUPO_VERIFICACOES, statusAoAgendar, type StatusIS } from './inspecoes';
-import { juntarRestricoes, STATUS_ENCAMINHAMENTO } from './conclusaoIS';
+import { grupoComRestricoes, juntarRestricoes, laudoMencionaRestricoes, STATUS_ENCAMINHAMENTO } from './conclusaoIS';
 import type { DadosSinais } from './inspecionadoSinais';
 
 export type AmpImportacao = 'JRS' | 'MPI';
@@ -37,6 +37,8 @@ export interface ConclusaoSinais {
   restricoes?: string[];
   /** Data do campo "Laudo" no rodapé da tela da conclusão. */
   dataLaudo?: string;
+  /** Códigos da seção "CID Associados" (ex.: "M54.5"). */
+  cids?: string[];
 }
 
 const chave = (t: string | undefined): string => normalizarBusca(String(t || '')).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -199,6 +201,7 @@ export interface LeituraPrint extends DadosISSinais {
   finalidade?: string;
   laudos?: ConclusaoSinais['laudos'];
   restricoes?: string[];
+  cids?: string[];
 }
 
 export type TipoPrint = 'is' | 'conclusao' | '';
@@ -214,11 +217,12 @@ export const tipoDoPrint = (l: LeituraPrint): TipoPrint => {
 
 export const conclusaoDaLeitura = (l: LeituraPrint): ConclusaoSinais => ({
   numInspecao: l.numInspecao, nip: l.nip, finalidade: l.finalidade, laudos: l.laudos ?? [], restricoes: l.restricoes ?? [], dataLaudo: l.dataLaudo,
+  ...(l.cids?.length ? { cids: l.cids } : {}),
 });
 
 /** Campos da tela da IS (com o `tipo` do inspecionado, como o cadastro espera). */
 export const dadosDaLeitura = (l: LeituraPrint): DadosISSinais => {
-  const { tipo: _tela, tipoInspecionado, finalidade: _f, laudos: _l, restricoes: _r, ...resto } = l;
+  const { tipo: _tela, tipoInspecionado, finalidade: _f, laudos: _l, restricoes: _r, cids: _c, ...resto } = l;
   return { ...resto, ...(tipoInspecionado ? { tipo: tipoInspecionado } : {}) };
 };
 
@@ -245,4 +249,58 @@ export const agruparPrints = <T>(lidos: { leitura: LeituraPrint; origem: T }[]):
     grupos.set(numero, g);
   }
   return { grupos: [...grupos.values()], naoReconhecidas };
+};
+
+// ---------------------------------------------------------------- Prints no detalhe da IS (só completa o que falta)
+
+/** O que o detalhe da IS já tem gravado (campos da Conclusão). */
+export interface ConclusaoAtualIS {
+  grupoFinalidade: string;
+  laudo: string;
+  dataLaudo: string;
+  restricoes: string;
+  tis: string;
+  ds1a: string;
+  cid?: string;
+}
+
+/** Campos a completar, na ordem de gravação (Laudo → Data do laudo → CID → Restrições → Nº do TIS → DS-1a). */
+export interface PreenchimentoPrints {
+  laudo?: string;
+  dataLaudo?: string;
+  /** Código do 1º CID associado (ex.: "M545"); o detalhe procura o DESCRABREV no public/cid.json. */
+  cidCodigo?: string;
+  restricoes?: string;
+  tis?: string;
+  ds1a?: string;
+}
+
+/** "M54.5" → "M545" (SUBCAT do public/cid.json). */
+export const codigoCidDoSinais = (texto: string | undefined): string => {
+  const m = String(texto || '').toUpperCase().match(/[A-Z]\d{2}(?:\.?\d)?/);
+  return m ? m[0].replace('.', '') : '';
+};
+
+/**
+ * Prints do SINAIS no detalhe da IS: só os campos VAZIOS da IS são completados com o que a proposta
+ * (proporImportacao) e os CID associados trazem — nada que já esteja preenchido é sobrescrito. O Nº do TIS
+ * só com Laudo, o DS-1a só com Nº do TIS; Restrições e CID só em Verificações e Términos (Restrições só
+ * com o Laudo mencionando "restrições"); a Data do laudo só quando o Laudo também vem dos prints.
+ */
+export const preenchimentoDosPrints = (atual: ConclusaoAtualIS, p: PropostaImportacao, cids: string[] = []): PreenchimentoPrints => {
+  const vazio = (v: string | undefined) => !String(v || '').trim();
+  const r: PreenchimentoPrints = {};
+  if (vazio(atual.laudo) && p.laudo.trim()) {
+    r.laudo = p.laudo.trim();
+    // Laudo novo: a Data do laudo (que a gravação do Laudo põe como hoje) passa a ser a do SINAIS.
+    if (p.dataLaudo) r.dataLaudo = p.dataLaudo;
+  }
+  const laudo = r.laudo ?? atual.laudo;
+  const vt = grupoComRestricoes(atual.grupoFinalidade);
+  if (vt && vazio(atual.cid)) { const c = cids.map(codigoCidDoSinais).find(Boolean); if (c) r.cidCodigo = c; }
+  if (vt && vazio(atual.restricoes) && p.restricoes.trim() && laudoMencionaRestricoes(laudo)) r.restricoes = p.restricoes.trim();
+  if (vazio(atual.tis) && p.tis.trim() && !vazio(laudo)) r.tis = p.tis.trim();
+  const tis = r.tis ?? atual.tis;
+  if (vazio(atual.ds1a) && p.ds1a.trim() && !vazio(tis)) r.ds1a = p.ds1a.trim().toUpperCase();
+  return r;
 };

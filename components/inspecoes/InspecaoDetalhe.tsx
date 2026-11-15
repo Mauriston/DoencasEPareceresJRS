@@ -5,9 +5,12 @@
 //     IS Aberta sem data de entrevista: a Finalidade é o único campo editável (o mesmo menu em cascata do
 //     cadastro; grava finalidade, grupo e AMP sozinha) e a Conclusão aparece só em leitura (campos vazios ocultos).
 //  2. Conclusão da IS (salva sozinha, sem botão; só com data de entrevista — utils/conclusaoIS.ts): cards da entrevista gravada e dos pareceres pedidos a
-//     partir desta IS, Laudo, Auditoria | JSD, Restrições (MultiSelectCombobox com chips; opcional, sempre
-//     que a finalidade é de Verificações e Términos), Nº do TIS, DS-1a e Observações. O status muda
-//     automaticamente (regras puras em utils/conclusaoIS.ts).
+//     partir desta IS, Prints do SINAIS (opcional — conclusao/PrintsSinaisIS: a IA completa os campos vazios),
+//     Laudo, CID (Verificações e Términos: obrigatório para o DS-1a — conclusao/CampoCidIS), Auditoria | JSD,
+//     Restrições (MultiSelectCombobox com chips; opcional, só em Verificações e Términos com o Laudo mencionando
+//     "restrições"), Nº do TIS, DS-1a e Observações. O status muda automaticamente (regras puras em
+//     utils/conclusaoIS.ts). Finalizada uma IS de Verificações e Términos, a IA calcula em segundo plano os
+//     afastamentos (LTS/Restrições — services/afastamentosIS.ts), mostrados aqui em leitura.
 // Não editável (DS-1a/TIS assinado ou cancelada — até "Reabrir IS", Admin — ou sem permissão): os dados
 // numa tabela vertical (rótulo | valor) e, abaixo, os cards da entrevista gravada e dos pareceres.
 // E-mails: botões de envio (EmailsDaIS, montado pela página) e a seção "E-mails enviados" (emails/HistoricoEmailsIS),
@@ -37,14 +40,18 @@ import { ExamesDaIS } from './exames/ExamesDaIS';
 import { EnviarExamesISDialog } from './exames/EnviarExamesISDialog';
 import { HistoricoEmailsIS } from './emails/HistoricoEmailsIS';
 import { GuiasExamesCard } from './guias/GuiasExamesCard';
+import { CampoCidIS } from './conclusao/CampoCidIS';
+import { PrintsSinaisIS } from './conclusao/PrintsSinaisIS';
 import { atualizarInspecao, type InspecaoDoc, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { marcarConcluido, observarPareceresDaIS, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
-import { carregarRestricoesIS } from '../../utils/corposQuadros';
+import { carregarCid, carregarRestricoesIS, type CidItem } from '../../utils/corposQuadros';
+import type { PreenchimentoPrints } from '../../utils/importacaoIS';
+import { ROTULO_AFASTAMENTO_IS, type AfastamentoIS } from '../../utils/afastamentosIS';
 import {
   STATUS_IS, statusEfetivoIS, dataBr, formatTis, tisValido, prefixoAnoTis, hojeISO, dataDeEntrevista,
 } from '../../utils/inspecoes';
 import {
-  encaminhamentoDoStatus, juntarRestricoes, mostraEncaminhamento, mostraRestricoes, opcoesDeRestricoes, patchConclusao,
+  encaminhamentoDoStatus, exigeCid, faltaCid, juntarRestricoes, mostraEncaminhamento, mostraRestricoes, opcoesDeRestricoes, patchCid, patchConclusao,
   patchEncaminhamento, patchFinalidade, podeEditarConclusao, podeEditarFinalidade, separarRestricoes,
   type CampoConclusao, type Encaminhamento, type EstadoConclusao,
 } from '../../utils/conclusaoIS';
@@ -101,7 +108,12 @@ const ATRASO_AUTOSAVE_MS = 1000;
 const comPadroes = (i: InspecaoRecord): EstadoConclusao => ({
   status: i.status, dataEntrevista: i.dataEntrevista || '', finalidade: i.finalidade || '', grupoFinalidade: i.grupoFinalidade || '',
   dataLaudo: i.dataLaudo || '', laudo: i.laudo || '', restricoes: i.restricoes || '', tis: i.tis || '', ds1a: i.ds1a || '', observacoes: i.observacoes || '',
+  cid: i.cid || '',
 });
+
+/** "LTS · 30 dias (10/11/2026 a 09/12/2026)" — afastamento calculado pela IA. */
+const textoAfastamento = (a: AfastamentoIS): string =>
+  `${ROTULO_AFASTAMENTO_IS[a.tipo]} · ${a.dias} dia${a.dias !== 1 ? 's' : ''} (${dataBr(a.dataInicio)} a ${dataBr(a.dataTermino)})${a.restricoes.length ? ` — ${a.restricoes.join(', ')}` : ''}`;
 
 /** Campo de texto com gravação automática: ~1 s sem digitar ou ao sair do campo. */
 const useCampoAuto = (remoto: string, salvar: (valor: string) => void) => {
@@ -216,7 +228,39 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   };
 
   const comEncaminhamento = mostraEncaminhamento(estadoConclusao);
-  const comRestricoes = mostraRestricoes(estadoConclusao);
+  // Restrições: aparecem assim que o Laudo digitado menciona "restrições" (o autosave grava o Laudo antes).
+  const comRestricoes = mostraRestricoes({ grupoFinalidade: estadoConclusao.grupoFinalidade, laudo: conclusaoEditavel ? laudo.valor : estadoConclusao.laudo });
+  // CID (Verificações e Términos): obrigatório para finalizar; a tela reflete a escolha na hora.
+  const comCid = exigeCid(estadoConclusao);
+  const [cidLocal, setCidLocal] = useState(is.cid || '');
+  useEffect(() => { setCidLocal(is.cid || ''); }, [is.cid]);
+  const semCid = faltaCid({ grupoFinalidade: estadoConclusao.grupoFinalidade, cid: cidLocal });
+  const escolherCid = (c: CidItem | null) => {
+    setCidLocal(c?.DESCRABREV ?? '');
+    gravar(atual => ({ patch: patchCid(comPadroes(atual), c ? { descrAbrev: c.DESCRABREV, subcat: c.SUBCAT } : null), concluirPareceres: false }));
+  };
+
+  // Prints do SINAIS: completa só os campos vazios, na ordem das regras (Laudo → CID → Restrições → TIS → DS-1a).
+  const preencherDosPrints = async (p: PreenchimentoPrints): Promise<string[]> => {
+    if (p.laudo) gravarCampo('laudo', p.laudo);
+    if (p.laudo && p.dataLaudo) gravar(atual => ({ patch: atual.laudo === p.laudo && atual.dataLaudo !== p.dataLaudo ? { dataLaudo: p.dataLaudo } : {}, concluirPareceres: false }));
+    if (p.cidCodigo) {
+      const c = await carregarCid().then(l => l.find(x => x.SUBCAT.toUpperCase() === p.cidCodigo)).catch(() => undefined);
+      if (c && !atualRef.current.cid) escolherCid(c);
+    }
+    if (p.restricoes) gravarCampo('restricoes', p.restricoes);
+    if (p.tis && tisValido(p.tis)) gravarCampo('tis', p.tis);
+    if (p.ds1a) gravarCampo('ds1a', p.ds1a);
+    await fila.current;
+    const r = atualRef.current;
+    return [
+      p.laudo && r.laudo === p.laudo ? 'Laudo' : '',
+      p.cidCodigo && r.cid ? 'CID' : '',
+      p.restricoes && r.restricoes ? 'Restrições' : '',
+      p.tis && r.tis === p.tis ? 'Nº do TIS' : '',
+      p.ds1a && r.ds1a === p.ds1a ? 'DS-1a' : '',
+    ].filter(Boolean);
+  };
   // Restrições: a tela reflete o clique na hora (o banco confirma depois pelo onSnapshot).
   const [restricoesLocal, setRestricoesLocal] = useState(is.restricoes || '');
   useEffect(() => { setRestricoesLocal(is.restricoes || ''); }, [is.restricoes]);
@@ -244,6 +288,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const textoLaudo = is.laudo?.trim() || '';
   const textoObservacoes = is.observacoes?.trim() || '';
   const restricoesGravadas = separarRestricoes(is.restricoes || '');
+  const afastamentos = is.afastamentos ?? [];
 
   const indicadorGravacao = (
     <span role="status" className={`text-xs ${estado === 'erro' ? 'font-semibold text-wine' : 'text-ink-3'}`}>
@@ -307,7 +352,13 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                   {comEncaminhamento && encaminhamento && (
                     <LinhaTabela rotulo="Encaminhamento">{encaminhamento === 'jsd' ? 'JSD' : 'Auditoria'}</LinhaTabela>
                   )}
+                  {is.cid?.trim() && <LinhaTabela rotulo="CID">{is.cid}</LinhaTabela>}
                   {restricoesGravadas.length > 0 && <LinhaTabela rotulo="Restrições">{restricoesGravadas.join(', ')}</LinhaTabela>}
+                  {afastamentos.length > 0 && (
+                    <LinhaTabela rotulo="Afastamentos (IA)">
+                      {afastamentos.map((a, i) => <span key={i} className="block">{textoAfastamento(a)}</span>)}
+                    </LinhaTabela>
+                  )}
                   <LinhaTabela rotulo="Nº do TIS">{is.tis?.trim() ? <span className="tabular-nums">{is.tis}</span> : ''}</LinhaTabela>
                   <LinhaTabela rotulo="DS-1a">{is.ds1a?.trim() || ''}</LinhaTabela>
                   {textoObservacoes && <LinhaTabela rotulo="Observações"><span className="whitespace-pre-line">{textoObservacoes}</span></LinhaTabela>}
@@ -356,7 +407,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
           {!conclusaoEditavel ? (
             <>
               <p className="text-xs text-ink-3">A Conclusão fica editável depois que a entrevista for agendada.</p>
-              {(textoLaudo || restricoesGravadas.length > 0 || is.tis?.trim() || is.ds1a?.trim() || textoObservacoes || (comEncaminhamento && encaminhamento)) && (
+              {(textoLaudo || is.cid?.trim() || restricoesGravadas.length > 0 || is.tis?.trim() || is.ds1a?.trim() || textoObservacoes || (comEncaminhamento && encaminhamento)) && (
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
                   {textoLaudo && (
                     <Linha rotulo="Laudo" className="col-span-2">
@@ -365,6 +416,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                     </Linha>
                   )}
                   {comEncaminhamento && encaminhamento && <Linha rotulo="Encaminhamento" className="col-span-2">{encaminhamento === 'jsd' ? 'JSD' : 'Auditoria'}</Linha>}
+                  {is.cid?.trim() && <Linha rotulo="CID" className="col-span-2">{is.cid}</Linha>}
                   {restricoesGravadas.length > 0 && <Linha rotulo="Restrições" className="col-span-2">{restricoesGravadas.join(', ')}</Linha>}
                   {is.tis?.trim() && <Linha rotulo="Nº do TIS"><span className="tabular-nums">{is.tis}</span></Linha>}
                   {is.ds1a?.trim() && <Linha rotulo="DS-1a">{is.ds1a}</Linha>}
@@ -375,9 +427,19 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
           ) : (
           <>
 
+          <PrintsSinaisIS
+            isId={is.id} inspecionadoId={is.inspecionadoId || ''} finalidade={is.finalidade || ''} dataAbertura={is.dataAbertura || ''}
+            atual={() => { const a = atualRef.current; return { grupoFinalidade: a.grupoFinalidade || '', laudo: a.laudo || '', dataLaudo: a.dataLaudo || '', restricoes: a.restricoes || '', tis: a.tis || '', ds1a: a.ds1a || '', cid: a.cid || '' }; }}
+            onPreencher={preencherDosPrints}
+          />
+
           <Field label="Laudo">
             {a => <textarea {...a} value={laudo.valor} onChange={e => laudo.onChange(e.target.value)} onBlur={laudo.onBlur} className={`${a.className} min-h-[88px]`} />}
           </Field>
+
+          {comCid && (
+            <CampoCidIS valor={cidLocal} onEscolher={escolherCid} erro={semCid && laudo.valor.trim() ? 'Informe o CID: obrigatório para finalizar a IS (DS-1a).' : undefined} />
+          )}
 
           {comEncaminhamento && (
             <fieldset disabled={!!is.tis?.trim()} className="disabled:opacity-60">
@@ -404,8 +466,8 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                 />
               )}
             </Field>
-            <Field label="DS-1a">
-              {a => <input {...a} type="text" value={ds1a.valor} disabled={!is.tis?.trim()} onChange={e => ds1a.onChange(e.target.value)} onBlur={ds1a.onBlur} autoComplete="off" />}
+            <Field label="DS-1a" help={semCid && is.tis?.trim() && !is.ds1a?.trim() ? 'Informe o CID antes do DS-1a.' : undefined}>
+              {a => <input {...a} type="text" value={ds1a.valor} disabled={!is.tis?.trim() || (semCid && !is.ds1a?.trim())} onChange={e => ds1a.onChange(e.target.value)} onBlur={ds1a.onBlur} autoComplete="off" />}
             </Field>
           </div>
 

@@ -2,7 +2,8 @@
 // Regras puras da seção "Conclusão da IS" (detalhe da IS): o status muda sozinho conforme o Laudo,
 // o Nº do TIS e o DS-1a são preenchidos ou apagados; a Data do laudo é a data em que o Laudo foi
 // inserido/alterado; o encaminhamento (Auditoria | JSD) só existe em certos casos; as Restrições (opcionais)
-// aparecem sempre que a finalidade é do grupo "Verificações e Términos", qualquer que seja o Laudo.
+// aparecem quando a finalidade é do grupo "Verificações e Términos" E o Laudo menciona "restrições"; nesse
+// grupo o CID (DESCRABREV do public/cid.json) é obrigatório para finalizar (DS-1a).
 // Testadas em utils/__tests__/conclusaoIS.test.ts.
 import { normalizarBusca } from './corposQuadros';
 import {
@@ -23,6 +24,8 @@ export interface EstadoConclusao {
   tis: string;
   ds1a: string;
   observacoes: string;
+  /** CID (DESCRABREV, ex.: "M54.5 Dor lombar baixa"); obrigatório em Verificações e Términos. Docs antigos: ''. */
+  cid?: string;
 }
 
 export type PatchConclusao = Partial<Pick<EstadoConclusao, 'status' | 'dataLaudo' | 'laudo' | 'restricoes' | 'tis' | 'ds1a' | 'observacoes'>> & { situacao?: SituacaoIS };
@@ -55,8 +58,23 @@ export const mostraEncaminhamento = (is: Pick<EstadoConclusao, 'laudo' | 'finali
   return ehTerminoDeIncapacidade(is.finalidade) && laudoIncapacidadeDefinitivaSam(is.laudo);
 };
 
-/** Restrições (opcionais): sempre que a finalidade é do grupo Verificações e Términos (independe do Laudo). */
-export const mostraRestricoes = (is: Pick<EstadoConclusao, 'grupoFinalidade'>): boolean => is.grupoFinalidade === GRUPO_VERIFICACOES;
+/** Finalidade do grupo Verificações e Términos (o único em que as Restrições e o CID da IS existem). */
+export const grupoComRestricoes = (grupoFinalidade: string | undefined | null): boolean => grupoFinalidade === GRUPO_VERIFICACOES;
+
+/** O Laudo menciona "restrições" (ou "restrição"), sem diferenciar maiúsculas nem acentos. */
+export const laudoMencionaRestricoes = (laudo: string | undefined | null): boolean => /\brestri(coes|cao)\b/.test(norm(laudo));
+
+/**
+ * Restrições (opcionais): só quando a finalidade é do grupo Verificações e Términos E o Laudo menciona
+ * "restrições" (ex.: "Apto para o SAM com restrições por 30 dias").
+ */
+export const mostraRestricoes = (is: Pick<EstadoConclusao, 'grupoFinalidade' | 'laudo'>): boolean =>
+  grupoComRestricoes(is.grupoFinalidade) && laudoMencionaRestricoes(is.laudo);
+
+/** CID obrigatório (Verificações e Términos). */
+export const exigeCid = (is: Pick<EstadoConclusao, 'grupoFinalidade'>): boolean => grupoComRestricoes(is.grupoFinalidade);
+/** Falta o CID obrigatório: a IS não pode ser finalizada (DS-1a). */
+export const faltaCid = (is: Pick<EstadoConclusao, 'grupoFinalidade' | 'cid'>): boolean => exigeCid(is) && !String(is.cid || '').trim();
 
 // ---------------------------------------------------------------------------
 // Restrições (várias, gravadas num só texto)
@@ -102,10 +120,11 @@ const comSituacao = (patch: PatchConclusao): PatchConclusao => (patch.status ? {
  *  - Laudo inserido/alterado: Data do laudo = hoje; status → Votação pendente se ainda antes da votação.
  *    Inserido com "Parecer solicitado": `concluirPareceres`. O encaminhamento que deixa de valer é desfeito.
  *  - Laudo apagado: apaga Data do laudo, Nº do TIS e DS-1a; status → Agendada (com entrevista) ou Aberta.
- *  - Restrições não dependem do Laudo: só são apagadas (em qualquer gravação) se a finalidade não for
- *    do grupo Verificações e Términos.
+ *  - Restrições só existem com a finalidade do grupo Verificações e Términos e o Laudo mencionando
+ *    "restrições": o Laudo que deixa de mencioná-las (ou apagado) apaga as Restrições.
  *  - Nº do TIS inserido → Assinaturas pendentes; apagado → apaga o DS-1a e volta a Votação pendente.
- *  - DS-1a inserido → TIS assinado (Finalizada); apagado (depois de reabrir) → Assinaturas pendentes.
+ *  - DS-1a inserido → TIS assinado (Finalizada) — em Verificações e Términos, só com o CID; apagado
+ *    (depois de reabrir) → Assinaturas pendentes.
  *  - Restrições só ficam gravadas se o campo estiver visível (finalidade do grupo).
  */
 export const patchConclusao = (atual: EstadoConclusao, campo: CampoConclusao, valorBruto: string, hoje: string = hojeISO()): ResultadoConclusao => {
@@ -124,7 +143,7 @@ export const patchConclusao = (atual: EstadoConclusao, campo: CampoConclusao, va
     case 'laudo': {
       if (!valor) {
         const patch: PatchConclusao = { laudo: '', dataLaudo: '', tis: '', ds1a: '' };
-        if (atual.restricoes && !mostraRestricoes(atual)) patch.restricoes = '';
+        if (atual.restricoes) patch.restricoes = '';
         if (STATUS_COM_LAUDO.includes(atual.status)) patch.status = atual.dataEntrevista ? 'agendada' : 'aberta';
         return { patch: comSituacao(patch), concluirPareceres: false };
       }
@@ -153,10 +172,24 @@ export const patchConclusao = (atual: EstadoConclusao, campo: CampoConclusao, va
         return { patch: comSituacao(patch), concluirPareceres: false };
       }
       if (!atual.tis.trim()) return nada; // DS-1a só depois do Nº do TIS
+      if (faltaCid(atual)) return nada; // Verificações e Términos: CID antes de finalizar
       return { patch: comSituacao({ ds1a: valor, status: 'tis_assinado' }), concluirPareceres: false };
     }
   }
   return nada;
+};
+
+/**
+ * CID da IS (autocomplete do public/cid.json): grava o rótulo DESCRABREV em `cid` e o código SUBCAT em
+ * `cidCodigo` (mesmo par das perícias menores). Só em Verificações e Términos; `null` apaga.
+ */
+export const patchCid = (
+  atual: Pick<EstadoConclusao, 'grupoFinalidade' | 'cid'>, escolhido: { descrAbrev: string; subcat: string } | null,
+): { cid?: string; cidCodigo?: string } => {
+  const cid = escolhido ? escolhido.descrAbrev.trim() : '';
+  if (cid === String(atual.cid || '').trim()) return {};
+  if (cid && !exigeCid(atual)) return {};
+  return { cid, cidCodigo: escolhido ? escolhido.subcat.trim().toUpperCase() : '' };
 };
 
 /** Botão Auditoria | JSD: muda o status (só com o encaminhamento visível e antes do Nº do TIS). */
@@ -213,6 +246,6 @@ export const patchFinalidade = (atual: EstadoFinalidade, nova: { finalidade: str
   if (finalidade === atual.finalidade && nova.grupo === atual.grupoFinalidade && nova.amp === atual.amp) return {};
   const patch: PatchFinalidade = { finalidade, grupoFinalidade: nova.grupo, amp: nova.amp };
   if (nova.amp !== atual.amp && atual.peritoUid) Object.assign(patch, { peritoUid: '', peritoNome: '', peritoGmail: '' });
-  if (atual.restricoes && !mostraRestricoes({ grupoFinalidade: nova.grupo })) patch.restricoes = '';
+  if (atual.restricoes && !grupoComRestricoes(nova.grupo)) patch.restricoes = '';
   return patch;
 };

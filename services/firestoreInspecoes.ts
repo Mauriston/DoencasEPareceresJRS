@@ -19,6 +19,8 @@ import { registrarEventoInspecionado } from './eventosInspecionado';
 import { notificarAcao } from './notificacoesPush';
 import { apagarGuiasExames } from './guiasExames';
 import { patchEntregaGuias, type EstadoEntregaGuias } from '../utils/guiasExamesIS';
+import type { AfastamentoIS, ProcessamentoAfastamentosIS } from '../utils/afastamentosIS';
+import { logErroSeguro } from '../utils/logSeguro';
 import {
   chaveSlot, chavesOcupadas, duracaoDoGrupo, situacaoDoStatus, statusAoAgendar, TODOS_PERITOS,
   type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS, type Turno,
@@ -102,6 +104,17 @@ export interface InspecaoDoc {
   atualizadoEm?: Timestamp | null;
   /** Quando a situação passou a "finalizada" (TIS assinado ou cancelada): conta os 15 dias para apagar as guias. */
   finalizadaEm?: Timestamp | null;
+  // ----- Verificações e Términos: CID e afastamentos (utils/conclusaoIS.ts, utils/afastamentosIS.ts) -----
+  /** CID da IS no formato DESCRABREV do public/cid.json (ex.: "M54.5 Dor lombar baixa"); obrigatório para finalizar. */
+  cid?: string;
+  /** Código SUBCAT do CID, sem ponto (ex.: "M545"). */
+  cidCodigo?: string;
+  /** Períodos de LTS/Restrições calculados pela IA depois da finalização (services/afastamentosIS.ts). */
+  afastamentos?: AfastamentoIS[];
+  /** Marcador do processamento em segundo plano (hash da entrada, situação, tentativas). */
+  afastamentosProcessamento?: ProcessamentoAfastamentosIS | null;
+  /** Quando os afastamentos foram gravados (serverTimestamp). */
+  afastamentosProcessadosEm?: Timestamp | null;
 }
 export type InspecaoRecord = InspecaoDoc & { id: string };
 
@@ -183,6 +196,17 @@ export const criarInspecao = async (dados: NovaInspecao): Promise<string> => {
   return id;
 };
 
+/**
+ * IS finalizada com TIS assinado: em segundo plano (sem bloquear a gravação), a IA calcula os afastamentos
+ * (LTS/Restrições) das IS de Verificações e Términos — services/afastamentosIS.ts decide se precisa (idempotente).
+ */
+const aposFinalizar = (id: string, status: StatusIS | undefined): void => {
+  if (status !== 'tis_assinado') return;
+  import('./afastamentosIS')
+    .then(m => m.processarAfastamentosEmSegundoPlano(id))
+    .catch(e => logErroSeguro('Afastamentos da IS: módulo não carregado', e));
+};
+
 /** `finalizadaEm` quando o status leva a IS à situação "finalizada" (limpeza das guias 15 dias depois, no servidor). */
 const marcaFinalizacao = (status: StatusIS | undefined): { finalizadaEm?: ReturnType<typeof serverTimestamp> } =>
   status && situacaoDoStatus(status) === 'finalizada' ? { finalizadaEm: serverTimestamp() } : {};
@@ -190,6 +214,7 @@ const marcaFinalizacao = (status: StatusIS | undefined): { finalizadaEm?: Return
 /** Atualiza campos que não mexem na agenda (laudo, restrições, TIS, DS-1a, observações, status…). */
 export const atualizarInspecao = async (id: string, patch: Partial<InspecaoDoc>): Promise<void> => {
   await updateDoc(doc(db, COL, id), { ...patch, ...(patch.status ? { situacao: situacaoDoStatus(patch.status), ...marcaFinalizacao(patch.status) } : {}), atualizadoEm: serverTimestamp() } as Record<string, unknown>);
+  aposFinalizar(id, patch.status);
   notificarAcao('is.editada', id);
 };
 
@@ -236,6 +261,7 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
   if (!atual) {
     const completo = { ...dados, is: Number(id), observacoes: '', situacao: situacaoDoStatus(dados.status) };
     await gravarComSlot(id, { ...completo, ...marcaFinalizacao(dados.status) }, slotNovo, null, true);
+    aposFinalizar(id, dados.status);
     registrarEventoInspecionado(dados.inspecionadoId, 'is.cadastrar', `IS ${id}`);
     notificarAcao('is.importada', id);
     return { ...completo, id, criadoEm: null };
@@ -247,6 +273,7 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
   const mudouData = !!dados.dataEntrevista && dados.dataEntrevista !== atual.dataEntrevista;
   const slotAntigo = mudouData && atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(id, patch, mudouData ? slotNovo : null, slotAntigo, false);
+  aposFinalizar(id, dados.status);
   notificarAcao('is.editada', id);
   return { ...atual, ...(patch as Partial<InspecaoDoc>) };
 };

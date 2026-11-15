@@ -64,7 +64,7 @@ const INSTRUCOES_PRINT = [
   '- laudos: uma linha por linha da tabela "Laudos": resultado ("Resultado"), finalidade ("Finalidade") e laudo ("Laudo", o texto completo).',
   '- restricoes: o texto da coluna "Restrição" de cada linha de "Restrições Associadas" (pule as linhas com a restrição vazia).',
   '- dataLaudo: a data do campo "Laudo" no rodapé (ao lado de "Rec. Assist."), no formato AAAA-MM-DD.',
-  '- Ignore a seção "CID Associados".',
+  '- cids: o código de cada linha da seção "CID Associados" (ex.: "M54.5"), na ordem em que aparecem.',
 ].join('\n');
 
 const TEXTOS_PRINT = ['numInspecao', 'junta', 'finalidadeTis', 'dataCriacao', 'dataAgendamento', 'ds1a', 'dataLaudo', 'numTis',
@@ -88,8 +88,9 @@ export const lerPrintDoSinais = async (base64: string, mimeType: string): Promis
           }),
         }),
         restricoes: Schema.array({ items: Schema.string() }),
+        cids: Schema.array({ items: Schema.string() }),
       },
-      optionalProperties: [...TEXTOS_PRINT, 'laudos', 'restricoes'],
+      optionalProperties: [...TEXTOS_PRINT, 'laudos', 'restricoes', 'cids'],
     }),
   });
   return lerJsonIA<LeituraPrint>(r, 'Não foi possível ler a foto.');
