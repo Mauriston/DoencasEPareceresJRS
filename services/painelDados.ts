@@ -74,6 +74,10 @@ export const lerConcursosPainel = async (inicio: string): Promise<ConcursoPainel
     c.status === 'em_andamento' || !c.periodoFimISO || c.periodoFimISO >= inicio);
   return Promise.all(concursos.map(async c => ({
     id: c.id, nome: c.nome, status: c.status, totalCandidatos: c.totalCandidatos,
-    candidatos: (await listarCandidatos(c.id)).map(x => ({ status: String(x.status || ''), finalizado: !!x.finalizado, dataLaudo: x.dataLaudo || '', dataAgendamento: x.dataAgendamento || '' })),
+    candidatos: (await listarCandidatos(c.id)).map(x => ({
+      status: String(x.status || ''), finalizado: !!x.finalizado, dataLaudo: x.dataLaudo || '', dataAgendamento: x.dataAgendamento || '',
+      // Só dos inaptos: as observações trazem o CID da inaptidão (causas de inaptidão no Painel). Dos demais, nada.
+      ...(String(x.status || '').trim().toUpperCase() === 'INAPTO' ? { observacoes: String(x.observacoes || '') } : {}),
+    })),
   })));
 };

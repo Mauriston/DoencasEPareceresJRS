@@ -433,7 +433,11 @@ export const periciasPorOm = (lista: PericiaPainel[], janela: JanelaPainel): Ite
 // Concursos
 // ---------------------------------------------------------------------------
 
-export interface CandidatoPainel { status: string; finalizado: boolean; dataLaudo: string; dataAgendamento: string }
+export interface CandidatoPainel {
+  status: string; finalizado: boolean; dataLaudo: string; dataAgendamento: string;
+  /** Só dos INAPTOS: as Observações, que obrigatoriamente trazem o CID da inaptidão ("M54.5 Dor lombar baixa"). */
+  observacoes?: string;
+}
 export interface ConcursoPainel { id: string; nome: string; status: string; totalCandidatos: number; candidatos: CandidatoPainel[] }
 
 /** Data da IS do candidato: a do laudo (DD/MM/AAAA) ou, sem ela, a do agendamento (AAAA-MM-DD). */
@@ -492,6 +496,74 @@ export const concursosComMaisInaptos = (concursos: ConcursoPainel[], janela: Jan
     .map(c => ({ chave: c.id, rotulo: c.nome, valor: contar(c.candidatos.filter(x => noIntervalo(dataDoCandidato(x), janela.atual))).inaptos }))
     .filter(c => c.valor > 0)
     .sort((a, b) => b.valor - a.valor);
+
+// Causas de inaptidão. Ao marcar INAPTO, o CID vai obrigatoriamente para as Observações do candidato
+// (CidInaptidaoModal grava o DESCRABREV da CID-10: "M54.5 Dor lombar baixa"). Aqui se lê só o código
+// no início do texto; o resto das observações (texto livre) não entra em nenhum agregado.
+const RE_CID = /^\s*([A-TV-Z]\d{2})(?:[.,]?(\d))?\b/i;
+
+/** Código do CID no início das observações ("M54.5" / "M545" / "M54" → "M54.5" ou "M54") e o rótulo abreviado. */
+export const cidDaInaptidao = (observacoes: string | undefined): { codigo: string; rotulo: string } | null => {
+  const m = RE_CID.exec(observacoes || '');
+  if (!m) return null;
+  const codigo = `${m[1].toUpperCase()}${m[2] ? `.${m[2]}` : ''}`;
+  const descricao = (observacoes || '').slice(m[0].length).replace(/^[\s\-–:]+/, '').split(/[\n;]/)[0].trim();
+  return { codigo, rotulo: descricao ? `${codigo} ${descricao}` : codigo };
+};
+
+/** Capítulos da CID-10 (pelo intervalo de categorias), para agrupar as causas por área. */
+const CAPITULOS_CID: { de: string; ate: string; nome: string }[] = [
+  { de: 'A00', ate: 'B99', nome: 'Infecciosas e parasitárias' },
+  { de: 'C00', ate: 'D48', nome: 'Neoplasias' },
+  { de: 'D50', ate: 'D89', nome: 'Sangue e imunidade' },
+  { de: 'E00', ate: 'E90', nome: 'Endócrinas e metabólicas' },
+  { de: 'F00', ate: 'F99', nome: 'Transtornos mentais' },
+  { de: 'G00', ate: 'G99', nome: 'Sistema nervoso' },
+  { de: 'H00', ate: 'H59', nome: 'Olho e anexos' },
+  { de: 'H60', ate: 'H95', nome: 'Ouvido' },
+  { de: 'I00', ate: 'I99', nome: 'Aparelho circulatório' },
+  { de: 'J00', ate: 'J99', nome: 'Aparelho respiratório' },
+  { de: 'K00', ate: 'K93', nome: 'Aparelho digestivo' },
+  { de: 'L00', ate: 'L99', nome: 'Pele' },
+  { de: 'M00', ate: 'M99', nome: 'Osteomuscular' },
+  { de: 'N00', ate: 'N99', nome: 'Geniturinário' },
+  { de: 'O00', ate: 'O99', nome: 'Gravidez e puerpério' },
+  { de: 'P00', ate: 'P96', nome: 'Período perinatal' },
+  { de: 'Q00', ate: 'Q99', nome: 'Malformações congênitas' },
+  { de: 'R00', ate: 'R99', nome: 'Sinais e achados anormais' },
+  { de: 'S00', ate: 'T98', nome: 'Lesões e causas externas' },
+  { de: 'V01', ate: 'Y98', nome: 'Causas externas' },
+  { de: 'Z00', ate: 'Z99', nome: 'Fatores que influenciam a saúde' },
+];
+export const capituloDoCid = (codigo: string): string => {
+  const cat = codigo.slice(0, 3).toUpperCase();
+  return CAPITULOS_CID.find(c => cat >= c.de && cat <= c.ate)?.nome ?? 'Outros';
+};
+
+export interface CausasInaptidao {
+  /** Inaptos finalizados no período. */
+  inaptos: number;
+  /** Quantos deles têm CID legível nas observações. */
+  comCid: number;
+  /** CID mais frequentes (código + descrição abreviada). */
+  porCid: ItemRanking[];
+  /** Os mesmos, agrupados por capítulo da CID-10. */
+  porCapitulo: ItemRanking[];
+}
+
+/** Causas de inaptidão (CID das observações) dos inaptos finalizados no período, em todos os concursos lidos. */
+export const causasInaptidao = (concursos: ConcursoPainel[], janela: JanelaPainel): CausasInaptidao => {
+  const inaptos = concursos.flatMap(c => c.candidatos.filter(x => x.finalizado && statusCand(x) === 'INAPTO' && noIntervalo(dataDoCandidato(x), janela.atual)));
+  const cids = inaptos.map(x => cidDaInaptidao(x.observacoes)).filter((c): c is { codigo: string; rotulo: string } => !!c);
+  const rotulos = new Map<string, string>();
+  cids.forEach(c => { if (!rotulos.has(c.codigo)) rotulos.set(c.codigo, c.rotulo); });
+  return {
+    inaptos: inaptos.length,
+    comCid: cids.length,
+    porCid: ranking(contarPor(cids, c => c.codigo), k => rotulos.get(k) ?? k),
+    porCapitulo: ranking(contarPor(cids, c => capituloDoCid(c.codigo))),
+  };
+};
 
 // ---------------------------------------------------------------------------
 // Uso do app (coleção uso_diario — services/usoDiario.ts)

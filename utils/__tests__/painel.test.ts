@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   janelaDoPeriodo, variacao, aplicarRecorteIS, recorteInicialIS, resumoIS, faltasNoIntervalo, serieMensalIS,
   emCursoPorEtapa, porPerito, aplicarRecortePericias, resumoPericias, serieMensalPericias, cidsFrequentes,
-  resumoConcursos, andamentoPorConcurso, dataDoCandidato, resumoUso, ultimosMeses, inicioDaLeitura,
+  resumoConcursos, andamentoPorConcurso, dataDoCandidato, causasInaptidao, cidDaInaptidao, capituloDoCid, resumoUso, ultimosMeses, inicioDaLeitura,
   type ISPainel, type PericiaPainel, type ConcursoPainel, type UsoDia,
 } from '../painel';
 
@@ -146,7 +146,7 @@ describe('Concursos', () => {
   const c: ConcursoPainel[] = [
     { id: 'a', nome: 'CP-A', status: 'em_andamento', totalCandidatos: 10, candidatos: [
       { status: 'APTO', finalizado: true, dataLaudo: '05/11/2026', dataAgendamento: '2026-11-05' },
-      { status: 'INAPTO', finalizado: true, dataLaudo: '', dataAgendamento: '2026-11-06' },
+      { status: 'INAPTO', finalizado: true, dataLaudo: '', dataAgendamento: '2026-11-06', observacoes: 'M54.5 Dor lombar baixa' },
       { status: 'FALTOU', finalizado: true, dataLaudo: '', dataAgendamento: '2026-10-06' },
       { status: '', finalizado: false, dataLaudo: '', dataAgendamento: '2026-11-20' },
     ] },
@@ -165,6 +165,41 @@ describe('Concursos', () => {
     expect(r.inaptos.atual).toBeCloseTo(33.3);
     expect(r.faltas).toEqual({ atual: 0, anterior: 100 });
     expect(andamentoPorConcurso(c)).toEqual([{ id: 'a', nome: 'CP-A', total: 10, finalizados: 3, aptos: 1, inaptos: 1, faltas: 1, idm: 0 }]);
+  });
+  it('lê o CID das observações do inapto', () => {
+    expect(cidDaInaptidao('M54.5 Dor lombar baixa')).toEqual({ codigo: 'M54.5', rotulo: 'M54.5 Dor lombar baixa' });
+    expect(cidDaInaptidao('m545 - Dor lombar baixa; reavaliar')).toEqual({ codigo: 'M54.5', rotulo: 'M54.5 Dor lombar baixa' });
+    expect(cidDaInaptidao('H52 Transtornos da refração')).toEqual({ codigo: 'H52', rotulo: 'H52 Transtornos da refração' });
+    expect(cidDaInaptidao('Z01.0')).toEqual({ codigo: 'Z01.0', rotulo: 'Z01.0' });
+    expect(cidDaInaptidao('sem cid aqui')).toBeNull();
+    expect(cidDaInaptidao('')).toBeNull();
+    expect(capituloDoCid('M54.5')).toBe('Osteomuscular');
+    expect(capituloDoCid('H52')).toBe('Olho e anexos');
+    expect(capituloDoCid('H90')).toBe('Ouvido');
+    expect(capituloDoCid('U07')).toBe('Outros');
+  });
+  it('causas de inaptidão por CID e por capítulo, só do período', () => {
+    const cc: ConcursoPainel[] = [
+      { id: 'a', nome: 'CP-A', status: 'em_andamento', totalCandidatos: 6, candidatos: [
+        { status: 'INAPTO', finalizado: true, dataLaudo: '03/11/2026', dataAgendamento: '', observacoes: 'M54.5 Dor lombar baixa' },
+        { status: 'INAPTO', finalizado: true, dataLaudo: '04/11/2026', dataAgendamento: '', observacoes: 'M545 Dor lombar baixa' },
+        { status: 'INAPTO', finalizado: true, dataLaudo: '05/11/2026', dataAgendamento: '', observacoes: 'H52.1 Miopia' },
+        { status: 'INAPTO', finalizado: true, dataLaudo: '06/11/2026', dataAgendamento: '', observacoes: 'motivo sem cid' },
+        { status: 'INAPTO', finalizado: true, dataLaudo: '06/10/2026', dataAgendamento: '', observacoes: 'F32.0 Episódio depressivo leve' },
+        { status: 'APTO', finalizado: true, dataLaudo: '06/11/2026', dataAgendamento: '', observacoes: 'J45 nunca contaria' },
+      ] },
+    ];
+    const r = causasInaptidao(cc, janelaDoPeriodo('mes', HOJE));
+    expect(r.inaptos).toBe(4);
+    expect(r.comCid).toBe(3);
+    expect(r.porCid).toEqual([
+      { chave: 'M54.5', rotulo: 'M54.5 Dor lombar baixa', valor: 2 },
+      { chave: 'H52.1', rotulo: 'H52.1 Miopia', valor: 1 },
+    ]);
+    expect(r.porCapitulo).toEqual([
+      { chave: 'Osteomuscular', rotulo: 'Osteomuscular', valor: 2 },
+      { chave: 'Olho e anexos', rotulo: 'Olho e anexos', valor: 1 },
+    ]);
   });
 });
 
