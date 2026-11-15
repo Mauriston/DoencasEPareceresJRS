@@ -12,6 +12,7 @@ import { TEMPLATE_RESULTADO_IS } from './templateResultadoIS';
 import { renderizarTemplate, type DadosTemplate } from './template';
 import { elegivelResultado } from '../../utils/emailResultadoIS';
 import { assinaturaDe, assinaturaSemSignatario, assinaturaTexto, destinatariosFixos, juntarEmails, type DadosAssinatura } from './comum';
+import { registrarEmailIS } from './registroEmailsIS';
 
 const APP_URL = (process.env.APP_URL || 'https://mauriston.github.io/DoencasEPareceresJRS/').replace(/\/?$/, '/');
 
@@ -156,5 +157,6 @@ export const enviarResultadoIS = async (db: Firestore, isIdBruto: unknown, email
   const emailSalvo = !cadastrado && !!refMilitar && !!militar;
   if (emailSalvo) await refMilitar!.update({ email: para, atualizadoEm: FieldValue.serverTimestamp() });
   await refIs.update({ emailResultadoEnviadoEm: FieldValue.serverTimestamp(), emailResultadoPara: para, emailResultadoEnviadoPor: uid });
+  await registrarEmailIS(db, isId, uid, { tipo: 'resultadoIS', assunto, para: paraTodos, cc });
   return { para, emailSalvo };
 };

@@ -689,6 +689,23 @@ async function startServer() {
   app.post("/api/email/resultado-is", rotaGoogle("email-resultado-is", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/resultadoIS")).enviarResultadoIS(db, b.isId, b.email, quem.uid)) }), true));
   // [rotas: e-mails de guias e de abertura — pacote B1]
+  // Guias de exames (PDF do Storage em anexo) ao inspecionado e/ou à SEC-JRS (Admin e Secretaria): servidor/email/guiasIS.ts.
+  app.post("/api/email/guias-is", rotaGoogle("email-guias-is", ["admin", "user_secretaria"], async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/guiasIS")).enviarGuiasIS(db, await bucketStorage(), b, quem.uid)) }), true));
+  // Abertura da IS ao inspecionado (prazos e consequências; Admin e Secretaria): servidor/email/aberturaIS.ts.
+  app.post("/api/email/abertura-is", rotaGoogle("email-abertura-is", ["admin", "user_secretaria"], async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/aberturaIS")).enviarAberturaIS(db, b.isId, b.email, quem.uid)) }), true));
+  // Membros da SEC-JRS (user_secretaria ativos com institucional) para as caixas do dialog das guias; rótulo = usuario.
+  app.post("/api/secretaria/usuarios", async (req, res) => {
+    if (!(await exigirUsuario(req, res, "secretaria-usuarios", PERFIS_EQUIPE))) return;
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      res.json({ success: true, usuarios: await (await import("./servidor/email/guiasIS")).listarUsuariosSecretaria(adminDb) });
+    } catch (error: any) {
+      logErroSeguro("secretaria-usuarios", error);
+      res.status(500).json({ success: false, error: "Falha ao listar a Secretaria." });
+    }
+  });
 
   // E-mail de agendamento ao inspecionado (só Verificações e Términos; Admin e Secretaria): servidor/email/agendamentoIS.ts.
   app.post("/api/email/agendamento-is", rotaGoogle("email-agendamento-is", ["admin", "user_secretaria"], async (db, b, quem) =>

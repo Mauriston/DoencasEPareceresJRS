@@ -14,6 +14,7 @@ import { TEMPLATE_FALTAS_HNRE } from './templateFaltasHNRe';
 import { CONFIG_EMAIL_RESULTADO, dataNaval } from './resultadoIS';
 import { CONFIG_EMAILS_PADRAO } from '../../config/emails';
 import { assinaturaDe, assinaturaSemSignatario, assinaturaTexto, destinatariosFixos, juntarEmails, type DadosAssinatura } from './comum';
+import { registrarEmailIS } from './registroEmailsIS';
 import { ehOmHnre, faltaSemEmail, separarNomeGuerra, type ISParaFalta } from '../../utils/emailFaltasHNRe';
 
 export const ASSUNTO_FALTAS_HNRE = 'COMUNICAÇÃO DE FALTAS A INSPEÇÕES DE SAÚDE';
@@ -99,5 +100,7 @@ export const enviarFaltasHNRe = async (db: Firestore, isIdsBruto: unknown, uid: 
   const lote = db.batch();
   pendentes.forEach(i => lote.update(i.ref, { emailFaltaDataEntrevista: i.dataEntrevista, emailFaltaEnviadoEm: FieldValue.serverTimestamp() }));
   await lote.commit();
+  // Histórico em cada IS do lote (e contagem no uso do app, uma por IS).
+  await Promise.all(pendentes.map(i => registrarEmailIS(db, i.id, uid, { tipo: 'faltasHNRe', assunto, para, cc })));
   return { enviados: pendentes.length, para, cc };
 };
