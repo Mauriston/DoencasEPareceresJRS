@@ -153,7 +153,7 @@ test('Inspeções: Conclusão da IS agendada grava sozinha (Observações) e o N
   await p.context().close();
 });
 
-test('Inspeções: Restrições (Verificações e Términos, sem laudo) — clicar seleciona e o × do chip remove', async () => {
+test('Inspeções: Restrições (Verificações e Términos) só com "restrições" no laudo — clicar seleciona e o × do chip remove', async () => {
   const p = await novaPagina();
   await entrar(p, MEDICO);
   await p.goto(`${BASE}#/inspecoes`);
@@ -161,6 +161,12 @@ test('Inspeções: Restrições (Verificações e Términos, sem laudo) — clic
   await p.getByRole('button', { name: `Abrir IS ${IS_AGENDADA_E2E.numero}` }).click();
   const detalhe = p.getByRole('dialog', { name: `IS ${IS_AGENDADA_E2E.numero}` });
   const campo = detalhe.getByRole('combobox', { name: 'Restrições' });
+  // Sem laudo o campo não aparece; o CID é obrigatório no grupo Verificações e Términos.
+  const laudo = detalhe.getByLabel('Laudo', { exact: true });
+  await laudo.waitFor();
+  assert.equal(await campo.count(), 0, 'Restrições oculto sem laudo');
+  await laudo.fill('Apto para o SAM com restrições por 30 dias.');
+  await campo.waitFor();
   await campo.click();
   const lista = detalhe.getByRole('listbox', { name: 'Restrições' });
   await lista.waitFor();
@@ -183,6 +189,10 @@ test('Inspeções: Restrições (Verificações e Términos, sem laudo) — clic
   // Backspace no campo vazio remove o último chip (deixa a IS como estava).
   await campo.press('Backspace');
   await detalhe.getByRole('button', { name: 'Remover Embarque' }).waitFor({ state: 'detached' });
+  // Laudo sem "restrições" esconde o campo; apagar deixa a IS como estava.
+  await laudo.fill('');
+  await laudo.blur();
+  await campo.waitFor({ state: 'detached' });
   await p.context().close();
 });
 
@@ -399,10 +409,15 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   await p.goto(`${BASE}#/pericia-menor/historico/${INSPECIONADO.nip}`);
   await p.waitForURL(new RegExp(`#/inspecionados/${INSPECIONADO.nip}$`));
   await p.getByRole('heading', { name: INSPECIONADO.nome }).waitFor();
-  const linha = p.getByRole('tablist', { name: 'Filtrar a linha do tempo' });
-  for (const aba of [/^Tudo/, /^IS/, /^Pareceres/, /^Perícias/]) await linha.getByRole('tab', { name: aba }).waitFor();
+  // Guias Inspeções de Saúde × Perícias Menores; "Pedir parecer" e o card Cadastro saíram da ficha.
+  const guias = p.getByRole('tablist', { name: 'Registros do inspecionado' });
+  await guias.getByRole('tab', { name: /Inspeções de Saúde/ }).waitFor();
+  assert.equal(await p.getByRole('button', { name: /Pedir parecer/i }).count(), 0);
+  await guias.getByRole('tab', { name: /Perícias Menores/ }).click();
   await p.getByRole('button', { name: /Perícia menor registrada/ }).first().click();
-  await p.getByRole('region', { name: `Perícia menor de ${INSPECIONADO.nome}` }).waitFor();
+  // O detalhe abre num drawer, sem sair da ficha.
+  await p.getByRole('dialog', { name: INSPECIONADO.nome }).waitFor();
+  assert.match(p.url(), new RegExp(`#/inspecionados/${INSPECIONADO.nip}`));
   // Registro de eventos é só do Admin.
   assert.equal(await p.getByText('Registro de eventos').count(), 0);
   await p.context().close();
