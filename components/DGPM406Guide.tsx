@@ -216,7 +216,7 @@ export const DGPM406Guide: React.FC = () => {
     <div className="flex flex-col flex-1 relative">
 
       {modalElement}
-      <Container size="data" className="py-6 md:py-8 pb-10">
+      <Container size="data" className="py-6 md:py-8 pt-4 md:pt-8 pb-10">
         <PageHeader title="DGPM-406" description="Normas Reguladoras para Inspeções de Saúde na Marinha — capítulos e anexos." />
         <div className="mb-6">
         <Segmented

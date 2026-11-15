@@ -144,7 +144,7 @@ export const Pareceres: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} acao={toast?.acao} />
-      <Container size="data" className={`py-6 md:py-8 ${podeGerar ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
+      <Container size="data" className={`py-6 md:py-8 pt-4 md:pt-8 ${podeGerar ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
         <PageHeader
           title="Pareceres"
           description="Pedidos de parecer por especialidade e o andamento de cada um."

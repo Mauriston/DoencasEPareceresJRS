@@ -86,7 +86,7 @@ export const Painel: React.FC = () => {
 
   if (!secoes.length) {
     return (
-      <div className="py-6 md:py-8 pb-10">
+      <div className="py-6 md:py-8 pt-4 md:pt-8 pb-10">
         <Container size="data">
           <PageHeader title="Painel" />
           <EmptyState icon="monitoring" title="Nenhuma seção disponível" description="O seu perfil não tem acesso às áreas acompanhadas pelo Painel." />
@@ -115,7 +115,7 @@ export const Painel: React.FC = () => {
   const legendaPeriodo = <span className="text-xs text-ink-3">{janela.rotulo} · comparação com {janela.rotuloAnterior}</span>;
 
   return (
-    <div className="py-6 md:py-8 pb-10 print:py-0">
+    <div className="py-6 md:py-8 pt-4 md:pt-8 pb-10 print:py-0">
       <Container size="data">
         <PageHeader
           title="Painel"

@@ -184,7 +184,7 @@ export const Apresentacoes: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1 relative">
-      <Container size="data" className={`py-6 md:py-8 ${ehAdmin ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
+      <Container size="data" className={`py-6 md:py-8 pt-4 md:pt-8 ${ehAdmin ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
         <PageHeader
           title="Apresentações" description="Apresentações de slides sobre os processos das IS."
           fab={ehAdmin ? { icon: 'add_to_queue', label: 'Adicionar apresentação', onClick: () => setNovo(true) } : undefined}

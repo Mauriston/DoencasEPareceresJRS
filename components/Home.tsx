@@ -1,6 +1,7 @@
 // Ficheiro: components/Home.tsx
 // Início como PAINEL DO DIA (auditoria v3, 2a/2d/4b/4d):
-//  • PageHeader "Início" com a data na descrição (P1/H6 — sem saudação em 32 px); ações via Button/ButtonLink/
+//  • PageHeader com a data na sobrelinha e a saudação como h1 de 24 px (2a; no celular o título da topbar é
+//    "Início" e fica só a data — 4b); ações via Button/ButtonLink/
 //    MenuAcoes (B2) com a principal do perfil por último; no celular as mesmas ações vão para o FAB (FabAcoes).
 //    "Enviar exames" saiu daqui para o cabeçalho de Concursos; "+ Perícia Menor/Atestado" só para o Médicos Geral;
 //  • faixa "Hoje" com até 4 contadores por perfil (ContadoresHoje): cada um declara a permissão e abre a lista já
@@ -61,6 +62,16 @@ const FUNCAO_ESCALA: Record<FuncaoEscala, { icone: string; rotulo: string }> = {
   'Retém noite': { icone: 'person_pin', rotulo: 'Retém do plantão noite' },
 };
 
+const saudacao = (): string => {
+  const h = new Date().getHours();
+  return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
+};
+/** Primeiro nome próprio (pula posto/graduação como "CT", "1T", "SG" e o "(Md)"). */
+const primeiroNome = (nome?: string): string => {
+  const partes = (nome || '').replace(/\([^)]*\)/g, ' ').split(/\s+/).filter(Boolean);
+  const proprio = partes.find(p => p.length > 2 && !/^[A-Z0-9-]{1,4}$/.test(p)) || partes[0] || '';
+  return proprio ? proprio.charAt(0).toUpperCase() + proprio.slice(1).toLowerCase() : '';
+};
 const dataPorExtenso = (): string => {
   const t = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   return t.charAt(0).toUpperCase() + t.slice(1);
@@ -521,8 +532,13 @@ export const Home: React.FC = () => {
   );
 
   return (
-    <Container size="data" className={`py-6 md:py-8 ${permitidas.length ? 'pb-28 md:pb-10' : 'pb-10'}`}>
-      <PageHeader title="Início" description={dataPorExtenso()} actions={isDesktop ? acoesDesktop : undefined} />
+    <Container size="data" className={`py-6 md:py-8 pt-4 md:pt-8 ${permitidas.length ? 'pb-28 md:pb-10' : 'pb-10'}`}>
+      <PageHeader
+        title={`${saudacao()}${primeiroNome(authUser?.nome) ? `, ${primeiroNome(authUser?.nome)}` : ''}`}
+        tituloTopbar="Início"
+        eyebrow={dataPorExtenso()}
+        actions={isDesktop ? acoesDesktop : undefined}
+      />
 
       <div className="space-y-6">
         <ContadoresHoje contadores={contadores} />

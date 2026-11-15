@@ -166,7 +166,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
   };
 
   return (
-    <Container size="form" className="py-6 md:py-8 pb-10">
+    <Container size="form" className="py-6 md:py-8 pt-4 md:pt-8 pb-10">
       <PageHeader title="Novo concurso" description="Registre a mensagem em PDF; o concurso nasce com os candidatos identificados." />
       {/* F60: etapas numeradas e escritas — 1 Mensagem · 2 Revisão · 3 Agendamento. */}
       <ol className="flex items-center gap-2 mb-5" aria-label="Etapas do novo concurso">

@@ -516,7 +516,7 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
         />
       )}
 
-      <Container size="data" className={`py-6 md:py-8 space-y-6 ${podeRegistrarMensagem ? 'pb-28 md:pb-10' : 'pb-10'}`}>
+      <Container size="data" className={`pt-0 md:pt-8 flex flex-col gap-6 ${podeRegistrarMensagem ? 'pb-28 md:pb-10' : 'pb-10'}`}>
         <PageHeader
           title="Concursos"
           description="Planilhas de controle dos candidatos de cada concurso."
@@ -554,7 +554,7 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
         ) : (
           <>
             {/* C2/G2: abas sublinhadas de situação + busca + ano + vista (só ícone) numa linha; KPIs do filtro abaixo. */}
-            <Card padding="none" className="@container">
+            <Card padding="none" className="@container -mx-4 md:mx-0 rounded-none md:rounded-xl border-x-0 md:border-x">
               <div className="flex flex-col @split:flex-row @split:items-end @split:justify-between gap-x-4 px-4 border-b border-line">
                 <AbasSituacao
                   idBase="concursos-situacao"

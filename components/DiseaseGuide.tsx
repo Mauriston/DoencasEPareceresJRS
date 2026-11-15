@@ -136,7 +136,7 @@ const CdrCalculator: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1">
-      <Container size="form" className="py-6 md:py-8 pb-6 space-y-4">
+      <Container size="form" className="py-6 md:py-8 pt-4 md:pt-8 pb-6 space-y-4">
         <PageHeader
           title="CDR Score"
           description="Calculadora do Clinical Dementia Rating, validada em português."
@@ -298,7 +298,7 @@ const WebsterCalculator: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1">
-      <Container size="form" className="py-6 md:py-8 pb-6 space-y-4">
+      <Container size="form" className="py-6 md:py-8 pt-4 md:pt-8 pb-6 space-y-4">
         <PageHeader
           title="Escala de Webster"
           description="Webster Rating Scale for Parkinson’s Disease: 10 domínios, de 0 a 3 pontos cada."
@@ -426,7 +426,7 @@ const ChildPughCalculator: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1">
-      <Container size="form" className="py-6 md:py-8 pb-6 space-y-4">
+      <Container size="form" className="py-6 md:py-8 pt-4 md:pt-8 pb-6 space-y-4">
         <PageHeader
           title="Child-Pugh"
           description="Classificação de Child-Turcotte-Pugh: 5 variáveis, de 1 a 3 pontos cada."
@@ -711,7 +711,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
   if (selectedDisease && !selectedDiagnosis) {
     return (
       <div className="flex flex-col flex-1 relative">
-        <Container size="reading" className="py-6 md:py-8 pb-10 space-y-6">
+        <Container size="reading" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-6">
           <PageHeader title={selectedDisease.name} description="Selecione o diagnóstico pericial associado" />
 
           <div className="grid grid-cols-1 gap-4">
@@ -745,7 +745,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
     const totalDocs = documentos.length;
     return (
       <div className="flex flex-col flex-1 relative">
-        <Container size="data" className="@container py-6 md:py-8 pb-6 md:pb-10">
+        <Container size="data" className="@container py-6 md:py-8 pt-4 md:pt-8 pb-6 md:pb-10">
           <PageHeader
             title={selectedDisease.name}
             description={selectedDisease.diagnoses.length > 1 ? `Diagnóstico pericial: ${selectedDiagnosis.name}` : undefined}
@@ -893,7 +893,7 @@ export const DiseaseGuide: React.FC<DiseaseGuideProps> = ({ publico = false }) =
   const tituloTipo: Record<string, string> = { disease: 'Doenças', diagnosis: 'Diagnósticos', criterion: 'Critérios' };
   return (
     <div className="flex flex-col flex-1">
-      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
+      <Container size="data" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-6">
         <PageHeader title="Doenças previstas em lei" description="Verifique as definições, os critérios clínicos e os documentos necessários para o enquadramento." />
 
         <SearchField

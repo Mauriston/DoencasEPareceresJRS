@@ -34,7 +34,7 @@ export const Sobre: React.FC = () => {
   ];
 
   return (
-    <Container size="data" className="py-6 md:py-8 pb-10">
+    <Container size="data" className="py-6 md:py-8 pt-4 md:pt-8 pb-10">
       <PageHeader
         title="Sobre o app"
         description="O que o app faz, área por área, com as telas reais. Toque em uma área para ir direto a ela."

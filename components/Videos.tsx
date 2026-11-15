@@ -118,7 +118,7 @@ export const Videos: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1 relative">
-      <Container size="data" className={`py-6 md:py-8 ${ehAdmin ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
+      <Container size="data" className={`py-6 md:py-8 pt-4 md:pt-8 ${ehAdmin ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
         <PageHeader
           title="Vídeos" description="Vídeos sobre os processos das IS."
           fab={ehAdmin ? { icon: 'add_link', label: 'Adicionar vídeo', onClick: () => setNovo(true) } : undefined}

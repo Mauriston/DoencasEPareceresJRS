@@ -432,7 +432,7 @@ export const ConcursosGuide: React.FC = () => {
     <div className="flex flex-col flex-1">
       {modalElement}
 
-      <Container size="reading" className="py-6 md:py-8 pb-10 space-y-5">
+      <Container size="reading" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-5">
           <PageHeader title="Índices mínimos" description="Padrões psicofísicos admissionais (Anexo N): índices mínimos e condições incapacitantes para ingresso." actions={<Button variant="secondary" icon="menu_book" onClick={() => setAnexoParam('n')}>Ver Anexo N completo</Button>} />
           <Segmented ariaLabel="Seção" fullWidth options={[{ value: 'indices', label: 'Índices mínimos' }, { value: 'inaptidao', label: 'Inaptidão' }]} value={activeTab} onChange={setActiveTab} />
 
