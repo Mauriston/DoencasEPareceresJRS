@@ -49,7 +49,7 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 import { observarDocumentosPendentes, marcarDocumentoAberto, type DocumentoGerado } from '../services/documentosGerados';
 import { urlVisualizacao } from '../services/driveConcursos';
 import { observarEscalaAPartirDe, type EscalaDia } from '../services/firestoreEscala';
-import { servicosDoUsuario, type FuncaoEscala } from '../utils/escalaSpa';
+import { chaveNome, nomeExibicao, servicosDoUsuario, servicosNoMes, type FuncaoEscala } from '../utils/escalaSpa';
 
 const SEMANA_ABR = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'];
 /** Ícone e cor de cada função da Escala SVÇ no card "Próximos serviços". */
@@ -166,11 +166,15 @@ export const Home: React.FC = () => {
       .sort((a, b) => (b.criadoEm?.toMillis?.() ?? 0) - (a.criadoEm?.toMillis?.() ?? 0) || b.dataAtestado.localeCompare(a.dataAtestado))
     : []), [pericias, ehMedicoGeral, authUser?.uid]);
 
-  // Escala SVÇ: próximos serviços do usuário (supervisão, retém, plantões), a partir de hoje.
+  // Escala SVÇ: do 1º dia do mês (para contar os serviços do mês) até ~2 meses à frente (próximos serviços).
   const podeEscala = canAccessPage('escala', perfil);
   const [escala, setEscala] = useState<EscalaDia[]>([]);
-  useEffect(() => (podeEscala ? observarEscalaAPartirDe(hoje, 62, setEscala, () => { /* silencioso */ }) : undefined), [podeEscala, hoje]);
-  const meusServicos = useMemo(() => servicosDoUsuario(escala, authUser?.usuario).slice(0, 5), [escala, authUser?.usuario]);
+  const inicioMes = `${hoje.slice(0, 7)}-01`;
+  useEffect(() => (podeEscala ? observarEscalaAPartirDe(inicioMes, 95, setEscala, () => { /* silencioso */ }) : undefined), [podeEscala, inicioMes]);
+  const escalaFutura = useMemo(() => escala.filter(d => d.data >= hoje), [escala, hoje]);
+  const meusServicos = useMemo(() => servicosDoUsuario(escalaFutura, authUser?.usuario).slice(0, 6), [escalaFutura, authUser?.usuario]);
+  const escalaPorData = useMemo(() => new Map(escala.map(d => [d.data, d])), [escala]);
+  const servicosMes = useMemo(() => servicosNoMes(escala, authUser?.usuario, hoje.slice(0, 7)), [escala, authUser?.usuario, hoje]);
 
   // Férias (coleção "afastamentos"): só o tipo Férias "Em gozo" ou "Confirmada" — em gozo primeiro, depois as
   // confirmadas pela data de início. Para quem acessa Férias; o card só aparece quando há registro.
@@ -204,7 +208,7 @@ export const Home: React.FC = () => {
   const proximaIS = isDeHoje.find(i => i.situacao !== 'finalizada' && horaDeEntrevista(i.dataEntrevista) >= agora);
   const terminamHoje = vigentes.filter(p => p.dataTermino === hoje).length;
   const meusVigentes = meusAtestados.filter(p => statusPericia(p) === 'vigente');
-  const meusNoMes = meusAtestados.filter(p => (p.dataAtestado || '').slice(0, 7) === hoje.slice(0, 7)).length;
+  const meusNoAno = meusAtestados.filter(p => (p.dataAtestado || '').slice(0, 4) === hoje.slice(0, 4)).length;
   const proximoServico = meusServicos[0];
   const contadores: ContadorHoje[] = contadoresDaFaixa([
     {
@@ -229,8 +233,12 @@ export const Home: React.FC = () => {
       dica: `Emitidos por mim${meusVigentes.some(p => p.dataTermino === hoje) ? ` · ${meusVigentes.filter(p => p.dataTermino === hoje).length} terminam hoje` : ''}`,
     },
     {
-      id: 'meus-no-mes', rotulo: 'Atestados no mês', valor: meusNoMes, to: '/pericia-menor?minhas=1&mes=atual', permitido: podeHistoricoPm && ehMedicoGeral,
-      dica: `Emitidos por mim em ${nomeMes(hoje)}`,
+      id: 'meus-no-ano', rotulo: 'Atestados no ano', valor: meusNoAno, to: '/pericia-menor?minhas=1&ano=atual', permitido: podeHistoricoPm && ehMedicoGeral,
+      dica: `Emitidos por mim em ${hoje.slice(0, 4)}`,
+    },
+    {
+      id: 'servicos-no-mes', rotulo: 'Serviços no mês', valor: servicosMes, to: pathForView('escala'), permitido: podeEscala && ehMedicoGeral,
+      dica: `Supervisão e plantões em ${nomeMes(hoje)} · reténs não contam`,
     },
     {
       id: 'candidatos-hoje', rotulo: 'Candidatos hoje', valor: candidatosHoje, to: concursosDiaPath(hoje), permitido: podeConcursos,
@@ -434,24 +442,51 @@ export const Home: React.FC = () => {
     </>
   );
 
+  // Próximos dias de serviço do usuário, cada um com a escala completa do dia (Supervisão · Dia · Noite);
+  // a função do usuário vem em tag e o nome dele destacado. Reténs do dia não entram na linha (ficam na Escala).
+  const diasServico = useMemo(() => {
+    const porDia = new Map<string, FuncaoEscala[]>();
+    meusServicos.forEach(s => porDia.set(s.data, [...(porDia.get(s.data) ?? []), s.funcao]));
+    return [...porDia.entries()].slice(0, 5).map(([data, funcoes]) => ({ data, funcoes, dia: escalaPorData.get(data) }));
+  }, [meusServicos, escalaPorData]);
+  const souEu = (n?: string) => !!n && !!authUser?.usuario && chaveNome(n) === chaveNome(authUser.usuario);
+  const nomesEscala = (lista: (string | undefined)[]) => {
+    const nomes = lista.filter((n): n is string => !!n);
+    if (!nomes.length) return <span className="text-ink-4">—</span>;
+    return nomes.map((n, i) => (
+      <React.Fragment key={n + i}>
+        {i > 0 && <br />}
+        <span className={`font-semibold ${souEu(n) ? 'text-navy bg-gold/30 rounded px-0.5 -mx-0.5' : 'text-ink'}`}>{nomeExibicao(n)}</span>
+      </React.Fragment>
+    ));
+  };
   const cardEscala = (
     <>
-      {podeEscala && meusServicos.length > 0 && (
+      {podeEscala && diasServico.length > 0 && (
         <Secao id="home-escala" titulo="Próximos serviços" acao={<ButtonLink to={pathForView('escala')} variant="ghost" size="sm">Ver escala</ButtonLink>}>
           <ul>
-            {meusServicos.map(s => {
-              const [y, m, d] = s.data.split('-').map(Number);
+            {diasServico.map(({ data, funcoes, dia }) => {
+              const [y, m, d] = data.split('-').map(Number);
               const dow = new Date(y, m - 1, d).getDay();
-              const f = FUNCAO_ESCALA[s.funcao];
               return (
-                <li key={s.data + s.funcao} className="flex items-center gap-3 px-4 min-h-[56px] py-2 border-t border-line">
-                  <span className="w-12 shrink-0 text-center tabular-nums">
+                <li key={data} className="flex gap-3 px-4 py-3 border-t border-line">
+                  <span className="w-12 shrink-0 text-center tabular-nums pt-0.5">
                     <span className="block text-sm font-extrabold text-navy leading-none">{String(d).padStart(2, '0')}/{String(m).padStart(2, '0')}</span>
-                    <span className="block text-xs font-semibold text-ink-3">{s.data === hoje ? 'hoje' : SEMANA_ABR[dow]}</span>
+                    <span className="block text-xs font-semibold text-ink-3">{data === hoje ? 'hoje' : SEMANA_ABR[dow]}</span>
                   </span>
-                  <span className="material-symbols-outlined text-[22px] text-navy shrink-0" aria-hidden="true">{f.icone}</span>
-                  <span className="min-w-0 flex-1 text-sm font-bold text-navy truncate">{f.rotulo}</span>
-                  {s.data === hoje && <StatusTag tone="attention" className="shrink-0">Hoje</StatusTag>}
+                  <div className="min-w-0 flex-1 flex flex-col gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {funcoes.map(f => <StatusTag key={f} tone={data === hoje ? 'attention' : 'neutral'}>{FUNCAO_ESCALA[f].rotulo}</StatusTag>)}
+                    </div>
+                    <dl className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-2 gap-y-1 text-sm">
+                      <dt className="text-xs font-bold text-ink-3 uppercase tracking-wide pt-0.5">Supervisão</dt>
+                      <dd className="min-w-0">{nomesEscala([dia?.supervisor])}</dd>
+                      <dt className="text-xs font-bold text-ink-3 uppercase tracking-wide pt-0.5">Dia</dt>
+                      <dd className="min-w-0">{nomesEscala(dia?.dia ?? [])}</dd>
+                      <dt className="text-xs font-bold text-ink-3 uppercase tracking-wide pt-0.5">Noite</dt>
+                      <dd className="min-w-0">{nomesEscala(dia?.noite ?? [])}</dd>
+                    </dl>
+                  </div>
                 </li>
               );
             })}
@@ -495,8 +530,10 @@ export const Home: React.FC = () => {
 
   // Desktop (≥ md): grade 8 + 4 — agenda, pendências e cards de perfil na principal; calendário, férias,
   // serviços e avisos no apoio. Se o container ainda empilhar (< @split), as férias sobem para logo após a agenda.
+  // Médicos Geral: "Próximos serviços" logo abaixo dos contadores (é o que ele mais consulta); nos demais, no apoio.
   const principal = (
     <div className="space-y-6">
+      {ehMedicoGeral && cardEscala}
       {podeInspecoes && agenda(false)}
       {cardFerias('@split:hidden')}
       {cardPendencias}
@@ -508,7 +545,7 @@ export const Home: React.FC = () => {
     <div className="space-y-6">
       {podeInspecoes && calendario(false)}
       {cardFerias('hidden @split:block')}
-      {cardEscala}
+      {!ehMedicoGeral && cardEscala}
       {cardAvisos}
     </div>
   );
@@ -517,6 +554,7 @@ export const Home: React.FC = () => {
   // escolhido no calendário filtra a agenda logo abaixo), cards de perfil e serviços, e as férias por último.
   const colunaCelular = (
     <div className="space-y-6">
+      {ehMedicoGeral && cardEscala}
       {cardPendencias}
       {cardAvisos}
       {podeInspecoes && (
@@ -526,7 +564,7 @@ export const Home: React.FC = () => {
         </div>
       )}
       {cardsPerfil}
-      {cardEscala}
+      {!ehMedicoGeral && cardEscala}
       {cardFerias('')}
     </div>
   );

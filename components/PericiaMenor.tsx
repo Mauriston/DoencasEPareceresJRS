@@ -7,8 +7,10 @@
 //   768–1279 px painel não modal à direita; < 768 px bottom sheet.
 // A seleção fica na URL (?sel=<id>&aba=historico). A antiga página de histórico do militar
 // (/pericia-menor/historico/<nip>) virou a Ficha do inspecionado (/inspecionados/<nip>).
-// Filtros por URL (Início/Painel): ?situacao=vigentes|concluidas · ?tipo=dispensa|restricoes · ?minhas=1 (perito/quem registrou)
-// · ?om=<sigla> · ?mes=atual (atestado do mês corrente)
+// Abas principais: Todas · Atestados (registrados) · Homologações (atestado externo homologado) — ?registro=atestados|homologacoes.
+// Chips: Vigentes · Concluídas (?situacao=vigentes|concluidas), Minhas, OM e busca.
+// Filtros por URL (Início/Painel): ?registro= · ?situacao= · ?tipo=dispensa|restricoes · ?minhas=1 (perito/quem registrou)
+// · ?om=<sigla> · ?mes=atual (atestado do mês corrente) · ?ano=atual (atestado do ano corrente)
 // Atalhos: ?novo=1 (abre o formulário) · ?novo=1&militar=<nip> (já preenchido).
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useParams, useSearchParams } from 'react-router-dom';
@@ -34,6 +36,7 @@ import { extrairNomeInspecionado } from '../utils/format';
 import { hojeISO } from '../utils/dados';
 
 type FiltroSituacao = 'vigentes' | 'concluidas' | 'todas';
+type FiltroRegistro = 'todas' | 'atestados' | 'homologacoes';
 type FiltroTipo = '' | 'dispensa' | 'restricoes';
 
 const ehCampoDeTexto = (el: EventTarget | null) => {
@@ -56,11 +59,14 @@ export const PericiaMenor: React.FC = () => {
   const [params, setParams] = useSearchParams();
   const situacaoUrl = params.get('situacao');
   const situacao: FiltroSituacao = situacaoUrl === 'vigentes' || situacaoUrl === 'concluidas' ? situacaoUrl : 'todas';
+  const registroUrl = params.get('registro');
+  const registro: FiltroRegistro = registroUrl === 'atestados' || registroUrl === 'homologacoes' ? registroUrl : 'todas';
   const tipoUrl = params.get('tipo');
   const tipo: FiltroTipo = tipoUrl === 'dispensa' || tipoUrl === 'restricoes' ? tipoUrl : '';
   const minhas = params.get('minhas') === '1';
   const om = params.get('om') ?? '';
   const mesAtual = params.get('mes') === 'atual';
+  const anoAtual = params.get('ano') === 'atual';
   const sel = params.get('sel');
   const abaDetalhe: AbaPericia = params.get('aba') === 'historico' ? 'historico' : 'esta';
 
@@ -119,23 +125,31 @@ export const PericiaMenor: React.FC = () => {
   const oms = useMemo(() => [...new Set<string>(comStatus.map(x => x.p.om).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [comStatus]);
   const minhaPericia = (p: PericiaMenorRecord) => p.peritoUid === uid || p.criadoPor === uid;
 
-  // Contagens das abas respeitam os demais filtros (tipo, minhas, OM e busca).
-  const filtradaSemSituacao = useMemo(() => {
+  // Base comum (tipo, minhas, OM, mês/ano e busca); as abas (registro) e os chips (situação) contam sobre ela.
+  const base = useMemo(() => {
     const termos = normalizarBusca(busca).split(/\s+/).filter(Boolean);
     return comStatus
       .filter(x => !tipo || x.tipo === tipo)
       .filter(x => !minhas || minhaPericia(x.p))
       .filter(x => !om || x.p.om === om)
       .filter(x => !mesAtual || (x.p.dataAtestado || '').slice(0, 7) === hoje.slice(0, 7))
+      .filter(x => !anoAtual || (x.p.dataAtestado || '').slice(0, 4) === hoje.slice(0, 4))
       .filter(x => { const alvo = normalizarBusca(`${x.p.inspecionado} ${x.p.militarId} ${x.p.cid} ${x.cidRotulo} ${x.p.om} ${x.medico}`); return termos.every(w => alvo.includes(w)); });
-  }, [comStatus, tipo, minhas, om, mesAtual, busca, uid, hoje]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [comStatus, tipo, minhas, om, mesAtual, anoAtual, busca, uid, hoje]); // eslint-disable-line react-hooks/exhaustive-deps
+  const doRegistro = (x: typeof comStatus[number], r: FiltroRegistro) => r === 'todas' || (r === 'homologacoes') === !!x.p.homologacao;
+  const daSituacao = (x: typeof comStatus[number], s: FiltroSituacao) => s === 'todas' || (s === 'vigentes') === x.vigente;
+  // Contagem das abas respeita a situação escolhida; a dos chips respeita a aba — cada uma mostra o que o toque traria.
+  const filtradaSemRegistro = useMemo(() => base.filter(x => daSituacao(x, situacao)), [base, situacao]);
+  const filtradaSemSituacao = useMemo(() => base.filter(x => doRegistro(x, registro)), [base, registro]);
   const totais = useMemo(() => ({
+    todas: filtradaSemRegistro.length,
+    atestados: filtradaSemRegistro.filter(x => !x.p.homologacao).length,
+    homologacoes: filtradaSemRegistro.filter(x => !!x.p.homologacao).length,
     vigentes: filtradaSemSituacao.filter(x => x.vigente).length,
     concluidas: filtradaSemSituacao.filter(x => !x.vigente).length,
-    todas: filtradaSemSituacao.length,
     terminaHoje: filtradaSemSituacao.filter(x => x.contagem.tom === 'hoje').length,
-  }), [filtradaSemSituacao]);
-  const filtrada = useMemo(() => filtradaSemSituacao.filter(x => situacao === 'todas' || (situacao === 'vigentes') === x.vigente), [filtradaSemSituacao, situacao]);
+  }), [filtradaSemRegistro, filtradaSemSituacao]);
+  const filtrada = useMemo(() => filtradaSemSituacao.filter(x => daSituacao(x, situacao)), [filtradaSemSituacao, situacao]);
 
   const detalhe = lista?.find(p => p.id === sel) ?? null;
   const historicoDetalhe = useMemo(() => (detalhe && lista ? lista.filter(p => chaveMilitar(p) === chaveMilitar(detalhe)) : []), [detalhe, lista]);
@@ -276,20 +290,22 @@ export const PericiaMenor: React.FC = () => {
         ) : (
           <>
             <div className="space-y-3">
-              <AbasSublinhadas<FiltroSituacao>
-                rotulo={`Situação ${atestado ? 'do atestado' : 'da perícia'}`} idBase="pm-situacao" ativa={situacao}
+              <AbasSublinhadas<FiltroRegistro>
+                rotulo={`Tipo de registro ${atestado ? 'do atestado' : 'da perícia'}`} idBase="pm-registro" ativa={registro}
                 className="-mx-4 px-4 md:mx-0 md:px-0 bg-white md:bg-transparent"
-                onChange={s => definir({ situacao: s === 'todas' ? null : s }, true)}
+                onChange={r => definir({ registro: r === 'todas' ? null : r }, true)}
                 abas={[
-                  { id: 'vigentes', rotulo: 'Vigentes', contagem: totais.vigentes },
-                  { id: 'concluidas', rotulo: 'Concluídas', contagem: totais.concluidas },
                   { id: 'todas', rotulo: 'Todas', contagem: totais.todas },
+                  { id: 'atestados', rotulo: 'Atestados', contagem: totais.atestados },
+                  { id: 'homologacoes', rotulo: 'Homologações', contagem: totais.homologacoes },
                 ]}
               />
               <div className="flex flex-wrap items-center gap-2">
-                <FilterChip ativo={tipo === 'dispensa'} onAlternar={() => definir({ tipo: tipo === 'dispensa' ? null : 'dispensa' }, true)}>Dispensa total</FilterChip>
-                <FilterChip ativo={tipo === 'restricoes'} onAlternar={() => definir({ tipo: tipo === 'restricoes' ? null : 'restricoes' }, true)}>Restrições</FilterChip>
+                <FilterChip ativo={situacao === 'vigentes'} onAlternar={() => definir({ situacao: situacao === 'vigentes' ? null : 'vigentes' }, true)}>Vigentes</FilterChip>
+                <FilterChip ativo={situacao === 'concluidas'} onAlternar={() => definir({ situacao: situacao === 'concluidas' ? null : 'concluidas' }, true)}>Concluídas</FilterChip>
+                {tipo && <FilterChip ativo onAlternar={() => definir({ tipo: null }, true)}>{tipo === 'dispensa' ? 'Dispensa total' : 'Restrições'}</FilterChip>}
                 {mesAtual && <FilterChip ativo icon="calendar_month" onAlternar={() => definir({ mes: null }, true)}>Este mês</FilterChip>}
+                {anoAtual && <FilterChip ativo icon="calendar_month" onAlternar={() => definir({ ano: null }, true)}>Este ano</FilterChip>}
                 {(podeNovo || minhas) && <FilterChip ativo={minhas} icon="person" onAlternar={() => definir({ minhas: minhas ? null : '1' }, true)}>Minhas</FilterChip>}
                 <label className="sr-only" htmlFor="pm-filtro-om">OM</label>
                 <select id="pm-filtro-om" value={om} onChange={e => definir({ om: e.target.value || null }, true)} className={`${controlClass} !w-auto min-w-[8rem]`}>

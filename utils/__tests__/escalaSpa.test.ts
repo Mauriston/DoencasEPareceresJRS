@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { corDoDia, feriados, lerCsvEscala, servicosDoUsuario, faceInicial, chaveNome, nomeExibicao } from '../escalaSpa';
+import { corDoDia, feriados, lerCsvEscala, servicosDoUsuario, servicosNoMes, faceInicial, chaveNome, nomeExibicao } from '../escalaSpa';
 
 describe('cores e feriados', () => {
   it('fim de semana/feriado vermelho, festas maiores roxo, resto branco', () => {
@@ -54,6 +54,10 @@ describe('serviços do usuário', () => {
   it('lista em ordem e decide a face inicial', () => {
     expect(servicosDoUsuario(dias, '1T OLIVEIRA')).toEqual([{ data: '2026-11-06', funcao: 'Retém dia' }, { data: '2026-11-06', funcao: 'Noite' }]);
     expect(servicosDoUsuario(dias, 'CT MAURISTON')).toEqual([{ data: '2026-11-07', funcao: 'Supervisão' }]);
+    // Serviços no mês: reténs não contam; outro mês não entra.
+    expect(servicosNoMes(dias, '1T OLIVEIRA', '2026-11')).toBe(1);
+    expect(servicosNoMes(dias, 'CT MAURISTON', '2026-11')).toBe(1);
+    expect(servicosNoMes(dias, 'CT MAURISTON', '2026-10')).toBe(0);
     expect(faceInicial(dias, '1T OLIVEIRA')).toBe('plantao');
     expect(faceInicial(dias, 'CT MAURISTON')).toBe('supervisao');
     expect(faceInicial(dias, 'NINGUEM')).toBe('supervisao');
