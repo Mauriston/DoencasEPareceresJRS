@@ -202,7 +202,7 @@ export const EscalaSpa: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast} tone="success" />
-      <Container size="data" className="py-6 md:py-8 pb-10 space-y-6">
+      <Container size="data" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-6">
         <PageHeader
           title="Escala SVÇ"
           description="Supervisão do SPA (24 h, com retém) e plantões de 12 h (dia e noite)."

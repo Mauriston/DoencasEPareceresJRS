@@ -149,7 +149,7 @@ export const Mensagens: React.FC = () => {
   return (
     <div className="flex flex-col flex-1 relative">
 
-      <Container size="form" className="py-6 md:py-8 pb-10 space-y-6">
+      <Container size="form" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-6">
         <PageHeader title="Mensagens" description="Minutas das mensagens de IS auxiliadas por IA." />
 
 

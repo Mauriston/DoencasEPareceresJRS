@@ -156,7 +156,7 @@ export const Militares: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
-      <Container size="data" className="py-6 md:py-8 pb-10 space-y-4">
+      <Container size="data" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-4">
         <PageHeader
           title="Inspecionados"
           description="Cadastro de militares da ativa, servidores civis, dependentes e pensionistas. Edite os dados e defina quem está ativo no appweb."

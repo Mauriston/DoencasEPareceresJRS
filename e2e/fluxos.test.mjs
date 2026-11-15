@@ -28,8 +28,8 @@ const entrar = async (pagina, usuario) => {
   await pagina.getByLabel('NIP').fill(usuario.nip.replace(/\D/g, ''));
   await pagina.getByLabel('Senha').fill(SENHA);
   await pagina.getByRole('button', { name: /entrar/i }).click();
-  // Início (painel do dia): o h1 "Início" do PageHeader.
-  await pagina.getByRole('heading', { level: 1, name: 'Início' }).first().waitFor();
+  // Início (painel do dia): o h1 é a saudação (desktop); no celular, "Início" na topbar.
+  await pagina.getByRole('heading', { level: 1, name: /Bom dia|Boa tarde|Boa noite|^Início$/ }).first().waitFor();
   // Aviso da triagem (MPI, 3 primeiros acessos): fecha para seguir.
   const entendi = pagina.getByRole('button', { name: 'Entendi' });
   // O aviso aparece um instante depois da Início: espera um pouco em vez de testar só uma vez.

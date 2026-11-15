@@ -23,7 +23,7 @@ interface MarkdownDocPageProps {
 export const MarkdownDocPage: React.FC<MarkdownDocPageProps> = ({ title, subtitle, markdown, sidebar, actions, estruturado }) => {
   useBreadcrumbs([{ label: title }]);
   return (
-    <div className="flex flex-col flex-1 py-6 md:py-8 pb-10">
+    <div className="flex flex-col flex-1 py-6 md:py-8 pt-4 md:pt-8 pb-10">
       <Container size={sidebar ? 'data' : 'reading'}>
         <PageHeader title={title} description={subtitle} actions={actions} />
         {/* Padrão D da grade (auditoria v3, L1/L3): índice 3 + texto 9 a partir de @split

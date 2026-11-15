@@ -177,7 +177,7 @@ export const Infograficos: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1">
-      <Container size="data" className={`py-6 md:py-8 ${ehAdmin ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
+      <Container size="data" className={`py-6 md:py-8 pt-4 md:pt-8 ${ehAdmin ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
         <PageHeader
           title="Infográficos" description="Resumos ilustrados para consultas rápidas."
           fab={ehAdmin ? { icon: 'add_photo_alternate', label: 'Adicionar infográfico', onClick: () => setNovo(true) } : undefined}

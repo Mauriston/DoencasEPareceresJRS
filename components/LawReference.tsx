@@ -44,7 +44,7 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
 
   return (
     <div className="flex flex-col flex-1">
-      <Container size="data" className={`py-6 md:py-8 ${podeCadastrar ? 'pb-28 md:pb-10' : 'pb-10'}`}>
+      <Container size="data" className={`py-6 md:py-8 pt-4 md:pt-8 ${podeCadastrar ? 'pb-28 md:pb-10' : 'pb-10'}`}>
         <PageHeader title="Legislação" description="Pesquise as leis que fundamentam as inspeções de saúde."
           fab={podeCadastrar ? { icon: 'add', label: 'Cadastrar lei', onClick: () => setNovo(true) } : undefined}
         />

@@ -262,7 +262,7 @@ export const PericiaMenor: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
-      <Container size="data" className="py-6 md:py-8 pb-10 space-y-4">
+      <Container size="data" className="pt-0 md:pt-8 pb-10 space-y-4">
         <PageHeader
           title={t.pagina}
           description={descricao}
@@ -278,6 +278,7 @@ export const PericiaMenor: React.FC = () => {
             <div className="space-y-3">
               <AbasSublinhadas<FiltroSituacao>
                 rotulo={`Situação ${atestado ? 'do atestado' : 'da perícia'}`} idBase="pm-situacao" ativa={situacao}
+                className="-mx-4 px-4 md:mx-0 md:px-0 bg-white md:bg-transparent"
                 onChange={s => definir({ situacao: s === 'todas' ? null : s }, true)}
                 abas={[
                   { id: 'vigentes', rotulo: 'Vigentes', contagem: totais.vigentes },

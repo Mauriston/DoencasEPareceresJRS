@@ -484,3 +484,7 @@ th[role="button"],
 @media (prefers-reduced-motion: reduce) {
   .fab-item-in { animation: none; }
 }
+
+/* Topbar do celular: com ações visíveis da página no slot (os wrappers só de desktop levam `hidden`),
+   o sino de notificações sai — as notificações continuam no menu do usuário (rodapé do drawer). */
+#topbar-acoes:has(> div > :not(.hidden)) ~ .topbar-sino { display: none; }

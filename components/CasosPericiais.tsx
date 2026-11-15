@@ -448,7 +448,7 @@ export const CasosPericiais: React.FC = () => {
     const rotuloProximo = ultimo ? 'Finalizar' : 'Próximo caso';
     return (
       <div className="flex flex-col flex-1 relative">
-        <Container size="form" className="py-6 md:py-8 pb-28 md:pb-10 space-y-6">
+        <Container size="form" className="py-6 md:py-8 pt-4 md:pt-8 pb-28 md:pb-10 space-y-6">
           {/* Auditoria v3 (3b/P5): a prova usa o PageHeader; o progresso vai na descrição. */}
           <PageHeader
             title="Casos periciais"
@@ -530,7 +530,7 @@ export const CasosPericiais: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1 relative">
-      <Container size="form" className="py-6 md:py-8 pb-10 space-y-6">
+      <Container size="form" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-6">
         <PageHeader title="Revisão dos casos" description="Seu resultado nos casos periciais comentados." actions={<Button variant="secondary" icon="restart_alt" onClick={handleRestart}>Refazer casos</Button>} />
 
         <Card className="text-center flex flex-col items-center">

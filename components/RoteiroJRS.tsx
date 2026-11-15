@@ -219,7 +219,7 @@ export const RoteiroJRS: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       
-      <Container size="reading" className="py-6 md:py-8 pb-10 space-y-6">
+      <Container size="reading" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-6">
         <PageHeader title="Roteiro JRS" description="Trilha de estudos para capacitação dos AMP." />
 
         <Card>

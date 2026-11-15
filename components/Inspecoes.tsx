@@ -518,8 +518,8 @@ export const Inspecoes: React.FC = () => {
   // Cabeçalho (3b): "Enviar e-mails" — menu com os e-mails da JRS, a pendência de cada lista à direita e a soma
   // no badge — e "Bloqueios" (bloqueio de turnos/horários da agenda). No celular o menu de e-mails fica na linha
   // das abas (compacto, com o badge) e Bloqueios vai para a pilha do FAB.
-  const menuEmails = (compacto: boolean) => (podeEmails
-    ? <MenuAcoes rotulo="Enviar e-mails" size={compacto ? 'sm' : 'md'} botao={{ texto: compacto ? 'E-mails' : 'Enviar e-mails', icone: 'mail', badge: emails.total }} itens={emails.itens} />
+  const menuEmails = () => (podeEmails
+    ? <MenuAcoes rotulo="Enviar e-mails" botao={{ texto: 'Enviar e-mails', icone: 'mail', badge: emails.total }} itens={emails.itens} />
     : null);
 
   const nomePeritoFiltro = peritoParam ? (peritos.find(p => p.uid === peritoParam)?.usuario ?? 'Perito') : '';
@@ -577,14 +577,26 @@ export const Inspecoes: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
-      <Container size="data" className={`py-6 md:py-8 ${podeCadastrar || podeBloquear ? 'pb-28 md:pb-10' : 'pb-10'} space-y-4`}>
+      <Container size="data" className={`pt-0 md:pt-8 ${podeCadastrar || podeBloquear ? 'pb-28 md:pb-10' : 'pb-10'} space-y-4`}>
         <PageHeader
           title="Inspeções de Saúde"
           description="Cadastro, agenda e prazos das IS (exceto concursos)."
           actions={podeEmails || podeBloquear || podeCadastrar ? (
-            // Celular: "E-mails" vai para a linha das abas; Abrir IS e Bloqueios, para o FAB.
+            <>
+            {/* Celular (4b): ⋮ na topbar com os e-mails e os Bloqueios; Abrir IS vai para o FAB. */}
+            {(podeEmails || podeBloquear) && (
+              <span className="md:hidden">
+                <MenuAcoes
+                  rotulo="Mais ações"
+                  itens={[
+                    ...(podeEmails ? emails.itens : []),
+                    ...(podeBloquear ? [{ rotulo: 'Bloqueios da agenda', icone: 'block', onClick: () => setBloqueiosAberto(true) }] : []),
+                  ]}
+                />
+              </span>
+            )}
             <div className="hidden md:flex items-center gap-2">
-              {menuEmails(false)}
+              {menuEmails()}
               {podeBloquear && <Button variant="secondary" icon="block" onClick={() => setBloqueiosAberto(true)}>Bloqueios</Button>}
               {podeCadastrar && (
                 <MenuAcoes
@@ -596,6 +608,7 @@ export const Inspecoes: React.FC = () => {
                 />
               )}
             </div>
+            </>
           ) : undefined}
         />
 
@@ -617,7 +630,7 @@ export const Inspecoes: React.FC = () => {
         ) : (
           <section aria-label="Lista de IS" className="md:bg-white md:border md:border-line md:rounded-xl md:overflow-clip">
             {/* Abas sublinhadas (ouro = ativa) com a contagem · vista só com ícone (G2) · ⋮ no celular. */}
-            <div className="flex items-end justify-between gap-2 border-b border-line md:px-4">
+            <div className="flex items-end justify-between gap-2 border-b border-line -mx-4 px-4 md:mx-0 bg-white md:bg-transparent">
               <div role="tablist" aria-label="Situação das IS" className="flex gap-1" onKeyDown={aoTeclaAbas}>
                 {abas.map(t => {
                   const ativa = aba === t.id;
@@ -633,10 +646,7 @@ export const Inspecoes: React.FC = () => {
                   );
                 })}
               </div>
-              <div className="flex items-center gap-1 pb-1.5">
-                {desktop && <AlternarVisao value={visao} onChange={setVisao} />}
-                {!desktop && menuEmails(true)}
-              </div>
+              {desktop && <div className="flex items-center gap-1 pb-1.5"><AlternarVisao value={visao} onChange={setVisao} /></div>}
             </div>
 
             {/* Busca e filtros em chips — no celular, uma linha só com rolagem lateral (M3); a busca abre pelo ícone. */}

@@ -4,10 +4,14 @@
 // com o título único da página, descrição e ações. Antes, cada tela escolhia
 // uma largura própria (672 a 1600 px) e repetia o título na topbar e num H2.
 // Contrato do PageHeader (auditoria v3, 3b): trilha na topbar · h1 24/800 ·
-// descrição 14 ink-3 (resumo operacional, sem sobrelinha) · ações em linha
-// (⋮ · secundária · primária por último), alinhadas ao topo. A primária pode
-// vir em `fab`: no celular vira FAB (canto inferior direito).
-import React from 'react';
+// descrição 14 ink-3 (resumo operacional) · ações em linha (⋮ · secundária ·
+// primária por último), alinhadas ao topo. A primária pode vir em `fab`: no
+// celular vira FAB (canto inferior direito).
+// Celular (auditoria v3, 4b/M1/M9): o título vai para a topbar (h1), a descrição some
+// (salvo `descricaoNoCelular`) e as `actions` são levadas à topbar (portal no slot
+// #topbar-acoes, à direita da busca) — o conteúdo da página começa logo abaixo da topbar.
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FabAcoes } from './Fab';
 import { Button, ButtonLink } from './Button';
 import { useTituloPagina } from '../shell/TituloPagina';
@@ -39,9 +43,18 @@ export interface PageHeaderFab {
   loading?: boolean;
 }
 
+/** Slot da topbar onde as ações da página aparecem no celular (Topbar.tsx). */
+export const TOPBAR_ACOES_ID = 'topbar-acoes';
+
 export interface PageHeaderProps {
   /** h1 24/800 — um por página, igual ao último item da trilha. */
   title: string;
+  /** Título mostrado na topbar do celular quando difere do h1 (ex.: Início: h1 "Boa tarde, Nome", topbar "Início"). */
+  tituloTopbar?: string;
+  /** Sobrelinha 12/700 acima do h1 (ex.: a data na Início). Visível também no celular. */
+  eyebrow?: string;
+  /** Mantém a descrição visível no celular (padrão: só no desktop). */
+  descricaoNoCelular?: boolean;
   /** Linha de resumo 14 ink-3 (data, situação, período, contadores). Aceita ReactNode. */
   description?: React.ReactNode;
   /**
@@ -60,22 +73,29 @@ const FabPagina: React.FC<{ fab: PageHeaderFab }> = ({ fab }) => (
   <FabAcoes acoes={[{ id: 'principal', rotulo: fab.label, icone: fab.icon, onClick: fab.onClick, to: fab.to, disabled: fab.disabled, loading: fab.loading }]} />
 );
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, actions, fab, className = '' }) => {
+export const PageHeader: React.FC<PageHeaderProps> = ({ title, tituloTopbar, eyebrow, description, descricaoNoCelular = false, actions, fab, className = '' }) => {
   const descricaoBloco = description !== undefined && description !== null && typeof description !== 'string' && typeof description !== 'number';
+  const temDescricao = description !== undefined && description !== null && description !== false && description !== '';
   // M9: no celular o título vira o h1 da topbar (shell/TituloPagina.tsx); aqui o h1 some abaixo de md.
-  const tituloNaTopbar = useTituloPagina(title);
+  const tituloNaTopbar = useTituloPagina(tituloTopbar ?? title);
+  // 4b: no celular as ações vão para a topbar (slot #topbar-acoes, à direita da busca).
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => { setSlot(document.getElementById(TOPBAR_ACOES_ID)); }, []);
+  // No celular, sem sobrelinha nem descrição visível, o cabeçalho não ocupa espaço: o conteúdo cola na topbar.
+  const vazioNoCelular = tituloNaTopbar && !eyebrow && !(temDescricao && descricaoNoCelular);
   return (
-    <div className={`flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-6 ${className}`}>
+    <div className={`flex flex-col md:flex-row md:items-start md:justify-between gap-3 ${vazioNoCelular ? 'mb-0 md:mb-6' : 'mb-6'} ${className}`}>
       <div className="min-w-0">
+        {eyebrow && <p className="eyebrow mb-1">{eyebrow}</p>}
         <h1 className={`${tituloNaTopbar ? 'hidden md:block ' : ''}text-h1 font-extrabold text-navy leading-tight`}>{title}</h1>
-        {description !== undefined && description !== null && description !== false && description !== '' && (
+        {temDescricao && (
           descricaoBloco
-            ? <div className="text-sm text-ink-3 mt-1">{description}</div>
-            : <p className="text-sm text-ink-3 mt-1">{description}</p>
+            ? <div className={`text-sm text-ink-3 mt-1 ${descricaoNoCelular || !tituloNaTopbar ? '' : 'hidden md:block'}`}>{description}</div>
+            : <p className={`text-sm text-ink-3 mt-1 ${descricaoNoCelular || !tituloNaTopbar ? '' : 'hidden md:block'}`}>{description}</p>
         )}
       </div>
       {(actions || fab) && (
-        <div className="flex flex-row flex-wrap items-center justify-end gap-2 shrink-0">
+        <div className={`${tituloNaTopbar && slot ? 'hidden md:flex' : 'flex'} flex-row flex-wrap items-center justify-end gap-2 shrink-0`}>
           {actions}
           {fab && (
             fab.to
@@ -84,6 +104,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, acti
           )}
         </div>
       )}
+      {/* Celular: as mesmas ações na topbar (o slot só existe/aparece abaixo de md). */}
+      {actions && tituloNaTopbar && slot && createPortal(<div className="flex items-center gap-1">{actions}</div>, slot)}
       {fab && <FabPagina fab={fab} />}
     </div>
   );
@@ -94,10 +116,10 @@ interface PageProps extends PageHeaderProps {
   children: React.ReactNode;
 }
 
-export const Page: React.FC<PageProps> = ({ size = 'data', title, description, actions, fab, children }) => (
-  <div className={`py-6 md:py-8 ${fab ? 'pb-28 md:pb-10' : 'pb-10'}`}>
+export const Page: React.FC<PageProps> = ({ size = 'data', title, description, actions, fab, children, ...resto }) => (
+  <div className={`py-6 md:py-8 pt-4 md:pt-8 ${fab ? 'pb-28 md:pb-10' : 'pb-10'}`}>
     <Container size={size}>
-      <PageHeader title={title} description={description} actions={actions} fab={fab} />
+      <PageHeader title={title} description={description} actions={actions} fab={fab} {...resto} />
       {children}
     </Container>
   </div>

@@ -177,7 +177,7 @@ export const Administracao: React.FC = () => {
   );
 
   return (
-    <Container size="data" className="py-6 md:py-8 pb-10">
+    <Container size="data" className="py-6 md:py-8 pt-4 md:pt-8 pb-10">
       <PageHeader
         title={isDesktop ? 'Administração' : atual!.rotulo}
         description={isDesktop ? 'Usuários, permissões e ajustes do app · só Admin' : atual!.descricao}

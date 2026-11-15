@@ -88,7 +88,7 @@ export const ExamesGuide: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1">
-      <Container size="reading" className="py-6 md:py-8 pb-10 space-y-6">
+      <Container size="reading" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-6">
         <PageHeader title="Exames mínimos" description="Exames mínimos por finalidade de IS observando o sexo e a idade, de acordo com o Anexo O da DGPM-406." />
 
         <Card id="exames-config-card" className="flex flex-col gap-4">
