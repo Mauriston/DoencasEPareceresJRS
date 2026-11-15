@@ -11,7 +11,7 @@
 import type { Firestore, Timestamp } from 'firebase-admin/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { getStorage } from 'firebase-admin/storage';
-import { examesDasGuias, finalidadeTemExamesMinimos, idadeEm, paginasDasGuias, type GrupoExamesGuia, type SexoGuia } from '../../../utils/guiasExames';
+import { ehFinalidadeAnexoO, examesDasGuias, finalidadeTemExamesMinimos, idadeEm, paginasDasGuias, type GrupoExamesGuia, type SexoGuia } from '../../../utils/guiasExames';
 import { registrarUsoServidor } from '../../email/registroEmailsIS';
 
 /** Erro de validação: vira 400/404 na rota, com a mensagem para o usuário. */
@@ -47,7 +47,7 @@ const dataValida = (v: unknown): string => {
 
 export const gerarGuiasExames = async (
   db: Firestore, bucket: Bucket, uid: string,
-  corpo: { isId?: unknown; sexo?: unknown; dataNascimento?: unknown },
+  corpo: { isId?: unknown; sexo?: unknown; dataNascimento?: unknown; finalidadeAnexoO?: unknown },
 ): Promise<{ gerado: boolean; guias?: GuiasGeradas; motivo?: string }> => {
   const isId = idDaIs(corpo.isId);
   if (!isId) throw new ErroGuias(400, 'Informe a IS.');
@@ -55,7 +55,8 @@ export const gerarGuiasExames = async (
   const snapIs = await refIs.get();
   if (!snapIs.exists) throw new ErroGuias(404, 'IS não encontrada.');
   const is = snapIs.data() as { is?: number; finalidade?: string; inspecionado?: string; inspecionadoId?: string };
-  const finalidade = String(is.finalidade || '').trim();
+  // Para as regras vale a finalidade do Anexo O que o app identificou (IA) quando é uma da lista; senão, a da IS.
+  const finalidade = ehFinalidadeAnexoO(corpo.finalidadeAnexoO) ? String(corpo.finalidadeAnexoO) : String(is.finalidade || '').trim();
   if (!finalidadeTemExamesMinimos(finalidade)) {
     return { gerado: false, motivo: 'A finalidade desta IS não tem exames mínimos que gerem guias.' };
   }
@@ -82,7 +83,7 @@ export const gerarGuiasExames = async (
   const { htmlGuiasExames } = await import('./documento');
   const { htmlParaPdf } = await import('../gerarPdf');
   const pdf = await htmlParaPdf(htmlGuiasExames({
-    numeroIS: is.is ?? isId, inspecionado: String(is.inspecionado || ''), finalidade, paginas,
+    numeroIS: is.is ?? isId, inspecionado: String(is.inspecionado || ''), finalidade: String(is.finalidade || '').trim() || finalidade, paginas,
     presidenteNome: assinatura.presidenteNome, presidentePosto: assinatura.presidentePosto,
   }));
 

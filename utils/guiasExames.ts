@@ -13,6 +13,7 @@
 //  - páginas: 1 dos laboratoriais (ordem alfabética, duas colunas); 1 de Audiometria; 1 do Exame
 //    odontológico geral; 1 de Oftalmologia Especial; 1 do Laudo ginecológico e de mamas; 1 por exame
 //    de imagem; 1 por exame de "Outros exames".
+import { casarFinalidadeAnexoO } from './guiasExamesIS';
 import examesData from '../data/anexoOExamesMinimos.json';
 
 export type SexoGuia = 'Masculino' | 'Feminino';
@@ -62,8 +63,18 @@ const compararPtBr = (a: string, b: string) => a.localeCompare(b, 'pt-BR', { sen
  * imagem e Outros exames (na ordem do Anexo O). Grupos sem exame ficam de fora. Finalidade desconhecida → [].
  * Idade inválida (NaN) não libera exame com idade mínima.
  */
+/**
+ * Finalidade do Anexo O equivalente à da IS: nome igual ou um apelido conhecido (utils/guiasExamesIS.ts —
+ * ex.: "Deixar o SAM" → "Deixar o SAM, SMV, SMI ou SPG"). O app pode mandar ao servidor a escolhida pela IA.
+ */
+const finalidadeDoAnexo = (finalidade: string): FinalidadeAnexo | undefined =>
+  FINALIDADES.get(chave(finalidade)) ?? FINALIDADES.get(chave(casarFinalidadeAnexoO(finalidade) ?? ''));
+
+/** O nome é exatamente uma finalidade do Anexo O (valida a escolhida pela IA no app). */
+export const ehFinalidadeAnexoO = (nome: unknown): boolean => typeof nome === 'string' && FINALIDADES.has(chave(nome));
+
 export const examesDasGuias = (finalidade: string, sexo: SexoGuia, idade: number): GrupoExamesGuia[] => {
-  const f = FINALIDADES.get(chave(finalidade));
+  const f = finalidadeDoAnexo(finalidade);
   if (!f) return [];
   const porGrupo = new Map<string, string[]>();
   for (const g of f.Grupos_Exame) {

@@ -31,7 +31,8 @@ import { FiltroPeriodo, type FiltroPeriodoValor } from './inspecoes/FiltroPeriod
 import { FiltroPopover } from './inspecoes/FiltroPopover';
 import { agruparAtivasIS, agruparFinalizadasIS, ordenarFinalizadasIS, type GrupoIS } from './inspecoes/listaIS';
 import { useIsDesktop } from '../hooks/useIsDesktop';
-import { InspecaoForm } from './inspecoes/InspecaoForm';
+import { InspecaoForm, type DadosInspecionadoIS } from './inspecoes/InspecaoForm';
+import { PosCriacaoIS, deveTentarGuias } from './inspecoes/guias/PosCriacaoIS';
 import { ISPorFotoForm } from './inspecoes/ISPorFotoForm';
 import { InspecaoDetalhe } from './inspecoes/InspecaoDetalhe';
 import { AgendarDialog } from './inspecoes/AgendarDialog';
@@ -227,6 +228,8 @@ export const Inspecoes: React.FC = () => {
     if (!perguntaAgendamento) return;
     return observarAgendamentos(a => setFilaAgendamento(f => (f.some(x => x.isId === a.isId && x.dataEntrevista === a.dataEntrevista) ? f : [...f, { ...a, origem: 'agendamento' }])));
   }, [perguntaAgendamento]);
+  /** Depois de abrir a IS: guias de exames, e-mail de abertura e envio das guias (inspecoes/guias/PosCriacaoIS). */
+  const [posCriacao, setPosCriacao] = useState<{ is: InspecaoRecord; dados: DadosInspecionadoIS } | null>(null);
   const [parecerPara, setParecerPara] = useState<{ is: InspecaoRecord; inicial?: ParecerRecord } | null>(null);
   const [confirmando, setConfirmando] = useState<{ tipo: 'falta' | 'cancelar'; is: InspecaoRecord } | null>(null);
   const [apagando, setApagando] = useState<InspecaoRecord | null>(null);
@@ -359,9 +362,11 @@ export const Inspecoes: React.FC = () => {
     else avisar(r.semConvidado ? 'Evento sincronizado. O perito não tem Gmail cadastrado e não foi convidado.' : 'Evento sincronizado com o Google Agenda "JRS/HNRe".');
   };
 
-  const aoCriada = (is: InspecaoRecord) => {
+  const aoCriada = (is: InspecaoRecord, dados: DadosInspecionadoIS = {}) => {
     setNovo(null);
-    if (is.dataEntrevista) avisarAgendamento(is, is.dataEntrevista);
+    // Guias de exames e e-mail de abertura primeiro; a pergunta do e-mail de agendamento vem depois (fimPosCriacao).
+    if (deveTentarGuias(is) || podeEmails) setPosCriacao({ is, dados });
+    else if (is.dataEntrevista) avisarAgendamento(is, is.dataEntrevista);
     if (is.dataEntrevista) {
       avisar(`IS ${is.is} cadastrada e agendada. Sincronizando com o Google Agenda…`);
       sincronizarAgendaIS(is).then(r => {
@@ -369,6 +374,12 @@ export const Inspecoes: React.FC = () => {
         else avisar(r.semConvidado ? `IS ${is.is} agendada. O perito não tem Gmail cadastrado e não foi convidado.` : `IS ${is.is} agendada e sincronizada com o Google Agenda.`);
       });
     } else avisar(`IS ${is.is} cadastrada.`);
+  };
+
+  const fimPosCriacao = () => {
+    const is = posCriacao?.is;
+    setPosCriacao(null);
+    if (is?.dataEntrevista) avisarAgendamento(is, is.dataEntrevista);
   };
 
   /** IS por foto (lote): cada IS gravada com horário reservado sincroniza o Google Agenda. */
@@ -687,6 +698,15 @@ export const Inspecoes: React.FC = () => {
         />
       )}
 
+      {posCriacao && (
+        <PosCriacaoIS
+          key={posCriacao.is.id}
+          is={posCriacao.is} dados={posCriacao.dados} podeEmails={podeEmails}
+          militar={militares.find(m => m.id === posCriacao.is.inspecionadoId)}
+          onAviso={avisar} onFim={fimPosCriacao}
+        />
+      )}
+
       {porFoto && usuario && (
         <ISPorFotoForm
           militares={militares} peritos={peritos} config={config} bloqueios={bloqueiosTodos} inspecoes={lista ?? []}
@@ -817,7 +837,7 @@ export const Inspecoes: React.FC = () => {
       {apagando && (
         <ConfirmDialog
           title="Apagar IS"
-          message={<>Apagar definitivamente a <strong>IS {apagando.is}</strong> ({nomeCurto(apagando.inspecionado)})? O horário reservado e o evento no Google Agenda também são removidos. Esta ação não pode ser desfeita.</>}
+          message={<>Apagar definitivamente a <strong>IS {apagando.is}</strong> ({nomeCurto(apagando.inspecionado)})? O horário reservado, o evento no Google Agenda e as guias de exames também são removidos. Esta ação não pode ser desfeita.</>}
           confirmLabel="Apagar" destructive onConfirm={confirmarApagar} onCancel={() => setApagando(null)}
         />
       )}
