@@ -102,7 +102,7 @@ const VisualizarComo: React.FC<{ atual: string; onEscolher: (perfil: string | nu
   );
 };
 
-/** Item "Sobre o app" (auditoria v3, SB1): as funções do app que o perfil usa. Navega pelo NavContext (topbar e sidebar). */
+/** Item "Sobre o app" (auditoria v3, SB1): o que o app faz, área por área. Navega pelo NavContext (topbar e sidebar). */
 const ItemSobre: React.FC = () => {
   const nav = useContext(NavContext);
   if (!nav || !canAccessPage('sobre', nav.authUser?.perfil)) return null;

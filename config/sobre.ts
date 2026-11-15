@@ -1,5 +1,5 @@
 // Ficheiro: config/sobre.ts
-// Conteúdo da página "Sobre o app" — a interna (components/Sobre.tsx, só as áreas que o perfil acessa) e a
+// Conteúdo da página "Sobre o app" — a interna (components/Sobre.tsx, todas as áreas; o "Abrir" só nas que o perfil acessa) e a
 // pública sem login (components/sobre/SobrePublico.tsx, #/publico/sobre, todas as áreas). Texto para o
 // usuário final — edite aqui, sem mexer nos componentes. As duas versões leem o MESMO registro de cada área
 // (o campo `textoPublico` traz a redação para quem é de fora: sem nomes de botão nem jargão de tela), para
@@ -11,7 +11,8 @@
 // - `itens`: benefícios curtos; a página mostra no máximo 4 (3 no celular) e "Ver tudo (N)" para o resto.
 // - `imagens`: nome-base das capturas em public/sobre/telas/ (geradas por scripts/sobre/gerar-capturas.ts,
 //   com dados fictícios). Sem captura gerada, a página mostra uma moldura com o ícone da área.
-// - `paginas`: a área aparece (e o botão "Abrir" leva à 1ª liberada) se o perfil acessa QUALQUER uma delas.
+// - `paginas`: a área aparece sempre; o botão "Abrir" leva à 1ª liberada e só existe se o perfil acessa
+//   QUALQUER uma delas.
 import type { NavItem } from '../types';
 import type { TipoEmail } from './emails';
 
