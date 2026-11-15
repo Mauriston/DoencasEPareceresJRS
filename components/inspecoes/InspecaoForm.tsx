@@ -18,7 +18,8 @@ import { AvatarRadioGroup, type AvatarRadioOption } from '../ui/AvatarRadioGroup
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { FinalidadeDropdown, type GrupoFinalidadeExtra } from '../ExamesGuide';
 import { CadastroInspecionado } from '../militares/CadastroInspecionado';
-import { SeletorHorario, estadoDoSlot } from './SeletorHorario';
+import { estadoDoSlot } from './SeletorHorario';
+import { EscolhaEntrevista } from './EscolhaEntrevista';
 import { carregarFinalidadesIS, normalizarBusca, type GrupoFinalidadeIS } from '../../utils/corposQuadros';
 import { formatNip } from '../../utils/format';
 import { hojeISO, ocupadosDe, duracaoDoGrupo, peritoAtendeNoTurno, turnoDoSlot, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
@@ -287,7 +288,21 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
           />
           <p className="-mt-3 text-xs text-ink-3">{ampCompetente ? `Definido pela finalidade: competência da ${ampCompetente}.` : 'Definido automaticamente pela finalidade escolhida.'}</p>
 
-          {ampCompetente && (
+          {podeAgendar && ampCompetente && (
+            <fieldset className="border border-line rounded-xl p-3 space-y-3">
+              <legend className="px-1 text-xs font-bold text-ink-3">Entrevista (opcional — pode ser agendada depois)</legend>
+              <EscolhaEntrevista
+                amp={ampCompetente} candidatos={peritosDoAmpAtual} config={config} bloqueios={bloqueios} ocupados={ocupados}
+                inspecoes={inspecoes} duracao={duracao} permitirDataPassada={podeDataPassada} permitirLimpar
+                data={data} peritoUid={peritoUid} hora={hora} erroPerito={erros.perito} erroHora={erros.hora}
+                onData={d => { setData(d); limpar('hora'); }} onPerito={uid => { setPeritoUid(uid); limpar('perito'); }} onHora={h => { setHora(h); limpar('hora'); }}
+              />
+              {hora && data && <p className="text-xs font-semibold text-green-700">A IS será cadastrada já como Agendada.</p>}
+            </fieldset>
+          )}
+
+          {/* Sem data da entrevista (ou sem permissão de agendar): o perito pode ser escolhido entre todos do AMP. */}
+          {ampCompetente && (!podeAgendar || (!data && peritosDoAmpAtual.length > 0)) && (
             <div>
               {peritosDoAmpAtual.length === 0
                 ? <p role="alert" className="text-sm font-semibold text-wine">Não há perito ativo para o AMP {ampCompetente}. Cadastre o usuário médico em Usuários.</p>
@@ -299,17 +314,6 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
                   />
                 )}
             </div>
-          )}
-
-          {podeAgendar && ampCompetente && (
-            <fieldset className="border border-line rounded-xl p-3 space-y-3">
-              <legend className="px-1 text-xs font-bold text-ink-3">Entrevista (opcional — pode ser agendada depois)</legend>
-              <SeletorHorario
-                duracao={duracao} peritoUid={peritoUid} data={data} onData={d => { setData(d); limpar('hora'); }} hora={hora} onHora={h => { setHora(h); limpar('hora'); }}
-                config={config} bloqueios={bloqueios} ocupados={ocupados} erro={erros.hora} permitirDataPassada={podeDataPassada}
-              />
-              {hora && data && <p className="text-xs font-semibold text-green-700">A IS será cadastrada já como Agendada.</p>}
-            </fieldset>
           )}
 
           <Field label="Observações">

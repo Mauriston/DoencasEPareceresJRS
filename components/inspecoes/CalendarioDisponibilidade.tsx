@@ -1,8 +1,10 @@
 // Ficheiro: components/inspecoes/CalendarioDisponibilidade.tsx
 // Mini calendário de escolha de data: só os dias com disponibilidade (segundo `disponivel`) podem ser
-// escolhidos; os demais ficam esmaecidos. Navega por mês.
+// escolhidos; os demais ficam esmaecidos. Navega por mês. Com `contagem`, cada dia disponível mostra
+// quantas IS já estão agendadas nele.
 import React, { useState } from 'react';
-import { hojeISO, somarDias, inicioDaSemana, inicioDoMes, nomeMes, deISO, paraISO } from '../../utils/inspecoes';
+import { hojeISO, inicioDoMes, nomeMes, deISO, paraISO } from '../../utils/inspecoes';
+import { gradeDoMes } from '../../utils/disponibilidadeAgenda';
 
 interface Props {
   valor: string;
@@ -11,15 +13,17 @@ interface Props {
   disponivel: (data: string) => boolean;
   /** Mês exibido ao abrir (qualquer data do mês). */
   mesInicial?: string;
+  /** Nº de IS já agendadas no dia, exibido nos dias disponíveis. */
+  contagem?: (data: string) => number;
+  /** Libera dias anteriores a hoje (só o Admin, ao cadastrar IS retroativa). */
+  permitirDataPassada?: boolean;
 }
 
-export const CalendarioDisponibilidade: React.FC<Props> = ({ valor, onChange, disponivel, mesInicial }) => {
+export const CalendarioDisponibilidade: React.FC<Props> = ({ valor, onChange, disponivel, mesInicial, contagem, permitirDataPassada = false }) => {
   const hoje = hojeISO();
   const [mes, setMes] = useState(inicioDoMes(valor || mesInicial || hoje));
   const mudarMes = (n: number) => { const d = deISO(mes); d.setMonth(d.getMonth() + n, 1); setMes(paraISO(d)); };
-  const inicio = inicioDaSemana(mes);
-  const semanas = Array.from({ length: 6 }, (_, w) => Array.from({ length: 7 }, (_, d) => somarDias(inicio, w * 7 + d)))
-    .filter((s, i) => i < 5 || s.some(d => d.slice(0, 7) === mes.slice(0, 7)));
+  const dias = gradeDoMes(mes);
 
   return (
     <div>
@@ -32,24 +36,28 @@ export const CalendarioDisponibilidade: React.FC<Props> = ({ valor, onChange, di
         {['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((l, i) => <span key={i} className="py-1">{l}</span>)}
       </div>
       <div className="grid grid-cols-7 gap-y-0.5" role="group" aria-label={`Datas de ${nomeMes(mes)}`}>
-        {semanas.flat().map(d => {
+        {dias.map(d => {
           const foraDoMes = d.slice(0, 7) !== mes.slice(0, 7);
-          const livre = !foraDoMes && d >= hoje && disponivel(d);
+          const livre = !foraDoMes && (permitirDataPassada || d >= hoje) && disponivel(d);
           const ativo = d === valor;
+          const n = livre && contagem ? contagem(d) : null;
           return (
             <button
               key={d} type="button" disabled={!livre} aria-pressed={ativo} onClick={() => onChange(d)}
-              aria-label={`${Number(d.slice(8))} de ${nomeMes(d)}${livre ? ', disponível' : ', indisponível'}`}
-              className={`min-h-[40px] rounded-lg text-sm font-semibold transition-colors ${
+              aria-label={`${Number(d.slice(8))} de ${nomeMes(d)}${livre ? ', disponível' : ', indisponível'}${n !== null ? `, ${n} IS agendada${n !== 1 ? 's' : ''}` : ''}`}
+              className={`min-h-[44px] flex flex-col items-center justify-center rounded-lg text-sm font-semibold leading-none transition-colors ${
                 ativo ? 'bg-navy text-white' : livre ? 'bg-green/15 text-green-700 hover:bg-green/25' : foraDoMes ? 'text-transparent cursor-default' : 'text-ink-4 cursor-not-allowed'
               } ${d === hoje && !ativo ? 'ring-1 ring-navy' : ''}`}
             >
               {Number(d.slice(8))}
+              {n !== null && (
+                <span aria-hidden="true" className={`mt-0.5 min-w-[18px] px-1 rounded-full text-[10px] font-bold tabular-nums leading-[14px] ${ativo ? 'bg-white text-navy' : n > 0 ? 'bg-navy text-white' : 'bg-white text-ink-3 border border-line'}`}>{n}</span>
+              )}
             </button>
           );
         })}
       </div>
-      <p className="mt-1 text-xs text-ink-3"><span className="inline-block w-3 h-3 rounded-sm bg-green/30 align-middle mr-1" aria-hidden="true" />Datas com horário livre</p>
+      <p className="mt-1 text-xs text-ink-3"><span className="inline-block w-3 h-3 rounded-sm bg-green/30 align-middle mr-1" aria-hidden="true" />Datas com horário livre{contagem ? ' · o número é a quantidade de IS já agendadas no dia' : ''}</p>
     </div>
   );
 };
