@@ -731,7 +731,7 @@ async function startServer() {
     }
   });
 
-  // E-mail de agendamento ao inspecionado (só Verificações e Términos; Admin e Secretaria): servidor/email/agendamentoIS.ts.
+  // E-mail de agendamento/reagendamento ao inspecionado (todos os grupos: Verificações, Benefícios e geral; Admin e Secretaria): servidor/email/agendamentoIS.ts.
   app.post("/api/email/agendamento-is", rotaGoogle("email-agendamento-is", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/agendamentoIS")).enviarAgendamentoIS(db, b.isId, b.email, quem.uid)) }), true));
   // E-mail de faltas às IS dos inspecionados do HNRe (Admin e Secretaria): servidor/email/faltasHNRe.ts.
@@ -744,6 +744,9 @@ async function startServer() {
   app.post("/api/email/nac", rotaGoogle("email-nac", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/nac")).enviarNac(db, b.isIds, quem.uid)) }), true));
   // [rotas: e-mails de agendamento geral/benefícios e resultado de benefícios — pacote B2]
+  // Resultado de IS de Benefícios (3 modelos; IS com Nº do TIS; Admin e Secretaria): servidor/email/resultadoBeneficios.ts.
+  app.post("/api/email/resultado-beneficios", rotaGoogle("email-resultado-beneficios", ["admin", "user_secretaria"], async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/resultadoBeneficios")).enviarResultadoBeneficios(db, b.isId, b.modelo, b.email, quem.uid)) }), true));
 
   // E-mails de teste (Configurações; só Admin): dados fictícios, só para os destinatários de teste: servidor/email/teste.ts.
   app.post("/api/email/teste", rotaGoogle("email-teste", ["admin"], async (db, b, quem) =>

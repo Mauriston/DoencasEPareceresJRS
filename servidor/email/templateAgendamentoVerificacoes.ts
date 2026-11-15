@@ -2,8 +2,8 @@
 // E-mail "AGENDAMENTO DE INSPEÇÃO DE SAÚDE" do grupo **Verificações e Términos** (VDF, Término de Incapacidade e
 // de Restrições: orientações, RDM, laudos possíveis e recurso). Template enviado pelo Presidente da JRS (Zimbra),
 // limpo e em HTML puro, sem JavaScript. Placeholders (servidor/email/agendamentoIS.ts): {{inspecionado}}
-// {{finalidade_is}} {{data}} {{hora}} {{banner_url}} {{logo_rodape_url}} e a assinatura dinâmica
-// ({{#mostrar_signatario}}…, servidor/email/comum.ts).
+// {{finalidade_is}} {{data}} {{hora}} {{acao_titulo}} ("Agendamento" / "Reagendamento") {{banner_url}}
+// {{logo_rodape_url}} e a assinatura dinâmica ({{#mostrar_signatario}}…, servidor/email/comum.ts).
 export const TEMPLATE_AGENDAMENTO_VERIFICACOES = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -22,7 +22,7 @@ export const TEMPLATE_AGENDAMENTO_VERIFICACOES = `<!DOCTYPE html>
 <p style="margin:0 0 20px;font-size:18px;color:#333333"><strong>Prezado(a) Senhor(a),</strong></p>
 
 <div style="background-color:#f4f6f9;border-left:4px solid #050f41;padding:20px;margin-bottom:30px;border-radius:4px">
-<p style="margin:0 0 10px;font-size:18px;color:#050f41;font-weight:bold;text-transform:uppercase">📅 Confirmação de Agendamento de Inspeção de Saúde</p>
+<p style="margin:0 0 10px;font-size:18px;color:#050f41;font-weight:bold;text-transform:uppercase">📅 Confirmação de {{acao_titulo}} de Inspeção de Saúde</p>
 <ul style="margin:0;padding-left:20px;list-style-type:disc;line-height:1.6;font-size:17px">
 <li style="margin-bottom:6px">Inspecionado: <span style="color:#050f41;font-weight:bold">{{inspecionado}}</span></li>
 <li style="margin-bottom:6px"><span style="color:#050f41">Finalidade IS:</span> <span style="color:#050f41;font-weight:bold">{{finalidade_is}}</span></li>
