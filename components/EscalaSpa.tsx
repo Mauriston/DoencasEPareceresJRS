@@ -1,5 +1,5 @@
 // Ficheiro: components/EscalaSpa.tsx
-// Página "Escala SVÇ": escala de serviço do SPA (coleção "escalaSpa", enviada pelo Admin em CSV).
+// Página "Escala de Serviço": escala de serviço do SPA (coleção "escalaSpa", enviada pelo Admin em CSV).
 //  - Desktop: calendário do mês no mesmo estilo da página de supervisão (github.com/Mauriston/escalasupervisao):
 //    grade navy, dias úteis em branco, sábados/domingos/feriados em vinho claro e festas maiores em azul claro, hoje com
 //    contorno dourado. Tocar num dia GIRA todos os cards (como um jogo da memória): numa face a supervisão
@@ -248,7 +248,7 @@ export const EscalaSpa: React.FC = () => {
       <Toast message={toast} tone="success" />
       <Container size="data" className="pt-0 md:pt-8 pb-10 flex flex-col gap-6">
         <PageHeader
-          title="Escala SVÇ"
+          title="Escala de Serviço"
           description="Supervisão do SPA (24 h, com retém) e plantões de 12 h (dia e noite)."
           actions={ehAdmin ? (
             <>

@@ -44,7 +44,7 @@ export const PAGE_DEFS: PageDef[] = [
   // label/ícone/subtítulo para a navegação (Home/Sidebar).
   { id: 'pericia-menor', label: 'Perícia Menor', icon: 'personal_injury', subtitle: 'Registre as Perícias Menores dos militares de bordo.' },
   // Escala de serviço do SPA (supervisão 24h com retém e plantões de 12h dia/noite), enviada pelo Admin em CSV.
-  { id: 'escala', label: 'Escala SVÇ', icon: 'calendar_month', subtitle: 'Escala de supervisão e plantões do SPA.' },
+  { id: 'escala', label: 'Escala de Serviço', icon: 'calendar_month', subtitle: 'Escala de supervisão e plantões do SPA.' },
   { id: 'mensagens', label: 'Mensagens', icon: 'chat', subtitle: 'Faça minutas das MSG de IS auxiliado por IA.' },
   { id: 'dgpm406', label: 'DGPM-406', icon: 'anchor', subtitle: 'Consulte capítulos e anexos da DGPM-406.' },
   { id: 'laws', label: 'Legislação', icon: 'balance', subtitle: 'Pesquise as leis que fundamentam as IS.' },

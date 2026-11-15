@@ -52,7 +52,7 @@ import { observarEscalaAPartirDe, type EscalaDia } from '../services/firestoreEs
 import { chaveNome, nomeExibicao, servicosDoUsuario, servicosNoMes, type FuncaoEscala } from '../utils/escalaSpa';
 
 const SEMANA_ABR = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'];
-/** Ícone e cor de cada função da Escala SVÇ no card "Próximos serviços". */
+/** Ícone e cor de cada função da Escala de Serviço no card "Próximos serviços". */
 const FUNCAO_ESCALA: Record<FuncaoEscala, { icone: string; rotulo: string }> = {
   'Supervisão': { icone: 'shield_person', rotulo: 'Supervisão 24 h' },
   'Retém supervisão': { icone: 'person_pin', rotulo: 'Retém da supervisão' },
@@ -166,7 +166,7 @@ export const Home: React.FC = () => {
       .sort((a, b) => (b.criadoEm?.toMillis?.() ?? 0) - (a.criadoEm?.toMillis?.() ?? 0) || b.dataAtestado.localeCompare(a.dataAtestado))
     : []), [pericias, ehMedicoGeral, authUser?.uid]);
 
-  // Escala SVÇ: do 1º dia do mês (para contar os serviços do mês) até ~2 meses à frente (próximos serviços).
+  // Escala de Serviço: do 1º dia do mês (para contar os serviços do mês) até ~2 meses à frente (próximos serviços).
   const podeEscala = canAccessPage('escala', perfil);
   const [escala, setEscala] = useState<EscalaDia[]>([]);
   const inicioMes = `${hoje.slice(0, 7)}-01`;
@@ -460,10 +460,15 @@ export const Home: React.FC = () => {
       </React.Fragment>
     ));
   };
+  // Para todos os médicos (Admin, JRS, MPI e Médicos Geral); a Secretaria não tem escala.
+  const mostraEscala = podeEscala && !ehSecretaria;
   const cardEscala = (
     <>
-      {podeEscala && diasServico.length > 0 && (
+      {mostraEscala && (
         <Secao id="home-escala" titulo="Próximos serviços" acao={<ButtonLink to={pathForView('escala')} variant="ghost" size="sm">Ver escala</ButtonLink>}>
+          {diasServico.length === 0 && (
+            <p className="px-4 py-4 text-sm text-ink-3 border-t border-line">Nenhum serviço seu nos próximos 2 meses{escala.length === 0 ? ' — a escala ainda não foi publicada' : ''}.</p>
+          )}
           <ul>
             {diasServico.map(({ data, funcoes, dia }) => {
               const [y, m, d] = data.split('-').map(Number);
@@ -564,6 +569,7 @@ export const Home: React.FC = () => {
         </div>
       )}
       {cardsPerfil}
+      {/* Próximos serviços antes de Próximas férias (celular). */}
       {!ehMedicoGeral && cardEscala}
       {cardFerias('')}
     </div>
