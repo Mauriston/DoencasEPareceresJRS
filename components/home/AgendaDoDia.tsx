@@ -25,6 +25,8 @@ interface Props {
   concursosClicaveis: boolean;
   /** Volta o painel para hoje (só aparece quando outro dia está escolhido). */
   onHoje: () => void;
+  /** Dentro do card que agrupa o calendário e a agenda (celular): sem moldura própria, com divisória no topo. */
+  embutido?: boolean;
 }
 
 /** Pesos das tags (H3/I8/G1): navy cheio fica para a ação primária; "Agendada" e afins vão em contorno. */
@@ -34,7 +36,7 @@ interface Linha { e: EventoAgenda; fim: string; to?: string; barra: string }
 
 const agoraHHMM = () => new Date().toTimeString().slice(0, 5);
 
-export const AgendaDoDia: React.FC<Props> = ({ dia, hoje, inspecoes, diasConcursos, concursosClicaveis, onHoje }) => {
+export const AgendaDoDia: React.FC<Props> = ({ dia, hoje, inspecoes, diasConcursos, concursosClicaveis, onHoje, embutido = false }) => {
   const ehHoje = dia === hoje;
   const porId = useMemo(() => new Map(inspecoes.map(i => [i.id, i])), [inspecoes]);
   const linhas: Linha[] = useMemo(() => eventosDoDia(dia, inspecoes, diasConcursos, hoje).map(e => {
@@ -58,7 +60,7 @@ export const AgendaDoDia: React.FC<Props> = ({ dia, hoje, inspecoes, diasConcurs
 
   return (
     <Secao
-      id="home-agenda" titulo={titulo}
+      id="home-agenda" titulo={titulo} embutido={embutido} className={embutido ? 'border-t border-line' : ''}
       acao={(
         <>
           {!ehHoje && <Button variant="ghost" size="sm" icon="today" onClick={onHoje}>Hoje</Button>}

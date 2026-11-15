@@ -19,6 +19,8 @@ interface Props {
   onSelecionar: (dia: string) => void;
   inspecoes: InspecaoRecord[];
   diasConcursos: DiaConcurso[];
+  /** Dentro de um card que agrupa o calendário e a agenda (celular): sem moldura própria. */
+  embutido?: boolean;
 }
 
 const Legenda: React.FC = () => (
@@ -30,7 +32,7 @@ const Legenda: React.FC = () => (
   </ul>
 );
 
-export const CalendarioMes: React.FC<Props> = ({ hoje, selecionado, onSelecionar, inspecoes, diasConcursos }) => {
+export const CalendarioMes: React.FC<Props> = ({ hoje, selecionado, onSelecionar, inspecoes, diasConcursos, embutido = false }) => {
   const [mes, setMes] = useState(inicioDoMes(selecionado || hoje));
   const ano = Number(mes.slice(0, 4));
   const mudarMes = (n: number) => {
@@ -46,7 +48,7 @@ export const CalendarioMes: React.FC<Props> = ({ hoje, selecionado, onSelecionar
 
   return (
     <Secao
-      id="home-calendario" titulo={tituloMes}
+      id="home-calendario" titulo={tituloMes} embutido={embutido}
       acao={(
         <span className="flex gap-1">
           <IconButton icon="chevron_left" label="Mês anterior" variant="ghost" size="sm" onClick={() => mudarMes(-1)} />
@@ -84,7 +86,7 @@ export const CalendarioMes: React.FC<Props> = ({ hoje, selecionado, onSelecionar
           );
         })}
       </div>
-      <p className="mt-3 pt-3 border-t border-line text-xs text-ink-3">Escolha um dia para ver a agenda daquele dia.</p>
+      <p className="mt-3 pt-3 border-t border-line text-xs text-ink-3">{embutido ? 'Escolha um dia para ver a agenda dele logo abaixo.' : 'Escolha um dia para ver a agenda daquele dia.'}</p>
       </div>
     </Secao>
   );
