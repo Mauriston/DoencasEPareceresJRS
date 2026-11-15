@@ -5,9 +5,13 @@
 import React, { useMemo } from 'react';
 import { Field } from '../ui/Field';
 import {
-  TURNOS, slotsDoTurno, ehDiaUtil, peritoAtendeNoTurno, bloqueioAtinge, chaveSlot, slotsCobertos, cabeNoTurno, horaFimEntrevista, DURACAO_SLOT_MIN, nomeDiaSemana, dataBr, hojeISO,
-  type BloqueioAgenda, type ConfigAgenda, type EstadoSlot,
+  TURNOS, slotsDoTurno, ehDiaUtil, peritoAtendeNoTurno, slotsCobertos, horaFimEntrevista, DURACAO_SLOT_MIN, nomeDiaSemana, dataBr, hojeISO,
+  type BloqueioAgenda, type ConfigAgenda,
 } from '../../utils/inspecoes';
+import { estadoDoSlot } from '../../utils/disponibilidadeAgenda';
+
+// Regras puras em utils/disponibilidadeAgenda.ts (reexportadas para quem já importava daqui).
+export { estadoDoSlot, slotsLivresDoDia } from '../../utils/disponibilidadeAgenda';
 
 interface Props {
   peritoUid: string;
@@ -29,19 +33,6 @@ interface Props {
   /** Libera datas anteriores a hoje no campo de data (só o Admin, ao cadastrar IS retroativa). */
   permitirDataPassada?: boolean;
 }
-
-export const estadoDoSlot = (
-  peritoUid: string, data: string, hhmm: string, turnoAtende: boolean,
-  bloqueios: BloqueioAgenda[], ocupados: Set<string>, duracao: number = DURACAO_SLOT_MIN,
-): EstadoSlot => {
-  if (!turnoAtende) return 'fora';
-  // A entrevista (20, 30 ou 60 min) ocupa os slots que toca; todos precisam estar livres e dentro do turno.
-  if (!cabeNoTurno(hhmm, duracao)) return 'nao_cabe';
-  const cobertos = slotsCobertos(hhmm, duracao);
-  if (cobertos.some(h => bloqueios.some(b => bloqueioAtinge(b, peritoUid, data, h)))) return 'bloqueado';
-  if (cobertos.some(h => ocupados.has(chaveSlot(peritoUid, `${data}T${h}`)))) return 'ocupado';
-  return 'livre';
-};
 
 export const SeletorHorario: React.FC<Props> = ({ peritoUid, data, onData, hora, onHora, config, bloqueios, ocupados, erro, semCampoData, permitirDataPassada = false, duracao = DURACAO_SLOT_MIN }) => {
   const diaUtil = !!data && ehDiaUtil(data);
@@ -109,13 +100,4 @@ export const SeletorHorario: React.FC<Props> = ({ peritoUid, data, onData, hora,
       )}
     </div>
   );
-};
-
-/** Horários (hh:mm) livres de um perito num dia: turno configurado, sem bloqueio e sem outra IS. */
-export const slotsLivresDoDia = (peritoUid: string, data: string, config: ConfigAgenda, bloqueios: BloqueioAgenda[], ocupados: Set<string>, duracao: number = DURACAO_SLOT_MIN): string[] => {
-  if (!ehDiaUtil(data)) return [];
-  return TURNOS.flatMap(t => {
-    const atende = peritoAtendeNoTurno(config, peritoUid, data, t.id);
-    return slotsDoTurno(t.id).filter(h => estadoDoSlot(peritoUid, data, h, atende, bloqueios, ocupados, duracao) === 'livre');
-  });
 };
