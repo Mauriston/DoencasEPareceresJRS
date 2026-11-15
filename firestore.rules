@@ -250,6 +250,13 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/inspecoes/$(id)).data.situacao != 'finalizada';
         allow update: if false;
       }
+
+      // Histórico de e-mails enviados da IS (utils/registroEmailsIS.ts): só o servidor grava (Admin SDK);
+      // lê quem lê as IS (todos que acessam a página Inspeções de Saúde).
+      match /emails/{eid} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
     }
 
     // Coleção "agendaSlots": horário ocupado de um perito ({peritoUid}__{data}T{hh-mm}),

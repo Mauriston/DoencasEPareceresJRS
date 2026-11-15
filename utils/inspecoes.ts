@@ -12,7 +12,7 @@ export type SituacaoIS = 'aberta' | 'andamento' | 'finalizada';
 
 /** Status gravado. "Atrasada" não é gravado: é derivado (ver statusEfetivoIS). */
 export type StatusIS =
-  | 'aberta' | 'agendada' | 'reagendada' | 'faltou' | 'parecer_solicitado' | 'auditoria' | 'revisao_exofficio'
+  | 'aberta' | 'realizando_exames' | 'agendada' | 'reagendada' | 'faltou' | 'parecer_solicitado' | 'auditoria' | 'revisao_exofficio'
   | 'restituicao_auditoria' | 'restituicao_jsd'
   | 'conclusao_pendente' | 'votacao_pendente' | 'assinaturas_pendentes' | 'tis_assinado' | 'cancelada';
 export type StatusExibicaoIS = StatusIS | 'atrasada';
@@ -22,6 +22,10 @@ export type TomStatus = 'success' | 'danger' | 'attention' | 'neutral' | 'navy' 
 export const STATUS_IS: Record<StatusExibicaoIS, { rotulo: string; situacao: SituacaoIS; tom: TomStatus }> = {
   aberta: { rotulo: 'Aberta', situacao: 'aberta', tom: 'navyOutline' },
   atrasada: { rotulo: 'Atrasada', situacao: 'aberta', tom: 'danger' },
+  // Só IS cuja finalidade tem exames mínimos (Anexo O): guias entregues ao inspecionado (presencial ou e-mail).
+  // Aberta → Realizando Exames → Agendada. Não fica "Atrasada": o comparecimento para pegar as guias cumpre o
+  // prazo de 7 dias úteis do item 2.1.2, alínea b, da DGPM-406.
+  realizando_exames: { rotulo: 'Realizando Exames', situacao: 'aberta', tom: 'attention' },
   agendada: { rotulo: 'Agendada', situacao: 'andamento', tom: 'navy' },
   reagendada: { rotulo: 'Reagendada', situacao: 'andamento', tom: 'navy' },
   faltou: { rotulo: 'Faltou', situacao: 'andamento', tom: 'danger' },
@@ -84,7 +88,7 @@ export const statusEfetivoIS = (is: DadosPrazoIS, hoje: string = hojeISO()): Sta
  * data e hora (só troca de perito) também mantém.
  */
 export const statusAoAgendar = (atual: { status: StatusIS; dataEntrevista?: string }, novaDataEntrevista: string): StatusIS => {
-  if (!['aberta', 'agendada', 'reagendada', 'faltou'].includes(atual.status)) return atual.status;
+  if (!['aberta', 'realizando_exames', 'agendada', 'reagendada', 'faltou'].includes(atual.status)) return atual.status;
   if (atual.dataEntrevista && atual.dataEntrevista === novaDataEntrevista && atual.status !== 'faltou') return atual.status;
   return atual.dataEntrevista || atual.status === 'faltou' ? 'reagendada' : 'agendada';
 };

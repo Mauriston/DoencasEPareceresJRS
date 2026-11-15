@@ -78,11 +78,39 @@ export interface InspecaoDoc {
   /** E-mail ao NAC (IS finalizada de Verificações e Términos; servidor/email/nac.ts). */
   emailNacEnviadoEm?: Timestamp | null;
   emailNacEnviadoPor?: string;
+  // ----- Guias de exames (só finalidades com exames mínimos no Anexo O; utils/guiasExames.ts) -----
+  /** Guias em PDF geradas no servidor (servidor/documentos/guiasExames/; Storage inspecoes/{id}/guias/guias-exames.pdf). */
+  guiasExames?: GuiasExamesIS | null;
+  /** Guias entregues ao inspecionado (caixa "Guias entregues ao inspecionado?" ou envio por e-mail). */
+  guiasEntregues?: boolean;
+  /** AAAA-MM-DD da entrega (data de hoje ao marcar; data do envio quando por e-mail). */
+  guiasEntreguesEm?: string;
+  guiasEntreguesVia?: 'presencial' | 'email';
+  guiasEntreguesPor?: string;
+  /** Último envio das guias por e-mail (inspecionado e/ou SEC-JRS): define "Enviar" × "Reenviar por e-mail". */
+  emailGuiasEnviadoEm?: Timestamp | null;
+  /** E-mail de abertura ao inspecionado (servidor/email/aberturaIS.ts). */
+  emailAberturaPara?: string;
+  emailAberturaEnviadoEm?: Timestamp | null;
+  /** E-mail de resultado de Benefícios (servidor/email/resultadoBeneficios.ts). */
+  emailResultadoBeneficiosEnviadoEm?: Timestamp | null;
+  emailResultadoBeneficiosModelo?: 'nao_enquadramento' | 'enquadramento_militar' | 'enquadramento_nao_militar';
   criadoPor: string;
   criadoEm: Timestamp | null;
   atualizadoEm?: Timestamp | null;
 }
 export type InspecaoRecord = InspecaoDoc & { id: string };
+
+/** Guias de exames geradas (gravado pelo servidor; Admin SDK). */
+export interface GuiasExamesIS {
+  /** Caminho no Storage: inspecoes/{isId}/guias/guias-exames.pdf */
+  caminho: string;
+  /** Exames solicitados por grupo, na ordem das páginas (ver utils/guiasExames.ts). */
+  grupos: { grupo: string; exames: string[] }[];
+  paginas: number;
+  geradoEm: Timestamp | null;
+  geradoPor: string;
+}
 
 export const observarInspecoes = (onData: (lista: InspecaoRecord[]) => void, onError?: (e: Error) => void) =>
   onSnapshot(

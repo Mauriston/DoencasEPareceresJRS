@@ -616,6 +616,8 @@ async function startServer() {
     await responderPdf(res, "pedido-parecer", async () => (await import("./servidor/documentos/pedidoParecer")).docPedidoParecer(dados));
   });
 
+  // [rotas: guias de exames — pacote A] (gerar PDF, apagar ao excluir a IS, limpeza 15 dias após a finalização)
+
   // ---- Conta Google da JRS no servidor (e-mail de impressão e Google Agenda, no lugar do Apps Script) ----
   // Sem a conta autorizada (ou sem o cliente OAuth configurado), as rotas respondem 503 com
   // codigo "google_indisponivel" e o app usa o Apps Script, como antes (services/googleServidor.ts).
@@ -686,6 +688,8 @@ async function startServer() {
   // Resultado da IS ao inspecionado (só IS com TIS assinado; Admin e Secretaria): servidor/email/resultadoIS.ts.
   app.post("/api/email/resultado-is", rotaGoogle("email-resultado-is", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/resultadoIS")).enviarResultadoIS(db, b.isId, b.email, quem.uid)) }), true));
+  // [rotas: e-mails de guias e de abertura — pacote B1]
+
   // E-mail de agendamento ao inspecionado (só Verificações e Términos; Admin e Secretaria): servidor/email/agendamentoIS.ts.
   app.post("/api/email/agendamento-is", rotaGoogle("email-agendamento-is", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/agendamentoIS")).enviarAgendamentoIS(db, b.isId, b.email, quem.uid)) }), true));
@@ -698,6 +702,8 @@ async function startServer() {
   // E-mail ao NAC: IS finalizadas de Verificações e Términos (Admin e Secretaria): servidor/email/nac.ts.
   app.post("/api/email/nac", rotaGoogle("email-nac", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/nac")).enviarNac(db, b.isIds, quem.uid)) }), true));
+  // [rotas: e-mails de agendamento geral/benefícios e resultado de benefícios — pacote B2]
+
   // E-mails de teste (Configurações; só Admin): dados fictícios, só para os destinatários de teste: servidor/email/teste.ts.
   app.post("/api/email/teste", rotaGoogle("email-teste", ["admin"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/teste")).enviarEmailTeste(db, b.tipo, quem.uid)) })));

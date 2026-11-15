@@ -26,7 +26,7 @@ const APP_URL = (process.env.APP_URL || 'https://mauriston.github.io/DoencasEPar
 const semente = (n: number): Aleatorio => () => { n = (n * 1103515245 + 12345) % 2147483648; return n / 2147483648; };
 
 // Semente de cada tipo: escolhida para listas de tamanho médio (o e-mail mostra o modelo sem ficar enorme).
-const SEMENTES: Record<TipoEmail, number> = { resultadoIS: 7, agendaIS: 11, agendamentoIS: 3, faltasHNRe: 5, inaptosConcurso: 9, nac: 4 };
+const SEMENTES: Partial<Record<TipoEmail, number>> = { resultadoIS: 7, agendaIS: 11, agendamentoIS: 3, faltasHNRe: 5, inaptosConcurso: 9, nac: 4 };
 
 const ASSINATURA_NEUTRA = `data:image/svg+xml;base64,${Buffer.from(
   '<svg xmlns="http://www.w3.org/2000/svg" width="440" height="264" viewBox="0 0 440 264"><path d="M60 170 C120 120 160 200 220 150 S320 120 380 160" fill="none" stroke="#9aa1b5" stroke-width="4" stroke-linecap="round"/></svg>',

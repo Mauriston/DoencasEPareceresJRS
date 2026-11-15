@@ -128,5 +128,13 @@ service firebase.storage {
         && firestore.get(/databases/(default)/documents/inspecoes/$(isId)).data.situacao != 'finalizada';
       allow update: if false;
     }
+
+    // Guias de exames da IS (PDF gerado no servidor — servidor/documentos/guiasExames/): inspecoes/{isId}/guias/guias-exames.pdf.
+    // A equipe lê; só o servidor grava e apaga (Admin SDK), inclusive 15 dias depois da finalização da IS.
+    match /inspecoes/{isId}/guias/{arquivo} {
+      allow read: if request.auth != null
+        && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
+      allow write: if false;
+    }
   }
 }
