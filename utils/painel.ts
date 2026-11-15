@@ -5,6 +5,7 @@
 // partir dos documentos que já existem (ver hooks/usePainel.ts). Datas em texto "AAAA-MM-DD".
 import { diasEntre, somarDias, statusEfetivoIS, type StatusIS, type SituacaoIS } from './inspecoes';
 import { ultimoDiaDoMes, type Intervalo } from './periodos';
+import { TIPOS_EMAIL } from '../config/emails';
 
 // ---------------------------------------------------------------------------
 // Períodos
@@ -178,6 +179,15 @@ export interface ISPainel {
   amp: 'JRS' | 'MPI';
   /** Data da entrevista à qual se refere a comunicação de falta (HNRe), quando houve. */
   emailFaltaDataEntrevista?: string;
+  // ----- Guias de exames / status "Realizando Exames" (só finalidades com exames mínimos) -----
+  /** Há guias geradas (guiasExames != null). */
+  temGuias?: boolean;
+  guiasEntregues?: boolean;
+  /** AAAA-MM-DD da entrega das guias = entrada em "Realizando Exames". */
+  guiasEntreguesEm?: string;
+  guiasEntreguesVia?: 'presencial' | 'email' | '';
+  /** Já houve envio das guias por e-mail (emailGuiasEnviadoEm != null). */
+  emailGuiasEnviado?: boolean;
 }
 
 export const recorteInicialIS = (perfil: string | undefined): RecorteIS =>
@@ -186,7 +196,7 @@ export const recorteInicialIS = (perfil: string | undefined): RecorteIS =>
 export const aplicarRecorteIS = <T extends Pick<ISPainel, 'peritoUid' | 'amp'>>(lista: T[], recorte: RecorteIS, uid: string): T[] =>
   recorte === 'minhas' ? lista.filter(i => i.peritoUid === uid) : recorte === 'mpi' ? lista.filter(i => i.amp === 'MPI') : lista;
 
-const ETAPAS_AGENDAMENTO: StatusIS[] = ['aberta', 'agendada', 'reagendada', 'faltou', 'cancelada'];
+const ETAPAS_AGENDAMENTO: StatusIS[] = ['aberta', 'realizando_exames', 'agendada', 'reagendada', 'faltou', 'cancelada'];
 const finalizadaNo = (i: ISPainel, j: Intervalo) => i.status === 'tis_assinado' && noIntervalo(i.dataFinalizacao, j);
 
 /**
@@ -247,6 +257,7 @@ export const serieMensalIS = (lista: ISPainel[], hoje: string): PontoSerie[] => 
 export const ETAPAS_EM_CURSO: { id: string; rotulo: string; status: (StatusIS | 'atrasada')[]; alerta?: boolean }[] = [
   { id: 'atrasada', rotulo: 'Atrasadas', status: ['atrasada'], alerta: true },
   { id: 'aberta', rotulo: 'Abertas', status: ['aberta'] },
+  { id: 'realizando_exames', rotulo: 'Realizando exames', status: ['realizando_exames'] },
   { id: 'agendada', rotulo: 'Agendadas', status: ['agendada', 'reagendada'] },
   { id: 'faltou', rotulo: 'Faltou', status: ['faltou'] },
   { id: 'parecer', rotulo: 'Parecer solicitado', status: ['parecer_solicitado'] },
@@ -261,6 +272,42 @@ export const emCursoPorEtapa = (lista: ISPainel[], hoje: string): (ItemRanking &
   return ETAPAS_EM_CURSO
     .map(e => ({ chave: e.id, rotulo: e.rotulo, alerta: !!e.alerta, valor: emCurso.filter(i => e.status.includes(statusEfetivoIS(i, hoje))).length }))
     .filter(e => e.valor > 0);
+};
+
+/**
+ * Status "Realizando Exames" (guias entregues ao inspecionado, presencialmente ou por e-mail). Cada média conta
+ * no período em que o evento final acontece, como o tempo até o TIS: abertura → entrega das guias pelas guias
+ * entregues no período; entrega → agendamento (data agendada da entrevista) pelas entrevistas do período.
+ */
+export interface ResumoExamesIS {
+  /** IS com status Realizando Exames agora. */
+  agora: number;
+  /** Entraram em Realizando Exames (guias entregues) no período. */
+  entraram: { atual: number; anterior: number };
+  aberturaAteGuias: { atual: number | null; anterior: number | null };
+  guiasAteAgendamento: { atual: number | null; anterior: number | null };
+  /** Entregas no período por via (sem via gravada: presencial, que é o padrão da caixa). */
+  via: { email: number; presencial: number; pctEmail: { atual: number | null; anterior: number | null } };
+  /** IS ainda abertas com guias geradas e não entregues. */
+  aguardandoEntrega: number;
+}
+
+export const resumoExamesIS = (lista: ISPainel[], janela: JanelaPainel): ResumoExamesIS => {
+  const entregues = (j: Intervalo) => lista.filter(i => i.status !== 'cancelada' && noIntervalo(i.guiasEntreguesEm, j));
+  const ateGuias = (j: Intervalo) => media(entregues(j).filter(i => i.dataAbertura).map(i => Math.max(0, diasEntre(i.dataAbertura, i.guiasEntreguesEm!.slice(0, 10)))));
+  const ateAgenda = (j: Intervalo) => media(lista
+    .filter(i => i.status !== 'cancelada' && i.guiasEntreguesEm && noIntervalo(i.dataEntrevista, j))
+    .map(i => Math.max(0, diasEntre(i.guiasEntreguesEm!.slice(0, 10), i.dataEntrevista.slice(0, 10)))));
+  const [a, b] = [entregues(janela.atual), entregues(janela.anterior)];
+  const porEmail = (xs: ISPainel[]) => xs.filter(i => i.guiasEntreguesVia === 'email').length;
+  return {
+    agora: lista.filter(i => i.status === 'realizando_exames').length,
+    entraram: { atual: a.length, anterior: b.length },
+    aberturaAteGuias: { atual: ateGuias(janela.atual), anterior: ateGuias(janela.anterior) },
+    guiasAteAgendamento: { atual: ateAgenda(janela.atual), anterior: ateAgenda(janela.anterior) },
+    via: { email: porEmail(a), presencial: a.length - porEmail(a), pctEmail: { atual: pct(porEmail(a), a.length), anterior: pct(porEmail(b), b.length) } },
+    aguardandoEntrega: lista.filter(i => i.status === 'aberta' && i.temGuias && !i.guiasEntregues).length,
+  };
 };
 
 /** IS abertas no período, por finalidade (da mais frequente). */
@@ -479,7 +526,14 @@ export interface UsoDia {
   acoesPorUsuario: Record<string, Record<string, number>>;
   /** Último acesso do usuário no dia (uid → ms desde a época). */
   ultimo: Record<string, number>;
+  /** E-mails enviados pelo servidor no dia, por tipo (TipoEmail → contagem; servidor/email/registroEmailsIS.ts). */
+  emailsPorTipo?: Record<string, number>;
+  /** Guias de exames geradas no dia (PDFs). */
+  guiasGeradas?: number;
 }
+
+/** Rótulo do tipo de e-mail (config/emails.ts → TIPOS_EMAIL). */
+export const rotuloTipoEmail = (tipo: string): string => TIPOS_EMAIL.find(t => t.tipo === tipo)?.rotulo ?? tipo;
 
 export interface UsuarioUso { uid: string; usuario: string; perfil: string; ativo: boolean }
 
@@ -501,7 +555,22 @@ export interface ResumoUso {
   porPerfil: ItemRanking[];
   /** Tipos de ação presentes no período (colunas do mapa de calor), do mais frequente. */
   tipos: string[];
+  /** E-mails enviados (todos os tipos) e guias geradas no período. */
+  emails: { atual: number; anterior: number };
+  guias: { atual: number; anterior: number };
+  /** E-mails do período por tipo (rótulos de TIPOS_EMAIL), do mais frequente. */
+  emailsPorTipo: ItemRanking[];
+  /** Últimos 28 dias: [e-mails, guias]. */
+  envios28: PontoSerie[];
 }
+
+const emailsDoDia = (d: UsoDia): number => somaValores(d.emailsPorTipo);
+const guiasDoDia = (d: UsoDia): number => Number(d.guiasGeradas) || 0;
+
+/** Linhas por dia do intervalo (para o CSV de envios): dia, total de e-mails, por tipo (na ordem de `tipos`) e guias. */
+export const enviosPorDia = (docs: UsoDia[], janela: JanelaPainel, tipos: string[]): (string | number)[][] =>
+  docs.filter(d => noIntervalo(d.dia, janela.atual)).sort((x, y) => x.dia.localeCompare(y.dia))
+    .map(d => [d.dia, emailsDoDia(d), ...tipos.map(t => Number(d.emailsPorTipo?.[t]) || 0), guiasDoDia(d)]);
 
 export const resumoUso = (docs: UsoDia[], usuarios: UsuarioUso[], janela: JanelaPainel, hoje: string): ResumoUso => {
   const em = (j: Intervalo) => docs.filter(d => noIntervalo(d.dia, j));
@@ -545,6 +614,10 @@ export const resumoUso = (docs: UsoDia[], usuarios: UsuarioUso[], janela: Janela
   const porPerfil = new Map<string, number>();
   linhas.forEach(l => { if (l.perfil) porPerfil.set(l.perfil, (porPerfil.get(l.perfil) ?? 0) + l.acessos); });
 
+  const emailsTipo = new Map<string, number>();
+  a.forEach(d => Object.entries(d.emailsPorTipo ?? {}).forEach(([t, n]) => emailsTipo.set(t, (emailsTipo.get(t) ?? 0) + (Number(n) || 0))));
+  [...emailsTipo.entries()].forEach(([t, n]) => { if (!n) emailsTipo.delete(t); });
+
   const diasAtual = Math.max(1, diasEntre(janela.atual.inicio, janela.atual.fim) + 1);
   const porDiaMapa = new Map(docs.map(d => [d.dia, d]));
   return {
@@ -562,6 +635,13 @@ export const resumoUso = (docs: UsoDia[], usuarios: UsuarioUso[], janela: Janela
     acoesPorTipo: rankTipos,
     porPerfil: ranking(porPerfil),
     tipos: rankTipos.map(t => t.chave),
+    emails: { atual: a.reduce((s, d) => s + emailsDoDia(d), 0), anterior: b.reduce((s, d) => s + emailsDoDia(d), 0) },
+    guias: { atual: a.reduce((s, d) => s + guiasDoDia(d), 0), anterior: b.reduce((s, d) => s + guiasDoDia(d), 0) },
+    emailsPorTipo: ranking(emailsTipo, rotuloTipoEmail),
+    envios28: ultimosDias(hoje, 28).map(dia => {
+      const d = porDiaMapa.get(dia);
+      return { chave: dia, rotulo: String(Number(dia.slice(8, 10))), valores: [d ? emailsDoDia(d) : 0, d ? guiasDoDia(d) : 0] };
+    }),
   };
 };
 

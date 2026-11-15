@@ -5,7 +5,10 @@
 //     acessosPorUsuario: { [uid]: n }                acessos de cada usuário
 //     acoesPorUsuario:   { [uid]: { [tipo]: n } }    ações principais por usuário e tipo (TipoAcaoUso)
 //     ultimo:            { [uid]: timestamp }        último acesso do usuário no dia
+//     emailsPorTipo:     { [TipoEmail]: n }          e-mails enviados pelo servidor (só o servidor grava)
+//     guiasGeradas:      n                           PDFs de guias de exames gerados (só o servidor grava)
 //   }
+// emailsPorTipo e guiasGeradas vêm de registrarUsoServidor (servidor/email/registroEmailsIS.ts, Admin SDK).
 // Gravado só com increment() (e serverTimestamp no "ultimo"); firestore.rules só deixa cada usuário mexer nas
 // PRÓPRIAS chaves e numa página por gravação. Privacidade (mesma regra do auditoriaAcoes): só contagens, a
 // página e o uid — NUNCA nome de inspecionado, NIP, CID, URL ou conteúdo.
@@ -73,7 +76,10 @@ export const listarUsoDiario = async (inicio: string, fim: string): Promise<UsoD
     const x = d.data() as Record<string, any>;
     const ultimo: Record<string, number> = {};
     Object.entries(x.ultimo ?? {}).forEach(([uid, v]) => { const ms = msDe(v); if (ms !== null) ultimo[uid] = ms; });
-    return { dia: d.id, paginas: x.paginas ?? {}, acessosPorUsuario: x.acessosPorUsuario ?? {}, acoesPorUsuario: x.acoesPorUsuario ?? {}, ultimo };
+    return {
+      dia: d.id, paginas: x.paginas ?? {}, acessosPorUsuario: x.acessosPorUsuario ?? {}, acoesPorUsuario: x.acoesPorUsuario ?? {}, ultimo,
+      emailsPorTipo: x.emailsPorTipo ?? {}, guiasGeradas: Number(x.guiasGeradas) || 0,
+    };
   });
 };
 
