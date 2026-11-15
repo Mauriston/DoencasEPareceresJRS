@@ -49,7 +49,7 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 import { observarDocumentosPendentes, marcarDocumentoAberto, type DocumentoGerado } from '../services/documentosGerados';
 import { urlVisualizacao } from '../services/driveConcursos';
 import { observarEscalaAPartirDe, type EscalaDia } from '../services/firestoreEscala';
-import { chaveNome, nomeExibicao, servicosDoUsuario, servicosNoMes, type FuncaoEscala } from '../utils/escalaSpa';
+import { chaveNome, ehRetem, nomeExibicao, servicosDoUsuario, servicosNoMes, type FuncaoEscala } from '../utils/escalaSpa';
 
 const SEMANA_ABR = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'];
 /** Ícone e cor de cada função da Escala de Serviço no card "Próximos serviços". */
@@ -172,7 +172,8 @@ export const Home: React.FC = () => {
   const inicioMes = `${hoje.slice(0, 7)}-01`;
   useEffect(() => (podeEscala ? observarEscalaAPartirDe(inicioMes, 95, setEscala, () => { /* silencioso */ }) : undefined), [podeEscala, inicioMes]);
   const escalaFutura = useMemo(() => escala.filter(d => d.data >= hoje), [escala, hoje]);
-  const meusServicos = useMemo(() => servicosDoUsuario(escalaFutura, authUser?.usuario).slice(0, 6), [escalaFutura, authUser?.usuario]);
+  // Só serviços de fato (Supervisão, Dia e Noite): os dias em que o usuário é retém não entram no card nem no KPI.
+  const meusServicos = useMemo(() => servicosDoUsuario(escalaFutura, authUser?.usuario).filter(s => !ehRetem(s.funcao)).slice(0, 6), [escalaFutura, authUser?.usuario]);
   const escalaPorData = useMemo(() => new Map(escala.map(d => [d.data, d])), [escala]);
   const servicosMes = useMemo(() => servicosNoMes(escala, authUser?.usuario, hoje.slice(0, 7)), [escala, authUser?.usuario, hoje]);
 
@@ -442,8 +443,8 @@ export const Home: React.FC = () => {
     </>
   );
 
-  // Próximos dias de serviço do usuário, cada um com a escala completa do dia (Supervisão · Dia · Noite);
-  // a função do usuário vem em tag e o nome dele destacado. Reténs do dia não entram na linha (ficam na Escala).
+  // Próximos dias de serviço do usuário (sem os dias de retém), cada um com a escala completa do dia
+  // (Supervisão · Dia · Noite); a função do usuário vem em tag e o nome dele destacado.
   const diasServico = useMemo(() => {
     const porDia = new Map<string, FuncaoEscala[]>();
     meusServicos.forEach(s => porDia.set(s.data, [...(porDia.get(s.data) ?? []), s.funcao]));
