@@ -16,6 +16,7 @@
 // As IS com entrevista marcada são sincronizadas com a agenda "JRS/HNRe" do Google Agenda, com o perito como
 // convidado (ver services/agendaGoogleIS.ts).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { retomarAfastamentosPendentes } from '../services/afastamentosIS';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
@@ -241,6 +242,9 @@ export const Inspecoes: React.FC = () => {
   const avisar = (msg: string, tone: 'success' | 'error' = 'success') => { setToast({ msg, tone }); window.setTimeout(() => setToast(null), tone === 'error' ? 7000 : 4500); };
 
   useEffect(() => observarInspecoes(setLista, e => setErroCarga(e.message || 'Não foi possível carregar as inspeções.')), []);
+  // Afastamentos (LTS/Restrições) das Verificações e Términos que ficaram pendentes (aba fechada no meio,
+  // erro da IA abaixo do limite): quem edita IS retoma em segundo plano, até 3 por vez.
+  useEffect(() => { if (podeEditar && lista?.length) retomarAfastamentosPendentes(lista); }, [podeEditar, lista]);
   useEffect(() => observarBloqueios(setBloqueios), []);
   useEffect(() => observarConfigAgenda(setConfig), []);
   // ?dia=, ?situacao=hoje, ?visao= e ?novo= viram estado e saem da URL (também quando a Início/Painel navega para cá
