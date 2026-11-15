@@ -126,10 +126,13 @@ export const CabecalhoSecao: React.FC<CabecalhoSecaoProps> = ({ id, icone, titul
 // Bloco (card com título) e estados
 // ---------------------------------------------------------------------------
 
-export const Bloco: React.FC<{ titulo: string; acoes?: React.ReactNode; className?: string; children: React.ReactNode }> = ({ titulo, acoes, className = '', children }) => (
+export const Bloco: React.FC<{ titulo: string; descricao?: string; acoes?: React.ReactNode; className?: string; children: React.ReactNode }> = ({ titulo, descricao, acoes, className = '', children }) => (
   <section className={`min-w-0 bg-white border border-line rounded-xl p-4 flex flex-col gap-3 ${className}`} aria-label={titulo}>
     <div className="flex items-center justify-between gap-3">
-      <h3 className="text-h3 font-bold text-navy">{titulo}</h3>
+      <div className="min-w-0">
+        <h3 className="text-h3 font-bold text-navy">{titulo}</h3>
+        {descricao && <p className="text-xs text-ink-3 mt-0.5">{descricao}</p>}
+      </div>
       {acoes}
     </div>
     {children}

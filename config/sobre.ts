@@ -176,7 +176,7 @@ export const AREAS_SOBRE: AreaSobre[] = [
     },
   },
   {
-    id: 'escala', titulo: 'Escala SVÇ', chip: 'Escala', icone: 'calendar_month', paginas: ['escala'], destaque: false,
+    id: 'escala', titulo: 'Escala de Serviço', chip: 'Escala', icone: 'calendar_month', paginas: ['escala'], destaque: false,
     resumo: 'Supervisão e plantões do SPA num calendário mensal.',
     resumoCurto: 'Supervisão e plantões do SPA.',
     itens: [

@@ -1,9 +1,10 @@
 // Ficheiro: components/painel/SecaoConcursos.tsx
 // Seção "Concursos" do Painel: concursos em andamento, candidatos finalizados e as taxas de faltas, inaptos e
 // IDM no período; andamento de cada concurso em curso (aptos/inaptos/faltas/IDM — cores de estado) e os
-// concursos com mais inaptos. Cada concurso abre a planilha dele.
+// concursos com mais inaptos. Cada concurso abre a planilha dele. Abaixo, as causas de inaptidão: o CID que
+// obrigatoriamente vai às Observações do candidato INAPTO, por código e por capítulo da CID-10.
 import React, { useMemo } from 'react';
-import { andamentoPorConcurso, concursosComMaisInaptos, resumoConcursos, variacao, type ConcursoPainel, type JanelaPainel } from '../../utils/painel';
+import { andamentoPorConcurso, causasInaptidao, concursosComMaisInaptos, resumoConcursos, variacao, type ConcursoPainel, type JanelaPainel } from '../../utils/painel';
 import { concursoPath } from '../../config/routes';
 import { Link } from 'react-router-dom';
 import { GradePainel } from '../ui/Grade';
@@ -24,6 +25,8 @@ export const SecaoConcursos: React.FC<Props> = ({ concursos, janela, desktop }) 
   const r = useMemo(() => resumoConcursos(concursos, janela), [concursos, janela]);
   const andamento = useMemo(() => andamentoPorConcurso(concursos), [concursos]);
   const inaptos = useMemo(() => concursosComMaisInaptos(concursos, janela), [concursos, janela]);
+  const causas = useMemo(() => causasInaptidao(concursos, janela), [concursos, janela]);
+  const semCid = causas.inaptos - causas.comCid;
   const vs = `vs. ${janela.rotuloAnterior}`;
   const umSo = r.emAndamento.length === 1 ? r.emAndamento[0] : null;
 
@@ -61,6 +64,26 @@ export const SecaoConcursos: React.FC<Props> = ({ concursos, janela, desktop }) 
         apoio={(
           <Bloco titulo={desktop ? 'Concursos com mais inaptos no período' : 'Mais inaptos'}>
             <ListaBarras itens={inaptos.map(i => ({ ...i, to: concursoPath(i.chave) }))} limite={desktop ? 5 : 3} />
+          </Bloco>
+        )}
+      />
+      <GradePainel
+        rotuloApoio="Causas de inaptidão por capítulo da CID-10"
+        principal={(
+          <Bloco
+            titulo="Causas de inaptidão · CID mais frequentes"
+            descricao={causas.inaptos
+              ? `${fmtNum(causas.inaptos)} ${causas.inaptos === 1 ? 'inapto' : 'inaptos'} no período · ${fmtNum(causas.comCid)} com CID nas observações${semCid > 0 ? ` · ${fmtNum(semCid)} sem CID legível` : ''}`
+              : undefined}
+          >
+            {causas.porCid.length
+              ? <ListaBarras itens={causas.porCid.map(c => ({ ...c, to: LISTA }))} limite={desktop ? 8 : 4} numerada />
+              : <SemDados texto="Nenhuma inaptidão com CID no período." />}
+          </Bloco>
+        )}
+        apoio={(
+          <Bloco titulo={desktop ? 'Por capítulo da CID-10' : 'Por capítulo'}>
+            <ListaBarras itens={causas.porCapitulo.map(c => ({ ...c, to: LISTA }))} limite={desktop ? 6 : 4} />
           </Bloco>
         )}
       />

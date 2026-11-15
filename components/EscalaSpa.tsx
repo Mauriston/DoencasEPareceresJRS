@@ -1,10 +1,11 @@
 // Ficheiro: components/EscalaSpa.tsx
-// Página "Escala SVÇ": escala de serviço do SPA (coleção "escalaSpa", enviada pelo Admin em CSV).
+// Página "Escala de Serviço": escala de serviço do SPA (coleção "escalaSpa", enviada pelo Admin em CSV).
 //  - Desktop: calendário do mês no mesmo estilo da página de supervisão (github.com/Mauriston/escalasupervisao):
 //    grade navy, dias úteis em branco, sábados/domingos/feriados em vinho claro e festas maiores em azul claro, hoje com
 //    contorno dourado. Tocar num dia GIRA todos os cards (como um jogo da memória): numa face a supervisão
 //    (escalado + retém), na outra os plantões de 12 h (D: … · N: …). A face inicial é a do serviço do usuário.
-//  - Celular: lista por dia, como a "Programação" do Google Agenda (Supervisão · Dia · Noite).
+//  - Celular: abas "Todos · Meus serviços" e a lista por dia, como a "Programação" do Google Agenda
+//    (Supervisão · Dia · Noite): escalados um por linha, sem o retém — que fica num ícone de info (toque abre).
 //  - Admin: baixa o modelo CSV e envia a escala do mês.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
@@ -19,6 +20,7 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 import { observarEscalaPeriodo, type EscalaDia } from '../services/firestoreEscala';
 import { chaveDia, chaveNome, corDoDia, faceInicial, feriados, nomeExibicao, type CorDia } from '../utils/escalaSpa';
 import { ImportarEscalaCsv, baixarModeloEscala } from './escala/ImportarEscalaCsv';
+import { AbasSublinhadas } from './periciaMenor/partes';
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const MES_ABR = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
@@ -55,6 +57,17 @@ export const EscalaSpa: React.FC = () => {
   const [virado, setVirado] = useState(false);
   const [importando, setImportando] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // Celular: "Todos" os dias ou só os "Meus serviços" (dias em que o usuário está escalado, retém incluído).
+  const [filtroDias, setFiltroDias] = useState<'todos' | 'meus'>('todos');
+  // Retém aberto (um por vez) no ícone de info da linha — chave "AAAA-MM-DD|Dia".
+  const [retemAberto, setRetemAberto] = useState<string | null>(null);
+  useEffect(() => {
+    if (!retemAberto) return;
+    const fechar = (ev: Event) => { const el = ev.target as HTMLElement | null; if (!el?.closest?.('[data-retem]')) setRetemAberto(null); };
+    const tecla = (ev: KeyboardEvent) => { if (ev.key === 'Escape') setRetemAberto(null); };
+    document.addEventListener('pointerdown', fechar); document.addEventListener('keydown', tecla);
+    return () => { document.removeEventListener('pointerdown', fechar); document.removeEventListener('keydown', tecla); };
+  }, [retemAberto]);
 
   const irPara = (y: number, m: number) => {
     if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; }
@@ -160,16 +173,47 @@ export const EscalaSpa: React.FC = () => {
   // ---- Celular: lista por dia (Supervisão · Dia · Noite) ----
   const refHoje = useRef<HTMLLIElement>(null);
   useEffect(() => { if (!isDesktop && dias) refHoje.current?.scrollIntoView({ block: 'start' }); }, [isDesktop, dias]);
-  const linhaEvento = (rotulo: string, conteudo: React.ReactNode, minha: boolean) => (
-    <div className={`flex gap-2 text-sm py-1 px-2 -mx-2 rounded ${minha ? 'bg-gold/20' : ''}`}>
-      <span className="w-[5.5rem] shrink-0 text-xs font-bold text-ink-3 uppercase tracking-wide pt-0.5">{rotulo}</span>
-      <span className="min-w-0 flex-1 text-pretty">{conteudo}</span>
-    </div>
-  );
-  const lista = (
+  // Escalados um por linha (sem o " - "): a dupla do plantão fica empilhada.
+  const empilhados = (lista?: string[]) => (lista && lista.length
+    ? lista.map((n, i) => <React.Fragment key={n + i}>{i > 0 && <br />}<Nome n={n} forte /></React.Fragment>)
+    : <span className="text-ink-4">—</span>);
+  const linhaEvento = (chave: string, rotulo: string, conteudo: React.ReactNode, minha: boolean, retem?: string) => {
+    const id = `${chave}|${rotulo}`;
+    const aberto = retemAberto === id;
+    return (
+      <div className={`relative flex items-start gap-2 text-sm py-1 px-2 -mx-2 rounded ${minha ? 'bg-gold/20' : ''}`} data-retem={retem ? id : undefined}>
+        <span className="w-[5.5rem] shrink-0 text-xs font-bold text-ink-3 uppercase tracking-wide pt-0.5">{rotulo}</span>
+        <span className="min-w-0 flex-1 text-pretty">{conteudo}</span>
+        {retem && (
+          <>
+            <button
+              type="button"
+              aria-label={`Retém de ${rotulo.toLowerCase()}: ${nomeExibicao(retem)}`}
+              aria-expanded={aberto}
+              onClick={() => setRetemAberto(aberto ? null : id)}
+              className="shrink-0 -my-1 -mr-1 w-8 h-8 inline-flex items-center justify-center rounded-full text-ink-4 hover:text-navy hover:bg-thead focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
+            >
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">info</span>
+            </button>
+            {aberto && (
+              <span role="tooltip" className="absolute right-0 top-full mt-1 z-dropdown max-w-[16rem] rounded-lg bg-navy text-white text-xs font-semibold px-3 py-2 shadow-lg">
+                Retém: <span className={souEu(retem) ? 'text-gold' : ''}>{nomeExibicao(retem)}</span>
+              </span>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+  const meuDia = (e?: EscalaDia) => !!e && (souEu(e.supervisor) || souEu(e.retemSupervisao) || (e.dia ?? []).some(souEu) || souEu(e.retemDia) || (e.noite ?? []).some(souEu) || souEu(e.retemNoite));
+  const diasDoMes = Array.from({ length: totalDias }, (_, i) => i + 1);
+  const diasVisiveis = filtroDias === 'meus' ? diasDoMes.filter(d => meuDia(porData.get(chaveDia(mes.y, mes.m, d)))) : diasDoMes;
+  const totalMeus = diasDoMes.filter(d => meuDia(porData.get(chaveDia(mes.y, mes.m, d)))).length;
+  const lista = diasVisiveis.length === 0 ? (
+    <Card padding="none"><EmptyState icon="event_busy" title={`Sem serviços seus em ${MESES[mes.m].toLowerCase()} de ${mes.y}`} description="Toque em “Todos” para ver a escala completa do mês." /></Card>
+  ) : (
     <ul className="bg-white rounded-xl border border-line divide-y divide-line overflow-clip">
-      {Array.from({ length: totalDias }, (_, i) => {
-        const d = i + 1;
+      {diasVisiveis.map(d => {
         const k = chaveDia(mes.y, mes.m, d);
         const e = porData.get(k);
         const cor = corDoDia(k);
@@ -187,9 +231,9 @@ export const EscalaSpa: React.FC = () => {
               {fer[k] && <p className="text-xs font-semibold text-wine mb-0.5">{fer[k]}</p>}
               {e ? (
                 <>
-                  {linhaEvento('Supervisão', <><Nome n={e.supervisor} forte />{e.retemSupervisao && <span className="text-xs text-ink-3"> · <span className="inline-block max-w-full whitespace-nowrap">Retém: <Nome n={e.retemSupervisao} /></span></span>}</>, souEu(e.supervisor) || souEu(e.retemSupervisao))}
-                  {linhaEvento('Dia', <>{dupla(e.dia)}{e.retemDia && <span className="text-xs text-ink-3"> · <span className="inline-block max-w-full whitespace-nowrap">Retém: <Nome n={e.retemDia} /></span></span>}</>, (e.dia ?? []).some(souEu) || souEu(e.retemDia))}
-                  {linhaEvento('Noite', <>{dupla(e.noite)}{e.retemNoite && <span className="text-xs text-ink-3"> · <span className="inline-block max-w-full whitespace-nowrap">Retém: <Nome n={e.retemNoite} /></span></span>}</>, (e.noite ?? []).some(souEu) || souEu(e.retemNoite))}
+                  {linhaEvento(k, 'Supervisão', <Nome n={e.supervisor} forte />, souEu(e.supervisor) || souEu(e.retemSupervisao), e.retemSupervisao)}
+                  {linhaEvento(k, 'Dia', empilhados(e.dia), (e.dia ?? []).some(souEu) || souEu(e.retemDia), e.retemDia)}
+                  {linhaEvento(k, 'Noite', empilhados(e.noite), (e.noite ?? []).some(souEu) || souEu(e.retemNoite), e.retemNoite)}
                 </>
               ) : <p className="text-sm text-ink-4 py-1">Sem escala registrada.</p>}
             </div>
@@ -202,9 +246,9 @@ export const EscalaSpa: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast} tone="success" />
-      <Container size="data" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-6">
+      <Container size="data" className="pt-0 md:pt-8 pb-10 flex flex-col gap-6">
         <PageHeader
-          title="Escala SVÇ"
+          title="Escala de Serviço"
           description="Supervisão do SPA (24 h, com retém) e plantões de 12 h (dia e noite)."
           actions={ehAdmin ? (
             <>
@@ -214,6 +258,13 @@ export const EscalaSpa: React.FC = () => {
           ) : undefined}
         />
 
+        {!isDesktop && (
+          <AbasSublinhadas<'todos' | 'meus'>
+            rotulo="Dias da escala" idBase="escala-dias" ativa={filtroDias} onChange={setFiltroDias}
+            className="-mx-4 px-4 bg-white"
+            abas={[{ id: 'todos', rotulo: 'Todos', contagem: totalDias }, { id: 'meus', rotulo: 'Meus serviços', contagem: totalMeus }]}
+          />
+        )}
         <div className="flex flex-wrap items-center justify-between gap-3">
           {seletor}
           {isDesktop && dias && dias.length > 0 && (

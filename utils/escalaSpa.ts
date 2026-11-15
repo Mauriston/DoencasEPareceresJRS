@@ -81,6 +81,13 @@ export const servicosDoUsuario = (dias: EscalaDia[], usuario: string | undefined
   return out;
 };
 
+/** É retém (não conta como serviço). */
+export const ehRetem = (f: FuncaoEscala): boolean => f.startsWith('Retém');
+
+/** Serviços do usuário no mês AAAA-MM (Supervisão, Dia e Noite — reténs não contam). */
+export const servicosNoMes = (dias: EscalaDia[], usuario: string | undefined, mes: string): number =>
+  servicosDoUsuario(dias.filter(d => d.data.startsWith(mes)), usuario).filter(s => !ehRetem(s.funcao)).length;
+
 /** Face inicial do calendário: plantão se o usuário só aparece nos plantões dia/noite; senão supervisão. */
 export const faceInicial = (dias: EscalaDia[], usuario: string | undefined): 'supervisao' | 'plantao' => {
   const s = servicosDoUsuario(dias, usuario);
