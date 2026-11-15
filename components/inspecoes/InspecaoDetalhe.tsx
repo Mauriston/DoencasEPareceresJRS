@@ -20,6 +20,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Drawer } from '../ui/Drawer';
+import { ButtonLink } from '../ui/Button';
+import { fichaPath } from '../../config/routes';
+import { podeAbrirFicha } from '../ficha/permissoes';
 import { AcoesRodape, type AcaoRodape } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
 import { Segmented } from '../ui/Segmented';
@@ -275,6 +278,9 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
       icon="event_available"
       onClose={onClose}
       tituloExtra={<StatusTag tone={tomStatusIS(efetivo)}>{info.rotulo}</StatusTag>}
+      acoesTopo={is.inspecionadoId && podeAbrirFicha(nav?.authUser?.perfil)
+        ? <ButtonLink to={fichaPath(is.inspecionadoId)} variant="ghost" size="sm" icon="id_card" aria-label={`Abrir ficha de ${is.inspecionado || 'inspecionado'}`}>Abrir ficha</ButtonLink>
+        : undefined}
       footer={acoes.length > 0 ? <AcoesRodape acoes={acoes} /> : undefined}
     >
       {somenteLeitura ? (

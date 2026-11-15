@@ -15,9 +15,11 @@ interface DrawerProps {
   footer?: React.ReactNode;
   /** Conteúdo extra na barra do topo, logo após o título (ex.: chip de status). */
   tituloExtra?: React.ReactNode;
+  /** Ação(ões) discretas no topo, à direita, antes do "Fechar" (ex.: Button ghost sm "Abrir ficha"). */
+  acoesTopo?: React.ReactNode;
 }
 
-export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, footer, tituloExtra }) => {
+export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, footer, tituloExtra, acoesTopo }) => {
   const isDesktop = useIsDesktop();
   const titleId = useId();
   const painel = useRef<HTMLDivElement>(null);
@@ -51,9 +53,12 @@ export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, 
             <h2 id={titleId} className="font-heading font-extrabold text-h2 text-navy truncate min-w-0">{title}</h2>
             {tituloExtra && <div className="shrink-0 flex items-center">{tituloExtra}</div>}
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0 w-10 h-10 -mr-2 flex items-center justify-center rounded-lg text-ink-3 hover:text-navy hover:bg-thead transition-colors">
-            <span className="material-symbols-outlined text-[24px]" aria-hidden="true">close</span>
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {acoesTopo}
+            <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0 w-10 h-10 -mr-2 flex items-center justify-center rounded-lg text-ink-3 hover:text-navy hover:bg-thead transition-colors">
+              <span className="material-symbols-outlined text-[24px]" aria-hidden="true">close</span>
+            </button>
+          </div>
         </div>
         <div data-sheet-corpo="" className="p-5 overflow-y-auto flex-1 text-sm text-ink">{children}</div>
         {footer && <div data-sheet-rodape="" className="px-5 py-3 border-t border-line flex flex-col-reverse sm:flex-row sm:flex-wrap sm:justify-end gap-2 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{footer}</div>}

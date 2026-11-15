@@ -30,7 +30,7 @@ export const Container: React.FC<{ size?: PageSize; className?: string; children
 export interface PageHeaderFab {
   /** Material Symbol (ex.: 'add'). */
   icon: string;
-  /** Verbo + objeto (ex.: "Abrir IS"): rótulo do botão no desktop e do FAB estendido no celular. */
+  /** Verbo + objeto (ex.: "Abrir IS"): rótulo do botão no desktop e aria-label do FAB (só ícone) no celular. */
   label: string;
   onClick?: () => void;
   /** Navegação interna (react-router) em vez de onClick. */
