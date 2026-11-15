@@ -98,6 +98,8 @@ export interface InspecaoDoc {
   criadoPor: string;
   criadoEm: Timestamp | null;
   atualizadoEm?: Timestamp | null;
+  /** Quando a situação passou a "finalizada" (TIS assinado ou cancelada): conta os 15 dias para apagar as guias. */
+  finalizadaEm?: Timestamp | null;
 }
 export type InspecaoRecord = InspecaoDoc & { id: string };
 
@@ -179,9 +181,13 @@ export const criarInspecao = async (dados: NovaInspecao): Promise<string> => {
   return id;
 };
 
+/** `finalizadaEm` quando o status leva a IS à situação "finalizada" (limpeza das guias 15 dias depois, no servidor). */
+const marcaFinalizacao = (status: StatusIS | undefined): { finalizadaEm?: ReturnType<typeof serverTimestamp> } =>
+  status && situacaoDoStatus(status) === 'finalizada' ? { finalizadaEm: serverTimestamp() } : {};
+
 /** Atualiza campos que não mexem na agenda (laudo, restrições, TIS, DS-1a, observações, status…). */
 export const atualizarInspecao = async (id: string, patch: Partial<InspecaoDoc>): Promise<void> => {
-  await updateDoc(doc(db, COL, id), { ...patch, ...(patch.status ? { situacao: situacaoDoStatus(patch.status) } : {}), atualizadoEm: serverTimestamp() } as Record<string, unknown>);
+  await updateDoc(doc(db, COL, id), { ...patch, ...(patch.status ? { situacao: situacaoDoStatus(patch.status), ...marcaFinalizacao(patch.status) } : {}), atualizadoEm: serverTimestamp() } as Record<string, unknown>);
   notificarAcao('is.editada', id);
 };
 
@@ -227,7 +233,7 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
     ? { peritoUid: dados.peritoUid, dataEntrevista: dados.dataEntrevista, grupoFinalidade: dados.grupoFinalidade } : null;
   if (!atual) {
     const completo = { ...dados, is: Number(id), observacoes: '', situacao: situacaoDoStatus(dados.status) };
-    await gravarComSlot(id, completo, slotNovo, null, true);
+    await gravarComSlot(id, { ...completo, ...marcaFinalizacao(dados.status) }, slotNovo, null, true);
     registrarEventoInspecionado(dados.inspecionadoId, 'is.cadastrar', `IS ${id}`);
     notificarAcao('is.importada', id);
     return { ...completo, id, criadoEm: null };
@@ -235,6 +241,7 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
   const { criadoPor: _c, ...resto } = dados;
   const patch: Record<string, unknown> = Object.fromEntries(Object.entries(resto).filter(([k, v]) => k === 'status' || String(v ?? '').trim() !== ''));
   patch.situacao = situacaoDoStatus(dados.status);
+  if (atual.situacao !== 'finalizada') Object.assign(patch, marcaFinalizacao(dados.status));
   const mudouData = !!dados.dataEntrevista && dados.dataEntrevista !== atual.dataEntrevista;
   const slotAntigo = mudouData && atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(id, patch, mudouData ? slotNovo : null, slotAntigo, false);
@@ -246,7 +253,7 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
 export const cancelarInspecao = async (atual: InspecaoRecord): Promise<void> => {
   const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(atual.id, {
-    status: 'cancelada', situacao: situacaoDoStatus('cancelada'),
+    status: 'cancelada', situacao: situacaoDoStatus('cancelada'), ...marcaFinalizacao('cancelada'),
   }, null, slotAntigo, false);
   notificarAcao('is.cancelada', atual.id);
 };

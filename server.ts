@@ -617,6 +617,30 @@ async function startServer() {
   });
 
   // [rotas: guias de exames — pacote A] (gerar PDF, apagar ao excluir a IS, limpeza 15 dias após a finalização)
+  // Guias de exames da IS (servidor/documentos/guiasExames/): PDF único no Storage (inspecoes/{isId}/guias/) e
+  // resumo em inspecoes/{isId}.guiasExames. Gerar: equipe; apagar (ao excluir a IS): só Admin.
+  const rotaGuias = (rota: string, perfis: string[], acao: (db: import("firebase-admin/firestore").Firestore, bucket: import("./servidor/documentos/guiasExames/servico").Bucket, b: any, uid: string) => Promise<object>) =>
+    async (req: express.Request, res: express.Response) => {
+      const quem = await exigirUsuario(req, res, rota, perfis);
+      if (!quem) return;
+      const { ErroGuias } = await import("./servidor/documentos/guiasExames/servico");
+      try {
+        const { adminDb, adminApp } = await getFirebaseAdmin();
+        const { getStorage } = await import("firebase-admin/storage");
+        res.json({ success: true, ...(await acao(adminDb, getStorage(adminApp).bucket(BUCKET_STORAGE), req.body || {}, quem.uid)) });
+      } catch (error: any) {
+        if (error instanceof ErroGuias) {
+          res.status(error.status).json({ success: false, error: error.message });
+          return;
+        }
+        logErroSeguro(`Guias ${rota}`, error);
+        res.status(500).json({ success: false, error: "Não foi possível processar as guias de exames. Tente novamente." });
+      }
+    };
+  app.post("/api/documentos/guias-exames", rotaGuias("documentos-guias-exames", PERFIS_EQUIPE, async (db, bucket, b, uid) =>
+    (await import("./servidor/documentos/guiasExames/servico")).gerarGuiasExames(db, bucket, uid, b)));
+  app.post("/api/documentos/guias-exames/apagar", rotaGuias("documentos-guias-exames-apagar", ["admin"], async (db, bucket, b) =>
+    (await import("./servidor/documentos/guiasExames/servico")).apagarGuiasExames(db, bucket, b.isId)));
 
   // ---- Conta Google da JRS no servidor (e-mail de impressão e Google Agenda, no lugar do Apps Script) ----
   // Sem a conta autorizada (ou sem o cliente OAuth configurado), as rotas respondem 503 com
@@ -726,6 +750,13 @@ async function startServer() {
       void auditarServidor("acesso_negado", "agendador-agenda-is", "", esperado ? "token_invalido" : "agendador_desligado");
       res.status(esperado ? 401 : 503).json({ success: false, error: "Agendador não autorizado." });
       return;
+    }
+    // Pacote A: apaga as guias de exames das IS finalizadas há mais de 15 dias (best effort: nunca derruba o e-mail).
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      await (await import("./servidor/documentos/guiasExames/servico")).limparGuiasVencidas(adminDb, await bucketStorage());
+    } catch (error) {
+      logErroSeguro("Agendador limpeza de guias", error);
     }
     try {
       const { adminDb } = await getFirebaseAdmin();
