@@ -2,7 +2,7 @@
 // Ficha do inspecionado (/inspecionados/:nip — auditoria v3, seção 9; MF1–MF4, PM6, PM8, PMD3).
 // Uma página com o que o perfil pode ver (components/ficha/permissoes.ts — sem abas fantasmas):
 //   cabeçalho (o nome abre o top sheet com os dados cadastrais; ⋮ com "Registro de eventos" só do Admin) ·
-//   guias "Inspeções de Saúde" × "Perícias Menores" (Segmented, fixas no topo ao rolar) · Situação atual ·
+//   guias "Inspeções de Saúde" × "Perícias Menores" (abas sublinhadas, fixas no topo ao rolar) · Situação atual ·
 //   coluna principal (8): faixa dos últimos 12 meses com os períodos da guia (LTS/Restrições nas IS,
 //   Dispensa/Restrições nas perícias) e a linha do tempo da guia · coluna de apoio (4):
 //     - IS: resumo do ano (IS, dias de LTS e de Restrições), atestados/relatórios médicos e exames enviados
@@ -20,7 +20,7 @@ import { Container } from '../ui/Page';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { MenuAcoes, type ItemMenu } from '../ui/MenuAcoes';
-import { Segmented } from '../ui/Segmented';
+import { AbasSublinhadas } from '../periciaMenor/partes';
 import { StatusTag } from '../ui/StatusTag';
 import { EmptyState } from '../ui/EmptyState';
 import { AccessDenied } from '../ui/AccessDenied';
@@ -550,11 +550,12 @@ export const FichaInspecionado: React.FC = () => {
         {principal && <FabAcoes acoes={[{ id: principal.id, rotulo: principal.rotulo, icone: principal.icone, onClick: principal.onClick }]} />}
 
         {opcoesGuia.length > 1 && (
-          <div className="sticky top-0 z-sticky -mx-4 md:-mx-6 xl:-mx-8 px-4 md:px-6 xl:px-8 py-2 bg-canvas border-b border-line print:static">
-            <div className="overflow-x-auto -mx-1 px-1">
-              <Segmented<GuiaFicha> papel="tab" idBase="ficha-guia" ariaLabel="Registros do inspecionado" options={opcoesGuia} value={guia}
-                onChange={g => definir({ guia: g })} className="min-w-full sm:min-w-0" fullWidth={!isDesktop} />
-            </div>
+          // 9b/9c: abas sublinhadas (ouro = ativa) com a contagem; no celular, faixa branca de borda a borda.
+          <div className="sticky top-0 z-sticky -mx-4 md:-mx-6 xl:-mx-8 px-4 md:px-6 xl:px-8 bg-white md:bg-canvas print:static">
+            <AbasSublinhadas<GuiaFicha>
+              rotulo="Registros do inspecionado" idBase="ficha-guia" ativa={guia} onChange={g => definir({ guia: g })} distribuir="nunca"
+              abas={opcoesGuia.map(o => ({ id: o.value, rotulo: o.label, contagem: o.badge }))}
+            />
           </div>
         )}
 

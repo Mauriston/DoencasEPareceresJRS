@@ -289,10 +289,12 @@ export const PericiaMenor: React.FC = () => {
           </div>
         ) : (
           <>
-            <div className="space-y-3">
+            {/* 5c: no desktop, uma faixa branca com as abas à esquerda e os chips + busca à direita; no celular,
+                abas coladas na topbar (largura dividida), chips numa linha rolável e a busca abaixo. */}
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-2 md:bg-white md:border md:border-line md:rounded-xl md:pl-1 md:pr-3">
               <AbasSublinhadas<FiltroRegistro>
                 rotulo={`Tipo de registro ${atestado ? 'do atestado' : 'da perícia'}`} idBase="pm-registro" ativa={registro}
-                className="-mx-4 px-4 md:mx-0 md:px-0 bg-white md:bg-transparent"
+                className="-mx-4 px-2 md:mx-0 md:px-0 bg-white md:bg-transparent md:border-b-0 md:shrink-0"
                 onChange={r => definir({ registro: r === 'todas' ? null : r }, true)}
                 abas={[
                   { id: 'todas', rotulo: 'Todas', contagem: totais.todas },
@@ -300,7 +302,8 @@ export const PericiaMenor: React.FC = () => {
                   { id: 'homologacoes', rotulo: 'Homologações', contagem: totais.homologacoes },
                 ]}
               />
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-col gap-3 md:flex-1 md:min-w-0 md:flex-row md:flex-wrap md:items-center md:justify-end md:gap-2 md:py-1.5">
+              <div className="flex items-center gap-2 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible md:flex-wrap md:justify-end">
                 <FilterChip ativo={situacao === 'vigentes'} onAlternar={() => definir({ situacao: situacao === 'vigentes' ? null : 'vigentes' }, true)}>Vigentes</FilterChip>
                 <FilterChip ativo={situacao === 'concluidas'} onAlternar={() => definir({ situacao: situacao === 'concluidas' ? null : 'concluidas' }, true)}>Concluídas</FilterChip>
                 {tipo && <FilterChip ativo onAlternar={() => definir({ tipo: null }, true)}>{tipo === 'dispensa' ? 'Dispensa total' : 'Restrições'}</FilterChip>}
@@ -308,12 +311,13 @@ export const PericiaMenor: React.FC = () => {
                 {anoAtual && <FilterChip ativo icon="calendar_month" onAlternar={() => definir({ ano: null }, true)}>Este ano</FilterChip>}
                 {(podeNovo || minhas) && <FilterChip ativo={minhas} icon="person" onAlternar={() => definir({ minhas: minhas ? null : '1' }, true)}>Minhas</FilterChip>}
                 <label className="sr-only" htmlFor="pm-filtro-om">OM</label>
-                <select id="pm-filtro-om" value={om} onChange={e => definir({ om: e.target.value || null }, true)} className={`${controlClass} !w-auto min-w-[8rem]`}>
+                <select id="pm-filtro-om" value={om} onChange={e => definir({ om: e.target.value || null }, true)} className={`${controlClass} !w-auto min-w-[8rem] shrink-0`}>
                   <option value="">Todas as OM</option>
                   {om && !oms.includes(om) && <option value={om}>{om}</option>}
                   {oms.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
-                <SearchField value={busca} onChange={setBusca} label={`Buscar ${t.singular}`} placeholder="Nome, NIP, OM, médico ou CID" className="flex-1 min-w-[14rem]" autoComplete="off" />
+              </div>
+              <SearchField value={busca} onChange={setBusca} label={`Buscar ${t.singular}`} placeholder="Nome, NIP, OM ou CID" className="md:w-[220px] xl:w-[260px] md:shrink-0" autoComplete="off" />
               </div>
             </div>
 
