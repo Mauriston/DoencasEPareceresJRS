@@ -3,7 +3,7 @@
 // pública: o que os e-mails têm em comum, um card por e-mail (quando sai, assunto e destinatários em texto,
 // prévia do modelo com esmaecido e "Ver e-mail inteiro"), os anexos em PDF e o visualizador (anterior/
 // próximo; no celular, pinça para ampliar). Sem botão para o app.
-// Desktop (≥ @split): 3 colunas. Celular: chips com os 6 e-mails e um card por vez (deslizar troca).
+// Desktop (≥ @split): 3 colunas. Celular: chips com os e-mails (12) e um card por vez (deslizar troca).
 // As imagens são os modelos reais montados com dados fictícios (scripts/sobre/gerar-emails.ts).
 import React, { useEffect, useRef, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
@@ -18,9 +18,9 @@ const RESERVA_EMAIL = { w: 860, h: 1400 };
 const RESERVA_ANEXO = { w: 1123, h: 794 };
 
 const COMUNS = [
-  { icone: 'send', titulo: 'Remetente único', texto: 'Todos saem da conta Google da JRS como “JRS/HNRe”; as respostas vão para a caixa da JRS.' },
+  { icone: 'send', titulo: 'Conta da JRS', texto: 'Todos saem da conta Google da JRS (“JRS-HNRe” aos inspecionados); as respostas vão para a caixa da JRS — nas guias à SEC-JRS, para quem enviou.' },
   { icone: 'edit_note', titulo: 'Modelos fixos, destinatários ajustáveis', texto: 'O texto segue o modelo aprovado; o Admin ajusta destinatários fixos, assinaturas e saudações em Configurações.' },
-  { icone: 'verified', titulo: 'Sem duplicar', texto: 'Cada envio fica registrado na IS ou no candidato; o app não manda o mesmo comunicado duas vezes.' },
+  { icone: 'verified', titulo: 'Confirmação e registro', texto: 'Fora o da agenda das 18h, nenhum sai sem confirmação: o app mostra o envio e dá para cancelar. Cada envio fica registrado na IS (data, hora e quem enviou); o agendamento sai uma vez por data e hora.' },
   { icone: 'science', titulo: 'Teste antes', texto: 'Cada modelo pode ser enviado em teste, com dados fictícios, só para a lista de teste.' },
 ];
 
@@ -30,7 +30,7 @@ const altDe = (e: EmailSobre) => `Modelo do e-mail “${e.titulo}”, preenchido
 interface ItemVisualizador { chave: string; titulo: string; alt: string; reserva: { w: number; h: number } }
 
 const ITENS_EMAILS: ItemVisualizador[] = EMAILS_SOBRE.map(e => ({ chave: `emails/${e.tipo}`, titulo: e.titulo, alt: altDe(e), reserva: RESERVA_EMAIL }));
-const ITENS_ANEXOS: ItemVisualizador[] = EMAILS_SOBRE.filter(e => e.anexo).map(e => ({
+const ITENS_ANEXOS: ItemVisualizador[] = EMAILS_SOBRE.filter(e => e.anexo?.imagem).map(e => ({
   chave: `emails/${e.anexo!.imagem}`, titulo: e.anexo!.rotulo, alt: `${e.anexo!.rotulo}, com dados fictícios`, reserva: RESERVA_ANEXO,
 }));
 
@@ -38,6 +38,10 @@ const TagModo: React.FC<{ modo: EmailSobre['modo'] }> = ({ modo }) => (
   modo === 'automatico' ? (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-navy text-white text-xs font-bold whitespace-nowrap">
       <span className="material-symbols-outlined text-[15px]" aria-hidden="true">schedule</span>Automático
+    </span>
+  ) : modo === 'confirmacao' ? (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-thead text-navy text-xs font-bold whitespace-nowrap">
+      <span className="material-symbols-outlined text-[15px]" aria-hidden="true">task_alt</span>Com confirmação
     </span>
   ) : (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-navy text-navy text-xs font-bold whitespace-nowrap">
@@ -140,8 +144,9 @@ export const EmailsApp: React.FC<{ id?: string }> = ({ id = 'sobre-emails' }) =>
           <IconeSecao icone="mail" />
           <h2 id={`${id}-titulo`} tabIndex={-1} className="text-h1 text-navy focus:outline-none">Comunicados prontos, no padrão da JRS</h2>
           <p className="text-base text-ink">
-            Seis e-mails saem do app a partir de modelos aprovados: um automático, todo fim de tarde, e cinco com um clique
-            depois da ação que os justifica. As imagens abaixo são os modelos reais, preenchidos com dados fictícios.
+            Doze e-mails saem do app a partir de modelos aprovados: um automático, todo fim de tarde; seis propostos logo
+            depois da ação que os justifica (abrir a IS, gerar as guias, agendar), com confirmação antes do envio; e cinco
+            com um clique. As imagens abaixo são os modelos reais, preenchidos com dados fictícios.
           </p>
         </div>
 
@@ -160,7 +165,7 @@ export const EmailsApp: React.FC<{ id?: string }> = ({ id = 'sobre-emails' }) =>
           {EMAILS_SOBRE.map((e, i) => <CardEmail key={e.tipo} email={e} onAbrir={() => abrirEmail(i)} />)}
         </ul>
 
-        {/* Celular: chips com os seis e-mails e um card por vez. */}
+        {/* Celular: chips com os e-mails e um card por vez. */}
         <div className="@lg:hidden flex flex-col gap-3">
           <div className="-mx-4 px-4 overflow-x-auto">
             <ul className="flex gap-2 w-max" aria-label="Escolha o e-mail">

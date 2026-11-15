@@ -1,5 +1,5 @@
 // Ficheiro: services/emailTeste.ts
-// E-mails de teste (Configurações; só Admin): o servidor (servidor/email/teste.ts) monta o e-mail do tipo com dados
+// E-mails de teste (Administração → E-mails automáticos, um por tipo de TIPOS_EMAIL; só Admin): o servidor (servidor/email/teste.ts) monta o e-mail do tipo com dados
 // fictícios e envia só aos destinatários de teste de config/emails, sem CCO, com "[TESTE]" no assunto.
 import { ApiError, chamarServidor } from './apiClient';
 import type { TipoEmail } from '../config/emails';

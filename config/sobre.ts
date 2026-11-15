@@ -13,6 +13,7 @@
 //   com dados fictícios). Sem captura gerada, a página mostra uma moldura com o ícone da área.
 // - `paginas`: a área aparece (e o botão "Abrir" leva à 1ª liberada) se o perfil acessa QUALQUER uma delas.
 import type { NavItem } from '../types';
+import type { TipoEmail } from './emails';
 
 export interface TextoAreaSobre {
   /** Título da linha (se diferente do título da área). */
@@ -248,21 +249,25 @@ export const AREAS_SOBRE: AreaSobre[] = [
 
 // ---------------------------------------------------------------- E-mails do app (bloco "Comunicados prontos")
 
-export type ModoEmail = 'automatico' | 'um-clique';
+/** automatico: sai sozinho (agendador); confirmacao: o app propõe logo depois da ação e pede confirmação; um-clique: botão/menu. */
+export type ModoEmail = 'automatico' | 'confirmacao' | 'um-clique';
 
 export interface EmailSobre {
   /** Tipo do e-mail (config/emails.ts) e nome-base da imagem em public/sobre/emails/. */
-  tipo: 'agendaIS' | 'agendamentoIS' | 'resultadoIS' | 'faltasHNRe' | 'nac' | 'inaptosConcurso';
+  tipo: TipoEmail;
   titulo: string;
   modo: ModoEmail;
   /** Quando sai (uma linha). */
   quando: string;
   /** Para quem vai, em texto (o que a imagem mostra não fica só na imagem). */
   para: string;
-  /** Imagem do anexo em PDF (nome-base em public/sobre/emails/), se houver. */
-  anexo?: { imagem: string; rotulo: string };
+  /** Anexo em PDF; `imagem` (nome-base em public/sobre/emails/) só quando há prévia do anexo na página. */
+  anexo?: { imagem?: string; rotulo: string };
 }
 
+const CC_SECRETARIA_OM = 'O inspecionado, com cópia à Secretaria da JRS e, conforme a OM, à Divisão de Pessoal do HNRe ou à EAMPE.';
+
+/** Um card por e-mail (os 12 de config/emails.ts → TIPOS_EMAIL), na ordem do fluxo da IS. */
 export const EMAILS_SOBRE: EmailSobre[] = [
   {
     tipo: 'agendaIS', titulo: 'IS agendadas do dia seguinte', modo: 'automatico',
@@ -271,14 +276,46 @@ export const EMAILS_SOBRE: EmailSobre[] = [
     anexo: { imagem: 'anexo-agendaIS', rotulo: 'Anexo da agenda do dia (PDF, A4 paisagem)' },
   },
   {
-    tipo: 'agendamentoIS', titulo: 'Agendamento da IS', modo: 'um-clique',
-    quando: 'Depois de agendar uma IS de VDF ou de Término.',
-    para: 'O inspecionado, com cópia ao médico da IS.',
+    tipo: 'aberturaIS', titulo: 'Abertura da IS', modo: 'confirmacao',
+    quando: 'Logo depois de abrir a IS, com o prazo para obter as guias ou agendar (Benefícios: 60 dias).',
+    para: CC_SECRETARIA_OM,
+  },
+  {
+    tipo: 'guiasInspecionado', titulo: 'Guias de exames ao inspecionado', modo: 'confirmacao',
+    quando: 'Depois de gerar as guias da IS (ou pelo detalhe da IS), com as guias em PDF.',
+    para: 'O inspecionado, com cópia a quem enviou.',
+    anexo: { rotulo: 'Guias de exames (PDF)' },
+  },
+  {
+    tipo: 'guiasSecretaria', titulo: 'Guias de exames à SEC-JRS', modo: 'confirmacao',
+    quando: 'No mesmo envio das guias, para os membros da Secretaria escolhidos, com as guias em PDF.',
+    para: 'Membros da Secretaria escolhidos; remetente e resposta: quem enviou.',
+    anexo: { rotulo: 'Guias de exames (PDF)' },
+  },
+  {
+    tipo: 'agendamentoIS', titulo: 'Agendamento (VDF e Términos)', modo: 'confirmacao',
+    quando: 'Depois de agendar uma IS de VDF ou de Término; no reagendamento, o mesmo modelo avisa a nova data.',
+    para: CC_SECRETARIA_OM,
+  },
+  {
+    tipo: 'agendamentoGeral', titulo: 'Agendamento (demais finalidades)', modo: 'confirmacao',
+    quando: 'Depois de agendar uma IS das demais finalidades; no reagendamento, avisa a nova data.',
+    para: CC_SECRETARIA_OM,
+  },
+  {
+    tipo: 'agendamentoBeneficios', titulo: 'Agendamento (Benefícios)', modo: 'confirmacao',
+    quando: 'Depois de agendar uma IS de Benefícios, com a documentação exigida; no reagendamento, avisa a nova data.',
+    para: 'O inspecionado, com cópia à Secretaria da JRS.',
   },
   {
     tipo: 'resultadoIS', titulo: 'Resultado da IS', modo: 'um-clique',
     quando: 'Quando o TIS é assinado.',
     para: 'O inspecionado.',
+  },
+  {
+    tipo: 'resultadoBeneficios', titulo: 'Resultado da IS (Benefícios)', modo: 'um-clique',
+    quando: 'Com o Nº do TIS: a IA sugere o modelo (não enquadramento ou enquadramento) e o usuário confere.',
+    para: 'O inspecionado, com cópia à Secretaria da JRS.',
   },
   {
     tipo: 'faltasHNRe', titulo: 'Faltas às IS (HNRe)', modo: 'um-clique',

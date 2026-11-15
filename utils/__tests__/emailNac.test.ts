@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { pendenteNac, pendentesNac, periodoNac, paginarNac, ehCargoSmi, LINHAS_POR_PAGINA } from '../emailNac';
 import { agendamentoPendente } from '../emailAgendamentoIS';
 import { montarEmailNac, ccSmi } from '../../servidor/email/nac';
-import { montarEmailTeste, TIPOS_TESTE, ficticios } from '../../servidor/email/teste';
+import { montarEmailTeste, REMETENTE_TESTE, TIPOS_TESTE, ficticios } from '../../servidor/email/teste';
 import { assinaturaSemSignatario } from '../../servidor/email/comum';
-import { CONFIG_EMAILS_PADRAO, mesclarConfigEmails } from '../../config/emails';
+import { CONFIG_EMAILS_PADRAO, TIPOS_EMAIL, mesclarConfigEmails } from '../../config/emails';
 
 const placeholder = /\{\{[#^/]?\w+\}\}/;
 const VT = 'Verificações e Términos';
@@ -116,6 +116,38 @@ describe('e-mails de teste', () => {
       expect(r.html, tipo).not.toMatch(/<script|javascript:/i);
       if (r.htmlAnexo) expect(r.htmlAnexo, tipo).not.toMatch(placeholder);
     }
+  });
+  it('todos os e-mails automáticos têm teste, com o remetente do envio real', () => {
+    expect([...TIPOS_TESTE].sort()).toEqual(TIPOS_EMAIL.map(t => t.tipo).sort());
+    expect(TIPOS_TESTE).toHaveLength(12);
+    expect(REMETENTE_TESTE.agendamentoGeral).toBe('JRS-HNRe');
+    expect(REMETENTE_TESTE.resultadoIS).toBe('JRS-HNRe');
+    expect(REMETENTE_TESTE.agendaIS).toBe('JRS/HNRe');
+  });
+  it('variantes sorteadas: abertura (3), agendamento/reagendamento e os 3 modelos de Benefícios', () => {
+    const cfg = mesclarConfigEmails(undefined);
+    const vistos = { abertura: new Set<string>(), agendamento: new Set<string>(), beneficios: new Set<string>() };
+    for (let n = 1; n <= 40; n++) {
+      vistos.abertura.add((montarEmailTeste('aberturaIS', assinaturaSemSignatario(), cfg, semente(n)) as unknown as { variante: string }).variante);
+      for (const tipo of ['agendamentoIS', 'agendamentoGeral', 'agendamentoBeneficios'] as const) {
+        const r = montarEmailTeste(tipo, assinaturaSemSignatario(), cfg, semente(n)) as unknown as { tipo: string; variante: string };
+        expect(r.tipo).toBe(tipo); // o grupo fictício leva ao modelo certo
+        vistos.agendamento.add(r.variante);
+      }
+      vistos.beneficios.add((montarEmailTeste('resultadoBeneficios', assinaturaSemSignatario(), cfg, semente(n)) as unknown as { modelo: string }).modelo);
+    }
+    expect(vistos.abertura.size).toBe(3);
+    expect(vistos.agendamento.size).toBe(2);
+    expect(vistos.beneficios.size).toBe(3);
+  });
+  it('guias: anexo com as páginas das guias fictícias; à SEC-JRS, remetente fictício (Admin não assina)', () => {
+    const cfg = mesclarConfigEmails(undefined);
+    const ins = montarEmailTeste('guiasInspecionado', assinaturaSemSignatario(), cfg, semente(1)) as { htmlAnexo?: string; anexoNome?: string };
+    expect(ins.anexoNome).toMatch(/^Guias de exames - IS \d+\.pdf$/);
+    expect((ins.htmlAnexo || '').split('<section class="pagina"').length - 1).toBeGreaterThan(1);
+    const sec = montarEmailTeste('guiasSecretaria', assinaturaSemSignatario(), cfg, semente(1)) as { nomeRemetente?: string; htmlAnexo?: string };
+    expect(sec.nomeRemetente).toBe('BELTRANO DE SOUZA');
+    expect(sec.htmlAnexo).toBeTruthy();
   });
   it('destinatários de teste padrão e sem CCO', () => {
     expect(CONFIG_EMAILS_PADRAO.testes).toEqual({ para: ['mauriston.martins@marinha.mil.br'], cc: ['mauriston@oncoortopedia.com'] });

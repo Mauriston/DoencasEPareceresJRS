@@ -7,7 +7,6 @@
 // Os destinatários DINÂMICOS não são configuráveis aqui — o servidor sempre os acrescenta:
 //   - resultadoIS:     PARA = e-mail do inspecionado.
 //   - agendaIS:        PARA += institucionais dos user_medicos/user_medicos_mpi; CC += Gmail de Admin, médicos, MPI e Secretaria.
-//   - agendamentoIS:   PARA = e-mail do inspecionado; CC += institucional do médico da IS.
 //   - faltasHNRe:      CC += e-mails dos inspecionados (quando cadastrados).
 //   - inaptosConcurso: nenhum.
 //   - nac:             CC += institucionais dos user_medicos_geral com cargo "SMI".
@@ -16,7 +15,7 @@
 //   - agendamentoBeneficios / resultadoBeneficios: PARA = e-mail do inspecionado; CC += institucionais dos user_secretaria.
 //   - guiasInspecionado: PARA = e-mail do inspecionado; CC += institucional de quem disparou.
 //   - guiasSecretaria:   PARA = institucionais dos user_secretaria escolhidos; Reply-To = institucional de quem disparou.
-// "Responder para" (Reply-To) é sempre a caixa da JRS (`responderPara`).
+// "Responder para" (Reply-To) é a caixa da JRS (`responderPara`), exceto em guiasSecretaria.
 
 export type TipoEmail =
   | 'resultadoIS' | 'agendaIS' | 'agendamentoIS' | 'faltasHNRe' | 'inaptosConcurso' | 'nac'

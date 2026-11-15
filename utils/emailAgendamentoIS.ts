@@ -7,6 +7,7 @@
 // Só com data de entrevista, e um envio por data/hora agendada; quando a IS já teve e-mail para outra data/hora
 // (ou o status é "reagendada"), a variante é 'reagendamento' (mesmo modelo, texto "foi reagendada para…").
 import type { TipoEmail } from '../config/emails';
+import { inspecionadoSemNip } from './emailGuiasIS';
 
 export type TipoEmailAgendamento = Extract<TipoEmail, 'agendamentoIS' | 'agendamentoGeral' | 'agendamentoBeneficios'>;
 export type VarianteAgendamento = 'agendamento' | 'reagendamento';
@@ -23,10 +24,9 @@ export const tipoEmailAgendamento = (grupoFinalidade: string | undefined): TipoE
 
 /**
  * INSPECIONADO sem o NIP: "CT (Md) 12.3456.78 MAURISTON RENAN MARTINS SILVA" → "CT (Md) MAURISTON RENAN MARTINS SILVA".
- * Aceita o NIP com ou sem pontos (8 dígitos). (Igual à de utils/emailGuiasIS.ts — o coordenador unifica.)
+ * Aceita o NIP com ou sem pontos (8 dígitos). Mesma função de utils/emailGuiasIS.ts (reexportada com o nome antigo).
  */
-export const nomeInspecionado = (inspecionado: string | undefined): string =>
-  String(inspecionado || '').replace(/(^|\s)(\d{2}\.\d{4}\.\d{2}|\d{8})(?=\s|$)/, ' ').replace(/\s+/g, ' ').trim();
+export const nomeInspecionado = inspecionadoSemNip;
 
 /** "AGENDAMENTO DE IS FIM {finalidade} - {inspecionado sem NIP}" (o mesmo no reagendamento). */
 export const assuntoAgendamento = (finalidade: string | undefined, inspecionado: string | undefined): string =>

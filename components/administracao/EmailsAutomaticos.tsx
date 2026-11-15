@@ -3,7 +3,8 @@
 // editor à direita (no celular, lista → editor com voltar) — no lugar da página longa de Configurações.
 // "Enviar teste" fica no próprio e-mail; "quem alterou e quando" por item (config/emails.alteracoes e
 // testesEnviados — services/configEmails.ts). "Geral" (Responder para e assinaturas) e os destinatários dos
-// testes viram itens da lista. Grades por container (@container), não pela janela. O servidor lê o documento
+// testes viram itens da lista (12 e-mails + Geral + Testes; com a lista longa, o editor fica fixo ao lado ao rolar).
+// Grades por container (@container), não pela janela. O servidor lê o documento
 // a cada envio (servidor/email/comum.ts): a mudança vale no próximo e-mail, sem publicar nada.
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Button } from '../ui/Button';
@@ -290,9 +291,10 @@ export const EmailsAutomaticos: React.FC = () => {
       <p className="text-sm text-ink-3 mb-4">Destinatários fixos de cada e-mail. Os que dependem da IS ou dos usuários são acrescentados pelo servidor. Depois de salvar, a mudança vale no próximo e-mail, sem publicar nada.</p>
       {isDesktop ? (
         <div className="@container">
-          <div className="grid gap-4 @[48rem]:grid-cols-[16rem_minmax(0,1fr)] items-start">
+          <div className="grid gap-4 @[42rem]:grid-cols-[16rem_minmax(0,1fr)] items-start">
             {listaItens}
-            <div className="min-w-0">{editor}</div>
+            {/* Lista longa (12 e-mails + Geral + Testes): o editor acompanha a rolagem ao lado dela. */}
+            <div className="min-w-0 @[42rem]:sticky @[42rem]:top-4">{editor}</div>
           </div>
         </div>
       ) : editorAberto ? (
