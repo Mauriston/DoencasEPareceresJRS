@@ -516,7 +516,7 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
         />
       )}
 
-      <Container size="data" className={`pt-0 md:pt-8 space-y-6 ${podeRegistrarMensagem ? 'pb-28 md:pb-10' : 'pb-10'}`}>
+      <Container size="data" className={`pt-0 md:pt-8 flex flex-col gap-6 ${podeRegistrarMensagem ? 'pb-28 md:pb-10' : 'pb-10'}`}>
         <PageHeader
           title="Concursos"
           description="Planilhas de controle dos candidatos de cada concurso."

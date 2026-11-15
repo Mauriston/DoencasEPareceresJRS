@@ -83,8 +83,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, tituloTopbar, eye
   useEffect(() => { setSlot(document.getElementById(TOPBAR_ACOES_ID)); }, []);
   // No celular, sem sobrelinha nem descrição visível, o cabeçalho não ocupa espaço: o conteúdo cola na topbar.
   const vazioNoCelular = tituloNaTopbar && !eyebrow && !(temDescricao && descricaoNoCelular);
-  return (
-    <div className={`flex flex-col md:flex-row md:items-start md:justify-between gap-3 ${vazioNoCelular ? 'mb-0 md:mb-6' : 'mb-6'} ${className}`}>
+  return (<>
+    {/* No celular, o cabeçalho vazio some de vez (display:none): assim não conta no gap/space-y de quem o contém. */}
+    <div className={`${vazioNoCelular ? 'hidden md:flex' : 'flex'} flex-col md:flex-row md:items-start md:justify-between gap-3 mb-6 ${className}`}>
       <div className="min-w-0">
         {eyebrow && <p className="eyebrow mb-1">{eyebrow}</p>}
         <h1 className={`${tituloNaTopbar ? 'hidden md:block ' : ''}text-h1 font-extrabold text-navy leading-tight`}>{title}</h1>
@@ -104,11 +105,11 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, tituloTopbar, eye
           )}
         </div>
       )}
-      {/* Celular: as mesmas ações na topbar (o slot só existe/aparece abaixo de md). */}
-      {actions && tituloNaTopbar && slot && createPortal(<div className="flex items-center gap-1">{actions}</div>, slot)}
-      {fab && <FabPagina fab={fab} />}
     </div>
-  );
+    {/* Celular: as mesmas ações na topbar (o slot só existe/aparece abaixo de md). */}
+    {actions && tituloNaTopbar && slot && createPortal(<div className="flex items-center gap-1">{actions}</div>, slot)}
+    {fab && <FabPagina fab={fab} />}
+  </>);
 };
 
 interface PageProps extends PageHeaderProps {

@@ -577,7 +577,7 @@ export const Inspecoes: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
-      <Container size="data" className={`pt-0 md:pt-8 ${podeCadastrar || podeBloquear ? 'pb-28 md:pb-10' : 'pb-10'} space-y-4`}>
+      <Container size="data" className={`pt-0 md:pt-8 ${podeCadastrar || podeBloquear ? 'pb-28 md:pb-10' : 'pb-10'} flex flex-col gap-4`}>
         <PageHeader
           title="Inspeções de Saúde"
           description="Cadastro, agenda e prazos das IS (exceto concursos)."

@@ -262,7 +262,7 @@ export const PericiaMenor: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
-      <Container size="data" className="pt-0 md:pt-8 pb-10 space-y-4">
+      <Container size="data" className="pt-0 md:pt-8 pb-10 flex flex-col gap-4">
         <PageHeader
           title={t.pagina}
           description={descricao}
