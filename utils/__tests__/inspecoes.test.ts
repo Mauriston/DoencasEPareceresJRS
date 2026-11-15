@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   bloqueioNoDia, cabeNoTurno, chaveSlot, chavesOcupadas, diasEntre, duracaoDoGrupo, slotsCobertos, slotsDoTurno,
-  statusEfetivoIS, tisValido, turnoDoSlot,
+  statusEfetivoIS, tisValido, turnoDoSlot, aguardaAgendamento, podeCancelarIS, statusAoAgendar,
 } from '../inspecoes';
 import { cpfValido, extrairNomeInspecionado, formatCelular, formatNip } from '../format';
 
@@ -16,6 +16,16 @@ describe('prazos das IS', () => {
     expect(statusEfetivoIS(base, '2026-10-28')).toBe('atrasada');
     expect(statusEfetivoIS({ ...base, grupoFinalidade: 'Benefícios' }, '2026-10-28')).toBe('aberta');
     expect(statusEfetivoIS({ ...base, dataEntrevista: '2026-11-01T08:00' }, '2026-12-01')).toBe('aberta');
+  });
+  it('Realizando Exames: aguarda agendamento, não fica atrasada nem é cancelada pelo prazo', () => {
+    const is = { status: 'realizando_exames' as const, dataAbertura: '2026-10-01' };
+    expect(aguardaAgendamento('realizando_exames')).toBe(true);
+    expect(aguardaAgendamento('aberta')).toBe(true);
+    expect(aguardaAgendamento('agendada')).toBe(false);
+    expect(statusEfetivoIS(is, '2026-11-15')).toBe('realizando_exames');
+    expect(podeCancelarIS(is, '2026-11-15')).toBe(false);
+    expect(podeCancelarIS({ ...is, status: 'aberta' }, '2026-11-15')).toBe(true);
+    expect(statusAoAgendar(is, '2026-11-20T08:00')).toBe('agendada');
   });
 });
 

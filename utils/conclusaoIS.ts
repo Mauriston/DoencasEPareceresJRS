@@ -75,7 +75,7 @@ export const opcoesDeRestricoes = (lista: string[]): string[] => lista.filter(op
 // ---------------------------------------------------------------------------
 
 /** Status anteriores à votação: o Laudo leva a "Votação pendente". */
-export const STATUS_ANTES_DA_VOTACAO: StatusIS[] = ['aberta', 'agendada', 'reagendada', 'faltou', 'parecer_solicitado', 'conclusao_pendente'];
+export const STATUS_ANTES_DA_VOTACAO: StatusIS[] = ['aberta', 'realizando_exames', 'agendada', 'reagendada', 'faltou', 'parecer_solicitado', 'conclusao_pendente'];
 /** Status do encaminhamento Auditoria | JSD (e as restituições). */
 export const STATUS_ENCAMINHAMENTO: StatusIS[] = ['auditoria', 'revisao_exofficio', 'restituicao_auditoria', 'restituicao_jsd'];
 /** Status que só existem com Laudo: apagado o Laudo, a IS volta para Agendada (ou Aberta, sem entrevista). */

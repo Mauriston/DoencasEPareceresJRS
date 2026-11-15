@@ -110,10 +110,10 @@ describe('IA: casar o nome lido com o usuário', () => {
 });
 
 describe('Inspeções: qualificação dos e-mails', () => {
-  it('resultado: situação Finalizada, Verificações e Términos ou Benefícios, com laudo, sem envio', () => {
-    const base = { situacao: 'finalizada', status: 'tis_assinado', grupoFinalidade: 'Benefícios', laudo: 'Apto' };
+  it('resultado: situação Finalizada, Verificações e Términos, com laudo, sem envio (Benefícios tem e-mail próprio)', () => {
+    const base = { situacao: 'finalizada', status: 'tis_assinado', grupoFinalidade: 'Verificações e Términos', laudo: 'Apto' };
     expect(resultadoPendente(base)).toBe(true);
-    expect(resultadoPendente({ ...base, grupoFinalidade: 'Verificações e Términos' })).toBe(true);
+    expect(resultadoPendente({ ...base, grupoFinalidade: 'Benefícios' })).toBe(false);
     expect(resultadoPendente({ ...base, grupoFinalidade: 'Ingresso' })).toBe(false);
     expect(resultadoPendente({ ...base, situacao: 'andamento', status: 'assinaturas_pendentes' })).toBe(false);
     expect(resultadoPendente({ ...base, status: 'cancelada' })).toBe(false);

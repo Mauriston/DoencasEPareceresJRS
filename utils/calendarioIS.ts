@@ -1,7 +1,7 @@
 // Ficheiro: utils/calendarioIS.ts
 // Regras puras da visão Calendário das IS: quem pode ser arrastado para remarcar, a fila de IS abertas
 // ainda sem entrevista (painel à esquerda) e a grade do mês só com os dias úteis (seg–sex).
-import { diasEmAberto, hojeISO, inicioDaSemana, inicioDoMes, somarDias, statusEfetivoIS, type StatusIS } from './inspecoes';
+import { aguardaAgendamento, diasEmAberto, hojeISO, inicioDaSemana, inicioDoMes, somarDias, statusEfetivoIS, type StatusIS } from './inspecoes';
 
 interface DadosArrasteIS {
   status: StatusIS;
@@ -33,10 +33,10 @@ export const podeArrastarIS = (is: DadosArrasteIS): boolean =>
 
 interface DadosAbertaIS { id: string; is: number; status: StatusIS; dataAbertura: string; dataEntrevista?: string; grupoFinalidade?: string }
 
-/** IS abertas e ainda sem entrevista, das mais antigas (mais dias em aberto) para as mais novas; empate pelo nº. */
+/** IS abertas (Aberta ou Realizando Exames) e ainda sem entrevista, das mais antigas (mais dias em aberto) para as mais novas; empate pelo nº. */
 export const abertasNaoAgendadas = <T extends DadosAbertaIS>(inspecoes: T[], hoje: string = hojeISO()): T[] =>
   inspecoes
-    .filter(i => i.status === 'aberta' && !i.dataEntrevista)
+    .filter(i => aguardaAgendamento(i.status) && !i.dataEntrevista)
     .sort((a, b) => diasEmAberto(b.dataAbertura, hoje) - diasEmAberto(a.dataAbertura, hoje) || a.is - b.is);
 
 /** A IS aberta passou do prazo de agendamento (status efetivo "Atrasada"). */
