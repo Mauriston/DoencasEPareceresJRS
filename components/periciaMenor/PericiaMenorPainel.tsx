@@ -186,6 +186,7 @@ export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoj
   const abas = (
     <AbasSublinhadas<AbaPericia>
       rotulo={`Detalhe ${atestado ? 'do atestado' : 'da perícia'}`} idBase={idBase} ativa={aba} onChange={onAba}
+      altura="sm" distribuir="sempre" className="-mx-5"
       abas={[{ id: 'esta', rotulo: atestado ? 'Este atestado' : 'Esta perícia' }, { id: 'historico', rotulo: 'Histórico', contagem: historico.length }]}
     />
   );

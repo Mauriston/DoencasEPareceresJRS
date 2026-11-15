@@ -32,9 +32,16 @@ export const CidCodigo: React.FC<{ codigo: string; descricao: string; className?
 
 export interface AbaSublinhada<T extends string> { id: T; rotulo: string; contagem?: number }
 
-/** Abas sublinhadas (ouro = ativa), com setas ← → entre elas. `idBase` liga cada aba ao painel `${idBase}-painel`. */
-export function AbasSublinhadas<T extends string>({ abas, ativa, onChange, rotulo, idBase, className = '' }: {
+/**
+ * Abas sublinhadas (auditoria v3, G2 — mockups 5b/5c/9b/9c): item de 48 px (ou 44 no sheet), 14/700, ouro de 3 px
+ * sob a ativa; contagem em pílula (navy cheia na ativa, cinza nas demais). No celular as abas dividem a largura
+ * em partes iguais, centradas (`distribuir` = 'celular', padrão); 'sempre' faz o mesmo em todas as larguras (sheet
+ * e painel lateral); 'nunca' deixa cada aba do tamanho do texto, com rolagem lateral (Ficha, 4+ abas).
+ * Setas ← → trocam a aba; `idBase` liga cada aba ao painel `${idBase}-painel`.
+ */
+export function AbasSublinhadas<T extends string>({ abas, ativa, onChange, rotulo, idBase, className = '', altura = 'md', distribuir = 'celular' }: {
   abas: AbaSublinhada<T>[]; ativa: T; onChange: (id: T) => void; rotulo: string; idBase: string; className?: string;
+  altura?: 'md' | 'sm'; distribuir?: 'celular' | 'sempre' | 'nunca';
 }) {
   const aoTecla = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const passo = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
@@ -45,18 +52,21 @@ export function AbasSublinhadas<T extends string>({ abas, ativa, onChange, rotul
     onChange(prox.id);
     requestAnimationFrame(() => document.getElementById(`${idBase}-aba-${prox.id}`)?.focus());
   };
+  const largura = distribuir === 'sempre' ? 'flex-1 justify-center px-3' : distribuir === 'celular' ? 'flex-1 justify-center px-2 md:px-3 md:flex-none md:justify-start' : 'flex-none px-3';
   return (
-    <div role="tablist" aria-label={rotulo} onKeyDown={aoTecla} className={`flex gap-5 overflow-x-auto border-b border-line ${className}`}>
+    <div role="tablist" aria-label={rotulo} onKeyDown={aoTecla} className={`flex gap-1 overflow-x-auto border-b border-line ${className}`}>
       {abas.map(a => {
         const sel = a.id === ativa;
         return (
           <button
             key={a.id} type="button" role="tab" id={`${idBase}-aba-${a.id}`} aria-selected={sel} aria-controls={`${idBase}-painel`} tabIndex={sel ? 0 : -1}
             onClick={() => onChange(a.id)}
-            className={`shrink-0 inline-flex items-center gap-1.5 min-h-10 text-sm font-bold border-b-[3px] -mb-px transition-colors ${sel ? 'border-gold text-navy' : 'border-transparent text-ink-3 hover:text-navy'}`}
+            className={`${largura} ${altura === 'sm' ? 'h-11' : 'h-12'} shrink-0 inline-flex items-center gap-1.5 text-sm font-bold whitespace-nowrap border-b-[3px] -mb-px transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold ${sel ? 'border-gold text-navy' : 'border-transparent text-ink-3 hover:text-navy'}`}
           >
             {a.rotulo}
-            {a.contagem !== undefined && <span className="min-w-5 h-5 px-1.5 rounded-full bg-thead text-ink-3 text-xs inline-flex items-center justify-center tabular-nums">{a.contagem}</span>}
+            {a.contagem !== undefined && (
+              <span className={`min-w-5 h-5 px-1.5 rounded-full text-xs font-bold inline-flex items-center justify-center tabular-nums ${sel ? 'bg-navy text-white' : 'bg-thead text-ink-3'}`}>{a.contagem}</span>
+            )}
           </button>
         );
       })}
