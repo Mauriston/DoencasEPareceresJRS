@@ -35,8 +35,9 @@ describe('abertasNaoAgendadas', () => {
       is('c', 9, '2026-11-09'),
       is('d', 12, '2026-10-01', { dataEntrevista: '2026-11-12T08:00' }),
       is('e', 13, '2026-09-01', { status: 'agendada' }),
+      is('f', 14, '2026-10-15', { status: 'realizando_exames' }),
     ];
-    expect(abertasNaoAgendadas(lista, '2026-11-10').map(i => i.id)).toEqual(['b', 'c', 'a']);
+    expect(abertasNaoAgendadas(lista, '2026-11-10').map(i => i.id)).toEqual(['b', 'f', 'c', 'a']);
   });
   it('atrasada conforme o prazo do grupo', () => {
     expect(abertaAtrasada(is('a', 1, '2026-11-01'), '2026-11-10')).toBe(true);

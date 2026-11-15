@@ -38,7 +38,7 @@ import { Pendencias, type Pendencia } from './home/Pendencias';
 import { CardFaltasHNRe } from './inspecoes/CardFaltasHNRe';
 import { EnviarExamesModal } from './concursos/ExamesCandidato';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
-import { hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, diasEmAberto, prazoAtrasoDias, statusEfetivoIS, nomeMes } from '../utils/inspecoes';
+import { aguardaAgendamento, hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, diasEmAberto, prazoAtrasoDias, statusEfetivoIS, nomeMes } from '../utils/inspecoes';
 import { finalidadeSemGrupo, nomeCurtoInspecionado } from '../utils/calendarioIS';
 import { observarPericiasMenores, statusPericia, dataBR, type PericiaMenorRecord } from '../services/firestorePericiasMenores';
 import { extrairNomeInspecionado } from '../utils/format';
@@ -147,7 +147,7 @@ export const Home: React.FC = () => {
   const isDeHoje = useMemo(() => inspecoes
     .filter(i => i.dataEntrevista && i.status !== 'cancelada' && dataDeEntrevista(i.dataEntrevista) === hoje)
     .sort((a, b) => a.dataEntrevista.localeCompare(b.dataEntrevista) || a.is - b.is), [inspecoes, hoje]);
-  const semAgendamento = useMemo(() => inspecoes.filter(i => i.status === 'aberta' && !i.dataEntrevista), [inspecoes]);
+  const semAgendamento = useMemo(() => inspecoes.filter(i => aguardaAgendamento(i.status) && !i.dataEntrevista), [inspecoes]);
   const isAtrasadas = useMemo(() => inspecoes.filter(i => statusEfetivoIS(i, hoje) === 'atrasada'), [inspecoes, hoje]);
 
   // Perícias menores / atestados.

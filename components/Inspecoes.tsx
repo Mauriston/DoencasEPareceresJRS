@@ -40,6 +40,8 @@ import { AgendarNoHorarioDialog } from './inspecoes/AgendarNoHorarioDialog';
 import { MinutaDialog } from './inspecoes/MinutaDialog';
 import { EnviarResultadoDialog } from './inspecoes/EnviarResultadoDialog';
 import { EnviarAgendamentoDialog } from './inspecoes/EnviarAgendamentoDialog';
+import { EnviarResultadoBeneficiosDialog } from './inspecoes/emails/EnviarResultadoBeneficiosDialog';
+import { resultadoBeneficiosDisponivel, resultadoBeneficiosEnviado } from '../utils/resultadoBeneficiosIS';
 import { avisarAgendamento, observarAgendamentos, type AgendamentoFeito } from '../services/emailAgendamentoIS';
 import { agendamentoJaEnviado, ehElegivelAgendamento } from '../utils/emailAgendamentoIS';
 import { EmailAgendaDialog } from './inspecoes/EmailAgendaDialog';
@@ -70,7 +72,7 @@ import { minutaCancelamento, minutaResultadoDaIS } from '../utils/minutasIS';
 import { postoDoInspecionado, sugerirDestinatariosIA } from '../services/destinatariosIA';
 import { normalizarBusca } from '../utils/corposQuadros';
 import {
-  STATUS_IS, statusEfetivoIS, dataHoraBr, hojeISO, podeCancelarIS, situacaoDoStatus, bloqueioNoDia, ehDiaUtil,
+  STATUS_IS, aguardaAgendamento, statusEfetivoIS, dataHoraBr, hojeISO, podeCancelarIS, situacaoDoStatus, bloqueioNoDia, ehDiaUtil,
   TURNOS, slotsDoTurno, minutosDe, horaDeEntrevista, duracaoDaIS, peritoAtendeNoTurno, ocupadosDe, turnoDoSlot,
   type BloqueioAgenda, type ConfigAgenda, type StatusIS,
 } from '../utils/inspecoes';
@@ -214,9 +216,10 @@ export const Inspecoes: React.FC = () => {
   const [horarioVazio, setHorarioVazio] = useState<string | null>(null);
   const [minuta, setMinuta] = useState<InspecaoRecord | null>(null);
   const [enviandoResultado, setEnviandoResultado] = useState<InspecaoRecord | null>(null);
-  /** E-mails de agendamento a oferecer (depois de agendar) ou pedidos pelo menu ⋮; mostrados um por vez. */
+  const [enviandoBeneficios, setEnviandoBeneficios] = useState<InspecaoRecord | null>(null);
+  /** E-mails de agendamento/reagendamento (todos os grupos) a confirmar depois de agendar ou pedidos pelo menu; um por vez. */
   const [filaAgendamento, setFilaAgendamento] = useState<(AgendamentoFeito & { origem: 'agendamento' | 'menu' })[]>([]);
-  // A pergunta depois de agendar é só para Admin e Secretaria (quem envia o e-mail de agendamento).
+  // A confirmação depois de agendar é só para Admin e Secretaria (quem envia o e-mail de agendamento).
   // E-mails da IS (matriz de permissões: inspecoes.enviarEmails; padrão Admin e Secretaria).
   const podeEmails = canUseFeature('inspecoes.enviarEmails', perfil);
   const perguntaAgendamento = podeEmails;
@@ -448,15 +451,18 @@ export const Inspecoes: React.FC = () => {
 
   const itensDe = (is: InspecaoRecord): ItemMenu[] => {
     const itens: ItemMenu[] = [];
-    if (podeAgendar && is.status === 'aberta') itens.push({ rotulo: is.dataEntrevista ? 'Reagendar' : 'Agendar', icone: 'event', onClick: () => setAgendando(is) });
+    // Aberta e Realizando Exames (guias entregues): "Agendar".
+    if (podeAgendar && aguardaAgendamento(is.status)) itens.push({ rotulo: is.dataEntrevista ? 'Reagendar' : 'Agendar', icone: 'event', onClick: () => setAgendando(is) });
     if (podeAgendar && is.status === 'faltou') itens.push({ rotulo: 'Reagendar', icone: 'event', onClick: () => setAgendando(is) });
     // Agendada/Reagendada: reagendar enquanto der para remarcar (sem laudo, TIS nem DS-1a; não é de concurso).
-    if (podeAgendar && is.status !== 'aberta' && is.status !== 'faltou' && podeArrastarIS(is)) itens.push({ rotulo: 'Reagendar', icone: 'event', onClick: () => setAgendando(is) });
+    if (podeAgendar && !aguardaAgendamento(is.status) && is.status !== 'faltou' && podeArrastarIS(is)) itens.push({ rotulo: 'Reagendar', icone: 'event', onClick: () => setAgendando(is) });
     if (podeEditar && fasesDeEntrevista(is)) itens.push({ rotulo: 'Falta', icone: 'person_off', onClick: () => setConfirmando({ tipo: 'falta', is }) });
     const restituicao = restituicaoDoStatus(is.status);
     if (restituicao && podeEditar && !ehSecretaria) itens.push({ rotulo: restituicao.rotulo, icone: 'undo', onClick: () => { mudarStatus(is, restituicao.status, `IS ${is.is}: ${restituicao.rotulo}.`); } });
     if (podeMinuta && mostraMinutaMsg(is)) itens.push({ rotulo: 'Minuta MSG', icone: 'mail', onClick: () => setMinuta(is) });
-    // Os e-mails (agendamento, resultado, faltas, NAC) ficam só no menu do botão "Enviar e-mail" do cabeçalho.
+    // Os e-mails (agendamento, resultado, faltas, NAC) ficam no menu "Enviar e-mail" do cabeçalho; o resultado de
+    // Benefícios também aqui, assim que a IS tem Nº do TIS (Assinaturas pendentes ou TIS assinado) e enquanto não foi enviado.
+    if (podeEmails && resultadoBeneficiosDisponivel(is) && !resultadoBeneficiosEnviado(is)) itens.push({ rotulo: 'E-mail de resultado (Benefícios)', icone: 'mark_email_unread', onClick: () => setEnviandoBeneficios(is) });
     if (podeAgendar && is.dataEntrevista && is.status !== 'cancelada' && !(is.agendaSincronizada && is.eventoAgendaId)) itens.push({ rotulo: 'Sincronizar com o Google Agenda', icone: 'sync', onClick: () => { sincronizar(is); } });
     if (ehAdmin && is.status === 'tis_assinado') itens.push({ rotulo: 'Reabrir IS', icone: 'lock_open', onClick: () => { mudarStatus(is, 'assinaturas_pendentes', `IS ${is.is} reaberta.`); } });
     if (canUseFeature('inspecoes.cancelar', perfil) && podeCancelarIS(is, hoje)) itens.push({ rotulo: 'Cancelar IS', icone: 'cancel', perigo: true, onClick: () => setConfirmando({ tipo: 'cancelar', is }) });
@@ -490,6 +496,7 @@ export const Inspecoes: React.FC = () => {
     podeEmailAgenda: ehAdmin, onEmailAgenda: () => setEmailAgendaAberto(true),
     onEnviarAgendamento: is => setFilaAgendamento(f => [...f, { isId: is.id, dataEntrevista: is.dataEntrevista, origem: 'menu' }]),
     onEnviarResultado: setEnviandoResultado,
+    onEnviarResultadoBeneficios: setEnviandoBeneficios,
     onAviso: avisar,
   });
   // ⋮ do cabeçalho (3b/M1): Bloqueios e os e-mails da JRS (com as pendências em cada item).
@@ -704,6 +711,7 @@ export const Inspecoes: React.FC = () => {
               is={detalhe} om={omDe(detalhe)} hoje={hoje} podeEnviar={podeEmails}
               onEnviarAgendamento={is => setFilaAgendamento(f => [...f, { isId: is.id, dataEntrevista: is.dataEntrevista, origem: 'menu' }])}
               onEnviarResultado={setEnviandoResultado}
+              onEnviarResultadoBeneficios={setEnviandoBeneficios}
               onAviso={avisar}
             />
           )}
@@ -761,7 +769,7 @@ export const Inspecoes: React.FC = () => {
       {agendamentoAtual && agendamentoAtual.is.dataEntrevista === agendamentoAtual.item.dataEntrevista && ehElegivelAgendamento(agendamentoAtual.is) && !agendamentoJaEnviado(agendamentoAtual.is) && (
         <EnviarAgendamentoDialog
           key={`${agendamentoAtual.item.isId}|${agendamentoAtual.item.dataEntrevista}`}
-          inspecao={agendamentoAtual.is} origem={agendamentoAtual.item.origem}
+          inspecao={agendamentoAtual.is} origem={agendamentoAtual.item.origem} om={omDe(agendamentoAtual.is)}
           emailCadastrado={emailDoInspecionado(militares.find(m => m.id === agendamentoAtual.is.inspecionadoId))}
           onClose={proximoAgendamento}
           onEnviado={(msg, tom) => { proximoAgendamento(); avisar(msg, tom); }}
@@ -774,6 +782,16 @@ export const Inspecoes: React.FC = () => {
           emailCadastrado={emailDoInspecionado(militares.find(m => m.id === enviandoResultado.inspecionadoId))}
           onClose={() => setEnviandoResultado(null)}
           onEnviado={(msg, tom) => { setEnviandoResultado(null); avisar(msg, tom); }}
+        />
+      )}
+
+      {enviandoBeneficios && (
+        <EnviarResultadoBeneficiosDialog
+          inspecao={lista?.find(i => i.id === enviandoBeneficios.id) ?? enviandoBeneficios}
+          militar={militares.find(m => m.id === enviandoBeneficios.inspecionadoId)}
+          emailCadastrado={emailDoInspecionado(militares.find(m => m.id === enviandoBeneficios.inspecionadoId))}
+          onClose={() => setEnviandoBeneficios(null)}
+          onEnviado={(msg, tom) => { setEnviandoBeneficios(null); avisar(msg, tom); }}
         />
       )}
 

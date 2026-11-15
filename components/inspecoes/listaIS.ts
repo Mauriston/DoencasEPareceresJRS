@@ -22,11 +22,13 @@ export const tomStatusIS = (status: StatusExibicaoIS): TomStatus => {
 
 export const TOTAL_ETAPAS_IS = 6;
 
-/** Etapa do fluxo da IS (null = sem etapa: aberta sem agendamento ou cancelada). `passo` 0 = voltou ao início (faltou). */
+/** Etapa do fluxo da IS (null = sem etapa: aberta sem agendamento ou cancelada; Realizando Exames = passo 0). `passo` 0 = voltou ao início (faltou). */
 export const etapaIS = (status: StatusExibicaoIS): { rotulo: string; passo: number } | null => {
   switch (status) {
     case 'agendada': case 'reagendada': return { rotulo: 'Entrevista', passo: 1 };
     case 'faltou': return { rotulo: 'Faltou · reagendar', passo: 0 };
+    // Guias entregues: o prazo de 7 dias úteis já foi cumprido; aguarda o agendamento (sem barra de prazo).
+    case 'realizando_exames': return { rotulo: 'Exames · agendar', passo: 0 };
     case 'parecer_solicitado': return { rotulo: 'Parecer', passo: 2 };
     case 'auditoria': return { rotulo: 'Auditoria', passo: 2 };
     case 'revisao_exofficio': return { rotulo: 'Revisão ex-officio', passo: 2 };
@@ -41,7 +43,7 @@ export const etapaIS = (status: StatusExibicaoIS): { rotulo: string; passo: numb
 
 export interface PrazoIS { texto: string; pct: number; atrasada: boolean }
 
-/** Prazo da IS aberta sem agendamento ("9 de 7 dias"); null para as demais. */
+/** Prazo da IS aberta sem agendamento ("9 de 7 dias"); null para as demais (Realizando Exames já cumpriu o prazo). */
 export const prazoIS = (is: InspecaoRecord, hoje: string): PrazoIS | null => {
   if (is.status !== 'aberta' || is.dataEntrevista) return null;
   const dias = diasEmAberto(is.dataAbertura, hoje);
@@ -99,7 +101,8 @@ export const agruparAtivasIS = (lista: InspecaoRecord[], hoje: string): GrupoIS[
   }
   dias.forEach(g => { g.dica = plural(g.itens.length, 'IS', 'IS'); });
   const aguardando = comData.filter(i => dataDeEntrevista(i.dataEntrevista) < hoje);
-  const urgencia = (i: InspecaoRecord) => diasEmAberto(i.dataAbertura, hoje) / prazoAtrasoDias(i.grupoFinalidade);
+  // Realizando Exames (prazo cumprido com a entrega das guias) vai depois das Abertas.
+  const urgencia = (i: InspecaoRecord) => (i.status === 'realizando_exames' ? -1 : diasEmAberto(i.dataAbertura, hoje) / prazoAtrasoDias(i.grupoFinalidade));
   const abertas = lista.filter(i => !i.dataEntrevista)
     .sort((a, b) => urgencia(b) - urgencia(a) || a.dataAbertura.localeCompare(b.dataAbertura) || a.is - b.is);
   const grupos = [...dias];

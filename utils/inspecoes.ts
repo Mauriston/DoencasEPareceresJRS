@@ -49,6 +49,14 @@ export const SITUACOES_IS: { id: SituacaoIS; rotulo: string; plural: string }[] 
 
 export const situacaoDoStatus = (status: StatusIS): SituacaoIS => STATUS_IS[status].situacao;
 
+/**
+ * Status de IS aberta que ainda espera o agendamento: Aberta e Realizando Exames (guias entregues). As telas
+ * tratam as duas como "aberta sem agendamento" (lista das abertas, menu "Agendar", contagens); só a Aberta
+ * fica "Atrasada" ou pode ser cancelada pelo prazo (o comparecimento para pegar as guias cumpre o prazo).
+ */
+export const STATUS_AGUARDANDO_AGENDAMENTO: StatusIS[] = ['aberta', 'realizando_exames'];
+export const aguardaAgendamento = (status: string | undefined): boolean => status === 'aberta' || status === 'realizando_exames';
+
 export const PRAZO_ATRASO_DIAS = 7;
 export const PRAZO_ATRASO_DIAS_BENEFICIOS = 60;
 export const GRUPO_BENEFICIOS = 'Benefícios';
