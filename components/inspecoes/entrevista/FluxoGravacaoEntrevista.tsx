@@ -39,9 +39,12 @@ interface Props {
   is: InspecaoRecord;
   onClose: () => void;
   onConcluido: (entrevistaId: string) => void;
+  /** 'inline': dentro do painel principal da Ficha › Transcrições (não cobre a tela; Esc não fecha). */
+  casca?: 'tela' | 'inline';
 }
 
-export const FluxoGravacaoEntrevista: React.FC<Props> = ({ is, onClose, onConcluido }) => {
+export const FluxoGravacaoEntrevista: React.FC<Props> = ({ is, onClose, onConcluido, casca = 'tela' }) => {
+  const inline = casca === 'inline';
   const nav = useNav();
   const usuario = nav?.authUser ?? null;
   const tituloId = useId();
@@ -63,7 +66,7 @@ export const FluxoGravacaoEntrevista: React.FC<Props> = ({ is, onClose, onConclu
   }, [is.id]);
   useEffect(() => { carregarPendentes(); }, [carregarPendentes]);
 
-  useEffect(() => { painel.current?.focus(); }, [etapa.tipo]);
+  useEffect(() => { if (!inline) painel.current?.focus(); }, [etapa.tipo, inline]);
 
   const fechar = useCallback(() => {
     // Durante a gravação, o gravador confirma antes de sair (e guarda o que foi gravado).
@@ -72,7 +75,7 @@ export const FluxoGravacaoEntrevista: React.FC<Props> = ({ is, onClose, onConclu
     if (etapa.tipo === 'envio') return;
     onClose();
   }, [etapa.tipo, gravandoAgora, onClose]);
-  useEscapeEmpilhado(fechar, !descartando);
+  useEscapeEmpilhado(fechar, !descartando && !inline);
 
   const avancar = async (dados: DadosPreparacao) => {
     if (!usuario) return;
@@ -114,10 +117,12 @@ export const FluxoGravacaoEntrevista: React.FC<Props> = ({ is, onClose, onConclu
 
   return (
     <div
-      ref={painel} role="dialog" aria-modal="true" aria-labelledby={tituloId} tabIndex={-1}
-      className="fixed inset-0 z-dialog bg-canvas flex flex-col focus:outline-none animate-fade-in"
+      ref={painel} role={inline ? 'region' : 'dialog'} aria-modal={inline ? undefined : true} aria-labelledby={tituloId} tabIndex={-1}
+      className={inline
+        ? 'relative bg-canvas flex flex-col rounded-xl border border-line overflow-hidden min-h-[520px] focus:outline-none'
+        : 'fixed inset-0 z-dialog bg-canvas flex flex-col focus:outline-none animate-fade-in'}
     >
-      <header className="shrink-0 bg-navy text-white px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 flex items-center justify-between gap-2">
+      <header className={`shrink-0 bg-navy text-white px-4 ${inline ? 'pt-3' : 'pt-[max(0.75rem,env(safe-area-inset-top))]'} pb-3 flex items-center justify-between gap-2`}>
         <div className="flex items-center gap-2 min-w-0">
           <span className="material-symbols-outlined text-[20px] text-gold shrink-0" aria-hidden="true">mic</span>
           <div className="min-w-0">

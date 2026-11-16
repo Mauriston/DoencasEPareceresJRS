@@ -15,6 +15,11 @@
 //   Guias: uma linha por IS com guias de exames geradas (finalidade e IS; data de assinatura) — o painel
 //   principal mostra as páginas do PDF em carrossel e a barra Confirmar entrega · Enviar por email ▾ · Imprimir
 //   (components/ficha/guias/PainelGuias.tsx).
+//   Inspeções de Saúde: sem o campo Inspecionado (o nome está no topo); barra com "Excluir" (Admin, à esquerda),
+//   "Abrir IS" só sem IS em andamento, "Agendar IS"/"Reagendar IS" (AgendarISFicha) e as ações da IS; "Gravar
+//   entrevista" leva à aba Transcrições (só com ela habilitada para o perfil).
+//   Transcrições: IS a gravar (Agendada/Reagendada) e entrevistas gravadas; a gravação e a revisão acontecem no
+//   painel principal (components/ficha/transcricoes/PainelTranscricoes.tsx).
 //   Ao abrir a página ou trocar de aba, o painel principal mostra o registro MAIS RECENTE, ou o aviso de que
 //   não há registros para o inspecionado. Aba e registro ficam na URL (?aba=…&reg=…; ?is= / ?sel= / ?guia=
 //   antigos continuam valendo).
@@ -44,6 +49,10 @@ import { MilitarEdicao } from '../Militares';
 import { CadastroTopSheet, type DadoCadastro } from './CadastroTopSheet';
 import { CascaPainelFicha } from './CascaPainelFicha';
 import { PainelGuias } from './guias/PainelGuias';
+import { PainelTranscricoes } from './transcricoes/PainelTranscricoes';
+import { AgendarISFicha } from './AgendarISFicha';
+import { useEntrevistasDasIS, type EntrevistaDaFicha } from './useEntrevistasDasIS';
+import { ConfirmDialog } from '../ui/Dialog';
 import { useExamesDasIS, type ExameDaFicha } from './useExamesDasIS';
 import { abasDaFicha, secoesDaFicha, podeAbrirFicha } from './permissoes';
 import { useNav } from '../../context/NavContext';
@@ -54,7 +63,10 @@ import { termosPericia } from '../../config/termosPericia';
 import { fichaPath } from '../../config/routes';
 import { observarMilitar, tipoDoInspecionado, type MilitarRecord } from '../../services/firestoreMilitares';
 import { observarPericiasDoMilitar, dataBR, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
-import { atualizarInspecao, observarInspecoesDoInspecionado, type InspecaoRecord } from '../../services/firestoreInspecoes';
+import { apagarInspecao, atualizarInspecao, observarInspecoesDoInspecionado, type InspecaoRecord } from '../../services/firestoreInspecoes';
+import { removerEventoAgendaIS } from '../../services/agendaGoogleIS';
+import { podeArrastarIS } from '../../utils/calendarioIS';
+import { rotuloSituacao } from '../../utils/entrevistas';
 import { observarPareceresDoMilitar, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
 import { observarEventosInspecionado, registrarEventoInspecionado, ROTULO_ACAO_INSPECIONADO, type EventoInspecionado } from '../../services/eventosInspecionado';
 import { urlDoExame } from '../../services/examesIS';
@@ -65,7 +77,7 @@ import { indiceCidAbreviado } from '../../utils/periciaMenorLista';
 import { ROTULO_TIPO_PERICIA, contagemTermino, diaMes, partesCid, postoDoInspecionado, tipoDaPericia } from '../../utils/periciaMenorResumo';
 import { ABAS_FICHA, abaFichaInicial, afastamentosDaIS, registroSelecionado, type AbaFicha } from '../../utils/fichaInspecionado';
 import { classeDoExame, ROTULO_CLASSE, ROTULO_TIPO } from '../../utils/examesIS';
-import { STATUS_IS, statusEfetivoIS, dataHoraBr, situacaoDoStatus } from '../../utils/inspecoes';
+import { STATUS_IS, aguardaAgendamento, statusEfetivoIS, dataHoraBr, situacaoDoStatus } from '../../utils/inspecoes';
 import { getDriveEmbedUrl, isGoogleDriveUrl } from '../../utils/googleDrive';
 import { extrairNomeInspecionado, formatCelular, formatCpf, formatDataBr, formatNip, idadeEmAnos } from '../../utils/format';
 import { hojeISO } from '../../utils/dados';
@@ -164,6 +176,8 @@ export const FichaInspecionado: React.FC = () => {
   const [pdf, setPdf] = useState<{ titulo: string; url: string } | null>(null);
   const [abrindoExame, setAbrindoExame] = useState<string | null>(null);
   const [parecerPara, setParecerPara] = useState<{ is: InspecaoRecord; inicial?: ParecerRecord } | null>(null);
+  const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
+  const [excluindo, setExcluindo] = useState<InspecaoRecord | null>(null);
   const [oms, setOms] = useState<OrganizacaoMilitar[]>([]);
   const [postos, setPostos] = useState<CorposQuadros['postos']>();
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
@@ -202,6 +216,7 @@ export const FichaInspecionado: React.FC = () => {
   );
   const pedido = params.get('reg') || (aba === 'is' ? params.get('is') : aba === 'pm' ? params.get('sel') : null);
   const exames = useExamesDasIS(inspecoes, secoes.inspecoes && (aba === 'atestados' || aba === 'exames'));
+  const entrevistas = useEntrevistasDasIS(inspecoes, estadoAbas.transcricoes.habilitada && aba === 'transcricoes');
 
   // Cabeçalho mínimo: do cadastro ou, sem cadastro, do texto copiado no registro mais recente.
   const textoRegistro = pericias[0]?.inspecionado || inspecoes[0]?.inspecionado || pareceres[0]?.inspecionado || '';
@@ -264,6 +279,20 @@ export const FichaInspecionado: React.FC = () => {
     tag: i.guiasEntregues ? <StatusTag tone="success">Entregues</StatusTag> : undefined,
   }));
 
+  // Transcrições: primeiro as IS Agendadas/Reagendadas (a gravar), depois as entrevistas gravadas.
+  const isAGravar = isOrdenadas.filter(i => fasesDeEntrevista(i));
+  const itensTranscricoes: ItemHistorico[] = [
+    ...isAGravar.map(i => ({
+      id: `is:${i.id}`, data: dataIS(i), icone: 'mic', titulo: `Gravar entrevista · IS ${i.is}`,
+      detalhe: [i.finalidade, i.dataEntrevista ? `entrevista em ${dataHoraBr(i.dataEntrevista)}` : ''].filter(Boolean).join(' · '),
+    })),
+    ...entrevistas.map((e: EntrevistaDaFicha) => ({
+      id: `${e.isId}/${e.id}`, data: isoDe(e.criadoPor?.em as never), icone: 'record_voice_over', titulo: `Entrevista · IS ${e.is}`,
+      detalhe: [e.finalidade, e.criadoPor?.nome].filter(Boolean).join(' · '),
+      tag: e.situacao !== 'pronta' ? <StatusTag tone={e.situacao === 'erro' ? 'danger' : 'muted'}>{rotuloSituacao(e.situacao)}</StatusTag> : undefined,
+    })),
+  ];
+
   if (!podeFicha) return <AccessDenied pagina="Ficha do inspecionado" />;
   if (militar === undefined) {
     return <div className="flex flex-1 items-center justify-center py-20"><span className="w-6 h-6 border-2 border-line border-t-navy rounded-full animate-spin" role="status" aria-label="Carregando ficha" /></div>;
@@ -316,9 +345,9 @@ export const FichaInspecionado: React.FC = () => {
     id: a.id, rotulo: a.id === 'pm' && atestado ? 'Atestados' : DEF_ABA[a.id].rotulo,
     desabilitada: !a.habilitada, dica: a.habilitada ? undefined : 'Em breve',
   }));
-  const trocarAba = (id: AbaFicha) => definir({ aba: id, reg: null, is: null, sel: null, guia: null });
+  const trocarAba = (id: AbaFicha) => definir({ aba: id, reg: null, is: null, sel: null, guia: null, gravar: null });
   const abrirRegistro = (id: string) => {
-    definir({ reg: id, is: null, sel: null });
+    definir({ reg: id, is: null, sel: null, gravar: null });
     // Empilhado (abaixo de xl), o painel principal fica acima do histórico: rola até ele.
     if (typeof window !== 'undefined' && !window.matchMedia('(min-width: 1280px)').matches) {
       requestAnimationFrame(() => principalRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -327,7 +356,7 @@ export const FichaInspecionado: React.FC = () => {
 
   const itensDaAba: Record<AbaFicha, ItemHistorico[]> = {
     is: itensIS, pm: itensPM, atestados: itensAtestados, pareceres: itensPareceres, exames: itensExames,
-    guias: itensGuias, emails: [], mensagens: [], outros: [], transcricoes: [],
+    guias: itensGuias, emails: [], mensagens: [], outros: [], transcricoes: itensTranscricoes,
   };
   const historico = aba ? itensDaAba[aba] : [];
   const atual = registroSelecionado(historico, pedido);
@@ -339,7 +368,9 @@ export const FichaInspecionado: React.FC = () => {
     finally { setAbrindoExame(null); }
   };
 
-  const acaoAbrirIS: AcaoRodape[] = podeIS ? [{ id: 'abrir-is', rotulo: 'Abrir IS', icone: 'event_available', variante: 'secondary', onClick: () => navigate(`/inspecoes?novo=manual&inspecionado=${nip}`) }] : [];
+  // "Abrir IS" só quando o inspecionado não tem IS em andamento (com uma aberta, abrir outra não faz sentido).
+  const temISEmAndamento = inspecoes.some(i => STATUS_IS[statusEfetivoIS(i, hoje)].situacao !== 'finalizada');
+  const acaoAbrirIS: AcaoRodape[] = podeIS && !temISEmAndamento ? [{ id: 'abrir-is', rotulo: 'Abrir IS', icone: 'event_available', variante: 'secondary', onClick: () => navigate(`/inspecoes?novo=manual&inspecionado=${nip}`) }] : [];
   const acaoNovaPericia: AcaoRodape[] = podePericia ? [{ id: 'nova-pericia', rotulo: atestado ? 'Novo atestado' : 'Nova Perícia Menor', icone: 'add', onClick: () => setNovaPericia(true) }] : [];
 
   /** Painel principal sem registro: o aviso da aba (com as ações que não dependem de um registro). */
@@ -409,11 +440,27 @@ export const FichaInspecionado: React.FC = () => {
     if (aba === 'is') {
       const isSel = isOrdenadas.find(i => i.id === atual?.id);
       if (!isSel) return semRegistro('is', acaoAbrirIS);
+      // Agendar (Aberta/Realizando Exames) ou Reagendar (Faltou; Agendada que ainda dá para remarcar) — as mesmas
+      // regras do menu da IS na página Inspeções de Saúde.
+      const podeAgendar = canUseFeature('inspecoes.agendar', perfil);
+      const agendar = podeAgendar && (aguardaAgendamento(isSel.status) || isSel.status === 'faltou' || podeArrastarIS(isSel));
+      const acoesIS: AcaoRodape[] = [
+        // Excluir: hoje só o Admin apaga IS (firestore.rules e a rota que apaga as guias).
+        ...(perfil === 'admin' ? [{ id: 'excluir', rotulo: 'Excluir', icone: 'delete', variante: 'destructive' as const, onClick: () => setExcluindo(isSel) }] : []),
+        ...acaoAbrirIS,
+        ...(agendar ? [{
+          id: 'agendar', rotulo: aguardaAgendamento(isSel.status) && !isSel.dataEntrevista ? 'Agendar IS' : 'Reagendar IS', icone: 'event',
+          variante: 'secondary' as const, onClick: () => setAgendando(isSel),
+        }] : []),
+      ];
       return (
         <InspecaoDetalhe
           key={isSel.id}
           casca="inline"
-          acoesExtras={acaoAbrirIS}
+          acoesExtras={acoesIS}
+          onGravarEntrevista={estadoAbas.transcricoes.habilitada
+            ? () => definir({ aba: 'transcricoes', reg: `is:${isSel.id}`, gravar: '1', is: null, sel: null, guia: null })
+            : null}
           inspecao={isSel}
           om={militar?.om || om}
           permissoes={{
@@ -447,6 +494,21 @@ export const FichaInspecionado: React.FC = () => {
     if (aba === 'atestados') return painelDocumento('atestados', atestadosIS);
     if (aba === 'exames') return painelDocumento('exames', examesIS);
     if (aba === 'pareceres') return painelParecer();
+    if (aba === 'transcricoes') {
+      if (!atual) return semRegistro('transcricoes');
+      const [isId, entrevistaId] = atual.id.startsWith('is:') ? [atual.id.slice(3), null] : atual.id.split('/');
+      const isSel = isOrdenadas.find(i => i.id === isId);
+      if (!isSel) return semRegistro('transcricoes');
+      const daIS = entrevistas.filter(e => e.isId === isId);
+      return (
+        <PainelTranscricoes
+          key={atual.id} is={isSel} entrevista={entrevistaId ? daIS.find(e => e.id === entrevistaId) ?? null : null} entrevistasDaIS={daIS}
+          gravar={params.get('gravar') === '1'}
+          onGravar={g => definir({ gravar: g ? '1' : null })}
+          onConcluido={id => definir({ gravar: null, reg: `${isId}/${id}` })}
+        />
+      );
+    }
     if (aba === 'guias') {
       const isSel = isComGuias.find(i => i.id === atual?.id);
       if (!isSel) return semRegistro('guias');
@@ -549,6 +611,19 @@ export const FichaInspecionado: React.FC = () => {
           onGerado={n => { void aoParecerGerado(parecerPara.is, n); }}
         />
       )}
+      {agendando && (
+        <AgendarISFicha inspecao={agendando} onClose={() => setAgendando(null)} onAgendada={(msg, tom) => { setAgendando(null); avisar(msg, tom); }} />
+      )}
+      {excluindo && (
+        <ConfirmDialog
+          title={`Excluir a IS ${excluindo.is}?`}
+          message="A IS, as guias de exames e o evento do Google Agenda serão apagados. Esta ação não pode ser desfeita."
+          confirmLabel="Excluir"
+          destructive
+          onConfirm={() => { void excluirIS(); }}
+          onCancel={() => setExcluindo(null)}
+        />
+      )}
       {pdf && <PdfFullscreenModal title={pdf.titulo} url={pdf.url} onClose={() => setPdf(null)} />}
       {novaPericia && podePericia && (
         <NovaPericiaMenorForm titulo={t.novo} militarInicial={nip} onClose={() => setNovaPericia(false)}
@@ -560,6 +635,20 @@ export const FichaInspecionado: React.FC = () => {
       )}
     </div>
   );
+
+  async function excluirIS() {
+    const is = excluindo;
+    if (!is) return;
+    setExcluindo(null);
+    try {
+      if (is.eventoAgendaId) await removerEventoAgendaIS(is);
+      await apagarInspecao(is);
+      definir({ reg: null, is: null });
+      avisar(`IS ${is.is} excluída.`);
+    } catch (e: any) {
+      avisar(e?.message || 'Não foi possível excluir a IS.', 'error');
+    }
+  }
 
   async function aoParecerGerado(is: InspecaoRecord, n: string) {
     setParecerPara(null);

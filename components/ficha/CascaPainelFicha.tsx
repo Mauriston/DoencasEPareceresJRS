@@ -27,13 +27,17 @@ interface Props {
 }
 
 /** Barra inferior de ações da aba (também usada sozinha, sem casca). */
-export const BarraAcoesFicha: React.FC<{ acoes: AcaoBarraFicha[] }> = ({ acoes }) => {
-  if (!acoes.length) return null;
+export const BarraAcoesFicha: React.FC<{ acoes: AcaoBarraFicha[] }> = ({ acoes: todas }) => {
+  if (!todas.length) return null;
+  // Ações destrutivas (ex.: "Excluir") ficam alinhadas à margem ESQUERDA; as demais, à direita.
+  const destrutiva = (a: AcaoBarraFicha) => !ehNodo(a) && a.variante === 'destructive';
+  const acoes = [...todas.filter(destrutiva), ...todas.filter(a => !destrutiva(a))];
   return (
     <div role="toolbar" aria-label="Ações da aba"
       className="md:sticky md:bottom-0 z-[1] border-t border-line bg-white/95 backdrop-blur-sm px-4 md:px-5 py-3 rounded-b-xl grid grid-cols-1 sm:flex sm:flex-wrap sm:justify-end gap-2 print:hidden">
       {acoes.map(a => ehNodo(a) ? <React.Fragment key={a.id}>{a.node}</React.Fragment> : (
-        <Button key={a.id} variant={a.variante ?? 'primary'} icon={a.icone} onClick={a.onClick} disabled={a.disabled} loading={a.loading}>
+        <Button key={a.id} variant={a.variante ?? 'primary'} icon={a.icone} onClick={a.onClick} disabled={a.disabled} loading={a.loading}
+          className={a.variante === 'destructive' ? 'sm:mr-auto' : ''}>
           {a.rotulo}
         </Button>
       ))}

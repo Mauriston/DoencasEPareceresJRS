@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { Dialog } from '../../ui/Dialog';
 import { useIsDesktop } from '../../../hooks/useIsDesktop';
 import { useEscapeEmpilhado } from '../../../hooks/useEscapeEmpilhado';
+import { CascaPainelFicha } from '../../ficha/CascaPainelFicha';
 
 interface Props {
   title: string;
@@ -14,6 +15,10 @@ interface Props {
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** 'inline': no painel principal da Ficha do inspecionado (aba Transcrições), sem portal nem "Fechar". */
+  casca?: 'dialog' | 'inline';
+  /** Linha de apoio sob o título (só inline). */
+  subtitulo?: React.ReactNode;
 }
 
 const TelaCheia: React.FC<Props> = ({ title, icon, onClose, children, footer }) => {
@@ -47,6 +52,13 @@ const TelaCheia: React.FC<Props> = ({ title, icon, onClose, children, footer }) 
 
 export const ResultadoPainel: React.FC<Props> = props => {
   const isDesktop = useIsDesktop();
+  if (props.casca === 'inline') {
+    return (
+      <CascaPainelFicha titulo={props.title} icone={props.icon} subtitulo={props.subtitulo} acoes={props.footer ? [{ id: 'rodape', node: props.footer }] : []}>
+        {props.children}
+      </CascaPainelFicha>
+    );
+  }
   return createPortal(
     isDesktop
       ? <Dialog title={props.title} icon={props.icon} onClose={props.onClose} size="xl" footer={props.footer}>{props.children}</Dialog>

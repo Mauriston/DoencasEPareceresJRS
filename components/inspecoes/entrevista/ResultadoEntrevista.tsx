@@ -23,6 +23,10 @@ interface Props {
   is: InspecaoRecord;
   entrevista: EntrevistaRecord;
   onClose: () => void;
+  /** 'inline': no painel principal da Ficha › Transcrições (ResultadoPainel sem portal). */
+  casca?: 'dialog' | 'inline';
+  /** Rodapé (barra de ações) — usado no modo inline da Ficha. */
+  rodape?: React.ReactNode;
 }
 
 type Aba = 'anamnese' | 'transcricao';
@@ -35,7 +39,7 @@ const ETAPAS: { id: EntrevistaRecord['situacao']; rotulo: string }[] = [
 
 const msgErro = (e: unknown, padrao: string) => (e instanceof Error && e.message ? e.message : padrao);
 
-export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClose }) => {
+export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClose, casca = 'dialog', rodape }) => {
   const isDesktop = useIsDesktop();
   const [aba, setAba] = useState<Aba>('anamnese');
   const [tentando, setTentando] = useState(false);
@@ -127,9 +131,12 @@ export const ResultadoEntrevista: React.FC<Props> = ({ is, entrevista: e, onClos
 
   return (
     <ResultadoPainel
-      title={`IS ${is.is}${is.inspecionado ? ` — ${is.inspecionado}` : ''}`}
+      title={casca === 'inline' ? `Entrevista · IS ${is.is}` : `IS ${is.is}${is.inspecionado ? ` — ${is.inspecionado}` : ''}`}
       icon="record_voice_over"
       onClose={onClose}
+      casca={casca}
+      footer={rodape}
+      subtitulo={casca === 'inline' ? [dataHoraEntrevista(e.criadoPor?.em), e.criadoPor?.nome, e.finalidade].filter(Boolean).join(' · ') : undefined}
     >
       <Toast message={aviso?.msg ?? null} tone={aviso?.tom} />
       <div className="space-y-5">
