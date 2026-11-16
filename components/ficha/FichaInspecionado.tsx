@@ -20,6 +20,9 @@
 //   Inspeções de Saúde: sem o campo Inspecionado (o nome está no topo); barra com "Excluir" (Admin, à esquerda),
 //   "Agendar IS"/"Reagendar IS" (AgendarISFicha; depois, o e-mail de agendamento) e as ações da IS; "Gravar
 //   entrevista" leva à aba Transcrições (só com ela habilitada para o perfil).
+//   Emails: um item por e-mail enviado que envolve o inspecionado (todas as IS dele e envios ligados ao NIP), do
+//   mais recente; o painel principal mostra o e-mail como saiu, num iframe sandbox sem scripts
+//   (components/ficha/emails/PainelEmail.tsx; dados em useEmailsDaFicha). Sem barra de ações.
 //   Transcrições: IS a gravar (Agendada/Reagendada) e entrevistas gravadas; a gravação e a revisão acontecem no
 //   painel principal (components/ficha/transcricoes/PainelTranscricoes.tsx).
 //   Ao abrir a página ou trocar de aba, o painel principal mostra o registro MAIS RECENTE, ou o aviso de que
@@ -54,6 +57,9 @@ import { CascaPainelFicha } from './CascaPainelFicha';
 import { PainelGuias } from './guias/PainelGuias';
 import { PainelTranscricoes } from './transcricoes/PainelTranscricoes';
 import { ApoioAfastamentos, PainelAfastamentos } from './afastamentos/PainelAfastamentos';
+import { PainelEmail } from './emails/PainelEmail';
+import { useEmailsDaFicha } from './emails/useEmailsDaFicha';
+import { horaDoEnvio, isoDoEnvio, resumoDestinatarios } from '../../utils/emailsEnviados';
 import { AgendarISFicha } from './AgendarISFicha';
 import { AbrirISFicha, type ModoAbrirIS } from './AbrirISFicha';
 import { PosCriacaoIS, deveTentarGuias } from '../inspecoes/guias/PosCriacaoIS';
@@ -242,6 +248,7 @@ export const FichaInspecionado: React.FC = () => {
   const pedido = params.get('reg') || (aba === 'is' ? params.get('is') : aba === 'pm' ? params.get('sel') : null);
   const exames = useExamesDasIS(inspecoes, secoes.inspecoes && (aba === 'atestados' || aba === 'exames'));
   const entrevistas = useEntrevistasDasIS(inspecoes, estadoAbas.transcricoes.habilitada && aba === 'transcricoes');
+  const emails = useEmailsDaFicha(nip, inspecoes, estadoAbas.emails.habilitada && aba === 'emails');
 
   // Cabeçalho mínimo: do cadastro ou, sem cadastro, do texto copiado no registro mais recente.
   const textoRegistro = pericias[0]?.inspecionado || inspecoes[0]?.inspecionado || pareceres[0]?.inspecionado || '';
@@ -302,6 +309,12 @@ export const FichaInspecionado: React.FC = () => {
     titulo: `${i.finalidade || 'IS'} · IS ${i.is}`,
     detalhe: isoDe(i.guiasExames?.geradoEm) ? `Guias assinadas em ${dataBR(isoDe(i.guiasExames?.geradoEm))}` : 'Guias geradas',
     tag: i.guiasEntregues ? <StatusTag tone="success">Entregues</StatusTag> : undefined,
+  }));
+
+  const itensEmails: ItemHistorico[] = emails.map(e => ({
+    id: e.id, data: isoDoEnvio(e.enviadoEmMs), icone: e.legado ? 'mail' : 'mark_email_read',
+    titulo: e.assunto || e.rotulo,
+    detalhe: [horaDoEnvio(e.enviadoEmMs), e.rotulo, `para ${resumoDestinatarios(e.para)}`].filter(Boolean).join(' · '),
   }));
 
   // Transcrições: primeiro as IS Agendadas/Reagendadas (a gravar), depois as entrevistas gravadas.
@@ -383,7 +396,7 @@ export const FichaInspecionado: React.FC = () => {
   const itensDaAba: Record<AbaFicha, ItemHistorico[]> = {
     afastamentos: [],
     is: itensIS, pm: itensPM, atestados: itensAtestados, pareceres: itensPareceres, exames: itensExames,
-    guias: itensGuias, emails: [], mensagens: [], outros: [], transcricoes: itensTranscricoes,
+    guias: itensGuias, emails: itensEmails, mensagens: [], outros: [], transcricoes: itensTranscricoes,
   };
   const historico = aba ? itensDaAba[aba] : [];
   const atual = registroSelecionado(historico, pedido);
@@ -572,6 +585,10 @@ export const FichaInspecionado: React.FC = () => {
       const isSel = isComGuias.find(i => i.id === atual?.id);
       if (!isSel) return semRegistro('guias');
       return <PainelGuias key={isSel.id} is={isSel} emailCadastrado={emailDoInspecionado(militar ?? undefined)} onAviso={avisar} />;
+    }
+    if (aba === 'emails') {
+      const e = emails.find(x => x.id === atual?.id);
+      return e ? <PainelEmail key={e.id} item={e} /> : semRegistro('emails');
     }
     return semRegistro(aba);
   })();

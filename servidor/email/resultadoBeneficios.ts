@@ -163,6 +163,6 @@ export const enviarResultadoBeneficios = async (
   const emailSalvo = !cadastrado && !!refMilitar && !!militar;
   if (emailSalvo) await refMilitar!.update({ email: para, atualizadoEm: FieldValue.serverTimestamp() });
   await refIs.update({ emailResultadoBeneficiosEnviadoEm: FieldValue.serverTimestamp(), emailResultadoBeneficiosModelo: modelo });
-  await registrarEmailIS(db, isId, uid, { tipo: 'resultadoBeneficios', assunto, para: paraTodos, cc, variante: modelo });
+  await registrarEmailIS(db, isId, uid, { tipo: 'resultadoBeneficios', assunto, para: paraTodos, cc, variante: modelo, html, texto });
   return { para, emailSalvo, modelo };
 };

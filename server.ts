@@ -746,8 +746,8 @@ async function startServer() {
     }
   });
 
-  app.post("/api/impressao/parecer", rotaGoogle("impressao-parecer", PERFIS_MEDICOS, async (db, b) => {
-    await (await import("./servidor/google/impressao")).enviarParecerImpressao(db, String(b.pdfUrl || ""), b.remetente);
+  app.post("/api/impressao/parecer", rotaGoogle("impressao-parecer", PERFIS_MEDICOS, async (db, b, quem) => {
+    await (await import("./servidor/google/impressao")).enviarParecerImpressao(db, String(b.pdfUrl || ""), b.remetente, quem.uid);
     return { enviado: true };
   }, true));
   app.post("/api/impressao/termo-recurso", rotaGoogle("impressao-termo-recurso", PERFIS_EQUIPE, async (db, b) => {

@@ -127,7 +127,7 @@ export const enviarNac = async (db: Firestore, isIdsBruto: unknown, uid: string)
   const lote = db.batch();
   iss.forEach(({ ref }) => lote.update(ref, { emailNacEnviadoEm: FieldValue.serverTimestamp(), emailNacEnviadoPor: uid }));
   await lote.commit();
-  // Histórico em cada IS do lote (e contagem no uso do app, uma por IS).
-  await Promise.all(iss.map(({ ref }) => registrarEmailIS(db, ref.id, uid, { tipo: 'nac', assunto, para, cc })));
+  // Histórico em cada IS do lote, com o conteúdo gravado uma vez (e contagem no uso do app, uma por IS).
+  await registrarEmailIS(db, iss.map(({ ref }) => ref.id), uid, { tipo: 'nac', assunto, para, cc, html, texto, anexo: arquivo });
   return { enviados: iss.length, para, cc, periodo };
 };

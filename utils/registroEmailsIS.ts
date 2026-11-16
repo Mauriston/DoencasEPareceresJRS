@@ -2,7 +2,8 @@
 // Contrato do histórico de e-mails enviados de uma IS (seção "E-mails enviados" no detalhe da IS).
 // O servidor grava um documento por envio em inspecoes/{isId}/emails/{autoId} (Admin SDK —
 // servidor/email/registroEmailsIS.ts); o app só lê (firestore.rules: lê quem acessa as IS).
-// Sem conteúdo do e-mail: só tipo, assunto, destinatários, quando e quem enviou.
+// Sem conteúdo do e-mail: só tipo, assunto, destinatários, quando e quem enviou. O conteúdo (HTML/texto) fica em
+// emails_enviados/{conteudoId} (utils/emailsEnviados.ts), que só a equipe lê.
 import type { TipoEmail } from '../config/emails';
 
 export interface RegistroEmailIS {
@@ -16,6 +17,8 @@ export interface RegistroEmailIS {
   /** ms desde a época (Date.now() do servidor no envio). */
   enviadoEmMs: number;
   enviadoPor: { uid: string; usuario: string; nome?: string };
+  /** Envio com conteúdo gravado: emails_enviados/{conteudoId} (ausente nos registros antigos). */
+  conteudoId?: string;
 }
 
 export const ROTULO_TIPO_EMAIL_IS: Partial<Record<TipoEmail, string>> = {
@@ -29,4 +32,5 @@ export const ROTULO_TIPO_EMAIL_IS: Partial<Record<TipoEmail, string>> = {
   resultadoBeneficios: 'Resultado (Benefícios)',
   faltasHNRe: 'Comunicação de falta (HNRe)',
   nac: 'Comunicação ao NAC',
+  agendaIS: 'IS agendadas do dia (interno)',
 };

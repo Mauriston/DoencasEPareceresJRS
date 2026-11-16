@@ -113,6 +113,6 @@ export const enviarAberturaIS = async (db: Firestore, isIdBruto: unknown, emailI
   const emailSalvo = !cadastrado && !!refMilitar && !!militar;
   if (emailSalvo) await refMilitar!.update({ email: emailInspecionado, atualizadoEm: FieldValue.serverTimestamp() });
   await refIs.update({ emailAberturaPara: emailInspecionado, emailAberturaEnviadoEm: FieldValue.serverTimestamp() });
-  await registrarEmailIS(db, isId, uid, { tipo: 'aberturaIS', assunto, para, cc, variante });
+  await registrarEmailIS(db, isId, uid, { tipo: 'aberturaIS', assunto, para, cc, variante, html, texto });
   return { para: emailInspecionado, emailSalvo };
 };
