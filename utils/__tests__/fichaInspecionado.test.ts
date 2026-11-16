@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ABAS_FICHA, abaFichaInicial, registroSelecionado,
   afastamentosDaIS, cidsDaIS, cidsDoTexto, diasDoLaudo, diasNoAno, faixaPeriodos12Meses, guiaInicial, itensDaGuia,
   listaCidsDasIS, normalizarCid, pareceresDasIS, resumoISNoAno, somarDiasISO,
 } from '../fichaInspecionado';
@@ -130,5 +131,32 @@ describe('exames da IS — classificação do PDF', () => {
   it('PDF antigo (sem o campo) é classificado pelos itens', () => {
     expect(classeDoExame({ itens: [{ tipo: 'atestado' }] })).toBe('atestado_relatorio');
     expect(classeDoExame({ classificacao: 'laudo_exame', itens: [{ tipo: 'atestado' }] })).toBe('laudo_exame');
+  });
+});
+
+describe('abas da ficha', () => {
+  const todas = (over: Partial<Record<string, Partial<{ visivel: boolean; habilitada: boolean }>>> = {}) =>
+    ABAS_FICHA.map(id => ({ id, visivel: true, habilitada: true, ...over[id] }));
+  it('respeita ?aba= quando a aba está liberada', () => {
+    expect(abaFichaInicial({ aba: 'exames' }, todas(), { is: 1, pm: 1 })).toBe('exames');
+    expect(abaFichaInicial({ aba: 'outros' }, todas({ outros: { habilitada: false } }), { is: 1, pm: 1 })).toBe('is');
+    expect(abaFichaInicial({ aba: 'xyz' }, todas(), { is: 1, pm: 1 })).toBe('is');
+  });
+  it('aceita os parâmetros antigos', () => {
+    expect(abaFichaInicial({ sel: 'p1' }, todas(), { is: 1, pm: 1 })).toBe('pm');
+    expect(abaFichaInicial({ is: 'i1' }, todas(), { is: 1, pm: 1 })).toBe('is');
+    expect(abaFichaInicial({ guia: 'pm' }, todas(), { is: 1, pm: 1 })).toBe('pm');
+  });
+  it('sem pedido: IS, ou Perícias quando só há perícias; senão a primeira liberada', () => {
+    expect(abaFichaInicial({}, todas(), { is: 0, pm: 2 })).toBe('pm');
+    expect(abaFichaInicial({}, todas(), { is: 0, pm: 0 })).toBe('is');
+    expect(abaFichaInicial({}, todas({ is: { visivel: false }, pm: { visivel: false } }), { is: 0, pm: 0 })).toBe('atestados');
+    expect(abaFichaInicial({}, ABAS_FICHA.map(id => ({ id, visivel: true, habilitada: false })), { is: 0, pm: 0 })).toBeNull();
+  });
+  it('registro aberto: o pedido ou o mais recente', () => {
+    const l = [{ id: 'a' }, { id: 'b' }];
+    expect(registroSelecionado(l, 'b')?.id).toBe('b');
+    expect(registroSelecionado(l, 'z')?.id).toBe('a');
+    expect(registroSelecionado([], 'z')).toBeNull();
   });
 });

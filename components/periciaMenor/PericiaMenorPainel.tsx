@@ -4,7 +4,9 @@
 //   - 'lateral'   (≥ 1280 px): painel fixo ao lado da tabela (mestre-detalhe), sem backdrop;
 //   - 'flutuante' (768–1279 px): painel de 576 px à direita, NÃO modal (não escurece nem fecha ao
 //     clicar na tabela); Esc fecha (tratado pela lista);
-//   - 'sheet'     (< 768 px): bottom sheet (Drawer do DS).
+//   - 'sheet'     (< 768 px): bottom sheet (Drawer do DS);
+//   - 'inline'    (Ficha do inspecionado): só "Esta perícia" no painel principal da página (CascaPainelFicha) —
+//     o histórico fica no painel de apoio da ficha; as ações vão para a barra inferior da aba (`acoes`).
 // "Esta perícia" responde primeiro "até quando?" (contagem + barra de dias), depois dispensas em chips,
 // CID com o código em destaque, o PDF com rótulo próprio e o resto recolhido. "Histórico" traz os dois
 // números de 12 meses, o CID que se repete e os registros — tocar num registro troca o conteúdo.
@@ -25,9 +27,11 @@ import {
   ROTULO_TIPO_PERICIA, contagemTermino, diaMes, diasDecorridos, partesCid, postoDoInspecionado, repeticaoCid, resumoPericias, tipoDaPericia,
 } from '../../utils/periciaMenorResumo';
 import type { TermosPericia } from '../../config/termosPericia';
+import type { AcaoRodape } from '../ui/AcoesRodape';
+import { CascaPainelFicha } from '../ficha/CascaPainelFicha';
 
 export type AbaPericia = 'esta' | 'historico';
-export type ModoPainel = 'lateral' | 'flutuante' | 'sheet';
+export type ModoPainel = 'lateral' | 'flutuante' | 'sheet' | 'inline';
 
 interface Props {
   pericia: PericiaMenorRecord;
@@ -46,6 +50,8 @@ interface Props {
   /** Ficha do inspecionado (⤢), quando há NIP e o perfil acessa. */
   fichaHref?: string;
   termos: TermosPericia;
+  /** Só no modo 'inline': botões da barra inferior da aba da ficha. */
+  acoes?: AcaoRodape[];
 }
 
 const dias = (n: number) => `${n} dia${n !== 1 ? 's' : ''}`;
@@ -179,10 +185,21 @@ const Historico: React.FC<{ p: PericiaMenorRecord; historico: PericiaMenorRecord
   );
 };
 
-export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoje, cidAbrev, modo, aba, onAba, onSelecionar, onFechar, onNova, fichaHref, termos }) => {
+export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoje, cidAbrev, modo, aba, onAba, onSelecionar, onFechar, onNova, fichaHref, termos, acoes }) => {
   const nome = extrairNomeInspecionado(p.inspecionado);
   const idBase = `pm-${modo}`;
   const atestado = termos.singular === 'atestado';
+  if (modo === 'inline') {
+    const tipo = tipoDaPericia(p.dispensas);
+    return (
+      <CascaPainelFicha
+        titulo={`${atestado ? 'Atestado' : 'Perícia menor'} de ${dataBR(p.dataAtestado)}`} icone="personal_injury"
+        tituloExtra={<TagTipoPericia tipo={tipo} />} subtitulo={linhaIdentificacao(p)} acoes={acoes}
+      >
+        <EstaPericia p={p} historico={historico} hoje={hoje} cidAbrev={cidAbrev} termos={termos} />
+      </CascaPainelFicha>
+    );
+  }
   const abas = (
     <AbasSublinhadas<AbaPericia>
       rotulo={`Detalhe ${atestado ? 'do atestado' : 'da perícia'}`} idBase={idBase} ativa={aba} onChange={onAba}

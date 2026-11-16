@@ -10,8 +10,10 @@ const matriz = (): Matriz => JSON.parse(JSON.stringify({ pages: DEFAULT_PAGE_PER
 
 describe('permissões por área', () => {
   it('todas as páginas e funções aparecem uma vez', () => {
+    // + "Ficha do inspecionado": página derivada (só as abas), fora de PAGE_DEFS.
     const paginas = AREAS.flatMap(a => a.paginas.map(p => p.id));
-    expect(new Set(paginas).size).toBe(PAGE_DEFS.length);
+    expect(new Set(paginas).size).toBe(PAGE_DEFS.length + 1);
+    expect(paginas).toContain('ficha');
     const funcoes = AREAS.flatMap(a => a.paginas.flatMap(p => p.funcoes.map(f => f.id)));
     expect(new Set(funcoes).size).toBe(FEATURE_DEFS.length);
   });
@@ -26,6 +28,14 @@ describe('permissões por área', () => {
     expect(m.pages.inspecoes.user_secretaria).toBe(false);
     expect(m.features['inspecoes.cadastrar'].user_secretaria).toBe(false);
     expect(m.features['inspecoes.cadastrar'].user_medicos).toBe(true);
+  });
+
+  it('Ficha do inspecionado liga/desliga todas as abas', () => {
+    const m = alternarPagina(matriz(), 'ficha', 'user_secretaria', true);
+    expect(paginaLigada(m, 'ficha', 'user_secretaria')).toBe(true);
+    expect(m.features['ficha.transcricoes'].user_secretaria).toBe(true);
+    const off = alternarPagina(m, 'ficha', 'user_secretaria', false);
+    expect(paginaLigada(off, 'ficha', 'user_secretaria')).toBe(false);
   });
 
   it('Perícia Menor liga/desliga as duas abas', () => {

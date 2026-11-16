@@ -409,15 +409,21 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   await p.goto(`${BASE}#/pericia-menor/historico/${INSPECIONADO.nip}`);
   await p.waitForURL(new RegExp(`#/inspecionados/${INSPECIONADO.nip}$`));
   await p.getByRole('heading', { name: INSPECIONADO.nome }).waitFor();
-  // Guias Inspeções de Saúde × Perícias Menores; "Pedir parecer" e o card Cadastro saíram da ficha.
+  // Abas sem contagens (Inspeções de Saúde, Perícia Menor e as novas); "Pedir parecer" e o card Cadastro saíram da ficha.
   const guias = p.getByRole('tablist', { name: 'Registros do inspecionado' });
-  await guias.getByRole('tab', { name: /Inspeções de Saúde/ }).waitFor();
+  await guias.getByRole('tab', { name: 'Inspeções de Saúde', exact: true }).waitFor();
+  for (const nome of ['Atestados e Laudos', 'Pareceres', 'Exames', 'Guias', 'Emails', 'Mensagens', 'Outros', 'Transcrições']) {
+    await guias.getByRole('tab', { name: nome, exact: true }).waitFor();
+  }
+  // "Outros" fica desabilitada para todos.
+  assert.equal(await guias.getByRole('tab', { name: 'Outros', exact: true }).getAttribute('aria-disabled'), 'true');
   assert.equal(await p.getByRole('button', { name: /Pedir parecer/i }).count(), 0);
-  await guias.getByRole('tab', { name: /Perícias Menores/ }).click();
-  await p.getByRole('button', { name: /Perícia menor registrada/ }).first().click();
-  // O detalhe abre num drawer, sem sair da ficha.
-  await p.getByRole('dialog', { name: INSPECIONADO.nome }).waitFor();
-  assert.match(p.url(), new RegExp(`#/inspecionados/${INSPECIONADO.nip}`));
+  // A aba abre com o registro mais recente no painel principal (sem drawer) e o histórico no painel de apoio.
+  await guias.getByRole('tab', { name: 'Perícia Menor', exact: true }).click();
+  await p.getByRole('heading', { name: /Perícia menor de/ }).waitFor();
+  await p.getByRole('complementary', { name: /Histórico de Perícias Menores/ }).getByRole('button', { name: /Perícia menor registrada/ }).first().click();
+  assert.equal(await p.getByRole('dialog').count(), 0);
+  assert.match(p.url(), new RegExp(`#/inspecionados/${INSPECIONADO.nip}\\?.*aba=pm`));
   // Registro de eventos é só do Admin.
   assert.equal(await p.getByText('Registro de eventos').count(), 0);
   await p.context().close();

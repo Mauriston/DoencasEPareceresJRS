@@ -20,6 +20,8 @@
 // laudo fica na íntegra para copiar (exames/ExamesDaIS).
 // Rodapé (AcoesRodape: linha no desktop, FAB no mobile): Minuta MSG · Parecer · Exames · Gravar entrevista (cada um
 // só quando cabe). Fecha no X ou fora.
+// casca="inline" (Ficha do inspecionado): o mesmo conteúdo no painel principal da página (CascaPainelFicha), sem
+// Drawer nem "Fechar"; as ações vão para a barra inferior da aba, depois das `acoesExtras` da página.
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Drawer } from '../ui/Drawer';
@@ -27,6 +29,7 @@ import { ButtonLink } from '../ui/Button';
 import { fichaPath } from '../../config/routes';
 import { podeAbrirFicha } from '../ficha/permissoes';
 import { AcoesRodape, type AcaoRodape } from '../ui/AcoesRodape';
+import { CascaPainelFicha } from '../ficha/CascaPainelFicha';
 import { Field } from '../ui/Field';
 import { Segmented } from '../ui/Segmented';
 import { StatusTag } from '../ui/StatusTag';
@@ -80,6 +83,10 @@ interface Props {
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
   /** Seção de e-mails da IS (botões de envio e cards dos já enviados — EmailsDaIS), montada pela página. */
   emails?: React.ReactNode;
+  /** 'drawer' (padrão): barra lateral/bottom sheet. 'inline': painel principal da Ficha do inspecionado. */
+  casca?: 'drawer' | 'inline';
+  /** Só em casca="inline": ações da página que entram na barra inferior antes das da IS (ex.: "Abrir IS"). */
+  acoesExtras?: AcaoRodape[];
 }
 
 /** Minuta MSG: com Nº do TIS e DS-1a, ou IS cancelada. */
@@ -149,7 +156,7 @@ const useCampoAuto = (remoto: string, salvar: (valor: string) => void) => {
 
 type EstadoGravacao = 'ocioso' | 'salvando' | 'salvo' | 'erro';
 
-export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes, onClose, onMinuta, onSolicitarParecer, onDuplicarParecer, onSituacaoMudou, onAviso, emails }) => {
+export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes, onClose, onMinuta, onSolicitarParecer, onDuplicarParecer, onSituacaoMudou, onAviso, emails, casca = 'drawer', acoesExtras = [] }) => {
   const nav = useNav();
   const efetivo = statusEfetivoIS(is);
   const info = STATUS_IS[efetivo];
@@ -317,17 +324,8 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
     </>
   );
 
-  return (
-    <Drawer
-      title={`IS ${is.is}`}
-      icon="event_available"
-      onClose={onClose}
-      tituloExtra={<StatusTag tone={tomStatusIS(efetivo)}>{info.rotulo}</StatusTag>}
-      acoesTopo={is.inspecionadoId && podeAbrirFicha(nav?.authUser?.perfil)
-        ? <ButtonLink to={fichaPath(is.inspecionadoId)} variant="ghost" size="sm" icon="id_card" aria-label={`Abrir ficha de ${is.inspecionado || 'inspecionado'}`}>Abrir ficha</ButtonLink>
-        : undefined}
-      footer={acoes.length > 0 ? <AcoesRodape acoes={acoes} /> : undefined}
-    >
+  const corpo = (
+    <>
       {somenteLeitura ? (
         <div className="space-y-4">
           <section aria-labelledby={`dados-is-${is.id}`} className="space-y-3">
@@ -500,6 +498,29 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
         />,
         document.body,
       )}
+    </>
+  );
+
+  const chipStatus = <StatusTag tone={tomStatusIS(efetivo)}>{info.rotulo}</StatusTag>;
+  if (casca === 'inline') {
+    return (
+      <CascaPainelFicha titulo={`IS ${is.is}`} icone="event_available" tituloExtra={chipStatus} subtitulo={is.finalidade} acoes={[...acoesExtras, ...acoes]}>
+        {corpo}
+      </CascaPainelFicha>
+    );
+  }
+  return (
+    <Drawer
+      title={`IS ${is.is}`}
+      icon="event_available"
+      onClose={onClose}
+      tituloExtra={chipStatus}
+      acoesTopo={is.inspecionadoId && podeAbrirFicha(nav?.authUser?.perfil)
+        ? <ButtonLink to={fichaPath(is.inspecionadoId)} variant="ghost" size="sm" icon="id_card" aria-label={`Abrir ficha de ${is.inspecionado || 'inspecionado'}`}>Abrir ficha</ButtonLink>
+        : undefined}
+      footer={acoes.length > 0 ? <AcoesRodape acoes={acoes} /> : undefined}
+    >
+      {corpo}
     </Drawer>
   );
 };

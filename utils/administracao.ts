@@ -31,24 +31,31 @@ export const ehPerfilMedico = (perfil: string): boolean => PERFIS_MEDICOS.includ
 export const PERFIS_PERITO = ['admin', 'user_medicos', 'user_medicos_mpi'];
 
 /** Grupo de funções de FEATURE_DEFS → página dona (desligar a página desliga e trava as funções dela). */
-export const PAGINA_DO_GRUPO: Record<string, NavItem> = {
+export const PAGINA_DO_GRUPO: Record<string, IdPaginaArea> = {
   'Concursos': 'concursosJRS',
   'Inspeções de Saúde': 'inspecoes',
   'Inspecionados': 'militares',
   'Pareceres': 'pareceres',
   'Perícia Menor': 'pericia-menor',
+  'Ficha do inspecionado': 'ficha',
 };
 
+/** "Páginas" sem permissão própria: valem as funções (abas). Ligar/desligar liga/desliga todas. */
+const PAGINAS_DERIVADAS = new Set<string>(['pericia-menor', 'ficha']);
+/** Ficha do inspecionado: não está em PAGE_DEFS (abre a partir de Inspecionados, IS e Perícias). */
+const PAGINA_FICHA = { id: 'ficha' as const, rotulo: 'Ficha do inspecionado' };
+
 /** Páginas por área, na ordem da sidebar (config/navigation.ts). */
-const AREAS_DEF: { id: string; rotulo: string; paginas: NavItem[] }[] = [
-  { id: 'trabalho', rotulo: 'Trabalho', paginas: ['inspecoes', 'militares', 'concursosJRS', 'pericia-menor', 'escala', 'pareceres', 'mensagens'] },
+const AREAS_DEF: { id: string; rotulo: string; paginas: IdPaginaArea[] }[] = [
+  { id: 'trabalho', rotulo: 'Trabalho', paginas: ['inspecoes', 'militares', 'ficha', 'concursosJRS', 'pericia-menor', 'escala', 'pareceres', 'mensagens'] },
   { id: 'consulta', rotulo: 'Consulta', paginas: ['guide', 'exames', 'concursos', 'dgpm406', 'portaria', 'laws'] },
   { id: 'formacao', rotulo: 'Formação', paginas: ['casos', 'videos', 'infograficos', 'apresentacoes', 'roteiro'] },
   { id: 'sistema', rotulo: 'Painel, férias e ajuda', paginas: ['painel', 'ferias', 'sobre'] },
 ];
 
+export type IdPaginaArea = NavItem | 'ficha';
 export interface FuncaoArea { id: FeatureKey; rotulo: string; ajuda: string }
-export interface PaginaArea { id: NavItem; rotulo: string; funcoes: FuncaoArea[]; /** Perícia Menor: sem permissão de página própria (vale a das funções). */ derivada: boolean }
+export interface PaginaArea { id: IdPaginaArea; rotulo: string; funcoes: FuncaoArea[]; /** Perícia Menor e Ficha: sem permissão de página própria (vale a das funções). */ derivada: boolean }
 export interface Area { id: string; rotulo: string; paginas: PaginaArea[] }
 
 /** "Cadastrar nova IS (a lista … página)" → rótulo "Cadastrar nova IS" + ajuda "A lista … página". */
@@ -60,15 +67,15 @@ export const partirRotulo = (label: string): { rotulo: string; ajuda: string } =
 };
 
 export const AREAS: Area[] = (() => {
-  const porId = new Map(PAGE_DEFS.map(p => [p.id, p]));
+  const porId = new Map<string, { label: string }>([...PAGE_DEFS.map(p => [p.id, p] as const), [PAGINA_FICHA.id, { label: PAGINA_FICHA.rotulo }]]);
   const usadas = new Set<string>();
-  const pagina = (id: NavItem): PaginaArea | null => {
+  const pagina = (id: IdPaginaArea): PaginaArea | null => {
     const def = porId.get(id);
     if (!def) return null;
     usadas.add(id);
     const grupo = Object.entries(PAGINA_DO_GRUPO).find(([, pid]) => pid === id)?.[0];
     const funcoes = grupo ? FEATURE_DEFS.filter(f => f.group === grupo).map(f => ({ id: f.id, ...partirRotulo(f.label) })) : [];
-    return { id, rotulo: def.label, funcoes, derivada: id === 'pericia-menor' };
+    return { id, rotulo: def.label, funcoes, derivada: PAGINAS_DERIVADAS.has(id) };
   };
   const areas = AREAS_DEF.map(a => ({ id: a.id, rotulo: a.rotulo, paginas: a.paginas.map(pagina).filter((p): p is PaginaArea => !!p) }));
   const outras = PAGE_DEFS.filter(p => !usadas.has(p.id)).map(p => pagina(p.id)).filter((p): p is PaginaArea => !!p);
@@ -76,16 +83,18 @@ export const AREAS: Area[] = (() => {
   return areas;
 })();
 
-const PAGINA_DA_FUNCAO: Record<string, NavItem> = Object.fromEntries(
+const PAGINA_DA_FUNCAO: Record<string, IdPaginaArea> = Object.fromEntries(
   FEATURE_DEFS.map(f => [f.id, PAGINA_DO_GRUPO[f.group]]).filter(([, p]) => !!p),
 );
-const ROTULO_PAGINA: Record<string, string> = Object.fromEntries(PAGE_DEFS.map(p => [p.id, p.label]));
+const ROTULO_PAGINA: Record<string, string> = { ...Object.fromEntries(PAGE_DEFS.map(p => [p.id, p.label])), [PAGINA_FICHA.id]: PAGINA_FICHA.rotulo };
 const ROTULO_FUNCAO: Record<string, string> = Object.fromEntries(FEATURE_DEFS.map(f => [f.id, partirRotulo(f.label).rotulo]));
 
-/** A página está ligada para o perfil (Perícia Menor: alguma das duas abas). */
+const funcoesDaPagina = (pagina: string): FeatureKey[] => FEATURE_DEFS.filter(f => PAGINA_DO_GRUPO[f.group] === pagina).map(f => f.id);
+
+/** A página está ligada para o perfil (Perícia Menor e Ficha: alguma das abas). */
 export const paginaLigada = (m: Matriz, pagina: string, role: Role): boolean =>
-  pagina === 'pericia-menor'
-    ? !!m.features['pericia-menor.novo']?.[role] || !!m.features['pericia-menor.historico']?.[role]
+  PAGINAS_DERIVADAS.has(pagina)
+    ? funcoesDaPagina(pagina).some(f => !!m.features[f]?.[role])
     : m.pages[pagina]?.[role] ?? true;
 
 const copiar = (m: Matriz): Matriz => JSON.parse(JSON.stringify(m));
@@ -93,9 +102,9 @@ const copiar = (m: Matriz): Matriz => JSON.parse(JSON.stringify(m));
 /** Liga/desliga a página para o perfil. Desligar desliga também as funções dela (que ficam travadas). */
 export const alternarPagina = (m: Matriz, pagina: string, role: Role, ligar: boolean): Matriz => {
   const n = copiar(m);
-  const funcoes = FEATURE_DEFS.filter(f => PAGINA_DO_GRUPO[f.group] === pagina).map(f => f.id);
-  if (pagina === 'pericia-menor') {
-    // Sem permissão de página: ligar libera as duas abas; desligar fecha as duas.
+  const funcoes = funcoesDaPagina(pagina);
+  if (PAGINAS_DERIVADAS.has(pagina)) {
+    // Sem permissão de página: ligar libera todas as abas; desligar fecha todas.
     funcoes.forEach(f => { n.features[f] = { ...n.features[f], [role]: ligar }; });
     return n;
   }

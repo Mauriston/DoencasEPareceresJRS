@@ -62,7 +62,15 @@ export type FeatureKey =
   | 'militares.cadastrar'
   | 'pareceres.gerar'
   | 'pericia-menor.novo'
-  | 'pericia-menor.historico';
+  | 'pericia-menor.historico'
+  | 'ficha.atestados'
+  | 'ficha.pareceres'
+  | 'ficha.exames'
+  | 'ficha.guias'
+  | 'ficha.emails'
+  | 'ficha.mensagens'
+  | 'ficha.outros'
+  | 'ficha.transcricoes';
 
 // Os padrões das funcionalidades "concursosJRS.*" se repetem em firestore.rules (função pode()),
 // que aplica a mesma matriz nas gravações: ao mudar um padrão aqui, mude lá também e rode
@@ -97,6 +105,17 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'pareceres.gerar': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
   'pericia-menor.novo': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: true },
   'pericia-menor.historico': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: true },
+  // Abas da Ficha do inspecionado (além de "Inspeções de Saúde" e "Perícias Menores", que seguem as permissões
+  // das páginas/funções de origem). "Outros" começa desligada para todos (e a aba fica desabilitada até ser
+  // implementada); "Transcrições" só para o Admin por enquanto, e ainda limitada aos perfis que gravam entrevista.
+  'ficha.atestados': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  'ficha.pareceres': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  'ficha.exames': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  'ficha.guias': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  'ficha.emails': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  'ficha.mensagens': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
+  'ficha.outros': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
+  'ficha.transcricoes': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
 };
 
 export interface MatrizPermissoesArmazenada {

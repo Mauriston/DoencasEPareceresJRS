@@ -214,3 +214,36 @@ export const pareceresDasIS = <P extends { isId?: string; criadoEm?: { toMillis?
   const ids = new Set(idsIS);
   return pareceres.filter(p => !!p.isId && ids.has(p.isId)).sort((a, b) => (b.criadoEm?.toMillis?.() ?? 0) - (a.criadoEm?.toMillis?.() ?? 0));
 };
+
+// ---------------------------------------------------------------- Abas da ficha (reformulação de 16/11/2026)
+
+/** Abas da Ficha do inspecionado, na ordem da barra. */
+export const ABAS_FICHA = ['is', 'pm', 'atestados', 'pareceres', 'exames', 'guias', 'emails', 'mensagens', 'outros', 'transcricoes'] as const;
+export type AbaFicha = typeof ABAS_FICHA[number];
+export const ehAbaFicha = (v: string | null | undefined): v is AbaFicha => (ABAS_FICHA as readonly string[]).includes(String(v));
+
+export interface EstadoAbaFicha { id: AbaFicha; visivel: boolean; habilitada: boolean }
+
+/**
+ * Aba aberta: `?aba=` (se visível e habilitada); senão os parâmetros antigos (`?is=` → IS, `?sel=` → Perícias,
+ * `?guia=is|pm`); senão Inspeções de Saúde — ou Perícias Menores, se não houver IS e houver perícias —;
+ * senão a primeira habilitada. Nenhuma habilitada: null.
+ */
+export const abaFichaInicial = (
+  params: { aba?: string | null; is?: string | null; sel?: string | null; guia?: string | null },
+  abas: ReadonlyArray<EstadoAbaFicha>, n: { is: number; pm: number },
+): AbaFicha | null => {
+  const ok = (id: string | null | undefined): id is AbaFicha => ehAbaFicha(id) && !!abas.find(a => a.id === id && a.visivel && a.habilitada);
+  if (ok(params.aba)) return params.aba;
+  if (params.is && ok('is')) return 'is';
+  if (params.sel && ok('pm')) return 'pm';
+  if (params.guia === 'pm' && ok('pm')) return 'pm';
+  if (params.guia === 'is' && ok('is')) return 'is';
+  if (n.is === 0 && n.pm > 0 && ok('pm')) return 'pm';
+  if (ok('is')) return 'is';
+  return abas.find(a => a.visivel && a.habilitada)?.id ?? null;
+};
+
+/** Registro aberto no painel principal: o pedido (se existe na lista) ou o mais recente (o 1º da lista). */
+export const registroSelecionado = <R extends { id: string }>(lista: ReadonlyArray<R>, pedido: string | null | undefined): R | null =>
+  (pedido ? lista.find(r => r.id === pedido) : undefined) ?? lista[0] ?? null;
