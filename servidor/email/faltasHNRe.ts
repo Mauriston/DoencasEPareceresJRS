@@ -100,7 +100,7 @@ export const enviarFaltasHNRe = async (db: Firestore, isIdsBruto: unknown, uid: 
   const lote = db.batch();
   pendentes.forEach(i => lote.update(i.ref, { emailFaltaDataEntrevista: i.dataEntrevista, emailFaltaEnviadoEm: FieldValue.serverTimestamp() }));
   await lote.commit();
-  // Histórico em cada IS do lote (e contagem no uso do app, uma por IS).
-  await Promise.all(pendentes.map(i => registrarEmailIS(db, i.id, uid, { tipo: 'faltasHNRe', assunto, para, cc })));
+  // Histórico em cada IS do lote, com o conteúdo gravado uma vez (e contagem no uso do app, uma por IS).
+  await registrarEmailIS(db, pendentes.map(i => i.id), uid, { tipo: 'faltasHNRe', assunto, para, cc, html, texto });
   return { enviados: pendentes.length, para, cc };
 };

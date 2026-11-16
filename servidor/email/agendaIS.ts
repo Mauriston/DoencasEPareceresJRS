@@ -5,7 +5,8 @@
 //    véspera de feriado; sai mesmo sem IS agendadas (aviso no corpo, sem tabela; sem anexo se também não há concursos); uma vez por data (o reenvio é só manual).
 //  - Manual: o Admin escolhe o dia na página Inspeções de Saúde (/api/email/agenda-is).
 // O PDF fica no Firebase Storage, um arquivo por data (caminhoPdfAgendaIS): reenviar substitui o anterior,
-// sem duplicar. O envio fica registrado em emailsAgendaIS/{AAAA-MM-DD}.
+// sem duplicar. O envio fica registrado em emailsAgendaIS/{AAAA-MM-DD} e no histórico de cada IS da agenda
+// (registrarEmailIS, com o conteúdo — aba Emails da Ficha).
 import type { Firestore } from 'firebase-admin/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import { ErroContaGoogle } from '../google/contaGoogle';
@@ -16,7 +17,7 @@ import { TEMPLATE_AGENDA_IS } from './templateAgendaIS';
 import { TEMPLATE_ANEXO_AGENDA_IS } from './templateAnexoAgendaIS';
 import { FONTE_MONTSERRAT_DATA_URI, LOGO_MARINHA_DATA_URI } from './recursosAnexo';
 import { CONFIG_EMAIL_RESULTADO } from './resultadoIS';
-import { registrarUsoServidor } from './registroEmailsIS';
+import { registrarEmailIS, registrarUsoServidor } from './registroEmailsIS';
 import { assinaturaSupervisor, assinaturaTexto, destinatariosFixos, juntarEmails, type DadosAssinatura } from './comum';
 import {
   assuntoAgendaIS, caminhoPdfAgendaIS, dataBrDeIso, dataIsoValida, dataTituloDeIso, decidirEnvioAutomatico, destinatariosAgendaIS,
@@ -46,7 +47,11 @@ export const nomeSemPostoNip = (inspecionado: string): string => {
   return t.replace(/^.*?\d{2}\.\d{4}\.\d{2}\s*/, '') || t;
 };
 export interface ItemConcurso { concurso: string; matricula: string; candidato: string }
-export interface AgendaDoDia { data: string; agendamentos: ItemAgenda[]; concursos: ItemConcurso[] }
+export interface AgendaDoDia {
+  data: string; agendamentos: ItemAgenda[]; concursos: ItemConcurso[];
+  /** Ids das IS da agenda (histórico de e-mails de cada IS e aba Emails da Ficha). */
+  isIds?: string[];
+}
 
 const maiusculas = (t: unknown) => String(t ?? '').trim().toLocaleUpperCase('pt-BR');
 
@@ -55,7 +60,7 @@ const maiusculas = (t: unknown) => String(t ?? '').trim().toLocaleUpperCase('pt-
 /** IS com entrevista na data (menos as canceladas), por hora, e candidatos de concurso (Em andamento / Em breve) agendados nela. */
 export const coletarAgenda = async (db: Firestore, data: string): Promise<AgendaDoDia> => {
   const snap = await db.collection('inspecoes').where('dataEntrevista', '>=', `${data}T00:00`).where('dataEntrevista', '<=', `${data}T23:59`).get();
-  const lista = snap.docs.map(d => d.data() as Record<string, any>).filter(i => i.status !== 'cancelada')
+  const lista = snap.docs.map(d => ({ ...d.data(), _id: d.id }) as Record<string, any>).filter(i => i.status !== 'cancelada')
     .sort((a, b) => String(a.dataEntrevista).localeCompare(String(b.dataEntrevista)) || Number(a.is) - Number(b.is));
 
   const ids = [...new Set(lista.map(i => String(i.inspecionadoId || '')).filter(Boolean))];
@@ -83,7 +88,7 @@ export const coletarAgenda = async (db: Firestore, data: string): Promise<Agenda
     cand.docs.forEach(d => concursos.push({ concurso: String(c.data().nome || ''), matricula: d.id, candidato: maiusculas(d.data().nome) }));
   }
   concursos.sort((a, b) => a.concurso.localeCompare(b.concurso, 'pt-BR') || a.candidato.localeCompare(b.candidato, 'pt-BR'));
-  return { data, agendamentos, concursos };
+  return { data, agendamentos, concursos, isIds: lista.map(i => String(i._id)) };
 };
 
 // ---------------------------------------------------------------- Montagem
@@ -163,8 +168,14 @@ export const enviarAgendaIS = async (db: Firestore, bucket: BucketPdf, data: str
     ultimoEnvioEm: FieldValue.serverTimestamp(), ultimoEnvioPor: quem.uid, envios: FieldValue.increment(1),
     ...(quem.automatico ? { envioAutomaticoEm: FieldValue.serverTimestamp() } : {}),
   }, { merge: true });
-  // Contagem no uso do app (não é e-mail de uma IS: sem histórico na IS).
+  // Contagem no uso do app: uma por envio (não por IS).
   await registrarUsoServidor(db, quem.automatico ? 'agendador' : quem.uid, { email: 'agendaIS' });
+  // Histórico de cada IS da agenda (e aba Emails da Ficha), com o conteúdo gravado uma vez; sem nova contagem.
+  if (agenda.isIds?.length) {
+    await registrarEmailIS(db, agenda.isIds, quem.automatico ? 'agendador' : quem.uid, {
+      tipo: 'agendaIS', assunto, para, cc, html, texto, ...(pdf ? { anexo: `IS_AGENDADAS_${dataBrDeIso(data).replace(/\//g, '-')}.pdf` } : {}),
+    }, { contarUso: false });
+  }
   return { data, para, cc, totalIS: agenda.agendamentos.length, totalConcursos: agenda.concursos.length, pdfCaminho, reenvio };
 };
 

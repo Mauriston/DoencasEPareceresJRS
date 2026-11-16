@@ -127,6 +127,19 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Coleção "emails_enviados": e-mails enviados com o CONTEÚDO (HTML e texto como saíram; sem anexos) e os
+    // vínculos (nips, isIds) — aba Emails da Ficha (utils/emailsEnviados.ts). Só o servidor grava (Admin SDK —
+    // servidor/email/registroEmailsIS.ts); só a equipe (Admin, médicos JRS/MPI e Secretaria) lê: o corpo traz
+    // dados pessoais e de saúde dos inspecionados.
+    match /emails_enviados/{eid} {
+      allow read: if isEquipe();
+      allow write: if false;
+      match /conteudo/{cid} {
+        allow read: if isEquipe();
+        allow write: if false;
+      }
+    }
+
     match /documentos_gerados/{id} {
       allow read: if isAdmin() || isSecretaria();
       allow create: if isSignedIn() && request.resource.data.criadoPorUid == request.auth.uid &&
