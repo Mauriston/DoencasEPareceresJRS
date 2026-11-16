@@ -19,7 +19,8 @@ export type AcaoInspecionado =
   | 'pericia.registrar'
   | 'is.cadastrar'
   | 'is.agendar'
-  | 'parecer.gerar';
+  | 'parecer.gerar'
+  | 'parecer.resposta';
 
 /** Frase do registro na ficha: "<usuário> registrou perícia menor". */
 export const ROTULO_ACAO_INSPECIONADO: Record<AcaoInspecionado, string> = {
@@ -30,6 +31,7 @@ export const ROTULO_ACAO_INSPECIONADO: Record<AcaoInspecionado, string> = {
   'is.cadastrar': 'cadastrou a IS',
   'is.agendar': 'agendou a IS',
   'parecer.gerar': 'gerou pedido de parecer',
+  'parecer.resposta': 'enviou resposta de parecer',
 };
 
 export interface EventoInspecionado {

@@ -61,6 +61,7 @@ export type FeatureKey =
   | 'inspecoes.cancelar'
   | 'militares.cadastrar'
   | 'pareceres.gerar'
+  | 'pareceres.resposta'
   | 'pericia-menor.novo'
   | 'pericia-menor.historico'
   | 'ficha.afastamentos'
@@ -105,6 +106,8 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'inspecoes.bloquearAgenda': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
   'militares.cadastrar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   'pareceres.gerar': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  // Resposta de Parecer (Ficha › Pareceres): a gravação no pedido segue a regra dos médicos (firestore.rules, pareceres).
+  'pareceres.resposta': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
   'pericia-menor.novo': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: true },
   'pericia-menor.historico': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: true },
   // Abas da Ficha do inspecionado (além de "Inspeções de Saúde" e "Perícias Menores", que seguem as permissões

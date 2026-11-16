@@ -46,6 +46,30 @@ export interface ParecerDoc {
   isId?: string;
   /** Número da IS (o mesmo do id). */
   is?: number;
+  /** Caminho do PDF no Storage (pareceres/{id}.pdf) — pedidos gerados pelo servidor; os antigos ficaram no Drive. */
+  pdfCaminho?: string;
+  /** Quem assina o pedido (o perito da IS ou quem gerou — utils/pareceres.ts → assinanteDoPedido). */
+  assinanteUid?: string;
+  assinanteNome?: string;
+  /** Resposta do especialista (PDF enviado na Ficha › Pareceres e transcrito pela IA — services/respostaParecer.ts). */
+  resposta?: RespostaParecer;
+}
+
+export interface RespostaParecer {
+  /** Caminho no Storage: pareceres/{id}-resposta.pdf */
+  caminho: string;
+  pdfUrl: string;
+  nomeArquivo: string;
+  bytes: number;
+  /** Transcrição integral feita pela IA (só leitura no app). */
+  transcricao: string;
+  /** Especialista/serviço que respondeu e a data da resposta (AAAA-MM-DD), quando constam. */
+  emissor?: string;
+  data?: string;
+  /** A resposta da IA foi cortada (documento muito longo): a transcrição pode estar incompleta. */
+  textoIncompleto: boolean;
+  enviadoPor: { uid: string; usuario: string };
+  enviadoEm: Timestamp | null;
 }
 export type ParecerRecord = ParecerDoc & { id: string };
 

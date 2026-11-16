@@ -94,6 +94,7 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'inspecoes.bloquearAgenda', label: 'Bloquear horários e turnos da agenda (perfis médicos só bloqueiam os próprios turnos; a configuração de turnos dos peritos é só do Admin)', group: 'Inspeções de Saúde' },
   { id: 'militares.cadastrar', label: 'Cadastrar novo inspecionado (Militares e Dep/Pens.); editar, apagar e inativar continuam só com o Admin', group: 'Inspecionados' },
   { id: 'pareceres.gerar', label: 'Gerar Pedido de Parecer e marcar como concluído (a lista de pareceres é vista por quem acessa a página)', group: 'Pareceres' },
+  { id: 'pareceres.resposta', label: 'Enviar Resposta de Parecer em PDF (Ficha do inspecionado › Pareceres; a IA transcreve e o pedido passa a Concluído)', group: 'Pareceres' },
   // Substituem a antiga permissão única de página "Perícia Menor": cada aba
   // (Novo/Histórico) é liberada separadamente por perfil.
   { id: 'pericia-menor.novo', label: 'Perícia Menor - Novo', group: 'Perícia Menor' },

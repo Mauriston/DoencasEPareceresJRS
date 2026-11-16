@@ -1,12 +1,13 @@
 // Ficheiro: components/pareceres/NovoParecerForm.tsx
-// "Novo parecer": barra lateral à direita (desktop) ou bottom sheet (mobile). Escolhe o
+// "Novo parecer": barra lateral à direita (desktop) ou bottom sheet (mobile) — ou, na Ficha do inspecionado
+// (aba Pareceres, ?criar=pedido), no painel principal (casca "inline", CascaFormulario). Escolhe o
 // militar (autocomplete na base do Firebase, texto = INSPECIONADO), a especialidade
 // (modelos de quesitos), a finalidade (mesmo menu de Exames mínimos), o histórico e os
-// quesitos — pré-preenchidos pela especialidade e editáveis. Ao gerar: preenche o
-// template do Google Docs (Apps Script), envia o PDF ao Storage e registra o pedido
-// no Firestore.
+// quesitos — pré-preenchidos pela especialidade e editáveis. Ao gerar: o servidor do app
+// gera o PDF (HTML + CSS) e o guarda no Storage (pareceres/{id}.pdf), com a assinatura do
+// perito da IS ou de quem gera (services/drivePareceres.ts), e o app registra o pedido no Firestore.
 import React, { useEffect, useMemo, useState } from 'react';
-import { Drawer } from '../ui/Drawer';
+import { CascaFormulario, type CascaForm } from '../ficha/CascaFormulario';
 import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
@@ -19,8 +20,8 @@ import { QuesitosEditor } from './QuesitosEditor';
 import { useNav } from '../../context/NavContext';
 import { observarMilitares, vinculoDoInspecionado, type MilitarRecord } from '../../services/firestoreMilitares';
 import { observarQuesitos, type QuesitosEspecialidade } from '../../services/firestoreQuesitos';
-import { novoIdParecer, registrarParecer, type ParecerRecord } from '../../services/firestorePareceres';
-import { gerarPdfPedidoParecer, salvarPdfParecerNoDrive } from '../../services/drivePareceres';
+import { registrarParecer, type ParecerRecord } from '../../services/firestorePareceres';
+import { gerarPedidoParecerNoServidor } from '../../services/drivePareceres';
 import { normalizarBusca } from '../../utils/corposQuadros';
 import { formatNip } from '../../utils/format';
 
@@ -31,15 +32,18 @@ interface Props {
   prefill?: { militarId: string; finalidade: string };
   /** Pedido feito a partir de uma IS: grava o vínculo (isId e nº) no parecer. */
   vinculoIS?: { isId: string; is: number };
+  /** Drawer (padrão) ou painel principal da Ficha do inspecionado. */
+  casca?: CascaForm;
   onClose: () => void;
-  onGerado: (nome: string, pdfUrl: string) => void;
+  /** Pedido gravado: nome do militar, URL do PDF e id do pedido (em "pareceres"). */
+  onGerado: (nome: string, pdfUrl: string, id: string) => void;
 }
 
 type Erros = Record<string, string>;
 
 const vinculoDoMilitar = vinculoDoInspecionado;
 
-export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, vinculoIS, onClose, onGerado }) => {
+export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, vinculoIS, casca = 'drawer', onClose, onGerado }) => {
   const nav = useNav();
   const usuario = nav?.authUser;
 
@@ -130,19 +134,19 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, vinculoIS, 
     setGerando(true);
     try {
       const lista = quesitos.map(q => q.trim()).filter(Boolean);
-      const pdfBase64 = await gerarPdfPedidoParecer({
+      // O servidor gera o PDF, resolve a assinatura (perito da IS ou quem gera) e o guarda no Storage.
+      const gerado = await gerarPedidoParecerNoServidor({
         inspecionado: militar.inspecionado, especialidade: modelo.especialidade, finalidade, historico: historico.trim(), quesitos: lista,
-        nomeUsuario: usuario.nome, postoGraduacao: usuario.postoGraduacao || '', cargo: usuario.cargo || '', crmPe: usuario.crmPe || '',
+        ...(vinculoIS ? { isId: vinculoIS.isId } : {}),
       });
-      const id = novoIdParecer();
-      const pdfUrl = await salvarPdfParecerNoDrive({ nomeInspecionado: militar.nome, especialidade: modelo.especialidade, pdfBase64 });
-      await registrarParecer(id, {
+      await registrarParecer(gerado.id, {
         militarId: militar.id, inspecionado: militar.inspecionado, especialidade: modelo.especialidade, finalidade,
-        historico: historico.trim(), quesitos: lista, pdfUrl,
+        historico: historico.trim(), quesitos: lista, pdfUrl: gerado.pdfUrl, pdfCaminho: gerado.caminho,
+        assinanteUid: gerado.assinante.uid, assinanteNome: gerado.assinante.nome,
         solicitanteUid: usuario.uid, solicitanteNome: usuario.nome, solicitanteUsuario: usuario.usuario, solicitantePosto: usuario.postoGraduacao || '',
         ...(vinculoIS ? { isId: vinculoIS.isId, is: vinculoIS.is } : {}),
       });
-      onGerado(militar.nome, pdfUrl);
+      onGerado(militar.nome, gerado.pdfUrl, gerado.id);
     } catch (err: any) {
       setErros({ geral: err?.message || 'Não foi possível gerar o pedido de parecer.' });
       setGerando(false);
@@ -151,8 +155,9 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, vinculoIS, 
 
   return (
     <>
-      <Drawer
-        title="Novo parecer"
+      <CascaFormulario
+        casca={casca}
+        title={casca === 'inline' ? 'Pedido de Parecer' : 'Novo parecer'}
         icon="assignment_add"
         onClose={() => { if (!gerando) onClose(); }}
         footer={(
@@ -220,7 +225,7 @@ export const NovoParecerForm: React.FC<Props> = ({ inicial, prefill, vinculoIS, 
             <p className="mt-1 text-xs text-ink-3">São sugestões: use o lápis para alterar, incluir ou remover quesitos neste pedido.</p>
           </div>
         </form>
-      </Drawer>
+      </CascaFormulario>
 
       {editandoQuesitos && modelo && (
         <QuesitosEditor

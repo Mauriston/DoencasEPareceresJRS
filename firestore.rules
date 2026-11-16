@@ -215,12 +215,13 @@ service cloud.firestore {
     // Coleção "pareceres": Pedidos de Parecer Médico (um doc por pedido, id
     // automático; liga ao militar por "militarId" = NIP só dígitos). Lê quem
     // está autenticado; só médicos criam e atualizam (marcar concluído).
-    // Quem não é Admin só pode alterar "status"/"concluidoEm"/"concluidoPor".
+    // Quem não é Admin só pode alterar "status"/"concluidoEm"/"concluidoPor" e gravar a "resposta" do
+    // especialista (PDF + transcrição da IA; Ficha › Pareceres — services/respostaParecer.ts).
     match /pareceres/{id} {
       allow read: if isSignedIn();
       allow create: if isMedico();
       allow update: if isAdmin() || (isMedico() &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'concluidoEm', 'concluidoPor']));
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'concluidoEm', 'concluidoPor', 'resposta']));
       allow delete: if isAdmin();
     }
 
