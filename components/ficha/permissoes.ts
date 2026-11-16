@@ -49,7 +49,8 @@ export const abasDaFicha = (perfil: string | undefined): Record<AbaFicha, Estado
     atestados: aba('atestados', s.inspecoes && canUseFeature('ficha.atestados', perfil)),
     pareceres: aba('pareceres', s.pareceres && canUseFeature('ficha.pareceres', perfil)),
     exames: aba('exames', s.inspecoes && canUseFeature('ficha.exames', perfil)),
-    guias: aba('guias', canUseFeature('ficha.guias', perfil)),
+    // Guias de exames geradas na abertura das IS (PDF no Storage: só a equipe lê — storage.rules).
+    guias: aba('guias', s.inspecoes && canUseFeature('ficha.guias', perfil)),
     emails: aba('emails', canUseFeature('ficha.emails', perfil)),
     mensagens: aba('mensagens', canUseFeature('ficha.mensagens', perfil)),
     outros: aba('outros', true, ABA_OUTROS_DISPONIVEL && canUseFeature('ficha.outros', perfil)),

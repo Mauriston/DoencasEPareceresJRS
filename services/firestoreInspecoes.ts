@@ -96,6 +96,8 @@ export interface InspecaoDoc {
   guiasEntreguesPor?: string;
   /** Último envio das guias por e-mail (inspecionado e/ou SEC-JRS): define "Enviar" × "Reenviar por e-mail". */
   emailGuiasEnviadoEm?: Timestamp | null;
+  /** Último envio das guias por e-mail AO INSPECIONADO (servidor/email/guiasIS.ts). */
+  emailGuiasInspecionadoEm?: Timestamp | null;
   /** E-mail de abertura ao inspecionado (servidor/email/aberturaIS.ts). */
   emailAberturaPara?: string;
   emailAberturaEnviadoEm?: Timestamp | null;

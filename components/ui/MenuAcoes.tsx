@@ -28,8 +28,11 @@ export const MenuAcoes: React.FC<{
   botao?: BotaoMenu;
   /** Tamanho do gatilho: md = 40 px (padrão) · sm = 32 px (linha de tabela/card). Toque: 44 px (app.css). */
   size?: 'md' | 'sm';
-}> = ({ rotulo, itens, botao: gatilho, size = 'md' }) => {
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  /** Classes extras do gatilho com texto (ex.: 'w-full sm:w-auto' numa barra de ações). */
+  classeGatilho?: string;
+}> = ({ rotulo, itens, botao: gatilho, size = 'md', classeGatilho = '' }) => {
+  // Perto do rodapé da tela (ex.: barra de ações fixa embaixo), o menu abre para CIMA do botão.
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const botao = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
 
@@ -64,7 +67,10 @@ export const MenuAcoes: React.FC<{
   const alternar = () => {
     if (pos) { setPos(null); return; }
     const r = botao.current!.getBoundingClientRect();
-    setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+    const altura = itens.length * 48 + 8;
+    setPos(r.bottom + 4 + altura > window.innerHeight && r.top - 4 - altura > 0
+      ? { bottom: window.innerHeight - r.top + 4, right: window.innerWidth - r.right }
+      : { top: r.bottom + 4, right: window.innerWidth - r.right });
   };
 
   return (
@@ -73,7 +79,7 @@ export const MenuAcoes: React.FC<{
         <button
           ref={botao} type="button" onClick={alternar} aria-haspopup="menu" aria-expanded={!!pos}
           aria-label={gatilho.badge ? `${rotulo} (${gatilho.badge} pendente${gatilho.badge > 1 ? 's' : ''})` : rotulo}
-          className={`relative inline-flex items-center justify-center whitespace-nowrap ${size === 'sm' ? 'h-8 px-3 gap-1.5' : 'h-10 px-4 gap-2'} rounded-lg text-sm font-bold border border-navy transition-colors ${gatilho.primario ? 'bg-navy text-white hover:bg-navy-hover' : 'bg-white text-navy hover:bg-thead'} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold`}
+          className={`relative inline-flex items-center justify-center whitespace-nowrap ${size === 'sm' ? 'h-8 px-3 gap-1.5' : 'h-10 px-4 gap-2'} rounded-lg text-sm font-bold border border-navy transition-colors ${gatilho.primario ? 'bg-navy text-white hover:bg-navy-hover' : 'bg-white text-navy hover:bg-thead'} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${classeGatilho}`}
         >
           <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{gatilho.icone}</span>
           {gatilho.texto}
@@ -93,7 +99,7 @@ export const MenuAcoes: React.FC<{
         </button>
       )}
       {pos && createPortal(
-        <div ref={menu} role="menu" aria-label={rotulo} style={{ position: 'fixed', top: pos.top, right: pos.right }} className="z-dialog min-w-[220px] bg-white border border-line rounded-lg shadow-xl py-1">
+        <div ref={menu} role="menu" aria-label={rotulo} style={{ position: 'fixed', top: pos.top, bottom: pos.bottom, right: pos.right }} className="z-dialog min-w-[220px] bg-white border border-line rounded-lg shadow-xl py-1">
           {itens.map(i => (
             <button
               key={i.rotulo} type="button" role="menuitem" aria-disabled={i.desabilitado || undefined}

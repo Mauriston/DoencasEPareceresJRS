@@ -7,6 +7,11 @@ import React, { useId } from 'react';
 import { Button } from '../ui/Button';
 import type { AcaoRodape } from '../ui/AcoesRodape';
 
+/** Item da barra que não é um botão simples (ex.: botão-menu "Enviar por email ▾"). */
+export interface ItemBarraFicha { id: string; node: React.ReactNode }
+export type AcaoBarraFicha = AcaoRodape | ItemBarraFicha;
+const ehNodo = (a: AcaoBarraFicha): a is ItemBarraFicha => 'node' in a;
+
 interface Props {
   titulo?: React.ReactNode;
   icone?: string;
@@ -15,19 +20,19 @@ interface Props {
   /** Linha de apoio sob o título. */
   subtitulo?: React.ReactNode;
   /** Botões da barra inferior (na ordem dada; a principal por último). Sem ações, a barra não aparece. */
-  acoes?: AcaoRodape[];
+  acoes?: AcaoBarraFicha[];
   /** Rótulo acessível quando não há título visível (ex.: aviso de "sem registros"). */
   rotulo?: string;
   children: React.ReactNode;
 }
 
 /** Barra inferior de ações da aba (também usada sozinha, sem casca). */
-export const BarraAcoesFicha: React.FC<{ acoes: AcaoRodape[] }> = ({ acoes }) => {
+export const BarraAcoesFicha: React.FC<{ acoes: AcaoBarraFicha[] }> = ({ acoes }) => {
   if (!acoes.length) return null;
   return (
     <div role="toolbar" aria-label="Ações da aba"
       className="md:sticky md:bottom-0 z-[1] border-t border-line bg-white/95 backdrop-blur-sm px-4 md:px-5 py-3 rounded-b-xl grid grid-cols-1 sm:flex sm:flex-wrap sm:justify-end gap-2 print:hidden">
-      {acoes.map(a => (
+      {acoes.map(a => ehNodo(a) ? <React.Fragment key={a.id}>{a.node}</React.Fragment> : (
         <Button key={a.id} variant={a.variante ?? 'primary'} icon={a.icone} onClick={a.onClick} disabled={a.disabled} loading={a.loading}>
           {a.rotulo}
         </Button>

@@ -424,6 +424,9 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   await p.getByRole('complementary', { name: /Histórico de Perícias Menores/ }).getByRole('button', { name: /Perícia menor registrada/ }).first().click();
   assert.equal(await p.getByRole('dialog').count(), 0);
   assert.match(p.url(), new RegExp(`#/inspecionados/${INSPECIONADO.nip}\\?.*aba=pm`));
+  // Guias: sem guias geradas, o painel principal avisa que não há registros.
+  await guias.getByRole('tab', { name: 'Guias', exact: true }).click();
+  await p.getByText('Nenhum registro em Guias').waitFor();
   // Registro de eventos é só do Admin.
   assert.equal(await p.getByText('Registro de eventos').count(), 0);
   await p.context().close();
