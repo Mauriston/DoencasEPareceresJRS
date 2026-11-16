@@ -25,6 +25,9 @@
 //   (components/ficha/emails/PainelEmail.tsx; dados em useEmailsDaFicha). Sem barra de ações.
 //   Transcrições: IS a gravar (Agendada/Reagendada) e entrevistas gravadas; a gravação e a revisão acontecem no
 //   painel principal (components/ficha/transcricoes/PainelTranscricoes.tsx).
+//   Exames / Atestados e Laudos: painel do PDF com a transcrição copiável e a barra Zimbra SEC-JRS · Imprimir; com
+//   ?criar=<aba>&is=<isId> (botão "Enviar PDF" da aba IS) e IS não finalizada, o estado "Criar novo" com o campo de
+//   upload (components/ficha/exames/; regras em utils/examesFicha.ts). Trocar de aba ou de registro limpa o "criar".
 //   Ao abrir a página ou trocar de aba, o painel principal mostra o registro MAIS RECENTE, ou o aviso de que
 //   não há registros para o inspecionado. Aba e registro ficam na URL (?aba=…&reg=…; ?is= / ?sel= / ?guia=
 //   antigos continuam valendo).
@@ -56,6 +59,9 @@ import { CadastroTopSheet, type DadoCadastro } from './CadastroTopSheet';
 import { CascaPainelFicha } from './CascaPainelFicha';
 import { PainelGuias } from './guias/PainelGuias';
 import { PainelTranscricoes } from './transcricoes/PainelTranscricoes';
+import { PainelCriarDocumentos } from './exames/PainelCriarDocumentos';
+import { PainelDocumentoIS, tituloDoDocumento } from './exames/PainelDocumentoIS';
+import { examesMinimosDaIS, isParaCriar } from '../../utils/examesFicha';
 import { ApoioAfastamentos, PainelAfastamentos } from './afastamentos/PainelAfastamentos';
 import { PainelEmail } from './emails/PainelEmail';
 import { useEmailsDaFicha } from './emails/useEmailsDaFicha';
@@ -86,14 +92,13 @@ import { podeArrastarIS } from '../../utils/calendarioIS';
 import { rotuloSituacao } from '../../utils/entrevistas';
 import { observarPareceresDoMilitar, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
 import { observarEventosInspecionado, registrarEventoInspecionado, ROTULO_ACAO_INSPECIONADO, type EventoInspecionado } from '../../services/eventosInspecionado';
-import { urlDoExame } from '../../services/examesIS';
 import { emailDoInspecionado } from '../../services/emailResultadoIS';
 import { sincronizarAgendaIS } from '../../services/agendaGoogleIS';
 import { carregarCid, carregarCorposQuadros, carregarOms, type CorposQuadros, type OrganizacaoMilitar } from '../../utils/corposQuadros';
 import { indiceCidAbreviado } from '../../utils/periciaMenorLista';
 import { ROTULO_TIPO_PERICIA, contagemTermino, diaMes, partesCid, postoDoInspecionado, tipoDaPericia } from '../../utils/periciaMenorResumo';
 import { ABAS_FICHA, abaFichaInicial, afastamentosDaIS, registroSelecionado, type AbaFicha } from '../../utils/fichaInspecionado';
-import { classeDoExame, ROTULO_CLASSE, ROTULO_TIPO } from '../../utils/examesIS';
+import { classeDoExame } from '../../utils/examesIS';
 import { STATUS_IS, aguardaAgendamento, statusEfetivoIS, dataHoraBr, situacaoDoStatus } from '../../utils/inspecoes';
 import { getDriveEmbedUrl, isGoogleDriveUrl } from '../../utils/googleDrive';
 import { extrairNomeInspecionado, formatCelular, formatCpf, formatDataBr, formatNip, idadeEmAnos } from '../../utils/format';
@@ -157,7 +162,7 @@ const Dado: React.FC<{ rotulo: string; children?: React.ReactNode; largo?: boole
   </div>
 );
 
-const tituloExame = (e: ExameDaFicha) => e.itens.map(i => i.titulo || ROTULO_TIPO[i.tipo]).filter(Boolean).join(' · ') || e.nomeArquivo || 'PDF';
+const tituloExame = (e: ExameDaFicha) => tituloDoDocumento(e);
 const dataExame = (e: ExameDaFicha) => e.itens.find(i => i.data)?.data || isoDe(e.enviadoEm);
 const idExame = (e: ExameDaFicha) => `${e.isId}:${e.id}`;
 const dataIS = (i: InspecaoRecord) => (i.dataEntrevista || i.dataAbertura || '').slice(0, 10);
@@ -192,7 +197,6 @@ export const FichaInspecionado: React.FC = () => {
   const [verCadastro, setVerCadastro] = useState(false);
   const [verEventos, setVerEventos] = useState(false);
   const [pdf, setPdf] = useState<{ titulo: string; url: string } | null>(null);
-  const [abrindoExame, setAbrindoExame] = useState<string | null>(null);
   const [parecerPara, setParecerPara] = useState<{ is: InspecaoRecord; inicial?: ParecerRecord } | null>(null);
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
   const [excluindo, setExcluindo] = useState<InspecaoRecord | null>(null);
@@ -383,10 +387,10 @@ export const FichaInspecionado: React.FC = () => {
     id: a.id, rotulo: a.id === 'pm' && atestado ? 'Atestados' : DEF_ABA[a.id].rotulo,
     desabilitada: !a.habilitada, dica: a.habilitada ? undefined : 'Em breve',
   }));
-  const trocarAba = (id: AbaFicha) => { setAbrindoIS(null); setNovaPericia(false); definir({ aba: id, reg: null, is: null, sel: null, guia: null, gravar: null }); };
+  const trocarAba = (id: AbaFicha) => { setAbrindoIS(null); setNovaPericia(false); definir({ aba: id, reg: null, is: null, sel: null, guia: null, gravar: null, criar: null }); };
   const abrirRegistro = (id: string) => {
     setAbrindoIS(null); setNovaPericia(false);
-    definir({ reg: id, is: null, sel: null, gravar: null });
+    definir({ reg: id, is: null, sel: null, gravar: null, criar: null });
     // Empilhado (abaixo de xl), o painel principal fica acima do histórico: rola até ele.
     if (typeof window !== 'undefined' && !window.matchMedia('(min-width: 1280px)').matches) {
       requestAnimationFrame(() => principalRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -404,15 +408,21 @@ export const FichaInspecionado: React.FC = () => {
     inspecoes, pericias, hoje, cidAbrev, atestado, comIS: lerIS, comPericias: lerPericias,
   };
 
-  const abrirExame = async (e: ExameDaFicha) => {
-    setAbrindoExame(idExame(e));
-    try { setPdf({ titulo: `${tituloExame(e)} — IS ${e.is}`, url: await urlDoExame(e) }); }
-    catch { avisar('Não foi possível abrir o PDF.', 'error'); }
-    finally { setAbrindoExame(null); }
-  };
+  // Exames / Atestados e Laudos — "Criar novo": só com ?criar=<aba>&is=<IS não finalizada do inspecionado>.
+  const criarIS = isParaCriar<InspecaoRecord>({ aba, criar: params.get('criar'), is: params.get('is'), podeEnviar: canUseFeature('inspecoes.enviarExames', perfil) }, inspecoes);
+  const formCriar = criarIS && nav?.authUser && (aba === 'exames' || aba === 'atestados') && (
+    <PainelCriarDocumentos
+      key={`${aba}:${criarIS.id}`} aba={aba} is={criarIS} casca={isDesktop ? 'inline' : 'drawer'}
+      examesMinimos={aba === 'exames' ? examesMinimosDaIS(criarIS, militar) : []}
+      recebidos={exames.filter(e => e.isId === criarIS.id).flatMap(e => e.itens.map(i => i.exameMinimo || '')).filter(Boolean)}
+      usuario={{ uid: nav.authUser.uid, usuario: nav.authUser.usuario }}
+      onClose={() => definir({ criar: null, is: null, reg: null })}
+      onAbrir={id => definir({ criar: null, is: null, reg: id })}
+    />
+  );
 
   // "Abrir IS" (cabeçalho): vai para a aba Inspeções de Saúde e abre o formulário no painel principal.
-  const abrirIS = (modo: ModoAbrirIS) => { setNovaPericia(false); definir({ aba: 'is', reg: null, is: null, sel: null, guia: null, gravar: null }); setAbrindoIS(modo); };
+  const abrirIS = (modo: ModoAbrirIS) => { setNovaPericia(false); definir({ aba: 'is', reg: null, is: null, sel: null, guia: null, gravar: null, criar: null }); setAbrindoIS(modo); };
   const formAbrirIS = abrindoIS && (
     <AbrirISFicha
       modo={abrindoIS} nip={nip} casca={isDesktop ? 'inline' : 'drawer'} onAviso={avisar}
@@ -434,7 +444,7 @@ export const FichaInspecionado: React.FC = () => {
   const tirarDaFila = (isId: string) => setFilaAgendamento(f => f.filter(x => x.isId !== isId));
   // "+ Perícia Menor" (cabeçalho): vai para a aba Perícia Menor e abre o formulário no painel principal (no celular,
   // bottom sheet).
-  const novaPericiaAbrir = () => { setAbrindoIS(null); definir({ aba: 'pm', reg: null, is: null, sel: null, guia: null, gravar: null }); setNovaPericia(true); };
+  const novaPericiaAbrir = () => { setAbrindoIS(null); definir({ aba: 'pm', reg: null, is: null, sel: null, guia: null, gravar: null, criar: null }); setNovaPericia(true); };
   const formNovaPericia = novaPericia && podePericia && (
     <NovaPericiaMenorForm titulo={t.novo} militarInicial={nip} casca={isDesktop ? 'inline' : 'drawer'} onClose={() => setNovaPericia(false)}
       onRegistrado={n => { setNovaPericia(false); definir({ aba: 'pm', reg: null }); avisar(atestado ? `Atestado de ${n} registrado.` : `Perícia menor de ${n} registrada.`); }} />
@@ -449,31 +459,10 @@ export const FichaInspecionado: React.FC = () => {
   );
 
   const painelDocumento = (a: 'atestados' | 'exames', lista: ExameDaFicha[]) => {
+    if (criarIS && isDesktop) return formCriar;
     const e = lista.find(x => idExame(x) === atual?.id);
     if (!e) return semRegistro(a);
-    return (
-      <CascaPainelFicha
-        titulo={tituloExame(e)} icone={DEF_ABA[a].icone}
-        tituloExtra={<StatusTag tone="navyOutline" dot={false}>{ROTULO_CLASSE[classeDoExame(e)]}</StatusTag>}
-        subtitulo={[`IS ${e.is}`, dataExame(e) ? dataBR(dataExame(e)) : '', e.enviadoPor?.usuario ? `enviado por ${e.enviadoPor.usuario}` : ''].filter(Boolean).join(' · ')}
-        acoes={[{ id: 'pdf', rotulo: 'Abrir PDF', icone: 'picture_as_pdf', onClick: () => { void abrirExame(e); }, loading: abrindoExame === idExame(e) }]}
-      >
-        <div className="space-y-5">
-          {e.itens.map((it, i) => (
-            <section key={i} className="space-y-3">
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-                <Dado rotulo="Documento" largo>{it.titulo || ROTULO_TIPO[it.tipo]}</Dado>
-                <Dado rotulo="Data">{it.data ? dataBR(it.data) : ''}</Dado>
-                <Dado rotulo="Emissor">{it.emissor}</Dado>
-              </dl>
-              {it.texto && <p className="text-sm text-ink whitespace-pre-line rounded-lg border border-line bg-surface-2 p-3">{it.texto}</p>}
-            </section>
-          ))}
-          {e.itens.length === 0 && <p className="text-sm text-ink-3">Sem transcrição do documento.</p>}
-          {e.textoIncompleto && <p className="text-xs text-ink-3">A transcrição pode estar incompleta: confira no PDF.</p>}
-        </div>
-      </CascaPainelFicha>
-    );
+    return <PainelDocumentoIS key={idExame(e)} aba={a} exame={e} podeZimbra={canUseFeature('ficha.zimbraSecretaria', perfil)} onAviso={avisar} />;
   };
 
   const painelParecer = () => {
@@ -697,6 +686,7 @@ export const FichaInspecionado: React.FC = () => {
         />
       )}
       {abrindoIS && !isDesktop && formAbrirIS}
+      {criarIS && !isDesktop && formCriar}
       {posCriacao && (
         <PosCriacaoIS
           key={posCriacao.is.id}

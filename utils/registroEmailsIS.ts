@@ -29,6 +29,7 @@ export const ROTULO_TIPO_EMAIL_IS: Partial<Record<TipoEmail, string>> = {
   aberturaIS: 'Abertura da IS',
   guiasInspecionado: 'Guias dos exames ao inspecionado',
   guiasSecretaria: 'Guias dos exames à SEC-JRS',
+  documentoSecretaria: 'Exame/atestado à SEC-JRS (impressão)',
   resultadoBeneficios: 'Resultado (Benefícios)',
   faltasHNRe: 'Comunicação de falta (HNRe)',
   nac: 'Comunicação ao NAC',
