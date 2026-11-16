@@ -3,7 +3,8 @@
 // Gerado no servidor pelo Chromium (servidor/documentos/gerarPdf.ts, sem rede): a fonte Montserrat e a logo
 // do rodapé entram como data: URI ({{fonte_montserrat}}, {{logo_rodape}}). Mesmos placeholders do e-mail
 // ({{data_titulo}}, {{#agendamentos}}… — aqui {{nome}} é "POSTO NIP NOME"; no e-mail, só o nome —, {{#tem_concursos}}…, {{#concursos}}…); a página dos concursos só
-// existe quando há candidatos no dia.
+// existe quando há candidatos no dia e a das IS ({{#tem_is}}) só quando há IS. Sem IS nem candidatos, o e-mail
+// sai sem anexo (servidor/email/agendaIS.ts).
 export const TEMPLATE_ANEXO_AGENDA_IS = `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -19,7 +20,8 @@ section.page:last-of-type{break-after:auto}
 tr{break-inside:avoid}
 </style>
 </head>
-<body><section class="page" style="min-height:210mm;display:flex;flex-direction:column;padding:12mm 12mm 0 12mm;box-sizing:border-box;font-family:'Carlito','Calibri',Arial,sans-serif;color:#050F41;background:#ffffff">
+<body>{{#tem_is}}
+<section class="page" style="min-height:210mm;display:flex;flex-direction:column;padding:12mm 12mm 0 12mm;box-sizing:border-box;font-family:'Carlito','Calibri',Arial,sans-serif;color:#050F41;background:#ffffff">
 <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;border-collapse:collapse;margin:0 0 22px 0;border-bottom:3px solid #050F41">
 <tbody><tr>
 <td valign="middle" align="center" style="padding:0 0 20px 0;text-align:center;color:#050F41">
@@ -51,9 +53,6 @@ tr{break-inside:avoid}
 <td valign="top" style="padding:8px 0 8px 0;border-bottom:1px solid #e0e0e0;font-weight:700;white-space:nowrap">{{medico}}</td>
 </tr>
 {{/agendamentos}}
-{{^agendamentos}}
-<tr><td colspan="5" style="padding:12px 0;border-bottom:1px solid #e0e0e0;font-size:14px;color:#555555;font-style:italic">Não há Inspeções de Saúde agendadas para esta data.</td></tr>
-{{/agendamentos}}
 </tbody>
 </table>
 
@@ -71,6 +70,7 @@ tr{break-inside:avoid}
 </table>
 </div>
 </section>
+{{/tem_is}}
 {{#tem_concursos}}
 <section class="page" style="min-height:210mm;display:flex;flex-direction:column;padding:12mm 12mm 0 12mm;box-sizing:border-box;font-family:'Carlito','Calibri',Arial,sans-serif;color:#050F41;background:#ffffff">
 <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;border-collapse:collapse;margin:0 0 22px 0;border-bottom:3px solid #050F41">

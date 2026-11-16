@@ -93,13 +93,27 @@ describe('montarEmailAgenda', () => {
     expect(nomeSemPostoNip('SEM NIP')).toBe('SEM NIP');
   });
 
-  it('sem IS nem concursos: e-mail sai com o aviso, sem o bloco de concursos; anexo com uma página', () => {
+  it('sem IS nem concursos: aviso no corpo, sem tabelas nem bloco de concursos', () => {
     const r = montarEmailAgenda({ data: '2026-11-16', agendamentos: [], concursos: [] });
-    for (const h of [r.html, r.htmlAnexo]) {
-      expect(h).toContain('Não há Inspeções de Saúde agendadas para esta data.');
-      expect(h).not.toContain('INSPEÇÕES DE SAÚDE DE CONCURSOS');
-      expect(h).not.toMatch(placeholder);
-    }
+    expect(r.html).toContain('INF que não há Inspeções de Saúde agendadas para <strong>16/11/2026</strong>.</p>');
+    expect(r.html).not.toContain('INSPEÇÕES DE SAÚDE ·');
+    expect(r.html).not.toContain('>HORA</td>');
+    expect(r.html).not.toContain('conforme relação abaixo');
+    expect(r.html).not.toContain('INSPEÇÕES DE SAÚDE DE CONCURSOS');
+    expect(r.html).not.toMatch(placeholder);
+    expect(r.texto).toContain('INF que não há Inspeções de Saúde agendadas para 16/11/2026.');
+    expect(r.texto).not.toContain('INSPEÇÕES DE SAÚDE ·');
+  });
+
+  it('só concursos: aviso de que não há IS, sem a tabela das IS; anexo só com a página dos concursos', () => {
+    const r = montarEmailAgenda({ ...agenda, data: '2026-11-16', agendamentos: [] });
+    expect(r.html).toContain('INF que não há Inspeções de Saúde agendadas para <strong>16/11/2026</strong>. Seguem abaixo as Inspeções de Saúde de concursos agendadas para a data:');
+    expect(r.html).not.toContain('>HORA</td>');
+    expect(r.html).toContain('INSPEÇÕES DE SAÚDE DE CONCURSOS');
+    expect(r.html).toContain('DAYVID RUAN DA SILVA OLIVEIRA');
+    for (const h of [r.html, r.htmlAnexo]) expect(h).not.toMatch(placeholder);
     expect(r.htmlAnexo.match(/<section class="page"/g)).toHaveLength(1);
+    expect(r.htmlAnexo).not.toContain('>HORA</th>');
+    expect(r.texto).toContain('Seguem abaixo as Inspeções de Saúde de concursos');
   });
 });
