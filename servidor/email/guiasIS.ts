@@ -187,6 +187,8 @@ export const enviarGuiasIS = async (db: Firestore, bucket: BucketLeitura, b: Rec
       guiasEntregues: true, guiasEntreguesVia: 'email', guiasEntreguesEm: hojeRecife(), guiasEntreguesPor: String(quem.usuario || uid),
       ...(is.status === 'aberta' ? { status: 'realizando_exames' } : {}),
       emailGuiasEnviadoEm: FieldValue.serverTimestamp(),
+      // Marca própria do envio AO INSPECIONADO (Ficha › Guias: o item "Para o Inspecionado" fica com ✓ e desabilitado).
+      emailGuiasInspecionadoEm: FieldValue.serverTimestamp(),
     });
     await registrarEmailIS(db, isId, uid, { tipo: 'guiasInspecionado', assunto, para, cc });
     resultado.paraInspecionado = emailInspecionado;

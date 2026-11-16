@@ -12,6 +12,9 @@
 //       a BARRA DE AÇÕES da aba (CascaPainelFicha/BarraAcoesFicha);
 //     - PAINEL DE APOIO (direita): um card único com o HISTÓRICO da aba (menu secundário, com rolagem);
 //       tocar num item abre o registro no painel principal.
+//   Guias: uma linha por IS com guias de exames geradas (finalidade e IS; data de assinatura) — o painel
+//   principal mostra as páginas do PDF em carrossel e a barra Confirmar entrega · Enviar por email ▾ · Imprimir
+//   (components/ficha/guias/PainelGuias.tsx).
 //   Ao abrir a página ou trocar de aba, o painel principal mostra o registro MAIS RECENTE, ou o aviso de que
 //   não há registros para o inspecionado. Aba e registro ficam na URL (?aba=…&reg=…; ?is= / ?sel= / ?guia=
 //   antigos continuam valendo).
@@ -40,6 +43,7 @@ import { NovoParecerForm } from '../pareceres/NovoParecerForm';
 import { MilitarEdicao } from '../Militares';
 import { CadastroTopSheet, type DadoCadastro } from './CadastroTopSheet';
 import { CascaPainelFicha } from './CascaPainelFicha';
+import { PainelGuias } from './guias/PainelGuias';
 import { useExamesDasIS, type ExameDaFicha } from './useExamesDasIS';
 import { abasDaFicha, secoesDaFicha, podeAbrirFicha } from './permissoes';
 import { useNav } from '../../context/NavContext';
@@ -54,6 +58,7 @@ import { atualizarInspecao, observarInspecoesDoInspecionado, type InspecaoRecord
 import { observarPareceresDoMilitar, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
 import { observarEventosInspecionado, registrarEventoInspecionado, ROTULO_ACAO_INSPECIONADO, type EventoInspecionado } from '../../services/eventosInspecionado';
 import { urlDoExame } from '../../services/examesIS';
+import { emailDoInspecionado } from '../../services/emailResultadoIS';
 import { sincronizarAgendaIS } from '../../services/agendaGoogleIS';
 import { carregarCid, carregarCorposQuadros, carregarOms, type CorposQuadros, type OrganizacaoMilitar } from '../../utils/corposQuadros';
 import { indiceCidAbreviado } from '../../utils/periciaMenorLista';
@@ -96,14 +101,18 @@ const DEF_ABA: Record<AbaFicha, { rotulo: string; icone: string; historico: stri
 };
 
 /** Item do histórico (painel de apoio). */
-interface ItemHistorico { id: string; data: string; icone: string; titulo: string; detalhe: React.ReactNode; tag?: React.ReactNode }
+interface ItemHistorico {
+  id: string; data: string; icone: string; titulo: string; detalhe: React.ReactNode; tag?: React.ReactNode;
+  /** Sem a linha de data no topo (a data já vem no detalhe — ex.: Guias). */
+  semData?: boolean;
+}
 
 const LinhaHistorico: React.FC<{ item: ItemHistorico; atual: boolean; onAbrir: () => void }> = ({ item, atual, onAbrir }) => (
   <button type="button" onClick={onAbrir} aria-current={atual || undefined}
     className={`w-full text-left flex items-start gap-3 px-4 py-3 border-l-[3px] transition-colors ${atual ? 'border-gold bg-thead' : 'border-transparent hover:bg-thead'}`}>
     <span className="material-symbols-outlined text-[20px] text-navy shrink-0 mt-0.5" aria-hidden="true">{item.icone}</span>
     <span className="min-w-0 flex-1">
-      <span className="block text-xs text-ink-3 tabular-nums">{item.data ? dataBR(item.data) : '—'}</span>
+      {!item.semData && <span className="block text-xs text-ink-3 tabular-nums">{item.data ? dataBR(item.data) : '—'}</span>}
       <span className="block text-sm font-bold text-navy break-words">{item.titulo}</span>
       <span className="block text-xs text-ink-3 break-words">{item.detalhe}</span>
     </span>
@@ -209,6 +218,9 @@ export const FichaInspecionado: React.FC = () => {
   const atestadosIS = useMemo(() => exames.filter(e => classeDoExame(e) === 'atestado_relatorio'), [exames]);
   const examesIS = useMemo(() => exames.filter(e => classeDoExame(e) === 'laudo_exame'), [exames]);
   const [agora] = useState(() => Date.now());
+  /** IS cujas guias foram geradas (ainda com o registro `guiasExames`), da assinatura mais recente para a mais antiga. */
+  const isComGuias = useMemo(() => inspecoes.filter(i => !!i.guiasExames)
+    .sort((a, b) => (b.guiasExames?.geradoEm?.toMillis?.() ?? 0) - (a.guiasExames?.geradoEm?.toMillis?.() ?? 0)), [inspecoes]);
 
   const itensIS = useMemo<ItemHistorico[]>(() => isOrdenadas.map(i => {
     const st = STATUS_IS[statusEfetivoIS(i, hoje)];
@@ -244,6 +256,13 @@ export const FichaInspecionado: React.FC = () => {
       tag: <StatusTag tone={TOM_PARECER[st]}>{ROTULO_PARECER[st]}</StatusTag>,
     };
   }), [pareceresOrdenados, agora]);
+
+  const itensGuias: ItemHistorico[] = isComGuias.map(i => ({
+    id: i.id, data: isoDe(i.guiasExames?.geradoEm), icone: 'receipt_long', semData: true,
+    titulo: `${i.finalidade || 'IS'} · IS ${i.is}`,
+    detalhe: isoDe(i.guiasExames?.geradoEm) ? `Guias assinadas em ${dataBR(isoDe(i.guiasExames?.geradoEm))}` : 'Guias geradas',
+    tag: i.guiasEntregues ? <StatusTag tone="success">Entregues</StatusTag> : undefined,
+  }));
 
   if (!podeFicha) return <AccessDenied pagina="Ficha do inspecionado" />;
   if (militar === undefined) {
@@ -308,7 +327,7 @@ export const FichaInspecionado: React.FC = () => {
 
   const itensDaAba: Record<AbaFicha, ItemHistorico[]> = {
     is: itensIS, pm: itensPM, atestados: itensAtestados, pareceres: itensPareceres, exames: itensExames,
-    guias: [], emails: [], mensagens: [], outros: [], transcricoes: [],
+    guias: itensGuias, emails: [], mensagens: [], outros: [], transcricoes: [],
   };
   const historico = aba ? itensDaAba[aba] : [];
   const atual = registroSelecionado(historico, pedido);
@@ -428,6 +447,11 @@ export const FichaInspecionado: React.FC = () => {
     if (aba === 'atestados') return painelDocumento('atestados', atestadosIS);
     if (aba === 'exames') return painelDocumento('exames', examesIS);
     if (aba === 'pareceres') return painelParecer();
+    if (aba === 'guias') {
+      const isSel = isComGuias.find(i => i.id === atual?.id);
+      if (!isSel) return semRegistro('guias');
+      return <PainelGuias key={isSel.id} is={isSel} emailCadastrado={emailDoInspecionado(militar ?? undefined)} onAviso={avisar} />;
+    }
     return semRegistro(aba);
   })();
 

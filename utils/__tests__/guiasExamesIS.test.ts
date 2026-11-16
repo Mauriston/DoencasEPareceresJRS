@@ -2,6 +2,7 @@
 // (utils/guiasExamesIS.ts), e as regras dos exames de utils/guiasExames.ts.
 import { describe, expect, it } from 'vitest';
 import {
+  guiasEnviadasAoInspecionado,
   FINALIDADES_ANEXO_O, casarFinalidadeAnexoO, entregaEditavel, erroDataNascimento, erroEscolhaEnvioGuias, extrairUsuariosSecretaria,
   grupoPodeTerExames, mensagemEnvioGuias, patchEntregaGuias, prazoAberturaIS, precisaIdentificarFinalidade, primeiroNome,
   rotuloEmailGuias, situacaoGuias, textoEntregaGuias,
@@ -137,5 +138,14 @@ describe('regras temporárias (contrato de utils/guiasExames.ts)', () => {
     expect(finalidadeTemExamesMinimos('Controle trienal')).toBe(true);
     expect(finalidadeTemExamesMinimos('IS inopinada de avaliação toxicológica preventiva direcionada')).toBe(false);
     expect(finalidadeTemExamesMinimos('Término de Incapacidade')).toBe(false);
+  });
+});
+
+describe('guias enviadas ao inspecionado', () => {
+  it('pela marca do servidor ou pela entrega via e-mail', () => {
+    expect(guiasEnviadasAoInspecionado({ emailGuiasInspecionadoEm: { seconds: 1 } })).toBe(true);
+    expect(guiasEnviadasAoInspecionado({ guiasEntregues: true, guiasEntreguesVia: 'email' })).toBe(true);
+    expect(guiasEnviadasAoInspecionado({ guiasEntregues: true, guiasEntreguesVia: 'presencial' })).toBe(false);
+    expect(guiasEnviadasAoInspecionado({})).toBe(false);
   });
 });

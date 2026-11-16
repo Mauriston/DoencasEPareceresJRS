@@ -106,6 +106,10 @@ export const textoEntregaGuias = (e: EstadoEntregaGuias): string => {
 export const entregaEditavel = (e: EstadoEntregaGuias & { situacao?: string }): boolean =>
   e.situacao !== 'finalizada' && !(e.guiasEntregues && e.guiasEntreguesVia === 'email');
 
+/** As guias já foram enviadas por e-mail ao inspecionado (marca do servidor; IS antigas: a entrega registrada via e-mail). */
+export const guiasEnviadasAoInspecionado = (is: { emailGuiasInspecionadoEm?: unknown; guiasEntregues?: boolean; guiasEntreguesVia?: string }): boolean =>
+  !!is.emailGuiasInspecionadoEm || (!!is.guiasEntregues && is.guiasEntreguesVia === 'email');
+
 /** "Enviar por e-mail" ou "Reenviar por e-mail" (já houve envio das guias). */
 export const rotuloEmailGuias = (jaEnviado: boolean): string => (jaEnviado ? 'Reenviar por e-mail' : 'Enviar por e-mail');
 

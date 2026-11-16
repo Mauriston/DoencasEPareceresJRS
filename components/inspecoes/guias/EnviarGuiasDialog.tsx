@@ -4,6 +4,7 @@
 // detalhe. Caixas "Zimbra para o inspecionado" (sem e-mail no cadastro, pede o e-mail, salvo no cadastro pelo
 // servidor) e "Zimbra para a SEC-JRS" (abre as caixas dos user_secretaria, rótulo = usuário, nunca o e-mail).
 // Só Admin e Secretaria (inspecoes.enviarEmails).
+// `destino` (Ficha › Guias, botão "Enviar por email" ▾): já escolhe o destinatário e mostra só ele.
 import React, { useEffect, useState } from 'react';
 import { Dialog } from '../../ui/Dialog';
 import { Button } from '../../ui/Button';
@@ -19,6 +20,8 @@ interface Props {
   emailCadastrado: string;
   /** Começa perguntando "Enviar guias por e-mail?" (fluxo da abertura da IS). */
   perguntar?: boolean;
+  /** Destinatário já escolhido (o dialog mostra só ele): 'inspecionado' ou 'secretaria'. */
+  destino?: 'inspecionado' | 'secretaria';
   onClose: () => void;
   onEnviado: (msg: string) => void;
 }
@@ -31,10 +34,10 @@ const Caixa: React.FC<{ checked: boolean; onChange: () => void; children: React.
   </label>
 );
 
-export const EnviarGuiasDialog: React.FC<Props> = ({ inspecao, emailCadastrado, perguntar = false, onClose, onEnviado }) => {
+export const EnviarGuiasDialog: React.FC<Props> = ({ inspecao, emailCadastrado, perguntar = false, destino, onClose, onEnviado }) => {
   const [etapa, setEtapa] = useState<'pergunta' | 'escolha'>(perguntar ? 'pergunta' : 'escolha');
-  const [paraInspecionado, setParaInspecionado] = useState(false);
-  const [paraSecretaria, setParaSecretaria] = useState(false);
+  const [paraInspecionado, setParaInspecionado] = useState(destino === 'inspecionado');
+  const [paraSecretaria, setParaSecretaria] = useState(destino === 'secretaria');
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [email, setEmail] = useState('');
   const [secretaria, setSecretaria] = useState<UsuarioSecretaria[] | null>(null);
@@ -93,7 +96,7 @@ export const EnviarGuiasDialog: React.FC<Props> = ({ inspecao, emailCadastrado, 
 
   return (
     <Dialog
-      title={`Guias por e-mail — IS ${inspecao.is}`}
+      title={destino === 'inspecionado' ? `Guias ao inspecionado — IS ${inspecao.is}` : destino === 'secretaria' ? `Guias à SEC-JRS — IS ${inspecao.is}` : `Guias por e-mail — IS ${inspecao.is}`}
       icon="forward_to_inbox"
       size="md"
       onClose={() => { if (!enviando) onClose(); }}
@@ -108,9 +111,10 @@ export const EnviarGuiasDialog: React.FC<Props> = ({ inspecao, emailCadastrado, 
         <p className="text-sm text-ink break-words">{inspecao.inspecionado}</p>
         <fieldset className="space-y-1">
           <legend className="sr-only">Para quem enviar</legend>
-          <Caixa checked={paraInspecionado} onChange={() => { setParaInspecionado(v => !v); setErro(''); }} destaque>Zimbra para o inspecionado</Caixa>
+          {destino === 'secretaria' && <p className="px-3 text-sm font-semibold text-ink">Escolha os membros da SEC-JRS:</p>}
+          {!destino && <Caixa checked={paraInspecionado} onChange={() => { setParaInspecionado(v => !v); setErro(''); }} destaque>Zimbra para o inspecionado</Caixa>}
           {paraInspecionado && (
-            <div className="pl-11 pr-3 pb-2 animate-fade-in">
+            <div className={`${destino ? 'px-3' : 'pl-11 pr-3'} pb-2 animate-fade-in`}>
               {emailCadastrado
                 ? <p className="text-xs text-ink-3">Para: <strong className="text-ink break-all">{emailCadastrado}</strong> · a entrega das guias fica registrada.</p>
                 : (
@@ -120,9 +124,9 @@ export const EnviarGuiasDialog: React.FC<Props> = ({ inspecao, emailCadastrado, 
                 )}
             </div>
           )}
-          <Caixa checked={paraSecretaria} onChange={() => { setParaSecretaria(v => !v); setErro(''); }} destaque>Zimbra para a SEC-JRS</Caixa>
+          {!destino && <Caixa checked={paraSecretaria} onChange={() => { setParaSecretaria(v => !v); setErro(''); }} destaque>Zimbra para a SEC-JRS</Caixa>}
           {paraSecretaria && (
-            <div className="pl-8 animate-fade-in">
+            <div className={`${destino ? '' : 'pl-8'} animate-fade-in`}>
               {erroLista ? <p role="alert" className="px-3 py-2 text-sm font-semibold text-wine">{erroLista}</p>
                 : secretaria === null ? <p role="status" className="px-3 py-2 text-sm text-ink-3">Carregando a SEC-JRS…</p>
                   : secretaria.length === 0 ? <p className="px-3 py-2 text-sm text-ink-3">Nenhum membro da SEC-JRS com e-mail institucional.</p>
