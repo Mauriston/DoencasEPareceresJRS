@@ -85,8 +85,13 @@ interface Props {
   emails?: React.ReactNode;
   /** 'drawer' (padrão): barra lateral/bottom sheet. 'inline': painel principal da Ficha do inspecionado. */
   casca?: 'drawer' | 'inline';
-  /** Só em casca="inline": ações da página que entram na barra inferior antes das da IS (ex.: "Abrir IS"). */
+  /** Só em casca="inline": ações da página que entram na barra inferior antes das da IS (ex.: "Agendar IS", "Excluir"). */
   acoesExtras?: AcaoRodape[];
+  /**
+   * "Gravar entrevista": sem a prop, abre a gravação aqui mesmo; com uma função, ela substitui o fluxo (a Ficha leva à
+   * aba Transcrições); null esconde o botão.
+   */
+  onGravarEntrevista?: (() => void) | null;
 }
 
 /** Minuta MSG: com Nº do TIS e DS-1a, ou IS cancelada. */
@@ -156,14 +161,15 @@ const useCampoAuto = (remoto: string, salvar: (valor: string) => void) => {
 
 type EstadoGravacao = 'ocioso' | 'salvando' | 'salvo' | 'erro';
 
-export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes, onClose, onMinuta, onSolicitarParecer, onDuplicarParecer, onSituacaoMudou, onAviso, emails, casca = 'drawer', acoesExtras = [] }) => {
+export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes, onClose, onMinuta, onSolicitarParecer, onDuplicarParecer, onSituacaoMudou, onAviso, emails, casca = 'drawer', acoesExtras = [], onGravarEntrevista }) => {
   const nav = useNav();
   const efetivo = statusEfetivoIS(is);
   const info = STATUS_IS[efetivo];
   const estadoConclusao = comPadroes(is);
   // Conclusão: só com data de entrevista (até finalizar). Aberta sem data: só a Finalidade.
   const conclusaoEditavel = permissoes.editar && podeEditarConclusao(estadoConclusao);
-  const finalidadeEditavel = permissoes.editar && podeEditarFinalidade(estadoConclusao);
+  // Com as guias de exames já geradas para a finalidade, ela não muda mais (as guias seguem a finalidade).
+  const finalidadeEditavel = permissoes.editar && podeEditarFinalidade(estadoConclusao) && !is.guiasExames;
   const somenteLeitura = !conclusaoEditavel && !finalidadeEditavel;
 
   const [restricoesOpcoes, setRestricoesOpcoes] = useState<string[]>([]);
@@ -288,7 +294,8 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
     ...(permissoes.minuta && mostraMinutaMsg(is) ? [{ id: 'minuta', rotulo: 'Minuta MSG', icone: 'mail', variante: 'secondary' as const, onClick: onMinuta }] : []),
     ...(permissoes.parecer && fasesDeEntrevista(is) ? [{ id: 'parecer', rotulo: 'Parecer', icone: 'assignment_add', variante: 'secondary' as const, onClick: onSolicitarParecer }] : []),
     ...(podeEnviarExames ? [{ id: 'exames', rotulo: 'Exames', icone: 'upload_file', variante: 'secondary' as const, onClick: () => setEnviandoExames(true) }] : []),
-    ...(permissoes.entrevista && fasesDeEntrevista(is) ? [{ id: 'gravar', rotulo: 'Gravar entrevista', icone: 'mic', variante: 'primary' as const, onClick: () => setGravacao(pedidoDeGravacao()) }] : []),
+    ...(permissoes.entrevista && fasesDeEntrevista(is) && onGravarEntrevista !== null
+      ? [{ id: 'gravar', rotulo: 'Gravar entrevista', icone: 'mic', variante: 'primary' as const, onClick: onGravarEntrevista ?? (() => setGravacao(pedidoDeGravacao())) }] : []),
   ];
 
   const encaminhamento = encaminhamentoDoStatus(is.status);
@@ -333,9 +340,11 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
             <div className="overflow-hidden rounded-lg border border-line">
               <table className="w-full table-fixed border-collapse">
                 <tbody className="divide-y divide-line">
-                  <LinhaTabela rotulo="Inspecionado">
-                    {is.inspecionado ? <><span className="font-bold">{is.inspecionado}</span>{om ? ` · ${om}` : ''}</> : ''}
-                  </LinhaTabela>
+                  {casca !== 'inline' && (
+                    <LinhaTabela rotulo="Inspecionado">
+                      {is.inspecionado ? <><span className="font-bold">{is.inspecionado}</span>{om ? ` · ${om}` : ''}</> : ''}
+                    </LinhaTabela>
+                  )}
                   <LinhaTabela rotulo="Finalidade">{is.finalidade}</LinhaTabela>
                   <LinhaTabela rotulo="Abertura IS">{is.dataAbertura ? dataBr(is.dataAbertura) : ''}</LinhaTabela>
                   <LinhaTabela rotulo="Entrevista">{is.dataEntrevista ? dataBr(dataDeEntrevista(is.dataEntrevista)) : ''}</LinhaTabela>
@@ -376,9 +385,11 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
             {finalidadeEditavel && indicadorGravacao}
           </div>
           <dl className="grid grid-cols-3 gap-x-4 gap-y-3">
-            <Linha rotulo="Inspecionado" className="col-span-3">
-              {is.inspecionado ? <><span className="font-bold">{is.inspecionado}</span>{om ? ` · ${om}` : ''}</> : ''}
-            </Linha>
+            {casca !== 'inline' && (
+              <Linha rotulo="Inspecionado" className="col-span-3">
+                {is.inspecionado ? <><span className="font-bold">{is.inspecionado}</span>{om ? ` · ${om}` : ''}</> : ''}
+              </Linha>
+            )}
             {!finalidadeEditavel && <Linha rotulo="Finalidade" className="col-span-3">{is.finalidade}</Linha>}
           </dl>
           {finalidadeEditavel && (

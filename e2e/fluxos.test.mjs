@@ -427,6 +427,20 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   // Guias: sem guias geradas, o painel principal avisa que não há registros.
   await guias.getByRole('tab', { name: 'Guias', exact: true }).click();
   await p.getByText('Nenhum registro em Guias').waitFor();
+  // IS aberta sem data: "Agendar IS" na barra (e não "Abrir IS", pois já há IS em andamento); sem o campo Inspecionado.
+  await guias.getByRole('tab', { name: 'Inspeções de Saúde', exact: true }).click();
+  await p.getByRole('complementary', { name: /Histórico de Inspeções de Saúde/ }).getByRole('button', { name: new RegExp(`IS ${IS_E2E.numero}`) }).click();
+  const barra = p.getByRole('toolbar', { name: 'Ações da aba' });
+  await barra.getByRole('button', { name: 'Agendar IS' }).waitFor();
+  assert.equal(await barra.getByRole('button', { name: 'Abrir IS' }).count(), 0);
+  assert.equal(await barra.getByRole('button', { name: 'Excluir' }).count(), 0);
+  // "Abrir IS ▾" no cabeçalho: de outra aba, volta para Inspeções de Saúde e abre o formulário no painel principal.
+  await guias.getByRole('tab', { name: 'Exames', exact: true }).click();
+  await p.getByRole('button', { name: 'Abrir IS', exact: true }).click();
+  await p.getByRole('menuitem', { name: /Manualmente/ }).click();
+  await p.getByRole('heading', { name: 'Cadastrar IS' }).waitFor();
+  assert.equal(await guias.getByRole('tab', { name: 'Inspeções de Saúde', exact: true }).getAttribute('aria-selected'), 'true');
+  assert.equal(await p.getByRole('dialog').count(), 0);
   // Registro de eventos é só do Admin.
   assert.equal(await p.getByText('Registro de eventos').count(), 0);
   await p.context().close();

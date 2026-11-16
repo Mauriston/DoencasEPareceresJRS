@@ -9,7 +9,7 @@
 // primeiro nome, para o usuário confirmar) e grava no cadastro (militares/{id}). As guias são geradas depois
 // de criada a IS (components/inspecoes/guias/PosCriacaoIS).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Drawer } from '../ui/Drawer';
+import { CascaFormulario, type CascaForm } from '../ficha/CascaFormulario';
 import { Button } from '../ui/Button';
 import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
@@ -80,6 +80,8 @@ interface Props {
   onClose: () => void;
   /** `dados`: o que o formulário completou do cadastro (data de nascimento e sexo), para as guias de exames. */
   onCriada: (is: InspecaoRecord, dados: DadosInspecionadoIS) => void;
+  /** 'inline': no painel principal da Ficha do inspecionado (telas grandes); padrão: Drawer. */
+  casca?: CascaForm;
 }
 
 /** Sexo e data de nascimento do inspecionado no momento da abertura (cadastro + o que o formulário pediu). */
@@ -87,7 +89,7 @@ export interface DadosInspecionadoIS { sexo?: SexoInspecionado; dataNascimento?:
 
 type Erros = Record<string, string>;
 
-export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloqueios, inspecoes, usuario, podeCadastrarInspecionado, podeAgendar, inicial, onClose, onCriada }) => {
+export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloqueios, inspecoes, usuario, podeCadastrarInspecionado, podeAgendar, inicial, onClose, onCriada, casca = 'drawer' }) => {
   const [numero, setNumero] = useState('');
   const [dataAbertura, setDataAbertura] = useState(hojeISO());
   const [militar, setMilitar] = useState<MilitarRecord | null>(null);
@@ -227,7 +229,8 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
 
   return (
     <>
-      <Drawer
+      <CascaFormulario
+        casca={casca}
         title="Cadastrar IS"
         icon="event_available"
         onClose={() => { if (!salvando) onClose(); }}
@@ -320,7 +323,7 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
             {a => <textarea {...a} value={observacoes} onChange={e => setObservacoes(e.target.value)} className={`${a.className} min-h-[72px]`} />}
           </Field>
         </form>
-      </Drawer>
+      </CascaFormulario>
 
       {cadastrando && (
         <CadastroInspecionado
