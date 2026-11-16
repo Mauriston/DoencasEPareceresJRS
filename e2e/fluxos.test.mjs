@@ -445,7 +445,8 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   await guias.getByRole('tab', { name: 'Inspeções de Saúde', exact: true }).click();
   await p.getByRole('complementary', { name: /Histórico de Inspeções de Saúde/ }).getByRole('button', { name: new RegExp(`IS ${IS_E2E.numero}`) }).click();
   const barra = p.getByRole('toolbar', { name: 'Ações da aba' });
-  await barra.getByRole('button', { name: 'Agendar IS' }).waitFor();
+  await p.getByRole('heading', { name: `IS ${IS_E2E.numero}`, exact: true }).waitFor();
+  await barra.getByRole('button', { name: 'Agendar IS', exact: true }).waitFor();
   assert.equal(await barra.getByRole('button', { name: 'Abrir IS' }).count(), 0);
   assert.equal(await barra.getByRole('button', { name: 'Excluir' }).count(), 0);
   // Barra da IS na ficha: "Gerar Documento ▾" (IS não finalizada); "Enviar PDF ▾" só com data de entrevista;
