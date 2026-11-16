@@ -15,6 +15,9 @@
 //   Guias: uma linha por IS com guias de exames geradas (finalidade e IS; data de assinatura) — o painel
 //   principal mostra as páginas do PDF em carrossel e a barra Confirmar entrega · Enviar por email ▾ · Imprimir
 //   (components/ficha/guias/PainelGuias.tsx).
+//   Pareceres: o pedido e, se houver, a resposta (pareceres/PainelParecer.tsx). ?criar=pedido&is=<isId> abre o "Pedido de
+//   Parecer" (NovoParecerForm; PDF gerado e guardado pelo servidor) e ?criar=resposta&is=<isId>, a "Resposta de Parecer"
+//   (pareceres/RespostaParecerForm.tsx: PDF transcrito pela IA; o pedido passa a Concluído). Trocar de aba/registro limpa o "criar".
 //   Cabeçalho: "Abrir IS ▾" (botão primário; Manualmente · Por print do SINAIS) leva à aba Inspeções de Saúde e abre o
 //   formulário no painel principal (AbrirISFicha; no celular, bottom sheet), com o pós-criação da página Inspeções.
 //   Inspeções de Saúde: sem o campo Inspecionado (o nome está no topo); barra com "Excluir" (Admin, à esquerda),
