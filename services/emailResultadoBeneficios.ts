@@ -4,7 +4,6 @@
 // confirmado pelo usuário no dialog). `email` só quando o cadastro não tem e-mail (o servidor grava no cadastro).
 import { ApiError, chamarServidor } from './apiClient';
 import { registrarUsoAcao } from './usoDiario';
-import { notificarAcao } from './notificacoesPush';
 import type { ModeloResultadoBeneficios } from '../utils/resultadoBeneficiosIS';
 
 export const enviarResultadoBeneficiosPorEmail = async (
@@ -15,7 +14,6 @@ export const enviarResultadoBeneficiosPorEmail = async (
       isId, modelo, ...(email ? { email: email.trim() } : {}),
     });
     registrarUsoAcao('email_enviar');
-    notificarAcao('is.emailResultado', isId);
     return { para: r.para, emailSalvo: !!r.emailSalvo };
   } catch (e) {
     if (e instanceof ApiError && e.status === 503) {

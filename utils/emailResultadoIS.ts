@@ -4,11 +4,14 @@
 // Verificações e Términos, com laudo, ainda sem o e-mail (envio único). O grupo Benefícios tem e-mail próprio
 // ("RESULTADO DE IS FIM …", três modelos — utils/resultadoBeneficiosIS.ts) e não entra aqui.
 
+import { emailDispensado, type EmailsDispensados } from './emailsDispensados';
+
 const semAcento = (t: string) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 export const GRUPOS_EMAIL_RESULTADO = ['verificacoes e terminos'];
 
 export interface ISParaResultado {
+  emailsDispensados?: EmailsDispensados | null;
   situacao?: string;
   status?: string;
   grupoFinalidade?: string;
@@ -23,4 +26,4 @@ export const elegivelResultado = (is: ISParaResultado): boolean =>
 
 /** Pendente no menu "Enviar e-mail": elegível, com laudo e sem o e-mail enviado. */
 export const resultadoPendente = (is: ISParaResultado): boolean =>
-  elegivelResultado(is) && !!String(is.laudo || '').trim() && !is.emailResultadoPara;
+  elegivelResultado(is) && !!String(is.laudo || '').trim() && !is.emailResultadoPara && !emailDispensado('resultado', is);

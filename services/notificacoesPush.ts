@@ -174,9 +174,9 @@ export const notificarAcao = (acao: AcaoNotificavelId, alvoId?: string): void =>
 // ---------------------------------------------------------------------------
 // Histórico (menu do avatar): o servidor grava cada notificação também em
 //   usuarios/{uid}/notificacoes/{id}  { titulo, corpo, rota, lida, em }
-// O badge do avatar conta as não lidas. Tocar no item do menu ou no push
-// (o link traz ?notif=id) marca como lida; "Marcar todas como lidas" apaga
-// todas do histórico.
+// O badge do avatar conta as não lidas. Abrir o modal "Notificações" apaga do
+// histórico as exibidas (contam como lidas); tocar no push (o link traz
+// ?notif=id) marca aquela como lida.
 
 export interface NotificacaoRecord {
   id: string;
@@ -213,8 +213,8 @@ export const observarNotificacoes = (
 export const marcarNotificacaoLida = (uid: string, id: string) =>
   updateDoc(doc(db, 'usuarios', uid, 'notificacoes', id), { lida: true }).catch(e => console.error('Falha ao marcar notificação como lida:', e));
 
-/** "Marcar todas como lidas": as notificações saem de vez do histórico do usuário. */
-export const apagarTodasNotificacoes = async (uid: string, ids: string[]): Promise<void> => {
+/** Notificações vistas (exibidas no modal "Notificações"): saem de vez do histórico do usuário. */
+export const apagarNotificacoes = async (uid: string, ids: string[]): Promise<void> => {
   for (let i = 0; i < ids.length; i += 400) {
     const batch = writeBatch(db);
     ids.slice(i, i + 400).forEach(id => batch.delete(doc(db, 'usuarios', uid, 'notificacoes', id)));

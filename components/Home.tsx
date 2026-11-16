@@ -7,7 +7,8 @@
 //  • faixa "Hoje" com até 4 contadores por perfil (ContadoresHoje): cada um declara a permissão e abre a lista já
 //    filtrada; 0 continua visível; vinho só com atraso > 0;
 //  • grade 8 + 4 (GradePainel): na principal, a agenda do dia (hora primeiro; cada linha abre a IS clicada — H4) e
-//    "Pendências · por atraso" (pareceres, IS e perícias numa lista só — no lugar de "Precisa de atenção", H1), além
+//    "Pendências · por atraso" (pareceres, IS atrasadas e e-mails pendentes por tipo — estes só para quem envia
+//    e-mails; abrem o modal do tipo em Inspeções; as perícias menores saíram), além
 //    dos cards de perfil (documentos gerados da Secretaria, faltas do HNRe, últimos atestados do Médicos Geral);
 //    no apoio, o calendário do mês com legenda (H5), Próximas férias, Próximos serviços e Avisos.
 //  • No celular (< md): contadores (com seta: abrem outra página) → Pendências → Avisos → UM card com o calendário
@@ -40,6 +41,8 @@ import { AgendaDoDia } from './home/AgendaDoDia';
 import { CalendarioMes } from './home/CalendarioMes';
 import { Pendencias, type Pendencia } from './home/Pendencias';
 import { CardFaltasHNRe } from './inspecoes/CardFaltasHNRe';
+import { observarMilitares, type MilitarRecord } from '../services/firestoreMilitares';
+import { pendenciasEmailIS, TIPOS_EMAIL_PENDENTE } from '../utils/pendenciasEmailIS';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
 import { aguardaAgendamento, hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, diasEmAberto, prazoAtrasoDias, statusEfetivoIS, nomeMes } from '../utils/inspecoes';
 import { finalidadeSemGrupo, nomeCurtoInspecionado } from '../utils/calendarioIS';
@@ -155,6 +158,14 @@ export const Home: React.FC = () => {
     .sort((a, b) => a.dataEntrevista.localeCompare(b.dataEntrevista) || a.is - b.is), [inspecoes, hoje]);
   const semAgendamento = useMemo(() => inspecoes.filter(i => aguardaAgendamento(i.status) && !i.dataEntrevista), [inspecoes]);
   const isAtrasadas = useMemo(() => inspecoes.filter(i => statusEfetivoIS(i, hoje) === 'atrasada'), [inspecoes, hoje]);
+  // E-mails pendentes da IS (Admin e Secretaria — inspecoes.enviarEmails): as listas do menu "Enviar e-mails".
+  const podeEmails = podeInspecoes && canUseFeature('inspecoes.enviarEmails', perfil);
+  const [militares, setMilitares] = useState<MilitarRecord[]>([]);
+  useEffect(() => (podeEmails ? observarMilitares(setMilitares, () => { /* silencioso */ }) : undefined), [podeEmails]);
+  const pendenciasEmail = useMemo(() => {
+    const omPorId = new Map<string, string>(militares.map(m => [m.id, m.om]));
+    return pendenciasEmailIS(podeEmails ? inspecoes : [], id => omPorId.get(id), hoje);
+  }, [podeEmails, inspecoes, militares, hoje]);
 
   // Perícias menores / atestados.
   const [pericias, setPericias] = useState<PericiaMenorRecord[]>([]);
@@ -297,25 +308,22 @@ export const Home: React.FC = () => {
       tag: { rotulo: 'Atrasadas', tom: 'danger' }, to: '/concursos/atrasadas', ordem: 999,
     });
   }
-  if (podePericiaMenor && !ehMedicoGeral) {
-    vigentes.forEach((p, idx) => {
-      const terminaHoje = p.dataTermino === hoje;
-      const nome = extrairNomeInspecionado(p.inspecionado);
+  // E-mails pendentes (só quem envia e-mails da IS): um item por tipo com pendências; abre Inspeções de Saúde já
+  // com o modal daquele tipo (?email=tipo), como o menu "Enviar e-mails".
+  if (podeEmails) {
+    TIPOS_EMAIL_PENDENTE.forEach(t => {
+      const n = pendenciasEmail[t.tipo].length;
+      if (!n) return;
       pendencias.push({
-        id: `pm:${p.id}`, icone: 'personal_injury', titulo: nome,
-        detalhe: `${termosPm.pagina === 'Atestados' ? 'Atestado' : 'Perícia menor'} · ${p.cid}`,
-        prazo: { texto: terminaHoje ? 'termina hoje' : `até ${dataBR(p.dataTermino)}`, pct: terminaHoje ? 100 : 50, tom: terminaHoje ? 'hoje' : 'prazo' },
-        // G1/H3: "vigente" não é exceção — tag neutra; ouro só quando termina hoje.
-        tag: terminaHoje ? { rotulo: 'Termina hoje', tom: 'attention' } : { rotulo: 'Vigente', tom: 'neutral' },
-        to: '/pericia-menor?situacao=vigentes', pdf: p.pdfUrl || undefined, tituloPdf: `Atestado — ${nome}`,
-        // Vigentes: as que terminam primeiro no topo (a lista já vem ordenada pela data de término).
-        ordem: terminaHoje ? 500 : -1 - idx,
+        id: `email:${t.tipo}`, icone: t.icone, titulo: `${n} ${n === 1 ? t.singular : t.plural}`,
+        detalhe: `E-mails · ${t.rotulo}`, tag: { rotulo: 'Enviar', tom: 'attention' },
+        to: `/inspecoes?email=${t.tipo}`, ordem: 800 + n / 1000,
       });
     });
   }
   pendencias.sort((a, b) => b.ordem - a.ordem);
-  const fontesPendencias = [podePareceres && 'Pareceres', podeInspecoes && 'IS', podePericiaMenor && !ehMedicoGeral && (ehAtestado ? 'Atestados' : 'Perícias menores')].filter(Boolean).join(' · ');
-  const mostraPendencias = podePareceres || podeInspecoes || (podePericiaMenor && !ehMedicoGeral) || pendencias.length > 0;
+  const fontesPendencias = [podePareceres && 'Pareceres', podeInspecoes && 'IS', podeEmails && 'E-mails'].filter(Boolean).join(' · ');
+  const mostraPendencias = podePareceres || podeInspecoes || pendencias.length > 0;
 
   // ---- Ações (4d): a ordem é a prioridade; a principal é a 1ª permitida. ----
   // "+ Perícia Menor/Atestado" só fica na Início para o Médicos Geral (os demais abrem pela própria página);

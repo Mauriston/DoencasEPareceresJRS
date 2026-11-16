@@ -6,6 +6,7 @@
 //  - demais grupos           → 'agendamentoGeral' (vocativo e uma frase com a data e a hora).
 // Só com data de entrevista, e um envio por data/hora agendada; quando a IS já teve e-mail para outra data/hora
 // (ou o status é "reagendada"), a variante é 'reagendamento' (mesmo modelo, texto "foi reagendada para…").
+import { emailDispensado, type EmailsDispensados } from './emailsDispensados';
 import type { TipoEmail } from '../config/emails';
 import { inspecionadoSemNip } from './emailGuiasIS';
 
@@ -41,6 +42,7 @@ export const vocativoPorSexo = (sexo: string | undefined | null): string => {
 };
 
 export interface ISParaAgendamento {
+  emailsDispensados?: EmailsDispensados | null;
   grupoFinalidade?: string;
   dataEntrevista?: string;
   status?: string;
@@ -73,4 +75,4 @@ export const dataHoraDoAgendamento = (dataEntrevista: string): { data: string; h
  */
 export const agendamentoPendente = (is: ISParaAgendamento, hoje: string): boolean =>
   ehElegivelAgendamento(is) && !agendamentoJaEnviado(is) && (is.status === 'agendada' || is.status === 'reagendada')
-  && String(is.dataEntrevista || '').slice(0, 10) >= hoje;
+  && String(is.dataEntrevista || '').slice(0, 10) >= hoje && !emailDispensado('agendamento', is);

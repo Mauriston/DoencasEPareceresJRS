@@ -89,7 +89,7 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'inspecoes.editar', label: 'Editar IS: status, laudo, restrições, TIS, DS-1a e observações', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.gerarMinuta', label: 'Gerar Minuta de Mensagem (cancelamento de IS atrasada)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.enviarExames', label: 'Enviar exames em PDF da IS (a IA identifica o exame e transcreve o laudo; não vale para IS finalizada)', group: 'Inspeções de Saúde' },
-  { id: 'inspecoes.enviarEmails', label: 'Enviar e-mails da IS: agendamento, resultado, faltas do HNRe e NAC (menu "Enviar e-mail", detalhe da IS e card de faltas da Início; o e-mail "IS agendadas" do dia é só do Admin)', group: 'Inspeções de Saúde' },
+  { id: 'inspecoes.enviarEmails', label: 'Enviar e-mails da IS: agendamento, resultado, faltas do HNRe e NAC (menu "Enviar e-mails", detalhe da IS, card de faltas e itens de e-mail das Pendências da Início; o "Limpar" dos modais é só do Admin)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.cancelar', label: 'Cancelar IS (menu ⋮ da IS)', group: 'Inspeções de Saúde' },
   { id: 'inspecoes.bloquearAgenda', label: 'Bloquear horários e turnos da agenda (perfis médicos só bloqueiam os próprios turnos; a configuração de turnos dos peritos é só do Admin)', group: 'Inspeções de Saúde' },
   { id: 'militares.cadastrar', label: 'Cadastrar novo inspecionado (Militares e Dep/Pens.); editar, apagar e inativar continuam só com o Admin', group: 'Inspecionados' },

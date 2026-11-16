@@ -2,9 +2,11 @@
 // Escolha das faltas a comunicar (IS com status "faltou" de inspecionados do HNRe ainda sem e-mail): lista de seleção
 // múltipla, todas marcadas de início, com "Marcar todas / Desmarcar todas". Envia à Divisão de Pessoal do HNRe o e-mail
 // "COMUNICAÇÃO DE FALTAS A INSPEÇÕES DE SAÚDE" (servidor/email/faltasHNRe.ts). Usado pelo botão de Inspeções e pelo card da Início.
+// Admin: "Limpar" tira as faltas marcadas da lista de pendências, sem enviar o e-mail (LimparPendencias).
 import React, { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
+import { LimparPendencias } from './LimparPendencias';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import { enviarEmailFaltasHNRe } from '../../services/emailFaltasHNRe';
 import { dataBr, dataDeEntrevista } from '../../utils/inspecoes';
@@ -14,9 +16,11 @@ interface Props {
   pendentes: InspecaoRecord[];
   onClose: () => void;
   onEnviado: (msg: string, tom?: 'success' | 'error') => void;
+  /** Só Admin: "Limpar" tira as IS marcadas da lista de pendências, sem enviar o e-mail. */
+  onLimpar?: (lista: InspecaoRecord[]) => Promise<void>;
 }
 
-export const EmailFaltasDialog: React.FC<Props> = ({ pendentes, onClose, onEnviado }) => {
+export const EmailFaltasDialog: React.FC<Props> = ({ pendentes, onClose, onEnviado, onLimpar }) => {
   const [marcadas, setMarcadas] = useState<Set<string>>(() => new Set(pendentes.map(i => i.id)));
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -46,6 +50,9 @@ export const EmailFaltasDialog: React.FC<Props> = ({ pendentes, onClose, onEnvia
       onClose={() => { if (!enviando) onClose(); }}
       footer={(
         <>
+          {onLimpar && pendentes.length > 0 && (
+            <LimparPendencias quantidade={escolhidas.length} disabled={enviando} onErro={setErro} onLimpar={() => { setErro(''); return onLimpar(escolhidas); }} />
+          )}
           <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
           <Button icon="send" loading={enviando} disabled={!escolhidas.length} onClick={enviar}>
             {escolhidas.length ? `Enviar (${escolhidas.length})` : 'Enviar'}

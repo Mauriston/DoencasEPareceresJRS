@@ -2,9 +2,11 @@
 // Escolha das IS a enviar ao NAC (finalizadas de Verificações e Términos ainda sem e-mail): lista de seleção múltipla,
 // todas marcadas de início, com "Marcar todas / Desmarcar todas" e o período (laudo mais antigo → mais recente)
 // das marcadas. Envia "INSPEÇÕES DE SAÚDE VDF E TÉRMINOS" com o anexo em PDF (servidor/email/nac.ts).
+// Admin: "Limpar" tira as IS marcadas da lista de pendências, sem enviar o e-mail (LimparPendencias).
 import React, { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
+import { LimparPendencias } from './LimparPendencias';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import { enviarEmailNac } from '../../services/emailNac';
 import { dataBrNac, periodoNac } from '../../utils/emailNac';
@@ -14,9 +16,11 @@ interface Props {
   pendentes: InspecaoRecord[];
   onClose: () => void;
   onEnviado: (msg: string, tom?: 'success' | 'error') => void;
+  /** Só Admin: "Limpar" tira as IS marcadas da lista de pendências, sem enviar o e-mail. */
+  onLimpar?: (lista: InspecaoRecord[]) => Promise<void>;
 }
 
-export const EmailNacDialog: React.FC<Props> = ({ pendentes, onClose, onEnviado }) => {
+export const EmailNacDialog: React.FC<Props> = ({ pendentes, onClose, onEnviado, onLimpar }) => {
   const [marcadas, setMarcadas] = useState<Set<string>>(() => new Set(pendentes.map(i => i.id)));
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -47,6 +51,9 @@ export const EmailNacDialog: React.FC<Props> = ({ pendentes, onClose, onEnviado 
       onClose={() => { if (!enviando) onClose(); }}
       footer={(
         <>
+          {onLimpar && pendentes.length > 0 && (
+            <LimparPendencias quantidade={escolhidas.length} disabled={enviando} onErro={setErro} onLimpar={() => { setErro(''); return onLimpar(escolhidas); }} />
+          )}
           <Button variant="secondary" onClick={onClose} disabled={enviando}>Cancelar</Button>
           <Button icon="send" loading={enviando} disabled={!escolhidas.length} onClick={enviar}>
             {escolhidas.length ? `Enviar (${escolhidas.length})` : 'Enviar'}

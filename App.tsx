@@ -35,7 +35,7 @@ import { getCasosResultado } from './services/firestoreCasos';
 import { observarPericiasMenores, statusPericia } from './services/firestorePericiasMenores';
 import { definirAtorAuditoria } from './services/auditoriaIS';
 import {
-  desvincularAparelho, observarNotificacoes, marcarNotificacaoLida, apagarTodasNotificacoes,
+  desvincularAparelho, observarNotificacoes, marcarNotificacaoLida, apagarNotificacoes,
   consumirNotifDaUrl, ouvirCliquesDoPush, type NotificacaoRecord,
 } from './services/notificacoesPush';
 import { useIsDesktop } from './hooks/useIsDesktop';
@@ -525,9 +525,8 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
         <NotificacoesPainel
           lista={notificacoes}
           onClose={() => setNotificacoesAbertas(false)}
-          onMarcarTodas={() => { void apagarTodasNotificacoes(authUser.uid, notificacoes.map(n => n.id)).catch(e => console.error('Falha ao apagar notificações:', e)); }}
+          onVistas={ids => { void apagarNotificacoes(authUser.uid, ids).catch(e => console.error('Falha ao apagar notificações:', e)); }}
           onAbrir={n => {
-            if (!n.lida) void marcarNotificacaoLida(authUser.uid, n.id);
             setNotificacoesAbertas(false);
             if (n.rota && n.rota !== '/') navigate(n.rota);
           }}

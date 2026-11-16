@@ -395,7 +395,7 @@ E-mails gerados pelo servidor a partir de templates do Claude Design (`servidor/
 - Todo envio relativo a uma IS (resultado, faltas, NAC, guias, abertura) grava o histórico em `inspecoes/{id}/emails` e conta em `uso_diario.emailsPorTipo` (`registroEmailsIS.ts`); agenda e inaptos só contam;
 - **Testes de e-mail** — `/api/email/teste` (`servidor/email/teste.ts`), um por tipo (os 12 de `TIPOS_EMAIL`, listados em Administração → E-mails automáticos, com destinatários fixos editáveis e "Enviar teste"); as imagens da página Sobre saem dos mesmos montadores (`scripts/sobre/gerar-emails.ts`, cards em `config/sobre.ts` → `EMAILS_SOBRE`);
 - **Inaptos de concurso à EAMPE** — `/api/email/inaptos-concurso` (`templateInaptosConcurso.ts`);
-- **IS agendadas do dia seguinte** — `/api/agendador/agenda-is` (Cloud Scheduler) e `/api/email/agenda-is` (Admin); anexo em PDF gerado pelo Chromium a partir de `templateAnexoAgendaIS.ts` (fonte e logo embutidas em `recursosAnexo.ts`, porque o gerador não acessa a rede) e guardado no Storage.
+- **IS agendadas do dia seguinte** — `/api/agendador/agenda-is` (Cloud Scheduler) e `/api/email/agenda-is` (Admin, sem botão no app desde a retirada do item do menu); anexo em PDF gerado pelo Chromium a partir de `templateAnexoAgendaIS.ts` (fonte e logo embutidas em `recursosAnexo.ts`, porque o gerador não acessa a rede) e guardado no Storage.
 
 ### 8.4 Segurança
 

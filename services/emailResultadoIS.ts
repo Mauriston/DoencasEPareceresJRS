@@ -4,7 +4,6 @@
 // reserva: sem a conta autorizada no servidor (503), o app explica que o Admin precisa autorizá-la.
 import { ApiError, chamarServidor } from './apiClient';
 import { registrarUsoAcao } from './usoDiario';
-import { notificarAcao } from './notificacoesPush';
 
 /** E-mail do cadastro do inspecionado (institucional; senão, o pessoal). */
 export const emailDoInspecionado = (m?: { email?: string; emailPessoal?: string }): string =>
@@ -17,7 +16,6 @@ export const enviarResultadoISPorEmail = async (isId: string, email?: string): P
   try {
     const r = await chamarServidor<{ para: string; emailSalvo: boolean }>('/api/email/resultado-is', { isId, ...(email ? { email: email.trim() } : {}) });
     registrarUsoAcao('email_enviar');
-    notificarAcao('is.emailResultado', isId);
     return { para: r.para, emailSalvo: !!r.emailSalvo };
   } catch (e) {
     if (e instanceof ApiError && e.status === 503) {
