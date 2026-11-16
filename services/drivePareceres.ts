@@ -1,13 +1,12 @@
 // Ficheiro: services/drivePareceres.ts
 // Geração e armazenamento do PDF do Pedido de Parecer: o servidor do app gera o PDF em HTML + CSS
-// (POST /api/documentos/pedido-parecer, servidor/documentos/pedidoParecer.ts) e o app o entrega ao
-// Apps Script (ação "salvarPdfParecer"), que o guarda no Google Drive em
-// PARECERES > {nome completo do inspecionado} > SOL_PARECER_{especialidade}_{DDMMMAAAA}.PDF, e grava no
-// Firestore a URL de visualização ("view") devolvida.
-import { chamarScript, chamarServidor } from './apiClient';
+// (servidor/documentos/pedidoParecer.ts) e o guarda no Firebase Storage em pareceres/{id}.pdf
+// (POST /api/pareceres/pedido; servidor/documentos/pedidoParecerServico.ts), já com a assinatura certa — a do
+// médico para quem a IS está agendada ou a de quem gera, se for médico (utils/pareceres.ts). Sem Apps Script nem
+// Google Drive. O app grava o pedido no Firestore com o id e a URL devolvidos (services/firestorePareceres.ts).
+// Pedidos antigos continuam com a URL do Drive.
+import { chamarServidor } from './apiClient';
 import { chamarGoogle } from './googleServidor';
-
-const MAX_BYTES = 10 * 1024 * 1024;
 
 export interface DadosPedidoParecer {
   inspecionado: string;
@@ -15,22 +14,21 @@ export interface DadosPedidoParecer {
   finalidade: string;
   historico: string;
   quesitos: string[];
-  nomeUsuario: string;
-  postoGraduacao: string;
-  cargo: string;
-  crmPe: string;
+  /** IS de onde o pedido sai (o perito dela pode assinar). */
+  isId?: string;
 }
 
-export const gerarPdfPedidoParecer = async (dados: DadosPedidoParecer): Promise<string> => {
-  const d = await chamarServidor<{ pdfBase64: string }>('/api/documentos/pedido-parecer', { ...dados });
-  return d.pdfBase64;
-};
+export interface PedidoParecerGerado {
+  id: string;
+  caminho: string;
+  pdfUrl: string;
+  assinante: { uid: string; nome: string; origem: 'gerador' | 'perito' };
+}
 
-/** Guarda o PDF no Drive (pasta do inspecionado dentro de PARECERES) e devolve a URL de visualização ("view"). */
-export const salvarPdfParecerNoDrive = async (params: { nomeInspecionado: string; especialidade: string; pdfBase64: string }): Promise<string> => {
-  if (Math.ceil((params.pdfBase64.length * 3) / 4) > MAX_BYTES) throw new Error('O PDF gerado é maior que o permitido.');
-  const d = await chamarScript<{ url: string }>('salvarPdfParecer', params);
-  return d.url;
+/** O servidor gera o PDF e o guarda no Storage; devolve o id do pedido, o caminho, a URL e quem assinou. */
+export const gerarPedidoParecerNoServidor = async (dados: DadosPedidoParecer): Promise<PedidoParecerGerado> => {
+  const d = await chamarServidor<PedidoParecerGerado & { success: boolean }>('/api/pareceres/pedido', { ...dados }, { timeoutMs: 90_000 });
+  return { id: d.id, caminho: d.caminho, pdfUrl: d.pdfUrl, assinante: d.assinante };
 };
 
 /**

@@ -662,6 +662,42 @@ async function startServer() {
     await responderPdf(res, "pedido-parecer", async () => (await import("./servidor/documentos/pedidoParecer")).docPedidoParecer(dados));
   });
 
+  // Pedido de Parecer gerado E guardado pelo servidor (Ficha › Pareceres, página Pareceres e Inspeções de Saúde), sem
+  // o Apps Script: PDF no Storage em pareceres/{id}.pdf; a assinatura (perito da IS ou quem gera) é lida do Firestore
+  // (servidor/documentos/pedidoParecerServico.ts). Devolve { id, caminho, pdfUrl, assinante }; o app grava o pedido.
+  app.post("/api/pareceres/pedido", async (req, res) => {
+    const quem = await exigirUsuario(req, res, "pareceres-pedido", PERFIS_MEDICOS);
+    if (!quem) return;
+    const b = req.body || {};
+    const quesitos = (Array.isArray(b.quesitos) ? b.quesitos : []).map((q: unknown) => textoLongo(q, 2000)).filter(Boolean).slice(0, 60);
+    const corpo = {
+      inspecionado: texto(b.inspecionado), especialidade: texto(b.especialidade, 120), finalidade: texto(b.finalidade),
+      historico: textoLongo(b.historico), quesitos, isId: texto(b.isId, 20),
+    };
+    if (!corpo.inspecionado || !corpo.especialidade || !corpo.finalidade || !corpo.historico) {
+      res.status(400).json({ success: false, error: "Informe inspecionado, especialidade, finalidade e histórico." });
+      return;
+    }
+    if (!quesitos.length) {
+      res.status(400).json({ success: false, error: "Informe ao menos um quesito." });
+      return;
+    }
+    const { ErroPedidoParecer, gerarPedidoParecer } = await import("./servidor/documentos/pedidoParecerServico");
+    try {
+      const { adminDb, adminApp } = await getFirebaseAdmin();
+      const { getStorage } = await import("firebase-admin/storage");
+      const r = await gerarPedidoParecer(adminDb, getStorage(adminApp).bucket(BUCKET_STORAGE), BUCKET_STORAGE, quem.uid, corpo);
+      res.json({ success: true, ...r });
+    } catch (error: any) {
+      if (error instanceof ErroPedidoParecer) {
+        res.status(error.status).json({ success: false, error: error.message });
+        return;
+      }
+      logErroSeguro("Pedido de parecer", error);
+      res.status(500).json({ success: false, error: "Não foi possível gerar o pedido de parecer. Tente novamente." });
+    }
+  });
+
   // [rotas: guias de exames — pacote A] (gerar PDF, apagar ao excluir a IS, limpeza 15 dias após a finalização)
   // Guias de exames da IS (servidor/documentos/guiasExames/): PDF único no Storage (inspecoes/{isId}/guias/) e
   // resumo em inspecoes/{isId}.guiasExames. Gerar: equipe; apagar (ao excluir a IS): só Admin.

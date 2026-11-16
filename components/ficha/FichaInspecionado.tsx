@@ -52,6 +52,8 @@ import { MilitarEdicao } from '../Militares';
 import { CadastroTopSheet, type DadoCadastro } from './CadastroTopSheet';
 import { CascaPainelFicha } from './CascaPainelFicha';
 import { PainelGuias } from './guias/PainelGuias';
+import { PainelParecer } from './pareceres/PainelParecer';
+import { RespostaParecerForm } from './pareceres/RespostaParecerForm';
 import { PainelTranscricoes } from './transcricoes/PainelTranscricoes';
 import { ApoioAfastamentos, PainelAfastamentos } from './afastamentos/PainelAfastamentos';
 import { AgendarISFicha } from './AgendarISFicha';
@@ -79,6 +81,7 @@ import { removerEventoAgendaIS } from '../../services/agendaGoogleIS';
 import { podeArrastarIS } from '../../utils/calendarioIS';
 import { rotuloSituacao } from '../../utils/entrevistas';
 import { observarPareceresDoMilitar, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
+import { modoCriarParecer, pedidosPendentes } from '../../utils/pareceres';
 import { observarEventosInspecionado, registrarEventoInspecionado, ROTULO_ACAO_INSPECIONADO, type EventoInspecionado } from '../../services/eventosInspecionado';
 import { urlDoExame } from '../../services/examesIS';
 import { emailDoInspecionado } from '../../services/emailResultadoIS';
@@ -370,10 +373,10 @@ export const FichaInspecionado: React.FC = () => {
     id: a.id, rotulo: a.id === 'pm' && atestado ? 'Atestados' : DEF_ABA[a.id].rotulo,
     desabilitada: !a.habilitada, dica: a.habilitada ? undefined : 'Em breve',
   }));
-  const trocarAba = (id: AbaFicha) => { setAbrindoIS(null); setNovaPericia(false); definir({ aba: id, reg: null, is: null, sel: null, guia: null, gravar: null }); };
+  const trocarAba = (id: AbaFicha) => { setAbrindoIS(null); setNovaPericia(false); definir({ aba: id, reg: null, is: null, sel: null, guia: null, gravar: null, criar: null }); };
   const abrirRegistro = (id: string) => {
     setAbrindoIS(null); setNovaPericia(false);
-    definir({ reg: id, is: null, sel: null, gravar: null });
+    definir({ reg: id, is: null, sel: null, gravar: null, criar: null });
     // Empilhado (abaixo de xl), o painel principal fica acima do histórico: rola até ele.
     if (typeof window !== 'undefined' && !window.matchMedia('(min-width: 1280px)').matches) {
       requestAnimationFrame(() => principalRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -463,29 +466,58 @@ export const FichaInspecionado: React.FC = () => {
     );
   };
 
+  // ---- Pareceres: pedido e resposta (contrato de navegação ?aba=pareceres&criar=pedido|resposta&is=<isId>) ----
+  // O painel do pedido (com a resposta, se houver) está em pareceres/PainelParecer.tsx; "Pedido de Parecer" é o
+  // NovoParecerForm (PDF gerado e guardado pelo servidor) e "Resposta de Parecer", o RespostaParecerForm. Trocar de aba
+  // ou de registro limpa o "criar". No celular, os formulários abrem em bottom sheet.
+  const podePedidoParecer = secoes.pareceres && canUseFeature('pareceres.gerar', perfil);
+  const podeRespostaParecer = secoes.pareceres && canUseFeature('pareceres.resposta', perfil);
+  const criarParecer = modoCriarParecer(aba, params.get('criar'));
+  const isCriarId = criarParecer ? params.get('is') : null;
+  const isDoCriar = isCriarId ? inspecoes.find(i => i.id === isCriarId) ?? null : null;
+  const fecharCriarParecer = () => definir({ criar: null, is: null });
+  const usuarioAtual = nav?.authUser;
+  const formCriarParecer = (() => {
+    if (criarParecer === 'pedido' && podePedidoParecer) {
+      if (isCriarId && !isDoCriar) return null; // a IS do link ainda não chegou (ou não é deste inspecionado)
+      return (
+        <NovoParecerForm
+          key={`pedido:${isDoCriar?.id ?? ''}`} casca={isDesktop ? 'inline' : 'drawer'}
+          prefill={{ militarId: isDoCriar?.inspecionadoId || nip, finalidade: isDoCriar?.finalidade ?? '' }}
+          vinculoIS={isDoCriar ? { isId: isDoCriar.id, is: isDoCriar.is } : undefined}
+          onClose={fecharCriarParecer}
+          onGerado={(n, _url, id) => {
+            definir({ criar: null, is: null, reg: id });
+            if (isDoCriar) void aoParecerGerado(isDoCriar, n);
+            else avisar(`Pedido de parecer de ${n} gerado.`);
+          }}
+        />
+      );
+    }
+    if (criarParecer === 'resposta' && podeRespostaParecer && usuarioAtual) {
+      return (
+        <RespostaParecerForm
+          key={`resposta:${isCriarId ?? ''}`} casca={isDesktop ? 'inline' : 'drawer'}
+          pendentes={pedidosPendentes(pareceres, isCriarId)} inicialId={params.get('reg')} is={isDoCriar?.is ?? null}
+          usuario={{ uid: usuarioAtual.uid, usuario: usuarioAtual.usuario, nome: usuarioAtual.nome }}
+          onClose={fecharCriarParecer}
+          onEnviada={p => { definir({ criar: null, is: null, reg: p.id }); avisar(`Resposta do parecer de ${p.especialidade} registrada. Pedido concluído.`); }}
+        />
+      );
+    }
+    return null;
+  })();
+
   const painelParecer = () => {
+    if (formCriarParecer && isDesktop) return formCriarParecer;
     const p = pareceresOrdenados.find(x => x.id === atual?.id);
     if (!p) return semRegistro('pareceres');
-    const st = statusEfetivo(p, agora);
-    const desde = isoDe(p.criadoEm);
     return (
-      <CascaPainelFicha
-        titulo={`Parecer de ${p.especialidade}`} icone="assignment" tituloExtra={<StatusTag tone={TOM_PARECER[st]}>{ROTULO_PARECER[st]}</StatusTag>}
-        subtitulo={[p.is ? `IS ${p.is}` : '', desde ? `solicitado em ${dataBR(desde)}` : '', p.solicitanteUsuario || p.solicitanteNome].filter(Boolean).join(' · ')}
-        acoes={p.pdfUrl ? [{ id: 'pdf', rotulo: 'Abrir PDF', icone: 'picture_as_pdf', onClick: () => setPdf({ titulo: `Parecer de ${p.especialidade}${p.is ? ` — IS ${p.is}` : ''}`, url: urlParaModal(p.pdfUrl) }) }] : []}
-      >
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-          <Dado rotulo="Especialidade">{p.especialidade}</Dado>
-          <Dado rotulo="Finalidade">{p.finalidade}</Dado>
-          {p.historico && <Dado rotulo="Histórico" largo><span className="whitespace-pre-line">{p.historico}</span></Dado>}
-          {p.quesitos?.length > 0 && (
-            <Dado rotulo="Quesitos" largo>
-              <ol className="list-decimal pl-5 space-y-1">{p.quesitos.map((q, i) => <li key={i}>{q}</li>)}</ol>
-            </Dado>
-          )}
-          {p.concluidoPor && <Dado rotulo="Concluído por">{p.concluidoPor}</Dado>}
-        </dl>
-      </CascaPainelFicha>
+      <PainelParecer
+        key={p.id} parecer={p} agora={agora} podeResponder={podeRespostaParecer}
+        onAbrirPdf={(titulo, url) => setPdf({ titulo, url: urlParaModal(url) })}
+        onResponder={() => definir({ criar: 'resposta', is: p.isId ?? null, reg: p.id })}
+      />
     );
   };
 
@@ -680,6 +712,7 @@ export const FichaInspecionado: React.FC = () => {
         />
       )}
       {abrindoIS && !isDesktop && formAbrirIS}
+      {!isDesktop && formCriarParecer}
       {posCriacao && (
         <PosCriacaoIS
           key={posCriacao.is.id}
