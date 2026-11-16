@@ -44,5 +44,12 @@ describe('Pedido de Parecer (página Pareceres)', () => {
     expect(d.html.match(/<i style="top:/g)).toHaveLength(30);
     expect(d.sobreposicao).toContain('class="pageNumber"');
     expect(d.sobreposicao).toContain('class="totalPages"');
+    expect(d.html).toContain('CRM-PE: 20674');
+    expect(d.html).not.toContain('RQE:');
+  });
+  it('assinatura com RQE quando o médico tem', () => {
+    const d = docPedidoParecer({ ...ass, rqe: '9876', inspecionado: '1T FULANO', especialidade: 'ORTOPEDIA', finalidade: 'VDF', historico: 'H', quesitos: ['Q1'] });
+    expect(d.html).toContain('RQE: 9876');
+    expect(d.html.indexOf('CRM-PE: 20674')).toBeLessThan(d.html.indexOf('RQE: 9876'));
   });
 });

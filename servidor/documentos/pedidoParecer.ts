@@ -16,6 +16,8 @@ export interface DadosPedidoParecer {
   postoGraduacao: string;
   cargo: string;
   crmPe: string;
+  /** RQE do médico que assina (opcional: sem ele, a linha não aparece). */
+  rqe?: string;
   hoje?: Date;
   /** Data já por extenso (substitui `hoje`; comparação com o template). */
   dataEmissao?: string;
@@ -73,6 +75,7 @@ export const docPedidoParecer = (d: DadosPedidoParecer): DocumentoPaginado => {
       <p class="p l115 c f11">${esc(d.postoGraduacao)}</p>
       <p class="p l115 c f11">${esc(d.cargo)}</p>
       <p class="p l115 c f11">CRM-PE: ${esc(d.crmPe)}</p>
+      ${d.rqe?.trim() ? `<p class="p l115 c f11">RQE: ${esc(d.rqe.trim())}</p>` : ''}
     </div>
     <section class="quebra">
       <p class="p c b">PARECER OU RESULTADO DE EXAME</p>

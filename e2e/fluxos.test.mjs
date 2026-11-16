@@ -6,7 +6,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
-import { MPI, SECRETARIA, MEDICO, SENHA, CONCURSO, INSPECIONADO, IS_E2E, IS_AGENDADA_E2E, PARECER_E2E, PERICIA_E2E } from './dados.mjs';
+import { MPI, SECRETARIA, MEDICO, SENHA, CONCURSO, INSPECIONADO, IS_E2E, IS_AGENDADA_E2E, PARECER_E2E, PERICIA_E2E, EMAIL_E2E } from './dados.mjs';
 
 const BASE = process.env.E2E_BASE_URL || 'http://127.0.0.1:3100/DoencasEPareceresJRS/';
 let navegador;
@@ -441,13 +441,28 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   // Guias: sem guias geradas, o painel principal avisa que não há registros.
   await guias.getByRole('tab', { name: 'Guias', exact: true }).click();
   await p.getByText('Nenhum registro em Guias').waitFor();
+  // Emails: abre o mais recente (com conteúdo) num iframe sandbox, sem rodar o script do e-mail; sem barra de ações.
+  await guias.getByRole('tab', { name: 'Emails', exact: true }).click();
+  await p.getByRole('heading', { name: 'Resultado da IS' }).waitFor();
+  const quadro = p.frameLocator('iframe[title^="E-mail:"]');
+  await quadro.getByText(EMAIL_E2E.corpo).waitFor();
+  assert.equal(await quadro.getByText('SCRIPT RODOU').count(), 0);
+  assert.equal(await p.getByRole('toolbar', { name: 'Ações da aba' }).count(), 0);
+  // Registro antigo (sem conteúdo): só os dados do envio e a nota.
+  await p.getByRole('complementary', { name: /Histórico de Emails/ }).getByRole('button', { name: /ABERTURA ANTIGA E2E/ }).click();
+  await p.getByText(/anterior à gravação do conteúdo/).waitFor();
   // IS aberta sem data: "Agendar IS" na barra (e não "Abrir IS", pois já há IS em andamento); sem o campo Inspecionado.
   await guias.getByRole('tab', { name: 'Inspeções de Saúde', exact: true }).click();
   await p.getByRole('complementary', { name: /Histórico de Inspeções de Saúde/ }).getByRole('button', { name: new RegExp(`IS ${IS_E2E.numero}`) }).click();
   const barra = p.getByRole('toolbar', { name: 'Ações da aba' });
-  await barra.getByRole('button', { name: 'Agendar IS' }).waitFor();
+  await p.getByRole('heading', { name: `IS ${IS_E2E.numero}`, exact: true }).waitFor();
+  await barra.getByRole('button', { name: 'Agendar IS', exact: true }).waitFor();
   assert.equal(await barra.getByRole('button', { name: 'Abrir IS' }).count(), 0);
   assert.equal(await barra.getByRole('button', { name: 'Excluir' }).count(), 0);
+  // Barra da IS na ficha: "Gerar Documento ▾" (IS não finalizada); "Enviar PDF ▾" só com data de entrevista;
+  // "Concluir IS" só com a Conclusão editável (entrevista agendada); sem os antigos "Parecer" e "Exames".
+  await barra.getByRole('button', { name: 'Gerar Documento' }).waitFor();
+  for (const nome of ['Enviar PDF', 'Concluir IS', 'Parecer', 'Exames']) assert.equal(await barra.getByRole('button', { name: nome, exact: true }).count(), 0, nome);
   // "Abrir IS ▾" no cabeçalho: de outra aba, volta para Inspeções de Saúde e abre o formulário no painel principal.
   await guias.getByRole('tab', { name: 'Exames', exact: true }).click();
   await p.getByRole('button', { name: 'Abrir IS', exact: true }).click();

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  acharFinalidade, agruparPrints, ampDaJunta, codigoCidDoSinais, conclusaoDaLeitura, dadosDaLeitura, preenchimentoDosPrints, tipoDoPrint, dataDoSinais, laudoDaConclusao, proporImportacao, restricoesDaConclusao,
+  acharCidDoSinais, acharFinalidade, agruparPrints, ampDaJunta, cidPrincipalDoSinais, codigoCidDoSinais, conclusaoDaLeitura, conclusaoValida, dadosDaLeitura, preenchimentoDosPrints, tipoDoPrint, dataDoSinais, laudoDaConclusao, proporImportacao, restricoesDaConclusao,
   statusDaConclusao, statusDosDados, type DadosISSinais,
 } from '../importacaoIS';
 import { militarDoPreenchimento, preencherInspecionadoDoSinais } from '../inspecionadoSinais';
@@ -59,7 +59,8 @@ describe('status', () => {
   it('com a conclusão: Laudo, Nº do TIS e DS-1A', () => {
     expect(statusDaConclusao({ laudo: 'Apto', tis: '', ds1a: '' })).toBe('votacao_pendente');
     expect(statusDaConclusao({ laudo: 'Apto', tis: '026.000.1', ds1a: '' })).toBe('assinaturas_pendentes');
-    expect(statusDaConclusao({ laudo: 'Apto', tis: '026.000.1', ds1a: 'X' })).toBe('tis_assinado');
+    expect(statusDaConclusao({ laudo: 'Apto', tis: '026.000.1', ds1a: 'X' })).toBe('assinaturas_pendentes');
+    expect(statusDaConclusao({ laudo: 'Apto', tis: '026.000.1', ds1a: 'X', dataConclusao: '2026-11-16' })).toBe('tis_assinado');
     expect(statusDaConclusao({ laudo: 'Apto', tis: '', ds1a: '' }, 'auditoria')).toBe('auditoria');
   });
 });
@@ -164,5 +165,93 @@ describe('prints no detalhe da IS (completa só o que falta)', () => {
     const l = { tipo: 'conclusao', numInspecao: '1', cids: ['M54.5'], laudos: [] };
     expect(conclusaoDaLeitura(l).cids).toEqual(['M54.5']);
     expect('cids' in dadosDaLeitura(l)).toBe(false);
+  });
+});
+
+describe('Data da Conclusão (prints do SINAIS)', () => {
+  const atualIS = { inspecionadoId: '26075920', finalidade: 'Verificação de Deficiência Funcional', dataAbertura: '2026-09-02' };
+  const vazia = { grupoFinalidade: 'Verificações e Términos', laudo: '', dataLaudo: '', restricoes: '', tis: '', ds1a: '', cid: '', dataConclusao: '' };
+  const comConclusao = (dataConclusao: string, extra: Partial<DadosISSinais> = {}) =>
+    proporImportacao({ ...foto1, ...extra, dataConclusao }, foto2, grupos, [], atualIS).proposta!;
+
+  it('lida da tela da IS (AAAA-MM-DD ou DD/MM/AAAA), só a data', () => {
+    expect(comConclusao('2026-09-22').dataConclusao).toBe('2026-09-22');
+    expect(comConclusao('22/09/2026 às 10:15').dataConclusao).toBe('2026-09-22');
+    expect(comConclusao('-').dataConclusao).toBe('');
+    expect(proporImportacao(foto1, foto2, grupos, [], atualIS).proposta!.dataConclusao).toBe('');
+  });
+  it('no mesmo dia da Data do Laudo vale; anterior é descartada (com aviso)', () => {
+    expect(comConclusao('2026-09-21').dataConclusao).toBe('2026-09-21');
+    const anterior = comConclusao('2026-09-20');
+    expect(anterior.dataConclusao).toBe('');
+    expect(anterior.avisos.join(' ')).toMatch(/Data da Conclusão anterior/);
+  });
+  it('sem a tela da IS, vale a do rodapé da conclusão, conferida com a Data do Laudo já gravada', () => {
+    const so2 = (dataConclusao: string, dataLaudo?: string) =>
+      proporImportacao(undefined, conclusaoDaLeitura({ ...foto2, tipo: 'conclusao', dataConclusao }), grupos, [], { ...atualIS, dataLaudo }).proposta!;
+    expect(so2('2026-10-02').dataConclusao).toBe('2026-10-02');
+    expect(so2('2026-10-02', '2026-10-05').dataConclusao).toBe('');
+  });
+  it('conclusaoValida', () => {
+    expect(conclusaoValida('2026-09-21', '2026-09-21T00:00')).toBe(true);
+    expect(conclusaoValida('2026-09-20', '2026-09-21')).toBe(false);
+    expect(conclusaoValida('2026-09-20', '')).toBe(true);
+    expect(conclusaoValida('', '2026-09-21')).toBe(true);
+  });
+  it('preenchimento: só vazia, só com Laudo e nunca anterior à Data do laudo', () => {
+    const p = comConclusao('2026-09-23');
+    expect(preenchimentoDosPrints(vazia, p).dataConclusao).toBe('2026-09-23');
+    expect(preenchimentoDosPrints({ ...vazia, dataConclusao: '2026-09-25' }, p).dataConclusao).toBeUndefined();
+    // Laudo já gravado com Data do laudo posterior à conclusão lida: descarta.
+    expect(preenchimentoDosPrints({ ...vazia, laudo: 'Apto', dataLaudo: '2026-09-24' }, p).dataConclusao).toBeUndefined();
+    expect(preenchimentoDosPrints({ ...vazia, laudo: 'Apto', dataLaudo: '2026-09-23' }, p).dataConclusao).toBe('2026-09-23');
+    // Sem Laudo (nem gravado nem lido): não há conclusão a datar.
+    const semLaudo = proporImportacao({ ...foto1, dataConclusao: '2026-09-23' }, undefined, grupos, [], atualIS).proposta!;
+    expect(preenchimentoDosPrints(vazia, semLaudo).dataConclusao).toBeUndefined();
+    // Também fora de Verificações e Términos.
+    expect(preenchimentoDosPrints({ ...vazia, grupoFinalidade: 'Benefícios' }, p).dataConclusao).toBe('2026-09-23');
+  });
+  it('a leitura do print leva a Data da Conclusão para a conclusão e para os dados', () => {
+    const l = { tipo: 'conclusao', numInspecao: '1', dataConclusao: '2026-09-22', laudos: [] };
+    expect(conclusaoDaLeitura(l).dataConclusao).toBe('2026-09-22');
+    expect(dadosDaLeitura({ tipo: 'is', numInspecao: '1', dataConclusao: '2026-09-22' }).dataConclusao).toBe('2026-09-22');
+  });
+});
+
+describe('CID dos prints do SINAIS', () => {
+  const atualIS = { inspecionadoId: '26075920', finalidade: 'Verificação de Deficiência Funcional', dataAbertura: '2026-09-02' };
+  const vazia = { grupoFinalidade: 'Verificações e Términos', laudo: '', dataLaudo: '', restricoes: '', tis: '', ds1a: '', cid: '' };
+  it('código com ou sem ponto, minúsculas, prefixo CID-10 e descrição', () => {
+    expect(codigoCidDoSinais('M545')).toBe('M545');
+    expect(codigoCidDoSinais('m54.5')).toBe('M545');
+    expect(codigoCidDoSinais('M54,5')).toBe('M545');
+    expect(codigoCidDoSinais('M54. 5 - Dor lombar baixa')).toBe('M545');
+    expect(codigoCidDoSinais('CID10 M54.5')).toBe('M545');
+    expect(codigoCidDoSinais('CID-10: F32.1')).toBe('F321');
+    expect(codigoCidDoSinais('I10 Hipertensão essencial')).toBe('I10');
+    expect(codigoCidDoSinais('(S83.2)')).toBe('S832');
+    expect(codigoCidDoSinais('G63.2*')).toBe('G632');
+    expect(codigoCidDoSinais('M5455')).toBe('');
+    expect(codigoCidDoSinais('')).toBe('');
+  });
+  it('vários CID: o principal (o 1º legível)', () => {
+    expect(cidPrincipalDoSinais(['M54.5', 'M51.1'])).toBe('M545');
+    expect(cidPrincipalDoSinais(['-', 'm51.1 Transt disco lombar'])).toBe('M511');
+    expect(cidPrincipalDoSinais(undefined)).toBe('');
+  });
+  it('a proposta leva o CID principal; o preenchimento usa os cids lidos ou, sem eles, o da proposta', () => {
+    const p = proporImportacao(foto1, { ...foto2, cids: ['M51.1', 'M54.5'] }, grupos, [], atualIS).proposta!;
+    expect(p.cidCodigo).toBe('M511');
+    expect(preenchimentoDosPrints(vazia, p).cidCodigo).toBe('M511');
+    expect(preenchimentoDosPrints(vazia, p, ['F32.1']).cidCodigo).toBe('F321');
+    expect(preenchimentoDosPrints({ ...vazia, cid: 'M54.5 Dor lombar baixa' }, p).cidCodigo).toBeUndefined();
+    expect(proporImportacao(foto1, foto2, grupos, [], atualIS).proposta!.cidCodigo).toBe('');
+  });
+  it('acharCidDoSinais: SUBCAT exato ou a categoria de 3 caracteres', () => {
+    const lista = [{ SUBCAT: 'M545', DESCRABREV: 'M54.5 Dor lombar baixa' }, { SUBCAT: 'I10', DESCRABREV: 'I10   Hipertensao essencial' }];
+    expect(acharCidDoSinais('M54.5', lista)?.SUBCAT).toBe('M545');
+    expect(acharCidDoSinais('I10.0', lista)?.SUBCAT).toBe('I10');
+    expect(acharCidDoSinais('M54', lista)).toBeNull();
+    expect(acharCidDoSinais('', lista)).toBeNull();
   });
 });

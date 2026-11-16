@@ -3,6 +3,7 @@ import {
   encaminhamentoDoStatus, exigeCid, faltaCid, grupoComRestricoes, juntarRestricoes, laudoAptoComRestricoes, laudoMencionaRestricoes, patchCid, laudoIncapacidadeDefinitivaSam, mostraEncaminhamento, mostraRestricoes,
   opcoesDeRestricoes, patchConclusao, patchEncaminhamento, patchFinalidade, podeEditarConclusao, podeEditarFinalidade, restituicaoDoStatus,
   separarRestricoes, type EstadoConclusao,
+  dataConclusaoInicial, erroDataConclusao, motivoNaoConcluir, patchConcluirIS, patchReabrirIS, podeReabrirIS, statusAoReabrir,
 } from '../conclusaoIS';
 import { diasUteisEntre, podeCancelarIS, statusAoAgendar } from '../inspecoes';
 
@@ -120,15 +121,17 @@ describe('patchConclusao', () => {
     expect(patchConclusao(comLaudo, 'tis', '026.000.1', HOJE).patch).toEqual({ tis: '026.000.1', status: 'assinaturas_pendentes', situacao: 'andamento' });
     const comTis = { ...comLaudo, status: 'assinaturas_pendentes' as const, tis: '026.000.1', ds1a: 'D' };
     expect(patchConclusao(comTis, 'tis', '', HOJE).patch).toEqual({ tis: '', ds1a: '', status: 'votacao_pendente', situacao: 'andamento' });
+    // TIS inserido com o DS-1a já gravado: não finaliza (a conclusão é pelo botão).
+    expect(patchConclusao({ ...comLaudo, ds1a: 'D' }, 'tis', '026.000.1', HOJE).patch.status).toBe('assinaturas_pendentes');
   });
-  it('DS-1a só com TIS; inserido → TIS assinado (Finalizada); apagado → Assinaturas pendentes', () => {
+  it('DS-1a só com TIS; inserido NÃO finaliza (fica Assinaturas pendentes); apagado → Assinaturas pendentes', () => {
     const comLaudo = { ...base, status: 'votacao_pendente' as const, laudo: 'Apto' };
     expect(patchConclusao(comLaudo, 'ds1a', 'D', HOJE).patch).toEqual({});
     const comTis = { ...comLaudo, status: 'assinaturas_pendentes' as const, tis: '026.000.1', cid: 'M54.5 Dor lombar baixa' };
-    expect(patchConclusao(comTis, 'ds1a', 'D', HOJE).patch).toEqual({ ds1a: 'D', status: 'tis_assinado', situacao: 'finalizada' });
-    // Verificações e Términos sem CID: não finaliza.
+    expect(patchConclusao(comTis, 'ds1a', 'D', HOJE).patch).toEqual({ ds1a: 'D' });
+    // Verificações e Términos sem CID: o DS-1a não entra.
     expect(patchConclusao({ ...comTis, cid: '' }, 'ds1a', 'D', HOJE).patch).toEqual({});
-    expect(patchConclusao({ ...comTis, cid: '', grupoFinalidade: 'Benefícios' }, 'ds1a', 'D', HOJE).patch.status).toBe('tis_assinado');
+    expect(patchConclusao({ ...comTis, cid: '', grupoFinalidade: 'Benefícios' }, 'ds1a', 'D', HOJE).patch).toEqual({ ds1a: 'D' });
     expect(patchConclusao({ ...comTis, status: 'tis_assinado', ds1a: 'D' }, 'ds1a', '', HOJE).patch).toEqual({ ds1a: '', status: 'assinaturas_pendentes', situacao: 'andamento' });
   });
   it('Restrições só são gravadas se visíveis (Laudo com "restrições"); apagar sempre; Observações sempre', () => {
@@ -219,5 +222,57 @@ describe('troca da finalidade', () => {
       .toEqual({ finalidade: 'Controle Trienal', grupoFinalidade: 'Controle Periódico', amp: 'JRS', restricoes: '' });
     expect(patchFinalidade(aberta, { finalidade: 'Controle Trienal', grupo: 'Controle Periódico', amp: 'JRS' })).toEqual({});
     expect(patchFinalidade(aberta, { finalidade: '', grupo: 'Controle Periódico', amp: 'JRS' })).toEqual({});
+  });
+});
+
+describe('conclusão explícita (Concluir IS / Reabrir IS)', () => {
+  const pronta = {
+    ...base, status: 'assinaturas_pendentes' as const, laudo: 'Apto', dataLaudo: '2026-11-05', tis: '026.000.1', ds1a: 'D', cid: 'M54.5 Dor lombar baixa',
+  };
+  const quem = { uid: 'u1', usuario: 'CT TESTE' };
+  it('Data da Conclusão: obrigatória, AAAA-MM-DD e nunca anterior à Data do laudo', () => {
+    expect(erroDataConclusao('2026-11-05', '2026-11-05')).toBe('');
+    expect(erroDataConclusao('2026-11-07', '2026-11-05')).toBe('');
+    expect(erroDataConclusao('2026-11-04', '2026-11-05')).toMatch(/anterior à Data do laudo/);
+    expect(erroDataConclusao('', '2026-11-05')).toMatch(/Informe/);
+    expect(erroDataConclusao('07/11/2026', '')).toMatch(/inválida/);
+    expect(erroDataConclusao('2026-11-07', '')).toBe('');
+  });
+  it('Data da Conclusão inicial: a gravada ou hoje', () => {
+    expect(dataConclusaoInicial('', HOJE)).toBe(HOJE);
+    expect(dataConclusaoInicial(undefined, HOJE)).toBe(HOJE);
+    expect(dataConclusaoInicial('2026-11-01', HOJE)).toBe('2026-11-01');
+  });
+  it('só conclui com Laudo, TIS, DS-1a, CID (Verificações e Términos) e data válida', () => {
+    expect(motivoNaoConcluir(pronta, HOJE)).toBe('');
+    expect(motivoNaoConcluir({ ...pronta, ds1a: '' }, HOJE)).toMatch(/DS-1a/);
+    expect(motivoNaoConcluir({ ...pronta, tis: '' }, HOJE)).toMatch(/TIS/);
+    expect(motivoNaoConcluir({ ...pronta, laudo: '' }, HOJE)).toMatch(/Laudo/);
+    expect(motivoNaoConcluir({ ...pronta, cid: '' }, HOJE)).toMatch(/CID/);
+    expect(motivoNaoConcluir({ ...pronta, cid: '', grupoFinalidade: 'Benefícios' }, HOJE)).toBe('');
+    expect(motivoNaoConcluir({ ...pronta, dataEntrevista: '' }, HOJE)).toMatch(/entrevista/);
+    expect(motivoNaoConcluir({ ...pronta, status: 'tis_assinado' }, HOJE)).toMatch(/finalizada/);
+    expect(motivoNaoConcluir(pronta, '2026-11-01')).toMatch(/anterior/);
+  });
+  it('Concluir grava TIS assinado (Finalizada), a data e quem concluiu', () => {
+    expect(patchConcluirIS(pronta, HOJE, quem)).toEqual({ status: 'tis_assinado', situacao: 'finalizada', dataConclusao: HOJE, concluidaPor: quem });
+    expect(patchConcluirIS({ ...pronta, ds1a: '' }, HOJE, quem)).toBeNull();
+    expect(patchConcluirIS(pronta, '2026-11-01', quem)).toBeNull();
+  });
+  it('Reabrir volta ao status coerente e apaga a conclusão', () => {
+    const concluida = { ...pronta, status: 'tis_assinado' as const };
+    expect(patchReabrirIS(concluida)).toEqual({ status: 'assinaturas_pendentes', situacao: 'andamento', dataConclusao: '', concluidaPor: null });
+    expect(patchReabrirIS(pronta)).toBeNull();
+    expect(statusAoReabrir({ laudo: 'Apto', tis: '', dataEntrevista: 'x' })).toBe('votacao_pendente');
+    expect(statusAoReabrir({ laudo: '', tis: '', dataEntrevista: '2026-11-06T10:30' })).toBe('agendada');
+    expect(statusAoReabrir({ laudo: '', tis: '', dataEntrevista: '' })).toBe('aberta');
+  });
+  it('Reabrir: quem tem a função ou quem concluiu; só IS concluída', () => {
+    const concluida = { status: 'tis_assinado' as const, concluidaPor: { uid: 'u1' } };
+    expect(podeReabrirIS(concluida, 'u2', true)).toBe(true);
+    expect(podeReabrirIS(concluida, 'u1', false)).toBe(true);
+    expect(podeReabrirIS(concluida, 'u2', false)).toBe(false);
+    expect(podeReabrirIS({ status: 'tis_assinado' }, 'u1', false)).toBe(false);
+    expect(podeReabrirIS({ status: 'assinaturas_pendentes', concluidaPor: { uid: 'u1' } }, 'u1', true)).toBe(false);
   });
 });

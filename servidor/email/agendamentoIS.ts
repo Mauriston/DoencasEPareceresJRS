@@ -178,6 +178,6 @@ export const enviarAgendamentoIS = async (
   await refIs.update({
     emailAgendamentoPara: para, emailAgendamentoDataEntrevista: String(is.dataEntrevista), emailAgendamentoEnviadoEm: FieldValue.serverTimestamp(),
   });
-  await registrarEmailIS(db, isId, uid, { tipo, assunto, para: paraTodos, cc, variante });
+  await registrarEmailIS(db, isId, uid, { tipo, assunto, para: paraTodos, cc, variante, html, texto });
   return { para, emailSalvo, tipo, variante };
 };

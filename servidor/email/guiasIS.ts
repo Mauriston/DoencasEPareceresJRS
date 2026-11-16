@@ -190,7 +190,7 @@ export const enviarGuiasIS = async (db: Firestore, bucket: BucketLeitura, b: Rec
       // Marca própria do envio AO INSPECIONADO (Ficha › Guias: o item "Para o Inspecionado" fica com ✓ e desabilitado).
       emailGuiasInspecionadoEm: FieldValue.serverTimestamp(),
     });
-    await registrarEmailIS(db, isId, uid, { tipo: 'guiasInspecionado', assunto, para, cc });
+    await registrarEmailIS(db, isId, uid, { tipo: 'guiasInspecionado', assunto, para, cc, html, texto, anexo: anexoNome });
     resultado.paraInspecionado = emailInspecionado;
   }
 
@@ -209,7 +209,7 @@ export const enviarGuiasIS = async (db: Firestore, bucket: BucketLeitura, b: Rec
       anexo: { nome: anexoNome, bytes },
     });
     if (!paraInspecionado) await refIs.update({ emailGuiasEnviadoEm: FieldValue.serverTimestamp() });
-    await registrarEmailIS(db, isId, uid, { tipo: 'guiasSecretaria', assunto, para, cc });
+    await registrarEmailIS(db, isId, uid, { tipo: 'guiasSecretaria', assunto, para, cc, html, texto, anexo: anexoNome });
     resultado.paraSecretaria = para;
   }
   return resultado;

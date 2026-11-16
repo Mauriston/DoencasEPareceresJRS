@@ -7,13 +7,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
-import { Segmented } from './ui/Segmented';
+import { AbasSublinhadas } from './periciaMenor/partes';
 import { FilterChip } from './ui/FilterChip';
 import { StatusTag } from './ui/StatusTag';
 import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
 import { controlClass, SearchField } from './ui/Field';
-import { Card } from './ui/Card';
 import { NovoParecerForm } from './pareceres/NovoParecerForm';
 import { QuesitosConfig } from './pareceres/QuesitosConfig';
 import { ParecerDetalhe, STATUS_PARECER, diasDesde } from './pareceres/ParecerDetalhe';
@@ -144,7 +143,7 @@ export const Pareceres: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} acao={toast?.acao} />
-      <Container size="data" className={`py-6 md:py-8 pt-4 md:pt-8 ${podeGerar ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
+      <Container size="data" className={`pt-0 md:pt-8 ${podeGerar ? 'pb-28 md:pb-10' : 'pb-10'} flex flex-col gap-4`}>
         <PageHeader
           title="Pareceres"
           description="Pedidos de parecer por especialidade e o andamento de cada um."
@@ -152,32 +151,31 @@ export const Pareceres: React.FC = () => {
           fab={podeGerar ? { icon: 'add', label: 'Novo parecer', onClick: () => setNovo(true) } : undefined}
         />
 
-        <Card padding="sm" className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <SearchField className="flex-1" label="Buscar parecer" value={busca} onChange={setBusca} placeholder="Inspecionado ou NIP…" autoComplete="off" />
-            <select aria-label="Filtrar por especialidade" value={especialidade} onChange={e => setEspecialidade(e.target.value)} className={`${controlClass} sm:w-56`}>
-              <option value="">Todas as especialidades</option>
-              {especialidades.map(e => <option key={e} value={e}>{e}</option>)}
-            </select>
+        {/* Situação em abas sublinhadas (G2 — mesmo padrão de Inspeções, Concursos e Perícia Menor): ouro = ativa,
+            contagem em pílula (vinho em "Atrasados" quando há atraso). Abaixo, busca + especialidade + "Minhas
+            solicitações" (FilterChip); a lista é o painel das abas. */}
+        <section aria-label="Lista de pareceres" className="bg-white border-y border-line md:border md:rounded-xl overflow-clip -mx-4 md:mx-0">
+          <AbasSublinhadas<Filtro>
+            rotulo="Situação do parecer" idBase="pareceres-situacao" ativa={filtro} onChange={setFiltro} className="px-4"
+            abas={[
+              { id: 'todos', rotulo: 'Todos', contagem: totais.todos },
+              { id: 'atrasado', rotulo: 'Atrasados', contagem: totais.atrasado, alerta: true },
+              { id: 'solicitado', rotulo: 'Solicitados', contagem: totais.solicitado },
+              { id: 'concluido', rotulo: 'Concluídos', contagem: totais.concluido },
+            ]}
+          />
+          <div className="p-4 flex flex-col md:flex-row md:items-center gap-2">
+            <SearchField className="md:flex-1 md:max-w-md" label="Buscar parecer" value={busca} onChange={setBusca} placeholder="Inspecionado ou NIP…" autoComplete="off" />
+            <div className="flex flex-wrap items-center gap-2">
+              <select aria-label="Filtrar por especialidade" value={especialidade} onChange={e => setEspecialidade(e.target.value)} className={`${controlClass} flex-1 md:flex-none md:w-56`}>
+                <option value="">Todas as especialidades</option>
+                {especialidades.map(e => <option key={e} value={e}>{e}</option>)}
+              </select>
+              {podeGerar && <FilterChip ativo={soMeus} icon="person" onAlternar={() => setSoMeus(v => !v)} className="shrink-0">Minhas solicitações</FilterChip>}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <Segmented
-              ariaLabel="Situação do parecer"
-              className="overflow-x-auto"
-              value={filtro}
-              onChange={setFiltro}
-              options={[
-                { value: 'todos', label: 'Todos', badge: totais.todos, badgeTone: 'neutro' },
-                { value: 'atrasado', label: 'Atrasados', badge: totais.atrasado, badgeTone: 'alerta' },
-                { value: 'solicitado', label: 'Solicitados', badge: totais.solicitado, badgeTone: 'neutro' },
-                { value: 'concluido', label: 'Concluídos', badge: totais.concluido, badgeTone: 'neutro' },
-              ]}
-            />
-            {podeGerar && <FilterChip ativo={soMeus} icon="person" onAlternar={() => setSoMeus(v => !v)}>Minhas solicitações</FilterChip>}
-          </div>
-        </Card>
 
-        <Card padding="none">
+          <div id="pareceres-situacao-painel" role="tabpanel" aria-labelledby={`pareceres-situacao-aba-${filtro}`} className="border-t border-line">
           {erroCarga ? (
             <p role="alert" className="p-6 text-sm font-semibold text-wine">{erroCarga}</p>
           ) : lista === null ? (
@@ -238,7 +236,8 @@ export const Pareceres: React.FC = () => {
               <div className="px-4 py-3 border-t border-line text-xs text-ink-3" role="status">{filtrada.length} {filtrada.length === 1 ? 'parecer' : 'pareceres'}</div>
             </>
           )}
-        </Card>
+          </div>
+        </section>
       </Container>
 
       {detalhe && (

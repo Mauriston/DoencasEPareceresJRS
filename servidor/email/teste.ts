@@ -17,6 +17,7 @@ import { montarEmailAgenda } from './agendaIS';
 import { montarEmailAgendamento } from './agendamentoIS';
 import { DADOS_FICTICIOS_GUIAS, REMETENTE_FICTICIO_GUIAS, montarEmailGuiasInspecionadoFicticio, montarEmailGuiasSecretariaFicticio, type RemetenteGuias } from './guiasIS';
 import { montarEmailAberturaFicticio } from './aberturaIS';
+import { DADOS_FICTICIOS_DOCUMENTO, montarEmailDocumentoSecretaria } from './documentoIS';
 import { montarEmailResultadoBeneficios } from './resultadoBeneficios';
 import { htmlGuiasExames } from '../documentos/guiasExames/documento';
 import { paginasDasGuias } from '../../utils/guiasExames';
@@ -34,7 +35,7 @@ import { TIPOS_EMAIL, mesclarConfigEmails, type TipoEmail } from '../../config/e
 export const TIPOS_TESTE: TipoEmail[] = TIPOS_EMAIL.map(t => t.tipo);
 
 /** Nome do remetente de cada e-mail, igual ao do envio real (guiasSecretaria: quem enviou — no teste, o signatário ou o fictício). */
-export const REMETENTE_TESTE: Record<Exclude<TipoEmail, 'guiasSecretaria'>, string> = {
+export const REMETENTE_TESTE: Record<Exclude<TipoEmail, 'guiasSecretaria' | 'documentoSecretaria'>, string> = {
   resultadoIS: 'JRS-HNRe', agendamentoIS: 'JRS-HNRe', agendamentoGeral: 'JRS-HNRe', agendamentoBeneficios: 'JRS-HNRe',
   aberturaIS: 'JRS-HNRe', guiasInspecionado: 'JRS-HNRe', resultadoBeneficios: 'JRS-HNRe',
   agendaIS: 'JRS/HNRe', faltasHNRe: 'JRS/HNRe', inaptosConcurso: 'JRS/HNRe', nac: 'JRS/HNRe',
@@ -137,6 +138,17 @@ export const montarEmailTeste = (tipo: TipoEmail, assinatura: Parameters<typeof 
         : REMETENTE_FICTICIO_GUIAS;
       return { ...montarEmailGuiasSecretariaFicticio(remetente), htmlAnexo: htmlGuiasFicticias(config), nomeRemetente: remetente.nome };
     }
+    case 'documentoSecretaria': {
+      // Mesmo remetente do teste das guias à SEC-JRS; o anexo de teste é o das guias fictícias.
+      const remetente: RemetenteGuias = assinatura.mostrar_signatario
+        ? { nome: String(assinatura.signatario_nome), posto: String(assinatura.signatario_posto || ''), cargo: String(assinatura.signatario_cargo || '') }
+        : REMETENTE_FICTICIO_GUIAS;
+      const p = f.pessoa();
+      return {
+        ...montarEmailDocumentoSecretaria({ ...DADOS_FICTICIOS_DOCUMENTO, numeroIs: f.numeroIs(), inspecionado: p.inspecionado }, remetente),
+        htmlAnexo: htmlGuiasFicticias(config), nomeRemetente: remetente.nome,
+      };
+    }
     case 'resultadoBeneficios': {
       const nome = f.nome();
       return montarEmailResultadoBeneficios({
@@ -176,7 +188,7 @@ export const enviarEmailTeste = async (db: Firestore, tipoBruto: unknown, uid: s
   await enviarEmail(db, {
     para: para.join(', '), cc: cc.length ? cc.join(', ') : undefined, responderPara: config.responderPara,
     assunto: `[TESTE] ${r.assunto}`, html: r.html, texto: `*** E-MAIL DE TESTE — dados fictícios ***\n\n${r.texto}`,
-    nomeRemetente: r.nomeRemetente || REMETENTE_TESTE[tipo as Exclude<TipoEmail, 'guiasSecretaria'>] || 'JRS-HNRe', anexo,
+    nomeRemetente: r.nomeRemetente || REMETENTE_TESTE[tipo as Exclude<TipoEmail, 'guiasSecretaria' | 'documentoSecretaria'>] || 'JRS-HNRe', anexo,
   });
   return { tipo, para, cc };
 };

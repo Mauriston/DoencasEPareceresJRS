@@ -78,4 +78,17 @@ export const semearTelas = async () => {
     dataAtestado: HOJE, tempoAtestado: 3, tempoHomologado: 3, dataTermino: iso(new Date(Date.now() + 2 * 86_400_000)), vdf: false,
     peritoUsuario: MEDICO.usuario, peritoNome: MEDICO.nome, peritoUid: MEDICO.uid, pdfUrl: '', criadoEm: agora,
   });
+  // Aba Emails da Ficha: um envio com conteúdo (emails_enviados + corpo) e um registro antigo da IS, sem conteúdo.
+  await db.doc(`emails_enviados/${EMAIL_E2E.id}`).set({
+    tipo: 'resultadoIS', assunto: EMAIL_E2E.assunto, para: ['paciente@teste.com'], cc: [], nips: [INSPECIONADO.nip], isIds: [String(IS_E2E.numero)],
+    temConteudo: true, enviadoEmMs: Date.now() - 60_000, enviadoPor: { uid: MEDICO.uid, usuario: MEDICO.usuario },
+  });
+  await db.doc(`emails_enviados/${EMAIL_E2E.id}/conteudo/corpo`).set({
+    html: `<html><head></head><body><p>${EMAIL_E2E.corpo}</p><script>document.body.innerHTML = 'SCRIPT RODOU'</script></body></html>`, texto: EMAIL_E2E.corpo,
+  });
+  await db.doc(`inspecoes/${IS_E2E.numero}/emails/antigo`).set({
+    tipo: 'aberturaIS', assunto: 'ABERTURA ANTIGA E2E', para: ['paciente@teste.com'], cc: [], enviadoEmMs: Date.now() - 86_400_000,
+    enviadoPor: { uid: MEDICO.uid, usuario: MEDICO.usuario },
+  });
 };
+export const EMAIL_E2E = { id: 'e2e-email', assunto: 'RESULTADO E2E', corpo: 'Conteúdo do e-mail E2E' };

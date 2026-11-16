@@ -5,7 +5,7 @@ import { logErroSeguro, descreverErro } from "./utils/logSeguro";
 import { higienizarParaIA, base64ValidoParaIA } from "./utils/minimizacaoIA";
 import { caminhoArquivoEquipe, caminhoArquivoValido } from "./utils/arquivosPermitidos";
 import { PERFIS_ENTREVISTA } from "./config/entrevistas";
-import { type FeatureKey, type MatrizPermissoesArmazenada } from "./config/permissoesPadrao";
+import { featurePermitida, type FeatureKey, type MatrizPermissoesArmazenada } from "./config/permissoesPadrao";
 import { acaoNotificavel, perfilExecuta, ROTA_DA_PAGINA, type AcaoNotificavel } from "./config/notificacoesAcoes";
 import { AVISOS_EMAIL, AVISO_EMAIL_AGENDA_AUTOMATICO, PERFIS_AVISO_EMAIL, quantidadeIS, textoAvisoEmail, type AvisoEmail } from "./config/notificacoesEmails";
 
@@ -389,6 +389,17 @@ async function startServer() {
     return new Set(snap.docs.filter((d: any) => d.data().ativo !== false && perfilExecuta(matriz, d.data().perfil, req)).map((d: any) => d.id));
   };
 
+  /** Usuário da equipe com a função da matriz (Admin sempre). Responde 401/403 e devolve false quando não pode. */
+  const exigirFuncao = async (req: express.Request, res: express.Response, rota: string, feature: FeatureKey): Promise<boolean> => {
+    const quem = await exigirUsuario(req, res, rota, PERFIS_EQUIPE);
+    if (!quem) return false;
+    const { adminDb } = await getFirebaseAdmin();
+    if (featurePermitida(await lerMatrizPermissoes(adminDb), feature, quem.perfil)) return true;
+    void auditarServidor("acesso_negado", rota, quem.uid, "sem_funcao");
+    res.status(403).json({ success: false, error: "Seu perfil não tem permissão para esta operação." });
+    return false;
+  };
+
   const hojeRecife = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Recife" }).format(new Date()); // AAAA-MM-DD
 
   app.post("/api/notificacoes/evento", async (req, res) => {
@@ -662,6 +673,42 @@ async function startServer() {
     await responderPdf(res, "pedido-parecer", async () => (await import("./servidor/documentos/pedidoParecer")).docPedidoParecer(dados));
   });
 
+  // Pedido de Parecer gerado E guardado pelo servidor (Ficha › Pareceres, página Pareceres e Inspeções de Saúde), sem
+  // o Apps Script: PDF no Storage em pareceres/{id}.pdf; a assinatura (perito da IS ou quem gera) é lida do Firestore
+  // (servidor/documentos/pedidoParecerServico.ts). Devolve { id, caminho, pdfUrl, assinante }; o app grava o pedido.
+  app.post("/api/pareceres/pedido", async (req, res) => {
+    const quem = await exigirUsuario(req, res, "pareceres-pedido", PERFIS_MEDICOS);
+    if (!quem) return;
+    const b = req.body || {};
+    const quesitos = (Array.isArray(b.quesitos) ? b.quesitos : []).map((q: unknown) => textoLongo(q, 2000)).filter(Boolean).slice(0, 60);
+    const corpo = {
+      inspecionado: texto(b.inspecionado), especialidade: texto(b.especialidade, 120), finalidade: texto(b.finalidade),
+      historico: textoLongo(b.historico), quesitos, isId: texto(b.isId, 20),
+    };
+    if (!corpo.inspecionado || !corpo.especialidade || !corpo.finalidade || !corpo.historico) {
+      res.status(400).json({ success: false, error: "Informe inspecionado, especialidade, finalidade e histórico." });
+      return;
+    }
+    if (!quesitos.length) {
+      res.status(400).json({ success: false, error: "Informe ao menos um quesito." });
+      return;
+    }
+    const { ErroPedidoParecer, gerarPedidoParecer } = await import("./servidor/documentos/pedidoParecerServico");
+    try {
+      const { adminDb, adminApp } = await getFirebaseAdmin();
+      const { getStorage } = await import("firebase-admin/storage");
+      const r = await gerarPedidoParecer(adminDb, getStorage(adminApp).bucket(BUCKET_STORAGE), BUCKET_STORAGE, quem.uid, corpo);
+      res.json({ success: true, ...r });
+    } catch (error: any) {
+      if (error instanceof ErroPedidoParecer) {
+        res.status(error.status).json({ success: false, error: error.message });
+        return;
+      }
+      logErroSeguro("Pedido de parecer", error);
+      res.status(500).json({ success: false, error: "Não foi possível gerar o pedido de parecer. Tente novamente." });
+    }
+  });
+
   // [rotas: guias de exames — pacote A] (gerar PDF, apagar ao excluir a IS, limpeza 15 dias após a finalização)
   // Guias de exames da IS (servidor/documentos/guiasExames/): PDF único no Storage (inspecoes/{isId}/guias/) e
   // resumo em inspecoes/{isId}.guiasExames. Gerar: equipe; apagar (ao excluir a IS): só Admin.
@@ -685,8 +732,37 @@ async function startServer() {
     };
   app.post("/api/documentos/guias-exames", rotaGuias("documentos-guias-exames", PERFIS_EQUIPE, async (db, bucket, b, uid) =>
     (await import("./servidor/documentos/guiasExames/servico")).gerarGuiasExames(db, bucket, uid, b)));
-  app.post("/api/documentos/guias-exames/apagar", rotaGuias("documentos-guias-exames-apagar", ["admin"], async (db, bucket, b) =>
+  // Apagar as guias (ao excluir a IS): função inspecoes.excluir da matriz (padrão: Admin e Secretaria).
+  app.post("/api/documentos/guias-exames/apagar", async (req, res, next) => {
+    if (await exigirFuncao(req, res, "documentos-guias-exames-apagar", "inspecoes.excluir")) next();
+  }, rotaGuias("documentos-guias-exames-apagar", PERFIS_EQUIPE, async (db, bucket, b) =>
     (await import("./servidor/documentos/guiasExames/servico")).apagarGuiasExames(db, bucket, b.isId)));
+
+  // Exclusão COMPLETA da IS (servidor/inspecoes/excluir.ts): a IS e tudo o que é dela — subcoleções, mensagens,
+  // horários, PDFs no Storage, pedidos de parecer vinculados e o evento do Google Agenda. Função inspecoes.excluir
+  // (IS não finalizada; o Admin apaga qualquer uma), conferida pela matriz de permissões como nas notificações.
+  app.post("/api/inspecoes/excluir", async (req, res) => {
+    const quem = await exigirUsuario(req, res, "inspecoes-excluir", PERFIS_EQUIPE);
+    if (!quem) return;
+    const { ErroExclusaoIS, excluirInspecao } = await import("./servidor/inspecoes/excluir");
+    try {
+      const { adminDb, adminApp } = await getFirebaseAdmin();
+      const { getStorage } = await import("firebase-admin/storage");
+      const temFuncao = featurePermitida(await lerMatrizPermissoes(adminDb), "inspecoes.excluir", quem.perfil);
+      const r = await excluirInspecao(adminDb, getStorage(adminApp).bucket(BUCKET_STORAGE), req.body?.isId, { perfil: quem.perfil, temFuncao },
+        async eventoId => { await (await import("./servidor/google/agenda")).sincronizarEventoIS(adminDb, { eventoId, remover: true }); });
+      void auditarServidor("operacao_sensivel", "inspecoes-excluir", quem.uid);
+      res.json({ success: true, ...r });
+    } catch (error: any) {
+      if (error instanceof ErroExclusaoIS) {
+        if (error.status === 403) void auditarServidor("acesso_negado", "inspecoes-excluir", quem.uid, "sem_funcao");
+        res.status(error.status).json({ success: false, error: error.message });
+        return;
+      }
+      logErroSeguro("Exclusão da IS", error);
+      res.status(500).json({ success: false, error: "Não foi possível excluir a IS. Tente novamente." });
+    }
+  });
 
   // ---- Conta Google da JRS no servidor (e-mail de impressão e Google Agenda, no lugar do Apps Script) ----
   // Sem a conta autorizada (ou sem o cliente OAuth configurado), as rotas respondem 503 com
@@ -746,8 +822,8 @@ async function startServer() {
     }
   });
 
-  app.post("/api/impressao/parecer", rotaGoogle("impressao-parecer", PERFIS_MEDICOS, async (db, b) => {
-    await (await import("./servidor/google/impressao")).enviarParecerImpressao(db, String(b.pdfUrl || ""), b.remetente);
+  app.post("/api/impressao/parecer", rotaGoogle("impressao-parecer", PERFIS_MEDICOS, async (db, b, quem) => {
+    await (await import("./servidor/google/impressao")).enviarParecerImpressao(db, String(b.pdfUrl || ""), b.remetente, quem.uid);
     return { enviado: true };
   }, true));
   app.post("/api/impressao/termo-recurso", rotaGoogle("impressao-termo-recurso", PERFIS_EQUIPE, async (db, b) => {
@@ -765,6 +841,10 @@ async function startServer() {
   // Guias de exames (PDF do Storage em anexo) ao inspecionado e/ou à SEC-JRS (Admin e Secretaria): servidor/email/guiasIS.ts.
   app.post("/api/email/guias-is", rotaGoogle("email-guias-is", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/guiasIS")).enviarGuiasIS(db, await bucketStorage(), b, quem.uid)) }), true));
+  // Ficha › Exames / Atestados e Laudos, "Zimbra SEC-JRS": o PDF do documento da IS aos membros da SEC-JRS
+  // escolhidos, para impressão (equipe; no app, a função "ficha.zimbraSecretaria"): servidor/email/documentoIS.ts.
+  app.post("/api/email/documento-is", rotaGoogle("email-documento-is", PERFIS_EQUIPE, async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/documentoIS")).enviarDocumentoSecretaria(db, await bucketStorage(), b, quem.uid)) }), true));
   // Abertura da IS ao inspecionado (prazos e consequências; Admin e Secretaria): servidor/email/aberturaIS.ts.
   app.post("/api/email/abertura-is", rotaGoogle("email-abertura-is", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/aberturaIS")).enviarAberturaIS(db, b.isId, b.email, quem.uid)) }), true));

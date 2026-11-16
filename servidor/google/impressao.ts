@@ -111,15 +111,31 @@ const corpoHtml = (miolo: string, fecho: string, remetente: string) =>
 
 // ---------------------------------------------------------------- Os três e-mails
 
-/** Pedido de Parecer (página Pareceres): PDF sob PARECERES. */
-export const enviarParecerImpressao = async (db: Firestore, pdfUrl: string, remetenteBruto: unknown) => {
+/**
+ * Pedido de Parecer (página Pareceres): PDF sob PARECERES. O envio fica na aba Emails da Ficha do inspecionado
+ * do parecer (achado pelo pdfUrl; registrarEmailEnviado, best effort — sem o parecer, não registra).
+ */
+export const enviarParecerImpressao = async (db: Firestore, pdfUrl: string, remetenteBruto: unknown, uid: string | null = null) => {
   const remetente = limparNome(remetenteBruto).slice(0, 80) || 'JRS/HNRe';
-  await enviarEmail(db, {
+  const email: Email = {
     para: CONFIG_GOOGLE.emailImpressao, cc: CONFIG_GOOGLE.copiasImpressao, assunto: 'POR FAVOR, IMPRIMIR', nomeRemetente: remetente,
     texto: `Giorginis,\n\nPor favor, imprimir este documento em frente e verso colorido.\n\nObrigado!\n\n${remetente}`,
     html: corpoHtml('Por favor, imprimir este documento em <strong>frente e verso colorido</strong>.', 'Obrigado!', remetente),
     anexo: await anexoDoParecer(db, pdfUrl),
-  });
+  };
+  await enviarEmail(db, email);
+  try {
+    const snap = await db.collection('pareceres').where('pdfUrl', '==', String(pdfUrl || '').trim()).limit(1).get();
+    const parecer = snap.docs[0]?.data() as { militarId?: string; isId?: string } | undefined;
+    if (parecer?.militarId) {
+      const { registrarEmailEnviado } = await import('../email/registroEmailsIS');
+      const lista = (v?: string) => String(v || '').split(',').map(e => e.trim()).filter(Boolean);
+      await registrarEmailEnviado(db, uid, {
+        tipo: 'impressaoParecer', assunto: email.assunto, para: lista(email.para), cc: lista(email.cc),
+        html: email.html, texto: email.texto, anexo: email.anexo?.nome,
+      }, { nips: [parecer.militarId], isIds: parecer.isId ? [parecer.isId] : [] });
+    }
+  } catch { /* best effort: o pedido já saiu */ }
 };
 
 /** Pedidos antigos ficaram no Firebase Storage (URL com token de download), como aceitava o Apps Script. */

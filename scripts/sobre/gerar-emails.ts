@@ -28,7 +28,7 @@ const semente = (n: number): Aleatorio => () => { n = (n * 1103515245 + 12345) %
 // Semente de cada tipo: escolhida para listas de tamanho médio (o e-mail mostra o modelo sem ficar enorme).
 const SEMENTES: Record<TipoEmail, number> = {
   resultadoIS: 7, agendaIS: 11, agendamentoIS: 3, faltasHNRe: 5, inaptosConcurso: 9, nac: 4,
-  aberturaIS: 1, guiasInspecionado: 1, guiasSecretaria: 1, agendamentoGeral: 2, agendamentoBeneficios: 6, resultadoBeneficios: 8,
+  aberturaIS: 1, guiasInspecionado: 1, guiasSecretaria: 1, documentoSecretaria: 1, agendamentoGeral: 2, agendamentoBeneficios: 6, resultadoBeneficios: 8,
 };
 
 type Montado = { assunto: string; html: string; htmlAnexo?: string; variante?: string; modelo?: string };
@@ -45,7 +45,7 @@ const SERVE: Partial<Record<TipoEmail, (r: Montado) => boolean>> = {
 };
 
 // Anexos sem prévia na página: as guias de exames levam a rubrica do Presidente e várias páginas A4.
-const SEM_IMAGEM_DO_ANEXO: TipoEmail[] = ['guiasInspecionado', 'guiasSecretaria'];
+const SEM_IMAGEM_DO_ANEXO: TipoEmail[] = ['guiasInspecionado', 'guiasSecretaria', 'documentoSecretaria'];
 
 const ASSINATURA_NEUTRA = `data:image/svg+xml;base64,${Buffer.from(
   '<svg xmlns="http://www.w3.org/2000/svg" width="440" height="264" viewBox="0 0 440 264"><path d="M60 170 C120 120 160 200 220 150 S320 120 380 160" fill="none" stroke="#9aa1b5" stroke-width="4" stroke-linecap="round"/></svg>',

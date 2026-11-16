@@ -64,7 +64,7 @@ export const ACOES_NOTIFICAVEIS = {
   'is.agendada': { titulo: 'IS agendada', texto: '{ator} agendou a IS {is}', pagina: 'inspecoes', feature: 'inspecoes.agendar', alvo: 'is' },
   'is.editada': { titulo: 'IS atualizada', texto: '{ator} atualizou a IS {is}', pagina: 'inspecoes', feature: 'inspecoes.editar', alvo: 'is', intervaloMs: 15 * MIN },
   'is.cancelada': { titulo: 'IS cancelada', texto: '{ator} cancelou a IS {is}', pagina: 'inspecoes', feature: 'inspecoes.cancelar', alvo: 'is' },
-  'is.apagada': { titulo: 'IS apagada', texto: '{ator} apagou a IS {is}', pagina: 'inspecoes', soAdmin: true, alvo: 'is' },
+  'is.apagada': { titulo: 'IS apagada', texto: '{ator} apagou a IS {is}', pagina: 'inspecoes', feature: 'inspecoes.excluir', alvo: 'is' },
   'is.examesEnviados': { titulo: 'Exames da IS', texto: '{ator} enviou exames da IS {is}', pagina: 'inspecoes', feature: 'inspecoes.enviarExames', alvo: 'is', intervaloMs: 10 * MIN },
   'is.emailAgendamento': { titulo: 'E-mail de agendamento', texto: '{ator} enviou o e-mail de agendamento da IS {is}', pagina: 'inspecoes', feature: 'inspecoes.enviarEmails', alvo: 'is', peloServidor: true },
   'is.emailResultado': { titulo: 'E-mail de resultado', texto: '{ator} enviou o e-mail de resultado da IS {is}', pagina: 'inspecoes', feature: 'inspecoes.enviarEmails', alvo: 'is', peloServidor: true },

@@ -31,6 +31,7 @@ import { MenuAcoes, type ItemMenu } from './ui/MenuAcoes';
 import { TabelaAgendaIS, type AvisoDiaIS } from './inspecoes/TabelaAgendaIS';
 import { FiltroPeriodo, type FiltroPeriodoValor } from './inspecoes/FiltroPeriodo';
 import { FiltroPopover } from './inspecoes/FiltroPopover';
+import { AbasSublinhadas } from './periciaMenor/partes';
 import { agruparAtivasIS, agruparFinalizadasIS, ordenarFinalizadasIS, type GrupoIS } from './inspecoes/listaIS';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { InspecaoForm, type DadosInspecionadoIS } from './inspecoes/InspecaoForm';
@@ -59,11 +60,11 @@ import { canUseFeature, canAccessPage } from '../config/permissions';
 import { podeUsarEntrevista } from '../config/entrevistas';
 import { observarMilitares, vinculoDoInspecionado, type MilitarRecord } from '../services/firestoreMilitares';
 import {
-  observarInspecoes, observarBloqueios, observarConfigAgenda, cancelarInspecao, apagarInspecao, agendarInspecao, atualizarInspecao, type InspecaoRecord,
+  observarInspecoes, observarBloqueios, observarConfigAgenda, cancelarInspecao, excluirInspecaoCompleta, agendarInspecao, atualizarInspecao, type InspecaoRecord,
 } from '../services/firestoreInspecoes';
 import type { ParecerRecord } from '../services/firestorePareceres';
 import { mostraMinutaMsg, fasesDeEntrevista } from './inspecoes/InspecaoDetalhe';
-import { restituicaoDoStatus } from '../utils/conclusaoIS';
+import { patchReabrirIS, podeReabrirIS, restituicaoDoStatus } from '../utils/conclusaoIS';
 import { podeArrastarIS } from '../utils/calendarioIS';
 import { useDiasConcursos, useSincronizarAgendaConcursos } from '../hooks/useDiasConcursos';
 import { tituloDiaConcurso, ehBloqueioDeConcurso } from '../services/agendaConcursos';
@@ -153,7 +154,9 @@ export const Inspecoes: React.FC = () => {
   const podeBloquear = canUseFeature('inspecoes.bloquearAgenda', perfil);
   const podeParecer = canUseFeature('pareceres.gerar', perfil);
   const podeCadastrarInspecionado = canUseFeature('militares.cadastrar', perfil);
-  const podeGravarEntrevista = podeUsarEntrevista(perfil);
+  // Gravar entrevista: perfis da junta (config/entrevistas.ts) E a função inspecoes.gravarEntrevista (padrão: só o Admin).
+  const podeGravarEntrevista = podeUsarEntrevista(perfil) && canUseFeature('inspecoes.gravarEntrevista', perfil);
+  const podeReabrir = canUseFeature('inspecoes.reabrir', perfil);
   const podeEnviarExames = canUseFeature('inspecoes.enviarExames', perfil);
 
   const [lista, setLista] = useState<InspecaoRecord[] | null>(null);
@@ -411,6 +414,18 @@ export const Inspecoes: React.FC = () => {
     }
   };
 
+  const reabrir = async (is: InspecaoRecord) => {
+    const patch = patchReabrirIS(is);
+    if (!patch) return;
+    try {
+      await atualizarInspecao(is.id, patch);
+      avisar(`IS ${is.is} reaberta.`);
+      if (is.dataEntrevista) sincronizarAgendaIS({ ...is, ...patch }).then(r => { if (!r.ok) avisar(`Google Agenda não atualizado: ${r.erro}`, 'error'); });
+    } catch (e: any) {
+      avisar(e?.message || 'Não foi possível reabrir a IS.', 'error');
+    }
+  };
+
   const confirmarAcao = async () => {
     const alvo = confirmando;
     if (!alvo) return;
@@ -439,7 +454,7 @@ export const Inspecoes: React.FC = () => {
     setApagando(null);
     try {
       if (is.eventoAgendaId) await removerEventoAgendaIS(is);
-      await apagarInspecao(is);
+      await excluirInspecaoCompleta(is);
       setDetalheId(null);
       avisar(`IS ${is.is} apagada.`);
     } catch (e: any) {
@@ -479,9 +494,11 @@ export const Inspecoes: React.FC = () => {
     // Benefícios também aqui, assim que a IS tem Nº do TIS (Assinaturas pendentes ou TIS assinado) e enquanto não foi enviado.
     if (podeEmails && resultadoBeneficiosDisponivel(is) && !resultadoBeneficiosEnviado(is)) itens.push({ rotulo: 'E-mail de resultado (Benefícios)', icone: 'mark_email_unread', onClick: () => setEnviandoBeneficios(is) });
     if (podeAgendar && is.dataEntrevista && is.status !== 'cancelada' && !(is.agendaSincronizada && is.eventoAgendaId)) itens.push({ rotulo: 'Sincronizar com o Google Agenda', icone: 'sync', onClick: () => { sincronizar(is); } });
-    if (ehAdmin && is.status === 'tis_assinado') itens.push({ rotulo: 'Reabrir IS', icone: 'lock_open', onClick: () => { mudarStatus(is, 'assinaturas_pendentes', `IS ${is.is} reaberta.`); } });
+    // Reabrir IS concluída: função inspecoes.reabrir ou quem concluiu (apaga a Data da Conclusão e quem concluiu).
+    if (podeEditar && podeReabrirIS(is, usuario?.uid, podeReabrir)) itens.push({ rotulo: 'Reabrir IS', icone: 'lock_open', onClick: () => { void reabrir(is); } });
     if (canUseFeature('inspecoes.cancelar', perfil) && podeCancelarIS(is, hoje)) itens.push({ rotulo: 'Cancelar IS', icone: 'cancel', perigo: true, onClick: () => setConfirmando({ tipo: 'cancelar', is }) });
-    if (ehAdmin) itens.push({ rotulo: 'Apagar IS', icone: 'delete', perigo: true, onClick: () => setApagando(is) });
+    // Apagar IS (com tudo o que é dela, no servidor): função inspecoes.excluir, só IS não finalizada; o Admin apaga qualquer uma.
+    if (ehAdmin || (canUseFeature('inspecoes.excluir', perfil) && is.situacao !== 'finalizada')) itens.push({ rotulo: 'Apagar IS', icone: 'delete', perigo: true, onClick: () => setApagando(is) });
     return itens;
   };
 
@@ -538,13 +555,6 @@ export const Inspecoes: React.FC = () => {
     { id: 'ativas', rotulo: 'Ativas', n: contagens.ativas },
     { id: 'finalizadas', rotulo: 'Finalizadas', n: contagens.finalizadas },
   ];
-  const aoTeclaAbas = (e: React.KeyboardEvent) => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    e.preventDefault();
-    const proxima: Aba = aba === 'ativas' ? 'finalizadas' : 'ativas';
-    irParaAba(proxima);
-    requestAnimationFrame(() => document.getElementById(`inspecoes-aba-${proxima}`)?.focus());
-  };
   const badge = (n: number, alerta = false) => (
     <span className={`min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full text-xs font-bold tabular-nums ${alerta ? 'bg-wine text-white' : 'bg-thead text-ink-3 border border-line'}`}>{n}</span>
   );
@@ -639,23 +649,13 @@ export const Inspecoes: React.FC = () => {
               )
         ) : (
           <section aria-label="Lista de IS" className="md:bg-white md:border md:border-line md:rounded-xl md:overflow-clip">
-            {/* Abas sublinhadas (ouro = ativa) com a contagem · vista só com ícone (G2) · ⋮ no celular. */}
+            {/* Abas sublinhadas (AbasSublinhadas — ouro = ativa, contagem em pílula, dividem a largura no celular) · vista só com ícone (G2). */}
             <div className="flex items-end justify-between gap-2 border-b border-line -mx-4 px-4 md:mx-0 bg-white md:bg-transparent">
-              <div role="tablist" aria-label="Situação das IS" className="flex gap-1" onKeyDown={aoTeclaAbas}>
-                {abas.map(t => {
-                  const ativa = aba === t.id;
-                  return (
-                    <button
-                      key={t.id} type="button" role="tab" id={`inspecoes-aba-${t.id}`} aria-selected={ativa} aria-controls="inspecoes-lista" tabIndex={ativa ? 0 : -1}
-                      onClick={() => irParaAba(t.id)}
-                      className={`inline-flex items-center gap-2 h-12 px-3 -mb-px border-b-[3px] text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${ativa ? 'border-gold text-navy' : 'border-transparent text-ink-3 hover:text-navy'}`}
-                    >
-                      {t.rotulo}
-                      <span className={`min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full text-xs tabular-nums ${ativa ? 'bg-navy text-white' : 'bg-thead text-ink-3'}`}>{t.n}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              <AbasSublinhadas<Aba>
+                rotulo="Situação das IS" idBase="inspecoes" ativa={aba} onChange={irParaAba} linha={false}
+                className="flex-1 md:flex-none -mb-px"
+                abas={abas.map(t => ({ id: t.id, rotulo: t.rotulo, contagem: t.n }))}
+              />
               {desktop && <div className="flex items-center gap-1 pb-1.5"><AlternarVisao value={visao} onChange={setVisao} /></div>}
             </div>
 
@@ -701,7 +701,7 @@ export const Inspecoes: React.FC = () => {
               </div>
             </div>
 
-            <div id="inspecoes-lista" role="tabpanel" aria-labelledby={`inspecoes-aba-${aba}`}>{conteudoLista}</div>
+            <div id="inspecoes-painel" role="tabpanel" aria-labelledby={`inspecoes-aba-${aba}`}>{conteudoLista}</div>
           </section>
         )}
       </Container>
@@ -744,7 +744,7 @@ export const Inspecoes: React.FC = () => {
         <InspecaoDetalhe
           inspecao={detalhe}
           om={omDe(detalhe)}
-          permissoes={{ editar: podeEditar, minuta: podeMinuta, parecer: podeParecer, entrevista: podeGravarEntrevista, exames: podeEnviarExames }}
+          permissoes={{ editar: podeEditar, minuta: podeMinuta, parecer: podeParecer, entrevista: podeGravarEntrevista, exames: podeEnviarExames, reabrir: podeReabrir }}
           onClose={() => setDetalheId(null)}
           onMinuta={() => setMinuta(detalhe)}
           onSolicitarParecer={() => setParecerPara({ is: detalhe })}
@@ -862,7 +862,7 @@ export const Inspecoes: React.FC = () => {
       {apagando && (
         <ConfirmDialog
           title="Apagar IS"
-          message={<>Apagar definitivamente a <strong>IS {apagando.is}</strong> ({nomeCurto(apagando.inspecionado)})? O horário reservado, o evento no Google Agenda e as guias de exames também são removidos. Esta ação não pode ser desfeita.</>}
+          message={<>Apagar definitivamente a <strong>IS {apagando.is}</strong> ({nomeCurto(apagando.inspecionado)})? Também são apagados tudo o que é dela: exames, entrevistas, e-mails e mensagens registradas, guias, pedidos de parecer vinculados, o horário reservado e o evento no Google Agenda. Esta ação não pode ser desfeita.</>}
           confirmLabel="Apagar" destructive onConfirm={confirmarApagar} onCancel={() => setApagando(null)}
         />
       )}

@@ -1,7 +1,12 @@
 // Ficheiro: servidor/email/registroEmailsIS.ts
 // Base comum (servidor) dos registros de envio:
-//  - registrarEmailIS: um documento por envio em inspecoes/{isId}/emails/{autoId} (contrato em
-//    utils/registroEmailsIS.ts), lido pela seção "E-mails enviados" do detalhe da IS;
+//  - registrarEmailIS: o envio com o CONTEÚDO (HTML e texto como saíram; sem anexos) uma vez em
+//    emails_enviados/{id} (+ conteudo/corpo — contrato em utils/emailsEnviados.ts; lido pela aba Emails da Ficha,
+//    só pela equipe) e um documento por IS em inspecoes/{isId}/emails/{autoId} com o conteudoId (contrato em
+//    utils/registroEmailsIS.ts), lido pela seção "E-mails enviados" do detalhe da IS. E-mails em lote (NAC,
+//    faltas, agenda do dia): um só conteúdo, ligado a todas as IS e NIPs do lote;
+//  - registrarEmailEnviado: só o emails_enviados (envios ligados a um NIP sem histórico de IS — ex.: pedido de
+//    impressão do parecer);
 //  - registrarUsoServidor: contagem agregada no uso_diario/{AAAA-MM-DD} para a seção "Uso do app" do Painel
 //    (emailsPorTipo.{tipo} e guiasGeradas). Só contagens, nunca conteúdo;
 //  - institucionaisSecretaria: e-mails institucionais (@marinha.mil.br) dos user_secretaria ativos (CC dinâmico).
@@ -10,6 +15,10 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { TipoEmail } from '../../config/emails';
 import type { RegistroEmailIS } from '../../utils/registroEmailsIS';
+import {
+  COL_EMAILS_ENVIADOS, DOC_CORPO, SUB_CONTEUDO, nipsValidos, prepararCorpoParaRegistro,
+  type EmailEnviado, type TipoEmailEnviado,
+} from '../../utils/emailsEnviados';
 import { ehInstitucional } from '../../utils/emailAgendaIS';
 
 /** AAAA-MM-DD de hoje em Recife (id do documento de uso_diario). */
@@ -23,20 +32,64 @@ export const quemEnviou = async (db: Firestore, uid: string | null): Promise<Reg
   return { uid, usuario: String(u?.usuario || '').trim() || 'Usuário', ...(u?.nome ? { nome: String(u.nome).trim() } : {}) };
 };
 
-/** Grava o envio no histórico da IS e conta no uso do app. Nunca lança. */
-export const registrarEmailIS = async (
-  db: Firestore, isId: string, uid: string | null,
-  envio: { tipo: TipoEmail; assunto: string; para: string[]; cc?: string[]; variante?: string },
-): Promise<void> => {
+/** O que o envio registra: metadados e, quando houver, o corpo como saiu (html/texto) e o nome do anexo. */
+export interface EnvioRegistrado {
+  tipo: TipoEmailEnviado; assunto: string; para: string[]; cc?: string[]; variante?: string;
+  html?: string; texto?: string; anexo?: string;
+}
+
+/**
+ * Grava o envio em emails_enviados/{id} (metadados + conteudo/corpo) e devolve o id ('' na falha). Nunca lança.
+ * `enviadoPor` já resolvido evita reler o usuário quando o chamador o tem.
+ */
+export const registrarEmailEnviado = async (
+  db: Firestore, uid: string | null, envio: EnvioRegistrado,
+  vinculos: { nips: unknown[]; isIds?: string[] }, enviadoPor?: RegistroEmailIS['enviadoPor'],
+): Promise<string> => {
   try {
+    const corpo = prepararCorpoParaRegistro(envio.html, envio.texto);
+    const temConteudo = !!(corpo.html || corpo.texto);
+    const doc: EmailEnviado = {
+      tipo: envio.tipo, assunto: envio.assunto, para: envio.para, cc: envio.cc ?? [],
+      ...(envio.variante ? { variante: envio.variante } : {}),
+      ...(envio.anexo ? { anexo: envio.anexo } : {}),
+      nips: nipsValidos(vinculos.nips), isIds: [...new Set((vinculos.isIds ?? []).map(String))],
+      temConteudo, enviadoEmMs: Date.now(), enviadoPor: enviadoPor ?? await quemEnviou(db, uid),
+    };
+    const ref = db.collection(COL_EMAILS_ENVIADOS).doc();
+    const lote = db.batch();
+    lote.set(ref, doc);
+    if (temConteudo) lote.set(ref.collection(SUB_CONTEUDO).doc(DOC_CORPO), corpo);
+    await lote.commit();
+    return ref.id;
+  } catch {
+    return '';
+  }
+};
+
+/**
+ * Grava o envio no histórico de cada IS (com o conteúdo uma vez só em emails_enviados) e conta no uso do app
+ * (uma vez por IS; `contarUso: false` quando o chamador já conta o envio — ex.: agenda do dia). Nunca lança.
+ */
+export const registrarEmailIS = async (
+  db: Firestore, isIdOuIds: string | string[], uid: string | null,
+  envio: EnvioRegistrado & { tipo: TipoEmail }, opcoes: { contarUso?: boolean } = {},
+): Promise<void> => {
+  const isIds = [...new Set((Array.isArray(isIdOuIds) ? isIdOuIds : [isIdOuIds]).map(String).filter(Boolean))];
+  try {
+    const enviadoPor = await quemEnviou(db, uid);
+    // NIPs dos inspecionados das IS (para a aba Emails da Ficha).
+    const docs = isIds.length ? await db.getAll(...isIds.map(id => db.collection('inspecoes').doc(id))) : [];
+    const nips = docs.map(d => (d.data() as { inspecionadoId?: string } | undefined)?.inspecionadoId);
+    const conteudoId = await registrarEmailEnviado(db, uid, envio, { nips, isIds }, enviadoPor);
     const registro: RegistroEmailIS = {
       tipo: envio.tipo, assunto: envio.assunto, para: envio.para, cc: envio.cc ?? [],
       ...(envio.variante ? { variante: envio.variante } : {}),
-      enviadoEmMs: Date.now(), enviadoPor: await quemEnviou(db, uid),
+      enviadoEmMs: Date.now(), enviadoPor, ...(conteudoId ? { conteudoId } : {}),
     };
-    await db.collection('inspecoes').doc(String(isId)).collection('emails').add(registro);
+    await Promise.all(isIds.map(isId => db.collection('inspecoes').doc(isId).collection('emails').add(registro)));
   } catch { /* best effort */ }
-  await registrarUsoServidor(db, uid, { email: envio.tipo });
+  if (opcoes.contarUso !== false) await Promise.all(isIds.map(() => registrarUsoServidor(db, uid, { email: envio.tipo })));
 };
 
 /**

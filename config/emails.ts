@@ -15,12 +15,15 @@
 //   - agendamentoBeneficios / resultadoBeneficios: PARA = e-mail do inspecionado; CC += institucionais dos user_secretaria.
 //   - guiasInspecionado: PARA = e-mail do inspecionado; CC += institucional de quem disparou.
 //   - guiasSecretaria:   PARA = institucionais dos user_secretaria escolhidos; Reply-To = institucional de quem disparou.
-// "Responder para" (Reply-To) é a caixa da JRS (`responderPara`), exceto em guiasSecretaria.
+//   - documentoSecretaria: idem (Ficha › Exames / Atestados e Laudos, "Zimbra SEC-JRS": o PDF para impressão).
+// "Responder para" (Reply-To) é a caixa da JRS (`responderPara`), exceto em guiasSecretaria e documentoSecretaria.
 
 export type TipoEmail =
   | 'resultadoIS' | 'agendaIS' | 'agendamentoIS' | 'faltasHNRe' | 'inaptosConcurso' | 'nac'
   // Novos (guias de exames, abertura, agendamento geral/benefícios e resultado de benefícios):
-  | 'guiasInspecionado' | 'guiasSecretaria' | 'aberturaIS' | 'agendamentoGeral' | 'agendamentoBeneficios' | 'resultadoBeneficios';
+  | 'guiasInspecionado' | 'guiasSecretaria' | 'aberturaIS' | 'agendamentoGeral' | 'agendamentoBeneficios' | 'resultadoBeneficios'
+  // Exame ou atestado/laudo da IS à SEC-JRS, para impressão (Ficha do inspecionado):
+  | 'documentoSecretaria';
 
 /** Divisão de Pessoal do HNRe: cópia dos e-mails de abertura e de agendamento quando a OM do inspecionado é o HNRe. */
 export const EMAILS_DIVISAO_PESSOAL_HNRE = [
@@ -86,6 +89,7 @@ export const CONFIG_EMAILS_PADRAO: ConfigEmails = {
     nac: { para: ['luciana.madruga@marinha.mil.br'], cc: [CAIXA_JRS], cco: [] },
     guiasInspecionado: { para: [], cc: [], cco: [] },
     guiasSecretaria: { para: [], cc: [], cco: [] },
+    documentoSecretaria: { para: [], cc: [], cco: [] },
     aberturaIS: { para: [], cc: [], cco: [] },
     agendamentoGeral: { para: [], cc: [], cco: [] },
     agendamentoBeneficios: { para: [], cc: [], cco: [] },
@@ -101,6 +105,7 @@ export const TIPOS_EMAIL: { tipo: TipoEmail; rotulo: string; assunto: string; di
   { tipo: 'aberturaIS', rotulo: 'Abertura de IS ao inspecionado', assunto: 'ABERTURA DE IS FIM {finalidade} - {inspecionado}', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mails institucionais da Secretaria; Divisão de Pessoal do HNRe (OM HNRe) ou EAMPE (OM EAMPE).' },
   { tipo: 'guiasInspecionado', rotulo: 'Guias dos exames ao inspecionado', assunto: 'GUIA DOS EXAMES PARA INSPEÇÃO DE SAÚDE', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mail institucional de quem enviou. Anexo: guias em PDF.' },
   { tipo: 'guiasSecretaria', rotulo: 'Guias dos exames à SEC-JRS', assunto: 'EXAMES DE {inspecionado}', dinamicos: 'PARA: e-mails institucionais dos membros da Secretaria escolhidos. Remetente e Responder para: quem enviou. Anexo: guias em PDF.' },
+  { tipo: 'documentoSecretaria', rotulo: 'Exame ou atestado à SEC-JRS (impressão)', assunto: 'EXAME DE {inspecionado} - IMPRESSÃO', dinamicos: 'PARA: e-mails institucionais dos membros da Secretaria escolhidos. Remetente e Responder para: quem enviou. Anexo: o PDF do exame ou do atestado/laudo (Ficha do inspecionado).' },
   { tipo: 'agendamentoGeral', rotulo: 'Agendamento de IS (demais finalidades)', assunto: 'AGENDAMENTO DE IS FIM {finalidade} - {inspecionado}', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mails institucionais da Secretaria; Divisão de Pessoal do HNRe (OM HNRe) ou EAMPE (OM EAMPE). Reagendamento: mesmo modelo, com o aviso de reagendamento.' },
   { tipo: 'agendamentoBeneficios', rotulo: 'Agendamento de IS (Benefícios)', assunto: 'AGENDAMENTO DE IS FIM {finalidade} - {inspecionado}', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mails institucionais da Secretaria. Reagendamento: mesmo modelo, com o aviso de reagendamento.' },
   { tipo: 'resultadoBeneficios', rotulo: 'Resultado de IS (Benefícios)', assunto: 'RESULTADO DE IS FIM {finalidade} - {inspecionado}', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mails institucionais da Secretaria. Três modelos: não enquadramento, enquadramento de militar inativo e enquadramento de não militar.' },

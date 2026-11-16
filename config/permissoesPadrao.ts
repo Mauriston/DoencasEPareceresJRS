@@ -59,8 +59,12 @@ export type FeatureKey =
   | 'inspecoes.enviarExames'
   | 'inspecoes.enviarEmails'
   | 'inspecoes.cancelar'
+  | 'inspecoes.reabrir'
+  | 'inspecoes.excluir'
+  | 'inspecoes.gravarEntrevista'
   | 'militares.cadastrar'
   | 'pareceres.gerar'
+  | 'pareceres.resposta'
   | 'pericia-menor.novo'
   | 'pericia-menor.historico'
   | 'ficha.afastamentos'
@@ -71,7 +75,8 @@ export type FeatureKey =
   | 'ficha.emails'
   | 'ficha.mensagens'
   | 'ficha.outros'
-  | 'ficha.transcricoes';
+  | 'ficha.transcricoes'
+  | 'ficha.zimbraSecretaria';
 
 // Os padrões das funcionalidades "concursosJRS.*" se repetem em firestore.rules (função pode()),
 // que aplica a mesma matriz nas gravações: ao mudar um padrão aqui, mude lá também e rode
@@ -95,6 +100,12 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'concursosJRS.enviarEmailInaptos': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
   'inspecoes.enviarEmails': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
   'inspecoes.cancelar': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
+  // Reabrir IS concluída (além de quem a concluiu) e excluir IS não finalizada (com tudo o que é dela: rota
+  // POST /api/inspecoes/excluir e firestore.rules): por padrão Admin e Secretaria.
+  'inspecoes.reabrir': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
+  'inspecoes.excluir': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
+  // Gravar a entrevista da IS (ainda limitada aos perfis da junta — config/entrevistas.ts): por padrão só o Admin.
+  'inspecoes.gravarEntrevista': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
   'inspecoes.cadastrar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   'inspecoes.agendar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   'inspecoes.editar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
@@ -104,6 +115,8 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'inspecoes.bloquearAgenda': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
   'militares.cadastrar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   'pareceres.gerar': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
+  // Resposta de Parecer (Ficha › Pareceres): a gravação no pedido segue a regra dos médicos (firestore.rules, pareceres).
+  'pareceres.resposta': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
   'pericia-menor.novo': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: true },
   'pericia-menor.historico': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: true },
   // Abas da Ficha do inspecionado (além de "Inspeções de Saúde" e "Perícias Menores", que seguem as permissões
@@ -119,6 +132,8 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'ficha.mensagens': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   'ficha.outros': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
   'ficha.transcricoes': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
+  // "Zimbra SEC-JRS" nas abas Exames e Atestados e Laudos: o PDF à Secretaria, para impressão (toda a equipe).
+  'ficha.zimbraSecretaria': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
 };
 
 export interface MatrizPermissoesArmazenada {

@@ -127,6 +127,19 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Coleção "emails_enviados": e-mails enviados com o CONTEÚDO (HTML e texto como saíram; sem anexos) e os
+    // vínculos (nips, isIds) — aba Emails da Ficha (utils/emailsEnviados.ts). Só o servidor grava (Admin SDK —
+    // servidor/email/registroEmailsIS.ts); só a equipe (Admin, médicos JRS/MPI e Secretaria) lê: o corpo traz
+    // dados pessoais e de saúde dos inspecionados.
+    match /emails_enviados/{eid} {
+      allow read: if isEquipe();
+      allow write: if false;
+      match /conteudo/{cid} {
+        allow read: if isEquipe();
+        allow write: if false;
+      }
+    }
+
     match /documentos_gerados/{id} {
       allow read: if isAdmin() || isSecretaria();
       allow create: if isSignedIn() && request.resource.data.criadoPorUid == request.auth.uid &&
@@ -202,12 +215,13 @@ service cloud.firestore {
     // Coleção "pareceres": Pedidos de Parecer Médico (um doc por pedido, id
     // automático; liga ao militar por "militarId" = NIP só dígitos). Lê quem
     // está autenticado; só médicos criam e atualizam (marcar concluído).
-    // Quem não é Admin só pode alterar "status"/"concluidoEm"/"concluidoPor".
+    // Quem não é Admin só pode alterar "status"/"concluidoEm"/"concluidoPor" e gravar a "resposta" do
+    // especialista (PDF + transcrição da IA; Ficha › Pareceres — services/respostaParecer.ts).
     match /pareceres/{id} {
       allow read: if isSignedIn();
       allow create: if isMedico();
       allow update: if isAdmin() || (isMedico() &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'concluidoEm', 'concluidoPor']));
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'concluidoEm', 'concluidoPor', 'resposta']));
       allow delete: if isAdmin();
     }
 
@@ -215,11 +229,13 @@ service cloud.firestore {
     // o que garante número único; liga ao inspecionado por "inspecionadoId" = NIP
     // só dígitos). Lê quem está autenticado; a equipe (Admin, médicos e Secretaria)
     // cria e atualiza — o controle fino por funcionalidade está na UI
-    // (config/permissions.ts); só o Admin apaga.
+    // (config/permissions.ts). Apagar: o Admin, ou a função "inspecoes.excluir" (padrão: Secretaria) com a IS
+    // não finalizada — a exclusão completa (subcoleções, PDFs, pareceres) é feita pelo servidor
+    // (POST /api/inspecoes/excluir); esta regra vale para a reserva pelo app.
     match /inspecoes/{id} {
       allow read: if isSignedIn();
       allow create, update: if isEquipe();
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || (podeExcluirIS() && resource.data.situacao != 'finalizada');
 
       // Entrevistas gravadas da IS (config/entrevistas.ts; ADR-014): só a junta — Admin e
       // user_medicos — e TODOS da junta leem as entrevistas de qualquer IS. O app cria o doc
@@ -263,6 +279,23 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow write: if false;
       }
+    }
+
+    // Coleção "mensagensIS": mensagens tramitadas registradas a partir da minuta de uma IS concluída ("Minutar MSG" da
+    // Ficha do inspecionado; services/mensagensIS.ts). Liga à IS (isId) e ao inspecionado (inspecionadoId); só leitura
+    // depois de gravada. A equipe lê; registra quem tem "inspecoes.gerarMinuta", em nome próprio e com a hora do
+    // servidor; só o Admin apaga (o servidor apaga junto com a IS).
+    match /mensagensIS/{id} {
+      allow read: if isEquipe();
+      allow create: if isEquipe() && podeMinutaIS()
+        && request.resource.data.keys().hasOnly(['isId', 'is', 'inspecionadoId', 'finalidade', 'de', 'para', 'info', 'assunto', 'texto', 'registradoPor', 'registradoEm'])
+        && request.resource.data.keys().hasAll(['isId', 'inspecionadoId', 'para', 'assunto', 'texto', 'registradoPor', 'registradoEm'])
+        && request.resource.data.registradoPor.uid == request.auth.uid
+        && request.resource.data.registradoEm == request.time
+        && request.resource.data.texto is string && request.resource.data.texto.size() <= 20000
+        && exists(/databases/$(database)/documents/inspecoes/$(request.resource.data.isId));
+      allow update: if false;
+      allow delete: if isAdmin();
     }
 
     // Coleção "agendaSlots": horário ocupado de um perito ({peritoUid}__{data}T{hh-mm}),
@@ -407,6 +440,9 @@ service cloud.firestore {
     function podeAdicionarCandidato() { return pode('concursosJRS.adicionarCandidato', {'user_medicos': true, 'user_secretaria': false, 'user_medicos_mpi': true}); }
     function podeGerarTermoRecurso() { return pode('concursosJRS.gerarTermoRecurso', {'user_medicos': true, 'user_secretaria': false, 'user_medicos_mpi': true}); }
     function podeSolicitar() { return pode('concursosJRS.solicitarParecerExames', {'user_medicos': true, 'user_secretaria': false, 'user_medicos_mpi': true}); }
+    // Inspeções de Saúde (mesmos padrões de config/permissoesPadrao.ts).
+    function podeExcluirIS() { return pode('inspecoes.excluir', {'user_medicos': false, 'user_secretaria': true, 'user_medicos_mpi': false}); }
+    function podeMinutaIS() { return pode('inspecoes.gerarMinuta', {'user_medicos': true, 'user_secretaria': true, 'user_medicos_mpi': true}); }
     function podeEnviarExames() { return pode('concursosJRS.enviarExamesCandidato', {'user_medicos': true, 'user_secretaria': true, 'user_medicos_mpi': true}); }
 
     // Uma atualização de candidato só pode mexer nos campos da ação que o
