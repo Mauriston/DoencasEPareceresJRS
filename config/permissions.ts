@@ -100,6 +100,7 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'pericia-menor.historico', label: 'Perícia Menor - Histórico', group: 'Perícia Menor' },
   // Abas da Ficha do inspecionado (/inspecionados/:nip). "Inspeções de Saúde" e "Perícias Menores" seguem as
   // permissões das páginas de origem; estas são as abas novas, uma por função.
+  { id: 'ficha.afastamentos', label: 'Aba Afastamentos (resumo só de leitura; inclui os afastamentos das IS, mesmo sem acesso a Inspeções de Saúde)', group: 'Ficha do inspecionado' },
   { id: 'ficha.atestados', label: 'Aba Atestados e Laudos', group: 'Ficha do inspecionado' },
   { id: 'ficha.pareceres', label: 'Aba Pareceres', group: 'Ficha do inspecionado' },
   { id: 'ficha.exames', label: 'Aba Exames', group: 'Ficha do inspecionado' },

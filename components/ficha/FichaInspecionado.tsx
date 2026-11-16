@@ -33,6 +33,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Container } from '../ui/Page';
 import { Card } from '../ui/Card';
+import { Button } from '../ui/Button';
 import { MenuAcoes, type ItemMenu } from '../ui/MenuAcoes';
 import { AbasSublinhadas, CidCodigo, TextoContagem } from '../periciaMenor/partes';
 import { StatusTag } from '../ui/StatusTag';
@@ -52,6 +53,7 @@ import { CadastroTopSheet, type DadoCadastro } from './CadastroTopSheet';
 import { CascaPainelFicha } from './CascaPainelFicha';
 import { PainelGuias } from './guias/PainelGuias';
 import { PainelTranscricoes } from './transcricoes/PainelTranscricoes';
+import { ApoioAfastamentos, PainelAfastamentos } from './afastamentos/PainelAfastamentos';
 import { AgendarISFicha } from './AgendarISFicha';
 import { AbrirISFicha, type ModoAbrirIS } from './AbrirISFicha';
 import { PosCriacaoIS, deveTentarGuias } from '../inspecoes/guias/PosCriacaoIS';
@@ -111,6 +113,7 @@ const urlParaModal = (url: string) => (isGoogleDriveUrl(url) ? getDriveEmbedUrl(
 const DEF_ABA: Record<AbaFicha, { rotulo: string; icone: string; historico: string; vazio: string }> = {
   is: { rotulo: 'Inspeções de Saúde', icone: 'event_available', historico: 'Inspeções de Saúde', vazio: 'Inspeções de Saúde registradas' },
   pm: { rotulo: 'Perícia Menor', icone: 'personal_injury', historico: 'Perícias Menores', vazio: 'Perícias Menores registradas' },
+  afastamentos: { rotulo: 'Afastamentos', icone: 'event_busy', historico: 'Afastamentos', vazio: 'afastamentos registrados' },
   atestados: { rotulo: 'Atestados e Laudos', icone: 'note_alt', historico: 'Atestados e Laudos', vazio: 'atestados ou laudos registrados' },
   pareceres: { rotulo: 'Pareceres', icone: 'assignment', historico: 'Pareceres', vazio: 'pareceres registrados' },
   exames: { rotulo: 'Exames', icone: 'lab_profile', historico: 'Exames', vazio: 'exames registrados' },
@@ -203,16 +206,20 @@ export const FichaInspecionado: React.FC = () => {
   const principalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => (podeFicha && nip ? observarMilitar(nip, setMilitar, () => setMilitar(null)) : undefined), [nip, podeFicha]);
-  useEffect(() => (secoes.pericias && nip ? observarPericiasDoMilitar(nip, setPericias, () => setPericias([])) : undefined), [nip, secoes.pericias]);
-  useEffect(() => (secoes.inspecoes && nip ? observarInspecoesDoInspecionado(nip, setInspecoes, () => setInspecoes([])) : undefined), [nip, secoes.inspecoes]);
+  // A aba Afastamentos (só leitura) lê IS e perícias mesmo sem acesso às páginas de origem (ex.: User Médicos Geral).
+  const comAfastamentos = estadoAbas.afastamentos.visivel;
+  const lerPericias = secoes.pericias || comAfastamentos;
+  const lerIS = secoes.inspecoes || comAfastamentos;
+  useEffect(() => (lerPericias && nip ? observarPericiasDoMilitar(nip, setPericias, () => setPericias([])) : undefined), [nip, lerPericias]);
+  useEffect(() => (lerIS && nip ? observarInspecoesDoInspecionado(nip, setInspecoes, () => setInspecoes([])) : undefined), [nip, lerIS]);
   useEffect(() => (secoes.pareceres && nip ? observarPareceresDoMilitar(nip, setPareceres, () => setPareceres([])) : undefined), [nip, secoes.pareceres]);
   useEffect(() => (secoes.eventos && nip ? observarEventosInspecionado(nip, setEventos, () => setEventos([])) : undefined), [nip, secoes.eventos]);
   useEffect(() => {
-    if (!secoes.pericias) return;
+    if (!lerPericias && !comAfastamentos) return;
     let vivo = true;
     carregarCid().then(l => { if (vivo) setCidAbrev(indiceCidAbreviado(l)); }).catch(() => { /* só o código */ });
     return () => { vivo = false; };
-  }, [secoes.pericias]);
+  }, [lerPericias, comAfastamentos]);
   // Auditoria de leitura: "abriu a ficha" (quem e quando), uma vez por ficha aberta.
   const auditada = useRef('');
   useEffect(() => {
@@ -363,9 +370,9 @@ export const FichaInspecionado: React.FC = () => {
     id: a.id, rotulo: a.id === 'pm' && atestado ? 'Atestados' : DEF_ABA[a.id].rotulo,
     desabilitada: !a.habilitada, dica: a.habilitada ? undefined : 'Em breve',
   }));
-  const trocarAba = (id: AbaFicha) => { setAbrindoIS(null); definir({ aba: id, reg: null, is: null, sel: null, guia: null, gravar: null }); };
+  const trocarAba = (id: AbaFicha) => { setAbrindoIS(null); setNovaPericia(false); definir({ aba: id, reg: null, is: null, sel: null, guia: null, gravar: null }); };
   const abrirRegistro = (id: string) => {
-    setAbrindoIS(null);
+    setAbrindoIS(null); setNovaPericia(false);
     definir({ reg: id, is: null, sel: null, gravar: null });
     // Empilhado (abaixo de xl), o painel principal fica acima do histórico: rola até ele.
     if (typeof window !== 'undefined' && !window.matchMedia('(min-width: 1280px)').matches) {
@@ -374,11 +381,15 @@ export const FichaInspecionado: React.FC = () => {
   };
 
   const itensDaAba: Record<AbaFicha, ItemHistorico[]> = {
+    afastamentos: [],
     is: itensIS, pm: itensPM, atestados: itensAtestados, pareceres: itensPareceres, exames: itensExames,
     guias: itensGuias, emails: [], mensagens: [], outros: [], transcricoes: itensTranscricoes,
   };
   const historico = aba ? itensDaAba[aba] : [];
   const atual = registroSelecionado(historico, pedido);
+  const dadosAfastamentos = {
+    inspecoes, pericias, hoje, cidAbrev, atestado, comIS: lerIS, comPericias: lerPericias,
+  };
 
   const abrirExame = async (e: ExameDaFicha) => {
     setAbrindoExame(idExame(e));
@@ -388,7 +399,7 @@ export const FichaInspecionado: React.FC = () => {
   };
 
   // "Abrir IS" (cabeçalho): vai para a aba Inspeções de Saúde e abre o formulário no painel principal.
-  const abrirIS = (modo: ModoAbrirIS) => { definir({ aba: 'is', reg: null, is: null, sel: null, guia: null, gravar: null }); setAbrindoIS(modo); };
+  const abrirIS = (modo: ModoAbrirIS) => { setNovaPericia(false); definir({ aba: 'is', reg: null, is: null, sel: null, guia: null, gravar: null }); setAbrindoIS(modo); };
   const formAbrirIS = abrindoIS && (
     <AbrirISFicha
       modo={abrindoIS} nip={nip} casca={isDesktop ? 'inline' : 'drawer'} onAviso={avisar}
@@ -408,13 +419,19 @@ export const FichaInspecionado: React.FC = () => {
     return is && is.dataEntrevista === item.dataEntrevista && ehElegivelAgendamento(is) && !agendamentoJaEnviado(is) ? is : null;
   }).find(Boolean) ?? null;
   const tirarDaFila = (isId: string) => setFilaAgendamento(f => f.filter(x => x.isId !== isId));
-  const acaoNovaPericia: AcaoRodape[] = podePericia ? [{ id: 'nova-pericia', rotulo: atestado ? 'Novo atestado' : 'Nova Perícia Menor', icone: 'add', onClick: () => setNovaPericia(true) }] : [];
+  // "+ Perícia Menor" (cabeçalho): vai para a aba Perícia Menor e abre o formulário no painel principal (no celular,
+  // bottom sheet).
+  const novaPericiaAbrir = () => { setAbrindoIS(null); definir({ aba: 'pm', reg: null, is: null, sel: null, guia: null, gravar: null }); setNovaPericia(true); };
+  const formNovaPericia = novaPericia && podePericia && (
+    <NovaPericiaMenorForm titulo={t.novo} militarInicial={nip} casca={isDesktop ? 'inline' : 'drawer'} onClose={() => setNovaPericia(false)}
+      onRegistrado={n => { setNovaPericia(false); definir({ aba: 'pm', reg: null }); avisar(atestado ? `Atestado de ${n} registrado.` : `Perícia menor de ${n} registrada.`); }} />
+  );
 
   /** Painel principal sem registro: o aviso da aba (com as ações que não dependem de um registro). */
-  const semRegistro = (a: AbaFicha, acoes: AcaoRodape[] = []) => (
+  const semRegistro = (a: AbaFicha, acoes: AcaoRodape[] = [], acaoVazio?: React.ReactNode) => (
     <CascaPainelFicha rotulo={DEF_ABA[a].rotulo} acoes={acoes}>
       <EmptyState icon={DEF_ABA[a].icone} title={`Nenhum registro em ${a === 'pm' && atestado ? 'Atestados' : DEF_ABA[a].rotulo}`}
-        description={`${nome} não tem ${a === 'pm' && atestado ? 'atestados registrados' : DEF_ABA[a].vazio}.`} />
+        description={`${nome} não tem ${a === 'pm' && atestado ? 'atestados registrados' : DEF_ABA[a].vazio}.`} action={acaoVazio} />
     </CascaPainelFicha>
   );
 
@@ -518,16 +535,21 @@ export const FichaInspecionado: React.FC = () => {
       );
     }
     if (aba === 'pm') {
+      if (novaPericia && isDesktop) return formNovaPericia;
       const pSel = pmOrdenadas.find(p => p.id === atual?.id);
-      if (!pSel) return semRegistro('pm', acaoNovaPericia);
+      if (!pSel) {
+        return semRegistro('pm', [], podePericia
+          ? <Button variant="ghost" icon="add" onClick={novaPericiaAbrir}>{atestado ? 'Registrar atestado' : 'Registrar Perícia Menor'}</Button>
+          : undefined);
+      }
       return (
         <PericiaMenorPainel
           key={pSel.id} modo="inline" pericia={pSel} historico={pmOrdenadas} hoje={hoje} cidAbrev={cidAbrev} termos={t}
           aba="esta" onAba={() => { /* inline: só "Esta perícia" */ }} onSelecionar={abrirRegistro} onFechar={() => { /* inline */ }}
-          acoes={acaoNovaPericia}
         />
       );
     }
+    if (aba === 'afastamentos') return <PainelAfastamentos {...dadosAfastamentos} nome={nome} />;
     if (aba === 'atestados') return painelDocumento('atestados', atestadosIS);
     if (aba === 'exames') return painelDocumento('exames', examesIS);
     if (aba === 'pareceres') return painelParecer();
@@ -554,7 +576,7 @@ export const FichaInspecionado: React.FC = () => {
     return semRegistro(aba);
   })();
 
-  const painelApoio = aba && (
+  const painelApoio = aba === 'afastamentos' ? <ApoioAfastamentos {...dadosAfastamentos} /> : aba && (
     <Card padding="none" as="section" title={`Histórico · ${aba === 'pm' && atestado ? 'Atestados' : DEF_ABA[aba].historico}`}>
       {historico.length === 0 ? (
         <p className="px-4 md:px-5 pb-4 -mt-1 text-sm text-ink-3">Nenhum registro.</p>
@@ -592,6 +614,9 @@ export const FichaInspecionado: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <MenuAcoes rotulo="Mais ações da ficha" itens={menu} />
+            {podePericia && (
+              <Button variant="secondary" icon="add" onClick={novaPericiaAbrir}>{atestado ? 'Atestado' : 'Perícia Menor'}</Button>
+            )}
             {podeIS && (
               <MenuAcoes rotulo="Abrir IS" botao={{ texto: 'Abrir IS', icone: 'add', primario: true }} itens={[
                 { rotulo: 'Manualmente', icone: 'edit_note', onClick: () => abrirIS('manual') },
@@ -617,7 +642,7 @@ export const FichaInspecionado: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6 items-start">
               <div ref={principalRef} className="min-w-0 xl:col-span-8 scroll-mt-16">{painelPrincipal}</div>
-              <aside aria-label={`Histórico de ${DEF_ABA[aba].historico}`} className="min-w-0 xl:col-span-4 xl:sticky xl:top-16">{painelApoio}</aside>
+              <aside aria-label={aba === 'afastamentos' ? 'Resumo dos afastamentos' : `Histórico de ${DEF_ABA[aba].historico}`} className="min-w-0 xl:col-span-4 xl:sticky xl:top-16">{painelApoio}</aside>
             </div>
           )}
         </div>
@@ -687,10 +712,7 @@ export const FichaInspecionado: React.FC = () => {
         />
       )}
       {pdf && <PdfFullscreenModal title={pdf.titulo} url={pdf.url} onClose={() => setPdf(null)} />}
-      {novaPericia && podePericia && (
-        <NovaPericiaMenorForm titulo={t.novo} militarInicial={nip} onClose={() => setNovaPericia(false)}
-          onRegistrado={n => { setNovaPericia(false); avisar(atestado ? `Atestado de ${n} registrado.` : `Perícia menor de ${n} registrada.`); }} />
-      )}
+      {!isDesktop && formNovaPericia}
       {editando && militar && perfil === 'admin' && (
         <MilitarEdicao militar={militar} oms={oms} postos={postos} onClose={() => setEditando(false)}
           onSalvo={n => { setEditando(false); avisar(`Dados de ${n} atualizados.`); }} />

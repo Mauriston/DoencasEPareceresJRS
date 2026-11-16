@@ -412,7 +412,7 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   // Abas sem contagens (Inspeções de Saúde, Perícia Menor e as novas); "Pedir parecer" e o card Cadastro saíram da ficha.
   const guias = p.getByRole('tablist', { name: 'Registros do inspecionado' });
   await guias.getByRole('tab', { name: 'Inspeções de Saúde', exact: true }).waitFor();
-  for (const nome of ['Atestados e Laudos', 'Pareceres', 'Exames', 'Guias', 'Emails', 'Mensagens', 'Outros', 'Transcrições']) {
+  for (const nome of ['Afastamentos', 'Atestados e Laudos', 'Pareceres', 'Exames', 'Guias', 'Emails', 'Mensagens', 'Outros', 'Transcrições']) {
     await guias.getByRole('tab', { name: nome, exact: true }).waitFor();
   }
   // "Outros" fica desabilitada para todos.
@@ -424,6 +424,15 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   await p.getByRole('complementary', { name: /Histórico de Perícias Menores/ }).getByRole('button', { name: /Perícia menor registrada/ }).first().click();
   assert.equal(await p.getByRole('dialog').count(), 0);
   assert.match(p.url(), new RegExp(`#/inspecionados/${INSPECIONADO.nip}\\?.*aba=pm`));
+  // "+ Perícia Menor" (cabeçalho): abre o formulário no painel principal da aba Perícia Menor, sem drawer.
+  await p.getByRole('button', { name: 'Perícia Menor', exact: true }).click();
+  await p.getByRole('heading', { name: 'Nova perícia menor' }).waitFor();
+  assert.equal(await p.getByRole('dialog').count(), 0);
+  // Afastamentos: só leitura, com os cards de resumo no apoio e sem barra de ações.
+  await guias.getByRole('tab', { name: 'Afastamentos', exact: true }).click();
+  await p.getByRole('heading', { name: 'Afastamentos', exact: true }).waitFor();
+  await p.getByRole('complementary', { name: 'Resumo dos afastamentos' }).getByText('Situação atual').waitFor();
+  assert.equal(await p.getByRole('toolbar', { name: 'Ações da aba' }).count(), 0);
   // Guias: sem guias geradas, o painel principal avisa que não há registros.
   await guias.getByRole('tab', { name: 'Guias', exact: true }).click();
   await p.getByText('Nenhum registro em Guias').waitFor();
