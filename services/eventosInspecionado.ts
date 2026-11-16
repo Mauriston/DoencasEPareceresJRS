@@ -19,6 +19,10 @@ export type AcaoInspecionado =
   | 'pericia.registrar'
   | 'is.cadastrar'
   | 'is.agendar'
+  | 'is.concluir'
+  | 'is.reabrir'
+  | 'is.excluir'
+  | 'is.mensagem'
   | 'parecer.gerar'
   | 'parecer.resposta';
 
@@ -30,6 +34,10 @@ export const ROTULO_ACAO_INSPECIONADO: Record<AcaoInspecionado, string> = {
   'pericia.registrar': 'registrou perícia menor',
   'is.cadastrar': 'cadastrou a IS',
   'is.agendar': 'agendou a IS',
+  'is.concluir': 'concluiu a IS',
+  'is.reabrir': 'reabriu a IS',
+  'is.excluir': 'excluiu a IS',
+  'is.mensagem': 'registrou mensagem tramitada da IS',
   'parecer.gerar': 'gerou pedido de parecer',
   'parecer.resposta': 'enviou resposta de parecer',
 };

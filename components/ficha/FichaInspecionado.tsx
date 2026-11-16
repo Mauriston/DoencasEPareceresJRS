@@ -20,9 +20,9 @@
 //   (pareceres/RespostaParecerForm.tsx: PDF transcrito pela IA; o pedido passa a Concluído). Trocar de aba/registro limpa o "criar".
 //   Cabeçalho: "Abrir IS ▾" (botão primário; Manualmente · Por print do SINAIS) leva à aba Inspeções de Saúde e abre o
 //   formulário no painel principal (AbrirISFicha; no celular, bottom sheet), com o pós-criação da página Inspeções.
-//   Inspeções de Saúde: sem o campo Inspecionado (o nome está no topo); barra com "Excluir" (Admin, à esquerda),
-//   "Agendar IS"/"Reagendar IS" (AgendarISFicha; depois, o e-mail de agendamento) e as ações da IS; "Gravar
-//   entrevista" leva à aba Transcrições (só com ela habilitada para o perfil).
+//   Inspeções de Saúde: painel e barra em components/ficha/inspecoes/PainelISFicha.tsx (sem o campo Inspecionado nem
+//   os cards dos documentos — atalhos para as abas); "Agendar IS"/"Reagendar IS" abre o AgendarISFicha (depois, o
+//   e-mail de agendamento); "Minutar MSG" registrada leva à aba Mensagens (mensagensIS — PainelMensagemIS).
 //   Emails: um item por e-mail enviado que envolve o inspecionado (todas as IS dele e envios ligados ao NIP), do
 //   mais recente; o painel principal mostra o e-mail como saiu, num iframe sandbox sem scripts
 //   (components/ficha/emails/PainelEmail.tsx; dados em useEmailsDaFicha). Sem barra de ações.
@@ -55,7 +55,7 @@ import { useTituloPagina } from '../shell/TituloPagina';
 import { PdfFullscreenModal } from '../PdfFullscreenModal';
 import { LinhaRegistroPericia, PericiaMenorPainel } from '../periciaMenor/PericiaMenorPainel';
 import { NovaPericiaMenorForm } from '../periciaMenor/NovaPericiaMenorForm';
-import { InspecaoDetalhe, fasesDeEntrevista } from '../inspecoes/InspecaoDetalhe';
+import { fasesDeEntrevista } from '../inspecoes/InspecaoDetalhe';
 import { NovoParecerForm } from '../pareceres/NovoParecerForm';
 import { MilitarEdicao } from '../Militares';
 import { CadastroTopSheet, type DadoCadastro } from './CadastroTopSheet';
@@ -73,6 +73,9 @@ import { useEmailsDaFicha } from './emails/useEmailsDaFicha';
 import { horaDoEnvio, isoDoEnvio, resumoDestinatarios } from '../../utils/emailsEnviados';
 import { AgendarISFicha } from './AgendarISFicha';
 import { AbrirISFicha, type ModoAbrirIS } from './AbrirISFicha';
+import { PainelISFicha } from './inspecoes/PainelISFicha';
+import { PainelMensagemIS } from './inspecoes/PainelMensagemIS';
+import { observarMensagensDoInspecionado, type MensagemISRecord } from '../../services/mensagensIS';
 import { PosCriacaoIS, deveTentarGuias } from '../inspecoes/guias/PosCriacaoIS';
 import { EnviarAgendamentoDialog } from '../inspecoes/EnviarAgendamentoDialog';
 import type { DadosInspecionadoIS } from '../inspecoes/InspecaoForm';
@@ -80,20 +83,16 @@ import { avisarAgendamento, observarAgendamentos } from '../../services/emailAge
 import { agendamentoJaEnviado, ehElegivelAgendamento } from '../../utils/emailAgendamentoIS';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useEntrevistasDasIS, type EntrevistaDaFicha } from './useEntrevistasDasIS';
-import { ConfirmDialog } from '../ui/Dialog';
 import { useExamesDasIS, type ExameDaFicha } from './useExamesDasIS';
 import { abasDaFicha, secoesDaFicha, podeAbrirFicha } from './permissoes';
 import { useNav } from '../../context/NavContext';
 import { useBreadcrumbs } from '../../context/BreadcrumbContext';
 import { canUseFeature } from '../../config/permissions';
-import { podeUsarEntrevista } from '../../config/entrevistas';
 import { termosPericia } from '../../config/termosPericia';
 import { fichaPath } from '../../config/routes';
-import { observarMilitar, tipoDoInspecionado, type MilitarRecord } from '../../services/firestoreMilitares';
+import { observarMilitar, tipoDoInspecionado, vinculoDoInspecionado, type MilitarRecord } from '../../services/firestoreMilitares';
 import { observarPericiasDoMilitar, dataBR, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
-import { apagarInspecao, atualizarInspecao, observarInspecoesDoInspecionado, type InspecaoRecord } from '../../services/firestoreInspecoes';
-import { removerEventoAgendaIS } from '../../services/agendaGoogleIS';
-import { podeArrastarIS } from '../../utils/calendarioIS';
+import { atualizarInspecao, observarInspecoesDoInspecionado, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { rotuloSituacao } from '../../utils/entrevistas';
 import { observarPareceresDoMilitar, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
 import { modoCriarParecer, pedidosPendentes } from '../../utils/pareceres';
@@ -104,7 +103,7 @@ import { carregarCid, carregarCorposQuadros, carregarOms, type CorposQuadros, ty
 import { indiceCidAbreviado } from '../../utils/periciaMenorLista';
 import { ROTULO_TIPO_PERICIA, contagemTermino, diaMes, partesCid, postoDoInspecionado, tipoDaPericia } from '../../utils/periciaMenorResumo';
 import { ABAS_FICHA, abaFichaInicial, afastamentosDaIS, registroSelecionado, type AbaFicha } from '../../utils/fichaInspecionado';
-import { classeDoExame } from '../../utils/examesIS';
+import { classeDoExame, ROTULO_CLASSE, ROTULO_TIPO } from '../../utils/examesIS';
 import { STATUS_IS, aguardaAgendamento, statusEfetivoIS, dataHoraBr, situacaoDoStatus } from '../../utils/inspecoes';
 import { getDriveEmbedUrl, isGoogleDriveUrl } from '../../utils/googleDrive';
 import { extrairNomeInspecionado, formatCelular, formatCpf, formatDataBr, formatNip, idadeEmAnos } from '../../utils/format';
@@ -205,7 +204,7 @@ export const FichaInspecionado: React.FC = () => {
   const [pdf, setPdf] = useState<{ titulo: string; url: string } | null>(null);
   const [parecerPara, setParecerPara] = useState<{ is: InspecaoRecord; inicial?: ParecerRecord } | null>(null);
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
-  const [excluindo, setExcluindo] = useState<InspecaoRecord | null>(null);
+  const [mensagens, setMensagens] = useState<MensagemISRecord[]>([]);
   /** "Abrir IS" do cabeçalho: formulário aberto (no painel principal da aba IS; no celular, bottom sheet). */
   const [abrindoIS, setAbrindoIS] = useState<ModoAbrirIS | null>(null);
   const [posCriacao, setPosCriacao] = useState<{ is: InspecaoRecord; dados: DadosInspecionadoIS } | null>(null);
@@ -229,6 +228,7 @@ export const FichaInspecionado: React.FC = () => {
   useEffect(() => (lerPericias && nip ? observarPericiasDoMilitar(nip, setPericias, () => setPericias([])) : undefined), [nip, lerPericias]);
   useEffect(() => (lerIS && nip ? observarInspecoesDoInspecionado(nip, setInspecoes, () => setInspecoes([])) : undefined), [nip, lerIS]);
   useEffect(() => (secoes.pareceres && nip ? observarPareceresDoMilitar(nip, setPareceres, () => setPareceres([])) : undefined), [nip, secoes.pareceres]);
+  useEffect(() => (estadoAbas.mensagens.habilitada && nip ? observarMensagensDoInspecionado(nip, setMensagens, () => setMensagens([])) : undefined), [nip, estadoAbas.mensagens.habilitada]);
   useEffect(() => (secoes.eventos && nip ? observarEventosInspecionado(nip, setEventos, () => setEventos([])) : undefined), [nip, secoes.eventos]);
   useEffect(() => {
     if (!lerPericias && !comAfastamentos) return;
@@ -327,6 +327,12 @@ export const FichaInspecionado: React.FC = () => {
     detalhe: [horaDoEnvio(e.enviadoEmMs), e.rotulo, `para ${resumoDestinatarios(e.para)}`].filter(Boolean).join(' · '),
   }));
 
+  // Mensagens tramitadas registradas a partir da minuta das IS ("Minutar MSG"), da mais recente para a mais antiga.
+  const itensMensagens: ItemHistorico[] = mensagens.map(m => ({
+    id: m.id, data: isoDe(m.registradoEm), icone: 'chat', titulo: m.assunto || `Mensagem da IS ${m.is}`,
+    detalhe: [`IS ${m.is}`, m.registradoPor?.usuario ? `registrada por ${m.registradoPor.usuario}` : ''].filter(Boolean).join(' · '),
+  }));
+
   // Transcrições: primeiro as IS Agendadas/Reagendadas (a gravar), depois as entrevistas gravadas.
   const isAGravar = isOrdenadas.filter(i => fasesDeEntrevista(i));
   const itensTranscricoes: ItemHistorico[] = [
@@ -406,7 +412,7 @@ export const FichaInspecionado: React.FC = () => {
   const itensDaAba: Record<AbaFicha, ItemHistorico[]> = {
     afastamentos: [],
     is: itensIS, pm: itensPM, atestados: itensAtestados, pareceres: itensPareceres, exames: itensExames,
-    guias: itensGuias, emails: itensEmails, mensagens: [], outros: [], transcricoes: itensTranscricoes,
+    guias: itensGuias, emails: itensEmails, mensagens: itensMensagens, outros: [], transcricoes: itensTranscricoes,
   };
   const historico = aba ? itensDaAba[aba] : [];
   const atual = registroSelecionado(historico, pedido);
@@ -532,40 +538,11 @@ export const FichaInspecionado: React.FC = () => {
       const isSel = isOrdenadas.find(i => i.id === atual?.id);
       if (abrindoIS && isDesktop) return formAbrirIS;
       if (!isSel) return semRegistro('is');
-      // Agendar (Aberta/Realizando Exames) ou Reagendar (Faltou; Agendada que ainda dá para remarcar) — as mesmas
-      // regras do menu da IS na página Inspeções de Saúde.
-      const podeAgendar = canUseFeature('inspecoes.agendar', perfil);
-      const agendar = podeAgendar && (aguardaAgendamento(isSel.status) || isSel.status === 'faltou' || podeArrastarIS(isSel));
-      const acoesIS: AcaoRodape[] = [
-        // Excluir: hoje só o Admin apaga IS (firestore.rules e a rota que apaga as guias).
-        ...(perfil === 'admin' ? [{ id: 'excluir', rotulo: 'Excluir', icone: 'delete', variante: 'destructive' as const, onClick: () => setExcluindo(isSel) }] : []),
-        ...(agendar ? [{
-          id: 'agendar', rotulo: aguardaAgendamento(isSel.status) && !isSel.dataEntrevista ? 'Agendar IS' : 'Reagendar IS', icone: 'event',
-          variante: 'secondary' as const, onClick: () => setAgendando(isSel),
-        }] : []),
-      ];
       return (
-        <InspecaoDetalhe
-          key={isSel.id}
-          casca="inline"
-          acoesExtras={acoesIS}
-          onGravarEntrevista={estadoAbas.transcricoes.habilitada
-            ? () => definir({ aba: 'transcricoes', reg: `is:${isSel.id}`, gravar: '1', is: null, sel: null, guia: null })
-            : null}
-          inspecao={isSel}
-          om={militar?.om || om}
-          permissoes={{
-            editar: canUseFeature('inspecoes.editar', perfil),
-            // A minuta MSG depende da lista de inspecionados e dos destinatários (página Inspeções de Saúde).
-            minuta: false,
-            parecer: secoes.pareceres && canUseFeature('pareceres.gerar', perfil),
-            entrevista: podeUsarEntrevista(perfil),
-            exames: canUseFeature('inspecoes.enviarExames', perfil),
-          }}
-          onClose={() => { /* inline: não fecha */ }}
-          onMinuta={() => { /* desligada na ficha */ }}
-          onSolicitarParecer={() => setParecerPara({ is: isSel })}
-          onDuplicarParecer={p => setParecerPara({ is: isSel, inicial: p })}
+        <PainelISFicha
+          key={isSel.id} is={isSel} perfil={perfil} abas={estadoAbas} definir={definir}
+          om={militar?.om || om} vinculo={militar ? vinculoDoInspecionado(militar) : undefined}
+          onAgendar={setAgendando}
           onSituacaoMudou={is => { sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS atualizada, mas o Google Agenda não: ${r.erro}`, 'error'); }); }}
           onAviso={avisar}
         />
@@ -604,6 +581,11 @@ export const FichaInspecionado: React.FC = () => {
           onConcluido={id => definir({ gravar: null, reg: `${isId}/${id}` })}
         />
       );
+    }
+    if (aba === 'mensagens') {
+      const m = mensagens.find(x => x.id === atual?.id);
+      if (!m) return semRegistro('mensagens');
+      return <PainelMensagemIS key={m.id} mensagem={m} onAviso={avisar} />;
     }
     if (aba === 'guias') {
       const isSel = isComGuias.find(i => i.id === atual?.id);
@@ -744,16 +726,6 @@ export const FichaInspecionado: React.FC = () => {
       {agendando && (
         <AgendarISFicha inspecao={agendando} onClose={() => setAgendando(null)} onAgendada={(msg, tom) => { setAgendando(null); avisar(msg, tom); }} />
       )}
-      {excluindo && (
-        <ConfirmDialog
-          title={`Excluir a IS ${excluindo.is}?`}
-          message="A IS, as guias de exames e o evento do Google Agenda serão apagados. Esta ação não pode ser desfeita."
-          confirmLabel="Excluir"
-          destructive
-          onConfirm={() => { void excluirIS(); }}
-          onCancel={() => setExcluindo(null)}
-        />
-      )}
       {pdf && <PdfFullscreenModal title={pdf.titulo} url={pdf.url} onClose={() => setPdf(null)} />}
       {!isDesktop && formNovaPericia}
       {editando && militar && perfil === 'admin' && (
@@ -762,20 +734,6 @@ export const FichaInspecionado: React.FC = () => {
       )}
     </div>
   );
-
-  async function excluirIS() {
-    const is = excluindo;
-    if (!is) return;
-    setExcluindo(null);
-    try {
-      if (is.eventoAgendaId) await removerEventoAgendaIS(is);
-      await apagarInspecao(is);
-      definir({ reg: null, is: null });
-      avisar(`IS ${is.is} excluída.`);
-    } catch (e: any) {
-      avisar(e?.message || 'Não foi possível excluir a IS.', 'error');
-    }
-  }
 
   async function aoParecerGerado(is: InspecaoRecord, n: string) {
     setParecerPara(null);

@@ -101,8 +101,10 @@ export const restricoesDaConclusao = (c: ConclusaoSinais | undefined, opcoes: st
 };
 
 /** Status pela conclusão (foto 2): Laudo → Votação pendente; + Nº do TIS → Assinaturas pendentes; + DS-1A → TIS assinado. */
-export const statusDaConclusao = (c: { laudo: string; tis: string; ds1a: string }, statusAtual?: StatusIS): StatusIS => {
-  if (c.laudo && c.tis && c.ds1a) return 'tis_assinado';
+// A IS só é FINALIZADA pela conclusão explícita (botão "Concluir IS" ou, na importação, a Data da Conclusão lida
+// nos prints — a IS já concluída no SINAIS). Laudo + TIS + DS-1a sem Data da Conclusão ficam em Assinaturas pendentes.
+export const statusDaConclusao = (c: { laudo: string; tis: string; ds1a: string; dataConclusao?: string }, statusAtual?: StatusIS): StatusIS => {
+  if (c.laudo && c.tis && c.ds1a && c.dataConclusao) return 'tis_assinado';
   if (c.laudo && c.tis) return 'assinaturas_pendentes';
   // Encaminhada à Auditoria/JSD (ou restituída) antes do TIS: o status do encaminhamento continua valendo.
   if (statusAtual && STATUS_ENCAMINHAMENTO.includes(statusAtual)) return statusAtual;
@@ -288,6 +290,7 @@ export interface ConclusaoAtualIS {
   tis: string;
   ds1a: string;
   cid?: string;
+  /** Data da Conclusão gravada (AAAA-MM-DD; '' enquanto a IS não foi concluída). */
   dataConclusao?: string;
 }
 
@@ -300,7 +303,7 @@ export interface PreenchimentoPrints {
   restricoes?: string;
   tis?: string;
   ds1a?: string;
-  /** "Data da Conclusão" da IS (AAAA-MM-DD), nunca anterior à Data do laudo. */
+  /** "Data da Conclusão" da IS (AAAA-MM-DD) lida nos prints, nunca anterior à Data do laudo: o detalhe preenche o campo. */
   dataConclusao?: string;
 }
 

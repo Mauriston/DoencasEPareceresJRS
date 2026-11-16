@@ -60,11 +60,11 @@ import { canUseFeature, canAccessPage } from '../config/permissions';
 import { podeUsarEntrevista } from '../config/entrevistas';
 import { observarMilitares, vinculoDoInspecionado, type MilitarRecord } from '../services/firestoreMilitares';
 import {
-  observarInspecoes, observarBloqueios, observarConfigAgenda, cancelarInspecao, apagarInspecao, agendarInspecao, atualizarInspecao, type InspecaoRecord,
+  observarInspecoes, observarBloqueios, observarConfigAgenda, cancelarInspecao, excluirInspecaoCompleta, agendarInspecao, atualizarInspecao, type InspecaoRecord,
 } from '../services/firestoreInspecoes';
 import type { ParecerRecord } from '../services/firestorePareceres';
 import { mostraMinutaMsg, fasesDeEntrevista } from './inspecoes/InspecaoDetalhe';
-import { restituicaoDoStatus } from '../utils/conclusaoIS';
+import { patchReabrirIS, podeReabrirIS, restituicaoDoStatus } from '../utils/conclusaoIS';
 import { podeArrastarIS } from '../utils/calendarioIS';
 import { useDiasConcursos, useSincronizarAgendaConcursos } from '../hooks/useDiasConcursos';
 import { tituloDiaConcurso, ehBloqueioDeConcurso } from '../services/agendaConcursos';
@@ -154,7 +154,9 @@ export const Inspecoes: React.FC = () => {
   const podeBloquear = canUseFeature('inspecoes.bloquearAgenda', perfil);
   const podeParecer = canUseFeature('pareceres.gerar', perfil);
   const podeCadastrarInspecionado = canUseFeature('militares.cadastrar', perfil);
-  const podeGravarEntrevista = podeUsarEntrevista(perfil);
+  // Gravar entrevista: perfis da junta (config/entrevistas.ts) E a função inspecoes.gravarEntrevista (padrão: só o Admin).
+  const podeGravarEntrevista = podeUsarEntrevista(perfil) && canUseFeature('inspecoes.gravarEntrevista', perfil);
+  const podeReabrir = canUseFeature('inspecoes.reabrir', perfil);
   const podeEnviarExames = canUseFeature('inspecoes.enviarExames', perfil);
 
   const [lista, setLista] = useState<InspecaoRecord[] | null>(null);
@@ -412,6 +414,18 @@ export const Inspecoes: React.FC = () => {
     }
   };
 
+  const reabrir = async (is: InspecaoRecord) => {
+    const patch = patchReabrirIS(is);
+    if (!patch) return;
+    try {
+      await atualizarInspecao(is.id, patch);
+      avisar(`IS ${is.is} reaberta.`);
+      if (is.dataEntrevista) sincronizarAgendaIS({ ...is, ...patch }).then(r => { if (!r.ok) avisar(`Google Agenda não atualizado: ${r.erro}`, 'error'); });
+    } catch (e: any) {
+      avisar(e?.message || 'Não foi possível reabrir a IS.', 'error');
+    }
+  };
+
   const confirmarAcao = async () => {
     const alvo = confirmando;
     if (!alvo) return;
@@ -440,7 +454,7 @@ export const Inspecoes: React.FC = () => {
     setApagando(null);
     try {
       if (is.eventoAgendaId) await removerEventoAgendaIS(is);
-      await apagarInspecao(is);
+      await excluirInspecaoCompleta(is);
       setDetalheId(null);
       avisar(`IS ${is.is} apagada.`);
     } catch (e: any) {
@@ -480,9 +494,11 @@ export const Inspecoes: React.FC = () => {
     // Benefícios também aqui, assim que a IS tem Nº do TIS (Assinaturas pendentes ou TIS assinado) e enquanto não foi enviado.
     if (podeEmails && resultadoBeneficiosDisponivel(is) && !resultadoBeneficiosEnviado(is)) itens.push({ rotulo: 'E-mail de resultado (Benefícios)', icone: 'mark_email_unread', onClick: () => setEnviandoBeneficios(is) });
     if (podeAgendar && is.dataEntrevista && is.status !== 'cancelada' && !(is.agendaSincronizada && is.eventoAgendaId)) itens.push({ rotulo: 'Sincronizar com o Google Agenda', icone: 'sync', onClick: () => { sincronizar(is); } });
-    if (ehAdmin && is.status === 'tis_assinado') itens.push({ rotulo: 'Reabrir IS', icone: 'lock_open', onClick: () => { mudarStatus(is, 'assinaturas_pendentes', `IS ${is.is} reaberta.`); } });
+    // Reabrir IS concluída: função inspecoes.reabrir ou quem concluiu (apaga a Data da Conclusão e quem concluiu).
+    if (podeEditar && podeReabrirIS(is, usuario?.uid, podeReabrir)) itens.push({ rotulo: 'Reabrir IS', icone: 'lock_open', onClick: () => { void reabrir(is); } });
     if (canUseFeature('inspecoes.cancelar', perfil) && podeCancelarIS(is, hoje)) itens.push({ rotulo: 'Cancelar IS', icone: 'cancel', perigo: true, onClick: () => setConfirmando({ tipo: 'cancelar', is }) });
-    if (ehAdmin) itens.push({ rotulo: 'Apagar IS', icone: 'delete', perigo: true, onClick: () => setApagando(is) });
+    // Apagar IS (com tudo o que é dela, no servidor): função inspecoes.excluir, só IS não finalizada; o Admin apaga qualquer uma.
+    if (ehAdmin || (canUseFeature('inspecoes.excluir', perfil) && is.situacao !== 'finalizada')) itens.push({ rotulo: 'Apagar IS', icone: 'delete', perigo: true, onClick: () => setApagando(is) });
     return itens;
   };
 
@@ -728,7 +744,7 @@ export const Inspecoes: React.FC = () => {
         <InspecaoDetalhe
           inspecao={detalhe}
           om={omDe(detalhe)}
-          permissoes={{ editar: podeEditar, minuta: podeMinuta, parecer: podeParecer, entrevista: podeGravarEntrevista, exames: podeEnviarExames }}
+          permissoes={{ editar: podeEditar, minuta: podeMinuta, parecer: podeParecer, entrevista: podeGravarEntrevista, exames: podeEnviarExames, reabrir: podeReabrir }}
           onClose={() => setDetalheId(null)}
           onMinuta={() => setMinuta(detalhe)}
           onSolicitarParecer={() => setParecerPara({ is: detalhe })}
@@ -846,7 +862,7 @@ export const Inspecoes: React.FC = () => {
       {apagando && (
         <ConfirmDialog
           title="Apagar IS"
-          message={<>Apagar definitivamente a <strong>IS {apagando.is}</strong> ({nomeCurto(apagando.inspecionado)})? O horário reservado, o evento no Google Agenda e as guias de exames também são removidos. Esta ação não pode ser desfeita.</>}
+          message={<>Apagar definitivamente a <strong>IS {apagando.is}</strong> ({nomeCurto(apagando.inspecionado)})? Também são apagados tudo o que é dela: exames, entrevistas, e-mails e mensagens registradas, guias, pedidos de parecer vinculados, o horário reservado e o evento no Google Agenda. Esta ação não pode ser desfeita.</>}
           confirmLabel="Apagar" destructive onConfirm={confirmarApagar} onCancel={() => setApagando(null)}
         />
       )}

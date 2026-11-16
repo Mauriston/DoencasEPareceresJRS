@@ -93,7 +93,9 @@ const statusDoItem = (it: Item, atual: InspecaoRecord | null): StatusIS => {
   const c = it.campos;
   const tis = c.tis.trim() || atual?.tis || '';
   const ds1a = tis ? c.ds1a.trim() || atual?.ds1a || '' : '';
-  if (it.proposta?.temConclusao && c.laudo.trim()) return statusDaConclusao({ laudo: c.laudo.trim(), tis, ds1a }, atual?.status);
+  if (it.proposta?.temConclusao && c.laudo.trim()) {
+    return statusDaConclusao({ laudo: c.laudo.trim(), tis, ds1a, dataConclusao: it.proposta.dataConclusao || atual?.dataConclusao || '' }, atual?.status);
+  }
   return statusDosDados(c.data ? `${c.data}T${c.hora || '00:00'}` : '', atual ?? undefined);
 };
 
@@ -291,6 +293,8 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
           restricoes: conclusao && mostraRestricoes({ grupoFinalidade: achada.grupo, laudo: c.laudo }) ? juntarRestricoes(separarRestricoes(c.restricoes)) : '',
           tis: conclusao ? c.tis.trim() : '', ds1a: conclusao && c.tis.trim() ? c.ds1a.trim().toUpperCase() : '',
           ...(cid ? { cid: cid.DESCRABREV.trim(), cidCodigo: cid.SUBCAT.trim().toUpperCase() } : {}),
+          // Data da Conclusão lida (proposta já descarta a anterior à Data do laudo): só com a IS finalizada.
+          ...(status === 'tis_assinado' && it.proposta!.dataConclusao && !atual?.dataConclusao ? { dataConclusao: it.proposta!.dataConclusao } : {}),
           status, criadoPor: usuario.usuario,
         }, atual, reservar);
         gravadas++; ultima = salva;

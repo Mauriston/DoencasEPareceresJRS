@@ -59,7 +59,8 @@ describe('status', () => {
   it('com a conclusão: Laudo, Nº do TIS e DS-1A', () => {
     expect(statusDaConclusao({ laudo: 'Apto', tis: '', ds1a: '' })).toBe('votacao_pendente');
     expect(statusDaConclusao({ laudo: 'Apto', tis: '026.000.1', ds1a: '' })).toBe('assinaturas_pendentes');
-    expect(statusDaConclusao({ laudo: 'Apto', tis: '026.000.1', ds1a: 'X' })).toBe('tis_assinado');
+    expect(statusDaConclusao({ laudo: 'Apto', tis: '026.000.1', ds1a: 'X' })).toBe('assinaturas_pendentes');
+    expect(statusDaConclusao({ laudo: 'Apto', tis: '026.000.1', ds1a: 'X', dataConclusao: '2026-11-16' })).toBe('tis_assinado');
     expect(statusDaConclusao({ laudo: 'Apto', tis: '', ds1a: '' }, 'auditoria')).toBe('auditoria');
   });
 });

@@ -59,6 +59,9 @@ export type FeatureKey =
   | 'inspecoes.enviarExames'
   | 'inspecoes.enviarEmails'
   | 'inspecoes.cancelar'
+  | 'inspecoes.reabrir'
+  | 'inspecoes.excluir'
+  | 'inspecoes.gravarEntrevista'
   | 'militares.cadastrar'
   | 'pareceres.gerar'
   | 'pareceres.resposta'
@@ -97,6 +100,12 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'concursosJRS.enviarEmailInaptos': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
   'inspecoes.enviarEmails': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
   'inspecoes.cancelar': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
+  // Reabrir IS concluída (além de quem a concluiu) e excluir IS não finalizada (com tudo o que é dela: rota
+  // POST /api/inspecoes/excluir e firestore.rules): por padrão Admin e Secretaria.
+  'inspecoes.reabrir': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
+  'inspecoes.excluir': { user_medicos: false, user_secretaria: true, user_medicos_mpi: false, user_medicos_geral: false },
+  // Gravar a entrevista da IS (ainda limitada aos perfis da junta — config/entrevistas.ts): por padrão só o Admin.
+  'inspecoes.gravarEntrevista': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
   'inspecoes.cadastrar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   'inspecoes.agendar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   'inspecoes.editar': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
