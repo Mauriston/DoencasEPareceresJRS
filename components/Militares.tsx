@@ -6,16 +6,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
-import { Segmented } from './ui/Segmented';
 import { FilterChip } from './ui/FilterChip';
 import { Dialog, ConfirmDialog } from './ui/Dialog';
-import { Field, controlClass } from './ui/Field';
+import { Field, SearchField, controlClass } from './ui/Field';
 import { ChoiceGroup } from './ui/ChoiceGroup';
 import { StatusTag } from './ui/StatusTag';
 import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
 import { Autocomplete, type OpcaoAutocomplete } from './ui/Autocomplete';
 import { MenuAcoes } from './ui/MenuAcoes';
+import { FiltroPopover } from './inspecoes/FiltroPopover';
+import { AbasSublinhadas } from './periciaMenor/partes';
 import { CadastroInspecionado } from './militares/CadastroInspecionado';
 import { ImportarInspecionadosCsv } from './militares/ImportarInspecionadosCsv';
 import { MilitarDetalhe } from './militares/MilitarDetalhe';
@@ -35,6 +36,7 @@ type Filtro = 'todos' | 'ativos' | 'inativos';
 type FiltroTipo = 'todos' | TipoInspecionado;
 
 const ROTULO_TIPO: Record<TipoInspecionado, string> = { militar: 'Militar', dependente: 'Dependente', pensionista: 'Pensionista' };
+const ROTULO_TIPO_PLURAL: Record<TipoInspecionado, string> = { militar: 'Militares', dependente: 'Dependentes', pensionista: 'Pensionistas' };
 type ColunaOrdem = 'nome' | 'pgq' | 'om';
 
 /** Posição hierárquica do posto/graduação dentro do P/G/Q (ex.: "CT (Md)" → CT; "CB-RM2-EF" → CB). Desconhecidos vão para o fim. */
@@ -92,6 +94,11 @@ export const Militares: React.FC = () => {
     dependente: lista?.filter(m => tipoDoInspecionado(m) === 'dependente').length ?? 0,
     pensionista: lista?.filter(m => tipoDoInspecionado(m) === 'pensionista').length ?? 0,
   }), [lista]);
+
+  const opcoesTipo: { valor: FiltroTipo; rotulo: string; n: number }[] = [
+    { valor: 'todos', rotulo: 'Todos os tipos', n: totais.todos },
+    ...(['militar', 'dependente', 'pensionista'] as const).map(t => ({ valor: t, rotulo: ROTULO_TIPO_PLURAL[t], n: totaisTipo[t] })),
+  ];
 
   const filtrada = useMemo(() => {
     const termos = normalizarBusca(busca).split(/\s+/).filter(Boolean);
@@ -156,65 +163,53 @@ export const Militares: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
-      <Container size="data" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-4">
+      <Container size="data" className={`pt-0 md:pt-8 ${podeCadastrar ? 'pb-28 md:pb-10' : 'pb-10'} flex flex-col gap-4`}>
         <PageHeader
           title="Inspecionados"
           description="Cadastro de militares da ativa, servidores civis, dependentes e pensionistas. Edite os dados e defina quem está ativo no appweb."
-          actions={(podeCadastrar || ehAdmin) ? (
-            <div className="flex flex-wrap gap-2">
-              {/* Importação em lote por CSV: exclusiva do Admin. */}
-              {ehAdmin && <Button variant="secondary" icon="upload_file" onClick={() => setImportando(true)} disabled={lista === null}>Importar CSV</Button>}
-              {podeCadastrar && <Button icon="person_add" onClick={() => setNovo(true)}>Cadastrar novo</Button>}
-            </div>
-          ) : undefined}
+          // Importação em lote por CSV: exclusiva do Admin. "Cadastrar novo" é a primária: entra por último no
+          // desktop e vira o FAB no celular (PageHeader `fab`), como em Pareceres — sem lotar a topbar.
+          actions={ehAdmin ? <Button variant="secondary" icon="upload_file" onClick={() => setImportando(true)} disabled={lista === null}>Importar CSV</Button> : undefined}
+          fab={podeCadastrar ? { icon: 'person_add', label: 'Cadastrar novo', onClick: () => setNovo(true) } : undefined}
         />
 
-        <div className="bg-white rounded-xl border border-line p-4 space-y-3">
-          <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-ink-3 pointer-events-none" aria-hidden="true">search</span>
-            <input type="search" aria-label="Buscar inspecionado" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome, NIP, posto, OM ou e-mail…" className={`${controlClass} pl-10`} autoComplete="off" />
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Segmented
-              ariaLabel="Situação do cadastro"
-              className="overflow-x-auto"
-              value={filtro}
-              onChange={setFiltro}
-              options={[
-                { value: 'ativos', label: 'Ativos', badge: totais.ativos, badgeTone: 'neutro' },
-                { value: 'inativos', label: 'Inativos', badge: totais.inativos, badgeTone: 'neutro' },
-                { value: 'todos', label: 'Todos', badge: totais.todos, badgeTone: 'neutro' },
-              ]}
-            />
-            <FilterChip ativo={soHnre} icon="local_hospital" onAlternar={() => setSoHnre(v => !v)}>Somente HNRe</FilterChip>
-          </div>
-          <Segmented
-            ariaLabel="Tipo de inspecionado"
-            className="overflow-x-auto"
-            value={filtroTipo}
-            onChange={setFiltroTipo}
-            options={[
-              { value: 'todos', label: 'Todos os tipos' },
-              { value: 'militar', label: 'Militares', badge: totaisTipo.militar, badgeTone: 'neutro' },
-              { value: 'dependente', label: 'Dependentes', badge: totaisTipo.dependente, badgeTone: 'neutro' },
-              { value: 'pensionista', label: 'Pensionistas', badge: totaisTipo.pensionista, badgeTone: 'neutro' },
+        {/* Situação do cadastro em abas sublinhadas (G2 — mesmo padrão de Inspeções, Concursos e Perícia Menor):
+            ouro = ativa, contagem em pílula. Abaixo, busca + filtros em chip (tipo com opções = FiltroPopover; HNRe
+            liga/desliga = FilterChip); no celular os chips rolam numa linha (M3). A lista é o painel das abas. */}
+        <section aria-label="Lista de inspecionados" className="bg-white border-y border-line md:border md:rounded-xl overflow-clip -mx-4 md:mx-0">
+          <AbasSublinhadas<Filtro>
+            rotulo="Situação do cadastro" idBase="militares-situacao" ativa={filtro} onChange={setFiltro} className="px-4"
+            abas={[
+              { id: 'ativos', rotulo: 'Ativos', contagem: totais.ativos },
+              { id: 'inativos', rotulo: 'Inativos', contagem: totais.inativos },
+              { id: 'todos', rotulo: 'Todos', contagem: totais.todos },
             ]}
           />
-        </div>
-
-        {selecionavel && escolhidos.length > 0 && (
-          <div role="region" aria-label="Ações em lote" className="sticky top-2 z-10 bg-navy text-white rounded-xl px-4 py-2 flex flex-wrap items-center justify-between gap-2 shadow-lg">
-            <span className="text-sm font-bold" role="status">{escolhidos.length} selecionado{escolhidos.length !== 1 ? 's' : ''}</span>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button variant="secondary" icon="military_tech" onClick={() => setLote('posto')}>Alterar posto (promoção)</Button>
-              <Button variant="secondary" icon="apartment" onClick={() => setLote('servico')}>Alterar serviço do HNRe</Button>
-              <Button variant="secondary" icon="person_off" onClick={() => setLote('inativar')}>Inativar</Button>
-              <Button variant="ghost" icon="close" className="!text-white hover:!bg-white/10" onClick={() => setSelecionados(new Set())}>Limpar</Button>
+          <div className="p-4 flex flex-col md:flex-row md:items-center gap-2">
+            <SearchField
+              value={busca} onChange={setBusca} label="Buscar inspecionado" placeholder="Buscar por nome, NIP, posto, OM ou e-mail…" autoComplete="off"
+              className="md:flex-1 md:min-w-[14rem] md:max-w-md"
+            />
+            <div className="flex items-center gap-2 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible md:flex-wrap [scrollbar-width:none]">
+              <FiltroPopover variante="chip" nome="Tipo de inspecionado" icone="badge" resumo={filtroTipo === 'todos' ? 'Todos os tipos' : ROTULO_TIPO_PLURAL[filtroTipo]} ativo={filtroTipo !== 'todos'}>
+                {fechar => (
+                  <fieldset>
+                    <legend className="sr-only">Tipo de inspecionado</legend>
+                    {opcoesTipo.map(({ valor, rotulo, n }) => (
+                      <label key={valor} className="flex items-center gap-3 min-h-10 px-3 cursor-pointer hover:bg-thead">
+                        <input type="radio" name="militares-tipo" className="w-5 h-5 shrink-0 accent-navy" checked={filtroTipo === valor} onChange={() => { setFiltroTipo(valor); fechar(); }} />
+                        <span className={`flex-1 text-sm ${filtroTipo === valor ? 'font-bold text-navy' : 'font-semibold text-ink'}`}>{rotulo}</span>
+                        <span className="text-xs text-ink-3 tabular-nums">{n}</span>
+                      </label>
+                    ))}
+                  </fieldset>
+                )}
+              </FiltroPopover>
+              <FilterChip ativo={soHnre} icon="local_hospital" onAlternar={() => setSoHnre(v => !v)} className="shrink-0">Somente HNRe</FilterChip>
             </div>
           </div>
-        )}
 
-        <div className="bg-white rounded-xl border border-line overflow-clip">
+          <div id="militares-situacao-painel" role="tabpanel" aria-labelledby={`militares-situacao-aba-${filtro}`} className="border-t border-line">
           {erroCarga ? (
             <p role="alert" className="p-6 text-sm font-semibold text-wine">{erroCarga}</p>
           ) : lista === null ? (
@@ -299,7 +294,8 @@ export const Militares: React.FC = () => {
               </div>
             </>
           )}
-        </div>
+          </div>
+        </section>
       </Container>
 
       {apagando && (

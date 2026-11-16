@@ -283,7 +283,10 @@ export const EscalaSpa: React.FC = () => {
           <Card padding="none">
             <EmptyState icon="calendar_month" title={`Sem escala para ${MESES[mes.m].toLowerCase()} de ${mes.y}`} description={ehAdmin ? 'Envie o CSV da escala do mês pelo botão "Enviar escala".' : 'A escala deste mês ainda não foi publicada.'} />
           </Card>
-        ) : isDesktop ? calendario : lista}
+        ) : isDesktop ? calendario : (
+          // Painel das abas "Todos · Meus serviços" (celular): liga o tablist à lista (aria-controls).
+          <div id="escala-dias-painel" role="tabpanel" aria-labelledby={`escala-dias-aba-${filtroDias}`}>{lista}</div>
+        )}
       </Container>
 
       {importando && ehAdmin && (

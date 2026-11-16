@@ -19,7 +19,7 @@ import { FilterChip } from '../ui/FilterChip';
 import { GradePainel } from '../ui/Grade';
 import { PdfFullscreenModal } from '../PdfFullscreenModal';
 import { getDriveEmbedUrl } from '../../utils/googleDrive';
-import { AbasSituacao } from './AbasSituacao';
+import { AbasSublinhadas } from '../periciaMenor/partes';
 import {
   listarCandidatos, listarExamesCandidato, salvarExamesCandidato,
   type CandidatoRecord, type ConcursoRecord, type ExamesEnvioRecord,
@@ -500,13 +500,12 @@ export const ExamesTranscritosModal: React.FC<ExamesTranscritosModalProps> = ({ 
             <GradePainel principal={transcricao} apoio={laudo} rotuloApoio="Laudo em PDF" />
           ) : (
             <>
-              <AbasSituacao
+              <AbasSublinhadas<typeof aba>
                 idBase="exames-candidato"
-                ariaLabel="Parte dos exames"
-                value={aba}
+                rotulo="Parte dos exames"
+                ativa={aba}
                 onChange={setAba}
-                abas={[{ value: 'transcricao', label: 'Transcrição', contagem: nExames }, { value: 'laudo', label: 'Laudo', contagem: pdfs.length }]}
-                className="border-b border-line"
+                abas={[{ id: 'transcricao', rotulo: 'Transcrição', contagem: nExames }, { id: 'laudo', rotulo: 'Laudo', contagem: pdfs.length }]}
               />
               <div id="exames-candidato-painel" role="tabpanel" aria-labelledby={`exames-candidato-aba-${aba}`}>
                 {aba === 'transcricao' ? transcricao : laudo}

@@ -1,62 +1,8 @@
 // Ficheiro: components/concursos/AbasSituacao.tsx
-// Abas sublinhadas de situação da lista de concursos (auditoria v3, G2/C2): ouro = aba ativa,
-// contagem ao lado do rótulo. São abas (tablist) que controlam o painel `${idBase}-painel`;
-// a vista (cards × tabela) fica num Segmented só de ícones, à parte.
+// Vista da lista de concursos (cards × tabela) só com ícones (auditoria v3, G2/C2). As abas de situação
+// que moravam aqui passaram a usar o componente único `AbasSublinhadas` (periciaMenor/partes.tsx),
+// o mesmo de Inspeções, Perícia Menor, Inspecionados e Pareceres.
 import React, { useRef } from 'react';
-
-export interface AbaSituacao<T extends string> {
-  value: T;
-  label: string;
-  contagem: number;
-}
-
-interface Props<T extends string> {
-  abas: AbaSituacao<T>[];
-  value: T;
-  onChange: (v: T) => void;
-  ariaLabel: string;
-  idBase: string;
-  className?: string;
-}
-
-export function AbasSituacao<T extends string>({ abas, value, onChange, ariaLabel, idBase, className = '' }: Props<T>) {
-  const raiz = useRef<HTMLDivElement>(null);
-  // Setas movem a seleção (roving tabindex), como no Segmented.
-  const aoTecla = (e: React.KeyboardEvent) => {
-    const passo = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
-    if (!passo) return;
-    e.preventDefault();
-    const i = abas.findIndex(a => a.value === value);
-    const prox = abas[(i + passo + abas.length) % abas.length];
-    onChange(prox.value);
-    requestAnimationFrame(() => raiz.current?.querySelectorAll<HTMLElement>('[role="tab"]')[abas.indexOf(prox)]?.focus());
-  };
-  return (
-    <div ref={raiz} role="tablist" aria-label={ariaLabel} onKeyDown={aoTecla} className={`flex gap-1 overflow-x-auto ${className}`}>
-      {abas.map(a => {
-        const ativo = a.value === value;
-        return (
-          <button
-            key={a.value}
-            type="button"
-            role="tab"
-            id={`${idBase}-aba-${a.value}`}
-            aria-selected={ativo}
-            aria-controls={`${idBase}-painel`}
-            tabIndex={ativo ? 0 : -1}
-            onClick={() => onChange(a.value)}
-            className={`shrink-0 inline-flex items-center gap-2 h-12 px-3 border-b-[3px] text-sm font-bold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold ${
-              ativo ? 'text-navy border-gold' : 'text-ink-3 border-transparent hover:text-navy'
-            }`}
-          >
-            {a.label}
-            <span className={`min-w-5 h-5 px-1.5 rounded-full text-xs font-bold tabular-nums inline-flex items-center justify-center ${ativo ? 'bg-navy text-white' : 'bg-line text-ink'}`}>{a.contagem}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 /**
  * Vista da lista só com ícones (G2): mesmo desenho do Segmented do DS, com nome acessível e

@@ -34,6 +34,8 @@ export interface AbaSublinhada<T extends string> {
   id: T; rotulo: string; contagem?: number;
   /** Aba visível mas desabilitada (cinza, sem clique; as setas a pulam). `dica` vira o title. */
   desabilitada?: boolean; dica?: string;
+  /** Contagem que exige atenção (ex.: "Atrasados"): pílula vinho quando > 0 e a aba não está ativa. */
+  alerta?: boolean;
 }
 
 /**
@@ -41,11 +43,13 @@ export interface AbaSublinhada<T extends string> {
  * sob a ativa; contagem em pílula (navy cheia na ativa, cinza nas demais). No celular as abas dividem a largura
  * em partes iguais, centradas (`distribuir` = 'celular', padrão); 'sempre' faz o mesmo em todas as larguras (sheet
  * e painel lateral); 'nunca' deixa cada aba do tamanho do texto, com rolagem lateral (Ficha, 4+ abas).
- * Setas ← → trocam a aba; `idBase` liga cada aba ao painel `${idBase}-painel`.
+ * Setas ← → trocam a aba; `idBase` liga cada aba ao painel `${idBase}-painel`. `linha={false}` tira o filete
+ * inferior quando quem envolve as abas já desenha a linha (cabeçalho de card com a vista ao lado — Inspeções, Concursos).
+ * Padrão das páginas de lista do grupo Trabalho: situação = estas abas; vista = `Segmented`/ícones à parte.
  */
-export function AbasSublinhadas<T extends string>({ abas, ativa, onChange, rotulo, idBase, className = '', altura = 'md', distribuir = 'celular' }: {
+export function AbasSublinhadas<T extends string>({ abas, ativa, onChange, rotulo, idBase, className = '', altura = 'md', distribuir = 'celular', linha = true }: {
   abas: AbaSublinhada<T>[]; ativa: T; onChange: (id: T) => void; rotulo: string; idBase: string; className?: string;
-  altura?: 'md' | 'sm'; distribuir?: 'celular' | 'sempre' | 'nunca';
+  altura?: 'md' | 'sm'; distribuir?: 'celular' | 'sempre' | 'nunca'; linha?: boolean;
 }) {
   const aoTecla = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const passo = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
@@ -60,7 +64,7 @@ export function AbasSublinhadas<T extends string>({ abas, ativa, onChange, rotul
   };
   const largura = distribuir === 'sempre' ? 'flex-1 justify-center px-3' : distribuir === 'celular' ? 'flex-1 justify-center px-2 md:px-3 md:flex-none md:justify-start' : 'flex-none px-3';
   return (
-    <div role="tablist" aria-label={rotulo} onKeyDown={aoTecla} className={`flex gap-1 overflow-x-auto border-b border-line ${className}`}>
+    <div role="tablist" aria-label={rotulo} onKeyDown={aoTecla} className={`flex gap-1 overflow-x-auto ${linha ? 'border-b border-line' : ''} ${className}`}>
       {abas.map(a => {
         const sel = a.id === ativa && !a.desabilitada;
         const cor = a.desabilitada ? 'border-transparent text-ink-4 cursor-not-allowed' : sel ? 'border-gold text-navy' : 'border-transparent text-ink-3 hover:text-navy';
@@ -73,7 +77,7 @@ export function AbasSublinhadas<T extends string>({ abas, ativa, onChange, rotul
           >
             {a.rotulo}
             {a.contagem !== undefined && (
-              <span className={`min-w-5 h-5 px-1.5 rounded-full text-xs font-bold inline-flex items-center justify-center tabular-nums ${sel ? 'bg-navy text-white' : 'bg-thead text-ink-3'}`}>{a.contagem}</span>
+              <span className={`min-w-5 h-5 px-1.5 rounded-full text-xs font-bold inline-flex items-center justify-center tabular-nums ${sel ? 'bg-navy text-white' : a.alerta && a.contagem > 0 ? 'bg-wine text-white' : 'bg-thead text-ink-3'}`}>{a.contagem}</span>
             )}
           </button>
         );
