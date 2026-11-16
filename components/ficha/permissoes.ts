@@ -45,6 +45,8 @@ export const abasDaFicha = (perfil: string | undefined): Record<AbaFicha, Estado
   return {
     is: aba('is', s.inspecoes),
     pm: aba('pm', s.pericias),
+    // Afastamentos (só leitura): IS e perícias (as duas coleções são legíveis por quem está autenticado).
+    afastamentos: aba('afastamentos', canUseFeature('ficha.afastamentos', perfil)),
     // Atestados/relatórios e exames vêm dos PDFs enviados nas IS; pareceres, da coleção de pareceres.
     atestados: aba('atestados', s.inspecoes && canUseFeature('ficha.atestados', perfil)),
     pareceres: aba('pareceres', s.pareceres && canUseFeature('ficha.pareceres', perfil)),

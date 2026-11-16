@@ -218,7 +218,7 @@ export const pareceresDasIS = <P extends { isId?: string; criadoEm?: { toMillis?
 // ---------------------------------------------------------------- Abas da ficha (reformulação de 16/11/2026)
 
 /** Abas da Ficha do inspecionado, na ordem da barra. */
-export const ABAS_FICHA = ['is', 'pm', 'atestados', 'pareceres', 'exames', 'guias', 'emails', 'mensagens', 'outros', 'transcricoes'] as const;
+export const ABAS_FICHA = ['is', 'pm', 'afastamentos', 'atestados', 'pareceres', 'exames', 'guias', 'emails', 'mensagens', 'outros', 'transcricoes'] as const;
 export type AbaFicha = typeof ABAS_FICHA[number];
 export const ehAbaFicha = (v: string | null | undefined): v is AbaFicha => (ABAS_FICHA as readonly string[]).includes(String(v));
 

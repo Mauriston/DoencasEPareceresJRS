@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { caminhoArquivoValido } from '../arquivosPermitidos';
+import { caminhoArquivoEquipe, caminhoArquivoValido } from '../arquivosPermitidos';
 import { caminhoDoStorage } from '../../services/arquivosStorage';
 
 describe('caminhoDoStorage', () => {
@@ -36,5 +36,19 @@ describe('caminhoArquivoValido (repasse do servidor)', () => {
     expect(caminhoArquivoValido('periciasMenores/a\u0000.pdf')).toBe(false);
     expect(caminhoArquivoValido(123)).toBe(false);
     expect(caminhoArquivoValido('periciasMenores/' + 'a'.repeat(600))).toBe(false);
+  });
+});
+
+describe('caminhoArquivoEquipe (repasse com perfil da equipe)', () => {
+  it('aceita só as guias e os exames de uma IS', () => {
+    expect(caminhoArquivoEquipe('inspecoes/9001/guias/guias-exames.pdf')).toBe(true);
+    expect(caminhoArquivoEquipe('inspecoes/9001/exames/abc.pdf')).toBe(true);
+    expect(caminhoArquivoValido('inspecoes/9001/guias/guias-exames.pdf')).toBe(false);
+  });
+  it('recusa outras pastas da IS, subpastas e caminhos inseguros', () => {
+    expect(caminhoArquivoEquipe('inspecoes/9001/outra/x.pdf')).toBe(false);
+    expect(caminhoArquivoEquipe('inspecoes/9001/guias/a/b.pdf')).toBe(false);
+    expect(caminhoArquivoEquipe('inspecoes/../perfil/x.pdf')).toBe(false);
+    expect(caminhoArquivoEquipe('entrevistas/9001/e1/audio.flac')).toBe(false);
   });
 });

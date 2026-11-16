@@ -63,6 +63,7 @@ export type FeatureKey =
   | 'pareceres.gerar'
   | 'pericia-menor.novo'
   | 'pericia-menor.historico'
+  | 'ficha.afastamentos'
   | 'ficha.atestados'
   | 'ficha.pareceres'
   | 'ficha.exames'
@@ -108,6 +109,8 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   // Abas da Ficha do inspecionado (além de "Inspeções de Saúde" e "Perícias Menores", que seguem as permissões
   // das páginas/funções de origem). "Outros" começa desligada para todos (e a aba fica desabilitada até ser
   // implementada); "Transcrições" só para o Admin por enquanto, e ainda limitada aos perfis que gravam entrevista.
+  // Afastamentos (só leitura): todos os perfis, inclusive o User Médicos Geral, que vê também os das IS.
+  'ficha.afastamentos': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: true },
   'ficha.atestados': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
   'ficha.pareceres': { user_medicos: true, user_secretaria: false, user_medicos_mpi: true, user_medicos_geral: false },
   'ficha.exames': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },

@@ -150,7 +150,7 @@ describe('abas da ficha', () => {
   it('sem pedido: IS, ou Perícias quando só há perícias; senão a primeira liberada', () => {
     expect(abaFichaInicial({}, todas(), { is: 0, pm: 2 })).toBe('pm');
     expect(abaFichaInicial({}, todas(), { is: 0, pm: 0 })).toBe('is');
-    expect(abaFichaInicial({}, todas({ is: { visivel: false }, pm: { visivel: false } }), { is: 0, pm: 0 })).toBe('atestados');
+    expect(abaFichaInicial({}, todas({ is: { visivel: false }, pm: { visivel: false } }), { is: 0, pm: 0 })).toBe('afastamentos');
     expect(abaFichaInicial({}, ABAS_FICHA.map(id => ({ id, visivel: true, habilitada: false })), { is: 0, pm: 0 })).toBeNull();
   });
   it('registro aberto: o pedido ou o mais recente', () => {

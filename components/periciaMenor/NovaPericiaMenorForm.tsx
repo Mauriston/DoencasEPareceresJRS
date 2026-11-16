@@ -12,7 +12,7 @@
 // vale o tempo homologado (máx. 20). Somado às perícias do militar vigentes ou concluídas há até
 // 10 dias, não passa de 30 (utils/periciaMenorRegras.ts).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Drawer } from '../ui/Drawer';
+import { CascaFormulario, type CascaForm } from '../ficha/CascaFormulario';
 import { Button } from '../ui/Button';
 import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
@@ -42,6 +42,8 @@ interface Props {
   onRegistrado: (nome: string) => void;
   /** Pré-preenchimento: id (NIP só dígitos) do militar — "Nova perícia para ele" (detalhe e Ficha do inspecionado). */
   militarInicial?: string;
+  /** 'inline': no painel principal da Ficha do inspecionado (telas grandes); padrão: Drawer. */
+  casca?: CascaForm;
 }
 
 type Erros = Record<string, string>;
@@ -56,7 +58,7 @@ const rotuloPerito = (p: PeritoPericiaMenor) => `${p.usuario || p.nome}${p.nip ?
 const AvisoMax: React.FC<{ visivel: boolean }> = ({ visivel }) =>
   visivel ? <p role="status" className="mt-1 text-right text-xs font-semibold text-wine">Máx {MAX_DIAS_PERICIA} dias</p> : null;
 
-export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia menor', onClose, onRegistrado, militarInicial }) => {
+export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia menor', onClose, onRegistrado, militarInicial, casca = 'drawer' }) => {
   const nav = useNav();
   const usuario = nav?.authUser;
   const [hoje] = useState(() => hojeISO());
@@ -299,7 +301,8 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
 
   return (
     <>
-      <Drawer
+      <CascaFormulario
+        casca={casca}
         title={titulo}
         icon="personal_injury"
         onClose={() => { if (!salvando) onClose(); }}
@@ -456,7 +459,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
           )}
           </div>
         </form>
-      </Drawer>
+      </CascaFormulario>
 
       {imagemBruta && (
         <RecorteAtestado

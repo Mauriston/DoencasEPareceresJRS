@@ -9,9 +9,9 @@ describe('perfil user_medicos_geral (padrões)', () => {
     const liberadas = PAGE_DEFS.map(d => d.id).filter(id => canAccessPage(id, p));
     expect(liberadas.sort()).toEqual(['escala', 'exames', 'pericia-menor', 'sobre']);
   });
-  it('só usa as funcionalidades da Perícia Menor', () => {
+  it('só usa as funcionalidades da Perícia Menor (e a aba Afastamentos da ficha)', () => {
     const liberadas = FEATURE_DEFS.map(f => f.id).filter(id => canUseFeature(id, p));
-    expect(liberadas.sort()).toEqual(['pericia-menor.historico', 'pericia-menor.novo']);
+    expect(liberadas.sort()).toEqual(['ficha.afastamentos', 'pericia-menor.historico', 'pericia-menor.novo']);
   });
   it('não muda os outros perfis', () => {
     expect(canAccessPage('guide', 'user_medicos')).toBe(true);

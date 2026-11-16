@@ -4,6 +4,8 @@
 // entre a tela e o documento). Setas ‹ › (também ← → no teclado e arrastar para o lado no toque) e
 // "Página X de N". A largura acompanha o painel (até 640 px); a nitidez segue o devicePixelRatio.
 // O pdf.js (pdfjs-dist, build "legacy" — Safari/iOS mais antigos) só é baixado quando a aba Guias abre.
+// Recebe os BYTES do PDF (quem monta baixa pelo repasse do servidor — o Storage não libera leitura direta
+// por script de outro domínio, CORS), não a URL.
 import React, { useEffect, useRef, useState } from 'react';
 import { IconButton } from '../../ui/IconButton';
 
@@ -13,7 +15,7 @@ type PdfPagina = {
   render: (o: { canvasContext: CanvasRenderingContext2D; canvas: HTMLCanvasElement; viewport: { width: number; height: number } }) => { promise: Promise<void>; cancel: () => void };
 };
 
-let pdfjsPromise: Promise<{ getDocument: (o: { url: string }) => { promise: Promise<PdfDoc>; destroy: () => Promise<void> } }> | null = null;
+let pdfjsPromise: Promise<{ getDocument: (o: { data: Uint8Array }) => { promise: Promise<PdfDoc>; destroy: () => Promise<void> } }> | null = null;
 const carregarPdfjs = () => {
   if (!pdfjsPromise) {
     pdfjsPromise = Promise.all([
@@ -31,14 +33,14 @@ const LARGURA_MAX = 640;
 
 interface Props {
   /** URL do PDF (download do Storage). null = ainda buscando a URL. */
-  url: string | null;
+  dados: ArrayBuffer | null;
   /** Rótulo acessível do documento (ex.: "Guias de exames da IS 123"). */
   rotulo: string;
   /** Erro ao obter a URL (ex.: PDF apagado). */
   erroUrl?: string;
 }
 
-export const PaginasPdf: React.FC<Props> = ({ url, rotulo, erroUrl }) => {
+export const PaginasPdf: React.FC<Props> = ({ dados, rotulo, erroUrl }) => {
   const [doc, setDoc] = useState<PdfDoc | null>(null);
   const [pagina, setPagina] = useState(1);
   const [erro, setErro] = useState('');
@@ -51,15 +53,16 @@ export const PaginasPdf: React.FC<Props> = ({ url, rotulo, erroUrl }) => {
   // Abre o PDF (novo URL → volta à página 1).
   useEffect(() => {
     setDoc(null); setPagina(1); setErro('');
-    if (!url) return;
+    if (!dados) return;
     let vivo = true;
     let tarefa: { destroy: () => Promise<void> } | null = null;
     carregarPdfjs()
-      .then(pdfjs => { tarefa = pdfjs.getDocument({ url }); return (tarefa as unknown as { promise: Promise<PdfDoc> }).promise; })
+      // Cópia: o pdf.js transfere (e esvazia) o buffer para o worker.
+      .then(pdfjs => { tarefa = pdfjs.getDocument({ data: new Uint8Array(dados.slice(0)) }); return (tarefa as unknown as { promise: Promise<PdfDoc> }).promise; })
       .then(d => { if (vivo) setDoc(d); else void d.destroy(); })
-      .catch(() => { if (vivo) setErro('Não foi possível abrir as páginas do PDF.'); });
+      .catch(e => { console.error('PaginasPdf', e); if (vivo) setErro('Não foi possível abrir as páginas do PDF.'); });
     return () => { vivo = false; void tarefa?.destroy(); };
-  }, [url]);
+  }, [dados]);
 
   // Largura disponível no painel.
   useEffect(() => {
