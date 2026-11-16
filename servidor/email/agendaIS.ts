@@ -2,7 +2,7 @@
 // E-mail "IS AGENDADAS EM dd/mm/aaaa" com as Inspeções de Saúde do dia seguinte e o anexo em PDF (A4 paisagem),
 // pela Gmail API da conta Google da JRS (servidor/google/impressao.ts → enviarEmail).
 //  - Automático: Cloud Scheduler às 18h (Recife) de domingo a quinta chama /api/agendador/agenda-is; não sai em
-//    véspera de feriado; sai mesmo sem IS agendadas; uma vez por data (o reenvio é só manual).
+//    véspera de feriado; sai mesmo sem IS agendadas (aviso no corpo, sem tabela; sem anexo se também não há concursos); uma vez por data (o reenvio é só manual).
 //  - Manual: o Admin escolhe o dia na página Inspeções de Saúde (/api/email/agenda-is).
 // O PDF fica no Firebase Storage, um arquivo por data (caminhoPdfAgendaIS): reenviar substitui o anterior,
 // sem duplicar. O envio fica registrado em emailsAgendaIS/{AAAA-MM-DD}.
@@ -91,6 +91,7 @@ export const coletarAgenda = async (db: Firestore, data: string): Promise<Agenda
 const dadosComuns = (a: AgendaDoDia): DadosTemplate => ({
   data_extenso: dataBrDeIso(a.data),
   data_titulo: dataTituloDeIso(a.data),
+  tem_is: a.agendamentos.length > 0,
   agendamentos: a.agendamentos as unknown as Record<string, unknown>[],
   tem_concursos: a.concursos.length > 0,
   concursos: a.concursos as unknown as Record<string, unknown>[],
@@ -109,11 +110,11 @@ export const montarEmailAgenda = (a: AgendaDoDia, assinatura: DadosAssinatura = 
   const htmlAnexo = renderizarTemplate(TEMPLATE_ANEXO_AGENDA_IS, { ...dadosComuns(a), fonte_montserrat: FONTE_MONTSERRAT_DATA_URI, logo_rodape: LOGO_MARINHA_DATA_URI });
   const texto = [
     CONFIG_EMAIL_AGENDA.vocativo, '',
-    `INF as Inspeções de Saúde agendadas para ${dataBrDeIso(a.data)}, conforme relação abaixo:`, '',
-    `INSPEÇÕES DE SAÚDE · ${dataTituloDeIso(a.data)}`,
     ...(a.agendamentos.length
-      ? a.agendamentos.map(i => `${i.hora} · ${i.nome_completo} (${i.om} · ${i.numero_is}) · ${i.finalidade} · ${i.medico}`)
-      : ['Não há Inspeções de Saúde agendadas para esta data.']),
+      ? [`INF as Inspeções de Saúde agendadas para ${dataBrDeIso(a.data)}, conforme relação abaixo:`, '',
+        `INSPEÇÕES DE SAÚDE · ${dataTituloDeIso(a.data)}`,
+        ...a.agendamentos.map(i => `${i.hora} · ${i.nome_completo} (${i.om} · ${i.numero_is}) · ${i.finalidade} · ${i.medico}`)]
+      : [`INF que não há Inspeções de Saúde agendadas para ${dataBrDeIso(a.data)}.${a.concursos.length ? ' Seguem abaixo as Inspeções de Saúde de concursos agendadas para a data:' : ''}`]),
     ...(a.concursos.length ? ['', 'INSPEÇÕES DE SAÚDE DE CONCURSOS', ...a.concursos.map(k => `${k.concurso} · ${k.matricula} · ${k.candidato}`)] : []),
     '', `App JRS/HNRe: ${APP_URL}`, '',
     assinaturaTexto(assinatura, CONFIG_EMAIL_AGENDA.fecho), '',
@@ -142,15 +143,17 @@ export const enviarAgendaIS = async (db: Firestore, bucket: BucketPdf, data: str
   // E-mail interno da junta: assinaturas fixas do Supervisor e do Presidente (config/emails), manual ou automático.
   const { assunto, html, texto, htmlAnexo } = montarEmailAgenda(agenda, assinaturaSupervisor(fixos.config));
 
-  const pdf = await htmlParaPdf(htmlAnexo);
-  const pdfCaminho = caminhoPdfAgendaIS(data);
+  // Sem IS nem candidatos de concurso, o e-mail sai só com o aviso no corpo, sem anexo (o PDF ficaria vazio).
+  const temAnexo = agenda.agendamentos.length > 0 || agenda.concursos.length > 0;
+  const pdf = temAnexo ? await htmlParaPdf(htmlAnexo) : null;
+  const pdfCaminho = temAnexo ? caminhoPdfAgendaIS(data) : '';
   // Mesmo caminho a cada envio da data: o reenvio substitui o PDF, não cria outro.
-  await bucket.file(pdfCaminho).save(pdf, { contentType: 'application/pdf', resumable: false, metadata: { cacheControl: 'private, no-store' } });
+  if (pdf) await bucket.file(pdfCaminho).save(pdf, { contentType: 'application/pdf', resumable: false, metadata: { cacheControl: 'private, no-store' } });
 
   await enviarEmail(db, {
     para: para.join(', '), cc: cc.length ? cc.join(', ') : undefined, cco: cco.length ? cco.join(', ') : undefined, responderPara: fixos.responderPara,
     assunto, html, texto, nomeRemetente: CONFIG_EMAIL_AGENDA.nomeRemetente,
-    anexo: { nome: `IS_AGENDADAS_${dataBrDeIso(data).replace(/\//g, '-')}.pdf`, bytes: pdf },
+    anexo: pdf ? { nome: `IS_AGENDADAS_${dataBrDeIso(data).replace(/\//g, '-')}.pdf`, bytes: pdf } : undefined,
   });
 
   const ref = db.collection(COL_REGISTRO).doc(data);

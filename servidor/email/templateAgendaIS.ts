@@ -7,7 +7,8 @@
 //   {{data_extenso}}       DD/MM/AAAA
 //   {{data_titulo}}        "13/11/2026 (SEXTA-FEIRA)"
 //   {{#agendamentos}}…{{/agendamentos}}   por hora; cada item: {{hora}} {{nome_completo}} (só o nome) {{om}} {{numero_is}} {{finalidade}} {{medico}}
-//   {{^agendamentos}}…{{/agendamentos}}   linha "Não há Inspeções de Saúde agendadas" (o e-mail sai mesmo sem IS)
+//   {{#tem_is}}…{{/tem_is}} / {{^tem_is}}…{{/tem_is}}  texto e tabela das IS só quando há IS; sem IS, o texto
+//                          informa que não há IS agendadas para a data, sem tabela (o e-mail sai mesmo assim)
 //   {{#tem_concursos}}…{{/tem_concursos}} bloco "INSPEÇÕES DE SAÚDE DE CONCURSOS" — só quando há candidatos no dia
 //   {{#concursos}}…{{/concursos}}         cada item: {{concurso}} {{matricula}} {{candidato}}
 //   {{fecho}}              "ATT/RPT,"
@@ -35,8 +36,14 @@ export const TEMPLATE_AGENDA_IS = `<!DOCTYPE html>
 
 <p style="margin:0 0 25px 0;font-size:17px;font-weight:700">{{vocativo}}</p>
 
+{{#tem_is}}
 <p style="margin:0 0 25px 0;text-align:justify">INF as Inspeções de Saúde agendadas para <strong>{{data_extenso}}</strong>, conforme relação abaixo:</p>
+{{/tem_is}}
+{{^tem_is}}
+<p style="margin:0 0 25px 0;text-align:justify">INF que não há Inspeções de Saúde agendadas para <strong>{{data_extenso}}</strong>.{{#tem_concursos}} Seguem abaixo as Inspeções de Saúde de concursos agendadas para a data:{{/tem_concursos}}</p>
+{{/tem_is}}
 
+{{#tem_is}}
 <p style="color:#050F41;font-size:24px;font-weight:700;letter-spacing:.5px;margin:0 0 15px;border-bottom:2px solid #FAB932;padding-bottom:5px">INSPEÇÕES DE SAÚDE · {{data_titulo}}</p>
 
 <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;margin:0 0 30px 0;font-size:14px;line-height:1.35;color:#050F41">
@@ -58,11 +65,9 @@ export const TEMPLATE_AGENDA_IS = `<!DOCTYPE html>
 <td valign="top" style="padding:11px 0 11px 0;border-bottom:1px solid #e0e0e0;font-size:14px;font-weight:700;white-space:nowrap">{{medico}}</td>
 </tr>
 {{/agendamentos}}
-{{^agendamentos}}
-<tr><td colspan="4" style="padding:16px 0;border-bottom:1px solid #e0e0e0;font-size:15px;color:#555555;font-style:italic">Não há Inspeções de Saúde agendadas para esta data.</td></tr>
-{{/agendamentos}}
 </tbody>
 </table>
+{{/tem_is}}
 
 {{#tem_concursos}}
 <p style="color:#050F41;font-size:24px;font-weight:700;letter-spacing:.5px;margin:0 0 15px;border-bottom:2px solid #FAB932;padding-bottom:5px">INSPEÇÕES DE SAÚDE DE CONCURSOS</p>
