@@ -3,7 +3,7 @@ import path from "path";
 import { GoogleGenAI } from "@google/genai";
 import { logErroSeguro, descreverErro } from "./utils/logSeguro";
 import { higienizarParaIA, base64ValidoParaIA } from "./utils/minimizacaoIA";
-import { caminhoArquivoValido } from "./utils/arquivosPermitidos";
+import { caminhoArquivoEquipe, caminhoArquivoValido } from "./utils/arquivosPermitidos";
 import { PERFIS_ENTREVISTA } from "./config/entrevistas";
 import { type FeatureKey, type MatrizPermissoesArmazenada } from "./config/permissoesPadrao";
 import { acaoNotificavel, perfilExecuta, ROTA_DA_PAGINA, type AcaoNotificavel } from "./config/notificacoesAcoes";
@@ -528,11 +528,14 @@ async function startServer() {
   // e as fotos chegam pelo próprio servidor do app, que já é acessível. Exige usuário ativo e só serve
   // as pastas de PASTAS_ARQUIVOS (espelho de storage.rules). Devolve os bytes com o Content-Type do
   // arquivo; o cliente monta um blob: (services/arquivosStorage.ts).
+  // PDFs da IS que só a equipe lê (guias e exames — caminhoArquivoEquipe) também passam aqui, com o perfil conferido.
   app.post("/api/arquivos/baixar", async (req, res) => {
-    const uid = await exigirUsuarioAtivo(req, res, "arquivos-baixar");
-    if (!uid) return;
     const caminho = req.body?.caminho;
-    if (!caminhoArquivoValido(caminho)) {
+    const daEquipe = caminhoArquivoEquipe(caminho);
+    const quem = await exigirUsuario(req, res, "arquivos-baixar", daEquipe ? PERFIS_EQUIPE : undefined);
+    if (!quem) return;
+    const uid = quem.uid;
+    if (!daEquipe && !caminhoArquivoValido(caminho)) {
       void auditarServidor("acesso_negado", "arquivos-baixar", uid, "caminho_invalido");
       res.status(400).json({ success: false, error: "Arquivo inválido." });
       return;

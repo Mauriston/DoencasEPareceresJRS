@@ -22,6 +22,7 @@ import { useNav } from '../../../context/NavContext';
 import { canUseFeature } from '../../../config/permissions';
 import { registrarEntregaGuias, type InspecaoRecord } from '../../../services/firestoreInspecoes';
 import { caminhoGuiasExames, urlDasGuias } from '../../../services/guiasExames';
+import { baixarDoServidor } from '../../../services/apiClient';
 import { entregaEditavel, guiasEnviadasAoInspecionado, situacaoGuias } from '../../../utils/guiasExamesIS';
 import { dataBr, hojeISO } from '../../../utils/inspecoes';
 
@@ -42,13 +43,23 @@ export const PainelGuias: React.FC<Props> = ({ is, emailCadastrado, onAviso }) =
   const apagadas = situacaoGuias(is, true) === 'apagadas';
   const caminho = is.guiasExames?.caminho || caminhoGuiasExames(is.id);
 
+  // URL de download (Imprimir: abre em nova guia) e os bytes do PDF para desenhar as páginas — pelo repasse do
+  // servidor (POST /api/arquivos/baixar, só a equipe), porque o Storage não deixa um script de outro domínio
+  // ler o arquivo (CORS); sem o repasse, tenta a leitura direta.
   const [url, setUrl] = useState<string | null>(null);
+  const [dados, setDados] = useState<ArrayBuffer | null>(null);
   const [erroUrl, setErroUrl] = useState('');
   useEffect(() => {
-    setUrl(null); setErroUrl('');
+    setUrl(null); setDados(null); setErroUrl('');
     if (apagadas) return;
     let vivo = true;
-    urlDasGuias(caminho).then(u => { if (vivo) setUrl(u); }).catch(() => { if (vivo) setErroUrl('O PDF das guias não foi encontrado.'); });
+    const urlP = urlDasGuias(caminho);
+    urlP.then(u => { if (vivo) setUrl(u); }).catch(() => { /* tratado abaixo */ });
+    baixarDoServidor('/api/arquivos/baixar', { caminho }, { timeoutMs: 60_000 })
+      .catch(() => urlP.then(u => fetch(u)).then(r => { if (!r.ok) throw new Error(String(r.status)); return r.blob(); }))
+      .then(b => b.arrayBuffer())
+      .then(buf => { if (vivo) setDados(buf); })
+      .catch(() => { if (vivo) setErroUrl('Não foi possível baixar o PDF das guias.'); });
     return () => { vivo = false; };
   }, [caminho, apagadas, is.guiasExames?.geradoEm]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -137,7 +148,7 @@ export const PainelGuias: React.FC<Props> = ({ is, emailCadastrado, onAviso }) =
           Guias apagadas 15 dias após a finalização da IS.
         </p>
       ) : (
-        <PaginasPdf url={url} erroUrl={erroUrl} rotulo={`Páginas das guias de exames da IS ${is.is}`} />
+        <PaginasPdf dados={dados} erroUrl={erroUrl} rotulo={`Páginas das guias de exames da IS ${is.is}`} />
       )}
 
       {envio && createPortal(

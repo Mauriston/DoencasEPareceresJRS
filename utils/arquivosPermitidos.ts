@@ -6,6 +6,17 @@
 // servidor (/api/entrevistas/ouvir), que confere o perfil — este repasse vale para qualquer usuário ativo.
 export const PASTAS_ARQUIVOS = ['perfil/', 'pareceres/', 'periciasMenores/', 'concursos/', 'legislacao/', 'infograficos/', 'dgpm406/'] as const;
 
-export const caminhoArquivoValido = (c: unknown): c is string =>
+const caminhoSeguro = (c: unknown): c is string =>
   typeof c === 'string' && c.length > 0 && c.length <= 512 && !c.includes('..') && !c.startsWith('/')
-  && !/[\u0000-\u001f]/.test(c) && PASTAS_ARQUIVOS.some(p => c.startsWith(p));
+  && !/[\u0000-\u001f]/.test(c);
+
+export const caminhoArquivoValido = (c: unknown): c is string =>
+  caminhoSeguro(c) && PASTAS_ARQUIVOS.some(p => c.startsWith(p));
+
+/**
+ * PDFs da IS que só a EQUIPE lê (storage.rules: admin, user_medicos, user_medicos_mpi, user_secretaria):
+ * guias de exames (inspecoes/{isId}/guias/…) e exames enviados (inspecoes/{isId}/exames/…). O servidor
+ * confere o perfil antes de repassar (Ficha › Guias desenha as páginas a partir destes bytes).
+ */
+export const caminhoArquivoEquipe = (c: unknown): c is string =>
+  caminhoSeguro(c) && /^inspecoes\/[^/]+\/(guias|exames)\/[^/]+$/.test(c);
