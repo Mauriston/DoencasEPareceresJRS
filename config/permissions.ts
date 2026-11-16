@@ -109,6 +109,7 @@ export const FEATURE_DEFS: FeatureDef[] = [
   { id: 'ficha.mensagens', label: 'Aba Mensagens', group: 'Ficha do inspecionado' },
   { id: 'ficha.outros', label: 'Aba Outros (em construção: a aba fica desabilitada para todos)', group: 'Ficha do inspecionado' },
   { id: 'ficha.transcricoes', label: 'Aba Transcrições (só para quem grava entrevista: Admin e User Médicos)', group: 'Ficha do inspecionado' },
+  { id: 'ficha.zimbraSecretaria', label: 'Exames e Atestados e Laudos: "Zimbra SEC-JRS" (envia o PDF aos e-mails institucionais da Secretaria escolhidos, para impressão)', group: 'Ficha do inspecionado' },
 ];
 
 

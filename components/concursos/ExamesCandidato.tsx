@@ -10,6 +10,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { SheetArrastavel } from '../ui/SheetArrastavel';
 import { AcoesRodape } from '../ui/AcoesRodape';
+import { BotaoCopiar } from '../ui/BotaoCopiar';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
 import { Container } from '../ui/Page';
@@ -39,36 +40,7 @@ export interface AlvoExames {
   candidatoNome: string;
 }
 
-const copiar = async (texto: string): Promise<boolean> => {
-  try {
-    await navigator.clipboard.writeText(texto);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-/** Botão de copiar que confirma na própria etiqueta por alguns segundos. */
-const BotaoCopiar: React.FC<{ texto: string; rotulo?: string; titulo: string; className?: string }> = ({ texto, rotulo, titulo, className = '' }) => {
-  const [copiado, setCopiado] = useState(false);
-  useEffect(() => {
-    if (!copiado) return;
-    const t = window.setTimeout(() => setCopiado(false), 1800);
-    return () => window.clearTimeout(t);
-  }, [copiado]);
-  return (
-    <button
-      type="button"
-      title={titulo}
-      aria-label={titulo}
-      onClick={async () => { if (await copiar(texto)) setCopiado(true); }}
-      className={`shrink-0 inline-flex items-center gap-1 min-h-[36px] px-2 rounded-lg text-xs font-bold transition-colors ${copiado ? 'bg-green-50 text-green-800' : 'text-navy hover:bg-thead'} ${className}`}
-    >
-      <span className="material-symbols-outlined text-[18px]" aria-hidden="true">{copiado ? 'check' : 'content_copy'}</span>
-      {rotulo && <span>{copiado ? 'Copiado' : rotulo}</span>}
-    </button>
-  );
-};
+// Botão de copiar: components/ui/BotaoCopiar.tsx (também usado na Ficha › Exames / Atestados e Laudos).
 
 // =========================================================================
 // ENVIAR EXAMES (PDF)

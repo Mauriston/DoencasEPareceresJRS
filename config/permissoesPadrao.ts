@@ -71,7 +71,8 @@ export type FeatureKey =
   | 'ficha.emails'
   | 'ficha.mensagens'
   | 'ficha.outros'
-  | 'ficha.transcricoes';
+  | 'ficha.transcricoes'
+  | 'ficha.zimbraSecretaria';
 
 // Os padrões das funcionalidades "concursosJRS.*" se repetem em firestore.rules (função pode()),
 // que aplica a mesma matriz nas gravações: ao mudar um padrão aqui, mude lá também e rode
@@ -119,6 +120,8 @@ export const DEFAULT_FEATURE_PERMISSIONS: Record<FeatureKey, Record<Role, boolea
   'ficha.mensagens': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
   'ficha.outros': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
   'ficha.transcricoes': { user_medicos: false, user_secretaria: false, user_medicos_mpi: false, user_medicos_geral: false },
+  // "Zimbra SEC-JRS" nas abas Exames e Atestados e Laudos: o PDF à Secretaria, para impressão (toda a equipe).
+  'ficha.zimbraSecretaria': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
 };
 
 export interface MatrizPermissoesArmazenada {

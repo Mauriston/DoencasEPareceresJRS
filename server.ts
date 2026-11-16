@@ -765,6 +765,10 @@ async function startServer() {
   // Guias de exames (PDF do Storage em anexo) ao inspecionado e/ou à SEC-JRS (Admin e Secretaria): servidor/email/guiasIS.ts.
   app.post("/api/email/guias-is", rotaGoogle("email-guias-is", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/guiasIS")).enviarGuiasIS(db, await bucketStorage(), b, quem.uid)) }), true));
+  // Ficha › Exames / Atestados e Laudos, "Zimbra SEC-JRS": o PDF do documento da IS aos membros da SEC-JRS
+  // escolhidos, para impressão (equipe; no app, a função "ficha.zimbraSecretaria"): servidor/email/documentoIS.ts.
+  app.post("/api/email/documento-is", rotaGoogle("email-documento-is", PERFIS_EQUIPE, async (db, b, quem) =>
+    ({ enviado: true, ...(await (await import("./servidor/email/documentoIS")).enviarDocumentoSecretaria(db, await bucketStorage(), b, quem.uid)) }), true));
   // Abertura da IS ao inspecionado (prazos e consequências; Admin e Secretaria): servidor/email/aberturaIS.ts.
   app.post("/api/email/abertura-is", rotaGoogle("email-abertura-is", ["admin", "user_secretaria"], async (db, b, quem) =>
     ({ enviado: true, ...(await (await import("./servidor/email/aberturaIS")).enviarAberturaIS(db, b.isId, b.email, quem.uid)) }), true));
