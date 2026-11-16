@@ -2,7 +2,14 @@
 // Seções da Ficha do inspecionado por permissão (auditoria v3, 9a — MF1): cada bloco só existe para
 // quem pode vê-lo (sem abas fantasmas). Fica fora do componente da página (carregado sob demanda)
 // para que listas e detalhes decidam se mostram o link "Abrir ficha".
+// Abas (reformulação de 16/11/2026): "Inspeções de Saúde" e "Perícias Menores" seguem as páginas/funções de
+// origem; as abas novas têm uma função cada em Administração › Perfis e permissões (grupo "Ficha do
+// inspecionado"). "Outros" aparece desabilitada para todos até ser implementada; "Transcrições" aparece só
+// para quem grava entrevista (config/entrevistas.ts) e fica habilitada conforme a função "ficha.transcricoes"
+// (por padrão, só o Admin).
 import { canAccessPage, canUseFeature } from '../../config/permissions';
+import { podeUsarEntrevista } from '../../config/entrevistas';
+import type { AbaFicha, EstadoAbaFicha } from '../../utils/fichaInspecionado';
 
 export interface SecoesFicha {
   inspecoes: boolean;
@@ -26,4 +33,26 @@ export const secoesDaFicha = (perfil: string | undefined): SecoesFicha => ({
 export const podeAbrirFicha = (perfil: string | undefined): boolean => {
   const s = secoesDaFicha(perfil);
   return s.inspecoes || s.pareceres || s.pericias || s.cadastro;
+};
+
+/** "Outros": a aba ainda não tem conteúdo — desabilitada para todos (inclusive o Admin) até ser implementada. */
+export const ABA_OUTROS_DISPONIVEL = false;
+
+/** Visibilidade e habilitação de cada aba da ficha para o perfil. */
+export const abasDaFicha = (perfil: string | undefined): Record<AbaFicha, EstadoAbaFicha> => {
+  const s = secoesDaFicha(perfil);
+  const aba = (id: AbaFicha, visivel: boolean, habilitada = visivel): EstadoAbaFicha => ({ id, visivel, habilitada: visivel && habilitada });
+  return {
+    is: aba('is', s.inspecoes),
+    pm: aba('pm', s.pericias),
+    // Atestados/relatórios e exames vêm dos PDFs enviados nas IS; pareceres, da coleção de pareceres.
+    atestados: aba('atestados', s.inspecoes && canUseFeature('ficha.atestados', perfil)),
+    pareceres: aba('pareceres', s.pareceres && canUseFeature('ficha.pareceres', perfil)),
+    exames: aba('exames', s.inspecoes && canUseFeature('ficha.exames', perfil)),
+    guias: aba('guias', canUseFeature('ficha.guias', perfil)),
+    emails: aba('emails', canUseFeature('ficha.emails', perfil)),
+    mensagens: aba('mensagens', canUseFeature('ficha.mensagens', perfil)),
+    outros: aba('outros', true, ABA_OUTROS_DISPONIVEL && canUseFeature('ficha.outros', perfil)),
+    transcricoes: aba('transcricoes', podeUsarEntrevista(perfil), canUseFeature('ficha.transcricoes', perfil)),
+  };
 };

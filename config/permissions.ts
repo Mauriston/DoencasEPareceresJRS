@@ -98,6 +98,16 @@ export const FEATURE_DEFS: FeatureDef[] = [
   // (Novo/Histórico) é liberada separadamente por perfil.
   { id: 'pericia-menor.novo', label: 'Perícia Menor - Novo', group: 'Perícia Menor' },
   { id: 'pericia-menor.historico', label: 'Perícia Menor - Histórico', group: 'Perícia Menor' },
+  // Abas da Ficha do inspecionado (/inspecionados/:nip). "Inspeções de Saúde" e "Perícias Menores" seguem as
+  // permissões das páginas de origem; estas são as abas novas, uma por função.
+  { id: 'ficha.atestados', label: 'Aba Atestados e Laudos', group: 'Ficha do inspecionado' },
+  { id: 'ficha.pareceres', label: 'Aba Pareceres', group: 'Ficha do inspecionado' },
+  { id: 'ficha.exames', label: 'Aba Exames', group: 'Ficha do inspecionado' },
+  { id: 'ficha.guias', label: 'Aba Guias', group: 'Ficha do inspecionado' },
+  { id: 'ficha.emails', label: 'Aba Emails', group: 'Ficha do inspecionado' },
+  { id: 'ficha.mensagens', label: 'Aba Mensagens', group: 'Ficha do inspecionado' },
+  { id: 'ficha.outros', label: 'Aba Outros (em construção: a aba fica desabilitada para todos)', group: 'Ficha do inspecionado' },
+  { id: 'ficha.transcricoes', label: 'Aba Transcrições (só para quem grava entrevista: Admin e User Médicos)', group: 'Ficha do inspecionado' },
 ];
 
 

@@ -30,7 +30,11 @@ export const CidCodigo: React.FC<{ codigo: string; descricao: string; className?
   </span>
 );
 
-export interface AbaSublinhada<T extends string> { id: T; rotulo: string; contagem?: number }
+export interface AbaSublinhada<T extends string> {
+  id: T; rotulo: string; contagem?: number;
+  /** Aba visível mas desabilitada (cinza, sem clique; as setas a pulam). `dica` vira o title. */
+  desabilitada?: boolean; dica?: string;
+}
 
 /**
  * Abas sublinhadas (auditoria v3, G2 — mockups 5b/5c/9b/9c): item de 48 px (ou 44 no sheet), 14/700, ouro de 3 px
@@ -47,8 +51,10 @@ export function AbasSublinhadas<T extends string>({ abas, ativa, onChange, rotul
     const passo = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
     if (!passo) return;
     e.preventDefault();
-    const i = abas.findIndex(a => a.id === ativa);
-    const prox = abas[(i + passo + abas.length) % abas.length];
+    const ativas = abas.filter(a => !a.desabilitada);
+    if (!ativas.length) return;
+    const i = ativas.findIndex(a => a.id === ativa);
+    const prox = ativas[(i + passo + ativas.length) % ativas.length];
     onChange(prox.id);
     requestAnimationFrame(() => document.getElementById(`${idBase}-aba-${prox.id}`)?.focus());
   };
@@ -56,12 +62,14 @@ export function AbasSublinhadas<T extends string>({ abas, ativa, onChange, rotul
   return (
     <div role="tablist" aria-label={rotulo} onKeyDown={aoTecla} className={`flex gap-1 overflow-x-auto border-b border-line ${className}`}>
       {abas.map(a => {
-        const sel = a.id === ativa;
+        const sel = a.id === ativa && !a.desabilitada;
+        const cor = a.desabilitada ? 'border-transparent text-ink-4 cursor-not-allowed' : sel ? 'border-gold text-navy' : 'border-transparent text-ink-3 hover:text-navy';
         return (
           <button
             key={a.id} type="button" role="tab" id={`${idBase}-aba-${a.id}`} aria-selected={sel} aria-controls={`${idBase}-painel`} tabIndex={sel ? 0 : -1}
-            onClick={() => onChange(a.id)}
-            className={`${largura} ${altura === 'sm' ? 'h-11' : 'h-12'} shrink-0 inline-flex items-center gap-1.5 text-sm font-bold whitespace-nowrap border-b-[3px] -mb-px transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold ${sel ? 'border-gold text-navy' : 'border-transparent text-ink-3 hover:text-navy'}`}
+            aria-disabled={a.desabilitada || undefined} title={a.dica}
+            onClick={() => { if (!a.desabilitada) onChange(a.id); }}
+            className={`${largura} ${altura === 'sm' ? 'h-11' : 'h-12'} shrink-0 inline-flex items-center gap-1.5 text-sm font-bold whitespace-nowrap border-b-[3px] -mb-px transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold ${cor}`}
           >
             {a.rotulo}
             {a.contagem !== undefined && (
