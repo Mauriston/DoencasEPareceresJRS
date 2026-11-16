@@ -31,6 +31,7 @@ import { MenuAcoes, type ItemMenu } from './ui/MenuAcoes';
 import { TabelaAgendaIS, type AvisoDiaIS } from './inspecoes/TabelaAgendaIS';
 import { FiltroPeriodo, type FiltroPeriodoValor } from './inspecoes/FiltroPeriodo';
 import { FiltroPopover } from './inspecoes/FiltroPopover';
+import { AbasSublinhadas } from './periciaMenor/partes';
 import { agruparAtivasIS, agruparFinalizadasIS, ordenarFinalizadasIS, type GrupoIS } from './inspecoes/listaIS';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { InspecaoForm, type DadosInspecionadoIS } from './inspecoes/InspecaoForm';
@@ -538,13 +539,6 @@ export const Inspecoes: React.FC = () => {
     { id: 'ativas', rotulo: 'Ativas', n: contagens.ativas },
     { id: 'finalizadas', rotulo: 'Finalizadas', n: contagens.finalizadas },
   ];
-  const aoTeclaAbas = (e: React.KeyboardEvent) => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    e.preventDefault();
-    const proxima: Aba = aba === 'ativas' ? 'finalizadas' : 'ativas';
-    irParaAba(proxima);
-    requestAnimationFrame(() => document.getElementById(`inspecoes-aba-${proxima}`)?.focus());
-  };
   const badge = (n: number, alerta = false) => (
     <span className={`min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full text-xs font-bold tabular-nums ${alerta ? 'bg-wine text-white' : 'bg-thead text-ink-3 border border-line'}`}>{n}</span>
   );
@@ -639,23 +633,13 @@ export const Inspecoes: React.FC = () => {
               )
         ) : (
           <section aria-label="Lista de IS" className="md:bg-white md:border md:border-line md:rounded-xl md:overflow-clip">
-            {/* Abas sublinhadas (ouro = ativa) com a contagem · vista só com ícone (G2) · ⋮ no celular. */}
+            {/* Abas sublinhadas (AbasSublinhadas — ouro = ativa, contagem em pílula, dividem a largura no celular) · vista só com ícone (G2). */}
             <div className="flex items-end justify-between gap-2 border-b border-line -mx-4 px-4 md:mx-0 bg-white md:bg-transparent">
-              <div role="tablist" aria-label="Situação das IS" className="flex gap-1" onKeyDown={aoTeclaAbas}>
-                {abas.map(t => {
-                  const ativa = aba === t.id;
-                  return (
-                    <button
-                      key={t.id} type="button" role="tab" id={`inspecoes-aba-${t.id}`} aria-selected={ativa} aria-controls="inspecoes-lista" tabIndex={ativa ? 0 : -1}
-                      onClick={() => irParaAba(t.id)}
-                      className={`inline-flex items-center gap-2 h-12 px-3 -mb-px border-b-[3px] text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${ativa ? 'border-gold text-navy' : 'border-transparent text-ink-3 hover:text-navy'}`}
-                    >
-                      {t.rotulo}
-                      <span className={`min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full text-xs tabular-nums ${ativa ? 'bg-navy text-white' : 'bg-thead text-ink-3'}`}>{t.n}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              <AbasSublinhadas<Aba>
+                rotulo="Situação das IS" idBase="inspecoes" ativa={aba} onChange={irParaAba} linha={false}
+                className="flex-1 md:flex-none -mb-px"
+                abas={abas.map(t => ({ id: t.id, rotulo: t.rotulo, contagem: t.n }))}
+              />
               {desktop && <div className="flex items-center gap-1 pb-1.5"><AlternarVisao value={visao} onChange={setVisao} /></div>}
             </div>
 
@@ -701,7 +685,7 @@ export const Inspecoes: React.FC = () => {
               </div>
             </div>
 
-            <div id="inspecoes-lista" role="tabpanel" aria-labelledby={`inspecoes-aba-${aba}`}>{conteudoLista}</div>
+            <div id="inspecoes-painel" role="tabpanel" aria-labelledby={`inspecoes-aba-${aba}`}>{conteudoLista}</div>
           </section>
         )}
       </Container>

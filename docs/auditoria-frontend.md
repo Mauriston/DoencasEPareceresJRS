@@ -66,7 +66,7 @@ Auditoria feita no Claude Design (seções 1–10 + achados globais G1–G10), i
 | Id | Achado | Situação |
 |---|---|---|
 | G1 | Vinho só para exceção que exige ação | feito — "vigente", "dia de concurso", "agendada" em neutro/navy; vinho só em atrasado/pendência |
-| G2 | Abas sublinhadas (ouro = ativo) para situação; Segmented só ícone para a vista | feito — Inspeções (Ativas/Finalizadas), Concursos (`AbasSituacao`), Perícia Menor; vista Lista/Calendário em `Segmented` de ícones |
+| G2 | Abas sublinhadas (ouro = ativo) para situação; Segmented só ícone para a vista | feito — componente único `AbasSublinhadas` em todo o grupo Trabalho: Inspeções (Ativas/Finalizadas), Inspecionados (Ativos/Inativos/Todos), Concursos, Perícia Menor, Escala (celular) e Pareceres (situação); vista Lista/Calendário em `Segmented` de ícones |
 | G3 | Grade de 12 colunas | feito — `GradeCards`/`GradePainel`/`GradeIndice` (`components/ui/Grade.tsx`) com gatilho `@split` |
 | G4 | 44 px só em `pointer: coarse` | feito — `Button`/`IconButton`/`controlClass` 40 px (32 em `size="sm"`); 44 px por regra global em toque |
 | G5 | Sem `font-mono` | feito — `tabular-nums`; `font-mono` barrado pelo `verificar-ds` |

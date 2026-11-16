@@ -27,7 +27,8 @@ import { Toast } from '../ui/Toast';
 import { ConfirmDialogState, isoParaBR } from './compartilhado';
 import { ModalAdicionarCandidato, ModalDefinirPeriodoAgendamento, ModalKpiBarChart, ModalListarMensagens, ModalRegistrarMensagemArquivo } from './ModaisConcurso';
 import { MenuAcoesConcurso, MenuAcoesConcursoProps, itensMenuAcoesConcurso } from './MenuAcoesConcurso';
-import { AbasSituacao, VistaIcones } from './AbasSituacao';
+import { VistaIcones } from './AbasSituacao';
+import { AbasSublinhadas } from '../periciaMenor/partes';
 import { CardConcurso, KpisContexto, ProximosDias, periodoCurto, plural, type ResumoConcurso } from './PainelConcursos';
 
 export interface ConcursosListaProps {
@@ -556,12 +557,13 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
             {/* C2/G2: abas sublinhadas de situação + busca + ano + vista (só ícone) numa linha; KPIs do filtro abaixo. */}
             <Card padding="none" className="@container -mx-4 md:mx-0 rounded-none md:rounded-xl border-x-0 md:border-x">
               <div className="flex flex-col @split:flex-row @split:items-end @split:justify-between gap-x-4 px-4 border-b border-line">
-                <AbasSituacao
+                <AbasSublinhadas<ConcursoRecord['status']>
                   idBase="concursos-situacao"
-                  ariaLabel="Situação do concurso"
-                  value={statusAtivo}
+                  rotulo="Situação do concurso"
+                  ativa={statusAtivo}
                   onChange={v => atualizarFiltro('situacao', v)}
-                  abas={GRUPOS_STATUS_ORDEM.map(g => ({ value: g.status, label: g.titulo, contagem: contagemPorStatus[g.status] }))}
+                  abas={GRUPOS_STATUS_ORDEM.map(g => ({ id: g.status, rotulo: g.titulo, contagem: contagemPorStatus[g.status] }))}
+                  linha={false}
                   className="-mb-px -mx-4 px-4 @split:mx-0 @split:px-0"
                 />
                 <div className="flex items-center gap-2 py-2 @split:py-0 @split:mb-1.5">
