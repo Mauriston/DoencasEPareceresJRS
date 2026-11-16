@@ -15,8 +15,10 @@
 //   Guias: uma linha por IS com guias de exames geradas (finalidade e IS; data de assinatura) — o painel
 //   principal mostra as páginas do PDF em carrossel e a barra Confirmar entrega · Enviar por email ▾ · Imprimir
 //   (components/ficha/guias/PainelGuias.tsx).
+//   Cabeçalho: "Abrir IS ▾" (botão primário; Manualmente · Por print do SINAIS) leva à aba Inspeções de Saúde e abre o
+//   formulário no painel principal (AbrirISFicha; no celular, bottom sheet), com o pós-criação da página Inspeções.
 //   Inspeções de Saúde: sem o campo Inspecionado (o nome está no topo); barra com "Excluir" (Admin, à esquerda),
-//   "Abrir IS" só sem IS em andamento, "Agendar IS"/"Reagendar IS" (AgendarISFicha) e as ações da IS; "Gravar
+//   "Agendar IS"/"Reagendar IS" (AgendarISFicha; depois, o e-mail de agendamento) e as ações da IS; "Gravar
 //   entrevista" leva à aba Transcrições (só com ela habilitada para o perfil).
 //   Transcrições: IS a gravar (Agendada/Reagendada) e entrevistas gravadas; a gravação e a revisão acontecem no
 //   painel principal (components/ficha/transcricoes/PainelTranscricoes.tsx).
@@ -51,6 +53,13 @@ import { CascaPainelFicha } from './CascaPainelFicha';
 import { PainelGuias } from './guias/PainelGuias';
 import { PainelTranscricoes } from './transcricoes/PainelTranscricoes';
 import { AgendarISFicha } from './AgendarISFicha';
+import { AbrirISFicha, type ModoAbrirIS } from './AbrirISFicha';
+import { PosCriacaoIS, deveTentarGuias } from '../inspecoes/guias/PosCriacaoIS';
+import { EnviarAgendamentoDialog } from '../inspecoes/EnviarAgendamentoDialog';
+import type { DadosInspecionadoIS } from '../inspecoes/InspecaoForm';
+import { avisarAgendamento, observarAgendamentos } from '../../services/emailAgendamentoIS';
+import { agendamentoJaEnviado, ehElegivelAgendamento } from '../../utils/emailAgendamentoIS';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useEntrevistasDasIS, type EntrevistaDaFicha } from './useEntrevistasDasIS';
 import { ConfirmDialog } from '../ui/Dialog';
 import { useExamesDasIS, type ExameDaFicha } from './useExamesDasIS';
@@ -178,6 +187,15 @@ export const FichaInspecionado: React.FC = () => {
   const [parecerPara, setParecerPara] = useState<{ is: InspecaoRecord; inicial?: ParecerRecord } | null>(null);
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
   const [excluindo, setExcluindo] = useState<InspecaoRecord | null>(null);
+  /** "Abrir IS" do cabeçalho: formulário aberto (no painel principal da aba IS; no celular, bottom sheet). */
+  const [abrindoIS, setAbrindoIS] = useState<ModoAbrirIS | null>(null);
+  const [posCriacao, setPosCriacao] = useState<{ is: InspecaoRecord; dados: DadosInspecionadoIS } | null>(null);
+  const isDesktop = useIsDesktop();
+  // E-mail de agendamento (Admin e Secretaria): depois de agendar ou abrir uma IS já agendada pela ficha,
+  // a mesma pergunta da página Inspeções de Saúde (fila de avisos de services/emailAgendamentoIS.ts).
+  const podeEmailsIS = canUseFeature('inspecoes.enviarEmails', perfil);
+  const [filaAgendamento, setFilaAgendamento] = useState<{ isId: string; dataEntrevista: string }[]>([]);
+  useEffect(() => (podeEmailsIS ? observarAgendamentos(a => setFilaAgendamento(f => [...f.filter(x => x.isId !== a.isId), a])) : undefined), [podeEmailsIS]);
   const [oms, setOms] = useState<OrganizacaoMilitar[]>([]);
   const [postos, setPostos] = useState<CorposQuadros['postos']>();
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
@@ -345,8 +363,9 @@ export const FichaInspecionado: React.FC = () => {
     id: a.id, rotulo: a.id === 'pm' && atestado ? 'Atestados' : DEF_ABA[a.id].rotulo,
     desabilitada: !a.habilitada, dica: a.habilitada ? undefined : 'Em breve',
   }));
-  const trocarAba = (id: AbaFicha) => definir({ aba: id, reg: null, is: null, sel: null, guia: null, gravar: null });
+  const trocarAba = (id: AbaFicha) => { setAbrindoIS(null); definir({ aba: id, reg: null, is: null, sel: null, guia: null, gravar: null }); };
   const abrirRegistro = (id: string) => {
+    setAbrindoIS(null);
     definir({ reg: id, is: null, sel: null, gravar: null });
     // Empilhado (abaixo de xl), o painel principal fica acima do histórico: rola até ele.
     if (typeof window !== 'undefined' && !window.matchMedia('(min-width: 1280px)').matches) {
@@ -368,9 +387,27 @@ export const FichaInspecionado: React.FC = () => {
     finally { setAbrindoExame(null); }
   };
 
-  // "Abrir IS" só quando o inspecionado não tem IS em andamento (com uma aberta, abrir outra não faz sentido).
-  const temISEmAndamento = inspecoes.some(i => STATUS_IS[statusEfetivoIS(i, hoje)].situacao !== 'finalizada');
-  const acaoAbrirIS: AcaoRodape[] = podeIS && !temISEmAndamento ? [{ id: 'abrir-is', rotulo: 'Abrir IS', icone: 'event_available', variante: 'secondary', onClick: () => navigate(`/inspecoes?novo=manual&inspecionado=${nip}`) }] : [];
+  // "Abrir IS" (cabeçalho): vai para a aba Inspeções de Saúde e abre o formulário no painel principal.
+  const abrirIS = (modo: ModoAbrirIS) => { definir({ aba: 'is', reg: null, is: null, sel: null, guia: null, gravar: null }); setAbrindoIS(modo); };
+  const formAbrirIS = abrindoIS && (
+    <AbrirISFicha
+      modo={abrindoIS} nip={nip} casca={isDesktop ? 'inline' : 'drawer'} onAviso={avisar}
+      onClose={() => setAbrindoIS(null)}
+      onCriada={(is, dados) => {
+        setAbrindoIS(null);
+        definir({ aba: 'is', reg: is.id });
+        if (deveTentarGuias(is) || podeEmailsIS) setPosCriacao({ is, dados });
+        else if (is.dataEntrevista) avisarAgendamento(is, is.dataEntrevista);
+      }}
+      onGravadasPorPrint={unica => { setAbrindoIS(null); if (unica) definir({ aba: 'is', reg: unica.id }); }}
+    />
+  );
+  // O primeiro aviso da fila cuja IS (deste inspecionado, já atualizada) ainda pede o e-mail daquela data.
+  const agendamentoAtual = filaAgendamento.map(item => {
+    const is = inspecoes.find(i => i.id === item.isId);
+    return is && is.dataEntrevista === item.dataEntrevista && ehElegivelAgendamento(is) && !agendamentoJaEnviado(is) ? is : null;
+  }).find(Boolean) ?? null;
+  const tirarDaFila = (isId: string) => setFilaAgendamento(f => f.filter(x => x.isId !== isId));
   const acaoNovaPericia: AcaoRodape[] = podePericia ? [{ id: 'nova-pericia', rotulo: atestado ? 'Novo atestado' : 'Nova Perícia Menor', icone: 'add', onClick: () => setNovaPericia(true) }] : [];
 
   /** Painel principal sem registro: o aviso da aba (com as ações que não dependem de um registro). */
@@ -439,7 +476,8 @@ export const FichaInspecionado: React.FC = () => {
     if (!aba) return null;
     if (aba === 'is') {
       const isSel = isOrdenadas.find(i => i.id === atual?.id);
-      if (!isSel) return semRegistro('is', acaoAbrirIS);
+      if (abrindoIS && isDesktop) return formAbrirIS;
+      if (!isSel) return semRegistro('is');
       // Agendar (Aberta/Realizando Exames) ou Reagendar (Faltou; Agendada que ainda dá para remarcar) — as mesmas
       // regras do menu da IS na página Inspeções de Saúde.
       const podeAgendar = canUseFeature('inspecoes.agendar', perfil);
@@ -447,7 +485,6 @@ export const FichaInspecionado: React.FC = () => {
       const acoesIS: AcaoRodape[] = [
         // Excluir: hoje só o Admin apaga IS (firestore.rules e a rota que apaga as guias).
         ...(perfil === 'admin' ? [{ id: 'excluir', rotulo: 'Excluir', icone: 'delete', variante: 'destructive' as const, onClick: () => setExcluindo(isSel) }] : []),
-        ...acaoAbrirIS,
         ...(agendar ? [{
           id: 'agendar', rotulo: aguardaAgendamento(isSel.status) && !isSel.dataEntrevista ? 'Agendar IS' : 'Reagendar IS', icone: 'event',
           variante: 'secondary' as const, onClick: () => setAgendando(isSel),
@@ -555,6 +592,12 @@ export const FichaInspecionado: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <MenuAcoes rotulo="Mais ações da ficha" itens={menu} />
+            {podeIS && (
+              <MenuAcoes rotulo="Abrir IS" botao={{ texto: 'Abrir IS', icone: 'add', primario: true }} itens={[
+                { rotulo: 'Manualmente', icone: 'edit_note', onClick: () => abrirIS('manual') },
+                { rotulo: 'Por print do SINAIS', icone: 'photo_camera', onClick: () => abrirIS('print') },
+              ]} />
+            )}
           </div>
         </div>
 
@@ -609,6 +652,25 @@ export const FichaInspecionado: React.FC = () => {
           vinculoIS={{ isId: parecerPara.is.id, is: parecerPara.is.is }}
           onClose={() => setParecerPara(null)}
           onGerado={n => { void aoParecerGerado(parecerPara.is, n); }}
+        />
+      )}
+      {abrindoIS && !isDesktop && formAbrirIS}
+      {posCriacao && (
+        <PosCriacaoIS
+          key={posCriacao.is.id}
+          is={posCriacao.is} dados={posCriacao.dados} podeEmails={podeEmailsIS}
+          militar={militar && militar.id === posCriacao.is.inspecionadoId ? militar : undefined}
+          onAviso={avisar}
+          onFim={() => { const is = posCriacao.is; setPosCriacao(null); if (is.dataEntrevista) avisarAgendamento(is, is.dataEntrevista); }}
+        />
+      )}
+      {agendamentoAtual && !posCriacao && (
+        <EnviarAgendamentoDialog
+          key={`${agendamentoAtual.id}|${agendamentoAtual.dataEntrevista}`}
+          inspecao={agendamentoAtual} origem="agendamento" om={militar?.om || om}
+          emailCadastrado={emailDoInspecionado(militar ?? undefined)}
+          onClose={() => tirarDaFila(agendamentoAtual.id)}
+          onEnviado={(msg, tom) => { tirarDaFila(agendamentoAtual.id); avisar(msg, tom); }}
         />
       )}
       {agendando && (

@@ -9,7 +9,7 @@
 //  3. Conferir: um cartão por IS (status no topo; abre para editar finalidade, datas, perito/horário e a
 //     conclusão). "Gravar" grava as que estão prontas; as com pendência ficam abertas.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Drawer } from '../ui/Drawer';
+import { CascaFormulario, type CascaForm } from '../ficha/CascaFormulario';
 import { Button } from '../ui/Button';
 import { AcoesRodape } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
@@ -51,6 +51,8 @@ interface Props {
   onGravada: (is: InspecaoRecord, criada: boolean, reservada: boolean) => void;
   /** Todas gravadas: fecha o painel. `unica` é a IS quando só havia uma (abre o detalhe). */
   onConcluido: (gravadas: number, unica: InspecaoRecord | null) => void;
+  /** 'inline': no painel principal da Ficha do inspecionado (telas grandes); padrão: Drawer. */
+  casca?: CascaForm;
 }
 
 interface Foto { id: string; arquivo: File; url: string }
@@ -104,7 +106,7 @@ const emLotes = async <T, R>(lista: T[], n: number, fn: (x: T) => Promise<R>, ao
   return res;
 };
 
-export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, bloqueios, inspecoes, usuario, podeCadastrarInspecionado, onClose, onGravada, onConcluido }) => {
+export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, bloqueios, inspecoes, usuario, podeCadastrarInspecionado, onClose, onGravada, onConcluido, casca = 'drawer' }) => {
   const isDesktop = useIsDesktop();
   const [fotos, setFotos] = useState<Foto[]>([]);
   const [lendo, setLendo] = useState<{ feitas: number; total: number } | null>(null);
@@ -309,7 +311,8 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
 
   return (
     <>
-      <Drawer
+      <CascaFormulario
+        casca={casca}
         title="IS por foto"
         icon="photo_camera"
         onClose={() => { if (!gravando && !lendo) onClose(); }}
@@ -379,7 +382,7 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
             )}
           </div>
         )}
-      </Drawer>
+      </CascaFormulario>
 
       {itemCadastro?.fotoDados && (
         <MilitarCadastroForm

@@ -434,6 +434,13 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   await barra.getByRole('button', { name: 'Agendar IS' }).waitFor();
   assert.equal(await barra.getByRole('button', { name: 'Abrir IS' }).count(), 0);
   assert.equal(await barra.getByRole('button', { name: 'Excluir' }).count(), 0);
+  // "Abrir IS ▾" no cabeçalho: de outra aba, volta para Inspeções de Saúde e abre o formulário no painel principal.
+  await guias.getByRole('tab', { name: 'Exames', exact: true }).click();
+  await p.getByRole('button', { name: 'Abrir IS', exact: true }).click();
+  await p.getByRole('menuitem', { name: /Manualmente/ }).click();
+  await p.getByRole('heading', { name: 'Cadastrar IS' }).waitFor();
+  assert.equal(await guias.getByRole('tab', { name: 'Inspeções de Saúde', exact: true }).getAttribute('aria-selected'), 'true');
+  assert.equal(await p.getByRole('dialog').count(), 0);
   // Registro de eventos é só do Admin.
   assert.equal(await p.getByText('Registro de eventos').count(), 0);
   await p.context().close();
