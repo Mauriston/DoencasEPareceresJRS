@@ -47,8 +47,8 @@ import { EnviarResultadoBeneficiosDialog } from './inspecoes/emails/EnviarResult
 import { resultadoBeneficiosDisponivel, resultadoBeneficiosEnviado } from '../utils/resultadoBeneficiosIS';
 import { avisarAgendamento, observarAgendamentos, type AgendamentoFeito } from '../services/emailAgendamentoIS';
 import { agendamentoJaEnviado, ehElegivelAgendamento } from '../utils/emailAgendamentoIS';
-import { EmailAgendaDialog } from './inspecoes/EmailAgendaDialog';
 import { useEmailsIS } from './inspecoes/BotaoEnviarEmail';
+import { ehTipoEmailPendente } from '../utils/pendenciasEmailIS';
 import { EmailsDaIS } from './inspecoes/EmailsDaIS';
 import { emailDoInspecionado } from '../services/emailResultadoIS';
 import { CalendarioIS } from './inspecoes/CalendarioIS';
@@ -236,7 +236,6 @@ export const Inspecoes: React.FC = () => {
   const [confirmando, setConfirmando] = useState<{ tipo: 'falta' | 'cancelar'; is: InspecaoRecord } | null>(null);
   const [apagando, setApagando] = useState<InspecaoRecord | null>(null);
   const [bloqueiosAberto, setBloqueiosAberto] = useState(false);
-  const [emailAgendaAberto, setEmailAgendaAberto] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
 
   const avisar = (msg: string, tone: 'success' | 'error' = 'success') => { setToast({ msg, tone }); window.setTimeout(() => setToast(null), tone === 'error' ? 7000 : 4500); };
@@ -509,12 +508,23 @@ export const Inspecoes: React.FC = () => {
   const peritosFiltraveis = peritos;
   const emails = useEmailsIS({
     inspecoes: lista ?? [], militares, hoje,
-    podeEmailAgenda: ehAdmin, onEmailAgenda: () => setEmailAgendaAberto(true),
+    podeLimpar: ehAdmin,
     onEnviarAgendamento: is => setFilaAgendamento(f => [...f, { isId: is.id, dataEntrevista: is.dataEntrevista, origem: 'menu' }]),
     onEnviarResultado: setEnviandoResultado,
     onEnviarResultadoBeneficios: setEnviandoBeneficios,
     onAviso: avisar,
   });
+  // ?email=tipo (itens de e-mail do card "Pendências" da Início): abre o modal daquele tipo, como o menu "Enviar e-mails".
+  // Espera as IS (e, nas faltas do HNRe, os inspecionados, que dão a OM) para o modal já abrir com a lista.
+  const emailParam = searchParams.get('email');
+  useEffect(() => {
+    if (!emailParam) return;
+    if (podeEmails && ehTipoEmailPendente(emailParam)) {
+      if (lista === null || (emailParam === 'faltas' && !militares.length)) return;
+      emails.abrir(emailParam);
+    }
+    mudarURL({ email: null });
+  }, [emailParam, podeEmails, lista, militares.length]); // eslint-disable-line react-hooks/exhaustive-deps
   // Cabeçalho (3b): "Enviar e-mails" — menu com os e-mails da JRS, a pendência de cada lista à direita e a soma
   // no badge — e "Bloqueios" (bloqueio de turnos/horários da agenda). No celular o menu de e-mails fica na linha
   // das abas (compacto, com o badge) e Bloqueios vai para a pilha do FAB.
@@ -862,13 +872,6 @@ export const Inspecoes: React.FC = () => {
           peritos={peritosFiltraveis} config={config} bloqueios={bloqueios}
           usuario={{ uid: usuario.uid, usuario: usuario.usuario, perfil: usuario.perfil }}
           onClose={() => setBloqueiosAberto(false)} onAviso={avisar}
-        />
-      )}
-      {emailAgendaAberto && ehAdmin && (
-        <EmailAgendaDialog
-          hoje={hoje} inspecoes={lista ?? []} diasConcursos={diasConcursos}
-          onClose={() => setEmailAgendaAberto(false)}
-          onEnviado={(msg, tom) => { setEmailAgendaAberto(false); avisar(msg, tom); }}
         />
       )}
     </div>

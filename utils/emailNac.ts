@@ -5,11 +5,14 @@
 //  - período do e-mail/anexo = data do laudo mais antiga e mais recente das IS enviadas;
 //  - paginação do anexo (A4 paisagem): 9 linhas por página, com espaço para a assinatura na última.
 
+import { emailDispensado, type EmailsDispensados } from './emailsDispensados';
+
 export const ASSUNTO_NAC = 'INSPEÇÕES DE SAÚDE VDF E TÉRMINOS';
 
 const semAcento = (t: string) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 export interface ISParaNac {
+  emailsDispensados?: EmailsDispensados | null;
   situacao?: string;
   status?: string;
   grupoFinalidade?: string;
@@ -19,7 +22,7 @@ export interface ISParaNac {
 
 /** IS em situação "Finalizada" (não cancelada) de Verificações e Términos ainda não enviada ao NAC. */
 export const pendenteNac = (is: ISParaNac): boolean =>
-  (is.situacao === 'finalizada' || is.status === 'tis_assinado') && is.status !== 'cancelada' && semAcento(is.grupoFinalidade || '') === 'verificacoes e terminos' && !is.emailNacEnviadoEm;
+  (is.situacao === 'finalizada' || is.status === 'tis_assinado') && is.status !== 'cancelada' && semAcento(is.grupoFinalidade || '') === 'verificacoes e terminos' && !is.emailNacEnviadoEm && !emailDispensado('nac', is);
 
 /** Pendentes ordenadas pela data do laudo (mais antiga primeiro). */
 export const pendentesNac = <T extends ISParaNac>(lista: T[]): T[] =>

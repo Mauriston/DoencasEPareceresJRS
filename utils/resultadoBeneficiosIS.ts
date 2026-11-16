@@ -8,6 +8,7 @@
 //    final pelo cadastro: a IA decide enquadramento × não enquadramento pelo laudo; quem é militar vem do cadastro.
 // resultadoBeneficiosPendente tem a mesma assinatura da regra do pacote B2 (utils/emailResultadoBeneficios.ts).
 // Testes em utils/__tests__/resultadoBeneficiosIS.test.ts.
+import { emailDispensado, type EmailsDispensados } from './emailsDispensados';
 import { higienizarParaIA } from './minimizacaoIA';
 
 export type ModeloResultadoBeneficios = 'nao_enquadramento' | 'enquadramento_militar' | 'enquadramento_nao_militar';
@@ -25,6 +26,7 @@ const semAcento = (t: string) => String(t || '').normalize('NFD').replace(/[̀-�
 export const ehGrupoBeneficios = (grupoFinalidade: string | undefined): boolean => semAcento(grupoFinalidade || '') === 'beneficios';
 
 export interface ISParaResultadoBeneficios {
+  emailsDispensados?: EmailsDispensados | null;
   grupoFinalidade?: string;
   status?: string;
   tis?: string;
@@ -41,7 +43,7 @@ export const resultadoBeneficiosDisponivel = (is: ISParaResultadoBeneficios): bo
 
 /** Pendente no menu "Enviar e-mail": IS de Benefícios finalizada (TIS assinado), com Nº do TIS, ainda não enviada. */
 export const resultadoBeneficiosPendente = (is: ISParaResultadoBeneficios): boolean =>
-  ehGrupoBeneficios(is.grupoFinalidade) && is.status === 'tis_assinado' && !!String(is.tis || '').trim() && !resultadoBeneficiosEnviado(is);
+  ehGrupoBeneficios(is.grupoFinalidade) && is.status === 'tis_assinado' && !!String(is.tis || '').trim() && !resultadoBeneficiosEnviado(is) && !emailDispensado('beneficios', is);
 
 // ---------------------------------------------------------------------------
 // Inspecionado: militar (inativo) × não militar (dependente, pensionista, servidor civil)

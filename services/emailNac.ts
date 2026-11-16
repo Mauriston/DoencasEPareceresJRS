@@ -3,7 +3,6 @@
 // (servidor/email/nac.ts) monta o e-mail e o anexo em PDF das IS escolhidas e envia pela conta Google da JRS.
 import { ApiError, chamarServidor } from './apiClient';
 import { registrarUsoAcao } from './usoDiario';
-import { notificarAcao } from './notificacoesPush';
 
 export interface ResultadoEnvioNac { enviados: number; para: string[]; cc: string[]; periodo: { inicio: string; fim: string } }
 
@@ -11,7 +10,6 @@ export const enviarEmailNac = async (isIds: string[]): Promise<ResultadoEnvioNac
   try {
     const { success: _s, enviado: _e, ...r } = await chamarServidor<ResultadoEnvioNac & { success: boolean; enviado: boolean }>('/api/email/nac', { isIds }, { timeoutMs: 180_000 });
     registrarUsoAcao('email_enviar');
-    notificarAcao('is.emailNac');
     return r;
   } catch (e) {
     if (e instanceof ApiError && e.status === 503) throw new ApiError('negocio', 'A conta Google da JRS não está autorizada no servidor. Peça ao Admin para autorizá-la em Usuários.', 503);

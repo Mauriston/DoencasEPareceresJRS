@@ -9,7 +9,7 @@
 //  - "bloqueiosAgenda": bloqueios de horário/turno (de todos os peritos ou de um perito).
 //  - config/agendaIS: turnos em que cada perito atende, por dia da semana (só o Admin grava).
 import {
-  getFirestore, collection, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot, runTransaction, serverTimestamp, Timestamp,
+  getFirestore, collection, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot, runTransaction, serverTimestamp, Timestamp, writeBatch,
 } from 'firebase/firestore';
 import { novoId } from '../utils/dados';
 import { app } from './firebaseAuth';
@@ -21,6 +21,7 @@ import { apagarGuiasExames } from './guiasExames';
 import { patchEntregaGuias, type EstadoEntregaGuias } from '../utils/guiasExamesIS';
 import type { AfastamentoIS, ProcessamentoAfastamentosIS } from '../utils/afastamentosIS';
 import { logErroSeguro } from '../utils/logSeguro';
+import { chaveDispensa, type EmailsDispensados, type TipoEmailPendente } from '../utils/emailsDispensados';
 import {
   chaveSlot, chavesOcupadas, duracaoDoGrupo, situacaoDoStatus, statusAoAgendar, TODOS_PERITOS,
   type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS, type Turno,
@@ -82,6 +83,8 @@ export interface InspecaoDoc {
   /** E-mail ao NAC (IS finalizada de Verificações e Términos; servidor/email/nac.ts). */
   emailNacEnviadoEm?: Timestamp | null;
   emailNacEnviadoPor?: string;
+  /** E-mails tirados da lista de pendências sem envio ("Limpar", só Admin — utils/emailsDispensados.ts). */
+  emailsDispensados?: EmailsDispensados | null;
   // ----- Guias de exames (só finalidades com exames mínimos no Anexo O; utils/guiasExames.ts) -----
   /** Guias em PDF geradas no servidor (servidor/documentos/guiasExames/; Storage inspecoes/{id}/guias/guias-exames.pdf). */
   guiasExames?: GuiasExamesIS | null;
@@ -216,6 +219,16 @@ export const atualizarInspecao = async (id: string, patch: Partial<InspecaoDoc>)
   await updateDoc(doc(db, COL, id), { ...patch, ...(patch.status ? { situacao: situacaoDoStatus(patch.status), ...marcaFinalizacao(patch.status) } : {}), atualizadoEm: serverTimestamp() } as Record<string, unknown>);
   aposFinalizar(id, patch.status);
   notificarAcao('is.editada', id);
+};
+
+/**
+ * "Limpar" dos modais de e-mails pendentes (só Admin): tira as IS da lista de pendências do e-mail `tipo` sem enviá-lo
+ * (emailsDispensados.{tipo}; utils/emailsDispensados.ts). Não mexe em atualizadoEm nem notifica "IS atualizada".
+ */
+export const dispensarEmailsPendentes = async (tipo: TipoEmailPendente, lista: { id: string; dataEntrevista?: string }[]): Promise<void> => {
+  const batch = writeBatch(db);
+  lista.forEach(is => batch.update(doc(db, COL, is.id), { [`emailsDispensados.${tipo}`]: chaveDispensa(tipo, is) }));
+  await batch.commit();
 };
 
 /** Marca o resultado da sincronização com o Google Agenda. */

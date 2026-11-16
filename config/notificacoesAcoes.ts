@@ -30,6 +30,11 @@ export interface AcaoNotificavel {
    * alvo, não geram novo aviso — evita uma notificação por célula editada.
    */
   intervaloMs?: number;
+  /**
+   * E-mails: quem notifica é o servidor, ao enviar (config/notificacoesEmails.ts, para Admin e Secretaria). O evento
+   * do app — de versões antigas em cache — é aceito e ignorado.
+   */
+  peloServidor?: boolean;
 }
 
 const MIN = 60_000;
@@ -50,7 +55,7 @@ export const ACOES_NOTIFICAVEIS = {
   'concurso.solicitacao': { titulo: 'Parecer / Exames solicitados', texto: '{ator} solicitou parecer ou exames no {concurso}', pagina: 'concursosJRS', feature: 'concursosJRS.solicitarParecerExames', alvo: 'concurso', intervaloMs: 5 * MIN },
   'concurso.examesEnviados': { titulo: 'Exames de candidato', texto: '{ator} enviou exames de candidato do {concurso}', pagina: 'concursosJRS', feature: 'concursosJRS.enviarExamesCandidato', alvo: 'concurso', intervaloMs: 10 * MIN },
   'concurso.mensagemArquivada': { titulo: 'Mensagem arquivada', texto: '{ator} arquivou uma mensagem no {concurso}', pagina: 'concursosJRS', feature: 'concursosJRS.registrarMensagemArquivo', alvo: 'concurso' },
-  'concurso.emailInaptos': { titulo: 'E-mail dos inaptos', texto: '{ator} enviou o e-mail dos inaptos do {concurso}', pagina: 'concursosJRS', feature: 'concursosJRS.enviarEmailInaptos', alvo: 'concurso' },
+  'concurso.emailInaptos': { titulo: 'E-mail dos inaptos', texto: '{ator} enviou o e-mail dos inaptos do {concurso}', pagina: 'concursosJRS', feature: 'concursosJRS.enviarEmailInaptos', alvo: 'concurso', peloServidor: true },
   'concurso.isLimpa': { titulo: 'IS limpa', texto: '{ator} limpou uma IS do {concurso}', pagina: 'concursosJRS', soAdmin: true, alvo: 'concurso' },
 
   // --- Inspeções de Saúde ------------------------------------------------
@@ -61,11 +66,11 @@ export const ACOES_NOTIFICAVEIS = {
   'is.cancelada': { titulo: 'IS cancelada', texto: '{ator} cancelou a IS {is}', pagina: 'inspecoes', feature: 'inspecoes.cancelar', alvo: 'is' },
   'is.apagada': { titulo: 'IS apagada', texto: '{ator} apagou a IS {is}', pagina: 'inspecoes', soAdmin: true, alvo: 'is' },
   'is.examesEnviados': { titulo: 'Exames da IS', texto: '{ator} enviou exames da IS {is}', pagina: 'inspecoes', feature: 'inspecoes.enviarExames', alvo: 'is', intervaloMs: 10 * MIN },
-  'is.emailAgendamento': { titulo: 'E-mail de agendamento', texto: '{ator} enviou o e-mail de agendamento da IS {is}', pagina: 'inspecoes', feature: 'inspecoes.enviarEmails', alvo: 'is' },
-  'is.emailResultado': { titulo: 'E-mail de resultado', texto: '{ator} enviou o e-mail de resultado da IS {is}', pagina: 'inspecoes', feature: 'inspecoes.enviarEmails', alvo: 'is' },
-  'is.emailFaltas': { titulo: 'E-mail de faltas', texto: '{ator} enviou o e-mail de faltas do HNRe', pagina: 'inspecoes', feature: 'inspecoes.enviarEmails', alvo: 'nenhum' },
-  'is.emailNac': { titulo: 'E-mail NAC', texto: '{ator} enviou o e-mail ao NAC', pagina: 'inspecoes', feature: 'inspecoes.enviarEmails', alvo: 'nenhum' },
-  'is.emailAgendaDia': { titulo: 'E-mail das IS agendadas', texto: '{ator} enviou o e-mail das IS agendadas do dia', pagina: 'inspecoes', soAdmin: true, alvo: 'nenhum' },
+  'is.emailAgendamento': { titulo: 'E-mail de agendamento', texto: '{ator} enviou o e-mail de agendamento da IS {is}', pagina: 'inspecoes', feature: 'inspecoes.enviarEmails', alvo: 'is', peloServidor: true },
+  'is.emailResultado': { titulo: 'E-mail de resultado', texto: '{ator} enviou o e-mail de resultado da IS {is}', pagina: 'inspecoes', feature: 'inspecoes.enviarEmails', alvo: 'is', peloServidor: true },
+  'is.emailFaltas': { titulo: 'E-mail de faltas', texto: '{ator} enviou o e-mail de faltas do HNRe', pagina: 'inspecoes', feature: 'inspecoes.enviarEmails', alvo: 'nenhum', peloServidor: true },
+  'is.emailNac': { titulo: 'E-mail NAC', texto: '{ator} enviou o e-mail ao NAC', pagina: 'inspecoes', feature: 'inspecoes.enviarEmails', alvo: 'nenhum', peloServidor: true },
+  'is.emailAgendaDia': { titulo: 'E-mail das IS agendadas', texto: '{ator} enviou o e-mail das IS agendadas do dia', pagina: 'inspecoes', soAdmin: true, alvo: 'nenhum', peloServidor: true },
   'is.agendaBloqueada': { titulo: 'Agenda bloqueada', texto: '{ator} bloqueou horários da agenda das IS', pagina: 'inspecoes', feature: 'inspecoes.bloquearAgenda', alvo: 'nenhum', intervaloMs: 5 * MIN },
   'is.agendaLiberada': { titulo: 'Agenda liberada', texto: '{ator} liberou horários da agenda das IS', pagina: 'inspecoes', feature: 'inspecoes.bloquearAgenda', alvo: 'nenhum', intervaloMs: 5 * MIN },
   'is.configAgenda': { titulo: 'Turnos dos peritos', texto: '{ator} alterou a configuração de turnos dos peritos', pagina: 'inspecoes', soAdmin: true, alvo: 'nenhum' },

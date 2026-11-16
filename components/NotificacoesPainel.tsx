@@ -1,17 +1,20 @@
 // Ficheiro: components/NotificacoesPainel.tsx
 // Lista das notificações recebidas pelo usuário (item "Notificações" do menu
-// do avatar). Tocar num item marca como lida e abre a tela do aviso (ex.: o
-// concurso); as não lidas vêm destacadas e somam no badge do avatar.
-// "Marcar todas como lidas" apaga todas as notificações do histórico.
-import React from 'react';
+// do avatar). Abrir o modal já conta como leitura: as notificações exibidas
+// saem do histórico na hora (`onVistas` as apaga) e o badge do avatar zera; o
+// modal continua mostrando o que foi aberto (as não lidas, destacadas) até
+// fechar. As que chegam com o modal aberto também entram e saem do histórico.
+// Tocar num item abre a tela do aviso (ex.: o concurso). Sem "Marcar todas".
+import React, { useEffect, useRef, useState } from 'react';
 import { Dialog } from './ui/Dialog';
-import { Button } from './ui/Button';
 import type { NotificacaoRecord } from '../services/notificacoesPush';
 
 interface Props {
+  /** Histórico ao vivo (services/notificacoesPush.ts → observarNotificacoes). */
   lista: NotificacaoRecord[];
   onAbrir: (n: NotificacaoRecord) => void;
-  onMarcarTodas: () => void;
+  /** Notificações exibidas: saem do histórico. */
+  onVistas: (ids: string[]) => void;
   onClose: () => void;
 }
 
@@ -28,20 +31,33 @@ const quando = (d: Date | null): string => {
   return `${d.toLocaleDateString('pt-BR')}, ${hora}`;
 };
 
-export const NotificacoesPainel: React.FC<Props> = ({ lista, onAbrir, onMarcarTodas, onClose }) => {
+export const NotificacoesPainel: React.FC<Props> = ({ lista, onAbrir, onVistas, onClose }) => {
+  // O que já foi exibido fica na tela (com o estado de leitura de quando chegou), mesmo depois de sair do histórico.
+  const [exibidas, setExibidas] = useState<NotificacaoRecord[]>(lista);
+  const vistas = useRef(new Set<string>());
+  useEffect(() => {
+    const novas = lista.filter(n => !vistas.current.has(n.id));
+    if (!novas.length) return;
+    novas.forEach(n => vistas.current.add(n.id));
+    setExibidas(atual => {
+      const ids = new Set(atual.map(n => n.id));
+      return [...atual, ...novas.filter(n => !ids.has(n.id))].sort((a, b) => (b.em?.getTime() ?? 0) - (a.em?.getTime() ?? 0));
+    });
+    onVistas(novas.map(n => n.id));
+  }, [lista]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <Dialog
       title="Notificações"
       icon="notifications"
       size="md"
       onClose={onClose}
-      footer={lista.length > 0 ? <Button variant="secondary" icon="done_all" onClick={onMarcarTodas}>Marcar todas como lidas</Button> : undefined}
     >
-      {lista.length === 0 ? (
+      {exibidas.length === 0 ? (
         <p className="text-ink-3 text-center py-6">Nenhuma notificação por enquanto.</p>
       ) : (
         <ul className="-mx-5 -my-5 divide-y divide-line">
-          {lista.map(n => (
+          {exibidas.map(n => (
             <li key={n.id}>
               <button
                 type="button"

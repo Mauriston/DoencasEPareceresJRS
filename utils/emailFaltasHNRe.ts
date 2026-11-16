@@ -5,7 +5,10 @@
 //  - pendente enquanto o e-mail não foi enviado para a falta atual: `emailFaltaDataEntrevista` (gravado no envio)
 //    diferente da `dataEntrevista` da IS — uma nova falta depois de reagendar volta a ficar pendente.
 
+import { emailDispensado, type EmailsDispensados } from './emailsDispensados';
+
 export interface ISParaFalta {
+  emailsDispensados?: EmailsDispensados | null;
   status?: string;
   dataEntrevista?: string;
   inspecionadoId?: string;
@@ -19,7 +22,7 @@ export const ehOmHnre = (om: string | undefined | null): boolean => semAcentos(S
 
 /** A falta da IS ainda não foi comunicada (a OM é conferida à parte). */
 export const faltaSemEmail = (is: ISParaFalta): boolean =>
-  is.status === 'faltou' && !!is.dataEntrevista && is.emailFaltaDataEntrevista !== is.dataEntrevista;
+  is.status === 'faltou' && !!is.dataEntrevista && is.emailFaltaDataEntrevista !== is.dataEntrevista && !emailDispensado('faltas', is);
 
 /** IS com falta de inspecionados do HNRe ainda sem e-mail, da falta mais antiga para a mais recente. */
 export const faltasPendentesHNRe = <T extends ISParaFalta>(inspecoes: T[], omDe: (inspecionadoId: string) => string | undefined): T[] =>

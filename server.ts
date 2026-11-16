@@ -7,6 +7,7 @@ import { caminhoArquivoValido } from "./utils/arquivosPermitidos";
 import { PERFIS_ENTREVISTA } from "./config/entrevistas";
 import { type FeatureKey, type MatrizPermissoesArmazenada } from "./config/permissoesPadrao";
 import { acaoNotificavel, perfilExecuta, ROTA_DA_PAGINA, type AcaoNotificavel } from "./config/notificacoesAcoes";
+import { AVISOS_EMAIL, AVISO_EMAIL_AGENDA_AUTOMATICO, PERFIS_AVISO_EMAIL, quantidadeIS, textoAvisoEmail, type AvisoEmail } from "./config/notificacoesEmails";
 
 // Firebase Admin (credenciais padrão do Cloud Run), inicializado sob demanda.
 async function getFirebaseAdmin() {
@@ -338,6 +339,46 @@ async function startServer() {
     return { aparelhos: tokens.length, enviados, erros };
   };
 
+  /**
+   * E-mail enviado pela conta Google da JRS (config/notificacoesEmails.ts): avisa os Admin e a Secretaria ativos,
+   * menos quem enviou (`quemUid`; null no envio automático). Best effort: quem chama não espera nem falha por isto.
+   */
+  const notificarEmailEnviado = async (adminDb: any, aviso: AvisoEmail, b: any, quemUid: string | null, resultado?: unknown) => {
+    const usuarios = await adminDb.collection("usuarios").get();
+    const perfis: readonly string[] = PERFIS_AVISO_EMAIL;
+    const destino = new Set<string>(usuarios.docs.filter((d: any) => d.data().ativo !== false && perfis.includes(String(d.data().perfil))).map((d: any) => d.id));
+    let ator = "";
+    if (quemUid) {
+      destino.delete(quemUid);
+      const d = usuarios.docs.find((x: any) => x.id === quemUid)?.data();
+      ator = String(d?.usuario || d?.nome || "Usuário");
+    }
+    if (!destino.size) return;
+    let rota = "/inspecoes";
+    let numeroIs = "";
+    let concurso = "";
+    if (aviso.alvo === "is") {
+      const isId = String(b?.isId ?? "").trim();
+      if (isId && !isId.includes("/")) {
+        const i = await adminDb.collection("inspecoes").doc(isId).get();
+        numeroIs = String(i.data()?.is || isId);
+        if (i.exists) rota = `/inspecoes/${encodeURIComponent(isId)}`;
+      }
+    } else if (aviso.alvo === "concurso") {
+      const concursoId = String(b?.concursoId ?? "").trim();
+      if (concursoId && !concursoId.includes("/")) {
+        const c = await adminDb.collection("concursos").doc(concursoId).get();
+        concurso = String(c.data()?.nome || concursoId);
+        rota = `/concursos/${encodeURIComponent(concursoId)}`;
+      }
+    }
+    const enviados = Number((resultado as { enviados?: unknown } | undefined)?.enviados);
+    const qtd = Number.isFinite(enviados) && enviados > 0 ? enviados : Array.isArray(b?.isIds) ? b.isIds.length : 0;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(b?.data || ""));
+    const corpo = textoAvisoEmail(aviso.texto, { ator, is: numeroIs, concurso, qtd: qtd ? quantidadeIS(qtd) : "", data: m ? `${m[3]}/${m[2]}/${m[1]}` : "" });
+    await enviarPush(adminDb, { uids: destino }, { titulo: aviso.titulo, corpo: corpo.replace(" ()", ""), rota });
+  };
+
   // Matriz de permissões salva pelo Admin (config/permissoes), somada aos padrões de config/permissoesPadrao.
   const lerMatrizPermissoes = async (adminDb: any): Promise<MatrizPermissoesArmazenada | null> =>
     ((await adminDb.collection("config").doc("permissoes").get()).data() as MatrizPermissoesArmazenada | undefined) || null;
@@ -387,6 +428,8 @@ async function startServer() {
         // Quem não pode executar a ação não dispara aviso (a gravação em si já
         // é barrada pelas regras do Firestore): ignora sem erro.
         if (!perfilExecuta(matriz, ator.perfil, acao)) { res.json({ success: true, enviado: false }); return; }
+        // E-mails: o próprio servidor avisa ao enviar (notificarEmailEnviado); o pedido do app antigo é ignorado.
+        if (acao.peloServidor) { res.json({ success: true, enviado: false }); return; }
         // Anti-repetição por usuário + ação + alvo.
         const chave = `acao_${decoded.uid}_${acaoId}_${alvoId || "-"}`.replace(/[^\w.-]/g, "_").slice(0, 400);
         const ref = adminDb.collection("notificacoes_enviadas").doc(chave);
@@ -655,6 +698,9 @@ async function startServer() {
         const r = await acao(adminDb, req.body || {}, quem);
         // E-mails de impressão: operação sensível (como ACOES_SENSIVEIS no Apps Script).
         if (sensivel) void auditarServidor("operacao_sensivel", rota, quem.uid);
+        // E-mail enviado: aviso aos Admin e à Secretaria, menos quem enviou (config/notificacoesEmails.ts).
+        const aviso = AVISOS_EMAIL[rota];
+        if (aviso) void notificarEmailEnviado(adminDb, aviso, req.body || {}, quem.uid, r).catch(e => logErroSeguro(`Aviso ${rota}`, e));
         res.json({ success: true, ...(r && typeof r === "object" ? r : {}) });
       } catch (error: any) {
         const { ErroContaGoogle } = await import("./servidor/google/contaGoogle");
@@ -781,7 +827,10 @@ async function startServer() {
     try {
       const { adminDb } = await getFirebaseAdmin();
       const r = await (await import("./servidor/email/agendaIS")).envioAutomaticoAgendaIS(adminDb, await bucketStorage());
-      if (r.enviado) void auditarServidor("operacao_sensivel", "agendador-agenda-is", "agendador");
+      if (r.enviado) {
+        void auditarServidor("operacao_sensivel", "agendador-agenda-is", "agendador");
+        void notificarEmailEnviado(adminDb, AVISO_EMAIL_AGENDA_AUTOMATICO, { data: r.data }, null).catch(e => logErroSeguro("Aviso agendador agenda-is", e));
+      }
       res.json({ success: true, ...r });
     } catch (error: any) {
       logErroSeguro("Agendador agenda-is", error);
