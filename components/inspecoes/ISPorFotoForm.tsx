@@ -7,7 +7,8 @@
 //  2. Inspecionado pelo NIP: achado na base, ou cadastrado com a foto da tela da IS — direto quando o
 //     print traz tudo, ou no cadastro já preenchido para completar (MilitarCadastroForm).
 //  3. Conferir: um cartão por IS (status no topo; abre para editar finalidade, datas, perito/horário e a
-//     conclusão). "Gravar" grava as que estão prontas; as com pendência ficam abertas.
+//     conclusão). "Gravar" grava as que estão prontas; as com pendência ficam abertas. Em Verificações e
+//     Términos, o CID principal dos "CID Associados" vai junto com a conclusão (só se a IS ainda não tem CID).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CascaFormulario, type CascaForm } from '../ficha/CascaFormulario';
 import { Button } from '../ui/Button';
@@ -25,13 +26,13 @@ import { lerPrintDoSinais } from '../../services/sinaisIA';
 import { criarMilitar, type MilitarRecord } from '../../services/firestoreMilitares';
 import { importarInspecao, type AmpIS, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { peritosDoAmp, type PeritoIS } from '../../services/peritosIS';
-import { carregarCorposQuadros, carregarFinalidadesIS, carregarOms, carregarRestricoesIS } from '../../utils/corposQuadros';
+import { carregarCid, carregarCorposQuadros, carregarFinalidadesIS, carregarOms, carregarRestricoesIS } from '../../utils/corposQuadros';
 import { preencherInspecionadoDoSinais, militarDoPreenchimento } from '../../utils/inspecionadoSinais';
 import {
-  agruparPrints, proporImportacao, statusDaConclusao, statusDosDados,
+  acharCidDoSinais, agruparPrints, proporImportacao, statusDaConclusao, statusDosDados,
   type DadosISSinais, type LeituraPrint, type PropostaImportacao,
 } from '../../utils/importacaoIS';
-import { mostraRestricoes, opcoesDeRestricoes, separarRestricoes, juntarRestricoes } from '../../utils/conclusaoIS';
+import { exigeCid, mostraRestricoes, opcoesDeRestricoes, separarRestricoes, juntarRestricoes } from '../../utils/conclusaoIS';
 import {
   hojeISO, ocupadosDe, duracaoDoGrupo, peritoAtendeNoTurno, turnoDoSlot, STATUS_IS,
   type BloqueioAgenda, type ConfigAgenda, type StatusIS,
@@ -277,6 +278,9 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
       const status = statusDoItem(it, atual);
       const reservar = !!c.data && c.data >= hojeISO() && STATUS_DE_AGENDA.includes(status);
       const conclusao = !!it.proposta!.temConclusao && !!c.laudo.trim();
+      // CID (Verificações e Términos): o principal lido, no rótulo DESCRABREV do public/cid.json; não troca o já gravado.
+      const codigoCid = conclusao && exigeCid({ grupoFinalidade: achada.grupo }) && !String(atual?.cid || '').trim() ? it.proposta!.cidCodigo : '';
+      const cid = codigoCid ? await carregarCid().then(l => acharCidDoSinais(codigoCid, l)).catch(() => null) : null;
       try {
         const salva = await importarInspecao(it.numero, {
           dataAbertura: c.dataAbertura, dataEntrevista: c.data && c.hora ? `${c.data}T${c.hora}` : '',
@@ -286,6 +290,7 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
           laudo: conclusao ? c.laudo.trim() : '', dataLaudo: conclusao ? c.dataLaudo || hojeISO() : '',
           restricoes: conclusao && mostraRestricoes({ grupoFinalidade: achada.grupo, laudo: c.laudo }) ? juntarRestricoes(separarRestricoes(c.restricoes)) : '',
           tis: conclusao ? c.tis.trim() : '', ds1a: conclusao && c.tis.trim() ? c.ds1a.trim().toUpperCase() : '',
+          ...(cid ? { cid: cid.DESCRABREV.trim(), cidCodigo: cid.SUBCAT.trim().toUpperCase() } : {}),
           status, criadoPor: usuario.usuario,
         }, atual, reservar);
         gravadas++; ultima = salva;

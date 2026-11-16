@@ -3,7 +3,8 @@
 // da IS e/ou da conclusão no SINAIS; a IA lê cada print (Firebase AI Logic — services/sinaisIA.lerPrintDoSinais,
 // a mesma leitura da "IS por foto") e as regras de utils/importacaoIS.ts (agruparPrints → proporImportacao →
 // preenchimentoDosPrints) dizem o que completar. Só os campos VAZIOS da IS são preenchidos (Laudo, Data do
-// laudo, CID, Restrições, Nº do TIS, DS-1a); quem grava é o detalhe (onPreencher), pelas mesmas regras do autosave.
+// laudo, CID principal, Restrições, Nº do TIS, DS-1a, Data da Conclusão — esta nunca anterior à Data do laudo);
+// quem grava é o detalhe (onPreencher), pelas mesmas regras do autosave.
 import React, { useRef, useState } from 'react';
 import { Button } from '../../ui/Button';
 import { arquivoParaBase64IA } from '../../../services/geminiAI';

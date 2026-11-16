@@ -7,6 +7,12 @@
 //  - Conclusão (laudos e restrições associadas): com ela valem também o Código DS-1A, a Data do Laudo e
 //    o Num. TIS da tela da IS, e o status sai do Laudo, do Nº do TIS e do DS-1A (Votação pendente,
 //    Assinaturas pendentes ou TIS assinado). Só a conclusão: atualiza a IS já cadastrada com aquele nº.
+//  - Data da Conclusão: campo "Data da Conclusão" de "Dados da Inspeção" (tela da IS). Suposição: no SINAIS é a
+//    data em que a junta concluiu a IS (conclusão/assinatura do TIS), que nunca antecede a "Data do Laudo" — se
+//    vier anterior, é leitura errada (ou outra data) e é descartada. O rodapé da tela da conclusão também pode
+//    trazê-la ("Conclusão"/"Data da Conclusão"); vale a da tela da IS quando houver as duas.
+//  - CID: a seção "CID Associados" da conclusão; vale o principal (o 1º da lista — a IA põe primeiro o marcado
+//    como principal), com ou sem ponto ("M54.5" ou "M545").
 // Testadas em utils/__tests__/importacaoIS.test.ts.
 import { normalizarBusca, type GrupoFinalidadeIS } from './corposQuadros';
 import { dataCivilISO, normalizarNip } from './dados';
@@ -25,6 +31,8 @@ export interface DadosISSinais extends DadosSinais {
   dataAgendamento?: string;
   ds1a?: string;
   dataLaudo?: string;
+  /** "Data da Conclusão" (ver o cabeçalho do ficheiro). */
+  dataConclusao?: string;
   numTis?: string;
 }
 
@@ -37,7 +45,9 @@ export interface ConclusaoSinais {
   restricoes?: string[];
   /** Data do campo "Laudo" no rodapé da tela da conclusão. */
   dataLaudo?: string;
-  /** Códigos da seção "CID Associados" (ex.: "M54.5"). */
+  /** Data "Conclusão" do rodapé, quando houver (a da tela da IS tem prioridade). */
+  dataConclusao?: string;
+  /** Códigos da seção "CID Associados" (ex.: "M54.5"), o principal primeiro. */
   cids?: string[];
 }
 
@@ -124,6 +134,10 @@ export interface PropostaImportacao {
   temConclusao: boolean;
   laudo: string;
   dataLaudo: string;
+  /** AAAA-MM-DD; '' quando não lida ou anterior à Data do Laudo (descartada). */
+  dataConclusao: string;
+  /** SUBCAT do CID principal ("M545"); '' sem CID associado legível. */
+  cidCodigo: string;
   restricoes: string;
   tis: string;
   ds1a: string;
@@ -131,7 +145,11 @@ export interface PropostaImportacao {
 }
 
 /** O que já está gravado da IS (atualização). */
-export interface ISCadastrada { inspecionadoId: string; finalidade: string; dataAbertura: string }
+export interface ISCadastrada { inspecionadoId: string; finalidade: string; dataAbertura: string; dataLaudo?: string }
+
+/** A Data da Conclusão (AAAA-MM-DD) vale se não for anterior à Data do Laudo (sem uma das duas, vale). */
+export const conclusaoValida = (dataConclusao: string | undefined, dataLaudo: string | undefined): boolean =>
+  !dataConclusao || !dataLaudo || dataConclusao >= String(dataLaudo).slice(0, 10);
 
 /**
  * Junta as leituras de uma IS numa proposta; `erro` quando não há como seguir (sem nº, fotos de IS
@@ -180,11 +198,18 @@ export const proporImportacao = (
     }
     if (achada?.grupo === GRUPO_VERIFICACOES) restricoes = restricoesDaConclusao(c, opcoesRestricoes);
   }
+  const cidCodigo = cidPrincipalDoSinais(c?.cids);
+  // Data da Conclusão: nunca anterior à Data do Laudo (lida agora ou, sem ela, a já gravada).
+  let dataConclusao = dataDoSinais(d?.dataConclusao) || dataDoSinais(c?.dataConclusao);
+  if (!conclusaoValida(dataConclusao, dataLaudo || atual?.dataLaudo)) {
+    avisos.push('Data da Conclusão anterior à Data do Laudo: ignorada.');
+    dataConclusao = '';
+  }
 
   return {
     proposta: {
       numero, nip, amp, finalidade: achada?.finalidade ?? '', grupoFinalidade: achada?.grupo ?? '', finalidadeLida,
-      dataAbertura, dataAgendamento, temDados: !!d, temConclusao: !!c, laudo, dataLaudo, restricoes, tis, ds1a, avisos,
+      dataAbertura, dataAgendamento, temDados: !!d, temConclusao: !!c, laudo, dataLaudo, dataConclusao, cidCodigo, restricoes, tis, ds1a, avisos,
     },
     erro: '',
   };
@@ -217,6 +242,7 @@ export const tipoDoPrint = (l: LeituraPrint): TipoPrint => {
 
 export const conclusaoDaLeitura = (l: LeituraPrint): ConclusaoSinais => ({
   numInspecao: l.numInspecao, nip: l.nip, finalidade: l.finalidade, laudos: l.laudos ?? [], restricoes: l.restricoes ?? [], dataLaudo: l.dataLaudo,
+  ...(l.dataConclusao ? { dataConclusao: l.dataConclusao } : {}),
   ...(l.cids?.length ? { cids: l.cids } : {}),
 });
 
@@ -262,30 +288,54 @@ export interface ConclusaoAtualIS {
   tis: string;
   ds1a: string;
   cid?: string;
+  dataConclusao?: string;
 }
 
-/** Campos a completar, na ordem de gravação (Laudo → Data do laudo → CID → Restrições → Nº do TIS → DS-1a). */
+/** Campos a completar, na ordem de gravação (Laudo → Data do laudo → CID → Restrições → Nº do TIS → DS-1a → Data da Conclusão). */
 export interface PreenchimentoPrints {
   laudo?: string;
   dataLaudo?: string;
-  /** Código do 1º CID associado (ex.: "M545"); o detalhe procura o DESCRABREV no public/cid.json. */
+  /** Código do CID principal (ex.: "M545"); o detalhe procura o DESCRABREV no public/cid.json (acharCidDoSinais). */
   cidCodigo?: string;
   restricoes?: string;
   tis?: string;
   ds1a?: string;
+  /** "Data da Conclusão" da IS (AAAA-MM-DD), nunca anterior à Data do laudo. */
+  dataConclusao?: string;
 }
 
-/** "M54.5" → "M545" (SUBCAT do public/cid.json). */
+/**
+ * "M54.5" → "M545" (SUBCAT do public/cid.json). Aceita com ou sem ponto (ou vírgula), minúsculas, prefixo
+ * "CID"/"CID-10" e descrição depois do código; não confunde o "D10" de "CID10" com um código. Ilegível → ''.
+ */
 export const codigoCidDoSinais = (texto: string | undefined): string => {
-  const m = String(texto || '').toUpperCase().match(/[A-Z]\d{2}(?:\.?\d)?/);
-  return m ? m[0].replace('.', '') : '';
+  const t = String(texto || '').toUpperCase().replace(/\bCID\s*-?\s*10\b/g, ' ');
+  const m = t.match(/(?:^|[^A-Z0-9])([A-Z])(\d{2})(?:\s?[.,]\s?(\d)|(\d))?(?![0-9])/);
+  return m ? `${m[1]}${m[2]}${m[3] ?? m[4] ?? ''}` : '';
+};
+
+/** CID principal dos "CID Associados": o 1º código legível (a IA põe o principal primeiro). */
+export const cidPrincipalDoSinais = (cids: (string | undefined)[] | undefined): string =>
+  (cids ?? []).map(codigoCidDoSinais).find(Boolean) ?? '';
+
+/**
+ * Item do public/cid.json para o código lido: o SUBCAT exato ou, sem ele, a categoria de 3 caracteres
+ * ("I10.0" lido, só "I10" na lista). Null se nenhum servir.
+ */
+export const acharCidDoSinais = <T extends { SUBCAT: string }>(codigo: string | undefined, lista: T[]): T | null => {
+  const c = codigoCidDoSinais(codigo);
+  if (!c) return null;
+  const porSubcat = (k: string) => lista.find(x => x.SUBCAT.toUpperCase() === k) ?? null;
+  return porSubcat(c) ?? (c.length === 4 ? porSubcat(c.slice(0, 3)) : null);
 };
 
 /**
  * Prints do SINAIS no detalhe da IS: só os campos VAZIOS da IS são completados com o que a proposta
  * (proporImportacao) e os CID associados trazem — nada que já esteja preenchido é sobrescrito. O Nº do TIS
  * só com Laudo, o DS-1a só com Nº do TIS; Restrições e CID só em Verificações e Términos (Restrições só
- * com o Laudo mencionando "restrições"); a Data do laudo só quando o Laudo também vem dos prints.
+ * com o Laudo mencionando "restrições"); a Data do laudo só quando o Laudo também vem dos prints. O CID é o
+ * principal dos CID associados (`cids`; sem eles, o da proposta). A Data da Conclusão só com Laudo e nunca
+ * anterior à Data do laudo (a que fica gravada) — anterior, é descartada.
  */
 export const preenchimentoDosPrints = (atual: ConclusaoAtualIS, p: PropostaImportacao, cids: string[] = []): PreenchimentoPrints => {
   const vazio = (v: string | undefined) => !String(v || '').trim();
@@ -297,10 +347,12 @@ export const preenchimentoDosPrints = (atual: ConclusaoAtualIS, p: PropostaImpor
   }
   const laudo = r.laudo ?? atual.laudo;
   const vt = grupoComRestricoes(atual.grupoFinalidade);
-  if (vt && vazio(atual.cid)) { const c = cids.map(codigoCidDoSinais).find(Boolean); if (c) r.cidCodigo = c; }
+  if (vt && vazio(atual.cid)) { const c = cidPrincipalDoSinais(cids) || p.cidCodigo; if (c) r.cidCodigo = c; }
   if (vt && vazio(atual.restricoes) && p.restricoes.trim() && laudoMencionaRestricoes(laudo)) r.restricoes = p.restricoes.trim();
   if (vazio(atual.tis) && p.tis.trim() && !vazio(laudo)) r.tis = p.tis.trim();
   const tis = r.tis ?? atual.tis;
   if (vazio(atual.ds1a) && p.ds1a.trim() && !vazio(tis)) r.ds1a = p.ds1a.trim().toUpperCase();
+  const dataLaudo = r.dataLaudo ?? atual.dataLaudo;
+  if (vazio(atual.dataConclusao) && p.dataConclusao && !vazio(laudo) && conclusaoValida(p.dataConclusao, dataLaudo)) r.dataConclusao = p.dataConclusao;
   return r;
 };

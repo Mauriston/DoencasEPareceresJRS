@@ -2,7 +2,8 @@
 // Lê um print da tela de uma IS do SINAIS e devolve a seção "DADOS DO INSPECIONADO" (Gemini via
 // Firebase AI Logic, services/geminiAI.ts), para pré-preencher o cadastro de novo inspecionado
 // (utils/inspecionadoSinais.ts faz a conversão para os campos do formulário), e — na "IS por foto" — a
-// tela da IS e a da conclusão (utils/importacaoIS.ts monta a IS a criar ou atualizar).
+// tela da IS e a da conclusão (utils/importacaoIS.ts monta a IS a criar ou atualizar), com a Data da Conclusão
+// e os CID associados (o principal primeiro).
 import { gerarComGemini, lerJsonIA } from './geminiAI';
 import type { DadosSinais } from '../utils/inspecionadoSinais';
 import type { LeituraPrint } from '../utils/importacaoIS';
@@ -52,9 +53,10 @@ const INSTRUCOES_PRINT = [
   '- numInspecao: "Num. Inspeção" (só os dígitos).',
   '- junta: "Junta" (ex.: JRS/HNRE, MPI/CASSUNDÉ).',
   '- finalidadeTis: "Texto Finalidade TIS".',
-  '- dataCriacao: "Data de Criação"; dataAgendamento: "Data de Agendamento"; dataLaudo: "Data do Laudo" — todas no formato AAAA-MM-DD.',
+  '- dataCriacao: "Data de Criação"; dataAgendamento: "Data de Agendamento"; dataLaudo: "Data do Laudo";',
+  '  dataConclusao: "Data da Conclusão" (conclusão da IS/assinatura do TIS) — todas no formato AAAA-MM-DD; só a data, sem a hora.',
   '- ds1a: "Código DS-1A"; numTis: "Num. TIS" (ex.: 026.000.48930).',
-  '- Ignore "Data de Apresentação", "Data Apreciação" e "Data da Conclusão".',
+  '- Ignore "Data de Apresentação" e "Data Apreciação" (não as confunda com a Data da Conclusão nem com a Data do Laudo).',
   '- Da seção "DADOS DO INSPECIONADO": nome ("Nome"), situacao ("Situação"), tipo do inspecionado em tipoInspecionado ("Tipo": Titular, Dependente…),',
   '  omSigla ("OM Inspecionado"), posto ("Posto", por extenso), corpo ("Corpo", sigla), quadro ("Quadro"), especialidade ("Especialidade"),',
   '  nip ("NIP", só os dígitos), dataNascimento ("Data Nascimento", AAAA-MM-DD). Não leia CPF nem Identidade.',
@@ -64,10 +66,14 @@ const INSTRUCOES_PRINT = [
   '- laudos: uma linha por linha da tabela "Laudos": resultado ("Resultado"), finalidade ("Finalidade") e laudo ("Laudo", o texto completo).',
   '- restricoes: o texto da coluna "Restrição" de cada linha de "Restrições Associadas" (pule as linhas com a restrição vazia).',
   '- dataLaudo: a data do campo "Laudo" no rodapé (ao lado de "Rec. Assist."), no formato AAAA-MM-DD.',
-  '- cids: o código de cada linha da seção "CID Associados" (ex.: "M54.5"), na ordem em que aparecem.',
+  '- dataConclusao: só se o rodapé tiver um campo "Conclusão" ou "Data da Conclusão": essa data, no formato AAAA-MM-DD.',
+  '- cids: o CID-10 de cada linha da seção "CID Associados", só o código como aparece (letra + 2 dígitos, com o',
+  '  ponto e o dígito da subcategoria quando houver, ex.: "M54.5", "F32.1", "I10"), sem a descrição. Se uma linha',
+  '  estiver marcada como principal, ponha-a primeiro; as demais na ordem em que aparecem. Não deduza CID do',
+  '  texto do laudo: sem a seção "CID Associados" (ou vazia), omita.',
 ].join('\n');
 
-const TEXTOS_PRINT = ['numInspecao', 'junta', 'finalidadeTis', 'dataCriacao', 'dataAgendamento', 'ds1a', 'dataLaudo', 'numTis',
+const TEXTOS_PRINT = ['numInspecao', 'junta', 'finalidadeTis', 'dataCriacao', 'dataAgendamento', 'ds1a', 'dataLaudo', 'dataConclusao', 'numTis',
   'nome', 'situacao', 'tipoInspecionado', 'omSigla', 'posto', 'corpo', 'quadro', 'especialidade', 'nip', 'dataNascimento', 'finalidade'] as const;
 
 /** Um print qualquer do SINAIS (tela da IS ou da conclusão): a IA diz qual é e lê os campos daquela tela. */
@@ -88,7 +94,7 @@ export const lerPrintDoSinais = async (base64: string, mimeType: string): Promis
           }),
         }),
         restricoes: Schema.array({ items: Schema.string() }),
-        cids: Schema.array({ items: Schema.string() }),
+        cids: Schema.array({ items: Schema.string({ description: 'código CID-10 da seção "CID Associados" (ex.: M54.5), o principal primeiro' }) }),
       },
       optionalProperties: [...TEXTOS_PRINT, 'laudos', 'restricoes', 'cids'],
     }),
