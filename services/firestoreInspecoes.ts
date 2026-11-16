@@ -18,6 +18,7 @@ import { registrarUsoAcao } from './usoDiario';
 import { registrarEventoInspecionado } from './eventosInspecionado';
 import { notificarAcao } from './notificacoesPush';
 import { apagarGuiasExames } from './guiasExames';
+import { ApiError, chamarServidor } from './apiClient';
 import { patchEntregaGuias, type EstadoEntregaGuias } from '../utils/guiasExamesIS';
 import type { AfastamentoIS, ProcessamentoAfastamentosIS } from '../utils/afastamentosIS';
 import { logErroSeguro } from '../utils/logSeguro';
@@ -107,6 +108,11 @@ export interface InspecaoDoc {
   criadoPor: string;
   criadoEm: Timestamp | null;
   atualizadoEm?: Timestamp | null;
+  // ----- Conclusão explícita ("Concluir IS"; utils/conclusaoIS.ts → patchConcluirIS/patchReabrirIS) -----
+  /** AAAA-MM-DD da conclusão (nunca anterior à Data do laudo); '' depois de "Reabrir IS". */
+  dataConclusao?: string;
+  /** Quem concluiu a IS (pode reabri-la mesmo sem a função inspecoes.reabrir); null depois de reabrir. */
+  concluidaPor?: { uid: string; usuario: string } | null;
   /** Quando a situação passou a "finalizada" (TIS assinado ou cancelada): conta os 15 dias para apagar as guias. */
   finalizadaEm?: Timestamp | null;
   // ----- Verificações e Términos: CID e afastamentos (utils/conclusaoIS.ts, utils/afastamentosIS.ts) -----
@@ -309,6 +315,37 @@ export const apagarInspecao = async (atual: InspecaoRecord): Promise<void> => {
   await deleteDoc(doc(db, COL, atual.id));
   void registrarAcaoSensivel('inspecao.excluir', 'inspecoes');
   notificarAcao('is.apagada', atual.id);
+};
+
+/** Resumo da exclusão completa feita pelo servidor (POST /api/inspecoes/excluir). */
+export interface ResultadoExclusaoIS {
+  documentos: number;
+  arquivos: number;
+  pareceres: number;
+  agendaRemovida: boolean;
+}
+
+/**
+ * Exclui a IS com TUDO o que é dela, no servidor (Admin SDK — servidor/inspecoes/excluir.ts): subcoleções
+ * (exames, entrevistas, e-mails), mensagens registradas, horários da agenda, PDFs no Storage, pedidos de
+ * parecer vinculados (e os PDFs) e o evento do Google Agenda. Função inspecoes.excluir (IS não finalizada;
+ * o Admin também apaga finalizada). Servidor ainda sem a rota (404): cai em apagarInspecao (reserva: só a IS,
+ * as guias e os horários).
+ */
+export const excluirInspecaoCompleta = async (atual: InspecaoRecord): Promise<ResultadoExclusaoIS | null> => {
+  try {
+    const r = await chamarServidor<ResultadoExclusaoIS & { success: true }>('/api/inspecoes/excluir', { isId: atual.id }, { timeoutMs: 60_000 });
+    registrarEventoInspecionado(atual.inspecionadoId, 'is.excluir', `IS ${atual.id}`);
+    void registrarAcaoSensivel('inspecao.excluir', 'inspecoes');
+    notificarAcao('is.apagada', atual.id);
+    return { documentos: r.documentos ?? 0, arquivos: r.arquivos ?? 0, pareceres: r.pareceres ?? 0, agendaRemovida: !!r.agendaRemovida };
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404 && /Servidor respondeu 404|Cannot POST/i.test(e.message)) {
+      await apagarInspecao(atual);
+      return null;
+    }
+    throw e;
+  }
 };
 
 /**

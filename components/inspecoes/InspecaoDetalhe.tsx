@@ -8,20 +8,24 @@
 //     partir desta IS, Prints do SINAIS (opcional — conclusao/PrintsSinaisIS: a IA completa os campos vazios),
 //     Laudo, CID (Verificações e Términos: obrigatório para o DS-1a — conclusao/CampoCidIS), Auditoria | JSD,
 //     Restrições (MultiSelectCombobox com chips; opcional, só em Verificações e Términos com o Laudo mencionando
-//     "restrições"), Nº do TIS, DS-1a e Observações. O status muda automaticamente (regras puras em
-//     utils/conclusaoIS.ts). Finalizada uma IS de Verificações e Términos, a IA calcula em segundo plano os
-//     afastamentos (LTS/Restrições — services/afastamentosIS.ts), mostrados aqui em leitura.
-// Não editável (DS-1a/TIS assinado ou cancelada — até "Reabrir IS", Admin — ou sem permissão): os dados
-// numa tabela vertical (rótulo | valor) e, abaixo, os cards da entrevista gravada e dos pareceres.
+//     "restrições"), Nº do TIS, DS-1a, Data da Conclusão (aparece com o DS-1a: hoje, editável, nunca anterior à
+//     Data do laudo) e Observações. O status muda automaticamente (regras puras em utils/conclusaoIS.ts), mas a IS
+//     só é FINALIZADA pelo botão "Concluir IS" (desabilitado até o DS-1a e os demais obrigatórios): grava
+//     dataConclusao, concluidaPor e TIS assinado. Finalizada uma IS de Verificações e Términos, a IA calcula em
+//     segundo plano os afastamentos (LTS/Restrições — services/afastamentosIS.ts), mostrados aqui em leitura.
+// Não editável (TIS assinado ou cancelada — até "Reabrir IS": função inspecoes.reabrir ou quem concluiu — ou sem
+// permissão): os dados numa tabela vertical (rótulo | valor) e, abaixo, os cards da entrevista gravada e dos pareceres.
 // E-mails: botões de envio (EmailsDaIS, montado pela página) e a seção "E-mails enviados" (emails/HistoricoEmailsIS),
 // visível a todos que acessam a página.
 // Guias de exames (finalidades com exames mínimos — guias/GuiasExamesCard): PDF, entrega ao inspecionado e envio por e-mail.
 // Exames: PDFs enviados pelo rodapé ("Exames", até a IS ser finalizada); a IA identifica o documento e o
 // laudo fica na íntegra para copiar (exames/ExamesDaIS).
-// Rodapé (AcoesRodape: linha no desktop, FAB no mobile): Minuta MSG · Parecer · Exames · Gravar entrevista (cada um
+// Rodapé (AcoesRodape: linha no desktop, FAB no mobile): Reabrir IS · Minuta MSG · Parecer · Exames · Gravar entrevista · Concluir IS (cada um
 // só quando cabe). Fecha no X ou fora.
 // casca="inline" (Ficha do inspecionado): o mesmo conteúdo no painel principal da página (CascaPainelFicha), sem
-// Drawer nem "Fechar"; as ações vão para a barra inferior da aba, depois das `acoesExtras` da página.
+// Drawer nem "Fechar"; as ações vão para a barra inferior da aba, depois das `acoesExtras` da página (botões ou
+// botões-menu). Sem os cards dos documentos gerados (entrevista, pareceres, guias, exames, e-mails): no lugar,
+// os atalhos da página (`atalhosDocumentos`: botões ghost que levam às abas dos documentos).
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Drawer } from '../ui/Drawer';
@@ -29,7 +33,7 @@ import { ButtonLink } from '../ui/Button';
 import { fichaPath } from '../../config/routes';
 import { podeAbrirFicha } from '../ficha/permissoes';
 import { AcoesRodape, type AcaoRodape } from '../ui/AcoesRodape';
-import { CascaPainelFicha } from '../ficha/CascaPainelFicha';
+import { CascaPainelFicha, type AcaoBarraFicha } from '../ficha/CascaPainelFicha';
 import { Field } from '../ui/Field';
 import { Segmented } from '../ui/Segmented';
 import { StatusTag } from '../ui/StatusTag';
@@ -46,6 +50,7 @@ import { GuiasExamesCard } from './guias/GuiasExamesCard';
 import { CampoCidIS } from './conclusao/CampoCidIS';
 import { PrintsSinaisIS } from './conclusao/PrintsSinaisIS';
 import { atualizarInspecao, type InspecaoDoc, type InspecaoRecord } from '../../services/firestoreInspecoes';
+import { registrarEventoInspecionado } from '../../services/eventosInspecionado';
 import { marcarConcluido, observarPareceresDaIS, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
 import { carregarCid, carregarRestricoesIS, type CidItem } from '../../utils/corposQuadros';
 import type { PreenchimentoPrints } from '../../utils/importacaoIS';
@@ -54,6 +59,7 @@ import {
   STATUS_IS, statusEfetivoIS, dataBr, formatTis, tisValido, prefixoAnoTis, hojeISO, dataDeEntrevista,
 } from '../../utils/inspecoes';
 import {
+  dataConclusaoInicial, erroDataConclusao, motivoNaoConcluir, patchConcluirIS, patchReabrirIS, podeReabrirIS,
   encaminhamentoDoStatus, exigeCid, faltaCid, juntarRestricoes, mostraEncaminhamento, mostraRestricoes, opcoesDeRestricoes, patchCid, patchConclusao,
   patchEncaminhamento, patchFinalidade, podeEditarConclusao, podeEditarFinalidade, separarRestricoes,
   type CampoConclusao, type Encaminhamento, type EstadoConclusao,
@@ -67,6 +73,8 @@ export interface PermissoesDetalheIS {
   entrevista: boolean;
   /** Enviar exames em PDF (inspecoes.enviarExames); ver/copiar os laudos é de quem abre a IS. */
   exames: boolean;
+  /** "Reabrir IS" concluída (função inspecoes.reabrir); quem concluiu a IS sempre pode. */
+  reabrir?: boolean;
 }
 
 interface Props {
@@ -85,8 +93,10 @@ interface Props {
   emails?: React.ReactNode;
   /** 'drawer' (padrão): barra lateral/bottom sheet. 'inline': painel principal da Ficha do inspecionado. */
   casca?: 'drawer' | 'inline';
-  /** Só em casca="inline": ações da página que entram na barra inferior antes das da IS (ex.: "Agendar IS", "Excluir"). */
-  acoesExtras?: AcaoRodape[];
+  /** Só em casca="inline": ações da página que entram na barra inferior antes das da IS (ex.: "Agendar IS", "Excluir", botões-menu). */
+  acoesExtras?: AcaoBarraFicha[];
+  /** Só em casca="inline": no lugar dos cards dos documentos gerados (atalhos para as abas dos documentos). */
+  atalhosDocumentos?: React.ReactNode;
   /**
    * "Gravar entrevista": sem a prop, abre a gravação aqui mesmo; com uma função, ela substitui o fluxo (a Ficha leva à
    * aba Transcrições); null esconde o botão.
@@ -161,7 +171,7 @@ const useCampoAuto = (remoto: string, salvar: (valor: string) => void) => {
 
 type EstadoGravacao = 'ocioso' | 'salvando' | 'salvo' | 'erro';
 
-export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes, onClose, onMinuta, onSolicitarParecer, onDuplicarParecer, onSituacaoMudou, onAviso, emails, casca = 'drawer', acoesExtras = [], onGravarEntrevista }) => {
+export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes, onClose, onMinuta, onSolicitarParecer, onDuplicarParecer, onSituacaoMudou, onAviso, emails, casca = 'drawer', acoesExtras = [], atalhosDocumentos, onGravarEntrevista }) => {
   const nav = useNav();
   const efetivo = statusEfetivoIS(is);
   const info = STATUS_IS[efetivo];
@@ -253,17 +263,53 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
     gravar(atual => ({ patch: patchCid(comPadroes(atual), c ? { descrAbrev: c.DESCRABREV, subcat: c.SUBCAT } : null), concluirPareceres: false }));
   };
 
+  // Data da Conclusão (aparece com o DS-1a): hoje, editável; só é gravada pelo "Concluir IS".
+  const [dataConclusao, setDataConclusao] = useState(() => dataConclusaoInicial(is.dataConclusao));
+  const [concluindo, setConcluindo] = useState(false);
+  const quem = nav?.authUser ? { uid: nav.authUser.uid, usuario: nav.authUser.usuario || nav.authUser.nome || '' } : null;
+  /** "Concluir IS": grava (em fila, depois dos campos pendentes) TIS assinado, a Data da Conclusão e quem concluiu. */
+  const concluirIS = () => {
+    if (!quem) return;
+    setConcluindo(true);
+    const data = dataConclusao;
+    gravar(atual => {
+      const estado = comPadroes(atual);
+      const patch = patchConcluirIS(estado, data, quem);
+      if (!patch) { onAviso(motivoNaoConcluir(estado, data) || 'Não foi possível concluir a IS.', 'error'); return { patch: {}, concluirPareceres: false }; }
+      return { patch: patch as Partial<InspecaoDoc>, concluirPareceres: false };
+    });
+    void fila.current.then(() => {
+      setConcluindo(false);
+      if (atualRef.current.status === 'tis_assinado') {
+        onAviso(`IS ${is.is} concluída.`);
+        if (is.inspecionadoId) registrarEventoInspecionado(is.inspecionadoId, 'is.concluir', `IS ${is.id}`);
+      }
+    });
+  };
+  /** "Reabrir IS": volta a Em andamento (status coerente) e apaga a Data da Conclusão e quem concluiu. */
+  const reabrirIS = () => {
+    gravar(atual => ({ patch: (patchReabrirIS(comPadroes(atual)) ?? {}) as Partial<InspecaoDoc>, concluirPareceres: false }));
+    void fila.current.then(() => {
+      if (atualRef.current.status !== 'tis_assinado') {
+        onAviso(`IS ${is.is} reaberta.`);
+        if (is.inspecionadoId) registrarEventoInspecionado(is.inspecionadoId, 'is.reabrir', `IS ${is.id}`);
+      }
+    });
+  };
+
   // Prints do SINAIS: completa só os campos vazios, na ordem das regras (Laudo → CID → Restrições → TIS → DS-1a).
   const preencherDosPrints = async (p: PreenchimentoPrints): Promise<string[]> => {
     if (p.laudo) gravarCampo('laudo', p.laudo);
     if (p.laudo && p.dataLaudo) gravar(atual => ({ patch: atual.laudo === p.laudo && atual.dataLaudo !== p.dataLaudo ? { dataLaudo: p.dataLaudo } : {}, concluirPareceres: false }));
     if (p.cidCodigo) {
+      // TODO(integração frente D): trocar pelo acharCidDoSinais(codigo, lista) de utils/importacaoIS.ts.
       const c = await carregarCid().then(l => l.find(x => x.SUBCAT.toUpperCase() === p.cidCodigo)).catch(() => undefined);
       if (c && !atualRef.current.cid) escolherCid(c);
     }
     if (p.restricoes) gravarCampo('restricoes', p.restricoes);
     if (p.tis && tisValido(p.tis)) gravarCampo('tis', p.tis);
     if (p.ds1a) gravarCampo('ds1a', p.ds1a);
+    if (p.dataConclusao) setDataConclusao(p.dataConclusao);
     await fila.current;
     const r = atualRef.current;
     return [
@@ -272,6 +318,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
       p.restricoes && r.restricoes ? 'Restrições' : '',
       p.tis && r.tis === p.tis ? 'Nº do TIS' : '',
       p.ds1a && r.ds1a === p.ds1a ? 'DS-1a' : '',
+      p.dataConclusao ? 'Data da Conclusão' : '',
     ].filter(Boolean);
   };
   // Restrições: a tela reflete o clique na hora (o banco confirma depois pelo onSnapshot).
@@ -290,12 +337,22 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   // Exames: envio (e remoção) só enquanto a IS não está finalizada.
   const isAtiva = is.situacao !== 'finalizada';
   const podeEnviarExames = permissoes.exames && isAtiva && !!nav?.authUser;
+  // Concluir IS: sempre visível na IS em andamento editável; desabilitado até o DS-1a (e os demais obrigatórios).
+  const comDs1a = !!ds1a.valor.trim();
+  const erroData = comDs1a ? erroDataConclusao(dataConclusao, is.dataLaudo || '') : '';
+  const motivoConcluir = motivoNaoConcluir({ ...estadoConclusao, ds1a: ds1a.valor, cid: cidLocal }, dataConclusao);
+  const reabrivel = permissoes.editar && podeReabrirIS(is, nav?.authUser?.uid, !!permissoes.reabrir);
   const acoes: AcaoRodape[] = [
+    ...(reabrivel ? [{ id: 'reabrir', rotulo: 'Reabrir IS', icone: 'lock_open', variante: 'secondary' as const, onClick: reabrirIS }] : []),
     ...(permissoes.minuta && mostraMinutaMsg(is) ? [{ id: 'minuta', rotulo: 'Minuta MSG', icone: 'mail', variante: 'secondary' as const, onClick: onMinuta }] : []),
     ...(permissoes.parecer && fasesDeEntrevista(is) ? [{ id: 'parecer', rotulo: 'Parecer', icone: 'assignment_add', variante: 'secondary' as const, onClick: onSolicitarParecer }] : []),
     ...(podeEnviarExames ? [{ id: 'exames', rotulo: 'Exames', icone: 'upload_file', variante: 'secondary' as const, onClick: () => setEnviandoExames(true) }] : []),
     ...(permissoes.entrevista && fasesDeEntrevista(is) && onGravarEntrevista !== null
-      ? [{ id: 'gravar', rotulo: 'Gravar entrevista', icone: 'mic', variante: 'primary' as const, onClick: onGravarEntrevista ?? (() => setGravacao(pedidoDeGravacao())) }] : []),
+      ? [{ id: 'gravar', rotulo: 'Gravar entrevista', icone: 'mic', variante: (conclusaoEditavel ? 'secondary' : 'primary') as AcaoRodape['variante'], onClick: onGravarEntrevista ?? (() => setGravacao(pedidoDeGravacao())) }] : []),
+    ...(conclusaoEditavel && quem ? [{
+      id: 'concluir', rotulo: 'Concluir IS', icone: 'task_alt', variante: 'primary' as const, onClick: concluirIS,
+      disabled: !!motivoConcluir || concluindo, loading: concluindo,
+    }] : []),
   ];
 
   const encaminhamento = encaminhamentoDoStatus(is.status);
@@ -310,7 +367,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
     </span>
   );
 
-  const cards = (
+  const cards = casca === 'inline' ? (atalhosDocumentos ?? null) : (
     <>
     <div className="flex flex-wrap gap-2 empty:hidden">
       {permissoes.entrevista && <SecaoEntrevista is={is} gravacao={gravacao} onGravacao={setGravacao} />}
@@ -368,6 +425,11 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                   )}
                   <LinhaTabela rotulo="Nº do TIS">{is.tis?.trim() ? <span className="tabular-nums">{is.tis}</span> : ''}</LinhaTabela>
                   <LinhaTabela rotulo="DS-1a">{is.ds1a?.trim() || ''}</LinhaTabela>
+                  {is.dataConclusao && (
+                    <LinhaTabela rotulo="Data da Conclusão">
+                      {dataBr(is.dataConclusao)}{is.concluidaPor?.usuario ? <span className="text-ink-3"> · concluída por {is.concluidaPor.usuario}</span> : null}
+                    </LinhaTabela>
+                  )}
                   {textoObservacoes && <LinhaTabela rotulo="Observações"><span className="whitespace-pre-line">{textoObservacoes}</span></LinhaTabela>}
                   <LinhaTabela rotulo="Status"><StatusTag tone={tomStatusIS(efetivo)}>{info.rotulo}</StatusTag></LinhaTabela>
                 </tbody>
@@ -438,7 +500,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
 
           <PrintsSinaisIS
             isId={is.id} inspecionadoId={is.inspecionadoId || ''} finalidade={is.finalidade || ''} dataAbertura={is.dataAbertura || ''}
-            atual={() => { const a = atualRef.current; return { grupoFinalidade: a.grupoFinalidade || '', laudo: a.laudo || '', dataLaudo: a.dataLaudo || '', restricoes: a.restricoes || '', tis: a.tis || '', ds1a: a.ds1a || '', cid: a.cid || '' }; }}
+            atual={() => { const a = atualRef.current; return { grupoFinalidade: a.grupoFinalidade || '', laudo: a.laudo || '', dataLaudo: a.dataLaudo || '', restricoes: a.restricoes || '', tis: a.tis || '', ds1a: a.ds1a || '', cid: a.cid || '', dataConclusao: a.dataConclusao || '' }; }}
             onPreencher={preencherDosPrints}
           />
 
@@ -478,6 +540,11 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
             <Field label="DS-1a" help={semCid && is.tis?.trim() && !is.ds1a?.trim() ? 'Informe o CID antes do DS-1a.' : undefined}>
               {a => <input {...a} type="text" value={ds1a.valor} disabled={!is.tis?.trim() || (semCid && !is.ds1a?.trim())} onChange={e => ds1a.onChange(e.target.value)} onBlur={ds1a.onBlur} autoComplete="off" />}
             </Field>
+            {comDs1a && (
+              <Field label="Data da Conclusão" error={erroData || undefined} help={erroData ? undefined : 'Gravada ao concluir a IS.'}>
+                {a => <input {...a} type="date" value={dataConclusao} min={is.dataLaudo || undefined} onChange={e => setDataConclusao(e.target.value)} />}
+              </Field>
+            )}
           </div>
 
           <Field label="Observações">

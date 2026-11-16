@@ -68,13 +68,35 @@ const evt = (nome, perfil, method, patch, esperado) => ({ nome, tc: {
   ...(method === 'create' ? {} : { resource: { data: evtNovo } }),
   functionMocks: mocks(perfil),
 } });
+const HORA_MSG = '2026-11-16T12:00:00Z';
 const notif = (nome, path, esperado) => ({ nome, tc: {
   expectation: esperado,
   request: { auth: { uid: 'u1' }, path: `${DB}/${path}`, method: 'delete' },
   resource: { data: { titulo: 'x', corpo: 'y', rota: '/', lida: false } },
   functionMocks: mocks('user_medicos'),
 } });
+// Exclusão da IS (inspecoes/{id}) e mensagens tramitadas (mensagensIS/{id}).
+const delIS = (nome, perfil, situacao, esperado, perm) => ({ nome, tc: {
+  expectation: esperado,
+  request: { auth: { uid: 'u1' }, path: `${DB}/inspecoes/9001`, method: 'delete' },
+  resource: { data: { situacao, status: 'agendada' } }, functionMocks: mocks(perfil, perm),
+} });
+const msgNova = { isId: '9001', is: 9001, inspecionadoId: '12345678', finalidade: 'X', de: 'HNRe', para: 'OM', info: '', assunto: 'A', texto: 'T', registradoPor: { uid: 'u1', usuario: 'CT' }, registradoEm: HORA_MSG };
+const msg = (nome, perfil, patch, esperado) => ({ nome, tc: {
+  expectation: esperado,
+  request: { auth: { uid: 'u1' }, path: `${DB}/mensagensIS/m1`, method: 'create', time: HORA_MSG, resource: { data: { ...msgNova, ...patch } } },
+  functionMocks: [...mocks(perfil), { function: 'exists', args: [{ exactValue: `${DB}/inspecoes/9001` }], result: { value: true } }],
+} });
 const casos = [
+  delIS('Admin apaga IS finalizada', 'admin', 'finalizada', 'ALLOW'),
+  delIS('Secretaria apaga IS em andamento', 'user_secretaria', 'andamento', 'ALLOW'),
+  delIS('Secretaria apaga IS finalizada', 'user_secretaria', 'finalizada', 'DENY'),
+  delIS('Médico apaga IS (padrão: não pode)', 'user_medicos', 'andamento', 'DENY'),
+  delIS('Médico apaga IS com a função dada pelo Admin', 'user_medicos', 'andamento', 'ALLOW', { 'inspecoes.excluir': { user_medicos: true } }),
+  msg('Secretaria registra mensagem da IS', 'user_secretaria', {}, 'ALLOW'),
+  msg('Mensagem em nome de outro usuário', 'user_medicos', { registradoPor: { uid: 'u2', usuario: 'X' } }, 'DENY'),
+  msg('Mensagem com campo estranho', 'user_medicos', { laudo: 'x' }, 'DENY'),
+  msg('Médico Geral registra mensagem', 'user_medicos_geral', {}, 'DENY'),
   // "Marcar todas como lidas" apaga as notificações — só as do próprio usuário.
   notif('Usuário apaga a própria notificação', 'usuarios/u1/notificacoes/n1', 'ALLOW'),
   notif('Usuário apaga notificação de outro', 'usuarios/u2/notificacoes/n1', 'DENY'),

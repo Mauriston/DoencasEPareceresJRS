@@ -4,6 +4,9 @@
 // inserido/alterado; o encaminhamento (Auditoria | JSD) só existe em certos casos; as Restrições (opcionais)
 // aparecem quando a finalidade é do grupo "Verificações e Términos" E o Laudo menciona "restrições"; nesse
 // grupo o CID (DESCRABREV do public/cid.json) é obrigatório para finalizar (DS-1a).
+// Conclusão EXPLÍCITA (16/11/2026): o DS-1a não finaliza mais a IS sozinho — com ele preenchido, o botão
+// "Concluir IS" grava a Data da Conclusão (nunca anterior à Data do laudo), quem concluiu e o status "TIS
+// assinado" (Finalizada); "Reabrir IS" (função inspecoes.reabrir ou quem concluiu) desfaz.
 // Testadas em utils/__tests__/conclusaoIS.test.ts.
 import { normalizarBusca } from './corposQuadros';
 import {
@@ -123,8 +126,8 @@ const comSituacao = (patch: PatchConclusao): PatchConclusao => (patch.status ? {
  *  - Restrições só existem com a finalidade do grupo Verificações e Términos e o Laudo mencionando
  *    "restrições": o Laudo que deixa de mencioná-las (ou apagado) apaga as Restrições.
  *  - Nº do TIS inserido → Assinaturas pendentes; apagado → apaga o DS-1a e volta a Votação pendente.
- *  - DS-1a inserido → TIS assinado (Finalizada) — em Verificações e Términos, só com o CID; apagado
- *    (depois de reabrir) → Assinaturas pendentes.
+ *  - DS-1a inserido (em Verificações e Términos, só com o CID) → continua Assinaturas pendentes: a IS só é
+ *    finalizada pelo botão "Concluir IS" (patchConcluirIS); apagado → Assinaturas pendentes.
  *  - Restrições só ficam gravadas se o campo estiver visível (finalidade do grupo).
  */
 export const patchConclusao = (atual: EstadoConclusao, campo: CampoConclusao, valorBruto: string, hoje: string = hojeISO()): ResultadoConclusao => {
@@ -162,7 +165,7 @@ export const patchConclusao = (atual: EstadoConclusao, campo: CampoConclusao, va
         return { patch: comSituacao(patch), concluirPareceres: false };
       }
       if (!atual.laudo.trim()) return nada; // TIS só depois do Laudo
-      return { patch: comSituacao({ tis: valor, status: atual.ds1a.trim() ? 'tis_assinado' : 'assinaturas_pendentes' }), concluirPareceres: false };
+      return { patch: comSituacao({ tis: valor, status: 'assinaturas_pendentes' }), concluirPareceres: false };
     }
 
     case 'ds1a': {
@@ -173,11 +176,83 @@ export const patchConclusao = (atual: EstadoConclusao, campo: CampoConclusao, va
       }
       if (!atual.tis.trim()) return nada; // DS-1a só depois do Nº do TIS
       if (faltaCid(atual)) return nada; // Verificações e Términos: CID antes de finalizar
-      return { patch: comSituacao({ ds1a: valor, status: 'tis_assinado' }), concluirPareceres: false };
+      // A IS não finaliza sozinha: o status fica (ou volta a) Assinaturas pendentes até o "Concluir IS".
+      return { patch: comSituacao({ ds1a: valor, ...(atual.status !== 'assinaturas_pendentes' ? { status: 'assinaturas_pendentes' as StatusIS } : {}) }), concluirPareceres: false };
     }
   }
   return nada;
 };
+
+// ---------------------------------------------------------------------------
+// Conclusão explícita ("Concluir IS") e "Reabrir IS"
+// ---------------------------------------------------------------------------
+
+const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Data da Conclusão: obrigatória, AAAA-MM-DD e nunca anterior à Data do laudo. '' = válida. */
+export const erroDataConclusao = (dataConclusao: string, dataLaudo: string): string => {
+  const d = String(dataConclusao || '').trim();
+  if (!d) return 'Informe a Data da Conclusão.';
+  if (!DATA_ISO.test(d)) return 'Data da Conclusão inválida.';
+  const laudo = String(dataLaudo || '').slice(0, 10);
+  if (laudo && d < laudo) return 'A Data da Conclusão não pode ser anterior à Data do laudo.';
+  return '';
+};
+
+/** Data da Conclusão sugerida: hoje (a validação aponta se a Data do laudo for posterior). */
+export const dataConclusaoInicial = (gravada: string | undefined | null, hoje: string = hojeISO()): string =>
+  DATA_ISO.test(String(gravada || '')) ? String(gravada) : hoje;
+
+type EstadoParaConcluir = Pick<EstadoConclusao, 'status' | 'dataEntrevista' | 'grupoFinalidade' | 'laudo' | 'tis' | 'ds1a' | 'dataLaudo' | 'cid'>;
+
+/**
+ * Por que a IS ainda não pode ser concluída ('' = pode): IS em andamento com entrevista, Laudo, Nº do TIS,
+ * DS-1a, CID (Verificações e Términos) e Data da Conclusão válida.
+ */
+export const motivoNaoConcluir = (is: EstadoParaConcluir, dataConclusao: string): string => {
+  if (conclusaoTravada(is.status)) return 'A IS já está finalizada.';
+  if (!String(is.dataEntrevista || '').trim()) return 'A IS ainda não tem entrevista.';
+  if (!String(is.laudo || '').trim()) return 'Preencha o Laudo.';
+  if (!String(is.tis || '').trim()) return 'Preencha o Nº do TIS.';
+  if (faltaCid(is)) return 'Informe o CID.';
+  if (!String(is.ds1a || '').trim()) return 'Preencha o DS-1a.';
+  return erroDataConclusao(dataConclusao, is.dataLaudo);
+};
+
+export interface QuemConcluiu { uid: string; usuario: string }
+export interface PatchConclusaoIS {
+  status: StatusIS;
+  situacao: SituacaoIS;
+  dataConclusao: string;
+  concluidaPor: QuemConcluiu | null;
+}
+
+/** "Concluir IS": TIS assinado (Finalizada) com a Data da Conclusão e quem concluiu; null se ainda não pode. */
+export const patchConcluirIS = (is: EstadoParaConcluir, dataConclusao: string, quem: QuemConcluiu): PatchConclusaoIS | null => {
+  if (motivoNaoConcluir(is, dataConclusao)) return null;
+  return { status: 'tis_assinado', situacao: situacaoDoStatus('tis_assinado'), dataConclusao: dataConclusao.trim(), concluidaPor: { uid: quem.uid, usuario: quem.usuario } };
+};
+
+/**
+ * Status de volta ao reabrir uma IS concluída, coerente com o que está preenchido: com Nº do TIS → Assinaturas
+ * pendentes; só com Laudo → Votação pendente; sem Laudo → Agendada (com entrevista) ou Aberta.
+ */
+export const statusAoReabrir = (is: Pick<EstadoConclusao, 'laudo' | 'tis' | 'dataEntrevista'>): StatusIS =>
+  String(is.tis || '').trim() ? 'assinaturas_pendentes'
+    : String(is.laudo || '').trim() ? 'votacao_pendente'
+      : String(is.dataEntrevista || '').trim() ? 'agendada' : 'aberta';
+
+/** "Reabrir IS": volta a Em andamento (status coerente) e apaga a Data da Conclusão e quem concluiu; null se não está concluída. */
+export const patchReabrirIS = (is: Pick<EstadoConclusao, 'status' | 'laudo' | 'tis' | 'dataEntrevista'>): PatchConclusaoIS | null => {
+  if (is.status !== 'tis_assinado') return null;
+  const status = statusAoReabrir(is);
+  return { status, situacao: situacaoDoStatus(status), dataConclusao: '', concluidaPor: null };
+};
+
+/** "Reabrir IS": IS concluída (TIS assinado) e o usuário tem a função inspecoes.reabrir OU foi quem concluiu. */
+export const podeReabrirIS = (
+  is: { status: StatusIS; concluidaPor?: { uid?: string } | null }, uid: string | undefined, temFuncao: boolean,
+): boolean => is.status === 'tis_assinado' && (temFuncao || (!!uid && is.concluidaPor?.uid === uid));
 
 /**
  * CID da IS (autocomplete do public/cid.json): grava o rótulo DESCRABREV em `cid` e o código SUBCAT em

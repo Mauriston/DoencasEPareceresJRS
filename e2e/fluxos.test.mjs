@@ -448,6 +448,10 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   await barra.getByRole('button', { name: 'Agendar IS' }).waitFor();
   assert.equal(await barra.getByRole('button', { name: 'Abrir IS' }).count(), 0);
   assert.equal(await barra.getByRole('button', { name: 'Excluir' }).count(), 0);
+  // Barra da IS na ficha: "Gerar Documento ▾" (IS não finalizada); "Enviar PDF ▾" só com data de entrevista;
+  // "Concluir IS" só com a Conclusão editável (entrevista agendada); sem os antigos "Parecer" e "Exames".
+  await barra.getByRole('button', { name: 'Gerar Documento' }).waitFor();
+  for (const nome of ['Enviar PDF', 'Concluir IS', 'Parecer', 'Exames']) assert.equal(await barra.getByRole('button', { name: nome, exact: true }).count(), 0, nome);
   // "Abrir IS ▾" no cabeçalho: de outra aba, volta para Inspeções de Saúde e abre o formulário no painel principal.
   await guias.getByRole('tab', { name: 'Exames', exact: true }).click();
   await p.getByRole('button', { name: 'Abrir IS', exact: true }).click();

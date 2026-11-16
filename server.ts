@@ -5,7 +5,7 @@ import { logErroSeguro, descreverErro } from "./utils/logSeguro";
 import { higienizarParaIA, base64ValidoParaIA } from "./utils/minimizacaoIA";
 import { caminhoArquivoEquipe, caminhoArquivoValido } from "./utils/arquivosPermitidos";
 import { PERFIS_ENTREVISTA } from "./config/entrevistas";
-import { type FeatureKey, type MatrizPermissoesArmazenada } from "./config/permissoesPadrao";
+import { featurePermitida, type FeatureKey, type MatrizPermissoesArmazenada } from "./config/permissoesPadrao";
 import { acaoNotificavel, perfilExecuta, ROTA_DA_PAGINA, type AcaoNotificavel } from "./config/notificacoesAcoes";
 import { AVISOS_EMAIL, AVISO_EMAIL_AGENDA_AUTOMATICO, PERFIS_AVISO_EMAIL, quantidadeIS, textoAvisoEmail, type AvisoEmail } from "./config/notificacoesEmails";
 
@@ -389,6 +389,17 @@ async function startServer() {
     return new Set(snap.docs.filter((d: any) => d.data().ativo !== false && perfilExecuta(matriz, d.data().perfil, req)).map((d: any) => d.id));
   };
 
+  /** Usuário da equipe com a função da matriz (Admin sempre). Responde 401/403 e devolve false quando não pode. */
+  const exigirFuncao = async (req: express.Request, res: express.Response, rota: string, feature: FeatureKey): Promise<boolean> => {
+    const quem = await exigirUsuario(req, res, rota, PERFIS_EQUIPE);
+    if (!quem) return false;
+    const { adminDb } = await getFirebaseAdmin();
+    if (featurePermitida(await lerMatrizPermissoes(adminDb), feature, quem.perfil)) return true;
+    void auditarServidor("acesso_negado", rota, quem.uid, "sem_funcao");
+    res.status(403).json({ success: false, error: "Seu perfil não tem permissão para esta operação." });
+    return false;
+  };
+
   const hojeRecife = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Recife" }).format(new Date()); // AAAA-MM-DD
 
   app.post("/api/notificacoes/evento", async (req, res) => {
@@ -685,8 +696,37 @@ async function startServer() {
     };
   app.post("/api/documentos/guias-exames", rotaGuias("documentos-guias-exames", PERFIS_EQUIPE, async (db, bucket, b, uid) =>
     (await import("./servidor/documentos/guiasExames/servico")).gerarGuiasExames(db, bucket, uid, b)));
-  app.post("/api/documentos/guias-exames/apagar", rotaGuias("documentos-guias-exames-apagar", ["admin"], async (db, bucket, b) =>
+  // Apagar as guias (ao excluir a IS): função inspecoes.excluir da matriz (padrão: Admin e Secretaria).
+  app.post("/api/documentos/guias-exames/apagar", async (req, res, next) => {
+    if (await exigirFuncao(req, res, "documentos-guias-exames-apagar", "inspecoes.excluir")) next();
+  }, rotaGuias("documentos-guias-exames-apagar", PERFIS_EQUIPE, async (db, bucket, b) =>
     (await import("./servidor/documentos/guiasExames/servico")).apagarGuiasExames(db, bucket, b.isId)));
+
+  // Exclusão COMPLETA da IS (servidor/inspecoes/excluir.ts): a IS e tudo o que é dela — subcoleções, mensagens,
+  // horários, PDFs no Storage, pedidos de parecer vinculados e o evento do Google Agenda. Função inspecoes.excluir
+  // (IS não finalizada; o Admin apaga qualquer uma), conferida pela matriz de permissões como nas notificações.
+  app.post("/api/inspecoes/excluir", async (req, res) => {
+    const quem = await exigirUsuario(req, res, "inspecoes-excluir", PERFIS_EQUIPE);
+    if (!quem) return;
+    const { ErroExclusaoIS, excluirInspecao } = await import("./servidor/inspecoes/excluir");
+    try {
+      const { adminDb, adminApp } = await getFirebaseAdmin();
+      const { getStorage } = await import("firebase-admin/storage");
+      const temFuncao = featurePermitida(await lerMatrizPermissoes(adminDb), "inspecoes.excluir", quem.perfil);
+      const r = await excluirInspecao(adminDb, getStorage(adminApp).bucket(BUCKET_STORAGE), req.body?.isId, { perfil: quem.perfil, temFuncao },
+        async eventoId => { await (await import("./servidor/google/agenda")).sincronizarEventoIS(adminDb, { eventoId, remover: true }); });
+      void auditarServidor("operacao_sensivel", "inspecoes-excluir", quem.uid);
+      res.json({ success: true, ...r });
+    } catch (error: any) {
+      if (error instanceof ErroExclusaoIS) {
+        if (error.status === 403) void auditarServidor("acesso_negado", "inspecoes-excluir", quem.uid, "sem_funcao");
+        res.status(error.status).json({ success: false, error: error.message });
+        return;
+      }
+      logErroSeguro("Exclusão da IS", error);
+      res.status(500).json({ success: false, error: "Não foi possível excluir a IS. Tente novamente." });
+    }
+  });
 
   // ---- Conta Google da JRS no servidor (e-mail de impressão e Google Agenda, no lugar do Apps Script) ----
   // Sem a conta autorizada (ou sem o cliente OAuth configurado), as rotas respondem 503 com

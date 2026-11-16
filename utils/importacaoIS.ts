@@ -262,6 +262,8 @@ export interface ConclusaoAtualIS {
   tis: string;
   ds1a: string;
   cid?: string;
+  /** Data da Conclusão gravada (AAAA-MM-DD; '' enquanto a IS não foi concluída). */
+  dataConclusao?: string;
 }
 
 /** Campos a completar, na ordem de gravação (Laudo → Data do laudo → CID → Restrições → Nº do TIS → DS-1a). */
@@ -273,6 +275,8 @@ export interface PreenchimentoPrints {
   restricoes?: string;
   tis?: string;
   ds1a?: string;
+  /** Data da Conclusão (AAAA-MM-DD) lida nos prints: o detalhe preenche o campo "Data da Conclusão". */
+  dataConclusao?: string;
 }
 
 /** "M54.5" → "M545" (SUBCAT do public/cid.json). */
