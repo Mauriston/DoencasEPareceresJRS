@@ -193,6 +193,11 @@ test('Inspeções: Restrições (Verificações e Términos) só com "restriçõ
   await laudo.fill('');
   await laudo.blur();
   await campo.waitFor({ state: 'detached' });
+  // Espera a gravação do Laudo vazio chegar ao banco (status de volta a Agendada e "Salvando…" encerrado) antes de
+  // fechar: sem isso a IS podia ficar em "Votação pendente" e o teste do tooltip do calendário falhava às vezes.
+  await detalhe.getByText('Agendada', { exact: true }).first().waitFor();
+  await detalhe.getByText('Salvando…', { exact: true }).waitFor({ state: 'detached' });
+  await detalhe.getByText('Salvo', { exact: true }).waitFor();
   await p.context().close();
 });
 
