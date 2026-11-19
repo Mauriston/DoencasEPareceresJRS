@@ -218,6 +218,11 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false;
     }
+    // Histórico das edições de perícias menores (antes/depois, justificativa, quem e quando): idem.
+    match /periciasEdicoes/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
 
     // Coleção "pareceres": Pedidos de Parecer Médico (um doc por pedido, id
     // automático; liga ao militar por "militarId" = NIP só dígitos). Lê quem

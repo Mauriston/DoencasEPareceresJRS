@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ehMinhaPericia, erroJustificativaExclusao, podeExcluirPericia } from '../exclusaoPericia';
+import { dataTerminoPericia, ehMinhaPericia, erroJustificativaExclusao, patchEdicaoPericia, podeExcluirPericia } from '../exclusaoPericia';
 
 describe('exclusão de perícia menor', () => {
   const p = { peritoUid: 'med1', criadoPor: 'adm' };
@@ -21,5 +21,26 @@ describe('exclusão de perícia menor', () => {
     expect(ehMinhaPericia(p, 'med1')).toBe(true);
     expect(ehMinhaPericia(p, 'adm')).toBe(false);
     expect(ehMinhaPericia(p, undefined)).toBe(false);
+  });
+});
+
+describe('edição de perícia menor', () => {
+  const base = { cid: 'M545 - Dor lombar baixa', cidCodigo: 'm545', dispensas: ['TODAS AS ATIVIDADES'], dataAtestado: '2026-11-10', tempoAtestado: 5, tempoHomologado: 5, homologacao: false, medicoEmissor: 'X', crmEmissor: 'Y', vdf: false };
+  it('recalcula o término e limpa o emissor fora da homologação', () => {
+    const r = patchEdicaoPericia(base, false);
+    expect(r.erro).toBeUndefined();
+    expect(r.patch).toMatchObject({ dataTermino: '2026-11-14', cidCodigo: 'M545', medicoEmissor: '', crmEmissor: '' });
+  });
+  it('só o Admin troca o perito', () => {
+    expect(patchEdicaoPericia({ ...base, peritoUid: 'p2' }, false).patch).not.toHaveProperty('peritoUid');
+    expect(patchEdicaoPericia({ ...base, peritoUid: 'p2' }, true).patch).toMatchObject({ peritoUid: 'p2' });
+  });
+  it('recusa dados inválidos', () => {
+    expect(patchEdicaoPericia({ ...base, dataAtestado: '10/11/2026' }, true).erro).toMatch(/Data/);
+    expect(patchEdicaoPericia({ ...base, dispensas: [] }, true).erro).toMatch(/dispensa/);
+    expect(patchEdicaoPericia({ ...base, tempoHomologado: 0 }, true).erro).toMatch(/tempo/);
+  });
+  it('término: o dia do atestado é o 1º', () => {
+    expect(dataTerminoPericia('2026-11-30', 2)).toBe('2026-12-01');
   });
 });

@@ -49,6 +49,8 @@ interface Props {
   onNova?: () => void;
   /** "Excluir" (Admin ou o perito responsável / quem registrou): quem monta abre o ExcluirPericiaDialog. */
   onExcluir?: () => void;
+  /** "Editar" (mesmas regras do Excluir): quem monta abre o formulário em modo edição. */
+  onEditar?: () => void;
   /** Ficha do inspecionado (⤢), quando há NIP e o perfil acessa. */
   fichaHref?: string;
   termos: TermosPericia;
@@ -187,7 +189,7 @@ const Historico: React.FC<{ p: PericiaMenorRecord; historico: PericiaMenorRecord
   );
 };
 
-export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoje, cidAbrev, modo, aba, onAba, onSelecionar, onFechar, onNova, fichaHref, termos, acoes, onExcluir }) => {
+export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoje, cidAbrev, modo, aba, onAba, onSelecionar, onFechar, onNova, fichaHref, termos, acoes, onExcluir, onEditar }) => {
   const nome = extrairNomeInspecionado(p.inspecionado);
   const idBase = `pm-${modo}`;
   const atestado = termos.singular === 'atestado';
@@ -197,7 +199,11 @@ export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoj
       <CascaPainelFicha
         titulo={`${atestado ? 'Atestado' : 'Perícia menor'} de ${dataBR(p.dataAtestado)}`} icone="personal_injury"
         tituloExtra={<TagTipoPericia tipo={tipo} />} subtitulo={linhaIdentificacao(p)}
-        acoes={[...(onExcluir ? [{ id: 'excluir', rotulo: 'Excluir', icone: 'delete', variante: 'destructive' as const, onClick: onExcluir }] : []), ...(acoes ?? [])]}
+        acoes={[
+          ...(onExcluir ? [{ id: 'excluir', rotulo: 'Excluir', icone: 'delete', variante: 'destructive' as const, onClick: onExcluir }] : []),
+          ...(onEditar ? [{ id: 'editar', rotulo: 'Editar', icone: 'edit', variante: 'secondary' as const, onClick: onEditar }] : []),
+          ...(acoes ?? []),
+        ]}
       >
         <EstaPericia p={p} historico={historico} hoje={hoje} cidAbrev={cidAbrev} termos={termos} />
       </CascaPainelFicha>
@@ -219,7 +225,9 @@ export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoj
   );
   const botaoNova = onNova ? <Button icon="add" fullWidth onClick={onNova}>{atestado ? 'Novo atestado para ele' : 'Nova perícia para ele'}</Button> : null;
   const botaoExcluir = onExcluir ? <Button variant="destructive" icon="delete" fullWidth onClick={onExcluir}>Excluir</Button> : null;
-  const nova = botaoNova || botaoExcluir ? <div className="flex flex-col-reverse sm:flex-row gap-2 w-full">{botaoExcluir}{botaoNova}</div> : null;
+  const botaoEditar = onEditar ? <Button variant="secondary" icon="edit" fullWidth onClick={onEditar}>Editar</Button> : null;
+  const nova = botaoNova || botaoExcluir || botaoEditar
+    ? <div className="flex flex-col-reverse sm:flex-row gap-2 w-full">{botaoExcluir}{botaoEditar}{botaoNova}</div> : null;
   const linha2 = linhaIdentificacao(p);
 
   if (modo === 'sheet') {

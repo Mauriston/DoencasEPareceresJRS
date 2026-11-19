@@ -86,6 +86,7 @@ export const PericiaMenor: React.FC = () => {
   const [novo, setNovo] = useState<{ militar?: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
   const [excluindo, setExcluindo] = useState<PericiaMenorRecord | null>(null);
+  const [editando, setEditando] = useState<PericiaMenorRecord | null>(null);
   const quemExclui = uid && perfil ? { uid, perfil } : null;
   const [hoje] = useState(() => hojeISO());
   const [cidAbrev, setCidAbrev] = useState<Map<string, string> | null>(null);
@@ -209,6 +210,7 @@ export const PericiaMenor: React.FC = () => {
       onFechar={() => selecionar(null, { replace: true })}
       onNova={podeNovo ? () => abrirNovo(detalhe.militarId || undefined) : undefined}
       onExcluir={podeExcluirPericia(detalhe, quemExclui) ? () => setExcluindo(detalhe) : undefined}
+      onEditar={podeExcluirPericia(detalhe, quemExclui) ? () => setEditando(detalhe) : undefined}
       fichaHref={podeFicha && detalhe.militarId ? fichaPath(detalhe.militarId) : undefined}
     />
   );
@@ -282,6 +284,13 @@ export const PericiaMenor: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
+      {editando && (
+        <NovaPericiaMenorForm
+          titulo={atestado ? 'Editar atestado' : 'Editar perícia menor'} editar={editando}
+          onClose={() => setEditando(null)}
+          onRegistrado={n => { setEditando(null); avisar(`${atestado ? 'Atestado' : 'Perícia menor'} de ${n} atualizad${atestado ? 'o' : 'a'}.`); }}
+        />
+      )}
       {excluindo && perfil && (
         <ExcluirPericiaDialog
           pericia={excluindo} perfil={perfil} termo={t.singular}

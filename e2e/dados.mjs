@@ -74,7 +74,7 @@ export const semearTelas = async () => {
     solicitanteUid: MEDICO.uid, solicitanteNome: MEDICO.nome, solicitanteUsuario: MEDICO.usuario, solicitantePosto: 'CT', criadoEm: agora,
   });
   await db.doc(`periciasMenores/${PERICIA_E2E.id}`).set({
-    militarId: INSPECIONADO.nip, inspecionado: INSPECIONADO.texto, om: 'HNRe', cid: PERICIA_E2E.cid, dispensas: [],
+    militarId: INSPECIONADO.nip, inspecionado: INSPECIONADO.texto, om: 'HNRe', cid: PERICIA_E2E.cid, dispensas: ['TODAS AS ATIVIDADES'],
     dataAtestado: HOJE, tempoAtestado: 3, tempoHomologado: 3, dataTermino: iso(new Date(Date.now() + 2 * 86_400_000)), vdf: false,
     peritoUsuario: MEDICO.usuario, peritoNome: MEDICO.nome, peritoUid: MEDICO.uid, pdfUrl: '', criadoEm: agora,
   });

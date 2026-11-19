@@ -136,3 +136,15 @@ export const excluirPericiaMenor = async (p: Pick<PericiaMenorRecord, 'id' | 'mi
     registrarEventoInspecionado(p.militarId, 'pericia.excluir', `atestado de ${dataBR(p.dataAtestado)}`);
   }
 };
+
+/** Edita a perícia pelo servidor (POST /api/pericias-menores/editar): mesmas regras da exclusão; grava o histórico. */
+export const editarPericiaMenor = async (
+  p: Pick<PericiaMenorRecord, 'id' | 'militarId' | 'dataAtestado'>, campos: import('../utils/exclusaoPericia').CamposEdicaoPericia, justificativa: string,
+): Promise<void> => {
+  const { chamarServidor } = await import('./apiClient');
+  await chamarServidor('/api/pericias-menores/editar', { id: p.id, campos, justificativa: justificativa.trim() }, { timeoutMs: 30_000 });
+  if (p.militarId) {
+    const { registrarEventoInspecionado } = await import('./eventosInspecionado');
+    registrarEventoInspecionado(p.militarId, 'pericia.editar', `atestado de ${dataBR(campos.dataAtestado)}`);
+  }
+};

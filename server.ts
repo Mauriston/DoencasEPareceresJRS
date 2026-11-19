@@ -743,6 +743,27 @@ async function startServer() {
   // (IS não finalizada; o Admin apaga qualquer uma), conferida pela matriz de permissões como nas notificações.
   // Exclusão de uma perícia menor: Admin (qualquer uma) ou o perito responsável / quem registrou, com Justificativa
   // (≥ 10 caracteres) fora do Admin; guarda o registro em periciasExcluidas e apaga o PDF (servidor/pericias/excluir.ts).
+  // Edição de uma perícia menor: mesmas regras da exclusão (Admin ou o perito; Justificativa fora do Admin).
+  app.post("/api/pericias-menores/editar", async (req, res) => {
+    const quem = await exigirUsuario(req, res, "pericias-editar", ["admin", "user_medicos", "user_medicos_mpi", "user_medicos_geral"]);
+    if (!quem) return;
+    const { ErroExclusaoPericia, editarPericiaMenor } = await import("./servidor/pericias/excluir");
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      const r = await editarPericiaMenor(adminDb, req.body?.id, req.body?.campos, req.body?.justificativa, quem);
+      void auditarServidor("operacao_sensivel", "pericias-editar", quem.uid);
+      res.json({ success: true, ...r });
+    } catch (error: any) {
+      if (error instanceof ErroExclusaoPericia) {
+        if (error.status === 403) void auditarServidor("acesso_negado", "pericias-editar", quem.uid, "nao_e_o_perito");
+        res.status(error.status).json({ success: false, error: error.message });
+        return;
+      }
+      logErroSeguro("Edição da perícia menor", error);
+      res.status(500).json({ success: false, error: "Não foi possível salvar as alterações. Tente novamente." });
+    }
+  });
+
   app.post("/api/pericias-menores/excluir", async (req, res) => {
     const quem = await exigirUsuario(req, res, "pericias-excluir", ["admin", "user_medicos", "user_medicos_mpi", "user_medicos_geral"]);
     if (!quem) return;
