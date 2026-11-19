@@ -29,6 +29,7 @@ const semente = (n: number): Aleatorio => () => { n = (n * 1103515245 + 12345) %
 const SEMENTES: Record<TipoEmail, number> = {
   resultadoIS: 7, agendaIS: 11, agendamentoIS: 3, faltasHNRe: 5, inaptosConcurso: 9, nac: 4,
   aberturaIS: 1, guiasInspecionado: 1, guiasSecretaria: 1, documentoSecretaria: 1, agendamentoGeral: 2, agendamentoBeneficios: 6, resultadoBeneficios: 8,
+  feedbackRecebido: 1, feedbackSolucionado: 1,
 };
 
 type Montado = { assunto: string; html: string; htmlAnexo?: string; variante?: string; modelo?: string };

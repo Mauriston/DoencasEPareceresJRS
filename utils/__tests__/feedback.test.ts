@@ -99,3 +99,20 @@ describe('servidor do feedback', () => {
     expect(enviar).not.toHaveBeenCalled();
   });
 });
+
+describe('e-mails de teste do feedback (Administração › E-mails automáticos)', () => {
+  it('montam o agradecimento e a solução com dados fictícios, sem placeholders e sem "Por ordem de"', async () => {
+    const { montarEmailTeste } = await import('../../servidor/email/teste');
+    const { assinaturaSemSignatario } = await import('../../servidor/email/comum');
+    const recebido = montarEmailTeste('feedbackRecebido', assinaturaSemSignatario()) as { assunto: string; html: string };
+    expect(recebido.assunto).toMatch(/^FEEDBACK DO APP JRS\/HNRe — .* RECEBIDO$/);
+    const sol = montarEmailTeste('feedbackSolucionado', assinaturaSemSignatario()) as { assunto: string; html: string };
+    expect(sol.assunto).toBe('FEEDBACK DO APP JRS/HNRe — PROBLEMA SOLUCIONADO');
+    for (const r of [recebido, sol]) {
+      expect(r.html).not.toMatch(/\{\{[#^/]?\w+\}\}/);
+      expect(r.html).toContain('Prezado ');
+      expect(r.html).not.toContain('Por ordem de');
+    }
+    expect(sol.html).toContain('Registrado em:');
+  });
+});

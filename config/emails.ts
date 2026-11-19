@@ -23,7 +23,9 @@ export type TipoEmail =
   // Novos (guias de exames, abertura, agendamento geral/benefícios e resultado de benefícios):
   | 'guiasInspecionado' | 'guiasSecretaria' | 'aberturaIS' | 'agendamentoGeral' | 'agendamentoBeneficios' | 'resultadoBeneficios'
   // Exame ou atestado/laudo da IS à SEC-JRS, para impressão (Ficha do inspecionado):
-  | 'documentoSecretaria';
+  | 'documentoSecretaria'
+  // Feedback do app (Ajuda › Feedback): agradecimento ao enviar e aviso de problema solucionado:
+  | 'feedbackRecebido' | 'feedbackSolucionado';
 
 /** Divisão de Pessoal do HNRe: cópia dos e-mails de abertura e de agendamento quando a OM do inspecionado é o HNRe. */
 export const EMAILS_DIVISAO_PESSOAL_HNRE = [
@@ -94,6 +96,8 @@ export const CONFIG_EMAILS_PADRAO: ConfigEmails = {
     agendamentoGeral: { para: [], cc: [], cco: [] },
     agendamentoBeneficios: { para: [], cc: [], cco: [] },
     resultadoBeneficios: { para: [], cc: [], cco: [] },
+    feedbackRecebido: { para: [], cc: [], cco: [] },
+    feedbackSolucionado: { para: [], cc: [], cco: [] },
   },
 };
 
@@ -112,6 +116,8 @@ export const TIPOS_EMAIL: { tipo: TipoEmail; rotulo: string; assunto: string; di
   { tipo: 'faltasHNRe', rotulo: 'Faltas às IS (inspecionados do HNRe)', assunto: 'COMUNICAÇÃO DE FALTAS A INSPEÇÕES DE SAÚDE', dinamicos: 'CC: e-mails dos inspecionados, quando cadastrados.' },
   { tipo: 'nac', rotulo: 'NAC — IS de Verificações e Términos finalizadas', assunto: 'INSPEÇÕES DE SAÚDE VDF E TÉRMINOS', dinamicos: 'CC: e-mails institucionais dos user_medicos_geral com cargo "SMI".' },
   { tipo: 'inaptosConcurso', rotulo: 'Candidatos inaptos de concurso (EAMPE)', assunto: '{concurso} - Candidatos Inaptos', dinamicos: 'Nenhum.' },
+  { tipo: 'feedbackRecebido', rotulo: 'Feedback recebido (agradecimento ao usuário)', assunto: 'FEEDBACK DO APP JRS/HNRe — {tipo} RECEBIDO', dinamicos: 'PARA: e-mail do usuário que enviou o feedback (Ajuda › Feedback). Assinatura: só o Presidente.' },
+  { tipo: 'feedbackSolucionado', rotulo: 'Feedback — problema solucionado', assunto: 'FEEDBACK DO APP JRS/HNRe — PROBLEMA SOLUCIONADO', dinamicos: 'PARA: e-mail do usuário que relatou o problema, ao marcar "Solucionado". Leva a página, o relato e a data/hora do registro. Assinatura: só o Presidente.' },
 ];
 
 const EMAIL_OK = /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;

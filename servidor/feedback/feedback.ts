@@ -15,7 +15,7 @@ import {
 } from '../../utils/feedback';
 import { renderizarTemplate } from '../email/template';
 import { MOLDURA_FIM, MOLDURA_INICIO, ASSINATURA_DUPLA } from '../email/templateGuiasIS';
-import { assinaturaSemSignatario, assinaturaTexto, lerConfigEmails } from '../email/comum';
+import { assinaturaSemSignatario, assinaturaTexto, destinatariosFixos, juntarEmails } from '../email/comum';
 import { CONFIG_EMAIL_RESULTADO, emailValido } from '../email/resultadoIS';
 
 export class ErroFeedback extends Error {
@@ -80,7 +80,32 @@ export const montarEmailFeedback = (m: MontarEmail): { html: string; texto: stri
   return { html, texto };
 };
 
-type Enviar = (e: { para: string; assunto: string; html: string; texto: string; nomeRemetente: string; responderPara?: string }) => Promise<void>;
+type Presidente = { nome: string; posto: string };
+const presidenteDe = (config: { assinatura: { presidenteNome: string; presidentePosto: string } }): Presidente =>
+  ({ nome: config.assinatura.presidenteNome, posto: config.assinatura.presidentePosto });
+
+/** E-mail de agradecimento (feedbackRecebido) — envio real e teste (servidor/email/teste.ts). */
+export const montarEmailFeedbackRecebido = (nome: string, tipo: TipoFeedback, presidente: Presidente) => ({
+  assunto: `FEEDBACK DO APP JRS/HNRe — ${rotuloTipo(tipo).toUpperCase()} RECEBIDO`,
+  ...montarEmailFeedback({ nome, titulo: 'Feedback recebido', paragrafos: paragrafosAgradecimento(tipo), presidente }),
+});
+
+/** E-mail de problema solucionado (feedbackSolucionado) — envio real e teste. */
+export const montarEmailFeedbackSolucionado = (nome: string, relato: { pagina: string; registradoEm: string; texto: string }, presidente: Presidente) => ({
+  assunto: 'FEEDBACK DO APP JRS/HNRe — PROBLEMA SOLUCIONADO',
+  ...montarEmailFeedback({ nome, titulo: 'Problema solucionado', paragrafos: [PARAGRAFO_SOLUCAO], relato, paragrafosFim: [PARAGRAFO_SOLUCAO_FIM], presidente }),
+});
+
+type Enviar = (e: { para: string; cc?: string; cco?: string; assunto: string; html: string; texto: string; nomeRemetente: string; responderPara?: string }) => Promise<void>;
+
+/** Destinatários fixos do tipo (Administração › E-mails automáticos) somados ao usuário. */
+const comFixos = async (db: Firestore, tipo: 'feedbackRecebido' | 'feedbackSolucionado', para: string) => {
+  const fixos = await destinatariosFixos(db, tipo);
+  const paraTodos = juntarEmails([para, fixos.para]);
+  const cc = juntarEmails([fixos.cc], paraTodos);
+  const cco = juntarEmails([fixos.cco], [...paraTodos, ...cc]);
+  return { config: fixos.config, destino: { para: paraTodos.join(', '), cc: cc.length ? cc.join(', ') : undefined, cco: cco.length ? cco.join(', ') : undefined, responderPara: fixos.responderPara } };
+};
 
 const enviarPadrao = (db: Firestore): Enviar => async e => {
   const { enviarEmail } = await import('../google/impressao');
@@ -133,12 +158,9 @@ export const criarFeedback = async (
   const para = emailDoUsuario(u);
   if (para) {
     try {
-      const config = await lerConfigEmails(db);
-      const { html, texto } = montarEmailFeedback({
-        nome: nomeDoUsuario(u), titulo: 'Feedback recebido', paragrafos: paragrafosAgradecimento(tipo),
-        presidente: { nome: config.assinatura.presidenteNome, posto: config.assinatura.presidentePosto },
-      });
-      await enviar({ para, assunto: `FEEDBACK DO APP JRS/HNRe — ${rotuloTipo(tipo).toUpperCase()} RECEBIDO`, html, texto, nomeRemetente: REMETENTE_FEEDBACK, responderPara: config.responderPara });
+      const { config, destino } = await comFixos(db, 'feedbackRecebido', para);
+      const email = montarEmailFeedbackRecebido(nomeDoUsuario(u), tipo, presidenteDe(config));
+      await enviar({ ...destino, assunto: email.assunto, html: email.html, texto: email.texto, nomeRemetente: REMETENTE_FEEDBACK });
       emailEnviado = true;
       await ref.update({ emailRecebidoEnviadoEm: FieldValue.serverTimestamp() });
     } catch { /* best effort: o feedback já está registrado */ }
@@ -172,16 +194,11 @@ export const atualizarFeedback = async (
   const u = f.uid ? ((await db.collection('usuarios').doc(f.uid).get()).data() || {}) as Usuario : {};
   const para = emailDoUsuario(u) || (emailValido(String(f.email || '')) ? String(f.email) : '');
   if (!para) return { emailEnviado: false, semEmail: true };
-  const config = await lerConfigEmails(db);
+  const { config, destino } = await comFixos(db, 'feedbackSolucionado', para);
   const registradoEm = f.criadoEm?.toDate ? dataHoraRecife(f.criadoEm.toDate()) : String(f.criadoEmTexto || '');
-  const { html, texto } = montarEmailFeedback({
-    nome: nomeDoUsuario(u) || String(f.usuario || ''), titulo: 'Problema solucionado',
-    paragrafos: [PARAGRAFO_SOLUCAO],
-    relato: { pagina: f.paginaRotulo || ROTULO_PAGINA_GERAL, registradoEm, texto: f.mensagem },
-    paragrafosFim: [PARAGRAFO_SOLUCAO_FIM],
-    presidente: { nome: config.assinatura.presidenteNome, posto: config.assinatura.presidentePosto },
-  });
-  await enviar({ para, assunto: 'FEEDBACK DO APP JRS/HNRe — PROBLEMA SOLUCIONADO', html, texto, nomeRemetente: REMETENTE_FEEDBACK, responderPara: config.responderPara });
+  const email = montarEmailFeedbackSolucionado(nomeDoUsuario(u) || String(f.usuario || ''),
+    { pagina: f.paginaRotulo || ROTULO_PAGINA_GERAL, registradoEm, texto: f.mensagem }, presidenteDe(config));
+  await enviar({ ...destino, assunto: email.assunto, html: email.html, texto: email.texto, nomeRemetente: REMETENTE_FEEDBACK });
   await ref.update({ emailSolucaoEnviadoEm: FieldValue.serverTimestamp(), emailSolucaoPara: para });
   return { emailEnviado: true };
 };
