@@ -169,7 +169,7 @@ export const Militares: React.FC = () => {
           description="Cadastro de militares da ativa, servidores civis, dependentes e pensionistas. Edite os dados e defina quem está ativo no appweb."
           // Importação em lote por CSV: exclusiva do Admin. "Cadastrar novo" é a primária: entra por último no
           // desktop e vira o FAB no celular (PageHeader `fab`), como em Pareceres — sem lotar a topbar.
-          actions={ehAdmin ? <Button variant="secondary" icon="upload_file" onClick={() => setImportando(true)} disabled={lista === null}>Importar CSV</Button> : undefined}
+          secundarias={[{ id: 'csv', rotulo: 'Importar CSV', icone: 'upload_file', onClick: () => setImportando(true), disabled: lista === null, permitido: ehAdmin }]}
           fab={podeCadastrar ? { icon: 'person_add', label: 'Cadastrar novo', onClick: () => setNovo(true) } : undefined}
         />
 

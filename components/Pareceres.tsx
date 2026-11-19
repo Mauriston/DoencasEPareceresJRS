@@ -147,7 +147,7 @@ export const Pareceres: React.FC = () => {
         <PageHeader
           title="Pareceres"
           description="Pedidos de parecer por especialidade e o andamento de cada um."
-          actions={ehAdmin ? <Button variant="secondary" icon="tune" onClick={() => setConfig(true)}>Quesitos</Button> : undefined}
+          secundarias={[{ id: 'quesitos', rotulo: 'Quesitos', icone: 'tune', onClick: () => setConfig(true), permitido: ehAdmin }]}
           fab={podeGerar ? { icon: 'add', label: 'Novo parecer', onClick: () => setNovo(true) } : undefined}
         />
 

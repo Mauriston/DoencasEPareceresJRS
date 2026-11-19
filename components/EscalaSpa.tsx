@@ -246,16 +246,13 @@ export const EscalaSpa: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast} tone="success" />
-      <Container size="data" className="pt-0 md:pt-8 pb-10 flex flex-col gap-6">
+      <Container size="data" className={`pt-0 md:pt-8 ${ehAdmin ? 'pb-28 md:pb-10' : 'pb-10'} flex flex-col gap-6`}>
         <PageHeader
           title="Escala de Serviço"
           description="Supervisão do SPA (24 h, com retém) e plantões de 12 h (dia e noite)."
-          actions={ehAdmin ? (
-            <>
-              <Button variant="secondary" icon="download" onClick={baixarModeloEscala}>Modelo CSV</Button>
-              <Button icon="upload_file" onClick={() => setImportando(true)}>Enviar escala</Button>
-            </>
-          ) : undefined}
+          // Ações do Admin: no celular vão para o FAB (Enviar escala é a principal), não para a topbar.
+          fab={ehAdmin ? { icon: 'upload_file', label: 'Enviar escala', onClick: () => setImportando(true) } : undefined}
+          secundarias={[{ id: 'modelo', rotulo: 'Modelo CSV', icone: 'download', onClick: baixarModeloEscala, permitido: ehAdmin }]}
         />
 
         {!isDesktop && (

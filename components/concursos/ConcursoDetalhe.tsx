@@ -28,7 +28,8 @@ import { TabelaCandidatos } from './TabelaCandidatos';
 import { ListaCandidatosMobile } from './ListaCandidatosMobile';
 import { SheetCandidatoMobile } from './SheetCandidatoMobile';
 import { MenuAcoesCandidato } from './MenuAcoesCandidato';
-import { BotaoEmailInaptos } from './BotaoEmailInaptos';
+import { BotaoEmailInaptos, podeEmailInaptos } from './BotaoEmailInaptos';
+import { inaptoPendente } from '../../utils/emailInaptosConcurso';
 
 export { type ConcursoDetalheProps };
 
@@ -99,6 +100,8 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
   // e pela situação do concurso. Só na planilha de UM concurso (não nas páginas do dia e de atrasadas).
   const [adicionarCandidatoAberto, setAdicionarCandidatoAberto] = useState(false);
   const [enviarExamesAberto, setEnviarExamesAberto] = useState(false);
+  const [inaptosAberto, setInaptosAberto] = useState(false);
+  const inaptosPendentes = candidatos.filter(inaptoPendente).length;
   const podeCandidato = !embutido && !!concurso && canUseFeature('concursosJRS.adicionarCandidato', perfil) && (concurso.status === 'em_andamento' || concurso.status === 'em_breve');
   const podeExames = !embutido && !!concurso && canUseFeature('concursosJRS.enviarExamesCandidato', perfil) && concurso.status === 'em_andamento';
   const finalizados = candidatos.filter(c => c.finalizado).length;
@@ -112,7 +115,10 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
   );
   const acoesCabecalho = (
     <>
-      {concurso && <BotaoEmailInaptos concurso={concurso} candidatos={candidatos} perfil={perfil} onAviso={showToast} />}
+      {concurso && (
+        <BotaoEmailInaptos concurso={concurso} candidatos={candidatos} perfil={perfil} onAviso={showToast}
+          aberto={inaptosAberto} onAbertoChange={setInaptosAberto} className={embutido ? '' : 'hidden md:inline-flex'} />
+      )}
       {podeExames && <Button variant="secondary" icon="upload_file" onClick={() => setEnviarExamesAberto(true)} className="hidden md:inline-flex">Enviar exames</Button>}
       {podeCandidato && <Button icon="person_add" onClick={() => setAdicionarCandidatoAberto(true)} className="hidden md:inline-flex">Adicionar candidato</Button>}
     </>
@@ -226,6 +232,11 @@ export const ConcursoDetalhe: React.FC<ConcursoDetalheProps> = (props) => {
         <FabAcoes acoes={[
           { id: 'candidato', rotulo: 'Candidato', ariaLabel: 'Adicionar candidato', icone: 'add', onClick: () => setAdicionarCandidatoAberto(true), permitido: podeCandidato },
           { id: 'exames', rotulo: 'Enviar exames', icone: 'upload_file', onClick: () => setEnviarExamesAberto(true), permitido: podeExames },
+          // E-mail de inaptos: no celular também no FAB (o botão do cabeçalho só aparece a partir de md).
+          {
+            id: 'inaptos', rotulo: 'E-mail de inaptos', icone: 'mail', onClick: () => setInaptosAberto(true),
+            permitido: !!concurso && podeEmailInaptos(concurso, perfil), disabled: inaptosPendentes === 0,
+          },
         ]} />
       )}
 

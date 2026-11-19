@@ -112,8 +112,10 @@ type EscalaId = 'cdr' | 'webster' | 'childpugh';
 const ESCALAS: Record<EscalaId, string> = { cdr: 'CDR Score', webster: 'Escala de Webster', childpugh: 'Child-Pugh' };
 const ehEscala = (v: string | null): v is EscalaId => v === 'cdr' || v === 'webster' || v === 'childpugh';
 
+// "Imprimir": só no desktop. No celular não vai para a topbar nem para o FAB, que cobriria a barra de resultado fixa
+// no rodapé das calculadoras.
 const BotaoImprimir: React.FC = () => (
-  <Button variant="secondary" icon="print" onClick={() => window.print()}>Imprimir</Button>
+  <Button variant="secondary" icon="print" onClick={() => window.print()} className="hidden md:inline-flex">Imprimir</Button>
 );
 
 // Calculadora CDR dentro do shell (auditoria v2, C1): página com Page/Card, cada domínio um grupo de

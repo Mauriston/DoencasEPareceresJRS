@@ -517,30 +517,15 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
         />
       )}
 
-      <Container size="data" className={`pt-0 md:pt-8 flex flex-col gap-6 ${podeRegistrarMensagem ? 'pb-28 md:pb-10' : 'pb-10'}`}>
+      <Container size="data" className={`pt-0 md:pt-8 flex flex-col gap-6 ${podeRegistrarMensagem || podeImportarCsv || mostrarEnviarExames ? 'pb-28 md:pb-10' : 'pb-10'}`}>
         <PageHeader
           title="Concursos"
           description="Planilhas de controle dos candidatos de cada concurso."
-          actions={podeImportarCsv || mostrarEnviarExames ? (
-            <>
-              {/* Celular: as secundárias no ⋮ (a primária vira FAB); desktop: secundárias ao lado da primária. */}
-              <span className="md:hidden">
-                <MenuAcoes
-                  rotulo="Mais ações"
-                  itens={[
-                    ...(mostrarEnviarExames ? [{ rotulo: 'Enviar exames', icone: 'lab_profile', onClick: () => setEnviarExamesConcursos(emAndamento) }] : []),
-                    ...(podeImportarCsv ? [{ rotulo: 'Importar CSV', icone: 'upload_file', onClick: onImportarCsvClick }] : []),
-                  ]}
-                />
-              </span>
-              {mostrarEnviarExames && (
-                <Button variant="secondary" icon="lab_profile" onClick={() => setEnviarExamesConcursos(emAndamento)} className="hidden md:inline-flex">Enviar exames</Button>
-              )}
-              {podeImportarCsv && (
-                <Button variant="secondary" icon="upload_file" onClick={onImportarCsvClick} className="hidden md:inline-flex">Importar CSV</Button>
-              )}
-            </>
-          ) : undefined}
+          // Secundárias: no desktop ao lado da primária; no celular na pilha do FAB (com "Novo concurso").
+          secundarias={[
+            { id: 'exames', rotulo: 'Enviar exames', icone: 'lab_profile', onClick: () => setEnviarExamesConcursos(emAndamento), permitido: mostrarEnviarExames },
+            { id: 'csv', rotulo: 'Importar CSV', icone: 'upload_file', onClick: onImportarCsvClick, permitido: podeImportarCsv },
+          ]}
           fab={podeRegistrarMensagem ? { icon: 'add', label: 'Novo concurso', onClick: onNovoConcursoClick } : undefined}
         />
 
