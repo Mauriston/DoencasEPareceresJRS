@@ -26,14 +26,15 @@ import { ServicoMilitarForm } from './ServicoMilitarForm';
 import { useNav } from '../../context/NavContext';
 import { extrairDadosAtestado } from '../../services/atestadoIA';
 import { observarMilitares, type MilitarRecord } from '../../services/firestoreMilitares';
-import { enviarPdfPericiaMenor, novoIdPericiaMenor, observarPericiasDoMilitar, registrarPericiaMenor, dataBR, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
+import { editarPericiaMenor, enviarPdfPericiaMenor, novoIdPericiaMenor, observarPericiasDoMilitar, registrarPericiaMenor, dataBR, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
+import { MIN_JUSTIFICATIVA_EXCLUSAO, erroJustificativaExclusao } from '../../utils/exclusaoPericia';
 import { carregarPeritosPericiaMenor } from '../../services/periciaMenorService';
 import { carregarCid, normalizarBusca, omEhHnre, type CidItem } from '../../utils/corposQuadros';
 import { imagemParaPdf } from '../../utils/imagemParaPdf';
 import { aplicarFiltroDocumento } from '../../utils/filtroDocumento';
 import { dataCivilISO, diasInteiro, hojeISO, normalizarTexto } from '../../utils/dados';
 import { MAX_DIAS_PERICIA, MAX_DIAS_ACUMULADOS, limitarDias, saldoAcumulado, type PeritoPericiaMenor } from '../../utils/periciaMenorRegras';
-import { formatNip } from '../../utils/format';
+import { extrairNomeInspecionado, formatNip } from '../../utils/format';
 
 interface Props {
   /** "Nova perícia menor" ou "Novo atestado" (perfil user_medicos_geral). */
@@ -44,6 +45,12 @@ interface Props {
   militarInicial?: string;
   /** 'inline': no painel principal da Ficha do inspecionado (telas grandes); padrão: Drawer. */
   casca?: CascaForm;
+  /**
+   * EDIÇÃO de uma perícia já registrada (Admin, ou o perito responsável / quem registrou — utils/exclusaoPericia.ts):
+   * o formulário vem preenchido, o inspecionado fica fixo, a foto/PDF não muda e, fora do Admin, a Justificativa
+   * (≥ 10 caracteres) é obrigatória. Grava pelo servidor (services/firestorePericiasMenores.ts → editarPericiaMenor).
+   */
+  editar?: PericiaMenorRecord;
 }
 
 type Erros = Record<string, string>;
@@ -58,7 +65,8 @@ const rotuloPerito = (p: PeritoPericiaMenor) => `${p.usuario || p.nome}${p.nip ?
 const AvisoMax: React.FC<{ visivel: boolean }> = ({ visivel }) =>
   visivel ? <p role="status" className="mt-1 text-right text-xs font-semibold text-wine">Máx {MAX_DIAS_PERICIA} dias</p> : null;
 
-export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia menor', onClose, onRegistrado, militarInicial, casca = 'drawer' }) => {
+export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia menor', onClose, onRegistrado, militarInicial, casca = 'drawer', editar }) => {
+  const edicao = !!editar;
   const nav = useNav();
   const usuario = nav?.authUser;
   const [hoje] = useState(() => hojeISO());
@@ -66,34 +74,35 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
   const [militares, setMilitares] = useState<MilitarRecord[]>([]);
   const [cids, setCids] = useState<CidItem[]>([]);
 
-  const [modo, setModo] = useState<Modo>('registrar');
+  const [modo, setModo] = useState<Modo>(editar?.homologacao ? 'homologar' : 'registrar');
   const homologacao = modo === 'homologar';
   // Perito responsável: só o Admin escolhe (na aba Registrar); para os demais é o próprio usuário.
   const ehAdmin = usuario?.perfil === 'admin';
   const [peritos, setPeritos] = useState<PeritoPericiaMenor[]>([]);
-  const [peritoUid, setPeritoUid] = useState(usuario?.uid ?? '');
+  const [peritoUid, setPeritoUid] = useState(editar?.peritoUid || usuario?.uid || '');
 
-  const [militarId, setMilitarId] = useState('');
-  const [militarTexto, setMilitarTexto] = useState('');
+  const [militarId, setMilitarId] = useState(editar?.militarId ?? '');
+  const [militarTexto, setMilitarTexto] = useState(editar?.inspecionado ?? '');
   const [cadastrando, setCadastrando] = useState(false);
   const [recemCadastradoId, setRecemCadastradoId] = useState(militarInicial ?? '');
   const [editandoServico, setEditandoServico] = useState(false);
   const [anteriores, setAnteriores] = useState<PericiaMenorRecord[]>([]);
 
-  const [dataTexto, setDataTexto] = useState('');
-  const [tempoAtestado, setTempoAtestado] = useState('');
+  const [dataTexto, setDataTexto] = useState(editar ? dataBR(editar.dataAtestado) : '');
+  const [tempoAtestado, setTempoAtestado] = useState(editar ? comUnidade(String(editar.tempoAtestado || '')) : '');
   const [avisoMaxAtestado, setAvisoMaxAtestado] = useState(false);
-  const [tempoHomologado, setTempoHomologado] = useState('');
+  const [tempoHomologado, setTempoHomologado] = useState(editar?.homologacao ? comUnidade(String(editar.tempoHomologado || '')) : '');
   const [avisoMaxHomologado, setAvisoMaxHomologado] = useState(false);
   const [cid, setCid] = useState<CidItem | null>(null);
-  const [cidTexto, setCidTexto] = useState('');
-  const [dispensas, setDispensas] = useState<string[]>([]);
+  const [cidTexto, setCidTexto] = useState(editar?.cid ?? '');
+  const [dispensas, setDispensas] = useState<string[]>(editar?.dispensas ?? []);
   const [escolhendoDispensas, setEscolhendoDispensas] = useState(false);
-  const [vdf, setVdf] = useState<'' | 'sim' | 'nao'>('');
+  const [vdf, setVdf] = useState<'' | 'sim' | 'nao'>(editar ? (editar.vdf ? 'sim' : 'nao') : '');
   // Médico emissor e CRM (atestado externo): aparecem só na homologação e se a leitura os trouxe.
-  const [medicoEmissor, setMedicoEmissor] = useState('');
-  const [crmEmissor, setCrmEmissor] = useState('');
-  const [emissorLido, setEmissorLido] = useState(false);
+  const [medicoEmissor, setMedicoEmissor] = useState(editar?.medicoEmissor ?? '');
+  const [crmEmissor, setCrmEmissor] = useState(editar?.crmEmissor ?? '');
+  const [emissorLido, setEmissorLido] = useState(!!(editar?.medicoEmissor || editar?.crmEmissor));
+  const [justificativa, setJustificativa] = useState('');
 
   const [imagemBruta, setImagemBruta] = useState('');
   const [imagemDoc, setImagemDoc] = useState('');
@@ -108,6 +117,13 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
 
   useEffect(() => observarMilitares(setMilitares), []);
   useEffect(() => { carregarCid().then(setCids).catch(() => setCids([])); }, []);
+  // Edição: o CID gravado volta a ser o item da lista (pelo código; nos registros antigos, pelo rótulo).
+  useEffect(() => {
+    if (!editar || cid || !cids.length) return;
+    const codigo = String(editar.cidCodigo || editar.cid.split(' ')[0] || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const achado = cids.find(c => c.SUBCAT.toUpperCase() === codigo);
+    if (achado) setCid(achado);
+  }, [cids]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!ehAdmin) return;
     let vivo = true;
@@ -115,9 +131,16 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
     return () => { vivo = false; };
   }, [ehAdmin]);
   // O próprio Admin sempre aparece no select (mesmo que a lista não carregue).
-  const opcoesPerito = useMemo(() => (!usuario || peritos.some(p => p.uid === usuario.uid)
-    ? peritos
-    : [{ uid: usuario.uid, usuario: usuario.usuario, nome: usuario.nome, nip: usuario.nip || '' }, ...peritos]), [peritos, usuario]);
+  const opcoesPerito = useMemo(() => {
+    let l = !usuario || peritos.some(p => p.uid === usuario.uid)
+      ? peritos
+      : [{ uid: usuario.uid, usuario: usuario.usuario, nome: usuario.nome, nip: usuario.nip || '' }, ...peritos];
+    // Edição: o perito gravado sempre aparece, mesmo fora da lista atual.
+    if (editar?.peritoUid && !l.some(p => p.uid === editar.peritoUid)) {
+      l = [{ uid: editar.peritoUid, usuario: editar.peritoUsuario, nome: editar.peritoNome, nip: '' }, ...l];
+    }
+    return l;
+  }, [peritos, usuario, editar]);
   const militar = militares.find(m => m.id === militarId) ?? null;
   // Perícias anteriores do militar escolhido, para o limite de 30 dias acumulados.
   useEffect(() => {
@@ -153,7 +176,8 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
 
   // ---- Tempo: o que conta para a dispensa e o limite de 30 dias acumulados ----
   const tempoEfetivo = Number(digitos(homologacao ? tempoHomologado : tempoAtestado)) || 0;
-  const saldo = useMemo(() => saldoAcumulado(anteriores, hoje), [anteriores, hoje]);
+  // Na edição, o próprio registro não conta no saldo (o tempo dele é o que está sendo editado).
+  const saldo = useMemo(() => saldoAcumulado(editar ? anteriores.filter(a => a.id !== editar.id) : anteriores, hoje), [anteriores, hoje, editar]);
   const passaDe30 = saldo.quantidade > 0 && tempoEfetivo > 0 && saldo.usados + tempoEfetivo > MAX_DIAS_ACUMULADOS;
   // Aviso quando há atestado recente (vigente ou concluído há até 10 dias — utils/periciaMenorRegras.ts): os dias já usados.
   // O limite de MAX_DIAS_ACUMULADOS continua validado no campo de tempo (erro ao passar).
@@ -233,8 +257,9 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
   const validar = (): Erros => {
     const e: Erros = {};
     // Foto: obrigatória na homologação, exceto para o Admin (pode homologar sem anexar; fica sem PDF).
-    if (homologacao && !imagemDoc && !ehAdmin) e.foto = 'Anexe a foto do atestado.';
-    if (!militar) e.militar = 'Escolha o militar na lista.';
+    if (homologacao && !imagemDoc && !ehAdmin && !edicao) e.foto = 'Anexe a foto do atestado.';
+    if (!militar && !edicao) e.militar = 'Escolha o militar na lista.';
+    if (edicao) { const j = erroJustificativaExclusao(justificativa, usuario?.perfil ?? ''); if (j) e.justificativa = j; }
     if (!dataTexto) e.dataAtestado = 'Informe a data do atestado.';
     else if (!dataAtestado) e.dataAtestado = 'Data inválida (dd/mm/aaaa).';
     if (!digitos(tempoAtestado)) e.tempoAtestado = 'Informe o tempo do atestado.';
@@ -254,7 +279,27 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
       requestAnimationFrame(() => document.querySelector<HTMLElement>('#form-nova-pericia [aria-invalid="true"]')?.focus());
       return;
     }
-    if (!militar || !cid || !usuario) return;
+    if (!cid || !usuario) return;
+    if (editar) {
+      const perito = (ehAdmin && opcoesPerito.find(p => p.uid === peritoUid)) || null;
+      const medico = normalizarTexto(medicoEmissor);
+      const crm = normalizarTexto(crmEmissor);
+      setSalvando(true);
+      try {
+        await editarPericiaMenor(editar, {
+          cid: rotuloCid(cid), cidCodigo: cid.SUBCAT, dispensas: dispensas.map(normalizarTexto), dataAtestado,
+          tempoAtestado: Number(digitos(tempoAtestado)), tempoHomologado: tempoEfetivo, homologacao,
+          medicoEmissor: homologacao ? medico : '', crmEmissor: homologacao ? crm : '', vdf: vdf === 'sim',
+          ...(perito ? { peritoUid: perito.uid, peritoUsuario: perito.usuario, peritoNome: perito.nome } : {}),
+        }, justificativa);
+        onRegistrado(extrairNomeInspecionado(editar.inspecionado));
+      } catch (err: any) {
+        setErros({ geral: err?.message || 'Não foi possível salvar as alterações.' });
+        setSalvando(false);
+      }
+      return;
+    }
+    if (!militar) return;
     // Admin escolhe o perito responsável (pré-preenchido com ele mesmo) em registrar E em homologar.
     const perito = (ehAdmin && opcoesPerito.find(p => p.uid === peritoUid))
       || { uid: usuario.uid, usuario: usuario.usuario, nome: usuario.nome };
@@ -311,7 +356,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
         footer={(
           <>
             <Button variant="secondary" className="max-md:hidden" onClick={onClose} disabled={salvando}>Cancelar</Button>
-            <AcoesRodape acoes={[{ id: 'salvar', rotulo: 'Registrar', icone: 'check', onClick: () => submeterFormulario('form-nova-pericia'), loading: salvando, disabled: !!processando }]} />
+            <AcoesRodape acoes={[{ id: 'salvar', rotulo: edicao ? 'Salvar alterações' : 'Registrar', icone: 'check', onClick: () => submeterFormulario('form-nova-pericia'), loading: salvando, disabled: !!processando }]} />
           </>
         )}
       >
@@ -324,7 +369,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
           />
 
           <div role="tabpanel" id="pm-painel" aria-labelledby={`pm-aba-${modo}`} className="space-y-6">
-          {homologacao && <section className="space-y-2" aria-labelledby="pm-foto">
+          {homologacao && !edicao && <section className="space-y-2" aria-labelledby="pm-foto">
             <h3 id="pm-foto" className={secao}>Foto do atestado{ehAdmin
               ? <span className="ml-1 text-xs font-normal text-ink-3">(opcional)</span>
               : <><span className="text-wine ml-0.5" aria-hidden="true">*</span><span className="sr-only"> (obrigatório)</span></>}</h3>
@@ -360,6 +405,11 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
 
           <section className="space-y-4" aria-labelledby="pm-militar">
             <h3 id="pm-militar" className={secao}>Dados do militar</h3>
+            {edicao ? (
+              <Field label="Nome">
+                {a => <input {...a} type="text" readOnly disabled value={editar?.inspecionado ?? ''} />}
+              </Field>
+            ) : (
             <div>
               <Autocomplete
                 label="Nome" required error={erros.militar}
@@ -375,6 +425,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
                 </button>
               )}
             </div>
+            )}
             {servicoAplicavel && (
               <div>
                 <Field label="Serviço do HNRe">
@@ -459,6 +510,12 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
                   {opcoesPerito.map(p => <option key={p.uid} value={p.uid}>{rotuloPerito(p)}</option>)}
                 </select>
               )}
+            </Field>
+          )}
+          {edicao && usuario?.perfil !== 'admin' && (
+            <Field label="Justificativa da alteração" required error={erros.justificativa}
+              help={`Mínimo de ${MIN_JUSTIFICATIVA_EXCLUSAO} caracteres. Fica no registro da alteração.`}>
+              {a => <textarea {...a} value={justificativa} maxLength={2000} onChange={e => { setJustificativa(e.target.value); limpar('justificativa'); }} className={`${a.className} min-h-[88px]`} />}
             </Field>
           )}
           </div>

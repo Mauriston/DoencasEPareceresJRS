@@ -17,6 +17,8 @@ export type AcaoInspecionado =
   | 'cadastro.criar'
   | 'cadastro.editar'
   | 'pericia.registrar'
+  | 'pericia.excluir'
+  | 'pericia.editar'
   | 'is.cadastrar'
   | 'is.agendar'
   | 'is.concluir'
@@ -32,6 +34,8 @@ export const ROTULO_ACAO_INSPECIONADO: Record<AcaoInspecionado, string> = {
   'cadastro.criar': 'cadastrou o inspecionado',
   'cadastro.editar': 'editou o cadastro',
   'pericia.registrar': 'registrou perícia menor',
+  'pericia.excluir': 'excluiu perícia menor',
+  'pericia.editar': 'editou perícia menor',
   'is.cadastrar': 'cadastrou a IS',
   'is.agendar': 'agendou a IS',
   'is.concluir': 'concluiu a IS',

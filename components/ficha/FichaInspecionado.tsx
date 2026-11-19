@@ -55,6 +55,8 @@ import type { AcaoRodape } from '../ui/AcoesRodape';
 import { useTituloPagina } from '../shell/TituloPagina';
 import { PdfFullscreenModal } from '../PdfFullscreenModal';
 import { LinhaRegistroPericia, PericiaMenorPainel } from '../periciaMenor/PericiaMenorPainel';
+import { ExcluirPericiaDialog } from '../periciaMenor/ExcluirPericiaDialog';
+import { podeExcluirPericia } from '../../utils/exclusaoPericia';
 import { NovaPericiaMenorForm } from '../periciaMenor/NovaPericiaMenorForm';
 import { fasesDeEntrevista } from '../inspecoes/InspecaoDetalhe';
 import { NovoParecerForm } from '../pareceres/NovoParecerForm';
@@ -177,6 +179,8 @@ export const FichaInspecionado: React.FC = () => {
   const { nip: nipParam = '' } = useParams();
   const nip = decodeURIComponent(nipParam).replace(/\D/g, '');
   const nav = useNav();
+  const [periciaExcluindo, setPericiaExcluindo] = useState<PericiaMenorRecord | null>(null);
+  const [periciaEditando, setPericiaEditando] = useState<PericiaMenorRecord | null>(null);
   const navigate = useNavigate();
   const perfil = nav?.authUser?.perfil;
   const secoes = secoesDaFicha(perfil);
@@ -400,9 +404,9 @@ export const FichaInspecionado: React.FC = () => {
     id: a.id, rotulo: a.id === 'pm' && atestado ? 'Atestados' : DEF_ABA[a.id].rotulo,
     desabilitada: !a.habilitada, dica: a.habilitada ? undefined : 'Em breve',
   }));
-  const trocarAba = (id: AbaFicha) => { setAbrindoIS(null); setNovaPericia(false); definir({ aba: id, reg: null, is: null, sel: null, guia: null, gravar: null, criar: null }); };
+  const trocarAba = (id: AbaFicha) => { setAbrindoIS(null); setNovaPericia(false); setPericiaEditando(null); definir({ aba: id, reg: null, is: null, sel: null, guia: null, gravar: null, criar: null }); };
   const abrirRegistro = (id: string) => {
-    setAbrindoIS(null); setNovaPericia(false);
+    setAbrindoIS(null); setNovaPericia(false); setPericiaEditando(null);
     definir({ reg: id, is: null, sel: null, gravar: null, criar: null });
     // Empilhado (abaixo de xl), o painel principal fica acima do histórico: rola até ele.
     if (typeof window !== 'undefined' && !window.matchMedia('(min-width: 1280px)').matches) {
@@ -435,7 +439,7 @@ export const FichaInspecionado: React.FC = () => {
   );
 
   // "Abrir IS" (cabeçalho): vai para a aba Inspeções de Saúde e abre o formulário no painel principal.
-  const abrirIS = (modo: ModoAbrirIS) => { setNovaPericia(false); definir({ aba: 'is', reg: null, is: null, sel: null, guia: null, gravar: null, criar: null }); setAbrindoIS(modo); };
+  const abrirIS = (modo: ModoAbrirIS) => { setNovaPericia(false); setPericiaEditando(null); definir({ aba: 'is', reg: null, is: null, sel: null, guia: null, gravar: null, criar: null }); setAbrindoIS(modo); };
   const formAbrirIS = abrindoIS && (
     <AbrirISFicha
       modo={abrindoIS} nip={nip} casca={isDesktop ? 'inline' : 'drawer'} onAviso={avisar}
@@ -457,7 +461,15 @@ export const FichaInspecionado: React.FC = () => {
   const tirarDaFila = (isId: string) => setFilaAgendamento(f => f.filter(x => x.isId !== isId));
   // "+ Perícia Menor" (cabeçalho): vai para a aba Perícia Menor e abre o formulário no painel principal (no celular,
   // bottom sheet).
-  const novaPericiaAbrir = () => { setAbrindoIS(null); definir({ aba: 'pm', reg: null, is: null, sel: null, guia: null, gravar: null, criar: null }); setNovaPericia(true); };
+  const novaPericiaAbrir = () => { setAbrindoIS(null); setPericiaEditando(null); definir({ aba: 'pm', reg: null, is: null, sel: null, guia: null, gravar: null, criar: null }); setNovaPericia(true); };
+  // Edição de uma perícia (Admin ou o perito responsável): no painel principal da aba (no celular, bottom sheet).
+  const formEditarPericia = periciaEditando && (
+    <NovaPericiaMenorForm
+      key={`editar-${periciaEditando.id}`} titulo={atestado ? 'Editar atestado' : 'Editar perícia menor'} editar={periciaEditando}
+      casca={isDesktop ? 'inline' : 'drawer'} onClose={() => setPericiaEditando(null)}
+      onRegistrado={n => { setPericiaEditando(null); avisar(`${atestado ? 'Atestado' : 'Perícia menor'} de ${n} atualizad${atestado ? 'o' : 'a'}.`); }}
+    />
+  );
   const formNovaPericia = novaPericia && podePericia && (
     <NovaPericiaMenorForm titulo={t.novo} militarInicial={nip} casca={isDesktop ? 'inline' : 'drawer'} onClose={() => setNovaPericia(false)}
       onRegistrado={n => { setNovaPericia(false); definir({ aba: 'pm', reg: null }); avisar(atestado ? `Atestado de ${n} registrado.` : `Perícia menor de ${n} registrada.`); }} />
@@ -551,6 +563,7 @@ export const FichaInspecionado: React.FC = () => {
     }
     if (aba === 'pm') {
       if (novaPericia && isDesktop) return formNovaPericia;
+      if (periciaEditando && isDesktop) return formEditarPericia;
       const pSel = pmOrdenadas.find(p => p.id === atual?.id);
       if (!pSel) {
         return semRegistro('pm', [], podePericia
@@ -561,6 +574,8 @@ export const FichaInspecionado: React.FC = () => {
         <PericiaMenorPainel
           key={pSel.id} modo="inline" pericia={pSel} historico={pmOrdenadas} hoje={hoje} cidAbrev={cidAbrev} termos={t}
           aba="esta" onAba={() => { /* inline: só "Esta perícia" */ }} onSelecionar={abrirRegistro} onFechar={() => { /* inline */ }}
+          onExcluir={nav?.authUser && podeExcluirPericia(pSel, { uid: nav.authUser.uid, perfil: nav.authUser.perfil }) ? () => setPericiaExcluindo(pSel) : undefined}
+          onEditar={nav?.authUser && podeExcluirPericia(pSel, { uid: nav.authUser.uid, perfil: nav.authUser.perfil }) ? () => setPericiaEditando(pSel) : undefined}
         />
       );
     }
@@ -739,7 +754,15 @@ export const FichaInspecionado: React.FC = () => {
         <AgendarISFicha inspecao={agendando} onClose={() => setAgendando(null)} onAgendada={(msg, tom) => { setAgendando(null); avisar(msg, tom); }} />
       )}
       {pdf && <PdfFullscreenModal title={pdf.titulo} url={pdf.url} onClose={() => setPdf(null)} />}
+      {periciaExcluindo && perfil && (
+        <ExcluirPericiaDialog
+          pericia={periciaExcluindo} perfil={perfil} termo={t.singular}
+          onClose={() => setPericiaExcluindo(null)}
+          onExcluida={msg => { setPericiaExcluindo(null); definir({ aba: 'pm', reg: null }); avisar(msg); }}
+        />
+      )}
       {!isDesktop && formNovaPericia}
+      {!isDesktop && formEditarPericia}
       {editando && militar && perfil === 'admin' && (
         <MilitarEdicao militar={militar} oms={oms} postos={postos} onClose={() => setEditando(false)}
           onSalvo={n => { setEditando(false); avisar(`Dados de ${n} atualizados.`); }} />
