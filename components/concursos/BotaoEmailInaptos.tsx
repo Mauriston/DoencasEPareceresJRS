@@ -16,18 +16,29 @@ interface Props {
   candidatos: CandidatoRecord[];
   perfil?: string;
   onAviso: (msg: string) => void;
+  /** Controle externo do dialog (o FAB do celular também abre). Sem ele, o estado é interno. */
+  aberto?: boolean;
+  onAbertoChange?: (aberto: boolean) => void;
+  /** Classes do botão (ex.: 'hidden md:inline-flex' quando o celular usa o FAB). */
+  className?: string;
 }
 
-export const BotaoEmailInaptos: React.FC<Props> = ({ concurso, candidatos, perfil, onAviso }) => {
+/** Pode mostrar a ação (perfil e situação do concurso) — também usado para o FAB do celular. */
+export const podeEmailInaptos = (concurso: Pick<ConcursoRecord, 'status'>, perfil?: string): boolean =>
+  canUseFeature('concursosJRS.enviarEmailInaptos', perfil) && concursoAceitaEmailInaptos(concurso.status);
+
+export const BotaoEmailInaptos: React.FC<Props> = ({ concurso, candidatos, perfil, onAviso, aberto: abertoExterno, onAbertoChange, className = '' }) => {
   const pendentes = useMemo(
     () => candidatos.filter(inaptoPendente).sort((a, b) => a.dataAgendamento.localeCompare(b.dataAgendamento) || a.nome.localeCompare(b.nome, 'pt-BR')),
     [candidatos],
   );
-  const [aberto, setAberto] = useState(false);
-  if (!canUseFeature('concursosJRS.enviarEmailInaptos', perfil) || !concursoAceitaEmailInaptos(concurso.status)) return null;
+  const [abertoInterno, setAbertoInterno] = useState(false);
+  const aberto = abertoExterno ?? abertoInterno;
+  const setAberto = (v: boolean) => { if (onAbertoChange) onAbertoChange(v); else setAbertoInterno(v); };
+  if (!podeEmailInaptos(concurso, perfil)) return null;
   return (
     <>
-      <span className="relative inline-flex">
+      <span className={`relative inline-flex ${className}`}>
         <Button
           variant="secondary" icon="mail" disabled={pendentes.length === 0} onClick={() => setAberto(true)}
           aria-label={`E-mail de inaptos (EAMPE)${pendentes.length ? ` — ${pendentes.length} pendente${pendentes.length > 1 ? 's' : ''}` : ''}`}

@@ -530,8 +530,8 @@ export const CasosPericiais: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1 relative">
-      <Container size="form" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-6">
-        <PageHeader title="Revisão dos casos" description="Seu resultado nos casos periciais comentados." actions={<Button variant="secondary" icon="restart_alt" onClick={handleRestart}>Refazer casos</Button>} />
+      <Container size="form" className="py-6 md:py-8 pt-4 md:pt-8 pb-28 md:pb-10 space-y-6">
+        <PageHeader title="Revisão dos casos" description="Seu resultado nos casos periciais comentados." secundarias={[{ id: 'refazer', rotulo: 'Refazer casos', icone: 'restart_alt', onClick: handleRestart }]} />
 
         <Card className="text-center flex flex-col items-center">
           <h2 className="text-h2 text-navy mb-2">Nota final</h2>

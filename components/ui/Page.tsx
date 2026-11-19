@@ -10,9 +10,12 @@
 // Celular (auditoria v3, 4b/M1/M9): o título vai para a topbar (h1), a descrição some
 // (salvo `descricaoNoCelular`) e as `actions` são levadas à topbar (portal no slot
 // #topbar-acoes, à direita da busca) — o conteúdo da página começa logo abaixo da topbar.
+// Botões de AÇÃO com texto (secundárias e primária) nunca vão para a topbar: a primária vem em `fab` e as
+// secundárias em `secundarias` — no desktop são Buttons no cabeçalho; no celular, a pilha do FAB padrão
+// (a primária é a principal; sem primária, a primeira secundária). `actions` fica para ⋮ e botões só ícone.
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FabAcoes } from './Fab';
+import { FabAcoes, type AcaoFab } from './Fab';
 import { Button, ButtonLink } from './Button';
 import { useTituloPagina } from '../shell/TituloPagina';
 
@@ -65,15 +68,25 @@ export interface PageHeaderProps {
   actions?: React.ReactNode;
   /** Primária da página: no desktop entra por último nas ações (Button primary); no celular vira FAB. */
   fab?: PageHeaderFab;
+  /**
+   * Ações secundárias com texto: no desktop, Buttons secundários antes da primária; no celular entram na pilha
+   * do FAB (não lotam a topbar). Respeita `permitido` como no FabAcoes.
+   */
+  secundarias?: AcaoFab[];
   className?: string;
 }
 
-/** A primária no celular: o FAB padrão do app (components/ui/Fab.tsx — transição, pilha, --fab-bottom). */
-const FabPagina: React.FC<{ fab: PageHeaderFab }> = ({ fab }) => (
-  <FabAcoes acoes={[{ id: 'principal', rotulo: fab.label, icone: fab.icon, onClick: fab.onClick, to: fab.to, disabled: fab.disabled, loading: fab.loading }]} />
+/** No celular: o FAB padrão do app (components/ui/Fab.tsx — transição, pilha, --fab-bottom), primária primeiro. */
+const FabPagina: React.FC<{ fab?: PageHeaderFab; secundarias: AcaoFab[] }> = ({ fab, secundarias }) => (
+  <FabAcoes acoes={[
+    ...(fab ? [{ id: 'principal', rotulo: fab.label, icone: fab.icon, onClick: fab.onClick, to: fab.to, disabled: fab.disabled, loading: fab.loading }] : []),
+    // No FAB as secundárias seguem o estilo da pilha (o FabAcoes decide a cor); o variante do desktop não vale aqui.
+    ...secundarias.map(a => ({ ...a, variante: undefined })),
+  ]} />
 );
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, tituloTopbar, eyebrow, description, descricaoNoCelular = false, actions, fab, className = '' }) => {
+export const PageHeader: React.FC<PageHeaderProps> = ({ title, tituloTopbar, eyebrow, description, descricaoNoCelular = false, actions, fab, secundarias: secundariasTodas = [], className = '' }) => {
+  const secundarias = secundariasTodas.filter(a => a.permitido !== false);
   const descricaoBloco = description !== undefined && description !== null && typeof description !== 'string' && typeof description !== 'number';
   const temDescricao = description !== undefined && description !== null && description !== false && description !== '';
   // M9: no celular o título vira o h1 da topbar (shell/TituloPagina.tsx); aqui o h1 some abaixo de md.
@@ -95,9 +108,14 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, tituloTopbar, eye
             : <p className={`text-sm text-ink-3 mt-1 ${descricaoNoCelular || !tituloNaTopbar ? '' : 'hidden md:block'}`}>{description}</p>
         )}
       </div>
-      {(actions || fab) && (
+      {(actions || fab || secundarias.length > 0) && (
         <div className={`${tituloNaTopbar && slot ? 'hidden md:flex' : 'flex'} flex-row flex-wrap items-center justify-end gap-2 shrink-0`}>
           {actions}
+          {secundarias.map(a => (
+            a.to
+              ? <ButtonLink key={a.id} to={a.to} variant={a.variante ?? 'secondary'} icon={a.icone} className="hidden md:inline-flex">{a.rotulo}</ButtonLink>
+              : <Button key={a.id} variant={a.variante ?? 'secondary'} icon={a.icone} onClick={a.onClick} disabled={a.disabled} loading={a.loading} aria-label={a.ariaLabel} className="hidden md:inline-flex">{a.rotulo}</Button>
+          ))}
           {fab && (
             fab.to
               ? <ButtonLink to={fab.to} icon={fab.icon} className="hidden md:inline-flex">{fab.label}</ButtonLink>
@@ -108,7 +126,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, tituloTopbar, eye
     </div>
     {/* Celular: as mesmas ações na topbar (o slot só existe/aparece abaixo de md). */}
     {actions && tituloNaTopbar && slot && createPortal(<div className="flex items-center gap-1">{actions}</div>, slot)}
-    {fab && <FabPagina fab={fab} />}
+    {(fab || secundarias.length > 0) && <FabPagina fab={fab} secundarias={secundarias} />}
   </>);
 };
 
@@ -117,10 +135,10 @@ interface PageProps extends PageHeaderProps {
   children: React.ReactNode;
 }
 
-export const Page: React.FC<PageProps> = ({ size = 'data', title, description, actions, fab, children, ...resto }) => (
-  <div className={`py-6 md:py-8 pt-4 md:pt-8 ${fab ? 'pb-28 md:pb-10' : 'pb-10'}`}>
+export const Page: React.FC<PageProps> = ({ size = 'data', title, description, actions, fab, secundarias, children, ...resto }) => (
+  <div className={`py-6 md:py-8 pt-4 md:pt-8 ${fab || secundarias?.length ? 'pb-28 md:pb-10' : 'pb-10'}`}>
     <Container size={size}>
-      <PageHeader title={title} description={description} actions={actions} fab={fab} {...resto} />
+      <PageHeader title={title} description={description} actions={actions} fab={fab} secundarias={secundarias} {...resto} />
       {children}
     </Container>
   </div>
