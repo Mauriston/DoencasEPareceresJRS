@@ -8,7 +8,7 @@
 // A seleção fica na URL (?sel=<id>&aba=historico). A antiga página de histórico do militar
 // (/pericia-menor/historico/<nip>) virou a Ficha do inspecionado (/inspecionados/<nip>).
 // Abas principais: Todas · Atestados (registrados) · Homologações (atestado externo homologado) — ?registro=atestados|homologacoes.
-// Chips: Vigentes · Concluídas (?situacao=vigentes|concluidas), Minhas, OM e busca.
+// Filtros: Situação (seletor Todas · Vigentes · Concluídas — ?situacao=vigentes|concluidas), Minhas, OM e busca.
 // Filtros por URL (Início/Painel): ?registro= · ?situacao= · ?tipo=dispensa|restricoes · ?minhas=1 (perito/quem registrou)
 // · ?om=<sigla> · ?mes=atual (atestado do mês corrente) · ?ano=atual (atestado do ano corrente)
 // Atalhos: ?novo=1 (abre o formulário) · ?novo=1&militar=<nip> (já preenchido).
@@ -304,12 +304,17 @@ export const PericiaMenor: React.FC = () => {
               />
               <div className="flex flex-col gap-3 md:flex-1 md:min-w-0 md:flex-row md:flex-wrap md:items-center md:justify-end md:gap-2 md:py-1.5">
               <div className="flex items-center gap-2 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible md:flex-wrap md:justify-end">
-                <FilterChip ativo={situacao === 'vigentes'} onAlternar={() => definir({ situacao: situacao === 'vigentes' ? null : 'vigentes' }, true)}>Vigentes</FilterChip>
-                <FilterChip ativo={situacao === 'concluidas'} onAlternar={() => definir({ situacao: situacao === 'concluidas' ? null : 'concluidas' }, true)}>Concluídas</FilterChip>
-                {tipo && <FilterChip ativo onAlternar={() => definir({ tipo: null }, true)}>{tipo === 'dispensa' ? 'Dispensa total' : 'Restrições'}</FilterChip>}
-                {mesAtual && <FilterChip ativo icon="calendar_month" onAlternar={() => definir({ mes: null }, true)}>Este mês</FilterChip>}
-                {anoAtual && <FilterChip ativo icon="calendar_month" onAlternar={() => definir({ ano: null }, true)}>Este ano</FilterChip>}
-                {(podeNovo || minhas) && <FilterChip ativo={minhas} icon="person" onAlternar={() => definir({ minhas: minhas ? null : '1' }, true)}>Minhas</FilterChip>}
+                {/* Situação: um seletor (como o de OM) no lugar dos chips Vigentes/Concluídas — no celular os chips espremiam. */}
+                <label className="sr-only" htmlFor="pm-filtro-situacao">Situação</label>
+                <select id="pm-filtro-situacao" value={situacao === 'todas' ? '' : situacao} onChange={e => definir({ situacao: e.target.value || null }, true)} className={`${controlClass} !w-auto min-w-[8rem] shrink-0`}>
+                  <option value="">Todas</option>
+                  <option value="vigentes">Vigentes</option>
+                  <option value="concluidas">Concluídas</option>
+                </select>
+                {tipo && <FilterChip ativo className="shrink-0" onAlternar={() => definir({ tipo: null }, true)}>{tipo === 'dispensa' ? 'Dispensa total' : 'Restrições'}</FilterChip>}
+                {mesAtual && <FilterChip ativo className="shrink-0" icon="calendar_month" onAlternar={() => definir({ mes: null }, true)}>Este mês</FilterChip>}
+                {anoAtual && <FilterChip ativo className="shrink-0" icon="calendar_month" onAlternar={() => definir({ ano: null }, true)}>Este ano</FilterChip>}
+                {(podeNovo || minhas) && <FilterChip ativo={minhas} className="shrink-0" icon="person" onAlternar={() => definir({ minhas: minhas ? null : '1' }, true)}>Minhas</FilterChip>}
                 <label className="sr-only" htmlFor="pm-filtro-om">OM</label>
                 <select id="pm-filtro-om" value={om} onChange={e => definir({ om: e.target.value || null }, true)} className={`${controlClass} !w-auto min-w-[8rem] shrink-0`}>
                   <option value="">Todas as OM</option>
