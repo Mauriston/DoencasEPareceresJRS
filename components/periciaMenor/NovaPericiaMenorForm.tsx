@@ -255,7 +255,8 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
       return;
     }
     if (!militar || !cid || !usuario) return;
-    const perito = (ehAdmin && !homologacao && opcoesPerito.find(p => p.uid === peritoUid))
+    // Admin escolhe o perito responsável (pré-preenchido com ele mesmo) em registrar E em homologar.
+    const perito = (ehAdmin && opcoesPerito.find(p => p.uid === peritoUid))
       || { uid: usuario.uid, usuario: usuario.usuario, nome: usuario.nome };
     setSalvando(true);
     try {
@@ -451,7 +452,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
             />
           </section>
 
-          {ehAdmin && !homologacao && (
+          {ehAdmin && (
             <Field label="Perito responsável">
               {a => (
                 <select {...a} value={peritoUid} onChange={e => setPeritoUid(e.target.value)}>
