@@ -43,6 +43,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Container } from '../ui/Page';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { FabAcoes } from '../ui/Fab';
 import { MenuAcoes, type ItemMenu } from '../ui/MenuAcoes';
 import { AbasSublinhadas, CidCodigo, TextoContagem } from '../periciaMenor/partes';
 import { StatusTag } from '../ui/StatusTag';
@@ -637,17 +638,28 @@ export const FichaInspecionado: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <MenuAcoes rotulo="Mais ações da ficha" itens={menu} />
-            {podePericia && (
-              <Button variant="secondary" icon="add" onClick={novaPericiaAbrir}>{atestado ? 'Atestado' : 'Perícia Menor'}</Button>
-            )}
-            {podeIS && (
-              <MenuAcoes rotulo="Abrir IS" botao={{ texto: 'Abrir IS', icone: 'add', primario: true }} itens={[
-                { rotulo: 'Manualmente', icone: 'edit_note', onClick: () => abrirIS('manual') },
-                { rotulo: 'Por print do SINAIS', icone: 'photo_camera', onClick: () => abrirIS('print') },
-              ]} />
-            )}
+            {/* Botões de criação no cabeçalho só a partir de md; no celular viram o FAB padrão (como em Inspeções). */}
+            <div className="hidden md:flex items-center gap-2">
+              {podePericia && (
+                <Button variant="secondary" icon="add" onClick={novaPericiaAbrir}>{atestado ? 'Atestado' : 'Perícia Menor'}</Button>
+              )}
+              {podeIS && (
+                <MenuAcoes rotulo="Abrir IS" botao={{ texto: 'Abrir IS', icone: 'add', primario: true }} itens={[
+                  { rotulo: 'Manualmente', icone: 'edit_note', onClick: () => abrirIS('manual') },
+                  { rotulo: 'Por print do SINAIS', icone: 'photo_camera', onClick: () => abrirIS('print') },
+                ]} />
+              )}
+            </div>
           </div>
         </div>
+        {/* FAB do celular (a primeira ação permitida é a principal): Abrir IS · Abrir IS por print · Perícia Menor. */}
+        {!isDesktop && (
+          <FabAcoes acoes={[
+            { id: 'abrir-is', rotulo: 'Abrir IS', ariaLabel: 'Abrir IS manualmente', icone: 'add', onClick: () => abrirIS('manual'), permitido: podeIS },
+            { id: 'is-print', rotulo: 'Abrir IS', ariaLabel: 'Abrir IS pelo print do SINAIS', icone: 'photo_camera', onClick: () => abrirIS('print'), permitido: podeIS },
+            { id: 'pericia', rotulo: atestado ? 'Atestado' : 'Perícia Menor', icone: 'personal_injury', onClick: novaPericiaAbrir, permitido: podePericia },
+          ]} />
+        )}
 
         {opcoesAbas.length > 0 && (
           // Abas sublinhadas (ouro = ativa), sem contagens; no celular, faixa branca de borda a borda com rolagem lateral.
