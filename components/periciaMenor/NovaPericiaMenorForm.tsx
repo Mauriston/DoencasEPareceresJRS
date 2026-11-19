@@ -4,7 +4,7 @@
 //   - "Registrar atestado": militar, dados do atestado, ENC p/ VDF e, só para o Admin, "Perito
 //     responsável" (select de médicos ativos que podem registrar, por NIP; padrão = o próprio Admin).
 //     Sem foto (pdfUrl vazio).
-//   - "Homologar atestado" (atestado externo): foto obrigatória (recorte → filtro "Documento" → leitura
+//   - "Homologar atestado" (atestado externo): foto obrigatória — opcional só para o Admin (recorte → filtro "Documento" → leitura
 //     pelo Gemini, que preenche militar, data, tempo, CID, médico emissor e CRM), tempo homologado.
 // Gravação: peritoUid/peritoNome/peritoUsuario = perito responsável (o escolhido pelo Admin ou quem
 // registra); criadoPor/criadoPorUsuario = quem registrou. Na homologação a foto vira PDF no Storage.
@@ -232,7 +232,8 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
 
   const validar = (): Erros => {
     const e: Erros = {};
-    if (homologacao && !imagemDoc) e.foto = 'Anexe a foto do atestado.';
+    // Foto: obrigatória na homologação, exceto para o Admin (pode homologar sem anexar; fica sem PDF).
+    if (homologacao && !imagemDoc && !ehAdmin) e.foto = 'Anexe a foto do atestado.';
     if (!militar) e.militar = 'Escolha o militar na lista.';
     if (!dataTexto) e.dataAtestado = 'Informe a data do atestado.';
     else if (!dataAtestado) e.dataAtestado = 'Data inválida (dd/mm/aaaa).';
@@ -323,7 +324,9 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
 
           <div role="tabpanel" id="pm-painel" aria-labelledby={`pm-aba-${modo}`} className="space-y-6">
           {homologacao && <section className="space-y-2" aria-labelledby="pm-foto">
-            <h3 id="pm-foto" className={secao}>Foto do atestado<span className="text-wine ml-0.5" aria-hidden="true">*</span><span className="sr-only"> (obrigatório)</span></h3>
+            <h3 id="pm-foto" className={secao}>Foto do atestado{ehAdmin
+              ? <span className="ml-1 text-xs font-normal text-ink-3">(opcional)</span>
+              : <><span className="text-wine ml-0.5" aria-hidden="true">*</span><span className="sr-only"> (obrigatório)</span></>}</h3>
             <input type="file" accept="image/*" capture="environment" ref={arquivo} onChange={aoEscolherArquivo} className="hidden" />
             {!imagemDoc && !processando ? (
               <Button variant="secondary" icon="photo_camera" onClick={() => arquivo.current?.click()} aria-invalid={!!erros.foto || undefined} aria-describedby={erros.foto ? 'pm-foto-erro' : undefined}>Fotografar atestado</Button>
