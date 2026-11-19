@@ -1,6 +1,7 @@
 // Ficheiro: components/PericiaMenor.tsx
-// Perícias Menores (auditoria v3, seção 5): lista com o nome primeiro, a contagem regressiva do término
-// ("termina em 2 dias / hoje / terminou 07/11") e quantos registros o militar já tem ("4 no histórico");
+// Perícias Menores (auditoria v3, seção 5): lista com o nome primeiro. No celular, o card mostra o nome em toda a
+// largura, "posto · OM · N dias" e o CID na linha de baixo (término e histórico só no detalhe); no desktop, a
+// tabela segue com a contagem regressiva do término ("termina em 2 dias / hoje / terminou 07/11") e o histórico;
 // a tag diz só o tipo (Dispensa total · Restrições) — vigente vira contagem, não alarme (G1/PM2/PM5/PM9/PM10).
 // O detalhe tem as abas "Esta perícia · Histórico N" (components/periciaMenor/PericiaMenorPainel.tsx):
 //   ≥ 1280 px mestre-detalhe lado a lado (sem backdrop; ↑ ↓ trocam, Enter abre, Esc fecha);
@@ -45,6 +46,12 @@ type FiltroTipo = '' | 'dispensa' | 'restricoes';
 const ehCampoDeTexto = (el: EventTarget | null) => {
   const e = el as HTMLElement | null;
   return !!e && (e.tagName === 'INPUT' || e.tagName === 'TEXTAREA' || e.tagName === 'SELECT' || e.isContentEditable);
+};
+
+/** Dias da perícia: os homologados (ou os do atestado, sem homologação) — "1 dia", "10 dias". */
+const rotuloDias = (p: { tempoHomologado?: number; tempoAtestado?: number }): string => {
+  const n = Number(p.tempoHomologado || p.tempoAtestado || 0);
+  return n > 0 ? `${n} dia${n === 1 ? '' : 's'}` : '';
 };
 
 export const PericiaMenor: React.FC = () => {
@@ -228,17 +235,19 @@ export const PericiaMenor: React.FC = () => {
         <EmptyState icon="personal_injury" title={lista.length === 0 ? `Nenhum${atestado ? '' : 'a'} ${t.singular} registrad${atestado ? 'o' : 'a'}` : 'Nenhum resultado'} description={lista.length === 0 ? `Os ${atestado ? 'atestados registrados aparecem' : 'registros de perícias menores aparecem'} aqui.` : 'Ajuste a busca ou os filtros.'} />
       ) : (
         <>
-          {/* Celular: nome primeiro; à direita, quanto falta e quantos registros o militar tem (PM10). */}
+          {/* Celular: nome em toda a largura; posto · OM · dias e, na linha de baixo, o CID (o término e o histórico
+              ficam no detalhe, ao tocar no card). */}
           <ul className="md:hidden divide-y divide-line">
             {filtrada.map(x => (
               <li key={x.p.id}>
                 <button type="button" onClick={() => selecionar(x.p.id)} aria-label={`Abrir detalhe ${atestado ? 'do atestado' : 'da perícia'} de ${x.nome}`}
-                  className={`w-full text-left px-4 py-3 grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-0.5 hover:bg-thead ${x.p.id === sel ? 'bg-thead' : ''}`}>
+                  className={`w-full text-left px-4 py-3 flex flex-col gap-0.5 hover:bg-thead ${x.p.id === sel ? 'bg-thead' : ''}`}>
                   <span className="font-bold text-navy truncate">{x.nome}</span>
-                  <TextoContagem contagem={x.contagem} />
-                  <span className="text-xs text-ink-3 min-w-0 break-words">{[postoDoInspecionado(x.p.inspecionado, x.nome), x.p.om].filter(Boolean).join(' · ')}{x.cid.codigo || x.cid.descricao ? ' · ' : ''}<CidCodigo codigo={x.cid.codigo} descricao={x.cid.descricao} /></span>
-                  <span className="text-xs text-ink-3 text-right whitespace-nowrap">{rotuloHistorico(x.hist)}</span>
-                  <span className="col-span-2 pt-1"><TagTipoPericia tipo={x.tipo} /></span>
+                  <span className="text-xs text-ink-3 min-w-0 break-words">{[postoDoInspecionado(x.p.inspecionado, x.nome), x.p.om, rotuloDias(x.p)].filter(Boolean).join(' · ')}</span>
+                  {(x.cid.codigo || x.cid.descricao) && (
+                    <span className="text-xs text-ink-3 min-w-0 break-words"><CidCodigo codigo={x.cid.codigo} descricao={x.cid.descricao} /></span>
+                  )}
+                  <span className="pt-1"><TagTipoPericia tipo={x.tipo} /></span>
                 </button>
               </li>
             ))}
