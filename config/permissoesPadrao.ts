@@ -32,6 +32,8 @@ export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {
   // Sobre o app: começa oculta para todos (o Admin sempre vê); liberar por perfil em Usuários quando for publicada.
   // Sobre o app: liberada a todos os perfis (auditoria v3, SB1).
   sobre: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: true },
+  // Feedback (elogios, sugestões e problemas ao Admin): liberado a todos; o Admin vê a lista recebida.
+  feedback: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: true },
   // Painel (indicadores do período): todos menos o Médicos Geral.
   painel: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
 };

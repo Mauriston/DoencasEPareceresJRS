@@ -537,3 +537,19 @@ test('Perícia Menor: o perito responsável exclui com Justificativa (mínimo de
   await p.getByRole('button', { name: `Abrir detalhe da perícia de ${INSPECIONADO.nome}` }).waitFor({ state: 'detached' });
   await p.context().close();
 });
+
+test('Feedback: o menu Ajuda tem "Feedback" e o médico relata um problema (página, impacto e descrição)', async () => {
+  const p = await novaPagina();
+  await entrar(p, MEDICO);
+  await p.goto(`${BASE}#/feedback`);
+  await p.getByRole('heading', { name: 'Feedback', level: 1 }).waitFor();
+  await p.getByRole('radio', { name: /Problema/ }).click();
+  await p.getByRole('button', { name: 'Enviar feedback' }).click();
+  await p.getByText('Informe a página em que o problema ocorreu.').waitFor();
+  await p.getByLabel(/Página em que o problema ocorreu/).selectOption({ label: 'Perícia Menor' });
+  await p.getByRole('radio', { name: 'Alto' }).click();
+  await p.getByLabel(/Descreva o problema/).fill('O botão salvar não responde no celular.');
+  await p.getByRole('button', { name: 'Enviar feedback' }).click();
+  await p.getByRole('heading', { name: 'Obrigado pelo seu feedback!' }).waitFor({ timeout: 40_000 });
+  await p.context().close();
+});

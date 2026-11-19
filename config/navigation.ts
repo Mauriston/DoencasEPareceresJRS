@@ -81,13 +81,13 @@ export const getNavCategories = (
     });
   }
 
-  // Ajuda: "Sobre o app" (matriz de permissões; liberada a todos por padrão).
-  const sobre = pageMap.get('sobre')!;
-  if (canAccessPage('sobre', perfil)) {
-    categories.push({
-      id: 'ajuda', label: 'Ajuda', icon: 'help', subtitle: 'O que o app faz, por área.',
-      subitems: [{ id: sobre.id, label: sobre.label, icon: sobre.icon, subtitle: sobre.subtitle }],
-    });
+  // Ajuda: "Sobre o app" e "Feedback" (matriz de permissões; liberados a todos por padrão).
+  const ajuda = (['sobre', 'feedback'] as NavItem[])
+    .filter(id => canAccessPage(id, perfil))
+    .map(id => pageMap.get(id)!)
+    .map(p => ({ id: p.id, label: p.label, icon: p.icon, subtitle: p.subtitle }));
+  if (ajuda.length) {
+    categories.push({ id: 'ajuda', label: 'Ajuda', icon: 'help', subtitle: 'O que o app faz, por área, e o canal de feedback.', subitems: ajuda });
   }
 
   return categories;

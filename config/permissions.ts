@@ -59,6 +59,8 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'painel', label: 'Painel', icon: 'monitoring', subtitle: 'Indicadores do período: IS, perícias, concursos e uso do app.' },
   // Ajuda: o que o app faz, por área (página "Sobre o app").
   { id: 'sobre', label: 'Sobre o app', icon: 'info', subtitle: 'As principais funcionalidades do app, por área.' },
+  // Feedback: elogios, sugestões e problemas enviados ao Admin (o Admin vê a lista recebida).
+  { id: 'feedback', label: 'Feedback', icon: 'feedback', subtitle: 'Envie elogios, sugestões ou relate problemas do app.' },
 ];
 
 

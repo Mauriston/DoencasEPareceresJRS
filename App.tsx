@@ -48,6 +48,7 @@ const paginaLazy = <K extends string>(carregar: () => Promise<Record<K, React.Co
 const Perfil = paginaLazy(() => import('./components/Perfil'), 'Perfil');
 const Ferias = paginaLazy(() => import('./components/Ferias'), 'Ferias');
 const Sobre = paginaLazy(() => import('./components/Sobre'), 'Sobre');
+const Feedback = paginaLazy(() => import('./components/Feedback'), 'Feedback');
 const DiseaseGuide = paginaLazy(() => import('./components/DiseaseGuide'), 'DiseaseGuide');
 const LawReference = paginaLazy(() => import('./components/LawReference'), 'LawReference');
 const DGPM406Guide = paginaLazy(() => import('./components/DGPM406Guide'), 'DGPM406Guide');
@@ -392,6 +393,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       // Férias e afastamentos: usuários da JRS (Admin, médicos JRS/MPI e Secretaria); só o Admin altera.
       case 'ferias': return canAccessPage('ferias', authUser?.perfil) ? <Ferias /> : <AccessDenied pagina="Férias" />;
       case 'sobre': return canAccessPage('sobre', authUser?.perfil) ? <Sobre /> : <AccessDenied pagina="Sobre o app" />;
+      case 'feedback': return canAccessPage('feedback', authUser?.perfil) ? <Feedback /> : <AccessDenied pagina="Feedback" />;
       case 'painel': return can('painel') ? <Painel /> : <AccessDenied pagina={paginaLabel('painel')} />;
 
       default: return <Home />;
