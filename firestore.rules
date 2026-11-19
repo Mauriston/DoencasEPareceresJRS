@@ -212,6 +212,13 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Registro das perícias menores excluídas (cópia, justificativa, quem e quando): só o servidor grava
+    // (POST /api/pericias-menores/excluir, Admin SDK); só o Admin lê.
+    match /periciasExcluidas/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Coleção "pareceres": Pedidos de Parecer Médico (um doc por pedido, id
     // automático; liga ao militar por "militarId" = NIP só dígitos). Lê quem
     // está autenticado; só médicos criam e atualizam (marcar concluído).

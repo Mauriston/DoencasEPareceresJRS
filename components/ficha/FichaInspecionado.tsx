@@ -55,6 +55,8 @@ import type { AcaoRodape } from '../ui/AcoesRodape';
 import { useTituloPagina } from '../shell/TituloPagina';
 import { PdfFullscreenModal } from '../PdfFullscreenModal';
 import { LinhaRegistroPericia, PericiaMenorPainel } from '../periciaMenor/PericiaMenorPainel';
+import { ExcluirPericiaDialog } from '../periciaMenor/ExcluirPericiaDialog';
+import { podeExcluirPericia } from '../../utils/exclusaoPericia';
 import { NovaPericiaMenorForm } from '../periciaMenor/NovaPericiaMenorForm';
 import { fasesDeEntrevista } from '../inspecoes/InspecaoDetalhe';
 import { NovoParecerForm } from '../pareceres/NovoParecerForm';
@@ -177,6 +179,7 @@ export const FichaInspecionado: React.FC = () => {
   const { nip: nipParam = '' } = useParams();
   const nip = decodeURIComponent(nipParam).replace(/\D/g, '');
   const nav = useNav();
+  const [periciaExcluindo, setPericiaExcluindo] = useState<PericiaMenorRecord | null>(null);
   const navigate = useNavigate();
   const perfil = nav?.authUser?.perfil;
   const secoes = secoesDaFicha(perfil);
@@ -561,6 +564,7 @@ export const FichaInspecionado: React.FC = () => {
         <PericiaMenorPainel
           key={pSel.id} modo="inline" pericia={pSel} historico={pmOrdenadas} hoje={hoje} cidAbrev={cidAbrev} termos={t}
           aba="esta" onAba={() => { /* inline: só "Esta perícia" */ }} onSelecionar={abrirRegistro} onFechar={() => { /* inline */ }}
+          onExcluir={nav?.authUser && podeExcluirPericia(pSel, { uid: nav.authUser.uid, perfil: nav.authUser.perfil }) ? () => setPericiaExcluindo(pSel) : undefined}
         />
       );
     }
@@ -739,6 +743,13 @@ export const FichaInspecionado: React.FC = () => {
         <AgendarISFicha inspecao={agendando} onClose={() => setAgendando(null)} onAgendada={(msg, tom) => { setAgendando(null); avisar(msg, tom); }} />
       )}
       {pdf && <PdfFullscreenModal title={pdf.titulo} url={pdf.url} onClose={() => setPdf(null)} />}
+      {periciaExcluindo && perfil && (
+        <ExcluirPericiaDialog
+          pericia={periciaExcluindo} perfil={perfil} termo={t.singular}
+          onClose={() => setPericiaExcluindo(null)}
+          onExcluida={msg => { setPericiaExcluindo(null); definir({ aba: 'pm', reg: null }); avisar(msg); }}
+        />
+      )}
       {!isDesktop && formNovaPericia}
       {editando && militar && perfil === 'admin' && (
         <MilitarEdicao militar={militar} oms={oms} postos={postos} onClose={() => setEditando(false)}

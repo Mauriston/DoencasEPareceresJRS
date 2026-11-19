@@ -500,3 +500,22 @@ test('o SDK do service worker e a fonte de ícones são autohospedados (sem CDN)
   assert.deepEqual(externas, []);
   await p.context().close();
 });
+
+// Por último: apaga a perícia semeada (os testes acima a usam).
+test('Perícia Menor: o perito responsável exclui com Justificativa (mínimo de 10 caracteres)', async () => {
+  const p = await novaPagina();
+  await entrar(p, MEDICO);
+  await p.goto(`${BASE}#/pericia-menor/historico`);
+  await p.getByRole('button', { name: `Abrir detalhe da perícia de ${INSPECIONADO.nome}` }).click();
+  const painel = p.getByRole('region', { name: `Perícia menor de ${INSPECIONADO.nome}` });
+  await painel.getByRole('button', { name: 'Excluir', exact: true }).click();
+  const dialogo = p.getByRole('dialog', { name: /Excluir perícia menor/ });
+  await dialogo.getByLabel(/Justificativa/).fill('curto');
+  await dialogo.getByRole('button', { name: 'Excluir', exact: true }).click();
+  await dialogo.getByText(/ao menos 10 caracteres/).waitFor();
+  await dialogo.getByLabel(/Justificativa/).fill('Registro feito em duplicidade.');
+  await dialogo.getByRole('button', { name: 'Excluir', exact: true }).click();
+  await dialogo.waitFor({ state: 'detached', timeout: 40_000 });
+  await p.getByRole('button', { name: `Abrir detalhe da perícia de ${INSPECIONADO.nome}` }).waitFor({ state: 'detached' });
+  await p.context().close();
+});

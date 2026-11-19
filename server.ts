@@ -741,6 +741,29 @@ async function startServer() {
   // Exclusão COMPLETA da IS (servidor/inspecoes/excluir.ts): a IS e tudo o que é dela — subcoleções, mensagens,
   // horários, PDFs no Storage, pedidos de parecer vinculados e o evento do Google Agenda. Função inspecoes.excluir
   // (IS não finalizada; o Admin apaga qualquer uma), conferida pela matriz de permissões como nas notificações.
+  // Exclusão de uma perícia menor: Admin (qualquer uma) ou o perito responsável / quem registrou, com Justificativa
+  // (≥ 10 caracteres) fora do Admin; guarda o registro em periciasExcluidas e apaga o PDF (servidor/pericias/excluir.ts).
+  app.post("/api/pericias-menores/excluir", async (req, res) => {
+    const quem = await exigirUsuario(req, res, "pericias-excluir", ["admin", "user_medicos", "user_medicos_mpi", "user_medicos_geral"]);
+    if (!quem) return;
+    const { ErroExclusaoPericia, excluirPericiaMenor } = await import("./servidor/pericias/excluir");
+    try {
+      const { adminDb, adminApp } = await getFirebaseAdmin();
+      const { getStorage } = await import("firebase-admin/storage");
+      const r = await excluirPericiaMenor(adminDb, getStorage(adminApp).bucket(BUCKET_STORAGE), req.body?.id, req.body?.justificativa, quem);
+      void auditarServidor("operacao_sensivel", "pericias-excluir", quem.uid);
+      res.json({ success: true, ...r });
+    } catch (error: any) {
+      if (error instanceof ErroExclusaoPericia) {
+        if (error.status === 403) void auditarServidor("acesso_negado", "pericias-excluir", quem.uid, "nao_e_o_perito");
+        res.status(error.status).json({ success: false, error: error.message });
+        return;
+      }
+      logErroSeguro("Exclusão da perícia menor", error);
+      res.status(500).json({ success: false, error: "Não foi possível excluir a perícia. Tente novamente." });
+    }
+  });
+
   app.post("/api/inspecoes/excluir", async (req, res) => {
     const quem = await exigirUsuario(req, res, "inspecoes-excluir", PERFIS_EQUIPE);
     if (!quem) return;

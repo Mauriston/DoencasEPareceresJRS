@@ -47,6 +47,8 @@ interface Props {
   onFechar: () => void;
   /** "Nova perícia para ele" (só com pericia-menor.novo). */
   onNova?: () => void;
+  /** "Excluir" (Admin ou o perito responsável / quem registrou): quem monta abre o ExcluirPericiaDialog. */
+  onExcluir?: () => void;
   /** Ficha do inspecionado (⤢), quando há NIP e o perfil acessa. */
   fichaHref?: string;
   termos: TermosPericia;
@@ -185,7 +187,7 @@ const Historico: React.FC<{ p: PericiaMenorRecord; historico: PericiaMenorRecord
   );
 };
 
-export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoje, cidAbrev, modo, aba, onAba, onSelecionar, onFechar, onNova, fichaHref, termos, acoes }) => {
+export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoje, cidAbrev, modo, aba, onAba, onSelecionar, onFechar, onNova, fichaHref, termos, acoes, onExcluir }) => {
   const nome = extrairNomeInspecionado(p.inspecionado);
   const idBase = `pm-${modo}`;
   const atestado = termos.singular === 'atestado';
@@ -194,7 +196,8 @@ export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoj
     return (
       <CascaPainelFicha
         titulo={`${atestado ? 'Atestado' : 'Perícia menor'} de ${dataBR(p.dataAtestado)}`} icone="personal_injury"
-        tituloExtra={<TagTipoPericia tipo={tipo} />} subtitulo={linhaIdentificacao(p)} acoes={acoes}
+        tituloExtra={<TagTipoPericia tipo={tipo} />} subtitulo={linhaIdentificacao(p)}
+        acoes={[...(onExcluir ? [{ id: 'excluir', rotulo: 'Excluir', icone: 'delete', variante: 'destructive' as const, onClick: onExcluir }] : []), ...(acoes ?? [])]}
       >
         <EstaPericia p={p} historico={historico} hoje={hoje} cidAbrev={cidAbrev} termos={termos} />
       </CascaPainelFicha>
@@ -214,7 +217,9 @@ export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoj
         : <Historico p={p} historico={historico} hoje={hoje} cidAbrev={cidAbrev} termos={termos} fichaHref={fichaHref} onSelecionar={id => { onSelecionar(id); onAba('esta'); }} />}
     </div>
   );
-  const nova = onNova ? <Button icon="add" fullWidth onClick={onNova}>{atestado ? 'Novo atestado para ele' : 'Nova perícia para ele'}</Button> : null;
+  const botaoNova = onNova ? <Button icon="add" fullWidth onClick={onNova}>{atestado ? 'Novo atestado para ele' : 'Nova perícia para ele'}</Button> : null;
+  const botaoExcluir = onExcluir ? <Button variant="destructive" icon="delete" fullWidth onClick={onExcluir}>Excluir</Button> : null;
+  const nova = botaoNova || botaoExcluir ? <div className="flex flex-col-reverse sm:flex-row gap-2 w-full">{botaoExcluir}{botaoNova}</div> : null;
   const linha2 = linhaIdentificacao(p);
 
   if (modo === 'sheet') {

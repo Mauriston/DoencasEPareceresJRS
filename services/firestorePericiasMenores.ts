@@ -123,3 +123,16 @@ export const registrarPericiaMenor = async (id: string, dados: NovaPericiaMenor)
   registrarEventoInspecionado(dados.militarId, 'pericia.registrar', `Perícia de ${dataBR(dados.dataAtestado)}`);
   notificarAcao('pericia.registrada');
 };
+
+/**
+ * Exclui a perícia pelo servidor (POST /api/pericias-menores/excluir): ele confere quem pode (Admin ou o perito
+ * responsável / quem registrou), exige a Justificativa fora do Admin, guarda o registro da exclusão e apaga o PDF.
+ */
+export const excluirPericiaMenor = async (p: Pick<PericiaMenorRecord, 'id' | 'militarId' | 'dataAtestado'>, justificativa: string): Promise<void> => {
+  const { chamarServidor } = await import('./apiClient');
+  await chamarServidor('/api/pericias-menores/excluir', { id: p.id, justificativa: justificativa.trim() }, { timeoutMs: 30_000 });
+  if (p.militarId) {
+    const { registrarEventoInspecionado } = await import('./eventosInspecionado');
+    registrarEventoInspecionado(p.militarId, 'pericia.excluir', `atestado de ${dataBR(p.dataAtestado)}`);
+  }
+};

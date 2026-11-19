@@ -9,7 +9,7 @@
 // (/pericia-menor/historico/<nip>) virou a Ficha do inspecionado (/inspecionados/<nip>).
 // Abas principais: Todas · Atestados (registrados) · Homologações (atestado externo homologado) — ?registro=atestados|homologacoes.
 // Filtros: Situação (seletor Todas · Vigentes · Concluídas — ?situacao=vigentes|concluidas), Minhas, OM e busca.
-// Filtros por URL (Início/Painel): ?registro= · ?situacao= · ?tipo=dispensa|restricoes · ?minhas=1 (perito/quem registrou)
+// Filtros por URL (Início/Painel): ?registro= · ?situacao= · ?tipo=dispensa|restricoes · ?minhas=1 (perito responsável)
 // · ?om=<sigla> · ?mes=atual (atestado do mês corrente) · ?ano=atual (atestado do ano corrente)
 // Atalhos: ?novo=1 (abre o formulário) · ?novo=1&militar=<nip> (já preenchido).
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -34,6 +34,8 @@ import { indiceCidAbreviado, medicoDaPericia, rotuloCidAbreviado } from '../util
 import { compararParaLista, contagemTermino, contarPorMilitar, partesCid, postoDoInspecionado, rotuloHistorico, tipoDaPericia } from '../utils/periciaMenorResumo';
 import { extrairNomeInspecionado } from '../utils/format';
 import { hojeISO } from '../utils/dados';
+import { ehMinhaPericia, podeExcluirPericia } from '../utils/exclusaoPericia';
+import { ExcluirPericiaDialog } from './periciaMenor/ExcluirPericiaDialog';
 
 type FiltroSituacao = 'vigentes' | 'concluidas' | 'todas';
 type FiltroRegistro = 'todas' | 'atestados' | 'homologacoes';
@@ -83,6 +85,8 @@ export const PericiaMenor: React.FC = () => {
   const [busca, setBusca] = useState('');
   const [novo, setNovo] = useState<{ militar?: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
+  const [excluindo, setExcluindo] = useState<PericiaMenorRecord | null>(null);
+  const quemExclui = uid && perfil ? { uid, perfil } : null;
   const [hoje] = useState(() => hojeISO());
   const [cidAbrev, setCidAbrev] = useState<Map<string, string> | null>(null);
 
@@ -123,7 +127,8 @@ export const PericiaMenor: React.FC = () => {
     }))
     .sort((a, b) => compararParaLista(a.p, b.p, hoje)), [lista, hoje, cidAbrev, contagemHist]);
   const oms = useMemo(() => [...new Set<string>(comStatus.map(x => x.p.om).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [comStatus]);
-  const minhaPericia = (p: PericiaMenorRecord) => p.peritoUid === uid || p.criadoPor === uid;
+  // "Minhas": perícias em que o usuário é o PERITO RESPONSÁVEL (o Admin registrou algumas em nome de outros peritos).
+  const minhaPericia = (p: PericiaMenorRecord) => ehMinhaPericia(p, uid);
 
   // Base comum (tipo, minhas, OM, mês/ano e busca); as abas (registro) e os chips (situação) contam sobre ela.
   const base = useMemo(() => {
@@ -203,6 +208,7 @@ export const PericiaMenor: React.FC = () => {
       onSelecionar={id => selecionar(id, { replace: true })}
       onFechar={() => selecionar(null, { replace: true })}
       onNova={podeNovo ? () => abrirNovo(detalhe.militarId || undefined) : undefined}
+      onExcluir={podeExcluirPericia(detalhe, quemExclui) ? () => setExcluindo(detalhe) : undefined}
       fichaHref={podeFicha && detalhe.militarId ? fichaPath(detalhe.militarId) : undefined}
     />
   );
@@ -276,6 +282,13 @@ export const PericiaMenor: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
+      {excluindo && perfil && (
+        <ExcluirPericiaDialog
+          pericia={excluindo} perfil={perfil} termo={t.singular}
+          onClose={() => setExcluindo(null)}
+          onExcluida={msg => { setExcluindo(null); selecionar(null, { replace: true }); avisar(msg); }}
+        />
+      )}
       <Container size="data" className="pt-0 md:pt-8 pb-10 flex flex-col gap-4">
         <PageHeader
           title={t.pagina}
