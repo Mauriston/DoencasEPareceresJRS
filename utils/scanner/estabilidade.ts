@@ -21,7 +21,7 @@ export interface ConfigEstabilidade {
 export const CONFIG_PADRAO: ConfigEstabilidade = {
   areaMin: 0.2,
   tolerancia: 0.02,
-  quadrosEstaveis: 6,
+  quadrosEstaveis: 5,
   nitidezMin: 60,
   mudancaRearme: 0.15,
 };

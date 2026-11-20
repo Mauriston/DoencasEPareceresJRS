@@ -4,7 +4,8 @@
 //     Web Worker (utils/scanner/detector.ts) — amarelo procurando, verde estável;
 //   - disparo automático quando o documento está grande, parado e nítido (utils/scanner/estabilidade.ts),
 //     com botão de disparo manual e opção de desligar o automático;
-//   - retificação da perspectiva + filtro "Documento" (utils/filtroDocumento.ts) em cada página;
+//   - retificação da perspectiva + realce "Documento" (utils/filtroDocumento.ts) em cada página — na revisão,
+//     "Realçada" ou "Original" (só recortada e endireitada);
 //   - multipágina: modo 'multipla' segue fotografando (troque a página e ele dispara de novo);
 //     modo 'unica' vai para a revisão após a 1ª foto, com "Adicionar página";
 //   - revisão: reordenar, ajustar os 4 cantos (EditorCantos), refazer/excluir;
@@ -40,8 +41,10 @@ interface Pagina {
   largura: number;
   altura: number;
   cantos: Cantos;
-  /** Resultado retificado e filtrado. */
+  /** Resultado retificado e com o realce "Documento". */
   final: string;
+  /** Resultado retificado, sem realce (opção "Original" da revisão). */
+  retificada: string;
   /** Cantos não detectados: imagem inteira, convém conferir. */
   semDeteccao?: boolean;
 }
@@ -55,8 +58,8 @@ const INTERVALO_MS = 120;
 
 const novoId = () => Math.random().toString(36).slice(2, 10);
 
-/** Retifica e filtra uma página a partir da foto original e dos cantos. */
-const processar = async (original: string, largura: number, altura: number, cantos: Cantos, filtro: boolean): Promise<string> => {
+/** Retifica e realça uma página a partir da foto original e dos cantos. */
+const processar = async (original: string, largura: number, altura: number, cantos: Cantos, filtro: boolean): Promise<{ final: string; retificada: string }> => {
   const img = await carregarImagem(original);
   const { dados } = pixelsDe(img, largura, altura);
   let saida: string;
@@ -65,8 +68,8 @@ const processar = async (original: string, largura: number, altura: number, cant
   } catch {
     saida = original; // sem o motor: segue com a foto inteira
   }
-  if (!filtro) return saida;
-  try { return await aplicarFiltroDocumento(saida); } catch { return saida; }
+  if (!filtro) return { final: saida, retificada: saida };
+  try { return { final: await aplicarFiltroDocumento(saida), retificada: saida }; } catch { return { final: saida, retificada: saida }; }
 };
 
 /** Lê um arquivo de imagem como data URL. */
@@ -87,6 +90,8 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
   const [ocupado, setOcupado] = useState('');
   const [erroCamera, setErroCamera] = useState('');
   const [modoAtual, setModoAtual] = useState(modo);
+  /** Revisão: páginas realçadas (padrão) ou como fotografadas, só recortadas e endireitadas. */
+  const [realce, setRealce] = useState(true);
   const arquivo = useRef<HTMLInputElement>(null);
   const cheio = paginas.length >= maxPaginas;
 
@@ -112,8 +117,8 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
     try {
       const original = imageDataParaDataUrl(foto, 0.9);
       const c = cantos && convexo(cantos) ? cantos : cantosPadrao(foto.width, foto.height, 0);
-      const final = await processar(original, foto.width, foto.height, c, filtro);
-      adicionar({ id: novoId(), original, largura: foto.width, altura: foto.height, cantos: c, final, semDeteccao: !cantos });
+      const r = await processar(original, foto.width, foto.height, c, filtro);
+      adicionar({ id: novoId(), original, largura: foto.width, altura: foto.height, cantos: c, ...r, semDeteccao: !cantos });
       const total = paginas.length + 1;
       if (modoAtual === 'unica' || total >= maxPaginas) setEtapa('revisao');
     } finally {
@@ -144,8 +149,8 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
           } catch { /* sem detecção: imagem inteira */ }
         }
         const c = cantos ?? cantosPadrao(dados.width, dados.height, 0);
-        const final = await processar(original, dados.width, dados.height, c, filtro);
-        adicionar({ id: novoId(), original, largura: dados.width, altura: dados.height, cantos: c, final, semDeteccao: !cantos });
+        const r = await processar(original, dados.width, dados.height, c, filtro);
+        adicionar({ id: novoId(), original, largura: dados.width, altura: dados.height, cantos: c, ...r, semDeteccao: !cantos });
       }
       setEtapa('revisao');
     } catch (err: any) {
@@ -161,8 +166,8 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
     if (!p) return;
     setOcupado('Reprocessando a página…');
     try {
-      const final = await processar(p.original, p.largura, p.altura, ajustando.cantos, filtro);
-      setPaginas(ps => ps.map((x, i) => (i === ajustando.indice ? { ...x, cantos: ajustando.cantos, final, semDeteccao: false } : x)));
+      const r = await processar(p.original, p.largura, p.altura, ajustando.cantos, filtro);
+      setPaginas(ps => ps.map((x, i) => (i === ajustando.indice ? { ...x, cantos: ajustando.cantos, ...r, semDeteccao: false } : x)));
       setAjustando(null);
       setEtapa('revisao');
     } finally {
@@ -234,11 +239,21 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
 
         {etapa === 'revisao' && (
           <div className="h-full overflow-auto p-4">
+            {filtro && (
+              <div className="flex justify-center mb-3" role="group" aria-label="Aparência das páginas">
+                {([[true, 'Realçada'], [false, 'Original']] as const).map(([v, rotulo]) => (
+                  <button
+                    key={rotulo} type="button" aria-pressed={realce === v} onClick={() => setRealce(v)}
+                    className={`h-11 px-4 text-sm font-bold border border-white/40 first:rounded-l-lg last:rounded-r-lg ${realce === v ? 'bg-white text-navy' : 'text-white hover:bg-white/10'} focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold`}
+                  >{rotulo}</button>
+                ))}
+              </div>
+            )}
             <ol className="grid gap-4 sm:grid-cols-2 max-w-3xl mx-auto" aria-label="Páginas digitalizadas">
               {paginas.map((p, i) => (
                 <li key={p.id} className="rounded-xl bg-white/5 border border-white/20 overflow-hidden flex flex-col">
                   <div className="relative bg-white">
-                    <img src={p.final} alt={`Página ${i + 1}`} className="w-full max-h-[55vh] object-contain" />
+                    <img src={realce ? p.final : p.retificada} alt={`Página ${i + 1}`} className="w-full max-h-[55vh] object-contain" />
                     <span className="absolute top-2 left-2 bg-navy text-white text-xs font-bold px-2 py-0.5 rounded">{i + 1}</span>
                   </div>
                   {p.semDeteccao && <p className="text-xs text-gold px-3 pt-2">Bordas não detectadas — confira e ajuste os cantos se precisar.</p>}
@@ -283,7 +298,7 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
               Adicionar página
             </Button>
           )}
-          <Button icon="check" disabled={!paginas.length || !!ocupado} onClick={() => onConcluir(paginas.map(p => p.final))}>
+          <Button icon="check" disabled={!paginas.length || !!ocupado} onClick={() => onConcluir(paginas.map(p => (realce ? p.final : p.retificada)))}>
             {paginas.length > 1 ? `Usar ${paginas.length} páginas` : 'Usar digitalização'}
           </Button>
         </div>
