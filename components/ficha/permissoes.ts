@@ -4,11 +4,12 @@
 // para que listas e detalhes decidam se mostram o link "Abrir ficha".
 // Abas (reformulação de 16/11/2026): "Inspeções de Saúde" e "Perícias Menores" seguem as páginas/funções de
 // origem; as abas novas têm uma função cada em Administração › Perfis e permissões (grupo "Ficha do
-// inspecionado"). "Outros" aparece desabilitada para todos até ser implementada; "Transcrições" aparece só
+// inspecionado"). "Outros" (documentos gerados nas IS) para todos menos user_medicos_geral; "Transcrições" aparece só
 // para quem grava entrevista (config/entrevistas.ts) e fica habilitada conforme a função "ficha.transcricoes"
 // (por padrão, só o Admin).
 import { canAccessPage, canUseFeature } from '../../config/permissions';
 import { podeUsarEntrevista } from '../../config/entrevistas';
+import { podeVerDocumentosIS } from '../../utils/documentosIS';
 import type { AbaFicha, EstadoAbaFicha } from '../../utils/fichaInspecionado';
 
 export interface SecoesFicha {
@@ -35,8 +36,8 @@ export const podeAbrirFicha = (perfil: string | undefined): boolean => {
   return s.inspecoes || s.pareceres || s.pericias || s.cadastro;
 };
 
-/** "Outros": a aba ainda não tem conteúdo — desabilitada para todos (inclusive o Admin) até ser implementada. */
-export const ABA_OUTROS_DISPONIVEL = false;
+/** "Outros": documentos gerados nas IS (Gerar Documento ▾, exceto Pedido de Parecer) — todos menos user_medicos_geral. */
+export const ABA_OUTROS_DISPONIVEL = true;
 
 /** Visibilidade e habilitação de cada aba da ficha para o perfil. */
 export const abasDaFicha = (perfil: string | undefined): Record<AbaFicha, EstadoAbaFicha> => {
@@ -55,7 +56,7 @@ export const abasDaFicha = (perfil: string | undefined): Record<AbaFicha, Estado
     guias: aba('guias', s.inspecoes && canUseFeature('ficha.guias', perfil)),
     emails: aba('emails', canUseFeature('ficha.emails', perfil)),
     mensagens: aba('mensagens', canUseFeature('ficha.mensagens', perfil)),
-    outros: aba('outros', true, ABA_OUTROS_DISPONIVEL && canUseFeature('ficha.outros', perfil)),
+    outros: aba('outros', s.inspecoes && podeVerDocumentosIS(perfil), ABA_OUTROS_DISPONIVEL),
     transcricoes: aba('transcricoes', podeUsarEntrevista(perfil), canUseFeature('ficha.transcricoes', perfil)),
   };
 };

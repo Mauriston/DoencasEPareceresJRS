@@ -4,7 +4,7 @@
 //   cabeçalho (o nome abre o top sheet com os dados cadastrais; ⋮ com "Registro de eventos" só do Admin) ·
 //   barra de abas sublinhadas, SEM contagens, fixa no topo ao rolar — Inspeções de Saúde · Perícias Menores ·
 //   Atestados e Laudos · Pareceres · Exames · Guias · Emails · Mensagens · Outros · Transcrições
-//   (permissões em components/ficha/permissoes.ts → abasDaFicha; Outros desabilitada para todos; Transcrições
+//   (permissões em components/ficha/permissoes.ts → abasDaFicha; Outros = documentos gerados nas IS, todos menos user_medicos_geral; Transcrições
 //   só para quem grava entrevista e habilitada pela função "ficha.transcricoes") ·
 //   grade 8 + 4 (a partir de xl; empilhada abaixo):
 //     - PAINEL PRINCIPAL (esquerda): o registro aberto da aba — o detalhe que antes abria num Drawer
@@ -90,6 +90,8 @@ import { agendamentoJaEnviado, ehElegivelAgendamento } from '../../utils/emailAg
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useEntrevistasDasIS, type EntrevistaDaFicha } from './useEntrevistasDasIS';
 import { useExamesDasIS, type ExameDaFicha } from './useExamesDasIS';
+import { useDocumentosDasIS } from './useDocumentosDasIS';
+import { PainelDocumentoGerado } from './outros/PainelDocumentoGerado';
 import { abasDaFicha, secoesDaFicha, podeAbrirFicha } from './permissoes';
 import { useNav } from '../../context/NavContext';
 import { useBreadcrumbs } from '../../context/BreadcrumbContext';
@@ -276,6 +278,7 @@ export const FichaInspecionado: React.FC = () => {
   const pedido = params.get('reg') || (aba === 'is' ? params.get('is') : aba === 'pm' ? params.get('sel') : null);
   const exames = useExamesDasIS(inspecoes, secoes.inspecoes && (aba === 'atestados' || aba === 'exames'));
   const entrevistas = useEntrevistasDasIS(inspecoes, estadoAbas.transcricoes.habilitada && aba === 'transcricoes');
+  const documentosIS = useDocumentosDasIS(inspecoes, estadoAbas.outros.habilitada && aba === 'outros');
   const emails = useEmailsDaFicha(nip, inspecoes, estadoAbas.emails.habilitada && aba === 'emails');
 
   // Cabeçalho mínimo: do cadastro ou, sem cadastro, do texto copiado no registro mais recente.
@@ -354,6 +357,16 @@ export const FichaInspecionado: React.FC = () => {
     id: m.id, data: isoDe(m.registradoEm), icone: 'chat', titulo: m.assunto || `Mensagem da IS ${m.is}`,
     detalhe: [`IS ${m.is}`, m.registradoPor?.usuario ? `registrada por ${m.registradoPor.usuario}` : ''].filter(Boolean).join(' · '),
   }));
+
+  // Outros: documentos gerados nas IS (Gerar Documento ▾), do mais recente para o mais antigo.
+  const itensOutros: ItemHistorico[] = documentosIS.map(d => {
+    const dt = d.criadoEmMs ? new Date(d.criadoEmMs) : null;
+    return {
+      id: `${d.isId}/${d.id}`, icone: 'description', titulo: d.titulo,
+      data: dt ? `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}` : '',
+      detalhe: [`IS ${d.is}`, d.resumo, d.emailEnviado ? 'enviado por e-mail' : ''].filter(Boolean).join(' · '),
+    };
+  });
 
   // Transcrições: primeiro as IS Agendadas/Reagendadas (a gravar), depois as entrevistas gravadas.
   const isAGravar = isOrdenadas.filter(i => fasesDeEntrevista(i));
@@ -436,7 +449,7 @@ export const FichaInspecionado: React.FC = () => {
   const itensDaAba: Record<AbaFicha, ItemHistorico[]> = {
     afastamentos: [],
     is: itensIS, pm: itensPM, atestados: itensAtestados, pareceres: itensPareceres, exames: itensExames,
-    guias: itensGuias, emails: itensEmails, mensagens: itensMensagens, outros: [], transcricoes: itensTranscricoes,
+    guias: itensGuias, emails: itensEmails, mensagens: itensMensagens, outros: itensOutros, transcricoes: itensTranscricoes,
   };
   const historico = aba ? itensDaAba[aba] : [];
   const atual = registroSelecionado(historico, pedido);
@@ -626,6 +639,10 @@ export const FichaInspecionado: React.FC = () => {
       const isSel = isComGuias.find(i => i.id === atual?.id);
       if (!isSel) return semRegistro('guias');
       return <PainelGuias key={isSel.id} is={isSel} emailCadastrado={emailDoInspecionado(militar ?? undefined)} onAviso={avisar} />;
+    }
+    if (aba === 'outros') {
+      const d = documentosIS.find(x => `${x.isId}/${x.id}` === atual?.id);
+      return d ? <PainelDocumentoGerado key={atual!.id} doc={d} /> : semRegistro('outros');
     }
     if (aba === 'emails') {
       const e = emails.find(x => x.id === atual?.id);

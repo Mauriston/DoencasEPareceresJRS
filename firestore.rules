@@ -317,6 +317,13 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow write: if false;
       }
+
+      // Documentos gerados na IS (servidor/documentos/is/; aba Outros da Ficha): só o servidor grava; lê a equipe
+      // (todos menos user_medicos_geral).
+      match /documentos/{did} {
+        allow read: if isEquipe();
+        allow write: if false;
+      }
     }
 
     // Coleção "mensagensIS": mensagens tramitadas registradas a partir da minuta de uma IS concluída ("Minutar MSG" da

@@ -163,7 +163,7 @@ export const inspecaoPath = (isId: string, acao?: string): string =>
 /** Conversa do Chat (id = os dois uids em ordem, utils/chat.ts → idConversa). */
 export const chatPath = (conversaId?: string): string => (conversaId ? `/chat/${encodeURIComponent(conversaId)}` : '/chat');
 /** Subpágina da Administração (só Admin). */
-export type SecaoAdministracao = 'usuarios' | 'perfis' | 'chat' | 'emails' | 'agenda' | 'integracoes' | 'registro';
+export type SecaoAdministracao = 'usuarios' | 'perfis' | 'chat' | 'emails' | 'agenda' | 'integracoes' | 'documentos' | 'registro';
 export const administracaoPath = (secao?: SecaoAdministracao): string => (secao ? `/administracao/${secao}` : '/administracao');
 /** Ficha do inspecionado (id = NIP só dígitos). */
 export const fichaPath = (nip: string): string => `/inspecionados/${encodeURIComponent(nip)}`;

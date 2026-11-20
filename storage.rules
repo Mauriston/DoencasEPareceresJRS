@@ -125,6 +125,21 @@ service firebase.storage {
         && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
       allow write: if false;
     }
+    // Documentos gerados na IS (Gerar Documento ▾ da Ficha; servidor/documentos/is/): inspecoes/{isId}/documentos/{tipo}-{id}.pdf.
+    // PERMANENTES: sem regra de ciclo de vida nem limpeza (só saem ao excluir a IS). Lê a equipe (todos menos
+    // user_medicos_geral); só o servidor grava (Admin SDK).
+    match /inspecoes/{isId}/documentos/{arquivo} {
+      allow read: if request.auth != null
+        && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
+      allow write: if false;
+    }
+
+    // PDFs de TESTE dos documentos da IS (Admin): apagados pelo servidor 30 min depois (limparTestesDocumentosIS).
+    match /testes/documentosIS/{arquivo} {
+      allow read: if request.auth != null
+        && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil == 'admin';
+      allow write: if false;
+    }
       // Anexos do Chat entre usuários (services/chat.ts): conversas/{a_b}/{msgId}_{nome}. Só os dois
     // participantes (uids no id da conversa) leem; envia quem participa e tem "enviar anexos" em config/chat
     // (padrão liberado), PDF ou imagem JPG/PNG/WEBP até 10 MB (utils/chat.ts). Ninguém troca; o Admin apaga

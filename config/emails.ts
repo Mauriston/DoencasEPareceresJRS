@@ -24,6 +24,8 @@ export type TipoEmail =
   | 'guiasInspecionado' | 'guiasSecretaria' | 'aberturaIS' | 'agendamentoGeral' | 'agendamentoBeneficios' | 'resultadoBeneficios'
   // Exame ou atestado/laudo da IS à SEC-JRS, para impressão (Ficha do inspecionado):
   | 'documentoSecretaria'
+  // Documento gerado na IS (Gerar Documento ▾ da Ficha) ao inspecionado, com o PDF (servidor/documentos/is/email.ts):
+  | 'documentoIS'
   // Feedback do app (Ajuda › Feedback): agradecimento ao enviar e aviso de problema solucionado:
   | 'feedbackRecebido' | 'feedbackSolucionado';
 
@@ -92,6 +94,7 @@ export const CONFIG_EMAILS_PADRAO: ConfigEmails = {
     guiasInspecionado: { para: [], cc: [], cco: [] },
     guiasSecretaria: { para: [], cc: [], cco: [] },
     documentoSecretaria: { para: [], cc: [], cco: [] },
+    documentoIS: { para: [], cc: [], cco: [] },
     aberturaIS: { para: [], cc: [], cco: [] },
     agendamentoGeral: { para: [], cc: [], cco: [] },
     agendamentoBeneficios: { para: [], cc: [], cco: [] },
@@ -110,6 +113,7 @@ export const TIPOS_EMAIL: { tipo: TipoEmail; rotulo: string; assunto: string; di
   { tipo: 'guiasInspecionado', rotulo: 'Guias dos exames ao inspecionado', assunto: 'GUIA DOS EXAMES PARA INSPEÇÃO DE SAÚDE', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mail institucional de quem enviou. Anexo: guias em PDF.' },
   { tipo: 'guiasSecretaria', rotulo: 'Guias dos exames à SEC-JRS', assunto: 'EXAMES DE {inspecionado}', dinamicos: 'PARA: e-mails institucionais dos membros da Secretaria escolhidos. Remetente e Responder para: quem enviou. Anexo: guias em PDF.' },
   { tipo: 'documentoSecretaria', rotulo: 'Exame ou atestado à SEC-JRS (impressão)', assunto: 'EXAME DE {inspecionado} - IMPRESSÃO', dinamicos: 'PARA: e-mails institucionais dos membros da Secretaria escolhidos. Remetente e Responder para: quem enviou. Anexo: o PDF do exame ou do atestado/laudo (Ficha do inspecionado).' },
+  { tipo: 'documentoIS', rotulo: 'Documento da IS ao inspecionado', assunto: '{DOCUMENTO} - IS {n} - {inspecionado}', dinamicos: 'PARA: e-mail do inspecionado. CC: conforme o documento (ex.: Papeleta de Dispensa → Divisão de Pessoal/EAMPE e caixa da JRS). Anexo: o PDF do documento (Ficha › Gerar Documento).' },
   { tipo: 'agendamentoGeral', rotulo: 'Agendamento de IS (demais finalidades)', assunto: 'AGENDAMENTO DE IS FIM {finalidade} - {inspecionado}', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mails institucionais da Secretaria; Divisão de Pessoal do HNRe (OM HNRe) ou EAMPE (OM EAMPE). Reagendamento: mesmo modelo, com o aviso de reagendamento.' },
   { tipo: 'agendamentoBeneficios', rotulo: 'Agendamento de IS (Benefícios)', assunto: 'AGENDAMENTO DE IS FIM {finalidade} - {inspecionado}', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mails institucionais da Secretaria. Reagendamento: mesmo modelo, com o aviso de reagendamento.' },
   { tipo: 'resultadoBeneficios', rotulo: 'Resultado de IS (Benefícios)', assunto: 'RESULTADO DE IS FIM {finalidade} - {inspecionado}', dinamicos: 'PARA: e-mail do inspecionado. CC: e-mails institucionais da Secretaria. Três modelos: não enquadramento, enquadramento de militar inativo e enquadramento de não militar.' },

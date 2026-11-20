@@ -30,7 +30,8 @@ import { minutaIncapacidadeDisponivel } from '../../utils/mensagensIS';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Drawer } from '../ui/Drawer';
-import { ButtonLink } from '../ui/Button';
+import { Button, ButtonLink } from '../ui/Button';
+import { Dialog } from '../ui/Dialog';
 import { fichaPath } from '../../config/routes';
 import { podeAbrirFicha } from '../ficha/permissoes';
 import { AcoesRodape, type AcaoRodape } from '../ui/AcoesRodape';
@@ -174,6 +175,28 @@ const useCampoAuto = (remoto: string, salvar: (valor: string) => void) => {
 
 type EstadoGravacao = 'ocioso' | 'salvando' | 'salvo' | 'erro';
 
+/** Modal com só o seletor de data para ajustar a data do laudo. */
+const EditarDataLaudoDialog: React.FC<{ valorInicial: string; onClose: () => void; onSalvar: (data: string) => Promise<void> }> = ({ valorInicial, onClose, onSalvar }) => {
+  const [data, setData] = useState(valorInicial);
+  const [salvando, setSalvando] = useState(false);
+  const salvar = async () => {
+    if (!data) return;
+    setSalvando(true);
+    try { await onSalvar(data); } finally { setSalvando(false); }
+  };
+  return (
+    <Dialog title="Editar data do laudo" icon="edit_calendar" onClose={onClose} travado={salvando}
+      footer={<>
+        <Button variant="secondary" onClick={onClose} disabled={salvando}>Cancelar</Button>
+        <Button onClick={salvar} loading={salvando} disabled={!data || data === valorInicial}>Salvar</Button>
+      </>}>
+      <Field label="Data do laudo" required>
+        {a => <input {...a} type="date" value={data} onChange={e => setData(e.target.value)} />}
+      </Field>
+    </Dialog>
+  );
+};
+
 export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes, onClose, onMinuta, onSolicitarParecer, onDuplicarParecer, onSituacaoMudou, onAviso, emails, casca = 'drawer', acoesExtras = [], atalhosDocumentos, onGravarEntrevista }) => {
   const nav = useNav();
   const efetivo = statusEfetivoIS(is);
@@ -192,6 +215,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const [gravacao, setGravacao] = useState<PedidoGravacao>(null);
   const [estado, setEstado] = useState<EstadoGravacao>('ocioso');
   const [erroTis, setErroTis] = useState('');
+  const [editandoDataLaudo, setEditandoDataLaudo] = useState(false);
 
   useEffect(() => { carregarRestricoesIS().then(l => setRestricoesOpcoes(opcoesDeRestricoes(l))).catch(() => setRestricoesOpcoes([])); }, []);
   useEffect(() => observarPareceresDaIS(is.id, setPareceres, () => setPareceres([])), [is.id]);
@@ -360,6 +384,14 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
 
   const encaminhamento = encaminhamentoDoStatus(is.status);
   const textoLaudo = is.laudo?.trim() || '';
+  // Data do laudo: ajuste discreto (ícone ao lado) enquanto a IS não está finalizada.
+  const podeEditarDataLaudo = permissoes.editar && isAtiva;
+  const botaoDataLaudo = podeEditarDataLaudo ? (
+    <button type="button" onClick={() => setEditandoDataLaudo(true)} aria-label="Editar data do laudo" title="Editar data do laudo"
+      className="inline-flex items-center justify-center w-6 h-6 rounded text-ink-3 hover:text-navy hover:bg-line/50 transition-colors">
+      <span className="material-symbols-outlined text-[16px]" aria-hidden="true">edit</span>
+    </button>
+  ) : null;
   const textoObservacoes = is.observacoes?.trim() || '';
   const restricoesGravadas = separarRestricoes(is.restricoes || '');
   const afastamentos = is.afastamentos ?? [];
@@ -408,13 +440,14 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                   <LinhaTabela rotulo="Finalidade">{is.finalidade}</LinhaTabela>
                   <LinhaTabela rotulo="Abertura IS">{is.dataAbertura ? dataBr(is.dataAbertura) : ''}</LinhaTabela>
                   <LinhaTabela rotulo="Entrevista">{is.dataEntrevista ? dataBr(dataDeEntrevista(is.dataEntrevista)) : ''}</LinhaTabela>
+                  <LinhaTabela rotulo="Médico">{is.peritoNome?.trim() || ''}</LinhaTabela>
                   <LinhaTabela rotulo="Laudo">
                     {textoLaudo ? (
                       <>
                         <span className="block whitespace-pre-line">{textoLaudo}</span>
-                        {is.dataLaudo && <span className="block mt-1 text-xs text-ink-3">Data do laudo: {dataBr(is.dataLaudo)}</span>}
+                        {(is.dataLaudo || podeEditarDataLaudo) && <span className="flex items-center gap-1 mt-1 text-xs text-ink-3">Data do laudo: {is.dataLaudo ? dataBr(is.dataLaudo) : '—'}{botaoDataLaudo}</span>}
                       </>
-                    ) : ''}
+                    ) : podeEditarDataLaudo ? <span className="flex items-center gap-1 text-xs text-ink-3">Data do laudo: {is.dataLaudo ? dataBr(is.dataLaudo) : '—'}{botaoDataLaudo}</span> : ''}
                   </LinhaTabela>
                   {comEncaminhamento && encaminhamento && (
                     <LinhaTabela rotulo="Encaminhamento">{encaminhamento === 'jsd' ? 'JSD' : 'Auditoria'}</LinhaTabela>
@@ -466,7 +499,12 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
           <dl className="grid grid-cols-3 gap-x-4 gap-y-3">
             <Linha rotulo="Abertura IS">{dataBr(is.dataAbertura)}</Linha>
             <Linha rotulo="Entrevista">{is.dataEntrevista ? dataBr(dataDeEntrevista(is.dataEntrevista)) : ''}</Linha>
-            <Linha rotulo="Laudo">{dataBr(is.dataLaudo)}</Linha>
+            <Linha rotulo="Laudo">
+              {podeEditarDataLaudo
+                ? <span className="inline-flex items-center gap-1">{is.dataLaudo ? dataBr(is.dataLaudo) : '—'}{botaoDataLaudo}</span>
+                : dataBr(is.dataLaudo)}
+            </Linha>
+            <Linha rotulo="Médico" className="col-span-3">{is.peritoNome?.trim() || ''}</Linha>
           </dl>
         </section>
 
@@ -557,6 +595,24 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
           )}
         </section>
       </div>
+      )}
+
+      {editandoDataLaudo && createPortal(
+        <EditarDataLaudoDialog
+          valorInicial={is.dataLaudo || ''}
+          onClose={() => setEditandoDataLaudo(false)}
+          onSalvar={async data => {
+            try {
+              await atualizarInspecao(is.id, { dataLaudo: data });
+              atualRef.current = { ...atualRef.current, dataLaudo: data };
+              onAviso('Data do laudo atualizada.');
+              setEditandoDataLaudo(false);
+            } catch (e: any) {
+              onAviso(e?.message || 'Não foi possível salvar a data do laudo.', 'error');
+            }
+          }}
+        />,
+        document.body,
       )}
 
       {enviandoExames && nav?.authUser && createPortal(

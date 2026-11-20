@@ -44,6 +44,7 @@ import { CardFaltasHNRe } from './inspecoes/CardFaltasHNRe';
 import { CardAniversariantes } from './home/CardAniversariantes';
 import { observarMilitares, type MilitarRecord } from '../services/firestoreMilitares';
 import { pendenciasEmailIS, TIPOS_EMAIL_PENDENTE } from '../utils/pendenciasEmailIS';
+import { temTagLaudoPericialPendente } from '../utils/documentosIS';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
 import { aguardaAgendamento, hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, diasEmAberto, prazoAtrasoDias, statusEfetivoIS, nomeMes } from '../utils/inspecoes';
 import { finalidadeSemGrupo, nomeCurtoInspecionado } from '../utils/calendarioIS';
@@ -298,6 +299,17 @@ export const Home: React.FC = () => {
         prazo: { texto: `${dias} de ${prazo} dias`, pct: 100, tom: 'atraso' },
         tag: { rotulo: 'Atrasada', tom: 'danger' }, to: `/inspecoes/${encodeURIComponent(i.id)}`,
         ordem: 1000 + dias / prazo,
+      });
+    });
+  }
+  // Secretaria: IS de Isenção de IR finalizadas com a tag "LAUDO PERICIAL PENDENTE" (sai ao gerar o Laudo Pericial).
+  if (podeInspecoes && ehSecretaria) {
+    inspecoes.filter(temTagLaudoPericialPendente).forEach(i => {
+      pendencias.push({
+        id: `laudo-pericial:${i.id}`, icone: 'contract', titulo: nomeCurtoInspecionado(i.inspecionado),
+        detalhe: `IS ${i.is} · Isenção de IR · gerar o Laudo Pericial`,
+        tag: { rotulo: 'Laudo pericial pendente', tom: 'attention' }, to: `/inspecoes/${encodeURIComponent(i.id)}`,
+        ordem: 900,
       });
     });
   }
