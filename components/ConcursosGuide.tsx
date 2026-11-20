@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { Segmented } from './ui/Segmented';
-import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import { Field } from './ui/Field';
 import { useQueryParam } from '../hooks/useQueryParam';
 import { MarkdownDocPage } from './MarkdownDocPage';
 import { StoragePdfIconButton, StoragePdfFab } from './StoragePdfButtons';
 import { useStoragePdf } from '../hooks/useStoragePdf';
 import { anexoPdfPath } from '../services/firebaseStorageNormas';
 import anexoNMarkdown from '../content/dgpm-406/anexos/anexo-n.md?raw';
-import { Ruler, Eye, FileText, Accessibility, Heart, Ear, ChevronDown } from './ui/icons';
+import { Ruler, Eye, FileText, Accessibility, Heart, Ear } from './ui/icons';
 
 type Bloco =
   | { tipo: 'lista'; itens: string[] }
@@ -22,14 +23,14 @@ interface Indice {
   blocos: Bloco[];
 }
 
-const iconCls = 'text-navy';
+const iconCls = 'text-navy shrink-0';
 
 // Índices mínimos — Anexo N (DGPM-406, 9ª Revisão).
 const indicesList: Indice[] = [
   {
     id: "altura",
     title: "I - Altura, peso mínimo e máximo",
-    icon: <Ruler size={22} className={iconCls} />,
+    icon: <Ruler size={20} className={iconCls} />,
     blocos: [
       {
         tipo: 'tabela',
@@ -46,7 +47,7 @@ const indicesList: Indice[] = [
   {
     id: "acuidade",
     title: "II - Acuidade visual",
-    icon: <Eye size={22} className={iconCls} />,
+    icon: <Eye size={20} className={iconCls} />,
     blocos: [
       {
         tipo: 'tabela',
@@ -64,7 +65,7 @@ const indicesList: Indice[] = [
   {
     id: "senso",
     title: "III - Senso cromático",
-    icon: <Eye size={22} className={iconCls} />,
+    icon: <Eye size={20} className={iconCls} />,
     blocos: [
       { tipo: 'texto', texto: 'Pesquisa de discromatopsia realizada exclusivamente através das Pranchas de Ishihara (modelos com 24 ou 38 pranchas).' },
     ],
@@ -72,7 +73,7 @@ const indicesList: Indice[] = [
   {
     id: "dentes",
     title: "IV - Dentes",
-    icon: <FileText size={22} className={iconCls} />,
+    icon: <FileText size={20} className={iconCls} />,
     blocos: [
       { tipo: 'texto', texto: 'Mínimo de 20 dentes naturais, hígidos ou tratados, com pelo menos 4 molares opostos 2 a 2.' },
     ],
@@ -80,7 +81,7 @@ const indicesList: Indice[] = [
   {
     id: "motilidade",
     title: "V - Limites mínimos de motilidade",
-    icon: <Accessibility size={22} className={iconCls} />,
+    icon: <Accessibility size={20} className={iconCls} />,
     blocos: [
       {
         tipo: 'tabela',
@@ -109,7 +110,7 @@ const indicesList: Indice[] = [
   {
     id: "cardio",
     title: "VI - Índices cardiovasculares",
-    icon: <Heart size={22} className={iconCls} />,
+    icon: <Heart size={20} className={iconCls} />,
     blocos: [
       {
         tipo: 'tabela',
@@ -124,7 +125,7 @@ const indicesList: Indice[] = [
   {
     id: "audicao",
     title: "VII - Índice audiométrico",
-    icon: <Ear size={22} className={iconCls} />,
+    icon: <Ear size={20} className={iconCls} />,
     blocos: [
       {
         tipo: 'tabela',
@@ -310,47 +311,35 @@ const inaptidaoCategories = Array.from(new Set(ANEXO_N_INAPTIDAO.map(r => r["Ín
   items: ANEXO_N_INAPTIDAO.filter(r => r["Índice"] === indice).map(r => r.Valor),
 }));
 
-// Seletor com cara de filtro: rótulo "Filtrar por", borda destacada e botão de seta.
+// Filtro do card de configuração — mesmo Field/select do DS usado em Exames mínimos.
 const FiltroSelect: React.FC<{
+  label: string;
   value: string;
   onChange: (v: string) => void;
   options: { id: string; title: string }[];
-  accent: 'navy' | 'red';
-}> = ({ value, onChange, options, accent }) => {
-  const cor = accent === 'red'
-    ? { borda: 'border-wine-700/70 focus-within:border-wine-700', texto: 'text-wine-700', botao: 'bg-wine-700' }
-    : { borda: 'border-navy/70 focus-within:border-navy', texto: 'text-navy', botao: 'bg-navy' };
-  return (
-    <div>
-      <label className={`flex items-center gap-1.5 text-sm font-bold uppercase tracking-wider mb-1.5 ml-1 ${cor.texto}`}>
-        <span className="material-symbols-outlined text-[18px] md:text-[20px]">filter_list</span>
-        Filtrar por
-      </label>
-      <div className={`relative flex items-center bg-white border-2 ${cor.borda} rounded-xl transition-colors`}>
-        <select
-          className="w-full bg-transparent text-navy py-3 md:py-4 pl-4 md:pl-5 pr-14 rounded-lg font-bold focus:outline-none text-base appearance-none cursor-pointer font-body"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        >
-          {options.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
-        </select>
-        <span className={`absolute right-2 md:right-3 top-1/2 -translate-y-1/2 w-8 h-8 md:w-9 md:h-9 rounded-lg ${cor.botao} text-white flex items-center justify-center pointer-events-none`}>
-          <ChevronDown size={20} />
-        </span>
-      </div>
-    </div>
-  );
-};
+}> = ({ label, value, onChange, options }) => (
+  <Field label={label}>
+    {a => (
+      <select {...a} value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
+      </select>
+    )}
+  </Field>
+);
+
+const Marcador: React.FC<{ tom?: 'navy' | 'wine' }> = ({ tom = 'navy' }) => (
+  <span aria-hidden="true" className={`w-1.5 h-1.5 rounded-full shrink-0 mt-2.5 ${tom === 'wine' ? 'bg-wine' : 'bg-navy'}`} />
+);
 
 const TabelaIndice: React.FC<{ bloco: Extract<Bloco, { tipo: 'tabela' }> }> = ({ bloco }) => (
-  <div>
-    {bloco.titulo && <h4 className="text-base font-bold text-navy mb-2">{bloco.titulo}</h4>}
-    <div className="overflow-x-auto rounded-xl border border-line">
-      <table className="w-full text-left border-collapse">
+  <section>
+    {bloco.titulo && <h3 className="eyebrow mb-1 px-1">{bloco.titulo}</h3>}
+    <div className="overflow-x-auto rounded-lg border border-line">
+      <table className="w-full text-left border-collapse text-sm">
         <thead>
-          <tr className="bg-paper text-navy">
+          <tr className="bg-thead">
             {bloco.colunas.map(col => (
-              <th key={col} className="py-2.5 px-4 text-sm font-bold uppercase tracking-wider border-b border-line">{col}</th>
+              <th key={col} scope="col" className="py-2.5 px-3 text-xs font-bold text-navy border-b border-line">{col}</th>
             ))}
           </tr>
         </thead>
@@ -358,24 +347,24 @@ const TabelaIndice: React.FC<{ bloco: Extract<Bloco, { tipo: 'tabela' }> }> = ({
           {bloco.linhas.map((linha, i) => (
             <tr key={i}>
               {linha.map((cel, j) => (
-                <td key={j} className={`py-3 px-4 text-base align-top ${j === 0 ? 'font-semibold text-navy' : 'text-ink'}`}>{cel}</td>
+                <td key={j} className={`py-2.5 px-3 align-top ${j === 0 ? 'font-semibold text-navy' : 'text-ink'}`}>{cel}</td>
               ))}
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 );
 
 const BlocoIndice: React.FC<{ bloco: Bloco }> = ({ bloco }) => {
   if (bloco.tipo === 'tabela') return <TabelaIndice bloco={bloco} />;
   if (bloco.tipo === 'lista') {
     return (
-      <ul className="space-y-3">
+      <ul className="flex flex-col divide-y divide-line">
         {bloco.itens.map((item, i) => (
-          <li key={i} className="flex gap-3 text-ink font-body text-base">
-            <span className="w-1.5 h-1.5 rounded-full bg-navy shrink-0 mt-2.5" />
+          <li key={i} className="flex gap-2.5 py-2.5 px-1 text-sm text-ink">
+            <Marcador />
             <span className="leading-relaxed flex-1">{item}</span>
           </li>
         ))}
@@ -384,12 +373,12 @@ const BlocoIndice: React.FC<{ bloco: Bloco }> = ({ bloco }) => {
   }
   return (
     <div className="space-y-2">
-      <p className="text-ink font-body text-base leading-relaxed">{bloco.texto}</p>
+      <p className="text-sm text-ink leading-relaxed px-1">{bloco.texto}</p>
       {bloco.condicoes && (
-        <ul className="space-y-1.5 pl-1">
+        <ul className="flex flex-col divide-y divide-line">
           {bloco.condicoes.map((c, i) => (
-            <li key={i} className="flex gap-3 text-ink font-body text-base">
-              <span className="w-1.5 h-1.5 rounded-full bg-navy shrink-0 mt-2.5" />
+            <li key={i} className="flex gap-2.5 py-2 px-1 text-sm text-ink">
+              <Marcador />
               <span className="leading-relaxed flex-1">{c}</span>
             </li>
           ))}
@@ -432,48 +421,54 @@ export const ConcursosGuide: React.FC = () => {
     <div className="flex flex-col flex-1">
       {modalElement}
 
-      <Container size="reading" className="py-6 md:py-8 pt-4 md:pt-8 pb-28 md:pb-10 space-y-5">
-          <PageHeader title="Índices mínimos" description="Padrões psicofísicos admissionais (Anexo N): índices mínimos e condições incapacitantes para ingresso." secundarias={[{ id: 'anexo-n', rotulo: 'Ver Anexo N completo', icone: 'menu_book', onClick: () => setAnexoParam('n') }]} />
-          <Segmented ariaLabel="Seção" fullWidth options={[{ value: 'indices', label: 'Índices mínimos' }, { value: 'inaptidao', label: 'Inaptidão' }]} value={activeTab} onChange={setActiveTab} />
+      <Container size="reading" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-6">
+        <PageHeader title="Índices mínimos" description="Padrões psicofísicos admissionais (Anexo N): índices mínimos e condições incapacitantes para ingresso." secundarias={[{ id: 'anexo-n', rotulo: 'Ver Anexo N completo', icone: 'menu_book', onClick: () => setAnexoParam('n') }]} />
 
-          {activeTab === 'indices' && (
-            <div className="space-y-3.5 md:space-y-4">
-              <FiltroSelect accent="navy" value={activeIndice} onChange={setActiveIndice} options={indicesList} />
-              {currentIndice && (
-                <div className="bg-white p-5 md:p-8 rounded-2xl border border-line/60 space-y-5">
-                  <h3 className="flex items-center gap-2.5 text-h2 font-heading font-bold text-navy pb-3 border-b border-line">
-                    {currentIndice.icon}
-                    {currentIndice.title}
-                  </h3>
-                  {currentIndice.blocos.map((bloco, i) => <BlocoIndice key={i} bloco={bloco} />)}
-                </div>
-              )}
-            </div>
-          )}
+        <Card id="indices-config-card" className="flex flex-col gap-4">
+          <div>
+            <p aria-hidden="true" className="block text-xs font-semibold text-ink-3 mb-1">Seção</p>
+            <Segmented ariaLabel="Seção" fullWidth options={[{ value: 'indices', label: 'Índices mínimos' }, { value: 'inaptidao', label: 'Inaptidão' }]} value={activeTab} onChange={setActiveTab} />
+          </div>
+          {activeTab === 'indices'
+            ? <FiltroSelect label="Índice" value={activeIndice} onChange={setActiveIndice} options={indicesList} />
+            : <FiltroSelect label="Segmento / órgão" value={activeInaptidao} onChange={setActiveInaptidao} options={inaptidaoCategories} />}
+        </Card>
 
-          {activeTab === 'inaptidao' && (
-            <div className="space-y-3.5 md:space-y-4">
-              <FiltroSelect accent="red" value={activeInaptidao} onChange={setActiveInaptidao} options={inaptidaoCategories} />
-              {currentInaptidao && (
-                <div className="bg-white p-5 md:p-8 rounded-2xl border border-line/60">
-                  <h3 className="flex items-center gap-2.5 text-h2 font-heading font-bold text-wine-700 pb-3 mb-4 border-b border-line">
-                    <span className="material-symbols-outlined text-[26px] md:text-[30px] shrink-0">{currentInaptidao.icon}</span>
-                    {currentInaptidao.title}
-                  </h3>
-                  <ul className="space-y-3.5">
-                    {currentInaptidao.items.map((item, idx) => (
-                      <li key={idx} className="flex gap-3 text-ink font-body text-base">
-                        <span className="w-1.5 h-1.5 rounded-full bg-wine-700 shrink-0 mt-2.5" />
-                        <span className="leading-relaxed flex-1">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+        {activeTab === 'indices' && currentIndice && (
+          <Card
+            id="indice-card"
+            titleAs="h2"
+            title={<span className="flex items-center gap-2.5">{currentIndice.icon}{currentIndice.title}</span>}
+          >
+            <div className="flex flex-col gap-6">
+              {currentIndice.blocos.map((bloco, i) => <BlocoIndice key={i} bloco={bloco} />)}
             </div>
-          )}
-              </Container>
-      
+          </Card>
+        )}
+
+        {activeTab === 'inaptidao' && currentInaptidao && (
+          <Card
+            id="inaptidao-card"
+            titleAs="h2"
+            title={
+              <span className="flex items-center gap-2.5">
+                <span aria-hidden="true" className="material-symbols-outlined text-[22px] text-wine shrink-0">{currentInaptidao.icon}</span>
+                {currentInaptidao.title}
+              </span>
+            }
+            actions={<span className="text-sm bg-navy/5 text-navy px-2.5 py-1 rounded-full font-bold tabular-nums">{currentInaptidao.items.length} {currentInaptidao.items.length === 1 ? 'condição' : 'condições'}</span>}
+          >
+            <ul className="flex flex-col divide-y divide-line">
+              {currentInaptidao.items.map((item, idx) => (
+                <li key={idx} className="flex gap-2.5 py-2.5 px-1 text-sm text-ink">
+                  <Marcador tom="wine" />
+                  <span className="leading-relaxed flex-1">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+      </Container>
     </div>
   );
 };
