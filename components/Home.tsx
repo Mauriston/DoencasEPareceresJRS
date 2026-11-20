@@ -8,7 +8,11 @@
 //    "Pendências · por atraso" (pareceres, IS e perícias numa lista só — no lugar de "Precisa de atenção", H1), além
 //    dos cards de perfil (documentos gerados da Secretaria, faltas do HNRe, últimos atestados do Médicos Geral);
 //    no apoio, o calendário do mês com legenda (H5), Próximas férias, Próximos serviços e Avisos.
-//  • No celular (4b): contadores, agenda, férias e o resto. "Acesso rápido" saiu (H2: repetia o menu).
+//  • No celular (< md): contadores (com seta: levam a outra página) → Pendências → Avisos → um card só com o
+//    calendário e, logo abaixo, a agenda do dia clicado → cards do perfil → Próximas férias por último.
+//    "Acesso rápido" saiu (H2: repetia o menu).
+//  • Ações: Abrir IS; "+ Perícia Menor"/"+ Atestado" só para o user_medicos_geral. "Enviar exames" fica na
+//    página Concursos.
 // Tudo respeita a matriz de permissões: cada bloco só aparece para quem tem acesso.
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -36,7 +40,6 @@ import { AgendaDoDia } from './home/AgendaDoDia';
 import { CalendarioMes } from './home/CalendarioMes';
 import { Pendencias, type Pendencia } from './home/Pendencias';
 import { CardFaltasHNRe } from './inspecoes/CardFaltasHNRe';
-import { EnviarExamesModal } from './concursos/ExamesCandidato';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
 import { aguardaAgendamento, hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, diasEmAberto, prazoAtrasoDias, statusEfetivoIS, nomeMes } from '../utils/inspecoes';
 import { finalidadeSemGrupo, nomeCurtoInspecionado } from '../utils/calendarioIS';
@@ -118,18 +121,12 @@ export const Home: React.FC = () => {
   const podeNovaPericia = podePericiaMenor && canUseFeature('pericia-menor.novo', perfil);
   const termosPm = termosPericia(perfil);
   const ehAtestado = termosPm.pagina === 'Atestados';
-  const podeEnviarExames = podeConcursos && canUseFeature('concursosJRS.enviarExamesCandidato', perfil);
   const ehMedicoGeral = perfil === 'user_medicos_geral';
   const ehSecretaria = perfil === 'user_secretaria';
-  // Envio dos exames de um candidato direto da Início: o candidato é escolhido no
-  // próprio sheet, entre os dos concursos em andamento.
-  const [enviarExames, setEnviarExames] = useState(false);
 
   const [concursos, setConcursos] = useState<ConcursoRecord[]>([]);
   useEffect(() => (podeConcursos ? observarConcursos(setConcursos, () => { /* silencioso: não bloqueia a Início */ }) : undefined), [podeConcursos]);
   const emAndamento = concursos.filter(c => c.status === 'em_andamento');
-  // "Enviar exames" só existe quando há concurso em andamento: fora disso não há candidato a quem anexar os laudos.
-  const mostrarEnviarExames = podeEnviarExames && emAndamento.length > 0;
 
   const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
   useEffect(() => (podePareceres ? observarPareceres(setPareceres, () => { /* silencioso */ }) : undefined), [podePareceres]);
@@ -303,11 +300,12 @@ export const Home: React.FC = () => {
   const mostraPendencias = podePareceres || podeInspecoes || (podePericiaMenor && !ehMedicoGeral) || pendencias.length > 0;
 
   // ---- Ações (4d): a ordem é a prioridade; a principal é a 1ª permitida. ----
+  // "+ Perícia Menor"/"+ Atestado" só para o user_medicos_geral (os demais registram na própria página);
+  // "Enviar exames" foi para a página Concursos.
   const rotuloPm = ehAtestado ? 'Atestado' : 'Perícia Menor';
   const acoes: AcaoFab[] = [
     { id: 'abrir-is', rotulo: 'Abrir IS', icone: 'add', to: '/inspecoes?novo=manual', permitido: podeAbrirIS },
-    { id: 'pm', rotulo: rotuloPm, icone: 'personal_injury', to: '/pericia-menor?novo=1', permitido: podeNovaPericia },
-    { id: 'exames', rotulo: 'Enviar exames', icone: 'upload_file', onClick: () => setEnviarExames(true), permitido: mostrarEnviarExames },
+    { id: 'pm', rotulo: rotuloPm, icone: 'personal_injury', to: '/pericia-menor?novo=1', permitido: podeNovaPericia && ehMedicoGeral },
   ];
   const permitidas = acoes.filter(a => a.permitido !== false);
   // No FAB a principal leva "+" (4d: "+ Perícia Menor", "+ Atestado").
@@ -363,18 +361,20 @@ export const Home: React.FC = () => {
   const avisoConcurso = podeConcursos && emAndamento.length > 0;
   const mostrarAvisos = avisoSenha || avisoConcurso || !!nav?.avisos?.casosPendente || !!nav?.avisos?.pwaPendente;
 
-  const principal = (
-    <div className="space-y-6">
-      {podeInspecoes && (
-        <AgendaDoDia
-          dia={diaAgenda} hoje={hoje} inspecoes={inspecoes} diasConcursos={diasConcursos}
-          concursosClicaveis={podeConcursos} onHoje={() => setDiaAgenda(hoje)}
-        />
-      )}
-      {/* Celular (4b): Próximas férias logo depois da agenda; no desktop ela fica na coluna de apoio. */}
-      {cardFerias('@split:hidden')}
-      {mostraPendencias && <Pendencias itens={pendencias} fontes={fontesPendencias} />}
+  // ---- Blocos do painel (montados no desktop em 8 + 4 e, no celular, numa coluna em outra ordem). ----
+  const agenda = (embutido = false) => (podeInspecoes ? (
+    <AgendaDoDia
+      dia={diaAgenda} hoje={hoje} inspecoes={inspecoes} diasConcursos={diasConcursos}
+      concursosClicaveis={podeConcursos} onHoje={() => setDiaAgenda(hoje)} embutido={embutido}
+    />
+  ) : null);
+  const calendario = (embutido = false) => (podeInspecoes ? (
+    <CalendarioMes hoje={hoje} selecionado={diaAgenda} onSelecionar={setDiaAgenda} inspecoes={inspecoes} diasConcursos={diasConcursos} embutido={embutido} />
+  ) : null);
+  const blocoPendencias = mostraPendencias ? <Pendencias itens={pendencias} fontes={fontesPendencias} /> : null;
 
+  const blocosDoPerfil = (
+    <>
       {ehSecretaria && (
         <Secao
           id="home-documentos" titulo="Últimos documentos gerados" badge={documentos.length}
@@ -422,66 +422,94 @@ export const Home: React.FC = () => {
           {meusAtestados.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{meusAtestados.length - 6} em Atestados.</p>}
         </Secao>
       )}
+    </>
+  );
+
+  const blocoServicos = podeEscala && meusServicos.length > 0 ? (
+    <Secao id="home-escala" titulo="Próximos serviços" acao={<ButtonLink to={pathForView('escala')} variant="ghost" size="sm">Ver escala</ButtonLink>}>
+      <ul>
+        {meusServicos.map(s => {
+          const [y, m, d] = s.data.split('-').map(Number);
+          const dow = new Date(y, m - 1, d).getDay();
+          const f = FUNCAO_ESCALA[s.funcao];
+          return (
+            <li key={s.data + s.funcao} className="flex items-center gap-3 px-4 min-h-[56px] py-2 border-t border-line">
+              <span className="w-12 shrink-0 text-center tabular-nums">
+                <span className="block text-sm font-extrabold text-navy leading-none">{String(d).padStart(2, '0')}/{String(m).padStart(2, '0')}</span>
+                <span className="block text-xs font-semibold text-ink-3">{s.data === hoje ? 'hoje' : SEMANA_ABR[dow]}</span>
+              </span>
+              <span className="material-symbols-outlined text-[22px] text-navy shrink-0" aria-hidden="true">{f.icone}</span>
+              <span className="min-w-0 flex-1 text-sm font-bold text-navy truncate">{f.rotulo}</span>
+              {s.data === hoje && <StatusTag tone="attention" className="shrink-0">Hoje</StatusTag>}
+            </li>
+          );
+        })}
+      </ul>
+    </Secao>
+  ) : null;
+
+  const blocoAvisos = mostrarAvisos ? (
+    <Secao id="home-avisos" titulo="Avisos">
+      <ul>
+        {avisoSenha && (
+          <LinhaAviso icone="key" titulo="Senha temporária" texto="Altere a senha inicial por uma só sua." acao={<ButtonLink to="/perfil" variant="ghost" size="sm">Alterar senha</ButtonLink>} />
+        )}
+        {avisoConcurso && (
+          <LinhaAviso
+            icone="fact_check"
+            titulo={emAndamento.length === 1 ? emAndamento[0].nome : `${emAndamento.length} concursos em andamento`}
+            texto={emAndamento.length === 1 ? 'Concurso em andamento · planilha de candidatos' : 'Planilhas de candidatos'}
+            acao={<ButtonLink to={emAndamento.length === 1 ? concursoPath(emAndamento[0].id) : '/concursos?situacao=em_andamento'} variant="ghost" size="sm">{emAndamento.length === 1 ? 'Abrir planilha' : 'Ver concursos'}</ButtonLink>}
+          />
+        )}
+        {nav?.avisos?.casosPendente && (
+          <LinhaAviso icone="quiz" titulo="Casos Periciais" texto="24 questões comentadas sobre a DGPM-406. Faça quando puder." acao={<ButtonLink to={pathForView('casos')} variant="ghost" size="sm">Responder</ButtonLink>} />
+        )}
+        {nav?.avisos?.pwaPendente && (
+          <LinhaAviso
+            icone="install_mobile" titulo="Use no celular"
+            texto={isDesktop ? 'Abra o QR code e instale o app na tela inicial.' : 'Instale o app na tela inicial do aparelho.'}
+            acao={<Button variant="ghost" size="sm" onClick={() => nav?.abrirInstalacaoApp()}>{isDesktop ? 'Mostrar QR code' : 'Ver como instalar'}</Button>}
+          />
+        )}
+      </ul>
+    </Secao>
+  ) : null;
+
+  // Desktop (≥ md): o layout de sempre — principal (agenda, pendências, cards do perfil) + apoio
+  // (calendário, férias, serviços, avisos). Entre md e @split a grade empilha e as férias vêm logo após a agenda.
+  const principal = (
+    <div className="space-y-6">
+      {agenda()}
+      {cardFerias('@split:hidden')}
+      {blocoPendencias}
+      {blocosDoPerfil}
+    </div>
+  );
+  const apoio = (
+    <div className="space-y-6">
+      {calendario()}
+      {cardFerias('hidden @split:block')}
+      {blocoServicos}
+      {blocoAvisos}
     </div>
   );
 
-  const apoio = (
+  // Celular (< md): contadores → Pendências → Avisos → calendário com a agenda do dia clicado logo abaixo
+  // (um card só) → cards do perfil e Próximos serviços → Próximas férias por último.
+  const painelCelular = (
     <div className="space-y-6">
+      {blocoPendencias}
+      {blocoAvisos}
       {podeInspecoes && (
-        <CalendarioMes hoje={hoje} selecionado={diaAgenda} onSelecionar={setDiaAgenda} inspecoes={inspecoes} diasConcursos={diasConcursos} />
+        <div className="bg-white border border-line rounded-xl overflow-clip">
+          {calendario(true)}
+          {agenda(true)}
+        </div>
       )}
-      {cardFerias('hidden @split:block')}
-
-      {podeEscala && meusServicos.length > 0 && (
-        <Secao id="home-escala" titulo="Próximos serviços" acao={<ButtonLink to={pathForView('escala')} variant="ghost" size="sm">Ver escala</ButtonLink>}>
-          <ul>
-            {meusServicos.map(s => {
-              const [y, m, d] = s.data.split('-').map(Number);
-              const dow = new Date(y, m - 1, d).getDay();
-              const f = FUNCAO_ESCALA[s.funcao];
-              return (
-                <li key={s.data + s.funcao} className="flex items-center gap-3 px-4 min-h-[56px] py-2 border-t border-line">
-                  <span className="w-12 shrink-0 text-center tabular-nums">
-                    <span className="block text-sm font-extrabold text-navy leading-none">{String(d).padStart(2, '0')}/{String(m).padStart(2, '0')}</span>
-                    <span className="block text-xs font-semibold text-ink-3">{s.data === hoje ? 'hoje' : SEMANA_ABR[dow]}</span>
-                  </span>
-                  <span className="material-symbols-outlined text-[22px] text-navy shrink-0" aria-hidden="true">{f.icone}</span>
-                  <span className="min-w-0 flex-1 text-sm font-bold text-navy truncate">{f.rotulo}</span>
-                  {s.data === hoje && <StatusTag tone="attention" className="shrink-0">Hoje</StatusTag>}
-                </li>
-              );
-            })}
-          </ul>
-        </Secao>
-      )}
-
-      {mostrarAvisos && (
-        <Secao id="home-avisos" titulo="Avisos">
-          <ul>
-            {avisoSenha && (
-              <LinhaAviso icone="key" titulo="Senha temporária" texto="Altere a senha inicial por uma só sua." acao={<ButtonLink to="/perfil" variant="ghost" size="sm">Alterar senha</ButtonLink>} />
-            )}
-            {avisoConcurso && (
-              <LinhaAviso
-                icone="fact_check"
-                titulo={emAndamento.length === 1 ? emAndamento[0].nome : `${emAndamento.length} concursos em andamento`}
-                texto={emAndamento.length === 1 ? 'Concurso em andamento · planilha de candidatos' : 'Planilhas de candidatos'}
-                acao={<ButtonLink to={emAndamento.length === 1 ? concursoPath(emAndamento[0].id) : '/concursos?situacao=em_andamento'} variant="ghost" size="sm">{emAndamento.length === 1 ? 'Abrir planilha' : 'Ver concursos'}</ButtonLink>}
-              />
-            )}
-            {nav?.avisos?.casosPendente && (
-              <LinhaAviso icone="quiz" titulo="Casos Periciais" texto="24 questões comentadas sobre a DGPM-406. Faça quando puder." acao={<ButtonLink to={pathForView('casos')} variant="ghost" size="sm">Responder</ButtonLink>} />
-            )}
-            {nav?.avisos?.pwaPendente && (
-              <LinhaAviso
-                icone="install_mobile" titulo="Use no celular"
-                texto={isDesktop ? 'Abra o QR code e instale o app na tela inicial.' : 'Instale o app na tela inicial do aparelho.'}
-                acao={<Button variant="ghost" size="sm" onClick={() => nav?.abrirInstalacaoApp()}>{isDesktop ? 'Mostrar QR code' : 'Ver como instalar'}</Button>}
-              />
-            )}
-          </ul>
-        </Secao>
-      )}
+      {blocosDoPerfil}
+      {blocoServicos}
+      {cardFerias('')}
     </div>
   );
 
@@ -491,19 +519,13 @@ export const Home: React.FC = () => {
 
       <div className="space-y-6">
         <ContadoresHoje contadores={contadores} />
-        <GradePainel principal={principal} apoio={apoio} rotuloApoio="Calendário, férias e avisos" />
+        {isDesktop
+          ? <GradePainel principal={principal} apoio={apoio} rotuloApoio="Calendário, férias e avisos" />
+          : painelCelular}
       </div>
 
       {/* FAB (só no celular) com a principal do perfil; fora da grade (container query quebra position:fixed). */}
       <FabAcoes acoes={acoesFab} />
-
-      {enviarExames && (
-        <EnviarExamesModal
-          concursos={emAndamento}
-          usuarioNome={authUser?.nome}
-          onClose={() => setEnviarExames(false)}
-        />
-      )}
 
       {todosDocumentos && (
         <Dialog title={`Últimos documentos gerados (${documentos.length})`} icon="print" size="lg" onClose={() => setTodosDocumentos(false)}>

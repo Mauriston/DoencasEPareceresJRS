@@ -2,7 +2,8 @@
 // Lista de concursos (auditoria v3, 2c): abas de situação + busca + ano + vista numa linha; KPIs no
 // contexto do filtro (situação e ano), visíveis também no celular; cards que respondem "como está"
 // (barra empilhada) na grade B 8 + 4 com "Próximos dias" e "Em breve" no apoio; tabela opcional
-// só a partir de md (no celular são sempre cards — inclusive para a Secretaria, M6).
+// só a partir de md (no celular são sempre cards — inclusive para a Secretaria, M6). Ações da página: Importar
+// CSV, Enviar exames (escolhe o candidato entre os concursos em andamento) e Novo concurso (primária).
 // Filtros na URL: /concursos?situacao=em_andamento|em_breve|encerrado&ano=AAAA (Início e Painel).
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -22,6 +23,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { SearchField, controlClass } from '../ui/Field';
 import { ConfirmDialog, Dialog } from '../ui/Dialog';
 import { MenuAcoes } from '../ui/MenuAcoes';
+import { FabAcoes, type AcaoFab } from '../ui/Fab';
 import { GradePainel } from '../ui/Grade';
 import { Toast } from '../ui/Toast';
 import { ConfirmDialogState, isoParaBR } from './compartilhado';
@@ -115,6 +117,16 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
   // Envio dos exames de um candidato pelo menu ⋮ do concurso: o candidato é
   // escolhido no próprio diálogo (autocomplete com os candidatos do concurso).
   const [enviarExamesConcurso, setEnviarExamesConcurso] = useState<ConcursoRecord | null>(null);
+  // "Enviar exames" da página (veio da Início): o candidato é escolhido no próprio sheet, entre os dos
+  // concursos em andamento. Só existe quando há concurso em andamento (sem isso não há a quem anexar).
+  const [enviarExamesPagina, setEnviarExamesPagina] = useState(false);
+  const concursosEmAndamento = useMemo(() => concursos.filter(c => c.status === 'em_andamento'), [concursos]);
+  const mostrarEnviarExames = podeEnviarExames && concursosEmAndamento.length > 0;
+
+  const acoesFab: AcaoFab[] = [
+    { id: 'novo-concurso', rotulo: 'Novo concurso', icone: 'add', onClick: onNovoConcursoClick, permitido: podeRegistrarMensagem },
+    { id: 'enviar-exames', rotulo: 'Enviar exames', icone: 'lab_profile', onClick: () => setEnviarExamesPagina(true), permitido: mostrarEnviarExames },
+  ];
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -488,6 +500,13 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
           onClose={(atualizado) => { setPeriodoAgendamentoAlvo(null); if (atualizado) onRecarregar(); }}
         />
       )}
+      {enviarExamesPagina && (
+        <EnviarExamesModal
+          concursos={concursosEmAndamento}
+          usuarioNome={navLista?.authUser?.nome}
+          onClose={() => setEnviarExamesPagina(false)}
+        />
+      )}
       {enviarExamesConcurso && (
         <EnviarExamesModal
           concursos={[enviarExamesConcurso]}
@@ -512,19 +531,22 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
         />
       )}
 
-      <Container size="data" className={`py-6 md:py-8 space-y-6 ${podeRegistrarMensagem ? 'pb-28 md:pb-10' : 'pb-10'}`}>
+      <Container size="data" className={`py-6 md:py-8 space-y-6 ${acoesFab.some(a => a.permitido !== false) ? 'pb-28 md:pb-10' : 'pb-10'}`}>
         <PageHeader
           title="Concursos"
           description="Planilhas de controle dos candidatos de cada concurso."
-          actions={podeImportarCsv ? (
+          actions={podeImportarCsv || mostrarEnviarExames || podeRegistrarMensagem ? (
             <>
-              {/* Celular: Importar CSV no ⋮ (a primária vira FAB); desktop: secundária ao lado da primária. */}
-              <span className="md:hidden"><MenuAcoes rotulo="Mais ações" itens={[{ rotulo: 'Importar CSV', icone: 'upload_file', onClick: onImportarCsvClick }]} /></span>
-              <Button variant="secondary" icon="upload_file" onClick={onImportarCsvClick} className="hidden md:inline-flex">Importar CSV</Button>
+              {/* Celular: Importar CSV no ⋮ e as demais no FAB; desktop: secundárias e a primária por último. */}
+              {podeImportarCsv && <span className="md:hidden"><MenuAcoes rotulo="Mais ações" itens={[{ rotulo: 'Importar CSV', icone: 'upload_file', onClick: onImportarCsvClick }]} /></span>}
+              {podeImportarCsv && <Button variant="secondary" icon="upload_file" onClick={onImportarCsvClick} className="hidden md:inline-flex">Importar CSV</Button>}
+              {mostrarEnviarExames && <Button variant="secondary" icon="lab_profile" onClick={() => setEnviarExamesPagina(true)} className="hidden md:inline-flex">Enviar exames</Button>}
+              {podeRegistrarMensagem && <Button icon="add" onClick={onNovoConcursoClick} className="hidden md:inline-flex">Novo concurso</Button>}
             </>
           ) : undefined}
-          fab={podeRegistrarMensagem ? { icon: 'add', label: 'Novo concurso', onClick: onNovoConcursoClick } : undefined}
         />
+        {/* FAB (só no celular): "+" executa a única ação ou abre a pilha (Novo concurso · Enviar exames). */}
+        <FabAcoes acoes={acoesFab} />
 
         {loading ? (
           <div className="p-12 text-center text-ink-3 flex flex-col items-center space-y-2" role="status" aria-label="Carregando">

@@ -1,13 +1,14 @@
 // Ficheiro: components/inspecoes/exames/EnviarExamesISDialog.tsx
 // "Exames" no detalhe da IS: escolhe um ou mais PDFs; cada um é lido pela IA (que identifica o documento
-// e transcreve o laudo) e, lido, vai para o Storage/Firestore (services/examesIS.ts). Um PDF que falha
+// e transcreve o laudo, e classifica o PDF como Exame ou Atestado/Relatório médico) e, lido, vai para o
+// Storage/Firestore (services/examesIS.ts; campo "categoria"). Um PDF que falha
 // fica na lista com o motivo e "Tentar de novo"; os demais seguem.
 import React, { useRef, useState } from 'react';
 import { Dialog } from '../../ui/Dialog';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { gravarExameIS, lerExameComIA, MAX_PDF_EXAME_MB } from '../../../services/examesIS';
-import { ROTULO_TIPO } from '../../../utils/examesIS';
+import { ROTULO_CATEGORIA, ROTULO_TIPO } from '../../../utils/examesIS';
 
 type Etapa = 'na_fila' | 'lendo' | 'enviando' | 'pronto' | 'erro';
 interface Envio { id: string; arquivo: File; etapa: Etapa; resumo: string; erro: string }
@@ -37,7 +38,7 @@ export const EnviarExamesISDialog: React.FC<Props> = ({ isId, usuario, onClose }
       const leitura = await lerExameComIA(e.arquivo);
       mudar(e.id, { etapa: 'enviando' });
       await gravarExameIS(isId, e.arquivo, leitura, usuario);
-      mudar(e.id, { etapa: 'pronto', resumo: leitura.itens.map(i => i.titulo || ROTULO_TIPO[i.tipo]).join(' · ') });
+      mudar(e.id, { etapa: 'pronto', resumo: `${ROTULO_CATEGORIA[leitura.categoria]}: ${leitura.itens.map(i => i.titulo || ROTULO_TIPO[i.tipo]).join(' · ')}` });
     } catch (err: any) {
       mudar(e.id, { etapa: 'erro', erro: err?.message || 'Não foi possível enviar.' });
     }

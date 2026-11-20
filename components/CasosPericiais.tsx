@@ -499,7 +499,7 @@ export const CasosPericiais: React.FC = () => {
         </Container>
 
         {selectedAnswer !== null && !showModal && (
-          <FabAcoes acoes={[{ id: 'proximo', rotulo: rotuloProximo, icone: ultimo ? 'check_circle' : 'chevron_right', onClick: handleNext }]} />
+          <FabAcoes acoes={[{ id: 'proximo', rotulo: rotuloProximo, icone: ultimo ? 'check_circle' : 'chevron_right', onClick: handleNext , manterIcone: true }]} />
         )}
 
         {showModal && (

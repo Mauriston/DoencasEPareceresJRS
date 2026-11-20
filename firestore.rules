@@ -282,6 +282,18 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Coleção "afastamentosIS": afastamentos (LTS/Restrições) e CID dos INSPECIONADOS, lidos pela IA do laudo das IS
+    // de Verificações e Términos finalizadas (services/afastamentosIS.ts). Id = id da IS (reprocessar substitui).
+    // O processamento roda no navegador de quem finaliza/reabre a IS (a equipe), então a equipe lê e grava.
+    match /afastamentosIS/{isId} {
+      allow read: if isEquipe();
+      allow create, update: if isEquipe()
+        && request.resource.data.isId == isId
+        && request.resource.data.afastamentos is list
+        && exists(/databases/$(database)/documents/inspecoes/$(isId));
+      allow delete: if isEquipe();
+    }
+
     match /bloqueiosAgenda/{id} {
       allow read: if isSignedIn();
       allow create: if isAdmin() || isSecretaria() || (isMedico() && request.resource.data.peritoUid == request.auth.uid);
