@@ -15,6 +15,10 @@ export const TagTipoPericia: React.FC<{ tipo: TipoPericia }> = ({ tipo }) => {
   return <span className="text-xs text-ink-4">{ROTULO_TIPO_PERICIA.nenhum}</span>;
 };
 
+/** Chip da especialidade médica (deduzida do CID pela IA). Sem especialidade: nada. */
+export const TagEspecialidade: React.FC<{ especialidade?: string; className?: string }> = ({ especialidade, className = '' }) =>
+  especialidade ? <StatusTag tone="muted" dot={false} title="Especialidade (pelo CID)" className={className}>{especialidade}</StatusTag> : null;
+
 /** Cor da contagem: vinho só quando termina hoje (exige ação); navy enquanto vigente; ink-3 depois. */
 export const classeContagem = (c: Pick<ContagemTermino, 'tom'>): string =>
   c.tom === 'hoje' ? 'text-wine' : c.tom === 'futuro' ? 'text-navy' : 'text-ink-3';

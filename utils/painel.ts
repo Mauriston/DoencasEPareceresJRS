@@ -350,6 +350,7 @@ export interface PericiaPainel {
   om: string;
   cid: string;
   cidCodigo?: string;
+  especialidade?: string;
   dispensas: string[];
   dataAtestado: string;
   dataTermino: string;
@@ -427,6 +428,10 @@ export const cidsFrequentes = (lista: PericiaPainel[], janela: JanelaPainel): It
   doPeriodo.forEach(p => { const c = cidDe(p); if (c.codigo && !rotulos.has(c.codigo)) rotulos.set(c.codigo, c.rotulo); });
   return ranking(contarPor(doPeriodo, p => cidDe(p).codigo), k => rotulos.get(k) ?? k);
 };
+
+/** Perícias do período por especialidade médica (deduzida do CID pela IA); sem classificação: "Não categorizada". */
+export const periciasPorEspecialidade = (lista: PericiaPainel[], janela: JanelaPainel): ItemRanking[] =>
+  ranking(contarPor(lista.filter(p => noIntervalo(p.dataAtestado, janela.atual)), p => p.especialidade || 'Não categorizada'));
 
 export const periciasPorOm = (lista: PericiaPainel[], janela: JanelaPainel): ItemRanking[] =>
   ranking(contarPor(lista.filter(p => noIntervalo(p.dataAtestado, janela.atual)), p => (p.om || 'Sem OM').trim()));

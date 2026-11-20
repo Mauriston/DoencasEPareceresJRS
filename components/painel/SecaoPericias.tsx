@@ -4,7 +4,7 @@
 // User Médicos Geral vê só os atestados que registrou (seção "Atestados").
 import React, { useMemo, useState } from 'react';
 import {
-  aplicarRecortePericias, cidsFrequentes, periciasPorOm, resumoPericias, serieMensalPericias, variacao, ALERTA_DIAS_PERICIA,
+  aplicarRecortePericias, cidsFrequentes, periciasPorEspecialidade, periciasPorOm, resumoPericias, serieMensalPericias, variacao, ALERTA_DIAS_PERICIA,
   type JanelaPainel, type PericiaPainel, type RecortePericias,
 } from '../../utils/painel';
 import { GradePainel } from '../ui/Grade';
@@ -33,6 +33,7 @@ export const SecaoPericias: React.FC<Props> = ({ lista, janela, hoje, uid, recor
   const r = useMemo(() => resumoPericias(dados, janela, hoje), [dados, janela, hoje]);
   const serie = useMemo(() => serieMensalPericias(dados, hoje, desktop ? 12 : 6), [dados, hoje, desktop]);
   const cids = useMemo(() => cidsFrequentes(dados, janela), [dados, janela]);
+  const especialidades = useMemo(() => periciasPorEspecialidade(dados, janela), [dados, janela]);
   const oms = useMemo(() => periciasPorOm(dados, janela), [dados, janela]);
   const vs = `vs. ${janela.rotuloAnterior}`;
   const minhas = recorte === 'minhas';
@@ -71,15 +72,18 @@ export const SecaoPericias: React.FC<Props> = ({ lista, janela, hoje, uid, recor
           </Bloco>
         )}
       />
-      {desktop && !minhas && (
-        <div className="@container">
-          <div className="grid grid-cols-1 @split:grid-cols-12 gap-6">
+      <div className="@container">
+        <div className="grid grid-cols-1 @split:grid-cols-12 gap-6">
+          <Bloco className="@split:col-span-5" titulo="Por especialidade">
+            <ListaBarras itens={especialidades.map(e => ({ ...e, to: e.chave && e.chave !== 'Não categorizada' ? `${LISTA}?especialidade=${encodeURIComponent(e.chave)}` : LISTA }))} limite={desktop ? 10 : 5} />
+          </Bloco>
+          {desktop && !minhas && (
             <Bloco className="@split:col-span-7" titulo="Por OM">
               <ListaBarras itens={oms.map(o => ({ ...o, to: LISTA }))} limite={6} />
             </Bloco>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
