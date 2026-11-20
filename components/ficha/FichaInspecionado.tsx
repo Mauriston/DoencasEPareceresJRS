@@ -45,7 +45,7 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { FabAcoes } from '../ui/Fab';
 import { MenuAcoes, type ItemMenu } from '../ui/MenuAcoes';
-import { AbasSublinhadas, CidCodigo, TextoContagem } from '../periciaMenor/partes';
+import { AbasSublinhadas, CidCodigo, TagEspecialidade, TextoContagem } from '../periciaMenor/partes';
 import { StatusTag } from '../ui/StatusTag';
 import { EmptyState } from '../ui/EmptyState';
 import { AccessDenied } from '../ui/AccessDenied';
@@ -300,7 +300,7 @@ export const FichaInspecionado: React.FC = () => {
     return {
       id: p.id, data: p.dataAtestado, icone: 'personal_injury',
       titulo: atestado ? 'Atestado registrado' : p.homologacao ? 'Atestado homologado' : 'Perícia menor registrada',
-      detalhe: <>{dias(p.tempoHomologado)} · {ROTULO_TIPO_PERICIA[tipoDaPericia(p.dispensas)]}{cid.codigo || cid.descricao ? ' · ' : ''}<CidCodigo codigo={cid.codigo} descricao={cid.descricao} /></>,
+      detalhe: <>{dias(p.tempoHomologado)} · {ROTULO_TIPO_PERICIA[tipoDaPericia(p.dispensas)]}{cid.codigo || cid.descricao ? ' · ' : ''}<CidCodigo codigo={cid.codigo} descricao={cid.descricao} />{p.especialidade && <span className="block mt-1"><TagEspecialidade especialidade={p.especialidade} /></span>}</>,
       tag: c.tom !== 'passado' ? <TextoContagem contagem={c} /> : <StatusTag tone="muted">Concluída</StatusTag>,
     };
   }), [pmOrdenadas, cidAbrev, hoje, atestado]);
