@@ -4,7 +4,9 @@
 // íntegra; depois o PDF vai para o Storage (pareceres/{id}-resposta.pdf) e a resposta é gravada NO PEDIDO
 // (pareceres/{id}.resposta), que passa a CONCLUÍDO (marcarConcluido). A leitura vem antes do envio: um PDF que
 // a IA não leu não deixa resposta pela metade. Regras: firestore.rules (pareceres) e storage.rules (pareceres/).
-import { getFirestore, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { avancarParaConclusaoPendente } from './firestoreInspecoes';
+import { statusAposRespostaParecer } from '../utils/conclusaoIS';
+import { getFirestore, doc, updateDoc, serverTimestamp, getDocs, query, collection, where } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { app } from './firebaseAuth';
 import { registrarUsoAcao } from './usoDiario';
@@ -61,7 +63,7 @@ export const lerRespostaComIA = async (arquivo: File): Promise<LeituraResposta> 
 
 /** Envia o PDF ao Storage, grava a resposta no pedido e marca o pedido como CONCLUÍDO. */
 export const gravarRespostaParecer = async (
-  pedido: Pick<ParecerRecord, 'id' | 'militarId' | 'is'>, arquivo: File, leitura: LeituraResposta,
+  pedido: Pick<ParecerRecord, 'id' | 'militarId' | 'is'> & { isId?: string }, arquivo: File, leitura: LeituraResposta,
   usuario: { uid: string; usuario: string; nome: string },
 ): Promise<void> => {
   const caminho = caminhoRespostaParecer(pedido.id);
@@ -81,5 +83,12 @@ export const gravarRespostaParecer = async (
     throw e;
   }
   await marcarConcluido(pedido.id, true, usuario.nome);
+  // IS em "Parecer solicitado" sem outro pedido em aberto → Conclusão pendente.
+  if (pedido.isId) {
+    const isId = pedido.isId;
+    const abertos = await getDocs(query(collection(db, 'pareceres'), where('isId', '==', isId)))
+      .then(s => s.docs.filter(d => d.id !== pedido.id && d.data().status !== 'concluido').length).catch(() => 1);
+    await avancarParaConclusaoPendente(isId, st => statusAposRespostaParecer(st, abertos));
+  }
   registrarEventoInspecionado(pedido.militarId, 'parecer.resposta', pedido.is ? `Parecer da IS ${pedido.is}` : 'Resposta de parecer');
 };
