@@ -22,7 +22,7 @@ async function getFirebaseAdmin() {
   return { adminAuth: getAuth(adminApp), adminDb: getFirestore(adminApp), adminApp };
 }
 
-// Bucket do Firebase Storage do app (PDFs, fotos de perfil, infográficos).
+// Bucket do Firebase Storage do app (PDFs, fotos de perfil).
 const BUCKET_STORAGE = process.env.FIREBASE_STORAGE_BUCKET || "jrs-app-web.firebasestorage.app";
 
 

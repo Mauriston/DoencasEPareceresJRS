@@ -1,25 +1,22 @@
 // Ficheiro: services/firestoreExtras.ts
-// Páginas Vídeos, Infográficos e Apresentações (as duas primeiras antes lidas da planilha).
+// Páginas Vídeos e Apresentações.
 //  - "videos": vídeos do YouTube. O Admin informa só a URL; o título vem do oEmbed do
 //    YouTube e a thumbnail é a do próprio YouTube (i.ytimg.com).
-//  - "infograficos": título + imagem enviada ao Storage em infograficos/{id}.{ext}.
 //  - "apresentacoes": apresentações de slides (Google Slides, Canva, GitHub Pages). O Admin informa só
 //    a URL; o título e a capa vêm do backend (/api/admin/preview-apresentacao), que lê o HTML público.
-//  - "visualizacoesExtras": quem abriu cada vídeo/infográfico/apresentação (um doc por pessoa e item, com o
+//  - "visualizacoesExtras": quem abriu cada vídeo/apresentação (um doc por pessoa e item, com o
 //    número de vezes). Cada usuário grava só as próprias visualizações; só o Admin lê.
 // Leitura: usuário autenticado; escrita: Admin (ver firestore.rules e storage.rules).
 import {
   getFirestore, collection, doc, onSnapshot, deleteDoc, setDoc, serverTimestamp, increment, query, where, getDocs, type Timestamp,
 } from 'firebase/firestore';
 import { novoId } from '../utils/dados';
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { app, auth } from './firebaseAuth';
 import { ApiError, chamarServidor } from './apiClient';
 import { notificarAcao } from './notificacoesPush';
 
 const db = getFirestore(app);
 const COL_VIDEOS = 'videos';
-const COL_INFOGRAFICOS = 'infograficos';
 const COL_APRESENTACOES = 'apresentacoes';
 const COL_VISUALIZACOES = 'visualizacoesExtras';
 
@@ -28,17 +25,6 @@ export interface VideoRecord {
   youtubeId: string;
   titulo: string;
   thumbnailUrl: string;
-  criadoPor?: string;
-  criadoEm?: Timestamp;
-}
-
-export interface InfograficoRecord {
-  id: string;
-  titulo: string;
-  /** Caminho da imagem no Storage (infograficos/{id}.{ext}). */
-  imagePath: string;
-  /** URL de download da imagem. */
-  imageUrl: string;
   criadoPor?: string;
   criadoEm?: Timestamp;
 }
@@ -85,37 +71,6 @@ export const criarVideo = async (dados: { youtubeId: string; titulo: string; thu
 export const apagarVideo = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, COL_VIDEOS, id));
   await apagarVisualizacoes('video', id);
-};
-
-// ---------------------------------------------------------------------------
-// Infográficos
-// ---------------------------------------------------------------------------
-
-export const LIMITE_INFOGRAFICO_MB = 10;
-
-export const observarInfograficos = (onData: (lista: InfograficoRecord[]) => void, onError?: (e: Error) => void) =>
-  onSnapshot(
-    collection(db, COL_INFOGRAFICOS),
-    snap => onData(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<InfograficoRecord, 'id'>) })).sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR'))),
-    err => onError?.(err),
-  );
-
-/** Envia a imagem ao Storage (infograficos/{id}.{ext}) e cria o documento. */
-export const criarInfografico = async (titulo: string, arquivo: File, criadoPor: string): Promise<void> => {
-  const novo = doc(db, COL_INFOGRAFICOS, novoId());
-  const ext = (arquivo.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-  const imagePath = `infograficos/${novo.id}.${ext}`;
-  const arq = ref(getStorage(app), imagePath);
-  await uploadBytes(arq, arquivo, { contentType: arquivo.type || 'image/jpeg' });
-  const imageUrl = await getDownloadURL(arq);
-  await setDoc(novo, { titulo: titulo.trim(), imagePath, imageUrl, criadoPor, criadoEm: serverTimestamp() });
-  notificarAcao('infografico.publicado');
-};
-
-export const apagarInfografico = async (item: InfograficoRecord): Promise<void> => {
-  await deleteDoc(doc(db, COL_INFOGRAFICOS, item.id));
-  await apagarVisualizacoes('infografico', item.id);
-  if (item.imagePath) await deleteObject(ref(getStorage(app), item.imagePath)).catch(() => { /* imagem já removida */ });
 };
 
 // ---------------------------------------------------------------------------
@@ -219,7 +174,7 @@ export const apagarApresentacao = async (id: string): Promise<void> => {
 // Visualizações (registradas ao abrir o card; exibidas só ao Admin)
 // ---------------------------------------------------------------------------
 
-export type TipoExtra = 'video' | 'infografico' | 'apresentacao';
+export type TipoExtra = 'video' | 'apresentacao';
 
 export interface VisualizacaoExtra {
   id: string;

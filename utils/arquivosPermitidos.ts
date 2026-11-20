@@ -4,7 +4,7 @@
 // Qualquer outro caminho, ou com "..", barra inicial ou caractere de controle, é recusado.
 // NUNCA inclua `entrevistas/` (áudio das entrevistas gravadas da IS): só a junta ouve, pelo
 // servidor (/api/entrevistas/ouvir), que confere o perfil — este repasse vale para qualquer usuário ativo.
-export const PASTAS_ARQUIVOS = ['perfil/', 'pareceres/', 'periciasMenores/', 'concursos/', 'legislacao/', 'infograficos/', 'dgpm406/'] as const;
+export const PASTAS_ARQUIVOS = ['perfil/', 'pareceres/', 'periciasMenores/', 'concursos/', 'legislacao/', 'dgpm406/'] as const;
 
 const caminhoSeguro = (c: unknown): c is string =>
   typeof c === 'string' && c.length > 0 && c.length <= 512 && !c.includes('..') && !c.startsWith('/')

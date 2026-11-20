@@ -11,7 +11,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 const [projeto = 'jrs-app-web', destino = 'restauracao-teste', snapshot = ''] = process.argv.slice(2);
 const COLECOES = [
   'usuarios', 'militares', 'inspecoes', 'bloqueiosAgenda', 'pareceres', 'periciasMenores', 'escalaSpa',
-  'concursos', 'legislacao', 'videos', 'infograficos', 'apresentacoes', 'documentos_gerados', 'quesitosParecer',
+  'concursos', 'legislacao', 'videos', 'apresentacoes', 'documentos_gerados', 'quesitosParecer',
 ];
 
 const ESSENCIAIS = new Set(['usuarios', 'militares', 'concursos']);

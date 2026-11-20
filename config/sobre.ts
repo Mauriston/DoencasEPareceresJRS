@@ -220,17 +220,16 @@ export const AREAS_SOBRE: AreaSobre[] = [
     },
   },
   {
-    id: 'formacao', titulo: 'Formação', chip: 'Formação', icone: 'school', paginas: ['roteiro', 'casos', 'videos', 'infograficos', 'apresentacoes'], destaque: false,
+    id: 'formacao', titulo: 'Formação', chip: 'Formação', icone: 'school', paginas: ['videos', 'apresentacoes'], destaque: false,
     resumo: 'Capacitação dos AMP.',
-    resumoCurto: 'Roteiro de estudos e casos periciais comentados.',
+    resumoCurto: 'Vídeos e apresentações de capacitação.',
     itens: [
-      'Roteiro JRS: trilha de estudos',
-      'Casos periciais comentados, vídeos, infográficos e apresentações',
+      'Vídeos e apresentações de capacitação',
     ],
     textoPublico: {
       resumo: 'Capacitação dos Agentes Médico-Periciais.',
-      resumoCurto: 'Roteiro de estudos e casos periciais comentados.',
-      itens: ['Trilha de estudos e casos comentados'],
+      resumoCurto: 'Vídeos e apresentações de capacitação.',
+      itens: ['Vídeos e apresentações de capacitação'],
     },
   },
   {

@@ -475,11 +475,11 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   await p.context().close();
 });
 
-test('aliases estáveis redirecionam para a rota canônica (/estudo, /doencas)', async () => {
+test('aliases estáveis redirecionam para a rota canônica (/dgpm-406, /doencas)', async () => {
   const p = await novaPagina();
   await entrar(p, MEDICO);
-  await p.goto(`${BASE}#/estudo`);
-  await p.waitForURL(/#\/extras\/roteiro$/);
+  await p.goto(`${BASE}#/dgpm-406`);
+  await p.waitForURL(/#\/normas\/dgpm-406$/);
   await p.goto(`${BASE}#/doencas`);
   await p.waitForURL(/#\/beneficios\/doencas$/);
   await p.context().close();

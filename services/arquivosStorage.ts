@@ -1,5 +1,5 @@
 // Ficheiro: services/arquivosStorage.ts
-// Arquivos do Firebase Storage (PDFs, fotos de perfil, infográficos) entregues pelo servidor do app.
+// Arquivos do Firebase Storage (PDFs, fotos de perfil) entregues pelo servidor do app.
 // Motivo: em algumas redes (ex.: Firefox nos PCs da Marinha) o endereço firebasestorage.googleapis.com
 // é bloqueado ou interceptado, e os PDFs e as fotos não abrem; o servidor do app (Cloud Run) é
 // acessível. Então, para uma URL do Storage, o app pede os bytes a POST /api/arquivos/baixar (com o

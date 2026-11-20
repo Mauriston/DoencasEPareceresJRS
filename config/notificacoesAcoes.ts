@@ -90,7 +90,6 @@ export const ACOES_NOTIFICAVEIS = {
 
   // --- Conteúdos e administração (exclusivos do Admin) -------------------
   'video.publicado': { titulo: 'Novo vídeo', texto: '{ator} publicou um vídeo', pagina: 'videos', soAdmin: true, alvo: 'nenhum' },
-  'infografico.publicado': { titulo: 'Novo infográfico', texto: '{ator} publicou um infográfico', pagina: 'infograficos', soAdmin: true, alvo: 'nenhum' },
   'apresentacao.publicada': { titulo: 'Nova apresentação', texto: '{ator} publicou uma apresentação', pagina: 'apresentacoes', soAdmin: true, alvo: 'nenhum' },
   'legislacao.publicada': { titulo: 'Nova legislação', texto: '{ator} cadastrou uma legislação', pagina: 'laws', soAdmin: true, alvo: 'nenhum' },
   'afastamento.registrado': { titulo: 'Afastamento', texto: '{ator} registrou ou alterou um afastamento', pagina: 'ferias', soAdmin: true, alvo: 'nenhum', intervaloMs: 5 * MIN },
@@ -110,7 +109,6 @@ export const ROTA_DA_PAGINA: Record<string, string> = {
   pareceres: '/pareceres',
   'pericia-menor': '/pericia-menor',
   videos: '/extras/videos',
-  infograficos: '/extras/infograficos',
   apresentacoes: '/extras/apresentacoes',
   laws: '/normas/legislacao',
   ferias: '/ferias',

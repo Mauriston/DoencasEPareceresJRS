@@ -1,5 +1,5 @@
 // Ficheiro: components/ui/VisualizacoesBadge.tsx
-// Selo "olho + total de visualizações" dos cards de Vídeos e Infográficos (só o Admin vê).
+// Selo "olho + total de visualizações" dos cards de Vídeos e Apresentações (só o Admin vê).
 // Passar o mouse (ou focar/tocar) abre a lista de quem visualizou, com quantas vezes e quando.
 import React, { useEffect, useRef, useState } from 'react';
 import type { VisualizacaoExtra } from '../../services/firestoreExtras';
