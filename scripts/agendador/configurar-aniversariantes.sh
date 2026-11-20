@@ -17,7 +17,7 @@ JOB="${JOB:-aniversariantes}"
 gc() { gcloud --project="$PROJETO" --quiet "$@"; }
 
 echo "== API do Cloud Scheduler"
-gc services enable cloudscheduler.googleapis.com
+gc services enable cloudscheduler.googleapis.com || echo "Sem permissão para ativar a API (provavelmente já ativa: o job email-agenda-is a usa). Seguindo."
 
 URL="$(gc run services describe "$SERVICO" --region="$REGIAO" --format='value(status.url)')"
 [[ -n "$URL" ]] || { echo "Serviço $SERVICO não encontrado em $REGIAO." >&2; exit 1; }

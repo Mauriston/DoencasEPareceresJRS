@@ -39,3 +39,10 @@ describe('aniversarios', () => {
     expect(hojeEmRecife(new Date('2026-11-21T02:00:00Z'))).toBe('2026-11-20');
   });
 });
+
+describe('mensagem livre', () => {
+  it('só o cabeçalho e o campo para o texto', async () => {
+    const { mensagemParabensLivre } = await import('../aniversarios');
+    expect(mensagemParabensLivre('CT JÚLIO CÉSAR')).toBe('*JÚLIO CÉSAR, PARABÉNS!*\n\n_[escreva aqui a sua mensagem para JÚLIO CÉSAR]_');
+  });
+});

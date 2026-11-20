@@ -4,6 +4,7 @@ import { Navigate, useLocation, useNavigate, useNavigationType, useRoutes } from
 import { Login } from './components/Login';
 import { Home } from './components/Home';
 import { Sidebar } from './components/shell/Sidebar';
+import { BannerAniversariantes } from './components/shell/BannerAniversariantes';
 import { Topbar } from './components/shell/Topbar';
 import { BarraInferior } from './components/shell/BarraInferior';
 import { TituloPaginaProvider } from './components/shell/TituloPagina';
@@ -492,6 +493,9 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
           <Topbar rolou={rolou} />
           {/* Único container de rolagem do app: as telas só crescem; toolbars e
               cabeçalhos de tabela usam `sticky` dentro dele. */}
+          {/* Banner flutuante dos aniversariantes do dia, por cima do conteúdo (não rola com ele). */}
+          <div className="relative flex-1 min-h-0 flex flex-col">
+          <BannerAniversariantes authUser={authUser} />
           <main id="conteudo" ref={mainRef} tabIndex={-1} className="flex-1 min-h-0 overflow-y-auto focus:outline-none">
             <div ref={sentinelaRef} className="h-px -mb-px" aria-hidden="true" />
             {/* Única transição de troca de tela (CSS, 150 ms); Page e as telas não repetem o fade. */}
@@ -502,6 +506,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
               </Suspense>
             </div>
           </main>
+          </div>
         </div>
         {/* Celular: destinos do perfil + Menu, oculta ao rolar (mesmo contêiner do `rolou`). */}
         <BarraInferior alvo={mainRef} />
