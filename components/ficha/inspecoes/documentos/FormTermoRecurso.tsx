@@ -14,7 +14,7 @@ export const FormTermoRecurso: React.FC<PropsFormularioDocumentoIS> = ({ is, env
   const dataLaudo = dataBr(is.dataLaudo);
   return (
     <DialogFormularioDocumento titulo="Termo de Recurso" icone="gavel" enviando={enviando} onCancelar={onCancelar} onGerar={() => onEnviar({})}>
-      <p className="text-sm text-ink-2">Gerar o Termo de Recurso da IS nº <b>{is.is}</b> ({is.finalidade}).</p>
+      <p className="text-sm text-ink-3">Gerar o Termo de Recurso da IS nº <b>{is.is}</b> ({is.finalidade}).</p>
       <p className="text-sm text-ink-3">
         Laudo exarado em: <b>{dataLaudo || 'sem data de laudo na IS'}</b>. Assinado pelo Presidente da JRS, com rubrica.
       </p>
