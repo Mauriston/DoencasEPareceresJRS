@@ -250,7 +250,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
       }
     });
   };
-  const gravarCampo = (campo: CampoConclusao, valor: string) => gravar(atual => patchConclusao(comPadroes(atual), campo, valor, hojeISO()));
+  const gravarCampo = (campo: CampoConclusao, valor: string) => gravar(atual => patchConclusao(comPadroes(atual), campo, valor, hojeISO(), nav?.authUser?.perfil));
 
   const laudo = useCampoAuto(is.laudo || '', v => gravarCampo('laudo', v));
   const ds1a = useCampoAuto(is.ds1a || '', v => gravarCampo('ds1a', v));

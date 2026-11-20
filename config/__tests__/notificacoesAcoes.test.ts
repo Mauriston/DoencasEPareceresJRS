@@ -63,3 +63,20 @@ describe('destinatários por perfil (padrões da matriz)', () => {
     expect(executaveis('visitante')).toEqual([]);
   });
 });
+
+import { recebeAvisoDaAcao as recebe, ACOES_NOTIFICAVEIS as ACOES } from '../notificacoesAcoes';
+describe('avisos das IS para user_medicos / user_medicos_mpi', () => {
+  const med = { uid: 'm1', perfil: 'user_medicos' };
+  const mpi = { uid: 'p1', perfil: 'user_medicos_mpi' };
+  it('só a IS agendada para o próprio perito', () => {
+    expect(recebe(med, ACOES['is.editada'], 'm1')).toBe(true);
+    expect(recebe(med, ACOES['is.editada'], 'outro')).toBe(false);
+    expect(recebe(mpi, ACOES['is.examesEnviados'], '')).toBe(false);
+    expect(recebe(med, ACOES['is.agendaBloqueada'])).toBe(false);
+  });
+  it('Admin e demais perfis, e a Perícia Menor, não mudam', () => {
+    expect(recebe({ uid: 'a', perfil: 'admin' }, ACOES['is.editada'], 'm1')).toBe(true);
+    expect(recebe({ uid: 's', perfil: 'user_secretaria' }, ACOES['is.agendaBloqueada'])).toBe(true);
+    expect(recebe(med, ACOES['pericia.registrada'])).toBe(true);
+  });
+});

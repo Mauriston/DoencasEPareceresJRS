@@ -129,3 +129,22 @@ export const perfilExecuta = (
   if (!paginaPermitida(matriz, req.pagina, perfil)) return false;
   return !req.feature || featurePermitida(matriz, req.feature, perfil);
 };
+
+/** Perfis médicos que só recebem os avisos das IS agendadas para eles (as demais notificações seguem a matriz). */
+export const PERFIS_SO_IS_PROPRIAS: readonly string[] = ['user_medicos', 'user_medicos_mpi'];
+
+/**
+ * O usuário recebe o aviso desta ação? Admin e demais perfis: sim (já filtrados por perfilExecuta).
+ * user_medicos/user_medicos_mpi, em ações das Inspeções de Saúde: só quando a IS está agendada para ele
+ * (peritoUid da IS = uid); avisos de IS sem uma IS específica (agenda, turnos…) não chegam a eles.
+ * Perícia Menor, Pareceres, Concursos etc. não mudam.
+ */
+export const recebeAvisoDaAcao = (
+  usuario: { uid: string; perfil?: string },
+  acao: Pick<AcaoNotificavel, 'pagina' | 'alvo'>,
+  peritoUidDaIS?: string,
+): boolean => {
+  if (!PERFIS_SO_IS_PROPRIAS.includes(String(usuario.perfil))) return true;
+  if (acao.pagina !== 'inspecoes') return true;
+  return acao.alvo === 'is' && !!peritoUidDaIS && peritoUidDaIS === usuario.uid;
+};

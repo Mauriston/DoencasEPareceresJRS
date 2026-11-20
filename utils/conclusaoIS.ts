@@ -129,15 +129,19 @@ const comSituacao = (patch: PatchConclusao): PatchConclusao => (patch.status ? {
  *  - DS-1a inserido (em Verificações e Términos, só com o CID) → continua Assinaturas pendentes: a IS só é
  *    finalizada pelo botão "Concluir IS" (patchConcluirIS); apagado → Assinaturas pendentes.
  *  - Restrições só ficam gravadas se o campo estiver visível (finalidade do grupo).
+ *  - Observações preenchidas por médico (`perfil`) numa IS Agendada/Reagendada → Conclusão pendente.
  */
-export const patchConclusao = (atual: EstadoConclusao, campo: CampoConclusao, valorBruto: string, hoje: string = hojeISO()): ResultadoConclusao => {
+export const patchConclusao = (atual: EstadoConclusao, campo: CampoConclusao, valorBruto: string, hoje: string = hojeISO(), perfil?: string): ResultadoConclusao => {
   const valor = campo === 'restricoes' ? juntarRestricoes(separarRestricoes(valorBruto)) : String(valorBruto ?? '').trim();
   const nada: ResultadoConclusao = { patch: {}, concluirPareceres: false };
   if (valor === (atual[campo] ?? '')) return nada;
 
   switch (campo) {
-    case 'observacoes':
-      return { patch: { observacoes: valor }, concluirPareceres: false };
+    case 'observacoes': {
+      // Observações gravadas por médico numa IS Agendada levam a "Conclusão pendente".
+      const novo = valor ? statusAposAtoMedico(atual.status, perfil) : null;
+      return { patch: comSituacao({ observacoes: valor, ...(novo ? { status: novo } : {}) }), concluirPareceres: false };
+    }
 
     case 'restricoes':
       if (valor && !mostraRestricoes(atual)) return nada;
@@ -326,3 +330,22 @@ export const patchFinalidade = (atual: EstadoFinalidade, nova: { finalidade: str
   if (atual.restricoes && !grupoComRestricoes(nova.grupo)) patch.restricoes = '';
   return patch;
 };
+
+// ---------------------------------------------------------------------------
+// Avanços automáticos para "Conclusão pendente"
+// ---------------------------------------------------------------------------
+
+/** Perfis médicos (o Admin também é perito). */
+export const PERFIS_MEDICOS: readonly string[] = ['admin', 'user_medicos', 'user_medicos_mpi'];
+const STATUS_AGENDADOS: StatusIS[] = ['agendada', 'reagendada'];
+
+/**
+ * IS Agendada (ou Reagendada) que recebe, de um médico, Observações, solicitação de exames ou PDF enviado:
+ * → Conclusão pendente. Devolve null quando o status não muda.
+ */
+export const statusAposAtoMedico = (status: StatusIS | string | undefined, perfil: string | undefined): StatusIS | null =>
+  STATUS_AGENDADOS.includes(status as StatusIS) && PERFIS_MEDICOS.includes(String(perfil)) ? 'conclusao_pendente' : null;
+
+/** IS em "Parecer solicitado" cujo pedido recebeu resposta (e sem outro pedido em aberto) → Conclusão pendente. */
+export const statusAposRespostaParecer = (status: StatusIS | string | undefined, pedidosAbertos: number): StatusIS | null =>
+  status === 'parecer_solicitado' && pedidosAbertos === 0 ? 'conclusao_pendente' : null;

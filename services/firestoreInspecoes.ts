@@ -249,6 +249,28 @@ export const atualizarInspecao = async (id: string, patch: Partial<InspecaoDoc>)
 };
 
 /**
+ * Avanço automático para "Conclusão pendente" (utils/conclusaoIS.ts): PDF enviado/solicitação de exames por médico
+ * numa IS Agendada, ou resposta ao último pedido de parecer em aberto. Best effort: nunca lança.
+ */
+export const avancarParaConclusaoPendente = async (
+  isId: string, regra: (status: StatusIS) => StatusIS | null,
+): Promise<boolean> => {
+  try {
+    const snap = await getDoc(doc(db, COL, isId));
+    if (!snap.exists()) return false;
+    const novo = regra(snap.data().status as StatusIS);
+    if (!novo) return false;
+    await atualizarInspecao(isId, { status: novo });
+    return true;
+  } catch { return false; }
+};
+
+/** Perfil do usuário (usuarios/{uid}.perfil); '' se não der para ler. */
+export const perfilDoUsuario = async (uid: string): Promise<string> => {
+  try { return String((await getDoc(doc(db, 'usuarios', uid))).data()?.perfil || ''); } catch { return ''; }
+};
+
+/**
  * "Limpar" dos modais de e-mails pendentes (só Admin): tira as IS da lista de pendências do e-mail `tipo` sem enviá-lo
  * (emailsDispensados.{tipo}; utils/emailsDispensados.ts). Não mexe em atualizadoEm nem notifica "IS atualizada".
  */
