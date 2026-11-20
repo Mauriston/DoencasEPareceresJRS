@@ -165,6 +165,8 @@ export const patchConclusao = (atual: EstadoConclusao, campo: CampoConclusao, va
         return { patch: comSituacao(patch), concluirPareceres: false };
       }
       if (!atual.laudo.trim()) return nada; // TIS só depois do Laudo
+      // Encaminhada à Auditoria/JSD, a IS mantém o status do encaminhamento ao receber o Nº do TIS.
+      if (STATUS_ENCAMINHAMENTO.includes(atual.status)) return { patch: { tis: valor }, concluirPareceres: false };
       return { patch: comSituacao({ tis: valor, status: 'assinaturas_pendentes' }), concluirPareceres: false };
     }
 
@@ -269,7 +271,7 @@ export const patchCid = (
 
 /** Botão Auditoria | JSD: muda o status (só com o encaminhamento visível e antes do Nº do TIS). */
 export const patchEncaminhamento = (atual: EstadoConclusao, e: Encaminhamento): PatchConclusao => {
-  if (!mostraEncaminhamento(atual) || atual.tis.trim() || conclusaoTravada(atual.status)) return {};
+  if (!mostraEncaminhamento(atual) || conclusaoTravada(atual.status)) return {};
   const status = statusDoEncaminhamento(e);
   return status === atual.status ? {} : comSituacao({ status });
 };

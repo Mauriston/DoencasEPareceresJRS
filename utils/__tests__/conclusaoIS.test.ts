@@ -153,7 +153,9 @@ describe('encaminhamento e restituição', () => {
     expect(patchEncaminhamento({ ...beneficio, status: 'auditoria' }, 'jsd')).toEqual({ status: 'revisao_exofficio', situacao: 'andamento' });
     expect(patchEncaminhamento({ ...beneficio, status: 'auditoria' }, 'auditoria')).toEqual({});
     expect(patchEncaminhamento({ ...beneficio, laudo: '' }, 'auditoria')).toEqual({});
-    expect(patchEncaminhamento({ ...beneficio, tis: '026.000.1' }, 'auditoria')).toEqual({});
+    expect(patchEncaminhamento({ ...beneficio, tis: '026.000.1' }, 'jsd')).toEqual({ status: 'revisao_exofficio', situacao: 'andamento' });
+    expect(patchEncaminhamento({ ...beneficio, tis: '026.000.1', status: 'tis_assinado' }, 'jsd')).toEqual({});
+    expect(patchConclusao({ ...beneficio, status: 'revisao_exofficio' }, 'tis', '026.000.1').patch).toEqual({ tis: '026.000.1' });
   });
   it('status ↔ opção e item de restituição', () => {
     expect(encaminhamentoDoStatus('restituicao_jsd')).toBe('jsd');

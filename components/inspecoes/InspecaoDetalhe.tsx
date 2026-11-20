@@ -64,6 +64,7 @@ import {
   encaminhamentoDoStatus, exigeCid, faltaCid, juntarRestricoes, mostraEncaminhamento, mostraRestricoes, opcoesDeRestricoes, patchCid, patchConclusao,
   patchEncaminhamento, patchFinalidade, podeEditarConclusao, podeEditarFinalidade, separarRestricoes,
   type CampoConclusao, type Encaminhamento, type EstadoConclusao,
+  conclusaoTravada,
 } from '../../utils/conclusaoIS';
 
 export interface PermissoesDetalheIS {
@@ -515,7 +516,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
           )}
 
           {comEncaminhamento && (
-            <fieldset disabled={!!is.tis?.trim()} className="disabled:opacity-60">
+            <fieldset disabled={conclusaoTravada(is.status)} className="disabled:opacity-60">
               <Segmented<Encaminhamento | ''>
                 ariaLabel="Encaminhamento"
                 value={encaminhamento ?? ''}
