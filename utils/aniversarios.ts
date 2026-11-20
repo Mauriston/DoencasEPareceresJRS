@@ -48,6 +48,40 @@ export const aniversariantesDoMes = <T extends PessoaAniversario>(pessoas: T[], 
     .sort((a, b) => a.dia - b.dia || nomeSemPosto(a.pessoa.usuario).localeCompare(nomeSemPosto(b.pessoa.usuario), 'pt-BR'));
 };
 
+export interface ProximoAniversario<T extends PessoaAniversario = PessoaAniversario> {
+  pessoa: T;
+  /** Data do próximo aniversário (AAAA-MM-DD), hoje incluído. */
+  data: string;
+  /** Idade que completa nessa data. */
+  idade: number;
+  /** 0 = hoje. */
+  dias: number;
+}
+
+/** Os `n` próximos aniversários (ativos), a partir de hoje (inclusive), atravessando a virada do ano. */
+export const proximosAniversarios = <T extends PessoaAniversario>(pessoas: T[], hojeIso: string, n = 4): ProximoAniversario<T>[] => {
+  const hoje = partes(hojeIso);
+  if (!hoje) return [];
+  const bissexto = (a: number) => (a % 4 === 0 && a % 100 !== 0) || a % 400 === 0;
+  const utc = (a: number, m: number, d: number) => Date.UTC(a, m - 1, d);
+  const t0 = utc(hoje.ano, hoje.mes, hoje.dia);
+  return pessoas
+    .filter(p => p.ativo !== false)
+    .flatMap(p => {
+      const nasc = partes(p.dataNascimento);
+      if (!nasc) return [];
+      const dataNoAno = (a: number) => (nasc.mes === 2 && nasc.dia === 29 && !bissexto(a) ? 28 : nasc.dia);
+      let ano = hoje.ano;
+      if (utc(ano, nasc.mes, dataNoAno(ano)) < t0) ano += 1;
+      const dia = dataNoAno(ano);
+      const dias = Math.round((utc(ano, nasc.mes, dia) - t0) / 86_400_000);
+      const data = `${ano}-${String(nasc.mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+      return [{ pessoa: p, data, idade: ano - nasc.ano, dias }];
+    })
+    .sort((a, b) => a.dias - b.dias || nomeSemPosto(a.pessoa.usuario).localeCompare(nomeSemPosto(b.pessoa.usuario), 'pt-BR'))
+    .slice(0, n);
+};
+
 export const mensagemParabens = (usuario: string, idade: number): string =>
   `*${nomeSemPosto(usuario)}, PARABÉNS!*\n\n`
   + `Que você tenha outros _${idade} anos_ de muita saúde e felicidade! Aproveite bastante o seu dia! 🥂\n\n`
