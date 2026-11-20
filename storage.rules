@@ -125,5 +125,24 @@ service firebase.storage {
         && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
       allow write: if false;
     }
+      // Anexos do Chat entre usuários (services/chat.ts): conversas/{a_b}/{msgId}_{nome}. Só os dois
+    // participantes (uids no id da conversa) leem; envia quem participa e tem "enviar anexos" em config/chat
+    // (padrão liberado), PDF ou imagem JPG/PNG/WEBP até 10 MB (utils/chat.ts). Ninguém troca; o Admin apaga
+    // (moderação) e o servidor apaga 7 dias depois do envio (servidor/chat/retencaoAnexos.ts, Admin SDK).
+    match /conversas/{conversaId}/{arquivo} {
+      allow read: if request.auth != null && request.auth.uid in conversaId.split('_');
+      allow create: if request.auth != null
+        && request.auth.uid in conversaId.split('_')
+        && conversaId.split('_').size() == 2
+        && (!firestore.exists(/databases/(default)/documents/config/chat)
+            || firestore.get(/databases/(default)/documents/config/chat).data.get('perfis', {})
+                 .get(firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil, {})
+                 .get('anexos', true) == true)
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType in ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+      allow delete: if request.auth != null
+        && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil == 'admin';
+      allow update: if false;
+    }
   }
 }

@@ -1,5 +1,5 @@
 // Ficheiro: components/shell/BannerAniversariantes.tsx
-// Banner flutuante no topo da área de conteúdo, um por aniversariante do dia, para todos os perfis menos a
+// Banner flutuante no topo da área de conteúdo (pilha com o do Chat, em App.tsx), um por aniversariante do dia, para todos os perfis menos a
 // Secretaria (e nunca para o próprio aniversariante). "Enviar mensagem" abre o WhatsApp do aniversariante:
 // o Admin com a mensagem completa de parabéns; os demais com o cabeçalho e um campo para o próprio texto.
 // Fechar (X) ou enviar esconde aquele banner de vez neste aparelho; sem ação, ele some sozinho no fim do dia
@@ -51,7 +51,7 @@ export const BannerAniversariantes: React.FC<{ authUser: AuthUser | null }> = ({
   };
 
   return (
-    <div className="absolute inset-x-0 top-0 z-dropdown px-3 pt-3 md:px-6 flex flex-col items-center gap-2 pointer-events-none" aria-live="polite">
+    <div className="w-full flex flex-col items-center gap-2 pointer-events-none">
       {banners.map(a => {
         const nome = nomeSemPosto(a.pessoa.usuario);
         const texto = authUser?.perfil === 'admin' ? mensagemParabens(a.pessoa.usuario, a.idade) : mensagemParabensLivre(a.pessoa.usuario);

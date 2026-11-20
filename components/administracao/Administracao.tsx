@@ -28,6 +28,7 @@ import { EmailsAutomaticos } from './EmailsAutomaticos';
 import { AgendaIS } from './AgendaIS';
 import { Integracoes } from './Integracoes';
 import { RegistroAlteracoes } from './RegistroAlteracoes';
+import { PermissoesChat } from '../chat/PermissoesChat';
 import { dataHoraCurta, plural, semAcessoHa, ultimoAcessoRelativo } from '../../utils/administracao';
 
 interface SecaoDef { id: SecaoAdministracao; rotulo: string; icone: string; descricao: string }
@@ -35,6 +36,7 @@ interface SecaoDef { id: SecaoAdministracao; rotulo: string; icone: string; desc
 export const SECOES: SecaoDef[] = [
   { id: 'usuarios', rotulo: 'Usuários', icone: 'group', descricao: 'Cadastro, perfil, último acesso e situação de cada usuário.' },
   { id: 'perfis', rotulo: 'Perfis e permissões', icone: 'verified_user', descricao: 'O que cada perfil acessa: páginas e funções.' },
+  { id: 'chat', rotulo: 'Chat', icone: 'forum', descricao: 'Quem envia, recebe e anexa arquivos no chat, por perfil.' },
   { id: 'emails', rotulo: 'E-mails automáticos', icone: 'mail', descricao: 'Destinatários fixos, assinaturas e testes de cada e-mail.' },
   { id: 'agenda', rotulo: 'Agenda das IS', icone: 'schedule', descricao: 'Turnos em que cada perito atende.' },
   { id: 'integracoes', rotulo: 'Integrações', icone: 'hub', descricao: 'Conta Google do servidor, Google Agenda e Apps Script.' },
@@ -107,6 +109,7 @@ export const Administracao: React.FC = () => {
       case 'usuarios': return carregando ? 'Carregando…' : `${plural(estado.ativos, 'ativo', 'ativos')} · ${estado.semAcesso} sem acesso há 30 dias`;
       case 'perfis': return plural(ROLES.length, 'perfil', 'perfis') + ' editáveis · Admin com acesso total';
       case 'emails': return `${plural(TIPOS_EMAIL.length, 'e-mail', 'e-mails')}${estado.emailsAlterado ? ` · alterado em ${dataHoraCurta(estado.emailsAlterado).split(' ')[0]}` : ''}`;
+      case 'chat': return 'Enviar, receber e anexos por perfil';
       case 'agenda': return estado.peritosComTurno === null ? 'Turnos dos peritos' : `turnos de ${plural(estado.peritosComTurno, 'perito', 'peritos')}`;
       case 'integracoes': return !conta.situacao ? (conta.erro ? 'Servidor indisponível' : 'Consultando…') : conta.situacao.autorizado ? 'Conta Google autorizada' : 'Conta Google não autorizada · Apps Script em uso';
       case 'registro': return estado.ultimoRegistro === undefined ? 'Carregando…' : estado.ultimoRegistro ? `último: ${ultimoAcessoRelativo(estado.ultimoRegistro)}` : 'Nada registrado ainda';
@@ -143,6 +146,7 @@ export const Administracao: React.FC = () => {
     switch (atual!.id) {
       case 'usuarios': return <UsuariosManagement usuarios={usuarios} setUsuarios={setUsuarios} carregando={carregando} erroCarga={erroCarga} recarregar={recarregar} />;
       case 'perfis': return <PerfisPermissoes usuarios={usuarios} />;
+      case 'chat': return <PermissoesChat />;
       case 'emails': return <EmailsAutomaticos />;
       case 'agenda': return <AgendaIS />;
       case 'integracoes': return <Integracoes conta={conta} />;

@@ -8,6 +8,8 @@ import { useTema, adotarTemaDoPerfil } from '../../hooks/useTema';
 import { updateUsuarioProfile } from '../../services/firestoreUsuarios';
 import { useUrlArquivo } from '../../services/arquivosStorage';
 import { canAccessPage } from '../../config/permissions';
+import { useChat } from '../chat/ChatContext';
+import { chatPath } from '../../config/routes';
 
 export const PERFIL_LABELS: Record<string, string> = {
   admin: 'Administrador',
@@ -25,15 +27,17 @@ interface AvatarProps {
   tone?: 'light' | 'dark';
   /** Notificações não lidas: bolinha com o número no canto do avatar. */
   badge?: number;
+  /** Texto acessível do badge (padrão: "N notificações não lidas"). */
+  badgeRotulo?: string;
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ badge = 0, ...props }) => {
+export const Avatar: React.FC<AvatarProps> = ({ badge = 0, badgeRotulo, ...props }) => {
   if (!badge) return <AvatarImagem {...props} />;
   return (
     <span className="relative inline-flex shrink-0">
       <AvatarImagem {...props} />
       <span
-        aria-label={`${badge} notificações não lidas`}
+        aria-label={badgeRotulo || `${badge} notificações não lidas`}
         className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-wine text-white text-xs font-bold leading-[18px] text-center ring-2 ring-white"
       >
         {badge > 99 ? '99+' : badge}
@@ -42,7 +46,7 @@ export const Avatar: React.FC<AvatarProps> = ({ badge = 0, ...props }) => {
   );
 };
 
-const AvatarImagem: React.FC<Omit<AvatarProps, 'badge'>> = ({ nome, imageProfile, size = 32, tone = 'dark' }) => {
+const AvatarImagem: React.FC<Omit<AvatarProps, 'badge' | 'badgeRotulo'>> = ({ nome, imageProfile, size = 32, tone = 'dark' }) => {
   const style = { width: size, height: size };
   const borda = tone === 'light' ? 'border border-line' : 'border border-white/30';
   // Foto do Storage via servidor do app (redes que bloqueiam o Storage); enquanto carrega, a inicial.
@@ -118,6 +122,24 @@ const ItemSobre: React.FC = () => {
   );
 };
 
+/** Item "Chat" (conversas entre usuários): só para quem pode enviar ou receber; badge com as não lidas. */
+const ItemChat: React.FC = () => {
+  const nav = useContext(NavContext);
+  const chat = useChat();
+  if (!nav || !chat?.ativo) return null;
+  return (
+    <button
+      type="button" role="menuitem"
+      onClick={() => { nav.setIsAvatarMenuOpen(false); nav.setIsMobileMenuOpen(false); nav.navigate(chatPath()); }}
+      className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-ink hover:bg-thead flex items-center gap-2.5 transition-colors"
+    >
+      <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">forum</span>
+      <span className="flex-1">Chat</span>
+      {chat.naoLidas > 0 && <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-wine text-white text-xs font-bold leading-5 text-center">{chat.naoLidas > 99 ? '99+' : chat.naoLidas}<span className="sr-only"> mensagens não lidas</span></span>}
+    </button>
+  );
+};
+
 /** Atalho lua/sol: alterna Claro ↔ Escuro sem abrir o perfil (a variante fica em Meu perfil → Aparência). */
 const ItemTema: React.FC = () => {
   const nav = useContext(NavContext);
@@ -153,6 +175,7 @@ export const UserDropdownContent: React.FC<UserDropdownContentProps> = ({ authUs
         <span>Perfil</span>
       </button>
       <ItemTema />
+      <ItemChat />
       {onNotificacoesClick && (
         <button type="button" role="menuitem" onClick={onNotificacoesClick} className="w-full text-left px-4 min-h-[44px] text-sm font-semibold text-ink hover:bg-thead flex items-center gap-2.5 transition-colors">
           <span className="material-symbols-outlined text-[20px] text-navy" aria-hidden="true">notifications</span>
@@ -173,6 +196,7 @@ export const UserDropdownContent: React.FC<UserDropdownContentProps> = ({ authUs
 /** Botão do usuário na topbar (desktop mostra nome e cargo; mobile só o avatar). */
 export const UserMenu: React.FC = () => {
   const nav = useContext(NavContext);
+  const chat = useChat();
   const authUser = nav?.authUser || null;
   const aberto = nav?.isAvatarMenuOpen || false;
   const setAberto = nav?.setIsAvatarMenuOpen || (() => {});
@@ -189,7 +213,7 @@ export const UserMenu: React.FC = () => {
         aria-label="Menu do usuário"
         className="flex items-center gap-2 pl-1 pr-1 md:pr-3 py-1 rounded-full hover:bg-thead transition-colors"
       >
-        <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} tone="light" badge={nav?.notificacoesNaoLidas} />
+        <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} tone="light" badge={(nav?.notificacoesNaoLidas || 0) + (chat?.naoLidas || 0)} badgeRotulo={chat?.naoLidas ? `${nav?.notificacoesNaoLidas || 0} notificações e ${chat.naoLidas} mensagens do chat não lidas` : undefined} />
         <span className="hidden md:flex flex-col items-start leading-tight text-left">
           <span className="text-xs font-bold text-navy truncate max-w-[140px]">{authUser?.usuario || 'Usuário'}</span>
           <span className={`text-xs truncate max-w-[140px] ${nav?.verComo ? 'font-bold text-wine' : 'text-ink-3'}`}>{nav?.verComo ? `Vendo como ${PERFIL_LABELS[nav.verComo] || nav.verComo}` : (authUser?.cargo || ' ')}</span>

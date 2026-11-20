@@ -19,12 +19,15 @@
 | Áudio das entrevistas gravadas da IS | Storage `entrevistas/{isId}/{entrevistaId}/` | **180 dias** após a entrevista (`DIAS_RETENCAO_AUDIO` em `config/entrevistas.ts`) | **Automático:** regra de ciclo de vida do bucket (`scripts/entrevistas/configurar-retencao.sh`); recuperável na lixeira do Storage por mais 30 dias. O app mostra a data em que o áudio será apagado | validado · implementado (ADR-014) |
 | Transcrição e anamnese organizada da entrevista | Firestore `inspecoes/{isId}/entrevistas` | Seguem a IS (ficam com ela enquanto a IS existir) | Junto com a IS (Admin); só a junta (Admin e `user_medicos`) lê | validado |
 | Consentimento do inspecionado para a gravação | Firestore, campo `consentimento` (`uid`, `nome` de quem registrou, `em`) da entrevista | Igual à transcrição (prova do consentimento enquanto houver dado gravado) | Junto com a entrevista | validado |
+| Anexos do Chat entre usuários (PDF e imagens JPG/PNG/WEBP, até 10 MB) | Storage `conversas/{a_b}/…` + referência `anexo` na mensagem (`conversas/{a_b}/mensagens/{id}`) | **7 dias** após o envio (`DIAS_RETENCAO_ANEXO` em `utils/chat.ts`) | **Automático:** o agendador diário apaga o arquivo do Storage e tira a referência da mensagem, que fica com `anexoRemovido.motivo = 'expirado'` (o app mostra "Anexo expirado") — `servidor/chat/retencaoAnexos.ts`, chamado no job das 07h (`/api/agendador/aniversariantes`) e na rota própria `/api/agendador/chat-anexos` (mesmo `X-Agendador-Token`). O Admin também pode apagar anexos e mensagens a qualquer momento (moderação) | implementado |
+| Texto das mensagens do Chat e presença (`presenca/{uid}`: só a hora da última atividade) | Firestore `conversas`, `presenca` | Enquanto a conversa existir | Mensagens: exclusão pelo Admin (moderação). Presença: sobrescrita a cada ~60 s | implementado · prazo do texto a definir |
 | Imagens enviadas ao Gemini | Não armazenadas pelo app | Não retidas pelo app (transitam na requisição) | — | validado |
 
 ## 2. Rotinas e pendências
 
 Exclusões automáticas em vigor:
 
+- **Anexos do Chat:** 7 dias após o envio, pelo agendador diário (job das 07h e `/api/agendador/chat-anexos`). O texto da mensagem fica, com a indicação "Anexo expirado".
 - **Áudio das entrevistas:** 180 dias (ciclo de vida do bucket; detalhes em 2.1).
 - **PDF dos exames dos candidatos (concursos no Storage):** 1 ano após a data-base, pelo agendador diário (`/api/agendador/agenda-is`, que roda de domingo a quinta). A transcrição fica.
 - **Fila de impressão:** TTL do Firestore em `expiraEm`. O Firestore apaga em até ~24 h depois do vencimento; a tela já não mostra o registro vencido.

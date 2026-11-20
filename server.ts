@@ -1022,6 +1022,9 @@ async function startServer() {
     }
     try {
       const { adminDb } = await getFirebaseAdmin();
+      // Retenção dos anexos do Chat (7 dias; docs/retencao-lgpd.md): este job roda todo dia às 07h.
+      await (await import("./servidor/chat/retencaoAnexos")).limparAnexosChatVencidos(adminDb, await bucketStorage())
+        .catch(e => logErroSeguro("Retenção anexos chat", e));
       const { aniversariantesDoMes, hojeEmRecife, nomeSemPosto } = await import("./utils/aniversarios");
       const hoje = hojeEmRecife();
       const snap = await adminDb.collection("usuarios").get();
@@ -1042,6 +1045,70 @@ async function startServer() {
     } catch (error: any) {
       logErroSeguro("Agendador aniversariantes", error);
       res.status(500).json({ success: false, error: "Falha no aviso de aniversariantes." });
+    }
+  });
+  // ---- Chat entre usuários (components/Chat.tsx, services/chat.ts, utils/chat.ts) ----
+  // Retenção dos anexos (7 dias) em rota própria, com o mesmo X-Agendador-Token (também roda no job das 07h acima).
+  app.post("/api/agendador/chat-anexos", async (req, res) => {
+    const esperado = process.env.AGENDADOR_TOKEN || "";
+    const recebido = String(req.get("X-Agendador-Token") || "");
+    const { timingSafeEqual } = await import("node:crypto");
+    const ok = esperado.length >= 32 && recebido.length === esperado.length && timingSafeEqual(Buffer.from(recebido), Buffer.from(esperado));
+    if (!ok) {
+      void auditarServidor("acesso_negado", "agendador-chat-anexos", "", esperado ? "token_invalido" : "agendador_desligado");
+      res.status(esperado ? 401 : 503).json({ success: false, error: "Agendador não autorizado." });
+      return;
+    }
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      const r = await (await import("./servidor/chat/retencaoAnexos")).limparAnexosChatVencidos(adminDb, await bucketStorage());
+      void auditarServidor("operacao_sensivel", "agendador-chat-anexos", "agendador", String(r.apagados));
+      res.json({ success: true, ...r });
+    } catch (error: any) {
+      logErroSeguro("Agendador chat-anexos", error);
+      res.status(500).json({ success: false, error: "Falha na limpeza dos anexos do chat." });
+    }
+  });
+  // Push da nova mensagem ao destinatário. O app só informa conversa e mensagem; aqui se confere que quem
+  // chama é o autor e participante, que o perfil dele pode enviar (e anexar, se houver anexo) e que o do
+  // destinatário pode receber (config/chat). O texto do push vem de utils/chat.ts (textoAviso), uma vez por mensagem.
+  app.post("/api/chat/notificar", async (req, res) => {
+    const quem = await exigirUsuario(req, res, "chat-notificar");
+    if (!quem) return;
+    const conversaId = String(req.body?.conversaId || "");
+    const mensagemId = String(req.body?.mensagemId || "");
+    if (!/^[\w-]{1,128}_[\w-]{1,128}$/.test(conversaId) || !/^[\w-]{1,64}$/.test(mensagemId)) {
+      res.status(400).json({ success: false, error: "Pedido inválido." });
+      return;
+    }
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      const { participantesDe, permissaoChat, textoAviso, tipoMensagem } = await import("./utils/chat");
+      const participantes = participantesDe(conversaId);
+      const destinatario = participantes.find(p => p !== quem.uid) || "";
+      const msg = (await adminDb.collection("conversas").doc(conversaId).collection("mensagens").doc(mensagemId).get()).data();
+      if (!participantes.includes(quem.uid) || !destinatario || !msg || msg.autor !== quem.uid) {
+        void auditarServidor("acesso_negado", "chat-notificar", quem.uid, "nao_participante");
+        res.status(403).json({ success: false, error: "Sem acesso a esta conversa." });
+        return;
+      }
+      const matriz = (await adminDb.collection("config").doc("chat").get()).data()?.perfis || null;
+      const dest = (await adminDb.collection("usuarios").doc(destinatario).get()).data();
+      const pRem = permissaoChat(matriz, quem.perfil);
+      if (!pRem.enviar || (msg.anexo && !pRem.anexos)) {
+        void auditarServidor("acesso_negado", "chat-notificar", quem.uid, "sem_funcao");
+        res.status(403).json({ success: false, error: "Seu perfil não pode enviar no chat." });
+        return;
+      }
+      if (!dest || dest.ativo === false || !permissaoChat(matriz, dest.perfil).receber) { res.json({ success: true, enviado: false }); return; }
+      if (!(await marcarEnvio(adminDb, `chat_${conversaId}_${mensagemId}`))) { res.json({ success: true, enviado: false }); return; }
+      const remetente = (await adminDb.collection("usuarios").doc(quem.uid).get()).data();
+      const corpo = textoAviso(String(remetente?.usuario || remetente?.nome || "Usuário"), tipoMensagem(msg.anexo?.tipo));
+      await enviarPush(adminDb, { uids: new Set([destinatario]) }, { titulo: "Chat", corpo, rota: `/chat/${encodeURIComponent(conversaId)}` });
+      res.json({ success: true, enviado: true });
+    } catch (error) {
+      logErroSeguro("Chat notificar", error);
+      res.status(500).json({ success: false, error: "Falha ao avisar o destinatário." });
     }
   });
   app.post("/api/agenda/evento-is", rotaGoogle("agenda-evento-is", PERFIS_EQUIPE, async (db, b) =>
