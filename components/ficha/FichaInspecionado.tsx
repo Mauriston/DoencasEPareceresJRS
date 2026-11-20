@@ -45,7 +45,7 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { FabAcoes } from '../ui/Fab';
 import { MenuAcoes, type ItemMenu } from '../ui/MenuAcoes';
-import { AbasSublinhadas, CidCodigo, TagEspecialidade, TextoContagem } from '../periciaMenor/partes';
+import { AbasSublinhadas, TextoContagem } from '../periciaMenor/partes';
 import { StatusTag } from '../ui/StatusTag';
 import { EmptyState } from '../ui/EmptyState';
 import { AccessDenied } from '../ui/AccessDenied';
@@ -109,10 +109,10 @@ import { emailDoInspecionado } from '../../services/emailResultadoIS';
 import { sincronizarAgendaIS } from '../../services/agendaGoogleIS';
 import { carregarCid, carregarCorposQuadros, carregarOms, type CorposQuadros, type OrganizacaoMilitar } from '../../utils/corposQuadros';
 import { indiceCidAbreviado } from '../../utils/periciaMenorLista';
-import { ROTULO_TIPO_PERICIA, contagemTermino, diaMes, partesCid, postoDoInspecionado, tipoDaPericia } from '../../utils/periciaMenorResumo';
+import { contagemTermino, diaMes, partesCid, postoDoInspecionado } from '../../utils/periciaMenorResumo';
 import { ABAS_FICHA, abaFichaInicial, afastamentosDaIS, registroSelecionado, type AbaFicha } from '../../utils/fichaInspecionado';
 import { classeDoExame, ROTULO_CLASSE, ROTULO_TIPO } from '../../utils/examesIS';
-import { STATUS_IS, aguardaAgendamento, statusEfetivoIS, dataHoraBr, situacaoDoStatus } from '../../utils/inspecoes';
+import { aguardaAgendamento, dataHoraBr, situacaoDoStatus } from '../../utils/inspecoes';
 import { getDriveEmbedUrl, isGoogleDriveUrl } from '../../utils/googleDrive';
 import { extrairNomeInspecionado, formatCelular, formatCpf, formatDataBr, formatNip, idadeEmAnos } from '../../utils/format';
 import { hojeISO } from '../../utils/dados';
@@ -129,7 +129,6 @@ const quandoEvento = (d: Date | null, hoje: string) => {
   const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   return `${iso === hoje ? 'hoje' : diaMes(iso)} · ${hora}`;
 };
-const dias = (n: number) => `${n} dia${n !== 1 ? 's' : ''}`;
 /** O iframe do modal não abre a página /view do Drive: usa a de preview embutido. */
 const urlParaModal = (url: string) => (isGoogleDriveUrl(url) ? getDriveEmbedUrl(url) ?? url : url);
 
@@ -301,7 +300,6 @@ export const FichaInspecionado: React.FC = () => {
     .sort((a, b) => (b.guiasExames?.geradoEm?.toMillis?.() ?? 0) - (a.guiasExames?.geradoEm?.toMillis?.() ?? 0)), [inspecoes]);
 
   const itensIS = useMemo<ItemHistorico[]>(() => isOrdenadas.map(i => {
-    const st = STATUS_IS[statusEfetivoIS(i, hoje)];
     // Aberta e não agendada → pending_actions; finalizada (ou cancelada) → lock; demais → edit_square.
     const estado = i.situacao === 'finalizada' || i.status === 'cancelada' ? ICONE_ESTADO.finalizado
       : aguardaAgendamento(i.status) && !i.dataEntrevista ? ICONE_ESTADO.pendente : ICONE_ESTADO.andamento;
@@ -309,16 +307,15 @@ export const FichaInspecionado: React.FC = () => {
       id: i.id, data: dataIS(i), icone: estado.icone, iconeEstilo: estado.estilo, semData: true,
       titulo: i.finalidade || `IS ${i.is}`,
       detalhe: i.dataEntrevista ? dataHoraBr(i.dataEntrevista) : '',
-      tag: <StatusTag tone={st.tom}>{st.rotulo}</StatusTag>,
     };
-  }), [isOrdenadas, hoje]);
+  }), [isOrdenadas]);
   const itensPM = useMemo<ItemHistorico[]>(() => pmOrdenadas.map(p => {
     const cid = partesCid(p, cidAbrev);
     const c = contagemTermino(p.dataTermino, hoje);
     return {
       id: p.id, data: p.dataAtestado, icone: 'personal_injury',
-      titulo: atestado ? 'Atestado registrado' : p.homologacao ? 'Atestado homologado' : 'Perícia menor registrada',
-      detalhe: <>{dias(p.tempoHomologado)} · {ROTULO_TIPO_PERICIA[tipoDaPericia(p.dispensas)]}{cid.codigo || cid.descricao ? ' · ' : ''}<CidCodigo codigo={cid.codigo} descricao={cid.descricao} />{p.especialidade && <span className="block mt-1"><TagEspecialidade especialidade={p.especialidade} /></span>}</>,
+      titulo: !atestado && p.homologacao ? 'ATESTADO HOMOLOGADO' : 'ATESTADO REGISTRADO',
+      detalhe: cid.codigo && cid.descricao ? `${cid.codigo} (${cid.descricao})` : cid.codigo || cid.descricao,
       tag: c.tom !== 'passado' ? <TextoContagem contagem={c} /> : <StatusTag tone="muted">Concluída</StatusTag>,
     };
   }), [pmOrdenadas, cidAbrev, hoje, atestado]);
