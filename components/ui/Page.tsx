@@ -6,7 +6,7 @@
 // Contrato do PageHeader (auditoria v3, 3b): trilha na topbar · h1 24/800 ·
 // descrição 14 ink-3 (resumo operacional, sem sobrelinha) · ações em linha
 // (⋮ · secundária · primária por último), alinhadas ao topo. A primária pode
-// vir em `fab`: no celular vira FAB (canto inferior direito).
+// vir em `fab`: no celular vira FAB circular "+" (canto inferior direito).
 import React from 'react';
 import { FabAcoes } from './Fab';
 import { Button, ButtonLink } from './Button';
@@ -30,7 +30,7 @@ export const Container: React.FC<{ size?: PageSize; className?: string; children
 export interface PageHeaderFab {
   /** Material Symbol (ex.: 'add'). */
   icon: string;
-  /** Verbo + objeto (ex.: "Abrir IS"): rótulo do botão no desktop e do FAB estendido no celular. */
+  /** Verbo + objeto (ex.: "Abrir IS"): rótulo do botão no desktop e aria-label do FAB "+" no celular. */
   label: string;
   onClick?: () => void;
   /** Navegação interna (react-router) em vez de onClick. */

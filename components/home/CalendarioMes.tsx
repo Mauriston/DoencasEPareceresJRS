@@ -19,6 +19,8 @@ interface Props {
   onSelecionar: (dia: string) => void;
   inspecoes: InspecaoRecord[];
   diasConcursos: DiaConcurso[];
+  /** Sem moldura própria: dentro do card único "calendário + agenda" do celular. */
+  embutido?: boolean;
 }
 
 const Legenda: React.FC = () => (
@@ -30,7 +32,7 @@ const Legenda: React.FC = () => (
   </ul>
 );
 
-export const CalendarioMes: React.FC<Props> = ({ hoje, selecionado, onSelecionar, inspecoes, diasConcursos }) => {
+export const CalendarioMes: React.FC<Props> = ({ hoje, selecionado, onSelecionar, inspecoes, diasConcursos, embutido }) => {
   const [mes, setMes] = useState(inicioDoMes(selecionado || hoje));
   const ano = Number(mes.slice(0, 4));
   const mudarMes = (n: number) => {
@@ -46,7 +48,7 @@ export const CalendarioMes: React.FC<Props> = ({ hoje, selecionado, onSelecionar
 
   return (
     <Secao
-      id="home-calendario" titulo={tituloMes}
+      id="home-calendario" titulo={tituloMes} embutido={embutido}
       acao={(
         <span className="flex gap-1">
           <IconButton icon="chevron_left" label="Mês anterior" variant="ghost" size="sm" onClick={() => mudarMes(-1)} />

@@ -2,10 +2,11 @@
 // Ações do rodapé de um Drawer/bottom sheet, adaptadas à tela:
 //  • desktop (≥ md): os Buttons do DS lado a lado, na ordem dada (como os rodapés de sempre —
 //    a principal por último);
-//  • mobile (< md): o FAB padrão único do app (components/ui/Fab.tsx, auditoria v3 M7). Com 1
-//    ação, FAB estendido (ícone + texto); com 2–3, FAB estendido com a PRINCIPAL + "˄", que abre a
-//    pilha das demais com a principal mais perto do polegar. Fecha ao tocar fora, ao escolher uma
-//    ação ou com Esc. A principal é a última ação primária (a mesma que fica por último no desktop).
+//  • mobile (< md): o FAB padrão único do app (components/ui/Fab.tsx, auditoria v3 M7): botão
+//    circular só com ícone. Com 1 ação, o botão executa a ação direto (com o ícone dela e o rótulo no
+//    aria-label); com 2+, um "+" que abre a pilha com TODAS as ações (ícone + texto), a principal mais
+//    perto do polegar. Fecha ao tocar fora, ao escolher uma ação ou com Esc. A principal é a última
+//    ação primária (a mesma que fica por último no desktop).
 // "Fechar"/"Cancelar" que só fecham o sheet não entram aqui (no mobile o sheet fecha no X ou
 // arrastando). O corpo rolável do sheet deve ter `data-sheet-corpo` (o Drawer já tem) para
 // ganhar folga embaixo e o FAB não cobrir o fim do conteúdo — ver styles/app.css.
