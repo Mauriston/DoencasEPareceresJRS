@@ -1,13 +1,19 @@
 // Ficheiro: components/DGPM406Guide.tsx
-import React, { useMemo } from 'react';
+// Leitor da DGPM-406 (9ª Rev) com o mesmo índice da Portaria (components/PortariaGuide.tsx,
+// auditoria v3 §10): desktop com índice em 3/12 colunas, fixo e com rolagem própria, texto
+// em 9 colunas (~68 caracteres); celular com barra fixa (item atual, anterior/próximo) e o
+// índice em drawer. Diferença: aqui o índice TROCA o documento exibido — um capítulo ou
+// anexo por vez. Ao abrir a página, sempre o Capítulo 1 (nenhuma seleção é restaurada).
+// O PDF integral fica num botão fixo, sempre visível, que abre numa nova aba.
+import React, { useEffect, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
-import { useQueryParam } from '../hooks/useQueryParam';
-import { Segmented } from './ui/Segmented';
-import { Card } from './ui/Card';
-import { MarkdownDocPage } from './MarkdownDocPage';
-import { StoragePdfIconButton, StoragePdfFab } from './StoragePdfButtons';
+import { Button } from './ui/Button';
+import { IconButton } from './ui/IconButton';
+import { Drawer } from './ui/Drawer';
+import { MarkdownContent } from './MarkdownContent';
 import { useStoragePdf } from '../hooks/useStoragePdf';
-import { capituloPdfPath, anexoPdfPath, NORMA_COMPLETA_PDF_PATH } from '../services/firebaseStorageNormas';
+import { getMainScroller } from '../utils/dom';
+import { anexoPdfPath, getStoragePdfUrl, NORMA_COMPLETA_PDF_PATH } from '../services/firebaseStorageNormas';
 
 interface Chapter {
   id: string;
@@ -47,15 +53,7 @@ const getModule = (modules: Record<string, string>, fileName: string): string | 
 
 const toSentenceCase = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 
-// "Capítulo 4" -> "CAP 4 - {título sem capitalização}"; itens que não seguem
-// esse padrão (ex.: "DGPM-406 9ª REV", o card do PDF na íntegra) ficam como estão.
-const chapterNavLabel = (item: Chapter): string => {
-  const match = item.chapter.match(/^Capítulo (\d+)$/);
-  return match ? `CAP ${match[1]} - ${toSentenceCase(item.title)}` : item.chapter;
-};
-
 const CHAPTERS: Chapter[] = [
-  { id: 'c0', chapter: 'DGPM-406 9ª REV', title: 'NORMAS REGULADORAS PARA INSPEÇÕES DE SAÚDE NA MARINHA', link: 'https://drive.google.com/open?id=1NlCZR1I24epU0-nucN4zHd2fUmO7SOFn' },
   { id: 'c1', chapter: 'Capítulo 1', title: 'ESTRUTURA DO SUBSISTEMA MÉDICO-PERICIAL DA MB', link: 'https://drive.google.com/open?id=1nVX3dkkGHHyWDwVhPdVjw7DWItD0y1sy', mdKey: 'capitulo-01.md' },
   { id: 'c2', chapter: 'Capítulo 2', title: 'PROCESSOS DAS INSPEÇÕES DE SAÚDE NA MB', link: 'https://drive.google.com/open?id=1L7TLBKFsRGaRI-rpaMEVvwg9bV_Y2A58', mdKey: 'capitulo-02.md' },
   { id: 'c3', chapter: 'Capítulo 3', title: 'PROCEDIMENTOS MÉDICO-PERICIAIS PARA INGRESSAR NO SERVIÇO ATIVO NA MARIINHA', link: 'https://drive.google.com/open?id=1FielRLlQ7rmcjtaVJafdGF2x1SN90DE3', mdKey: 'capitulo-03.md' },
@@ -98,166 +96,163 @@ const ANEXOS: Anexo[] = [
   { id: 'a19', anexo: 'ANEXO AB', title: 'Índices mínimos e condições incapacitantes para o serviço de praticagem', link: 'https://drive.google.com/open?id=1p4mBsX_-8wwGY5flgS6SoVbw_mymqdeC' },
 ];
 
-type SelectedDoc = { kind: 'markdown'; source: 'capitulo' | 'anexo'; id: string; title: string; subtitle: string; markdown: string; pdfPath?: string };
+// ─── Índice ──────────────────────────────────────────────────────────────────
 
-// Documento aberto = nível de navegação na URL (?doc=capitulo-c4 / ?doc=anexo-a10);
-// a aba também (?aba=anexos) — deep link, botão voltar e refresh funcionam.
-const montarDocumento = (param: string | null): SelectedDoc | null => {
-  const m = param?.match(/^(capitulo|anexo)-(.+)$/);
-  if (!m) return null;
-  if (m[1] === 'capitulo') {
-    const item = CHAPTERS.find(c => c.id === m[2]);
-    const md = item?.mdKey && getModule(chapterModules, item.mdKey);
-    if (!item || !md) return null;
-    const numero = item.chapter.match(/^Capítulo (\d+)$/)?.[1];
-    return { kind: 'markdown', source: 'capitulo', id: item.id, title: item.chapter, subtitle: item.title, markdown: md, pdfPath: numero ? capituloPdfPath(Number(numero)) : undefined };
-  }
-  const item = ANEXOS.find(a => a.id === m[2]);
-  const md = item?.mdKey && getModule(anexoModules, item.mdKey);
-  if (!item || !md) return null;
-  return { kind: 'markdown', source: 'anexo', id: item.id, title: item.anexo, subtitle: item.title, markdown: md, pdfPath: anexoPdfPath(item.anexo.replace(/^ANEXO\s+/i, '')) };
-};
+interface ItemDoc { id: string; rotulo: string; titulo: string; numero?: string; markdown?: string; codigoAnexo?: string }
+
+const ITENS_CAPITULOS: ItemDoc[] = CHAPTERS.map(c => ({
+  id: c.id,
+  rotulo: c.chapter,
+  titulo: toSentenceCase(c.title),
+  numero: c.chapter.match(/^Capítulo (\d+)$/)?.[1],
+  markdown: c.mdKey ? getModule(chapterModules, c.mdKey) : undefined,
+}));
+const ITENS_ANEXOS: ItemDoc[] = ANEXOS.map(a => ({
+  id: a.id,
+  rotulo: a.anexo.replace(/^ANEXO\b/, 'Anexo'),
+  titulo: a.title.charAt(0).toUpperCase() + a.title.slice(1),
+  numero: a.anexo.replace(/^ANEXO\s+/i, ''),
+  markdown: a.mdKey ? getModule(anexoModules, a.mdKey) : undefined,
+  codigoAnexo: a.anexo.replace(/^ANEXO\s+/i, ''),
+}));
+const ORDEM: ItemDoc[] = [...ITENS_CAPITULOS, ...ITENS_ANEXOS];
+const itemDe = (id: string) => ORDEM.find(i => i.id === id) ?? ORDEM[0];
+const INICIAL = 'c1';
+
+const ItemIndice: React.FC<{ item: ItemDoc; ativo: boolean; onIr: (id: string) => void }> = ({ item, ativo, onIr }) => (
+  <li>
+    <button
+      type="button"
+      onClick={() => onIr(item.id)}
+      aria-current={ativo ? 'page' : undefined}
+      className={`w-full text-left grid grid-cols-[28px_minmax(0,1fr)] gap-1.5 items-baseline px-2.5 py-1.5 min-h-9 rounded-md text-sm transition-colors ${
+        ativo ? 'bg-thead text-navy font-bold shadow-[inset_3px_0_0_#FAB932]' : 'text-ink hover:bg-paper'
+      }`}
+    >
+      <span className="text-xs text-ink-3 tabular-nums">{item.numero}</span>
+      <span>{item.titulo}</span>
+    </button>
+  </li>
+);
+
+const ListaIndice: React.FC<{ ativo: string; onIr: (id: string) => void }> = ({ ativo, onIr }) => (
+  <nav aria-label="Índice da DGPM-406" className="flex flex-col gap-1">
+    <p className="text-xs font-bold tracking-label uppercase text-ink-3 px-2.5 pt-1">Capítulos · {ITENS_CAPITULOS.length}</p>
+    <ul className="flex flex-col">
+      {ITENS_CAPITULOS.map(i => <ItemIndice key={i.id} item={i} ativo={ativo === i.id} onIr={onIr} />)}
+    </ul>
+    <p className="text-xs font-bold tracking-label uppercase text-ink-3 px-2.5 pt-2 mt-1 border-t border-line">Anexos · {ITENS_ANEXOS.length}</p>
+    <ul className="flex flex-col">
+      {ITENS_ANEXOS.map(i => <ItemIndice key={i.id} item={i} ativo={ativo === i.id} onIr={onIr} />)}
+    </ul>
+  </nav>
+);
+
+// ─── Página ──────────────────────────────────────────────────────────────────
 
 export const DGPM406Guide: React.FC = () => {
-  const [abaParam, setAbaParam] = useQueryParam('aba');
-  const activeTab: 'capitulos' | 'anexos' = abaParam === 'anexos' ? 'anexos' : 'capitulos';
-  const setActiveTab = (aba: 'capitulos' | 'anexos') => setAbaParam(aba === 'capitulos' ? null : aba, { replace: true });
-  const [docParam, setDocParam] = useQueryParam('doc');
-  const selectedDoc = useMemo(() => montarDocumento(docParam), [docParam]);
+  // Sempre começa no Capítulo 1: estado local, sem ler URL nem armazenamento.
+  const [ativo, setAtivo] = useState<string>(INICIAL);
+  const [indiceAberto, setIndiceAberto] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const { open: openPdf, busy: baixandoPdf, modalElement } = useStoragePdf();
 
-  const handleChapterClick = (item: Chapter) => {
-    const md = item.mdKey && getModule(chapterModules, item.mdKey);
-    if (md) {
-      setDocParam(`capitulo-${item.id}`);
-      return;
-    }
-    // Primeiro item (DGPM-406 na íntegra): abre o PDF salvo no Storage —
-    // modal fullscreen no desktop, nova aba no mobile.
-    if (item.id === 'c0') {
-      openPdf(NORMA_COMPLETA_PDF_PATH, `${item.chapter} — ${item.title}`);
-      return;
-    }
-    const numero = item.chapter.match(/^Capítulo (\d+)$/)?.[1];
-    if (numero) openPdf(capituloPdfPath(Number(numero)), `${item.chapter} — ${item.title}`);
+  // URL do PDF integral (Storage, exige login) obtida de antemão: o botão fixo é um
+  // <a target="_blank"> de verdade, sem pop-up bloqueado.
+  useEffect(() => {
+    let vivo = true;
+    getStoragePdfUrl(NORMA_COMPLETA_PDF_PATH).then(u => { if (vivo) setPdfUrl(u); }).catch(() => { /* sem PDF */ });
+    return () => { vivo = false; };
+  }, []);
+
+  const item = itemDe(ativo);
+  const posicao = ORDEM.indexOf(item);
+  const anterior = posicao > 0 ? ORDEM[posicao - 1] : null;
+  const proximo = posicao < ORDEM.length - 1 ? ORDEM[posicao + 1] : null;
+
+  const irPara = (id: string) => {
+    setIndiceAberto(false);
+    setAtivo(id);
+    const scroller = getMainScroller();
+    if (scroller) scroller.scrollTo({ top: 0 });
+    else window.scrollTo({ top: 0 });
   };
-
-  const handleAnexoClick = (item: Anexo) => {
-    const md = item.mdKey && getModule(anexoModules, item.mdKey);
-    if (md) {
-      setDocParam(`anexo-${item.id}`);
-      return;
-    }
-    // Anexo sem página renderizada: abre o PDF salvo no Storage (modal
-    // fullscreen no desktop, nova aba no mobile).
-    openPdf(anexoPdfPath(item.anexo.replace(/^ANEXO\s+/i, '')), `${item.anexo} — ${item.title}`);
-  };
-
-  // Card fixo à esquerda (desktop) com a lista de capítulos ou de anexos (conforme
-  // o documento aberto), para navegar entre eles sem voltar à grade.
-  const navCard = (heading: string, children: React.ReactNode) => (
-    <div className="bg-white rounded-xl border border-line p-3 max-h-[calc(100vh-140px)] overflow-y-auto">
-      <h3 className="eyebrow px-2 pb-2 mb-1 border-b border-line">
-        {heading}
-      </h3>
-      <nav className="space-y-0.5">{children}</nav>
-    </div>
-  );
-
-  const navButtonClass = (active: boolean) =>
-    `w-full text-left px-2.5 py-2 rounded-lg text-xs font-semibold leading-snug transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold ${
-      active ? 'bg-navy text-white' : 'text-ink hover:bg-thead'
-    }`;
-
-  const chapterNav = navCard('Capítulos', CHAPTERS.map(item => (
-    <button
-      key={item.id}
-      type="button"
-      onClick={() => handleChapterClick(item)}
-      className={navButtonClass(selectedDoc?.source === 'capitulo' && selectedDoc.id === item.id)}
-    >
-      {chapterNavLabel(item)}
-    </button>
-  )));
-
-  const anexoNav = navCard('Anexos', ANEXOS.map(item => (
-    <button
-      key={item.id}
-      type="button"
-      onClick={() => handleAnexoClick(item)}
-      className={navButtonClass(selectedDoc?.source === 'anexo' && selectedDoc.id === item.id)}
-    >
-      {`${item.anexo} - ${item.title}`}
-    </button>
-  )));
-
-  if (selectedDoc) {
-    const baixar = selectedDoc.pdfPath
-      ? () => openPdf(selectedDoc.pdfPath!, `${selectedDoc.title} — ${selectedDoc.subtitle}`)
-      : undefined;
-    return (
-      <>
-        <MarkdownDocPage
-          title={selectedDoc.title}
-          subtitle={selectedDoc.subtitle}
-          markdown={selectedDoc.markdown}
-          sidebar={selectedDoc.source === 'capitulo' ? chapterNav : anexoNav}
-          actions={baixar ? <StoragePdfIconButton busy={baixandoPdf} onClick={baixar} /> : undefined}
-        />
-        {/* Mobile: botão flutuante fora do MarkdownDocPage, para o position:fixed
-            não depender dos ancestrais dele. */}
-        {baixar && <StoragePdfFab busy={baixandoPdf} onClick={baixar} />}
-        {modalElement}
-      </>
-    );
-  }
 
   return (
     <div className="flex flex-col flex-1 relative">
+      <Container size="data" className="pt-6 md:py-8 pb-24 md:pb-24">
+        <PageHeader title="DGPM-406" description="Normas Reguladoras para Inspeções de Saúde na Marinha · 9ª Revisão · capítulos e anexos" />
 
-      {modalElement}
-      <Container size="data" className="py-6 md:py-8 pt-4 md:pt-8 pb-10">
-        <PageHeader title="DGPM-406" description="Normas Reguladoras para Inspeções de Saúde na Marinha — capítulos e anexos." />
-        <div className="mb-6">
-        <Segmented
-          ariaLabel="Seção da DGPM-406"
-          fullWidth
-          className="md:w-auto md:inline-flex"
-          options={[{ value: 'capitulos', label: 'Capítulos', icon: 'menu_book' }, { value: 'anexos', label: 'Anexos', icon: 'attach_file' }]}
-          value={activeTab}
-          onChange={setActiveTab}
-        />
+        {/* Celular: barra fixa com o item atual, anterior/próximo e o índice em drawer. */}
+        <div className="md:hidden sticky top-0 z-sticky -mx-4 px-3 py-2 bg-white border-b border-line">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setIndiceAberto(true)}
+              aria-haspopup="dialog"
+              className="flex-1 min-w-0 h-10 flex items-center gap-2 pl-3 pr-1.5 rounded-full border border-line text-left"
+            >
+              <span className="material-symbols-outlined text-[20px] text-navy shrink-0" aria-hidden="true">toc</span>
+              <span className="flex-1 min-w-0 truncate text-sm font-bold text-navy">{item.rotulo} · {item.titulo}</span>
+              <span className="material-symbols-outlined text-[22px] text-ink-3 shrink-0" aria-hidden="true">expand_more</span>
+            </button>
+            <IconButton icon="chevron_left" label={anterior ? `Anterior: ${anterior.rotulo}` : 'Anterior'} variant="secondary" className="!w-10 !h-10 !rounded-full border-line" disabled={!anterior} onClick={() => anterior && irPara(anterior.id)} />
+            <IconButton icon="chevron_right" label={proximo ? `Próximo: ${proximo.rotulo}` : 'Próximo'} variant="secondary" className="!w-10 !h-10 !rounded-full border-line" disabled={!proximo} onClick={() => proximo && irPara(proximo.id)} />
+          </div>
         </div>
 
+        <div className="md:grid md:grid-cols-12 md:gap-6 md:items-start">
+          {/* Desktop: índice fixo, com rolagem própria. */}
+          <aside className="hidden md:block md:col-span-3 sticky top-4 max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain bg-white border border-line rounded-xl p-3">
+            <ListaIndice ativo={item.id} onIr={irPara} />
+          </aside>
 
-        {/* Uma lista só para todas as larguras (auditoria v3, M10/L6): antes havia tabela
-            (md+) e cards (celular) em paralelo, e o md:grid-cols-2 dos cards nunca aparecia
-            (bloco md:hidden). O ícone indica o que o clique faz: abre o PDF (file_open) ou
-            navega para a página renderizada (chevron). */}
-        <Card padding="none" as="div">
-          <ul className="divide-y divide-line">
-            {(activeTab === 'capitulos'
-              ? CHAPTERS.map(item => ({ id: item.id, rotulo: item.chapter, titulo: item.title, md: !!item.mdKey, abrir: () => handleChapterClick(item) }))
-              : ANEXOS.map(item => ({ id: item.id, rotulo: item.anexo, titulo: item.title, md: !!item.mdKey, abrir: () => handleAnexoClick(item) }))
-            ).map(item => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={item.abrir}
-                  className="group w-full text-left grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[11rem_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-0.5 px-4 py-3 min-h-[52px] hover:bg-paper transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold"
-                >
-                  <span className="text-sm font-bold text-navy md:whitespace-nowrap">{item.rotulo}</span>
-                  <span className="row-start-2 md:row-start-auto text-xs font-medium text-ink-3 line-clamp-2 md:line-clamp-none">{item.titulo}</span>
-                  <span className="row-span-2 md:row-span-1 col-start-2 md:col-start-3 material-symbols-outlined text-[20px] text-ink-3 group-hover:text-navy transition-colors" aria-hidden="true">
-                    {item.md ? 'chevron_right' : 'file_open'}
-                  </span>
-                  {!item.md && <span className="sr-only">(abre o PDF)</span>}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Card>
+          {/* Texto: 9 colunas, ~68 caracteres. No celular, sem card (16 px de margem). */}
+          <div className="md:col-span-9 -mx-4 px-4 py-5 bg-white md:mx-0 md:px-9 md:py-7 md:border md:border-line md:rounded-xl min-w-0">
+            <div className="max-w-[68ch]">
+              <p className="text-sm font-semibold text-ink-3 mb-2">
+                {item.codigoAnexo ? `Anexos · ${posicao - ITENS_CAPITULOS.length + 1} de ${ITENS_ANEXOS.length}` : `Capítulos · ${posicao + 1} de ${ITENS_CAPITULOS.length}`}
+              </p>
+              {item.markdown ? (
+                <MarkdownContent key={item.id} markdown={item.markdown} />
+              ) : (
+                <div className="flex flex-col items-start gap-3">
+                  <h2 className="text-h1 font-extrabold text-navy leading-tight">{item.rotulo} — {item.titulo}</h2>
+                  <p className="text-sm text-ink-3">O texto deste anexo ainda não está disponível na página. Abra o PDF do anexo.</p>
+                  {item.codigoAnexo && (
+                    <Button variant="secondary" icon="picture_as_pdf" loading={baixandoPdf} onClick={() => openPdf(anexoPdfPath(item.codigoAnexo!), `${item.rotulo} — ${item.titulo}`)}>
+                      PDF do {item.rotulo}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </Container>
+
+      {indiceAberto && (
+        <Drawer title="Índice" icon="toc" onClose={() => setIndiceAberto(false)}>
+          <ListaIndice ativo={item.id} onIr={irPara} />
+        </Drawer>
+      )}
+      {modalElement}
+
+      {/* Único botão flutuante: a DGPM-406 integral em PDF, numa nova aba. */}
+      <a
+        href={pdfUrl ?? undefined}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-disabled={!pdfUrl}
+        onClick={e => { if (!pdfUrl) { e.preventDefault(); alert('O PDF da DGPM-406 ainda não está disponível.'); } }}
+        className={`fixed right-4 z-sticky inline-flex items-center gap-2 h-12 px-4 rounded-full bg-navy text-white text-sm font-bold shadow-lg transition-colors hover:bg-navy-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${pdfUrl ? '' : 'opacity-70'}`}
+        style={{ bottom: 'var(--fab-bottom, calc(1.5rem + env(safe-area-inset-bottom)))' }}
+      >
+        <span className="material-symbols-outlined text-[20px]" aria-hidden="true">picture_as_pdf</span>
+        <span>DGPM-406 completa</span>
+        <span className="material-symbols-outlined text-[18px]" aria-hidden="true">open_in_new</span>
+        <span className="sr-only">(abre em nova aba)</span>
+      </a>
     </div>
   );
 };
