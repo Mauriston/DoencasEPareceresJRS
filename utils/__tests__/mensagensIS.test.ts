@@ -32,3 +32,13 @@ describe('minuta MSG da IS', () => {
     expect(podeMinutarMsg({ status: 'cancelada' })).toBe(false);
   });
 });
+
+describe('Minuta MSG de incapacidade definitiva', () => {
+  it('dispensa DS-1A: laudo + Nº do TIS bastam', async () => {
+    const { podeMinutarMsg } = await import('../mensagensIS');
+    const base = { status: 'assinaturas_pendentes', finalidade: 'Término de Incapacidade', grupoFinalidade: 'Verificações e Términos', laudo: 'Incapaz definitivamente para o SAM', tis: '1' };
+    expect(podeMinutarMsg(base)).toBe(true);
+    expect(podeMinutarMsg({ ...base, tis: '' })).toBe(false);
+    expect(podeMinutarMsg({ ...base, laudo: 'Apto para o SAM' })).toBe(false);
+  });
+});

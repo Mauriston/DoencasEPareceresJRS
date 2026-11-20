@@ -26,6 +26,7 @@
 // Drawer nem "Fechar"; as ações vão para a barra inferior da aba, depois das `acoesExtras` da página (botões ou
 // botões-menu). Sem os cards dos documentos gerados (entrevista, pareceres, guias, exames, e-mails): no lugar,
 // os atalhos da página (`atalhosDocumentos`: botões ghost que levam às abas dos documentos).
+import { minutaIncapacidadeDisponivel } from '../../utils/mensagensIS';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Drawer } from '../ui/Drawer';
@@ -104,8 +105,9 @@ interface Props {
   onGravarEntrevista?: (() => void) | null;
 }
 
-/** Minuta MSG: com Nº do TIS e DS-1a, ou IS cancelada. */
-export const mostraMinutaMsg = (is: Pick<InspecaoRecord, 'tis' | 'ds1a' | 'status'>): boolean => (!!is.tis?.trim() && !!is.ds1a?.trim()) || is.status === 'cancelada';
+/** Minuta MSG: com Nº do TIS e DS-1a, ou IS cancelada; em Verificações e Términos com incapacidade definitiva para o SAM, basta laudo + Nº do TIS. */
+export const mostraMinutaMsg = (is: Pick<InspecaoRecord, 'tis' | 'ds1a' | 'status' | 'finalidade' | 'grupoFinalidade' | 'laudo'>): boolean =>
+  (!!is.tis?.trim() && !!is.ds1a?.trim()) || is.status === 'cancelada' || minutaIncapacidadeDisponivel(is);
 /** Parecer e Gravar entrevista: só com a IS Agendada ou Reagendada. */
 export const fasesDeEntrevista = (is: Pick<InspecaoRecord, 'status'>): boolean => is.status === 'agendada' || is.status === 'reagendada';
 
