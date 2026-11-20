@@ -43,7 +43,7 @@ const PERFIS = ['admin', ...ROLES.map(r => r.id)];
 
 const ROTULO_CAMPO: Record<string, string> = {
   postoGraduacao: 'Posto/graduação', cargo: 'Cargo', nome: 'Nome', nip: 'NIP', crmPe: 'CRM-PE', rqe: 'RQE',
-  email: 'E-mail institucional', gmail: 'Gmail', celular: 'Celular',
+  email: 'E-mail institucional', gmail: 'Gmail', celular: 'Celular', dataNascimento: 'Data de nascimento',
 };
 
 const Avatar: React.FC<{ u: UsuarioRecord }> = ({ u }) => (u.imageProfile
@@ -169,6 +169,7 @@ export const UsuariosManagement: React.FC<Props> = ({ usuarios: users, setUsuari
       email: f.email.trim().toLowerCase(),
       gmail: f.gmail.trim().toLowerCase(),
       celular: f.celular.trim(),
+      dataNascimento: f.dataNascimento,
       perfil: f.perfil || 'user_secretaria',
     };
     if (editando) {
