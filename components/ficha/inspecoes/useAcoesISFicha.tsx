@@ -109,7 +109,7 @@ export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, femini
     <nav aria-label="Documentos da IS" className="flex flex-wrap gap-1 empty:hidden">
       {temTranscricoes && atalho('transcricoes', 'Ver transcrições', 'record_voice_over')}
       {pareceres.length > 0 && atalho('pareceres', 'Ver pareceres', 'assignment')}
-      {temExames && atalho('exames', 'Ver exames', 'lab_profile')}
+      {temExames && atalho('exames', 'Ver exames', 'lab_profile', { is: is.id })}
       {is.guiasExames && atalho('guias', 'Ver guias', 'receipt_long', { reg: is.id })}
       {temEmails && atalho('emails', 'Ver e-mails', 'mail')}
     </nav>

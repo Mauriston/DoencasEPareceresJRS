@@ -89,6 +89,7 @@ import { avisarAgendamento, observarAgendamentos } from '../../services/emailAge
 import { agendamentoJaEnviado, ehElegivelAgendamento } from '../../utils/emailAgendamentoIS';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useEntrevistasDasIS, type EntrevistaDaFicha } from './useEntrevistasDasIS';
+import { HistoricoAgrupadoIS, agruparPorIS } from './HistoricoAgrupadoIS';
 import { useExamesDasIS, type ExameDaFicha } from './useExamesDasIS';
 import { useDocumentosDasIS } from './useDocumentosDasIS';
 import { PainelDocumentoGerado } from './outros/PainelDocumentoGerado';
@@ -154,6 +155,8 @@ interface ItemHistorico {
   semData?: boolean;
   /** font-variation-settings do ícone (Material Symbols). */
   iconeEstilo?: React.CSSProperties;
+  /** IS do registro (abas agrupadas por IS: Exames e Outros). */
+  isId?: string;
 }
 
 /** Ícones de estado do histórico (IS e Pareceres), com os eixos do Material Symbols definidos pela JRS. */
@@ -289,6 +292,8 @@ export const FichaInspecionado: React.FC = () => {
   const tituloNaTopbar = useTituloPagina(nome);
 
   // Listas de cada aba, do mais recente para o mais antigo.
+  const isPorAbertura = useMemo(() => [...inspecoes].sort((a, b) => (b.dataAbertura || '').localeCompare(a.dataAbertura || ''))
+    .map(i => ({ id: i.id, titulo: i.finalidade || `IS ${i.is}`, data: i.dataAbertura ? formatDataBr(i.dataAbertura.slice(0, 10)) : '' })), [inspecoes]);
   const isOrdenadas = useMemo(() => [...inspecoes].sort((a, b) => dataIS(b).localeCompare(dataIS(a))), [inspecoes]);
   const pmOrdenadas = useMemo(() => [...pericias].sort((a, b) => (b.dataAtestado || '').localeCompare(a.dataAtestado || '')), [pericias]);
   const pareceresOrdenados = useMemo(() => [...pareceres].sort((a, b) => (b.criadoEm?.toMillis?.() ?? 0) - (a.criadoEm?.toMillis?.() ?? 0)), [pareceres]);
@@ -323,8 +328,10 @@ export const FichaInspecionado: React.FC = () => {
     };
   }), [pmOrdenadas, cidAbrev, atestado]);
   const itemExame = (e: ExameDaFicha, icone: string): ItemHistorico => ({
-    id: idExame(e), data: dataExame(e), icone, titulo: tituloExame(e),
-    detalhe: [`IS ${e.is}`, e.itens.find(i => i.emissor)?.emissor].filter(Boolean).join(' · '),
+    id: idExame(e), data: dataExame(e), icone, titulo: tituloExame(e), isId: e.isId,
+    // Exames: agrupados por IS no histórico (sem nº da IS nem data na linha).
+    ...(icone === 'lab_profile' ? { semData: true, detalhe: e.itens.find(i => i.emissor)?.emissor || '' }
+      : { detalhe: [`IS ${e.is}`, e.itens.find(i => i.emissor)?.emissor].filter(Boolean).join(' · ') }),
   });
   const itensAtestados = useMemo(() => atestadosIS.map(e => itemExame(e, 'note_alt')), [atestadosIS]); // eslint-disable-line react-hooks/exhaustive-deps
   const itensExames = useMemo(() => examesIS.map(e => itemExame(e, 'lab_profile')), [examesIS]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -362,9 +369,9 @@ export const FichaInspecionado: React.FC = () => {
   const itensOutros: ItemHistorico[] = documentosIS.map(d => {
     const dt = d.criadoEmMs ? new Date(d.criadoEmMs) : null;
     return {
-      id: `${d.isId}/${d.id}`, icone: 'description', titulo: d.titulo,
+      id: `${d.isId}/${d.id}`, icone: 'description', titulo: d.titulo, isId: d.isId, semData: true,
       data: dt ? `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}` : '',
-      detalhe: [`IS ${d.is}`, d.resumo, d.emailEnviado ? 'enviado por e-mail' : ''].filter(Boolean).join(' · '),
+      detalhe: [d.resumo, d.emailEnviado ? 'enviado por e-mail' : ''].filter(Boolean).join(' · '),
     };
   });
 
@@ -451,8 +458,12 @@ export const FichaInspecionado: React.FC = () => {
     is: itensIS, pm: itensPM, atestados: itensAtestados, pareceres: itensPareceres, exames: itensExames,
     guias: itensGuias, emails: itensEmails, mensagens: itensMensagens, outros: itensOutros, transcricoes: itensTranscricoes,
   };
-  const historico = aba ? itensDaAba[aba] : [];
-  const atual = registroSelecionado(historico, pedido);
+  // Exames e Outros: histórico agrupado por IS (da abertura mais recente para a mais antiga; "Sem IS" no fim).
+  const agrupada = aba === 'exames' || aba === 'outros';
+  const gruposIS = agrupada ? agruparPorIS(itensDaAba[aba], i => i.isId, isPorAbertura) : [];
+  const historico = agrupada ? gruposIS.flatMap(g => g.itens) : aba ? itensDaAba[aba] : [];
+  const isPedida = agrupada ? params.get('is') : null;
+  const atual = registroSelecionado(historico, pedido ?? gruposIS.find(g => g.id === isPedida)?.itens[0]?.id);
   const dadosAfastamentos = {
     inspecoes, pericias, hoje, cidAbrev, atestado, comIS: lerIS, comPericias: lerPericias,
   };
@@ -655,6 +666,11 @@ export const FichaInspecionado: React.FC = () => {
     <Card padding="none" as="section" title={`Histórico · ${aba === 'pm' && atestado ? 'Atestados' : DEF_ABA[aba].historico}`}>
       {historico.length === 0 ? (
         <p className="px-4 md:px-5 pb-4 -mt-1 text-sm text-ink-3">Nenhum registro.</p>
+      ) : agrupada ? (<React.Fragment key={aba}>
+        <HistoricoAgrupadoIS grupos={gruposIS} inicial={atual?.isId ?? isPedida}
+          rotulo={`Histórico de ${DEF_ABA[aba].historico}`} nomeItens={aba === 'exames' ? 'exames' : 'documentos'}
+          idItem={i => i.id} renderItem={i => <LinhaHistorico item={i} atual={i.id === atual?.id} onAbrir={() => abrirRegistro(i.id)} />} />
+      </React.Fragment>
       ) : (
         <ul className="divide-y divide-line border-t border-line overflow-y-auto overscroll-contain max-h-[60vh] xl:max-h-[calc(100dvh-14rem)] rounded-b-xl"
           aria-label={`Histórico de ${DEF_ABA[aba].historico}`}>
