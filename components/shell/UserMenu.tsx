@@ -55,7 +55,7 @@ const AvatarImagem: React.FC<Omit<AvatarProps, 'badge'>> = ({ nome, imageProfile
       style={style}
       className={`rounded-full font-bold flex items-center justify-center shrink-0 uppercase ${borda} ${tone === 'light' ? 'bg-navy text-white' : 'bg-white/20 text-white'}`}
     >
-      {nome ? nome.charAt(0) : <span className="material-symbols-outlined text-[18px]" aria-hidden="true">person</span>}
+      {nome ? nome.charAt(0) : <span className="material-symbols-outlined" style={{ fontSize: Math.max(18, Math.round(size * 0.6)) }} aria-hidden="true">person</span>}
     </div>
   );
 };
