@@ -140,6 +140,15 @@ describe('Perícias Menores', () => {
     expect(s[10].valores).toEqual([0, 1]);
     expect(cidsFrequentes(lista, janelaDoPeriodo('mes', HOJE))[0]).toMatchObject({ chave: 'M545', rotulo: 'M545 Lombalgia', valor: 2 });
   });
+  it('CID no formato DESCRABREV agrupa com o formato antigo pelo código', () => {
+    const descrabrev = lista.map(p => (p.cid?.startsWith('M545') ? { ...p, cid: 'M54.5 Dor lombar baixa', cidCodigo: 'M545' } : p));
+    const misto = [...lista, ...descrabrev.filter(p => p.cid === 'M54.5 Dor lombar baixa')];
+    const [primeiro] = cidsFrequentes(misto, janelaDoPeriodo('mes', HOJE));
+    expect(primeiro.chave).toBe('M545');
+    expect(primeiro.valor).toBeGreaterThan(2);
+    const [so] = cidsFrequentes(descrabrev, janelaDoPeriodo('mes', HOJE));
+    expect(so).toMatchObject({ chave: 'M545', rotulo: 'M54.5 Dor lombar baixa', valor: 2 });
+  });
 });
 
 describe('Concursos', () => {
