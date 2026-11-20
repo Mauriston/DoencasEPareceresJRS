@@ -11,7 +11,7 @@
 // Tocar numa IS ou perícia da linha do tempo abre o detalhe num Drawer à direita (bottom sheet no celular)
 // sem sair da ficha. PDFs (atestados, pareceres, exames) abrem no modal em tela cheia.
 // Leitura limitada às consultas por NIP (where militarId/inspecionadoId == nip), nunca a coleção inteira (MF2);
-// os exames vêm das subcoleções das IS da pessoa (services/fichaDados.ts).
+// exames, atestados, afastamentos (LTS/Restrições) e CID das IS vêm de services/fichaDados.ts (examesIS + afastamentosIS).
 // Abrir a ficha grava o evento "abriu a ficha" (quem e quando) em militares/{nip}/eventos (best effort).
 // Substitui a antiga página de histórico da Perícia Menor (/pericia-menor/historico/<nip> redireciona para cá).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -50,8 +50,10 @@ import { observarPareceresDoMilitar, statusEfetivo, type ParecerRecord } from '.
 import { observarEventosInspecionado, registrarEventoInspecionado, ROTULO_ACAO_INSPECIONADO, type EventoInspecionado } from '../../services/eventosInspecionado';
 import { sincronizarAgendaIS } from '../../services/agendaGoogleIS';
 import {
-  cidsDasIS, faixa12MesesIS, observarExamesDasInspecoes, periodosDasIS, resumoIS, urlDoArquivoFicha, urlParaModal, type ExameFicha,
+  DADOS_IS_VAZIOS, agruparCidsIS, carregarDadosISDaFicha, faixa12MesesIS, resumoIS, urlParaModal, type DadosISDaFicha,
 } from '../../services/fichaDados';
+import { urlDoExame, type DocumentoDaIS } from '../../services/examesIS';
+import { ROTULO_AFASTAMENTO_IS } from '../../utils/afastamentosIS';
 import { carregarCid, carregarCorposQuadros, carregarOms, type CorposQuadros, type OrganizacaoMilitar } from '../../utils/corposQuadros';
 import { indiceCidAbreviado } from '../../utils/periciaMenorLista';
 import { saldoAcumulado } from '../../utils/periciaMenorRegras';
@@ -193,7 +195,7 @@ export const FichaInspecionado: React.FC = () => {
   const [pericias, setPericias] = useState<PericiaMenorRecord[] | null>(null);
   const [inspecoes, setInspecoes] = useState<InspecaoRecord[] | null>(null);
   const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
-  const [exames, setExames] = useState<ExameFicha[]>([]);
+  const [dadosIs, setDadosIs] = useState<DadosISDaFicha>(DADOS_IS_VAZIOS);
   const [eventos, setEventos] = useState<EventoInspecionado[]>([]);
   const [cidAbrev, setCidAbrev] = useState<Map<string, string> | null>(null);
   const [novaPericia, setNovaPericia] = useState(false);
@@ -211,13 +213,15 @@ export const FichaInspecionado: React.FC = () => {
   useEffect(() => (secoes.inspecoes && nip ? observarInspecoesDoInspecionado(nip, setInspecoes, () => setInspecoes([])) : undefined), [nip, secoes.inspecoes]);
   useEffect(() => (secoes.pareceres && nip ? observarPareceresDoMilitar(nip, setPareceres, () => setPareceres([])) : undefined), [nip, secoes.pareceres]);
   useEffect(() => (secoes.eventos && nip ? observarEventosInspecionado(nip, setEventos, () => setEventos([])) : undefined), [nip, secoes.eventos]);
-  // Exames/atestados enviados nas IS: um ouvinte por IS (só re-assina quando muda o conjunto de IS).
-  const chaveIs = (inspecoes ?? []).map(i => `${i.id}:${i.is}`).join(',');
+  // Exames, atestados, afastamentos e CID das IS (leitura única): recarrega quando muda alguma IS da pessoa
+  // (nova IS, status, laudo, CID — ex.: um exame enviado ou a IS finalizada no Drawer de detalhe).
+  const chaveIs = (inspecoes ?? []).map(i => [i.id, i.status, i.laudo, (i as { cid?: string }).cid ?? '', i.atualizadoEm?.toMillis?.() ?? ''].join('|')).join(',');
   useEffect(() => {
-    if (!secoes.inspecoes || !chaveIs) { setExames([]); return; }
-    const lista = chaveIs.split(',').map(s => { const [id, n] = s.split(':'); return { id, is: Number(n) }; });
-    return observarExamesDasInspecoes(lista, setExames);
-  }, [chaveIs, secoes.inspecoes]);
+    if (!secoes.inspecoes || !nip || !chaveIs) { setDadosIs(DADOS_IS_VAZIOS); return; }
+    let vivo = true;
+    carregarDadosISDaFicha(nip).then(d => { if (vivo) setDadosIs(d); });
+    return () => { vivo = false; };
+  }, [chaveIs, nip, secoes.inspecoes, isSelId]);
   useEffect(() => {
     if (!secoes.pericias) return;
     let vivo = true;
@@ -252,10 +256,10 @@ export const FichaInspecionado: React.FC = () => {
   const faixa = useMemo(() => faixa12Meses(listaPm, hoje), [listaPm, hoje]);
   const cidsPm = useMemo(() => cidsFrequentes(listaPm, cidAbrev, Number.POSITIVE_INFINITY), [listaPm, cidAbrev]);
   const saldo = useMemo(() => saldoAcumulado(listaPm, hoje), [listaPm, hoje]);
-  const periodosIs = useMemo(() => periodosDasIS(listaIs), [listaIs]);
+  const periodosIs = dadosIs.afastamentos;
   const faixaIs = useMemo(() => faixa12MesesIS(periodosIs, hoje), [periodosIs, hoje]);
-  const resumoIs = useMemo(() => resumoIS(listaIs, hoje), [listaIs, hoje]);
-  const cidsIs = useMemo(() => cidsDasIS(listaIs as ReadonlyArray<{ cid?: unknown }>), [listaIs]);
+  const resumoIs = useMemo(() => resumoIS(listaIs, periodosIs, hoje), [listaIs, periodosIs, hoje]);
+  const cidsIs = useMemo(() => agruparCidsIS(dadosIs.cids), [dadosIs.cids]);
   const [agora] = useState(() => Date.now());
 
   // Aba: a escolhida (?ver=is|pm) entre as que o perfil vê; sem escolha, IS (ou Perícias, sem acesso às IS).
@@ -302,8 +306,8 @@ export const FichaInspecionado: React.FC = () => {
   }
 
   const abrirPdf = (titulo: string, url: string) => setPdf({ titulo, url: urlParaModal(url) });
-  const abrirExame = async (e: ExameFicha) => {
-    try { setPdf({ titulo: `${e.titulo} — IS ${e.is}`, url: await urlDoArquivoFicha(e.caminho) }); }
+  const abrirExame = async (e: DocumentoDaIS) => {
+    try { setPdf({ titulo: `${e.titulo || e.nomeArquivo || 'Documento'} — IS ${e.isNumero}`, url: e.url || await urlDoExame(e) }); }
     catch { avisar('Não foi possível abrir o PDF. Tente novamente.', 'error'); }
   };
 
@@ -354,13 +358,13 @@ export const FichaInspecionado: React.FC = () => {
       onClick: p.pdfUrl ? () => abrirPdf(`Parecer de ${p.especialidade} — ${nome}`, p.pdfUrl) : undefined,
     };
   });
-  const docExame = (e: ExameFicha): ItemDoc => ({
-    chave: `ex-${e.isId}-${e.id}`, titulo: e.titulo,
-    detalhe: [`IS ${e.is}`, e.data ? dataBR(e.data) : null].filter(Boolean).join(' · '),
+  const docExame = (e: DocumentoDaIS): ItemDoc => ({
+    chave: `ex-${e.isId}-${e.exameId}`, titulo: e.titulo || e.nomeArquivo || 'Documento',
+    detalhe: [`IS ${e.isNumero}`, e.data ? dataBR(e.data) : null].filter(Boolean).join(' · '),
     onClick: e.caminho ? () => { void abrirExame(e); } : undefined,
   });
-  const atestadosIs = exames.filter(e => e.categoria === 'atestado').map(docExame);
-  const examesIs = exames.filter(e => e.categoria === 'exame').map(docExame);
+  const atestadosIs = dadosIs.atestados.map(docExame);
+  const examesIs = dadosIs.exames.map(docExame);
 
   const situacaoIs = [
     isEmCurso && (() => {
@@ -416,18 +420,15 @@ export const FichaInspecionado: React.FC = () => {
             {periodosIs.length > 0 && (
               <Card title="Períodos de LTS e restrições">
                 <ul className="space-y-1.5">
-                  {periodosIs.map(p => {
-                    const i = listaIs.find(x => x.id === p.isId);
-                    return (
-                      <li key={`${p.isId}-${p.inicio}`} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
-                        <span className="min-w-0 tabular-nums">
-                          {p.tipo === 'lts' ? <StatusTag tone="navyOutline" dot={false}>LTS</StatusTag> : <StatusTag tone="attention">Restrições</StatusTag>}
-                          <span className="ml-2 text-ink">{dataBR(p.inicio)} a {dataBR(p.fim)}</span>
-                        </span>
-                        <span className="text-xs text-ink-3 tabular-nums">{dias(p.dias)}{i ? ` · IS ${i.is}` : ''}</span>
-                      </li>
-                    );
-                  })}
+                  {periodosIs.map((p, k) => (
+                    <li key={`${p.isId}-${p.dataInicio}-${k}`} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
+                      <span className="min-w-0 tabular-nums">
+                        {p.tipo === 'lts' ? <StatusTag tone="navyOutline" dot={false}>{ROTULO_AFASTAMENTO_IS.lts}</StatusTag> : <StatusTag tone="attention">{ROTULO_AFASTAMENTO_IS.restricoes}</StatusTag>}
+                        <span className="ml-2 text-ink">{dataBR(p.dataInicio)} a {dataBR(p.dataFim)}</span>
+                      </span>
+                      <span className="text-xs text-ink-3 tabular-nums">{dias(p.dias)} · IS {p.isNumero}</span>
+                    </li>
+                  ))}
                 </ul>
               </Card>
             )}
@@ -442,7 +443,7 @@ export const FichaInspecionado: React.FC = () => {
                 <Dado rotulo="Dias de LTS" valor={<><strong className="text-navy">{resumoIs.lts.ano}</strong><span className="text-ink-3"> · {resumoIs.lts.total} no total</span></>} />
                 <Dado rotulo="Dias de restrições" valor={<><strong className="text-navy">{resumoIs.restricoes.ano}</strong><span className="text-ink-3"> · {resumoIs.restricoes.total} no total</span></>} />
               </dl>
-              <p className="text-xs text-ink-3 mt-2">Dias contados a partir da data do laudo das IS.</p>
+              <p className="text-xs text-ink-3 mt-2">Afastamentos das IS de Verificações e Términos com TIS assinado.</p>
             </Card>
             <CardDocumentos titulo="Atestados e relatórios médicos" icone="note_alt" itens={atestadosIs} vazio="Nenhum atestado ou relatório enviado." />
             {secoes.pareceres && <CardDocumentos titulo="Pareceres solicitados" icone="assignment" itens={pareceresIs} vazio="Nenhum parecer solicitado." />}
@@ -450,7 +451,7 @@ export const FichaInspecionado: React.FC = () => {
             <Card padding="none" as="section" title={<>CID registrados<Contagem n={cidsIs.length} /></>}>
               {cidsIs.length === 0 ? <VazioCompacto icone="medical_information" texto="Nenhum CID registrado nas IS." /> : (
                 <ul className="px-5 pb-4 space-y-1.5">
-                  {cidsIs.map(c => <li key={c.chave} className="flex justify-between gap-3 text-sm"><span className="min-w-0 break-words text-ink">{c.texto}</span><span className="text-ink-3 tabular-nums shrink-0">{c.n}×</span></li>)}
+                  {cidsIs.map(c => <li key={c.chave} className="flex justify-between gap-3 text-sm"><span className="min-w-0 break-words text-ink">{c.texto}<span className="block text-xs text-ink-3">IS {c.isNumeros.join(', ')}</span></span><span className="text-ink-3 tabular-nums shrink-0">{c.n}×</span></li>)}
                 </ul>
               )}
             </Card>

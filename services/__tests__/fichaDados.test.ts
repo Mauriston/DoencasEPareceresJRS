@@ -1,68 +1,64 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../firebaseAuth', () => ({ app: {} }));
-vi.mock('firebase/firestore', () => ({ getFirestore: vi.fn(), collection: vi.fn(), onSnapshot: vi.fn() }));
-vi.mock('firebase/storage', () => ({ getStorage: vi.fn(), ref: vi.fn(), getDownloadURL: vi.fn() }));
+vi.mock('../examesIS', () => ({ listarDocumentosDasISDoInspecionado: vi.fn() }));
+vi.mock('../afastamentosIS', () => ({ listarAfastamentosECidsDoInspecionado: vi.fn() }));
 
-import {
-  categoriaDoExame, cidsDasIS, exameDaFicha, faixa12MesesIS, periodoDoLaudo, periodosDasIS, resumoIS, somarDiasISO,
-} from '../fichaDados';
+import { listarDocumentosDasISDoInspecionado } from '../examesIS';
+import { listarAfastamentosECidsDoInspecionado } from '../afastamentosIS';
+import { agruparCidsIS, carregarDadosISDaFicha, faixa12MesesIS, resumoIS, urlParaModal } from '../fichaDados';
 
-describe('periodoDoLaudo', () => {
-  it('lê LTS e restrições do laudo', () => {
-    expect(periodoDoLaudo('Incapaz temporariamente para o SAM, necessitando de 30 dias de LTS')).toEqual({ tipo: 'lts', dias: 30 });
-    expect(periodoDoLaudo('Apto com restrições por 90 dias')).toEqual({ tipo: 'restricoes', dias: 90 });
-    expect(periodoDoLaudo('Apto com restricoes por 60 (sessenta) dias')).toEqual({ tipo: 'restricoes', dias: 60 });
-  });
-  it('sem prazo ou sem LTS/restrições: null', () => {
-    expect(periodoDoLaudo('Apto para o SAM')).toBeNull();
-    expect(periodoDoLaudo('Apto com restrições')).toBeNull();
-    expect(periodoDoLaudo('')).toBeNull();
-    expect(periodoDoLaudo(undefined)).toBeNull();
-  });
-});
+const periodos = [
+  { tipo: 'lts' as const, dataInicio: '2026-12-20', dataFim: '2027-01-18', dias: 30 },
+  { tipo: 'restricoes' as const, dataInicio: '2025-03-01', dataFim: '2025-03-10', dias: 10 },
+];
 
-describe('períodos e resumo das IS', () => {
-  const lista = [
-    { id: '1', laudo: 'Incapaz temporariamente, necessitando de 30 dias de LTS', dataLaudo: '2026-12-20', dataAbertura: '2026-12-01', status: 'tis_assinado' },
-    { id: '2', laudo: 'Apto com restrições por 10 dias', dataLaudo: '2025-03-01', dataAbertura: '2025-02-01', status: 'tis_assinado' },
-    { id: '3', laudo: 'Apto com restrições por 90 dias', dataLaudo: '2026-01-01', dataAbertura: '2026-01-01', status: 'cancelada' },
-    { id: '4', laudo: '', dataAbertura: '2026-05-01', status: 'aberta' },
-  ];
-  it('somarDiasISO', () => { expect(somarDiasISO('2026-12-20', 29)).toBe('2027-01-18'); });
-  it('periodosDasIS ignora canceladas e laudos sem prazo', () => {
-    expect(periodosDasIS(lista)).toEqual([
-      { isId: '1', tipo: 'lts', inicio: '2026-12-20', fim: '2027-01-18', dias: 30 },
-      { isId: '2', tipo: 'restricoes', inicio: '2025-03-01', fim: '2025-03-10', dias: 10 },
-    ]);
-  });
-  it('resumoIS conta IS do ano e dias (no ano e total)', () => {
-    expect(resumoIS(lista, '2026-11-20')).toEqual({
+describe('resumoIS', () => {
+  it('conta IS do ano (sem canceladas) e dias no ano e no total', () => {
+    const is = [
+      { dataAbertura: '2026-12-01', status: 'tis_assinado' }, { dataAbertura: '2025-02-01', status: 'tis_assinado' },
+      { dataAbertura: '2026-01-01', status: 'cancelada' }, { dataAbertura: '2026-05-01', status: 'aberta' },
+    ];
+    expect(resumoIS(is, periodos, '2026-11-20')).toEqual({
       ano: 2026, isNoAno: 2, isTotal: 3, lts: { ano: 12, total: 30 }, restricoes: { ano: 0, total: 10 },
     });
   });
-  it('faixa12MesesIS marca os meses com LTS ou restrições', () => {
-    const f = faixa12MesesIS(periodosDasIS(lista), '2027-01-05');
+});
+
+describe('faixa12MesesIS', () => {
+  it('marca os meses com LTS ou restrições', () => {
+    const f = faixa12MesesIS(periodos, '2027-01-05');
     expect(f).toHaveLength(12);
-    expect(f[11]).toMatchObject({ chave: '2027-01', tipo: 'lts' });
+    expect(f[11]).toMatchObject({ chave: '2027-01', rotulo: 'jan', tipo: 'lts' });
     expect(f[10]).toMatchObject({ chave: '2026-12', tipo: 'lts' });
     expect(f[9].tipo).toBeNull();
   });
 });
 
-describe('exames e CID', () => {
-  it('categoria ausente = exame', () => {
-    expect(categoriaDoExame({})).toBe('exame');
-    expect(categoriaDoExame({ categoria: 'atestado' })).toBe('atestado');
-    expect(categoriaDoExame({ categoria: 'outra' })).toBe('exame');
+describe('agruparCidsIS', () => {
+  it('agrupa o mesmo CID e ordena por frequência', () => {
+    expect(agruparCidsIS([{ cid: 'Dor lombar M54.5', isNumero: 1 }, { cid: 'dor lombar  m54.5', isNumero: 2 }, { cid: 'Gonartrose M17', isNumero: 2 }, { cid: ' ', isNumero: 3 }]))
+      .toEqual([
+        { chave: 'dor lombar m54.5', texto: 'Dor lombar M54.5', n: 2, isNumeros: [1, 2] },
+        { chave: 'gonartrose m17', texto: 'Gonartrose M17', n: 1, isNumeros: [2] },
+      ]);
   });
-  it('exameDaFicha usa o título do 1º documento', () => {
-    expect(exameDaFicha('9', 9, 'e1', { caminho: 'inspecoes/9/exames/e1.pdf', nomeArquivo: 'rm.pdf', itens: [{ titulo: 'RM do joelho', data: '2026-10-01' }] }))
-      .toMatchObject({ titulo: 'RM do joelho', data: '2026-10-01', categoria: 'exame', is: 9 });
-    expect(exameDaFicha('9', 9, 'e2', { nomeArquivo: 'x.pdf', categoria: 'atestado' })).toMatchObject({ titulo: 'x.pdf', categoria: 'atestado' });
+});
+
+describe('carregarDadosISDaFicha', () => {
+  it('uma fonte que falha não derruba a outra', async () => {
+    vi.mocked(listarDocumentosDasISDoInspecionado).mockRejectedValue(new Error('sem permissão'));
+    vi.mocked(listarAfastamentosECidsDoInspecionado).mockResolvedValue({ afastamentos: [], cids: [{ cid: 'X', isId: '1', isNumero: 1, data: '', finalidade: '', origem: 'is' }] });
+    const r = await carregarDadosISDaFicha('123');
+    expect(r.exames).toEqual([]);
+    expect(r.atestados).toEqual([]);
+    expect(r.cids).toHaveLength(1);
+    expect(listarDocumentosDasISDoInspecionado).toHaveBeenCalledWith('123', { comUrl: false });
   });
-  it('cidsDasIS agrupa e ordena por frequência', () => {
-    expect(cidsDasIS([{ cid: 'Dor lombar M54.5' }, { cid: 'dor lombar m54.5' }, { cid: 'Gonartrose M17; Dor lombar M54.5' }, {}, { cid: 3 }]))
-      .toEqual([{ chave: 'dor lombar m54.5', texto: 'Dor lombar M54.5', n: 3 }, { chave: 'gonartrose m17', texto: 'Gonartrose M17', n: 1 }]);
+});
+
+describe('urlParaModal', () => {
+  it('Drive vira preview; demais passam direto', () => {
+    expect(urlParaModal('https://drive.google.com/file/d/abc123/view')).toBe('https://drive.google.com/file/d/abc123/preview');
+    expect(urlParaModal('https://x.com/a.pdf')).toBe('https://x.com/a.pdf');
   });
 });

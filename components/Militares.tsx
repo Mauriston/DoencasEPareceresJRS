@@ -1,6 +1,6 @@
 // Ficheiro: components/Militares.tsx
 // Página INSPECIONADOS: base de militares da ativa, servidores civis, dependentes e
-// pensionistas (coleção "militares"). Busca, ficha, edição dos dados, ativar/inativar para o
+// pensionistas (coleção "militares"). Busca, ficha (clique na linha abre a Ficha do inspecionado), edição dos dados, ativar/inativar para o
 // appweb (só Admin), "Importar CSV" em lote (só Admin) e "Cadastrar novo" com duas abas: Militares (formulário em cascata com OM e
 // quadros da MB) e Dep/Pens. (Dependente ou Pensionista).
 import React, { useEffect, useMemo, useState } from 'react';
@@ -132,8 +132,10 @@ export const Militares: React.FC = () => {
     }
   };
 
+  // Linha/card da lista → Ficha do inspecionado (página própria). O ⋮ e os controles da linha não propagam.
+  const abrirFicha = (m: MilitarRecord) => navigate(fichaPath(m.id));
+
   const itensDe = (m: MilitarRecord) => [
-    { rotulo: 'Abrir ficha', icone: 'id_card', onClick: () => navigate(fichaPath(m.id)) },
     { rotulo: 'Ver prévia', icone: 'badge', onClick: () => setDetalhe(m) },
     ...(ehAdmin ? [
       { rotulo: 'Editar', icone: 'edit', onClick: () => setEditando(m) },
@@ -232,7 +234,7 @@ export const Militares: React.FC = () => {
                   <li key={m.id} className={`px-4 py-3 ${selecionados.has(m.id) ? 'bg-thead' : ''}`}>
                     <div className="flex items-start justify-between gap-2">
                       {selecionavel && <label className="shrink-0 -ml-2 w-11 h-11 flex items-center justify-center"><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy" /></label>}
-                      <button type="button" onClick={() => setDetalhe(m)} className="min-w-0 flex-1 text-left" aria-label={`Abrir detalhes de ${m.nome}`}>
+                      <button type="button" onClick={() => abrirFicha(m)} className="min-w-0 flex-1 text-left rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold" aria-label={`Abrir ficha de ${m.nome}`}>
                         <span className="block text-sm font-bold text-navy break-words">{m.nome}</span>
                         <span className="block text-xs text-ink-3">{formatNip(m.nip)} · {m.pgq}</span>
                         {soHnre && m.servico_label && <span className="block text-xs text-ink-3">{m.servico_label}</span>}
@@ -245,7 +247,7 @@ export const Militares: React.FC = () => {
                       ) : (
                         <span className="shrink-0 min-h-[44px] flex items-center"><StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag></span>
                       )}
-                      <div className="shrink-0 -mr-2"><MenuAcoes rotulo={`Ações para ${m.nome}`} itens={itensDe(m)} /></div>
+                      <div className="shrink-0 -mr-2" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}><MenuAcoes rotulo={`Ações para ${m.nome}`} itens={itensDe(m)} /></div>
                     </div>
                   </li>
                 ))}
@@ -271,13 +273,17 @@ export const Militares: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-line">
                     {visiveis.map(m => (
-                      <tr key={m.id} onClick={() => setDetalhe(m)} className={`cursor-pointer hover:bg-thead transition-colors ${selecionados.has(m.id) ? 'bg-thead' : ''} ${m.ativo ? '' : 'text-ink-3'}`}>
-                        {selecionavel && <td className="pl-4 pr-0 py-2" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy align-middle" /></td>}
+                      <tr
+                        key={m.id} tabIndex={0} aria-label={`Abrir ficha de ${m.nome}`}
+                        onClick={() => abrirFicha(m)}
+                        onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrirFicha(m); } }}
+                        className={`cursor-pointer hover:bg-thead transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold ${selecionados.has(m.id) ? 'bg-thead' : ''} ${m.ativo ? '' : 'text-ink-3'}`}>
+                        {selecionavel && <td className="pl-4 pr-0 py-2" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}><input type="checkbox" checked={selecionados.has(m.id)} onChange={() => alternarSelecao(m.id)} aria-label={`Selecionar ${m.nome}`} className="w-5 h-5 accent-navy align-middle" /></td>}
                         <td className="px-4 py-2 tabular-nums whitespace-nowrap">{formatNip(m.nip)}</td>
                         <td className="px-4 py-2 whitespace-nowrap">{m.pgq}</td>
-                        <td className="px-4 py-2 font-semibold text-navy"><button type="button" onClick={e => { e.stopPropagation(); setDetalhe(m); }} className="text-left" aria-label={`Abrir detalhes de ${m.nome}`}>{m.nome}</button>{tipoDoInspecionado(m) === 'dependente' && m.titularNome && <span className="block text-xs font-normal text-ink-3">Titular: {m.titularNome}</span>}</td>
+                        <td className="px-4 py-2 font-semibold text-navy">{m.nome}{tipoDoInspecionado(m) === 'dependente' && m.titularNome && <span className="block text-xs font-normal text-ink-3">Titular: {m.titularNome}</span>}</td>
                         {soHnre && <td className="px-4 py-2 text-ink">{m.servico_label || <span className="text-ink-4">—</span>}</td>}
-                        <td className="px-4 py-2" onClick={e => e.stopPropagation()}>
+                        <td className="px-4 py-2" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                           {ehAdmin ? (
                             <button type="button" onClick={() => alternarAtivo(m)} title={m.ativo ? 'Clique para inativar' : 'Clique para ativar'} aria-label={`${m.ativo ? 'Inativar' : 'Ativar'} ${m.nome}`} className="min-h-[44px] flex items-center">
                               <StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag>
@@ -286,7 +292,7 @@ export const Militares: React.FC = () => {
                             <span className="min-h-[44px] flex items-center"><StatusTag tone={m.ativo ? 'success' : 'muted'}>{m.ativo ? 'Ativo' : 'Inativo'}</StatusTag></span>
                           )}
                         </td>
-                        <td className="pr-2 py-1 text-right" onClick={e => e.stopPropagation()}><MenuAcoes rotulo={`Ações para ${m.nome}`} itens={itensDe(m)} /></td>
+                        <td className="pr-2 py-1 text-right" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}><MenuAcoes rotulo={`Ações para ${m.nome}`} itens={itensDe(m)} /></td>
                       </tr>
                     ))}
                   </tbody>
