@@ -44,6 +44,7 @@ import { CardFaltasHNRe } from './inspecoes/CardFaltasHNRe';
 import { CardAniversariantes } from './home/CardAniversariantes';
 import { observarMilitares, type MilitarRecord } from '../services/firestoreMilitares';
 import { pendenciasEmailIS, TIPOS_EMAIL_PENDENTE } from '../utils/pendenciasEmailIS';
+import { temTagLaudoPericialPendente } from '../utils/documentosIS';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
 import { aguardaAgendamento, hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, diasEmAberto, prazoAtrasoDias, statusEfetivoIS, nomeMes } from '../utils/inspecoes';
 import { finalidadeSemGrupo, nomeCurtoInspecionado } from '../utils/calendarioIS';
@@ -301,6 +302,17 @@ export const Home: React.FC = () => {
       });
     });
   }
+  // Secretaria: IS de Isenção de IR finalizadas com a tag "LAUDO PERICIAL PENDENTE" (sai ao gerar o Laudo Pericial).
+  if (podeInspecoes && ehSecretaria) {
+    inspecoes.filter(temTagLaudoPericialPendente).forEach(i => {
+      pendencias.push({
+        id: `laudo-pericial:${i.id}`, icone: 'contract', titulo: nomeCurtoInspecionado(i.inspecionado),
+        detalhe: `IS ${i.is} · Isenção de IR · gerar o Laudo Pericial`,
+        tag: { rotulo: 'Laudo pericial pendente', tom: 'attention' }, to: `/inspecoes/${encodeURIComponent(i.id)}`,
+        ordem: 900,
+      });
+    });
+  }
   // IS de concurso atrasadas: quando o contador não está na faixa do perfil, a pendência entra aqui (agregada).
   if (qtdConcursoAtrasadas > 0 && !naFaixa('concurso-atrasadas')) {
     const nomes = [...new Set(diasAtrasados.map(d => d.nome))];
@@ -429,7 +441,8 @@ export const Home: React.FC = () => {
       {/* Faltas do HNRe ainda não comunicadas à Divisão de Pessoal (só Admin e Secretaria; some sem pendências). */}
       {podeInspecoes && canUseFeature('inspecoes.enviarEmails', perfil) && <CardFaltasHNRe inspecoes={inspecoes} Secao={Secao} />}
 
-      {perfil === 'admin' && <CardAniversariantes hoje={hoje} />}
+      {/* Aniversários: no celular vai para o fim da coluna (colunaCelular). */}
+      {perfil === 'admin' && isDesktop && <CardAniversariantes hoje={hoje} />}
     </>
   );
 
@@ -595,6 +608,7 @@ export const Home: React.FC = () => {
       {/* Próximos serviços antes de Próximas férias (celular). */}
       {!ehMedicoGeral && cardEscala}
       {cardFerias('')}
+      {perfil === 'admin' && <CardAniversariantes hoje={hoje} />}
     </div>
   );
 

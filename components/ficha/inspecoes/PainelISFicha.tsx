@@ -20,13 +20,14 @@ interface Props {
   definir: (m: Record<string, string | null>) => void;
   om?: string;
   vinculo?: string;
+  feminino?: boolean;
   onAgendar: (is: InspecaoRecord) => void;
   onSituacaoMudou: (is: InspecaoRecord) => void;
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
 }
 
-export const PainelISFicha: React.FC<Props> = ({ is, perfil, abas, definir, om, vinculo, onAgendar, onSituacaoMudou, onAviso }) => {
-  const { acoes, atalhos, dialogos } = useAcoesISFicha({ is, perfil, abas, definir, om, vinculo, onAgendar, onAviso });
+export const PainelISFicha: React.FC<Props> = ({ is, perfil, abas, definir, om, vinculo, feminino, onAgendar, onSituacaoMudou, onAviso }) => {
+  const { acoes, atalhos, dialogos } = useAcoesISFicha({ is, perfil, abas, definir, om, vinculo, feminino, onAgendar, onAviso });
   const gravar = podeUsarEntrevista(perfil) && canUseFeature('inspecoes.gravarEntrevista', perfil) && abas.transcricoes.habilitada;
   return (
     <>

@@ -7,6 +7,7 @@
 // (exames / agendamento / Benefícios), agendamentos (agendamento / reagendamento) e resultado de Benefícios (os três
 // modelos). As guias (ao inspecionado e à SEC-JRS) levam um PDF de guias fictício gerado pelo mesmo documento do
 // envio real (servidor/documentos/guiasExames/documento.ts → htmlParaPdf). Remetente = o do envio real.
+import { montarEmailDocumentoIS } from '../documentos/is/email';
 import type { Firestore } from 'firebase-admin/firestore';
 import { ErroContaGoogle } from '../google/contaGoogle';
 import { enviarEmail } from '../google/impressao';
@@ -37,7 +38,7 @@ import { TIPOS_FEEDBACK, dataHoraRecife } from '../../utils/feedback';
 export const TIPOS_TESTE: TipoEmail[] = TIPOS_EMAIL.map(t => t.tipo);
 
 /** Nome do remetente de cada e-mail, igual ao do envio real (guiasSecretaria: quem enviou — no teste, o signatário ou o fictício). */
-export const REMETENTE_TESTE: Record<Exclude<TipoEmail, 'guiasSecretaria' | 'documentoSecretaria'>, string> = {
+export const REMETENTE_TESTE: Record<Exclude<TipoEmail, 'guiasSecretaria' | 'documentoSecretaria' | 'documentoIS'>, string> = {
   resultadoIS: 'JRS-HNRe', agendamentoIS: 'JRS-HNRe', agendamentoGeral: 'JRS-HNRe', agendamentoBeneficios: 'JRS-HNRe',
   aberturaIS: 'JRS-HNRe', guiasInspecionado: 'JRS-HNRe', resultadoBeneficios: 'JRS-HNRe',
   agendaIS: 'JRS/HNRe', faltasHNRe: 'JRS/HNRe', inaptosConcurso: 'JRS/HNRe', nac: 'JRS/HNRe',
@@ -163,6 +164,10 @@ export const montarEmailTeste = (tipo: TipoEmail, assinatura: Parameters<typeof 
         htmlAnexo: htmlGuiasFicticias(config), nomeRemetente: remetente.nome,
       };
     }
+    case 'documentoIS': {
+      const p = f.pessoa();
+      return { ...montarEmailDocumentoIS({ titulo: 'Declaração de Comparecimento', numeroIs: f.numeroIs(), inspecionado: p.inspecionado, finalidade: 'Controle Periódico de Saúde' }, assinatura), htmlAnexo: htmlGuiasFicticias(config) };
+    }
     case 'resultadoBeneficios': {
       const nome = f.nome();
       return montarEmailResultadoBeneficios({
@@ -213,7 +218,7 @@ export const enviarEmailTeste = async (db: Firestore, tipoBruto: unknown, uid: s
   await enviarEmail(db, {
     para: para.join(', '), cc: cc.length ? cc.join(', ') : undefined, responderPara: config.responderPara,
     assunto: `[TESTE] ${r.assunto}`, html: r.html, texto: `*** E-MAIL DE TESTE — dados fictícios ***\n\n${r.texto}`,
-    nomeRemetente: r.nomeRemetente || REMETENTE_TESTE[tipo as Exclude<TipoEmail, 'guiasSecretaria' | 'documentoSecretaria'>] || 'JRS-HNRe', anexo,
+    nomeRemetente: r.nomeRemetente || REMETENTE_TESTE[tipo as Exclude<TipoEmail, 'guiasSecretaria' | 'documentoSecretaria' | 'documentoIS'>] || 'JRS-HNRe', anexo,
   });
   return { tipo, para, cc };
 };

@@ -15,14 +15,14 @@ const templateDoPrompt = (): string => {
   return corpo.slice(0, corpo.indexOf('---')).join('\n\n');
 };
 const preencherTemplate = (v: Record<string, string>): string =>
-  templateDoPrompt().replace(/\[(PARA|INFO|FINALIDADE|INSPECIONADO|OM|Junta|DATA|LAUDO|TIS|DS1A)\]/g, (_, k: string) => v[k]);
+  templateDoPrompt().replace(/\[(PARA|INFO|FINALIDADE|INSPECIONADO|OM|Junta|DATA|LAUDO|DISPENSA|TIS|DS1A)\]/g, (_, k: string) => v[k] ?? "");
 
 // IS fictícia finalizada (InspecaoRecord sem os campos de agenda/auditoria).
 const IS_FICTICIA = {
   is: 4321, dataAbertura: '2026-10-01', dataEntrevista: '2026-10-20T08:00', finalidade: 'Término de Incapacidade',
   grupoFinalidade: 'Verificações e Términos', amp: 'JRS', peritoNome: 'CT MAURISTON',
   inspecionado: '3SG-EF 12.3456.78 FULANO DE TAL', dataLaudo: '2026-10-20',
-  laudo: 'Apto para o SAM com restrições por 30 dias', restricoes: 'Embarque', tis: '026.001.15', ds1a: 'AB12CD34',
+  laudo: 'Apto para o SAM com restrições por 30 dias', restricoes: '', tis: '026.001.15', ds1a: 'AB12CD34',
 };
 
 describe('minuta de resultado no padrão da página Mensagens', () => {

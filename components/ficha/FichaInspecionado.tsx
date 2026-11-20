@@ -4,7 +4,7 @@
 //   cabeçalho (o nome abre o top sheet com os dados cadastrais; ⋮ com "Registro de eventos" só do Admin) ·
 //   barra de abas sublinhadas, SEM contagens, fixa no topo ao rolar — Inspeções de Saúde · Perícias Menores ·
 //   Atestados e Laudos · Pareceres · Exames · Guias · Emails · Mensagens · Outros · Transcrições
-//   (permissões em components/ficha/permissoes.ts → abasDaFicha; Outros desabilitada para todos; Transcrições
+//   (permissões em components/ficha/permissoes.ts → abasDaFicha; Outros = documentos gerados nas IS, todos menos user_medicos_geral; Transcrições
 //   só para quem grava entrevista e habilitada pela função "ficha.transcricoes") ·
 //   grade 8 + 4 (a partir de xl; empilhada abaixo):
 //     - PAINEL PRINCIPAL (esquerda): o registro aberto da aba — o detalhe que antes abria num Drawer
@@ -45,7 +45,7 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { FabAcoes } from '../ui/Fab';
 import { MenuAcoes, type ItemMenu } from '../ui/MenuAcoes';
-import { AbasSublinhadas, CidCodigo, TagEspecialidade, TextoContagem } from '../periciaMenor/partes';
+import { AbasSublinhadas } from '../periciaMenor/partes';
 import { StatusTag } from '../ui/StatusTag';
 import { EmptyState } from '../ui/EmptyState';
 import { AccessDenied } from '../ui/AccessDenied';
@@ -73,7 +73,7 @@ import { examesMinimosDaIS, isParaCriar } from '../../utils/examesFicha';
 import { ApoioAfastamentos, PainelAfastamentos } from './afastamentos/PainelAfastamentos';
 import { PainelEmail } from './emails/PainelEmail';
 import { useEmailsDaFicha } from './emails/useEmailsDaFicha';
-import { horaDoEnvio, isoDoEnvio, resumoDestinatarios } from '../../utils/emailsEnviados';
+import { horaDoEnvio, isoDoEnvio } from '../../utils/emailsEnviados';
 import { AgendarISFicha } from './AgendarISFicha';
 import { AbrirISFicha, type ModoAbrirIS } from './AbrirISFicha';
 import { PainelISFicha } from './inspecoes/PainelISFicha';
@@ -90,6 +90,8 @@ import { agendamentoJaEnviado, ehElegivelAgendamento } from '../../utils/emailAg
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useEntrevistasDasIS, type EntrevistaDaFicha } from './useEntrevistasDasIS';
 import { useExamesDasIS, type ExameDaFicha } from './useExamesDasIS';
+import { useDocumentosDasIS } from './useDocumentosDasIS';
+import { PainelDocumentoGerado } from './outros/PainelDocumentoGerado';
 import { abasDaFicha, secoesDaFicha, podeAbrirFicha } from './permissoes';
 import { useNav } from '../../context/NavContext';
 import { useBreadcrumbs } from '../../context/BreadcrumbContext';
@@ -107,10 +109,10 @@ import { emailDoInspecionado } from '../../services/emailResultadoIS';
 import { sincronizarAgendaIS } from '../../services/agendaGoogleIS';
 import { carregarCid, carregarCorposQuadros, carregarOms, type CorposQuadros, type OrganizacaoMilitar } from '../../utils/corposQuadros';
 import { indiceCidAbreviado } from '../../utils/periciaMenorLista';
-import { ROTULO_TIPO_PERICIA, contagemTermino, diaMes, partesCid, postoDoInspecionado, tipoDaPericia } from '../../utils/periciaMenorResumo';
+import { diaMes, partesCid, postoDoInspecionado } from '../../utils/periciaMenorResumo';
 import { ABAS_FICHA, abaFichaInicial, afastamentosDaIS, registroSelecionado, type AbaFicha } from '../../utils/fichaInspecionado';
 import { classeDoExame, ROTULO_CLASSE, ROTULO_TIPO } from '../../utils/examesIS';
-import { STATUS_IS, aguardaAgendamento, statusEfetivoIS, dataHoraBr, situacaoDoStatus } from '../../utils/inspecoes';
+import { aguardaAgendamento, dataHoraBr, situacaoDoStatus } from '../../utils/inspecoes';
 import { getDriveEmbedUrl, isGoogleDriveUrl } from '../../utils/googleDrive';
 import { extrairNomeInspecionado, formatCelular, formatCpf, formatDataBr, formatNip, idadeEmAnos } from '../../utils/format';
 import { hojeISO } from '../../utils/dados';
@@ -127,7 +129,6 @@ const quandoEvento = (d: Date | null, hoje: string) => {
   const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   return `${iso === hoje ? 'hoje' : diaMes(iso)} · ${hora}`;
 };
-const dias = (n: number) => `${n} dia${n !== 1 ? 's' : ''}`;
 /** O iframe do modal não abre a página /view do Drive: usa a de preview embutido. */
 const urlParaModal = (url: string) => (isGoogleDriveUrl(url) ? getDriveEmbedUrl(url) ?? url : url);
 
@@ -276,6 +277,7 @@ export const FichaInspecionado: React.FC = () => {
   const pedido = params.get('reg') || (aba === 'is' ? params.get('is') : aba === 'pm' ? params.get('sel') : null);
   const exames = useExamesDasIS(inspecoes, secoes.inspecoes && (aba === 'atestados' || aba === 'exames'));
   const entrevistas = useEntrevistasDasIS(inspecoes, estadoAbas.transcricoes.habilitada && aba === 'transcricoes');
+  const documentosIS = useDocumentosDasIS(inspecoes, estadoAbas.outros.habilitada && aba === 'outros');
   const emails = useEmailsDaFicha(nip, inspecoes, estadoAbas.emails.habilitada && aba === 'emails');
 
   // Cabeçalho mínimo: do cadastro ou, sem cadastro, do texto copiado no registro mais recente.
@@ -298,7 +300,6 @@ export const FichaInspecionado: React.FC = () => {
     .sort((a, b) => (b.guiasExames?.geradoEm?.toMillis?.() ?? 0) - (a.guiasExames?.geradoEm?.toMillis?.() ?? 0)), [inspecoes]);
 
   const itensIS = useMemo<ItemHistorico[]>(() => isOrdenadas.map(i => {
-    const st = STATUS_IS[statusEfetivoIS(i, hoje)];
     // Aberta e não agendada → pending_actions; finalizada (ou cancelada) → lock; demais → edit_square.
     const estado = i.situacao === 'finalizada' || i.status === 'cancelada' ? ICONE_ESTADO.finalizado
       : aguardaAgendamento(i.status) && !i.dataEntrevista ? ICONE_ESTADO.pendente : ICONE_ESTADO.andamento;
@@ -306,19 +307,21 @@ export const FichaInspecionado: React.FC = () => {
       id: i.id, data: dataIS(i), icone: estado.icone, iconeEstilo: estado.estilo, semData: true,
       titulo: i.finalidade || `IS ${i.is}`,
       detalhe: i.dataEntrevista ? dataHoraBr(i.dataEntrevista) : '',
-      tag: <StatusTag tone={st.tom}>{st.rotulo}</StatusTag>,
     };
-  }), [isOrdenadas, hoje]);
+  }), [isOrdenadas]);
   const itensPM = useMemo<ItemHistorico[]>(() => pmOrdenadas.map(p => {
     const cid = partesCid(p, cidAbrev);
-    const c = contagemTermino(p.dataTermino, hoje);
+    const homologado = !atestado && !!p.homologacao;
+    // Registrado: data e dias do atestado; homologado: data da homologação (registro) e dias homologados.
+    const dataRef = homologado ? isoDe(p.criadoEm) : p.dataAtestado;
+    const dias = homologado ? p.tempoHomologado : p.tempoAtestado;
     return {
-      id: p.id, data: p.dataAtestado, icone: 'personal_injury',
-      titulo: atestado ? 'Atestado registrado' : p.homologacao ? 'Atestado homologado' : 'Perícia menor registrada',
-      detalhe: <>{dias(p.tempoHomologado)} · {ROTULO_TIPO_PERICIA[tipoDaPericia(p.dispensas)]}{cid.codigo || cid.descricao ? ' · ' : ''}<CidCodigo codigo={cid.codigo} descricao={cid.descricao} />{p.especialidade && <span className="block mt-1"><TagEspecialidade especialidade={p.especialidade} /></span>}</>,
-      tag: c.tom !== 'passado' ? <TextoContagem contagem={c} /> : <StatusTag tone="muted">Concluída</StatusTag>,
+      id: p.id, data: p.dataAtestado, icone: 'personal_injury', semData: true,
+      titulo: homologado ? 'ATESTADO HOMOLOGADO' : 'ATESTADO REGISTRADO',
+      detalhe: <>{cid.codigo && cid.descricao ? `${cid.codigo} (${cid.descricao})` : cid.codigo || cid.descricao}<br />{dataRef ? dataBR(dataRef) : '—'}</>,
+      tag: Number.isFinite(dias) ? <strong className="text-sm text-navy tabular-nums whitespace-nowrap">{dias} {dias === 1 ? 'dia' : 'dias'}</strong> : undefined,
     };
-  }), [pmOrdenadas, cidAbrev, hoje, atestado]);
+  }), [pmOrdenadas, cidAbrev, atestado]);
   const itemExame = (e: ExameDaFicha, icone: string): ItemHistorico => ({
     id: idExame(e), data: dataExame(e), icone, titulo: tituloExame(e),
     detalhe: [`IS ${e.is}`, e.itens.find(i => i.emissor)?.emissor].filter(Boolean).join(' · '),
@@ -345,8 +348,8 @@ export const FichaInspecionado: React.FC = () => {
 
   const itensEmails: ItemHistorico[] = emails.map(e => ({
     id: e.id, data: isoDoEnvio(e.enviadoEmMs), icone: e.legado ? 'mail' : 'mark_email_read',
-    titulo: e.assunto || e.rotulo,
-    detalhe: [horaDoEnvio(e.enviadoEmMs), e.rotulo, `para ${resumoDestinatarios(e.para)}`].filter(Boolean).join(' · '),
+    titulo: e.rotulo, semData: true,
+    detalhe: e.enviadoEmMs ? `${dataBR(isoDoEnvio(e.enviadoEmMs))} ${horaDoEnvio(e.enviadoEmMs)}` : '—',
   }));
 
   // Mensagens tramitadas registradas a partir da minuta das IS ("Minutar MSG"), da mais recente para a mais antiga.
@@ -354,6 +357,16 @@ export const FichaInspecionado: React.FC = () => {
     id: m.id, data: isoDe(m.registradoEm), icone: 'chat', titulo: m.assunto || `Mensagem da IS ${m.is}`,
     detalhe: [`IS ${m.is}`, m.registradoPor?.usuario ? `registrada por ${m.registradoPor.usuario}` : ''].filter(Boolean).join(' · '),
   }));
+
+  // Outros: documentos gerados nas IS (Gerar Documento ▾), do mais recente para o mais antigo.
+  const itensOutros: ItemHistorico[] = documentosIS.map(d => {
+    const dt = d.criadoEmMs ? new Date(d.criadoEmMs) : null;
+    return {
+      id: `${d.isId}/${d.id}`, icone: 'description', titulo: d.titulo,
+      data: dt ? `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}` : '',
+      detalhe: [`IS ${d.is}`, d.resumo, d.emailEnviado ? 'enviado por e-mail' : ''].filter(Boolean).join(' · '),
+    };
+  });
 
   // Transcrições: primeiro as IS Agendadas/Reagendadas (a gravar), depois as entrevistas gravadas.
   const isAGravar = isOrdenadas.filter(i => fasesDeEntrevista(i));
@@ -436,7 +449,7 @@ export const FichaInspecionado: React.FC = () => {
   const itensDaAba: Record<AbaFicha, ItemHistorico[]> = {
     afastamentos: [],
     is: itensIS, pm: itensPM, atestados: itensAtestados, pareceres: itensPareceres, exames: itensExames,
-    guias: itensGuias, emails: itensEmails, mensagens: itensMensagens, outros: [], transcricoes: itensTranscricoes,
+    guias: itensGuias, emails: itensEmails, mensagens: itensMensagens, outros: itensOutros, transcricoes: itensTranscricoes,
   };
   const historico = aba ? itensDaAba[aba] : [];
   const atual = registroSelecionado(historico, pedido);
@@ -573,7 +586,7 @@ export const FichaInspecionado: React.FC = () => {
       return (
         <PainelISFicha
           key={isSel.id} is={isSel} perfil={perfil} abas={estadoAbas} definir={definir}
-          om={militar?.om || om} vinculo={militar ? vinculoDoInspecionado(militar) : undefined}
+          om={militar?.om || om} vinculo={militar ? vinculoDoInspecionado(militar) : undefined} feminino={militar?.sexo === 'Feminino'}
           onAgendar={setAgendando}
           onSituacaoMudou={is => { sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS atualizada, mas o Google Agenda não: ${r.erro}`, 'error'); }); }}
           onAviso={avisar}
@@ -626,6 +639,10 @@ export const FichaInspecionado: React.FC = () => {
       const isSel = isComGuias.find(i => i.id === atual?.id);
       if (!isSel) return semRegistro('guias');
       return <PainelGuias key={isSel.id} is={isSel} emailCadastrado={emailDoInspecionado(militar ?? undefined)} onAviso={avisar} />;
+    }
+    if (aba === 'outros') {
+      const d = documentosIS.find(x => `${x.isId}/${x.id}` === atual?.id);
+      return d ? <PainelDocumentoGerado key={atual!.id} doc={d} /> : semRegistro('outros');
     }
     if (aba === 'emails') {
       const e = emails.find(x => x.id === atual?.id);

@@ -21,12 +21,14 @@ interface Props {
   /** OM e vínculo do inspecionado (cadastro), para PARA/INFO e o assunto. */
   om?: string;
   vinculo?: string;
+  /** Inspecionada do sexo feminino (cadastro): concordância da minuta. */
+  feminino?: boolean;
   onClose: () => void;
   onRegistrada: (mensagemId: string) => void;
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
 }
 
-export const MinutarMsgIS: React.FC<Props> = ({ is, om, vinculo, onClose, onRegistrada, onAviso }) => {
+export const MinutarMsgIS: React.FC<Props> = ({ is, om, vinculo, feminino, onClose, onRegistrada, onAviso }) => {
   const nav = useNav();
   const [modo, setModo] = useState<Modo>('ver');
   const [campos, setCampos] = useState<CamposMsgIS | null>(null);
@@ -35,7 +37,7 @@ export const MinutarMsgIS: React.FC<Props> = ({ is, om, vinculo, onClose, onRegi
 
   const preparar = async () => {
     setPreparando(true);
-    let c = camposMinutaMsgIS(is, { om, vinculo });
+    let c = camposMinutaMsgIS(is, { om, vinculo, feminino });
     if (faltaDestinatario(c)) {
       try {
         const s = await sugerirDestinatariosIA({ finalidade: is.finalidade, grupoFinalidade: is.grupoFinalidade, vinculo, posto: postoDoInspecionado(is.inspecionado), laudo: is.laudo || '' });

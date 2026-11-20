@@ -128,7 +128,7 @@ test('Inspeções: lista a IS semeada, filtra pela busca e abre o detalhe', asyn
   // Aberta sem data de entrevista: só a Finalidade é editável (menu em cascata); a Conclusão fica em leitura.
   await detalhe.getByRole('button', { name: 'Finalidade' }).waitFor();
   await detalhe.getByText('A Conclusão fica editável depois que a entrevista for agendada.').waitFor();
-  for (const campo of ['Laudo', 'Nº do TIS', 'DS-1a', 'Observações']) assert.equal(await detalhe.getByLabel(campo).count(), 0, `${campo} não editável`);
+  for (const campo of ['Laudo', 'Nº do TIS', 'DS-1a', 'Observações']) assert.equal(await detalhe.getByLabel(campo, { exact: true }).count(), 0, `${campo} não editável`);
   assert.equal(await detalhe.getByRole('combobox', { name: 'Restrições' }).count(), 0);
   await p.context().close();
 });
@@ -431,13 +431,13 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   for (const nome of ['Afastamentos', 'Atestados e Laudos', 'Pareceres', 'Exames', 'Guias', 'Emails', 'Mensagens', 'Outros', 'Transcrições']) {
     await guias.getByRole('tab', { name: nome, exact: true }).waitFor();
   }
-  // "Outros" fica desabilitada para todos.
-  assert.equal(await guias.getByRole('tab', { name: 'Outros', exact: true }).getAttribute('aria-disabled'), 'true');
+  // "Outros" (documentos gerados das IS) fica habilitada para a equipe, exceto user_medicos_geral.
+  assert.notEqual(await guias.getByRole('tab', { name: 'Outros', exact: true }).getAttribute('aria-disabled'), 'true');
   assert.equal(await p.getByRole('button', { name: /Pedir parecer/i }).count(), 0);
   // A aba abre com o registro mais recente no painel principal (sem drawer) e o histórico no painel de apoio.
   await guias.getByRole('tab', { name: 'Perícia Menor', exact: true }).click();
   await p.getByRole('heading', { name: /Perícia menor de/ }).waitFor();
-  await p.getByRole('complementary', { name: /Histórico de Perícias Menores/ }).getByRole('button', { name: /Perícia menor registrada/ }).first().click();
+  await p.getByRole('complementary', { name: /Histórico de Perícias Menores/ }).getByRole('button', { name: /ATESTADO REGISTRADO/ }).first().click();
   assert.equal(await p.getByRole('dialog').count(), 0);
   assert.match(p.url(), new RegExp(`#/inspecionados/${INSPECIONADO.nip}\\?.*aba=pm`));
   // "+ Perícia Menor" (cabeçalho): abre o formulário no painel principal da aba Perícia Menor, sem drawer.
@@ -460,7 +460,7 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   assert.equal(await quadro.getByText('SCRIPT RODOU').count(), 0);
   assert.equal(await p.getByRole('toolbar', { name: 'Ações da aba' }).count(), 0);
   // Registro antigo (sem conteúdo): só os dados do envio e a nota.
-  await p.getByRole('complementary', { name: /Histórico de Emails/ }).getByRole('button', { name: /ABERTURA ANTIGA E2E/ }).click();
+  await p.getByRole('complementary', { name: /Histórico de Emails/ }).getByRole('button', { name: /Abertura/i }).click();
   await p.getByText(/anterior à gravação do conteúdo/).waitFor();
   // IS aberta sem data: "Agendar IS" na barra (e não "Abrir IS", pois já há IS em andamento); sem o campo Inspecionado.
   await guias.getByRole('tab', { name: 'Inspeções de Saúde', exact: true }).click();

@@ -8,7 +8,8 @@
 //  - "Enviar PDF ▾" (com data de entrevista, sem Laudo e IS não finalizada): Exames · Atestados e Laudos · Resposta de Parecer
 //    (só com pedido de parecer da IS não concluído). Sempre confirma e navega pelo contrato
 //    definir({ aba, criar, is, reg: null }) — o estado "Criar novo" é de cada aba;
-//  - "Gerar Documento ▾": Pedido de Parecer → aba Pareceres (criar: 'pedido'); os demais "Em breve";
+//  - "Gerar Documento ▾": Pedido de Parecer → aba Pareceres (criar: 'pedido'); os demais pelo registro
+//    documentos/registro.tsx (formulário → confirmar e-mail → servidor → PDF em nova aba; ficam na aba Outros);
 //  - "Minutar MSG" (IS concluída; função inspecoes.gerarMinuta): MinutarMsgIS; registrada, abre a aba Mensagens.
 import React, { useEffect, useState } from 'react';
 import { Button } from '../../ui/Button';
@@ -16,6 +17,7 @@ import { ConfirmDialog } from '../../ui/Dialog';
 import { MenuAcoes, type ItemMenu } from '../../ui/MenuAcoes';
 import type { AcaoBarraFicha } from '../CascaPainelFicha';
 import { MinutarMsgIS } from './MinutarMsgIS';
+import { useGerarDocumentoIS } from './documentos/useGerarDocumentoIS';
 import { canUseFeature } from '../../../config/permissions';
 import { excluirInspecaoCompleta, type InspecaoRecord } from '../../../services/firestoreInspecoes';
 import { observarExamesDaIS } from '../../../services/examesIS';
@@ -36,15 +38,6 @@ const DESTINO_PDF: Record<CriarPdf, { aba: AbaFicha; rotulo: string }> = {
   atestados: { aba: 'atestados', rotulo: 'Atestados e Laudos' },
   resposta: { aba: 'pareceres', rotulo: 'Resposta de Parecer' },
 };
-/** Documentos ainda não implementados no "Gerar Documento". */
-const DOCUMENTOS_EM_BREVE: { rotulo: string; icone: string }[] = [
-  { rotulo: 'Solicitação de Exames', icone: 'lab_profile' },
-  { rotulo: 'Papeleta de Dispensa', icone: 'description' },
-  { rotulo: 'Declaração de Comparecimento', icone: 'how_to_reg' },
-  { rotulo: 'Termo de Recurso', icone: 'gavel' },
-  { rotulo: 'Laudo Pericial', icone: 'contract' },
-];
-
 interface Opcoes {
   is: InspecaoRecord;
   perfil: string | undefined;
@@ -52,11 +45,12 @@ interface Opcoes {
   definir: Definir;
   om?: string;
   vinculo?: string;
+  feminino?: boolean;
   onAgendar: (is: InspecaoRecord) => void;
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
 }
 
-export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, onAgendar, onAviso }: Opcoes) => {
+export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, feminino, onAgendar, onAviso }: Opcoes) => {
   const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
   const [confirmarPdf, setConfirmarPdf] = useState<CriarPdf | null>(null);
   const [excluindo, setExcluindo] = useState(false);
@@ -87,11 +81,13 @@ export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, onAgen
     ...(habilitada('atestados') ? [{ rotulo: 'Atestados e Laudos', icone: 'note_alt', onClick: () => setConfirmarPdf('atestados' as const) }] : []),
     ...(parecerAberto && habilitada('pareceres') ? [{ rotulo: 'Resposta de Parecer', icone: 'assignment_turned_in', onClick: () => setConfirmarPdf('resposta' as const) }] : []),
   ];
-  // Gerar Documento: IS não finalizada; Pedido de Parecer com a função pareceres.gerar e a aba Pareceres.
-  const podePedido = canUseFeature('pareceres.gerar', perfil) && habilitada('pareceres');
-  const itensDocumento: ItemMenu[] = finalizada ? [] : [
+  // Gerar Documento: Pedido de Parecer (IS não finalizada; função pareceres.gerar e a aba Pareceres) e os documentos do
+  // registro (documentos/registro.tsx; finalizada → só Termo de Recurso e Laudo Pericial).
+  const podePedido = !finalizada && canUseFeature('pareceres.gerar', perfil) && habilitada('pareceres');
+  const docs = useGerarDocumentoIS(is, { perfil, om, vinculo }, onAviso);
+  const itensDocumento: ItemMenu[] = [
     ...(podePedido ? [{ rotulo: 'Pedido de Parecer', icone: 'assignment_add', onClick: () => ir('pareceres', { criar: 'pedido', is: is.id }) }] : []),
-    ...DOCUMENTOS_EM_BREVE.map(d => ({ ...d, onClick: () => { /* em breve */ }, desabilitado: true, dica: 'Em breve' })),
+    ...docs.itens,
   ];
   const minuta = podeMinutarMsg(is) && canUseFeature('inspecoes.gerarMinuta', perfil);
 
@@ -153,9 +149,10 @@ export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, onAgen
           onCancel={() => setConfirmarPdf(null)}
         />
       )}
+      {docs.dialogos}
       {minutando && (
         <MinutarMsgIS
-          is={is} om={om} vinculo={vinculo} onAviso={onAviso} onClose={() => setMinutando(false)}
+          is={is} om={om} vinculo={vinculo} feminino={feminino} onAviso={onAviso} onClose={() => setMinutando(false)}
           onRegistrada={id => { setMinutando(false); ir('mensagens', { reg: id }); }}
         />
       )}

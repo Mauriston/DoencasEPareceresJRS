@@ -1,7 +1,7 @@
 // Ficheiro: components/administracao/Administracao.tsx
 // Área "Administração" (só Admin; auditoria v3, 8b/8c — U3/CF4). Um lugar para o Admin: sub-navegação 3 + 9
 // (GradeIndice proporcao="3-9") com Usuários · Perfis e permissões · E-mails automáticos · Agenda das IS ·
-// Integrações · Registro de alterações, e atalhos para os ajustes que continuam onde são usados (quesitos dos
+// Templates de documentos · Integrações · Registro de alterações, e atalhos para os ajustes que continuam onde são usados (quesitos dos
 // pareceres, bloqueios de agenda, importação da escala). Rotas: /administracao/{secao}; /usuarios e
 // /configuracoes são aliases (config/routes.ts). No celular, /administracao é a lista de seções com o estado
 // de cada uma; cada item abre a subpágina, com "‹" de volta para a lista (trilha da topbar).
@@ -28,6 +28,7 @@ import { EmailsAutomaticos } from './EmailsAutomaticos';
 import { AgendaIS } from './AgendaIS';
 import { Integracoes } from './Integracoes';
 import { RegistroAlteracoes } from './RegistroAlteracoes';
+import { TemplatesDocumentos } from './TemplatesDocumentos';
 import { PermissoesChat } from '../chat/PermissoesChat';
 import { dataHoraCurta, plural, semAcessoHa, ultimoAcessoRelativo } from '../../utils/administracao';
 
@@ -39,6 +40,7 @@ export const SECOES: SecaoDef[] = [
   { id: 'chat', rotulo: 'Chat', icone: 'forum', descricao: 'Quem envia, recebe e anexa arquivos no chat, por perfil.' },
   { id: 'emails', rotulo: 'E-mails automáticos', icone: 'mail', descricao: 'Destinatários fixos, assinaturas e testes de cada e-mail.' },
   { id: 'agenda', rotulo: 'Agenda das IS', icone: 'schedule', descricao: 'Turnos em que cada perito atende.' },
+  { id: 'documentos', rotulo: 'Templates de documentos', icone: 'description', descricao: 'Textos dos documentos da IS e PDFs de teste.' },
   { id: 'integracoes', rotulo: 'Integrações', icone: 'hub', descricao: 'Conta Google do servidor, Google Agenda e Apps Script.' },
   { id: 'registro', rotulo: 'Registro de alterações', icone: 'history', descricao: 'Quem mudou o quê e quando.' },
 ];
@@ -109,6 +111,7 @@ export const Administracao: React.FC = () => {
       case 'usuarios': return carregando ? 'Carregando…' : `${plural(estado.ativos, 'ativo', 'ativos')} · ${estado.semAcesso} sem acesso há 30 dias`;
       case 'perfis': return plural(ROLES.length, 'perfil', 'perfis') + ' editáveis · Admin com acesso total';
       case 'emails': return `${plural(TIPOS_EMAIL.length, 'e-mail', 'e-mails')}${estado.emailsAlterado ? ` · alterado em ${dataHoraCurta(estado.emailsAlterado).split(' ')[0]}` : ''}`;
+      case 'documentos': return '5 templates · teste apagado em 30 min';
       case 'chat': return 'Enviar, receber e anexos por perfil';
       case 'agenda': return estado.peritosComTurno === null ? 'Turnos dos peritos' : `turnos de ${plural(estado.peritosComTurno, 'perito', 'peritos')}`;
       case 'integracoes': return !conta.situacao ? (conta.erro ? 'Servidor indisponível' : 'Consultando…') : conta.situacao.autorizado ? 'Conta Google autorizada' : 'Conta Google não autorizada · Apps Script em uso';
@@ -149,6 +152,7 @@ export const Administracao: React.FC = () => {
       case 'chat': return <PermissoesChat />;
       case 'emails': return <EmailsAutomaticos />;
       case 'agenda': return <AgendaIS />;
+      case 'documentos': return <TemplatesDocumentos />;
       case 'integracoes': return <Integracoes conta={conta} />;
       case 'registro': return <RegistroAlteracoes usuarios={usuarios} />;
       default: return null;

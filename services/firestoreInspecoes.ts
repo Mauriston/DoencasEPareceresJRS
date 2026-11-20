@@ -9,7 +9,7 @@
 //  - "bloqueiosAgenda": bloqueios de horário/turno (de todos os peritos ou de um perito).
 //  - config/agendaIS: turnos em que cada perito atende, por dia da semana (só o Admin grava).
 import {
-  getFirestore, collection, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot, runTransaction, serverTimestamp, Timestamp, writeBatch,
+  getFirestore, collection, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, deleteField, arrayUnion, onSnapshot, runTransaction, serverTimestamp, Timestamp, writeBatch,
 } from 'firebase/firestore';
 import { novoId } from '../utils/dados';
 import { app } from './firebaseAuth';
@@ -48,6 +48,8 @@ export interface InspecaoDoc {
   grupoFinalidade: string;
   amp: AmpIS;
   peritoUid: string;
+  /** Marcadores da IS (ex.: "LAUDO PERICIAL PENDENTE" — utils/documentosIS.ts). */
+  tags?: string[];
   /** Login do perito (o que as telas mostram). */
   peritoNome: string;
   /** Gmail do perito: convidado do evento no Google Agenda. */
@@ -216,6 +218,23 @@ const aposFinalizar = (id: string, status: StatusIS | undefined): void => {
   import('./afastamentosIS')
     .then(m => m.processarAfastamentosEmSegundoPlano(id))
     .catch(e => logErroSeguro('Afastamentos da IS: módulo não carregado', e));
+  void marcarLaudoPericialPendente(id).catch(e => logErroSeguro('Tag Laudo Pericial pendente', e));
+};
+
+/**
+ * IS de Isenção de IR finalizada com laudo de enquadramento: tag "LAUDO PERICIAL PENDENTE" (pendência da Secretaria),
+ * exceto militar INATIVO (responsabilidade da JSD). Sai ao gerar o Laudo Pericial (servidor/documentos/is/laudoPericial.ts).
+ */
+export const marcarLaudoPericialPendente = async (id: string): Promise<boolean> => {
+  const { deveMarcarLaudoPericialPendente, ehMilitarInativo, TAG_LAUDO_PERICIAL_PENDENTE } = await import('../utils/documentosIS');
+  const snap = await getDoc(doc(db, COL, id));
+  const is = snap.data() as Partial<InspecaoDoc> | undefined;
+  if (!is || is.status !== 'tis_assinado') return false;
+  if ((is.tags || []).includes(TAG_LAUDO_PERICIAL_PENDENTE) || (is as Record<string, unknown>).laudoPericialGeradoEm) return false;
+  const mil = is.inspecionadoId ? (await getDoc(doc(db, 'militares', is.inspecionadoId))).data() : undefined;
+  if (!deveMarcarLaudoPericialPendente(is, ehMilitarInativo(mil))) return false;
+  await updateDoc(doc(db, COL, id), { tags: arrayUnion(TAG_LAUDO_PERICIAL_PENDENTE) });
+  return true;
 };
 
 /** `finalizadaEm` quando o status leva a IS à situação "finalizada" (limpeza das guias 15 dias depois, no servidor). */

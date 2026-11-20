@@ -709,6 +709,29 @@ async function startServer() {
     }
   });
 
+  // Documentos gerados a partir de uma IS ("Gerar Documento ▾" da Ficha): um gerador por tipo em servidor/documentos/is/
+  // (registro.ts). Corpo { isId, tipo, dados, enviarEmail?, teste? }; perfis por tipo em utils/documentosIS.ts (conferidos
+  // no serviço). PDF permanente em inspecoes/{isId}/documentos/ + registro em inspecoes/{isId}/documentos/{id}.
+  app.post("/api/inspecoes/documentos/gerar", async (req, res) => {
+    const quem = await exigirUsuario(req, res, "inspecoes-documentos-gerar", PERFIS_EQUIPE);
+    if (!quem) return;
+    const { ErroDocumentoIS } = await import("./servidor/documentos/is/tipos");
+    try {
+      const { adminDb, adminApp } = await getFirebaseAdmin();
+      const { getStorage } = await import("firebase-admin/storage");
+      const { gerarDocumentoIS } = await import("./servidor/documentos/is/servico");
+      const r = await gerarDocumentoIS(adminDb, getStorage(adminApp).bucket(BUCKET_STORAGE), BUCKET_STORAGE, quem, req.body || {});
+      res.json({ success: true, ...r });
+    } catch (error: any) {
+      if (error instanceof ErroDocumentoIS) {
+        res.status(error.status).json({ success: false, error: error.message });
+        return;
+      }
+      logErroSeguro("Documento da IS", error);
+      res.status(500).json({ success: false, error: "Não foi possível gerar o documento. Tente novamente." });
+    }
+  });
+
   // [rotas: guias de exames — pacote A] (gerar PDF, apagar ao excluir a IS, limpeza 15 dias após a finalização)
   // Guias de exames da IS (servidor/documentos/guiasExames/): PDF único no Storage (inspecoes/{isId}/guias/) e
   // resumo em inspecoes/{isId}.guiasExames. Gerar: equipe; apagar (ao excluir a IS): só Admin.
@@ -984,6 +1007,12 @@ async function startServer() {
       await (await import("./servidor/documentos/guiasExames/servico")).limparGuiasVencidas(adminDb, await bucketStorage());
     } catch (error) {
       logErroSeguro("Agendador limpeza de guias", error);
+    }
+    // PDFs de teste dos documentos da IS com mais de 30 min (também limpos a cada geração de teste).
+    try {
+      await (await import("./servidor/documentos/is/servico")).limparTestesDocumentosIS(await bucketStorage());
+    } catch (error) {
+      logErroSeguro("Agendador limpeza de testes de documentos", error);
     }
     // Apaga os PDFs de exames dos candidatos 1 ano depois da última data de agendamento do concurso
     // (sem ela, do encerramento); as transcrições ficam (docs/retencao-lgpd.md). Best effort.
@@ -1397,6 +1426,12 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  // PDFs de teste dos documentos da IS: garante a exclusão em ~30 min mesmo sem o agendador (a cada 5 min).
+  setInterval(() => {
+    void (async () => (await import("./servidor/documentos/is/servico")).limparTestesDocumentosIS(await bucketStorage()))()
+      .catch(error => logErroSeguro("Limpeza de testes de documentos", error));
+  }, 5 * 60_000).unref();
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
