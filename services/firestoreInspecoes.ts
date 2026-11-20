@@ -34,6 +34,10 @@ const CONFIG_REF = doc(db, 'config', 'agendaIS');
 export type AmpIS = 'JRS' | 'MPI';
 
 export interface InspecaoDoc {
+  /** CID da IS (Verificações e Términos), formato DESCRABREV do cid.json (ex.: "M54.5 Dor lombar baixa"). */
+  cid?: string;
+  /** Código SUBCAT do CID (ex.: "M545"). */
+  cidCodigo?: string;
   /** Número da IS (o mesmo do id do documento). */
   is: number;
   /** AAAA-MM-DD */
