@@ -1,7 +1,7 @@
 // Ficheiro: services/documentosIS.ts
 // Documentos gerados a partir de uma IS ("Gerar Documento ▾" da Ficha): POST /api/inspecoes/documentos/gerar
 // (servidor/documentos/is/) e a leitura dos registros em inspecoes/{isId}/documentos (aba Outros da Ficha).
-import { getFirestore, collection, onSnapshot, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, collectionGroup, query, where, orderBy, limit, onSnapshot, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { app } from './firebaseAuth';
 import { chamarServidor } from './apiClient';
 import { SUBCOL_DOCUMENTOS_IS, type TipoDocumentoIS } from '../utils/documentosIS';
@@ -59,6 +59,26 @@ export const observarDocumentosDaIS = (isId: string, cb: (l: RegistroDocumentoIS
       criadoEmMs: Number(x.criadoEmMs) || 0,
     };
   }).sort((a, b) => b.criadoEmMs - a.criadoEmMs)), e => onErro?.(e));
+
+/** Janela dos documentos de IS na Início da Secretaria (mesma validade da fila de impressão: 24 h). */
+export const HORAS_RECENTES_DOCUMENTOS_IS = 24;
+
+/** Documentos gerados em TODAS as IS nas últimas 24 h (collectionGroup; índice em firestore.indexes.json), mais recentes primeiro. */
+export const observarDocumentosISRecentes = (cb: (l: RegistroDocumentoIS[]) => void, max = 50, onErro?: (e: Error) => void) =>
+  onSnapshot(
+    query(collectionGroup(db, SUBCOL_DOCUMENTOS_IS),
+      where('criadoEmMs', '>=', Date.now() - HORAS_RECENTES_DOCUMENTOS_IS * 3600 * 1000), orderBy('criadoEmMs', 'desc'), limit(max)),
+    snap => cb(snap.docs.filter(s => s.ref.parent.parent?.parent.id === 'inspecoes').map(s => {
+      const x = s.data();
+      const isId = s.ref.parent.parent!.id;
+      return {
+        id: s.id, isId, is: x.is ?? isId, tipo: x.tipo, titulo: String(x.titulo || 'Documento'), resumo: String(x.resumo || ''),
+        pdfUrl: String(x.pdfUrl || ''), assinanteNome: String(x.assinante?.nome || ''), emailEnviado: !!x.emailEnviado,
+        criadoEmMs: Number(x.criadoEmMs) || 0,
+      };
+    })),
+    e => { console.error('Falha ao ler documentos das IS:', e); onErro?.(e); },
+  );
 
 /** Abre o PDF em NOVA aba do navegador. */
 export const abrirPdfNovaAba = (url: string) => { if (url) window.open(url, '_blank', 'noopener,noreferrer'); };

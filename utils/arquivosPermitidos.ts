@@ -15,8 +15,9 @@ export const caminhoArquivoValido = (c: unknown): c is string =>
 
 /**
  * PDFs da IS que só a EQUIPE lê (storage.rules: admin, user_medicos, user_medicos_mpi, user_secretaria):
- * guias de exames (inspecoes/{isId}/guias/…) e exames enviados (inspecoes/{isId}/exames/…). O servidor
+ * guias de exames (inspecoes/{isId}/guias/…), exames enviados (inspecoes/{isId}/exames/…) e documentos gerados
+ * (inspecoes/{isId}/documentos/…). O servidor
  * confere o perfil antes de repassar (Ficha › Guias desenha as páginas a partir destes bytes).
  */
 export const caminhoArquivoEquipe = (c: unknown): c is string =>
-  caminhoSeguro(c) && /^inspecoes\/[^/]+\/(guias|exames)\/[^/]+$/.test(c);
+  caminhoSeguro(c) && /^inspecoes\/[^/]+\/(guias|exames|documentos)\/[^/]+$/.test(c);

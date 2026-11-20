@@ -43,6 +43,7 @@ describe('caminhoArquivoEquipe (repasse com perfil da equipe)', () => {
   it('aceita só as guias e os exames de uma IS', () => {
     expect(caminhoArquivoEquipe('inspecoes/9001/guias/guias-exames.pdf')).toBe(true);
     expect(caminhoArquivoEquipe('inspecoes/9001/exames/abc.pdf')).toBe(true);
+    expect(caminhoArquivoEquipe('inspecoes/9001/documentos/atestado-x.pdf')).toBe(true);
     expect(caminhoArquivoValido('inspecoes/9001/guias/guias-exames.pdf')).toBe(false);
   });
   it('recusa outras pastas da IS, subpastas e caminhos inseguros', () => {
