@@ -412,9 +412,12 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
           <section className="space-y-4" aria-labelledby="pm-militar">
             <h3 id="pm-militar" className={secao}>Dados do militar</h3>
             {edicao ? (
-              <Field label="Nome">
-                {a => <input {...a} type="text" readOnly disabled value={editar?.inspecionado ?? ''} />}
-              </Field>
+              <div>
+                <Field label="Nome">
+                  {a => <input {...a} type="text" readOnly disabled value={editar?.inspecionado ?? ''} />}
+                </Field>
+                {msgAcumulado && <p className="mt-1.5 text-xs font-semibold text-wine" role={passaDe30 ? 'alert' : undefined}>{msgAcumulado}</p>}
+              </div>
             ) : (
             <div>
               <Autocomplete
@@ -429,6 +432,10 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
                   <span className="material-symbols-outlined text-[18px]" aria-hidden="true">person_add</span>
                   Militar não encontrado? Cadastrar novo militar
                 </button>
+              )}
+              {/* Histórico recente do inspecionado: logo abaixo do Nome, em vermelho. */}
+              {msgAcumulado && (
+                <p className="mt-1.5 text-xs font-semibold text-wine" role={passaDe30 ? 'alert' : undefined}>{msgAcumulado}</p>
               )}
             </div>
             )}
@@ -471,9 +478,6 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
               {tempoField('Tempo do atestado', tempoAtestado, setTempoAtestado, erros.tempoAtestado, avisoMaxAtestado && !homologacao, alterarTempoAtestado)}
               {homologacao && tempoField('Tempo homologado', tempoHomologado, setTempoHomologado, erros.tempoHomologado, avisoMaxHomologado, alterarTempoHomologado)}
             </div>
-            {msgAcumulado && !erros.tempoAtestado && !erros.tempoHomologado && (
-              <p className={`text-xs ${passaDe30 ? 'font-semibold text-wine' : 'text-ink-3'}`} role={passaDe30 ? 'alert' : undefined}>{msgAcumulado}</p>
-            )}
             {homologacao && emissorLido && (
               <div className="grid grid-cols-1 sm:grid-cols-[1fr_10rem] gap-4">
                 <Field label="Médico emissor">
