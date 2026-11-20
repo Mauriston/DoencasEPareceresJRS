@@ -48,4 +48,12 @@ describe('preencherInspecionadoDoSinais', () => {
     expect(r.nip).toBe('');
     expect(r.avisos.length).toBeGreaterThanOrEqual(2);
   });
+
+  it('CPF: formatado quando válido; inválido vira aviso', () => {
+    const ok = preencherInspecionadoDoSinais({ situacao: 'Ativa', posto: 'Capitão-Tenente', corpo: 'CSM', quadro: 'MD', cpf: '63372622472' }, cq, oms);
+    expect(ok.cpf).toBe('633.726.224-72');
+    const ruim = preencherInspecionadoDoSinais({ situacao: 'Ativa', posto: 'Capitão-Tenente', corpo: 'CSM', quadro: 'MD', cpf: '12345678900' }, cq, oms);
+    expect(ruim.cpf).toBe('');
+    expect(ruim.avisos.some(a => a.includes('CPF'))).toBe(true);
+  });
 });

@@ -8,7 +8,7 @@ import {
   type CorposQuadros, type OrganizacaoMilitar, type Vinculo, type SituacaoMilitar,
 } from './corposQuadros';
 import { dataCivilISO, normalizarNip } from './dados';
-import { formatNip } from './format';
+import { formatNip, formatCpf, cpfValido } from './format';
 
 /** Campos como aparecem no SINAIS (texto livre lido da imagem). */
 export interface DadosSinais {
@@ -22,6 +22,8 @@ export interface DadosSinais {
   especialidade?: string;
   quadro?: string;
   tipo?: string;
+  /** CPF (com ou sem máscara). */
+  cpf?: string;
 }
 
 export type VinculoForm = Vinculo | 'Inativo';
@@ -42,6 +44,8 @@ export interface PreenchimentoInspecionado {
   omSigla: string;
   omTexto: string;
   dataNascimento: string;
+  /** CPF formatado (000.000.000-00) quando lido e válido; senão ''. */
+  cpf: string;
   /** O que não foi possível preencher (para o usuário completar). */
   avisos: string[];
 }
@@ -122,6 +126,11 @@ export const preencherInspecionadoDoSinais = (
   const nipDigitos = normalizarNip(d.nip || '');
   if (d.nip && nipDigitos.length !== 8) avisos.push('NIP ilegível no print: confira.');
 
+  // CPF: só entra se os dígitos verificadores conferirem.
+  const cpfDigitos = (d.cpf || '').replace(/\D/g, '');
+  const cpfOk = cpfDigitos.length === 11 && cpfValido(cpfDigitos);
+  if (cpfDigitos && !cpfOk) avisos.push('CPF ilegível ou inválido no print: confira.');
+
   return {
     tipo, vinculo, situacao, posto, quadroChave, cpfn, espSigla, espTexto,
     nome: (d.nome || '').replace(/\s+/g, ' ').trim().toUpperCase(),
@@ -129,6 +138,7 @@ export const preencherInspecionadoDoSinais = (
     omSigla: om?.sigla || '',
     omTexto: om ? `${om.sigla} — ${om.nome}` : omLida,
     dataNascimento: dataCivilISO(d.dataNascimento || '') || '',
+    cpf: cpfOk ? formatCpf(cpfDigitos) : '',
     avisos,
   };
 };
@@ -141,7 +151,7 @@ export const preencherInspecionadoDoSinais = (
  */
 export const militarDoPreenchimento = (p: PreenchimentoInspecionado, cq: CorposQuadros): {
   om: string; temporario: boolean; pgq: string; nip: string; nome: string; inspecionado: string;
-  email: string; ativo: boolean; celular: string; dataNascimento: string; rm1: boolean; refo: boolean;
+  email: string; ativo: boolean; celular: string; dataNascimento: string; rm1: boolean; refo: boolean; cpf?: string;
 } | null => {
   if (p.tipo !== 'militar' || p.avisos.length > 0 || !p.vinculo || !p.posto || !p.nome || !p.nip) return null;
   if (p.vinculo === 'Inativo' && !p.situacao) return null;
@@ -158,5 +168,6 @@ export const militarDoPreenchimento = (p: PreenchimentoInspecionado, cq: CorposQ
     om: p.omSigla, temporario: p.vinculo === 'Temporário', pgq, nip: p.nip, nome: p.nome,
     inspecionado: montarInspecionado(pgq, p.nip, p.nome), email: '', ativo: true, celular: '',
     dataNascimento: p.dataNascimento, rm1: p.situacao === 'RM1', refo: p.situacao === 'Refº',
+    ...(p.cpf ? { cpf: p.cpf.replace(/\D/g, '') } : {}),
   };
 };

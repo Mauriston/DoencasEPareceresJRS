@@ -21,10 +21,11 @@ const INSTRUCOES = [
   '- especialidade: campo "Especialidade" (praças).',
   '- nip: campo "NIP" (só os dígitos).',
   '- dataNascimento: campo "Data Nascimento", no formato AAAA-MM-DD.',
-  'Não leia CPF nem Identidade. Campo vazio ou ilegível: omita. Não invente dados.',
+  '- cpf: campo "CPF" (só os 11 dígitos; usado nos documentos das IS de Benefícios).',
+  'Não leia a Identidade. Campo vazio ou ilegível: omita. Não invente dados.',
 ].join('\n');
 
-const CAMPOS = ['nome', 'situacao', 'tipo', 'omSigla', 'posto', 'corpo', 'quadro', 'especialidade', 'nip', 'dataNascimento'] as const;
+const CAMPOS = ['nome', 'situacao', 'tipo', 'omSigla', 'posto', 'corpo', 'quadro', 'especialidade', 'nip', 'dataNascimento', 'cpf'] as const;
 
 export const lerInspecionadoDoSinais = async (base64: string, mimeType: string): Promise<DadosSinais> => {
   const r = await gerarComGemini({
@@ -59,7 +60,7 @@ const INSTRUCOES_PRINT = [
   '- Ignore "Data de Apresentação" e "Data Apreciação" (não as confunda com a Data da Conclusão nem com a Data do Laudo).',
   '- Da seção "DADOS DO INSPECIONADO": nome ("Nome"), situacao ("Situação"), tipo do inspecionado em tipoInspecionado ("Tipo": Titular, Dependente…),',
   '  omSigla ("OM Inspecionado"), posto ("Posto", por extenso), corpo ("Corpo", sigla), quadro ("Quadro"), especialidade ("Especialidade"),',
-  '  nip ("NIP", só os dígitos), dataNascimento ("Data Nascimento", AAAA-MM-DD). Não leia CPF nem Identidade.',
+  '  nip ("NIP", só os dígitos), dataNascimento ("Data Nascimento", AAAA-MM-DD), cpf ("CPF", só os 11 dígitos). Não leia a Identidade.',
   '',
   'Tela (B):',
   '- numInspecao: campo "IS" do cabeçalho (só os dígitos); nip: "NIP" (só os dígitos); finalidade: "Final.".',
@@ -74,7 +75,7 @@ const INSTRUCOES_PRINT = [
 ].join('\n');
 
 const TEXTOS_PRINT = ['numInspecao', 'junta', 'finalidadeTis', 'dataCriacao', 'dataAgendamento', 'ds1a', 'dataLaudo', 'dataConclusao', 'numTis',
-  'nome', 'situacao', 'tipoInspecionado', 'omSigla', 'posto', 'corpo', 'quadro', 'especialidade', 'nip', 'dataNascimento', 'finalidade'] as const;
+  'nome', 'situacao', 'tipoInspecionado', 'omSigla', 'posto', 'corpo', 'quadro', 'especialidade', 'nip', 'dataNascimento', 'cpf', 'finalidade'] as const;
 
 /** Um print qualquer do SINAIS (tela da IS ou da conclusão): a IA diz qual é e lê os campos daquela tela. */
 export const lerPrintDoSinais = async (base64: string, mimeType: string): Promise<LeituraPrint> => {
