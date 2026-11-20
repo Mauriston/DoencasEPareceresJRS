@@ -24,5 +24,5 @@ export const StoragePdfIconButton: React.FC<StoragePdfButtonProps> = ({ busy, on
  * `bottomClass` ficou só por compatibilidade: a altura vem de --fab-bottom.
  */
 export const StoragePdfFab: React.FC<StoragePdfButtonProps & { bottomClass?: string }> = ({ busy, onClick }) => (
-  <FabAcoes acoes={[{ id: 'baixar-pdf', rotulo: 'Baixar PDF', icone: 'download', onClick, loading: busy, disabled: busy }]} />
+  <FabAcoes acoes={[{ id: 'baixar-pdf', rotulo: 'Baixar PDF', icone: 'download', onClick, loading: busy, disabled: busy , manterIcone: true }]} />
 );

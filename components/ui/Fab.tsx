@@ -40,6 +40,8 @@ export interface AcaoFab {
   loading?: boolean;
   /** Nome completo para leitores de tela, quando o rótulo é curto. */
   ariaLabel?: string;
+  /** Ação única de página que NÃO cria nada (ex.: "Próximo", "Baixar PDF"): mostra o próprio ícone no lugar do "+". */
+  manterIcone?: boolean;
 }
 
 const COR: Record<NonNullable<AcaoFab['variante']>, string> = {
@@ -114,7 +116,7 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
 
   if (!varias) {
     const nome = principal.ariaLabel ?? principal.rotulo;
-    const icone = principal.loading ? 'progress_activity' : posicao === 'pagina' ? 'add' : principal.icone;
+    const icone = principal.loading ? 'progress_activity' : posicao === 'pagina' && !principal.manterIcone ? 'add' : principal.icone;
     return (
       <div data-acoes-fab="" className={classePosicao(posicao)} style={estiloPosicao(posicao)}>
         <button
