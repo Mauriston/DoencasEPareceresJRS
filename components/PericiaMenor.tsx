@@ -18,6 +18,7 @@ import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
 import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
+import { CampoDataBr } from './ui/CampoDataBr';
 import { SearchField, controlClass } from './ui/Field';
 import { FilterChip } from './ui/FilterChip';
 import { NovaPericiaMenorForm } from './periciaMenor/NovaPericiaMenorForm';
@@ -363,13 +364,14 @@ export const PericiaMenor: React.FC = () => {
               </div>
               {periodo === 'personalizado' && (
                 <div className="grid grid-cols-2 gap-2 md:flex md:items-end" role="group" aria-label="Período personalizado">
-                  <label className="flex flex-col gap-1 text-xs font-semibold text-ink-3">
+                  {/* Datas sempre em dd/mm/aaaa (o campo nativo segue o idioma do aparelho). */}
+                  <label className="flex flex-col gap-1 text-xs font-semibold text-ink-3 min-w-0">
                     De
-                    <input type="date" value={periodoDe} max={periodoAte || undefined} onChange={e => definir({ de: e.target.value || null }, true)} className={`${controlClass} md:!w-auto min-w-0`} />
+                    <CampoDataBr aria-label="De" value={periodoDe} max={periodoAte || undefined} onChange={v => definir({ de: v || null }, true)} className="md:w-[10rem]" />
                   </label>
-                  <label className="flex flex-col gap-1 text-xs font-semibold text-ink-3">
+                  <label className="flex flex-col gap-1 text-xs font-semibold text-ink-3 min-w-0">
                     Até
-                    <input type="date" value={periodoAte} min={periodoDe || undefined} onChange={e => definir({ ate: e.target.value || null }, true)} className={`${controlClass} md:!w-auto min-w-0`} />
+                    <CampoDataBr aria-label="Até" value={periodoAte} min={periodoDe || undefined} onChange={v => definir({ ate: v || null }, true)} className="md:w-[10rem]" />
                   </label>
                 </div>
               )}

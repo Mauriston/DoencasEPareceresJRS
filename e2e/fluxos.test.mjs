@@ -563,3 +563,15 @@ test('Ajuda › "Add à Tela de Início" abre o diálogo de instalação sem sai
   assert.match(p.url(), /#\/sobre/);
   await p.context().close();
 });
+
+test('Perícia Menor: período personalizado mostra as datas em dd/mm/aaaa', async () => {
+  const p = await novaPagina();
+  await entrar(p, MEDICO);
+  await p.goto(`${BASE}#/pericia-menor/historico?periodo=personalizado&de=2026-11-01&ate=2026-11-10`);
+  const grupo = p.getByRole('group', { name: 'Período personalizado' });
+  await grupo.getByText('01/11/2026').waitFor();
+  await grupo.getByText('10/11/2026').waitFor();
+  await grupo.getByLabel('Até').fill('2026-11-15');
+  await grupo.getByText('15/11/2026').waitFor();
+  await p.context().close();
+});
