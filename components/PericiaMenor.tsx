@@ -16,7 +16,7 @@
 import { completarEspecialidadesPendentes } from '../services/especialidadePericiaIA';
 import { ESPECIALIDADES } from '../utils/especialidadePericia';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Navigate, useParams, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
 import { EmptyState } from './ui/EmptyState';
 import { Toast } from './ui/Toast';
@@ -70,6 +70,7 @@ export const PericiaMenor: React.FC = () => {
   const pessoa = pessoaParam ? decodeURIComponent(pessoaParam) : null;
 
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const situacaoUrl = params.get('situacao');
   const situacao: FiltroSituacao = situacaoUrl === 'vigentes' || situacaoUrl === 'concluidas' ? situacaoUrl : 'todas';
   const registroUrl = params.get('registro');
@@ -177,6 +178,12 @@ export const PericiaMenor: React.FC = () => {
   const detalhe = lista?.find(p => p.id === sel) ?? null;
   const historicoDetalhe = useMemo(() => (detalhe && lista ? lista.filter(p => chaveMilitar(p) === chaveMilitar(detalhe)) : []), [detalhe, lista]);
 
+  // Clique no registro: abre a Ficha do inspecionado na aba Perícia Menor com o registro selecionado; sem acesso à
+  // ficha ou sem NIP, o painel de detalhe como antes.
+  const abrirRegistro = (p: PericiaMenorRecord, replace = false) => {
+    if (podeFicha && p.militarId) navigate(`${fichaPath(p.militarId)}?aba=pm&reg=${encodeURIComponent(p.id)}`);
+    else selecionar(p.id, { replace });
+  };
   const selecionar = useCallback((id: string | null, opcoes: { replace?: boolean; aba?: AbaPericia } = {}) => {
     definir({ sel: id, aba: id && opcoes.aba === 'historico' ? 'historico' : null }, opcoes.replace);
   }, [definir]);
@@ -247,7 +254,7 @@ export const PericiaMenor: React.FC = () => {
           <ul className="md:hidden divide-y divide-line">
             {filtrada.map(x => (
               <li key={x.p.id}>
-                <button type="button" onClick={() => selecionar(x.p.id)} aria-label={`Abrir detalhe ${atestado ? 'do atestado' : 'da perícia'} de ${x.nome}`}
+                <button type="button" onClick={() => abrirRegistro(x.p)} aria-label={`Abrir detalhe ${atestado ? 'do atestado' : 'da perícia'} de ${x.nome}`}
                   className={`w-full text-left px-4 py-3 flex flex-col gap-0.5 hover:bg-thead ${x.p.id === sel ? 'bg-thead' : ''}`}>
                   <span className="font-bold text-navy truncate">{x.nome}</span>
                   <span className="text-xs text-ink-3 min-w-0 break-words">{[postoDoInspecionado(x.p.inspecionado, x.nome), x.p.om, rotuloDias(x.p)].filter(Boolean).join(' · ')}</span>
@@ -273,10 +280,10 @@ export const PericiaMenor: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-line">
                 {filtrada.map(x => (
-                  <tr key={x.p.id} onClick={() => selecionar(x.p.id, { replace: !!sel })} aria-selected={x.p.id === sel}
+                  <tr key={x.p.id} onClick={() => abrirRegistro(x.p, !!sel)} aria-selected={x.p.id === sel}
                     className={`cursor-pointer hover:bg-thead transition-colors ${x.p.id === sel ? 'bg-thead shadow-[inset_3px_0_0_rgb(var(--c-gold))]' : ''}`}>
                     <td className="px-4 py-2.5 align-top">
-                      <button type="button" id={`pm-linha-${x.p.id}`} onClick={e => { e.stopPropagation(); selecionar(x.p.id, { replace: !!sel }); }} className="text-left w-full"
+                      <button type="button" id={`pm-linha-${x.p.id}`} onClick={e => { e.stopPropagation(); abrirRegistro(x.p, !!sel); }} className="text-left w-full"
                         aria-label={`Abrir detalhe ${atestado ? 'do atestado' : 'da perícia'} de ${x.nome}`}>
                         <span className="block font-bold text-navy break-words">{x.nome}</span>
                         <span className="block text-xs text-ink-3">{[postoDoInspecionado(x.p.inspecionado, x.nome), x.p.om].filter(Boolean).join(' · ')}</span>

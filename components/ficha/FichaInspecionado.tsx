@@ -79,6 +79,9 @@ import { AbrirISFicha, type ModoAbrirIS } from './AbrirISFicha';
 import { PainelISFicha } from './inspecoes/PainelISFicha';
 import { PainelMensagemIS } from './inspecoes/PainelMensagemIS';
 import { observarMensagensDoInspecionado, type MensagemISRecord } from '../../services/mensagensIS';
+import { GerarGuiasDialog } from '../inspecoes/guias/GerarGuiasDialog';
+import { FINALIDADE_ANEXO_O_INCDEF } from '../../utils/guiasExamesIS';
+import { usaMinutaIncapacidadeDefinitiva } from '../../utils/minutaMensagemResultado';
 import { PosCriacaoIS, deveTentarGuias } from '../inspecoes/guias/PosCriacaoIS';
 import { EnviarAgendamentoDialog } from '../inspecoes/EnviarAgendamentoDialog';
 import type { DadosInspecionadoIS } from '../inspecoes/InspecaoForm';
@@ -148,12 +151,21 @@ interface ItemHistorico {
   id: string; data: string; icone: string; titulo: string; detalhe: React.ReactNode; tag?: React.ReactNode;
   /** Sem a linha de data no topo (a data já vem no detalhe — ex.: Guias). */
   semData?: boolean;
+  /** font-variation-settings do ícone (Material Symbols). */
+  iconeEstilo?: React.CSSProperties;
 }
+
+/** Ícones de estado do histórico (IS e Pareceres), com os eixos do Material Symbols definidos pela JRS. */
+const ICONE_ESTADO = {
+  pendente: { icone: 'pending_actions', estilo: { fontVariationSettings: "'FILL' 1, 'wght' 700, 'GRAD' -25, 'opsz' 40" } },
+  andamento: { icone: 'edit_square', estilo: { fontVariationSettings: "'FILL' 0, 'wght' 700, 'GRAD' -25, 'opsz' 40" } },
+  finalizado: { icone: 'lock', estilo: { fontVariationSettings: "'FILL' 1, 'wght' 500, 'GRAD' -25, 'opsz' 48" } },
+} as const;
 
 const LinhaHistorico: React.FC<{ item: ItemHistorico; atual: boolean; onAbrir: () => void }> = ({ item, atual, onAbrir }) => (
   <button type="button" onClick={onAbrir} aria-current={atual || undefined}
     className={`w-full text-left flex items-start gap-3 px-4 py-3 border-l-[3px] transition-colors ${atual ? 'border-gold bg-thead' : 'border-transparent hover:bg-thead'}`}>
-    <span className="material-symbols-outlined text-[20px] text-navy shrink-0 mt-0.5" aria-hidden="true">{item.icone}</span>
+    <span className="material-symbols-outlined text-[20px] text-navy shrink-0 mt-0.5" style={item.iconeEstilo} aria-hidden="true">{item.icone}</span>
     <span className="min-w-0 flex-1">
       {!item.semData && <span className="block text-xs text-ink-3 tabular-nums">{item.data ? dataBR(item.data) : '—'}</span>}
       <span className="block text-sm font-bold text-navy break-words">{item.titulo}</span>
@@ -212,6 +224,7 @@ export const FichaInspecionado: React.FC = () => {
   const [mensagens, setMensagens] = useState<MensagemISRecord[]>([]);
   /** "Abrir IS" do cabeçalho: formulário aberto (no painel principal da aba IS; no celular, bottom sheet). */
   const [abrindoIS, setAbrindoIS] = useState<ModoAbrirIS | null>(null);
+  const [guiasIncdef, setGuiasIncdef] = useState<InspecaoRecord | null>(null);
   const [posCriacao, setPosCriacao] = useState<{ is: InspecaoRecord; dados: DadosInspecionadoIS } | null>(null);
   const isDesktop = useIsDesktop();
   // E-mail de agendamento (Admin e Secretaria): depois de agendar ou abrir uma IS já agendada pela ficha,
@@ -286,11 +299,13 @@ export const FichaInspecionado: React.FC = () => {
 
   const itensIS = useMemo<ItemHistorico[]>(() => isOrdenadas.map(i => {
     const st = STATUS_IS[statusEfetivoIS(i, hoje)];
-    const periodos = afastamentosDaIS(i as unknown as Record<string, unknown>);
+    // Aberta e não agendada → pending_actions; finalizada (ou cancelada) → lock; demais → edit_square.
+    const estado = i.situacao === 'finalizada' || i.status === 'cancelada' ? ICONE_ESTADO.finalizado
+      : aguardaAgendamento(i.status) && !i.dataEntrevista ? ICONE_ESTADO.pendente : ICONE_ESTADO.andamento;
     return {
-      id: i.id, data: dataIS(i), icone: 'event_available',
-      titulo: `IS ${i.is}${i.dataEntrevista ? ` · entrevista em ${dataHoraBr(i.dataEntrevista)}` : ' · aberta'}`,
-      detalhe: [i.finalidade, ...periodos.map(p => `${p.tipo === 'lts' ? 'LTS' : 'Restrições'} ${dias(p.dias)}`), i.peritoNome].filter(Boolean).join(' · '),
+      id: i.id, data: dataIS(i), icone: estado.icone, iconeEstilo: estado.estilo, semData: true,
+      titulo: i.finalidade || `IS ${i.is}`,
+      detalhe: i.dataEntrevista ? dataHoraBr(i.dataEntrevista) : '',
       tag: <StatusTag tone={st.tom}>{st.rotulo}</StatusTag>,
     };
   }), [isOrdenadas, hoje]);
@@ -313,7 +328,9 @@ export const FichaInspecionado: React.FC = () => {
   const itensPareceres = useMemo<ItemHistorico[]>(() => pareceresOrdenados.map(p => {
     const st = statusEfetivo(p, agora);
     return {
-      id: p.id, data: isoDe(p.criadoEm), icone: 'assignment', titulo: `Parecer de ${p.especialidade}`,
+      id: p.id, data: isoDe(p.criadoEm), titulo: `Parecer de ${p.especialidade}`,
+      ...(st === 'concluido' ? { icone: ICONE_ESTADO.finalizado.icone, iconeEstilo: ICONE_ESTADO.finalizado.estilo }
+        : { icone: ICONE_ESTADO.pendente.icone, iconeEstilo: ICONE_ESTADO.pendente.estilo }),
       detalhe: [p.is ? `IS ${p.is}` : '', p.finalidade, p.pdfUrl ? '' : 'sem PDF'].filter(Boolean).join(' · '),
       tag: <StatusTag tone={TOM_PARECER[st]}>{ROTULO_PARECER[st]}</StatusTag>,
     };
@@ -363,12 +380,14 @@ export const FichaInspecionado: React.FC = () => {
   // Ações gerais da ficha (⋮). As de cada aba vão para a barra inferior do painel principal.
   const podePericia = canUseFeature('pericia-menor.novo', perfil);
   const podeIS = secoes.inspecoes && canUseFeature('inspecoes.cadastrar', perfil);
+  // Guias INCDEF: a IS aberta na aba (ou a mais recente) de VDF/Término de Incapacidade com "Incapaz definitivamente para o SAM".
+  const ehIncdef = (i: InspecaoRecord) => usaMinutaIncapacidadeDefinitiva({ finalidade: i.finalidade || '', laudo: i.laudo });
+  const isIncdef = secoes.inspecoes ? ((aba === 'is' ? isOrdenadas.find(i => i.id === pedido && ehIncdef(i)) : undefined) ?? isOrdenadas.find(ehIncdef)) : undefined;
   const menu: ItemMenu[] = [
     { rotulo: 'Dados cadastrais', icone: 'badge', onClick: () => setVerCadastro(true) },
     ...(perfil === 'admin' && militar ? [{ rotulo: 'Editar cadastro', icone: 'edit', onClick: () => setEditando(true) }] : []),
     ...(secoes.eventos ? [{ rotulo: 'Registro de eventos', icone: 'history', onClick: () => setVerEventos(true) }] : []),
-    { rotulo: 'Imprimir resumo', icone: 'print', onClick: () => window.print() },
-    ...(secoes.cadastro ? [{ rotulo: 'Abrir em Inspecionados', icone: 'groups', onClick: () => navigate('/inspecionados') }] : []),
+    ...(isIncdef && canUseFeature('inspecoes.cadastrar', perfil) ? [{ rotulo: 'Gerar Guias INCDEF', icone: 'receipt_long', onClick: () => setGuiasIncdef(isIncdef) }] : []),
   ];
 
   const tipo = militar ? tipoDoInspecionado(militar) : 'militar';
@@ -732,6 +751,18 @@ export const FichaInspecionado: React.FC = () => {
       {abrindoIS && !isDesktop && formAbrirIS}
       {criarIS && !isDesktop && formCriar}
       {!isDesktop && formCriarParecer}
+      {guiasIncdef && (
+        <GerarGuiasDialog
+          is={guiasIncdef} militar={militar && militar.id === guiasIncdef.inspecionadoId ? militar : undefined}
+          finalidadeAnexoO={FINALIDADE_ANEXO_O_INCDEF}
+          onClose={() => setGuiasIncdef(null)}
+          onConcluido={r => {
+            const is = guiasIncdef; setGuiasIncdef(null);
+            avisar(r.gerado ? `Guias INCDEF da IS ${is.is} geradas.` : r.motivo || 'Não há exames para gerar guias.', r.gerado ? 'success' : 'error');
+            if (r.gerado && estadoAbas.guias.habilitada) definir({ aba: 'guias', reg: is.id, is: null, sel: null, guia: null, gravar: null, criar: null });
+          }}
+        />
+      )}
       {posCriacao && (
         <PosCriacaoIS
           key={posCriacao.is.id}

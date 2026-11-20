@@ -69,7 +69,7 @@ import { podeArrastarIS } from '../utils/calendarioIS';
 import { useDiasConcursos, useSincronizarAgendaConcursos } from '../hooks/useDiasConcursos';
 import { tituloDiaConcurso, ehBloqueioDeConcurso } from '../services/agendaConcursos';
 import { estadoDoSlot } from './inspecoes/SeletorHorario';
-import { concursoPath } from '../config/routes';
+import { concursoPath, fichaPath } from '../config/routes';
 import { carregarPeritos, type PeritoIS } from '../services/peritosIS';
 import { sincronizarAgendaIS, removerEventoAgendaIS } from '../services/agendaGoogleIS';
 import { minutaCancelamento, minutaResultadoDaIS } from '../utils/minutasIS';
@@ -216,6 +216,12 @@ export const Inspecoes: React.FC = () => {
   const setDetalheId = (id: string | null) => {
     setDetalheIdEstado(id);
     if (id === null && isIdDaRota) navigate('/inspecoes', { replace: true });
+  };
+  // Clique na IS (tabela ou calendário): abre a Ficha do inspecionado na aba Inspeções de Saúde com a IS
+  // selecionada; sem inspecionado vinculado, o detalhe da IS (drawer) como antes.
+  const abrirIS = (is: InspecaoRecord) => {
+    if (is.inspecionadoId) navigate(`${fichaPath(is.inspecionadoId)}?aba=is&reg=${encodeURIComponent(is.id)}`);
+    else setDetalheId(is.id);
   };
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
   const [trocandoPerito, setTrocandoPerito] = useState<{ is: InspecaoRecord; dataHora: string; modo: 'arraste' | 'troca' } | null>(null);
@@ -575,7 +581,7 @@ export const Inspecoes: React.FC = () => {
     <TabelaAgendaIS
       grupos={grupos} hoje={hoje}
       nomeDe={is => nomeCurto(is.inspecionado)} omDe={omDe}
-      onAbrir={is => setDetalheId(is.id)}
+      onAbrir={abrirIS}
       podeTrocarPerito={is => !['cancelada', 'tis_assinado'].includes(is.status)}
       onTrocarPerito={podeAgendar ? is => setTrocandoPerito({ is, dataHora: is.dataEntrevista, modo: 'troca' }) : undefined}
       itensDe={itensDe}
@@ -640,7 +646,7 @@ export const Inspecoes: React.FC = () => {
                   inspecoes={lista} bloqueios={bloqueiosTodos} config={config} peritoUid="" diasConcursos={diasConcursos}
                   controleVisao={<AlternarVisao value={visao} onChange={setVisao} />}
                   onAbrirConcurso={podeVerConcursos ? id => nav?.navigate(concursoPath(id)) : undefined}
-                  onAbrir={is => setDetalheId(is.id)}
+                  onAbrir={abrirIS}
                   onNovoNoHorario={podeAgendar ? setHorarioVazio : undefined}
                   onReagendar={podeAgendar ? reagendarArrastando : undefined}
                   onTrocarPerito={podeAgendar ? (is, dataHora) => setTrocandoPerito({ is, dataHora, modo: 'arraste' }) : undefined}
