@@ -14,6 +14,7 @@ import { agendarInspecao, type InspecaoRecord } from '../../services/firestoreIn
 import { sincronizarAgendaIS } from '../../services/agendaGoogleIS';
 import { avisarAgendamento } from '../../services/emailAgendamentoIS';
 import { peritosDoAmp, type PeritoIS } from '../../services/peritosIS';
+import { contarISPorDia } from '../../utils/agendaIS';
 import { ocupadosDe, duracaoDaIS, dataBr, dataHoraBr, hojeISO, somarDias, nomeDiaSemana, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
 
 interface Props {
@@ -42,6 +43,8 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
 
   // Ocupação por outras IS (a própria não conta: dá para repetir o mesmo horário ao trocar só o perito).
   const ocupados = useMemo(() => ocupadosDe(inspecoes, inspecao.id), [inspecoes, inspecao.id]);
+  // IS já agendadas por dia (do mesmo AMP), no número pequeno de cada dia do calendário.
+  const porDia = useMemo(() => contarISPorDia(inspecoes, { amp: inspecao.amp, ignorarId: inspecao.id }), [inspecoes, inspecao.amp, inspecao.id]);
   const duracao = duracaoDaIS(inspecao);
   const perito = candidatos.find(p => p.uid === peritoUid);
 
@@ -120,7 +123,7 @@ export const AgendarDialog: React.FC<Props> = ({ inspecao, peritos, config, bloq
           <>
             <div>
               <span className="block text-xs font-semibold text-ink-3 mb-1">Data da entrevista (peritos {inspecao.amp === 'JRS' ? 'da JRS' : 'do MPI'})</span>
-              <CalendarioDisponibilidade valor={data} onChange={escolherData} disponivel={diaDisponivel} mesInicial={dataInicial || proximaLivre} />
+              <CalendarioDisponibilidade valor={data} onChange={escolherData} disponivel={diaDisponivel} contagem={d => porDia.get(d) ?? 0} mesInicial={dataInicial || proximaLivre} />
               {!data && (
                 <p className="mt-1 text-xs text-ink-3">Próxima data livre: <button type="button" onClick={() => escolherData(proximaLivre)} className="font-bold text-navy underline min-h-[24px]">{nomeDiaSemana(proximaLivre)}, {dataBr(proximaLivre)}</button></p>
               )}
