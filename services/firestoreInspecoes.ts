@@ -19,6 +19,7 @@ import { registrarEventoInspecionado } from './eventosInspecionado';
 import { notificarAcao } from './notificacoesPush';
 import { apagarGuiasExames } from './guiasExames';
 import { patchEntregaGuias, type EstadoEntregaGuias } from '../utils/guiasExamesIS';
+import { logErroSeguro } from '../utils/logSeguro';
 import {
   chaveSlot, chavesOcupadas, duracaoDoGrupo, situacaoDoStatus, statusAoAgendar, TODOS_PERITOS,
   type BloqueioAgenda, type ConfigAgenda, type SituacaoIS, type StatusIS, type Turno,
@@ -187,10 +188,22 @@ export const criarInspecao = async (dados: NovaInspecao): Promise<string> => {
 const marcaFinalizacao = (status: StatusIS | undefined): { finalizadaEm?: ReturnType<typeof serverTimestamp> } =>
   status && situacaoDoStatus(status) === 'finalizada' ? { finalizadaEm: serverTimestamp() } : {};
 
+/**
+ * Afastamentos (LTS/Restrições) das IS de Verificações e Términos: a cada mudança de status, processa a IS em segundo
+ * plano (services/afastamentosIS.ts; fire-and-forget, sem bloquear a UI). Finalizada com o TIS assinado → a IA lê o
+ * laudo e grava afastamentosIS/{id}; reaberta/cancelada → o registro sai. Importação sob demanda (SDK de IA só quando usado).
+ */
+const processarAfastamentosEmSegundoPlano = (id: string): void => {
+  import('./afastamentosIS')
+    .then(m => m.dispararProcessamentoAfastamentosIS(id))
+    .catch(e => logErroSeguro(`Afastamentos da IS ${id}: módulo não carregou`, e));
+};
+
 /** Atualiza campos que não mexem na agenda (laudo, restrições, TIS, DS-1a, observações, status…). */
 export const atualizarInspecao = async (id: string, patch: Partial<InspecaoDoc>): Promise<void> => {
   await updateDoc(doc(db, COL, id), { ...patch, ...(patch.status ? { situacao: situacaoDoStatus(patch.status), ...marcaFinalizacao(patch.status) } : {}), atualizadoEm: serverTimestamp() } as Record<string, unknown>);
   notificarAcao('is.editada', id);
+  if (patch.status) processarAfastamentosEmSegundoPlano(id);
 };
 
 /** Marca o resultado da sincronização com o Google Agenda. */
@@ -238,6 +251,7 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
     await gravarComSlot(id, { ...completo, ...marcaFinalizacao(dados.status) }, slotNovo, null, true);
     registrarEventoInspecionado(dados.inspecionadoId, 'is.cadastrar', `IS ${id}`);
     notificarAcao('is.importada', id);
+    processarAfastamentosEmSegundoPlano(id);
     return { ...completo, id, criadoEm: null };
   }
   const { criadoPor: _c, ...resto } = dados;
@@ -248,6 +262,7 @@ export const importarInspecao = async (id: string, dados: DadosImportacaoIS, atu
   const slotAntigo = mudouData && atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
   await gravarComSlot(id, patch, mudouData ? slotNovo : null, slotAntigo, false);
   notificarAcao('is.editada', id);
+  processarAfastamentosEmSegundoPlano(id);
   return { ...atual, ...(patch as Partial<InspecaoDoc>) };
 };
 
@@ -258,6 +273,7 @@ export const cancelarInspecao = async (atual: InspecaoRecord): Promise<void> => 
     status: 'cancelada', situacao: situacaoDoStatus('cancelada'), ...marcaFinalizacao('cancelada'),
   }, null, slotAntigo, false);
   notificarAcao('is.cancelada', atual.id);
+  if (atual.status === 'tis_assinado') processarAfastamentosEmSegundoPlano(atual.id);
 };
 
 /** Apaga a IS (só Admin) e libera o horário. Antes, apaga as guias de exames no servidor (PDF; best effort). */
@@ -265,6 +281,8 @@ export const apagarInspecao = async (atual: InspecaoRecord): Promise<void> => {
   await apagarGuiasExames(atual.id);
   if (atual.dataEntrevista) await Promise.all(refsSlots(atual).map(r => deleteDoc(r).catch(() => { /* slot já liberado */ })));
   await deleteDoc(doc(db, COL, atual.id));
+  // Afastamentos lidos da IS (services/afastamentosIS.ts; id = id da IS).
+  await deleteDoc(doc(db, 'afastamentosIS', atual.id)).catch(() => { /* não havia */ });
   void registrarAcaoSensivel('inspecao.excluir', 'inspecoes');
   notificarAcao('is.apagada', atual.id);
 };
