@@ -45,6 +45,7 @@ import { MultiSelectCombobox } from '../ui/MultiSelectCombobox';
 import { SecaoEntrevista, cardConclusaoClass, pedidoDeGravacao, type PedidoGravacao } from './entrevista/SecaoEntrevista';
 import { ParecerDetalhe } from '../pareceres/ParecerDetalhe';
 import { CampoFinalidadeIS, resumoFinalidades, useFinalidadesIS } from './InspecaoForm';
+import { partesDaFinalidade } from '../../utils/finalidadesCompostas';
 import { alinharLaudos, finalidadesDaIS, juntarFinalidades, laudoComposto, laudosDaIS } from '../../utils/finalidadesMultiplas';
 import { useNav } from '../../context/NavContext';
 import { ExamesDaIS } from './exames/ExamesDaIS';
@@ -299,8 +300,9 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
         ...patchFinalidade({ finalidade: atual.finalidade || '', grupoFinalidade: atual.grupoFinalidade || '', amp: atual.amp || '', peritoUid: atual.peritoUid || '', restricoes: atual.restricoes || '' }, { ...principal, finalidade: nome }),
       };
       if (finalidadesDaIS(atual).join('\u0001') !== lista.join('\u0001')) {
+        const partes = lista.flatMap(partesDaFinalidade);
         patch.finalidades = lista.length > 1 ? lista : [];
-        patch.laudosFinalidades = lista.length > 1 ? alinharLaudos(lista, laudosDaIS(atual)) : [];
+        patch.laudosFinalidades = partes.length > 1 ? alinharLaudos(partes, laudosDaIS(atual)) : [];
       }
       return { patch, concluirPareceres: false };
     });

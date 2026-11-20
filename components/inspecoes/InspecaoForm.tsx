@@ -50,7 +50,7 @@ export const useFinalidadesIS = (ativo = true) => {
     [grupos],
   );
   const achar = (nome: string): FinalidadeEscolhida | null => {
-    for (const g of grupos) { const f = g.finalidades.find(x => x.nome === nome); if (f) return { finalidade: f.nome, grupo: g.grupo, amp: ampDaFinalidade(f.amp) }; }
+    for (const g of grupos) { const f = g.finalidades.find(x => x.nome === nome); if (f) return { finalidade: f.nome, grupo: f.grupoRegras ?? g.grupo, amp: ampDaFinalidade(f.amp) }; }
     return null;
   };
   return { gruposMenu, achar };
