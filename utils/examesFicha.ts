@@ -96,6 +96,19 @@ export const instrucoesEnvioFicha = (o: OpcoesLeituraExame): string => {
 const dataBR = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.split('-').reverse().join('/') : iso);
 
 /** Nome do documento na Ficha: o exame mínimo enquadrado (quando há) ou o título lido. */
+/**
+ * Excluir um documento enviado à IS (aba Atestados e Laudos da Ficha): só o Admin ou quem enviou o PDF, e só enquanto a
+ * IS não estiver finalizada (as regras do Firestore/Storage também recusam a exclusão em IS finalizada).
+ */
+export const podeExcluirDocumentoIS = (
+  exame: { enviadoPor?: { uid?: string } | null },
+  quem: { uid?: string; perfil?: string } | null | undefined,
+  isFinalizada: boolean,
+): boolean => {
+  if (isFinalizada || !quem?.uid) return false;
+  return quem.perfil === 'admin' || (!!exame.enviadoPor?.uid && exame.enviadoPor.uid === quem.uid);
+};
+
 export const nomeDoItem = (item: Pick<ItemExame, 'titulo' | 'exameMinimo'>): string => item.exameMinimo || item.titulo;
 
 /** O item da IS no formato dos exames dos concursos (para reutilizar textoCopiaExame e o bloco de analitos). */
