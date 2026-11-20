@@ -261,7 +261,6 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
     return (
       <ScannerDocumento
         titulo="Digitalizar exames"
-        modo="multipla"
         maxPaginas={40}
         onCancelar={() => setDigitalizando(false)}
         onConcluir={paginas => { void aoDigitalizar(paginas); }}

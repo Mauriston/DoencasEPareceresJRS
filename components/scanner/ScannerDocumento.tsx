@@ -6,8 +6,8 @@
 //     com botão de disparo manual e opção de desligar o automático;
 //   - retificação da perspectiva + realce "Documento" (utils/filtroDocumento.ts) em cada página — na revisão,
 //     "Realçada" ou "Original" (só recortada e endireitada);
-//   - multipágina: modo 'multipla' segue fotografando (troque a página e ele dispara de novo);
-//     modo 'unica' vai para a revisão após a 1ª foto, com "Adicionar página";
+//   - multipágina: cada foto vai para a revisão; a próxima página só começa pelo botão "Adicionar página"
+//     (nunca dispara sozinho de uma página para a outra);
 //   - revisão: reordenar, ajustar os 4 cantos (EditorCantos), refazer/excluir;
 //   - fallback sem câmera (página sem HTTPS, permissão negada, PC sem câmera) ou sem o motor de detecção:
 //     foto/arquivo pelo seletor do sistema, com os cantos detectados na imagem estática (ou a imagem inteira).
@@ -23,8 +23,6 @@ import { area, cantosPadrao, convexo, escalarCantos, type Cantos } from '../../u
 export interface ScannerDocumentoProps {
   /** Título da barra superior. */
   titulo?: string;
-  /** 'unica': revisão após a 1ª foto (com "Adicionar página"); 'multipla': segue fotografando. */
-  modo?: 'unica' | 'multipla';
   /** Limite de páginas (padrão: 10). */
   maxPaginas?: number;
   /** Aplica o filtro "Documento" (fundo branco, tinta escura). Padrão: true. */
@@ -81,7 +79,7 @@ const lerArquivo = (f: File) => new Promise<string>((ok, erro) => {
 });
 
 export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
-  titulo = 'Digitalizar documento', modo = 'unica', maxPaginas = 10, filtro = true, onConcluir, onCancelar,
+  titulo = 'Digitalizar documento', maxPaginas = 10, filtro = true, onConcluir, onCancelar,
 }) => {
   const [etapa, setEtapa] = useState<Etapa>('camera');
   const [paginas, setPaginas] = useState<Pagina[]>([]);
@@ -89,7 +87,6 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
   const [motor, setMotor] = useState<'carregando' | 'pronto' | 'falhou'>('carregando');
   const [ocupado, setOcupado] = useState('');
   const [erroCamera, setErroCamera] = useState('');
-  const [modoAtual, setModoAtual] = useState(modo);
   /** Revisão: páginas realçadas (padrão) ou como fotografadas, só recortadas e endireitadas. */
   const [realce, setRealce] = useState(true);
   const arquivo = useRef<HTMLInputElement>(null);
@@ -119,12 +116,11 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
       const c = cantos && convexo(cantos) ? cantos : cantosPadrao(foto.width, foto.height, 0);
       const r = await processar(original, foto.width, foto.height, c, filtro);
       adicionar({ id: novoId(), original, largura: foto.width, altura: foto.height, cantos: c, ...r, semDeteccao: !cantos });
-      const total = paginas.length + 1;
-      if (modoAtual === 'unica' || total >= maxPaginas) setEtapa('revisao');
+      setEtapa('revisao'); // a próxima página só começa pelo botão "Adicionar página"
     } finally {
       setOcupado('');
     }
-  }, [adicionar, filtro, maxPaginas, modoAtual, paginas.length]);
+  }, [adicionar, filtro]);
 
   /** Imagens escolhidas no seletor do sistema (galeria/arquivos/câmera nativa). */
   const aoEscolherArquivos = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,7 +187,7 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
 
   const inputArquivo = (
     <input
-      ref={arquivo} type="file" accept="image/*" multiple={modoAtual === 'multipla' || maxPaginas > 1}
+      ref={arquivo} type="file" accept="image/*" multiple={maxPaginas > 1}
       className="hidden" onChange={e => { void aoEscolherArquivos(e); }} data-testid="scanner-arquivo"
     />
   );
@@ -294,7 +290,7 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
       {etapa === 'revisao' && (
         <div className="p-4 pb-8 shrink-0 border-t border-white/20 flex flex-wrap gap-2 justify-center">
           {!cheio && (
-            <Button variant="secondary" icon="add_a_photo" onClick={() => { setModoAtual(m => (m === 'unica' ? 'multipla' : m)); setEtapa(erroCamera ? 'sem-camera' : 'camera'); }}>
+            <Button variant="secondary" icon="add_a_photo" onClick={() => setEtapa(erroCamera ? 'sem-camera' : 'camera')}>
               Adicionar página
             </Button>
           )}
