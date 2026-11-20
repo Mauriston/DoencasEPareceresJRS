@@ -21,6 +21,8 @@ import { MilitarCadastroForm } from '../militares/MilitarCadastroForm';
 import { SeletorHorario, estadoDoSlot } from './SeletorHorario';
 import { CampoFinalidadeIS, opcaoAvatarDoPerito, useFinalidadesIS, type FinalidadeEscolhida } from './InspecaoForm';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
+import { ScannerDocumento } from '../scanner/ScannerDocumento';
+import { dataUrlParaArquivo } from '../../utils/imagensParaPdf';
 import { arquivoParaBase64IA } from '../../services/geminiAI';
 import { lerPrintDoSinais } from '../../services/sinaisIA';
 import { criarMilitar, type MilitarRecord } from '../../services/firestoreMilitares';
@@ -112,6 +114,7 @@ const emLotes = async <T, R>(lista: T[], n: number, fn: (x: T) => Promise<R>, ao
 export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, bloqueios, inspecoes, usuario, podeCadastrarInspecionado, onClose, onGravada, onConcluido, casca = 'drawer' }) => {
   const isDesktop = useIsDesktop();
   const [fotos, setFotos] = useState<Foto[]>([]);
+  const [digitalizando, setDigitalizando] = useState(false);
   const [lendo, setLendo] = useState<{ feitas: number; total: number } | null>(null);
   const [erroLeitura, setErroLeitura] = useState('');
   const [itens, setItens] = useState<Item[] | null>(null);
@@ -345,6 +348,11 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
               <span className="text-xs opacity-60">{isDesktop ? 'Galeria · Arquivos · Colar (Ctrl+V)' : 'Câmera · Galeria · Arquivos'}</span>
             </button>
             <input ref={input} type="file" accept="image/*" multiple className="hidden" onChange={e => { adicionar(Array.from(e.target.files || [])); e.target.value = ''; }} />
+            {!isDesktop && (
+              <Button variant="secondary" fullWidth icon="document_scanner" onClick={() => setDigitalizando(true)} disabled={!!lendo}>
+                Digitalizar telas com o scanner
+              </Button>
+            )}
 
             {fotos.length > 0 && (
               <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2" aria-label="Fotos">
@@ -402,6 +410,19 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
             // O mesmo inspecionado pode estar em outras IS do lote.
             const nip = itemCadastro.proposta?.nip;
             setItens(l => l?.map(it => (it.numero === itemCadastro.numero || (nip && it.proposta?.nip === nip && !it.militarId) ? { ...it, militarId: id, militarNovo: true } : it)) ?? l);
+          }}
+        />
+      )}
+      {digitalizando && (
+        <ScannerDocumento
+          titulo="Digitalizar telas do SINAIS"
+          modo="multipla"
+          maxPaginas={20}
+          filtro={false}
+          onCancelar={() => setDigitalizando(false)}
+          onConcluir={paginas => {
+            setDigitalizando(false);
+            adicionar(paginas.map((p, k) => dataUrlParaArquivo(p, `tela-${Date.now()}-${k + 1}.jpg`)));
           }}
         />
       )}
@@ -489,7 +510,7 @@ const CartaoIS: React.FC<CartaoProps> = ({ item, atual, militar, peritos, config
             </ul>
           )}
 
-          <CampoFinalidadeIS required value={c.finalidade} onChange={v => onCampos({ finalidade: v }, 'finalidade')} gruposMenu={gruposMenu} erro={erros.finalidade} />
+          <CampoFinalidadeIS required value={c.finalidade ? [c.finalidade] : []} onChange={v => onCampos({ finalidade: v.filter(f => f !== c.finalidade)[0] ?? '' }, 'finalidade')} gruposMenu={gruposMenu} erro={erros.finalidade} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Data de abertura" required error={erros.dataAbertura}>

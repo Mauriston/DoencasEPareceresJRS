@@ -44,7 +44,8 @@ import { tomStatusIS } from './listaIS';
 import { MultiSelectCombobox } from '../ui/MultiSelectCombobox';
 import { SecaoEntrevista, cardConclusaoClass, pedidoDeGravacao, type PedidoGravacao } from './entrevista/SecaoEntrevista';
 import { ParecerDetalhe } from '../pareceres/ParecerDetalhe';
-import { CampoFinalidadeIS, useFinalidadesIS } from './InspecaoForm';
+import { CampoFinalidadeIS, resumoFinalidades, useFinalidadesIS } from './InspecaoForm';
+import { alinharLaudos, finalidadesDaIS, juntarFinalidades, laudoComposto, laudosDaIS } from '../../utils/finalidadesMultiplas';
 import { useNav } from '../../context/NavContext';
 import { ExamesDaIS } from './exames/ExamesDaIS';
 import { EnviarExamesISDialog } from './exames/EnviarExamesISDialog';
@@ -174,6 +175,23 @@ const useCampoAuto = (remoto: string, salvar: (valor: string) => void) => {
   };
 };
 
+/** Finalidade(s) da IS em leitura: com mais de uma, uma por linha, numeradas. */
+const TextoFinalidades: React.FC<{ is: InspecaoRecord }> = ({ is }) => {
+  const lista = finalidadesDaIS(is);
+  if (lista.length < 2) return <>{is.finalidade}</>;
+  return <ol className="list-decimal pl-4 space-y-0.5">{lista.map(f => <li key={f}>{f}</li>)}</ol>;
+};
+
+/** Laudo de uma das finalidades (IS com mais de uma finalidade), com gravação automática. */
+const CampoLaudoFinalidade: React.FC<{ ordem: number; finalidade: string; remoto: string; onSalvar: (finalidade: string, valor: string) => void }> = ({ ordem, finalidade, remoto, onSalvar }) => {
+  const campo = useCampoAuto(remoto, v => onSalvar(finalidade, v));
+  return (
+    <Field label={`Laudo ${ordem} — ${finalidade}`}>
+      {a => <textarea {...a} value={campo.valor} onChange={e => campo.onChange(e.target.value)} onBlur={campo.onBlur} className={`${a.className} min-h-[88px]`} />}
+    </Field>
+  );
+};
+
 type EstadoGravacao = 'ocioso' | 'salvando' | 'salvo' | 'erro';
 
 /** Modal com só o seletor de data para ajustar a data do laudo. */
@@ -266,17 +284,37 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
 
   // Finalidade (IS Aberta sem entrevista): a tela reflete a escolha na hora; grava finalidade, grupo e AMP.
   const { gruposMenu, achar } = useFinalidadesIS(finalidadeEditavel);
-  const [finalidadeLocal, setFinalidadeLocal] = useState(is.finalidade || '');
-  useEffect(() => { setFinalidadeLocal(is.finalidade || ''); }, [is.finalidade]);
-  const mudarFinalidade = (nome: string) => {
-    const nova = achar(nome);
-    if (!nova) return;
-    setFinalidadeLocal(nova.finalidade);
-    gravar(atual => ({
-      patch: patchFinalidade({ finalidade: atual.finalidade || '', grupoFinalidade: atual.grupoFinalidade || '', amp: atual.amp || '', peritoUid: atual.peritoUid || '', restricoes: atual.restricoes || '' }, nova),
-      concluirPareceres: false,
-    }));
+  const [finalidadesLocal, setFinalidadesLocal] = useState<string[]>(() => finalidadesDaIS(is));
+  const chaveFinalidades = finalidadesDaIS(is).join('\u0001');
+  useEffect(() => { setFinalidadesLocal(finalidadesDaIS(is)); }, [chaveFinalidades]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [erroFinalidade, setErroFinalidade] = useState('');
+  const mudarFinalidades = (lista: string[]) => {
+    setFinalidadesLocal(lista);
+    const { principal, erroAmp } = resumoFinalidades(lista, achar);
+    setErroFinalidade(lista.length ? erroAmp : 'Selecione a finalidade.');
+    if (!principal || erroAmp) return;
+    const nome = juntarFinalidades(lista);
+    gravar(atual => {
+      const patch: Partial<InspecaoDoc> = {
+        ...patchFinalidade({ finalidade: atual.finalidade || '', grupoFinalidade: atual.grupoFinalidade || '', amp: atual.amp || '', peritoUid: atual.peritoUid || '', restricoes: atual.restricoes || '' }, { ...principal, finalidade: nome }),
+      };
+      if (finalidadesDaIS(atual).join('\u0001') !== lista.join('\u0001')) {
+        patch.finalidades = lista.length > 1 ? lista : [];
+        patch.laudosFinalidades = lista.length > 1 ? alinharLaudos(lista, laudosDaIS(atual)) : [];
+      }
+      return { patch, concluirPareceres: false };
+    });
   };
+
+  // Mais de uma finalidade: um laudo para cada. O `laudo` (texto único) é a junção, só quando todas têm laudo.
+  const laudosPorFinalidade = laudosDaIS(is);
+  const multiplasFinalidades = laudosPorFinalidade.length > 1;
+  const salvarLaudoFinalidade = (finalidade: string, valor: string) => gravar(atual => {
+    const lista = laudosDaIS(atual).map(l => (l.finalidade === finalidade ? { ...l, laudo: valor } : l));
+    const r = patchConclusao(comPadroes(atual), 'laudo', laudoComposto(lista), hojeISO(), nav?.authUser?.perfil);
+    const mudou = JSON.stringify(lista) !== JSON.stringify(laudosDaIS(atual));
+    return { ...r, patch: { ...r.patch, ...(mudou ? { laudosFinalidades: lista } : {}) } as Partial<InspecaoDoc> };
+  });
 
   const comEncaminhamento = mostraEncaminhamento(estadoConclusao);
   // Restrições: aparecem assim que o Laudo digitado menciona "restrições" (o autosave grava o Laudo antes).
@@ -438,7 +476,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                       {is.inspecionado ? <><span className="font-bold">{is.inspecionado}</span>{om ? ` · ${om}` : ''}</> : ''}
                     </LinhaTabela>
                   )}
-                  <LinhaTabela rotulo="Finalidade">{is.finalidade}</LinhaTabela>
+                  <LinhaTabela rotulo={finalidadesDaIS(is).length > 1 ? 'Finalidades' : 'Finalidade'}><TextoFinalidades is={is} /></LinhaTabela>
                   <LinhaTabela rotulo="Abertura IS">{is.dataAbertura ? dataBr(is.dataAbertura) : ''}</LinhaTabela>
                   <LinhaTabela rotulo="Entrevista">{is.dataEntrevista ? dataBr(dataDeEntrevista(is.dataEntrevista)) : ''}</LinhaTabela>
                   <LinhaTabela rotulo="Médico">{is.peritoNome?.trim() || ''}</LinhaTabela>
@@ -489,11 +527,11 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                 {is.inspecionado ? <><span className="font-bold">{is.inspecionado}</span>{om ? ` · ${om}` : ''}</> : ''}
               </Linha>
             )}
-            {!finalidadeEditavel && <Linha rotulo="Finalidade" className="col-span-3">{is.finalidade}</Linha>}
+            {!finalidadeEditavel && <Linha rotulo={finalidadesDaIS(is).length > 1 ? 'Finalidades' : 'Finalidade'} className="col-span-3"><TextoFinalidades is={is} /></Linha>}
           </dl>
           {finalidadeEditavel && (
             <div>
-              <CampoFinalidadeIS value={finalidadeLocal} onChange={mudarFinalidade} gruposMenu={gruposMenu} />
+              <CampoFinalidadeIS value={finalidadesLocal} onChange={mudarFinalidades} gruposMenu={gruposMenu} erro={erroFinalidade} />
               {is.amp && <p className="mt-1 text-xs text-ink-3">Competência da {is.amp} (definida pela finalidade).</p>}
             </div>
           )}
@@ -546,9 +584,18 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
             onPreencher={preencherDosPrints}
           />}
 
-          <Field label="Laudo">
-            {a => <textarea {...a} value={laudo.valor} onChange={e => laudo.onChange(e.target.value)} onBlur={laudo.onBlur} className={`${a.className} min-h-[88px]`} />}
-          </Field>
+          {multiplasFinalidades ? (
+            <div className="space-y-3">
+              {laudosPorFinalidade.map((l, i) => (
+                <CampoLaudoFinalidade key={l.finalidade} ordem={i + 1} finalidade={l.finalidade} remoto={l.laudo} onSalvar={salvarLaudoFinalidade} />
+              ))}
+              {!is.laudo?.trim() && <p className="text-xs text-ink-3">Um laudo para cada finalidade: o TIS fica disponível quando todos estiverem preenchidos.</p>}
+            </div>
+          ) : (
+            <Field label="Laudo">
+              {a => <textarea {...a} value={laudo.valor} onChange={e => laudo.onChange(e.target.value)} onBlur={laudo.onBlur} className={`${a.className} min-h-[88px]`} />}
+            </Field>
+          )}
 
           {comCid && (
             <CampoCidIS valor={cidLocal} onEscolher={escolherCid} erro={semCid && laudo.valor.trim() ? 'Informe o CID: obrigatório para finalizar a IS (DS-1a).' : undefined} />

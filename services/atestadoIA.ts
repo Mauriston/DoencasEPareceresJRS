@@ -1,7 +1,7 @@
 // Ficheiro: services/atestadoIA.ts
 // Leitura do atestado fotografado (Perícia Menor / Atestados) pelo Gemini via Firebase AI Logic
 // (services/geminiAI.ts), com saída estruturada por esquema JSON obrigatório.
-import { gerarComGemini, lerJsonIA } from './geminiAI';
+import { gerarComGemini, lerJsonIA, type ArquivoIA } from './geminiAI';
 import { CATEGORIAS_ATESTADO, ehCategoriaAtestado } from '../utils/examesIS';
 import type { TranscricaoAtestadoPM } from './firestorePericiasMenores';
 import { dataCivilISO } from '../utils/dados';
@@ -18,6 +18,7 @@ export interface DadosAtestado {
 
 const INSTRUCOES = [
   'Você lê a foto de um atestado médico brasileiro e extrai os dados pedidos no esquema.',
+  'Se vierem várias imagens, são páginas (ou frente e verso) do MESMO documento, na ordem: combine as informações.',
   '- nomeMilitar: nome completo do paciente.',
   '- dataAtestado: data de emissão do atestado no formato AAAA-MM-DD.',
   '- tempoAtestado: número de dias de afastamento/dispensa (só o número).',
@@ -27,12 +28,22 @@ const INSTRUCOES = [
   'Se um dado não estiver presente ou legível, omita o campo. Não invente dados.',
 ].join('\n');
 
-export const extrairDadosAtestado = async (base64Image: string): Promise<DadosAtestado> => {
+/** Página digitalizada (data URL) → arquivo para o Gemini. */
+export const dataUrlParaArquivoIA = (dataUrl: string): ArquivoIA => {
+  const [cab, base64 = ''] = dataUrl.split(',');
+  return { base64, mimeType: /data:([^;]+)/.exec(cab)?.[1] || 'image/jpeg' };
+};
+
+/** Lê o atestado: uma imagem (base64 JPEG) ou as páginas digitalizadas (data URLs), pelo Firebase AI Logic. */
+export const extrairDadosAtestado = async (imagens: string | string[]): Promise<DadosAtestado> => {
+  const arquivos = typeof imagens === 'string'
+    ? [{ base64: imagens, mimeType: 'image/jpeg' }]
+    : imagens.map(dataUrlParaArquivoIA);
   try {
     const r = await gerarComGemini({
       contexto: 'leitura do atestado',
       instrucoes: INSTRUCOES,
-      arquivos: [{ base64: base64Image, mimeType: 'image/jpeg' }],
+      arquivos,
       esquema: Schema => Schema.object({
         properties: {
           nomeMilitar: Schema.string(),
@@ -57,7 +68,7 @@ export const extrairDadosAtestado = async (base64Image: string): Promise<DadosAt
 
 const INSTRUCOES_TRANSCRICAO = [
   'Você lê a imagem de um documento médico brasileiro (via de regra um atestado) apresentado para homologação numa perícia',
-  'médica da Marinha do Brasil e devolve:',
+  'médica da Marinha do Brasil e devolve (várias imagens = páginas do mesmo documento, na ordem):',
   '- categoria: atestado (atestado médico), laudo (laudo médico) ou relatorio (relatório médico ou parecer);',
   '- especialidade: a especialidade médica do documento (do emissor ou do conteúdo), ex.: "Ortopedia", "Clínica Médica";',
   '  vazia se não for possível deduzir;',
@@ -67,11 +78,11 @@ const INSTRUCOES_TRANSCRICAO = [
   '  rodapés administrativos (endereço, telefone, site, códigos de autenticação).',
 ].join('\n');
 
-export const transcreverAtestadoPM = async (base64: string, mimeType: string): Promise<TranscricaoAtestadoPM> => {
+export const transcreverAtestadoPM = async (arquivos: ArquivoIA[]): Promise<TranscricaoAtestadoPM> => {
   const r = await gerarComGemini({
     contexto: 'transcrição do atestado (perícia menor)',
     instrucoes: INSTRUCOES_TRANSCRICAO,
-    arquivos: [{ base64, mimeType }],
+    arquivos,
     temperature: 0,
     maxOutputTokens: 16384,
     esquema: Schema => Schema.object({

@@ -24,6 +24,23 @@ const sdkDoServiceWorker = (base: string): Plugin => ({
     },
 });
 
+// OpenCV.js do scanner de documentos (public/scanner/detector-worker.js faz importScripts('opencv.js')):
+// ≈10 MB, fora do bundle — copiado de node_modules para <base>/scanner/opencv.js no build e servido do
+// mesmo lugar no `npm run dev`. Só é baixado quando o scanner abre.
+const OPENCV = path.resolve(__dirname, 'node_modules/@techstark/opencv-js/dist/opencv.js');
+const opencvDoScanner = (base: string): Plugin => ({
+    name: 'opencv-scanner',
+    configureServer(server) {
+        server.middlewares.use(`${base}scanner/opencv.js`, (_req, res) => {
+            res.setHeader('Content-Type', 'text/javascript');
+            res.end(fs.readFileSync(OPENCV));
+        });
+    },
+    generateBundle() {
+        this.emitFile({ type: 'asset', fileName: 'scanner/opencv.js', source: fs.readFileSync(OPENCV) });
+    },
+});
+
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
@@ -32,7 +49,7 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
-      plugins: [react(), sdkDoServiceWorker('/DoencasEPareceresJRS/')],
+      plugins: [react(), sdkDoServiceWorker('/DoencasEPareceresJRS/'), opencvDoScanner('/DoencasEPareceresJRS/')],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)

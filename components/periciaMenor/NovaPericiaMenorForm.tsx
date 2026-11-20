@@ -4,14 +4,16 @@
 //   - "Registrar atestado": militar, dados do atestado, ENC p/ VDF e, só para o Admin, "Perito
 //     responsável" (select de médicos ativos que podem registrar, por NIP; padrão = o próprio Admin).
 //     Sem foto (pdfUrl vazio).
-//   - "Homologar atestado" (atestado externo): foto obrigatória — opcional só para o Admin (recorte → filtro "Documento" → leitura
-//     pelo Gemini, que preenche militar, data, tempo, CID, médico emissor e CRM), tempo homologado.
+//   - "Homologar atestado" (atestado externo): foto obrigatória — opcional só para o Admin. Digitalização pelo scanner
+//     (components/scanner/ScannerDocumento.tsx: bordas detectadas, disparo automático, perspectiva corrigida, filtro
+//     "Documento", até 4 páginas — ex.: frente e verso) → leitura pelo Gemini via Firebase AI Logic, que preenche
+//     militar, data, tempo, CID, médico emissor e CRM; tempo homologado.
 // Gravação: peritoUid/peritoNome/peritoUsuario = perito responsável (o escolhido pelo Admin ou quem
-// registra); criadoPor/criadoPorUsuario = quem registrou. Na homologação a foto vira PDF no Storage.
+// registra); criadoPor/criadoPorUsuario = quem registrou. Na homologação as páginas viram um PDF no Storage.
 // Tempo: sem homologação, o tempo do atestado é o tempo de dispensa (máx. 20 dias); com homologação,
 // vale o tempo homologado (máx. 20). Somado às perícias do militar vigentes ou concluídas há até
 // 10 dias, não passa de 30 (utils/periciaMenorRegras.ts).
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { CascaFormulario, type CascaForm } from '../ficha/CascaFormulario';
 import { Button } from '../ui/Button';
 import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
@@ -20,11 +22,11 @@ import { ChoiceGroup } from '../ui/ChoiceGroup';
 import { Segmented } from '../ui/Segmented';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { MilitarCadastroForm } from '../militares/MilitarCadastroForm';
-import { RecorteAtestado } from './RecorteAtestado';
+import { ScannerDocumento } from '../scanner/ScannerDocumento';
 import { DispensasModal } from './DispensasModal';
 import { ServicoMilitarForm } from './ServicoMilitarForm';
 import { useNav } from '../../context/NavContext';
-import { extrairDadosAtestado, transcreverAtestadoPM } from '../../services/atestadoIA';
+import { dataUrlParaArquivoIA, extrairDadosAtestado, transcreverAtestadoPM } from '../../services/atestadoIA';
 import { logErroSeguro } from '../../utils/logSeguro';
 import { categorizarPericiaEmSegundoPlano, especialidadeDoCid } from '../../services/especialidadePericiaIA';
 import { observarMilitares, type MilitarRecord } from '../../services/firestoreMilitares';
@@ -32,8 +34,7 @@ import { editarPericiaMenor, enviarPdfPericiaMenor, gravarTranscricaoPericia, no
 import { MIN_JUSTIFICATIVA_EXCLUSAO, erroJustificativaExclusao } from '../../utils/exclusaoPericia';
 import { carregarPeritosPericiaMenor } from '../../services/periciaMenorService';
 import { carregarCid, normalizarBusca, omEhHnre, type CidItem } from '../../utils/corposQuadros';
-import { imagemParaPdf } from '../../utils/imagemParaPdf';
-import { aplicarFiltroDocumento } from '../../utils/filtroDocumento';
+import { imagensParaPdf } from '../../utils/imagensParaPdf';
 import { dataCivilISO, diasInteiro, hojeISO, normalizarTexto } from '../../utils/dados';
 import { MAX_DIAS_PERICIA, MAX_DIAS_ACUMULADOS, limitarDias, saldoAcumulado, type PeritoPericiaMenor } from '../../utils/periciaMenorRegras';
 import { extrairNomeInspecionado, formatNip } from '../../utils/format';
@@ -107,11 +108,12 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
   const [emissorLido, setEmissorLido] = useState(!!(editar?.medicoEmissor || editar?.crmEmissor));
   const [justificativa, setJustificativa] = useState('');
 
-  const [imagemBruta, setImagemBruta] = useState('');
-  const [imagemDoc, setImagemDoc] = useState('');
-  const [processando, setProcessando] = useState<'' | 'filtro' | 'leitura'>('');
+  const [digitalizando, setDigitalizando] = useState(false);
+  /** Páginas do atestado digitalizadas (JPEG data URL, já retificadas e com o filtro "Documento"). */
+  const [paginas, setPaginas] = useState<string[]>([]);
+  const [paginaVista, setPaginaVista] = useState(0);
+  const [processando, setProcessando] = useState<'' | 'leitura'>('');
   const [falhaLeitura, setFalhaLeitura] = useState('');
-  const arquivo = useRef<HTMLInputElement>(null);
 
   const [erros, setErros] = useState<Erros>({});
   const [salvando, setSalvando] = useState(false);
@@ -206,15 +208,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
     if (!marcado) { setTempoHomologado(''); setAvisoMaxHomologado(false); limpar('tempoHomologado'); limpar('foto'); }
   };
 
-  // ---- Foto do atestado: recorte → filtro "Documento" → leitura automática ----
-  const aoEscolherArquivo = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    e.target.value = '';
-    if (!f) return;
-    const leitor = new FileReader();
-    leitor.onload = () => setImagemBruta(String(leitor.result || ''));
-    leitor.readAsDataURL(f);
-  };
+  // ---- Atestado: scanner (bordas, perspectiva, filtro "Documento") → leitura automática ----
 
   const aplicarDados = (dados: Awaited<ReturnType<typeof extrairDadosAtestado>>) => {
     const iso = dados.dataAtestado ? dataCivilISO(String(dados.dataAtestado)) : null;
@@ -238,17 +232,15 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
     setMedicoEmissor(medico); setCrmEmissor(crm); setEmissorLido(!!(medico || crm));
   };
 
-  const aoConfirmarRecorte = async (recortada: string) => {
-    setImagemBruta('');
+  const aoDigitalizar = async (novas: string[]) => {
+    setDigitalizando(false);
+    setPaginas(novas);
+    setPaginaVista(0);
     setFalhaLeitura('');
     limpar('foto');
-    setProcessando('filtro');
-    let doc = recortada;
-    try { doc = await aplicarFiltroDocumento(recortada); } catch { /* sem filtro, segue com a foto recortada */ }
-    setImagemDoc(doc);
     setProcessando('leitura');
     try {
-      aplicarDados(await extrairDadosAtestado(doc.split(',')[1]));
+      aplicarDados(await extrairDadosAtestado(novas));
     } catch (err: any) {
       setFalhaLeitura(`${err?.message || 'Não foi possível ler o atestado.'} Preencha os campos abaixo; a foto será arquivada.`);
     } finally {
@@ -262,7 +254,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
   const validar = (): Erros => {
     const e: Erros = {};
     // Foto: obrigatória na homologação, exceto para o Admin (pode homologar sem anexar; fica sem PDF).
-    if (homologacao && !imagemDoc && !ehAdmin && !edicao) e.foto = 'Anexe a foto do atestado.';
+    if (homologacao && !paginas.length && !ehAdmin && !edicao) e.foto = 'Anexe a foto do atestado.';
     if (!militar && !edicao) e.militar = 'Escolha o militar na lista.';
     if (edicao) { const j = erroJustificativaExclusao(justificativa, usuario?.perfil ?? ''); if (j) e.justificativa = j; }
     if (!dataTexto) e.dataAtestado = 'Informe a data do atestado.';
@@ -312,7 +304,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
     setSalvando(true);
     try {
       const id = novoIdPericiaMenor();
-      const pdfUrl = homologacao && imagemDoc ? await enviarPdfPericiaMenor(id, await imagemParaPdf(imagemDoc), militar.inspecionado) : '';
+      const pdfUrl = homologacao && paginas.length ? await enviarPdfPericiaMenor(id, await imagensParaPdf(paginas), militar.inspecionado) : '';
       const medico = normalizarTexto(medicoEmissor);
       const crm = normalizarTexto(crmEmissor);
       await registrarPericiaMenor(id, {
@@ -331,10 +323,8 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
       // Especialidade pela IA: a classificação começou quando o CID foi escolhido; grava ao terminar.
       categorizarPericiaEmSegundoPlano(id, cid.SUBCAT, rotuloCid(cid));
       // Transcrição do atestado (aba Atestados e Laudos da Ficha): em segundo plano, sem atrasar o registro.
-      if (pdfUrl && imagemDoc) {
-        const [cab, base64] = imagemDoc.split(',');
-        const mime = /data:([^;]+)/.exec(cab)?.[1] || 'image/jpeg';
-        transcreverAtestadoPM(base64, mime).then(t => gravarTranscricaoPericia(id, t))
+      if (pdfUrl && paginas.length) {
+        transcreverAtestadoPM(paginas.map(dataUrlParaArquivoIA)).then(t => gravarTranscricaoPericia(id, t))
           .catch(e => logErroSeguro('Transcrição do atestado da perícia menor falhou', e));
       }
       onRegistrado(militar.nome);
@@ -388,23 +378,32 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
             <h3 id="pm-foto" className={secao}>Foto do atestado{ehAdmin
               ? <span className="ml-1 text-xs font-normal text-ink-3">(opcional)</span>
               : <><span className="text-wine ml-0.5" aria-hidden="true">*</span><span className="sr-only"> (obrigatório)</span></>}</h3>
-            <input type="file" accept="image/*" capture="environment" ref={arquivo} onChange={aoEscolherArquivo} className="hidden" />
-            {!imagemDoc && !processando ? (
-              <Button variant="secondary" icon="photo_camera" onClick={() => arquivo.current?.click()} aria-invalid={!!erros.foto || undefined} aria-describedby={erros.foto ? 'pm-foto-erro' : undefined}>Fotografar atestado</Button>
+            {!paginas.length && !processando ? (
+              <Button variant="secondary" icon="photo_camera" onClick={() => setDigitalizando(true)} aria-invalid={!!erros.foto || undefined} aria-describedby={erros.foto ? 'pm-foto-erro' : undefined}>Fotografar atestado</Button>
             ) : (
               <div className="relative rounded-lg border border-line bg-white overflow-hidden">
-                {imagemDoc
-                  ? <img src={imagemDoc} alt="Atestado fotografado (filtro Documento)" className="w-full max-h-[55vh] object-contain bg-white" />
+                {paginas.length
+                  ? <img src={paginas[Math.min(paginaVista, paginas.length - 1)]} alt={`Atestado digitalizado — página ${Math.min(paginaVista, paginas.length - 1) + 1} de ${paginas.length}`} className="w-full max-h-[55vh] object-contain bg-white" />
                   : <div className="h-48" aria-hidden="true" />}
+                {paginas.length > 1 && (
+                  <div className="absolute top-1 left-1 flex gap-1" role="group" aria-label="Páginas do atestado">
+                    {paginas.map((_, i) => (
+                      <button
+                        key={i} type="button" onClick={() => setPaginaVista(i)} aria-pressed={i === paginaVista} aria-label={`Ver página ${i + 1}`}
+                        className={`min-w-11 h-11 px-2 rounded-lg text-xs font-bold ${i === paginaVista ? 'bg-navy text-white' : 'bg-white/90 text-navy border border-navy'} focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold`}
+                      >{i + 1}</button>
+                    ))}
+                  </div>
+                )}
                 {processando && (
                   <div className="absolute inset-0 bg-white/75 flex items-center justify-center gap-2 text-sm font-bold text-navy" role="status">
                     <span className="w-5 h-5 border-2 border-navy/20 border-t-navy rounded-full animate-spin" aria-hidden="true" />
-                    {processando === 'filtro' ? 'Tratando a foto…' : 'Lendo o atestado…'}
+                    Lendo o atestado…
                   </div>
                 )}
                 {!processando && (
                   <button
-                    type="button" onClick={() => arquivo.current?.click()} aria-label="Refazer foto do atestado" title="Refazer foto"
+                    type="button" onClick={() => setDigitalizando(true)} aria-label="Refazer foto do atestado" title="Refazer foto"
                     className="group absolute bottom-1 right-1 w-11 h-11 flex items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
                   >
                     <span className="w-8 h-8 rounded-full bg-navy/60 group-hover:bg-navy text-white flex items-center justify-center transition-colors">
@@ -541,11 +540,13 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
         </form>
       </CascaFormulario>
 
-      {imagemBruta && (
-        <RecorteAtestado
-          imagem={imagemBruta}
-          onCancelar={() => setImagemBruta('')}
-          onConfirmar={url => { void aoConfirmarRecorte(url); }}
+      {digitalizando && (
+        <ScannerDocumento
+          titulo="Digitalizar atestado"
+          modo="unica"
+          maxPaginas={4}
+          onCancelar={() => setDigitalizando(false)}
+          onConcluir={novas => { void aoDigitalizar(novas); }}
         />
       )}
       {escolhendoDispensas && (

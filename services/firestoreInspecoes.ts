@@ -43,7 +43,12 @@ export interface InspecaoDoc {
   dataAbertura: string;
   /** AAAA-MM-DDThh:mm ou '' quando ainda não agendada. */
   dataEntrevista: string;
+  /** Finalidade(s) em texto: com mais de uma, a junção com " / " (utils/finalidadesMultiplas.ts). */
   finalidade: string;
+  /** Lista das finalidades quando a IS tem mais de uma (Benefícios, compostas como "Engajamento / Deixar o SMI"). */
+  finalidades?: string[];
+  /** Um laudo por finalidade (IS com mais de uma); o `laudo` é a junção, só quando todas têm laudo. */
+  laudosFinalidades?: { finalidade: string; laudo: string }[];
   /** Grupo da finalidade (ex.: "Benefícios") — define o prazo de atraso (60 dias) e a competência. */
   grupoFinalidade: string;
   amp: AmpIS;
