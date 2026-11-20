@@ -36,10 +36,10 @@ export const linhasMinuta = (c: CamposMsgIS): { rotulo: string; valor: string }[
 ];
 
 /** "Minutar MSG": só com a IS concluída (TIS assinado). */
-/** Exceção: Verificações e Términos com "Incapaz definitivamente para o SAM" — basta o laudo e o Nº do TIS (sem DS-1A). */
+/** Exceção: VDF ou Término de Incapacidade com "Incapaz definitivamente para o SAM" — basta o laudo e o Nº do TIS (sem DS-1A). */
 export const podeMinutarMsg = (is: { status?: string; finalidade?: string; grupoFinalidade?: string; laudo?: string; tis?: string }): boolean =>
   is.status === 'tis_assinado' || (is.status !== 'cancelada' && minutaIncapacidadeDisponivel(is));
 
-/** Minuta de incapacidade definitiva para o SAM disponível: Verificações e Términos + laudo "Incapaz definitivamente para o SAM" + Nº do TIS. */
+/** Minuta de incapacidade definitiva para o SAM disponível: VDF ou Término de Incapacidade + laudo "Incapaz definitivamente para o SAM" + Nº do TIS. */
 export const minutaIncapacidadeDisponivel = (is: { finalidade?: string; grupoFinalidade?: string; laudo?: string; tis?: string }): boolean =>
   !!is.tis?.trim() && usaMinutaIncapacidadeDefinitiva({ finalidade: is.finalidade || '', grupoFinalidade: is.grupoFinalidade, laudo: is.laudo });

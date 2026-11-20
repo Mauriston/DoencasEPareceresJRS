@@ -105,7 +105,7 @@ interface Props {
   onGravarEntrevista?: (() => void) | null;
 }
 
-/** Minuta MSG: com Nº do TIS e DS-1a, ou IS cancelada; em Verificações e Términos com incapacidade definitiva para o SAM, basta laudo + Nº do TIS. */
+/** Minuta MSG: com Nº do TIS e DS-1a, ou IS cancelada; em VDF ou Término de Incapacidade com incapacidade definitiva para o SAM, basta laudo + Nº do TIS. */
 export const mostraMinutaMsg = (is: Pick<InspecaoRecord, 'tis' | 'ds1a' | 'status' | 'finalidade' | 'grupoFinalidade' | 'laudo'>): boolean =>
   (!!is.tis?.trim() && !!is.ds1a?.trim()) || is.status === 'cancelada' || minutaIncapacidadeDisponivel(is);
 /** Parecer e Gravar entrevista: só com a IS Agendada ou Reagendada. */

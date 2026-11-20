@@ -177,7 +177,9 @@ describe('minuta de incapacidade definitiva para o SAM (Verificações e Términ
   it('feminino: "atinente à"', () => {
     expect(camposResultadoDaIS(IS_INCAPAZ, { om: 'HNRE', feminino: true }).texto).toContain('atinente à 3SG');
   });
-  it('fora de Verificações e Términos segue o modelo de resultado', () => {
-    expect(camposResultadoDaIS({ ...IS_INCAPAZ, grupoFinalidade: 'Benefícios' }).de).toBeUndefined();
+  it('VDF também usa o modelo; Término de Restrições e outras finalidades não', () => {
+    expect(camposResultadoDaIS({ ...IS_INCAPAZ, finalidade: 'Verificação de Deficiência Funcional - SMI' }).de).toBe('HOSCRF');
+    expect(camposResultadoDaIS({ ...IS_INCAPAZ, finalidade: 'Término de Restrições' }).de).toBeUndefined();
+    expect(camposResultadoDaIS({ ...IS_INCAPAZ, finalidade: 'Controle Anual de Mergulho', grupoFinalidade: 'Benefícios' }).de).toBeUndefined();
   });
 });

@@ -90,17 +90,15 @@ export interface MinutaCampos { de?: string; para: string; info?: string; assunt
 export const REMETENTE_INCAPACIDADE_DEFINITIVA = 'HOSCRF';
 export const ASSUNTO_INCAPACIDADE_DEFINITIVA = 'INCAPACIDADE DEFINITIVA PARA O SAM';
 
-/** IS do grupo "Verificações e Términos" (sem o grupo, pelo nome: "Verificação…"/"Término…"). */
-export const ehVerificacaoOuTermino = (finalidade: string, grupoFinalidade?: string): boolean =>
-  grupoFinalidade?.trim()
-    ? normalizarTexto(grupoFinalidade) === normalizarTexto('Verificações e Términos')
-    : /^(verificacao|termino)\b/.test(normalizarTexto(finalidade));
+/** Finalidades da minuta de incapacidade definitiva: VDF (todas as variantes) e Término de Incapacidade. */
+export const ehVerificacaoOuTermino = (finalidade: string, _grupoFinalidade?: string): boolean =>
+  /^(verificacao de deficiencia funcional|termino de incapacidade)\b/.test(normalizarTexto(finalidade));
 
 /** Laudo com "Incapaz definitivamente para o SAM…". */
 export const laudoIncapazDefinitivoSAM = (laudo: string | undefined): boolean =>
   /\bincapaz definitivamente para o sam\b/.test(normalizarTexto(laudo || ''));
 
-/** Verificações e Términos com laudo de incapacidade definitiva para o SAM: usa a minuta própria (HOSNAT/TERDIS). */
+/** VDF ou Término de Incapacidade com laudo de incapacidade definitiva para o SAM: usa a minuta própria (HOSNAT/TERDIS). */
 export const usaMinutaIncapacidadeDefinitiva = (d: { finalidade: string; grupoFinalidade?: string; laudo?: string }): boolean =>
   ehVerificacaoOuTermino(d.finalidade, d.grupoFinalidade) && laudoIncapazDefinitivoSAM(d.laudo);
 
