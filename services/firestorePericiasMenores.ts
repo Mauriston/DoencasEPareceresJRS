@@ -30,6 +30,8 @@ export interface PericiaMenorDoc {
   cid: string;
   /** Código estável do CID ("G432"), para relações e filtros (convenção 19.3). Registros antigos não têm. */
   cidCodigo?: string;
+  /** Especialidade médica deduzida do CID pela IA em segundo plano (services/especialidadePericiaIA.ts). */
+  especialidade?: string;
   dispensas: string[];
   /** AAAA-MM-DD. */
   dataAtestado: string;

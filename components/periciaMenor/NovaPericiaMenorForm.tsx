@@ -25,6 +25,7 @@ import { DispensasModal } from './DispensasModal';
 import { ServicoMilitarForm } from './ServicoMilitarForm';
 import { useNav } from '../../context/NavContext';
 import { extrairDadosAtestado } from '../../services/atestadoIA';
+import { categorizarPericiaEmSegundoPlano, especialidadeDoCid } from '../../services/especialidadePericiaIA';
 import { observarMilitares, type MilitarRecord } from '../../services/firestoreMilitares';
 import { editarPericiaMenor, enviarPdfPericiaMenor, novoIdPericiaMenor, observarPericiasDoMilitar, registrarPericiaMenor, dataBR, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
 import { MIN_JUSTIFICATIVA_EXCLUSAO, erroJustificativaExclusao } from '../../utils/exclusaoPericia';
@@ -124,6 +125,8 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
     const achado = cids.find(c => c.SUBCAT.toUpperCase() === codigo);
     if (achado) setCid(achado);
   }, [cids]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Especialidade pela IA em segundo plano assim que o CID é escolhido (nada aparece no formulário).
+  useEffect(() => { if (cid) void especialidadeDoCid(cid.SUBCAT, rotuloCid(cid)); }, [cid]);
   useEffect(() => {
     if (!ehAdmin) return;
     let vivo = true;
@@ -292,6 +295,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
           medicoEmissor: homologacao ? medico : '', crmEmissor: homologacao ? crm : '', vdf: vdf === 'sim',
           ...(perito ? { peritoUid: perito.uid, peritoUsuario: perito.usuario, peritoNome: perito.nome } : {}),
         }, justificativa);
+        if (normalizarCidCod(editar.cidCodigo) !== normalizarCidCod(cid.SUBCAT) || !editar.especialidade) categorizarPericiaEmSegundoPlano(editar.id, cid.SUBCAT, rotuloCid(cid));
         onRegistrado(extrairNomeInspecionado(editar.inspecionado));
       } catch (err: any) {
         setErros({ geral: err?.message || 'Não foi possível salvar as alterações.' });
@@ -322,6 +326,8 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
         vdf: vdf === 'sim', peritoUsuario: perito.usuario, peritoNome: perito.nome, peritoUid: perito.uid,
         criadoPor: usuario.uid, criadoPorUsuario: usuario.usuario, pdfUrl,
       });
+      // Especialidade pela IA: a classificação começou quando o CID foi escolhido; grava ao terminar.
+      categorizarPericiaEmSegundoPlano(id, cid.SUBCAT, rotuloCid(cid));
       onRegistrado(militar.nome);
     } catch (err: any) {
       setErros({ geral: err?.message || 'Não foi possível registrar.' });
@@ -548,3 +554,5 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
     </>
   );
 };
+
+const normalizarCidCod = (c?: string) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');

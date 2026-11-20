@@ -212,7 +212,12 @@ service cloud.firestore {
         // criadoPor é novo: versões antigas do app (PWA em cache) ainda não mandam o campo.
         (!('criadoPor' in request.resource.data) || request.resource.data.criadoPor == request.auth.uid) &&
         (!('peritoUid' in request.resource.data) || request.resource.data.peritoUid == request.auth.uid || isAdmin());
-      allow update, delete: if isAdmin();
+      allow delete: if isAdmin();
+      // A especialidade (deduzida do CID pela IA em segundo plano) pode ser gravada por qualquer médico.
+      allow update: if isAdmin() || ((isMedico() || isMedicoGeral()) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['especialidade']) &&
+        request.resource.data.especialidade in ['Ortopedia', 'Clínica Médica', 'Psiquiatria', 'Gineco-Obstetrícia',
+          'Cirurgia Geral', 'Cardiologia', 'Otorrino', 'Oftalmologia', 'Oncologia', 'Neurologia']);
     }
 
     // Registro das perícias menores excluídas (cópia, justificativa, quem e quando): só o servidor grava

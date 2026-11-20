@@ -10,9 +10,11 @@
 // (/pericia-menor/historico/<nip>) virou a Ficha do inspecionado (/inspecionados/<nip>).
 // Abas principais: Todas · Atestados (registrados) · Homologações (atestado externo homologado) — ?registro=atestados|homologacoes.
 // Filtros: Situação (seletor Todas · Vigentes · Concluídas — ?situacao=vigentes|concluidas), Minhas, OM e busca.
-// Filtros por URL (Início/Painel): ?registro= · ?situacao= · ?tipo=dispensa|restricoes · ?minhas=1 (perito responsável) · ?periodo=mes|trimestre|semestre|ano|personalizado (&de= &ate=)
+// Filtros por URL (Início/Painel): ?registro= · ?situacao= · ?tipo=dispensa|restricoes · ?especialidade=<nome> · ?minhas=1 (perito responsável) · ?periodo=mes|trimestre|semestre|ano|personalizado (&de= &ate=)
 // · ?om=<sigla> · ?mes=atual (atestado do mês corrente) · ?ano=atual (atestado do ano corrente)
 // Atalhos: ?novo=1 (abre o formulário) · ?novo=1&militar=<nip> (já preenchido).
+import { completarEspecialidadesPendentes } from '../services/especialidadePericiaIA';
+import { ESPECIALIDADES } from '../utils/especialidadePericia';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
@@ -23,7 +25,7 @@ import { SearchField, controlClass } from './ui/Field';
 import { FilterChip } from './ui/FilterChip';
 import { NovaPericiaMenorForm } from './periciaMenor/NovaPericiaMenorForm';
 import { PericiaMenorPainel, type AbaPericia, type ModoPainel } from './periciaMenor/PericiaMenorPainel';
-import { AbasSublinhadas, CidCodigo, TagTipoPericia, TextoContagem, useLarguraMinima } from './periciaMenor/partes';
+import { AbasSublinhadas, CidCodigo, TagEspecialidade, TagTipoPericia, TextoContagem, useLarguraMinima } from './periciaMenor/partes';
 import { podeAbrirFicha } from './ficha/permissoes';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { useNav } from '../context/NavContext';
@@ -76,6 +78,7 @@ export const PericiaMenor: React.FC = () => {
   const tipo: FiltroTipo = tipoUrl === 'dispensa' || tipoUrl === 'restricoes' ? tipoUrl : '';
   const minhas = params.get('minhas') === '1';
   const om = params.get('om') ?? '';
+  const especialidade = params.get('especialidade') ?? '';
   // Período (data do atestado ou, na homologação, a data em que foi homologado — utils/periodoPericia.ts).
   const periodo = periodoDaUrl({ periodo: params.get('periodo'), mes: params.get('mes'), ano: params.get('ano') });
   const periodoDe = params.get('de') ?? '';
@@ -115,6 +118,8 @@ export const PericiaMenor: React.FC = () => {
     if (!podeConsultar) return;
     return observarPericiasMenores(setLista, e => setErroCarga(e.message || 'Não foi possível carregar os registros.'));
   }, [podeConsultar]);
+  // Registros sem especialidade: a IA categoriza pelo CID em segundo plano (quem pode registrar também grava).
+  useEffect(() => { if (lista && podeNovo) void completarEspecialidadesPendentes(lista); }, [lista, podeNovo]);
   useEffect(() => {
     if (!podeConsultar) return;
     let vivo = true;
@@ -150,9 +155,10 @@ export const PericiaMenor: React.FC = () => {
       .filter(x => !tipo || x.tipo === tipo)
       .filter(x => !minhas || minhaPericia(x.p))
       .filter(x => !om || x.p.om === om)
+      .filter(x => !especialidade || x.p.especialidade === especialidade)
       .filter(x => noPeriodo(dataReferenciaPericia(x.p), intervalo))
-      .filter(x => { const alvo = normalizarBusca(`${x.p.inspecionado} ${x.p.militarId} ${x.p.cid} ${x.cidRotulo} ${x.p.om} ${x.medico}`); return termos.every(w => alvo.includes(w)); });
-  }, [comStatus, tipo, minhas, om, intervalo, busca, uid, hoje]); // eslint-disable-line react-hooks/exhaustive-deps
+      .filter(x => { const alvo = normalizarBusca(`${x.p.inspecionado} ${x.p.militarId} ${x.p.cid} ${x.cidRotulo} ${x.p.om} ${x.medico} ${x.p.especialidade ?? ''}`); return termos.every(w => alvo.includes(w)); });
+  }, [comStatus, tipo, minhas, om, especialidade, intervalo, busca, uid, hoje]); // eslint-disable-line react-hooks/exhaustive-deps
   const doRegistro = (x: typeof comStatus[number], r: FiltroRegistro) => r === 'todas' || (r === 'homologacoes') === !!x.p.homologacao;
   const daSituacao = (x: typeof comStatus[number], s: FiltroSituacao) => s === 'todas' || (s === 'vigentes') === x.vigente;
   // Contagem das abas respeita a situação escolhida; a dos chips respeita a aba — cada uma mostra o que o toque traria.
@@ -248,7 +254,7 @@ export const PericiaMenor: React.FC = () => {
                   {(x.cid.codigo || x.cid.descricao) && (
                     <span className="text-xs text-ink-3 min-w-0 break-words"><CidCodigo codigo={x.cid.codigo} descricao={x.cid.descricao} /></span>
                   )}
-                  <span className="pt-1"><TagTipoPericia tipo={x.tipo} /></span>
+                  <span className="pt-1 flex flex-wrap items-center gap-1.5"><TagTipoPericia tipo={x.tipo} /><TagEspecialidade especialidade={x.p.especialidade} /></span>
                 </button>
               </li>
             ))}
@@ -276,7 +282,7 @@ export const PericiaMenor: React.FC = () => {
                         <span className="block text-xs text-ink-3">{[postoDoInspecionado(x.p.inspecionado, x.nome), x.p.om].filter(Boolean).join(' · ')}</span>
                       </button>
                     </td>
-                    <td className="px-4 py-2.5 align-top text-ink"><CidCodigo codigo={x.cid.codigo} descricao={x.cid.descricao} /></td>
+                    <td className="px-4 py-2.5 align-top text-ink"><CidCodigo codigo={x.cid.codigo} descricao={x.cid.descricao} />{x.p.especialidade && <span className="block mt-1"><TagEspecialidade especialidade={x.p.especialidade} /></span>}</td>
                     <td className="px-4 py-2.5 align-top"><TagTipoPericia tipo={x.tipo} /></td>
                     <td className="px-4 py-2.5 align-top"><TextoContagem contagem={x.contagem} curto /></td>
                     <td className="px-4 py-2.5 align-top text-right tabular-nums text-ink">{x.hist}</td>
@@ -359,6 +365,11 @@ export const PericiaMenor: React.FC = () => {
                   <option value="">Todas as OM</option>
                   {om && !oms.includes(om) && <option value={om}>{om}</option>}
                   {oms.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+                <label className="sr-only" htmlFor="pm-filtro-especialidade">Especialidade</label>
+                <select id="pm-filtro-especialidade" value={especialidade} onChange={e => definir({ especialidade: e.target.value || null }, true)} className={`${controlClass} !w-auto min-w-[10rem] shrink-0`}>
+                  <option value="">Todas as especialidades</option>
+                  {ESPECIALIDADES.map(e => <option key={e} value={e}>{e}</option>)}
                 </select>
                 {(podeNovo || minhas) && <FilterChip ativo={minhas} className="shrink-0" icon="person" onAlternar={() => definir({ minhas: minhas ? null : '1' }, true)}>Minhas</FilterChip>}
               </div>

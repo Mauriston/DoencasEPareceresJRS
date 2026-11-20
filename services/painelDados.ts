@@ -61,7 +61,7 @@ export const lerPericiasPainel = async (inicio: string): Promise<PericiaPainel[]
   return snap.docs.map(s => {
     const d = s.data() as PericiaMenorDoc;
     return {
-      id: s.id, militarId: d.militarId || '', inspecionado: d.militarId ? '' : (d.inspecionado || ''), om: d.om || '', cid: d.cid || '', cidCodigo: d.cidCodigo,
+      id: s.id, militarId: d.militarId || '', inspecionado: d.militarId ? '' : (d.inspecionado || ''), om: d.om || '', cid: d.cid || '', cidCodigo: d.cidCodigo, especialidade: d.especialidade,
       dispensas: d.dispensas ?? [], dataAtestado: d.dataAtestado || '', dataTermino: d.dataTermino || '', tempoHomologado: Number(d.tempoHomologado) || 0,
       homologacao: !!d.homologacao, peritoUid: d.peritoUid || '', criadoPor: d.criadoPor,
     };
