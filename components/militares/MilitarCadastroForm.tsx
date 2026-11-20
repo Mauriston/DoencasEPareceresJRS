@@ -18,7 +18,7 @@ import { AcoesRodape, submeterFormulario } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
-import { formatNip, formatCelular } from '../../utils/format';
+import { formatNip, formatCelular, formatCpf, cpfValido } from '../../utils/format';
 import { hojeISO } from '../../utils/dados';
 import {
   carregarCorposQuadros, carregarOms, postosDoVinculo, quadrosDoOficial, especialidadesDaPraca, montarPgq, montarInspecionado, ehOficialMedico, omEhHnre, type SituacaoMilitar,
@@ -62,6 +62,8 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs, 
   const [email, setEmail] = useState('');
   const [celular, setCelular] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
+  // CPF (opcional): usado nos documentos das IS de Benefícios. HNRe: vai nas Informações adicionais.
+  const [cpf, setCpf] = useState('');
   // RM1 (reserva) e Refº (reformado): só vínculo Inativo, depois do posto; um exclui o outro.
   const [situacao, setSituacao] = useState<SituacaoMilitar>('');
   const [adicionais, setAdicionais] = useState<Adicionais>(ADICIONAIS_VAZIO);
@@ -98,6 +100,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs, 
       if (p.nip) setNip(p.nip);
       if (p.omSigla || p.omTexto) { setOmSigla(p.omSigla); setOmTexto(p.omTexto); }
       if (p.dataNascimento) setDataNascimento(p.dataNascimento);
+      if (p.cpf) { setCpf(p.cpf); setAdicionais(a => (a.cpf ? a : { ...a, cpf: p.cpf })); }
       setErros({});
       setAvisosPrint(p.avisos);
     } catch (e: any) {
@@ -190,6 +193,7 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs, 
     if (!omSigla && !situacao) e.om = 'Escolha a OM na lista.';
     if (celular && celular.replace(/\D/g, '').length < 10) e.celular = 'Informe o DDD e o número.';
     if (dataNascimento && dataNascimento > hojeISO()) e.dataNascimento = 'A data não pode ser futura.';
+    if (!hnre && cpf && !cpfValido(cpf)) e.cpf = 'CPF inválido.';
     if (hnre) Object.assign(e, validarAdicionais(adicionais, medico));
     return e;
   };
@@ -209,7 +213,8 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs, 
       const id = await criarMilitar({
         om: omSigla, temporario: vinculo === 'Temporário', pgq, nip, nome: nomeFinal, ...(sexo ? { sexo } : {}),
         inspecionado: montarInspecionado(pgq, nip, nomeFinal), email: email.trim().toLowerCase(), ativo: true,
-        celular: celular.replace(/\D/g, ''), dataNascimento, rm1: situacao === 'RM1', refo: situacao === 'Refº', ...extras,
+        celular: celular.replace(/\D/g, ''), dataNascimento, rm1: situacao === 'RM1', refo: situacao === 'Refº',
+        ...(!hnre && cpf ? { cpf: cpf.replace(/\D/g, '') } : {}), ...extras,
       });
       onCriado(nomeFinal, id);
       if (medico && adicionais.fotoNova) {
@@ -354,6 +359,12 @@ export const MilitarCadastroForm: React.FC<Props> = ({ onClose, onCriado, tabs, 
               {a => <input {...a} type="tel" inputMode="numeric" placeholder="(00) 00000-0000" value={celular} onChange={e => { setCelular(formatCelular(e.target.value)); limpar('celular'); }} maxLength={15} autoComplete="off" />}
             </Field>
           </div>
+
+          {!hnre && (
+            <Field label="CPF" error={erros.cpf}>
+              {a => <input {...a} type="text" inputMode="numeric" placeholder="000.000.000-00" value={cpf} onChange={e => { setCpf(formatCpf(e.target.value)); limpar('cpf'); }} maxLength={14} className={`${a.className} tabular-nums`} autoComplete="off" />}
+            </Field>
+          )}
 
           {hnre && <InformacoesAdicionais valor={adicionais} onChange={setAdicionais} medico={medico} erros={erros} />}
 
