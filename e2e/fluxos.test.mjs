@@ -386,8 +386,13 @@ test('Perícia Menor: lista o registro semeado, busca, abre o detalhe e o formul
   await p.getByText('Nenhum resultado').waitFor();
   await busca.fill('M54');
   await abrir.waitFor();
+  // O clique abre a Ficha do inspecionado na aba Perícia Menor, com o registro selecionado.
   await abrir.click();
-  // ≥ 1280 px: painel lateral (mestre-detalhe, sem backdrop) com as abas Esta perícia · Histórico; a seleção vai para a URL.
+  await p.waitForURL(new RegExp(`#/inspecionados/${INSPECIONADO.nip}\\?.*aba=pm.*reg=${PERICIA_E2E.id}`));
+  await p.getByRole('heading', { name: /Perícia menor de/ }).waitFor();
+  // O painel lateral continua acessível pela URL (?sel=).
+  await p.goto(`${BASE}#/pericia-menor/historico?sel=${PERICIA_E2E.id}`);
+  // ≥ 1280 px: painel lateral (mestre-detalhe, sem backdrop) com as abas Esta perícia · Histórico.
   const painel = p.getByRole('region', { name: `Perícia menor de ${INSPECIONADO.nome}` });
   await painel.waitFor();
   await p.waitForURL(/[?&]sel=/);
@@ -510,8 +515,7 @@ test('o SDK do service worker e a fonte de ícones são autohospedados (sem CDN)
 test('Perícia Menor: o perito responsável edita com Justificativa (mínimo de 10 caracteres)', async () => {
   const p = await novaPagina();
   await entrar(p, MEDICO);
-  await p.goto(`${BASE}#/pericia-menor/historico`);
-  await p.getByRole('button', { name: `Abrir detalhe da perícia de ${INSPECIONADO.nome}` }).click();
+  await p.goto(`${BASE}#/pericia-menor/historico?sel=${PERICIA_E2E.id}`);
   const painel = p.getByRole('region', { name: `Perícia menor de ${INSPECIONADO.nome}` });
   await painel.getByRole('button', { name: 'Editar', exact: true }).click();
   const form = p.getByRole('dialog', { name: 'Editar perícia menor' });
@@ -529,8 +533,7 @@ test('Perícia Menor: o perito responsável edita com Justificativa (mínimo de 
 test('Perícia Menor: o perito responsável exclui com Justificativa (mínimo de 10 caracteres)', async () => {
   const p = await novaPagina();
   await entrar(p, MEDICO);
-  await p.goto(`${BASE}#/pericia-menor/historico`);
-  await p.getByRole('button', { name: `Abrir detalhe da perícia de ${INSPECIONADO.nome}` }).click();
+  await p.goto(`${BASE}#/pericia-menor/historico?sel=${PERICIA_E2E.id}`);
   const painel = p.getByRole('region', { name: `Perícia menor de ${INSPECIONADO.nome}` });
   await painel.getByRole('button', { name: 'Excluir', exact: true }).click();
   const dialogo = p.getByRole('dialog', { name: /Excluir perícia menor/ });
