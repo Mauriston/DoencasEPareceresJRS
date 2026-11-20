@@ -59,7 +59,8 @@ type Modo = 'registrar' | 'homologar';
 
 const comUnidade = (v: string): string => (v ? `${v} dia${Number(v) > 1 ? 's' : ''}` : v);
 const digitos = (v: string) => v.replace(/\D/g, '');
-const rotuloCid = (c: CidItem) => `${c.SUBCAT} - ${c.DESCRICAO}`;
+/** CID gravado no formato DESCRABREV do cid.json (ex.: "M54.5 Dor lombar baixa"), igual ao da IS. */
+const rotuloCid = (c: CidItem) => c.DESCRABREV;
 const rotuloPerito = (p: PeritoPericiaMenor) => `${p.usuario || p.nome}${p.nip ? ` — ${formatNip(p.nip)}` : ''}`;
 
 /** Aviso discreto, vermelho e à direita, logo abaixo do campo. */

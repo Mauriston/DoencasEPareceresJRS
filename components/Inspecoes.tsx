@@ -546,7 +546,7 @@ export const Inspecoes: React.FC = () => {
   // no badge — e "Bloqueios" (bloqueio de turnos/horários da agenda). No celular o menu de e-mails fica na linha
   // das abas (compacto, com o badge) e Bloqueios vai para a pilha do FAB.
   const menuEmails = () => (podeEmails
-    ? <MenuAcoes rotulo="Enviar e-mails" botao={{ texto: 'Enviar e-mails', icone: 'mail', badge: emails.total }} itens={emails.itens} />
+    ? <MenuAcoes rotulo="Enviar emails" botao={{ texto: 'Enviar emails', icone: 'mail', badge: emails.total }} itens={emails.itens} />
     : null);
 
   const nomePeritoFiltro = peritoParam ? (peritos.find(p => p.uid === peritoParam)?.usuario ?? 'Perito') : '';
