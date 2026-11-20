@@ -412,9 +412,15 @@ export const serieMensalPericias = (lista: PericiaPainel[], hoje: string, meses 
   });
 };
 
-/** Código do CID ("M545") e rótulo ("M54.5 Lombalgia") a partir do texto gravado ("M545 - Lombalgia"). */
+/** Código do CID ("M545") e rótulo a partir do texto gravado: DESCRABREV ("M54.5 Lombalgia", formato atual)
+ *  ou o formato antigo "M545 - Lombalgia". */
 const cidDe = (p: Pick<PericiaPainel, 'cid' | 'cidCodigo'>): { codigo: string; rotulo: string } => {
-  const [cod, ...resto] = (p.cid || '').split(' - ');
+  const texto = (p.cid || '').trim();
+  if (!texto.includes(' - ')) {
+    const codigo = (p.cidCodigo || texto.split(/\s+/)[0] || '').trim().toUpperCase().replace(/\./g, '');
+    return { codigo, rotulo: texto || codigo };
+  }
+  const [cod, ...resto] = texto.split(' - ');
   const codigo = (p.cidCodigo || cod || '').trim().toUpperCase();
   return { codigo, rotulo: [codigo, resto.join(' - ').trim()].filter(Boolean).join(' ') };
 };
