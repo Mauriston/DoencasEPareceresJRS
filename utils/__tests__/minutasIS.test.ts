@@ -15,7 +15,7 @@ const templateDoPrompt = (): string => {
   return corpo.slice(0, corpo.indexOf('---')).join('\n\n');
 };
 const preencherTemplate = (v: Record<string, string>): string =>
-  templateDoPrompt().replace(/\[(PARA|INFO|FINALIDADE|INSPECIONADO|OM|Junta|DATA|LAUDO|TIS|DS1A)\]/g, (_, k: string) => v[k]);
+  templateDoPrompt().replace(/\[(PARA|INFO|FINALIDADE|INSPECIONADO|OM|Junta|DATA|LAUDO|DISPENSA|TIS|DS1A)\]/g, (_, k: string) => v[k] ?? "");
 
 // IS fictícia finalizada (InspecaoRecord sem os campos de agenda/auditoria).
 const IS_FICTICIA = {

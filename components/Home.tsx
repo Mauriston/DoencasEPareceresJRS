@@ -441,7 +441,8 @@ export const Home: React.FC = () => {
       {/* Faltas do HNRe ainda não comunicadas à Divisão de Pessoal (só Admin e Secretaria; some sem pendências). */}
       {podeInspecoes && canUseFeature('inspecoes.enviarEmails', perfil) && <CardFaltasHNRe inspecoes={inspecoes} Secao={Secao} />}
 
-      {perfil === 'admin' && <CardAniversariantes hoje={hoje} />}
+      {/* Aniversários: no celular vai para o fim da coluna (colunaCelular). */}
+      {perfil === 'admin' && isDesktop && <CardAniversariantes hoje={hoje} />}
     </>
   );
 
@@ -607,6 +608,7 @@ export const Home: React.FC = () => {
       {/* Próximos serviços antes de Próximas férias (celular). */}
       {!ehMedicoGeral && cardEscala}
       {cardFerias('')}
+      {perfil === 'admin' && <CardAniversariantes hoje={hoje} />}
     </div>
   );
 
