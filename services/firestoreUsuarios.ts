@@ -18,6 +18,8 @@ export interface UsuarioDoc {
   email: string;
   gmail: string;
   celular: string;
+  /** AAAA-MM-DD (opcional): card "Aniversariantes do mês" e push diário das 07h. */
+  dataNascimento?: string;
   perfil: 'admin' | 'user_medicos' | 'user_secretaria' | 'user_medicos_mpi' | 'user_medicos_geral' | string;
   ativo: boolean;
   imageProfile: string;

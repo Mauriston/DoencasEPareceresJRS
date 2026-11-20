@@ -91,6 +91,7 @@ export const DetalheUsuario: React.FC<Props> = ({ usuario: u, usuarios, impacto,
             <Dado rotulo="E-mail institucional">{u.email}</Dado>
             <Dado rotulo="Gmail (agenda)">{u.gmail}</Dado>
             <Dado rotulo="Celular"><span className="tabular-nums">{formatCelular(u.celular)}</span></Dado>
+            <Dado rotulo="Data de nascimento"><span className="tabular-nums">{u.dataNascimento ? u.dataNascimento.split('-').reverse().join('/') : '—'}</span></Dado>
           </dl>
         )}
         {aba === 'acesso' && (

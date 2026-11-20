@@ -1007,6 +1007,43 @@ async function startServer() {
       res.status(500).json({ success: false, error: error?.message || "Falha no envio automático." });
     }
   });
+  // Aniversariantes do dia: o Cloud Scheduler chama às 07h (Recife), todo dia, com o mesmo X-Agendador-Token
+  // (scripts/agendador/configurar-aniversariantes.sh). Havendo aniversariante (usuários ativos com dataNascimento),
+  // todos os usuários ativos recebem o push; uma vez por data (notificacoes_enviadas).
+  app.post("/api/agendador/aniversariantes", async (req, res) => {
+    const esperado = process.env.AGENDADOR_TOKEN || "";
+    const recebido = String(req.get("X-Agendador-Token") || "");
+    const { timingSafeEqual } = await import("node:crypto");
+    const ok = esperado.length >= 32 && recebido.length === esperado.length && timingSafeEqual(Buffer.from(recebido), Buffer.from(esperado));
+    if (!ok) {
+      void auditarServidor("acesso_negado", "agendador-aniversariantes", "", esperado ? "token_invalido" : "agendador_desligado");
+      res.status(esperado ? 401 : 503).json({ success: false, error: "Agendador não autorizado." });
+      return;
+    }
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      const { aniversariantesDoMes, hojeEmRecife, nomeSemPosto } = await import("./utils/aniversarios");
+      const hoje = hojeEmRecife();
+      const snap = await adminDb.collection("usuarios").get();
+      const usuarios = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+      const doDia = aniversariantesDoMes(usuarios, hoje).filter(a => a.ehHoje);
+      if (!doDia.length) { res.json({ success: true, aniversariantes: 0 }); return; }
+      if (!(await marcarEnvio(adminDb, `aniversariantes_${hoje}`))) { res.json({ success: true, jaEnviado: true }); return; }
+      const nomes = doDia.map(a => `${a.pessoa.usuario}`);
+      const lista = nomes.length > 1 ? `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}` : nomes[0];
+      const todos = new Set<string>(usuarios.filter((u: any) => u.ativo !== false).map((u: any) => u.id));
+      const r = await enviarPush(adminDb, { uids: todos }, {
+        titulo: doDia.length > 1 ? "Aniversariantes do dia" : "Aniversariante do dia",
+        corpo: `Hoje é aniversário ${doDia.length > 1 ? "de" : "do(a)"} ${lista}. Deixe seus parabéns! 🎂`,
+        rota: "/",
+      });
+      void auditarServidor("operacao_sensivel", "agendador-aniversariantes", "agendador", doDia.map(a => nomeSemPosto(a.pessoa.usuario)).join(", "));
+      res.json({ success: true, aniversariantes: doDia.length, ...r, erros: r.erros.length });
+    } catch (error: any) {
+      logErroSeguro("Agendador aniversariantes", error);
+      res.status(500).json({ success: false, error: "Falha no aviso de aniversariantes." });
+    }
+  });
   app.post("/api/agenda/evento-is", rotaGoogle("agenda-evento-is", PERFIS_EQUIPE, async (db, b) =>
     (await import("./servidor/google/agenda")).sincronizarEventoIS(db, b)));
   app.post("/api/agenda/evento-bloqueio", rotaGoogle("agenda-evento-bloqueio", PERFIS_EQUIPE, async (db, b) =>

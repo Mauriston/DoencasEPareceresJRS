@@ -38,6 +38,8 @@ on:
       - 'Dockerfile'
       - '.dockerignore'
       - '.github/workflows/deploy-cloud-run.yml'
+      - 'utils/aniversarios.ts'
+      - 'scripts/agendador/**'
   workflow_dispatch:
 
 permissions:
@@ -83,3 +85,12 @@ jobs:
         run: |
           echo "Backend publicado em: ${{ steps.deploy.outputs.url }}"
           echo "Defina essa URL na variável de repositório API_BASE_URL (Settings > Secrets and variables > Actions > Variables) e rode novamente o workflow 'Deploy to GitHub Pages' para o frontend passar a usá-la."
+
+      # Job do Cloud Scheduler do push "Aniversariante do dia" (07h, Recife). Idempotente; exige que a
+      # service account tenha "Cloud Scheduler Admin". Sem permissão, rode o script manualmente.
+      - name: Agendador dos aniversariantes (07h)
+        continue-on-error: true
+        env:
+          AGENDADOR_TOKEN: ${{ secrets.AGENDADOR_TOKEN }}
+          PROJETO: ${{ secrets.GCP_PROJECT_ID }}
+        run: bash scripts/agendador/configurar-aniversariantes.sh

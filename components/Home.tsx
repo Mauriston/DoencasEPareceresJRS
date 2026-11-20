@@ -41,6 +41,7 @@ import { AgendaDoDia } from './home/AgendaDoDia';
 import { CalendarioMes } from './home/CalendarioMes';
 import { Pendencias, type Pendencia } from './home/Pendencias';
 import { CardFaltasHNRe } from './inspecoes/CardFaltasHNRe';
+import { CardAniversariantes } from './home/CardAniversariantes';
 import { observarMilitares, type MilitarRecord } from '../services/firestoreMilitares';
 import { pendenciasEmailIS, TIPOS_EMAIL_PENDENTE } from '../utils/pendenciasEmailIS';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
@@ -428,6 +429,7 @@ export const Home: React.FC = () => {
       {/* Faltas do HNRe ainda não comunicadas à Divisão de Pessoal (só Admin e Secretaria; some sem pendências). */}
       {podeInspecoes && canUseFeature('inspecoes.enviarEmails', perfil) && <CardFaltasHNRe inspecoes={inspecoes} Secao={Secao} />}
 
+      {perfil === 'admin' && <CardAniversariantes hoje={hoje} />}
     </>
   );
 

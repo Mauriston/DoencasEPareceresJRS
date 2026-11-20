@@ -18,15 +18,18 @@ import type { UsuarioRecord } from '../../services/firestoreUsuarios';
 export interface DadosFormUsuario {
   usuario: string; postoGraduacao: string; cargo: string; nome: string; nip: string;
   crmPe: string; rqe: string; email: string; gmail: string; celular: string; perfil: string;
+  /** AAAA-MM-DD (input date); vazio = não informado. */
+  dataNascimento: string;
 }
 
 export const FORM_VAZIO: DadosFormUsuario = {
-  usuario: '', postoGraduacao: '', cargo: '', nome: '', nip: '', crmPe: '', rqe: '', email: '', gmail: '', celular: '', perfil: 'user_secretaria',
+  usuario: '', postoGraduacao: '', cargo: '', nome: '', nip: '', crmPe: '', rqe: '', email: '', gmail: '', celular: '', perfil: 'user_secretaria', dataNascimento: '',
 };
 
 export const formDoUsuario = (u: UsuarioRecord): DadosFormUsuario => ({
   usuario: u.usuario, postoGraduacao: u.postoGraduacao || '', cargo: u.cargo || '', nome: u.nome || '', nip: formatNip(u.nip),
   crmPe: u.crmPe || '', rqe: u.rqe || '', email: u.email || '', gmail: u.gmail || '', celular: formatCelular(u.celular), perfil: u.perfil || 'user_secretaria',
+  dataNascimento: u.dataNascimento || '',
 });
 
 const PERFIS = ['admin', ...ROLES.map(r => r.id)];
@@ -126,6 +129,9 @@ export const FormUsuario: React.FC<Props> = ({ editando, onCancelar, onSalvar })
             </Field>
             <Field label="Celular">
               {a => <input {...a} value={f.celular} inputMode="tel" placeholder="(00) 00000-0000" maxLength={15} className={`${a.className} tabular-nums`} onChange={e => set({ celular: formatCelular(e.target.value) })} />}
+            </Field>
+            <Field label="Data de nascimento" help="Opcional. Usada nos aniversariantes do mês.">
+              {a => <input {...a} type="date" value={f.dataNascimento} max={new Date().toISOString().slice(0, 10)} className={`${a.className} tabular-nums`} onChange={e => set({ dataNascimento: e.target.value })} />}
             </Field>
             {medico && (
               <>
