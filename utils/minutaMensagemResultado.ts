@@ -8,6 +8,7 @@
 // Os testes (utils/__tests__/minutasIS.test.ts) conferem o modelo contra o texto do prompt.
 
 import { destinatariosDaMensagem, normalizarTexto } from './destinatariosIS';
+import { GRUPO_VERIFICACOES } from './inspecoes';
 
 export const PRE = (campo: string) => `[preencher: ${campo}]`;
 
@@ -81,6 +82,8 @@ export interface DadosMensagemResultado {
   grupoFinalidade?: string;
   /** Nº da IS (usado na minuta de incapacidade definitiva para o SAM). */
   is?: number | string;
+  /** Restrições da IS ("A; B"), citadas na minuta das Verificações e Términos ("Deverá ser dispensado de …"). */
+  restricoes?: string;
 }
 
 /** Minuta em campos, como são colados no sistema de mensagens. `de` só existe na minuta de cancelamento. */
@@ -136,6 +139,16 @@ export const camposIncapacidadeDefinitiva = (d: DadosMensagemResultado): MinutaC
   };
 };
 
+/** Rótulo de restrição legível: guardado todo em maiúsculas → minúsculas; senão, como está. */
+const rotuloRestricao = (r: string): string => (r === r.toUpperCase() && r !== r.toLowerCase() ? r.toLowerCase() : r);
+
+/** Verificações e Términos com restrições: "Deverá ser dispensado(a) de A, B." (vazio nos demais casos). */
+export const fraseDispensa = (d: Pick<DadosMensagemResultado, 'grupoFinalidade' | 'restricoes' | 'feminino'>): string => {
+  if (d.grupoFinalidade !== GRUPO_VERIFICACOES) return '';
+  const lista = Array.from(new Set(String(d.restricoes || '').split(';').map(s => s.trim()).filter(Boolean))).map(rotuloRestricao);
+  return lista.length ? `Deverá ser ${d.feminino ? 'dispensada' : 'dispensado'} de ${lista.join(', ')}.` : '';
+};
+
 /**
  * Minuta de resultado no modelo "TEMPLATE — IS ÚNICA" do PROMPT_MINUTA_MENSAGEM, em campos:
  *   para / info / assunto ("INSPEÇÃO DE SAÚDE FIM [FINALIDADE] - [INSPECIONADO] ([OM])") /
@@ -155,12 +168,13 @@ export const camposMensagemResultado = (d: DadosMensagemResultado): MinutaCampos
   const tis = (d.tis || '').trim() || PRE('nº do TIS');
   const ds1a = (d.ds1a || '').trim() || PRE('código DS-1A');
   const atinente = d.feminino ? 'atinente à' : 'atinente ao';
+  const dispensa = fraseDispensa(d);
   return {
     para,
     info,
     assunto: `INSPEÇÃO DE SAÚDE FIM ${finalidade} - ${inspecionado} (${om})`,
     texto: [
-      `ALFA - PTC que a ${junta} concluiu em ${data} a IS FIM ${finalidade} ${atinente} ${inspecionado} (${om}) e exarou o seguinte laudo: "${laudo || PRE('laudo')}". ACD TIS nº ${tis}; e`,
+      `ALFA - PTC que a ${junta} concluiu em ${data} a IS FIM ${finalidade} ${atinente} ${inspecionado} (${om}) e exarou o seguinte laudo: "${laudo || PRE('laudo')}".${dispensa ? ` ${dispensa}` : ''} ACD TIS nº ${tis}; e`,
       '',
       `BRAVO - O REF TIS (modelo DS-1A) pode ser verificado digitalmente por meio do acesso ao sítio https://sinais.dsm.mb/tisonline, informando o código de validação ${ds1a} e selecionando a opção "Download do TIS" BT`,
     ].join('\n'),

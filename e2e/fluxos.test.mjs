@@ -460,7 +460,7 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   assert.equal(await quadro.getByText('SCRIPT RODOU').count(), 0);
   assert.equal(await p.getByRole('toolbar', { name: 'Ações da aba' }).count(), 0);
   // Registro antigo (sem conteúdo): só os dados do envio e a nota.
-  await p.getByRole('complementary', { name: /Histórico de Emails/ }).getByRole('button', { name: /ABERTURA ANTIGA E2E/ }).click();
+  await p.getByRole('complementary', { name: /Histórico de Emails/ }).getByRole('button', { name: /Abertura/i }).click();
   await p.getByText(/anterior à gravação do conteúdo/).waitFor();
   // IS aberta sem data: "Agendar IS" na barra (e não "Abrir IS", pois já há IS em andamento); sem o campo Inspecionado.
   await guias.getByRole('tab', { name: 'Inspeções de Saúde', exact: true }).click();

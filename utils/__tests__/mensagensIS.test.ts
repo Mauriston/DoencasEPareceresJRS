@@ -26,6 +26,16 @@ describe('minuta MSG da IS', () => {
     expect(linhasMinuta({ de: 'D', para: 'P', info: '', assunto: 'A', texto: 'T' }).map(l => l.rotulo)).toEqual(['DE', 'PARA', 'ASSUNTO', 'TEXTO']);
     expect(linhasMinuta({ de: 'D', para: 'P', info: 'I', assunto: 'A', texto: 'T' }).map(l => l.rotulo)).toEqual(['DE', 'PARA', 'INFO', 'ASSUNTO', 'TEXTO']);
   });
+  it('Verificações e Términos com restrições: frase de dispensa entre o laudo e o ACD TIS', () => {
+    const c = camposMinutaMsgIS({ ...is, laudo: 'Apto para o SAM com restrições por 30 dias', restricoes: 'Marchas; Embarque' }, { om: 'HNRe' });
+    expect(c.texto).toContain('com restrições por 30 dias". Deverá ser dispensado de Marchas, Embarque. ACD TIS nº 026.000.1');
+    const f = camposMinutaMsgIS({ ...is, restricoes: 'SERVIÇO ARMADO' }, { om: 'HNRe', feminino: true });
+    expect(f.texto).toContain('". Deverá ser dispensada de serviço armado. ACD TIS');
+  });
+  it('sem restrições ou fora de Verificações e Términos: sem frase de dispensa', () => {
+    expect(camposMinutaMsgIS(is, { om: 'HNRe' }).texto).not.toContain('Deverá ser');
+    expect(camposMinutaMsgIS({ ...is, grupoFinalidade: 'Benefícios', restricoes: 'Marchas' }, { om: 'HNRe' }).texto).not.toContain('Deverá ser');
+  });
   it('só IS concluída', () => {
     expect(podeMinutarMsg({ status: 'tis_assinado' })).toBe(true);
     expect(podeMinutarMsg({ status: 'assinaturas_pendentes' })).toBe(false);

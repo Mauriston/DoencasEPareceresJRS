@@ -45,7 +45,7 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { FabAcoes } from '../ui/Fab';
 import { MenuAcoes, type ItemMenu } from '../ui/MenuAcoes';
-import { AbasSublinhadas, TextoContagem } from '../periciaMenor/partes';
+import { AbasSublinhadas } from '../periciaMenor/partes';
 import { StatusTag } from '../ui/StatusTag';
 import { EmptyState } from '../ui/EmptyState';
 import { AccessDenied } from '../ui/AccessDenied';
@@ -73,7 +73,7 @@ import { examesMinimosDaIS, isParaCriar } from '../../utils/examesFicha';
 import { ApoioAfastamentos, PainelAfastamentos } from './afastamentos/PainelAfastamentos';
 import { PainelEmail } from './emails/PainelEmail';
 import { useEmailsDaFicha } from './emails/useEmailsDaFicha';
-import { horaDoEnvio, isoDoEnvio, resumoDestinatarios } from '../../utils/emailsEnviados';
+import { horaDoEnvio, isoDoEnvio } from '../../utils/emailsEnviados';
 import { AgendarISFicha } from './AgendarISFicha';
 import { AbrirISFicha, type ModoAbrirIS } from './AbrirISFicha';
 import { PainelISFicha } from './inspecoes/PainelISFicha';
@@ -109,7 +109,7 @@ import { emailDoInspecionado } from '../../services/emailResultadoIS';
 import { sincronizarAgendaIS } from '../../services/agendaGoogleIS';
 import { carregarCid, carregarCorposQuadros, carregarOms, type CorposQuadros, type OrganizacaoMilitar } from '../../utils/corposQuadros';
 import { indiceCidAbreviado } from '../../utils/periciaMenorLista';
-import { contagemTermino, diaMes, partesCid, postoDoInspecionado } from '../../utils/periciaMenorResumo';
+import { diaMes, partesCid, postoDoInspecionado } from '../../utils/periciaMenorResumo';
 import { ABAS_FICHA, abaFichaInicial, afastamentosDaIS, registroSelecionado, type AbaFicha } from '../../utils/fichaInspecionado';
 import { classeDoExame, ROTULO_CLASSE, ROTULO_TIPO } from '../../utils/examesIS';
 import { aguardaAgendamento, dataHoraBr, situacaoDoStatus } from '../../utils/inspecoes';
@@ -311,14 +311,17 @@ export const FichaInspecionado: React.FC = () => {
   }), [isOrdenadas]);
   const itensPM = useMemo<ItemHistorico[]>(() => pmOrdenadas.map(p => {
     const cid = partesCid(p, cidAbrev);
-    const c = contagemTermino(p.dataTermino, hoje);
+    const homologado = !atestado && !!p.homologacao;
+    // Registrado: data e dias do atestado; homologado: data da homologação (registro) e dias homologados.
+    const dataRef = homologado ? isoDe(p.criadoEm) : p.dataAtestado;
+    const dias = homologado ? p.tempoHomologado : p.tempoAtestado;
     return {
-      id: p.id, data: p.dataAtestado, icone: 'personal_injury',
-      titulo: !atestado && p.homologacao ? 'ATESTADO HOMOLOGADO' : 'ATESTADO REGISTRADO',
-      detalhe: cid.codigo && cid.descricao ? `${cid.codigo} (${cid.descricao})` : cid.codigo || cid.descricao,
-      tag: c.tom !== 'passado' ? <TextoContagem contagem={c} /> : <StatusTag tone="muted">Concluída</StatusTag>,
+      id: p.id, data: p.dataAtestado, icone: 'personal_injury', semData: true,
+      titulo: homologado ? 'ATESTADO HOMOLOGADO' : 'ATESTADO REGISTRADO',
+      detalhe: <>{cid.codigo && cid.descricao ? `${cid.codigo} (${cid.descricao})` : cid.codigo || cid.descricao}<br />{dataRef ? dataBR(dataRef) : '—'}</>,
+      tag: Number.isFinite(dias) ? <strong className="text-sm text-navy tabular-nums whitespace-nowrap">{dias} {dias === 1 ? 'dia' : 'dias'}</strong> : undefined,
     };
-  }), [pmOrdenadas, cidAbrev, hoje, atestado]);
+  }), [pmOrdenadas, cidAbrev, atestado]);
   const itemExame = (e: ExameDaFicha, icone: string): ItemHistorico => ({
     id: idExame(e), data: dataExame(e), icone, titulo: tituloExame(e),
     detalhe: [`IS ${e.is}`, e.itens.find(i => i.emissor)?.emissor].filter(Boolean).join(' · '),
@@ -345,8 +348,8 @@ export const FichaInspecionado: React.FC = () => {
 
   const itensEmails: ItemHistorico[] = emails.map(e => ({
     id: e.id, data: isoDoEnvio(e.enviadoEmMs), icone: e.legado ? 'mail' : 'mark_email_read',
-    titulo: e.assunto || e.rotulo,
-    detalhe: [horaDoEnvio(e.enviadoEmMs), e.rotulo, `para ${resumoDestinatarios(e.para)}`].filter(Boolean).join(' · '),
+    titulo: e.rotulo, semData: true,
+    detalhe: e.enviadoEmMs ? `${dataBR(isoDoEnvio(e.enviadoEmMs))} ${horaDoEnvio(e.enviadoEmMs)}` : '—',
   }));
 
   // Mensagens tramitadas registradas a partir da minuta das IS ("Minutar MSG"), da mais recente para a mais antiga.
@@ -583,7 +586,7 @@ export const FichaInspecionado: React.FC = () => {
       return (
         <PainelISFicha
           key={isSel.id} is={isSel} perfil={perfil} abas={estadoAbas} definir={definir}
-          om={militar?.om || om} vinculo={militar ? vinculoDoInspecionado(militar) : undefined}
+          om={militar?.om || om} vinculo={militar ? vinculoDoInspecionado(militar) : undefined} feminino={militar?.sexo === 'Feminino'}
           onAgendar={setAgendando}
           onSituacaoMudou={is => { sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS atualizada, mas o Google Agenda não: ${r.erro}`, 'error'); }); }}
           onAviso={avisar}

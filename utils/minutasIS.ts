@@ -51,8 +51,9 @@ export type DadosMinutaResultado = DadosMinuta & {
   peritoNome?: string;
   feminino?: boolean;
   vinculo?: string;
-  /** Aceitos por compatibilidade; o modelo da página Mensagens não os usa. */
+  /** Aceito por compatibilidade; o modelo da página Mensagens não o usa. */
   dataEntrevista?: string;
+  /** Restrições ("A; B"): frase de dispensa nas Verificações e Términos. */
   restricoes?: string;
 };
 
@@ -65,7 +66,7 @@ export const minutaResultado = (d: DadosMinutaResultado): string => juntarMinuta
 
 const dadosDeResultado = (d: DadosMinutaResultado): DadosMensagemResultado => ({
   is: d.is, finalidade: d.finalidade, grupoFinalidade: d.grupoFinalidade, inspecionado: d.inspecionado, om: d.om, amp: d.amp, peritoNome: d.peritoNome,
-  dataLaudo: d.dataLaudo, laudo: d.laudo, tis: d.tis, ds1a: d.ds1a, feminino: d.feminino, vinculo: d.vinculo,
+  dataLaudo: d.dataLaudo, laudo: d.laudo, tis: d.tis, ds1a: d.ds1a, feminino: d.feminino, vinculo: d.vinculo, restricoes: d.restricoes,
 });
 
 /** Campos da IS (InspecaoRecord) usados pela minuta de resultado. */

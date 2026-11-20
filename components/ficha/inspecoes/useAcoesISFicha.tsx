@@ -45,11 +45,12 @@ interface Opcoes {
   definir: Definir;
   om?: string;
   vinculo?: string;
+  feminino?: boolean;
   onAgendar: (is: InspecaoRecord) => void;
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
 }
 
-export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, onAgendar, onAviso }: Opcoes) => {
+export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, feminino, onAgendar, onAviso }: Opcoes) => {
   const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
   const [confirmarPdf, setConfirmarPdf] = useState<CriarPdf | null>(null);
   const [excluindo, setExcluindo] = useState(false);
@@ -151,7 +152,7 @@ export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, onAgen
       {docs.dialogos}
       {minutando && (
         <MinutarMsgIS
-          is={is} om={om} vinculo={vinculo} onAviso={onAviso} onClose={() => setMinutando(false)}
+          is={is} om={om} vinculo={vinculo} feminino={feminino} onAviso={onAviso} onClose={() => setMinutando(false)}
           onRegistrada={id => { setMinutando(false); ir('mensagens', { reg: id }); }}
         />
       )}
