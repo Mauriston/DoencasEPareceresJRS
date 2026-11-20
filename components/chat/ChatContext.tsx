@@ -11,7 +11,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import type { AuthUser } from '../../context/NavContext';
 import { listUsuarios, type UsuarioRecord } from '../../services/firestoreUsuarios';
 import { observarConfigChat, observarConversas, observarPresenca, registrarAtividade, type ConversaChat } from '../../services/chat';
-import { INTERVALO_HEARTBEAT_MS, estaOnline, permissaoChat, totalNaoLidas, usaChat, type MatrizChat, type PermissaoChat } from '../../utils/chat';
+import { INTERVALO_HEARTBEAT_MS, estaOnline, filtrarContatosChat, permissaoChat, totalNaoLidas, usaChat, type MatrizChat, type PermissaoChat } from '../../utils/chat';
 
 export interface ChatEstado {
   ativo: boolean;
@@ -75,13 +75,14 @@ export const ChatProvider: React.FC<{ authUser: AuthUser | null; children: React
     conversas,
     naoLidas: ativo ? totalNaoLidas(conversas, uid) : 0,
     usuarios,
-    destinatarios: usuarios
+    // Novos contatos: quem pode receber; user_medicos_geral só aparece para o Admin e o USUARIO_VE_MEDICOS_GERAL.
+    destinatarios: filtrarContatosChat<UsuarioRecord>(usuarios, authUser)
       .filter(u => u.id !== uid && u.ativo !== false && permissaoChat(matriz, u.perfil).receber)
       .sort((a, b) => (a.usuario || '').localeCompare(b.usuario || '', 'pt-BR')),
     online: (id: string) => estaOnline(presenca[id], agora),
     conversaAberta,
     setConversaAberta,
-  }), [ativo, permissao, matriz, conversas, uid, usuarios, presenca, agora, conversaAberta]);
+  }), [ativo, permissao, matriz, conversas, uid, usuarios, presenca, agora, conversaAberta, authUser]);
 
   return <ChatCtx.Provider value={valor}>{children}</ChatCtx.Provider>;
 };

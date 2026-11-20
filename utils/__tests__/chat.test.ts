@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   anexoVencido, chaveBanner, conversasComBanner, estaOnline, expiraEm, idConversa, limiteRetencaoAnexo, matrizCompleta,
   nomeArquivoSeguro, outroParticipante, permissaoChat, previaMensagem, situacaoEntrega, textoAviso, tipoAnexo,
-  tipoMensagem, totalNaoLidas, usaChat, validarAnexo, TAMANHO_MAX_ANEXO,
+  tipoMensagem, totalNaoLidas, usaChat, validarAnexo, TAMANHO_MAX_ANEXO, filtrarContatosChat, veMedicosGeral, USUARIO_VE_MEDICOS_GERAL,
 } from '../chat';
 
 const DIA = 24 * 60 * 60 * 1000;
@@ -114,5 +114,27 @@ describe('recibo de leitura', () => {
     expect(situacaoEntrega({ pendente: true }, 'b')).toBe('enviando');
     expect(situacaoEntrega({ lidaPor: ['a'] }, 'b')).toBe('enviada');
     expect(situacaoEntrega({ lidaPor: ['a', 'b'] }, 'b')).toBe('lida');
+  });
+});
+
+describe('filtrarContatosChat (user_medicos_geral fora da lista de contatos)', () => {
+  const contatos = [
+    { id: 'a', perfil: 'user_medicos' },
+    { id: 'b', perfil: 'user_medicos_geral' },
+    { id: 'c', perfil: 'user_secretaria' },
+  ];
+  it('esconde user_medicos_geral de quem não é Admin', () => {
+    expect(filtrarContatosChat(contatos, { perfil: 'user_medicos', usuario: '2T SILVA' }).map(u => u.id)).toEqual(['a', 'c']);
+    expect(filtrarContatosChat(contatos, { perfil: 'user_secretaria' }).map(u => u.id)).toEqual(['a', 'c']);
+    expect(filtrarContatosChat(contatos, null).map(u => u.id)).toEqual(['a', 'c']);
+  });
+  it('Admin vê todos', () => {
+    expect(filtrarContatosChat(contatos, { perfil: 'admin' })).toHaveLength(3);
+  });
+  it('o usuário 1T OLIVEIRA vê todos (normalizado, por usuario ou nome)', () => {
+    expect(USUARIO_VE_MEDICOS_GERAL).toBe('1T OLIVEIRA');
+    expect(filtrarContatosChat(contatos, { perfil: 'user_medicos', usuario: ' 1t  oliveira ' })).toHaveLength(3);
+    expect(filtrarContatosChat(contatos, { perfil: 'user_medicos', usuario: '', nome: '1T Olivéira' })).toHaveLength(3);
+    expect(veMedicosGeral({ perfil: 'user_medicos', usuario: '1T OLIVEIRA SANTOS' })).toBe(false);
   });
 });

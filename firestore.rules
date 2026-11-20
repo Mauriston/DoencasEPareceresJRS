@@ -329,6 +329,14 @@ service cloud.firestore {
       }
     }
 
+    // Collection group "documentos" (Início da Secretaria: "Últimos documentos gerados" lista os documentos gerados
+    // em todas as IS — collectionGroup('documentos') por criadoEmMs). Só existe a subcoleção inspecoes/{id}/documentos
+    // com esse nome; mesmo público da leitura por IS (isEquipe()). Escrita só pelo servidor.
+    match /{caminho=**}/documentos/{did} {
+      allow read: if isEquipe();
+      allow write: if false;
+    }
+
     // Coleção "mensagensIS": mensagens tramitadas registradas a partir da minuta de uma IS concluída ("Minutar MSG" da
     // Ficha do inspecionado; services/mensagensIS.ts). Liga à IS (isId) e ao inspecionado (inspecionadoId); só leitura
     // depois de gravada. A equipe lê; registra quem tem "inspecoes.gerarMinuta", em nome próprio e com a hora do
