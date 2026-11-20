@@ -17,6 +17,7 @@
     "@google-cloud/firestore": "^9.3.1",
     "@google-cloud/speech": "^8.2.1",
     "@google/genai": "^2.16.0",
+    "@techstark/opencv-js": "^4.10.0-release.1",
     "express": "^5.2.1",
     "firebase": "^12.14.0",
     "firebase-admin": "^14.5.0",
@@ -26,7 +27,6 @@
     "qrcode": "^1.5.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-image-crop": "^11.0.5",
     "react-router-dom": "^7.18.4"
   },
   "devDependencies": {

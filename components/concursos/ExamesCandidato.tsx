@@ -16,6 +16,8 @@ import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
 import { Container } from '../ui/Page';
 import { Card } from '../ui/Card';
 import { Button, ButtonLink } from '../ui/Button';
+import { ScannerDocumento } from '../scanner/ScannerDocumento';
+import { imagensParaPdf } from '../../utils/imagensParaPdf';
 import { FilterChip } from '../ui/FilterChip';
 import { GradePainel } from '../ui/Grade';
 import { PdfFullscreenModal } from '../PdfFullscreenModal';
@@ -70,6 +72,21 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
   const isDesktop = useIsDesktop();
   const [etapa, setEtapa] = useState<EtapaEnvio>('select');
   const [file, setFile] = useState<File | null>(null);
+  // Exames em papel: o scanner digitaliza as páginas e o PDF é gerado aqui (utils/imagensParaPdf.ts).
+  const [digitalizando, setDigitalizando] = useState(false);
+  const [gerandoPdf, setGerandoPdf] = useState(false);
+  const aoDigitalizar = async (paginas: string[]) => {
+    setDigitalizando(false);
+    setGerandoPdf(true);
+    try {
+      const pdf = await imagensParaPdf(paginas);
+      setFile(new File([pdf], `exames-digitalizados-${paginas.length}p.pdf`, { type: 'application/pdf' }));
+    } catch (e: any) {
+      setErro(e?.message || 'Não foi possível gerar o PDF.');
+    } finally {
+      setGerandoPdf(false);
+    }
+  };
   const [erro, setErro] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ nomeArquivo: string; url: string; extraidos: ExamesExtraidos | null; erroExtracao: string } | null>(null);
 
@@ -177,6 +194,10 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
             <span className="text-xs text-ink-3">Máx. {LIMITE_PDF_EXAMES_MB} MB — acima disso, divida em dois PDFs</span>
             <input type="file" accept="application/pdf" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
           </label>
+          <Button variant="secondary" fullWidth icon="document_scanner" onClick={() => setDigitalizando(true)}>
+            Digitalizar exames em papel (gera o PDF)
+          </Button>
+          {gerandoPdf && <p role="status" className="text-xs text-ink-3 text-center">Gerando o PDF…</p>}
         </>
       )}
 
@@ -235,6 +256,18 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
 
   const titulo = 'Enviar exames do candidato';
   const subtitulo = destino ? `${destino.candidatoNome} · ${destino.concursoNome}` : 'Escolha o candidato e o PDF';
+
+  if (digitalizando) {
+    return (
+      <ScannerDocumento
+        titulo="Digitalizar exames"
+        modo="multipla"
+        maxPaginas={40}
+        onCancelar={() => setDigitalizando(false)}
+        onConcluir={paginas => { void aoDigitalizar(paginas); }}
+      />
+    );
+  }
 
   if (!isDesktop) {
     return (
