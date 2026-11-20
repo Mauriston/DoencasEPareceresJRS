@@ -4,13 +4,17 @@
 // em 9 colunas (~68 caracteres); celular com barra fixa (item atual, anterior/próximo) e o
 // índice em drawer. Diferença: aqui o índice TROCA o documento exibido — um capítulo ou
 // anexo por vez. Ao abrir a página, sempre o Capítulo 1 (nenhuma seleção é restaurada).
+// Busca no texto (como na Portaria): destaca no documento aberto e mostra, no índice,
+// quantas ocorrências há em cada capítulo/anexo.
 // O PDF integral fica num botão fixo, sempre visível, que abre numa nova aba.
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
 import { IconButton } from './ui/IconButton';
 import { Drawer } from './ui/Drawer';
 import { MarkdownContent } from './MarkdownContent';
+import { CampoBusca, ContadorBusca, useBuscaNoTexto } from './normas/BuscaNoTexto';
+import { acharOcorrencias } from '../utils/normaMarkdown';
 import { useStoragePdf } from '../hooks/useStoragePdf';
 import { getMainScroller } from '../utils/dom';
 import { anexoPdfPath, getStoragePdfUrl, NORMA_COMPLETA_PDF_PATH } from '../services/firebaseStorageNormas';
@@ -119,31 +123,36 @@ const ORDEM: ItemDoc[] = [...ITENS_CAPITULOS, ...ITENS_ANEXOS];
 const itemDe = (id: string) => ORDEM.find(i => i.id === id) ?? ORDEM[0];
 const INICIAL = 'c1';
 
-const ItemIndice: React.FC<{ item: ItemDoc; ativo: boolean; onIr: (id: string) => void }> = ({ item, ativo, onIr }) => (
+const ItemIndice: React.FC<{ item: ItemDoc; ativo: boolean; onIr: (id: string) => void; ocorrencias?: number }> = ({ item, ativo, onIr, ocorrencias }) => (
   <li>
     <button
       type="button"
       onClick={() => onIr(item.id)}
       aria-current={ativo ? 'page' : undefined}
-      className={`w-full text-left grid grid-cols-[28px_minmax(0,1fr)] gap-1.5 items-baseline px-2.5 py-1.5 min-h-9 rounded-md text-sm transition-colors ${
+      className={`w-full text-left grid ${ocorrencias !== undefined ? 'grid-cols-[28px_minmax(0,1fr)_auto]' : 'grid-cols-[28px_minmax(0,1fr)]'} gap-1.5 items-baseline px-2.5 py-1.5 min-h-9 rounded-md text-sm transition-colors ${
         ativo ? 'bg-thead text-navy font-bold shadow-[inset_3px_0_0_#FAB932]' : 'text-ink hover:bg-paper'
       }`}
     >
       <span className="text-xs text-ink-3 tabular-nums">{item.numero}</span>
       <span>{item.titulo}</span>
+      {ocorrencias !== undefined && (
+        <span className={`text-xs tabular-nums px-1.5 rounded-full ${ocorrencias ? 'bg-gold/20 text-navy font-bold' : 'text-ink-4'}`}>
+          {ocorrencias}<span className="sr-only"> ocorrências</span>
+        </span>
+      )}
     </button>
   </li>
 );
 
-const ListaIndice: React.FC<{ ativo: string; onIr: (id: string) => void }> = ({ ativo, onIr }) => (
+const ListaIndice: React.FC<{ ativo: string; onIr: (id: string) => void; contagens?: Record<string, number> | null }> = ({ ativo, onIr, contagens }) => (
   <nav aria-label="Índice da DGPM-406" className="flex flex-col gap-1">
     <p className="text-xs font-bold tracking-label uppercase text-ink-3 px-2.5 pt-1">Capítulos · {ITENS_CAPITULOS.length}</p>
     <ul className="flex flex-col">
-      {ITENS_CAPITULOS.map(i => <ItemIndice key={i.id} item={i} ativo={ativo === i.id} onIr={onIr} />)}
+      {ITENS_CAPITULOS.map(i => <ItemIndice key={i.id} item={i} ativo={ativo === i.id} onIr={onIr} ocorrencias={contagens ? contagens[i.id] ?? 0 : undefined} />)}
     </ul>
     <p className="text-xs font-bold tracking-label uppercase text-ink-3 px-2.5 pt-2 mt-1 border-t border-line">Anexos · {ITENS_ANEXOS.length}</p>
     <ul className="flex flex-col">
-      {ITENS_ANEXOS.map(i => <ItemIndice key={i.id} item={i} ativo={ativo === i.id} onIr={onIr} />)}
+      {ITENS_ANEXOS.map(i => <ItemIndice key={i.id} item={i} ativo={ativo === i.id} onIr={onIr} ocorrencias={contagens ? contagens[i.id] ?? 0 : undefined} />)}
     </ul>
   </nav>
 );
@@ -155,6 +164,9 @@ export const DGPM406Guide: React.FC = () => {
   const [ativo, setAtivo] = useState<string>(INICIAL);
   const [indiceAberto, setIndiceAberto] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [termo, setTermo] = useState('');
+  const [buscaMobile, setBuscaMobile] = useState(false);
+  const conteudo = useRef<HTMLDivElement>(null);
   const { open: openPdf, busy: baixandoPdf, modalElement } = useStoragePdf();
 
   // URL do PDF integral (Storage, exige login) obtida de antemão: o botão fixo é um
@@ -166,6 +178,12 @@ export const DGPM406Guide: React.FC = () => {
   }, []);
 
   const item = itemDe(ativo);
+  // Reaplica os destaques quando o documento exibido muda.
+  const busca = useBuscaNoTexto(conteudo, termo, item.id);
+  const contagens = useMemo(() => {
+    if (termo.trim().length < 2) return null;
+    return Object.fromEntries(ORDEM.map(i => [i.id, i.markdown ? acharOcorrencias(i.markdown, termo).length : 0])) as Record<string, number>;
+  }, [termo]);
   const posicao = ORDEM.indexOf(item);
   const anterior = posicao > 0 ? ORDEM[posicao - 1] : null;
   const proximo = posicao < ORDEM.length - 1 ? ORDEM[posicao + 1] : null;
@@ -185,6 +203,22 @@ export const DGPM406Guide: React.FC = () => {
 
         {/* Celular: barra fixa com o item atual, anterior/próximo e o índice em drawer. */}
         <div className="md:hidden sticky top-0 z-sticky -mx-4 px-3 py-2 bg-white border-b border-line">
+          {buscaMobile ? (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <div className="flex-1 min-w-0">
+                  <CampoBusca valor={termo} onChange={setTermo} placeholder="Buscar no texto" autoFocus onEnter={s => (s ? busca.anterior() : busca.proxima())} />
+                </div>
+                <ContadorBusca {...busca} termo={termo} />
+                <IconButton icon="close" label="Fechar a busca" variant="secondary" className="!w-9 !h-9 border-line" onClick={() => { setBuscaMobile(false); setTermo(''); }} />
+              </div>
+              {contagens && (
+                <button type="button" onClick={() => setIndiceAberto(true)} className="text-xs text-navy font-bold underline self-start min-h-9">
+                  Ver ocorrências por capítulo/anexo ({Object.values(contagens).reduce((a: number, b: number) => a + b, 0)})
+                </button>
+              )}
+            </div>
+          ) : (
           <div className="flex items-center gap-1.5">
             <button
               type="button"
@@ -198,17 +232,23 @@ export const DGPM406Guide: React.FC = () => {
             </button>
             <IconButton icon="chevron_left" label={anterior ? `Anterior: ${anterior.rotulo}` : 'Anterior'} variant="secondary" className="!w-10 !h-10 !rounded-full border-line" disabled={!anterior} onClick={() => anterior && irPara(anterior.id)} />
             <IconButton icon="chevron_right" label={proximo ? `Próximo: ${proximo.rotulo}` : 'Próximo'} variant="secondary" className="!w-10 !h-10 !rounded-full border-line" disabled={!proximo} onClick={() => proximo && irPara(proximo.id)} />
+            <IconButton icon="search" label="Buscar no texto" variant="secondary" className="!w-10 !h-10 !rounded-full border-line" onClick={() => setBuscaMobile(true)} />
           </div>
+          )}
         </div>
 
         <div className="md:grid md:grid-cols-12 md:gap-6 md:items-start">
           {/* Desktop: índice fixo, com rolagem própria. */}
           <aside className="hidden md:block md:col-span-3 sticky top-4 max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain bg-white border border-line rounded-xl p-3">
-            <ListaIndice ativo={item.id} onIr={irPara} />
+            <div className="flex flex-col gap-1.5 mb-2">
+              <CampoBusca valor={termo} onChange={setTermo} placeholder="Buscar no texto" onEnter={s => (s ? busca.anterior() : busca.proxima())} />
+              <ContadorBusca {...busca} termo={termo} />
+            </div>
+            <ListaIndice ativo={item.id} onIr={irPara} contagens={contagens} />
           </aside>
 
           {/* Texto: 9 colunas, ~68 caracteres. No celular, sem card (16 px de margem). */}
-          <div className="md:col-span-9 -mx-4 px-4 py-5 bg-white md:mx-0 md:px-9 md:py-7 md:border md:border-line md:rounded-xl min-w-0">
+          <div ref={conteudo} className="md:col-span-9 -mx-4 px-4 py-5 bg-white md:mx-0 md:px-9 md:py-7 md:border md:border-line md:rounded-xl min-w-0">
             <div className="max-w-[68ch]">
               <p className="text-sm font-semibold text-ink-3 mb-2">
                 {item.codigoAnexo ? `Anexos · ${posicao - ITENS_CAPITULOS.length + 1} de ${ITENS_ANEXOS.length}` : `Capítulos · ${posicao + 1} de ${ITENS_CAPITULOS.length}`}
@@ -233,7 +273,7 @@ export const DGPM406Guide: React.FC = () => {
 
       {indiceAberto && (
         <Drawer title="Índice" icon="toc" onClose={() => setIndiceAberto(false)}>
-          <ListaIndice ativo={item.id} onIr={irPara} />
+          <ListaIndice ativo={item.id} onIr={irPara} contagens={contagens} />
         </Drawer>
       )}
       {modalElement}
