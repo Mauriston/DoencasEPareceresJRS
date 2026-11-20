@@ -1,7 +1,7 @@
 // Ficheiro: components/LegislacaoDocumento.tsx
 // Texto de uma norma da página Legislação (?doc=<id>), no padrão da DGPM-406 e da
 // Portaria (auditoria v3, §10): índice fixo em 3/12 colunas no desktop (Drawer no
-// celular) + texto em 9 colunas, ~68 caracteres. O PDF original abre numa nova aba
+// celular) + texto em 9 colunas, na largura total do card. O PDF original abre numa nova aba
 // pelo botão "Download" do cabeçalho (<a target="_blank" rel="noopener">).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
@@ -60,16 +60,29 @@ export const LegislacaoDocumento: React.FC<LegislacaoDocumentoProps> = ({ law, m
   }, [law.pdfPath]);
 
   // Os ids dos títulos (mesma ordem de titulosDoMarkdown) entram no HTML renderizado.
-  useEffect(() => {
+  // Reaplicados antes de cada rolagem: uma nova renderização pode recriar o HTML do texto sem eles.
+  const aplicarIds = React.useCallback(() => {
     const els = texto.current?.querySelectorAll<HTMLElement>('h2, h3, h4, h5, h6');
     els?.forEach((el, i) => { if (titulos[i]) el.id = titulos[i].id; });
-  }, [markdown, titulos]);
+  }, [titulos]);
+  useEffect(aplicarIds, [markdown, aplicarIds]);
 
+  // A rolagem espera o Drawer (celular) fechar: ao fechar, ele devolve o foco ao botão "Índice" e a página
+  // voltaria ao topo. Por isso o destino fica pendente e a rolagem roda no efeito, depois do fechamento.
+  const [destino, setDestino] = useState<{ id: string } | null>(null);
   const irPara = (id: string) => {
     setIndiceAberto(false);
     setAtivo(id);
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setDestino({ id });
   };
+  useEffect(() => {
+    if (!destino || indiceAberto) return;
+    const quadro = requestAnimationFrame(() => {
+      aplicarIds();
+      document.getElementById(destino.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return () => cancelAnimationFrame(quadro);
+  }, [destino, indiceAberto, aplicarIds]);
 
   const download = pdfUrl ? (
     <ButtonLink href={pdfUrl} target="_blank" rel="noopener noreferrer" variant="primary" icon="download">
@@ -121,8 +134,8 @@ export const LegislacaoDocumento: React.FC<LegislacaoDocumentoProps> = ({ law, m
             ref={texto}
             className={`${indice.length > 0 ? 'md:col-span-9' : 'md:col-span-12'} -mx-4 px-4 py-5 bg-white md:mx-0 md:px-9 md:py-7 md:border md:border-line md:rounded-xl min-w-0`}
           >
-            <div className="max-w-[68ch] [&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20 [&_h4]:scroll-mt-20">
-              <MarkdownContent markdown={markdown} />
+            <div className="[&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20 [&_h4]:scroll-mt-20">
+              <MarkdownContent markdown={markdown} className="!max-w-none" />
             </div>
           </div>
         </div>

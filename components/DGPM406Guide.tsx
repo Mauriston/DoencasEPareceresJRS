@@ -1,7 +1,7 @@
 // Ficheiro: components/DGPM406Guide.tsx
 // Leitor da DGPM-406 (9ª Rev) com o mesmo índice da Portaria (components/PortariaGuide.tsx,
 // auditoria v3 §10): desktop com índice em 3/12 colunas, fixo e com rolagem própria, texto
-// em 9 colunas (~68 caracteres); celular com barra fixa (item atual, anterior/próximo) e o
+// em 9 colunas (largura total do card); celular com barra fixa (item atual, anterior/próximo) e o
 // índice em drawer. Diferença: aqui o índice TROCA o documento exibido — um capítulo ou
 // anexo por vez. Ao abrir a página, sempre o Capítulo 1 (nenhuma seleção é restaurada).
 // Busca no texto (como na Portaria): destaca no documento aberto e mostra, no índice,
@@ -247,14 +247,14 @@ export const DGPM406Guide: React.FC = () => {
             <ListaIndice ativo={item.id} onIr={irPara} contagens={contagens} />
           </aside>
 
-          {/* Texto: 9 colunas, ~68 caracteres. No celular, sem card (16 px de margem). */}
+          {/* Texto: 9 colunas, largura total do card. No celular, sem card (16 px de margem). */}
           <div ref={conteudo} className="md:col-span-9 -mx-4 px-4 py-5 bg-white md:mx-0 md:px-9 md:py-7 md:border md:border-line md:rounded-xl min-w-0">
-            <div className="max-w-[68ch]">
+            <div>
               <p className="text-sm font-semibold text-ink-3 mb-2">
                 {item.codigoAnexo ? `Anexos · ${posicao - ITENS_CAPITULOS.length + 1} de ${ITENS_ANEXOS.length}` : `Capítulos · ${posicao + 1} de ${ITENS_CAPITULOS.length}`}
               </p>
               {item.markdown ? (
-                <MarkdownContent key={item.id} markdown={item.markdown} />
+                <MarkdownContent key={item.id} markdown={item.markdown} className="!max-w-none" />
               ) : (
                 <div className="flex flex-col items-start gap-3">
                   <h2 className="text-h1 font-extrabold text-navy leading-tight">{item.rotulo} — {item.titulo}</h2>
