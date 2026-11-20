@@ -79,10 +79,62 @@ export interface DadosMensagemResultado {
   vinculo?: string;
   /** Grupo da finalidade (finalidadesIS.json): "Benefícios", "Justiça e Disciplina"… */
   grupoFinalidade?: string;
+  /** Nº da IS (usado na minuta de incapacidade definitiva para o SAM). */
+  is?: number | string;
 }
 
 /** Minuta em campos, como são colados no sistema de mensagens. `de` só existe na minuta de cancelamento. */
 export interface MinutaCampos { de?: string; para: string; info?: string; assunto: string; texto: string }
+
+/** Remetente da minuta de incapacidade definitiva para o SAM. */
+export const REMETENTE_INCAPACIDADE_DEFINITIVA = 'HOSCRF';
+export const ASSUNTO_INCAPACIDADE_DEFINITIVA = 'INCAPACIDADE DEFINITIVA PARA O SAM';
+
+/** Finalidades da minuta de incapacidade definitiva: VDF (todas as variantes) e Término de Incapacidade. */
+export const ehVerificacaoOuTermino = (finalidade: string, _grupoFinalidade?: string): boolean =>
+  /^(verificacao de deficiencia funcional|termino de incapacidade)\b/.test(normalizarTexto(finalidade));
+
+/** Laudo com "Incapaz definitivamente para o SAM…". */
+export const laudoIncapazDefinitivoSAM = (laudo: string | undefined): boolean =>
+  /\bincapaz definitivamente para o sam\b/.test(normalizarTexto(laudo || ''));
+
+/** VDF ou Término de Incapacidade com laudo de incapacidade definitiva para o SAM: usa a minuta própria (HOSNAT/TERDIS). */
+export const usaMinutaIncapacidadeDefinitiva = (d: { finalidade: string; grupoFinalidade?: string; laudo?: string }): boolean =>
+  ehVerificacaoOuTermino(d.finalidade, d.grupoFinalidade) && laudoIncapazDefinitivoSAM(d.laudo);
+
+/**
+ * Minuta de incapacidade definitiva para o SAM (Verificações e Términos): DE HOSCRF; PARA HOSNAT e a OM do
+ * inspecionado em ordem alfabética; INFO TERDIS; ALFA (laudo + TIS), BRAVO (HOSNAT: revisão ex officio pela JSD/COM3ºDN,
+ * alínea "n" do item 6.1.3 da DGPM-406) e CHARLIE (OM: alínea "p"). Não usa o código DS-1A.
+ */
+export const camposIncapacidadeDefinitiva = (d: DadosMensagemResultado): MinutaCampos => {
+  const omIns = omMensagem(d.om);
+  const para = omIns
+    ? [...new Set(['HOSNAT', omIns])].sort((a, b) => a.localeCompare(b, 'pt-BR')).join(', ')
+    : `HOSNAT, ${PRE('OM do inspecionado')}`;
+  const om = omIns || PRE('OM');
+  const finalidade = d.finalidade.trim().toUpperCase() || PRE('finalidade');
+  const inspecionado = inspecionadoMensagem(d.inspecionado) || PRE('inspecionado');
+  const atinente = d.feminino ? 'atinente à' : 'atinente ao';
+  const data = dataMensagem(d.dataLaudo) || PRE('data do laudo');
+  const laudo = laudoMensagem(d.laudo) || PRE('laudo');
+  const tis = (d.tis || '').trim() || PRE('nº do TIS');
+  return {
+    de: REMETENTE_INCAPACIDADE_DEFINITIVA,
+    para,
+    info: 'TERDIS',
+    assunto: ASSUNTO_INCAPACIDADE_DEFINITIVA,
+    texto: [
+      `REF IS nº ${d.is ?? PRE('nº da IS')} FIM ${finalidade} ${atinente} ${inspecionado} (${om}), PTC:`,
+      '',
+      `ALFA - a JRS/HNRe, em ${data}, exarou o seguinte laudo "${laudo}" ACD TIS nº ${tis};`,
+      '',
+      'BRAVO - HOSNAT: o REF TIS foi ENC para Revisão Ex-offício pela JSD/COM3ºDN via SINAIS nos termos da alínea "n" do item 6.1.3 da DGPM-406 (9ª Revisão); e',
+      '',
+      `CHARLIE - ${om}: SOL OBS o disposto na alínea "p" do mesmo item da antecitada norma BT`,
+    ].join('\n'),
+  };
+};
 
 /**
  * Minuta de resultado no modelo "TEMPLATE — IS ÚNICA" do PROMPT_MINUTA_MENSAGEM, em campos:
@@ -90,6 +142,7 @@ export interface MinutaCampos { de?: string; para: string; info?: string; assunt
  *   texto (ALFA + linha em branco + BRAVO).
  */
 export const camposMensagemResultado = (d: DadosMensagemResultado): MinutaCampos => {
+  if (usaMinutaIncapacidadeDefinitiva(d)) return camposIncapacidadeDefinitiva(d);
   const laudo = laudoMensagem(d.laudo);
   const dest = destinatariosDaMensagem(d.finalidade, laudo, { vinculo: d.vinculo, inspecionado: d.inspecionado, grupoFinalidade: d.grupoFinalidade });
   const para = dest?.para || PRE(dicaPara(d.finalidade, d.vinculo) || 'PARA');
@@ -119,6 +172,9 @@ export const camposMensagemResultado = (d: DadosMensagemResultado): MinutaCampos
  * Cancelamento (com DE): cabeçalho compacto DE/PARA/ASSUNTO e uma linha em branco antes do texto.
  */
 export const juntarMinuta = (c: MinutaCampos): string => {
+  if (c.de === REMETENTE_INCAPACIDADE_DEFINITIVA) {
+    return [`DE: ${c.de}`, '', `PARA: ${c.para}`, '', ...(c.info ? [`INFO: ${c.info}`, ''] : []), `ASSUNTO: ${c.assunto}`, '', 'TEXTO:', '', c.texto].join('\n');
+  }
   if (c.de !== undefined) {
     return [`DE: ${c.de}`, `PARA: ${c.para}`, ...(c.info !== undefined ? [`INFO: ${c.info}`] : []), `ASSUNTO: ${c.assunto}`, '', c.texto].join('\n');
   }
@@ -136,6 +192,7 @@ export const separarMinuta = (texto: string): MinutaCampos => {
   for (; i < linhas.length; i++) {
     const l = linhas[i];
     if (!l.trim()) continue;
+    if (/^TEXTO:\s*$/.test(l)) { i++; break; }
     const m = /^(DE|PARA|INFO|ASSUNTO):\s?(.*)$/.exec(l);
     if (!m) break;
     const k = ({ DE: 'de', PARA: 'para', INFO: 'info', ASSUNTO: 'assunto' } as const)[m[1] as 'DE' | 'PARA' | 'INFO' | 'ASSUNTO'];

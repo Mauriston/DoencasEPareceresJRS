@@ -5,6 +5,7 @@
 //  - PARA/INFO "[preencher…]" (a tabela do Anexo M não decidiu sozinha) pedem a sugestão da IA (services/destinatariosIA.ts);
 //  - a mensagem registrada (coleção mensagensIS; services/mensagensIS.ts) guarda os campos em texto, só leitura.
 // Testadas em utils/__tests__/mensagensIS.test.ts.
+import { REMETENTE_INCAPACIDADE_DEFINITIVA, usaMinutaIncapacidadeDefinitiva } from './minutaMensagemResultado';
 import { camposResultadoDaIS, type ISParaMinuta, type MinutaCampos } from './minutasIS';
 
 /** Remetente padrão das mensagens de resultado da JRS. */
@@ -22,7 +23,8 @@ export const normalizarCampos = (c: MinutaCampos): CamposMsgIS => ({
 });
 
 /** PARA ou INFO ainda com "[preencher…]": vale pedir a sugestão da IA. */
-export const faltaDestinatario = (c: Pick<CamposMsgIS, 'para' | 'info'>): boolean => /\[preencher\b/i.test(`${c.para} ${c.info}`);
+export const faltaDestinatario = (c: Pick<CamposMsgIS, 'para' | 'info'> & { de?: string }): boolean =>
+  c.de !== REMETENTE_INCAPACIDADE_DEFINITIVA && /\[preencher\b/i.test(`${c.para} ${c.info ?? ''}`);
 
 /** Linhas "rótulo: valor" da minuta em texto corrido (modal só leitura); INFO vazio sai. */
 export const linhasMinuta = (c: CamposMsgIS): { rotulo: string; valor: string }[] => [
@@ -34,4 +36,10 @@ export const linhasMinuta = (c: CamposMsgIS): { rotulo: string; valor: string }[
 ];
 
 /** "Minutar MSG": só com a IS concluída (TIS assinado). */
-export const podeMinutarMsg = (is: { status?: string }): boolean => is.status === 'tis_assinado';
+/** Exceção: VDF ou Término de Incapacidade com "Incapaz definitivamente para o SAM" — basta o laudo e o Nº do TIS (sem DS-1A). */
+export const podeMinutarMsg = (is: { status?: string; finalidade?: string; grupoFinalidade?: string; laudo?: string; tis?: string }): boolean =>
+  is.status === 'tis_assinado' || (is.status !== 'cancelada' && minutaIncapacidadeDisponivel(is));
+
+/** Minuta de incapacidade definitiva para o SAM disponível: VDF ou Término de Incapacidade + laudo "Incapaz definitivamente para o SAM" + Nº do TIS. */
+export const minutaIncapacidadeDisponivel = (is: { finalidade?: string; grupoFinalidade?: string; laudo?: string; tis?: string }): boolean =>
+  !!is.tis?.trim() && usaMinutaIncapacidadeDefinitiva({ finalidade: is.finalidade || '', grupoFinalidade: is.grupoFinalidade, laudo: is.laudo });

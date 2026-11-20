@@ -159,3 +159,27 @@ describe('minuta em campos', () => {
     expect(separarMinuta('Texto livre\n\nsegunda linha')).toEqual({ para: '', assunto: '', texto: 'Texto livre\n\nsegunda linha' });
   });
 });
+
+describe('minuta de incapacidade definitiva para o SAM (Verificações e Términos)', () => {
+  const IS_INCAPAZ = { ...IS_FICTICIA, laudo: 'Incapaz definitivamente para o SAM. Não é inválido.', ds1a: '', feminino: false };
+  it('substitui a minuta de resultado, sem DS-1A, PARA em ordem alfabética', () => {
+    const t = minutaResultadoDaIS(IS_INCAPAZ, { om: 'CPesFN' });
+    expect(t).toBe([
+      'DE: HOSCRF', '', 'PARA: CPesFN, HOSNAT', '', 'INFO: TERDIS', '', 'ASSUNTO: INCAPACIDADE DEFINITIVA PARA O SAM', '', 'TEXTO:', '',
+      'REF IS nº 4321 FIM TÉRMINO DE INCAPACIDADE atinente ao 3SG-EF 12.3456.78 FULANO DE TAL (CPesFN), PTC:', '',
+      'ALFA - a JRS/HNRe, em 20OUT2026, exarou o seguinte laudo "Incapaz definitivamente para o SAM. Não é inválido." ACD TIS nº 026.001.15;', '',
+      'BRAVO - HOSNAT: o REF TIS foi ENC para Revisão Ex-offício pela JSD/COM3ºDN via SINAIS nos termos da alínea "n" do item 6.1.3 da DGPM-406 (9ª Revisão); e', '',
+      'CHARLIE - CPesFN: SOL OBS o disposto na alínea "p" do mesmo item da antecitada norma BT',
+    ].join('\n'));
+    expect(separarMinuta(t).de).toBe('HOSCRF');
+    expect(separarMinuta(t).texto.startsWith('REF IS')).toBe(true);
+  });
+  it('feminino: "atinente à"', () => {
+    expect(camposResultadoDaIS(IS_INCAPAZ, { om: 'HNRE', feminino: true }).texto).toContain('atinente à 3SG');
+  });
+  it('VDF também usa o modelo; Término de Restrições e outras finalidades não', () => {
+    expect(camposResultadoDaIS({ ...IS_INCAPAZ, finalidade: 'Verificação de Deficiência Funcional - SMI' }).de).toBe('HOSCRF');
+    expect(camposResultadoDaIS({ ...IS_INCAPAZ, finalidade: 'Término de Restrições' }).de).toBeUndefined();
+    expect(camposResultadoDaIS({ ...IS_INCAPAZ, finalidade: 'Controle Anual de Mergulho', grupoFinalidade: 'Benefícios' }).de).toBeUndefined();
+  });
+});

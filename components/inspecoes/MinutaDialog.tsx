@@ -5,6 +5,7 @@
 // Aceita a minuta em campos (`campos`) ou como texto único (`textoInicial`, separado pelos cabeçalhos).
 // Com `sugerirDestinatarios`, quando PARA/INFO ficaram "[preencher]" (a tabela do Anexo M não decidiu sozinha),
 // oferece a sugestão por IA: a IA escolhe a linha da tabela e PARA/INFO vêm da própria tabela.
+import { faltaDestinatario } from '../../utils/mensagensIS';
 import React, { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
@@ -45,7 +46,7 @@ export const MinutaDialog: React.FC<Props> = ({ titulo, campos: camposIniciais, 
   const set = (k: keyof MinutaCampos) => (v: string) => setCampos(c => ({ ...c, [k]: v }));
   const [sugerindo, setSugerindo] = useState(false);
   const [origemSugestao, setOrigemSugestao] = useState('');
-  const faltaDestino = /\[preencher\b/.test(`${campos.para} ${campos.info ?? ''}`);
+  const faltaDestino = faltaDestinatario({ de: campos.de, para: campos.para, info: campos.info ?? '' });
   const sugerir = async () => {
     if (!sugerirDestinatarios) return;
     setSugerindo(true); setErro('');
