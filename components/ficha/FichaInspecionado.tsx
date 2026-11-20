@@ -598,12 +598,12 @@ export const FichaInspecionado: React.FC = () => {
               </div>
               <div className="sm:hidden min-w-0">
                 <p className="text-base font-bold text-navy break-words">{militar.nome}</p>
-                <p className="text-sm text-ink-2">{militar.pgq}</p>
+                <p className="text-sm text-ink">{militar.pgq}</p>
               </div>
             </div>
             <div className="min-w-0 flex-1">
               <p className="hidden sm:block text-base font-bold text-navy break-words">{militar.nome}</p>
-              <p className="hidden sm:block text-sm text-ink-2 mb-3">{militar.pgq}</p>
+              <p className="hidden sm:block text-sm text-ink mb-3">{militar.pgq}</p>
               <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
                 <Campo rotulo="NIP" valor={formatNip(militar.nip || nip)} mono />
                 <Campo rotulo="OM" valor={militar.om} />
