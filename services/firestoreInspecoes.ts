@@ -316,7 +316,7 @@ export const agendarInspecao = async (atual: InspecaoRecord, novo: Agendamento):
 export type DadosImportacaoIS = Pick<InspecaoDoc,
   'dataAbertura' | 'dataEntrevista' | 'finalidade' | 'grupoFinalidade' | 'amp' | 'peritoUid' | 'peritoNome' | 'peritoGmail'
   | 'inspecionadoId' | 'inspecionado' | 'laudo' | 'dataLaudo' | 'restricoes' | 'tis' | 'ds1a' | 'status' | 'criadoPor'
-  | 'cid' | 'cidCodigo' | 'dataConclusao'>;
+  | 'cid' | 'cidCodigo' | 'dataConclusao' | 'finalidades' | 'laudosFinalidades'>;
 
 /**
  * Cria a IS (`atual` nulo) ou atualiza a já cadastrada com o que veio das fotos. Na atualização, campo

@@ -19,7 +19,9 @@ import { AvatarRadioGroup } from '../ui/AvatarRadioGroup';
 import { MultiSelectCombobox } from '../ui/MultiSelectCombobox';
 import { MilitarCadastroForm } from '../militares/MilitarCadastroForm';
 import { SeletorHorario, estadoDoSlot } from './SeletorHorario';
-import { CampoFinalidadeIS, opcaoAvatarDoPerito, useFinalidadesIS, type FinalidadeEscolhida } from './InspecaoForm';
+import { alinharLaudos, finalidadesDaIS, juntarFinalidades } from '../../utils/finalidadesMultiplas';
+import { partesDaFinalidade } from '../../utils/finalidadesCompostas';
+import { CampoFinalidadeIS, resumoFinalidades, opcaoAvatarDoPerito, useFinalidadesIS, type FinalidadeEscolhida } from './InspecaoForm';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { ScannerDocumento } from '../scanner/ScannerDocumento';
 import { dataUrlParaArquivo } from '../../utils/imagensParaPdf';
@@ -61,7 +63,8 @@ interface Props {
 interface Foto { id: string; arquivo: File; url: string }
 
 interface Campos {
-  finalidade: string; dataAbertura: string; data: string; hora: string; peritoUid: string;
+  /** 1ª finalidade (grupo, AMP); `finalidades` traz todas (Benefícios: mais de uma). */
+  finalidade: string; finalidades: string[]; dataAbertura: string; data: string; hora: string; peritoUid: string;
   laudo: string; dataLaudo: string; restricoes: string; tis: string; ds1a: string;
 }
 
@@ -178,7 +181,7 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
         const item: Item = {
           numero: g.numero, proposta, erro, fotos: fotosDoItem, dados: g.dados?.leitura, fotoDados: g.dados?.origem,
           militarId: '', militarNovo: false, aberto: false, gravada: false, erroGravar: '',
-          campos: { finalidade: '', dataAbertura: '', data: '', hora: '', peritoUid: '', laudo: '', dataLaudo: '', restricoes: '', tis: '', ds1a: '' },
+          campos: { finalidade: '', finalidades: [], dataAbertura: '', data: '', hora: '', peritoUid: '', laudo: '', dataLaudo: '', restricoes: '', tis: '', ds1a: '' },
         };
         if (proposta) {
           const nip = proposta.nip || atual?.inspecionadoId || '';
@@ -223,7 +226,8 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
     const doAmp = amp ? peritosDoAmp(peritos, amp) : [];
     const peritoUid = (atual?.peritoUid && doAmp.some(x => x.uid === atual.peritoUid) ? atual.peritoUid : '') || (doAmp.some(x => x.uid === usuario.uid) ? usuario.uid : '');
     return {
-      finalidade: p.finalidade || atual?.finalidade || '', dataAbertura: p.dataAbertura || atual?.dataAbertura || '',
+      ...(() => { const l = p.finalidades.length ? p.finalidades : atual ? finalidadesDaIS(atual) : []; return { finalidade: l[0] ?? '', finalidades: l }; })(),
+      dataAbertura: p.dataAbertura || atual?.dataAbertura || '',
       data, hora, peritoUid,
       laudo: p.laudo, dataLaudo: p.dataLaudo || (p.laudo ? atual?.dataLaudo || '' : ''), restricoes: p.restricoes, tis: p.tis, ds1a: p.ds1a,
     };
@@ -236,11 +240,12 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
     const e: Erros = {};
     if (it.erro || !it.proposta) return e;
     const c = it.campos;
-    const achada = achar(c.finalidade);
+    const { principal: achada, erroAmp } = resumoFinalidades(c.finalidades, achar);
     const amp = ampDe(it, achada);
     const perito = peritos.find(p => p.uid === c.peritoUid);
     if (!militares.some(m => m.id === it.militarId)) e.militar = it.militarId ? 'Carregando o inspecionado…' : 'Cadastre o inspecionado.';
     if (!achada) e.finalidade = 'Selecione a finalidade.';
+    else if (erroAmp) e.finalidade = erroAmp;
     if (!c.dataAbertura) e.dataAbertura = 'Informe a data de abertura.';
     if (c.data && !c.hora) e.hora = 'Escolha o horário da entrevista.';
     if (c.data && (!perito || (amp && !peritosDoAmp(peritos, amp).some(p => p.uid === perito.uid)))) e.perito = 'Escolha o perito.';
@@ -289,7 +294,13 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
       try {
         const salva = await importarInspecao(it.numero, {
           dataAbertura: c.dataAbertura, dataEntrevista: c.data && c.hora ? `${c.data}T${c.hora}` : '',
-          finalidade: achada.finalidade, grupoFinalidade: achada.grupo, amp,
+          finalidade: juntarFinalidades(c.finalidades), grupoFinalidade: achada.grupo, amp,
+          ...(c.finalidades.length > 1 ? { finalidades: c.finalidades } : {}),
+          ...(() => {
+            // Um laudo por finalidade (parte), com o que a tabela "Laudos" da conclusão trouxe.
+            const partes = c.finalidades.flatMap(partesDaFinalidade);
+            return conclusao && partes.length > 1 ? { laudosFinalidades: alinharLaudos(partes, it.proposta!.laudosFinalidades) } : {};
+          })(),
           peritoUid: perito?.uid ?? '', peritoNome: perito?.usuario ?? '', peritoGmail: perito?.gmail ?? '',
           inspecionadoId: militar.id, inspecionado: militar.inspecionado,
           laudo: conclusao ? c.laudo.trim() : '', dataLaudo: conclusao ? c.dataLaudo || hojeISO() : '',
@@ -487,7 +498,7 @@ const CartaoIS: React.FC<CartaoProps> = ({ item, atual, militar, peritos, config
           <span className="block text-sm font-bold text-navy break-words">
             {militar ? militar.inspecionado : item.militarId ? 'Carregando…' : <span className="text-wine">Inspecionado não cadastrado</span>}
           </span>
-          <span className="block text-xs text-ink-3 truncate">{achada?.finalidade || p.finalidadeLida || 'Finalidade não identificada'}</span>
+          <span className="block text-xs text-ink-3 truncate">{(c.finalidades.length ? juntarFinalidades(c.finalidades) : '') || p.finalidadeLida || 'Finalidade não identificada'}</span>
         </span>
         {!item.gravada && <span className="material-symbols-outlined text-[20px] text-ink-4 shrink-0" aria-hidden="true">{item.aberto ? 'expand_less' : 'expand_more'}</span>}
       </button>
@@ -509,7 +520,7 @@ const CartaoIS: React.FC<CartaoProps> = ({ item, atual, militar, peritos, config
             </ul>
           )}
 
-          <CampoFinalidadeIS required value={c.finalidade ? [c.finalidade] : []} onChange={v => onCampos({ finalidade: v.filter(f => f !== c.finalidade)[0] ?? '' }, 'finalidade')} gruposMenu={gruposMenu} erro={erros.finalidade} />
+          <CampoFinalidadeIS required value={c.finalidades} onChange={v => onCampos({ finalidades: v, finalidade: v[0] ?? '' }, 'finalidade')} gruposMenu={gruposMenu} erro={erros.finalidade} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Data de abertura" required error={erros.dataAbertura}>
