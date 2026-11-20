@@ -6,7 +6,9 @@ import React, { useRef, useState } from 'react';
 import { Dialog } from '../../ui/Dialog';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
-import { gravarExameIS, lerExameComIA, MAX_PDF_EXAME_MB } from '../../../services/examesIS';
+import { gravarExameIS, lerExameComIA } from '../../../services/examesIS';
+import { BotaoDigitalizar } from '../../scanner/BotaoDigitalizar';
+import { LIMITE_PDF_MB } from '../../../config/limitePdf';
 import { ROTULO_CLASSE, ROTULO_TIPO } from '../../../utils/examesIS';
 
 type Etapa = 'na_fila' | 'lendo' | 'enviando' | 'pronto' | 'erro';
@@ -77,9 +79,10 @@ export const EnviarExamesISDialog: React.FC<Props> = ({ isId, usuario, onClose }
         >
           <span className="material-symbols-outlined text-[32px]" aria-hidden="true">upload_file</span>
           <span className="text-sm font-semibold">Selecionar PDFs</span>
-          <span className="text-xs opacity-60">Um ou mais · até {MAX_PDF_EXAME_MB} MB cada</span>
+          <span className="text-xs opacity-60">Um ou mais · até {LIMITE_PDF_MB} MB cada</span>
         </button>
         <input ref={input} type="file" accept="application/pdf,.pdf" multiple className="hidden" onChange={e => { adicionar(Array.from(e.target.files || [])); e.target.value = ''; }} />
+        <BotaoDigitalizar fullWidth nomeBase="exames" titulo="Digitalizar exames" onPdf={f => adicionar([f])} />
 
         {envios.length > 0 && (
           <ul className="divide-y divide-line rounded-lg border border-line" aria-live="polite">

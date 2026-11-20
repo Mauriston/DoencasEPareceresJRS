@@ -2,6 +2,7 @@
 // Itens da página Legislação (coleção "legislacao", migrada da aba NORMAS da
 // planilha). Id do documento = slug da norma; o PDF fica no Storage em
 // `pdfPath` (legislacao/{id}.pdf). Leitura: usuário autenticado; escrita: Admin.
+import { exigirLimitePdf } from '../config/limitePdf';
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes } from 'firebase/storage';
 import { app } from './firebaseAuth';
@@ -46,6 +47,7 @@ export interface NovaLegislacao {
 
 /** Envia o PDF ao Storage (legislacao/{id}.pdf) e cria o documento no fim da lista. */
 export const criarLegislacao = async (dados: NovaLegislacao, arquivo: File, ordem: number): Promise<string> => {
+  exigirLimitePdf(arquivo.size, arquivo.name);
   const id = slugLegislacao(dados.legislacao);
   if (!id) throw new Error('Identificação inválida.');
   if ((await getDoc(doc(db, 'legislacao', id))).exists()) throw new Error('Já existe uma legislação com esta identificação.');

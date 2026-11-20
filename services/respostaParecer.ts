@@ -14,11 +14,11 @@ import { registrarEventoInspecionado } from './eventosInspecionado';
 import { gerarComGemini, lerJsonIA, arquivoParaBase64IA } from './geminiAI';
 import { marcarConcluido, type ParecerRecord } from './firestorePareceres';
 import { caminhoRespostaParecer } from '../utils/pareceres';
+import { exigirLimitePdf } from '../config/limitePdf';
 
 const db = getFirestore(app);
 
 /** Maior PDF aceito (a IA recebe o arquivo inteiro; storage.rules limita pareceres/ a 10 MB). */
-export const MAX_PDF_RESPOSTA_MB = 10;
 
 /** É um PDF (pelo tipo ou, sem tipo — ex.: colado —, pela extensão)? */
 export const ehPdf = (f: Pick<File, 'type' | 'name'>): boolean => f.type === 'application/pdf' || (!f.type && /\.pdf$/i.test(f.name));
@@ -41,7 +41,7 @@ export interface LeituraResposta { transcricao: string; emissor: string; data: s
 /** A IA lê o PDF e devolve a transcrição integral da resposta. */
 export const lerRespostaComIA = async (arquivo: File): Promise<LeituraResposta> => {
   if (!ehPdf(arquivo)) throw new Error('Envie a resposta em PDF.');
-  if (arquivo.size > MAX_PDF_RESPOSTA_MB * 1024 * 1024) throw new Error(`PDF acima de ${MAX_PDF_RESPOSTA_MB} MB.`);
+  exigirLimitePdf(arquivo.size, 'O PDF');
   const r = await gerarComGemini({
     contexto: 'resposta de parecer (PDF)',
     instrucoes: INSTRUCOES,

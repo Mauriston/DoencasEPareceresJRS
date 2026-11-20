@@ -416,7 +416,6 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
       {digitalizando && (
         <ScannerDocumento
           titulo="Digitalizar telas do SINAIS"
-          maxPaginas={20}
           filtro={false}
           onCancelar={() => setDigitalizando(false)}
           onConcluir={paginas => {

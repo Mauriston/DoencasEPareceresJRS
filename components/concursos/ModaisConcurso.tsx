@@ -8,6 +8,8 @@ import { parseChaveData, type CabecalhoMensagem } from '../../utils/concursosUti
 import { interpretarMensagem } from './compartilhado';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
+import { BotaoDigitalizar } from '../scanner/BotaoDigitalizar';
+import { LIMITE_PDF_MB, erroTamanhoPdf } from '../../config/limitePdf';
 import { controlClass } from '../ui/Field';
 
 // =========================================================================
@@ -72,6 +74,12 @@ export const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArqui
   const pastaConcurso: PastaConcurso = { nome: concursoNome, ano: concursoAno, concursoId, storage: !!concursoStorage };
   const [step, setStep] = useState<'select' | 'processando' | 'revisao' | 'concluido'>('select');
   const [file, setFile] = useState<File | null>(null);
+  /** Arquivo escolhido ou digitalizado: só entra se couber no limite único de 10 MB (config/limitePdf.ts). */
+  const escolherArquivo = (f: File | null) => {
+    const e = f ? erroTamanhoPdf(f.size, f.name) : '';
+    setErro(e || null);
+    setFile(e ? null : f);
+  };
   const [erro, setErro] = useState<string | null>(null);
   const [cabecalho, setCabecalho] = useState<CabecalhoMensagem | null>(null);
   const [processando, setProcessando] = useState(false);
@@ -137,9 +145,10 @@ export const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArqui
               <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-ink-5 rounded-xl p-6 cursor-pointer hover:border-navy transition-colors">
                 <span className="material-symbols-outlined text-[32px] text-ink-3">picture_as_pdf</span>
                 <span className="text-sm font-bold text-ink">{file ? file.name : 'Clique para selecionar o PDF'}</span>
-                <span className="text-xs text-ink-3">Máx. 15 MB</span>
-                <input type="file" accept="application/pdf,image/*" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
+                <span className="text-xs text-ink-3">Máx. {LIMITE_PDF_MB} MB</span>
+                <input type="file" accept="application/pdf,image/*" className="hidden" onChange={e => { escolherArquivo(e.target.files?.[0] || null); e.target.value = ''; }} />
               </label>
+              <BotaoDigitalizar fullWidth nomeBase="mensagem" titulo="Digitalizar a mensagem" onPdf={escolherArquivo} />
               <div className="pt-2 flex items-center justify-end space-x-2">
                 <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-line text-sm font-bold text-ink hover:bg-thead transition-colors">Cancelar</button>
                 <button type="button" disabled={!file || processando} onClick={handleProcessar} className="px-5 py-2.5 bg-navy hover:bg-navy-hover text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50">Processar mensagem</button>

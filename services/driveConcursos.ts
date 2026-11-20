@@ -19,17 +19,10 @@ import { contentDisposition, nomeArquivoDocumento, type TipoDocumentoArquivo } f
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { app } from './firebaseAuth';
 import { normalizarExamesExtraidos, type ExamesExtraidos } from '../utils/examesCandidato';
+import { exigirLimitePdf } from '../config/limitePdf';
 
-const MAX_PDF_BYTES = 15 * 1024 * 1024;
-/** Leitura da mensagem pela IA: o arquivo vai em base64 (~33% maior) numa requisição de até 20 MB. */
-const MAX_PDF_MENSAGEM_IA_BYTES = 14 * 1024 * 1024;
-/**
- * Exames: o PDF vai inteiro no corpo da chamada ao Gemini, em base64 (que
- * cresce ~33%), e a requisição da API não passa de 20 MB. 12 MB de PDF é o
- * maior tamanho que cabe com folga — acima disso é melhor dividir o PDF em
- * dois (cada envio fica guardado, nada é sobrescrito).
- */
-const MAX_PDF_EXAMES_BYTES = 12 * 1024 * 1024;
+// Limite ÚNICO de 10 MB por PDF (config/limitePdf.ts): vale para os PDFs do concurso, a mensagem lida pela IA e os
+// exames — o PDF vai em base64 (~33% maior) numa requisição de até 20 MB, então 10 MB cabe com folga.
 
 /** Tipos de documento gravados na pasta do candidato (prefixo do nome do arquivo). */
 export type TipoDocumentoCandidato = 'termoRecurso' | 'termoCientificacao' | 'solicitacaoParecer' | 'solicitacaoExames';
@@ -90,20 +83,9 @@ const arquivoParaBase64 = (file: File): Promise<string> => new Promise((resolve,
   reader.readAsDataURL(file);
 });
 
-const exigirTamanho = (bytes: number) => {
-  if (bytes > MAX_PDF_BYTES) {
-    throw new Error(`O arquivo tem ${(bytes / (1024 * 1024)).toFixed(1)} MB — acima do limite de ${MAX_PDF_BYTES / (1024 * 1024)} MB. Tente um PDF menor.`);
-  }
-};
+const exigirTamanho = (bytes: number) => { exigirLimitePdf(bytes); };
 
-const exigirTamanhoExames = (bytes: number) => {
-  if (bytes > MAX_PDF_EXAMES_BYTES) {
-    throw new Error(`O PDF tem ${(bytes / (1024 * 1024)).toFixed(1)} MB — acima do limite de ${MAX_PDF_EXAMES_BYTES / (1024 * 1024)} MB para leitura dos exames. Divida os exames em dois PDFs e envie um por vez.`);
-  }
-};
-
-/** Maior PDF de exames aceito, em MB (usado no texto da tela de envio). */
-export const LIMITE_PDF_EXAMES_MB = MAX_PDF_EXAMES_BYTES / (1024 * 1024);
+const exigirTamanhoExames = (bytes: number) => exigirLimitePdf(bytes, 'O PDF dos exames');
 
 /** Dados da mensagem administrativa lidos pelo Gemini (ver PROMPT_MENSAGEM_CONCURSO em CodeConcursos.gs). */
 export interface MensagemExtraida {
@@ -122,9 +104,6 @@ export interface MensagemExtraida {
 /** O Gemini (Firebase AI Logic) lê o PDF (ou imagem) da mensagem e devolve os dados em JSON. */
 export const extrairMensagemComGemini = async (file: File): Promise<MensagemExtraida> => {
   exigirTamanho(file.size);
-  if (file.size > MAX_PDF_MENSAGEM_IA_BYTES) {
-    throw new Error(`O arquivo tem ${(file.size / (1024 * 1024)).toFixed(1)} MB — acima do limite de ${MAX_PDF_MENSAGEM_IA_BYTES / (1024 * 1024)} MB para a leitura pela IA. Tente um PDF menor.`);
-  }
   const r = await gerarComGemini({
     contexto: 'mensagem de concurso',
     instrucoes: PROMPT_MENSAGEM_CONCURSO,

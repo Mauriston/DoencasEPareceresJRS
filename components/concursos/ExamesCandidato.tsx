@@ -16,8 +16,8 @@ import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
 import { Container } from '../ui/Page';
 import { Card } from '../ui/Card';
 import { Button, ButtonLink } from '../ui/Button';
-import { ScannerDocumento } from '../scanner/ScannerDocumento';
-import { imagensParaPdf } from '../../utils/imagensParaPdf';
+import { BotaoDigitalizar } from '../scanner/BotaoDigitalizar';
+import { LIMITE_PDF_MB, erroTamanhoPdf } from '../../config/limitePdf';
 import { FilterChip } from '../ui/FilterChip';
 import { GradePainel } from '../ui/Grade';
 import { abrirPdf } from '../../services/abrirPdf';
@@ -27,7 +27,7 @@ import {
   listarCandidatos, listarExamesCandidato, salvarExamesCandidato,
   type CandidatoRecord, type ConcursoRecord, type ExamesEnvioRecord,
 } from '../../services/firestoreConcursos';
-import { anoDoConcurso, enviarExamesCandidatoParaDrive, urlDownload, urlVisualizacao, LIMITE_PDF_EXAMES_MB, type PastaConcurso } from '../../services/driveConcursos';
+import { anoDoConcurso, enviarExamesCandidatoParaDrive, urlDownload, urlVisualizacao, type PastaConcurso } from '../../services/driveConcursos';
 import {
   ehExameBlocoUnico, ehExameDeValores, linhaEmissor, textoCopiaExame, textoItem,
   type ExameCandidato, type ExamesExtraidos,
@@ -72,22 +72,13 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
   const isDesktop = useIsDesktop();
   const [etapa, setEtapa] = useState<EtapaEnvio>('select');
   const [file, setFile] = useState<File | null>(null);
-  // Exames em papel: o scanner digitaliza as páginas e o PDF é gerado aqui (utils/imagensParaPdf.ts).
-  const [digitalizando, setDigitalizando] = useState(false);
-  const [gerandoPdf, setGerandoPdf] = useState(false);
-  const aoDigitalizar = async (paginas: string[]) => {
-    setDigitalizando(false);
-    setGerandoPdf(true);
-    try {
-      const pdf = await imagensParaPdf(paginas);
-      setFile(new File([pdf], `exames-digitalizados-${paginas.length}p.pdf`, { type: 'application/pdf' }));
-    } catch (e: any) {
-      setErro(e?.message || 'Não foi possível gerar o PDF.');
-    } finally {
-      setGerandoPdf(false);
-    }
-  };
   const [erro, setErro] = useState<string | null>(null);
+  /** PDF escolhido ou digitalizado (BotaoDigitalizar): só entra se couber no limite único de 10 MB. */
+  const escolherPdf = (f: File | null) => {
+    const e = f ? erroTamanhoPdf(f.size, f.name) : '';
+    setErro(e || null);
+    setFile(e ? null : f);
+  };
   const [resultado, setResultado] = useState<{ nomeArquivo: string; url: string; extraidos: ExamesExtraidos | null; erroExtracao: string } | null>(null);
 
   // Busca do candidato (só quando o alvo não vem definido).
@@ -191,13 +182,10 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
           <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-ink-5 rounded-xl p-6 cursor-pointer hover:border-navy transition-colors">
             <span className="material-symbols-outlined text-[32px] text-ink-3" aria-hidden="true">lab_profile</span>
             <span className="text-sm font-bold text-ink text-center break-all">{file ? file.name : 'Clique para selecionar o PDF dos exames'}</span>
-            <span className="text-xs text-ink-3">Máx. {LIMITE_PDF_EXAMES_MB} MB — acima disso, divida em dois PDFs</span>
-            <input type="file" accept="application/pdf" className="hidden" onChange={e => setFile(e.target.files?.[0] || null)} />
+            <span className="text-xs text-ink-3">Máx. {LIMITE_PDF_MB} MB — acima disso, divida em dois PDFs</span>
+            <input type="file" accept="application/pdf" className="hidden" onChange={e => { escolherPdf(e.target.files?.[0] || null); e.target.value = ''; }} />
           </label>
-          <Button variant="secondary" fullWidth icon="document_scanner" onClick={() => setDigitalizando(true)}>
-            Digitalizar exames em papel (gera o PDF)
-          </Button>
-          {gerandoPdf && <p role="status" className="text-xs text-ink-3 text-center">Gerando o PDF…</p>}
+          <BotaoDigitalizar fullWidth nomeBase="exames" titulo="Digitalizar exames" onPdf={escolherPdf} />
         </>
       )}
 
@@ -256,17 +244,6 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
 
   const titulo = 'Enviar exames do candidato';
   const subtitulo = destino ? `${destino.candidatoNome} · ${destino.concursoNome}` : 'Escolha o candidato e o PDF';
-
-  if (digitalizando) {
-    return (
-      <ScannerDocumento
-        titulo="Digitalizar exames"
-        maxPaginas={40}
-        onCancelar={() => setDigitalizando(false)}
-        onConcluir={paginas => { void aoDigitalizar(paginas); }}
-      />
-    );
-  }
 
   if (!isDesktop) {
     return (

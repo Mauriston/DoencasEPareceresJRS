@@ -10,12 +10,13 @@ import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { EmptyState } from '../../ui/EmptyState';
 import { AcoesRodape, submeterFormulario } from '../../ui/AcoesRodape';
-import { ehPdf, gravarRespostaParecer, lerRespostaComIA, MAX_PDF_RESPOSTA_MB } from '../../../services/respostaParecer';
+import { ehPdf, gravarRespostaParecer, lerRespostaComIA } from '../../../services/respostaParecer';
+import { BotaoDigitalizar } from '../../scanner/BotaoDigitalizar';
+import { LIMITE_PDF_MB, erroTamanhoPdf, formatarTamanho } from '../../../config/limitePdf';
 import type { ParecerRecord } from '../../../services/firestorePareceres';
 
 const ID_FORM = 'form-resposta-parecer';
 const dataDe = (p: ParecerRecord) => p.criadoEm?.toDate?.().toLocaleDateString('pt-BR') ?? 'agora';
-const tamanho = (b: number) => (b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
 
 interface Props {
   casca: CascaForm;
@@ -52,7 +53,8 @@ export const RespostaParecerForm: React.FC<Props> = ({ casca, pendentes: pendent
     if (ocupado || !lista.length) return;
     const pdf = lista.find(ehPdf);
     if (!pdf) { setErro('Envie a resposta em PDF.'); return; }
-    if (pdf.size > MAX_PDF_RESPOSTA_MB * 1024 * 1024) { setErro(`PDF acima de ${MAX_PDF_RESPOSTA_MB} MB.`); return; }
+    const e = erroTamanhoPdf(pdf.size, pdf.name || 'O PDF');
+    if (e) { setErro(e); return; }
     setArquivo(pdf); setErro('');
   };
 
@@ -137,7 +139,7 @@ export const RespostaParecerForm: React.FC<Props> = ({ casca, pendentes: pendent
                 <span className="material-symbols-outlined text-[22px] text-navy shrink-0" aria-hidden="true">picture_as_pdf</span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-semibold text-ink truncate">{arquivo.name || 'resposta.pdf'}</span>
-                  <span className="block text-xs text-ink-3">{tamanho(arquivo.size)}</span>
+                  <span className="block text-xs text-ink-3">{formatarTamanho(arquivo.size)}</span>
                 </span>
                 <IconButton icon="close" label="Trocar o PDF" variant="ghost" onClick={() => setArquivo(null)} disabled={ocupado} />
               </div>
@@ -151,10 +153,11 @@ export const RespostaParecerForm: React.FC<Props> = ({ casca, pendentes: pendent
               >
                 <span className="material-symbols-outlined text-[32px]" aria-hidden="true">upload_file</span>
                 <span className="text-sm font-semibold">Selecionar, arrastar ou colar (Ctrl+V) o PDF</span>
-                <span className="text-xs opacity-60">Um PDF · até {MAX_PDF_RESPOSTA_MB} MB</span>
+                <span className="text-xs opacity-60">Um PDF · até {LIMITE_PDF_MB} MB</span>
               </button>
             )}
             <input ref={input} type="file" accept="application/pdf,.pdf" className="hidden" onChange={e => { escolher(Array.from(e.target.files || [])); e.target.value = ''; }} />
+            {!arquivo && <BotaoDigitalizar className="mt-2" fullWidth disabled={ocupado} nomeBase="resposta-parecer" titulo="Digitalizar a resposta do parecer" onPdf={f => escolher([f])} />}
             <p className="mt-1 text-xs text-ink-3">A IA transcreve a resposta; o pedido passa a Concluído.</p>
           </div>
         </form>

@@ -8,6 +8,8 @@ import React, { useMemo, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button, buttonClass } from '../ui/Button';
 import { Field } from '../ui/Field';
+import { BotaoDigitalizar } from '../scanner/BotaoDigitalizar';
+import { LIMITE_PDF_BYTES, LIMITE_PDF_MB } from '../../config/limitePdf';
 import { ChoiceGroup } from '../ui/ChoiceGroup';
 import type { UsuarioRecord } from '../../services/firestoreUsuarios';
 import {
@@ -89,8 +91,12 @@ export const AfastamentoForm: React.FC<Props> = ({ usuarios, atual, hoje, autor,
     }
   };
 
-  const anexar = (lista: FileList | null) => {
-    const fs = Array.from(lista ?? []).filter(f => /^(application\/pdf|image\/)/.test(f.type));
+  const anexar = (lista: ArrayLike<File> | null) => {
+    const validos = Array.from(lista ?? []).filter(f => /^(application\/pdf|image\/)/.test(f.type));
+    // Limite único de 10 MB por arquivo (config/limitePdf.ts).
+    const grandes = validos.filter(f => f.size >= LIMITE_PDF_BYTES);
+    setErro(grandes.length ? `Acima de ${LIMITE_PDF_MB} MB (divida o PDF ou digitalize): ${grandes.map(f => f.name).join(', ')}.` : '');
+    const fs = validos.filter(f => f.size < LIMITE_PDF_BYTES);
     if (!fs.length) return;
     setNovos(n => [...n, ...fs]);
     // Lê o primeiro documento anexado (os campos continuam editáveis).
@@ -144,12 +150,13 @@ export const AfastamentoForm: React.FC<Props> = ({ usuarios, atual, hoje, autor,
       <div className="space-y-4">
         <div className="rounded-xl border border-line bg-paper p-3 space-y-2">
           <p className="text-sm font-semibold text-ink">Documentos (opcional)</p>
-          <p className="text-xs text-ink-3">PDF ou foto (CP de férias, portaria, papeleta de LTS…). Ao anexar, a IA lê o documento e preenche os campos.</p>
+          <p className="text-xs text-ink-3">PDF ou foto, até {LIMITE_PDF_MB} MB (CP de férias, portaria, papeleta de LTS…). Ao anexar, a IA lê o documento e preenche os campos.</p>
           <label className={`${buttonClass('secondary')} cursor-pointer has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-gold`}>
             <span className="material-symbols-outlined text-[20px]" aria-hidden="true">upload_file</span>
             Anexar documento
             <input type="file" accept="application/pdf,image/*" multiple className="sr-only" onChange={e => { anexar(e.target.files); e.target.value = ''; }} />
           </label>
+          <BotaoDigitalizar nomeBase="afastamento" titulo="Digitalizar documento" onPdf={f => anexar([f])} className="ml-2" />
           {lendo && <p role="status" className="text-xs font-semibold text-navy flex items-center gap-1"><span className="material-symbols-outlined text-[16px] animate-spin" aria-hidden="true">progress_activity</span>Lendo o documento com IA…</p>}
           {leitura && <p role="status" className="text-xs text-ink">{leitura}</p>}
           {(arquivos.length > 0 || novos.length > 0) && (
