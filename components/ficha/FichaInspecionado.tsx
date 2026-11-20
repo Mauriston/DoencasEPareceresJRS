@@ -70,7 +70,7 @@ import { PainelTranscricoes } from './transcricoes/PainelTranscricoes';
 import { PainelCriarDocumentos } from './exames/PainelCriarDocumentos';
 import { PainelDocumentoIS, tituloDoDocumento } from './exames/PainelDocumentoIS';
 import { PainelAtestadoPM } from './exames/PainelAtestadoPM';
-import { examesMinimosDaIS, isParaCriar } from '../../utils/examesFicha';
+import { examesMinimosDaIS, isParaCriar, podeExcluirDocumentoIS } from '../../utils/examesFicha';
 import { ApoioAfastamentos, PainelAfastamentos } from './afastamentos/PainelAfastamentos';
 import { PainelEmail } from './emails/PainelEmail';
 import { useEmailsDaFicha } from './emails/useEmailsDaFicha';
@@ -555,7 +555,11 @@ export const FichaInspecionado: React.FC = () => {
     if (criarIS && isDesktop) return formCriar;
     const e = lista.find(x => idExame(x) === atual?.id);
     if (!e) return semRegistro(a);
-    return <PainelDocumentoIS key={idExame(e)} aba={a} exame={e} podeZimbra={canUseFeature('ficha.zimbraSecretaria', perfil)} onAviso={avisar} />;
+    // Excluir (só na aba Atestados e Laudos): Admin ou quem enviou o PDF, enquanto a IS não estiver finalizada.
+    const isDoc = inspecoes.find(i => i.id === e.isId);
+    const isFinalizada = !isDoc || isDoc.situacao === 'finalizada'; // IS não carregada: não mostra
+    const podeExcluir = a === 'atestados' && podeExcluirDocumentoIS(e, nav?.authUser, isFinalizada);
+    return <PainelDocumentoIS key={idExame(e)} aba={a} exame={e} podeZimbra={canUseFeature('ficha.zimbraSecretaria', perfil)} podeExcluir={podeExcluir} onAviso={avisar} />;
   };
 
   // ---- Pareceres: pedido e resposta (contrato de navegação ?aba=pareceres&criar=pedido|resposta&is=<isId>) ----

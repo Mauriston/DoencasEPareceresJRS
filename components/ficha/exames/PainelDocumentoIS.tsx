@@ -14,7 +14,8 @@ import { StatusTag } from '../../ui/StatusTag';
 import { CascaPainelFicha, type AcaoBarraFicha } from '../CascaPainelFicha';
 import { BotaoCopiar } from '../../ui/BotaoCopiar';
 import { EnviarDocumentoSecretariaDialog } from './EnviarDocumentoSecretariaDialog';
-import { urlDoExame } from '../../../services/examesIS';
+import { apagarExameIS, urlDoExame } from '../../../services/examesIS';
+import { ConfirmDialog } from '../../ui/Dialog';
 import { textoItem } from '../../../utils/examesCandidato';
 import { classeDoExame, ROTULO_CLASSE, type ItemExame } from '../../../utils/examesIS';
 import { nomeDoItem, textoTranscricao, type AbaDocumentoFicha } from '../../../utils/examesFicha';
@@ -24,6 +25,8 @@ interface Props {
   aba: AbaDocumentoFicha;
   exame: ExameDaFicha;
   podeZimbra: boolean;
+  /** Mostra "Excluir" (apaga o PDF e a transcrição): Admin ou quem enviou, com a IS não finalizada (podeExcluirDocumentoIS). */
+  podeExcluir?: boolean;
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
 }
 
@@ -62,7 +65,21 @@ const Documento: React.FC<{ item: ItemExame; varios: boolean }> = ({ item, vario
   );
 };
 
-export const PainelDocumentoIS: React.FC<Props> = ({ aba, exame: e, podeZimbra, onAviso }) => {
+export const PainelDocumentoIS: React.FC<Props> = ({ aba, exame: e, podeZimbra, podeExcluir = false, onAviso }) => {
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
+  const excluir = async () => {
+    setExcluindo(true);
+    try {
+      await apagarExameIS(e.isId, e);
+      onAviso('Documento excluído: PDF e transcrição apagados.');
+    } catch {
+      onAviso('Não foi possível excluir o documento.', 'error');
+    } finally {
+      setExcluindo(false);
+      setConfirmandoExclusao(false);
+    }
+  };
   // URL de download (Imprimir: abre em nova guia).
   const [url, setUrl] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -79,6 +96,7 @@ export const PainelDocumentoIS: React.FC<Props> = ({ aba, exame: e, podeZimbra, 
   const copia = textoTranscricao(e.itens);
 
   const acoes: AcaoBarraFicha[] = [];
+  if (podeExcluir) acoes.push({ id: 'excluir', rotulo: 'Excluir', icone: 'delete', variante: 'destructive', loading: excluindo, onClick: () => setConfirmandoExclusao(true) });
   if (podeZimbra) acoes.push({ id: 'zimbra', rotulo: 'Zimbra SEC-JRS', icone: 'forward_to_inbox', variante: 'secondary', onClick: () => setEnviando(true) });
   acoes.push({
     id: 'imprimir',
@@ -119,6 +137,14 @@ export const PainelDocumentoIS: React.FC<Props> = ({ aba, exame: e, podeZimbra, 
         {e.textoIncompleto && <p className="text-xs text-ink-3">A transcrição pode estar incompleta: confira no PDF.</p>}
       </div>
 
+      {confirmandoExclusao && createPortal(
+        <ConfirmDialog
+          title="Excluir documento" destructive confirmLabel="Excluir"
+          message={`O PDF${e.nomeArquivo ? ` "${e.nomeArquivo}"` : ''} e a transcrição salva serão apagados. Esta ação não pode ser desfeita.`}
+          onConfirm={() => void excluir()} onCancel={() => { if (!excluindo) setConfirmandoExclusao(false); }}
+        />,
+        document.body,
+      )}
       {enviando && createPortal(
         <EnviarDocumentoSecretariaDialog
           isId={e.isId} numeroIs={e.is} exameId={e.id} documento={titulo}

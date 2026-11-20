@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   assuntoDocumentoSecretaria, erroEscolhaSecretaria, examesMinimosDaIS, instrucoesEnvioFicha, isParaCriar,
-  nomeAnexoDocumento, pdfsDaLista, textoTranscricao, textoTranscricaoItem,
+  nomeAnexoDocumento, pdfsDaLista, podeExcluirDocumentoIS, textoTranscricao, textoTranscricaoItem,
 } from '../examesFicha';
 import { exameMinimoValido, itensDaLeitura } from '../examesIS';
 
@@ -99,5 +99,21 @@ describe('e-mail do documento à SEC-JRS (servidor)', () => {
     expect(r.html).not.toMatch(/<script|javascript:/i);
     expect(r.html).toContain('RM DO JOELHO DIREITO');
     expect(r.anexoNome).toBe('RM DO JOELHO DIREITO - IS 1234567.pdf');
+  });
+});
+
+describe('podeExcluirDocumentoIS (Atestados e Laudos › Excluir)', () => {
+  const doc = { enviadoPor: { uid: 'u1' } };
+  it('Admin pode, com a IS aberta', () => expect(podeExcluirDocumentoIS(doc, { uid: 'adm', perfil: 'admin' }, false)).toBe(true));
+  it('quem enviou pode, com a IS aberta', () => expect(podeExcluirDocumentoIS(doc, { uid: 'u1', perfil: 'user_medicos' }, false)).toBe(true));
+  it('outro membro da equipe não pode', () => expect(podeExcluirDocumentoIS(doc, { uid: 'u2', perfil: 'user_medicos' }, false)).toBe(false));
+  it('IS finalizada: ninguém pode, nem o Admin', () => {
+    expect(podeExcluirDocumentoIS(doc, { uid: 'adm', perfil: 'admin' }, true)).toBe(false);
+    expect(podeExcluirDocumentoIS(doc, { uid: 'u1', perfil: 'user_medicos' }, true)).toBe(false);
+  });
+  it('sem usuário ou sem remetente gravado: só o Admin', () => {
+    expect(podeExcluirDocumentoIS(doc, null, false)).toBe(false);
+    expect(podeExcluirDocumentoIS({}, { uid: 'u1', perfil: 'user_medicos' }, false)).toBe(false);
+    expect(podeExcluirDocumentoIS({}, { uid: 'adm', perfil: 'admin' }, false)).toBe(true);
   });
 });
