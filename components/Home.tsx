@@ -45,6 +45,8 @@ import { CardAniversariantes } from './home/CardAniversariantes';
 import { observarMilitares, type MilitarRecord } from '../services/firestoreMilitares';
 import { pendenciasEmailIS, TIPOS_EMAIL_PENDENTE } from '../utils/pendenciasEmailIS';
 import { temTagLaudoPericialPendente } from '../utils/documentosIS';
+import { observarDocumentosISRecentes, type RegistroDocumentoIS } from '../services/documentosIS';
+import { urlDasGuias } from '../services/guiasExames';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
 import { aguardaAgendamento, hojeISO, dataDeEntrevista, horaDeEntrevista, dataBr, diasEmAberto, prazoAtrasoDias, statusEfetivoIS, nomeMes } from '../utils/inspecoes';
 import { finalidadeSemGrupo, nomeCurtoInspecionado } from '../utils/calendarioIS';
@@ -91,13 +93,33 @@ const ICONE_DOCUMENTO: Record<string, string> = {
   'solicitacao-parecer': 'stethoscope',
   'solicitacao-exames': 'biotech',
   'pedido-parecer': 'description',
+  // Documentos gerados na IS ("Gerar Documento ▾" da Ficha; inspecoes/{isId}/documentos).
+  solicitacaoExames: 'biotech',
+  declaracaoComparecimento: 'event_available',
+  termoRecurso: 'gavel',
+  papeletaDispensa: 'assignment',
+  laudoPericial: 'clinical_notes',
+  guiasExames: 'lab_profile',
+};
+/** Todo documento sai do card 24 h depois de registrado (o PDF continua no Storage/Drive). */
+const MS_JANELA_DOCUMENTOS = 24 * 60 * 60 * 1000;
+
+/** Linha do card: da fila de impressão (some ao abrir) ou de uma IS (histórico das últimas 24 h; abrir só abre). */
+type ItemDocumento = Omit<DocumentoGerado, 'tipo'> & { tipo: string; origemIS?: boolean; caminhoGuias?: string };
+
+/** Guias: a URL vem do Storage na hora; abre a aba antes (evita o bloqueio de pop-up) e depois navega. */
+const abrirGuias = (caminho: string) => {
+  const w = window.open('', '_blank');
+  urlDasGuias(caminho).then(u => { if (w) w.location.href = u; else window.open(u, '_blank', 'noopener,noreferrer'); })
+    .catch(e => { w?.close(); console.error('Falha ao abrir as guias:', e); });
 };
 const MAX_DOCUMENTOS = 5;
 
 /** Documento gerado ainda não aberto (fila de impressão da Secretaria): abrir o PDF o tira da lista. */
-const LinhaDocumentoGerado: React.FC<{ d: DocumentoGerado; onAbrir: (d: DocumentoGerado) => void }> = ({ d, onAbrir }) => (
+const LinhaDocumentoGerado: React.FC<{ d: ItemDocumento; onAbrir: (d: ItemDocumento) => void }> = ({ d, onAbrir }) => (
   <a
-    href={urlVisualizacao(d.pdfUrl)} target="_blank" rel="noopener noreferrer" onClick={() => onAbrir(d)}
+    href={d.caminhoGuias ? '#' : d.origemIS ? d.pdfUrl : urlVisualizacao(d.pdfUrl)} target="_blank" rel="noopener noreferrer"
+    onClick={e => { if (d.caminhoGuias) { e.preventDefault(); abrirGuias(d.caminhoGuias); } onAbrir(d); }}
     className="flex items-center gap-3 px-4 min-h-[56px] py-2 border-t border-line hover:bg-thead transition-colors"
   >
     <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">{ICONE_DOCUMENTO[d.tipo] || 'description'}</span>
@@ -106,7 +128,7 @@ const LinhaDocumentoGerado: React.FC<{ d: DocumentoGerado; onAbrir: (d: Document
       <span className="block text-xs text-ink-3 truncate">{d.detalhe}{d.remetente ? ` · ${d.remetente}` : ''}</span>
     </span>
     <span className="text-xs text-ink-3 shrink-0 tabular-nums">{d.criadoEm ? d.criadoEm.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'agora'}</span>
-    <span className="material-symbols-outlined text-[20px] text-ink-4 shrink-0" aria-hidden="true">print</span>
+    <span className="material-symbols-outlined text-[20px] text-ink-4 shrink-0" aria-hidden="true">{d.origemIS ? 'open_in_new' : 'print'}</span>
   </a>
 );
 
@@ -205,12 +227,41 @@ export const Home: React.FC = () => {
   [afastamentos, hoje]);
 
   // Últimos documentos gerados (só Secretaria): fila do que foi enviado para impressão e ainda não abriu.
-  const [documentos, setDocumentos] = useState<DocumentoGerado[]>([]);
+  // Junta os documentos gerados nas IS ("Gerar Documento ▾": Solicitação de Exames, Declaração, Termo de Recurso,
+  // Papeleta, Laudo) das últimas 24 h — esses não saem da lista ao abrir (é histórico, não fila).
+  const [fila, setFila] = useState<DocumentoGerado[]>([]);
+  const [docsIS, setDocsIS] = useState<RegistroDocumentoIS[]>([]);
   const [todosDocumentos, setTodosDocumentos] = useState(false);
-  useEffect(() => (ehSecretaria ? observarDocumentosPendentes(setDocumentos) : undefined), [ehSecretaria]);
-  const abrirDocumento = (d: DocumentoGerado) => {
+  useEffect(() => (ehSecretaria ? observarDocumentosPendentes(setFila) : undefined), [ehSecretaria]);
+  useEffect(() => (ehSecretaria ? observarDocumentosISRecentes(setDocsIS) : undefined), [ehSecretaria]);
+  // Reavalia a janela de 24 h a cada 5 min (sem nova leitura do Firestore).
+  const [relogio, setRelogio] = useState(0);
+  useEffect(() => { if (!ehSecretaria) return; const t = setInterval(() => setRelogio(n => n + 1), 5 * 60 * 1000); return () => clearInterval(t); }, [ehSecretaria]);
+  const documentos = useMemo<ItemDocumento[]>(() => {
+    const porId = new Map<string, InspecaoRecord>(inspecoes.map(i => [i.id, i]));
+    const deIS: ItemDocumento[] = docsIS.filter(r => r.pdfUrl).map(r => {
+      const i = porId.get(r.isId);
+      const nome = i?.inspecionado ? extrairNomeInspecionado(i.inspecionado) || i.inspecionado : '';
+      const meio = i?.finalidade ? finalidadeSemGrupo(i.finalidade, i.grupoFinalidade) : `IS ${r.is}`;
+      return {
+        id: `is:${r.isId}:${r.id}`, tipo: r.tipo, titulo: r.titulo, detalhe: [nome, meio].filter(Boolean).join(' · '),
+        pdfUrl: r.pdfUrl, remetente: r.assinanteNome, criadoEm: r.criadoEmMs ? new Date(r.criadoEmMs) : null, expiraEm: null, origemIS: true,
+      };
+    });
+    const deGuias: ItemDocumento[] = inspecoes.filter(i => i.guiasExames?.caminho && i.guiasExames.geradoEm).map(i => ({
+      id: `guias:${i.id}`, tipo: 'guiasExames', titulo: 'Guias de exames',
+      detalhe: [i.inspecionado ? extrairNomeInspecionado(i.inspecionado) || i.inspecionado : '', i.finalidade ? finalidadeSemGrupo(i.finalidade, i.grupoFinalidade) : `IS ${i.is}`].filter(Boolean).join(' · '),
+      pdfUrl: '', caminhoGuias: i.guiasExames!.caminho, remetente: '',
+      criadoEm: i.guiasExames!.geradoEm!.toDate(), expiraEm: null, origemIS: true,
+    }));
+    const corte = Date.now() - MS_JANELA_DOCUMENTOS;
+    return [...fila, ...deIS, ...deGuias].filter(d => !d.criadoEm || d.criadoEm.getTime() >= corte).sort((a, b) => (b.criadoEm?.getTime() ?? Infinity) - (a.criadoEm?.getTime() ?? Infinity));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fila, docsIS, inspecoes, relogio]);
+  const abrirDocumento = (d: ItemDocumento) => {
+    if (d.origemIS) return;
     void marcarDocumentoAberto(d.id, authUser?.usuario || authUser?.nome || '', d.criadoEm);
-    setDocumentos(prev => prev.filter(x => x.id !== d.id));
+    setFila(prev => prev.filter(x => x.id !== d.id));
   };
 
   // IS de concurso: hoje e atrasadas (agendadas antes de hoje e ainda não finalizadas).
@@ -431,7 +482,7 @@ export const Home: React.FC = () => {
           acao={documentos.length > MAX_DOCUMENTOS ? <Button variant="ghost" size="sm" onClick={() => setTodosDocumentos(true)}>Ver todos</Button> : undefined}
         >
           {documentos.length === 0 ? (
-            <EmptyState icon="print" title="Nada para imprimir" description="Termos e solicitações enviados para impressão aparecem aqui até serem abertos." />
+            <EmptyState icon="print" title="Nada para imprimir" description="Termos e solicitações enviados para impressão aparecem aqui até serem abertos; tudo sai da lista 24 h depois de gerado." />
           ) : (
             <ul>{documentos.slice(0, MAX_DOCUMENTOS).map(d => <li key={d.id}><LinhaDocumentoGerado d={d} onAbrir={abrirDocumento} /></li>)}</ul>
           )}

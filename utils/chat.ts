@@ -50,6 +50,26 @@ export const matrizCompleta = (matriz: MatrizChat | null | undefined): Record<Pe
     return [p.id, { enviar: c.enviar ?? true, receber: c.receber ?? true, anexos: c.anexos ?? true }];
   })) as Record<PerfilChat, PermissaoChat>;
 
+// ---- Contatos para iniciar conversa ----
+/** Usuário que, mesmo sem ser Admin, vê os user_medicos_geral entre os contatos (comparado normalizado). */
+export const USUARIO_VE_MEDICOS_GERAL = '1T OLIVEIRA';
+
+const normalizarNome = (s: string | undefined | null): string =>
+  (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
+
+/** O visualizador vê user_medicos_geral na lista de contatos? Só o Admin e o USUARIO_VE_MEDICOS_GERAL. */
+export const veMedicosGeral = (quem: { perfil?: string | null; usuario?: string | null; nome?: string | null } | null | undefined): boolean => {
+  if (!quem) return false;
+  if (quem.perfil === 'admin') return true;
+  const alvo = normalizarNome(USUARIO_VE_MEDICOS_GERAL);
+  return normalizarNome(quem.usuario) === alvo || normalizarNome(quem.nome) === alvo;
+};
+
+/** Contatos para INICIAR conversa: tira os user_medicos_geral, salvo para quem veMedicosGeral. */
+export const filtrarContatosChat = <T extends { perfil?: string | null }>(
+  contatos: T[], quem: { perfil?: string | null; usuario?: string | null; nome?: string | null } | null | undefined,
+): T[] => (veMedicosGeral(quem) ? contatos : contatos.filter(u => u.perfil !== 'user_medicos_geral'));
+
 // ---- Conversa ----
 /** Id determinístico da conversa um a um: os dois uids em ordem, separados por "_" (as regras conferem). */
 export const idConversa = (a: string, b: string): string => (a < b ? `${a}_${b}` : `${b}_${a}`);
