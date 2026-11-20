@@ -95,9 +95,6 @@ Escala de serviço do SPA: **supervisão** de 24 h (escalado + retém) e **plant
 * **Envio (só Admin):** botões **Modelo CSV** (`DATA;SERVICO;MEDICOS;RETEM`, uma linha por serviço) e **Enviar escala**, que aceita também o CSV exportado da aba *Agenda* da planilha da escala, mostra uma prévia (meses, dias, linhas ignoradas com o motivo) e grava em `escalaSpa` mesclando com o que já existe (`utils/escalaSpa.ts`).
 * **Início:** card **Próximos serviços** com os próximos 5 serviços do usuário (cruzados pelo login: "1T (RM2-Md) COSTA" = "1T COSTA"); o toque abre a Escala.
 
-### 5. Roteiro JRS (`/components/RoteiroJRS.tsx`)
-Trilha de capacitação em formato *accordion* (lista expansível) com aulas, normas e infográficos, abrindo vídeos e imagens em modais de visualização sobrepostos à tela. O material de formação (vídeos, infográficos e apresentações) tem páginas próprias (seção 8).
-
 ### 6. Normas e Legislação (`/components/DGPM406Guide.tsx`, `PortariaGuide.tsx` e `LawReference.tsx`)
 * **DGPM-406 e Portaria:** leitura navegável das normas (a Portaria também tem página pública).
 * **Legislação:** lista da coleção `legislacao` (Firestore) com o PDF de cada norma no Firebase Storage, aberto em modal de tela cheia; o Admin cadastra novas normas pela própria página.
@@ -108,7 +105,7 @@ Trilha de capacitação em formato *accordion* (lista expansível) com aulas, no
 * **`user_medicos_geral`:** sem Próximas férias; no lugar de "Atestados vigentes" aparece **Últimos atestados** (os registrados pelo próprio usuário; no celular só "Fim: dd/mm/aaaa" nos vigentes e o chip só com a bolinha), e *Precisa de atenção* mostra os atestados vigentes de todos os usuários.
 
 ### 8. Formação
-**Casos Periciais**, **Vídeos** (YouTube), **Infográficos** (imagens no Storage), **Apresentações** (Google Slides, Canva ou GitHub Pages, abertas em tela cheia) e **Roteiro JRS**. Vídeos, infográficos e apresentações são cadastrados pelo Admin na própria página (coleções `videos`, `infograficos`, `apresentacoes`); quem abriu cada item fica registrado para o Admin (`visualizacoesExtras`).
+**Vídeos** (YouTube) e **Apresentações** (Google Slides, Canva ou GitHub Pages, abertas em tela cheia), cadastrados pelo Admin na própria página (coleções `videos`, `apresentacoes`); quem abriu cada item fica registrado para o Admin (`visualizacoesExtras`).
 
 ### 8.1 Férias (`/components/Ferias.tsx` e `/components/ferias/`)
 Menu lateral → **Administração → Férias**. Férias e afastamentos (**Férias**, **LTS**, **LIC Adm**) dos usuários da JRS; veem Admin, `user_medicos`, `user_medicos_mpi` e `user_secretaria`; **só o Admin** cria, edita e apaga (*Nova férias / afastamento*).
@@ -136,7 +133,7 @@ Menu lateral fixo (recolhível; drawer no celular) com as categorias:
 
 1. **Trabalho:** Inspeções de Saúde, Inspecionados, Concursos, Perícia Menor (*Atestados* para MPI e médicos gerais), Escala SVÇ, Pareceres e Mensagens.
 2. **Consulta:** Doenças de Lei, Exames, Índices, DGPM-406, Portaria e Legislação.
-3. **Formação:** Casos Periciais, Vídeos, Infográficos, Apresentações e Roteiro.
+3. **Formação:** Vídeos e Apresentações.
 4. **Administração** (Admin): Usuários.
 
 Cada tela tem URL própria (`HashRouter`, tabela em `config/routes.ts`). O menu do avatar traz Perfil, **Notificações** (com contador de não lidas) e Sair.
@@ -182,7 +179,7 @@ A interface do usuário foi desenhada com estrita observância à Identidade Vis
 - `components/`
   - `Home.tsx`, `Inspecoes.tsx`, `Militares.tsx`, `ConcursosJRS.tsx`, `Pareceres.tsx`, `PericiaMenor.tsx`, `EscalaSpa.tsx`, `UsuariosManagement.tsx`, `Perfil.tsx` *(telas de trabalho)*
   - `DiseaseGuide.tsx`, `ExamesGuide.tsx`, `ConcursosGuide.tsx`, `DGPM406Guide.tsx`, `PortariaGuide.tsx`, `LawReference.tsx` *(consulta)*
-  - `CasosPericiais.tsx`, `Videos.tsx`, `Infograficos.tsx`, `Apresentacoes.tsx`, `RoteiroJRS.tsx` *(formação)*
+  - `Videos.tsx`, `Apresentacoes.tsx` *(formação)*
   - `NotificacoesConvite.tsx`, `NotificacoesPainel.tsx`, `ErroFatal.tsx`, `Raiz.tsx`
   - `concursos/` *(detalhe da IS, exames do candidato, triagem, calendário)*
   - `inspecoes/` *(agenda, agendamento, bloqueios, minutas, e-mails de resultado e da agenda)*

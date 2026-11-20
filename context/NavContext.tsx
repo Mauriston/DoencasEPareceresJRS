@@ -35,7 +35,7 @@ export interface NavContextType {
   verComo: string | null;
   setVerComo: (perfil: string | null) => void;
   /** Avisos não bloqueantes mostrados na Início (antes eram diálogos em sequência no login). */
-  avisos: { casosPendente: boolean; pwaPendente: boolean };
+  avisos: { pwaPendente: boolean };
   /** Abre o tutorial (celular) ou o QR code (desktop) de instalação do app. */
   abrirInstalacaoApp: () => void;
   /** Notificações não lidas do usuário (badge do avatar). */

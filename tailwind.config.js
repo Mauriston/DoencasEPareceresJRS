@@ -79,7 +79,7 @@ export default {
       h1: ['1.5rem', { lineHeight: '1.25', fontWeight: '800' }],
       kpi: ['1.5rem', { lineHeight: '1.1', fontWeight: '800' }],
       display: ['2rem', { lineHeight: '1.15', fontWeight: '800' }],
-      // Números-herói (nota dos Casos Periciais) — fora da escala de texto.
+      // Números-herói — fora da escala de texto.
       '5xl': ['3rem', { lineHeight: '1' }],
       '6xl': ['3.5rem', { lineHeight: '1' }],
     },

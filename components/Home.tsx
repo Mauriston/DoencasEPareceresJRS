@@ -387,7 +387,7 @@ export const Home: React.FC = () => {
 
   const avisoSenha = !!authUser?.senhaTemporaria;
   const avisoConcurso = podeConcursos && emAndamento.length > 0;
-  const mostrarAvisos = avisoSenha || avisoConcurso || !!nav?.avisos?.casosPendente || !!nav?.avisos?.pwaPendente;
+  const mostrarAvisos = avisoSenha || avisoConcurso || !!nav?.avisos?.pwaPendente;
 
   const agenda = (embutido: boolean) => (
     <AgendaDoDia
@@ -496,9 +496,6 @@ export const Home: React.FC = () => {
                 texto={emAndamento.length === 1 ? 'Concurso em andamento · planilha de candidatos' : 'Planilhas de candidatos'}
                 acao={<ButtonLink to={emAndamento.length === 1 ? concursoPath(emAndamento[0].id) : '/concursos?situacao=em_andamento'} variant="ghost" size="sm">{emAndamento.length === 1 ? 'Abrir planilha' : 'Ver concursos'}</ButtonLink>}
               />
-            )}
-            {nav?.avisos?.casosPendente && (
-              <LinhaAviso icone="quiz" titulo="Casos Periciais" texto="24 questões comentadas sobre a DGPM-406. Faça quando puder." acao={<ButtonLink to={pathForView('casos')} variant="ghost" size="sm">Responder</ButtonLink>} />
             )}
             {nav?.avisos?.pwaPendente && (
               <LinhaAviso

@@ -31,7 +31,6 @@ import {
 } from './utils/pwa';
 import { getUsuarioProfile, setUsuarioPublico, updateUsuarioProfile, UsuarioRecord } from './services/firestoreUsuarios';
 import { observarPermissoes, salvarPermissoesRemoto, type PermissoesArmazenadas } from './services/firestorePermissions';
-import { getCasosResultado } from './services/firestoreCasos';
 import { observarPericiasMenores, statusPericia } from './services/firestorePericiasMenores';
 import { definirAtorAuditoria } from './services/auditoriaIS';
 import {
@@ -56,15 +55,12 @@ const ConcursosGuide = paginaLazy(() => import('./components/ConcursosGuide'), '
 const ConcursosJRS = paginaLazy(() => import('./components/ConcursosJRS'), 'ConcursosJRS');
 const PortariaGuide = paginaLazy(() => import('./components/PortariaGuide'), 'PortariaGuide');
 const ExamesGuide = paginaLazy(() => import('./components/ExamesGuide'), 'ExamesGuide');
-const Infograficos = paginaLazy(() => import('./components/Infograficos'), 'Infograficos');
 const Apresentacoes = paginaLazy(() => import('./components/Apresentacoes'), 'Apresentacoes');
 const Pareceres = paginaLazy(() => import('./components/Pareceres'), 'Pareceres');
-const CasosPericiais = paginaLazy(() => import('./components/CasosPericiais'), 'CasosPericiais');
 const Videos = paginaLazy(() => import('./components/Videos'), 'Videos');
 const PericiaMenor = paginaLazy(() => import('./components/PericiaMenor'), 'PericiaMenor');
 const EscalaSpa = paginaLazy(() => import('./components/EscalaSpa'), 'EscalaSpa');
 const Mensagens = paginaLazy(() => import('./components/Mensagens'), 'Mensagens');
-const RoteiroJRS = paginaLazy(() => import('./components/RoteiroJRS'), 'RoteiroJRS');
 const Administracao = paginaLazy(() => import('./components/administracao/Administracao'), 'Administracao');
 const Militares = paginaLazy(() => import('./components/Militares'), 'Militares');
 // Ficha do inspecionado: o acesso é por seção (permissões checadas na própria página).
@@ -160,7 +156,6 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   const [rolou, setRolou] = useState(false);
   // null enquanto ainda não verificamos; depois, true/false conforme já
   // existe (ou não) um resultado salvo para este usuário.
-  const [casosRespondido, setCasosRespondido] = useState<boolean | null>(null);
   const isDesktop = useIsDesktop();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   // Estado do menu do usuário (avatar) compartilhado entre o Header (que o
@@ -237,19 +232,6 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       forcarRerenderPermissoes();
     });
     return unsubscribe;
-  }, [authUser?.uid]);
-
-  // Lembrete de Casos Periciais (só mobile, ver modal mais abaixo): verifica
-  // uma vez por login se este usuário já tem um resultado salvo. A
-  // permissão em si (canAccessPage) é checada no render, não aqui, para
-  // sempre refletir o cache de permissões mais atual.
-  useEffect(() => {
-    if (!authUser) { setCasosRespondido(null); return; }
-    let cancelado = false;
-    getCasosResultado(authUser.uid)
-      .then(resultado => { if (!cancelado) setCasosRespondido(!!resultado); })
-      .catch(() => { if (!cancelado) setCasosRespondido(null); });
-    return () => { cancelado = true; };
   }, [authUser?.uid]);
 
   useEffect(() => {
@@ -404,11 +386,8 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       case 'pericia-menor': return can('pericia-menor') ? <PericiaMenor /> : <AccessDenied pagina={paginaLabel('pericia-menor')} />;
       case 'escala': return can('escala') ? <EscalaSpa /> : <AccessDenied pagina={paginaLabel('escala')} />;
       case 'mensagens': return can('mensagens') ? <Mensagens /> : <AccessDenied pagina={paginaLabel('mensagens')} />;
-      case 'infograficos': return can('infograficos') ? <Infograficos /> : <AccessDenied pagina={paginaLabel('infograficos')} />;
       case 'apresentacoes': return can('apresentacoes') ? <Apresentacoes /> : <AccessDenied pagina={paginaLabel('apresentacoes')} />;
-      case 'casos': return can('casos') ? <CasosPericiais /> : <AccessDenied pagina={paginaLabel('casos')} />;
       case 'videos': return can('videos') ? <Videos /> : <AccessDenied pagina={paginaLabel('videos')} />;
-      case 'roteiro': return can('roteiro') ? <RoteiroJRS /> : <AccessDenied pagina={paginaLabel('roteiro')} />;
 
       case 'inspecoes': return can('inspecoes') ? <Inspecoes /> : <AccessDenied pagina={paginaLabel('inspecoes')} />;
       case 'militares': return can('militares') ? <Militares /> : <AccessDenied pagina={paginaLabel('militares')} />;
@@ -463,10 +442,9 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   }
 
   const mostrarAlertaSenha = !!authUser.senhaTemporaria && currentView !== 'perfil' && !senhaAlertDismissed;
-  // Fila de avisos pós-login (auditoria v2, L4): só a senha temporária é diálogo. O convite
-  // aos Casos Periciais e a instalação do app viram avisos não bloqueantes na Início; o
+  // Fila de avisos pós-login (auditoria v2, L4): só a senha temporária é diálogo. A instalação
+  // do app vira aviso não bloqueantes na Início; o
   // tutorial (celular) ou o QR code (desktop) só abre quando o usuário pede.
-  const casosPendente = casosRespondido === false && canAccessPage('casos', authUser.perfil);
   const pwaPendente =
     !authUser.pwaTutorialConcluido &&
     !tutorialConcluidoLocal() &&
@@ -481,7 +459,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
         setCurrentView,
         navigate: (to, opcoes) => navigate(to, opcoes),
         authUser,
-        avisos: { casosPendente, pwaPendente },
+        avisos: { pwaPendente },
         abrirInstalacaoApp: () => setPwaDialogAberto(true),
         notificacoesNaoLidas,
         abrirNotificacoes: () => { setIsAvatarMenuOpen(false); setIsMobileMenuOpen(false); setNotificacoesAbertas(true); },

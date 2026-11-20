@@ -48,11 +48,8 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'mensagens', label: 'Mensagens', icon: 'chat', subtitle: 'Faça minutas das MSG de IS auxiliado por IA.' },
   { id: 'dgpm406', label: 'DGPM-406', icon: 'anchor', subtitle: 'Consulte capítulos e anexos da DGPM-406.' },
   { id: 'laws', label: 'Legislação', icon: 'balance', subtitle: 'Pesquise as leis que fundamentam as IS.' },
-  { id: 'casos', label: 'Casos Periciais', icon: 'quiz', subtitle: 'Teste seus conhecimentos em casos comentados.' },
   { id: 'videos', label: 'Vídeos', icon: 'smart_display', subtitle: 'Assista vídeos sobre os processos das IS.' },
-  { id: 'infograficos', label: 'Infográficos', icon: 'image', subtitle: 'Resumos ilustrados para consultas rápidas.' },
   { id: 'apresentacoes', label: 'Apresentações', icon: 'slideshow', subtitle: 'Apresentações de slides sobre os processos das IS.' },
-  { id: 'roteiro', label: 'Roteiro JRS', icon: 'view_list', subtitle: 'Trilha de estudos para capacitação dos AMP.' },
   // Administração: férias e afastamentos dos usuários da JRS (criar, editar e apagar continuam só com o Admin).
   { id: 'ferias', label: 'Férias', icon: 'beach_access', subtitle: 'Férias e afastamentos dos usuários da JRS.' },
   // Painel: "como estamos no período" (tendências e comparações); na sidebar logo abaixo de Início.

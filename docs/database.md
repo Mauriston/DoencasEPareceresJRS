@@ -241,17 +241,15 @@ Regras: Firestore — leitura autenticada, escrita só Admin; Storage (`legislac
 
 - **E-mail de inaptos à EAMPE:** o servidor grava no candidato `emailInaptoEnviadoEm` e `emailInaptoEnviadoPor` (`servidor/email/inaptosConcurso.ts`); INAPTO sem esses campos = pendente. São gravados só pelo Admin SDK (as regras por campo do app não os alteram); uma regravação completa do candidato sem *merge* (ex.: script de sobrescrever candidatos) apagaria a marca e o candidato voltaria a pendente.
 
-## 11. Formação: vídeos, infográficos, apresentações e casos periciais
+## 11. Formação: vídeos e apresentações
 
 | Coleção | Documento | Conteúdo |
 |---|---|---|
 | `videos` | id do vídeo no YouTube | `youtubeId`, `titulo` (oEmbed do YouTube), `thumbnailUrl`, `criadoPor`, `criadoEm` |
-| `infograficos` | id automático | `titulo`, `imagePath` (Storage `infograficos/{id}.{ext}`), `imageUrl`, `criadoPor`, `criadoEm` |
 | `apresentacoes` | id automático | `url`, `plataforma` (Google Slides, Canva, GitHub Pages), `titulo` e `thumbnailUrl` (lidos pelo servidor em `/api/admin/preview-apresentacao`), `criadoPor`, `criadoEm` |
 | `visualizacoesExtras` | `{tipo}__{itemId}__{uid}` | Quem abriu cada item e quantas vezes (`vezes`, `ultimaEm`, `nome`). Cada usuário grava só o próprio registro; só o Admin lê |
-| `casos_periciais_resultados` | UID | Último resultado do teste *Casos Periciais* (`respostas[]`, `acertos`, `total`, `nota`); cada usuário lê e grava só o próprio |
 
-Vídeos e infográficos vinham de uma planilha de extras, que deixou de ser usada; o cadastro agora é pelo Admin, na própria página.
+As páginas Casos Periciais, Infográficos e Roteiro JRS foram retiradas em 20/11/2026; seus dados (`casos_periciais_resultados`, `infograficos` e Storage `infograficos/`) foram apagados por `scripts/retirar-paginas-formacao.mjs`.
 
 ## 12. Notificações push
 
@@ -295,9 +293,8 @@ O cliente só avisa o servidor (`/api/notificacoes/evento`); o servidor confere 
 | `escalaSpa` | autenticado | só Admin grava |
 | `periciasMenores` | autenticado | médicos criam; Admin edita e apaga |
 | `concursos` e subcoleções | autenticado | por funcionalidade da matriz `config/permissoes` e por campo (abaixo); exclusão só Admin; eventos só criação, leitura do Admin |
-| `legislacao`, `videos`, `infograficos`, `apresentacoes`, `quesitosParecer`, `config` | autenticado | Admin |
+| `legislacao`, `videos`, `apresentacoes`, `quesitosParecer`, `config` | autenticado | Admin |
 | `visualizacoesExtras` | Admin | o próprio registro |
-| `casos_periciais_resultados` | o dono | o dono |
 | `acessoRapido` | o dono | o dono |
 
 ### Concursos: regras por funcionalidade e por campo

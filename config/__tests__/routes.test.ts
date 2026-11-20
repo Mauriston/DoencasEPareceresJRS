@@ -14,7 +14,6 @@ describe('mapa de rotas (config/routes.ts)', () => {
     expect(viewForPath('/pericia-menor/historico/12345678')).toBe('pericia-menor');
     expect(viewForPath('/mensagens')).toBe('mensagens');
     expect(viewForPath('/normas/dgpm-406')).toBe('dgpm406');
-    expect(viewForPath('/extras/roteiro')).toBe('roteiro');
     expect(viewForPath('/administracao')).toBe('usuarios');
     expect(viewForPath('/administracao/perfis')).toBe('usuarios');
   });
@@ -77,8 +76,6 @@ describe('aliases estáveis', () => {
   it('redirecionam para a rota canônica preservando os subníveis', () => {
     expect(destinoDoAlias('/doencas')).toBe('/beneficios/doencas');
     expect(destinoDoAlias('/doencas/cegueira/1')).toBe('/beneficios/doencas/cegueira/1');
-    expect(destinoDoAlias('/estudo')).toBe('/extras/roteiro');
-    expect(destinoDoAlias('/estudo/')).toBe('/extras/roteiro');
     expect(destinoDoAlias('/exames')).toBe('/concursos/exames');
     expect(destinoDoAlias('/dgpm-406')).toBe('/normas/dgpm-406');
     expect(destinoDoAlias('/usuarios')).toBe('/administracao/usuarios');
