@@ -3,8 +3,8 @@
 // DGPM-406, Legislação), gravada no Firestore (services/destaquesNormas.ts) sem alterar os .md.
 // - Admin: botão direito sobre a seleção (no celular, toque longo / seleção) abre o menu: negrito, destaque
 //   amarelo, ambos, sublinhado, citação (o parágrafo inteiro), nota e remover.
-// - Todos os logados veem as marcações, com estilo próprio (styles/app.css, .jrs-*), a legenda
-//   "Destaques do Presidente" e o botão para ocultá-las (preferência deste aparelho).
+// - Todos os logados veem as marcações, com estilo próprio (styles/app.css, .jrs-*), sem legenda nem
+//   opção de ocultá-las.
 // - Marcação cujo trecho não existe mais no texto fica "órfã": o Admin as revê numa lista.
 // As marcações vão no DOM só dentro de .md-content (HTML do marked, que o React não reconcilia) e são
 // reaplicadas a cada renderização da página (o HTML do texto pode ser recriado).
@@ -18,7 +18,6 @@ import {
 } from '../../services/destaquesNormas';
 import { criarAncora, localizarAncora, TIPOS_DESTAQUE, type TipoDestaque } from '../../utils/destaquesTexto';
 
-const CHAVE_OCULTOS = 'jrs-destaques-ocultos';
 const BLOCOS = 'p, li, blockquote, h1, h2, h3, h4, h5, h6, td, th, .md-item';
 const rotuloTipo = (t: TipoDestaque) => TIPOS_DESTAQUE.find(x => x.tipo === t)?.rotulo ?? t;
 
@@ -119,7 +118,6 @@ export const DestaquesNorma: React.FC<{
   const nav = useContext(NavContext);
   const admin = nav?.authUser?.perfil === 'admin';
   const [todos, setTodos] = useState<DestaqueRecord[]>([]);
-  const [ocultos, setOcultos] = useState(() => { try { return localStorage.getItem(CHAVE_OCULTOS) === '1'; } catch { return false; } });
   const [orfas, setOrfas] = useState<string[]>([]);
   const [menu, setMenu] = useState<Menu | null>(null);
   const [nota, setNota] = useState('');
@@ -136,11 +134,9 @@ export const DestaquesNorma: React.FC<{
     const el = raiz.current;
     if (!el) return;
     const novas = aplicar(el, destaques);
-    el.classList.toggle('jrs-ocultos', ocultos);
     setOrfas(prev => (prev.join() === novas.join() ? prev : novas));
   });
 
-  useEffect(() => { try { localStorage.setItem(CHAVE_OCULTOS, ocultos ? '1' : '0'); } catch { /* sem armazenamento */ } }, [ocultos]);
 
   // Menu do Admin: botão direito (desktop) e seleção por toque longo (celular).
   useEffect(() => {
@@ -195,7 +191,7 @@ export const DestaquesNorma: React.FC<{
     if (!el) return;
     const mostrar = (alvo: Element | null) => {
       const s = alvo?.closest("span.jrs-nota-fim") as HTMLElement | null | undefined;
-      if (!s || el.classList.contains('jrs-ocultos')) return false;
+      if (!s) return false;
       const r = s.getBoundingClientRect();
       setVerNota({ x: r.left, y: r.bottom + 6, texto: s.dataset.nota ?? '' });
       return true;
@@ -241,37 +237,24 @@ export const DestaquesNorma: React.FC<{
   };
 
   const listaOrfas = destaques.filter(d => orfas.includes(d.id));
-  const tiposUsados: TipoDestaque[] = Array.from(new Set<TipoDestaque>(destaques.filter(d => !orfas.includes(d.id)).map(d => d.tipo)));
   const pos = (x: number, y: number, w: number) => ({
     left: Math.max(8, Math.min(x, window.innerWidth - w - 8)),
     top: Math.max(8, Math.min(y, window.innerHeight - 340)),
   });
 
-  if (!destaques.length && !admin) return null;
+  if (!admin && !destaques.length) return null;
   return (
     <>
-      <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-line bg-paper px-3 py-2 text-xs text-ink-3 ${className}`}>
-        <span className="inline-flex items-center gap-1.5 font-bold text-navy">
-          <span className="material-symbols-outlined text-[18px] text-gold-ink" aria-hidden="true">ink_highlighter</span>
-          Destaques do Presidente
-        </span>
-        {tiposUsados.length > 0 ? (
-          <span className="flex flex-wrap items-center gap-2" aria-label="Legenda">
-            {tiposUsados.map(t => <span key={t} className={`jrs-legenda jrs-d jrs-${t}`}>{rotuloTipo(t)}</span>)}
-          </span>
-        ) : admin && <span>Selecione um trecho e use o botão direito (no celular, toque longo) para formatar.</span>}
-        <span className="flex-1" />
-        {admin && listaOrfas.length > 0 && (
-          <Button variant="secondary" size="sm" icon="link_off" onClick={() => setRevisarOrfas(true)}>
-            {listaOrfas.length} {listaOrfas.length === 1 ? 'órfã' : 'órfãs'}
+      {/* Sem legenda nem botão de ocultar: os destaques fazem parte da leitura. Só o Admin vê o aviso das órfãs. */}
+      {admin && listaOrfas.length > 0 && (
+        <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-line bg-paper px-3 py-2 text-xs text-ink-3 ${className}`}>
+          <span className="material-symbols-outlined text-[18px] text-gold-ink" aria-hidden="true">link_off</span>
+          <span className="flex-1 min-w-0">Há destaques do Presidente cujo trecho não foi encontrado no texto atual.</span>
+          <Button variant="secondary" size="sm" onClick={() => setRevisarOrfas(true)}>
+            Revisar {listaOrfas.length} {listaOrfas.length === 1 ? 'órfã' : 'órfãs'}
           </Button>
-        )}
-        {destaques.length > 0 && (
-          <Button variant="ghost" size="sm" icon={ocultos ? 'visibility' : 'visibility_off'} onClick={() => setOcultos(o => !o)} aria-pressed={ocultos}>
-            {ocultos ? 'Mostrar destaques' : 'Ocultar destaques'}
-          </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {menu && (
         <div

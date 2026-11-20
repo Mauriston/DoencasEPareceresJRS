@@ -6,10 +6,10 @@
 // anexo por vez. Ao abrir a página, sempre o Capítulo 1 (nenhuma seleção é restaurada).
 // Busca no texto (como na Portaria): destaca no documento aberto e mostra, no índice,
 // quantas ocorrências há em cada capítulo/anexo.
-// O PDF integral fica num botão fixo, sempre visível, que abre numa nova aba.
+// O PDF integral abre numa nova aba pelo botão primário do cabeçalho.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
-import { Button } from './ui/Button';
+import { Button, ButtonLink } from './ui/Button';
 import { IconButton } from './ui/IconButton';
 import { Drawer } from './ui/Drawer';
 import { MarkdownContent } from './MarkdownContent';
@@ -165,16 +165,19 @@ export const DGPM406Guide: React.FC = () => {
   const [ativo, setAtivo] = useState<string>(INICIAL);
   const [indiceAberto, setIndiceAberto] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfFalhou, setPdfFalhou] = useState(false);
   const [termo, setTermo] = useState('');
   const [buscaMobile, setBuscaMobile] = useState(false);
   const conteudo = useRef<HTMLDivElement>(null);
   const { open: openPdf, busy: baixandoPdf, modalElement } = useStoragePdf();
 
-  // URL do PDF integral (Storage, exige login) obtida de antemão: o botão fixo é um
+  // URL do PDF integral (Storage, exige login) obtida de antemão: o botão do cabeçalho é um
   // <a target="_blank"> de verdade, sem pop-up bloqueado.
   useEffect(() => {
     let vivo = true;
-    getStoragePdfUrl(NORMA_COMPLETA_PDF_PATH).then(u => { if (vivo) setPdfUrl(u); }).catch(() => { /* sem PDF */ });
+    getStoragePdfUrl(NORMA_COMPLETA_PDF_PATH)
+      .then(u => { if (vivo) { setPdfUrl(u); setPdfFalhou(!u); } })
+      .catch(() => { if (vivo) setPdfFalhou(true); });
     return () => { vivo = false; };
   }, []);
 
@@ -199,8 +202,18 @@ export const DGPM406Guide: React.FC = () => {
 
   return (
     <div className="flex flex-col flex-1 relative">
-      <Container size="data" className="pt-6 md:py-8 pb-24 md:pb-24">
-        <PageHeader title="DGPM-406" description="Normas Reguladoras para Inspeções de Saúde na Marinha · 9ª Revisão · capítulos e anexos" />
+      <Container size="data" className="pt-6 md:py-8 pb-10">
+        <PageHeader
+          title="DGPM-406"
+          description="Normas Reguladoras para Inspeções de Saúde na Marinha · 9ª Revisão · capítulos e anexos"
+          actions={pdfUrl ? (
+            <ButtonLink href={pdfUrl} target="_blank" rel="noopener noreferrer" variant="primary" icon="picture_as_pdf">
+              DGPM-406 completa<span className="sr-only"> (abre o PDF em nova aba)</span>
+            </ButtonLink>
+          ) : (
+            <Button variant="primary" icon="picture_as_pdf" loading={!pdfFalhou} disabled title={pdfFalhou ? 'PDF indisponível' : undefined}>DGPM-406 completa</Button>
+          )}
+        />
 
         {/* Celular: barra fixa com o item atual, anterior/próximo e o índice em drawer. */}
         <div className="md:hidden sticky top-0 z-sticky -mx-4 px-3 py-2 bg-white border-b border-line">
@@ -280,21 +293,6 @@ export const DGPM406Guide: React.FC = () => {
       )}
       {modalElement}
 
-      {/* Único botão flutuante: a DGPM-406 integral em PDF, numa nova aba. */}
-      <a
-        href={pdfUrl ?? undefined}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-disabled={!pdfUrl}
-        onClick={e => { if (!pdfUrl) { e.preventDefault(); alert('O PDF da DGPM-406 ainda não está disponível.'); } }}
-        className={`fixed right-4 z-sticky inline-flex items-center gap-2 h-12 px-4 rounded-full bg-navy text-white text-sm font-bold shadow-lg transition-colors hover:bg-navy-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${pdfUrl ? '' : 'opacity-70'}`}
-        style={{ bottom: 'var(--fab-bottom, calc(1.5rem + env(safe-area-inset-bottom)))' }}
-      >
-        <span className="material-symbols-outlined text-[20px]" aria-hidden="true">picture_as_pdf</span>
-        <span>DGPM-406 completa</span>
-        <span className="material-symbols-outlined text-[18px]" aria-hidden="true">open_in_new</span>
-        <span className="sr-only">(abre em nova aba)</span>
-      </a>
     </div>
   );
 };
