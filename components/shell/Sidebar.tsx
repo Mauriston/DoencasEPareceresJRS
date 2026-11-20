@@ -14,6 +14,7 @@ import { pathForView } from '../../config/routes';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
 import { Avatar, UserDropdownContent, PERFIL_LABELS } from './UserMenu';
+import { useChat } from '../chat/ChatContext';
 import { ID_DRAWER_MENU } from './BarraInferior';
 import iconeJrs from '../../assets/icone-jrs.png';
 
@@ -30,6 +31,7 @@ const lerPreferencia = (): boolean => {
 
 export const Sidebar: React.FC = () => {
   const nav = useContext(NavContext);
+  const chatNaoLidas = useChat()?.naoLidas || 0;
   const currentView = nav?.currentView;
   const authUser = nav?.authUser || null;
   const isMobileMenuOpen = nav?.isMobileMenuOpen || false;
@@ -239,7 +241,7 @@ export const Sidebar: React.FC = () => {
               <span className="text-sm font-bold text-white truncate max-w-[170px]">{authUser?.usuario || 'Usuário'}</span>
               <span className={`text-xs truncate max-w-[170px] ${nav?.verComo ? 'font-bold text-gold' : 'font-medium text-white/70'}`}>{nav?.verComo ? `Vendo como ${PERFIL_LABELS[nav.verComo] || nav.verComo}` : (authUser?.cargo || ' ')}</span>
             </span>
-            <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} badge={nav?.notificacoesNaoLidas} />
+            <Avatar nome={authUser?.nome} imageProfile={authUser?.imageProfile} size={36} badge={(nav?.notificacoesNaoLidas || 0) + (chatNaoLidas || 0)} />
           </button>
         </div>
       </aside>

@@ -547,5 +547,85 @@ service cloud.firestore {
         allow write: if podeRegistrarMensagemPDF() || podeImportarCsv() || podeAbrirEncerrar();
       }
     }
+    // ---------------------------------------------------------------------
+    // Chat entre usuários (components/Chat.tsx, services/chat.ts, utils/chat.ts). Independente das
+    // mensagens das IS. Permissões por perfil em config/chat (perfis[perfil].{enviar, receber, anexos};
+    // padrão true — utils/chat.ts → PADRAO_CHAT), editadas em Administração › Chat.
+    function permChat(perfil, chave) {
+      return !exists(/databases/$(database)/documents/config/chat) ||
+        get(/databases/$(database)/documents/config/chat).data.get('perfis', {}).get(perfil, {}).get(chave, true) == true;
+    }
+    function perfilDe(uid) {
+      return get(/databases/$(database)/documents/usuarios/$(uid)).data.get('perfil', '');
+    }
+    // Conversa um a um: id = os dois uids em ordem, separados por "_".
+    function participaChat(conversaId) {
+      return isSignedIn() && request.auth.uid in conversaId.split('_');
+    }
+    function outroDoChat(conversaId) {
+      return conversaId.split('_')[0] == request.auth.uid ? conversaId.split('_')[1] : conversaId.split('_')[0];
+    }
+    function idChatValido(conversaId) {
+      return conversaId.split('_').size() == 2 && conversaId.split('_')[0] < conversaId.split('_')[1];
+    }
+    // Enviar: o remetente pode enviar e o destinatário (ativo) pode receber.
+    function podeEnviarChat(conversaId) {
+      return permChat(perfilAtual(), 'enviar') &&
+        get(/databases/$(database)/documents/usuarios/$(outroDoChat(conversaId))).data.get('ativo', true) != false &&
+        permChat(perfilDe(outroDoChat(conversaId)), 'receber');
+    }
+
+    // conversas/{a_b}: participantes, ultimaMensagem, atualizadaEm, naoLidas{uid: n}. Só os participantes
+    // leem e gravam; a lista (array-contains) só devolve as do próprio usuário. Só o Admin apaga.
+    match /conversas/{conversaId} {
+      allow get: if participaChat(conversaId);
+      allow list: if isSignedIn() && request.auth.uid in resource.data.participantes;
+      allow create: if participaChat(conversaId) && idChatValido(conversaId) &&
+        request.resource.data.participantes == conversaId.split('_') && podeEnviarChat(conversaId);
+      allow update: if participaChat(conversaId) &&
+        request.resource.data.participantes == resource.data.participantes &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ultimaMensagem', 'atualizadaEm', 'naoLidas']) &&
+        // Só quem pode enviar mexe na última mensagem; quem só recebe apenas zera as próprias não lidas.
+        (podeEnviarChat(conversaId) ||
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['naoLidas']) &&
+           request.resource.data.naoLidas.diff(resource.data.naoLidas).affectedKeys().hasOnly([request.auth.uid]) &&
+           request.resource.data.naoLidas[request.auth.uid] == 0));
+      allow delete: if isAdmin();
+
+      // Mensagens: autor, texto (até 4000), em, anexo?, lidaPor. O autor é o próprio usuário; anexo só com
+      // "enviar anexos". O outro participante só acrescenta o próprio uid em lidaPor (recibo de leitura).
+      // O Admin modera: apaga a mensagem ou tira o anexo (anexoRemovido). A retenção de 7 dias é do servidor.
+      match /mensagens/{mensagemId} {
+        allow read: if participaChat(conversaId);
+        allow create: if participaChat(conversaId) &&
+          request.resource.data.autor == request.auth.uid &&
+          request.resource.data.texto is string && request.resource.data.texto.size() <= 4000 &&
+          request.resource.data.em == request.time &&
+          request.resource.data.lidaPor == [request.auth.uid] &&
+          request.resource.data.keys().hasOnly(['autor', 'texto', 'em', 'lidaPor', 'anexo']) &&
+          podeEnviarChat(conversaId) &&
+          (!('anexo' in request.resource.data) || (
+            permChat(perfilAtual(), 'anexos') &&
+            request.resource.data.anexo.caminho is string &&
+            request.resource.data.anexo.caminho.matches('conversas/' + conversaId + '/.+') &&
+            request.resource.data.anexo.mime in ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] &&
+            request.resource.data.anexo.tamanho is int && request.resource.data.anexo.tamanho <= 10 * 1024 * 1024));
+        allow update: if (participaChat(conversaId) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lidaPor']) &&
+            request.resource.data.lidaPor.hasAll(resource.data.lidaPor) &&
+            request.resource.data.lidaPor.removeAll(resource.data.lidaPor).hasOnly([request.auth.uid])) ||
+          (isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['anexo', 'anexoRemovido']));
+        allow delete: if isAdmin();
+      }
+    }
+
+    // Presença do Chat (heartbeat ~60 s; online se < 2 min — utils/chat.ts). Só a hora da última atividade,
+    // gravada pelo próprio usuário com a hora do servidor; qualquer usuário autenticado lê.
+    match /presenca/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['ultimaAtividade']) && request.resource.data.ultimaAtividade == request.time;
+      allow delete: if false;
+    }
   }
 }

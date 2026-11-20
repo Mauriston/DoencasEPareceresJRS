@@ -5,6 +5,8 @@ import { Login } from './components/Login';
 import { Home } from './components/Home';
 import { Sidebar } from './components/shell/Sidebar';
 import { BannerAniversariantes } from './components/shell/BannerAniversariantes';
+import { ChatProvider } from './components/chat/ChatContext';
+import { BannerChat } from './components/chat/BannerChat';
 import { Topbar } from './components/shell/Topbar';
 import { BarraInferior } from './components/shell/BarraInferior';
 import { TituloPaginaProvider } from './components/shell/TituloPagina';
@@ -49,6 +51,7 @@ const Perfil = paginaLazy(() => import('./components/Perfil'), 'Perfil');
 const Ferias = paginaLazy(() => import('./components/Ferias'), 'Ferias');
 const Sobre = paginaLazy(() => import('./components/Sobre'), 'Sobre');
 const Feedback = paginaLazy(() => import('./components/Feedback'), 'Feedback');
+const Chat = paginaLazy(() => import('./components/Chat'), 'Chat');
 const DiseaseGuide = paginaLazy(() => import('./components/DiseaseGuide'), 'DiseaseGuide');
 const LawReference = paginaLazy(() => import('./components/LawReference'), 'LawReference');
 const DGPM406Guide = paginaLazy(() => import('./components/DGPM406Guide'), 'DGPM406Guide');
@@ -400,6 +403,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       // Férias e afastamentos: usuários da JRS (Admin, médicos JRS/MPI e Secretaria); só o Admin altera.
       case 'ferias': return canAccessPage('ferias', authUser?.perfil) ? <Ferias /> : <AccessDenied pagina="Férias" />;
       case 'sobre': return canAccessPage('sobre', authUser?.perfil) ? <Sobre /> : <AccessDenied pagina="Sobre o app" />;
+      case 'chat': return <Chat />;
       case 'feedback': return canAccessPage('feedback', authUser?.perfil) ? <Feedback /> : <AccessDenied pagina="Feedback" />;
       case 'painel': return can('painel') ? <Painel /> : <AccessDenied pagina={paginaLabel('painel')} />;
 
@@ -478,6 +482,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
     >
       {/* Mantém o Google Agenda em dia com os dias de concurso, em qualquer página (a de Inspeções faz a sua própria). */}
       <SincronizadorAgendaConcursos ativo={canAccessPage('inspecoes', authUser.perfil) && canUseFeature('inspecoes.agendar', authUser.perfil) && currentView !== 'inspecoes'} />
+      <ChatProvider authUser={authUser}>
       <BreadcrumbProvider>
       <TituloPaginaProvider>
       <div className="fixed inset-0 flex bg-canvas text-ink overflow-hidden antialiased">
@@ -493,9 +498,12 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
           <Topbar rolou={rolou} />
           {/* Único container de rolagem do app: as telas só crescem; toolbars e
               cabeçalhos de tabela usam `sticky` dentro dele. */}
-          {/* Banner flutuante dos aniversariantes do dia, por cima do conteúdo (não rola com ele). */}
+          {/* Banners flutuantes (aniversariantes do dia e novas mensagens do Chat), por cima do conteúdo (não rolam com ele). */}
           <div className="relative flex-1 min-h-0 flex flex-col">
-          <BannerAniversariantes authUser={authUser} />
+          <div className="absolute inset-x-0 top-0 z-dropdown px-3 pt-3 md:px-6 flex flex-col items-center gap-2 pointer-events-none" aria-live="polite">
+            <BannerAniversariantes authUser={authUser} />
+            <BannerChat uid={authUser.uid} />
+          </div>
           <main id="conteudo" ref={mainRef} tabIndex={-1} className="flex-1 min-h-0 overflow-y-auto focus:outline-none">
             <div ref={sentinelaRef} className="h-px -mb-px" aria-hidden="true" />
             {/* Única transição de troca de tela (CSS, 150 ms); Page e as telas não repetem o fade. */}
@@ -513,6 +521,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       </div>
       </TituloPaginaProvider>
       </BreadcrumbProvider>
+      </ChatProvider>
 
       {mostrarAlertaSenha && (
         <Dialog

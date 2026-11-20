@@ -31,6 +31,8 @@ export const ROUTES: RouteDef[] = [
   { view: 'sobre', path: '/sobre' },
   // Feedback: formulário (usuários) e lista recebida (Admin) — components/Feedback.tsx.
   { view: 'feedback', path: '/feedback' },
+  // Chat entre usuários (components/Chat.tsx): /chat lista as conversas; /chat/{a_b} abre a conversa. Acesso pelo menu do avatar.
+  { view: 'chat', path: '/chat/:conversaId?' },
   // "Add à Tela de Início": abre o diálogo de instalação e volta para a Início (App.tsx).
   { view: 'instalar-app', path: '/instalar-app' },
   { view: 'guide', path: '/beneficios/doencas/:doencaId?/:diagnosticoIdx?' },
@@ -102,6 +104,7 @@ const BASE_PATHS: Record<NavItem, string> = {
   painel: '/painel',
   sobre: '/sobre',
   feedback: '/feedback',
+  chat: '/chat',
   'instalar-app': '/instalar-app',
   guide: '/beneficios/doencas',
   portaria: '/beneficios/portaria',
@@ -157,8 +160,10 @@ export const concursoPath = (concursoId: string): string => `/concursos/${encode
 /** Detalhe de uma IS (e, opcionalmente, uma ação — ex.: 'entrevista', que abre a gravação no celular). */
 export const inspecaoPath = (isId: string, acao?: string): string =>
   `/inspecoes/${encodeURIComponent(isId)}${acao ? `/${encodeURIComponent(acao)}` : ''}`;
+/** Conversa do Chat (id = os dois uids em ordem, utils/chat.ts → idConversa). */
+export const chatPath = (conversaId?: string): string => (conversaId ? `/chat/${encodeURIComponent(conversaId)}` : '/chat');
 /** Subpágina da Administração (só Admin). */
-export type SecaoAdministracao = 'usuarios' | 'perfis' | 'emails' | 'agenda' | 'integracoes' | 'registro';
+export type SecaoAdministracao = 'usuarios' | 'perfis' | 'chat' | 'emails' | 'agenda' | 'integracoes' | 'registro';
 export const administracaoPath = (secao?: SecaoAdministracao): string => (secao ? `/administracao/${secao}` : '/administracao');
 /** Ficha do inspecionado (id = NIP só dígitos). */
 export const fichaPath = (nip: string): string => `/inspecionados/${encodeURIComponent(nip)}`;
