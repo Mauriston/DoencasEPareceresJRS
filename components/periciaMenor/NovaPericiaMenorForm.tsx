@@ -379,7 +379,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
               ? <span className="ml-1 text-xs font-normal text-ink-3">(opcional)</span>
               : <><span className="text-wine ml-0.5" aria-hidden="true">*</span><span className="sr-only"> (obrigatório)</span></>}</h3>
             {!paginas.length && !processando ? (
-              <Button variant="secondary" icon="document_scanner" onClick={() => setDigitalizando(true)} aria-invalid={!!erros.foto || undefined} aria-describedby={erros.foto ? 'pm-foto-erro' : undefined}>Digitalizar atestado</Button>
+              <Button variant="secondary" icon="photo_camera" onClick={() => setDigitalizando(true)} aria-invalid={!!erros.foto || undefined} aria-describedby={erros.foto ? 'pm-foto-erro' : undefined}>Fotografar atestado</Button>
             ) : (
               <div className="relative rounded-lg border border-line bg-white overflow-hidden">
                 {paginas.length
@@ -403,7 +403,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
                 )}
                 {!processando && (
                   <button
-                    type="button" onClick={() => setDigitalizando(true)} aria-label="Digitalizar o atestado de novo" title="Digitalizar de novo"
+                    type="button" onClick={() => setDigitalizando(true)} aria-label="Refazer foto do atestado" title="Refazer foto"
                     className="group absolute bottom-1 right-1 w-11 h-11 flex items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"
                   >
                     <span className="w-8 h-8 rounded-full bg-navy/60 group-hover:bg-navy text-white flex items-center justify-center transition-colors">

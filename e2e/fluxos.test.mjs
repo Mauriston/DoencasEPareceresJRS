@@ -420,10 +420,10 @@ test('Perícia Menor: lista o registro semeado, busca, abre o detalhe e o formul
   const abaRegistrar = form.getByRole('tab', { name: 'Registrar atestado' });
   assert.equal(await abaRegistrar.getAttribute('aria-selected'), 'true');
   await form.getByText('ENC p/ VDF?').waitFor();
-  assert.equal(await form.getByRole('button', { name: 'Digitalizar atestado' }).count(), 0);
+  assert.equal(await form.getByRole('button', { name: 'Fotografar atestado' }).count(), 0);
   assert.equal(await form.getByLabel('Perito responsável').count(), 0); // só o Admin escolhe
   await form.getByRole('tab', { name: 'Homologar atestado' }).click();
-  await form.getByRole('button', { name: 'Digitalizar atestado' }).waitFor();
+  await form.getByRole('button', { name: 'Fotografar atestado' }).waitFor();
   await form.getByLabel(/Tempo homologado/).waitFor();
   await p.context().close();
 });
