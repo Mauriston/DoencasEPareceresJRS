@@ -1,16 +1,16 @@
 // Ficheiro: components/inspecoes/BotaoEnviarEmails.tsx
-// "Enviar e-mails" do cabeçalho de Inspeções de Saúde: as listas de e-mails pendentes da JRS (itens de useEmailsIS,
+// "Enviar emails" do cabeçalho de Inspeções de Saúde: as listas de e-mails pendentes da JRS (itens de useEmailsIS,
 // com a contagem de pendentes de cada lista à direita) e, no gatilho, o badge com o total.
 //  • BotaoEnviarEmails — desktop: botão secundário que abre o menu suspenso (MenuAcoes com `botao`).
-//  • EmailsPendentesDialog — celular: a mesma lista num diálogo, aberto pela ação "Enviar e-mails" do FAB.
+//  • EmailsPendentesDialog — celular: a mesma lista num diálogo, aberto pela ação "Enviar emails" do FAB.
 // Os diálogos de envio continuam sendo os de useEmailsIS (renderize `dialogos` na página).
 import React from 'react';
 import { MenuAcoes, type ItemMenu } from '../ui/MenuAcoes';
 import { Dialog } from '../ui/Dialog';
 
-export const ROTULO_ENVIAR_EMAILS = 'Enviar e-mails';
+export const ROTULO_ENVIAR_EMAILS = 'Enviar emails';
 
-/** Texto acessível com o total de pendências (ex.: "Enviar e-mails (3 pendentes)"). */
+/** Texto acessível com o total de pendências (ex.: "Enviar emails (3 pendentes)"). */
 export const rotuloEmailsComTotal = (total: number): string =>
   total > 0 ? `${ROTULO_ENVIAR_EMAILS} (${total} pendente${total !== 1 ? 's' : ''})` : ROTULO_ENVIAR_EMAILS;
 

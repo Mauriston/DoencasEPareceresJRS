@@ -7,9 +7,9 @@
 // trabalho: Hoje → próximos dias → entrevistados aguardando conclusão → abertas sem agendamento; Finalizadas por
 // mês, paginadas ("Mostrar mais"). Ver inspecoes/TabelaAgendaIS e inspecoes/listaIS.
 // Calendário (formato do Google Agenda) só a partir de md (4g): no celular a página força a Lista, mesmo com a
-// preferência salva ou ?visao=calendario. Cabeçalho (desktop): "Enviar e-mails" (menu com as listas de pendentes e o
+// preferência salva ou ?visao=calendario. Cabeçalho (desktop): "Enviar emails" (menu com as listas de pendentes e o
 // badge do total) · "Bloqueios" · "Abrir IS" por último. No celular, FAB com "Abrir IS" (manual), "Abrir IS" (foto do
-// SINAIS), "Enviar e-mails" e "Bloqueios" (4d).
+// SINAIS), "Enviar emails" e "Bloqueios" (4d).
 // Filtros pela URL (contadores da Início e do Painel):
 //   ?situacao=atrasadas | sem_agendamento | finalizadas | hoje   (hoje vira o período "Hoje" e sai da URL)
 //   ?perito=<uid> · ?minhas=1 · ?dia=AAAA-MM-DD (período daquele dia) · ?visao=calendario|tabela · ?novo=manual|print
@@ -237,7 +237,7 @@ export const Inspecoes: React.FC = () => {
   const [apagando, setApagando] = useState<InspecaoRecord | null>(null);
   const [bloqueiosAberto, setBloqueiosAberto] = useState(false);
   const [emailAgendaAberto, setEmailAgendaAberto] = useState(false);
-  /** Celular: lista de e-mails pendentes aberta pela ação "Enviar e-mails" do FAB. */
+  /** Celular: lista de e-mails pendentes aberta pela ação "Enviar emails" do FAB. */
   const [emailsAberto, setEmailsAberto] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
 
@@ -514,7 +514,7 @@ export const Inspecoes: React.FC = () => {
     onEnviarResultadoBeneficios: setEnviandoBeneficios,
     onAviso: avisar,
   });
-  // Ações da página: "Enviar e-mails" (listas de pendentes) e "Bloqueios" como botões secundários no cabeçalho
+  // Ações da página: "Enviar emails" (listas de pendentes) e "Bloqueios" como botões secundários no cabeçalho
   // (desktop) e no FAB (celular). Não sobrou nada para um ⋮.
   const temAcoesCabecalho = podeEmails || podeBloquear || podeCadastrar;
 
@@ -683,7 +683,7 @@ export const Inspecoes: React.FC = () => {
         )}
       </Container>
 
-      {/* Celular: FAB com as ações do cabeçalho (4d) — Abrir IS (manual), Abrir IS (foto do SINAIS), Enviar e-mails, Bloqueios. */}
+      {/* Celular: FAB com as ações do cabeçalho (4d) — Abrir IS (manual), Abrir IS (foto do SINAIS), Enviar emails, Bloqueios. */}
       <FabAcoes acoes={[
         { id: 'abrir-is-manual', rotulo: 'Abrir IS', icone: 'add', ariaLabel: 'Abrir IS manualmente', onClick: () => setNovo({}), permitido: podeCadastrar },
         { id: 'abrir-is-foto', rotulo: 'Abrir IS', icone: 'photo_camera', ariaLabel: 'Abrir IS por foto do SINAIS', onClick: () => setPorFoto(true), permitido: podeCadastrar },
