@@ -13,6 +13,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import type { getStorage } from 'firebase-admin/storage';
 import { ehFinalidadeAnexoO, examesDasGuias, finalidadeTemExamesMinimos, idadeEm, paginasDasGuias, type GrupoExamesGuia, type SexoGuia } from '../../../utils/guiasExames';
 import { registrarUsoServidor } from '../../email/registroEmailsIS';
+import { contentDisposition, nomeArquivoDocumento } from '../../../utils/nomeArquivoDocumento';
 
 /** Erro de validação: vira 400/404 na rota, com a mensagem para o usuário. */
 export class ErroGuias extends Error {
@@ -88,7 +89,10 @@ export const gerarGuiasExames = async (
   }));
 
   const caminho = caminhoGuias(isId);
-  await bucket.file(caminho).save(pdf, { contentType: 'application/pdf', resumable: false, metadata: { cacheControl: 'private, max-age=0, no-store' } });
+  await bucket.file(caminho).save(pdf, { contentType: 'application/pdf', resumable: false, metadata: {
+    cacheControl: 'private, max-age=0, no-store',
+    contentDisposition: contentDisposition(nomeArquivoDocumento({ tipo: 'GUIA_DE_EXAMES', nome: is.inspecionado, is: is.is ?? isId })),
+  } });
   const guias: GuiasGeradas = { caminho, grupos, paginas: paginas.length, geradoPor: uid };
   await refIs.update({ guiasExames: { ...guias, geradoEm: FieldValue.serverTimestamp() } });
   await registrarUsoServidor(db, uid, { guias: true });

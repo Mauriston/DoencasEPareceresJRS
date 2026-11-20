@@ -2,6 +2,7 @@
 // "Enviar para impressão" pelo servidor (Gmail API da conta Google da JRS), no lugar do MailApp do Apps
 // Script: mesmos destinatários, assuntos, textos (simples e HTML) e anexo. O PDF é lido do Google Drive
 // (Drive API, só leitura) e precisa estar sob a pasta permitida (PARECERES ou CONCURSOS), como antes.
+import { nomeArquivoDocumento, nomeDoContentDisposition } from '../../utils/nomeArquivoDocumento';
 import type { Firestore } from 'firebase-admin/firestore';
 import { googleFetch, tokenGoogle, ErroContaGoogle } from './contaGoogle';
 
@@ -151,7 +152,7 @@ const anexoDoParecer = async (db: Firestore, pdfUrl: string): Promise<{ nome: st
   if (URL_STORAGE_LEGADO.test(url)) {
     const r = await fetch(url);
     if (!r.ok) throw new ErroContaGoogle('falha', 'Não foi possível baixar o PDF do pedido.');
-    return { nome: 'PEDIDO_DE_PARECER.pdf', bytes: Buffer.from(await r.arrayBuffer()) };
+    return { nome: nomeDoContentDisposition(r.headers.get('content-disposition')) || 'PEDIDO_DE_PARECER.pdf', bytes: Buffer.from(await r.arrayBuffer()) };
   }
   throw new ErroContaGoogle('falha', 'Endereço do PDF não reconhecido.');
 };
@@ -169,7 +170,7 @@ const anexoDoConcurso = async (db: Firestore, url: string, nomeStorage: string):
   if (URL_STORAGE_CONCURSOS.test(url)) {
     const r = await fetch(url);
     if (!r.ok) throw new ErroContaGoogle('falha', 'Não foi possível baixar o PDF do concurso.');
-    return { nome: nomeStorage, bytes: Buffer.from(await r.arrayBuffer()) };
+    return { nome: nomeDoContentDisposition(r.headers.get('content-disposition')) || nomeStorage, bytes: Buffer.from(await r.arrayBuffer()) };
   }
   throw new ErroContaGoogle('falha', 'Endereço do PDF não reconhecido.');
 };
@@ -181,7 +182,7 @@ export const enviarTermoRecursoImpressao = async (db: Firestore, b: any) => {
   const candidatoId = limparNome(b.candidatoId);
   const nomeConcurso = limparNome(b.nomeConcurso);
   if (!candidato) throw new ErroContaGoogle('falha', '"candidatoNome" é obrigatório.');
-  const nomeAnexo = 'TERMO_RECURSO.pdf';
+  const nomeAnexo = nomeArquivoDocumento({ tipo: 'TERMO_DE_RECURSO', nome: candidato, identificador: nomeConcurso });
   const anexo = await anexoDoConcurso(db, String(b.pdfUrl || ''), nomeAnexo);
   const agradecimento = agradecimentoDe(remetente);
   const idCandidato = candidatoId ? `${candidatoId} ` : '';

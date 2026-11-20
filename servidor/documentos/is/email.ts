@@ -48,7 +48,7 @@ export const montarEmailDocumentoIS = (d: DadosEmailDocumentoIS, assinatura: Dad
 
 /** Envia o PDF ao inspecionado. Lança Error com mensagem amigável se não houver e-mail. Devolve os destinatários. */
 export const enviarDocumentoAoInspecionado = async (
-  ctx: ContextoDocumentoIS, titulo: string, pdf: Buffer, ajuste: AjusteEmailDocumento = {},
+  ctx: ContextoDocumentoIS, titulo: string, pdf: Buffer, ajuste: AjusteEmailDocumento = {}, nomeArquivo?: string,
 ): Promise<string[]> => {
   const { db, is, militar, uid } = ctx;
   const emailInspecionado = String(militar?.email || militar?.emailPessoal || '').trim().toLowerCase();
@@ -56,10 +56,11 @@ export const enviarDocumentoAoInspecionado = async (
 
   const fixos = await destinatariosFixos(db, 'documentoIS');
   const assinatura = await assinaturaDe(db, uid, fixos.config);
-  const { assunto, html, texto, anexoNome } = montarEmailDocumentoIS({
+  const { assunto, html, texto, anexoNome: anexoPadrao } = montarEmailDocumentoIS({
     titulo, numeroIs: is.is, inspecionado: is.inspecionado, finalidade: is.finalidade, sexo: militar?.sexo as string | undefined,
     paragrafos: ajuste.paragrafos, assunto: ajuste.assunto,
   }, assinatura);
+  const anexoNome = nomeArquivo || anexoPadrao;
   const para = juntarEmails([emailInspecionado, ajuste.para, fixos.para]);
   const cc = juntarEmails([ajuste.cc, fixos.cc], para);
   const cco = juntarEmails([fixos.cco], [...para, ...cc]);

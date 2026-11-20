@@ -558,7 +558,7 @@ async function startServer() {
       return;
     }
     try {
-      const { adminApp } = await getFirebaseAdmin();
+      const { adminApp, adminDb } = await getFirebaseAdmin();
       const { getStorage } = await import("firebase-admin/storage");
       const arquivo = getStorage(adminApp).bucket(BUCKET_STORAGE).file(caminho);
       const [meta] = await arquivo.getMetadata();
@@ -566,6 +566,13 @@ async function startServer() {
       if (meta.size) res.setHeader("Content-Length", String(meta.size));
       res.setHeader("Cache-Control", "private, max-age=300");
       res.setHeader("X-Content-Type-Options", "nosniff");
+      const { nomeArquivoDoObjeto } = await import("./servidor/documentos/nomeArquivo");
+      const { contentDisposition } = await import("./utils/nomeArquivoDocumento");
+      const nomeArquivo = await nomeArquivoDoObjeto(/^inspecoes\//.test(caminho) ? adminDb : null, caminho, meta as { contentDisposition?: string; timeCreated?: string });
+      if (nomeArquivo) {
+        res.setHeader("Content-Disposition", contentDisposition(nomeArquivo));
+        res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+      }
       arquivo.createReadStream()
         .on("error", (e: unknown) => { logErroSeguro("Storage stream", e); if (!res.headersSent) res.status(500).end(); else res.destroy(); })
         .pipe(res);

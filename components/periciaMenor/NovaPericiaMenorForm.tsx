@@ -312,7 +312,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
     setSalvando(true);
     try {
       const id = novoIdPericiaMenor();
-      const pdfUrl = homologacao && imagemDoc ? await enviarPdfPericiaMenor(id, await imagemParaPdf(imagemDoc)) : '';
+      const pdfUrl = homologacao && imagemDoc ? await enviarPdfPericiaMenor(id, await imagemParaPdf(imagemDoc), militar.inspecionado) : '';
       const medico = normalizarTexto(medicoEmissor);
       const crm = normalizarTexto(crmEmissor);
       await registrarPericiaMenor(id, {

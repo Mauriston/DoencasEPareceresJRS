@@ -14,6 +14,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Bucket } from '../guiasExames/servico';
 import { urlDownloadStorage } from '../../../utils/pareceres';
+import { contentDisposition, nomeArquivoDocumento, TIPO_ARQUIVO_DOCUMENTO_IS, TIPOS_COM_CARIMBO } from '../../../utils/nomeArquivoDocumento';
 import {
   caminhoDocumentoIS, ehTipoDocumentoIS, motivoDocumentoISIndisponivel, PERFIS_DOCUMENTO_IS, ROTULO_DOCUMENTO_IS, SUBCOL_DOCUMENTOS_IS,
 } from '../../../utils/documentosIS';
@@ -106,9 +107,10 @@ export const gerarDocumentoIS = async (
   const id = randomUUID();
   const caminho = teste ? `${PREFIXO_TESTES_DOCUMENTOS_IS}${tipo}-${id}.pdf` : caminhoDocumentoIS(is.id, tipo, id);
   const token = randomUUID();
+  const nomeArquivo = nomeArquivoDocumento({ tipo: TIPO_ARQUIVO_DOCUMENTO_IS[tipo], nome: is.inspecionado, is: is.is, carimbo: TIPOS_COM_CARIMBO.includes(TIPO_ARQUIVO_DOCUMENTO_IS[tipo]) ? base.agora : false });
   await bucket.file(caminho).save(pdf, {
     contentType: 'application/pdf', resumable: false,
-    metadata: { contentType: 'application/pdf', metadata: { firebaseStorageDownloadTokens: token } },
+    metadata: { contentType: 'application/pdf', contentDisposition: contentDisposition(nomeArquivo), metadata: { firebaseStorageDownloadTokens: token } },
   });
   const salvo: DocumentoISSalvo = {
     id, tipo, titulo: gerador.titulo, caminho, pdfUrl: urlDownloadStorage(nomeBucket, caminho, token),
@@ -123,7 +125,7 @@ export const gerarDocumentoIS = async (
     try {
       const { enviarDocumentoAoInspecionado } = await import('./email');
       const ajuste = gerador.email ? await gerador.email(dados, ctx) : {};
-      salvo.emailPara = await enviarDocumentoAoInspecionado(ctx, gerador.titulo, pdf, ajuste);
+      salvo.emailPara = await enviarDocumentoAoInspecionado(ctx, gerador.titulo, pdf, ajuste, nomeArquivo);
       salvo.emailEnviado = true;
     } catch (e: any) {
       salvo.erroEmail = e?.message ? String(e.message) : 'Falha ao enviar o e-mail.';

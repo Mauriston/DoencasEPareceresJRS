@@ -6,7 +6,7 @@
 // login) e mostra um endereço blob: local. Se o repasse falhar, cai para a URL original.
 // URLs que não são do Storage (Drive, imagens externas, data:) passam direto.
 import { useEffect, useState } from 'react';
-import { baixarDoServidor } from './apiClient';
+import { baixarArquivoDoServidor } from './apiClient';
 
 /** Caminho do objeto no bucket a partir da URL de download do Storage; null se não for do Storage. */
 export const caminhoDoStorage = (url: string | undefined | null): string | null => {
@@ -26,6 +26,11 @@ export const caminhoDoStorage = (url: string | undefined | null): string | null 
 
 // Cache da sessão (URL original → blob:), para não baixar de novo a mesma foto em cada avatar.
 const cache = new Map<string, Promise<string>>();
+// blob: → nome do arquivo (Content-Disposition do servidor), para o botão "Baixar" usar o nome humano.
+const nomes = new Map<string, string>();
+
+/** Nome do arquivo de uma URL devolvida por urlExibivel ('' se não houver). */
+export const nomeDoArquivoExibivel = (src: string | undefined | null): string => (src && nomes.get(src)) || '';
 
 /** URL que o navegador consegue abrir: blob: (via servidor) para arquivos do Storage; a própria URL nos demais. */
 export const urlExibivel = (url: string): Promise<string> => {
@@ -33,8 +38,13 @@ export const urlExibivel = (url: string): Promise<string> => {
   if (!caminho) return Promise.resolve(url);
   let p = cache.get(url);
   if (!p) {
-    p = baixarDoServidor('/api/arquivos/baixar', { caminho }, { timeoutMs: 60_000 })
-      .then(blob => URL.createObjectURL(blob))
+    p = baixarArquivoDoServidor('/api/arquivos/baixar', { caminho }, { timeoutMs: 60_000 })
+      .then(({ blob, nome }) => {
+        // File com o nome: alguns visualizadores usam-no ao salvar; o "Baixar" do app usa nomeDoArquivoExibivel.
+        const u = URL.createObjectURL(nome && typeof File === 'function' ? new File([blob], nome, { type: blob.type }) : blob);
+        if (nome) nomes.set(u, nome);
+        return u;
+      })
       .catch(() => { cache.delete(url); return url; }); // repasse indisponível: tenta direto
     cache.set(url, p);
   }
