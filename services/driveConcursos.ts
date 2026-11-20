@@ -10,10 +10,12 @@
 // No Drive, quem cria as pastas e os arquivos é o Apps Script standalone (CodeConcursos.gs); este módulo só
 // o chama e devolve as URLs, que o app grava no Firestore. A leitura da mensagem e a transcrição dos exames
 // são feitas pelo Gemini no próprio app (Firebase AI Logic, services/geminiAI.ts).
+import { abrirPdf as abrirPdfNovaAba } from './abrirPdf';
 import { chamarScript as chamarScriptApi } from './apiClient';
 import { chamarGoogle } from './googleServidor';
 import { gerarComGemini, lerJsonIA } from './geminiAI';
 import { PROMPT_EXAMES_CANDIDATO, PROMPT_MENSAGEM_CONCURSO } from '../config/promptsIA';
+import { contentDisposition, nomeArquivoDocumento, type TipoDocumentoArquivo } from '../utils/nomeArquivoDocumento';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { app } from './firebaseAuth';
 import { normalizarExamesExtraidos, type ExamesExtraidos } from '../utils/examesCandidato';
@@ -42,6 +44,12 @@ export interface PastaConcurso { nome: string; ano: number | string; concursoId?
 export const pastaDoConcurso = (c: { id: string; nome: string; criadoEm?: string; armazenamento?: 'storage' | 'drive' }): PastaConcurso =>
   ({ nome: c.nome, ano: anoDoConcurso(c.criadoEm), concursoId: c.id, storage: c.armazenamento === 'storage' });
 
+/** Tipo no nome "humano" do arquivo (utils/nomeArquivoDocumento.ts). */
+const TIPO_ARQUIVO_CANDIDATO: Record<TipoDocumentoCandidato, TipoDocumentoArquivo> = {
+  termoRecurso: 'TERMO_DE_RECURSO', termoCientificacao: 'TERMO_DE_CIENTIFICACAO',
+  solicitacaoParecer: 'SOLICITACAO_DE_PARECER', solicitacaoExames: 'SOLICITACAO_DE_EXAMES',
+};
+
 const NOME_TIPO: Record<TipoDocumentoCandidato, string> = {
   termoRecurso: 'TERMO_RECURSO', termoCientificacao: 'TERMO_CIENTIFICACAO',
   solicitacaoParecer: 'SOLICITACAO_PARECER', solicitacaoExames: 'SOLICITACAO_EXAMES',
@@ -57,11 +65,11 @@ const carimbo = () => new Date().toISOString().replace(/[-:]/g, '').replace('T',
 const base64ParaBytes = (b64: string): Uint8Array => Uint8Array.from(atob(b64), ch => ch.charCodeAt(0));
 
 /** Envia o PDF ao Storage em concursos/{concursoId}/… e devolve a URL de download (com token). */
-const enviarAoStorage = async (pasta: PastaConcurso, subcaminho: string, dados: Blob | Uint8Array): Promise<{ url: string; caminho: string }> => {
+const enviarAoStorage = async (pasta: PastaConcurso, subcaminho: string, dados: Blob | Uint8Array, nomeArquivo?: string): Promise<{ url: string; caminho: string }> => {
   if (!pasta.concursoId) throw new Error('Concurso sem identificador: não foi possível guardar o PDF.');
   const caminho = `concursos/${pasta.concursoId}/${subcaminho}`;
   const r = ref(getStorage(app), caminho);
-  await uploadBytes(r, dados, { contentType: 'application/pdf' });
+  await uploadBytes(r, dados, { contentType: 'application/pdf', ...(nomeArquivo ? { contentDisposition: contentDisposition(nomeArquivo) } : {}) });
   return { url: await getDownloadURL(r), caminho };
 };
 
@@ -181,7 +189,8 @@ export const salvarPdfCandidatoNoDrive = async (params: {
   exigirTamanho(Math.ceil((params.pdfBase64.length * 3) / 4));
   if (params.pasta.storage) {
     const sub = `candidatos/${trechoCaminho(params.candidatoId)}/${NOME_TIPO[params.tipo]}_${carimbo()}.pdf`;
-    return (await enviarAoStorage(params.pasta, sub, base64ParaBytes(params.pdfBase64))).url;
+    const nomeArquivo = nomeArquivoDocumento({ tipo: TIPO_ARQUIVO_CANDIDATO[params.tipo], nome: params.candidatoNome, identificador: params.pasta.nome, carimbo: true });
+    return (await enviarAoStorage(params.pasta, sub, base64ParaBytes(params.pdfBase64), nomeArquivo)).url;
   }
   const d = await chamarScript<{ url: string }>('salvarPdfCandidato', {
     ano: params.pasta.ano,
@@ -285,7 +294,7 @@ export const urlDownload = (url: string): string => {
 
 /** Abre o PDF numa nova janela (URL "view" do Drive; PDFs antigos do Storage abrem como estão). */
 export const abrirPdf = (url: string): void => {
-  window.open(urlVisualizacao(url), '_blank', 'noopener,noreferrer');
+  abrirPdfNovaAba(urlVisualizacao(url)).catch(e => console.error('Falha ao abrir o PDF:', e));
 };
 
 /**

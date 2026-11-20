@@ -9,6 +9,7 @@
 // pois nada atualizaria um valor gravado com o passar do tempo.
 import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, serverTimestamp, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { novoId } from '../utils/dados';
+import { contentDisposition, nomeArquivoDocumento } from '../utils/nomeArquivoDocumento';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { camposIdDrive } from '../utils/googleDrive';
 import { app } from './firebaseAuth';
@@ -129,9 +130,10 @@ export const observarPericiasDoMilitar = (militarId: string, onData: (lista: Per
   );
 
 /** Envia o PDF ao Storage e devolve a URL de download. */
-export const enviarPdfPericiaMenor = async (id: string, pdf: Blob): Promise<string> => {
+export const enviarPdfPericiaMenor = async (id: string, pdf: Blob, inspecionado?: string): Promise<string> => {
   const r = ref(getStorage(app), `${COL}/${id}.pdf`);
-  await uploadBytes(r, pdf, { contentType: 'application/pdf' });
+  const nomeArquivo = nomeArquivoDocumento({ tipo: 'PERICIA_MENOR', nome: inspecionado, carimbo: true });
+  await uploadBytes(r, pdf, { contentType: 'application/pdf', contentDisposition: contentDisposition(nomeArquivo) });
   return getDownloadURL(r);
 };
 

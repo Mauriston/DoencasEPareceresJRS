@@ -11,6 +11,7 @@
 //    institucionais dos user_secretaria escolhidos; Reply-To = institucional de quem disparou; só a assinatura dele.
 //  - Grava emailGuiasEnviadoEm e registra cada envio no histórico da IS (registrarEmailIS).
 // POST /api/secretaria/usuarios: listarUsuariosSecretaria (caixas de seleção do dialog; rótulo = usuario).
+import { nomeArquivoDocumento } from '../../utils/nomeArquivoDocumento';
 import type { Firestore } from 'firebase-admin/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import { ErroContaGoogle } from '../google/contaGoogle';
@@ -23,7 +24,7 @@ import { TEMPLATE_GUIAS_INSPECIONADO, TEMPLATE_GUIAS_SECRETARIA } from './templa
 import { cargoSemJrs } from '../../config/emails';
 import { ehInstitucional } from '../../utils/emailAgendaIS';
 import {
-  ASSUNTO_GUIAS_INSPECIONADO, assuntoGuiasSecretaria, caminhoGuiasExames, inspecionadoSemNip, linhasExamesGuias, nomeAnexoGuias,
+  ASSUNTO_GUIAS_INSPECIONADO, assuntoGuiasSecretaria, caminhoGuiasExames, inspecionadoSemNip, linhasExamesGuias,
   vocativoInspecionado, type GrupoGuia, type SexoCadastro,
 } from '../../utils/emailGuiasIS';
 
@@ -68,7 +69,7 @@ export const montarEmailGuiasInspecionado = (d: DadosEmailGuias, assinatura: Dad
     assinaturaTexto(assinatura, FECHO_GUIAS), '',
     ...rodapeTexto(),
   ].join('\n');
-  return { assunto: ASSUNTO_GUIAS_INSPECIONADO, html, texto, anexoNome: nomeAnexoGuias(d.numeroIs) };
+  return { assunto: ASSUNTO_GUIAS_INSPECIONADO, html, texto, anexoNome: nomeArquivoDocumento({ tipo: 'GUIA_DE_EXAMES', nome: d.inspecionado, is: d.numeroIs }) };
 };
 
 /** E-mail à SEC-JRS: assunto, HTML, texto simples e nome do anexo. Exportada para os testes. */
@@ -87,7 +88,7 @@ export const montarEmailGuiasSecretaria = (d: DadosEmailGuias, remetente: Remete
     ...[remetente.nome, remetente.posto, remetente.cargo].filter(Boolean) as string[], '',
     ...rodapeTexto(),
   ].join('\n');
-  return { assunto: assuntoGuiasSecretaria(inspecionadoSemNip(inspecionado)), html, texto, anexoNome: nomeAnexoGuias(d.numeroIs) };
+  return { assunto: assuntoGuiasSecretaria(inspecionadoSemNip(inspecionado)), html, texto, anexoNome: nomeArquivoDocumento({ tipo: 'GUIA_DE_EXAMES', nome: d.inspecionado, is: d.numeroIs }) };
 };
 
 // ---------------------------------------------------------------- Dados fictícios (e-mail de teste e página Sobre)

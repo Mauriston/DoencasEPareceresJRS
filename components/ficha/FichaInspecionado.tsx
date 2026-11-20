@@ -34,7 +34,7 @@
 //   Ao abrir a página ou trocar de aba, o painel principal mostra o registro MAIS RECENTE, ou o aviso de que
 //   não há registros para o inspecionado. Aba e registro ficam na URL (?aba=…&reg=…; ?is= / ?sel= / ?guia=
 //   antigos continuam valendo).
-// Os PDFs abrem no PdfFullscreenModal. Afastamentos das IS: adaptador único afastamentosDaIS (utils/fichaInspecionado.ts).
+// Os PDFs abrem em nova aba (services/abrirPdf). Afastamentos das IS: adaptador único afastamentosDaIS (utils/fichaInspecionado.ts).
 // Leitura limitada às consultas por NIP (where militarId/inspecionadoId == nip), nunca a coleção inteira (MF2).
 // Abrir a ficha grava o evento "abriu a ficha" (quem e quando) em militares/{nip}/eventos (best effort).
 // Substitui a antiga página de histórico da Perícia Menor (/pericia-menor/historico/<nip> redireciona para cá).
@@ -53,7 +53,7 @@ import { Toast } from '../ui/Toast';
 import { Drawer } from '../ui/Drawer';
 import type { AcaoRodape } from '../ui/AcoesRodape';
 import { useTituloPagina } from '../shell/TituloPagina';
-import { PdfFullscreenModal } from '../PdfFullscreenModal';
+import { abrirPdf } from '../../services/abrirPdf';
 import { LinhaRegistroPericia, PericiaMenorPainel } from '../periciaMenor/PericiaMenorPainel';
 import { ExcluirPericiaDialog } from '../periciaMenor/ExcluirPericiaDialog';
 import { podeExcluirPericia } from '../../utils/exclusaoPericia';
@@ -115,7 +115,6 @@ import { diaMes, partesCid, postoDoInspecionado } from '../../utils/periciaMenor
 import { ABAS_FICHA, abaFichaInicial, afastamentosDaIS, registroSelecionado, type AbaFicha } from '../../utils/fichaInspecionado';
 import { categoriaDoItem, classeDoExame, ROTULO_CATEGORIA, ROTULO_CLASSE, ROTULO_TIPO } from '../../utils/examesIS';
 import { aguardaAgendamento, dataHoraBr, situacaoDoStatus } from '../../utils/inspecoes';
-import { getDriveEmbedUrl, isGoogleDriveUrl } from '../../utils/googleDrive';
 import { extrairNomeInspecionado, formatCelular, formatCpf, formatDataBr, formatNip, idadeEmAnos } from '../../utils/format';
 import { hojeISO } from '../../utils/dados';
 
@@ -131,8 +130,6 @@ const quandoEvento = (d: Date | null, hoje: string) => {
   const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   return `${iso === hoje ? 'hoje' : diaMes(iso)} · ${hora}`;
 };
-/** O iframe do modal não abre a página /view do Drive: usa a de preview embutido. */
-const urlParaModal = (url: string) => (isGoogleDriveUrl(url) ? getDriveEmbedUrl(url) ?? url : url);
 
 /** Rótulo, ícone e textos de cada aba (o título do histórico e o aviso de "sem registros"). */
 const DEF_ABA: Record<AbaFicha, { rotulo: string; icone: string; historico: string; vazio: string }> = {
@@ -224,7 +221,6 @@ export const FichaInspecionado: React.FC = () => {
   const [editando, setEditando] = useState(false);
   const [verCadastro, setVerCadastro] = useState(false);
   const [verEventos, setVerEventos] = useState(false);
-  const [pdf, setPdf] = useState<{ titulo: string; url: string } | null>(null);
   const [parecerPara, setParecerPara] = useState<{ is: InspecaoRecord; inicial?: ParecerRecord } | null>(null);
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
   const [mensagens, setMensagens] = useState<MensagemISRecord[]>([]);
@@ -611,7 +607,7 @@ export const FichaInspecionado: React.FC = () => {
     return (
       <PainelParecer
         key={p.id} parecer={p} agora={agora} podeResponder={podeRespostaParecer}
-        onAbrirPdf={(titulo, url) => setPdf({ titulo, url: urlParaModal(url) })}
+        onAbrirPdf={(_titulo, url) => { abrirPdf(url).catch(() => { /* aba fechada */ }); }}
         onResponder={() => definir({ criar: 'resposta', is: p.isId ?? null, reg: p.id })}
       />
     );
@@ -854,7 +850,6 @@ export const FichaInspecionado: React.FC = () => {
       {agendando && (
         <AgendarISFicha inspecao={agendando} onClose={() => setAgendando(null)} onAgendada={(msg, tom) => { setAgendando(null); avisar(msg, tom); }} />
       )}
-      {pdf && <PdfFullscreenModal title={pdf.titulo} url={pdf.url} onClose={() => setPdf(null)} />}
       {periciaExcluindo && perfil && (
         <ExcluirPericiaDialog
           pericia={periciaExcluindo} perfil={perfil} termo={t.singular}

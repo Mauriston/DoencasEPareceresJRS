@@ -8,6 +8,7 @@
 //   Apps Script:  { sucesso: true, dados } | { sucesso: false, erro }      (padrão)
 //                 { success, data | message, ... }                          (legado: Gemini)
 //   Servidor:     { success: true, ...campos } | { success: false, error }
+import { nomeDoContentDisposition } from '../utils/nomeArquivoDocumento';
 import { GAS_URL_CONCURSOS } from '../config/endpoints';
 import { apiUrl } from '../utils/apiBase';
 import { obterIdToken } from './authService';
@@ -96,7 +97,11 @@ export const chamarServidor = async <T = Record<string, any>>(rota: string, corp
  * Baixa um arquivo binário do servidor Node (POST JSON, token no cabeçalho) e devolve o Blob.
  * Erros vêm como ApiError (o corpo de erro do servidor é JSON).
  */
-export const baixarDoServidor = async (rota: string, corpo: unknown = {}, opts: OpcoesApi = {}): Promise<Blob> => {
+export const baixarDoServidor = async (rota: string, corpo: unknown = {}, opts: OpcoesApi = {}): Promise<Blob> =>
+  (await baixarArquivoDoServidor(rota, corpo, opts)).blob;
+
+/** Como baixarDoServidor, e também o nome do arquivo do Content-Disposition (vazio se não houver). */
+export const baixarArquivoDoServidor = async (rota: string, corpo: unknown = {}, opts: OpcoesApi = {}): Promise<{ blob: Blob; nome: string }> => {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (opts.autenticar !== false) headers.Authorization = `Bearer ${await exigirToken()}`;
   const resp = await enviar(apiUrl(rota), { method: 'POST', headers, body: JSON.stringify(corpo) }, opts);
@@ -106,7 +111,7 @@ export const baixarDoServidor = async (rota: string, corpo: unknown = {}, opts: 
     const codigo: CodigoErroApi = resp.status === 401 ? 'nao_autenticado' : resp.status === 403 ? 'sem_permissao' : 'negocio';
     throw new ApiError(codigo, msg, resp.status);
   }
-  return resp.blob();
+  return { blob: await resp.blob(), nome: nomeDoContentDisposition(resp.headers?.get?.('Content-Disposition')) };
 };
 
 /**

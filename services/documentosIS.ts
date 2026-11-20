@@ -1,6 +1,7 @@
 // Ficheiro: services/documentosIS.ts
 // Documentos gerados a partir de uma IS ("Gerar Documento ▾" da Ficha): POST /api/inspecoes/documentos/gerar
 // (servidor/documentos/is/) e a leitura dos registros em inspecoes/{isId}/documentos (aba Outros da Ficha).
+import { abrirPdf } from './abrirPdf';
 import { getFirestore, collection, collectionGroup, query, where, orderBy, limit, onSnapshot, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { app } from './firebaseAuth';
 import { chamarServidor } from './apiClient';
@@ -81,7 +82,7 @@ export const observarDocumentosISRecentes = (cb: (l: RegistroDocumentoIS[]) => v
   );
 
 /** Abre o PDF em NOVA aba do navegador. */
-export const abrirPdfNovaAba = (url: string) => { if (url) window.open(url, '_blank', 'noopener,noreferrer'); };
+export const abrirPdfNovaAba = (url: string) => { if (url) abrirPdf(url).catch(e => console.error('Falha ao abrir o PDF:', e)); };
 
 // ── Administração › Templates de documentos: ajustes em config/documentosIS.{tipo} (utils/ajustesDocumentosIS.ts).
 export const observarAjustesDocumentosIS = (cb: (cru: Record<string, Record<string, unknown>>) => void, onErro?: (e: Error) => void) =>

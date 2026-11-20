@@ -9,6 +9,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Firestore } from 'firebase-admin/firestore';
 import type { Bucket } from './guiasExames/servico';
+import { contentDisposition, nomeArquivoDocumento } from '../../utils/nomeArquivoDocumento';
 import { assinanteDoPedido, caminhoPedidoParecer, urlDownloadStorage, type DadosAssinante } from '../../utils/pareceres';
 
 /** Erro de validação: vira 400/404 na rota, com a mensagem para o usuário. */
@@ -51,11 +52,13 @@ export const gerarPedidoParecer = async (
   if (!gerador) throw new ErroPedidoParecer(404, 'Usuário não encontrado.');
 
   let perito: DadosAssinante | null = null;
+  let snapIsNumero: unknown = '';
   const isId = idDaIs(corpo.isId);
   if (isId) {
     const snapIs = await db.collection('inspecoes').doc(isId).get();
     if (!snapIs.exists) throw new ErroPedidoParecer(404, 'IS não encontrada.');
     perito = await lerUsuario(db, String((snapIs.data() as { peritoUid?: string }).peritoUid ?? ''));
+    snapIsNumero = (snapIs.data() as { is?: unknown }).is ?? '';
   }
   const { assinante, origem } = assinanteDoPedido(gerador, perito);
 
@@ -73,7 +76,11 @@ export const gerarPedidoParecer = async (
   const token = randomUUID();
   await bucket.file(caminho).save(pdf, {
     contentType: 'application/pdf', resumable: false,
-    metadata: { contentType: 'application/pdf', metadata: { firebaseStorageDownloadTokens: token } },
+    metadata: {
+      contentType: 'application/pdf',
+      contentDisposition: contentDisposition(nomeArquivoDocumento({ tipo: 'PEDIDO_DE_PARECER', nome: corpo.inspecionado, is: snapIsNumero, carimbo: true })),
+      metadata: { firebaseStorageDownloadTokens: token },
+    },
   });
   return { id, caminho, pdfUrl: urlDownloadStorage(nomeBucket, caminho, token), assinante: { uid: assinante.uid, nome: assinante.nome ?? '', origem } };
 };

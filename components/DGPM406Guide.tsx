@@ -169,7 +169,7 @@ export const DGPM406Guide: React.FC = () => {
   const [termo, setTermo] = useState('');
   const [buscaMobile, setBuscaMobile] = useState(false);
   const conteudo = useRef<HTMLDivElement>(null);
-  const { open: openPdf, busy: baixandoPdf, modalElement } = useStoragePdf();
+  const { open: openPdf, busy: baixandoPdf } = useStoragePdf();
 
   // URL do PDF integral (Storage, exige login) obtida de antemão: o botão do cabeçalho é um
   // <a target="_blank"> de verdade, sem pop-up bloqueado.
@@ -291,7 +291,6 @@ export const DGPM406Guide: React.FC = () => {
           <ListaIndice ativo={item.id} onIr={irPara} contagens={contagens} />
         </Drawer>
       )}
-      {modalElement}
 
     </div>
   );

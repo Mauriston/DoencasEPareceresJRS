@@ -144,7 +144,7 @@ describe('e-mails de teste', () => {
   it('guias: anexo com as páginas das guias fictícias; à SEC-JRS, remetente fictício (Admin não assina)', () => {
     const cfg = mesclarConfigEmails(undefined);
     const ins = montarEmailTeste('guiasInspecionado', assinaturaSemSignatario(), cfg, semente(1)) as { htmlAnexo?: string; anexoNome?: string };
-    expect(ins.anexoNome).toMatch(/^Guias de exames - IS \d+\.pdf$/);
+    expect(ins.anexoNome).toMatch(/^GUIA_DE_EXAMES_[A-Z0-9_]+_IS\d+\.pdf$/);
     expect((ins.htmlAnexo || '').split('<section class="pagina"').length - 1).toBeGreaterThan(1);
     const sec = montarEmailTeste('guiasSecretaria', assinaturaSemSignatario(), cfg, semente(1)) as { nomeRemetente?: string; htmlAnexo?: string };
     expect(sec.nomeRemetente).toBe('BELTRANO DE SOUZA');

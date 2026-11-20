@@ -3,6 +3,7 @@
 // Ficha). Por template, ajustes editáveis (títulos, textos fixos, corpo com {{placeholders}}) gravados em
 // config/documentosIS.{tipo} (esquema/padrões em utils/ajustesDocumentosIS.ts; lidos pelos geradores em
 // servidor/documentos/is/) e "Gerar teste": PDF com dados fictícios em testes/documentosIS/, apagado após 30 min.
+import { abrirPdf } from '../../services/abrirPdf';
 import React, { useContext, useEffect, useState } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -39,14 +40,11 @@ const CartaoTemplate: React.FC<{ tipo: TipoDocumentoIS; cru: Record<string, unkn
   const restaurar = () => { setValores({ ...(AJUSTES_PADRAO_DOCUMENTOS_IS[tipo] as unknown as Valores) }); setSujo(true); };
   const gerarTeste = async () => {
     // Abre a aba já no clique (senão o bloqueador de pop-ups barra o window.open depois do await).
-    const aba = window.open('', '_blank');
     setGerando(true); setMsg(null);
     try {
-      const r = await gerarDocumentoISTeste(tipo);
-      if (aba) aba.location.href = r.pdfUrl; else window.open(r.pdfUrl, '_blank', 'noopener,noreferrer');
+      await abrirPdf(async () => (await gerarDocumentoISTeste(tipo)).pdfUrl);
       setMsg({ texto: 'PDF de teste gerado (usa os ajustes SALVOS). Ele é apagado automaticamente após 30 minutos.' });
     } catch (e) {
-      aba?.close();
       setMsg({ texto: `Falha ao gerar o teste: ${(e as Error).message}`, erro: true });
     } finally { setGerando(false); }
   };

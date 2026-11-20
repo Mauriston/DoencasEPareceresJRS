@@ -157,7 +157,7 @@ interface PortariaGuideProps {
 
 export const PortariaGuide: React.FC<PortariaGuideProps> = ({ publico = false }) => {
   const { visivel: showScrollTop, irAoTopo } = useBackToTop(400);
-  const { open: openPdf, busy: baixandoPdf, modalElement } = useStoragePdf();
+  const { open: openPdf, busy: baixandoPdf } = useStoragePdf();
   const baixar = () => openPdf(PORTARIA_PDF_PATH, 'Portaria GM-MD nº 3.551/2021');
   const nav = useContext(NavContext);
   const podeVerCriterios = publico || canAccessPage('guide', nav?.authUser?.perfil);
@@ -392,7 +392,6 @@ export const PortariaGuide: React.FC<PortariaGuideProps> = ({ publico = false })
           </div>
         </Drawer>
       )}
-      {modalElement}
 
       {/* Único botão flutuante: voltar ao topo (acima da barra inferior e da área segura). */}
       {showScrollTop && (

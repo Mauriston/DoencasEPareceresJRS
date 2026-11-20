@@ -2,6 +2,7 @@
 // Exames da IS no detalhe: um cartão por documento identificado nos PDFs (tipo, título e data). O cartão
 // abre o laudo na íntegra, com "Copiar" (área de transferência), "Abrir PDF" e — enquanto a IS não está
 // finalizada — "Apagar". Com mais de um documento, "Copiar todos" junta os laudos.
+import { abrirPdf as abrirPdfNovaAba } from '../../../services/abrirPdf';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Dialog, ConfirmDialog } from '../../ui/Dialog';
@@ -50,10 +51,9 @@ export const ExamesDaIS: React.FC<Props> = ({ isId, podeApagar, onAviso }) => {
 
   const abrirPdf = async (exame: ExameISRecord) => {
     // Abre a aba já no clique (bloqueadores de pop-up) e depois aponta para o PDF.
-    const aba = window.open('about:blank', '_blank');
     setAbrindoPdf(true);
-    try { const url = await urlDoExame(exame); if (aba) aba.location.href = url; else window.location.href = url; }
-    catch { aba?.close(); onAviso('Não foi possível abrir o PDF.', 'error'); }
+    try { await abrirPdfNovaAba(() => urlDoExame(exame)); }
+    catch { onAviso('Não foi possível abrir o PDF.', 'error'); }
     finally { setAbrindoPdf(false); }
   };
 

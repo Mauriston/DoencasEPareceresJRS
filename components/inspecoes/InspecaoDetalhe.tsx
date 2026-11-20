@@ -26,6 +26,7 @@
 // Drawer nem "Fechar"; as ações vão para a barra inferior da aba, depois das `acoesExtras` da página (botões ou
 // botões-menu). Sem os cards dos documentos gerados (entrevista, pareceres, guias, exames, e-mails): no lugar,
 // os atalhos da página (`atalhosDocumentos`: botões ghost que levam às abas dos documentos).
+import { abrirPdf } from '../../services/abrirPdf';
 import { minutaIncapacidadeDisponivel } from '../../utils/mensagensIS';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -672,7 +673,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
           parecer={parecerAberto}
           podeGerar={permissoes.parecer}
           onClose={() => setParecerAbertoId(null)}
-          onAbrirPdf={() => { window.open(parecerAberto.pdfUrl, '_blank', 'noopener,noreferrer'); }}
+          onAbrirPdf={() => { abrirPdf(parecerAberto.pdfUrl).catch(() => { /* aba fechada */ }); }}
           onConcluir={concluido => {
             marcarConcluido(parecerAberto.id, concluido, concluido ? nav?.authUser?.nome || '' : '')
               .then(() => onAviso(concluido ? 'Parecer concluído.' : 'Parecer reaberto.'))

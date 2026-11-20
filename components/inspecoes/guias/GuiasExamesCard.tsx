@@ -1,7 +1,7 @@
 // Ficheiro: components/inspecoes/guias/GuiasExamesCard.tsx
 // Bloco "Guias de exames" no detalhe da IS (InspecaoDetalhe → cards da Conclusão). Só para a equipe (Admin,
 // médicos JRS/MPI e Secretaria — quem lê o PDF em storage.rules) e só nas finalidades com exames mínimos:
-//  - card "Guias de exames" (páginas e exames por grupo): o clique abre o PDF SEM nova aba, no PdfFullscreenModal
+//  - card "Guias de exames" (páginas e exames por grupo): o clique abre o PDF em nova aba (services/abrirPdf)
 //    (Storage inspecoes/{isId}/guias/guias-exames.pdf);
 //  - caixa única "Guias entregues ao inspecionado?": marcar grava a entrega presencial de hoje e Aberta →
 //    Realizando Exames; desmarcar desfaz. Entregue por e-mail: marcada, "por e-mail em dd/mm/aaaa" (só leitura);
@@ -12,7 +12,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '../../ui/Button';
-import { PdfFullscreenModal } from '../../PdfFullscreenModal';
+import { abrirPdf as abrirPdfNovaAba } from '../../../services/abrirPdf';
 import { cardConclusaoClass } from '../entrevista/SecaoEntrevista';
 import { useNav } from '../../../context/NavContext';
 import { canUseFeature } from '../../../config/permissions';
@@ -65,7 +65,6 @@ export const GuiasExamesCard: React.FC<Props> = ({ is, onAviso }) => {
   const entrega: EstadoEntregaGuias = entregaLocal ?? is;
   const [salvandoEntrega, setSalvandoEntrega] = useState(false);
 
-  const [pdf, setPdf] = useState<string | null>(null);
   const [abrindo, setAbrindo] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [gerando, setGerando] = useState(false);
@@ -83,7 +82,7 @@ export const GuiasExamesCard: React.FC<Props> = ({ is, onAviso }) => {
 
   const abrirPdf = async () => {
     setAbrindo(true);
-    try { setPdf(await urlDasGuias(is.guiasExames?.caminho || caminhoGuiasExames(is.id))); }
+    try { await abrirPdfNovaAba(() => urlDasGuias(is.guiasExames?.caminho || caminhoGuiasExames(is.id))); }
     catch { onAviso('Não foi possível abrir as guias.', 'error'); }
     finally { setAbrindo(false); }
   };
@@ -165,7 +164,6 @@ export const GuiasExamesCard: React.FC<Props> = ({ is, onAviso }) => {
         </div>
       )}
 
-      {pdf && <PdfFullscreenModal title={`Guias de exames — IS ${is.is}`} url={pdf} onClose={() => setPdf(null)} />}
 
       {enviando && createPortal(
         <EnviarGuiasDialog

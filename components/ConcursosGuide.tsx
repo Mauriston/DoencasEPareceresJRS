@@ -395,7 +395,7 @@ export const ConcursosGuide: React.FC = () => {
   // O Anexo N completo é um nível de navegação: ?anexo=n
   const [anexoParam, setAnexoParam] = useQueryParam('anexo');
   const verAnexo = anexoParam === 'n';
-  const { open: openPdf, busy: baixandoPdf, modalElement } = useStoragePdf();
+  const { open: openPdf, busy: baixandoPdf } = useStoragePdf();
 
   const currentIndice = indicesList.find(i => i.id === activeIndice);
   const currentInaptidao = inaptidaoCategories.find(i => i.id === activeInaptidao);
@@ -412,14 +412,12 @@ export const ConcursosGuide: React.FC = () => {
           actions={<StoragePdfIconButton busy={baixandoPdf} onClick={baixarAnexoN} />}
         />
         <StoragePdfFab busy={baixandoPdf} onClick={baixarAnexoN} />
-        {modalElement}
       </>
     );
   }
 
   return (
     <div className="flex flex-col flex-1">
-      {modalElement}
 
       <Container size="reading" className="py-6 md:py-8 pt-4 md:pt-8 pb-10 space-y-6">
         <PageHeader title="Índices mínimos" description="Padrões psicofísicos admissionais (Anexo N): índices mínimos e condições incapacitantes para ingresso." secundarias={[{ id: 'anexo-n', rotulo: 'Ver Anexo N completo', icone: 'menu_book', onClick: () => setAnexoParam('n') }]} />

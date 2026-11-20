@@ -65,7 +65,7 @@ describe('montarEmailGuiasInspecionado', () => {
   const r = montarEmailGuiasInspecionado(DADOS_FICTICIOS_GUIAS, assinaturaSec);
   it('assunto, vocativo sem NIP, finalidade, tabela e assinatura dupla', () => {
     expect(r.assunto).toBe('GUIA DOS EXAMES PARA INSPEÇÃO DE SAÚDE');
-    expect(r.anexoNome).toBe('Guias de exames - IS 1234567.pdf');
+    expect(r.anexoNome).toBe('GUIA_DE_EXAMES_FULANO_DE_TAL_DA_SILVA_IS1234567.pdf');
     expect(r.html).toContain('Prezado CT (Md) FULANO DE TAL DA SILVA,');
     expect(r.html).not.toContain('12.3456.78');
     expect(r.html).toContain('participo em anexo as guias dos exames necessários para a realização da IS fim <strong>Controle anual de praça de máquinas</strong>, a saber:');
