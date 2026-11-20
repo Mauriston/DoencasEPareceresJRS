@@ -31,6 +31,7 @@ import { doencaPath, pathForView, PUBLICO_DOENCAS, PUBLICO_PORTARIA } from '../c
 import { getMainScroller } from '../utils/dom';
 import { idItem, type OpcoesNorma } from '../utils/normaMarkdown';
 import { CampoBusca, ContadorBusca, useBuscaNoTexto } from './normas/BuscaNoTexto';
+import { DestaquesNorma } from './normas/DestaquesNorma';
 import {
   DOENCAS_PORTARIA, PARTES_INICIAIS, PARTE_FINAL, doencaDoQuadro, idDaSecao, idTituloPortaria,
   portariaPathSecao, semTituloPrincipal, separarCabecalhoDou, type DoencaPortaria,
@@ -351,6 +352,7 @@ export const PortariaGuide: React.FC<PortariaGuideProps> = ({ publico = false })
             onClick={aoClicarNoTexto}
             className="md:col-span-9 -mx-4 px-4 py-5 bg-white md:mx-0 md:px-9 md:py-7 md:border md:border-line md:rounded-xl min-w-0"
           >
+            <DestaquesNorma pagina="portaria" doc="portaria" raiz={conteudo} className="mb-5" />
             <div className="max-w-[68ch] portaria-texto">
               <section id="preliminares" aria-label="Portaria e Anexo">
                 <MarkdownContent markdown={MD_PRELIMINARES} estruturado={opcoesPreliminares} />

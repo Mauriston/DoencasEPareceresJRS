@@ -8,6 +8,7 @@ import { Container, PageHeader } from './ui/Page';
 import { Button, ButtonLink } from './ui/Button';
 import { Drawer } from './ui/Drawer';
 import { MarkdownContent } from './MarkdownContent';
+import { DestaquesNorma } from './normas/DestaquesNorma';
 import { useBreadcrumbs } from '../context/BreadcrumbContext';
 import { getStoragePdfUrl } from '../services/firebaseStorageNormas';
 import { itensDoIndice, titulosDoMarkdown, type TituloIndice } from '../utils/legislacao';
@@ -134,6 +135,7 @@ export const LegislacaoDocumento: React.FC<LegislacaoDocumentoProps> = ({ law, m
             ref={texto}
             className={`${indice.length > 0 ? 'md:col-span-9' : 'md:col-span-12'} -mx-4 px-4 py-5 bg-white md:mx-0 md:px-9 md:py-7 md:border md:border-line md:rounded-xl min-w-0`}
           >
+            <DestaquesNorma pagina="legislacao" doc={law.id} raiz={texto} className="mb-4" />
             <div className="[&_h2]:scroll-mt-20 [&_h3]:scroll-mt-20 [&_h4]:scroll-mt-20">
               <MarkdownContent markdown={markdown} className="!max-w-none" />
             </div>

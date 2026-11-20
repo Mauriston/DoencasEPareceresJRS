@@ -488,3 +488,29 @@ th[role="button"],
 /* Topbar do celular: com ações visíveis da página no slot (os wrappers só de desktop levam `hidden`),
    o sino de notificações sai — as notificações continuam no menu do usuário (rodapé do drawer). */
 #topbar-acoes:has(> div > :not(.hidden)) ~ .topbar-sino { display: none; }
+
+/* Destaques do Presidente (components/normas/DestaquesNorma.tsx): formatação do Admin sobre o texto das normas.
+   Estilo próprio, distinto do negrito/itálico da norma: tom vinho, amarelo-claro (≠ dourado da busca),
+   sublinhado dourado, citação com fio dourado e nota com marcador. .jrs-ocultos desliga tudo. */
+.jrs-d.jrs-negrito, .jrs-d.jrs-ambos { font-weight: 700; color: var(--wine); }
+.jrs-d.jrs-amarelo, .jrs-d.jrs-ambos { background: rgb(255 230 90 / 0.55); border-radius: 2px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+:root[data-theme="dark"] .jrs-d.jrs-amarelo, :root[data-theme="dark"] .jrs-d.jrs-ambos { background: rgb(255 230 90 / 0.28); }
+.jrs-d.jrs-sublinhado { text-decoration: underline; text-decoration-color: var(--gold); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.jrs-d.jrs-nota { text-decoration: underline dotted var(--gold-ink); text-underline-offset: 3px; }
+.jrs-d.jrs-nota-fim { cursor: pointer; }
+.jrs-d.jrs-nota-fim::after {
+  content: "✱"; font-size: 0.7em; vertical-align: super; margin-left: 1px; color: var(--gold-ink); font-weight: 700;
+}
+.md-content :is(p, li, blockquote, h1, h2, h3, h4, h5, h6, td, th, .md-item).jrs-citacao {
+  border-left: 3px solid var(--gold);
+  background: var(--paper);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+}
+.jrs-legenda { padding: 0 4px; font-size: 0.75rem; }
+.jrs-legenda.jrs-citacao { border-left: 3px solid var(--gold); padding-left: 6px; font-style: italic; }
+.jrs-legenda.jrs-nota::after { content: "✱"; color: var(--gold-ink); font-weight: 700; margin-left: 2px; }
+.jrs-ocultos .jrs-d { font-weight: inherit; color: inherit; background: none; text-decoration: none; cursor: auto; }
+.jrs-ocultos .jrs-d.jrs-nota-fim::after { content: none; }
+.jrs-ocultos .md-content :is(p, li, blockquote, h1, h2, h3, h4, h5, h6, td, th, .md-item).jrs-citacao { border-left: 0; background: none; padding: 0; font-style: inherit; }
