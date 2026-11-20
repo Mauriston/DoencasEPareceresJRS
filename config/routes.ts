@@ -29,6 +29,8 @@ export const ROUTES: RouteDef[] = [
   { view: 'ferias', path: '/ferias' },
   // Sobre o app: principais funcionalidades por área (liberada a todos por padrão; ajustável na matriz).
   { view: 'sobre', path: '/sobre' },
+  // Feedback: formulário (usuários) e lista recebida (Admin) — components/Feedback.tsx.
+  { view: 'feedback', path: '/feedback' },
   { view: 'guide', path: '/beneficios/doencas/:doencaId?/:diagnosticoIdx?' },
   { view: 'portaria', path: '/beneficios/portaria' },
   { view: 'concursos', path: '/concursos/indices' },
@@ -103,6 +105,7 @@ const BASE_PATHS: Record<NavItem, string> = {
   ferias: '/ferias',
   painel: '/painel',
   sobre: '/sobre',
+  feedback: '/feedback',
   guide: '/beneficios/doencas',
   portaria: '/beneficios/portaria',
   concursos: '/concursos/indices',

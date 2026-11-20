@@ -30,6 +30,8 @@ import { montarEmailInaptos } from './inaptosConcurso';
 import { montarEmailNac } from './nac';
 import { assinaturaSupervisor } from './comum';
 import { TIPOS_EMAIL, mesclarConfigEmails, type TipoEmail } from '../../config/emails';
+import { montarEmailFeedbackRecebido, montarEmailFeedbackSolucionado } from '../feedback/feedback';
+import { TIPOS_FEEDBACK, dataHoraRecife } from '../../utils/feedback';
 
 /** Todos os e-mails automáticos têm teste (mesma ordem da lista em Administração → E-mails automáticos). */
 export const TIPOS_TESTE: TipoEmail[] = TIPOS_EMAIL.map(t => t.tipo);
@@ -39,6 +41,7 @@ export const REMETENTE_TESTE: Record<Exclude<TipoEmail, 'guiasSecretaria' | 'doc
   resultadoIS: 'JRS-HNRe', agendamentoIS: 'JRS-HNRe', agendamentoGeral: 'JRS-HNRe', agendamentoBeneficios: 'JRS-HNRe',
   aberturaIS: 'JRS-HNRe', guiasInspecionado: 'JRS-HNRe', resultadoBeneficios: 'JRS-HNRe',
   agendaIS: 'JRS/HNRe', faltasHNRe: 'JRS/HNRe', inaptosConcurso: 'JRS/HNRe', nac: 'JRS/HNRe',
+  feedbackRecebido: 'JRS/HNRe', feedbackSolucionado: 'JRS/HNRe',
 };
 
 // ---------------------------------------------------------------- Dados fictícios aleatórios
@@ -64,6 +67,12 @@ const SITUACOES_BENEFICIOS = ['PENS-CMG', 'PENS-SO', 'DEP-CT', 'SO-RM1', '1SG-RM
 const VARIANTES_ABERTURA: VarianteAbertura[] = ['exames', 'agendamento', 'beneficios'];
 const VARIANTES_AGENDAMENTO: VarianteAgendamento[] = ['agendamento', 'reagendamento'];
 const CONCURSOS = ['CP-C-FSD-FN-TI/2027', 'CPAEAM/2027', 'CP-CAP/2027', 'CPA-QC-CA/2027'];
+const PAGINAS_FEEDBACK = ['Inspeções de Saúde', 'Perícia Menor', 'Pareceres', 'Ficha do inspecionado', 'Escala de Serviço'];
+const RELATOS_FEEDBACK = [
+  'Ao salvar a conclusão da IS, a tela fica carregando e não confirma o registro.',
+  'No celular, o botão de enviar o atestado fica escondido atrás do teclado.',
+  'O filtro por período não mostra as perícias do mês anterior.',
+];
 const PERITOS = ['CT MAURISTON', 'CT JÚLIO CÉSAR', '1T MÔNICA VIRGÍNIA', '2T CASSUNDÉ'];
 
 /** Fábrica de dados fictícios a partir de um gerador (aleatório por padrão). */
@@ -91,6 +100,11 @@ export const htmlGuiasFicticias = (config?: Awaited<ReturnType<typeof lerConfigE
   presidenteNome: (config ?? mesclarConfigEmails(undefined)).assinatura.presidenteNome,
   presidentePosto: (config ?? mesclarConfigEmails(undefined)).assinatura.presidentePosto,
 });
+
+const presidenteTeste = (config?: Awaited<ReturnType<typeof lerConfigEmails>>) => {
+  const c = config ?? mesclarConfigEmails(undefined);
+  return { nome: c.assinatura.presidenteNome, posto: c.assinatura.presidentePosto };
+};
 
 /** Monta o e-mail de teste do tipo com dados fictícios aleatórios (exportada para os testes): assunto, html, texto e, se houver, o anexo. */
 export const montarEmailTeste = (tipo: TipoEmail, assinatura: Parameters<typeof montarEmailResultado>[2], config = undefined as undefined | Awaited<ReturnType<typeof lerConfigEmails>>, rnd: Aleatorio = Math.random) => {
@@ -169,6 +183,17 @@ export const montarEmailTeste = (tipo: TipoEmail, assinatura: Parameters<typeof 
         return { dataLaudo: f.dia(-20, -1), inspecionado: p.inspecionado, nomeCompleto: p.nome, om: f.om(), numero_is: f.numeroIs(), finalidade: f.finalidade(), laudo: f.laudo() };
       }), assinatura, config?.saudacaoNac);
       return { ...r, anexoNome: r.arquivo };
+    }
+    case 'feedbackRecebido': {
+      // Feedback: só a assinatura do Presidente (como no envio real), com o tipo sorteado.
+      const presidente = presidenteTeste(config);
+      return montarEmailFeedbackRecebido(`${f.um(POSTOS)} ${f.nome().split(' ')[0]}`, f.um(TIPOS_FEEDBACK).value, presidente);
+    }
+    case 'feedbackSolucionado': {
+      const presidente = presidenteTeste(config);
+      return montarEmailFeedbackSolucionado(`${f.um(POSTOS)} ${f.nome().split(' ')[0]}`, {
+        pagina: f.um(PAGINAS_FEEDBACK), registradoEm: dataHoraRecife(new Date(Date.now() - f.int(1, 20) * 86_400_000)), texto: f.um(RELATOS_FEEDBACK),
+      }, presidente);
     }
     default:
       throw new ErroContaGoogle('falha', 'Tipo de e-mail de teste desconhecido.');

@@ -119,7 +119,8 @@ describe('e-mails de teste', () => {
   });
   it('todos os e-mails automáticos têm teste, com o remetente do envio real', () => {
     expect([...TIPOS_TESTE].sort()).toEqual(TIPOS_EMAIL.map(t => t.tipo).sort());
-    expect(TIPOS_TESTE).toHaveLength(13);
+    expect(TIPOS_TESTE).toHaveLength(15);
+    expect(REMETENTE_TESTE.feedbackRecebido).toBe('JRS/HNRe');
     expect(REMETENTE_TESTE.agendamentoGeral).toBe('JRS-HNRe');
     expect(REMETENTE_TESTE.resultadoIS).toBe('JRS-HNRe');
     expect(REMETENTE_TESTE.agendaIS).toBe('JRS/HNRe');

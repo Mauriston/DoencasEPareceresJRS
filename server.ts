@@ -764,6 +764,40 @@ async function startServer() {
     }
   });
 
+  // Feedback do app (Ajuda › Feedback): qualquer usuário ativo envia; só o Admin marca Lido/Solucionado.
+  app.post("/api/feedback", async (req, res) => {
+    const quem = await exigirUsuario(req, res, "feedback-enviar");
+    if (!quem) return;
+    const { ErroFeedback, criarFeedback } = await import("./servidor/feedback/feedback");
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      res.json({ success: true, ...(await criarFeedback(adminDb, req.body || {}, quem)) });
+    } catch (error: any) {
+      if (error instanceof ErroFeedback) { res.status(error.status).json({ success: false, error: error.message }); return; }
+      logErroSeguro("Envio de feedback", error);
+      res.status(500).json({ success: false, error: "Não foi possível enviar o feedback. Tente novamente." });
+    }
+  });
+
+  app.post("/api/feedback/status", async (req, res) => {
+    const quem = await exigirUsuario(req, res, "feedback-status", ["admin"]);
+    if (!quem) return;
+    const { ErroFeedback, atualizarFeedback } = await import("./servidor/feedback/feedback");
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      res.json({ success: true, ...(await atualizarFeedback(adminDb, req.body || {}, quem)) });
+    } catch (error: any) {
+      if (error instanceof ErroFeedback) { res.status(error.status).json({ success: false, error: error.message }); return; }
+      const { ErroContaGoogle } = await import("./servidor/google/contaGoogle");
+      if (error instanceof ErroContaGoogle && error.codigo !== "falha") {
+        res.status(503).json({ success: false, codigo: "google_indisponivel", error: "Marcado como solucionado, mas o e-mail não foi enviado: a conta Google da JRS não está autorizada." });
+        return;
+      }
+      logErroSeguro("Status do feedback", error);
+      res.status(500).json({ success: false, error: "Não foi possível atualizar o feedback. Tente novamente." });
+    }
+  });
+
   app.post("/api/pericias-menores/excluir", async (req, res) => {
     const quem = await exigirUsuario(req, res, "pericias-excluir", ["admin", "user_medicos", "user_medicos_mpi", "user_medicos_geral"]);
     if (!quem) return;
