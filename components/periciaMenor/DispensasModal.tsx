@@ -4,6 +4,7 @@
 // Duas dispensas têm um complemento obrigatório digitado pelo médico, gravado no próprio texto:
 //   "Movimentos repetitivos com sobrecarga do joelho esquerdo"
 //   "Permanecer em pé por mais de 2 horas"
+// "Outros: ___" (última da lista) abre um campo livre; grava-se só o texto digitado, sem "Outros:".
 import React, { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
@@ -21,7 +22,10 @@ const EM_PE: DispensaComplemento = {
   chave: 'Permanecer em pé por mais de', prefixo: 'Permanecer em pé por mais de ', sufixo: ' horas',
   numerico: true, placeholder: 'h', erro: 'Informe as horas (1 ou 2 dígitos).',
 };
-const COMPLEMENTOS = [SOBRECARGA, EM_PE];
+const OUTROS: DispensaComplemento = {
+  chave: 'Outros:', prefixo: '', sufixo: '', numerico: false, placeholder: 'Descreva a dispensa', erro: 'Descreva a dispensa.',
+};
+const COMPLEMENTOS = [SOBRECARGA, EM_PE, OUTROS];
 const complementoDe = (chave: string) => COMPLEMENTOS.find(c => c.chave === chave);
 
 /** Dispensas possíveis numa Perícia Menor (lista fixa; as com complemento aparecem pela chave).
@@ -42,6 +46,7 @@ export const DISPENSAS = [
     SOBRECARGA.chave,
     'TAF/TFM',
   ].sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' })),
+  OUTROS.chave,
 ];
 
 /** Separa a lista gravada em chaves marcadas + complementos digitados. */
@@ -49,8 +54,12 @@ const lerInicial = (inicial: string[]) => {
   const marcadas: string[] = [];
   const textos: Record<string, string> = {};
   inicial.forEach(d => {
-    const c = COMPLEMENTOS.find(x => d.startsWith(x.prefixo.trim()));
-    if (c) {
+    const c = COMPLEMENTOS.find(x => x !== OUTROS && d.startsWith(x.prefixo.trim()));
+    if (!c && !DISPENSAS.includes(d)) {
+      // Texto livre gravado antes por "Outros:" (sem o prefixo).
+      if (!marcadas.includes(OUTROS.chave)) marcadas.push(OUTROS.chave);
+      textos[OUTROS.chave] = [textos[OUTROS.chave], d].filter(Boolean).join(', ');
+    } else if (c) {
       marcadas.push(c.chave);
       textos[c.chave] = d.slice(c.prefixo.length, c.sufixo ? d.length - c.sufixo.length : undefined).trim();
     } else marcadas.push(d);
@@ -121,16 +130,17 @@ export const DispensasModal: React.FC<Props> = ({ inicial, onConfirmar, onCancel
             >
               <label className={`flex items-center gap-3 px-3 min-h-[44px] ${desabilitada ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-thead rounded-lg'}`}>
                 <input type="checkbox" className="w-5 h-5 shrink-0 accent-navy" checked={selecionada} disabled={desabilitada} onChange={() => alternar(d)} />
-                <span className="break-words min-w-0">{c ? `${d} ${c.numerico ? '__ horas' : '___'}` : d}</span>
+                <span className="break-words min-w-0">{c ? (c === OUTROS ? `${d} ___` : `${d} ${c.numerico ? '__ horas' : '___'}`) : d}</span>
               </label>
               {c && selecionada && (
                 <div className="px-3 pb-3 -mt-1">
                   <div className="flex items-center gap-2 font-normal text-ink pl-8">
                     <input
                       data-complemento
+                      autoFocus={c === OUTROS && !textos[d]}
                       type="text"
                       inputMode={c.numerico ? 'numeric' : 'text'}
-                      maxLength={c.numerico ? 2 : 60}
+                      maxLength={c.numerico ? 2 : c === OUTROS ? 120 : 60}
                       aria-label={`Complemento: ${d}`}
                       aria-invalid={invalido || undefined}
                       value={textos[d] || ''}
