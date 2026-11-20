@@ -1,13 +1,20 @@
 // Ficheiro: components/LawReference.tsx
-// Página Legislação: itens vindos do Firestore (coleção "legislacao"); o clique
-// abre o PDF do Firebase Storage num modal em tela cheia.
-import React, { useEffect, useState } from 'react';
+// Página Legislação: itens vindos do Firestore (coleção "legislacao"), agrupados
+// em abas (Leis e Decretos · Portarias · DGPM · Res CFM, ?grupo=). O clique abre o
+// texto da norma (?doc=<id>, content/legislacao/<id>.md) com índice e botão Download;
+// sem texto convertido, abre o PDF do Storage num modal em tela cheia.
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
 import { PdfFullscreenModal } from './PdfFullscreenModal';
 import { Card } from './ui/Card';
 import { GradeCards } from './ui/Grade';
 import { IconButton } from './ui/IconButton';
 import { Toast } from './ui/Toast';
+import { Segmented } from './ui/Segmented';
+import { LegislacaoDocumento } from './LegislacaoDocumento';
+import { GRUPOS_LEGISLACAO, grupoDaLegislacao, textoDaLegislacao, type GrupoLegislacao } from '../utils/legislacao';
+import { getMainScroller } from '../utils/dom';
 import { LegislacaoForm } from './LegislacaoForm';
 import { listarLegislacao, LegislacaoDoc } from '../services/firestoreLegislacao';
 import { getStoragePdfUrl } from '../services/firebaseStorageNormas';
@@ -25,10 +32,36 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
   const [aviso, setAviso] = useState<string | null>(null);
   const [modal, setModal] = useState<{ title: string; url: string } | null>(null);
 
+  const [params, setParams] = useSearchParams();
+  const grupoParam = params.get('grupo') as GrupoLegislacao | null;
+  const grupo: GrupoLegislacao = GRUPOS_LEGISLACAO.some(g => g.value === grupoParam) ? grupoParam! : 'leis';
+  const docId = params.get('doc');
+
   const carregar = () => listarLegislacao().then(setItens).catch(() => setErro(true));
   useEffect(() => { carregar(); }, []);
 
+  const contagem = useMemo(() => {
+    const c: Record<GrupoLegislacao, number> = { leis: 0, portarias: 0, dgpm: 0, cfm: 0 };
+    (itens ?? []).forEach(i => { c[grupoDaLegislacao(i.id, i.legislacao)]++; });
+    return c;
+  }, [itens]);
+  const visiveis = (itens ?? []).filter(i => grupoDaLegislacao(i.id, i.legislacao) === grupo);
+
+  const rolarAoTopo = () => (getMainScroller() ?? window).scrollTo({ top: 0 });
+  const mudarParams = (mut: (p: URLSearchParams) => void) => {
+    const p = new URLSearchParams(params);
+    mut(p);
+    setParams(p);
+  };
+  const escolherGrupo = (g: GrupoLegislacao) => mudarParams(p => { p.set('grupo', g); p.delete('doc'); });
+  const voltar = () => { mudarParams(p => p.delete('doc')); rolarAoTopo(); };
+
   const abrir = async (law: LegislacaoDoc) => {
+    if (textoDaLegislacao(law.id)) {
+      mudarParams(p => { p.set('grupo', grupoDaLegislacao(law.id, law.legislacao)); p.set('doc', law.id); });
+      rolarAoTopo();
+      return;
+    }
     if (!law.pdfPath) { alert('O PDF desta norma ainda não está disponível.'); return; }
     setAbrindo(law.id);
     try {
@@ -42,6 +75,10 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
     }
   };
 
+  const lawAberta = docId ? (itens ?? []).find(i => i.id === docId) : undefined;
+  const textoAberto = lawAberta ? textoDaLegislacao(lawAberta.id) : null;
+  if (lawAberta && textoAberto) return <LegislacaoDocumento law={lawAberta} markdown={textoAberto} onVoltar={voltar} />;
+
   return (
     <div className="flex flex-col flex-1">
       <Container size="data" className={`py-6 md:py-8 pt-4 md:pt-8 ${podeCadastrar ? 'pb-28 md:pb-10' : 'pb-10'}`}>
@@ -52,8 +89,20 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
         {erro && <p className="text-sm text-ink-3">Não foi possível carregar a legislação.</p>}
         {!erro && itens === null && <p className="text-sm text-ink-3">Carregando…</p>}
 
+        <Segmented
+          papel="tab"
+          idBase="legislacao"
+          ariaLabel="Grupos de legislação"
+          className="mb-6 max-w-full overflow-x-auto"
+          value={grupo}
+          onChange={escolherGrupo}
+          options={GRUPOS_LEGISLACAO.map(g => ({ ...g, badge: itens ? contagem[g.value] : undefined, badgeTone: 'neutro' as const }))}
+        />
+
+        <div id="legislacao-painel" role="tabpanel" aria-labelledby={`legislacao-aba-${grupo}`}>
+        {itens !== null && visiveis.length === 0 && <p className="text-sm text-ink-3">Nenhuma norma neste grupo.</p>}
         <GradeCards colunas={3}>
-          {(itens ?? []).map((law) => {
+          {visiveis.map((law) => {
             const isBrasao = law.imageUrl.includes('brasao-da-republica');
 
             return (
@@ -97,6 +146,7 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
             );
           })}
         </GradeCards>
+        </div>
       </Container>
       <Toast message={aviso} />
       {novo && (
