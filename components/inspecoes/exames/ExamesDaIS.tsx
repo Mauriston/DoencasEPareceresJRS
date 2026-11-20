@@ -1,5 +1,6 @@
 // Ficheiro: components/inspecoes/exames/ExamesDaIS.tsx
 // Exames da IS no detalhe: um cartão por documento identificado nos PDFs (tipo, título e data). O cartão
+// Atestados/relatórios médicos (categoria "atestado" dada pela IA no envio) aparecem com a etiqueta "Atestado". O cartão
 // abre o laudo na íntegra, com "Copiar" (área de transferência), "Abrir PDF" e — enquanto a IS não está
 // finalizada — "Apagar". Com mais de um documento, "Copiar todos" junta os laudos.
 import React, { useEffect, useRef, useState } from 'react';
@@ -10,7 +11,7 @@ import { StatusTag } from '../../ui/StatusTag';
 import { cardConclusaoClass } from '../entrevista/SecaoEntrevista';
 import { copiarTexto } from '../CampoCopiavel';
 import { apagarExameIS, observarExamesDaIS, urlDoExame, type ExameISRecord } from '../../../services/examesIS';
-import { ICONE_TIPO, ROTULO_TIPO, textoParaCopiar, textosParaCopiar, type ItemExame } from '../../../utils/examesIS';
+import { categoriaDoExame, ICONE_TIPO, ROTULO_CATEGORIA, ROTULO_TIPO, textoParaCopiar, textosParaCopiar, type ItemExame } from '../../../utils/examesIS';
 import { dataBr } from '../../../utils/inspecoes';
 
 interface Props {
@@ -76,7 +77,10 @@ export const ExamesDaIS: React.FC<Props> = ({ isId, podeApagar, onAviso }) => {
             <span className="material-symbols-outlined text-[20px] text-navy shrink-0" aria-hidden="true">{ICONE_TIPO[item.tipo]}</span>
             <span className="min-w-0">
               <span className="block text-sm font-bold text-navy truncate">{item.titulo}</span>
-              <span className="block text-xs text-ink-3">{ROTULO_TIPO[item.tipo]}{item.data ? ` · ${dataBr(item.data)}` : ''}</span>
+              <span className="block text-xs text-ink-3">
+                {categoriaDoExame(exame) === 'atestado' && <span className="font-semibold text-wine">Atestado · </span>}
+                {ROTULO_TIPO[item.tipo]}{item.data ? ` · ${dataBr(item.data)}` : ''}
+              </span>
             </span>
           </button>
         ))}
@@ -96,6 +100,7 @@ export const ExamesDaIS: React.FC<Props> = ({ isId, podeApagar, onAviso }) => {
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2 text-xs text-ink-3">
               <StatusTag tone="navyOutline" dot={false}>{ROTULO_TIPO[aberto.item.tipo]}</StatusTag>
+              {categoriaDoExame(aberto.exame) === 'atestado' && <StatusTag tone="attention" dot={false}>{ROTULO_CATEGORIA.atestado}</StatusTag>}
               {aberto.item.data && <span>{dataBr(aberto.item.data)}</span>}
               {aberto.item.emissor && <span>· {aberto.item.emissor}</span>}
             </div>

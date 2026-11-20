@@ -1,5 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { itensDaLeitura, textoParaCopiar, textosParaCopiar } from '../examesIS';
+import { categoriaDaLeitura, categoriaDoExame, dataDoDocumento, itensDaLeitura, textoParaCopiar, textosParaCopiar } from '../examesIS';
+
+describe('categoria do PDF (exame × atestado)', () => {
+  it('usa a categoria da IA; sem ela, deduz pelos tipos dos documentos', () => {
+    expect(categoriaDaLeitura('atestado', [{ tipo: 'exame_imagem' }])).toBe('atestado');
+    expect(categoriaDaLeitura('EXAME', [{ tipo: 'atestado' }])).toBe('exame');
+    expect(categoriaDaLeitura('', [{ tipo: 'atestado' }, { tipo: 'laudo_medico' }])).toBe('atestado');
+    expect(categoriaDaLeitura(undefined, [{ tipo: 'atestado' }, { tipo: 'exame_laboratorial' }])).toBe('exame');
+    expect(categoriaDaLeitura('outra', [])).toBe('exame');
+  });
+
+  it('exame gravado sem categoria é "exame"; data do documento', () => {
+    expect(categoriaDoExame({})).toBe('exame');
+    expect(categoriaDoExame({ categoria: 'atestado' })).toBe('atestado');
+    expect(dataDoDocumento([{ data: '' }, { data: '2026-09-10' }], '2026-10-01T12:00')).toBe('2026-09-10');
+    expect(dataDoDocumento([{ data: '' }], '2026-10-01T12:00')).toBe('2026-10-01');
+  });
+});
 
 describe('exames da IS', () => {
   it('limpa a leitura da IA: tipo desconhecido vira "outro", data inválida sai, documento vazio sai', () => {

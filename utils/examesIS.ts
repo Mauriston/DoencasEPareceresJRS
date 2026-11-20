@@ -47,6 +47,8 @@ export interface ItemExame {
 
 /** O que a IA devolve (texto livre, ainda não conferido). */
 export interface LeituraExameIA {
+  /** Classificação do PDF: "exame" (laudo de exame) ou "atestado" (atestado/relatório médico). */
+  categoria?: string;
   documentos?: { tipo?: string; titulo?: string; data?: string; emissor?: string; texto?: string }[];
 }
 
@@ -72,3 +74,31 @@ export const textoParaCopiar = (item: ItemExame): string => {
 
 /** Vários documentos (ex.: todos os exames da IS) separados por linha em branco. */
 export const textosParaCopiar = (itens: ItemExame[]): string => itens.map(textoParaCopiar).join('\n\n');
+
+// ---------------------------------------------------------------------------
+// Categoria do PDF: exame × atestado (Atestado/Relatório Médico)
+// ---------------------------------------------------------------------------
+
+export const CATEGORIAS_EXAME = ['exame', 'atestado'] as const;
+export type CategoriaExame = typeof CATEGORIAS_EXAME[number];
+export const ROTULO_CATEGORIA: Record<CategoriaExame, string> = { exame: 'Exame', atestado: 'Atestado/Relatório médico' };
+
+/** Tipos de documento que, sozinhos no PDF, fazem dele um atestado/relatório médico. */
+const TIPOS_ATESTADO: TipoDocumento[] = ['atestado', 'laudo_medico'];
+
+/**
+ * Categoria a gravar: a que a IA deu; se veio vazia ou inválida, "atestado" quando todos os documentos do PDF são
+ * atestado ou laudo/relatório médico, senão "exame".
+ */
+export const categoriaDaLeitura = (categoriaIA: unknown, itens: Pick<ItemExame, 'tipo'>[]): CategoriaExame => {
+  const c = String(categoriaIA || '').toLowerCase().trim();
+  if ((CATEGORIAS_EXAME as readonly string[]).includes(c)) return c as CategoriaExame;
+  return itens.length > 0 && itens.every(i => TIPOS_ATESTADO.includes(i.tipo)) ? 'atestado' : 'exame';
+};
+
+/** Categoria de um exame gravado (campo opcional: documentos antigos, sem o campo, são "exame"). */
+export const categoriaDoExame = (exame: { categoria?: string | null }): CategoriaExame => (exame.categoria === 'atestado' ? 'atestado' : 'exame');
+
+/** Data do documento: a do 1º item com data; senão a do envio (AAAA-MM-DD) ou ''. */
+export const dataDoDocumento = (itens: Pick<ItemExame, 'data'>[], enviadoEmISO = ''): string =>
+  itens.find(i => i.data)?.data || enviadoEmISO.slice(0, 10);
