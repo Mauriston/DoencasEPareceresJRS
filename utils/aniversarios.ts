@@ -53,13 +53,22 @@ export const mensagemParabens = (usuario: string, idade: number): string =>
   + `Que você tenha outros _${idade} anos_ de muita saúde e felicidade! Aproveite bastante o seu dia! 🥂\n\n`
   + 'FA! Mauriston.';
 
+/** Mensagem dos demais perfis (banner): só o cabeçalho e um campo para o próprio texto. */
+export const mensagemParabensLivre = (usuario: string): string => {
+  const nome = nomeSemPosto(usuario);
+  return `*${nome}, PARABÉNS!*\n\n_[escreva aqui a sua mensagem para ${nome}]_`;
+};
+
 /** wa.me com DDI 55 (celular gravado com ou sem máscara/DDI); null sem número válido. */
-export const linkWhatsAppParabens = (celular: string | undefined, usuario: string, idade: number): string | null => {
+export const linkWhatsApp = (celular: string | undefined, texto: string): string | null => {
   let d = (celular ?? '').replace(/\D/g, '');
   if (d.length === 10 || d.length === 11) d = `55${d}`;
   if (d.length < 12 || d.length > 13) return null;
-  return `https://wa.me/${d}?text=${encodeURIComponent(mensagemParabens(usuario, idade))}`;
+  return `https://wa.me/${d}?text=${encodeURIComponent(texto)}`;
 };
+
+export const linkWhatsAppParabens = (celular: string | undefined, usuario: string, idade: number): string | null =>
+  linkWhatsApp(celular, mensagemParabens(usuario, idade));
 
 /** Data de hoje (AAAA-MM-DD) no fuso de Recife — o servidor roda em UTC. */
 export const hojeEmRecife = (agora = new Date()): string =>
