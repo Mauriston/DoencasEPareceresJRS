@@ -10,6 +10,7 @@
 // No Drive, quem cria as pastas e os arquivos é o Apps Script standalone (CodeConcursos.gs); este módulo só
 // o chama e devolve as URLs, que o app grava no Firestore. A leitura da mensagem e a transcrição dos exames
 // são feitas pelo Gemini no próprio app (Firebase AI Logic, services/geminiAI.ts).
+import { abrirPdf as abrirPdfNovaAba } from './abrirPdf';
 import { chamarScript as chamarScriptApi } from './apiClient';
 import { chamarGoogle } from './googleServidor';
 import { gerarComGemini, lerJsonIA } from './geminiAI';
@@ -293,7 +294,7 @@ export const urlDownload = (url: string): string => {
 
 /** Abre o PDF numa nova janela (URL "view" do Drive; PDFs antigos do Storage abrem como estão). */
 export const abrirPdf = (url: string): void => {
-  window.open(urlVisualizacao(url), '_blank', 'noopener,noreferrer');
+  abrirPdfNovaAba(urlVisualizacao(url)).catch(e => console.error('Falha ao abrir o PDF:', e));
 };
 
 /**

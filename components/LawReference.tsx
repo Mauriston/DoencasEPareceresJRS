@@ -2,11 +2,11 @@
 // Página Legislação: itens vindos do Firestore (coleção "legislacao"), agrupados
 // em abas (Leis e Decretos · Portarias · DGPM · Res CFM, ?grupo=). O clique abre o
 // texto da norma (?doc=<id>, content/legislacao/<id>.md) com índice e botão Download;
-// sem texto convertido, abre o PDF do Storage num modal em tela cheia.
+// sem texto convertido, abre o PDF do Storage em nova aba.
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
-import { PdfFullscreenModal } from './PdfFullscreenModal';
+import { abrirPdf } from '../services/abrirPdf';
 import { Card } from './ui/Card';
 import { GradeCards } from './ui/Grade';
 import { IconButton } from './ui/IconButton';
@@ -30,7 +30,6 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
   const [abrindo, setAbrindo] = useState<string | null>(null);
   const [novo, setNovo] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
-  const [modal, setModal] = useState<{ title: string; url: string } | null>(null);
 
   const [params, setParams] = useSearchParams();
   const grupoParam = params.get('grupo') as GrupoLegislacao | null;
@@ -65,9 +64,11 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
     if (!law.pdfPath) { alert('O PDF desta norma ainda não está disponível.'); return; }
     setAbrindo(law.id);
     try {
-      const url = await getStoragePdfUrl(law.pdfPath);
-      if (!url) { alert('O PDF desta norma ainda não está disponível.'); return; }
-      setModal({ title: `${law.legislacao} — ${law.titulo}`, url });
+      const pdfPath = law.pdfPath;
+      let indisponivel = false;
+      await abrirPdf(async () => { const url = await getStoragePdfUrl(pdfPath); if (!url) indisponivel = true; return url || ''; })
+        .catch(e => { if (!indisponivel) throw e; });
+      if (indisponivel) { alert('O PDF desta norma ainda não está disponível.'); return; }
     } catch {
       alert('Não foi possível abrir o PDF. Tente novamente.');
     } finally {
@@ -161,7 +162,6 @@ export const LawReference: React.FC<LawReferenceProps> = ({ podeCadastrar = fals
           }}
         />
       )}
-      {modal && <PdfFullscreenModal title={modal.title} url={modal.url} onClose={() => setModal(null)} />}
     </div>
   );
 };

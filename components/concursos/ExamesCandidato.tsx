@@ -18,7 +18,7 @@ import { Card } from '../ui/Card';
 import { Button, ButtonLink } from '../ui/Button';
 import { FilterChip } from '../ui/FilterChip';
 import { GradePainel } from '../ui/Grade';
-import { PdfFullscreenModal } from '../PdfFullscreenModal';
+import { abrirPdf } from '../../services/abrirPdf';
 import { getDriveEmbedUrl } from '../../utils/googleDrive';
 import { AbasSublinhadas } from '../periciaMenor/partes';
 import {
@@ -383,7 +383,6 @@ export const ExamesTranscritosModal: React.FC<ExamesTranscritosModalProps> = ({ 
   // L2/4c: Container de dados (1200) + padrão B — transcrição (8) e laudo em PDF (4). No celular, as duas
   // partes alternam por abas (Transcrição · Laudo) em vez de empilhar.
   const [aba, setAba] = useState<'transcricao' | 'laudo'>('transcricao');
-  const [laudoTelaCheia, setLaudoTelaCheia] = useState<{ titulo: string; url: string } | null>(null);
   const isDesktop = useIsDesktop();
   const [pdfSel, setPdfSel] = useState(0);
   const pdfAtual = pdfs[Math.min(pdfSel, Math.max(0, pdfs.length - 1))];
@@ -437,7 +436,7 @@ export const ExamesTranscritosModal: React.FC<ExamesTranscritosModalProps> = ({ 
             )}
             {pdfAtual && (
               <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" size="sm" icon="open_in_full" onClick={() => setLaudoTelaCheia({ titulo: `${rotuloPdf(pdfSel)} — ${candidatoNome}`, url: embedAtual || pdfAtual.pdfUrl })}>Tela cheia</Button>
+                <Button variant="secondary" size="sm" icon="open_in_new" onClick={() => { abrirPdf(pdfAtual.pdfUrl).catch(() => { /* aba fechada */ }); }}>Abrir em nova aba</Button>
                 <ButtonLink variant="secondary" size="sm" icon="download" href={urlDownload(pdfAtual.pdfUrl)} target="_blank" rel="noopener noreferrer">Baixar PDF</ButtonLink>
               </div>
             )}
@@ -489,7 +488,6 @@ export const ExamesTranscritosModal: React.FC<ExamesTranscritosModalProps> = ({ 
           )}
         </Container>
       </div>
-      {laudoTelaCheia && <PdfFullscreenModal title={laudoTelaCheia.titulo} url={laudoTelaCheia.url} onClose={() => setLaudoTelaCheia(null)} />}
     </div>
   );
 };

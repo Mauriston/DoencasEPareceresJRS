@@ -4,6 +4,7 @@
 // cada pedido e caixa para marcar como concluído. Quem pode gerar (Admin e médicos)
 // também vê "Novo parecer" (barra lateral/bottom sheet); o Admin ainda configura os
 // quesitos por especialidade.
+import { abrirPdf } from '../services/abrirPdf';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
@@ -117,7 +118,7 @@ export const Pareceres: React.FC = () => {
   };
 
   // O PDF (Drive ou, nos mais antigos, Storage) abre sempre numa nova janela, no desktop e no mobile.
-  const abrir = (p: ParecerRecord) => { window.open(p.pdfUrl, '_blank', 'noopener,noreferrer'); };
+  const abrir = (p: ParecerRecord) => { abrirPdf(p.pdfUrl).catch(() => { /* aba fechada */ }); };
   const pedirImpressao = (p: ParecerRecord) =>
     setImpressao({ alvo: { nome: extrairNomeInspecionado(p.inspecionado), pdfUrl: p.pdfUrl, remetente: solicitanteDe(p) }, aposGerar: false });
 

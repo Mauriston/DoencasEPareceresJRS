@@ -15,6 +15,7 @@
 //    e, logo abaixo, a agenda do dia escolhido (clicar no dia filtra a agenda) → cards de perfil → Próximas férias
 //    por último. "Acesso rápido" saiu (H2: repetia o menu).
 // Tudo respeita a matriz de permissões: cada bloco só aparece para quem tem acesso.
+import { abrirPdf } from '../services/abrirPdf';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MenuAcoes } from './ui/MenuAcoes';
@@ -109,9 +110,7 @@ type ItemDocumento = Omit<DocumentoGerado, 'tipo'> & { tipo: string; origemIS?: 
 
 /** Guias: a URL vem do Storage na hora; abre a aba antes (evita o bloqueio de pop-up) e depois navega. */
 const abrirGuias = (caminho: string) => {
-  const w = window.open('', '_blank');
-  urlDasGuias(caminho).then(u => { if (w) w.location.href = u; else window.open(u, '_blank', 'noopener,noreferrer'); })
-    .catch(e => { w?.close(); console.error('Falha ao abrir as guias:', e); });
+  abrirPdf(() => urlDasGuias(caminho)).catch(e => console.error('Falha ao abrir as guias:', e));
 };
 const MAX_DOCUMENTOS = 5;
 

@@ -19,7 +19,7 @@ import { Segmented } from './ui/Segmented';
 import { FiltroCaixas } from './inspecoes/FiltroCaixas';
 import { FiltroPeriodo } from './inspecoes/FiltroPeriodo';
 import { Avatar } from './shell/UserMenu';
-import { PdfFullscreenModal } from './PdfFullscreenModal';
+import { abrirPdf } from '../services/abrirPdf';
 import { AfastamentoForm } from './ferias/AfastamentoForm';
 import { TimelineAfastamentos } from './ferias/TimelineAfastamentos';
 import { useNav } from '../context/NavContext';
@@ -51,7 +51,6 @@ export const Ferias: React.FC = () => {
   const [form, setForm] = useState<{ atual?: AfastamentoRecord } | null>(null);
   const [apagando, setApagando] = useState<AfastamentoRecord | null>(null);
   // Documento aberto em tela cheia (PDF ou imagem).
-  const [documento, setDocumento] = useState<{ titulo: string; url: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
 
   useEffect(() => observarAfastamentos(setLista, () => setErroCarga('Não foi possível carregar as férias e afastamentos.')), []);
@@ -79,7 +78,7 @@ export const Ferias: React.FC = () => {
   const ordenados = useMemo(() => [...filtrados].sort((a, b) => a.dataInicio.localeCompare(b.dataInicio) || a.usuario.localeCompare(b.usuario, 'pt-BR')), [filtrados]);
 
   const abrirArquivo = async (a: AfastamentoRecord['arquivos'][number]) => {
-    try { setDocumento({ titulo: a.nome, url: await urlArquivoAfastamento(a) }); } catch { avisar('Não foi possível abrir o arquivo.', 'error'); }
+    try { await abrirPdf(() => urlArquivoAfastamento(a)); } catch { avisar('Não foi possível abrir o arquivo.', 'error'); }
   };
   const confirmarApagar = async () => {
     if (!apagando) return;
@@ -230,7 +229,6 @@ export const Ferias: React.FC = () => {
           onSalvo={(msg, tom) => { setForm(null); avisar(msg, tom); }}
         />
       )}
-      {documento && <PdfFullscreenModal title={documento.titulo} url={documento.url} onClose={() => setDocumento(null)} />}
       {apagando && (
         <ConfirmDialog
           title="Apagar férias / afastamento"

@@ -3,6 +3,7 @@
 // ao anexar, a IA (Firebase AI Logic — services/afastamentoIA.ts) lê o documento, identifica do que se trata e
 // preenche o que encontrar (usuário, tipo, início, duração, referência, motivo) para conferência. Data fim e status
 // automáticos (utils/afastamentos.ts). Médicos ganham bloqueio na agenda das IS; todos, o evento no Google Agenda.
+import { abrirPdf } from '../../services/abrirPdf';
 import React, { useMemo, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button, buttonClass } from '../ui/Button';
@@ -96,7 +97,7 @@ export const AfastamentoForm: React.FC<Props> = ({ usuarios, atual, hoje, autor,
     void lerComIA(fs[0]);
   };
 
-  const abrir = async (a: ArquivoAfastamento) => { try { window.open(await urlArquivoAfastamento(a), '_blank', 'noopener'); } catch { setErro('Não foi possível abrir o arquivo.'); } };
+  const abrir = async (a: ArquivoAfastamento) => { try { await abrirPdf(() => urlArquivoAfastamento(a)); } catch { setErro('Não foi possível abrir o arquivo.'); } };
 
   const salvar = async () => {
     const e: Record<string, string> = {};
