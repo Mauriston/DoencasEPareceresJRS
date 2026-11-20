@@ -26,6 +26,7 @@ import { hojeISO, ocupadosDe, duracaoDoGrupo, peritoAtendeNoTurno, turnoDoSlot, 
 import { atualizarMilitar, OPCOES_SEXO, type MilitarRecord, type SexoInspecionado } from '../../services/firestoreMilitares';
 import { casarFinalidadeAnexoO, erroDataNascimento } from '../../utils/guiasExamesIS';
 import { finalidadeTemExamesMinimos } from '../../utils/guiasExames';
+import { alternarFinalidade, juntarFinalidades } from '../../utils/finalidadesMultiplas';
 import { sugerirSexoPeloNome } from '../../services/guiasExamesIA';
 import { criarInspecao, idDaIs, type AmpIS, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { peritosDoAmp, ampDaFinalidade, perfilAtendeAmp, type PeritoIS } from '../../services/peritosIS';
@@ -55,14 +56,47 @@ export const useFinalidadesIS = (ativo = true) => {
   return { gruposMenu, achar };
 };
 
-/** Campo "Finalidade" (menu em cascata por grupo) — o mesmo no cadastro e no detalhe da IS aberta. */
-export const CampoFinalidadeIS: React.FC<{ value: string; onChange: (nome: string) => void; gruposMenu: GrupoFinalidadeExtra[]; required?: boolean; erro?: string }> = ({ value, onChange, gruposMenu, required, erro }) => (
+/**
+ * Campo "Finalidade(s)" (menu em cascata por grupo) — o mesmo no cadastro e no detalhe da IS aberta.
+ * Aceita uma ou mais finalidades (Benefícios; compostas como "Engajamento / Deixar o SMI"): cada escolha no
+ * menu acrescenta um chip; o ✕ do chip retira. Cada finalidade terá o seu laudo.
+ */
+export const CampoFinalidadeIS: React.FC<{ value: string[]; onChange: (lista: string[]) => void; gruposMenu: GrupoFinalidadeExtra[]; required?: boolean; erro?: string }> = ({ value, onChange, gruposMenu, required, erro }) => (
   <div>
-    <label htmlFor="finalidade-select" className="block text-xs font-semibold text-ink-3 mb-1">Finalidade{required && <span className="text-wine ml-0.5" aria-hidden="true">*</span>}</label>
-    <FinalidadeDropdown value={value} onChange={onChange} placeholder="Selecione a finalidade da IS" gruposProprios={gruposMenu} erro={!!erro} />
+    <label htmlFor="finalidade-select" className="block text-xs font-semibold text-ink-3 mb-1">
+      Finalidade{value.length > 1 ? 's' : ''}{required && <span className="text-wine ml-0.5" aria-hidden="true">*</span>}
+    </label>
+    {value.length > 0 && (
+      <ul className="flex flex-wrap gap-1.5 mb-2" aria-label="Finalidades escolhidas">
+        {value.map((f, i) => (
+          <li key={f} className="inline-flex items-center gap-1 max-w-full rounded-full bg-navy/10 text-navy text-xs font-semibold pl-2.5 pr-1 py-1">
+            {value.length > 1 && <span className="tabular-nums text-ink-3">{i + 1}.</span>}
+            <span className="truncate">{f}</span>
+            <button type="button" onClick={() => onChange(value.filter(x => x !== f))} aria-label={`Retirar a finalidade ${f}`} title="Retirar"
+              className="inline-flex items-center justify-center w-6 h-6 rounded-full hover:bg-navy/15 focus:outline-none focus-visible:ring-1 focus-visible:ring-navy">
+              <span className="material-symbols-outlined text-[16px] leading-none" aria-hidden="true">close</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    )}
+    <FinalidadeDropdown
+      value="" onChange={nome => onChange(alternarFinalidade(value, nome))}
+      placeholder={value.length ? 'Acrescentar outra finalidade (opcional)' : 'Selecione a finalidade da IS'}
+      gruposProprios={gruposMenu} erro={!!erro}
+    />
+    {value.length > 1 && <p className="mt-1 text-xs text-ink-3">IS com {value.length} finalidades: haverá um laudo para cada uma.</p>}
     {erro && <p role="alert" className="mt-1 text-xs font-semibold text-wine">{erro}</p>}
   </div>
 );
+
+/** Finalidades escolhidas → a 1ª define grupo e AMP; todas precisam ser do mesmo AMP. */
+export const resumoFinalidades = (lista: string[], achar: (nome: string) => FinalidadeEscolhida | null): { principal: FinalidadeEscolhida | null; erroAmp: string } => {
+  const achadas = lista.map(achar).filter((x): x is FinalidadeEscolhida => !!x);
+  const principal = achadas[0] ?? null;
+  const erroAmp = principal && achadas.some(a => a.amp !== principal.amp) ? 'As finalidades escolhidas são de AMPs diferentes (JRS e MPI): abra uma IS para cada.' : '';
+  return { principal, erroAmp };
+};
 
 interface Props {
   militares: MilitarRecord[];
@@ -97,7 +131,8 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
   const [cadastrando, setCadastrando] = useState(false);
   // Também o inspecionado pré-escolhido (Ficha → Abrir IS): é selecionado assim que a lista o tiver.
   const [recemCadastradoId, setRecemCadastradoId] = useState(inicial?.inspecionadoId ?? '');
-  const [finalidade, setFinalidade] = useState('');
+  const [finalidades, setFinalidades] = useState<string[]>([]);
+  const finalidade = juntarFinalidades(finalidades);
   const [amp, setAmp] = useState<AmpIS | ''>('');
   const [peritoUid, setPeritoUid] = useState(inicial?.peritoUid ?? '');
   const [data, setData] = useState(inicial?.dataEntrevista?.slice(0, 10) ?? '');
@@ -125,10 +160,10 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
     busca: normalizarBusca(`${m.inspecionado} ${m.om} ${m.id}`),
   })), [militares]);
 
-  const achada = useMemo(() => achar(finalidade), [gruposMenu, finalidade]); // eslint-disable-line react-hooks/exhaustive-deps
+  const { principal: achada, erroAmp } = useMemo(() => resumoFinalidades(finalidades, achar), [gruposMenu, finalidade]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Finalidade com exames mínimos: pede o que falta no cadastro para as guias.
-  const temExamesMinimos = useMemo(() => { const f = casarFinalidadeAnexoO(finalidade); return !!f && finalidadeTemExamesMinimos(f); }, [finalidade]);
+  const temExamesMinimos = useMemo(() => finalidades.some(n => { const f = casarFinalidadeAnexoO(n); return !!f && finalidadeTemExamesMinimos(f); }), [finalidade]); // eslint-disable-line react-hooks/exhaustive-deps
   const pedirNascimento = temExamesMinimos && !!militar && !militar.dataNascimento;
   const pedirSexo = temExamesMinimos && !!militar && !militar.sexo;
   // Outro inspecionado: limpa o que foi digitado para o anterior.
@@ -172,7 +207,8 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
     else if (inspecoes.some(i => i.id === idDaIs(numero))) e.numero = `Já existe a IS nº ${idDaIs(numero)}.`;
     if (!dataAbertura) e.dataAbertura = 'Informe a data de abertura.';
     if (!militar) e.militar = 'Escolha o inspecionado na lista.';
-    if (!finalidade) e.finalidade = 'Selecione a finalidade.';
+    if (!finalidades.length) e.finalidade = 'Selecione a finalidade.';
+    else if (erroAmp) e.finalidade = erroAmp;
     if (pedirNascimento) { const erro = erroDataNascimento(dataNascimento, hojeISO()); if (erro) e.dataNascimento = erro; }
     if (pedirSexo && !sexo) e.sexo = 'Informe o sexo.';
     if ((data || hora) && !perito) e.perito = 'Escolha o perito para agendar a entrevista.';
@@ -201,7 +237,7 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
       const dataEntrevista = podeAgendar && data && hora ? `${data}T${hora}` : '';
       const id = await criarInspecao({
         is: Number(idDaIs(numero)), dataAbertura, dataEntrevista,
-        finalidade, grupoFinalidade: achada.grupo, amp,
+        finalidade, ...(finalidades.length > 1 ? { finalidades } : {}), grupoFinalidade: achada.grupo, amp,
         peritoUid: perito?.uid ?? '', peritoNome: perito?.usuario ?? '', peritoGmail: perito?.gmail ?? '',
         inspecionadoId: militar.id, inspecionado: militar.inspecionado,
         dataLaudo: '', laudo: '', observacoes: observacoes.trim(), restricoes: '', tis: '', ds1a: '',
@@ -215,7 +251,7 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
         dataNascimento: (pedirNascimento && dataNascimento) || militar.dataNascimento || undefined,
       };
       onCriada({
-        id, is: Number(id), dataAbertura, dataEntrevista, finalidade, grupoFinalidade: achada.grupo, amp,
+        id, is: Number(id), dataAbertura, dataEntrevista, finalidade, ...(finalidades.length > 1 ? { finalidades } : {}), grupoFinalidade: achada.grupo, amp,
         peritoUid: perito?.uid ?? '', peritoNome: perito?.usuario ?? '', peritoGmail: perito?.gmail ?? '',
         inspecionadoId: militar.id, inspecionado: militar.inspecionado,
         situacao: dataEntrevista ? 'andamento' : 'aberta', status: dataEntrevista ? 'agendada' : 'aberta',
@@ -262,7 +298,7 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
             aoNaoEncontrar={podeCadastrarInspecionado ? { rotulo: 'Cadastrar novo', onClick: () => setCadastrando(true) } : undefined}
           />
 
-          <CampoFinalidadeIS required value={finalidade} onChange={v => { setFinalidade(v); limpar('finalidade'); }} gruposMenu={gruposMenu} erro={erros.finalidade} />
+          <CampoFinalidadeIS required value={finalidades} onChange={v => { setFinalidades(v); limpar('finalidade'); }} gruposMenu={gruposMenu} erro={erros.finalidade} />
 
           {(pedirNascimento || pedirSexo) && (
             <fieldset className="border border-line rounded-xl p-3 space-y-3 animate-fade-in">
