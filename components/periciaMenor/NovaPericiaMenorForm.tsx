@@ -543,7 +543,6 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
       {digitalizando && (
         <ScannerDocumento
           titulo="Digitalizar atestado"
-          modo="unica"
           maxPaginas={4}
           onCancelar={() => setDigitalizando(false)}
           onConcluir={novas => { void aoDigitalizar(novas); }}
