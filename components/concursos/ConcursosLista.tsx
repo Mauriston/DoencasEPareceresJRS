@@ -474,6 +474,7 @@ export const ConcursosLista: React.FC<ConcursosListaProps> = ({ concursos, loadi
           concursoId={registrarMensagemAlvo.id}
           concursoNome={registrarMensagemAlvo.nome}
           concursoAno={anoDoConcurso(registrarMensagemAlvo.criadoEm)}
+          concursoStorage={registrarMensagemAlvo.armazenamento === 'storage'}
           onClose={() => setRegistrarMensagemAlvo(null)}
         />
       )}

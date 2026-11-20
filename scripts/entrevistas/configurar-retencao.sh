@@ -2,7 +2,7 @@
 # Ficheiro: scripts/entrevistas/configurar-retencao.sh
 # Retenção do ÁUDIO das entrevistas gravadas da IS (ADR-014; docs/retencao-lgpd.md):
 # aplica no bucket do app uma regra de ciclo de vida que APAGA os objetos com prefixo
-# `entrevistas/` (entrevistas/{isId}/{entrevistaId}/original.* e audio.flac) com idade ≥ 90 dias
+# `entrevistas/` (entrevistas/{isId}/{entrevistaId}/original.* e audio.flac) com idade ≥ 180 dias
 # (DIAS_RETENCAO_AUDIO em config/entrevistas.ts). A transcrição e a anamnese ficam no Firestore
 # e seguem a retenção da IS; só o áudio sai.
 #
@@ -10,7 +10,7 @@
 # (`gcloud storage buckets describe --format=json(lifecycle_config)`), tira só a regra antiga
 # deste script (Delete com matchesPrefix ["entrevistas/"]) e acrescenta a nova. Idempotente:
 # rodar de novo não duplica a regra. O Cloud Storage aplica o ciclo de vida uma vez por dia
-# (o objeto pode durar até ~1 dia além dos 90). Com a lixeira (soft delete de 30 dias,
+# (o objeto pode durar até ~1 dia além dos 180). Com a lixeira (soft delete de 30 dias,
 # scripts/backup/configurar-backup.sh), o objeto apagado ainda pode ser restaurado nesse prazo.
 #
 # Uso (gcloud autenticado numa conta com roles/storage.admin no bucket; precisa de python3):
@@ -19,7 +19,7 @@
 set -euo pipefail
 PROJETO="${PROJETO:-jrs-app-web}"
 BUCKET="${BUCKET:-jrs-app-web.firebasestorage.app}"
-DIAS="${DIAS:-90}"
+DIAS="${DIAS:-180}"
 PREFIXO="entrevistas/"
 
 TMP="$(mktemp -d)"

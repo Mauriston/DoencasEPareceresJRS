@@ -145,10 +145,15 @@ service cloud.firestore {
 
     match /documentos_gerados/{id} {
       allow read: if isAdmin() || isSecretaria();
+      // expiraEm: TTL do Firestore (24 h após criar; 5 min após abrir — docs/retencao-lgpd.md).
       allow create: if isSignedIn() && request.resource.data.criadoPorUid == request.auth.uid &&
-        request.resource.data.aberto == false;
+        request.resource.data.aberto == false &&
+        request.resource.data.expiraEm is timestamp &&
+        request.resource.data.expiraEm <= request.time + duration.value(25, 'h');
       allow update: if (isAdmin() || isSecretaria()) &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['aberto', 'abertoEm', 'abertoPor']);
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['aberto', 'abertoEm', 'abertoPor', 'expiraEm']) &&
+        request.resource.data.expiraEm is timestamp &&
+        request.resource.data.expiraEm <= request.time + duration.value(10, 'm');
       allow delete: if isAdmin();
     }
 
@@ -506,24 +511,27 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if podeRegistrarMensagemPDF() || podeImportarCsv();
       allow update: if isAdmin() || (
-        (podeAbrirEncerrar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'periodoInicioISO', 'periodoFimISO'])) ||
+        (podeAbrirEncerrar() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'periodoInicioISO', 'periodoFimISO', 'encerradoEm'])) ||
         ((podeAdicionarCandidato() || podeRegistrarMensagemPDF() || podeImportarCsv()) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalCandidatos']))
       );
-      allow delete: if isAdmin();
+      // IS de concurso nunca são apagadas (docs/retencao-lgpd.md): nem o concurso nem os candidatos.
+      allow delete: if false;
 
       match /candidatos/{candidatoId} {
         allow read: if isSignedIn();
         allow create: if podeAdicionarCandidato() || podeRegistrarMensagemPDF() || podeImportarCsv();
         allow update: if isAdmin() || atualizacaoCandidatoPermitida(request.resource.data.diff(resource.data).affectedKeys());
-        allow delete: if isAdmin();
+        allow delete: if false;
 
         // Exames que o candidato entregou: um documento por PDF enviado, com a
         // transcrição dos laudos lida pelo Gemini (ver salvarExamesCandidato em
-        // services/firestoreConcursos.ts). Apagados só pelo "Limpar IS" (Admin).
+        // services/firestoreConcursos.ts). A transcrição nunca é apagada (docs/retencao-lgpd.md); o PDF
+        // sai 1 ano depois pelo servidor (servidor/concursos/retencaoExames.ts, Admin SDK).
         match /exames/{exameId} {
           allow read: if isSignedIn();
           allow create: if podeEnviarExames();
-          allow update, delete: if isAdmin();
+          allow update: if isAdmin();
+          allow delete: if false;
         }
 
         // Registro de eventos (auditoria) da IS: qualquer usuário autenticado

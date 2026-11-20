@@ -2,7 +2,6 @@
 // Importação de um concurso a partir de CSV (Admin).
 import React, { useState } from 'react';
 import { importarConcursoDeCsv, definirPeriodoAgendamento, type ConcursoRecord } from '../../services/firestoreConcursos';
-import { criarEstruturaConcursoNoDrive } from '../../services/driveConcursos';
 import { parseChaveData, interpretarCsvCandidatosDataBase, type CandidatoImportadoCsv } from '../../utils/concursosUtils';
 import { controlClass } from '../ui/Field';
 
@@ -58,7 +57,6 @@ export const ModalImportarCsv: React.FC<ModalImportarCsvProps> = ({ onClose }) =
     setProcessando(true);
     try {
       const { concursoId } = await importarConcursoDeCsv(nomeConcurso.trim(), status, candidatos);
-      void criarEstruturaConcursoNoDrive({ nome: nomeConcurso.trim(), ano: new Date().getFullYear() });
       if (periodoInicio && periodoFim) {
         await definirPeriodoAgendamento(concursoId, parseChaveData(periodoInicio), parseChaveData(periodoFim));
       }

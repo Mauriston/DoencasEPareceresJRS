@@ -985,6 +985,14 @@ async function startServer() {
     } catch (error) {
       logErroSeguro("Agendador limpeza de guias", error);
     }
+    // Apaga os PDFs de exames dos candidatos 1 ano depois da última data de agendamento do concurso
+    // (sem ela, do encerramento); as transcrições ficam (docs/retencao-lgpd.md). Best effort.
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      await (await import("./servidor/concursos/retencaoExames")).limparPdfsExamesVencidos(adminDb, await bucketStorage());
+    } catch (error) {
+      logErroSeguro("Agendador retenção de exames", error);
+    }
     try {
       const { adminDb } = await getFirebaseAdmin();
       const r = await (await import("./servidor/email/agendaIS")).envioAutomaticoAgendaIS(adminDb, await bucketStorage());

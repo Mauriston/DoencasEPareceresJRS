@@ -1,15 +1,21 @@
 // Ficheiro: services/driveConcursos.ts
-// PDFs dos concursos no Google Drive (drive compartilhado, pasta raiz CONCURSOS):
+// PDFs dos concursos. Concursos criados a partir de 20/11/2026 (armazenamento = 'storage') gravam SÓ no
+// Firebase Storage (docs/retencao-lgpd.md):
+//   concursos/{concursoId}/mensagens/{data}_{arquivo}.pdf
+//   concursos/{concursoId}/candidatos/{candidatoId}/{TIPO}_{data}.pdf  (termos e solicitações)
+//   concursos/{concursoId}/candidatos/{candidatoId}/exames/EXAMES_{data}.pdf
+// Os anteriores continuam no Google Drive (drive compartilhado, pasta raiz CONCURSOS):
 //   CONCURSOS > {ano} > {concurso} > CANDIDATOS > {candidato} (termos, pedidos de parecer e exames)
 //                                  > MENSAGENS (PDF das mensagens administrativas)
-// Quem cria as pastas e os arquivos é o Apps Script standalone (CodeConcursos.gs); este módulo só o
-// chama e devolve as URLs, que o app grava no Firestore. A leitura da mensagem e a transcrição dos exames
+// No Drive, quem cria as pastas e os arquivos é o Apps Script standalone (CodeConcursos.gs); este módulo só
+// o chama e devolve as URLs, que o app grava no Firestore. A leitura da mensagem e a transcrição dos exames
 // são feitas pelo Gemini no próprio app (Firebase AI Logic, services/geminiAI.ts).
 import { chamarScript as chamarScriptApi } from './apiClient';
 import { chamarGoogle } from './googleServidor';
 import { gerarComGemini, lerJsonIA } from './geminiAI';
 import { PROMPT_EXAMES_CANDIDATO, PROMPT_MENSAGEM_CONCURSO } from '../config/promptsIA';
-import { removerPdfDoStorage } from './firebaseStorageConcursos';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { app } from './firebaseAuth';
 import { normalizarExamesExtraidos, type ExamesExtraidos } from '../utils/examesCandidato';
 
 const MAX_PDF_BYTES = 15 * 1024 * 1024;
@@ -26,8 +32,38 @@ const MAX_PDF_EXAMES_BYTES = 12 * 1024 * 1024;
 /** Tipos de documento gravados na pasta do candidato (prefixo do nome do arquivo). */
 export type TipoDocumentoCandidato = 'termoRecurso' | 'termoCientificacao' | 'solicitacaoParecer' | 'solicitacaoExames';
 
-/** Concurso no Drive: pasta do ano + pasta com o nome do concurso. */
-export interface PastaConcurso { nome: string; ano: number | string }
+/**
+ * Destino dos PDFs do concurso: no Drive, pasta do ano + pasta com o nome do concurso; com `storage`, o
+ * Firebase Storage em concursos/{concursoId}/ (concursos novos).
+ */
+export interface PastaConcurso { nome: string; ano: number | string; concursoId?: string; storage?: boolean }
+
+/** Destino dos PDFs a partir do registro do concurso. */
+export const pastaDoConcurso = (c: { id: string; nome: string; criadoEm?: string; armazenamento?: 'storage' | 'drive' }): PastaConcurso =>
+  ({ nome: c.nome, ano: anoDoConcurso(c.criadoEm), concursoId: c.id, storage: c.armazenamento === 'storage' });
+
+const NOME_TIPO: Record<TipoDocumentoCandidato, string> = {
+  termoRecurso: 'TERMO_RECURSO', termoCientificacao: 'TERMO_CIENTIFICACAO',
+  solicitacaoParecer: 'SOLICITACAO_PARECER', solicitacaoExames: 'SOLICITACAO_EXAMES',
+};
+
+/** Trecho seguro para o caminho no Storage (sem barras, acentos ou espaços). */
+const trechoCaminho = (t: string) =>
+  t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').slice(0, 80) || 'arquivo';
+
+/** Carimbo AAAAMMDD-HHMMSS-mmm: o nome nunca se repete, então nada é sobrescrito. */
+const carimbo = () => new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').replace('.', '-').slice(0, 19);
+
+const base64ParaBytes = (b64: string): Uint8Array => Uint8Array.from(atob(b64), ch => ch.charCodeAt(0));
+
+/** Envia o PDF ao Storage em concursos/{concursoId}/… e devolve a URL de download (com token). */
+const enviarAoStorage = async (pasta: PastaConcurso, subcaminho: string, dados: Blob | Uint8Array): Promise<{ url: string; caminho: string }> => {
+  if (!pasta.concursoId) throw new Error('Concurso sem identificador: não foi possível guardar o PDF.');
+  const caminho = `concursos/${pasta.concursoId}/${subcaminho}`;
+  const r = ref(getStorage(app), caminho);
+  await uploadBytes(r, dados, { contentType: 'application/pdf' });
+  return { url: await getDownloadURL(r), caminho };
+};
 
 /** Ano da pasta de um concurso já existente: o do cadastro (criadoEm, ISO); sem ele, o ano atual. */
 export const anoDoConcurso = (criadoEm?: string): number => {
@@ -124,6 +160,7 @@ export const criarEstruturaConcursoNoDrive = async (pasta: PastaConcurso): Promi
 /** Grava o PDF da mensagem na pasta MENSAGENS do concurso; devolve a URL de visualização. */
 export const salvarMensagemNoDrive = async (pasta: PastaConcurso, file: File): Promise<string> => {
   exigirTamanho(file.size);
+  if (pasta.storage) return (await enviarAoStorage(pasta, `mensagens/${carimbo()}_${trechoCaminho(file.name.replace(/\.pdf$/i, ''))}.pdf`, file)).url;
   const d = await chamarScript<{ url: string }>('salvarMensagemPdf', {
     ano: pasta.ano,
     nomeConcurso: pasta.nome,
@@ -142,6 +179,10 @@ export const salvarPdfCandidatoNoDrive = async (params: {
   pdfBase64: string;
 }): Promise<string> => {
   exigirTamanho(Math.ceil((params.pdfBase64.length * 3) / 4));
+  if (params.pasta.storage) {
+    const sub = `candidatos/${trechoCaminho(params.candidatoId)}/${NOME_TIPO[params.tipo]}_${carimbo()}.pdf`;
+    return (await enviarAoStorage(params.pasta, sub, base64ParaBytes(params.pdfBase64))).url;
+  }
   const d = await chamarScript<{ url: string }>('salvarPdfCandidato', {
     ano: params.pasta.ano,
     nomeConcurso: params.pasta.nome,
@@ -195,17 +236,22 @@ export const enviarExamesCandidatoParaDrive = async (params: {
   exigirTamanhoExames(params.file.size);
   const pdfBase64 = await arquivoParaBase64(params.file);
   const mimeType = params.file.type || 'application/pdf';
-  // Em paralelo: o Apps Script guarda o PDF no Drive e o Gemini (AI Logic) transcreve os laudos.
-  // O PDF fica salvo mesmo se a transcrição falhar ("erroExtracao" explica o motivo).
-  const [d, transcricao] = await Promise.all([
-    chamarScript<{ url: string; fileId: string; nomeArquivo: string }>('salvarExamesCandidato', {
+  // Em paralelo: o PDF vai ao Storage (concursos novos) ou ao Drive (Apps Script) e o Gemini (AI Logic)
+  // transcreve os laudos. O PDF fica salvo mesmo se a transcrição falhar ("erroExtracao" explica o motivo).
+  const nomeExames = `EXAMES_${trechoCaminho(params.candidatoNome.toUpperCase())}.pdf`;
+  const salvar = params.pasta.storage
+    ? enviarAoStorage(params.pasta, `candidatos/${trechoCaminho(params.candidatoId)}/exames/EXAMES_${carimbo()}.pdf`, params.file)
+      .then(({ url }) => ({ url, fileId: '', nomeArquivo: nomeExames }))
+    : chamarScript<{ url: string; fileId: string; nomeArquivo: string }>('salvarExamesCandidato', {
       ano: params.pasta.ano,
       nomeConcurso: params.pasta.nome,
       candidatoId: params.candidatoId,
       candidatoNome: params.candidatoNome,
       pdfBase64,
       mimeType,
-    }),
+    });
+  const [d, transcricao] = await Promise.all([
+    salvar,
     transcreverExames(pdfBase64, mimeType).then(
       dados => ({ dados, erro: '' }),
       (e: Error) => ({ dados: null as ExamesExtraidos | null, erro: e?.message || 'Não foi possível transcrever os exames.' }),
@@ -223,21 +269,6 @@ export const enviarExamesCandidatoParaDrive = async (params: {
 const idDoArquivoDrive = (url: string): string | null => {
   if (!/^https:\/\/drive\.google\.com\//.test(url)) return null;
   return url.match(/[?&]id=([\w-]+)/)?.[1] ?? url.match(/\/d\/([\w-]+)/)?.[1] ?? null;
-};
-
-/**
- * Apaga um PDF a partir da URL gravada no Firestore (best-effort): arquivo do Drive vai para a lixeira;
- * URL do Firebase Storage (documentos antigos) é apagada do Storage.
- */
-export const removerPdfPorUrl = async (url: string): Promise<void> => {
-  if (!url) return;
-  const fileId = idDoArquivoDrive(url);
-  try {
-    if (fileId) await chamarScript('removerArquivoDrive', { fileId });
-    else await removerPdfDoStorage(url);
-  } catch {
-    // silencioso: o link no Firestore é limpo de qualquer forma
-  }
 };
 
 /** Converte uma URL de download direto do Drive (uc?export=download&id=…) em URL de visualização; as demais ficam como estão. */
