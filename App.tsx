@@ -26,7 +26,7 @@ import { NotificacoesPainel } from './components/NotificacoesPainel';
 import { onAuthChange, logoutUsuario } from './services/firebaseAuth';
 import { entrarComToken } from './services/handoff';
 import {
-  detectarPlataformaTutorial, isMobileDevice, isStandalone,
+  detectarPlataformaTutorial, isMobileDevice, isStandalone, deveExibirAvisoPwa, avisoPwaJaNestaSessao, marcarAvisoPwaNestaSessao,
   marcarTutorialConcluidoLocal, tutorialConcluidoLocal,
 } from './utils/pwa';
 import { getUsuarioProfile, setUsuarioPublico, updateUsuarioProfile, UsuarioRecord } from './services/firestoreUsuarios';
@@ -113,6 +113,7 @@ const buildAuthUser = (profile: UsuarioRecord): AuthUser => ({
   imageProfile: profile.imageProfile,
   senhaTemporaria: !!profile.senhaTemporaria,
   pwaTutorialConcluido: !!profile.pwaTutorialConcluido,
+  pwaAvisoExibicoes: Number(profile.pwaAvisoExibicoes) || 0,
   aparencia: profile.aparencia,
 });
 
@@ -257,6 +258,32 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
       .catch(() => {}) // token inválido/expirado: segue para o login normal
       .finally(() => setHandoffPendente(false));
   }, [handoffToken]);
+
+  // Diálogo "adicionar à tela de início": abre sozinho nos 3 primeiros acessos de cada usuário (todos os perfis),
+  // uma vez por sessão do navegador e depois dos avisos que bloqueiam (senha temporária, triagem). O contador
+  // fica no perfil (pwaAvisoExibicoes), então vale em qualquer aparelho; quem já concluiu o tutorial ou já disse
+  // que instalou não o vê mais. Menu › Ajuda › "Add à Tela de Início" abre sempre, sem contar.
+  useEffect(() => {
+    const u = authUserReal;
+    if (!u || (u.senhaTemporaria && !senhaAlertDismissed) || avisoTriagem) return;
+    if (!deveExibirAvisoPwa({
+      exibicoes: u.pwaAvisoExibicoes, concluido: u.pwaTutorialConcluido || tutorialConcluidoLocal(),
+      standalone: isStandalone(), jaNestaSessao: avisoPwaJaNestaSessao(u.uid),
+    })) return;
+    marcarAvisoPwaNestaSessao(u.uid);
+    const exibicoes = (u.pwaAvisoExibicoes || 0) + 1;
+    setAuthUser(prev => (prev ? { ...prev, pwaAvisoExibicoes: exibicoes } : prev));
+    updateUsuarioProfile(u.uid, { pwaAvisoExibicoes: exibicoes }).catch(() => {});
+    setPwaDialogAberto(true);
+  }, [authUserReal?.uid, authUserReal?.senhaTemporaria, senhaAlertDismissed, avisoTriagem]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Menu › Ajuda › "Add à Tela de Início" (rota /instalar-app): abre o diálogo na hora, mesmo depois das 3
+  // exibições, e volta para a Início (o menu lateral abre o diálogo sem sair da página — Sidebar.tsx).
+  useEffect(() => {
+    if (currentView !== 'instalar-app' || !authUser) return;
+    setPwaDialogAberto(true);
+    navigate(pathForView('home'), { replace: true });
+  }, [currentView, authUser?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Já abriu pelo ícone da tela inicial: não há mais o que ensinar.
   useEffect(() => {
@@ -441,7 +468,6 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   // tutorial (celular) ou o QR code (desktop) só abre quando o usuário pede.
   const casosPendente = casosRespondido === false && canAccessPage('casos', authUser.perfil);
   const pwaPendente =
-    authUserReal?.perfil !== 'admin' &&
     !authUser.pwaTutorialConcluido &&
     !tutorialConcluidoLocal() &&
     !isStandalone();

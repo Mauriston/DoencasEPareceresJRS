@@ -63,7 +63,10 @@ service cloud.firestore {
       allow update: if isAdmin() ||
         (isSignedIn() && request.auth.uid == uid &&
          request.resource.data.diff(resource.data).affectedKeys()
-           .hasOnly(['email', 'gmail', 'celular', 'imageProfile', 'senhaTemporaria', 'pwaTutorialConcluido', 'aparencia', 'ultimoAcesso']) &&
+           .hasOnly(['email', 'gmail', 'celular', 'imageProfile', 'senhaTemporaria', 'pwaTutorialConcluido', 'pwaAvisoExibicoes', 'aparencia', 'ultimoAcesso']) &&
+         // pwaAvisoExibicoes (App.tsx): contador inteiro das exibições automáticas do diálogo de instalação.
+         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['pwaAvisoExibicoes']) ||
+          (request.resource.data.pwaAvisoExibicoes is int && request.resource.data.pwaAvisoExibicoes >= 0 && request.resource.data.pwaAvisoExibicoes <= 100)) &&
          // ultimoAcesso (services/usoDiario.ts): só a hora do servidor, nunca um valor escolhido pelo cliente.
          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['ultimoAcesso']) ||
           request.resource.data.ultimoAcesso == request.time));

@@ -81,8 +81,8 @@ export const getNavCategories = (
     });
   }
 
-  // Ajuda: "Sobre o app" e "Feedback" (matriz de permissões; liberados a todos por padrão).
-  const ajuda = (['sobre', 'feedback'] as NavItem[])
+  // Ajuda: "Sobre o app", "Feedback" e "Add à Tela de Início" (matriz de permissões; liberados a todos por padrão).
+  const ajuda = (['sobre', 'feedback', 'instalar-app'] as NavItem[])
     .filter(id => canAccessPage(id, perfil))
     .map(id => pageMap.get(id)!)
     .map(p => ({ id: p.id, label: p.label, icon: p.icon, subtitle: p.subtitle }));

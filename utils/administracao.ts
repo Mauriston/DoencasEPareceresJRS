@@ -50,7 +50,7 @@ const AREAS_DEF: { id: string; rotulo: string; paginas: IdPaginaArea[] }[] = [
   { id: 'trabalho', rotulo: 'Trabalho', paginas: ['inspecoes', 'militares', 'ficha', 'concursosJRS', 'pericia-menor', 'escala', 'pareceres', 'mensagens'] },
   { id: 'consulta', rotulo: 'Consulta', paginas: ['guide', 'exames', 'concursos', 'dgpm406', 'portaria', 'laws'] },
   { id: 'formacao', rotulo: 'Formação', paginas: ['casos', 'videos', 'infograficos', 'apresentacoes', 'roteiro'] },
-  { id: 'sistema', rotulo: 'Painel, férias e ajuda', paginas: ['painel', 'ferias', 'sobre', 'feedback'] },
+  { id: 'sistema', rotulo: 'Painel, férias e ajuda', paginas: ['painel', 'ferias', 'sobre', 'feedback', 'instalar-app'] },
 ];
 
 export type IdPaginaArea = NavItem | 'ficha';

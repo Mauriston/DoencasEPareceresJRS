@@ -41,7 +41,7 @@ export const SecaoPericias: React.FC<Props> = ({ lista, janela, hoje, uid, recor
     <div className="flex flex-col gap-4">
       <CabecalhoSecao
         id="painel-pericias" icone="personal_injury" titulo={minhas ? 'Atestados' : 'Perícias Menores'}
-        subtitulo={minhas ? 'Os atestados que você registrou, com o saldo de dias dos militares' : 'Atestados registrados, dias concedidos e recorrência'}
+        subtitulo={minhas ? 'Os atestados em que você é o perito responsável, com o saldo de dias dos militares' : 'Atestados registrados, dias concedidos e recorrência'}
         recorte={minhas ? 'só os meus' : 'todas as OM'}
         abrir={{ rotulo: 'Abrir Perícias Menores', to: LISTA }}
       />

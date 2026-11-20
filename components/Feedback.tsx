@@ -40,7 +40,7 @@ const FormularioFeedback: React.FC<{ avisar: (m: string, t?: 'success' | 'error'
   const perfil = usuario?.perfil;
   const email = String(usuario?.email || usuario?.gmail || '').trim();
   const paginas = useMemo(() => PAGE_DEFS
-    .filter(p => p.id !== 'feedback' && canAccessPage(p.id, perfil))
+    .filter(p => p.id !== 'feedback' && p.id !== 'instalar-app' && canAccessPage(p.id, perfil))
     .map(p => ({ id: p.id as string, label: p.label }))
     .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')), [perfil]);
 

@@ -82,6 +82,19 @@ export const Sidebar: React.FC = () => {
         {rail && <span id={`grupo-${variante}-${cat.id}`} className="sr-only">{cat.label}</span>}
         {cat.subitems.map(sub => {
           const ativo = currentView === sub.id;
+          // "Add à Tela de Início" não é página: abre o diálogo de instalação aqui mesmo (App.tsx).
+          if (sub.id === 'instalar-app') {
+            return (
+              <button
+                key={sub.id} type="button" title={sub.label} aria-label={rail ? sub.label : undefined}
+                onClick={() => { setIsMobileMenuOpen(false); nav?.abrirInstalacaoApp(); }}
+                className={`relative w-full flex items-center ${variante === 'drawer' ? 'h-11' : 'h-10'} px-5 transition-colors whitespace-nowrap text-white/80 hover:bg-white/10 hover:text-white font-semibold`}
+              >
+                <span className="material-symbols-outlined text-[24px] shrink-0" aria-hidden="true">{sub.icon}</span>
+                {!rail && <span className="ml-3 text-sm truncate">{sub.label}</span>}
+              </button>
+            );
+          }
           return (
             <Link
               key={sub.id}

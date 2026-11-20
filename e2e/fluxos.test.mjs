@@ -553,3 +553,13 @@ test('Feedback: o menu Ajuda tem "Feedback" e o médico relata um problema (pág
   await p.getByRole('heading', { name: 'Obrigado pelo seu feedback!' }).waitFor({ timeout: 40_000 });
   await p.context().close();
 });
+
+test('Ajuda › "Add à Tela de Início" abre o diálogo de instalação sem sair da página', async () => {
+  const p = await novaPagina();
+  await entrar(p, SECRETARIA);
+  await p.goto(`${BASE}#/sobre`);
+  await p.getByRole('complementary', { name: 'Menu principal' }).getByRole('button', { name: 'Add à Tela de Início' }).click();
+  await p.getByRole('dialog', { name: 'Instalar o app no celular' }).waitFor();
+  assert.match(p.url(), /#\/sobre/);
+  await p.context().close();
+});

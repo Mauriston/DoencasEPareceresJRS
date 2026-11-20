@@ -34,6 +34,8 @@ export const DEFAULT_PAGE_PERMISSIONS: Record<string, Record<Role, boolean>> = {
   sobre: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: true },
   // Feedback (elogios, sugestões e problemas ao Admin): liberado a todos; o Admin vê a lista recebida.
   feedback: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: true },
+  // "Add à Tela de Início" (Ajuda): só abre o diálogo de instalação — liberado a todos.
+  'instalar-app': { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: true },
   // Painel (indicadores do período): todos menos o Médicos Geral.
   painel: { user_medicos: true, user_secretaria: true, user_medicos_mpi: true, user_medicos_geral: false },
 };
