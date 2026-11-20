@@ -156,39 +156,54 @@ const anexoDoParecer = async (db: Firestore, pdfUrl: string): Promise<{ nome: st
   throw new ErroContaGoogle('falha', 'Endereço do PDF não reconhecido.');
 };
 
-/** Termo de Recurso + Cientificação (candidato INAPTO): PDF sob CONCURSOS. */
+/** URL de download do Firebase Storage de um PDF de concurso (concursos/…; concursos novos, docs/retencao-lgpd.md). */
+export const URL_STORAGE_CONCURSOS = /^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/jrs-app-web\.firebasestorage\.app\/o\/concursos%2F[^?#]+\.pdf\?/;
+
+/** PDF de concurso: no Drive (sob a pasta CONCURSOS) ou, nos concursos novos, no Firebase Storage (concursos/…). */
+const anexoDoConcurso = async (db: Firestore, url: string, nomeStorage: string): Promise<{ nome: string; bytes: Buffer }> => {
+  const id = idDoDrive(url);
+  if (id) {
+    if (!(await estaSobPasta(db, id, CONFIG_GOOGLE.pastaConcursos))) throw new ErroContaGoogle('falha', 'O PDF não está na pasta CONCURSOS.');
+    return baixarDoDrive(db, id);
+  }
+  if (URL_STORAGE_CONCURSOS.test(url)) {
+    const r = await fetch(url);
+    if (!r.ok) throw new ErroContaGoogle('falha', 'Não foi possível baixar o PDF do concurso.');
+    return { nome: nomeStorage, bytes: Buffer.from(await r.arrayBuffer()) };
+  }
+  throw new ErroContaGoogle('falha', 'Endereço do PDF não reconhecido.');
+};
+
+/** Termo de Recurso + Cientificação (candidato INAPTO): PDF sob CONCURSOS (Drive) ou concursos/ (Storage). */
 export const enviarTermoRecursoImpressao = async (db: Firestore, b: any) => {
   const remetente = limparNome(b.remetente).slice(0, 80) || 'JRS/HNRe';
   const candidato = limparNome(b.candidatoNome).toUpperCase();
   const candidatoId = limparNome(b.candidatoId);
   const nomeConcurso = limparNome(b.nomeConcurso);
   if (!candidato) throw new ErroContaGoogle('falha', '"candidatoNome" é obrigatório.');
-  const id = idDoDrive(String(b.pdfUrl || ''));
-  if (!id) throw new ErroContaGoogle('falha', 'Endereço do PDF não reconhecido.');
-  if (!(await estaSobPasta(db, id, CONFIG_GOOGLE.pastaConcursos))) throw new ErroContaGoogle('falha', 'O PDF não está na pasta CONCURSOS.');
+  const nomeAnexo = 'TERMO_RECURSO.pdf';
+  const anexo = await anexoDoConcurso(db, String(b.pdfUrl || ''), nomeAnexo);
   const agradecimento = agradecimentoDe(remetente);
   const idCandidato = candidatoId ? `${candidatoId} ` : '';
   await enviarEmail(db, {
     para: CONFIG_GOOGLE.emailImpressao, cc: CONFIG_GOOGLE.copiasImpressao, assunto: `TERMO DE RECURSO INAPTIDÃO - ${candidato}`, nomeRemetente: remetente,
     texto: `Giorginis,\n\nSeguem os termos do candidato INAPTO ao ${nomeConcurso} ${idCandidato}${candidato} para impressão e coleta de assinaturas.\n\n${agradecimento}\n\n${remetente}`,
     html: corpoHtml(`Seguem os termos do candidato <strong style="color: #C00000;">INAPTO</strong> ao ${escHtml(nomeConcurso)} <strong>${escHtml(idCandidato + candidato)}</strong> para impressão e coleta de assinaturas.`, agradecimento, remetente),
-    anexo: await baixarDoDrive(db, id),
+    anexo,
   });
 };
 
-/** Solicitação de Parecer ou de Exames dos concursos: PDF sob CONCURSOS. */
+/** Solicitação de Parecer ou de Exames dos concursos: PDF sob CONCURSOS (Drive) ou concursos/ (Storage). */
 export const enviarSolicitacaoConcursoImpressao = async (db: Firestore, b: any) => {
   const remetente = limparNome(b.remetente).slice(0, 80) || 'JRS/HNRe';
   const tipo = b.tipo === 'parecer' ? 'PARECER' : b.tipo === 'exames' ? 'EXAMES' : '';
   if (!tipo) throw new ErroContaGoogle('falha', '"tipo" deve ser "parecer" ou "exames".');
-  const id = idDoDrive(String(b.pdfUrl || ''));
-  if (!id) throw new ErroContaGoogle('falha', 'Endereço do PDF não reconhecido.');
-  if (!(await estaSobPasta(db, id, CONFIG_GOOGLE.pastaConcursos))) throw new ErroContaGoogle('falha', 'O PDF não está na pasta CONCURSOS.');
+  const anexo = await anexoDoConcurso(db, String(b.pdfUrl || ''), `SOLICITACAO_${tipo}.pdf`);
   const agradecimento = agradecimentoDe(remetente);
   await enviarEmail(db, {
     para: CONFIG_GOOGLE.emailImpressao, cc: CONFIG_GOOGLE.copiasImpressao, assunto: `IMPRIMIR - SOLICITAÇÃO DE ${tipo}`, nomeRemetente: remetente,
     texto: `Giorginis,\n\nPor favor, imprimir apenas na frente e colorido.\n\n${agradecimento}\n\n${remetente}`,
     html: corpoHtml('Por favor, imprimir <strong>apenas na frente e colorido</strong>.', agradecimento, remetente),
-    anexo: await baixarDoDrive(db, id),
+    anexo,
   });
 };

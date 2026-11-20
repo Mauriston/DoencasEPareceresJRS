@@ -36,6 +36,8 @@ export interface AlvoExames {
   concursoId: string;
   concursoNome: string;
   concursoAno: number;
+  /** PDFs do concurso no Firebase Storage (concursos novos) em vez do Drive. */
+  concursoStorage?: boolean;
   candidatoId: string;
   candidatoNome: string;
 }
@@ -95,6 +97,7 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
         concursoId: c.id,
         concursoNome: c.nome,
         concursoAno: anoDoConcurso(c.criadoEm),
+        concursoStorage: c.armazenamento === 'storage',
         candidatoId: cand.id,
         candidatoNome: cand.nome,
       }));
@@ -120,7 +123,7 @@ export const EnviarExamesModal: React.FC<EnviarExamesModalProps> = ({ alvo = nul
     setErro(null);
     setEtapa('enviando');
     try {
-      const pasta: PastaConcurso = { nome: destino.concursoNome, ano: destino.concursoAno };
+      const pasta: PastaConcurso = { nome: destino.concursoNome, ano: destino.concursoAno, concursoId: destino.concursoId, storage: !!destino.concursoStorage };
       const envio = await enviarExamesCandidatoParaDrive({
         pasta,
         candidatoId: destino.candidatoId,

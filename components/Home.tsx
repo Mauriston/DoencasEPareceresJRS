@@ -207,7 +207,7 @@ export const Home: React.FC = () => {
   const [todosDocumentos, setTodosDocumentos] = useState(false);
   useEffect(() => (ehSecretaria ? observarDocumentosPendentes(setDocumentos) : undefined), [ehSecretaria]);
   const abrirDocumento = (d: DocumentoGerado) => {
-    void marcarDocumentoAberto(d.id, authUser?.usuario || authUser?.nome || '');
+    void marcarDocumentoAberto(d.id, authUser?.usuario || authUser?.nome || '', d.criadoEm);
     setDocumentos(prev => prev.filter(x => x.id !== d.id));
   };
 

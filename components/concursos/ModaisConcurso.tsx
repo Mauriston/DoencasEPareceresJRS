@@ -63,11 +63,13 @@ export interface ModalRegistrarMensagemArquivoProps {
   concursoId: string;
   concursoNome: string;
   concursoAno: number;
+  /** PDFs do concurso no Firebase Storage (concursos novos) em vez do Drive. */
+  concursoStorage?: boolean;
   onClose: () => void;
 }
 
-export const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps> = ({ concursoId, concursoNome, concursoAno, onClose }) => {
-  const pastaConcurso: PastaConcurso = { nome: concursoNome, ano: concursoAno };
+export const ModalRegistrarMensagemArquivo: React.FC<ModalRegistrarMensagemArquivoProps> = ({ concursoId, concursoNome, concursoAno, concursoStorage, onClose }) => {
+  const pastaConcurso: PastaConcurso = { nome: concursoNome, ano: concursoAno, concursoId, storage: !!concursoStorage };
   const [step, setStep] = useState<'select' | 'processando' | 'revisao' | 'concluido'>('select');
   const [file, setFile] = useState<File | null>(null);
   const [erro, setErro] = useState<string | null>(null);

@@ -14,13 +14,12 @@
 // apresentaram, o que antes exigia uma planilha "TEMPLATE CONCURSOS"
 // separada por concurso — aqui é só mais um documento na mesma coleção.
 import {
-  getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, deleteDoc, updateDoc, onSnapshot,
+  getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, onSnapshot,
   writeBatch, serverTimestamp, Timestamp, deleteField,
 } from 'firebase/firestore';
 import { parseTimestamp, timestampISO } from '../utils/dados';
 import { app } from './firebaseAuth';
 import { registrarEvento } from './auditoriaIS';
-import { removerPdfPorUrl } from './driveConcursos';
 import { notificarEvento, notificarAcao } from './notificacoesPush';
 import type { ExameCandidato, ExamesExtraidos, PacienteExames } from '../utils/examesCandidato';
 import { lerTriagem, type TriagemDados, type TriagemRecord } from '../utils/triagem';
@@ -52,6 +51,13 @@ export interface ConcursoRecord {
   periodoFimISO: string;
   totalCandidatos: number;
   criadoEm: string;
+  /**
+   * Onde ficam os PDFs do concurso: 'storage' (Firebase Storage, concursos/{id}/…) nos concursos criados a
+   * partir de 20/11/2026; 'drive' (pasta CONCURSOS do Drive) nos anteriores. Ver docs/retencao-lgpd.md.
+   */
+  armazenamento: 'storage' | 'drive';
+  /** Quando o Admin encerrou o concurso (ISO); vazio se aberto ou encerrado antes deste registro. */
+  encerradoEm: string;
 }
 
 export type StatusCandidato = '' | 'Pendente' | 'APTO' | 'INAPTO' | 'FALTOU' | 'INSUF DOCUMENTAL' | 'Reagendado';
@@ -131,6 +137,8 @@ const toConcursoRecord = (id: string, data: any): ConcursoRecord => ({
   periodoFimISO: data.periodoFimISO || '',
   totalCandidatos: data.totalCandidatos || 0,
   criadoEm: data.criadoEm instanceof Timestamp ? data.criadoEm.toDate().toISOString() : (data.criadoEm || ''),
+  armazenamento: data.armazenamento === 'storage' ? 'storage' : 'drive',
+  encerradoEm: data.encerradoEm instanceof Timestamp ? data.encerradoEm.toDate().toISOString() : '',
 });
 
 /** Lê a lista de documentos gerados; aceita o campo antigo de URL única (legado). */
@@ -272,6 +280,8 @@ export const criarConcursoDaMensagem = async (params: {
     periodoFimISO: periodo ? formatarChaveData(periodo.fim) : '',
     totalCandidatos: candidatos.length,
     criadoEm: serverTimestamp(),
+    // PDFs dos concursos novos só no Firebase Storage (docs/retencao-lgpd.md).
+    armazenamento: 'storage',
   }));
 
   candidatos.forEach(c => {
@@ -368,6 +378,8 @@ export const importarConcursoDeCsv = async (
     periodoFimISO: '',
     totalCandidatos: candidatos.length,
     criadoEm: serverTimestamp(),
+    // PDFs dos concursos novos só no Firebase Storage (docs/retencao-lgpd.md).
+    armazenamento: 'storage',
   }));
 
   candidatos.forEach(c => {
@@ -454,16 +466,15 @@ export const atualizarCandidato = async (
     }
   }
 
-  // Mudou o Status: o Termo de Cientificação gerado para o status anterior perde o sentido.
+  // Mudou o Status: o Termo de Cientificação gerado para o status anterior perde o sentido e sai da IS.
+  // O PDF NÃO é apagado (termos nunca são apagados — docs/retencao-lgpd.md): continua no Storage/Drive.
   if (proximo.status !== undefined && proximo.status !== atual.status && atual.termoCientificacaoUrl) {
     proximo.termoCientificacaoUrl = '';
-    void removerPdfPorUrl(atual.termoCientificacaoUrl);
   }
   // Inapto: o Termo de Recurso (que leva junto o de Cientificação) também perde o sentido.
   if (proximo.status !== undefined && proximo.status !== atual.status && atual.termoRecursoUrl) {
     proximo.termoRecursoUrl = '';
     proximo.recurso = false;
-    void removerPdfPorUrl(atual.termoRecursoUrl);
   }
 
   const statusFinal = proximo.status !== undefined ? proximo.status : atual.status;
@@ -528,8 +539,7 @@ export const reagendarCandidato = async (concursoId: string, id: string, dataISO
     termoRecursoUrl: '',
     recurso: false,
   };
-  if (atual.termoCientificacaoUrl) void removerPdfPorUrl(atual.termoCientificacaoUrl);
-  if (atual.termoRecursoUrl) void removerPdfPorUrl(atual.termoRecursoUrl);
+  // Os PDFs dos termos anteriores não são apagados (docs/retencao-lgpd.md); só deixam de estar ligados à IS.
   await updateDoc(candidatoRef(concursoId, id), proximo);
   await registrarEvento(concursoId, id, 'IS reagendada', `${atual.dataAgendamento ? formatarDataSimples(new Date(`${atual.dataAgendamento}T12:00:00`)) : '(sem data)'} → ${formatarDataSimples(new Date(`${dataISO}T12:00:00`))}`);
   notificarAcao('concurso.reagendado', concursoId);
@@ -771,7 +781,8 @@ export const encerrarConcurso = async (concursoId: string) => {
   if (candidatos.some(c => !c.finalizado)) {
     throw new Error('Ainda há candidatos não finalizados. Encerre apenas quando todos estiverem finalizados.');
   }
-  await updateDoc(concursoRef(concursoId), { status: 'encerrado' as ConcursoStatus });
+  // encerradoEm: base da retenção dos PDFs de exames quando o concurso não tem data de agendamento.
+  await updateDoc(concursoRef(concursoId), { status: 'encerrado' as ConcursoStatus, encerradoEm: serverTimestamp() });
   notificarAcao('concurso.encerrado', concursoId);
 };
 
@@ -914,14 +925,6 @@ export const listarExamesCandidato = async (concursoId: string, candidatoId: str
     .sort((a, b) => (parseTimestamp(a.criadoEm)?.getTime() ?? 0) - (parseTimestamp(b.criadoEm)?.getTime() ?? 0));
 };
 
-/** Apaga a subcoleção "exames" do candidato e os PDFs correspondentes no Drive (usado por `limparIS`). */
-const apagarExamesCandidato = async (concursoId: string, candidatoId: string, pdfUrls: string[]): Promise<void> => {
-  const snap = await getDocs(examesCol(concursoId, candidatoId));
-  await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
-  const urls = new Set([...pdfUrls, ...snap.docs.map(d => (d.data() as any).pdfUrl || '')].filter(Boolean));
-  await Promise.all([...urls].map(removerPdfPorUrl));
-};
-
 /**
  * Admin — "Editar": reabre uma IS finalizada para edição. O Nº TIS é apagado
  * (era ele que, junto com o status, finalizava a IS); o restante é mantido.
@@ -937,11 +940,10 @@ export const reabrirIS = async (concursoId: string, id: string): Promise<Candida
 };
 
 /**
- * Admin — "Limpar": apaga todas as colunas da IS (volta a "Sem status") e todos
- * os documentos gerados (termos de recurso e de cientificação, pareceres e
- * pedidos de exames), inclusive os PDFs no Storage, e também os exames que o
- * candidato entregou (PDF no Drive e transcrição na subcoleção "exames") e a triagem. Nome, matrícula e data de
- * agendamento são mantidos.
+ * Admin — "Limpar": zera as colunas da IS (volta a "Sem status"), desliga da IS os documentos gerados
+ * (termos de recurso e de cientificação, pareceres e pedidos de exames) e apaga a triagem. Nenhum PDF é
+ * apagado e os exames entregues (PDF + transcrição) ficam com o candidato — docs/retencao-lgpd.md. Nome,
+ * matrícula e data de agendamento são mantidos.
  */
 export const limparIS = async (concursoId: string, id: string): Promise<CandidatoRecord> => {
   const snap = await getDoc(candidatoRef(concursoId, id));
@@ -952,16 +954,11 @@ export const limparIS = async (concursoId: string, id: string): Promise<Candidat
     dataLaudo: '', laudo: '', numTIS: '',
     termoRecursoUrl: '', termoCientificacaoUrl: '',
     solicitacoesParecer: [] as SolicitacaoDoc[], solicitacoesExames: [] as SolicitacaoDoc[],
-    examesQtd: 0, examesPdfUrls: [] as string[], examesEnviadoEm: '',
     triagem: null,
   };
+  // Nada é apagado (docs/retencao-lgpd.md): os PDFs dos termos e solicitações continuam no Storage/Drive, e os
+  // exames entregues (PDF + transcrição na subcoleção "exames") ficam com o candidato.
   await updateDoc(candidatoRef(concursoId, id), { ...proximo, triagem: deleteField() });
-  await apagarExamesCandidato(concursoId, id, atual.examesPdfUrls);
-  const urls = [
-    atual.termoRecursoUrl, atual.termoCientificacaoUrl,
-    ...atual.solicitacoesParecer.map(d => d.url), ...atual.solicitacoesExames.map(d => d.url),
-  ].filter(Boolean);
-  await Promise.all(urls.map(removerPdfPorUrl));
   await registrarEvento(concursoId, id, 'IS limpa (Admin)', `Status anterior: ${atual.status || '(vazio)'}`);
   notificarAcao('concurso.isLimpa', concursoId);
   return { ...atual, ...proximo };

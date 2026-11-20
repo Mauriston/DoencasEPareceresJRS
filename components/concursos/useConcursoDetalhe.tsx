@@ -8,7 +8,7 @@ import { useNav } from '../../context/NavContext';
 import { canUseFeature } from '../../config/permissions';
 import { getConcurso, salvarTriagem, listarCandidatos, observarConcurso, observarCandidatos, atualizarCandidato, reagendarCandidato, listarDatasAgendamento, salvarTermoRecurso, salvarTermoCientificacao, registrarSolicitacao, STATUS_PERMITEM_SOLICITACAO, reabrirIS, limparIS, type SolicitacaoDoc, type ConcursoRecord, type CandidatoRecord, type DataAgendamentoInfo } from '../../services/firestoreConcursos';
 import { type AlvoExames } from './ExamesCandidato';
-import { salvarPdfCandidatoNoDrive, abrirPdf, anoDoConcurso, enviarTermoRecursoParaImpressao, enviarSolicitacaoParaImpressao, type PastaConcurso } from '../../services/driveConcursos';
+import { salvarPdfCandidatoNoDrive, abrirPdf, anoDoConcurso, pastaDoConcurso, enviarTermoRecursoParaImpressao, enviarSolicitacaoParaImpressao, type PastaConcurso } from '../../services/driveConcursos';
 import { registrarDocumentoGerado } from '../../services/documentosGerados';
 import { MAPA_LAUDO_POR_STATUS, isAtrasada } from '../../utils/concursosUtils';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
@@ -84,10 +84,10 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
   // Mobile: botão de voltar flutuante sobre a lista ao rolar + botão de
   // voltar ao topo (ver JSX mais abaixo).
   const isDesktop = useIsDesktop();
-  // Pasta do concurso no Drive (CONCURSOS > ano > concurso): onde ficam os PDFs gerados.
+  // Onde ficam os PDFs gerados: Firebase Storage (concursos novos) ou a pasta do concurso no Drive (antigos).
   const pastaDrive = (): PastaConcurso => {
     if (!concurso) throw new Error('Concurso ainda não carregado. Aguarde um instante e tente de novo.');
-    return { nome: concurso.nome, ano: anoDoConcurso(concurso.criadoEm) };
+    return pastaDoConcurso(concurso);
   };
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [mostrarBotaoTopo, setMostrarBotaoTopo] = useState(false);
@@ -287,6 +287,7 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
       concursoId,
       concursoNome: concurso.nome,
       concursoAno: anoDoConcurso(concurso.criadoEm),
+      concursoStorage: concurso.armazenamento === 'storage',
       candidatoId: c.id,
       candidatoNome: c.nome,
     };
@@ -362,7 +363,7 @@ export const useConcursoDetalhe = ({ concursoId, onVoltar, dataFixa, embutido = 
     setCandidatoModalMobile(null);
     setConfirmDialog({
       title: 'Limpar IS',
-      message: `Limpar toda a IS de ${c.nome}? O Status volta a "Sem status" e serão apagados Observações, Nº TIS, laudo, todos os documentos gerados (termo de recurso, termo de cientificação, pareceres e pedidos de exames), os exames entregues pelo candidato (PDF no Drive e transcrição) e os dados da triagem. Esta ação não pode ser desfeita.`,
+      message: `Limpar toda a IS de ${c.nome}? O Status volta a "Sem status", Observações, Nº TIS, laudo e triagem são apagados e os documentos gerados (termos, pareceres e pedidos de exames) deixam de aparecer na IS — os PDFs continuam guardados. Os exames entregues pelo candidato (PDF e transcrição) são mantidos. Esta ação não pode ser desfeita.`,
       confirmLabel: 'Limpar IS',
       onConfirm: async () => {
         setConfirmDialog(null);

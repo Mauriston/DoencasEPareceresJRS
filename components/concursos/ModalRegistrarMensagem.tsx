@@ -93,10 +93,10 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
     setProcessando(true);
     try {
       const periodo = periodoInicio && periodoFim ? { inicio: parseChaveData(periodoInicio), fim: parseChaveData(periodoFim) } : null;
-      // O PDF vai para o Drive (CONCURSOS > ano atual > concurso > MENSAGENS; a estrutura de pastas é criada
-      // aqui) e o upload é aguardado: o registro da mensagem precisa nascer já com a URL do arquivo.
+      // Concurso novo: o PDF vai só para o Firebase Storage (concursos/{id}/mensagens/) e o upload é aguardado —
+      // o registro da mensagem precisa nascer já com a URL do arquivo.
       const novoId = novoConcursoId();
-      const fileUrl = await salvarMensagemNoDrive({ nome: nomeConcurso.trim(), ano: new Date().getFullYear() }, file!);
+      const fileUrl = await salvarMensagemNoDrive({ nome: nomeConcurso.trim(), ano: new Date().getFullYear(), concursoId: novoId, storage: true }, file!);
       // A mensagem que cria o concurso é sempre do tipo "Apresentação",
       // independente do que a heurística de extração tenha identificado.
       await criarConcursoDaMensagem({

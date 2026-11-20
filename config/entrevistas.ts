@@ -8,7 +8,7 @@
 //  - só Admin e `user_medicos` (membros da junta) gravam, leem e revisam — e TODOS eles veem as
 //    entrevistas de qualquer IS (a junta trabalha em conjunto);
 //  - gravação SÓ no celular (os PCs do HNRe não têm microfone); no computador, "Enviar para o meu celular" (push);
-//  - o áudio fica no Storage (`entrevistas/{isId}/{entrevistaId}/…`) e é apagado 90 dias após a
+//  - o áudio fica no Storage (`entrevistas/{isId}/{entrevistaId}/…`) e é apagado 180 dias após a
 //    entrevista (regra de ciclo de vida do bucket); nenhum PDF é gerado: o resultado vive no Firestore;
 //  - processamento pode ser nos EUA (região do Chirp 3).
 
@@ -22,8 +22,8 @@ export const MIN_PARTICIPANTES = 2;
 export const MAX_DURACAO_SEG = 60 * 60;
 /** Tamanho máximo do áudio enviado (Opus/AAC de 60 min fica bem abaixo disso). */
 export const MAX_BYTES_AUDIO = 80 * 1024 * 1024;
-/** O áudio é apagado do Storage 90 dias após a entrevista (ciclo de vida do bucket). */
-export const DIAS_RETENCAO_AUDIO = 90;
+/** O áudio é apagado do Storage 180 dias após a entrevista (ciclo de vida do bucket). */
+export const DIAS_RETENCAO_AUDIO = 180;
 /** Pasta do Storage: entrevistas/{isId}/{entrevistaId}/original.{ext} (enviado pelo celular) e audio.flac (convertido pelo servidor). */
 export const caminhoAudioOriginal = (isId: string, entrevistaId: string, ext: string) => `entrevistas/${isId}/${entrevistaId}/original.${ext}`;
 
