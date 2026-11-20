@@ -12,6 +12,7 @@
 //   - fallback sem câmera (página sem HTTPS, permissão negada, PC sem câmera) ou sem o motor de detecção:
 //     foto/arquivo pelo seletor do sistema, com os cantos detectados na imagem estática (ou a imagem inteira).
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '../ui/Button';
 import { EditorCantos } from './EditorCantos';
 import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
@@ -19,16 +20,20 @@ import { aplicarFiltroDocumento } from '../../utils/filtroDocumento';
 import { carregarImagem, detectar, encerrarDetector, imageDataParaDataUrl, iniciarDetector, pixelsDe, retificar } from '../../utils/scanner/detector';
 import { CONFIG_PADRAO, ESTADO_INICIAL, MENSAGEM, avaliar, type EstadoEstabilidade, type Situacao } from '../../utils/scanner/estabilidade';
 import { area, cantosPadrao, convexo, escalarCantos, type Cantos } from '../../utils/scanner/geometria';
+import { imagensParaPdf } from '../../utils/imagensParaPdf';
+import { ajustarAoLimite, recomprimirJpeg, type ResultadoLimite } from '../../utils/limitePdf';
+import { LIMITE_PDF_MB, formatarTamanho } from '../../config/limitePdf';
 
 export interface ScannerDocumentoProps {
   /** Título da barra superior. */
   titulo?: string;
-  /** Limite de páginas (padrão: 10). */
-  maxPaginas?: number;
   /** Aplica o filtro "Documento" (fundo branco, tinta escura). Padrão: true. */
   filtro?: boolean;
-  /** Páginas finais (JPEG data URL), na ordem. */
-  onConcluir: (paginas: string[]) => void;
+  /**
+   * Páginas finais (JPEG data URL, na ordem) e o PDF já gerado e MEDIDO (≤ 10 MB — config/limitePdf.ts); se
+   * precisou, as páginas vêm recomprimidas (utils/limitePdf.ts). Sem limite de quantidade de páginas.
+   */
+  onConcluir: (paginas: string[], pdf: Blob) => void;
   onCancelar: () => void;
 }
 
@@ -79,7 +84,7 @@ const lerArquivo = (f: File) => new Promise<string>((ok, erro) => {
 });
 
 export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
-  titulo = 'Digitalizar documento', maxPaginas = 10, filtro = true, onConcluir, onCancelar,
+  titulo = 'Digitalizar documento', filtro = true, onConcluir, onCancelar,
 }) => {
   const [etapa, setEtapa] = useState<Etapa>('camera');
   const [paginas, setPaginas] = useState<Pagina[]>([]);
@@ -89,8 +94,23 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
   const [erroCamera, setErroCamera] = useState('');
   /** Revisão: páginas realçadas (padrão) ou como fotografadas, só recortadas e endireitadas. */
   const [realce, setRealce] = useState(true);
+  // Tamanho do PDF: gerado e MEDIDO a cada mudança das páginas (com recompressão automática se passar de 10 MB).
+  const [medida, setMedida] = useState<ResultadoLimite | null>(null);
+  const [medindo, setMedindo] = useState(false);
+  const [erroMedida, setErroMedida] = useState('');
+  useEffect(() => {
+    if (!paginas.length) { setMedida(null); return; }
+    let vivo = true;
+    setMedindo(true);
+    setErroMedida('');
+    ajustarAoLimite(paginas.map(p => (realce ? p.final : p.retificada)), { gerarPdf: imagensParaPdf, recomprimir: recomprimirJpeg })
+      .then(r => { if (vivo) setMedida(r); })
+      .catch(e => { if (vivo) { setMedida(null); setErroMedida(e?.message || 'Não foi possível gerar o PDF.'); } })
+      .finally(() => { if (vivo) setMedindo(false); });
+    return () => { vivo = false; };
+  }, [paginas, realce]);
+  const excede = !!medida?.excede;
   const arquivo = useRef<HTMLInputElement>(null);
-  const cheio = paginas.length >= maxPaginas;
 
   // Motor de detecção: carrega ao abrir, libera ao fechar.
   useEffect(() => {
@@ -124,7 +144,7 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
 
   /** Imagens escolhidas no seletor do sistema (galeria/arquivos/câmera nativa). */
   const aoEscolherArquivos = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = (Array.from(e.target.files ?? []) as File[]).slice(0, Math.max(0, maxPaginas - paginas.length));
+    const files = Array.from(e.target.files ?? []) as File[];
     e.target.value = '';
     if (!files.length) return;
     setOcupado(files.length > 1 ? `Processando ${files.length} imagens…` : 'Processando a imagem…');
@@ -187,12 +207,13 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
 
   const inputArquivo = (
     <input
-      ref={arquivo} type="file" accept="image/*" multiple={maxPaginas > 1}
+      ref={arquivo} type="file" accept="image/*" multiple
       className="hidden" onChange={e => { void aoEscolherArquivos(e); }} data-testid="scanner-arquivo"
     />
   );
 
-  return (
+  // Portal no <body>: o scanner é tela cheia mesmo aberto de dentro de gavetas/sheets com transform.
+  return createPortal(
     <div className="fixed inset-0 z-dialog bg-black flex flex-col text-white animate-fade-in" role="dialog" aria-modal="true" aria-label={titulo}>
       {inputArquivo}
       <div className="px-4 py-3 flex items-center justify-between gap-2 shrink-0 border-b border-white/20">
@@ -214,7 +235,7 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
           <CameraScanner
             motorPronto={motor === 'pronto'}
             motorCarregando={motor === 'carregando'}
-            pausado={!!ocupado || cheio}
+            pausado={!!ocupado}
             paginas={paginas}
             podeConcluir={paginas.length > 0}
             onCapturar={aoCapturar}
@@ -289,12 +310,17 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
 
       {etapa === 'revisao' && (
         <div className="p-4 pb-8 shrink-0 border-t border-white/20 flex flex-wrap gap-2 justify-center">
-          {!cheio && (
-            <Button variant="secondary" icon="add_a_photo" onClick={() => setEtapa(erroCamera ? 'sem-camera' : 'camera')}>
-              Adicionar página
-            </Button>
-          )}
-          <Button icon="check" disabled={!paginas.length || !!ocupado} onClick={() => onConcluir(paginas.map(p => (realce ? p.final : p.retificada)))}>
+          <p role="status" aria-live="polite" className={`w-full text-center text-xs ${excede || erroMedida ? 'font-semibold text-gold' : 'text-white/70'}`}>
+            {medindo || !medida
+              ? (erroMedida || `${paginas.length} página${paginas.length !== 1 ? 's' : ''} · calculando o tamanho do PDF…`)
+              : excede
+                ? `${paginas.length} páginas · ${formatarTamanho(medida.bytes)} — acima do limite de ${LIMITE_PDF_MB} MB mesmo comprimido. Exclua página(s) ou divida em dois envios.`
+                : `${paginas.length} página${paginas.length !== 1 ? 's' : ''} · ${formatarTamanho(medida.bytes)} de ${LIMITE_PDF_MB} MB${medida.nivel > 0 ? ' (comprimido)' : ''}`}
+          </p>
+          <Button variant="secondary" icon="add_a_photo" disabled={excede || medindo} onClick={() => setEtapa(erroCamera ? 'sem-camera' : 'camera')}>
+            Adicionar página
+          </Button>
+          <Button icon="check" disabled={!paginas.length || !!ocupado || medindo || excede || !medida} onClick={() => { if (medida) onConcluir(medida.paginas, medida.pdf); }}>
             {paginas.length > 1 ? `Usar ${paginas.length} páginas` : 'Usar digitalização'}
           </Button>
         </div>
@@ -309,7 +335,8 @@ export const ScannerDocumento: React.FC<ScannerDocumentoProps> = ({
           <Button icon="check" disabled={!convexo(ajustando.cantos) || !!ocupado} onClick={() => { void confirmarAjuste(); }}>Aplicar</Button>
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 };
 

@@ -6,6 +6,8 @@ import { Drawer } from './ui/Drawer';
 import { Button } from './ui/Button';
 import { AcoesRodape } from './ui/AcoesRodape';
 import { Field } from './ui/Field';
+import { BotaoDigitalizar } from './scanner/BotaoDigitalizar';
+import { LIMITE_PDF_MB, erroTamanhoPdf } from '../config/limitePdf';
 import { criarLegislacao, IMAGEM_PADRAO_LEGISLACAO } from '../services/firestoreLegislacao';
 
 interface Props {
@@ -14,7 +16,6 @@ interface Props {
   onCriada: (legislacao: string) => void;
 }
 
-const LIMITE_MB = 25;
 
 export const LegislacaoForm: React.FC<Props> = ({ proximaOrdem, onClose, onCriada }) => {
   const [legislacao, setLegislacao] = useState('');
@@ -25,7 +26,7 @@ export const LegislacaoForm: React.FC<Props> = ({ proximaOrdem, onClose, onCriad
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
-  const erroArquivo = arquivo && arquivo.size > LIMITE_MB * 1024 * 1024 ? `O PDF deve ter até ${LIMITE_MB} MB.` : '';
+  const erroArquivo = arquivo ? erroTamanhoPdf(arquivo.size, arquivo.name) : '';
   const valido = legislacao.trim() && titulo.trim() && providencias.trim() && arquivo && !erroArquivo;
 
   const salvar = async () => {
@@ -66,7 +67,7 @@ export const LegislacaoForm: React.FC<Props> = ({ proximaOrdem, onClose, onCriad
         <Field label="URL da imagem" help="Opcional. Se vazio, usa o Brasão da República.">
           {aria => <input {...aria} type="url" placeholder={IMAGEM_PADRAO_LEGISLACAO} value={imageUrl} onChange={e => setImageUrl(e.target.value)} />}
         </Field>
-        <Field label="Arquivo PDF" required error={erroArquivo} help={arquivo ? arquivo.name : `PDF de até ${LIMITE_MB} MB.`}>
+        <Field label="Arquivo PDF" required error={erroArquivo} help={arquivo ? arquivo.name : `PDF de até ${LIMITE_PDF_MB} MB.`}>
           {aria => (
             <input
               {...aria}
@@ -77,6 +78,7 @@ export const LegislacaoForm: React.FC<Props> = ({ proximaOrdem, onClose, onCriad
             />
           )}
         </Field>
+        <BotaoDigitalizar fullWidth nomeBase="legislacao" titulo="Digitalizar legislação" onPdf={setArquivo} />
         {erro && <p role="alert" className="text-xs font-semibold text-wine">{erro}</p>}
       </div>
     </Drawer>

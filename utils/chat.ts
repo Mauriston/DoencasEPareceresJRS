@@ -5,6 +5,7 @@
 // servidor/chat/). Os mesmos limites estão em firestore.rules e storage.rules — ao mudar aqui, mude lá.
 
 // ---- Permissões por perfil (config/chat, editada em Administração › Chat) ----
+import { LIMITE_PDF_BYTES, LIMITE_PDF_MB } from '../config/limitePdf';
 export type PerfilChat = 'admin' | 'user_medicos' | 'user_medicos_mpi' | 'user_medicos_geral' | 'user_secretaria';
 export type ChavePermissaoChat = 'enviar' | 'receber' | 'anexos';
 export interface PermissaoChat { enviar: boolean; receber: boolean; anexos: boolean }
@@ -79,7 +80,7 @@ export const outroParticipante = (conversaId: string, uid: string): string => pa
 export const TEXTO_MAX = 4000;
 
 // ---- Anexos ----
-export const TAMANHO_MAX_ANEXO = 10 * 1024 * 1024; // 10 MB (storage.rules)
+export const TAMANHO_MAX_ANEXO = LIMITE_PDF_BYTES; // 10 MB (config/limitePdf.ts; storage.rules)
 export const TIPOS_IMAGEM = ['image/jpeg', 'image/png', 'image/webp'] as const;
 export const TIPOS_ANEXO = [...TIPOS_IMAGEM, 'application/pdf'] as const;
 export const ACCEPT_ANEXO = '.pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp';
@@ -92,7 +93,7 @@ export const tipoAnexo = (mime: string): TipoAnexo | null =>
 export const validarAnexo = (arq: { type: string; size: number }): string | null => {
   if (!tipoAnexo(arq.type)) return 'Envie só PDF ou imagem (JPG, PNG ou WEBP).';
   if (arq.size <= 0) return 'O arquivo está vazio.';
-  if (arq.size > TAMANHO_MAX_ANEXO) return 'O arquivo passa de 10 MB.';
+  if (arq.size >= TAMANHO_MAX_ANEXO) return `O arquivo passa de ${LIMITE_PDF_MB} MB.`;
   return null;
 };
 

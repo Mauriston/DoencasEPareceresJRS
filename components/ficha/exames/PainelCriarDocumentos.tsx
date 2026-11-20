@@ -13,7 +13,9 @@ import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { StatusTag } from '../../ui/StatusTag';
 import { CascaFormulario, type CascaForm } from '../CascaFormulario';
-import { gravarExameIS, lerExameComIA, MAX_PDF_EXAME_MB } from '../../../services/examesIS';
+import { gravarExameIS, lerExameComIA } from '../../../services/examesIS';
+import { BotaoDigitalizar } from '../../scanner/BotaoDigitalizar';
+import { LIMITE_PDF_BYTES, LIMITE_PDF_MB } from '../../../config/limitePdf';
 import { CLASSE_DA_ABA, nomeDoItem, pdfsDaLista, type AbaDocumentoFicha } from '../../../utils/examesFicha';
 
 type Etapa = 'na_fila' | 'lendo' | 'enviando' | 'pronto' | 'erro';
@@ -78,8 +80,14 @@ export const PainelCriarDocumentos: React.FC<Props> = ({ aba, is, examesMinimos,
   };
 
   const adicionar = (lista: ArrayLike<File> | null | undefined) => {
-    const { pdfs, ignorados } = pdfsDaLista(lista);
-    setAviso(ignorados.length ? `Ignorado${ignorados.length > 1 ? 's' : ''} (não é PDF): ${ignorados.map(f => f.name || 'arquivo colado').join(', ')}.` : '');
+    const { pdfs: todos, ignorados } = pdfsDaLista(lista);
+    // Limite único de 10 MB por PDF (config/limitePdf.ts): os maiores ficam de fora, com aviso.
+    const grandes = todos.filter(f => f.size >= LIMITE_PDF_BYTES);
+    const pdfs = todos.filter(f => f.size < LIMITE_PDF_BYTES);
+    setAviso([
+      ignorados.length ? `Ignorado${ignorados.length > 1 ? 's' : ''} (não é PDF): ${ignorados.map(f => f.name || 'arquivo colado').join(', ')}.` : '',
+      grandes.length ? `Acima de ${LIMITE_PDF_MB} MB (divida o PDF ou digitalize): ${grandes.map(f => f.name || 'arquivo colado').join(', ')}.` : '',
+    ].filter(Boolean).join(' '));
     if (!pdfs.length) return;
     setEnvios(l => [...l, ...pdfs.map(arquivo => ({ id: `d${++seq}`, arquivo, etapa: 'na_fila' as Etapa, resumo: '', erro: '' }))]);
     void rodarFila();
@@ -127,9 +135,10 @@ export const PainelCriarDocumentos: React.FC<Props> = ({ aba, is, examesMinimos,
         >
           <span className="material-symbols-outlined text-[36px]" aria-hidden="true">upload_file</span>
           <span className="text-sm font-semibold">{t.campo} em PDF</span>
-          <span id="ficha-upload-dica" className="text-xs opacity-70">Clique para escolher, arraste ou cole (Ctrl+V) · um ou mais · até {MAX_PDF_EXAME_MB} MB cada</span>
+          <span id="ficha-upload-dica" className="text-xs opacity-70">Clique para escolher, arraste ou cole (Ctrl+V) · um ou mais · até {LIMITE_PDF_MB} MB cada</span>
         </div>
         <input ref={input} type="file" accept="application/pdf,.pdf" multiple className="hidden" onChange={e => { adicionar(e.target.files); e.target.value = ''; }} />
+        <BotaoDigitalizar fullWidth nomeBase={aba === 'exames' ? 'exames' : 'atestado'} titulo={`Digitalizar · ${t.campo}`} onPdf={f => adicionar([f])} />
         {aviso && <p role="alert" className="text-xs font-semibold text-wine">{aviso}</p>}
 
         {envios.length > 0 && (

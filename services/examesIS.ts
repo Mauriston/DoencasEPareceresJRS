@@ -21,11 +21,10 @@ import { gerarComGemini, lerJsonIA, arquivoParaBase64IA } from './geminiAI';
 import { novoId } from '../utils/dados';
 import { instrucoesEnvioFicha, type OpcoesLeituraExame } from '../utils/examesFicha';
 import { classificarExame, itensDaLeitura, CATEGORIAS_ATESTADO, CLASSES_EXAME, TIPOS_DOCUMENTO, type ClasseExame, type ItemExame, type LeituraExameIA, type OrigemClasseExame } from '../utils/examesIS';
+import { exigirLimitePdf } from '../config/limitePdf';
 
 const db = getFirestore(app);
 
-/** Maior PDF aceito (a IA recebe o arquivo inteiro na requisição). */
-export const MAX_PDF_EXAME_MB = 15;
 
 export interface ExameISDoc {
   /** Caminho no Storage: inspecoes/{isId}/exames/{id}.pdf */
@@ -93,7 +92,7 @@ export interface LeituraExame { itens: ItemExame[]; textoIncompleto: boolean; cl
 
 /** A IA lê o PDF e devolve os documentos identificados, com o laudo na íntegra. */
 export const lerExameComIA = async (arquivo: File, opcoes: OpcoesLeituraExame = {}): Promise<LeituraExame> => {
-  if (arquivo.size > MAX_PDF_EXAME_MB * 1024 * 1024) throw new Error(`PDF acima de ${MAX_PDF_EXAME_MB} MB.`);
+  exigirLimitePdf(arquivo.size, arquivo.name || 'O PDF');
   const r = await gerarComGemini({
     contexto: 'exame da IS (PDF)',
     instrucoes: [INSTRUCOES, INSTRUCOES_VALORES, instrucoesEnvioFicha(opcoes)].filter(Boolean).join('\n'),

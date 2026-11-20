@@ -42,25 +42,25 @@ service firebase.storage {
     // PDFs do menu Concursos ("Planilhas de Controle"). Nos concursos criados a partir de 20/11/2026 os
     // PDFs ficam SÓ aqui (services/driveConcursos.ts; docs/retencao-lgpd.md):
     //   concursos/{id}/mensagens/…, concursos/{id}/candidatos/{matricula}/{TIPO}_{data}.pdf (termos e
-    //   solicitações) e concursos/{id}/candidatos/{matricula}/exames/EXAMES_{data}.pdf (até 15 MB).
+    //   solicitações) e concursos/{id}/candidatos/{matricula}/exames/EXAMES_{data}.pdf (até 10 MB — config/limitePdf.ts).
     // Os antigos (concursos/{id}/termos/…) também ficam aqui. Cada envio tem nome único: ninguém troca nem
     // apaga pelo app — mensagens, termos e solicitações nunca são apagados; o PDF dos exames é apagado pelo
     // servidor (Admin SDK) 1 ano depois (servidor/concursos/retencaoExames.ts).
     match /concursos/{concursoId}/{arquivo=**} {
       allow read: if request.auth != null;
       allow create: if request.auth != null
-        && request.resource.size < 15 * 1024 * 1024
+        && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType == 'application/pdf';
       allow update, delete: if false;
     }
 
     // PDFs da página Legislação (legislacao/{id}.pdf). Leitura autenticada;
-    // escrita só do Admin (perfil lido do Firestore), PDF até 25 MB.
+    // escrita só do Admin (perfil lido do Firestore), PDF até 10 MB (config/limitePdf.ts).
     match /legislacao/{arquivo} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null
         && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil == 'admin'
-        && request.resource.size < 25 * 1024 * 1024
+        && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType == 'application/pdf';
       allow delete: if false;
     }
@@ -89,13 +89,13 @@ service firebase.storage {
     }
 
     // Documentos das férias e afastamentos (página Férias; services/afastamentos.ts): afastamentos/{id}/{arquivo},
-    // PDF ou imagem até 15 MB. A equipe da JRS (Admin, médicos JRS/MPI e Secretaria) lê; só o Admin envia e apaga.
+    // PDF ou imagem até 10 MB (config/limitePdf.ts). A equipe da JRS (Admin, médicos JRS/MPI e Secretaria) lê; só o Admin envia e apaga.
     match /afastamentos/{afastamentoId}/{arquivo} {
       allow read: if request.auth != null
         && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
       allow create: if request.auth != null
         && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil == 'admin'
-        && request.resource.size < 15 * 1024 * 1024
+        && request.resource.size < 10 * 1024 * 1024
         && (request.resource.contentType == 'application/pdf' || request.resource.contentType.matches('image/.*'));
       allow delete: if request.auth != null
         && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil == 'admin';
@@ -103,14 +103,14 @@ service firebase.storage {
     }
 
     // Exames da IS (PDFs; services/examesIS.ts): inspecoes/{isId}/exames/{exameId}.pdf. A equipe
-    // (Admin, médicos JRS/MPI e Secretaria) lê; envia (PDF até 15 MB) e apaga enquanto a IS não está finalizada.
+    // (Admin, médicos JRS/MPI e Secretaria) lê; envia (PDF até 10 MB — config/limitePdf.ts) e apaga enquanto a IS não está finalizada.
     match /inspecoes/{isId}/exames/{arquivo} {
       allow read: if request.auth != null
         && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria'];
       allow create: if request.auth != null
         && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria']
         && firestore.get(/databases/(default)/documents/inspecoes/$(isId)).data.situacao != 'finalizada'
-        && request.resource.size < 15 * 1024 * 1024
+        && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType == 'application/pdf';
       allow delete: if request.auth != null
         && firestore.get(/databases/(default)/documents/usuarios/$(request.auth.uid)).data.perfil in ['admin', 'user_medicos', 'user_medicos_mpi', 'user_secretaria']

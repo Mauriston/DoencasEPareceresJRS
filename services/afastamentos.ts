@@ -16,6 +16,7 @@ import {
   dataFimDe, geraBloqueioNaAgenda, statusAoGravar, tituloEventoAfastamento,
   type StatusAfastamento, type TipoAfastamento,
 } from '../utils/afastamentos';
+import { exigirLimitePdf } from '../config/limitePdf';
 
 const db = getFirestore(app);
 const COL = 'afastamentos';
@@ -60,9 +61,9 @@ export const observarAfastamentos = (onData: (l: AfastamentoRecord[]) => void, o
     err => onError?.(err),
   );
 
-/** Envia um documento (PDF ou imagem, até 15 MB) para afastamentos/{id}/. */
+/** Envia um documento (PDF ou imagem, até 10 MB — config/limitePdf.ts) para afastamentos/{id}/. */
 export const enviarArquivoAfastamento = async (afastamentoId: string, arquivo: File): Promise<ArquivoAfastamento> => {
-  if (arquivo.size > 15 * 1024 * 1024) throw new Error(`${arquivo.name}: o arquivo passa de 15 MB.`);
+  exigirLimitePdf(arquivo.size, arquivo.name);
   if (!/^(application\/pdf|image\/)/.test(arquivo.type)) throw new Error(`${arquivo.name}: envie PDF ou imagem.`);
   const nomeSeguro = arquivo.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w.-]+/g, '_').slice(-80) || 'documento';
   const caminho = `${COL}/${afastamentoId}/${Date.now()}_${nomeSeguro}`;

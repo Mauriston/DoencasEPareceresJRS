@@ -7,6 +7,7 @@
 //
 // Status NÃO é gravado: é derivado de "dataTermino" (dataAtestado + tempoHomologado - 1),
 // pois nada atualizaria um valor gravado com o passar do tempo.
+import { exigirLimitePdf } from '../config/limitePdf';
 import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, serverTimestamp, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { novoId } from '../utils/dados';
 import { contentDisposition, nomeArquivoDocumento } from '../utils/nomeArquivoDocumento';
@@ -131,6 +132,7 @@ export const observarPericiasDoMilitar = (militarId: string, onData: (lista: Per
 
 /** Envia o PDF ao Storage e devolve a URL de download. */
 export const enviarPdfPericiaMenor = async (id: string, pdf: Blob, inspecionado?: string): Promise<string> => {
+  exigirLimitePdf(pdf.size, 'O PDF do atestado');
   const r = ref(getStorage(app), `${COL}/${id}.pdf`);
   const nomeArquivo = nomeArquivoDocumento({ tipo: 'PERICIA_MENOR', nome: inspecionado, carimbo: true });
   await uploadBytes(r, pdf, { contentType: 'application/pdf', contentDisposition: contentDisposition(nomeArquivo) });

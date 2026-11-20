@@ -34,7 +34,6 @@ import { editarPericiaMenor, enviarPdfPericiaMenor, gravarTranscricaoPericia, no
 import { MIN_JUSTIFICATIVA_EXCLUSAO, erroJustificativaExclusao } from '../../utils/exclusaoPericia';
 import { carregarPeritosPericiaMenor } from '../../services/periciaMenorService';
 import { carregarCid, normalizarBusca, omEhHnre, type CidItem } from '../../utils/corposQuadros';
-import { imagensParaPdf } from '../../utils/imagensParaPdf';
 import { dataCivilISO, diasInteiro, hojeISO, normalizarTexto } from '../../utils/dados';
 import { MAX_DIAS_PERICIA, MAX_DIAS_ACUMULADOS, limitarDias, saldoAcumulado, type PeritoPericiaMenor } from '../../utils/periciaMenorRegras';
 import { extrairNomeInspecionado, formatNip } from '../../utils/format';
@@ -111,6 +110,8 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
   const [digitalizando, setDigitalizando] = useState(false);
   /** Páginas do atestado digitalizadas (JPEG data URL, já retificadas e com o filtro "Documento"). */
   const [paginas, setPaginas] = useState<string[]>([]);
+  /** PDF gerado e medido pelo scanner (≤ 10 MB — config/limitePdf.ts); é o que vai para o Storage. */
+  const [pdfAtestado, setPdfAtestado] = useState<Blob | null>(null);
   const [paginaVista, setPaginaVista] = useState(0);
   const [processando, setProcessando] = useState<'' | 'leitura'>('');
   const [falhaLeitura, setFalhaLeitura] = useState('');
@@ -232,7 +233,8 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
     setMedicoEmissor(medico); setCrmEmissor(crm); setEmissorLido(!!(medico || crm));
   };
 
-  const aoDigitalizar = async (novas: string[]) => {
+  const aoDigitalizar = async (novas: string[], pdf: Blob) => {
+    setPdfAtestado(pdf);
     setDigitalizando(false);
     setPaginas(novas);
     setPaginaVista(0);
@@ -304,7 +306,7 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
     setSalvando(true);
     try {
       const id = novoIdPericiaMenor();
-      const pdfUrl = homologacao && paginas.length ? await enviarPdfPericiaMenor(id, await imagensParaPdf(paginas), militar.inspecionado) : '';
+      const pdfUrl = homologacao && paginas.length && pdfAtestado ? await enviarPdfPericiaMenor(id, pdfAtestado, militar.inspecionado) : '';
       const medico = normalizarTexto(medicoEmissor);
       const crm = normalizarTexto(crmEmissor);
       await registrarPericiaMenor(id, {
@@ -543,9 +545,8 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
       {digitalizando && (
         <ScannerDocumento
           titulo="Digitalizar atestado"
-          maxPaginas={4}
           onCancelar={() => setDigitalizando(false)}
-          onConcluir={novas => { void aoDigitalizar(novas); }}
+          onConcluir={(novas, pdf) => { void aoDigitalizar(novas, pdf); }}
         />
       )}
       {escolhendoDispensas && (
