@@ -5,7 +5,7 @@
 //  - "Excluir" (destrutivo, à esquerda): função inspecoes.excluir, só IS não finalizada; a exclusão é completa, no
 //    servidor (excluirInspecaoCompleta — POST /api/inspecoes/excluir);
 //  - "Agendar IS"/"Reagendar IS": as regras do menu da página Inspeções de Saúde;
-//  - "Enviar PDF ▾" (com data de entrevista e IS não finalizada): Exames · Atestados e Laudos · Resposta de Parecer
+//  - "Enviar PDF ▾" (com data de entrevista, sem Laudo e IS não finalizada): Exames · Atestados e Laudos · Resposta de Parecer
 //    (só com pedido de parecer da IS não concluído). Sempre confirma e navega pelo contrato
 //    definir({ aba, criar, is, reg: null }) — o estado "Criar novo" é de cada aba;
 //  - "Gerar Documento ▾": Pedido de Parecer → aba Pareceres (criar: 'pedido'); os demais "Em breve";
@@ -18,6 +18,9 @@ import type { AcaoBarraFicha } from '../CascaPainelFicha';
 import { MinutarMsgIS } from './MinutarMsgIS';
 import { canUseFeature } from '../../../config/permissions';
 import { excluirInspecaoCompleta, type InspecaoRecord } from '../../../services/firestoreInspecoes';
+import { observarExamesDaIS } from '../../../services/examesIS';
+import { observarEntrevistas } from '../../../services/entrevistasIS';
+import { observarEmailsDaIS } from '../../../services/historicoEmailsIS';
 import { observarPareceresDaIS, type ParecerRecord } from '../../../services/firestorePareceres';
 import { removerEventoAgendaIS } from '../../../services/agendaGoogleIS';
 import { podeArrastarIS } from '../../../utils/calendarioIS';
@@ -60,6 +63,13 @@ export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, onAgen
   const [apagando, setApagando] = useState(false);
   const [minutando, setMinutando] = useState(false);
   useEffect(() => observarPareceresDaIS(is.id, setPareceres, () => setPareceres([])), [is.id]);
+  // Atalhos "Ver …" só com registros da IS (transcrições/entrevistas, exames, e-mails).
+  const [temTranscricoes, setTemTranscricoes] = useState(false);
+  const [temExames, setTemExames] = useState(false);
+  const [temEmails, setTemEmails] = useState(false);
+  useEffect(() => observarEntrevistas(is.id, l => setTemTranscricoes(l.length > 0), () => setTemTranscricoes(false)), [is.id]);
+  useEffect(() => observarExamesDaIS(is.id, l => setTemExames(l.length > 0), () => setTemExames(false)), [is.id]);
+  useEffect(() => observarEmailsDaIS(is.id, l => setTemEmails(l.length > 0), () => setTemEmails(false)), [is.id]);
 
   const finalizada = is.situacao === 'finalizada';
   const habilitada = (a: AbaFicha) => abas[a].habilitada;
@@ -70,9 +80,9 @@ export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, onAgen
   const podeExcluir = !finalizada && !motivoNaoExcluir({ perfil, temFuncao: canUseFeature('inspecoes.excluir', perfil), situacao: is.situacao });
   // Agendar (Aberta/Realizando Exames) ou Reagendar (Faltou; Agendada que ainda dá para remarcar).
   const agendar = canUseFeature('inspecoes.agendar', perfil) && (aguardaAgendamento(is.status) || is.status === 'faltou' || podeArrastarIS(is));
-  // Enviar PDF: com data de entrevista e IS não finalizada.
+  // Enviar PDF: com data de entrevista, IS não finalizada e Laudo ainda vazio.
   const parecerAberto = pareceres.some(p => p.status !== 'concluido');
-  const itensPdf: ItemMenu[] = !is.dataEntrevista || finalizada || !canUseFeature('inspecoes.enviarExames', perfil) ? [] : [
+  const itensPdf: ItemMenu[] = !is.dataEntrevista || finalizada || !!is.laudo?.trim() || !canUseFeature('inspecoes.enviarExames', perfil) ? [] : [
     ...(habilitada('exames') ? [{ rotulo: 'Exames', icone: 'lab_profile', onClick: () => setConfirmarPdf('exames' as const) }] : []),
     ...(habilitada('atestados') ? [{ rotulo: 'Atestados e Laudos', icone: 'note_alt', onClick: () => setConfirmarPdf('atestados' as const) }] : []),
     ...(parecerAberto && habilitada('pareceres') ? [{ rotulo: 'Resposta de Parecer', icone: 'assignment_turned_in', onClick: () => setConfirmarPdf('resposta' as const) }] : []),
@@ -101,11 +111,11 @@ export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, onAgen
     habilitada(aba) ? <Button key={aba} variant="ghost" size="sm" icon={icone} onClick={() => ir(aba, extra)}>{rotulo}</Button> : null;
   const atalhos = (
     <nav aria-label="Documentos da IS" className="flex flex-wrap gap-1 empty:hidden">
-      {is.dataEntrevista && atalho('transcricoes', 'Ver transcrições', 'record_voice_over')}
+      {temTranscricoes && atalho('transcricoes', 'Ver transcrições', 'record_voice_over')}
       {pareceres.length > 0 && atalho('pareceres', 'Ver pareceres', 'assignment')}
-      {atalho('exames', 'Ver exames', 'lab_profile')}
+      {temExames && atalho('exames', 'Ver exames', 'lab_profile')}
       {is.guiasExames && atalho('guias', 'Ver guias', 'receipt_long', { reg: is.id })}
-      {atalho('emails', 'Ver e-mails', 'mail')}
+      {temEmails && atalho('emails', 'Ver e-mails', 'mail')}
     </nav>
   );
 

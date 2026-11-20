@@ -180,3 +180,6 @@ export const prazoAberturaIS = (p: { grupoFinalidade?: string; comExamesMinimos:
   if (p.comExamesMinimos) return `7 dias úteis a partir de ${data} para comparecer à JRS e obter as guias dos exames.`;
   return `7 dias úteis a partir de ${data} para agendar a IS.`;
 };
+
+/** Guias INCDEF: VDF/Término de Incapacidade com "Incapaz definitivamente para o SAM" usam os exames de "Deixar o SAM". */
+export const FINALIDADE_ANEXO_O_INCDEF = 'Deixar o SAM, SMV, SMI ou SPG';

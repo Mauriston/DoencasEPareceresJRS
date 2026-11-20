@@ -23,6 +23,8 @@ interface Props {
   militar: MilitarRecord | null | undefined;
   /** Dados já completados (formulário de abertura); prevalecem sobre o cadastro. */
   dados?: DadosInspecionadoIS;
+  /** Finalidade do Anexo O já definida (ex.: guias INCDEF → "Deixar o SAM…"): dispensa a identificação pela IA. */
+  finalidadeAnexoO?: string;
   /** Começa a gerar sozinho quando os dados estão completos. */
   automatico?: boolean;
   onClose: () => void;
@@ -32,7 +34,7 @@ interface Props {
 
 type Etapa = 'dados' | 'gerando' | 'erro';
 
-export const GerarGuiasDialog: React.FC<Props> = ({ is, militar, dados, automatico = false, onClose, onConcluido }) => {
+export const GerarGuiasDialog: React.FC<Props> = ({ is, militar, dados, finalidadeAnexoO, automatico = false, onClose, onConcluido }) => {
   const sexoCadastro = dados?.sexo || militar?.sexo || '';
   const nascimentoCadastro = dados?.dataNascimento || militar?.dataNascimento || '';
   const completo = !!sexoCadastro && !!nascimentoCadastro;
@@ -56,7 +58,7 @@ export const GerarGuiasDialog: React.FC<Props> = ({ is, militar, dados, automati
   const gerar = async (s: SexoInspecionado, dn: string) => {
     setEtapa('gerando'); setErro(''); setPasso('Identificando finalidade, sexo e idade…');
     try {
-      const id = await identificarDadosGuias({ finalidade: is.finalidade, grupoFinalidade: is.grupoFinalidade, sexo: s, dataNascimento: dn, hoje: hojeISO() });
+      const id = finalidadeAnexoO ? { finalidadeAnexoO, temExames: true } : await identificarDadosGuias({ finalidade: is.finalidade, grupoFinalidade: is.grupoFinalidade, sexo: s, dataNascimento: dn, hoje: hojeISO() });
       if (!vivo.current) return;
       if (!id.finalidadeAnexoO || !id.temExames) {
         onConcluido({ gerado: false, motivo: 'A finalidade desta IS não tem exames mínimos com guia.' });

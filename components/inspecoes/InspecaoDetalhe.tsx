@@ -501,11 +501,11 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
           ) : (
           <>
 
-          <PrintsSinaisIS
+          {!ds1a.valor.trim() && <PrintsSinaisIS
             isId={is.id} inspecionadoId={is.inspecionadoId || ''} finalidade={is.finalidade || ''} dataAbertura={is.dataAbertura || ''}
             atual={() => { const a = atualRef.current; return { grupoFinalidade: a.grupoFinalidade || '', laudo: a.laudo || '', dataLaudo: a.dataLaudo || '', restricoes: a.restricoes || '', tis: a.tis || '', ds1a: a.ds1a || '', cid: a.cid || '', dataConclusao: a.dataConclusao || '' }; }}
             onPreencher={preencherDosPrints}
-          />
+          />}
 
           <Field label="Laudo">
             {a => <textarea {...a} value={laudo.valor} onChange={e => laudo.onChange(e.target.value)} onBlur={laudo.onBlur} className={`${a.className} min-h-[88px]`} />}
