@@ -18,7 +18,7 @@ import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import { LinkPdf } from '../ui/LinkPdf';
 import { StatusTag } from '../ui/StatusTag';
-import { AbasSublinhadas, BarraDias, CidCodigo, SaldoAcumulado, TagTipoPericia, TextoContagem, classeContagem } from './partes';
+import { AbasSublinhadas, BarraDias, CidCodigo, SaldoAcumulado, TagEspecialidade, TagTipoPericia, TextoContagem, classeContagem } from './partes';
 import { dataBR, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
 import { extrairNomeInspecionado, formatNip } from '../../utils/format';
 import { medicoDaPericia } from '../../utils/periciaMenorLista';
@@ -198,7 +198,7 @@ export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoj
     return (
       <CascaPainelFicha
         titulo={`${atestado ? 'Atestado' : 'Perícia menor'} de ${dataBR(p.dataAtestado)}`} icone="personal_injury"
-        tituloExtra={<TagTipoPericia tipo={tipo} />} subtitulo={linhaIdentificacao(p)}
+        tituloExtra={<span className="inline-flex flex-wrap items-center gap-1.5"><TagTipoPericia tipo={tipo} /><TagEspecialidade especialidade={p.especialidade} /></span>} subtitulo={linhaIdentificacao(p)}
         acoes={[
           ...(onExcluir ? [{ id: 'excluir', rotulo: 'Excluir', icone: 'delete', variante: 'destructive' as const, onClick: onExcluir }] : []),
           ...(onEditar ? [{ id: 'editar', rotulo: 'Editar', icone: 'edit', variante: 'secondary' as const, onClick: onEditar }] : []),
