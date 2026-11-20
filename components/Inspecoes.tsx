@@ -7,8 +7,9 @@
 // trabalho: Hoje → próximos dias → entrevistados aguardando conclusão → abertas sem agendamento; Finalizadas por
 // mês, paginadas ("Mostrar mais"). Ver inspecoes/TabelaAgendaIS e inspecoes/listaIS.
 // Calendário (formato do Google Agenda) só a partir de md (4g): no celular a página força a Lista, mesmo com a
-// preferência salva ou ?visao=calendario. Cabeçalho: ⋮ (Bloqueios e E-mails) · "Abrir IS" por último; no celular,
-// FAB "Abrir IS" para quem tem inspecoes.cadastrar (4d).
+// preferência salva ou ?visao=calendario. Cabeçalho (desktop): "Enviar e-mails" (menu com as listas de pendentes e o
+// badge do total) · "Bloqueios" · "Abrir IS" por último. No celular, FAB com "Abrir IS" (manual), "Abrir IS" (foto do
+// SINAIS), "Enviar e-mails" e "Bloqueios" (4d).
 // Filtros pela URL (contadores da Início e do Painel):
 //   ?situacao=atrasadas | sem_agendamento | finalizadas | hoje   (hoje vira o período "Hoje" e sai da URL)
 //   ?perito=<uid> · ?minhas=1 · ?dia=AAAA-MM-DD (período daquele dia) · ?visao=calendario|tabela · ?novo=manual|print
@@ -47,6 +48,7 @@ import { avisarAgendamento, observarAgendamentos, type AgendamentoFeito } from '
 import { agendamentoJaEnviado, ehElegivelAgendamento } from '../utils/emailAgendamentoIS';
 import { EmailAgendaDialog } from './inspecoes/EmailAgendaDialog';
 import { useEmailsIS } from './inspecoes/BotaoEnviarEmail';
+import { BotaoEnviarEmails, EmailsPendentesDialog, ROTULO_ENVIAR_EMAILS, rotuloEmailsComTotal } from './inspecoes/BotaoEnviarEmails';
 import { EmailsDaIS } from './inspecoes/EmailsDaIS';
 import { emailDoInspecionado } from '../services/emailResultadoIS';
 import { CalendarioIS } from './inspecoes/CalendarioIS';
@@ -235,6 +237,8 @@ export const Inspecoes: React.FC = () => {
   const [apagando, setApagando] = useState<InspecaoRecord | null>(null);
   const [bloqueiosAberto, setBloqueiosAberto] = useState(false);
   const [emailAgendaAberto, setEmailAgendaAberto] = useState(false);
+  /** Celular: lista de e-mails pendentes aberta pela ação "Enviar e-mails" do FAB. */
+  const [emailsAberto, setEmailsAberto] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
 
   const avisar = (msg: string, tone: 'success' | 'error' = 'success') => { setToast({ msg, tone }); window.setTimeout(() => setToast(null), tone === 'error' ? 7000 : 4500); };
@@ -510,14 +514,9 @@ export const Inspecoes: React.FC = () => {
     onEnviarResultadoBeneficios: setEnviandoBeneficios,
     onAviso: avisar,
   });
-  // ⋮ do cabeçalho (3b/M1): Bloqueios e os e-mails da JRS (com as pendências em cada item).
-  const itensMais: ItemMenu[] = [
-    ...(podeBloquear ? [{ rotulo: 'Bloqueios da agenda', icone: 'block', onClick: () => setBloqueiosAberto(true) }] : []),
-    ...(podeEmails ? emails.itens : []),
-  ];
-  const menuMais = itensMais.length > 0
-    ? <MenuAcoes rotulo={emails.total && podeEmails ? `Mais ações (${emails.total} e-mail${emails.total !== 1 ? 's' : ''} pendente${emails.total !== 1 ? 's' : ''})` : 'Mais ações'} itens={itensMais} />
-    : null;
+  // Ações da página: "Enviar e-mails" (listas de pendentes) e "Bloqueios" como botões secundários no cabeçalho
+  // (desktop) e no FAB (celular). Não sobrou nada para um ⋮.
+  const temAcoesCabecalho = podeEmails || podeBloquear || podeCadastrar;
 
   const nomePeritoFiltro = peritoParam ? (peritos.find(p => p.uid === peritoParam)?.usuario ?? 'Perito') : '';
   const souPerito = !!usuario && peritos.some(p => p.uid === usuario.uid);
@@ -574,14 +573,15 @@ export const Inspecoes: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
-      <Container size="data" className={`py-6 md:py-8 ${podeCadastrar ? 'pb-28 md:pb-10' : 'pb-10'} space-y-4`}>
+      <Container size="data" className={`py-6 md:py-8 ${temAcoesCabecalho ? 'pb-28 md:pb-10' : 'pb-10'} space-y-4`}>
         <PageHeader
           title="Inspeções de Saúde"
           description="Cadastro, agenda e prazos das IS (exceto concursos)."
-          actions={menuMais || podeCadastrar ? (
-            // Celular: o ⋮ vai para a linha das abas e "Abrir IS" vira o FAB.
+          actions={temAcoesCabecalho ? (
+            // Celular: as mesmas ações vão para o FAB.
             <div className="hidden md:flex items-center gap-2">
-              {menuMais}
+              {podeEmails && <BotaoEnviarEmails itens={emails.itens} total={emails.total} />}
+              {podeBloquear && <Button variant="secondary" icon="block" onClick={() => setBloqueiosAberto(true)}>Bloqueios</Button>}
               {podeCadastrar && (
                 <MenuAcoes
                   rotulo="Abrir IS" botao={{ texto: 'Abrir IS', icone: 'add', primario: true }}
@@ -612,7 +612,7 @@ export const Inspecoes: React.FC = () => {
               )
         ) : (
           <section aria-label="Lista de IS" className="md:bg-white md:border md:border-line md:rounded-xl md:overflow-clip">
-            {/* Abas sublinhadas (ouro = ativa) com a contagem · vista só com ícone (G2) · ⋮ no celular. */}
+            {/* Abas sublinhadas (ouro = ativa) com a contagem · vista só com ícone (G2). */}
             <div className="flex items-end justify-between gap-2 border-b border-line md:px-4">
               <div role="tablist" aria-label="Situação das IS" className="flex gap-1" onKeyDown={aoTeclaAbas}>
                 {abas.map(t => {
@@ -629,10 +629,11 @@ export const Inspecoes: React.FC = () => {
                   );
                 })}
               </div>
-              <div className="flex items-center gap-1 pb-1.5">
-                {desktop && <AlternarVisao value={visao} onChange={setVisao} />}
-                {!desktop && menuMais}
-              </div>
+              {desktop && (
+                <div className="flex items-center gap-1 pb-1.5">
+                  <AlternarVisao value={visao} onChange={setVisao} />
+                </div>
+              )}
             </div>
 
             {/* Busca e filtros em chips — no celular, uma linha só com rolagem lateral (M3); a busca abre pelo ícone. */}
@@ -682,11 +683,17 @@ export const Inspecoes: React.FC = () => {
         )}
       </Container>
 
-      {/* Celular: "Abrir IS" como FAB, só para quem cadastra IS (4d); "Enviar print" na pilha. */}
+      {/* Celular: FAB com as ações do cabeçalho (4d) — Abrir IS (manual), Abrir IS (foto do SINAIS), Enviar e-mails, Bloqueios. */}
       <FabAcoes acoes={[
-        { id: 'abrir-is', rotulo: 'Abrir IS', icone: 'add', onClick: () => setNovo({}), permitido: podeCadastrar },
-        { id: 'is-print', rotulo: 'Enviar print', icone: 'photo_camera', onClick: () => setPorFoto(true), permitido: podeCadastrar },
+        { id: 'abrir-is-manual', rotulo: 'Abrir IS', icone: 'add', ariaLabel: 'Abrir IS manualmente', onClick: () => setNovo({}), permitido: podeCadastrar },
+        { id: 'abrir-is-foto', rotulo: 'Abrir IS', icone: 'photo_camera', ariaLabel: 'Abrir IS por foto do SINAIS', onClick: () => setPorFoto(true), permitido: podeCadastrar },
+        {
+          id: 'enviar-emails', rotulo: emails.total > 0 ? `${ROTULO_ENVIAR_EMAILS} (${emails.total > 99 ? '99+' : emails.total})` : ROTULO_ENVIAR_EMAILS,
+          icone: 'mail', ariaLabel: rotuloEmailsComTotal(emails.total), onClick: () => setEmailsAberto(true), permitido: podeEmails,
+        },
+        { id: 'bloqueios', rotulo: 'Bloqueios', icone: 'block', ariaLabel: 'Bloqueios da agenda', onClick: () => setBloqueiosAberto(true), permitido: podeBloquear },
       ]} />
+      {podeEmails && emailsAberto && <EmailsPendentesDialog itens={emails.itens} total={emails.total} onClose={() => setEmailsAberto(false)} />}
       {podeEmails && emails.dialogos}
 
       {novo && usuario && (
