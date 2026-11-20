@@ -4,7 +4,8 @@
 // lista; a faixa só monta os que o perfil pode abrir, na ordem de prioridade recebida, e no máximo 4.
 // Regras: valor 0 continua visível (a faixa não muda de posição de um dia para o outro); vinho só quando o
 // contador é de atraso e o valor é maior que 0; as colunas acompanham a quantidade (4, 3, 2 ou 1 card ocupando a
-// largura toda, sem card vazio). Sem nenhum contador possível, a faixa não aparece.
+// largura toda, sem card vazio). Sem nenhum contador possível, a faixa não aparece. Todo card leva a outra
+// página: a seta (chevron no celular) diz isso.
 import React from 'react';
 import { Link } from 'react-router-dom';
 
@@ -52,6 +53,8 @@ export const ContadoresHoje: React.FC<{ contadores: ContadorHoje[] }> = ({ conta
               >
                 <span className="flex items-center justify-between gap-2 min-w-0">
                   <span className="text-xs font-semibold text-ink-3 leading-tight">{c.rotulo}</span>
+                  {/* Seta: o card leva à lista filtrada (no celular, chevron; no desktop, seta). */}
+                  <span className="md:hidden material-symbols-outlined text-[20px] text-ink-3 shrink-0" aria-hidden="true">chevron_right</span>
                   <span className="hidden md:inline material-symbols-outlined text-[18px] text-ink-4 group-hover:text-navy shrink-0" aria-hidden="true">arrow_forward</span>
                 </span>
                 <span className="flex flex-col gap-1">
