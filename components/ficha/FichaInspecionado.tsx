@@ -69,6 +69,7 @@ import { RespostaParecerForm } from './pareceres/RespostaParecerForm';
 import { PainelTranscricoes } from './transcricoes/PainelTranscricoes';
 import { PainelCriarDocumentos } from './exames/PainelCriarDocumentos';
 import { PainelDocumentoIS, tituloDoDocumento } from './exames/PainelDocumentoIS';
+import { PainelAtestadoPM } from './exames/PainelAtestadoPM';
 import { examesMinimosDaIS, isParaCriar } from '../../utils/examesFicha';
 import { ApoioAfastamentos, PainelAfastamentos } from './afastamentos/PainelAfastamentos';
 import { PainelEmail } from './emails/PainelEmail';
@@ -112,7 +113,7 @@ import { carregarCid, carregarCorposQuadros, carregarOms, type CorposQuadros, ty
 import { indiceCidAbreviado } from '../../utils/periciaMenorLista';
 import { diaMes, partesCid, postoDoInspecionado } from '../../utils/periciaMenorResumo';
 import { ABAS_FICHA, abaFichaInicial, afastamentosDaIS, registroSelecionado, type AbaFicha } from '../../utils/fichaInspecionado';
-import { classeDoExame, ROTULO_CLASSE, ROTULO_TIPO } from '../../utils/examesIS';
+import { categoriaDoItem, classeDoExame, ROTULO_CATEGORIA, ROTULO_CLASSE, ROTULO_TIPO } from '../../utils/examesIS';
 import { aguardaAgendamento, dataHoraBr, situacaoDoStatus } from '../../utils/inspecoes';
 import { getDriveEmbedUrl, isGoogleDriveUrl } from '../../utils/googleDrive';
 import { extrairNomeInspecionado, formatCelular, formatCpf, formatDataBr, formatNip, idadeEmAnos } from '../../utils/format';
@@ -189,7 +190,8 @@ const Dado: React.FC<{ rotulo: string; children?: React.ReactNode; largo?: boole
 const tituloExame = (e: ExameDaFicha) => tituloDoDocumento(e);
 const dataExame = (e: ExameDaFicha) => e.itens.find(i => i.data)?.data || isoDe(e.enviadoEm);
 const idExame = (e: ExameDaFicha) => `${e.isId}:${e.id}`;
-const dataIS = (i: InspecaoRecord) => (i.dataEntrevista || i.dataAbertura || '').slice(0, 10);
+/** Todas as datas/ordens de IS na Ficha seguem a DATA DA ENTREVISTA (IS não agendada: sem data, no fim). */
+const dataIS = (i: InspecaoRecord) => (i.dataEntrevista || '').slice(0, 10);
 
 export const FichaInspecionado: React.FC = () => {
   const { nip: nipParam = '' } = useParams();
@@ -292,9 +294,9 @@ export const FichaInspecionado: React.FC = () => {
   const tituloNaTopbar = useTituloPagina(nome);
 
   // Listas de cada aba, do mais recente para o mais antigo.
-  const isPorAbertura = useMemo(() => [...inspecoes].sort((a, b) => (b.dataAbertura || '').localeCompare(a.dataAbertura || ''))
-    .map(i => ({ id: i.id, titulo: i.finalidade || `IS ${i.is}`, data: i.dataAbertura ? formatDataBr(i.dataAbertura.slice(0, 10)) : '' })), [inspecoes]);
-  const isOrdenadas = useMemo(() => [...inspecoes].sort((a, b) => dataIS(b).localeCompare(dataIS(a))), [inspecoes]);
+  const isOrdenadas = useMemo(() => [...inspecoes].sort((a, b) => (b.dataEntrevista || '').localeCompare(a.dataEntrevista || '')), [inspecoes]);
+  const isPorEntrevista = useMemo(() => isOrdenadas
+    .map(i => ({ id: i.id, titulo: i.finalidade || `IS ${i.is}`, data: dataIS(i) ? formatDataBr(dataIS(i)) : '' })), [isOrdenadas]);
   const pmOrdenadas = useMemo(() => [...pericias].sort((a, b) => (b.dataAtestado || '').localeCompare(a.dataAtestado || '')), [pericias]);
   const pareceresOrdenados = useMemo(() => [...pareceres].sort((a, b) => (b.criadoEm?.toMillis?.() ?? 0) - (a.criadoEm?.toMillis?.() ?? 0)), [pareceres]);
   const atestadosIS = useMemo(() => exames.filter(e => classeDoExame(e) === 'atestado_relatorio'), [exames]);
@@ -304,7 +306,9 @@ export const FichaInspecionado: React.FC = () => {
   const isComGuias = useMemo(() => inspecoes.filter(i => !!i.guiasExames)
     .sort((a, b) => (b.guiasExames?.geradoEm?.toMillis?.() ?? 0) - (a.guiasExames?.geradoEm?.toMillis?.() ?? 0)), [inspecoes]);
 
-  const itensIS = useMemo<ItemHistorico[]>(() => isOrdenadas.map(i => {
+  // Histórico da aba IS: só as IS com data da entrevista (as abertas e não agendadas completam o agendamento
+  // no drawer "Agendar IS" das listas — Inspeções de Saúde, Home, calendário).
+  const itensIS = useMemo<ItemHistorico[]>(() => isOrdenadas.filter(i => !!i.dataEntrevista).map(i => {
     // Aberta e não agendada → pending_actions; finalizada (ou cancelada) → lock; demais → edit_square.
     const estado = i.situacao === 'finalizada' || i.status === 'cancelada' ? ICONE_ESTADO.finalizado
       : aguardaAgendamento(i.status) && !i.dataEntrevista ? ICONE_ESTADO.pendente : ICONE_ESTADO.andamento;
@@ -333,7 +337,33 @@ export const FichaInspecionado: React.FC = () => {
     ...(icone === 'lab_profile' ? { semData: true, detalhe: e.itens.find(i => i.emissor)?.emissor || '' }
       : { detalhe: [`IS ${e.is}`, e.itens.find(i => i.emissor)?.emissor].filter(Boolean).join(' · ') }),
   });
-  const itensAtestados = useMemo(() => atestadosIS.map(e => itemExame(e, 'note_alt')), [atestadosIS]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Atestados e Laudos: PDFs de atestado/relatório enviados nas IS + atestados das Perícias Menores (homologação),
+  // numa lista única da data de emissão mais recente para a mais antiga.
+  const pmComAtestado = useMemo(() => (secoes.pericias ? pmOrdenadas.filter(p => !!p.pdfUrl) : []), [pmOrdenadas, secoes.pericias]);
+  const itensAtestados = useMemo<ItemHistorico[]>(() => {
+    const linha = (categoria: string, especialidade: string | undefined, data: string, emissor: string) => (
+      <>{[categoria, especialidade].filter(Boolean).join(' ')}<br />{[data ? dataBR(data) : '—', emissor].filter(Boolean).join(' | ')}</>
+    );
+    const doIS = atestadosIS.map(e => {
+      const it = e.itens.find(i => i.data) ?? e.itens[0];
+      const is = inspecoes.find(i => i.id === e.isId);
+      const data = dataExame(e);
+      return {
+        id: idExame(e), data, icone: 'note_alt', semData: true, isId: e.isId,
+        titulo: `IS ${(is?.finalidade || String(e.is)).toUpperCase()}`,
+        detalhe: linha(it ? ROTULO_CATEGORIA[categoriaDoItem(it)] : 'Laudo', e.itens.find(i => i.especialidade)?.especialidade, data, e.itens.find(i => i.emissor)?.emissor || ''),
+      };
+    });
+    const daPM = pmComAtestado.map(p => {
+      const t = p.transcricao;
+      const data = t?.dataEmissao || p.dataAtestado;
+      return {
+        id: `pm:${p.id}`, data, icone: 'personal_injury', semData: true, titulo: 'PERÍCIA MENOR',
+        detalhe: linha(ROTULO_CATEGORIA[t?.categoria ?? 'atestado'], t?.especialidade || p.especialidade, data, t?.emissor || p.medicoEmissor || ''),
+      };
+    });
+    return [...doIS, ...daPM].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+  }, [atestadosIS, pmComAtestado, inspecoes]); // eslint-disable-line react-hooks/exhaustive-deps
   const itensExames = useMemo(() => examesIS.map(e => itemExame(e, 'lab_profile')), [examesIS]); // eslint-disable-line react-hooks/exhaustive-deps
   const itensPareceres = useMemo<ItemHistorico[]>(() => pareceresOrdenados.map(p => {
     const st = statusEfetivo(p, agora);
@@ -458,9 +488,9 @@ export const FichaInspecionado: React.FC = () => {
     is: itensIS, pm: itensPM, atestados: itensAtestados, pareceres: itensPareceres, exames: itensExames,
     guias: itensGuias, emails: itensEmails, mensagens: itensMensagens, outros: itensOutros, transcricoes: itensTranscricoes,
   };
-  // Exames e Outros: histórico agrupado por IS (da abertura mais recente para a mais antiga; "Sem IS" no fim).
+  // Exames e Outros: histórico agrupado por IS (da entrevista mais recente para a mais antiga; "Sem IS" no fim).
   const agrupada = aba === 'exames' || aba === 'outros';
-  const gruposIS = agrupada ? agruparPorIS(itensDaAba[aba], i => i.isId, isPorAbertura) : [];
+  const gruposIS = agrupada ? agruparPorIS(itensDaAba[aba], i => i.isId, isPorEntrevista) : [];
   const historico = agrupada ? gruposIS.flatMap(g => g.itens) : aba ? itensDaAba[aba] : [];
   const isPedida = agrupada ? params.get('is') : null;
   const atual = registroSelecionado(historico, pedido ?? gruposIS.find(g => g.id === isPedida)?.itens[0]?.id);
@@ -619,11 +649,19 @@ export const FichaInspecionado: React.FC = () => {
           aba="esta" onAba={() => { /* inline: só "Esta perícia" */ }} onSelecionar={abrirRegistro} onFechar={() => { /* inline */ }}
           onExcluir={nav?.authUser && podeExcluirPericia(pSel, { uid: nav.authUser.uid, perfil: nav.authUser.perfil }) ? () => setPericiaExcluindo(pSel) : undefined}
           onEditar={nav?.authUser && podeExcluirPericia(pSel, { uid: nav.authUser.uid, perfil: nav.authUser.perfil }) ? () => setPericiaEditando(pSel) : undefined}
+          // PDF do atestado: com a aba Atestados e Laudos, abre o registro lá; sem ela (ex.: User Médicos Geral), nova guia.
+          onAbrirAtestado={estadoAbas.atestados.habilitada ? () => { setPericiaEditando(null); definir({ aba: 'atestados', reg: `pm:${pSel.id}`, is: null, sel: null, guia: null, gravar: null, criar: null }); } : undefined}
         />
       );
     }
     if (aba === 'afastamentos') return <PainelAfastamentos {...dadosAfastamentos} nome={nome} />;
-    if (aba === 'atestados') return painelDocumento('atestados', atestadosIS);
+    if (aba === 'atestados') {
+      if (atual?.id.startsWith('pm:') && !(criarIS && isDesktop)) {
+        const p = pmComAtestado.find(x => `pm:${x.id}` === atual.id);
+        if (p) return <PainelAtestadoPM key={p.id} pericia={p} />;
+      }
+      return painelDocumento('atestados', atestadosIS);
+    }
     if (aba === 'exames') return painelDocumento('exames', examesIS);
     if (aba === 'pareceres') return painelParecer();
     if (aba === 'transcricoes') {

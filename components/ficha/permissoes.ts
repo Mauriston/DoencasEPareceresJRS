@@ -48,8 +48,10 @@ export const abasDaFicha = (perfil: string | undefined): Record<AbaFicha, Estado
     pm: aba('pm', s.pericias),
     // Afastamentos (só leitura): IS e perícias (as duas coleções são legíveis por quem está autenticado).
     afastamentos: aba('afastamentos', canUseFeature('ficha.afastamentos', perfil)),
-    // Atestados/relatórios e exames vêm dos PDFs enviados nas IS; pareceres, da coleção de pareceres.
-    atestados: aba('atestados', s.inspecoes && canUseFeature('ficha.atestados', perfil)),
+    // Atestados e Laudos: PDFs de atestado/relatório enviados nas IS e atestados das Perícias Menores (homologação).
+    // Nunca para user_medicos_geral (no PDF do atestado da Perícia Menor ele abre o arquivo numa nova guia).
+    atestados: aba('atestados', (s.inspecoes || s.pericias) && perfil !== 'user_medicos_geral' && canUseFeature('ficha.atestados', perfil)),
+    // Exames vêm dos PDFs enviados nas IS; pareceres, da coleção de pareceres.
     pareceres: aba('pareceres', s.pareceres && canUseFeature('ficha.pareceres', perfil)),
     exames: aba('exames', s.inspecoes && canUseFeature('ficha.exames', perfil)),
     // Guias de exames geradas na abertura das IS (PDF no Storage: só a equipe lê — storage.rules).

@@ -1,6 +1,6 @@
 // Ficheiro: components/ficha/HistoricoAgrupadoIS.tsx
 // Histórico em dois níveis do painel de apoio da Ficha (abas Exames e Outros): 1º nível = uma linha por IS
-// (finalidade · data de abertura · nº de registros), que expande/recolhe; 2º nível = os registros daquela IS.
+// (finalidade · data da entrevista · nº de registros), que expande/recolhe; 2º nível = os registros daquela IS.
 // Os registros sem IS ficam no grupo final "Sem IS". Expandida de início: a IS pedida (?is=) ou a do registro
 // aberto; senão, a IS mais recente.
 import React, { useEffect, useState } from 'react';
@@ -16,7 +16,7 @@ export interface GrupoHistoricoIS<T> {
 
 export const SEM_IS = '__sem_is__';
 
-/** Agrupa os registros por IS, na ordem das IS dadas (mais recente primeiro); os sem IS vão para "Sem IS" no fim. */
+/** Agrupa os registros por IS, na ordem das IS dadas (entrevista mais recente primeiro); os sem IS vão para "Sem IS" no fim. */
 export const agruparPorIS = <T,>(
   itens: ReadonlyArray<T>, isDoItem: (t: T) => string | null | undefined,
   inspecoes: ReadonlyArray<{ id: string; titulo: string; data: string }>,

@@ -218,12 +218,19 @@ export const Inspecoes: React.FC = () => {
     if (id === null && isIdDaRota) navigate('/inspecoes', { replace: true });
   };
   // Clique na IS (tabela ou calendário): abre a Ficha do inspecionado na aba Inspeções de Saúde com a IS
-  // selecionada; sem inspecionado vinculado, o detalhe da IS (drawer) como antes.
+  // selecionada; sem inspecionado vinculado, o detalhe da IS (drawer) como antes. IS aberta e NÃO agendada
+  // (sem data da entrevista — não aparece no histórico da ficha): abre o "Agendar IS" para completar o
+  // agendamento (sem a função de agendar, ou cancelada, o detalhe da IS).
+  const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
   const abrirIS = (is: InspecaoRecord) => {
+    if (!is.dataEntrevista) {
+      if (podeAgendar && aguardaAgendamento(is.status)) setAgendando(is);
+      else setDetalheId(is.id);
+      return;
+    }
     if (is.inspecionadoId) navigate(`${fichaPath(is.inspecionadoId)}?aba=is&reg=${encodeURIComponent(is.id)}`);
     else setDetalheId(is.id);
   };
-  const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
   const [trocandoPerito, setTrocandoPerito] = useState<{ is: InspecaoRecord; dataHora: string; modo: 'arraste' | 'troca' } | null>(null);
   const [horarioVazio, setHorarioVazio] = useState<string | null>(null);
   const [minuta, setMinuta] = useState<InspecaoRecord | null>(null);

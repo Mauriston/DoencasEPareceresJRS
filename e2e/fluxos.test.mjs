@@ -118,18 +118,27 @@ test('Inspeções: lista a IS semeada, filtra pela busca e abre o detalhe', asyn
   await busca.fill(INSPECIONADO.nome);
   await abrir.waitFor();
 
-  // O clique abre a Ficha do inspecionado na aba Inspeções de Saúde, com a IS clicada no painel principal.
+  // IS aberta e NÃO agendada: o clique não navega para a ficha (ela não aparece no histórico da aba IS) —
+  // abre o "Agendar IS" para completar o agendamento.
   await abrir.click();
-  await p.waitForURL(new RegExp(`#/inspecionados/${INSPECIONADO.nip}\\?.*aba=is.*reg=${IS_E2E.numero}`));
+  const agendar = p.getByRole('dialog', { name: `Agendar IS ${IS_E2E.numero}` });
+  await agendar.waitFor();
+  assert.match(p.url(), /#\/inspecoes/);
+  await p.keyboard.press('Escape');
+  await agendar.waitFor({ state: 'detached' });
+
+  // IS agendada: o clique abre a Ficha do inspecionado na aba Inspeções de Saúde, com a IS clicada no painel principal.
+  await busca.fill('');
+  await p.getByRole('button', { name: `Abrir IS ${IS_AGENDADA_E2E.numero}` }).click();
+  await p.waitForURL(new RegExp(`#/inspecionados/${INSPECIONADO.nip}\\?.*aba=is.*reg=${IS_AGENDADA_E2E.numero}`));
   const detalhe = p.getByRole('main');
-  await detalhe.getByRole('heading', { name: `IS ${IS_E2E.numero}`, exact: true }).waitFor();
+  await detalhe.getByRole('heading', { name: `IS ${IS_AGENDADA_E2E.numero}`, exact: true }).waitFor();
   await detalhe.getByText('Dados da IS').waitFor();
   await detalhe.getByText('Conclusão da IS').waitFor();
-  // Aberta sem data de entrevista: só a Finalidade é editável (menu em cascata); a Conclusão fica em leitura.
-  await detalhe.getByRole('button', { name: 'Finalidade' }).waitFor();
-  await detalhe.getByText('A Conclusão fica editável depois que a entrevista for agendada.').waitFor();
-  for (const campo of ['Laudo', 'Nº do TIS', 'DS-1a', 'Observações']) assert.equal(await detalhe.getByLabel(campo, { exact: true }).count(), 0, `${campo} não editável`);
-  assert.equal(await detalhe.getByRole('combobox', { name: 'Restrições' }).count(), 0);
+  // Histórico da aba IS: só as IS com data da entrevista.
+  const historico = p.getByRole('complementary', { name: /Histórico de Inspeções de Saúde/ });
+  await historico.getByRole('button', { name: new RegExp(IS_AGENDADA_E2E.finalidade) }).first().waitFor();
+  assert.equal(await historico.getByRole('button', { name: new RegExp(IS_E2E.finalidade) }).count(), 0);
   await p.context().close();
 });
 
@@ -462,18 +471,16 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   // Registro antigo (sem conteúdo): só os dados do envio e a nota.
   await p.getByRole('complementary', { name: /Histórico de Emails/ }).getByRole('button', { name: /Abertura/i }).click();
   await p.getByText(/anterior à gravação do conteúdo/).waitFor();
-  // IS aberta sem data: "Agendar IS" na barra (e não "Abrir IS", pois já há IS em andamento); sem o campo Inspecionado.
+  // Aba IS: só as IS agendadas (a aberta sem data completa o agendamento pelas listas); sem o campo Inspecionado.
   await guias.getByRole('tab', { name: 'Inspeções de Saúde', exact: true }).click();
-  await p.getByRole('complementary', { name: /Histórico de Inspeções de Saúde/ }).getByRole('button', { name: new RegExp(IS_E2E.finalidade) }).click();
+  await p.getByRole('complementary', { name: /Histórico de Inspeções de Saúde/ }).getByRole('button', { name: new RegExp(IS_AGENDADA_E2E.finalidade) }).first().click();
   const barra = p.getByRole('toolbar', { name: 'Ações da aba' });
-  await p.getByRole('heading', { name: `IS ${IS_E2E.numero}`, exact: true }).waitFor();
-  await barra.getByRole('button', { name: 'Agendar IS', exact: true }).waitFor();
+  await p.getByRole('heading', { name: `IS ${IS_AGENDADA_E2E.numero}`, exact: true }).waitFor();
   assert.equal(await barra.getByRole('button', { name: 'Abrir IS' }).count(), 0);
   assert.equal(await barra.getByRole('button', { name: 'Excluir' }).count(), 0);
-  // Barra da IS na ficha: "Gerar Documento ▾" (IS não finalizada); "Enviar PDF ▾" só com data de entrevista;
-  // "Concluir IS" só com a Conclusão editável (entrevista agendada); sem os antigos "Parecer" e "Exames".
+  // Barra da IS na ficha: "Gerar Documento ▾" (IS não finalizada); sem os antigos "Parecer" e "Exames".
   await barra.getByRole('button', { name: 'Gerar Documento' }).waitFor();
-  for (const nome of ['Enviar PDF', 'Concluir IS', 'Parecer', 'Exames']) assert.equal(await barra.getByRole('button', { name: nome, exact: true }).count(), 0, nome);
+  for (const nome of ['Parecer', 'Exames']) assert.equal(await barra.getByRole('button', { name: nome, exact: true }).count(), 0, nome);
   // "Abrir IS ▾" no cabeçalho: de outra aba, volta para Inspeções de Saúde e abre o formulário no painel principal.
   await guias.getByRole('tab', { name: 'Exames', exact: true }).click();
   await p.getByRole('button', { name: 'Abrir IS', exact: true }).click();

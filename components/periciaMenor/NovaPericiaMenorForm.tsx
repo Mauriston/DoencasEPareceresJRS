@@ -24,10 +24,11 @@ import { RecorteAtestado } from './RecorteAtestado';
 import { DispensasModal } from './DispensasModal';
 import { ServicoMilitarForm } from './ServicoMilitarForm';
 import { useNav } from '../../context/NavContext';
-import { extrairDadosAtestado } from '../../services/atestadoIA';
+import { extrairDadosAtestado, transcreverAtestadoPM } from '../../services/atestadoIA';
+import { logErroSeguro } from '../../utils/logSeguro';
 import { categorizarPericiaEmSegundoPlano, especialidadeDoCid } from '../../services/especialidadePericiaIA';
 import { observarMilitares, type MilitarRecord } from '../../services/firestoreMilitares';
-import { editarPericiaMenor, enviarPdfPericiaMenor, novoIdPericiaMenor, observarPericiasDoMilitar, registrarPericiaMenor, dataBR, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
+import { editarPericiaMenor, enviarPdfPericiaMenor, gravarTranscricaoPericia, novoIdPericiaMenor, observarPericiasDoMilitar, registrarPericiaMenor, dataBR, type PericiaMenorRecord } from '../../services/firestorePericiasMenores';
 import { MIN_JUSTIFICATIVA_EXCLUSAO, erroJustificativaExclusao } from '../../utils/exclusaoPericia';
 import { carregarPeritosPericiaMenor } from '../../services/periciaMenorService';
 import { carregarCid, normalizarBusca, omEhHnre, type CidItem } from '../../utils/corposQuadros';
@@ -329,6 +330,13 @@ export const NovaPericiaMenorForm: React.FC<Props> = ({ titulo = 'Nova perícia 
       });
       // Especialidade pela IA: a classificação começou quando o CID foi escolhido; grava ao terminar.
       categorizarPericiaEmSegundoPlano(id, cid.SUBCAT, rotuloCid(cid));
+      // Transcrição do atestado (aba Atestados e Laudos da Ficha): em segundo plano, sem atrasar o registro.
+      if (pdfUrl && imagemDoc) {
+        const [cab, base64] = imagemDoc.split(',');
+        const mime = /data:([^;]+)/.exec(cab)?.[1] || 'image/jpeg';
+        transcreverAtestadoPM(base64, mime).then(t => gravarTranscricaoPericia(id, t))
+          .catch(e => logErroSeguro('Transcrição do atestado da perícia menor falhou', e));
+      }
       onRegistrado(militar.nome);
     } catch (err: any) {
       setErros({ geral: err?.message || 'Não foi possível registrar.' });

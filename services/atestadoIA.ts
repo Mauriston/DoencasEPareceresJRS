@@ -2,6 +2,9 @@
 // Leitura do atestado fotografado (Perícia Menor / Atestados) pelo Gemini via Firebase AI Logic
 // (services/geminiAI.ts), com saída estruturada por esquema JSON obrigatório.
 import { gerarComGemini, lerJsonIA } from './geminiAI';
+import { CATEGORIAS_ATESTADO, ehCategoriaAtestado } from '../utils/examesIS';
+import type { TranscricaoAtestadoPM } from './firestorePericiasMenores';
+import { dataCivilISO } from '../utils/dados';
 
 export interface DadosAtestado {
   nomeMilitar?: string;
@@ -46,4 +49,47 @@ export const extrairDadosAtestado = async (base64Image: string): Promise<DadosAt
   } catch {
     throw new Error('Não foi possível ler o atestado automaticamente.');
   }
+};
+
+// ---- Transcrição do atestado da Perícia Menor (aba Atestados e Laudos da Ficha) ----
+// A mesma leitura dos PDFs das IS (services/examesIS.ts): categoria, especialidade, data de emissão, emissor e o
+// texto na íntegra. Roda em segundo plano depois do registro (não atrasa o envio) e grava em periciasMenores/{id}.transcricao.
+
+const INSTRUCOES_TRANSCRICAO = [
+  'Você lê a imagem de um documento médico brasileiro (via de regra um atestado) apresentado para homologação numa perícia',
+  'médica da Marinha do Brasil e devolve:',
+  '- categoria: atestado (atestado médico), laudo (laudo médico) ou relatorio (relatório médico ou parecer);',
+  '- especialidade: a especialidade médica do documento (do emissor ou do conteúdo), ex.: "Ortopedia", "Clínica Médica";',
+  '  vazia se não for possível deduzir;',
+  '- dataEmissao: data de emissão no formato AAAA-MM-DD (vazia se não constar);',
+  '- emissor: serviço/clínica e/ou profissional que assina, com o CRM se houver (vazio se não constar);',
+  '- texto: o documento NA ÍNTEGRA, transcrito fielmente, sem resumir, interpretar ou corrigir. Omita só cabeçalhos e',
+  '  rodapés administrativos (endereço, telefone, site, códigos de autenticação).',
+].join('\n');
+
+export const transcreverAtestadoPM = async (base64: string, mimeType: string): Promise<TranscricaoAtestadoPM> => {
+  const r = await gerarComGemini({
+    contexto: 'transcrição do atestado (perícia menor)',
+    instrucoes: INSTRUCOES_TRANSCRICAO,
+    arquivos: [{ base64, mimeType }],
+    temperature: 0,
+    maxOutputTokens: 16384,
+    esquema: Schema => Schema.object({
+      properties: {
+        categoria: Schema.enumString({ enum: [...CATEGORIAS_ATESTADO] }),
+        especialidade: Schema.string(), dataEmissao: Schema.string(), emissor: Schema.string(), texto: Schema.string(),
+      },
+      optionalProperties: ['categoria', 'especialidade', 'dataEmissao', 'emissor'],
+    }),
+  });
+  const l = lerJsonIA<{ categoria?: string; especialidade?: string; dataEmissao?: string; emissor?: string; texto?: string }>(r, 'A IA não conseguiu ler o atestado.');
+  const txt = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+  return {
+    categoria: ehCategoriaAtestado(l.categoria) ? l.categoria : 'atestado',
+    especialidade: txt(l.especialidade).replace(/\s+/g, ' '),
+    dataEmissao: dataCivilISO(txt(l.dataEmissao)) || '',
+    emissor: txt(l.emissor).replace(/\s+/g, ' '),
+    texto: txt(l.texto),
+    textoIncompleto: r.cortada,
+  };
 };
