@@ -510,7 +510,7 @@ const CartaoIS: React.FC<CartaoProps> = ({ item, atual, militar, peritos, config
             </ul>
           )}
 
-          <CampoFinalidadeIS required value={c.finalidade} onChange={v => onCampos({ finalidade: v }, 'finalidade')} gruposMenu={gruposMenu} erro={erros.finalidade} />
+          <CampoFinalidadeIS required value={c.finalidade ? [c.finalidade] : []} onChange={v => onCampos({ finalidade: v.filter(f => f !== c.finalidade)[0] ?? '' }, 'finalidade')} gruposMenu={gruposMenu} erro={erros.finalidade} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Data de abertura" required error={erros.dataAbertura}>
