@@ -46,3 +46,23 @@ describe('mensagem livre', () => {
     expect(mensagemParabensLivre('CT JÚLIO CÉSAR')).toBe('*JÚLIO CÉSAR, PARABÉNS!*\n\n_[escreva aqui a sua mensagem para JÚLIO CÉSAR]_');
   });
 });
+
+describe('proximosAniversarios', () => {
+  it('os 4 próximos a partir de hoje, atravessando o ano', async () => {
+    const { proximosAniversarios } = await import('../aniversarios');
+    const ps = [
+      { id: 'a', usuario: 'CT A', dataNascimento: '1990-11-20' },
+      { id: 'b', usuario: 'CT B', dataNascimento: '1990-11-19' },
+      { id: 'c', usuario: 'CT C', dataNascimento: '1990-12-26' },
+      { id: 'd', usuario: 'CT D', dataNascimento: '1990-01-24' },
+      { id: 'e', usuario: 'CT E', dataNascimento: '1990-03-02' },
+      { id: 'f', usuario: 'CT F', dataNascimento: '1990-11-28' },
+    ];
+    expect(proximosAniversarios(ps, '2026-11-20').map(x => [x.pessoa.id, x.data, x.idade, x.dias])).toEqual([
+      ['a', '2026-11-20', 36, 0],
+      ['f', '2026-11-28', 36, 8],
+      ['c', '2026-12-26', 36, 36],
+      ['d', '2027-01-24', 37, 65],
+    ]);
+  });
+});

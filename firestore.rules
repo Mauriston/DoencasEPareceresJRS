@@ -80,6 +80,13 @@ service cloud.firestore {
     // usuários já era pública ali). Espelhada a partir de "usuarios" sempre
     // que uma conta é criada (Login.tsx / UsuariosManagement.tsx) ou tem o
     // status ativo/inativo alterado.
+    // Destaques do Presidente sobre o texto das normas (components/normas/DestaquesNorma.tsx):
+    // todos os logados leem; só o Admin cria/remove.
+    match /destaques_normas/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
     match /usuarios_publicos/{uid} {
       allow read: if true;
       allow write: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
