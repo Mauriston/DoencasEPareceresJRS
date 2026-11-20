@@ -21,7 +21,9 @@ import { SeletorHorario, estadoDoSlot } from './SeletorHorario';
 import { CampoFinalidadeIS, opcaoAvatarDoPerito, useFinalidadesIS, type FinalidadeEscolhida } from './InspecaoForm';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { arquivoParaBase64IA } from '../../services/geminiAI';
-import { lerPrintDoSinais } from '../../services/sinaisIA';
+import { lerPrintDoSinaisParaEdicao } from '../../services/sinaisIA';
+import { acharCid, camposDoCid, exigeCid } from '../../utils/edicaoIS';
+import { carregarCid, type CidItem } from '../../utils/corposQuadros';
 import { criarMilitar, type MilitarRecord } from '../../services/firestoreMilitares';
 import { importarInspecao, type AmpIS, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { peritosDoAmp, type PeritoIS } from '../../services/peritosIS';
@@ -70,6 +72,8 @@ interface Item {
   fotoDados?: Foto;
   militarId: string;
   militarNovo: boolean;
+  /** Códigos da seção "CID Associados" lidos nos prints (gravados em Verificações e Términos). */
+  cids: string[];
   campos: Campos;
   aberto: boolean;
   gravada: boolean;
@@ -153,8 +157,9 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
         carregarFinalidadesIS(),
         carregarRestricoesIS().then(opcoesDeRestricoes).catch(() => [] as string[]),
       ]);
+      const cidsPorFoto = new Map<Foto, string[]>();
       const lidos = await emLotes(fotos, LEITURAS_SIMULTANEAS, async (f: Foto): Promise<{ leitura: LeituraPrint; origem: Foto }> => {
-        try { return { leitura: await lerPrintDoSinais(await arquivoParaBase64IA(f.arquivo), f.arquivo.type || 'image/png'), origem: f }; }
+        try { const leitura = await lerPrintDoSinaisParaEdicao(await arquivoParaBase64IA(f.arquivo), f.arquivo.type || 'image/png'); cidsPorFoto.set(f, (leitura.cids ?? []).map(c => String(c || '').trim()).filter(Boolean)); return { leitura, origem: f }; }
         catch (e) { if (/Limite|App Check|indisponível/.test(String((e as Error)?.message))) throw e; return { leitura: {} as LeituraPrint, origem: f }; }
       }, () => setLendo(l => (l ? { ...l, feitas: l.feitas + 1 } : l)));
       const { grupos: porIs, naoReconhecidas: semIs } = agruparPrints<Foto>(lidos);
@@ -169,7 +174,7 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
         const fotosDoItem = [g.dados?.origem, g.conclusao?.origem, ...g.repetidas].filter((f): f is Foto => !!f);
         const item: Item = {
           numero: g.numero, proposta, erro, fotos: fotosDoItem, dados: g.dados?.leitura, fotoDados: g.dados?.origem,
-          militarId: '', militarNovo: false, aberto: false, gravada: false, erroGravar: '',
+          militarId: '', militarNovo: false, cids: [...new Set(fotosDoItem.flatMap(f => cidsPorFoto.get(f) ?? []))], aberto: false, gravada: false, erroGravar: '',
           campos: { finalidade: '', dataAbertura: '', data: '', hora: '', peritoUid: '', laudo: '', dataLaudo: '', restricoes: '', tis: '', ds1a: '' },
         };
         if (proposta) {
@@ -265,6 +270,7 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
     setGravando(true);
     let gravadas = 0;
     let ultima: InspecaoRecord | null = null;
+    let tabelaCid: CidItem[] | null = null;
     for (const it of prontos) {
       const c = it.campos;
       const atual = atualDe(it.numero);
@@ -275,6 +281,13 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
       const status = statusDoItem(it, atual);
       const reservar = !!c.data && c.data >= hojeISO() && STATUS_DE_AGENDA.includes(status);
       const conclusao = !!it.proposta!.temConclusao && !!c.laudo.trim();
+      // CID (Verificações e Términos): o primeiro código de "CID Associados" que existir na tabela.
+      let camposCid = {};
+      if (exigeCid(achada.grupo) && it.cids.length) {
+        tabelaCid ??= await carregarCid().catch(() => [] as CidItem[]);
+        const achado = it.cids.map(cod => acharCid(cod, tabelaCid!)).find((x): x is CidItem => !!x) ?? null;
+        if (achado) camposCid = camposDoCid(achado);
+      }
       try {
         const salva = await importarInspecao(it.numero, {
           dataAbertura: c.dataAbertura, dataEntrevista: c.data && c.hora ? `${c.data}T${c.hora}` : '',
@@ -284,7 +297,7 @@ export const ISPorFotoForm: React.FC<Props> = ({ militares, peritos, config, blo
           laudo: conclusao ? c.laudo.trim() : '', dataLaudo: conclusao ? c.dataLaudo || hojeISO() : '',
           restricoes: conclusao && mostraRestricoes({ grupoFinalidade: achada.grupo }) ? juntarRestricoes(separarRestricoes(c.restricoes)) : '',
           tis: conclusao ? c.tis.trim() : '', ds1a: conclusao && c.tis.trim() ? c.ds1a.trim().toUpperCase() : '',
-          status, criadoPor: usuario.usuario,
+          status, criadoPor: usuario.usuario, ...camposCid,
         }, atual, reservar);
         gravadas++; ultima = salva;
         mudar(it.numero, { gravada: true, aberto: false, erroGravar: '' });

@@ -309,7 +309,16 @@ export const Home: React.FC = () => {
   ];
   const permitidas = acoes.filter(a => a.permitido !== false);
   // No FAB a principal leva "+" (4d: "+ Perícia Menor", "+ Atestado").
-  const acoesFab = permitidas.map((a, i) => (i === 0 ? { ...a, icone: 'add' } : a));
+  // No celular, "Abrir IS" vira duas ações: manual ("+") e pelo print do SINAIS (câmera).
+  const acoesFab = permitidas.flatMap((a, i): AcaoFab[] => {
+    if (a.id === 'abrir-is') {
+      return [
+        { ...a, id: 'abrir-is-manual', icone: 'add', ariaLabel: 'Abrir IS manualmente' },
+        { ...a, id: 'abrir-is-foto', icone: 'photo_camera', to: '/inspecoes?novo=print', ariaLabel: 'Abrir IS por foto do SINAIS' },
+      ];
+    }
+    return [i === 0 ? { ...a, icone: 'add' } : a];
+  });
   const botaoDesktop = (a: AcaoFab, principal: boolean) => {
     if (a.id === 'abrir-is') {
       return (

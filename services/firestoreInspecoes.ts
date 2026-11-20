@@ -240,7 +240,7 @@ export const agendarInspecao = async (atual: InspecaoRecord, novo: Agendamento):
 /** IS por foto (prints do SINAIS): os campos conferidos pelo usuário e o status calculado (utils/importacaoIS.ts). */
 export type DadosImportacaoIS = Pick<InspecaoDoc,
   'dataAbertura' | 'dataEntrevista' | 'finalidade' | 'grupoFinalidade' | 'amp' | 'peritoUid' | 'peritoNome' | 'peritoGmail'
-  | 'inspecionadoId' | 'inspecionado' | 'laudo' | 'dataLaudo' | 'restricoes' | 'tis' | 'ds1a' | 'status' | 'criadoPor'>;
+  | 'inspecionadoId' | 'inspecionado' | 'laudo' | 'dataLaudo' | 'restricoes' | 'tis' | 'ds1a' | 'status' | 'criadoPor' | 'cid' | 'cidCodigo'>;
 
 /**
  * Cria a IS (`atual` nulo) ou atualiza a já cadastrada com o que veio das fotos. Na atualização, campo
