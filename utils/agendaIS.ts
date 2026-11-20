@@ -28,3 +28,23 @@ export const agruparAgendaIS = <T extends ItemAgendaIS>(lista: T[]): DiaAgendaIS
   }
   return semData.length ? [{ data: null, itens: semData }, ...dias] : dias;
 };
+
+/**
+ * Quantas IS já têm entrevista em cada dia (AAAA-MM-DD → nº), para o calendário de escolha da data da
+ * entrevista. Canceladas não contam; com `amp`, só as IS daquele AMP; `ignorarId` tira a própria IS
+ * (reagendamento).
+ */
+export const contarISPorDia = (
+  inspecoes: ReadonlyArray<{ id?: string; dataEntrevista?: string; status?: string; amp?: string }>,
+  filtro: { amp?: string; ignorarId?: string } = {},
+): Map<string, number> => {
+  const m = new Map<string, number>();
+  for (const i of inspecoes) {
+    if (!i.dataEntrevista || i.status === 'cancelada') continue;
+    if (filtro.amp && i.amp !== filtro.amp) continue;
+    if (filtro.ignorarId && i.id === filtro.ignorarId) continue;
+    const dia = i.dataEntrevista.slice(0, 10);
+    m.set(dia, (m.get(dia) ?? 0) + 1);
+  }
+  return m;
+};

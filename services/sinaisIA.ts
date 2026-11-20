@@ -2,10 +2,12 @@
 // Lê um print da tela de uma IS do SINAIS e devolve a seção "DADOS DO INSPECIONADO" (Gemini via
 // Firebase AI Logic, services/geminiAI.ts), para pré-preencher o cadastro de novo inspecionado
 // (utils/inspecionadoSinais.ts faz a conversão para os campos do formulário), e — na "IS por foto" — a
-// tela da IS e a da conclusão (utils/importacaoIS.ts monta a IS a criar ou atualizar).
+// tela da IS e a da conclusão (utils/importacaoIS.ts monta a IS a criar ou atualizar). Na edição da IS
+// (InspecaoDetalhe), a mesma leitura traz também os CIDs associados (utils/edicaoIS.ts preenche só os campos vazios).
 import { gerarComGemini, lerJsonIA } from './geminiAI';
 import type { DadosSinais } from '../utils/inspecionadoSinais';
 import type { LeituraPrint } from '../utils/importacaoIS';
+import type { LeituraEdicaoIS } from '../utils/edicaoIS';
 
 const INSTRUCOES = [
   'A imagem é um print da tela de uma Inspeção de Saúde do SINAIS (Sistema Naval de Inspeções de Saúde, Marinha do Brasil).',
@@ -93,4 +95,37 @@ export const lerPrintDoSinais = async (base64: string, mimeType: string): Promis
     }),
   });
   return lerJsonIA<LeituraPrint>(r, 'Não foi possível ler a foto.');
+};
+
+// ---------------------------------------------------------------- Edição da IS (preencher campos vazios)
+
+const INSTRUCOES_PRINT_EDICAO = INSTRUCOES_PRINT.replace(
+  '- Ignore a seção "CID Associados".',
+  '- cids: os códigos CID-10 da seção "CID Associados" (ex.: M54.5), na ordem em que aparecem.',
+);
+
+/** Print do SINAIS na edição da IS: como `lerPrintDoSinais`, com os CIDs associados da tela da conclusão. */
+export const lerPrintDoSinaisParaEdicao = async (base64: string, mimeType: string): Promise<LeituraEdicaoIS> => {
+  const r = await gerarComGemini({
+    contexto: 'print do SINAIS (edição da IS)',
+    instrucoes: INSTRUCOES_PRINT_EDICAO,
+    arquivos: [{ base64, mimeType }],
+    temperature: 0,
+    esquema: Schema => Schema.object({
+      properties: {
+        tipo: Schema.enumString({ enum: ['is', 'conclusao', 'outra'] }),
+        ...Object.fromEntries(TEXTOS_PRINT.map(c => [c, Schema.string()])),
+        laudos: Schema.array({
+          items: Schema.object({
+            properties: { resultado: Schema.string(), finalidade: Schema.string(), laudo: Schema.string() },
+            optionalProperties: ['resultado', 'finalidade', 'laudo'],
+          }),
+        }),
+        restricoes: Schema.array({ items: Schema.string() }),
+        cids: Schema.array({ items: Schema.string() }),
+      },
+      optionalProperties: [...TEXTOS_PRINT, 'laudos', 'restricoes', 'cids'],
+    }),
+  });
+  return lerJsonIA<LeituraEdicaoIS>(r, 'Não foi possível ler o print do SINAIS.');
 };

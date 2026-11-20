@@ -1,6 +1,7 @@
 // Ficheiro: components/inspecoes/CalendarioDisponibilidade.tsx
 // Mini calendário de escolha de data: só os dias com disponibilidade (segundo `disponivel`) podem ser
-// escolhidos; os demais ficam esmaecidos. Navega por mês.
+// escolhidos; os demais ficam esmaecidos. Navega por mês (anterior/próximo). Opcional: `contagem` mostra,
+// em cada dia habilitado, um pequeno número com as IS já agendadas naquele dia.
 import React, { useState } from 'react';
 import { hojeISO, somarDias, inicioDaSemana, inicioDoMes, nomeMes, deISO, paraISO } from '../../utils/inspecoes';
 
@@ -11,9 +12,13 @@ interface Props {
   disponivel: (data: string) => boolean;
   /** Mês exibido ao abrir (qualquer data do mês). */
   mesInicial?: string;
+  /** IS já agendadas no dia (o número aparece nos dias habilitados quando > 0). */
+  contagem?: (data: string) => number;
+  /** Libera dias anteriores a hoje (só o Admin, registro retroativo). */
+  permitirPassado?: boolean;
 }
 
-export const CalendarioDisponibilidade: React.FC<Props> = ({ valor, onChange, disponivel, mesInicial }) => {
+export const CalendarioDisponibilidade: React.FC<Props> = ({ valor, onChange, disponivel, mesInicial, contagem, permitirPassado = false }) => {
   const hoje = hojeISO();
   const [mes, setMes] = useState(inicioDoMes(valor || mesInicial || hoje));
   const mudarMes = (n: number) => { const d = deISO(mes); d.setMonth(d.getMonth() + n, 1); setMes(paraISO(d)); };
@@ -31,25 +36,37 @@ export const CalendarioDisponibilidade: React.FC<Props> = ({ valor, onChange, di
       <div className="grid grid-cols-7 text-center text-xs font-semibold text-ink-3 uppercase" aria-hidden="true">
         {['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((l, i) => <span key={i} className="py-1">{l}</span>)}
       </div>
-      <div className="grid grid-cols-7 gap-y-0.5" role="group" aria-label={`Datas de ${nomeMes(mes)}`}>
+      <div className="grid grid-cols-7 gap-0.5" role="group" aria-label={`Datas de ${nomeMes(mes)}`}>
         {semanas.flat().map(d => {
           const foraDoMes = d.slice(0, 7) !== mes.slice(0, 7);
-          const livre = !foraDoMes && d >= hoje && disponivel(d);
+          const livre = !foraDoMes && (permitirPassado || d >= hoje) && disponivel(d);
           const ativo = d === valor;
+          const qtd = livre && contagem ? contagem(d) : 0;
           return (
             <button
               key={d} type="button" disabled={!livre} aria-pressed={ativo} onClick={() => onChange(d)}
-              aria-label={`${Number(d.slice(8))} de ${nomeMes(d)}${livre ? ', disponível' : ', indisponível'}`}
-              className={`min-h-[40px] rounded-lg text-sm font-semibold transition-colors ${
+              aria-label={`${Number(d.slice(8))} de ${nomeMes(d)}${livre ? `, disponível${contagem ? `, ${qtd} IS agendada${qtd !== 1 ? 's' : ''}` : ''}` : ', indisponível'}`}
+              className={`relative min-h-[44px] rounded-lg text-sm font-semibold transition-colors ${
                 ativo ? 'bg-navy text-white' : livre ? 'bg-green/15 text-green-700 hover:bg-green/25' : foraDoMes ? 'text-transparent cursor-default' : 'text-ink-4 cursor-not-allowed'
               } ${d === hoje && !ativo ? 'ring-1 ring-navy' : ''}`}
             >
               {Number(d.slice(8))}
+              {qtd > 0 && (
+                <span
+                  aria-hidden="true"
+                  className={`absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] leading-4 font-bold tabular-nums ${ativo ? 'bg-white text-navy' : 'bg-navy text-white'}`}
+                >
+                  {qtd}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
-      <p className="mt-1 text-xs text-ink-3"><span className="inline-block w-3 h-3 rounded-sm bg-green/30 align-middle mr-1" aria-hidden="true" />Datas com horário livre</p>
+      <p className="mt-1 text-xs text-ink-3">
+        <span className="inline-block w-3 h-3 rounded-sm bg-green/30 align-middle mr-1" aria-hidden="true" />Datas com horário livre
+        {contagem && <><span className="inline-block min-w-[16px] h-4 px-1 ml-3 mr-1 rounded-full bg-navy text-white text-[10px] leading-4 font-bold text-center align-middle" aria-hidden="true">n</span>IS já agendadas no dia</>}
+      </p>
     </div>
   );
 };

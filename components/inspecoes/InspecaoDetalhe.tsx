@@ -5,9 +5,13 @@
 //     IS Aberta sem data de entrevista: a Finalidade é o único campo editável (o mesmo menu em cascata do
 //     cadastro; grava finalidade, grupo e AMP sozinha) e a Conclusão aparece só em leitura (campos vazios ocultos).
 //  2. Conclusão da IS (salva sozinha, sem botão; só com data de entrevista — utils/conclusaoIS.ts): cards da entrevista gravada e dos pareceres pedidos a
-//     partir desta IS, Laudo, Auditoria | JSD, Restrições (MultiSelectCombobox com chips; opcional, sempre
-//     que a finalidade é de Verificações e Términos), Nº do TIS, DS-1a e Observações. O status muda
-//     automaticamente (regras puras em utils/conclusaoIS.ts).
+//     partir desta IS, "Preencher pelo SINAIS" (prints opcionais; a IA preenche só os campos vazios —
+//     PreencherPeloSinais + utils/edicaoIS.ts), Laudo, CID (autocomplete do cid.json, obrigatório em Verificações
+//     e Términos; grava `cid` = DESCRABREV e `cidCodigo` = SUBCAT, como na Perícia Menor), Auditoria | JSD,
+//     Restrições (MultiSelectCombobox com chips; opcional, só com finalidade de Verificações e Términos E
+//     Laudo que fale em "restrição/restrições"), Nº do TIS (com CID obrigatório, só depois do CID), DS-1a e
+//     Observações. O status muda automaticamente (regras puras em utils/conclusaoIS.ts).
+// "Abrir ficha" (ghost, ao lado de "Dados da IS"): leva à Ficha do inspecionado, para quem pode abri-la.
 // Não editável (DS-1a/TIS assinado ou cancelada — até "Reabrir IS", Admin — ou sem permissão): os dados
 // numa tabela vertical (rótulo | valor) e, abaixo, os cards da entrevista gravada e dos pareceres.
 // E-mails: botões de envio (EmailsDaIS, montado pela página) e a seção "E-mails enviados" (emails/HistoricoEmailsIS),
@@ -17,11 +21,17 @@
 // laudo fica na íntegra para copiar (exames/ExamesDaIS).
 // Rodapé (AcoesRodape: linha no desktop, FAB no mobile): Minuta MSG · Parecer · Exames · Gravar entrevista (cada um
 // só quando cabe). Fecha no X ou fora.
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Drawer } from '../ui/Drawer';
 import { AcoesRodape, type AcaoRodape } from '../ui/AcoesRodape';
 import { Field } from '../ui/Field';
+import { ButtonLink } from '../ui/Button';
+import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
+import { useLocation } from 'react-router-dom';
+import { PreencherPeloSinais } from './PreencherPeloSinais';
+import { podeAbrirFicha } from '../ficha/permissoes';
+import { fichaPath } from '../../config/routes';
 import { Segmented } from '../ui/Segmented';
 import { StatusTag } from '../ui/StatusTag';
 import { tomStatusIS } from './listaIS';
@@ -36,7 +46,11 @@ import { HistoricoEmailsIS } from './emails/HistoricoEmailsIS';
 import { GuiasExamesCard } from './guias/GuiasExamesCard';
 import { atualizarInspecao, type InspecaoDoc, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { marcarConcluido, observarPareceresDaIS, statusEfetivo, type ParecerRecord } from '../../services/firestorePareceres';
-import { carregarRestricoesIS } from '../../utils/corposQuadros';
+import { carregarCid, carregarRestricoesIS, normalizarBusca, type CidItem } from '../../utils/corposQuadros';
+import {
+  camposDoCid, exigeCid, mostraCampoRestricoesEdicao, preenchimentoDoSinais,
+  type CamposCidIS, type EstadoEdicaoIS, type LeituraEdicaoIS,
+} from '../../utils/edicaoIS';
 import {
   STATUS_IS, statusEfetivoIS, dataBr, formatTis, tisValido, prefixoAnoTis, hojeISO, dataDeEntrevista,
 } from '../../utils/inspecoes';
@@ -100,6 +114,10 @@ const comPadroes = (i: InspecaoRecord): EstadoConclusao => ({
   dataLaudo: i.dataLaudo || '', laudo: i.laudo || '', restricoes: i.restricoes || '', tis: i.tis || '', ds1a: i.ds1a || '', observacoes: i.observacoes || '',
 });
 
+/** Estado da edição: Conclusão + CID (campos novos, opcionais em docs antigos). */
+type ISComCid = InspecaoRecord & CamposCidIS;
+const comPadroesEdicao = (i: ISComCid): EstadoEdicaoIS => ({ ...comPadroes(i), cid: i.cid || '', cidCodigo: i.cidCodigo || '' });
+
 /** Campo de texto com gravação automática: ~1 s sem digitar ou ao sair do campo. */
 const useCampoAuto = (remoto: string, salvar: (valor: string) => void) => {
   const [valor, setValor] = useState(remoto);
@@ -156,16 +174,16 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   useEffect(() => observarPareceresDaIS(is.id, setPareceres, () => setPareceres([])), [is.id]);
 
   // Estado mais recente da IS (banco + gravações já disparadas): as regras partem dele.
-  const atualRef = useRef<InspecaoRecord>(is);
+  const atualRef = useRef<ISComCid>(is);
   useEffect(() => { atualRef.current = is; }, [is]);
   const pareceresRef = useRef(pareceres);
   pareceresRef.current = pareceres;
   const fila = useRef<Promise<void>>(Promise.resolve());
 
   /** Grava, em fila, o patch calculado a partir do estado mais recente. */
-  const gravar = (calcular: (atual: InspecaoRecord) => { patch: Partial<InspecaoDoc>; concluirPareceres: boolean }) => {
+  const gravar = (calcular: (atual: ISComCid) => { patch: Partial<InspecaoDoc> & CamposCidIS; concluirPareceres: boolean }) => {
     fila.current = fila.current.then(async () => {
-      const atual = atualRef.current;
+      const atual: ISComCid = atualRef.current;
       const { patch, concluirPareceres } = calcular(atual);
       if (Object.keys(patch).length === 0) return;
       atualRef.current = { ...atual, ...patch };
@@ -224,6 +242,43 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
     gravarCampo('restricoes', texto);
   };
 
+  // CID (obrigatório em Verificações e Términos): autocomplete na tabela do cid.json, como na Perícia Menor.
+  const isCid = is as ISComCid;
+  const comCid = exigeCid(is.grupoFinalidade);
+  const [cids, setCids] = useState<CidItem[]>([]);
+  useEffect(() => { if (comCid && conclusaoEditavel) carregarCid().then(setCids).catch(() => setCids([])); }, [comCid, conclusaoEditavel]);
+  const opcoesCid: OpcaoAutocomplete[] = useMemo(() => cids.map(c => ({
+    chave: c.SUBCAT, principal: c.DESCRABREV, secundaria: c.DESCRICAO, busca: normalizarBusca(`${c.SUBCAT} ${c.DESCRABREV} ${c.DESCRICAO}`),
+  })), [cids]);
+  const [cidTexto, setCidTexto] = useState(isCid.cid || '');
+  useEffect(() => { setCidTexto(isCid.cid || ''); }, [isCid.cid]);
+  const gravarCid = (c: CidItem | null) => {
+    const campos = camposDoCid(c);
+    gravar(atual => ({ patch: (atual.cid || '') === campos.cid ? {} : campos, concluirPareceres: false }));
+  };
+  const cidPendente = comCid && !(isCid.cid || '').trim();
+
+  // Prints do SINAIS: preenche só os campos vazios (a partir do estado mais recente, na fila de gravação).
+  const preencherPeloSinais = async (leituras: LeituraEdicaoIS[]) => {
+    const tabelaCid = comCid ? await carregarCid().catch(() => [] as CidItem[]) : [];
+    let resultado: ReturnType<typeof preenchimentoDoSinais> | null = null;
+    gravar(atual => {
+      resultado = preenchimentoDoSinais(comPadroesEdicao(atual), atual.is, leituras, { opcoesRestricoes: restricoesOpcoes, cids: tabelaCid, hoje: hojeISO() });
+      return { patch: resultado.patch, concluirPareceres: resultado.concluirPareceres };
+    });
+    await fila.current;
+    const r = resultado as ReturnType<typeof preenchimentoDoSinais> | null;
+    if (!r || r.preenchidos.length === 0) return { resumo: 'Nenhum campo vazio foi preenchido com esses prints.', avisos: r?.avisos ?? [] };
+    return { resumo: `Preenchido pelo SINAIS: ${r.preenchidos.join(', ')}.`, avisos: r.avisos };
+  };
+
+  // "Abrir ficha": quem pode abrir a Ficha (e não está nela).
+  const local = useLocation();
+  const hrefFicha = is.inspecionadoId && podeAbrirFicha(nav?.authUser?.perfil) ? fichaPath(is.inspecionadoId) : '';
+  const botaoFicha = hrefFicha && local.pathname !== hrefFicha
+    ? <ButtonLink to={hrefFicha} variant="ghost" size="sm" icon="id_card">Abrir ficha</ButtonLink>
+    : null;
+
   const parecerAberto = parecerAbertoId ? pareceres.find(p => p.id === parecerAbertoId) ?? null : null;
   const dataParecer = (p: ParecerRecord) => p.criadoEm?.toDate?.().toLocaleDateString('pt-BR') ?? dataBr(hojeISO());
 
@@ -280,7 +335,10 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
       {somenteLeitura ? (
         <div className="space-y-4">
           <section aria-labelledby={`dados-is-${is.id}`} className="space-y-3">
-            <h3 id={`dados-is-${is.id}`} className="text-h3 font-bold text-navy">Dados da IS</h3>
+            <div className="flex items-center justify-between gap-2">
+              <h3 id={`dados-is-${is.id}`} className="text-h3 font-bold text-navy">Dados da IS</h3>
+              {botaoFicha}
+            </div>
             <div className="overflow-hidden rounded-lg border border-line">
               <table className="w-full table-fixed border-collapse">
                 <tbody className="divide-y divide-line">
@@ -301,6 +359,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                   {comEncaminhamento && encaminhamento && (
                     <LinhaTabela rotulo="Encaminhamento">{encaminhamento === 'jsd' ? 'JSD' : 'Auditoria'}</LinhaTabela>
                   )}
+                  {isCid.cid?.trim() && <LinhaTabela rotulo="CID">{isCid.cid}</LinhaTabela>}
                   {restricoesGravadas.length > 0 && <LinhaTabela rotulo="Restrições">{restricoesGravadas.join(', ')}</LinhaTabela>}
                   <LinhaTabela rotulo="Nº do TIS">{is.tis?.trim() ? <span className="tabular-nums">{is.tis}</span> : ''}</LinhaTabela>
                   <LinhaTabela rotulo="DS-1a">{is.ds1a?.trim() || ''}</LinhaTabela>
@@ -318,7 +377,10 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
         <section aria-labelledby={`dados-is-${is.id}`} className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h3 id={`dados-is-${is.id}`} className="text-h3 font-bold text-navy">Dados da IS</h3>
-            {finalidadeEditavel && indicadorGravacao}
+            <div className="flex items-center gap-2">
+              {finalidadeEditavel && indicadorGravacao}
+              {botaoFicha}
+            </div>
           </div>
           <dl className="grid grid-cols-3 gap-x-4 gap-y-3">
             <Linha rotulo="Inspecionado" className="col-span-3">
@@ -350,7 +412,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
           {!conclusaoEditavel ? (
             <>
               <p className="text-xs text-ink-3">A Conclusão fica editável depois que a entrevista for agendada.</p>
-              {(textoLaudo || restricoesGravadas.length > 0 || is.tis?.trim() || is.ds1a?.trim() || textoObservacoes || (comEncaminhamento && encaminhamento)) && (
+              {(textoLaudo || isCid.cid?.trim() || restricoesGravadas.length > 0 || is.tis?.trim() || is.ds1a?.trim() || textoObservacoes || (comEncaminhamento && encaminhamento)) && (
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
                   {textoLaudo && (
                     <Linha rotulo="Laudo" className="col-span-2">
@@ -359,6 +421,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                     </Linha>
                   )}
                   {comEncaminhamento && encaminhamento && <Linha rotulo="Encaminhamento" className="col-span-2">{encaminhamento === 'jsd' ? 'JSD' : 'Auditoria'}</Linha>}
+                  {isCid.cid?.trim() && <Linha rotulo="CID" className="col-span-2">{isCid.cid}</Linha>}
                   {restricoesGravadas.length > 0 && <Linha rotulo="Restrições" className="col-span-2">{restricoesGravadas.join(', ')}</Linha>}
                   {is.tis?.trim() && <Linha rotulo="Nº do TIS"><span className="tabular-nums">{is.tis}</span></Linha>}
                   {is.ds1a?.trim() && <Linha rotulo="DS-1a">{is.ds1a}</Linha>}
@@ -369,9 +432,22 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
           ) : (
           <>
 
+          <PreencherPeloSinais onLeituras={preencherPeloSinais} />
+
           <Field label="Laudo">
             {a => <textarea {...a} value={laudo.valor} onChange={e => laudo.onChange(e.target.value)} onBlur={laudo.onBlur} className={`${a.className} min-h-[88px]`} />}
           </Field>
+
+          {comCid && (
+            <Autocomplete
+              label="CID" required placeholder="Digite o código ou a descrição do CID"
+              error={cidPendente && laudo.valor.trim() ? 'Informe o CID (obrigatório em Verificações e Términos) para liberar o Nº do TIS.' : undefined}
+              help={cidPendente && !laudo.valor.trim() ? 'Obrigatório nas finalidades de Verificações e Términos.' : undefined}
+              valor={cidTexto} opcoes={opcoesCid}
+              onDigitar={t => { setCidTexto(t); if (!t.trim()) gravarCid(null); }}
+              onSelecionar={o => { const c = cids.find(x => x.SUBCAT === o.chave); if (c) { setCidTexto(c.DESCRABREV); gravarCid(c); } }}
+            />
+          )}
 
           {comEncaminhamento && (
             <fieldset disabled={!!is.tis?.trim()} className="disabled:opacity-60">
@@ -384,7 +460,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
             </fieldset>
           )}
 
-          {comRestricoes && (
+          {comRestricoes && mostraCampoRestricoesEdicao({ grupoFinalidade: is.grupoFinalidade, laudo: laudo.valor }) && (
             <MultiSelectCombobox label="Restrições" opcoes={restricoesOpcoes} selecionadas={restricoesMarcadas} onChange={mudarRestricoes} />
           )}
 
@@ -392,7 +468,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
             <Field label="Nº do TIS" error={erroTis}>
               {a => (
                 <input
-                  {...a} type="text" inputMode="numeric" value={tis.valor} disabled={!is.laudo?.trim()}
+                  {...a} type="text" inputMode="numeric" value={tis.valor} disabled={!is.laudo?.trim() || (cidPendente && !is.tis?.trim())}
                   onChange={e => { tis.onChange(formatTis(e.target.value, tis.valor)); setErroTis(''); }} onBlur={tis.onBlur}
                   placeholder={`${prefixoAnoTis()}.000.0`} maxLength={14} className={`${a.className} tabular-nums`}
                 />

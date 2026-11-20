@@ -2,8 +2,12 @@
 // "Cadastrar IS": barra lateral à direita (desktop) ou bottom sheet (mobile). Campos: Nº da IS, data de
 // abertura, inspecionado (autocomplete na base INSPECIONADOS, com "Cadastrar novo"), finalidade (todas,
 // no menu em cascata por grupo), AMP (definido pela finalidade: JRS ou MPI), perito (cards com avatar dos
-// usuários médicos do AMP — AvatarRadioGroup, com "JRS"/"MPI" na 2ª linha) e, opcionalmente, já a data/hora da entrevista (slots de 20 min). A IS nasce "Aberta", ou
+// usuários médicos do AMP — AvatarRadioGroup, com "JRS"/"MPI" na 2ª linha) e, opcionalmente, já a data/hora da entrevista. A IS nasce "Aberta", ou
 // "Agendada" quando a entrevista já é marcada no cadastro.
+// Data da entrevista (quem pode agendar): calendário do mês (CalendarioDisponibilidade) em que só os dias com
+// horário livre de algum perito do AMP ficam habilitados, cada um com o nº de IS já agendadas no dia (do AMP).
+// Escolhida a data, aparecem os peritos com horário naquele dia; escolhido o perito, os slots (SeletorHorario).
+// Sem permissão de agendar: só o perito (cards), como antes.
 // Finalidade com exames mínimos (guias de exames — utils/guiasExamesIS.ts): se o cadastro do inspecionado não
 // tem data de nascimento e/ou sexo, o formulário pede (obrigatórios; o sexo vem sugerido pela IA a partir do
 // primeiro nome, para o usuário confirmar) e grava no cadastro (militares/{id}). As guias são geradas depois
@@ -18,10 +22,12 @@ import { AvatarRadioGroup, type AvatarRadioOption } from '../ui/AvatarRadioGroup
 import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
 import { FinalidadeDropdown, type GrupoFinalidadeExtra } from '../ExamesGuide';
 import { CadastroInspecionado } from '../militares/CadastroInspecionado';
-import { SeletorHorario, estadoDoSlot } from './SeletorHorario';
+import { SeletorHorario, estadoDoSlot, slotsLivresDoDia } from './SeletorHorario';
+import { CalendarioDisponibilidade } from './CalendarioDisponibilidade';
 import { carregarFinalidadesIS, normalizarBusca, type GrupoFinalidadeIS } from '../../utils/corposQuadros';
 import { formatNip } from '../../utils/format';
-import { hojeISO, ocupadosDe, duracaoDoGrupo, peritoAtendeNoTurno, turnoDoSlot, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
+import { hojeISO, ocupadosDe, duracaoDoGrupo, peritoAtendeNoTurno, turnoDoSlot, somarDias, dataBr, nomeDiaSemana, type BloqueioAgenda, type ConfigAgenda } from '../../utils/inspecoes';
+import { contarISPorDia } from '../../utils/agendaIS';
 import { atualizarMilitar, OPCOES_SEXO, type MilitarRecord, type SexoInspecionado } from '../../services/firestoreMilitares';
 import { casarFinalidadeAnexoO, erroDataNascimento } from '../../utils/guiasExamesIS';
 import { finalidadeTemExamesMinimos } from '../../utils/guiasExames';
@@ -158,10 +164,32 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
 
   // Entrevista em data passada (registro retroativo) só para o Admin.
   const podeDataPassada = usuario.perfil === 'admin';
-  const perito = peritos.find(p => p.uid === peritoUid);
+  const peritoEscolhido = peritos.find(p => p.uid === peritoUid);
+  const perito = peritoEscolhido;
   const ocupados = useMemo(() => ocupadosDe(inspecoes), [inspecoes]);
   // Entrevista de 20 min (padrão), 30 (Verificações e Términos) ou 60 (Benefícios), conforme a finalidade.
   const duracao = duracaoDoGrupo(achada?.grupo);
+
+  // Data da entrevista: dias com horário livre de algum perito do AMP; nº de IS já agendadas no dia (do AMP).
+  const porDia = useMemo(() => contarISPorDia(inspecoes, { amp: ampCompetente || undefined }), [inspecoes, ampCompetente]);
+  const peritosLivresNoDia = (d: string) => peritosDoAmpAtual.filter(p => slotsLivresDoDia(p.uid, d, config, bloqueios, ocupados, duracao).length > 0);
+  const diaDisponivel = (d: string) => peritosLivresNoDia(d).length > 0;
+  const peritosDoDia = useMemo(() => (data ? peritosLivresNoDia(data) : []), [data, peritosDoAmpAtual, config, bloqueios, ocupados, duracao]); // eslint-disable-line react-hooks/exhaustive-deps
+  const proximaLivre = useMemo(() => {
+    if (!podeAgendar || !ampCompetente) return '';
+    const hoje = hojeISO();
+    for (let i = 0; i < 180; i++) { const d = somarDias(hoje, i); if (diaDisponivel(d)) return d; }
+    return '';
+  }, [podeAgendar, ampCompetente, peritosDoAmpAtual, config, bloqueios, ocupados, duracao]); // eslint-disable-line react-hooks/exhaustive-deps
+  const escolherData = (d: string) => {
+    setData(d); setHora(''); limpar('hora'); limpar('perito');
+    const livres = peritosLivresNoDia(d);
+    // Fica o perito já escolhido (ou o próprio médico) se tiver horário no dia; um só já vem selecionado.
+    setPeritoUid(atual => livres.some(p => p.uid === atual) ? atual
+      : livres.some(p => p.uid === usuario.uid) ? usuario.uid
+      : livres.length === 1 ? livres[0].uid : '');
+  };
+  const limparData = () => { setData(''); setHora(''); limpar('hora'); limpar('perito'); };
 
   const validar = (): Erros => {
     const e: Erros = {};
@@ -196,6 +224,8 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
     setSalvando(true);
     try {
       const dataEntrevista = podeAgendar && data && hora ? `${data}T${hora}` : '';
+      // Quem agenda escolhe o perito junto com a data (só os que têm horário no dia); sem data, a IS fica sem perito.
+      const perito = !podeAgendar || dataEntrevista ? peritoEscolhido : undefined;
       const id = await criarInspecao({
         is: Number(idDaIs(numero)), dataAbertura, dataEntrevista,
         finalidade, grupoFinalidade: achada.grupo, amp,
@@ -287,27 +317,53 @@ export const InspecaoForm: React.FC<Props> = ({ militares, peritos, config, bloq
           />
           <p className="-mt-3 text-xs text-ink-3">{ampCompetente ? `Definido pela finalidade: competência da ${ampCompetente}.` : 'Definido automaticamente pela finalidade escolhida.'}</p>
 
-          {ampCompetente && (
-            <div>
-              {peritosDoAmpAtual.length === 0
-                ? <p role="alert" className="text-sm font-semibold text-wine">Não há perito ativo para o AMP {ampCompetente}. Cadastre o usuário médico em Usuários.</p>
-                : (
-                  <AvatarRadioGroup<string>
-                    label={`Perito (${ampCompetente === 'JRS' ? 'Admin e médicos JRS' : 'médicos MPI'})`} error={erros.perito}
-                    value={peritoUid} onChange={v => { if (v !== peritoUid) { setPeritoUid(v); setHora(''); } limpar('perito'); }}
-                    options={peritosDoAmpAtual.map(opcaoAvatarDoPerito)}
-                  />
-                )}
-            </div>
+          {ampCompetente && peritosDoAmpAtual.length === 0 && (
+            <p role="alert" className="text-sm font-semibold text-wine">Não há perito ativo para o AMP {ampCompetente}. Cadastre o usuário médico em Usuários.</p>
           )}
 
-          {podeAgendar && ampCompetente && (
-            <fieldset className="border border-line rounded-xl p-3 space-y-3">
-              <legend className="px-1 text-xs font-bold text-ink-3">Entrevista (opcional — pode ser agendada depois)</legend>
-              <SeletorHorario
-                duracao={duracao} peritoUid={peritoUid} data={data} onData={d => { setData(d); limpar('hora'); }} hora={hora} onHora={h => { setHora(h); limpar('hora'); }}
-                config={config} bloqueios={bloqueios} ocupados={ocupados} erro={erros.hora} permitirDataPassada={podeDataPassada}
+          {ampCompetente && !podeAgendar && peritosDoAmpAtual.length > 0 && (
+            <AvatarRadioGroup<string>
+              label={`Perito (${ampCompetente === 'JRS' ? 'Admin e médicos JRS' : 'médicos MPI'})`} error={erros.perito}
+              value={peritoUid} onChange={v => { if (v !== peritoUid) { setPeritoUid(v); setHora(''); } limpar('perito'); }}
+              options={peritosDoAmpAtual.map(opcaoAvatarDoPerito)}
+            />
+          )}
+
+          {podeAgendar && ampCompetente && peritosDoAmpAtual.length > 0 && (
+            <fieldset className="border border-line rounded-xl p-3 space-y-3 animate-fade-in">
+              <legend className="px-1 text-xs font-bold text-ink-3">Data Entrevista (opcional — pode ser agendada depois)</legend>
+              <CalendarioDisponibilidade
+                key={`${ampCompetente}-${duracao}`}
+                valor={data} onChange={escolherData} disponivel={diaDisponivel}
+                contagem={d => porDia.get(d) ?? 0} mesInicial={data || hojeISO()} permitirPassado={podeDataPassada}
               />
+              {!data && (proximaLivre
+                ? <p className="text-xs text-ink-3">Próxima data livre ({ampCompetente}): <button type="button" onClick={() => escolherData(proximaLivre)} className="font-bold text-navy underline min-h-[24px]">{nomeDiaSemana(proximaLivre)}, {dataBr(proximaLivre)}</button></p>
+                : <p role="status" className="text-xs font-semibold text-wine">Nenhuma data livre nos próximos meses para o AMP {ampCompetente}. O Admin define os turnos dos peritos em "Turnos dos peritos".</p>)}
+
+              {data && (
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-navy first-letter:uppercase">{nomeDiaSemana(data)}, {dataBr(data)}</p>
+                  <Button variant="ghost" size="sm" icon="close" onClick={limparData}>Limpar data</Button>
+                </div>
+              )}
+              {data && peritosDoDia.length === 0 && (
+                <p role="alert" className="text-sm font-semibold text-wine">Nenhum perito {ampCompetente === 'JRS' ? 'da JRS' : 'do MPI'} tem horário livre em {dataBr(data)}. Escolha outra data.</p>
+              )}
+              {data && peritosDoDia.length > 0 && (
+                <AvatarRadioGroup<string>
+                  label={`Perito com horário em ${dataBr(data)}`} error={erros.perito}
+                  value={peritoUid} onChange={v => { if (v !== peritoUid) { setPeritoUid(v); setHora(''); } limpar('perito'); limpar('hora'); }}
+                  options={peritosDoDia.map(opcaoAvatarDoPerito)}
+                />
+              )}
+              {data && peritoUid && peritosDoDia.some(p => p.uid === peritoUid) && (
+                <SeletorHorario
+                  semCampoData duracao={duracao} peritoUid={peritoUid} data={data} onData={d => { setData(d); limpar('hora'); }} hora={hora} onHora={h => { setHora(h); limpar('hora'); }}
+                  config={config} bloqueios={bloqueios} ocupados={ocupados} erro={erros.hora}
+                />
+              )}
+              {erros.hora && !(data && peritoUid) && <p role="alert" className="text-xs font-semibold text-wine">{erros.hora}</p>}
               {hora && data && <p className="text-xs font-semibold text-green-700">A IS será cadastrada já como Agendada.</p>}
             </fieldset>
           )}
