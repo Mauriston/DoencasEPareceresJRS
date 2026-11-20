@@ -6,7 +6,7 @@ import { higienizarParaIA, base64ValidoParaIA } from "./utils/minimizacaoIA";
 import { caminhoArquivoEquipe, caminhoArquivoValido } from "./utils/arquivosPermitidos";
 import { PERFIS_ENTREVISTA } from "./config/entrevistas";
 import { featurePermitida, type FeatureKey, type MatrizPermissoesArmazenada } from "./config/permissoesPadrao";
-import { acaoNotificavel, perfilExecuta, ROTA_DA_PAGINA, type AcaoNotificavel } from "./config/notificacoesAcoes";
+import { acaoNotificavel, perfilExecuta, recebeAvisoDaAcao, ROTA_DA_PAGINA, type AcaoNotificavel } from "./config/notificacoesAcoes";
 import { AVISOS_EMAIL, AVISO_EMAIL_AGENDA_AUTOMATICO, PERFIS_AVISO_EMAIL, quantidadeIS, textoAvisoEmail, type AvisoEmail } from "./config/notificacoesEmails";
 
 // Firebase Admin (credenciais padrão do Cloud Run), inicializado sob demanda.
@@ -384,9 +384,13 @@ async function startServer() {
     ((await adminDb.collection("config").doc("permissoes").get()).data() as MatrizPermissoesArmazenada | undefined) || null;
 
   /** Usuários ativos cujo perfil pode executar a ação — só eles são notificados dela. */
-  const uidsQuePodemExecutar = async (adminDb: any, req: { pagina: string; feature?: FeatureKey; soAdmin?: boolean }): Promise<Set<string>> => {
+  const uidsQuePodemExecutar = async (
+    adminDb: any, req: { pagina: string; feature?: FeatureKey; soAdmin?: boolean },
+    recebe: (u: { uid: string; perfil?: string }) => boolean = () => true,
+  ): Promise<Set<string>> => {
     const [snap, matriz] = await Promise.all([adminDb.collection("usuarios").get(), lerMatrizPermissoes(adminDb)]);
-    return new Set(snap.docs.filter((d: any) => d.data().ativo !== false && perfilExecuta(matriz, d.data().perfil, req)).map((d: any) => d.id));
+    return new Set(snap.docs.filter((d: any) => d.data().ativo !== false && perfilExecuta(matriz, d.data().perfil, req)
+      && recebe({ uid: d.id, perfil: d.data().perfil })).map((d: any) => d.id));
   };
 
   /** Usuário da equipe com a função da matriz (Admin sempre). Responde 401/403 e devolve false quando não pode. */
@@ -451,6 +455,7 @@ async function startServer() {
         let rota = ROTA_DA_PAGINA[acao.pagina] || "/";
         let nomeConcurso = "";
         let numeroIs = "";
+        let peritoUidDaIS = "";
         if (acao.alvo === "concurso") {
           const c = await adminDb.collection("concursos").doc(alvoId).get();
           nomeConcurso = String(c.data()?.nome || alvoId);
@@ -458,10 +463,11 @@ async function startServer() {
         } else if (acao.alvo === "is") {
           const i = await adminDb.collection("inspecoes").doc(alvoId).get();
           numeroIs = String(i.data()?.is || alvoId);
+          peritoUidDaIS = String(i.data()?.peritoUid || "");
           rota = i.exists ? `/inspecoes/${encodeURIComponent(alvoId)}` : "/inspecoes";
         }
         const corpo = acao.texto.replace("{ator}", nomeAtor).replace("{concurso}", nomeConcurso).replace("{is}", numeroIs);
-        const destino = await uidsQuePodemExecutar(adminDb, acao);
+        const destino = await uidsQuePodemExecutar(adminDb, acao, u => recebeAvisoDaAcao(u, acao, peritoUidDaIS));
         destino.delete(decoded.uid);
         if (destino.size) await enviarPush(adminDb, { uids: destino }, { titulo: acao.titulo, corpo, rota });
         res.json({ success: true, enviado: destino.size > 0 });

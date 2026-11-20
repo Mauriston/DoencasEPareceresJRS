@@ -8,6 +8,8 @@
 // de destino (a classificação gravada é a da aba). Laboratoriais trazem também os analitos (valores) à parte.
 // A leitura vem antes do envio: um PDF que a IA não leu não deixa
 // documento pela metade. Envio e remoção só enquanto a IS não está finalizada (firestore.rules e storage.rules).
+import { avancarParaConclusaoPendente, perfilDoUsuario } from './firestoreInspecoes';
+import { statusAposAtoMedico } from '../utils/conclusaoIS';
 import {
   getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp, type Timestamp,
 } from 'firebase/firestore';
@@ -141,6 +143,8 @@ export const gravarExameIS = async (
     throw e;
   }
   notificarAcao('is.examesEnviados', isId);
+  // PDF enviado por médico numa IS Agendada → Conclusão pendente.
+  void perfilDoUsuario(usuario.uid).then(perfil => avancarParaConclusaoPendente(isId, st => statusAposAtoMedico(st, perfil)));
   return id;
 };
 

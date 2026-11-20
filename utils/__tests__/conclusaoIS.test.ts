@@ -278,3 +278,23 @@ describe('conclusão explícita (Concluir IS / Reabrir IS)', () => {
     expect(podeReabrirIS({ status: 'assinaturas_pendentes', concluidaPor: { uid: 'u1' } }, 'u1', true)).toBe(false);
   });
 });
+
+import { statusAposAtoMedico, statusAposRespostaParecer } from '../conclusaoIS';
+describe('avanço automático para Conclusão pendente', () => {
+  it('ato médico em IS Agendada/Reagendada', () => {
+    expect(statusAposAtoMedico('agendada', 'user_medicos')).toBe('conclusao_pendente');
+    expect(statusAposAtoMedico('reagendada', 'user_medicos_mpi')).toBe('conclusao_pendente');
+    expect(statusAposAtoMedico('agendada', 'user_secretaria')).toBeNull();
+    expect(statusAposAtoMedico('votacao_pendente', 'admin')).toBeNull();
+  });
+  it('Observações de médico na IS agendada mudam o status', () => {
+    const ag = { ...base, status: 'agendada' as const, dataEntrevista: '2026-11-10T08:00' };
+    expect(patchConclusao(ag, 'observacoes', 'Solicitados exames', HOJE, 'user_medicos').patch).toEqual({ observacoes: 'Solicitados exames', status: 'conclusao_pendente', situacao: 'andamento' });
+    expect(patchConclusao(ag, 'observacoes', 'x', HOJE, 'user_secretaria').patch).toEqual({ observacoes: 'x' });
+  });
+  it('resposta do último parecer em aberto', () => {
+    expect(statusAposRespostaParecer('parecer_solicitado', 0)).toBe('conclusao_pendente');
+    expect(statusAposRespostaParecer('parecer_solicitado', 1)).toBeNull();
+    expect(statusAposRespostaParecer('agendada', 0)).toBeNull();
+  });
+});
