@@ -122,8 +122,8 @@ describe('Perícias Menores', () => {
     p({ dataAtestado: '2026-11-10', dataTermino: '2026-11-16', tempoHomologado: 7, om: 'HNRe', cid: 'J069 - IVAS', criadoPor: 'eu', peritoUid: 'adm' }),
     p({ militarId: 'm2', dataAtestado: '2026-11-12', dataTermino: '2026-11-13', tempoHomologado: 2 }),
   ];
-  it('recorte "minhas" inclui as registradas pelo usuário', () => {
-    expect(aplicarRecortePericias(lista, 'minhas', 'eu')).toHaveLength(3);
+  it('recorte "minhas": só as que têm o usuário como perito responsável (registrar não conta)', () => {
+    expect(aplicarRecortePericias(lista, 'minhas', 'eu')).toHaveLength(2);
   });
   it('resumo', () => {
     const r = resumoPericias(lista, janelaDoPeriodo('mes', HOJE), HOJE);

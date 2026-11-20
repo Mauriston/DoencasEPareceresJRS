@@ -61,6 +61,8 @@ export const PAGE_DEFS: PageDef[] = [
   { id: 'sobre', label: 'Sobre o app', icon: 'info', subtitle: 'As principais funcionalidades do app, por área.' },
   // Feedback: elogios, sugestões e problemas enviados ao Admin (o Admin vê a lista recebida).
   { id: 'feedback', label: 'Feedback', icon: 'feedback', subtitle: 'Envie elogios, sugestões ou relate problemas do app.' },
+  // "Add à Tela de Início": não é página — abre o diálogo que ensina a instalar o app (App.tsx / Sidebar.tsx).
+  { id: 'instalar-app', label: 'Add à Tela de Início', icon: 'install_mobile', subtitle: 'Veja como adicionar o app à tela de início do celular.' },
 ];
 
 

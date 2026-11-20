@@ -8,6 +8,7 @@
 //    (Supervisão · Dia · Noite): escalados um por linha, sem o retém — que fica num ícone de info (toque abre).
 //  - Admin: baixa o modelo CSV e envia a escala do mês.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -58,7 +59,9 @@ export const EscalaSpa: React.FC = () => {
   const [importando, setImportando] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   // Celular: "Todos" os dias ou só os "Meus serviços" (dias em que o usuário está escalado, retém incluído).
-  const [filtroDias, setFiltroDias] = useState<'todos' | 'meus'>('todos');
+  // ?aba=meus (KPI "Serviços no mês" da Início) abre já em "Meus serviços".
+  const [searchParams] = useSearchParams();
+  const [filtroDias, setFiltroDias] = useState<'todos' | 'meus'>(searchParams.get('aba') === 'meus' ? 'meus' : 'todos');
   // Retém aberto (um por vez) no ícone de info da linha — chave "AAAA-MM-DD|Dia".
   const [retemAberto, setRetemAberto] = useState<string | null>(null);
   useEffect(() => {

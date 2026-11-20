@@ -553,3 +553,25 @@ test('Feedback: o menu Ajuda tem "Feedback" e o médico relata um problema (pág
   await p.getByRole('heading', { name: 'Obrigado pelo seu feedback!' }).waitFor({ timeout: 40_000 });
   await p.context().close();
 });
+
+test('Ajuda › "Add à Tela de Início" abre o diálogo de instalação sem sair da página', async () => {
+  const p = await novaPagina();
+  await entrar(p, SECRETARIA);
+  await p.goto(`${BASE}#/sobre`);
+  await p.getByRole('complementary', { name: 'Menu principal' }).getByRole('button', { name: 'Add à Tela de Início' }).click();
+  await p.getByRole('dialog', { name: 'Instalar o app no celular' }).waitFor();
+  assert.match(p.url(), /#\/sobre/);
+  await p.context().close();
+});
+
+test('Perícia Menor: período personalizado mostra as datas em dd/mm/aaaa', async () => {
+  const p = await novaPagina();
+  await entrar(p, MEDICO);
+  await p.goto(`${BASE}#/pericia-menor/historico?periodo=personalizado&de=2026-11-01&ate=2026-11-10`);
+  const grupo = p.getByRole('group', { name: 'Período personalizado' });
+  await grupo.getByText('01/11/2026').waitFor();
+  await grupo.getByText('10/11/2026').waitFor();
+  await grupo.getByLabel('Até').fill('2026-11-15');
+  await grupo.getByText('15/11/2026').waitFor();
+  await p.context().close();
+});

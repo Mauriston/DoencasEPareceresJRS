@@ -24,6 +24,8 @@ export interface UsuarioDoc {
   senhaTemporaria: boolean;
   /** Tutorial "adicionar ícone à tela inicial" já concluído (em qualquer dispositivo). */
   pwaTutorialConcluido?: boolean;
+  /** Quantas vezes o diálogo "adicionar à tela de início" abriu sozinho (até 3 acessos — utils/pwa.ts). */
+  pwaAvisoExibicoes?: number;
   /** Tema da interface (Meu perfil → Aparência): { modo: 'sistema'|'claro'|'escuro', variante: 'marinho'|'grafite'|'oled' }. */
   aparencia?: { modo: string; variante: string };
   /** Último acesso ao app (serverTimestamp; gravado por services/usoDiario.ts uma vez por sessão). */

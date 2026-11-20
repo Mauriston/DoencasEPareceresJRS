@@ -7,7 +7,7 @@ describe('perfil user_medicos_geral (padrões)', () => {
   // "Sobre o app" é liberada a todos os perfis (auditoria v3, SB1).
   it('só acessa Escala de Serviço, Exames mínimos, Perícia Menor, Sobre o app e Feedback', () => {
     const liberadas = PAGE_DEFS.map(d => d.id).filter(id => canAccessPage(id, p));
-    expect(liberadas.sort()).toEqual(['escala', 'exames', 'feedback', 'pericia-menor', 'sobre']);
+    expect(liberadas.sort()).toEqual(['escala', 'exames', 'feedback', 'instalar-app', 'pericia-menor', 'sobre']);
   });
   it('só usa as funcionalidades da Perícia Menor (e a aba Afastamentos da ficha)', () => {
     const liberadas = FEATURE_DEFS.map(f => f.id).filter(id => canUseFeature(id, p));

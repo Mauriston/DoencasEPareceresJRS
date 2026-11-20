@@ -17,6 +17,7 @@ export interface AuthUser {
   imageProfile?: string;
   senhaTemporaria?: boolean;
   pwaTutorialConcluido?: boolean;
+  pwaAvisoExibicoes?: number;
   aparencia?: { modo: string; variante: string };
 }
 

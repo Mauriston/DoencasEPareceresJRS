@@ -31,6 +31,8 @@ export const ROUTES: RouteDef[] = [
   { view: 'sobre', path: '/sobre' },
   // Feedback: formulário (usuários) e lista recebida (Admin) — components/Feedback.tsx.
   { view: 'feedback', path: '/feedback' },
+  // "Add à Tela de Início": abre o diálogo de instalação e volta para a Início (App.tsx).
+  { view: 'instalar-app', path: '/instalar-app' },
   { view: 'guide', path: '/beneficios/doencas/:doencaId?/:diagnosticoIdx?' },
   { view: 'portaria', path: '/beneficios/portaria' },
   { view: 'concursos', path: '/concursos/indices' },
@@ -106,6 +108,7 @@ const BASE_PATHS: Record<NavItem, string> = {
   painel: '/painel',
   sobre: '/sobre',
   feedback: '/feedback',
+  'instalar-app': '/instalar-app',
   guide: '/beneficios/doencas',
   portaria: '/beneficios/portaria',
   concursos: '/concursos/indices',

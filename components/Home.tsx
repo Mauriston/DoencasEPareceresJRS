@@ -52,6 +52,8 @@ import { useIsDesktop } from '../hooks/useIsDesktop';
 import { observarDocumentosPendentes, marcarDocumentoAberto, type DocumentoGerado } from '../services/documentosGerados';
 import { urlVisualizacao } from '../services/driveConcursos';
 import { observarEscalaAPartirDe, type EscalaDia } from '../services/firestoreEscala';
+import { saudacaoInicio } from '../utils/saudacaoInicio';
+import { Avatar } from './shell/UserMenu';
 import { chaveNome, ehRetem, nomeExibicao, servicosDoUsuario, servicosNoMes, type FuncaoEscala } from '../utils/escalaSpa';
 
 const SEMANA_ABR = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'];
@@ -249,7 +251,7 @@ export const Home: React.FC = () => {
       dica: `Emitidos por mim em ${hoje.slice(0, 4)}`,
     },
     {
-      id: 'servicos-no-mes', rotulo: 'Serviços no mês', valor: servicosMes, to: pathForView('escala'), permitido: podeEscala && ehMedicoGeral,
+      id: 'servicos-no-mes', rotulo: 'Serviços no mês', valor: servicosMes, to: `${pathForView('escala')}?aba=meus`, permitido: podeEscala && ehMedicoGeral,
       dica: `Supervisão e plantões em ${nomeMes(hoje)} · reténs não contam`,
     },
     {
@@ -417,37 +419,6 @@ export const Home: React.FC = () => {
       {/* Faltas do HNRe ainda não comunicadas à Divisão de Pessoal (só Admin e Secretaria; some sem pendências). */}
       {podeInspecoes && canUseFeature('inspecoes.enviarEmails', perfil) && <CardFaltasHNRe inspecoes={inspecoes} Secao={Secao} />}
 
-      {podePericiaMenor && ehMedicoGeral && meusAtestados.length > 0 && (
-        <Secao id="home-meus-atestados" titulo="Últimos atestados" acao={<ButtonLink to="/pericia-menor/historico" variant="ghost" size="sm">Ver atestados</ButtonLink>}>
-          <ul>
-            {meusAtestados.slice(0, 6).map(p => {
-              const vigente = statusPericia(p) === 'vigente';
-              const nome = extrairNomeInspecionado(p.inspecionado);
-              const corpo = (
-                <>
-                  <span className="material-symbols-outlined text-[22px] text-navy shrink-0" aria-hidden="true">personal_injury</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-bold text-navy truncate">{nome}</span>
-                    <span className="block text-xs text-ink-3 truncate tabular-nums">{dataBR(p.dataAtestado)} · {plural(p.tempoHomologado, 'dia', 'dias')} · {p.cid}{vigente ? ` · até ${dataBR(p.dataTermino)}` : ''}</span>
-                  </span>
-                  {/* G1: vigente é neutro; concluída em verde. */}
-                  <StatusTag tone={vigente ? 'neutral' : 'success'} className="shrink-0">{vigente ? 'Vigente' : 'Concluída'}</StatusTag>
-                  <span className="material-symbols-outlined text-[20px] text-ink-4 shrink-0" aria-hidden="true">{p.pdfUrl ? 'open_in_new' : 'chevron_right'}</span>
-                </>
-              );
-              const classe = 'flex items-center gap-3 px-4 min-h-[56px] py-2 border-t border-line hover:bg-thead transition-colors';
-              return (
-                <li key={p.id}>
-                  {p.pdfUrl
-                    ? <LinkPdf url={p.pdfUrl} tituloPdf={`Atestado — ${nome}`} className={classe}>{corpo}</LinkPdf>
-                    : <Link to="/pericia-menor/historico" className={classe}>{corpo}</Link>}
-                </li>
-              );
-            })}
-          </ul>
-          {meusAtestados.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{meusAtestados.length - 6} em Atestados.</p>}
-        </Secao>
-      )}
     </>
   );
 
@@ -542,11 +513,45 @@ export const Home: React.FC = () => {
     </>
   );
 
+  // Médicos Geral: "Últimos atestados" logo após os contadores e antes de "Próximos serviços" (celular e desktop).
+  const cardMeusAtestados = podePericiaMenor && ehMedicoGeral && meusAtestados.length > 0 ? (
+        <Secao id="home-meus-atestados" titulo="Últimos atestados" acao={<ButtonLink to="/pericia-menor/historico" variant="ghost" size="sm">Ver atestados</ButtonLink>}>
+          <ul>
+            {meusAtestados.slice(0, 6).map(p => {
+              const vigente = statusPericia(p) === 'vigente';
+              const nome = extrairNomeInspecionado(p.inspecionado);
+              const corpo = (
+                <>
+                  <span className="material-symbols-outlined text-[22px] text-navy shrink-0" aria-hidden="true">personal_injury</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold text-navy truncate">{nome}</span>
+                    <span className="block text-xs text-ink-3 truncate tabular-nums">{dataBR(p.dataAtestado)} · {plural(p.tempoHomologado, 'dia', 'dias')} · {p.cid}{vigente ? ` · até ${dataBR(p.dataTermino)}` : ''}</span>
+                  </span>
+                  {/* G1: vigente é neutro; concluída em verde. */}
+                  <StatusTag tone={vigente ? 'neutral' : 'success'} className="shrink-0">{vigente ? 'Vigente' : 'Concluída'}</StatusTag>
+                  <span className="material-symbols-outlined text-[20px] text-ink-4 shrink-0" aria-hidden="true">{p.pdfUrl ? 'open_in_new' : 'chevron_right'}</span>
+                </>
+              );
+              const classe = 'flex items-center gap-3 px-4 min-h-[56px] py-2 border-t border-line hover:bg-thead transition-colors';
+              return (
+                <li key={p.id}>
+                  {p.pdfUrl
+                    ? <LinkPdf url={p.pdfUrl} tituloPdf={`Atestado — ${nome}`} className={classe}>{corpo}</LinkPdf>
+                    : <Link to="/pericia-menor/historico" className={classe}>{corpo}</Link>}
+                </li>
+              );
+            })}
+          </ul>
+          {meusAtestados.length > 6 && <p className="px-4 py-2 text-xs text-ink-3 border-t border-line">+{meusAtestados.length - 6} em Atestados.</p>}
+        </Secao>
+  ) : null;
+
   // Desktop (≥ md): grade 8 + 4 — agenda, pendências e cards de perfil na principal; calendário, férias,
   // serviços e avisos no apoio. Se o container ainda empilhar (< @split), as férias sobem para logo após a agenda.
   // Médicos Geral: "Próximos serviços" logo abaixo dos contadores (é o que ele mais consulta); nos demais, no apoio.
   const principal = (
     <div className="space-y-6">
+      {cardMeusAtestados}
       {ehMedicoGeral && cardEscala}
       {podeInspecoes && agenda(false)}
       {cardFerias('@split:hidden')}
@@ -568,6 +573,7 @@ export const Home: React.FC = () => {
   // escolhido no calendário filtra a agenda logo abaixo), cards de perfil e serviços, e as férias por último.
   const colunaCelular = (
     <div className="space-y-6">
+      {cardMeusAtestados}
       {ehMedicoGeral && cardEscala}
       {cardPendencias}
       {cardAvisos}
@@ -586,6 +592,15 @@ export const Home: React.FC = () => {
 
   return (
     <Container size="data" className={`py-6 md:py-8 pt-4 md:pt-8 ${permitidas.length ? 'pb-28 md:pb-10' : 'pb-10'}`}>
+      {/* Celular (Médicos Geral): avatar (foto ou silhueta; leva ao perfil) e "PAES, bom dia!" acima da data. */}
+      {ehMedicoGeral && !isDesktop && (
+        <div className="flex items-center gap-3 mb-3">
+          <Link to={pathForView('perfil')} aria-label="Abrir meu perfil" className="rounded-full shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">
+            <Avatar nome="" imageProfile={authUser?.imageProfile} size={44} tone="light" />
+          </Link>
+          <p className="text-h3 font-bold text-navy min-w-0 break-words">{saudacaoInicio(authUser?.usuario)}</p>
+        </div>
+      )}
       <PageHeader
         title={`${saudacao()}${primeiroNome(authUser?.nome) ? `, ${primeiroNome(authUser?.nome)}` : ''}`}
         tituloTopbar="Início"

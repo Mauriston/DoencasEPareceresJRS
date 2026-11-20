@@ -6,6 +6,7 @@
 import { diasEntre, somarDias, statusEfetivoIS, type StatusIS, type SituacaoIS } from './inspecoes';
 import { ultimoDiaDoMes, type Intervalo } from './periodos';
 import { TIPOS_EMAIL } from '../config/emails';
+import { ehMinhaPericia } from './exclusaoPericia';
 
 // ---------------------------------------------------------------------------
 // Períodos
@@ -362,8 +363,9 @@ export interface PericiaPainel {
 export const LIMITE_DIAS_PERICIA = 30;
 export const ALERTA_DIAS_PERICIA = 25;
 
-export const aplicarRecortePericias = <T extends Pick<PericiaPainel, 'peritoUid' | 'criadoPor'>>(lista: T[], recorte: RecortePericias, uid: string): T[] =>
-  recorte === 'minhas' ? lista.filter(p => p.peritoUid === uid || p.criadoPor === uid) : lista;
+/** "Meus": as perícias em que o usuário é o perito responsável (o mesmo critério do "Minhas" da Perícia Menor). */
+export const aplicarRecortePericias = <T extends Pick<PericiaPainel, 'peritoUid'>>(lista: T[], recorte: RecortePericias, uid: string): T[] =>
+  recorte === 'minhas' ? lista.filter(p => ehMinhaPericia(p, uid)) : lista;
 
 /** "TODAS AS ATIVIDADES" = dispensa total; qualquer outra dispensa = restrição. */
 export const ehDispensaTotal = (p: Pick<PericiaPainel, 'dispensas'>): boolean =>

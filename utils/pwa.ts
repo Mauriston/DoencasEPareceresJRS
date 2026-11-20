@@ -39,5 +39,23 @@ export const marcarTutorialConcluidoLocal = (): void => {
   try { localStorage.setItem(LS_TUTORIAL_CONCLUIDO, '1'); } catch { /* modo privado */ }
 };
 
+/** Exibição automática do diálogo "adicionar à tela de início": nos 3 primeiros acessos de cada usuário. */
+export const MAX_EXIBICOES_AVISO_PWA = 3;
+
+/**
+ * O diálogo abre sozinho neste acesso? Não, se o usuário já o viu 3 vezes (contador no perfil), se já concluiu
+ * o tutorial / disse que já instalou, se o app já está aberto pelo ícone ou se já abriu nesta sessão do navegador.
+ */
+export const deveExibirAvisoPwa = (o: { exibicoes?: number; concluido?: boolean; standalone: boolean; jaNestaSessao: boolean }): boolean =>
+  !o.standalone && !o.concluido && !o.jaNestaSessao && (Number(o.exibicoes) || 0) < MAX_EXIBICOES_AVISO_PWA;
+
+const chaveSessaoAvisoPwa = (uid: string) => `jrs_pwa_aviso_sessao_${uid}`;
+export const avisoPwaJaNestaSessao = (uid: string): boolean => {
+  try { return sessionStorage.getItem(chaveSessaoAvisoPwa(uid)) === '1'; } catch { return false; }
+};
+export const marcarAvisoPwaNestaSessao = (uid: string): void => {
+  try { sessionStorage.setItem(chaveSessaoAvisoPwa(uid), '1'); } catch { /* modo privado */ }
+};
+
 /** URL pública do app (raiz, respeitando o base do Vite, ex.: /DoencasEPareceresJRS/). */
 export const urlDoApp = (): string => `${window.location.origin}${import.meta.env.BASE_URL}`;
