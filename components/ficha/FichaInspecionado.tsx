@@ -306,9 +306,8 @@ export const FichaInspecionado: React.FC = () => {
   const isComGuias = useMemo(() => inspecoes.filter(i => !!i.guiasExames)
     .sort((a, b) => (b.guiasExames?.geradoEm?.toMillis?.() ?? 0) - (a.guiasExames?.geradoEm?.toMillis?.() ?? 0)), [inspecoes]);
 
-  // Histórico da aba IS: só as IS com data da entrevista (as abertas e não agendadas completam o agendamento
-  // no drawer "Agendar IS" das listas — Inspeções de Saúde, Home, calendário).
-  const itensIS = useMemo<ItemHistorico[]>(() => isOrdenadas.filter(i => !!i.dataEntrevista).map(i => {
+  // Histórico da aba IS: todas as IS, pela data da entrevista (as não agendadas, sem data, no topo).
+  const itensIS = useMemo<ItemHistorico[]>(() => [...isOrdenadas.filter(i => !i.dataEntrevista), ...isOrdenadas.filter(i => !!i.dataEntrevista)].map(i => {
     // Aberta e não agendada → pending_actions; finalizada (ou cancelada) → lock; demais → edit_square.
     const estado = i.situacao === 'finalizada' || i.status === 'cancelada' ? ICONE_ESTADO.finalizado
       : aguardaAgendamento(i.status) && !i.dataEntrevista ? ICONE_ESTADO.pendente : ICONE_ESTADO.andamento;

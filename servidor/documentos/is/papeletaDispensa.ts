@@ -1,7 +1,7 @@
 // Ficheiro: servidor/documentos/is/papeletaDispensa.ts
 // Papeleta de Dispensa (DGPM-406 Anexo I) da IS de VDF / Término de Incapacidade (Ficha › Gerar Documento):
 // bloco "INFORMAÇÃO PESSOAL" + brasão, SEM a caixa cinza; título em 2 linhas; dias por extenso; assinada por quem
-// gerou (rubrica se Admin); OBS. abaixo do divisor. E-mail: CC = Divisão de Pessoal do HNRe / EAMPE (copiasPorOM) +
+// gerou (rubrica se Admin), com "Recife, PE, {data}." à esquerda e a assinatura à direita (modelo das guias); OBS. abaixo do divisor. E-mail: CC = Divisão de Pessoal do HNRe / EAMPE (copiasPorOM) +
 // caixa da JRS, com o aviso de que o anexo é cópia sem assinatura digital.
 // Ajustes (config/documentosIS.papeletaDispensa): titulo, subtitulo, observacoes[], paragrafosEmail[].
 import { PERFIS_DOCUMENTO_IS, ROTULO_DOCUMENTO_IS } from '../../../utils/documentosIS';
@@ -65,8 +65,10 @@ export const gerador: GeradorDocumentoIS<Dados> = {
         <p class="p c" style="font-size:14pt;line-height:1">${esc(str(ctx.ajustes.subtitulo, '(DGPM-406 ANEXO I)'))}</p>
       </div>
       <p class="p j" style="line-height:1.5;margin-bottom:24pt">O <b>${esc(ctx.is.inspecionado)}</b> necessita ${esc(numeroPorExtenso(d.dias))} (<b>${d.dias}</b>) <b>${diasTxt} de dispensa de todas as atividades militares</b>, enquanto aguarda conclusão de sua inspeção de saúde nº ${esc(ctx.is.is)}.</p>
-      <p class="p c" style="margin-bottom:84pt">${esc(localData(dataDoc(d.data, ctx.agora)))}</p>
-      ${blocoAssinatura(ctx.assinante)}
+      <div style="display:flex;align-items:flex-start;margin-top:84pt;break-inside:avoid">
+        <div style="flex:1;padding:6.5pt 5pt 0"><p class="p">${esc(localData(dataDoc(d.data, ctx.agora)))}</p></div>
+        ${blocoAssinatura(ctx.assinante, { direita: true })}
+      </div>
       <div class="hr" style="margin-top:28pt"></div>
       <p class="p b sb6" style="font-size:10pt">OBS.:</p>
       ${obs.map(t => `<p class="p j sb6" style="font-size:10pt">${esc(t)}</p>`).join('')}`);
