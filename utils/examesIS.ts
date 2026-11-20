@@ -51,7 +51,25 @@ export interface ItemExame {
   /** Laboratoriais: um analito por linha ("Hemoglobina" · "15,4"), sem unidade — o padrão copiável dos concursos
    *  (utils/examesCandidato.ts). Ausente nos demais e nos PDFs enviados antes de 16/11/2026. */
   valores?: ValorExame[];
+  /** Especialidade médica do documento, deduzida pela IA (ex.: "Ortopedia"). Ausente nos PDFs antigos. */
+  especialidade?: string;
+  /** Atestados e Laudos: atestado × laudo × relatório, pela IA. Ausente nos PDFs antigos (ver categoriaDoItem). */
+  categoria?: CategoriaAtestado;
 }
+
+/** Categoria de um documento do médico assistente (aba Atestados e Laudos da Ficha). */
+export const CATEGORIAS_ATESTADO = ['atestado', 'laudo', 'relatorio'] as const;
+export type CategoriaAtestado = typeof CATEGORIAS_ATESTADO[number];
+export const ROTULO_CATEGORIA: Record<CategoriaAtestado, string> = { atestado: 'Atestado', laudo: 'Laudo', relatorio: 'Relatório' };
+export const ehCategoriaAtestado = (v: unknown): v is CategoriaAtestado => (CATEGORIAS_ATESTADO as readonly unknown[]).includes(v);
+
+/** Categoria do item: a da IA ou, nos antigos, pelo tipo e pelo título. */
+export const categoriaDoItem = (i: Pick<ItemExame, 'tipo' | 'titulo'> & { categoria?: unknown }): CategoriaAtestado => {
+  if (ehCategoriaAtestado(i.categoria)) return i.categoria;
+  if (i.tipo === 'atestado') return 'atestado';
+  if (i.tipo === 'parecer' || /relat[oó]rio/i.test(i.titulo || '')) return 'relatorio';
+  return 'laudo';
+};
 
 /** Um analito de exame laboratorial: só o nome e o valor, sem unidade. */
 export interface ValorExame { nome: string; valor: string }
@@ -60,7 +78,7 @@ export interface ValorExame { nome: string; valor: string }
 export interface LeituraExameIA {
   /** Classe do PDF inteiro (laudo_exame | atestado_relatorio); opcional — ver classificarExame. */
   classificacao?: string;
-  documentos?: { tipo?: string; titulo?: string; data?: string; emissor?: string; texto?: string; exameMinimo?: string; valores?: { nome?: string; valor?: string }[] }[];
+  documentos?: { tipo?: string; titulo?: string; data?: string; emissor?: string; texto?: string; exameMinimo?: string; valores?: { nome?: string; valor?: string }[]; especialidade?: string; categoria?: string }[];
 }
 
 const limpo = (v: unknown): string => (typeof v === 'string' ? v.replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim() : '');
@@ -97,6 +115,9 @@ export const itensDaLeitura = (l: LeituraExameIA, examesMinimos: ReadonlyArray<s
     if (minimo) item.exameMinimo = minimo;
     const valores = tipo === 'exame_laboratorial' ? valoresDaLeitura(d?.valores) : [];
     if (valores.length) item.valores = valores;
+    const especialidade = limpo(d?.especialidade).replace(/\s+/g, ' ');
+    if (especialidade) item.especialidade = especialidade;
+    if (ehCategoriaAtestado(d?.categoria)) item.categoria = d!.categoria as CategoriaAtestado;
     return item;
   })
   .filter(d => d.titulo || d.texto)

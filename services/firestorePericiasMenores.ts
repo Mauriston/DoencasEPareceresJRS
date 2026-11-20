@@ -7,7 +7,7 @@
 //
 // Status NÃO é gravado: é derivado de "dataTermino" (dataAtestado + tempoHomologado - 1),
 // pois nada atualizaria um valor gravado com o passar do tempo.
-import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, updateDoc, onSnapshot, serverTimestamp, query, orderBy, limit, where, Timestamp } from 'firebase/firestore';
 import { novoId } from '../utils/dados';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { camposIdDrive } from '../utils/googleDrive';
@@ -60,8 +60,26 @@ export interface PericiaMenorDoc {
   pdfUrl: string;
   /** ID do arquivo no Drive (quando pdfUrl é do Drive); ausente nos registros antigos. */
   pdfFileId?: string;
+  /** Transcrição do atestado pela IA (aba Atestados e Laudos da Ficha), gravada em segundo plano depois do
+   *  registro. Ausente nos registros sem foto ou anteriores a 20/11/2026. */
+  transcricao?: TranscricaoAtestadoPM;
   criadoEm: Timestamp | null;
 }
+/** Leitura do atestado pela IA (services/atestadoIA.ts → transcreverAtestadoPM). */
+export interface TranscricaoAtestadoPM {
+  categoria: 'atestado' | 'laudo' | 'relatorio';
+  especialidade: string;
+  /** AAAA-MM-DD ou ''. */
+  dataEmissao: string;
+  emissor: string;
+  texto: string;
+  textoIncompleto: boolean;
+}
+
+/** Grava a transcrição do atestado (firestore.rules: médico pode gravar só este campo). */
+export const gravarTranscricaoPericia = (id: string, transcricao: TranscricaoAtestadoPM): Promise<void> =>
+  updateDoc(doc(db, COL, id), { transcricao });
+
 export type PericiaMenorRecord = PericiaMenorDoc & { id: string };
 export type StatusPericia = 'vigente' | 'concluida';
 

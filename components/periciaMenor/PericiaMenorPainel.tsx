@@ -14,7 +14,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Drawer } from '../ui/Drawer';
-import { Button } from '../ui/Button';
+import { Button, buttonClass } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
 import { LinkPdf } from '../ui/LinkPdf';
 import { StatusTag } from '../ui/StatusTag';
@@ -56,6 +56,9 @@ interface Props {
   termos: TermosPericia;
   /** Só no modo 'inline': botões da barra inferior da aba da ficha. */
   acoes?: AcaoRodape[];
+  /** Só no modo 'inline' (Ficha): o PDF do atestado vira um botão ghost; com esta ação, abre o registro na aba
+   *  Atestados e Laudos; sem ela, abre o PDF numa nova guia do navegador. */
+  onAbrirAtestado?: () => void;
 }
 
 const dias = (n: number) => `${n} dia${n !== 1 ? 's' : ''}`;
@@ -69,7 +72,7 @@ export const linhaIdentificacao = (p: Pick<PericiaMenorRecord, 'inspecionado' | 
   return [postoDoInspecionado(p.inspecionado, nome), p.militarId ? formatNip(p.militarId) : '', p.om].filter(Boolean).join(' · ');
 };
 
-const EstaPericia: React.FC<{ p: PericiaMenorRecord; historico: PericiaMenorRecord[]; hoje: string; cidAbrev: Props['cidAbrev']; termos: TermosPericia }> = ({ p, historico, hoje, cidAbrev, termos }) => {
+const EstaPericia: React.FC<{ p: PericiaMenorRecord; historico: PericiaMenorRecord[]; hoje: string; cidAbrev: Props['cidAbrev']; termos: TermosPericia; inline?: boolean; onAbrirAtestado?: () => void }> = ({ p, historico, hoje, cidAbrev, termos, inline, onAbrirAtestado }) => {
   const contagem = contagemTermino(p.dataTermino, hoje);
   const { decorridos, total } = diasDecorridos(p, hoje);
   const cid = partesCid(p, cidAbrev);
@@ -107,7 +110,18 @@ const EstaPericia: React.FC<{ p: PericiaMenorRecord; historico: PericiaMenorReco
         <p className="text-sm text-ink"><CidCodigo codigo={cid.codigo} descricao={cid.descricao} /></p>
       </div>
 
-      {p.pdfUrl && (
+      {p.pdfUrl && inline && (
+        <div>
+          {onAbrirAtestado ? (
+            <Button variant="ghost" icon="picture_as_pdf" onClick={onAbrirAtestado}>Atestado de {diaMes(p.dataAtestado)}</Button>
+          ) : (
+            <a href={p.pdfUrl} target="_blank" rel="noopener noreferrer" className={buttonClass('ghost')}>
+              <span className="material-symbols-outlined text-[20px]" aria-hidden="true">picture_as_pdf</span>Atestado de {diaMes(p.dataAtestado)}
+            </a>
+          )}
+        </div>
+      )}
+      {p.pdfUrl && !inline && (
         <LinkPdf
           url={p.pdfUrl} tituloPdf={`Atestado de ${dataBR(p.dataAtestado)} — ${extrairNomeInspecionado(p.inspecionado)}`}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-line hover:border-navy text-left transition-colors"
@@ -189,7 +203,7 @@ const Historico: React.FC<{ p: PericiaMenorRecord; historico: PericiaMenorRecord
   );
 };
 
-export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoje, cidAbrev, modo, aba, onAba, onSelecionar, onFechar, onNova, fichaHref, termos, acoes, onExcluir, onEditar }) => {
+export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoje, cidAbrev, modo, aba, onAba, onSelecionar, onFechar, onNova, fichaHref, termos, acoes, onExcluir, onEditar, onAbrirAtestado }) => {
   const nome = extrairNomeInspecionado(p.inspecionado);
   const idBase = `pm-${modo}`;
   const atestado = termos.singular === 'atestado';
@@ -205,7 +219,7 @@ export const PericiaMenorPainel: React.FC<Props> = ({ pericia: p, historico, hoj
           ...(acoes ?? []),
         ]}
       >
-        <EstaPericia p={p} historico={historico} hoje={hoje} cidAbrev={cidAbrev} termos={termos} />
+        <EstaPericia p={p} historico={historico} hoje={hoje} cidAbrev={cidAbrev} termos={termos} inline onAbrirAtestado={onAbrirAtestado} />
       </CascaPainelFicha>
     );
   }

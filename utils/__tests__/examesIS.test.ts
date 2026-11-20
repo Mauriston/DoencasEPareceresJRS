@@ -20,3 +20,16 @@ describe('exames da IS', () => {
     expect(textosParaCopiar([item, { ...item, data: '', titulo: 'TSH', texto: '2,1' }])).toBe('HEMOGRAMA — 10/09/2026\nHb 14 g/dL\n\nTSH\n2,1');
   });
 });
+
+describe('categoriaDoItem e campos novos da leitura (Atestados e Laudos)', () => {
+  it('usa a categoria da IA ou cai no tipo/título', async () => {
+    const { categoriaDoItem, itensDaLeitura } = await import('../examesIS');
+    expect(categoriaDoItem({ tipo: 'laudo_medico', titulo: 'x', categoria: 'relatorio' })).toBe('relatorio');
+    expect(categoriaDoItem({ tipo: 'atestado', titulo: 'Atestado' })).toBe('atestado');
+    expect(categoriaDoItem({ tipo: 'laudo_medico', titulo: 'Relatório médico' })).toBe('relatorio');
+    expect(categoriaDoItem({ tipo: 'laudo_medico', titulo: 'Laudo' })).toBe('laudo');
+    const [i] = itensDaLeitura({ documentos: [{ tipo: 'atestado', titulo: 'A', texto: 't', especialidade: ' Ortopedia ', categoria: 'xx' }] });
+    expect(i.especialidade).toBe('Ortopedia');
+    expect(i.categoria).toBeUndefined();
+  });
+});

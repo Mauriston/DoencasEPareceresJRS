@@ -20,7 +20,7 @@ import { notificarAcao } from './notificacoesPush';
 import { gerarComGemini, lerJsonIA, arquivoParaBase64IA } from './geminiAI';
 import { novoId } from '../utils/dados';
 import { instrucoesEnvioFicha, type OpcoesLeituraExame } from '../utils/examesFicha';
-import { classificarExame, itensDaLeitura, CLASSES_EXAME, TIPOS_DOCUMENTO, type ClasseExame, type ItemExame, type LeituraExameIA, type OrigemClasseExame } from '../utils/examesIS';
+import { classificarExame, itensDaLeitura, CATEGORIAS_ATESTADO, CLASSES_EXAME, TIPOS_DOCUMENTO, type ClasseExame, type ItemExame, type LeituraExameIA, type OrigemClasseExame } from '../utils/examesIS';
 
 const db = getFirestore(app);
 
@@ -76,6 +76,11 @@ const INSTRUCOES = [
   '- laudo_exame: laudo ou resultado de exame complementar (imagem, laboratorial, funcional);',
   '- atestado_relatorio: atestado médico, relatório/laudo do médico assistente ou parecer de especialista.',
   'Se houver dos dois, use o que predomina no PDF.',
+  'Em cada documento, devolva também:',
+  '- especialidade: a especialidade médica do documento (do emissor ou do conteúdo), ex.: "Ortopedia", "Psiquiatria",',
+  '  "Cardiologia", "Clínica Médica" (vazia se não for possível deduzir);',
+  '- categoria (só para documentos do médico assistente): atestado (atestado médico), laudo (laudo médico) ou relatorio',
+  '  (relatório médico ou parecer de especialista).',
 ].join('\n');
 
 // Laboratoriais: os analitos à parte, no padrão copiável dos concursos (utils/examesCandidato.ts).
@@ -103,10 +108,11 @@ export const lerExameComIA = async (arquivo: File, opcoes: OpcoesLeituraExame = 
             properties: {
               tipo: Schema.enumString({ enum: [...TIPOS_DOCUMENTO] }),
               titulo: Schema.string(), data: Schema.string(), emissor: Schema.string(), texto: Schema.string(),
-              exameMinimo: Schema.string(),
+              exameMinimo: Schema.string(), especialidade: Schema.string(),
+              categoria: Schema.enumString({ enum: [...CATEGORIAS_ATESTADO] }),
               valores: Schema.array({ items: Schema.object({ properties: { nome: Schema.string(), valor: Schema.string() } }) }),
             },
-            optionalProperties: ['data', 'emissor', 'exameMinimo', 'valores'],
+            optionalProperties: ['data', 'emissor', 'exameMinimo', 'valores', 'especialidade', 'categoria'],
           }),
         }),
       },
