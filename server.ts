@@ -1260,6 +1260,32 @@ async function startServer() {
     res.json({ success: true, enviados });
   }));
 
+  // Assessor IA (Ficha do inspecionado — servidor/assessor/): um turno da conversa sobre uma IS em andamento.
+  // Só Admin, user_medicos e user_medicos_mpi. A conversa não é gravada; a auditoria registra quem e qual IS, sem conteúdo.
+  app.post("/api/assessor/conversar", async (req, res) => {
+    const quem = await exigirUsuario(req, res, "assessor-conversar", PERFIS_MEDICOS);
+    if (!quem) return;
+    const isId = String(req.body?.isId ?? "");
+    try {
+      const { adminDb } = await getFirebaseAdmin();
+      const { conversarAssessor } = await import("./servidor/assessor/servico");
+      void auditarServidor("operacao_sensivel", "assessor-conversar", quem.uid, `IS ${isId}`.slice(0, 20));
+      const resposta = await conversarAssessor(adminDb, isId, req.body?.conversa);
+      res.json({ success: true, resposta });
+    } catch (error: any) {
+      const { ErroAssessor } = await import("./servidor/assessor/servico");
+      if (error instanceof ErroAssessor) {
+        res.status(error.status).json({ success: false, error: error.message });
+        return;
+      }
+      logErroSeguro("Assessor IA", error);
+      const semCota = error?.status === 429 || /quota|RESOURCE_EXHAUSTED/i.test(String(error?.message || ""));
+      res.status(semCota ? 429 : 500).json({ success: false, error: semCota
+        ? "A IA está sem cota no momento. Tente de novo em alguns minutos."
+        : "Falha ao consultar a IA. Tente novamente." });
+    }
+  });
+
   app.post("/api/gemini/analyze-image", async (req, res) => {
     try {
       if (!(await exigirUsuarioAtivo(req, res, "gemini-analyze-image"))) return;

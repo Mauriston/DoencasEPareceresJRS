@@ -118,6 +118,8 @@ Configuração única da gravação da entrevista da IS (ADR-014): o servidor tr
 
 Variáveis opcionais do Cloud Run (padrões no código, `servidor/entrevistas/`): `SPEECH_LOCALIZACAO` (padrão `us`), `GEMINI_MODELO_ENTREVISTA` (padrão `gemini-3.5-flash`), `GEMINI_LOCALIZACAO` (padrão `global`), `SPEECH_DIARIZACAO_LIMITES` (`0` desliga os limites de 2–4 falantes) e `FFMPEG_PATH` (conversão para FLAC; padrão `ffmpeg` da imagem).
 
+Assessor IA (`servidor/assessor/`; chat da Ficha do inspecionado, rota `/api/assessor/conversar`): `ASSESSOR_PROVEDOR` (`gemini`, padrão, ou `claude`), `ASSESSOR_MODELO_GEMINI` (padrão `gemini-3.1-pro-preview`), `ASSESSOR_MODELO_CLAUDE` (padrão `claude-opus-5-5`) e `ASSESSOR_LOCALIZACAO` (padrão `global`). Os dois provedores rodam no Vertex AI do projeto com a conta de serviço do Cloud Run (sem chave de API). O Claude exige a cota *Global online prediction requests per base model* (`anthropic-claude-opus`) liberada no projeto; enquanto ela não sai, fica o Gemini. As instruções e referências vêm da pasta `assessor/skill/` (a mesma skill do Claude Code), copiada para a imagem pelo `Dockerfile`.
+
 Para testar: no celular, entre como um usuário `user_medicos`, abra uma IS → **Entrevista gravada → Gravar entrevista**, grave alguns segundos e acompanhe a situação (*Transcrevendo* → *Organizando* → *Pronta*).
 
 ## 9. E-mail das IS agendadas (Cloud Scheduler, 18h)

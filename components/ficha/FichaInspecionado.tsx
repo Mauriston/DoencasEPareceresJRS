@@ -79,6 +79,9 @@ import { AgendarISFicha } from './AgendarISFicha';
 import { AbrirISFicha, type ModoAbrirIS } from './AbrirISFicha';
 import { PainelISFicha } from './inspecoes/PainelISFicha';
 import { PainelMensagemIS } from './inspecoes/PainelMensagemIS';
+import { AssessorIAModal } from './assessor/AssessorIAModal';
+import { LogoClaude } from '../ui/LogoClaude';
+import { isDoAssessor, podeUsarAssessorIA } from '../../utils/assessorIA';
 import { observarMensagensDoInspecionado, type MensagemISRecord } from '../../services/mensagensIS';
 import { GerarGuiasDialog } from '../inspecoes/guias/GerarGuiasDialog';
 import { FINALIDADE_ANEXO_O_INCDEF } from '../../utils/guiasExamesIS';
@@ -221,6 +224,8 @@ export const FichaInspecionado: React.FC = () => {
   const [editando, setEditando] = useState(false);
   const [verCadastro, setVerCadastro] = useState(false);
   const [verEventos, setVerEventos] = useState(false);
+  /** Assessor IA (chat em tela cheia): só Admin e médicos, com IS em andamento. */
+  const [assessorAberto, setAssessorAberto] = useState(false);
   const [parecerPara, setParecerPara] = useState<{ is: InspecaoRecord; inicial?: ParecerRecord } | null>(null);
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
   const [mensagens, setMensagens] = useState<MensagemISRecord[]>([]);
@@ -425,6 +430,7 @@ export const FichaInspecionado: React.FC = () => {
   // Ações gerais da ficha (⋮). As de cada aba vão para a barra inferior do painel principal.
   const podePericia = canUseFeature('pericia-menor.novo', perfil);
   const podeIS = secoes.inspecoes && canUseFeature('inspecoes.cadastrar', perfil);
+  const isAssessor = podeUsarAssessorIA(perfil) ? isDoAssessor(inspecoes) : [];
   // Guias INCDEF: a IS aberta na aba (ou a mais recente) de VDF/Término de Incapacidade com "Incapaz definitivamente para o SAM".
   const ehIncdef = (i: InspecaoRecord) => usaMinutaIncapacidadeDefinitiva({ finalidade: i.finalidade || '', laudo: i.laudo });
   const isIncdef = secoes.inspecoes ? ((aba === 'is' ? isOrdenadas.find(i => i.id === pedido && ehIncdef(i)) : undefined) ?? isOrdenadas.find(ehIncdef)) : undefined;
@@ -743,6 +749,12 @@ export const FichaInspecionado: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <MenuAcoes rotulo="Mais ações da ficha" itens={menu} />
+            {/* Assessor IA: logo do Claude, sem texto, à direita do ⋮; em todas as larguras (o FAB do celular é só de criação). */}
+            {isAssessor.length > 0 && (
+              <Button variant="secondary" onClick={() => setAssessorAberto(true)} aria-label="Assessor IA — redigir a IS com a IA" title="Assessor IA">
+                <LogoClaude altura={18} />
+              </Button>
+            )}
             {/* Botões de criação no cabeçalho só a partir de md; no celular viram o FAB padrão (como em Inspeções). */}
             <div className="hidden md:flex items-center gap-2">
               {podePericia && (
@@ -788,6 +800,12 @@ export const FichaInspecionado: React.FC = () => {
         </div>
       </Container>
 
+      {assessorAberto && isAssessor.length > 0 && (
+        <AssessorIAModal
+          inspecoes={isAssessor} isInicialId={params.get('reg')} perfil={perfil}
+          onClose={() => setAssessorAberto(false)} onAviso={avisar}
+        />
+      )}
       {verCadastro && (
         <CadastroTopSheet
           titulo={nome} subtitulo={<span className="tabular-nums">{linhaId}{titular}</span>} dados={dadosCadastro} aviso={avisoCadastro}

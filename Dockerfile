@@ -24,6 +24,8 @@ ENV CHROMIUM_PATH=/usr/bin/chromium
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
+# Skill do Assessor IA (instruções e referências da DGPM-406 lidas pelo servidor — servidor/assessor/referencias.ts).
+COPY --from=builder /app/assessor/skill ./assessor/skill
 
 # Cloud Run injeta a variável PORT (padrão 8080) — server.ts já lê
 # process.env.PORT, então não é preciso fixar aqui além de documentar.
