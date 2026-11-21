@@ -60,7 +60,7 @@ import { canUseFeature, canAccessPage } from '../config/permissions';
 import { podeUsarEntrevista } from '../config/entrevistas';
 import { observarMilitares, vinculoDoInspecionado, type MilitarRecord } from '../services/firestoreMilitares';
 import {
-  observarInspecoes, observarBloqueios, observarConfigAgenda, cancelarInspecao, excluirInspecaoCompleta, agendarInspecao, atualizarInspecao, type InspecaoRecord,
+  observarInspecoes, observarBloqueios, observarConfigAgenda, cancelarInspecao, cancelarPorFalta, marcarMinutaFaltaEnviada, excluirInspecaoCompleta, agendarInspecao, atualizarInspecao, type InspecaoRecord,
 } from '../services/firestoreInspecoes';
 import type { ParecerRecord } from '../services/firestorePareceres';
 import { mostraMinutaMsg, fasesDeEntrevista } from './inspecoes/InspecaoDetalhe';
@@ -73,6 +73,7 @@ import { concursoPath, fichaPath } from '../config/routes';
 import { carregarPeritos, type PeritoIS } from '../services/peritosIS';
 import { sincronizarAgendaIS, removerEventoAgendaIS } from '../services/agendaGoogleIS';
 import { minutaCancelamento, minutaResultadoDaIS } from '../utils/minutasIS';
+import { OBS_CANCELADA_FALTA, temMinutaFaltaPendente } from '../utils/faltaIS';
 import { postoDoInspecionado, sugerirDestinatariosIA } from '../services/destinatariosIA';
 import { normalizarBusca } from '../utils/corposQuadros';
 import {
@@ -443,7 +444,17 @@ export const Inspecoes: React.FC = () => {
     const alvo = confirmando;
     if (!alvo) return;
     setConfirmando(null);
-    if (alvo.tipo === 'falta') { await mudarStatus(alvo.is, 'faltou', `IS ${alvo.is.is}: Faltou.`); return; }
+    // Falta: a IS é cancelada por falta e finalizada automaticamente (utils/faltaIS.ts); fica a pendência da Minuta MSG.
+    if (alvo.tipo === 'falta') {
+      try {
+        await cancelarPorFalta(alvo.is);
+        if (alvo.is.eventoAgendaId) await removerEventoAgendaIS(alvo.is);
+        avisar(`IS ${alvo.is.is}: cancelada por falta e finalizada. Minuta MSG de cancelamento pendente.`);
+      } catch (e: any) {
+        avisar(e?.message || 'Não foi possível registrar a falta.', 'error');
+      }
+      return;
+    }
     try {
       await cancelarInspecao(alvo.is);
       if (alvo.is.eventoAgendaId) await removerEventoAgendaIS(alvo.is);
@@ -804,6 +815,15 @@ export const Inspecoes: React.FC = () => {
         <MinutaDialog
           titulo={`Minuta de cancelamento — IS ${minuta.is}`}
           textoInicial={minuta.minutaCancelamento || minutaCancelamento(dadosMinuta(minuta))}
+          confirmar={temMinutaFaltaPendente(minuta) ? {
+            rotulo: 'Marcar minuta como enviada', icone: 'mark_email_read',
+            aviso: 'Copia a minuta e tira a pendência "Minuta MSG de cancelamento por falta".',
+            onConfirmar: async texto => {
+              await marcarMinutaFaltaEnviada(minuta, texto);
+              avisar(`IS ${minuta.is}: minuta de cancelamento por falta marcada como enviada.`);
+              setMinuta(null);
+            },
+          } : undefined}
           onClose={() => setMinuta(null)} onAviso={avisar}
         />
       ) : (
@@ -866,7 +886,9 @@ export const Inspecoes: React.FC = () => {
       {confirmando && (
         <ConfirmDialog
           title={confirmando.tipo === 'falta' ? 'Falta' : 'Cancelar IS'}
-          message={<>{confirmando.tipo === 'falta' ? 'Registrar falta na' : 'Cancelar a'} <strong>IS {confirmando.is.is}</strong> ({nomeCurto(confirmando.is.inspecionado)})?</>}
+          message={confirmando.tipo === 'falta'
+            ? <>Registrar falta na <strong>IS {confirmando.is.is}</strong> ({nomeCurto(confirmando.is.inspecionado)})? A IS será <strong>cancelada por falta e finalizada</strong>, com "{OBS_CANCELADA_FALTA}" nas observações, e fica pendente a Minuta MSG de cancelamento por falta.</>
+            : <>Cancelar a <strong>IS {confirmando.is.is}</strong> ({nomeCurto(confirmando.is.inspecionado)})?</>}
           confirmLabel={confirmando.tipo === 'falta' ? 'Registrar falta' : 'Cancelar IS'} cancelLabel="Voltar"
           destructive={confirmando.tipo === 'cancelar'} onConfirm={confirmarAcao} onCancel={() => setConfirmando(null)}
         />

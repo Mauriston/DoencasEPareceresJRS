@@ -15,6 +15,7 @@
 //    e, logo abaixo, a agenda do dia escolhido (clicar no dia filtra a agenda) → cards de perfil → Próximas férias
 //    por último. "Acesso rápido" saiu (H2: repetia o menu).
 // Tudo respeita a matriz de permissões: cada bloco só aparece para quem tem acesso.
+import { temMinutaFaltaPendente } from '../utils/faltaIS';
 import { abrirPdf } from '../services/abrirPdf';
 import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -360,6 +361,18 @@ export const Home: React.FC = () => {
         detalhe: `IS ${i.is} · Isenção de IR · gerar o Laudo Pericial`,
         tag: { rotulo: 'Laudo pericial pendente', tom: 'attention' }, to: `/inspecoes/${encodeURIComponent(i.id)}`,
         ordem: 900,
+      });
+    });
+  }
+  // Secretaria e Admin: IS canceladas por falta com a Minuta MSG de cancelamento ainda não enviada (utils/faltaIS.ts;
+  // sai em "Marcar minuta como enviada" na Minuta MSG da IS).
+  if (podeInspecoes && (ehSecretaria || perfil === 'admin')) {
+    inspecoes.filter(temMinutaFaltaPendente).forEach(i => {
+      pendencias.push({
+        id: `minuta-falta:${i.id}`, icone: 'person_off', titulo: nomeCurtoInspecionado(i.inspecionado),
+        detalhe: `IS ${i.is} cancelada por falta · Minuta MSG de Cancelamento por Falta pendente`,
+        tag: { rotulo: 'Minuta MSG pendente', tom: 'attention' }, to: `/inspecoes/${encodeURIComponent(i.id)}`,
+        ordem: 950,
       });
     });
   }

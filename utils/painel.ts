@@ -3,6 +3,7 @@
 // equivalente, variação contra o período anterior (com o sentido de "bom"/"ruim") e as agregações das
 // seções Inspeções de Saúde, Perícias Menores, Concursos e Uso do app. Tudo é calculado no cliente a
 // partir dos documentos que já existem (ver hooks/usePainel.ts). Datas em texto "AAAA-MM-DD".
+import { ehFaltaIS } from './faltaIS';
 import { diasEntre, somarDias, statusEfetivoIS, type StatusIS, type SituacaoIS } from './inspecoes';
 import { ultimoDiaDoMes, type Intervalo } from './periodos';
 import { TIPOS_EMAIL } from '../config/emails';
@@ -180,6 +181,8 @@ export interface ISPainel {
   amp: 'JRS' | 'MPI';
   /** Data da entrevista à qual se refere a comunicação de falta (HNRe), quando houve. */
   emailFaltaDataEntrevista?: string;
+  /** 'falta' na IS cancelada por falta (utils/faltaIS.ts). */
+  motivoCancelamento?: string;
   // ----- Guias de exames / status "Realizando Exames" (só finalidades com exames mínimos) -----
   /** Há guias geradas (guiasExames != null). */
   temGuias?: boolean;
@@ -208,11 +211,13 @@ const finalizadaNo = (i: ISPainel, j: Intervalo) => i.status === 'tis_assinado' 
 export const faltasNoIntervalo = (lista: ISPainel[], j: Intervalo): { faltas: number; agendadas: number } => {
   let faltas = 0, agendadas = 0;
   lista.forEach(i => {
-    if (i.status === 'cancelada') return;
+    // Cancelada por falta conta como falta (utils/faltaIS.ts); a cancelada por prazo fica de fora.
+    const falta = ehFaltaIS(i);
+    if (i.status === 'cancelada' && !falta) return;
     const entrevistaNo = noIntervalo(i.dataEntrevista, j);
-    const faltaComunicada = i.status !== 'faltou' && noIntervalo(i.emailFaltaDataEntrevista, j);
+    const faltaComunicada = !falta && noIntervalo(i.emailFaltaDataEntrevista, j);
     if (entrevistaNo) agendadas++;
-    if (i.status === 'faltou' && entrevistaNo) faltas++;
+    if (falta && entrevistaNo) faltas++;
     if (faltaComunicada) { faltas++; if (!entrevistaNo) agendadas++; }
   });
   return { faltas, agendadas };
