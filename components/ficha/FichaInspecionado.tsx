@@ -559,7 +559,8 @@ export const FichaInspecionado: React.FC = () => {
     const isDoc = inspecoes.find(i => i.id === e.isId);
     const isFinalizada = !isDoc || isDoc.situacao === 'finalizada'; // IS não carregada: não mostra
     const podeExcluir = a === 'atestados' && podeExcluirDocumentoIS(e, nav?.authUser, isFinalizada);
-    return <PainelDocumentoIS key={idExame(e)} aba={a} exame={e} podeZimbra={canUseFeature('ficha.zimbraSecretaria', perfil)} podeExcluir={podeExcluir} onAviso={avisar} />;
+    return <PainelDocumentoIS key={idExame(e)} aba={a} exame={e} podeZimbra={canUseFeature('ficha.zimbraSecretaria', perfil)} podeExcluir={podeExcluir}
+      validade={{ referencia: (isDoc?.dataEntrevista || '').slice(0, 10) || hojeISO(), finalidade: isDoc?.finalidade || '' }} onAviso={avisar} />;
   };
 
   // ---- Pareceres: pedido e resposta (contrato de navegação ?aba=pareceres&criar=pedido|resposta&is=<isId>) ----

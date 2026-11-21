@@ -72,13 +72,22 @@ export const categoriaDoItem = (i: Pick<ItemExame, 'tipo' | 'titulo'> & { catego
 };
 
 /** Um analito de exame laboratorial: só o nome e o valor, sem unidade. */
-export interface ValorExame { nome: string; valor: string }
+export interface ValorExame {
+  nome: string;
+  valor: string;
+  /** Valores de referência considerados (como impressos no laudo, ou a referência usual quando o laudo não traz). */
+  referencia?: string;
+  /** De onde veio a referência: 'laudo' (impressa) ou 'usual' (o laudo não traz; referência usual de adulto). */
+  referenciaOrigem?: 'laudo' | 'usual';
+  /** Resultado fora da referência (ou marcado como alterado no próprio laudo). */
+  alterado?: boolean;
+}
 
 /** O que a IA devolve (texto livre, ainda não conferido). */
 export interface LeituraExameIA {
   /** Classe do PDF inteiro (laudo_exame | atestado_relatorio); opcional — ver classificarExame. */
   classificacao?: string;
-  documentos?: { tipo?: string; titulo?: string; data?: string; emissor?: string; texto?: string; exameMinimo?: string; valores?: { nome?: string; valor?: string }[]; especialidade?: string; categoria?: string }[];
+  documentos?: { tipo?: string; titulo?: string; data?: string; emissor?: string; texto?: string; exameMinimo?: string; valores?: { nome?: string; valor?: string; referencia?: string; referenciaOrigem?: string; alterado?: boolean }[]; especialidade?: string; categoria?: string }[];
 }
 
 const limpo = (v: unknown): string => (typeof v === 'string' ? v.replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim() : '');
@@ -92,8 +101,18 @@ export const exameMinimoValido = (sugestao: unknown, lista: ReadonlyArray<string
 };
 
 /** Analitos válidos (nome e valor preenchidos), sem espaços sobrando. */
-const valoresDaLeitura = (v: unknown): ValorExame[] => (Array.isArray(v) ? v : [])
-  .map(x => ({ nome: limpo(x?.nome).replace(/\s+/g, ' '), valor: limpo(x?.valor).replace(/\s+/g, ' ') }))
+/** Analitos lidos; referência e "alterado" só entram quando vêm (o Firestore não aceita undefined). */
+export const valoresDaLeitura = (v: unknown): ValorExame[] => (Array.isArray(v) ? v : [])
+  .map(x => {
+    const r: ValorExame = { nome: limpo(x?.nome).replace(/\s+/g, ' '), valor: limpo(x?.valor).replace(/\s+/g, ' ') };
+    const ref = limpo(x?.referencia).replace(/\s+/g, ' ');
+    if (ref) {
+      r.referencia = ref;
+      r.referenciaOrigem = x?.referenciaOrigem === 'usual' ? 'usual' : 'laudo';
+    }
+    if (x?.alterado === true) r.alterado = true;
+    return r;
+  })
   .filter(x => x.nome && x.valor);
 
 /**
