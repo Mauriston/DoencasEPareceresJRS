@@ -4,10 +4,11 @@
 // regras de utils/validacaoLaudo.ts com o contexto da IS (utils/contextoLaudo.ts: cadastro + histórico de IS do
 // inspecionado). Só mostra os achados (erro/alerta + fonte); nada é reescrito.
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { observarMilitar, type MilitarRecord } from '../../../services/firestoreMilitares';
 import { observarInspecoesDoInspecionado, type InspecaoRecord } from '../../../services/firestoreInspecoes';
 import { derivarContexto, type ContextoLaudo } from '../../../utils/contextoLaudo';
-import { carregarFormasConclusao, validarLaudo, type AchadoLaudo, type FormasConclusao } from '../../../utils/validacaoLaudo';
+import { carregarFormasConclusao, linkItemDgpm, validarLaudo, type AchadoLaudo, type FormasConclusao } from '../../../utils/validacaoLaudo';
 
 interface Props {
   isNumero: number;
@@ -19,10 +20,20 @@ interface Props {
   restricoes?: string;
 }
 
+const FonteDgpm: React.FC<{ fonte: string }> = ({ fonte }) => {
+  const partes = fonte.split(/(;\s*)/);
+  return (
+    <span className="text-ink-3"> (DGPM-406, {partes.map((p, i) => {
+      const to = linkItemDgpm(p);
+      return to ? <Link key={i} to={to} className="underline decoration-dotted underline-offset-2 hover:text-navy" title={`Abrir a DGPM-406 no item ${p.trim()}`}>{p}</Link> : <React.Fragment key={i}>{p}</React.Fragment>;
+    })})</span>
+  );
+};
+
 const Achado: React.FC<{ a: AchadoLaudo }> = ({ a }) => (
   <li className={`flex gap-2 text-xs rounded px-2 py-1.5 ${a.severidade === 'erro' ? 'bg-wine/10 text-wine' : 'bg-gold/20 text-ink'}`}>
     <span className="material-symbols-outlined text-[16px] shrink-0" aria-hidden="true">{a.severidade === 'erro' ? 'error' : 'warning'}</span>
-    <span>{a.mensagem}{a.fonte ? <span className="text-ink-3"> (DGPM-406, {a.fonte})</span> : null}</span>
+    <span>{a.mensagem}{a.fonte ? <FonteDgpm fonte={a.fonte} /> : null}</span>
   </li>
 );
 

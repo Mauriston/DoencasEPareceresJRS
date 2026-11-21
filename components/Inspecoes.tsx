@@ -12,7 +12,8 @@
 // com Abrir IS (manual) · Abrir IS (print do SINAIS) · Bloqueios (4d).
 // Filtros pela URL (contadores da Início e do Painel):
 //   ?situacao=atrasadas | sem_agendamento | finalizadas | hoje   (hoje vira o período "Hoje" e sai da URL)
-//   ?perito=<uid> · ?minhas=1 · ?dia=AAAA-MM-DD (período daquele dia) · ?visao=calendario|tabela · ?novo=manual|print
+//   ?situacao=aguardando (entrevistados aguardando conclusão) | msg_pendentes (Minuta MSG de cancelamento por falta pendente)
+//   ?amp=JRS | MPI (só as IS dessa junta) · ?perito=<uid> · ?minhas=1 · ?dia=AAAA-MM-DD (período daquele dia) · ?visao=calendario|tabela · ?novo=manual|print
 // As IS com entrevista marcada são sincronizadas com a agenda "JRS/HNRe" do Google Agenda, com o perito como
 // convidado (ver services/agendaGoogleIS.ts).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -78,7 +79,7 @@ import { postoDoInspecionado, sugerirDestinatariosIA } from '../services/destina
 import { normalizarBusca } from '../utils/corposQuadros';
 import {
   STATUS_IS, aguardaAgendamento, statusEfetivoIS, dataHoraBr, hojeISO, podeCancelarIS, situacaoDoStatus, bloqueioNoDia, ehDiaUtil,
-  TURNOS, slotsDoTurno, minutosDe, horaDeEntrevista, duracaoDaIS, peritoAtendeNoTurno, ocupadosDe, turnoDoSlot,
+  TURNOS, slotsDoTurno, minutosDe, horaDeEntrevista, dataDeEntrevista, duracaoDaIS, peritoAtendeNoTurno, ocupadosDe, turnoDoSlot,
   type BloqueioAgenda, type ConfigAgenda, type StatusIS,
 } from '../utils/inspecoes';
 import { intervaloDoPeriodo } from '../utils/periodos';
@@ -87,8 +88,13 @@ import { passaNoPeriodo } from '../utils/agendaIS';
 type Visao = 'tabela' | 'calendario';
 type Aba = 'ativas' | 'finalizadas';
 /** ?situacao= que vira estado da lista (os demais valores são consumidos e saem da URL). */
-type SituacaoURL = 'atrasadas' | 'sem_agendamento' | 'finalizadas';
-const SITUACOES_URL: SituacaoURL[] = ['atrasadas', 'sem_agendamento', 'finalizadas'];
+type SituacaoURL = 'atrasadas' | 'sem_agendamento' | 'finalizadas' | 'aguardando' | 'msg_pendentes';
+const SITUACOES_URL: SituacaoURL[] = ['atrasadas', 'sem_agendamento', 'finalizadas', 'aguardando', 'msg_pendentes'];
+/** Rótulo do chip das situações que só chegam pela URL (KPIs da Início). */
+const ROTULO_SITUACAO_URL: Partial<Record<SituacaoURL, { rotulo: string; icone: string }>> = {
+  aguardando: { rotulo: 'Entrevistados · aguardando conclusão', icone: 'pending_actions' },
+  msg_pendentes: { rotulo: 'Minuta MSG pendente', icone: 'mail' },
+};
 /** Finalizadas por página ("Mostrar mais"). */
 const PAGINA_FINALIZADAS = 30;
 const CHAVE_VISAO = 'jrs_inspecoes_visao';
@@ -187,6 +193,7 @@ export const Inspecoes: React.FC = () => {
   const aba: Aba = situacao === 'finalizadas' ? 'finalizadas' : 'ativas';
   const minhas = searchParams.get('minhas') === '1';
   const peritoParam = searchParams.get('perito') ?? '';
+  const ampParam = searchParams.get('amp') === 'JRS' || searchParams.get('amp') === 'MPI' ? searchParams.get('amp') as 'JRS' | 'MPI' : null;
   const [periodo, setPeriodo] = useState<FiltroPeriodoValor | null>(() => {
     const dia = diaDoParam(searchParams.get('dia'));
     return dia ? periodoDoDia(dia, hojeISO()) : situacaoParam === 'hoje' ? { id: 'hoje' } : null;
@@ -315,9 +322,10 @@ export const Inspecoes: React.FC = () => {
     const termos = normalizarBusca(busca).split(/\s+/).filter(Boolean);
     return (lista ?? [])
       .filter(i => (peritoAlvo ? i.peritoUid === peritoAlvo : true))
+      .filter(i => (ampParam ? i.amp === ampParam : true))
       .filter(i => (intervalo ? passaNoPeriodo(i, intervalo) : true))
       .filter(i => { const alvo = normalizarBusca(`${i.is} ${i.inspecionado} ${i.inspecionadoId} ${i.finalidade} ${i.peritoNome} ${STATUS_IS[statusEfetivoIS(i, hoje)].rotulo}`); return termos.every(t => alvo.includes(t)); });
-  }, [lista, peritoAlvo, intervalo, busca, hoje]);
+  }, [lista, peritoAlvo, ampParam, intervalo, busca, hoje]);
 
   const ativasBase = useMemo(() => base.filter(i => i.situacao !== 'finalizada'), [base]);
   const finalizadasBase = useMemo(() => ordenarFinalizadasIS(base.filter(i => i.situacao === 'finalizada')), [base]);
@@ -330,14 +338,19 @@ export const Inspecoes: React.FC = () => {
 
   // Ordem de trabalho (Ativas) ou meses (Finalizadas, paginadas).
   const grupos: GrupoIS[] = useMemo(() => {
+    if (situacao === 'msg_pendentes') {
+      const itens = base.filter(temMinutaFaltaPendente).sort((a, b) => a.is - b.is);
+      return itens.length ? [{ chave: 'msg', tipo: 'abertas', titulo: 'Minuta MSG de cancelamento por falta pendente', dica: `${itens.length} IS`, itens }] : [];
+    }
     if (aba === 'finalizadas') return agruparFinalizadasIS(finalizadasBase.slice(0, limiteFinalizadas));
+    if (situacao === 'aguardando') return agruparAtivasIS(ativasBase.filter(i => !!i.dataEntrevista && dataDeEntrevista(i.dataEntrevista) < hoje), hoje);
     const filtradas = situacao === 'atrasadas' ? ativasBase.filter(i => statusEfetivoIS(i, hoje) === 'atrasada')
       : situacao === 'sem_agendamento' ? ativasBase.filter(i => !i.dataEntrevista) : ativasBase;
     return agruparAtivasIS(filtradas, hoje);
-  }, [aba, situacao, ativasBase, finalizadasBase, limiteFinalizadas, hoje]);
+  }, [aba, situacao, base, ativasBase, finalizadasBase, limiteFinalizadas, hoje]);
   const restantesFinalizadas = aba === 'finalizadas' ? Math.max(0, finalizadasBase.length - limiteFinalizadas) : 0;
-  const filtrosAtivos = !!situacao && situacao !== 'finalizadas' || !!peritoAlvo || !!periodo || !!busca;
-  const limparFiltros = () => { mudarURL({ situacao: aba === 'finalizadas' ? 'finalizadas' : null, perito: null, minhas: null }); setPeriodo(null); setBusca(''); };
+  const filtrosAtivos = !!situacao && situacao !== 'finalizadas' || !!peritoAlvo || !!ampParam || !!periodo || !!busca;
+  const limparFiltros = () => { mudarURL({ situacao: aba === 'finalizadas' ? 'finalizadas' : null, perito: null, minhas: null, amp: null }); setPeriodo(null); setBusca(''); };
 
   /** Cabeçalho do dia: turno de concurso, bloqueios (todos os peritos ou do perito filtrado), férias e afastamentos. */
   const avisosDoDia = (data: string): AvisoDiaIS[] => [
@@ -698,6 +711,14 @@ export const Inspecoes: React.FC = () => {
                   <FilterChip ativo={situacao === 'atrasadas'} icon="warning" onAlternar={() => alternarSituacao('atrasadas')} className="shrink-0">
                     Atrasadas {badge(contagens.atrasadas, true)}
                   </FilterChip>
+                )}
+                {situacao && ROTULO_SITUACAO_URL[situacao] && (
+                  <FilterChip ativo icon={ROTULO_SITUACAO_URL[situacao]!.icone} onAlternar={() => mudarURL({ situacao: null })} className="shrink-0">
+                    {ROTULO_SITUACAO_URL[situacao]!.rotulo}
+                  </FilterChip>
+                )}
+                {ampParam && (
+                  <FilterChip ativo icon="groups" onAlternar={() => mudarURL({ amp: null })} className="shrink-0">Médicos {ampParam}</FilterChip>
                 )}
                 <FilterChip ativo={situacao === 'sem_agendamento'} icon="event_busy" onAlternar={() => alternarSituacao('sem_agendamento')} className="shrink-0">
                   Sem agendamento {badge(contagens.semAgendamento)}

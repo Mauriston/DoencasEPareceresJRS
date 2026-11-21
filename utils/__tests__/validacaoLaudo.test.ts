@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import formas from '../../data/formasConclusaoIS.json';
 import finalidadesApp from '../../public/finalidadesIS.json';
 import {
-  identificarLaudo, regraDaIS, validarLaudo, compilarModelo,
+  identificarLaudo, linkItemDgpm, regraDaIS, validarLaudo, compilarModelo,
   type FormasConclusao,
 } from '../validacaoLaudo';
 import { derivarContexto, tipoServicoDoCadastro, type ContextoLaudo } from '../contextoLaudo';
@@ -143,5 +143,13 @@ describe('contexto', () => {
     expect(c.historicoDisponivel).toBe(false);
     expect(c.ltsAnterior).toBeNull();
     expect(c.tipoServico).toBe('SMV');
+  });
+});
+
+describe('linkItemDgpm', () => {
+  it('leva ao capítulo e ao item da DGPM-406', () => {
+    expect(linkItemDgpm('6.2.2.e')).toBe('/normas/dgpm-406?cap=6&item=6.2.2');
+    expect(linkItemDgpm(' 11.8.2.b')).toBe('/normas/dgpm-406?cap=11&item=11.8.2');
+    expect(linkItemDgpm('formas de conclusão')).toBeNull();
   });
 });
