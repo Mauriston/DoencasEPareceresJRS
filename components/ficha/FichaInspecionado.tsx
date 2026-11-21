@@ -80,7 +80,7 @@ import { AbrirISFicha, type ModoAbrirIS } from './AbrirISFicha';
 import { PainelISFicha } from './inspecoes/PainelISFicha';
 import { PainelMensagemIS } from './inspecoes/PainelMensagemIS';
 import { AssessorIAModal } from './assessor/AssessorIAModal';
-import { LogoClaude } from '../ui/LogoClaude';
+import { LogoClaude, SimboloClaude } from '../ui/LogoClaude';
 import { isDoAssessor, podeUsarAssessorIA } from '../../utils/assessorIA';
 import { observarMensagensDoInspecionado, type MensagemISRecord } from '../../services/mensagensIS';
 import { GerarGuiasDialog } from '../inspecoes/guias/GerarGuiasDialog';
@@ -226,6 +226,10 @@ export const FichaInspecionado: React.FC = () => {
   const [verEventos, setVerEventos] = useState(false);
   /** Assessor IA (chat em tela cheia): só Admin e médicos, com IS em andamento. */
   const [assessorAberto, setAssessorAberto] = useState(false);
+  /** "Print SINAIS" do menu do Claude: prints escolhidos para a IS `isId` (lidos no painel da aba IS). */
+  const [printsSinais, setPrintsSinais] = useState<{ id: number; isId: string; arquivos: File[] } | null>(null);
+  const inputPrintsRef = useRef<HTMLInputElement>(null);
+  const alvoPrintsRef = useRef<string>('');
   const [parecerPara, setParecerPara] = useState<{ is: InspecaoRecord; inicial?: ParecerRecord } | null>(null);
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
   const [mensagens, setMensagens] = useState<MensagemISRecord[]>([]);
@@ -430,7 +434,18 @@ export const FichaInspecionado: React.FC = () => {
   // Ações gerais da ficha (⋮). As de cada aba vão para a barra inferior do painel principal.
   const podePericia = canUseFeature('pericia-menor.novo', perfil);
   const podeIS = secoes.inspecoes && canUseFeature('inspecoes.cadastrar', perfil);
-  const isAssessor = podeUsarAssessorIA(perfil) ? isDoAssessor(inspecoes) : [];
+  const isAssessor: InspecaoRecord[] = podeUsarAssessorIA(perfil) ? isDoAssessor(inspecoes) : [];
+  // Menu do Claude: a IS aberta na aba IS (se em andamento) ou a mais recente em andamento.
+  const isAlvoClaude = isAssessor.find(i => i.id === params.get('reg')) ?? isAssessor[0];
+  const printBloqueado = !isAlvoClaude ? '' : isAlvoClaude.ds1a?.trim() ? 'A IS já tem DS-1a.' : !isAlvoClaude.dataEntrevista ? 'A IS ainda não foi agendada.' : '';
+  const itensClaude: ItemMenu[] = [
+    { rotulo: 'Assessor IA', icone: <SimboloClaude tamanho={18} />, onClick: () => setAssessorAberto(true) },
+    {
+      rotulo: 'Print SINAIS', icone: 'screenshot_region', desabilitado: !!printBloqueado,
+      dica: printBloqueado || (isAlvoClaude && isAssessor.length > 1 ? `IS ${isAlvoClaude.is}` : undefined),
+      onClick: () => { if (!isAlvoClaude) return; alvoPrintsRef.current = isAlvoClaude.id; inputPrintsRef.current?.click(); },
+    },
+  ];
   // Guias INCDEF: a IS aberta na aba (ou a mais recente) de VDF/Término de Incapacidade com "Incapaz definitivamente para o SAM".
   const ehIncdef = (i: InspecaoRecord) => usaMinutaIncapacidadeDefinitiva({ finalidade: i.finalidade || '', laudo: i.laudo });
   const isIncdef = secoes.inspecoes ? ((aba === 'is' ? isOrdenadas.find(i => i.id === pedido && ehIncdef(i)) : undefined) ?? isOrdenadas.find(ehIncdef)) : undefined;
@@ -637,6 +652,7 @@ export const FichaInspecionado: React.FC = () => {
           onAgendar={setAgendando}
           onSituacaoMudou={is => { sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS atualizada, mas o Google Agenda não: ${r.erro}`, 'error'); }); }}
           onAviso={avisar}
+          printsSinais={printsSinais?.isId === isSel.id ? printsSinais : null}
         />
       );
     }
@@ -749,12 +765,21 @@ export const FichaInspecionado: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <MenuAcoes rotulo="Mais ações da ficha" itens={menu} />
-            {/* Assessor IA: logo do Claude, sem texto, à direita do ⋮; em todas as larguras (o FAB do celular é só de criação). */}
+            {/* Menu do Claude (logo, sem texto, à direita do ⋮; em todas as larguras): Assessor IA · Print SINAIS. */}
             {isAssessor.length > 0 && (
-              <Button variant="secondary" onClick={() => setAssessorAberto(true)} aria-label="Assessor IA — redigir a IS com a IA" title="Assessor IA">
-                <LogoClaude altura={18} />
-              </Button>
+              <MenuAcoes rotulo="Claude: Assessor IA e Print SINAIS" itens={itensClaude} botao={{ texto: 'Claude', icone: '', conteudo: <LogoClaude altura={18} /> }} />
             )}
+            <input
+              ref={inputPrintsRef} type="file" accept="image/*" multiple className="hidden" aria-label="Prints do SINAIS"
+              onChange={e => {
+                const arquivos: File[] = Array.from(e.target.files ?? []);
+                e.target.value = '';
+                const isId = alvoPrintsRef.current;
+                if (!arquivos.length || !isId) return;
+                definir({ aba: 'is', reg: isId, criar: null });
+                setPrintsSinais({ id: Date.now(), isId, arquivos });
+              }}
+            />
             {/* Botões de criação no cabeçalho só a partir de md; no celular viram o FAB padrão (como em Inspeções). */}
             <div className="hidden md:flex items-center gap-2">
               {podePericia && (
