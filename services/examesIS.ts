@@ -93,6 +93,15 @@ const INSTRUCOES = [
 const INSTRUCOES_VALORES = [
   'Em exame_laboratorial, devolva também "valores": um item por analito/parâmetro, na ordem do laudo, com "nome" (como consta,',
   'ex.: "Hemoglobina", "Glicose em jejum") e "valor" (só o resultado, SEM unidade e sem referência, ex.: "15,4"). Nos demais tipos, omita.',
+  'Em cada valor, devolva também:',
+  '- referencia: os valores de referência do analito EXATAMENTE como impressos no laudo, com unidade (ex.: "13,5 a 17,5 g/dL");',
+  '  referenciaOrigem = "laudo". Só se o laudo NÃO trouxer referência para aquele analito, use a referência usual para adulto',
+  '  e marque referenciaOrigem = "usual".',
+  '- alterado: true quando o resultado está fora da referência considerada ou o laudo o marca como alterado (*, H, L, ↑, ↓,',
+  '  "alterado"); false quando está dentro. Na dúvida (resultado qualitativo sem referência clara), false.',
+  'Datas: em exame_laboratorial e no exame toxicológico, "data" é a data da COLETA (se não houver, a de emissão); nos',
+  'demais exames, a data de realização. Use exatamente a data que consta no laudo, sem estimar.',
+  'Estes campos são dados à parte: o "texto" continua sendo a transcrição na íntegra, sem nenhuma alteração.',
 ].join('\n');
 
 export interface LeituraExame { itens: ItemExame[]; textoIncompleto: boolean; classificacao: ClasseExame; classificacaoOrigem: OrigemClasseExame }
@@ -116,7 +125,13 @@ export const lerExameComIA = async (arquivo: File, opcoes: OpcoesLeituraExame = 
               titulo: Schema.string(), data: Schema.string(), emissor: Schema.string(), texto: Schema.string(),
               exameMinimo: Schema.string(), especialidade: Schema.string(),
               categoria: Schema.enumString({ enum: [...CATEGORIAS_ATESTADO] }),
-              valores: Schema.array({ items: Schema.object({ properties: { nome: Schema.string(), valor: Schema.string() } }) }),
+              valores: Schema.array({ items: Schema.object({
+                properties: {
+                  nome: Schema.string(), valor: Schema.string(), referencia: Schema.string(),
+                  referenciaOrigem: Schema.enumString({ enum: ['laudo', 'usual'] }), alterado: Schema.boolean(),
+                },
+                optionalProperties: ['referencia', 'referenciaOrigem', 'alterado'],
+              }) }),
             },
             optionalProperties: ['data', 'emissor', 'exameMinimo', 'valores', 'especialidade', 'categoria'],
           }),
