@@ -4,8 +4,8 @@
 //   - Ao abrir, sugestões de comando para a IS escolhida (tocar põe o texto na caixa, para completar e enviar).
 //   - Com mais de uma IS em andamento, o seletor do topo troca a IS (e recomeça a conversa).
 //   - Cada resposta traz a mensagem do Assessor e os campos gerados — Entrevista, Exame Clínico, Conclusão,
-//     Laudo (um por finalidade) e CID —, cada um com "Copiar" e "Inserir na IS" (services/assessorIA.ts).
-//     Substituir um texto já gravado diferente pede confirmação.
+//     Laudo (um por finalidade) e CID —, cada um em bloco de código com o ícone Copiar, que copia o texto E o insere
+//     no campo da IS (services/assessorIA.ts). Substituir um texto já gravado diferente pede confirmação.
 //   - A conversa vive só nesta tela (não é gravada). O servidor junta os dados da IS a cada pedido
 //     (servidor/assessor/: documentos em PDF já transcritos, entrevistas gravadas e histórico de IS).
 // O texto da IA é mostrado como texto simples (nunca como HTML).
@@ -19,27 +19,9 @@ import { CAMPOS_REDACAO, sugestoesDoAssessor, type CampoRedacao } from '../../..
 import { laudosDaIS } from '../../../utils/finalidadesMultiplas';
 import type { InspecaoRecord } from '../../../services/firestoreInspecoes';
 
-/** Botão do tema escuro: contorno claro (padrão) ou sólido branco (principal). */
-const botaoEscuro = (principal = false) =>
-  `inline-flex items-center justify-center gap-1.5 shrink-0 whitespace-nowrap rounded-lg font-bold text-sm transition-colors min-h-9 px-3 ` +
-  `focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:opacity-50 disabled:cursor-not-allowed ` +
-  (principal ? 'bg-white text-black hover:bg-white/85' : 'bg-transparent text-white border border-white/25 hover:bg-white/10');
-
-const Icone: React.FC<{ nome: string; girando?: boolean }> = ({ nome, girando }) => (
-  <span className={`material-symbols-outlined text-[18px]${girando ? ' animate-spin' : ''}`} aria-hidden="true">{nome}</span>
+const Icone: React.FC<{ nome: string; girando?: boolean; tamanho?: number }> = ({ nome, girando, tamanho = 16 }) => (
+  <span className={`material-symbols-outlined${girando ? ' animate-spin' : ''}`} style={{ fontSize: tamanho }} aria-hidden="true">{nome}</span>
 );
-
-/** Copiar no tema escuro, com a confirmação na própria etiqueta. */
-const CopiarEscuro: React.FC<{ texto: string; titulo: string }> = ({ texto, titulo }) => {
-  const [copiado, setCopiado] = useState(false);
-  useEffect(() => { if (!copiado) return; const t = window.setTimeout(() => setCopiado(false), 1800); return () => window.clearTimeout(t); }, [copiado]);
-  return (
-    <button type="button" title={titulo} aria-label={titulo} className={botaoEscuro()}
-      onClick={async () => { try { await navigator.clipboard.writeText(texto); setCopiado(true); } catch { /* sem permissão */ } }}>
-      <Icone nome={copiado ? 'check' : 'content_copy'} />{copiado ? 'Copiado' : 'Copiar'}
-    </button>
-  );
-};
 
 interface Props {
   /** IS em andamento do inspecionado (a primeira é a padrão, salvo `isInicialId`). */
@@ -61,20 +43,28 @@ const CHAVE_RESPOSTA: Record<CampoRedacao, 'entrevista' | 'exameClinico' | 'conc
   redacaoEntrevista: 'entrevista', redacaoExameClinico: 'exameClinico', redacaoConclusao: 'conclusao',
 };
 
-const CartaoCampo: React.FC<{ campo: CampoGerado; inserido: boolean; onInserir: () => void; inserindo: boolean }> = ({ campo, inserido, onInserir, inserindo }) => (
-  <section className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
-    <header className="px-4 py-2 bg-white/5 border-b border-white/10 flex flex-wrap items-center justify-between gap-2">
-      <h3 className="text-sm font-bold text-white">{campo.titulo}</h3>
-      <div className="flex items-center gap-2">
-        <CopiarEscuro texto={campo.texto} titulo={`Copiar ${campo.titulo}`} />
-        <button type="button" className={botaoEscuro(!inserido)} disabled={inserido || inserindo} aria-busy={inserindo || undefined} onClick={onInserir}>
-          <Icone nome={inserindo ? 'progress_activity' : inserido ? 'check' : 'input'} girando={inserindo} />{inserido ? 'Inserido' : 'Inserir na IS'}
-        </button>
+/** Campo gerado em bloco de código: título acima, "txt" no canto e o ícone Copiar, que copia e insere na IS. */
+const BlocoCampo: React.FC<{ campo: CampoGerado; inserido: boolean; inserindo: boolean; onCopiar: () => void }> = ({ campo, inserido, inserindo, onCopiar }) => {
+  const rotulo = inserido ? 'Copiado e inserido na IS' : 'Copiar';
+  return (
+    <section className="space-y-2">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-white/90">{campo.titulo}</h3>
+      <div className="relative rounded-xl border border-white/10 bg-white/[0.04]">
+        <span className="absolute left-4 top-2.5 text-xs text-white/40">txt</span>
+        <div className="absolute right-2 top-1.5 group">
+          <button type="button" onClick={onCopiar} disabled={inserindo} aria-busy={inserindo || undefined}
+            aria-label={`${rotulo}: ${campo.titulo}`}
+            className="w-8 h-8 flex items-center justify-center rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
+            <Icone nome={inserindo ? 'progress_activity' : inserido ? 'check' : 'content_copy'} girando={inserindo} tamanho={18} />
+          </button>
+          <span role="tooltip" className="pointer-events-none absolute right-0 top-9 whitespace-nowrap rounded-md bg-white/15 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">{rotulo}</span>
+        </div>
+        <pre className="pt-9 pb-4 px-4 text-sm text-white/90 whitespace-pre overflow-x-auto leading-relaxed"
+          style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' }}>{campo.texto}</pre>
       </div>
-    </header>
-    <pre className="p-4 text-sm text-white/90 whitespace-pre-wrap break-words font-sans leading-relaxed">{campo.texto}</pre>
-  </section>
-);
+    </section>
+  );
+};
 
 export const AssessorIAModal: React.FC<Props> = ({ inspecoes, isInicialId, perfil, onClose, onAviso }) => {
   const [isId, setIsId] = useState<string>(() => (inspecoes.some(i => i.id === isInicialId) ? String(isInicialId) : inspecoes[0]?.id ?? ''));
@@ -150,118 +140,122 @@ export const AssessorIAModal: React.FC<Props> = ({ inspecoes, isInicialId, perfi
     try {
       await campo.inserir();
       setInseridos(s => new Set(s).add(chaveItem));
-      onAviso(`${campo.titulo} inserido na IS ${is.is}.`);
+      onAviso(`${campo.titulo} copiado e inserido na IS ${is.is}.`);
     } catch (e: any) {
       onAviso(e?.message || `Não foi possível inserir ${campo.titulo}.`, 'error');
     } finally {
       setInserindo(null);
     }
   };
-  const pedirInsercao = (chaveItem: string, campo: CampoGerado) => {
-    if (campo.atual.trim() && campo.atual.trim() !== campo.texto.trim()) setConfirmar({ chave: chaveItem, campo });
+  /** Ícone Copiar: copia para a área de transferência e insere no campo da IS (substituir texto diferente pede confirmação). */
+  const copiarEInserir = async (chaveItem: string, campo: CampoGerado) => {
+    try { await navigator.clipboard.writeText(campo.texto); } catch { onAviso('Não foi possível copiar para a área de transferência.', 'error'); }
+    if (campo.atual.trim() === campo.texto.trim()) { setInseridos(s => new Set(s).add(chaveItem)); onAviso(`${campo.titulo} copiado (já estava na IS).`); return; }
+    if (campo.atual.trim()) setConfirmar({ chave: chaveItem, campo });
     else void executarInsercao(chaveItem, campo);
   };
 
   const tituloIS = (i: InspecaoRecord) => `IS ${i.is} · ${i.finalidade}`;
 
+  const vazio = itens.length === 0;
+  const chips = (
+    <div className="flex flex-wrap justify-center gap-2">
+      {sugestoes.map(s => (
+        <button key={s.rotulo} type="button" disabled={enviando}
+          onClick={() => { setTexto(s.comando); requestAnimationFrame(() => { const c = caixaRef.current; if (c) { c.focus(); c.setSelectionRange(c.value.length, c.value.length); } }); }}
+          className="h-8 px-3 rounded-lg border border-white/15 text-sm text-white/80 hover:bg-white/10 hover:text-white disabled:opacity-50">
+          {s.rotulo}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div role="dialog" aria-modal="true" aria-label="Assessor IA" className="fixed inset-0 z-dialog bg-black text-white flex flex-col animate-fade-in [color-scheme:dark]">
-      <div className="px-4 py-3 bg-black border-b border-white/10 text-white flex items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="material-symbols-outlined text-[20px] text-gold shrink-0" aria-hidden="true">auto_awesome</span>
-          <div className="min-w-0">
-            <h2 className="font-heading font-bold text-base text-white truncate">Assessor IA</h2>
-            {inspecoes.length > 1 ? (
-              <label className="flex items-center gap-1 text-xs text-white/80">
-                <span className="sr-only">Inspeção de Saúde</span>
-                <select value={is.id} onChange={e => setIsId(e.target.value)} disabled={enviando}
-                  className="max-w-[70vw] bg-black text-white border border-white/30 rounded px-1 py-0.5 text-xs truncate">
-                  {inspecoes.map(i => <option key={i.id} value={i.id}>{tituloIS(i)}</option>)}
-                </select>
-              </label>
-            ) : <p className="text-xs text-white/70 truncate">{tituloIS(is)}</p>}
-          </div>
+      <div className="h-14 px-3 flex items-center justify-between gap-2 shrink-0">
+        <div className="min-w-0 pl-1">
+          <h2 className="text-sm font-semibold text-white truncate">Assessor IA</h2>
+          {inspecoes.length > 1 ? (
+            <label className="block text-xs text-white/50">
+              <span className="sr-only">Inspeção de Saúde</span>
+              <select value={is.id} onChange={e => setIsId(e.target.value)} disabled={enviando}
+                className="max-w-[70vw] bg-black text-white/70 hover:text-white rounded text-xs truncate focus:outline-none">
+                {inspecoes.map(i => <option key={i.id} value={i.id}>{tituloIS(i)}</option>)}
+              </select>
+            </label>
+          ) : <p className="text-xs text-white/50 truncate">{tituloIS(is)}</p>}
         </div>
-        <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0 w-11 h-11 flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors">
-          <span className="material-symbols-outlined text-[20px]" aria-hidden="true">close</span>
+        <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0 w-10 h-10 flex items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors">
+          <Icone nome="close" tamanho={20} />
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto" aria-live="polite">
-        <div className="mx-auto w-full max-w-3xl px-4 py-4 md:py-6 space-y-4">
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
-            <p className="text-sm text-white/85">
-              Redijo a Entrevista, o Exame Clínico, a Conclusão, o Laudo e o CID da <strong>IS {is.is}</strong> ({is.finalidade}), juntando ao seu comando os exames, atestados e relatórios já enviados em PDF, as entrevistas gravadas e o histórico de IS do inspecionado.
-            </p>
-            <p className="text-xs font-bold uppercase tracking-widest text-gold">Sugestões de comandos</p>
-            <div className="flex flex-wrap gap-2">
-              {sugestoes.map(s => (
-                <button key={s.rotulo} type="button" disabled={enviando}
-                  onClick={() => { setTexto(s.comando); requestAnimationFrame(() => { const c = caixaRef.current; if (c) { c.focus(); c.setSelectionRange(c.value.length, c.value.length); } }); }}
-                  className="min-h-9 px-3 rounded-full border border-white/25 text-sm text-white hover:bg-white/10 disabled:opacity-50 text-left">
-                  {s.rotulo}
-                </button>
-              ))}
+        <div className={`mx-auto w-full max-w-3xl px-4 ${vazio ? 'h-full flex flex-col justify-center' : 'py-6 space-y-6'}`}>
+          {vazio ? (
+            <div className="text-center space-y-3 -mt-10">
+              <h3 className="font-heading text-h2 text-white">Como posso ajudar com a IS {is.is}?</h3>
+              <p className="text-sm text-white/50 max-w-xl mx-auto">
+                Redijo a Entrevista, o Exame Clínico, a Conclusão, o Laudo e o CID com os documentos em PDF, as entrevistas gravadas e o histórico de IS do inspecionado.
+              </p>
             </div>
-          </div>
-
-          {itens.map(item => item.papel === 'usuario' ? (
+          ) : itens.map(item => item.papel === 'usuario' ? (
             <div key={item.id} className="flex justify-end">
-              <p className="max-w-[85%] bg-white/15 text-white rounded-xl rounded-br-sm px-4 py-2 text-sm whitespace-pre-wrap break-words">{item.texto}</p>
+              <p className="max-w-[85%] bg-white/10 text-white rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words">{item.texto}</p>
             </div>
           ) : (
-            <div key={item.id} className="space-y-3">
-              {item.resposta.mensagem && (
-                <div className="flex gap-2">
-                  <span className="material-symbols-outlined text-[20px] text-gold shrink-0 mt-1" aria-hidden="true">auto_awesome</span>
-                  <p className="bg-white/5 border border-white/10 rounded-xl rounded-tl-sm px-4 py-2 text-sm text-white/90 whitespace-pre-wrap break-words">{item.resposta.mensagem}</p>
-                </div>
-              )}
+            <div key={item.id} className="space-y-4">
+              {item.resposta.mensagem && <p className="text-sm text-white/90 leading-relaxed whitespace-pre-wrap break-words">{item.resposta.mensagem}</p>}
               {item.resposta.avisos.map(a => (
-                <p key={a} role="note" className="flex gap-2 bg-gold/15 border border-gold/30 rounded-lg px-3 py-2 text-xs text-white">
-                  <span className="material-symbols-outlined text-[16px] shrink-0" aria-hidden="true">warning</span>{a}
+                <p key={a} role="note" className="flex gap-2 text-xs text-gold">
+                  <Icone nome="warning" />{a}
                 </p>
               ))}
               {camposDa(item.resposta).map(c => {
                 const chaveItem = `${item.id}:${c.chave}`;
-                return <CartaoCampo key={chaveItem} campo={c} inserido={inseridos.has(chaveItem)} inserindo={inserindo === chaveItem} onInserir={() => pedirInsercao(chaveItem, c)} />;
+                return <BlocoCampo key={chaveItem} campo={c} inserido={inseridos.has(chaveItem)} inserindo={inserindo === chaveItem} onCopiar={() => void copiarEInserir(chaveItem, c)} />;
               })}
             </div>
           ))}
 
           {enviando && (
-            <div role="status" className="flex items-center gap-2 text-sm text-white/70">
-              <span className="material-symbols-outlined animate-spin text-[20px] text-gold" aria-hidden="true">progress_activity</span>
-              O Assessor está lendo os dados da IS e redigindo… pode levar até um minuto.
+            <div role="status" className="flex items-center gap-2 text-sm text-white/50">
+              <Icone nome="progress_activity" girando tamanho={18} />
+              Lendo os dados da IS e redigindo… pode levar até um minuto.
             </div>
           )}
-          {erro && <div role="alert" className="bg-wine/20 border border-wine/60 rounded-xl p-3 text-sm text-white font-semibold">{erro}</div>}
+          {erro && <p role="alert" className="flex gap-2 text-sm text-white"><Icone nome="error" tamanho={18} />{erro}</p>}
           <div ref={fimRef} />
         </div>
       </div>
 
-      <form className="shrink-0 border-t border-white/10 bg-black" onSubmit={e => { e.preventDefault(); void enviar(texto); }}>
-        <div className="mx-auto w-full max-w-3xl px-4 py-3 space-y-1">
-          <div className="flex items-end gap-2">
+      <form className="shrink-0 px-4 pb-4" onSubmit={e => { e.preventDefault(); void enviar(texto); }}>
+        <div className="mx-auto w-full max-w-3xl space-y-3">
+          <div className="rounded-2xl border border-white/15 bg-white/5 focus-within:border-white/30 px-4 pt-3 pb-2 transition-colors">
             <label htmlFor="assessor-comando" className="sr-only">Comando para o Assessor</label>
             <textarea
-              id="assessor-comando" ref={caixaRef} value={texto} onChange={e => setTexto(e.target.value)} rows={3}
+              id="assessor-comando" ref={caixaRef} value={texto} onChange={e => setTexto(e.target.value)} rows={2}
               placeholder={`Ex.: Redija a IS ${is.is}. Inspecionado relata…`}
-              onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void enviar(texto); } }}
-              className="w-full min-h-10 max-h-60 resize-y bg-white/5 border border-white/20 rounded-lg px-3 py-2 text-base md:text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white/60 focus:ring-1 focus:ring-white/60"
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void enviar(texto); } }}
+              className="w-full max-h-60 resize-none bg-transparent text-base md:text-sm text-white placeholder:text-white/40 focus:outline-none"
             />
-            <button type="submit" className={`${botaoEscuro(true)} min-h-10 px-4`} disabled={!texto.trim() || enviando} aria-busy={enviando || undefined} aria-label="Enviar comando">
-              <Icone nome={enviando ? 'progress_activity' : 'send'} girando={enviando} />Enviar
-            </button>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-white/40">Enter envia · Shift+Enter quebra a linha</span>
+              <button type="submit" disabled={!texto.trim() || enviando} aria-busy={enviando || undefined} aria-label="Enviar comando" title="Enviar"
+                className="w-8 h-8 rounded-lg bg-white text-black flex items-center justify-center hover:bg-white/85 disabled:bg-white/20 disabled:text-white/40 disabled:cursor-not-allowed transition-colors">
+                <Icone nome={enviando ? 'progress_activity' : 'arrow_upward'} girando={enviando} tamanho={18} />
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-white/50">Ctrl+Enter envia. A IA pode errar: confira cada texto antes de inserir — o laudo é ato do perito.</p>
+          {vazio && chips}
+          <p className="text-center text-xs text-white/40">A IA pode errar: confira cada texto antes de copiar para a IS — o laudo é ato do perito.</p>
         </div>
       </form>
 
       {confirmar && (
         <ConfirmDialog
           title={`Substituir ${confirmar.campo.titulo}?`}
-          message={<>A IS já tem um texto diferente neste campo. Inserir o texto do Assessor substitui o atual.</>}
+          message={<>O texto foi copiado. A IS já tem um texto diferente neste campo: substituir pelo texto do Assessor?</>}
           confirmLabel="Substituir"
           onConfirm={() => { const c = confirmar; setConfirmar(null); void executarInsercao(c.chave, c.campo); }}
           onCancel={() => setConfirmar(null)}
