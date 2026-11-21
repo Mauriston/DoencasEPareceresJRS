@@ -11,6 +11,7 @@
 //  3. validarLaudo: aplica as `verificacoes` declarativas do JSON ao laudo identificado, às restrições e ao
 //     contexto da IS (utils/contextoLaudo.ts). Condição de contexto sem dado → `nivelSemDado` (ou nada).
 import type { ContextoLaudo } from './contextoLaudo';
+import { pathForView } from '../config/routes';
 
 // ------------------------------------------------------------------ tipos do JSON
 
@@ -266,4 +267,11 @@ export const validarLaudo = (f: FormasConclusao, e: EntradaValidacao): Resultado
   const finais = ids.has('VDF_SMI_FORMA') ? achados.filter(a => a.id !== 'LAUDO_NAO_PERMITIDO') : achados;
   finais.sort((a, b) => (a.severidade === b.severidade ? 0 : a.severidade === 'erro' ? -1 : 1));
   return { regra, laudo, parecido: laudo ? null : modeloMaisParecido(f, e.laudo, permitidos), emProrrogacao, achados: finais };
+};
+
+/** "6.2.2.e; 6.3.2.a.I" → links para a página DGPM-406 no capítulo, destacando o item (?cap=6&item=6.2.2). */
+export const linkItemDgpm = (ref: string): string | null => {
+  const m = ref.trim().match(/^(\d{1,2})((?:\.\d+)*)/);
+  if (!m || !m[2]) return null;
+  return `${pathForView('dgpm406')}?cap=${m[1]}&item=${encodeURIComponent(m[1] + m[2])}`;
 };

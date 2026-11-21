@@ -31,7 +31,7 @@ import { LinkPdf } from './ui/LinkPdf';
 import { NavContext } from '../context/NavContext';
 import { termosPericia } from '../config/termosPericia';
 import { canAccessPage, canUseFeature } from '../config/permissions';
-import { pathForView, concursoPath, concursosDiaPath } from '../config/routes';
+import { pathForView, concursoPath, concursosDiaPath, fichaPath } from '../config/routes';
 import { observarConcursos, type ConcursoRecord } from '../services/firestoreConcursos';
 import { observarPareceres, statusEfetivo, PRAZO_ATRASO_DIAS as PRAZO_PARECER_DIAS, type ParecerRecord } from '../services/firestorePareceres';
 import { observarInspecoes, type InspecaoRecord } from '../services/firestoreInspecoes';
@@ -168,7 +168,6 @@ export const Home: React.FC = () => {
 
   const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
   useEffect(() => (podePareceres ? observarPareceres(setPareceres, () => { /* silencioso */ }) : undefined), [podePareceres]);
-  const atrasados = useMemo(() => pareceres.filter(p => statusEfetivo(p) === 'atrasado'), [pareceres]);
   const naoConcluidos = useMemo(() => pareceres.filter(p => p.status !== 'concluido'), [pareceres]);
 
   const [inspecoes, setInspecoes] = useState<InspecaoRecord[]>([]);
@@ -184,6 +183,13 @@ export const Home: React.FC = () => {
     .sort((a, b) => a.dataEntrevista.localeCompare(b.dataEntrevista) || a.is - b.is), [inspecoes, hoje]);
   const semAgendamento = useMemo(() => inspecoes.filter(i => aguardaAgendamento(i.status) && !i.dataEntrevista), [inspecoes]);
   const isAtrasadas = useMemo(() => inspecoes.filter(i => statusEfetivoIS(i, hoje) === 'atrasada'), [inspecoes, hoje]);
+  // "IS MSG pendentes": IS com a Minuta MSG (de cancelamento por falta) nas pendências.
+  const isMsgPendentes = useMemo(() => inspecoes.filter(temMinutaFaltaPendente), [inspecoes]);
+  // "IS pendentes" (exceto Secretaria): entrevistados aguardando conclusão, da junta do perfil
+  // (Médicos → JRS; Médicos MPI → MPI; Admin → JRS e MPI).
+  const ampPendentes: 'JRS' | 'MPI' | null = perfil === 'user_medicos' ? 'JRS' : perfil === 'user_medicos_mpi' ? 'MPI' : null;
+  const isPendentes = useMemo(() => inspecoes.filter(i => i.situacao !== 'finalizada' && !!i.dataEntrevista && dataDeEntrevista(i.dataEntrevista) < hoje
+    && (!ampPendentes || i.amp === ampPendentes)), [inspecoes, hoje, ampPendentes]);
   // E-mails pendentes da IS (Admin e Secretaria — inspecoes.enviarEmails): as listas do menu "Enviar e-mails".
   const podeEmails = podeInspecoes && canUseFeature('inspecoes.enviarEmails', perfil);
   const [militares, setMilitares] = useState<MilitarRecord[]>([]);
@@ -283,12 +289,16 @@ export const Home: React.FC = () => {
       dica: proximaIS ? `Próxima às ${horaDeEntrevista(proximaIS.dataEntrevista)} · ${nomeCurtoInspecionado(proximaIS.inspecionado)}` : isDeHoje.length ? 'Nenhuma a seguir' : 'Nenhuma agendada',
     },
     {
-      id: 'pareceres-atrasados', rotulo: 'Pareceres atrasados', valor: atrasados.length, to: '/pareceres?situacao=atrasado', permitido: podePareceres,
-      atraso: true, dica: `${PRAZO_PARECER_DIAS} dias ou mais sem conclusão`,
+      id: 'is-msg-pendentes', rotulo: 'IS MSG pendentes', valor: isMsgPendentes.length, to: '/inspecoes?situacao=msg_pendentes&visao=tabela', permitido: podeInspecoes,
+      atraso: isMsgPendentes.length > 0, dica: 'Minuta MSG de cancelamento por falta',
     },
-    {
+    ehSecretaria ? {
       id: 'is-sem-agendamento', rotulo: 'IS sem agendamento', valor: semAgendamento.length, to: '/inspecoes?situacao=sem_agendamento', permitido: podeInspecoes,
       dica: isAtrasadas.length ? `${isAtrasadas.length} além do prazo` : 'Nenhuma além do prazo', dicaAtraso: isAtrasadas.length > 0,
+    } : {
+      id: 'is-pendentes', rotulo: 'IS pendentes', valor: isPendentes.length,
+      to: `/inspecoes?situacao=aguardando&visao=tabela${ampPendentes ? `&amp=${ampPendentes}` : ''}`, permitido: podeInspecoes,
+      dica: `Entrevistados aguardando conclusão${ampPendentes ? ` · ${ampPendentes}` : ' · JRS e MPI'}`,
     },
     {
       id: 'pm-vigentes', rotulo: ehAtestado ? 'Atestados vigentes' : 'Perícias menores vigentes', valor: vigentes.length,
@@ -335,7 +345,7 @@ export const Home: React.FC = () => {
         detalhe: `Parecer · ${p.especialidade}${p.criadoEm?.toDate ? ` · pedido em ${p.criadoEm.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : ''}`,
         prazo: { texto: `${dias} de ${PRAZO_PARECER_DIAS} dias`, pct: (dias / PRAZO_PARECER_DIAS) * 100, tom: atrasado ? 'atraso' : 'prazo' },
         tag: atrasado ? { rotulo: 'Atrasado', tom: 'danger' } : { rotulo: 'Solicitado', tom: 'navyOutline' },
-        to: '/pareceres', pdf: p.pdfUrl || undefined,
+        to: p.militarId ? `${fichaPath(p.militarId)}?aba=pareceres&reg=${encodeURIComponent(p.id)}` : '/pareceres', pdf: p.pdfUrl || undefined,
         ordem: atrasado ? 1000 + dias / PRAZO_PARECER_DIAS : dias / PRAZO_PARECER_DIAS,
       });
     });

@@ -8,6 +8,7 @@
 // quantas ocorrências há em cada capítulo/anexo.
 // O PDF integral abre numa nova aba pelo botão primário do cabeçalho.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Container, PageHeader } from './ui/Page';
 import { Button, ButtonLink } from './ui/Button';
 import { IconButton } from './ui/IconButton';
@@ -161,12 +162,15 @@ const ListaIndice: React.FC<{ ativo: string; onIr: (id: string) => void; contage
 // ─── Página ──────────────────────────────────────────────────────────────────
 
 export const DGPM406Guide: React.FC = () => {
-  // Sempre começa no Capítulo 1: estado local, sem ler URL nem armazenamento.
-  const [ativo, setAtivo] = useState<string>(INICIAL);
+  // Começa no Capítulo 1, salvo o deep link ?cap=N (capítulo) e ?item=6.2.2 (destaca e rola até o item) —
+  // usado pelos alertas de validação do laudo (components/inspecoes/conclusao/LaudoAssistidoIS.tsx).
+  const [searchParams] = useSearchParams();
+  const capParam = searchParams.get('cap');
+  const [ativo, setAtivo] = useState<string>(() => (capParam && ORDEM.some(i => i.id === `c${capParam}`) ? `c${capParam}` : INICIAL));
   const [indiceAberto, setIndiceAberto] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFalhou, setPdfFalhou] = useState(false);
-  const [termo, setTermo] = useState('');
+  const [termo, setTermo] = useState(() => (searchParams.get('item') || '').slice(0, 40));
   const [buscaMobile, setBuscaMobile] = useState(false);
   const conteudo = useRef<HTMLDivElement>(null);
   const { open: openPdf, busy: baixandoPdf } = useStoragePdf();
