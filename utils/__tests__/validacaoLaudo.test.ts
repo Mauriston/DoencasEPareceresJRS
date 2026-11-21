@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import formas from '../../data/formasConclusaoIS.json';
 import finalidadesApp from '../../public/finalidadesIS.json';
 import {
-  identificarLaudo, montarLaudo, regraDaIS, validarLaudo, camposPendentes, compilarModelo,
+  identificarLaudo, regraDaIS, validarLaudo, compilarModelo,
   type FormasConclusao,
 } from '../validacaoLaudo';
 import { derivarContexto, tipoServicoDoCadastro, type ContextoLaudo } from '../contextoLaudo';
@@ -143,14 +143,5 @@ describe('contexto', () => {
     expect(c.historicoDisponivel).toBe(false);
     expect(c.ltsAnterior).toBeNull();
     expect(c.tipoServico).toBe('SMV');
-  });
-});
-
-describe('montarLaudo', () => {
-  it('preenche campos, "(não)" e trechos opcionais', () => {
-    const m = F.laudos.SAM_INCAP_TEMP.modelo;
-    expect(montarLaudo(m, { tempo_dias: '30' }, true)).toBe('Incapaz temporariamente para o SAM, necessitando de 30 dias de LTS (em prorrogação)');
-    const t = montarLaudo(F.laudos.DSAM_INCAP_TEMP.modelo, { doenca_cid: 'Lombalgia, CID-10 M54.5' });
-    expect(camposPendentes(t)).toEqual(['com_ou_sem']);
   });
 });
