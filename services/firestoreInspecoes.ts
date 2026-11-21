@@ -129,6 +129,12 @@ export interface InspecaoDoc {
   cid?: string;
   /** Código SUBCAT do CID, sem ponto (ex.: "M545"). */
   cidCodigo?: string;
+  // ----- Redação da IS pelo Assessor IA (utils/assessorIA.ts; opcionais) -----
+  /** Entrevista, Exame Clínico e Conclusão inseridos a partir do Assessor IA (editáveis depois). Ausentes até a
+   *  primeira inserção — o detalhe só mostra o campo quando a chave existe. */
+  redacaoEntrevista?: string;
+  redacaoExameClinico?: string;
+  redacaoConclusao?: string;
   /** Períodos de LTS/Restrições calculados pela IA depois da finalização (services/afastamentosIS.ts). */
   afastamentos?: AfastamentoIS[];
   /** Marcador do processamento em segundo plano (hash da entrada, situação, tentativas). */

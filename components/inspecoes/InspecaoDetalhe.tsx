@@ -54,6 +54,8 @@ import { EnviarExamesISDialog } from './exames/EnviarExamesISDialog';
 import { HistoricoEmailsIS } from './emails/HistoricoEmailsIS';
 import { GuiasExamesCard } from './guias/GuiasExamesCard';
 import { CampoCidIS } from './conclusao/CampoCidIS';
+import { CampoRedacaoIS } from './conclusao/CampoRedacaoIS';
+import { CAMPOS_REDACAO, patchInserirCid, type CampoRedacao } from '../../utils/assessorIA';
 import { PrintsSinaisIS } from './conclusao/PrintsSinaisIS';
 import { atualizarInspecao, type InspecaoDoc, type InspecaoRecord } from '../../services/firestoreInspecoes';
 import { registrarEventoInspecionado } from '../../services/eventosInspecionado';
@@ -288,6 +290,17 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   );
   const ds1a = useCampoAuto(is.ds1a || '', v => gravarCampo('ds1a', v));
   const observacoes = useCampoAuto(is.observacoes || '', v => gravarCampo('observacoes', v));
+  // Redação da IS (Assessor IA): Entrevista, Exame Clínico e Conclusão — só aparecem depois da primeira inserção.
+  const gravarRedacao = (campo: CampoRedacao) => (v: string) => gravar(atual => {
+    const valor = v.trim();
+    return { patch: (valor === String(atual[campo] ?? '').trim() ? {} : { [campo]: valor }) as Partial<InspecaoDoc>, concluirPareceres: false };
+  });
+  const redacao: Record<CampoRedacao, ReturnType<typeof useCampoAuto>> = {
+    redacaoEntrevista: useCampoAuto(is.redacaoEntrevista || '', gravarRedacao('redacaoEntrevista')),
+    redacaoExameClinico: useCampoAuto(is.redacaoExameClinico || '', gravarRedacao('redacaoExameClinico')),
+    redacaoConclusao: useCampoAuto(is.redacaoConclusao || '', gravarRedacao('redacaoConclusao')),
+  };
+  const camposRedacao = CAMPOS_REDACAO.filter(c => is[c.campo] !== undefined);
   const tis = useCampoAuto(is.tis || '', v => {
     const t = v.trim();
     if (t === (atualRef.current.tis || '')) { setErroTis(''); return; }
@@ -339,9 +352,16 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const [cidLocal, setCidLocal] = useState(is.cid || '');
   useEffect(() => { setCidLocal(is.cid || ''); }, [is.cid]);
   const semCid = faltaCid({ grupoFinalidade: estadoConclusao.grupoFinalidade, cid: cidLocal });
+  // Fora de Verificações e Términos o CID não é obrigatório, mas o campo aparece quando o Assessor IA inseriu um.
+  const mostraCid = comCid || !!is.cid?.trim();
   const escolherCid = (c: CidItem | null) => {
     setCidLocal(c?.DESCRABREV ?? '');
-    gravar(atual => ({ patch: patchCid(comPadroes(atual), c ? { descrAbrev: c.DESCRABREV, subcat: c.SUBCAT } : null), concluirPareceres: false }));
+    gravar(atual => ({
+      patch: comCid
+        ? patchCid(comPadroes(atual), c ? { descrAbrev: c.DESCRABREV, subcat: c.SUBCAT } : null)
+        : c ? patchInserirCid(atual.cid, { descrAbrev: c.DESCRABREV, subcat: c.SUBCAT }) : (atual.cid ? { cid: '', cidCodigo: '' } : {}),
+      concluirPareceres: false,
+    }));
   };
 
   // Data da Conclusão (aparece com o DS-1a): hoje, editável; só é gravada pelo "Concluir IS".
@@ -495,6 +515,9 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                   <LinhaTabela rotulo="Abertura IS">{is.dataAbertura ? dataBr(is.dataAbertura) : ''}</LinhaTabela>
                   <LinhaTabela rotulo="Entrevista">{is.dataEntrevista ? dataBr(dataDeEntrevista(is.dataEntrevista)) : ''}</LinhaTabela>
                   <LinhaTabela rotulo="Médico">{is.peritoNome?.trim() || ''}</LinhaTabela>
+                  {camposRedacao.map(c => (
+                    <LinhaTabela key={c.campo} rotulo={c.rotulo}><CampoRedacaoIS rotulo={c.rotulo} valor={String(is[c.campo] ?? '')} /></LinhaTabela>
+                  ))}
                   <LinhaTabela rotulo="Laudo">
                     {textoLaudo ? (
                       <>
@@ -571,6 +594,14 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
 
           {cards}
 
+          {camposRedacao.length > 0 && (
+            <div className="space-y-4">
+              {camposRedacao.map(c => conclusaoEditavel
+                ? <CampoRedacaoIS key={c.campo} rotulo={c.rotulo} valor={redacao[c.campo].valor} onChange={redacao[c.campo].onChange} onBlur={redacao[c.campo].onBlur} />
+                : <CampoRedacaoIS key={c.campo} rotulo={c.rotulo} valor={String(is[c.campo] ?? '')} />)}
+            </div>
+          )}
+
           {!conclusaoEditavel ? (
             <>
               <p className="text-xs text-ink-3">A Conclusão fica editável depois que a entrevista for agendada.</p>
@@ -618,7 +649,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
             </div>
           )}
 
-          {comCid && (
+          {mostraCid && (
             <CampoCidIS valor={cidLocal} onEscolher={escolherCid} erro={semCid && laudo.valor.trim() ? 'Informe o CID: obrigatório para finalizar a IS (DS-1a).' : undefined} />
           )}
 

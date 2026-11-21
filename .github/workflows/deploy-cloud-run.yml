@@ -40,6 +40,12 @@ on:
       - '.github/workflows/deploy-cloud-run.yml'
       - 'utils/aniversarios.ts'
       - 'scripts/agendador/**'
+      # Assessor IA: a skill (lida pelo servidor) e as regras que o servidor importa.
+      - 'assessor/skill/**'
+      - 'data/formasConclusaoIS.json'
+      - 'utils/contextoLaudo.ts'
+      - 'utils/validacaoLaudo.ts'
+      - 'utils/finalidadesMultiplas.ts'
   workflow_dispatch:
 
 permissions:

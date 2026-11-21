@@ -5,3 +5,5 @@ dist
 *.md
 .env
 .env.local
+# Skill do Assessor IA (servidor/assessor/referencias.ts lê os .md em tempo de execução).
+!assessor/skill/**/*.md
