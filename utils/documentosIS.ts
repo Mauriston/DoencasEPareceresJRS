@@ -48,7 +48,7 @@ export const ehGrupoBeneficios = (is: ISParaDocumento) => mesmo(is.grupoFinalida
 export const ehGrupoVerificacoes = (is: ISParaDocumento) => mesmo(is.grupoFinalidade, GRUPO_VERIFICACOES);
 /** VDF (todas as variantes) ou Término de Incapacidade. */
 export const ehVdfOuTermino = (is: ISParaDocumento) => ehVerificacaoOuTermino(is.finalidade || '', is.grupoFinalidade);
-export const ehIsencaoIR = (is: ISParaDocumento) => /isencao de imposto de renda/.test(normalizarTexto(is.finalidade || ''));
+export const ehIsencaoIR = (is: ISParaDocumento) => /isencao de (pagamento de )?imposto de renda/.test(normalizarTexto(is.finalidade || ''));
 /** Laudo de NÃO enquadramento na Lei 7.713/1988 ("Não apresenta histórico médico de doença especificada…"). */
 export const laudoNaoEnquadramento = (laudo: string | undefined) => /^\s*(o\(a\) inspecionado\(a\)\s*)?nao (apresenta|tem) historico medico/.test(normalizarTexto(laudo || ''));
 /** As 3 redações de enquadramento (DGPM-406 9.1.6 "g"): reforma por acidente em serviço/doença ocupacional;

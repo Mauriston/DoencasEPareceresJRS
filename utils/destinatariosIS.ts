@@ -85,7 +85,7 @@ export const finalidadeDaTabela = (finalidade: string, grupoFinalidade?: string)
     [/^termino de incapacidade/, 'Término de Incapacidade'],
     [/^termino de restricoes/, 'Término de Restrições'],
     // Benefícios (grupo "Benefícios" do finalidadesIS.json): a situação do inspecionado decide a linha.
-    [/^(auxilio[ -]invalidez|reforma de militar rm1|is para verificacao de preexistencia|isencao de (pagamento de )?imposto de renda|pensao |dependencia de familiar|beneficios\b)/, 'Benefícios'],
+    [/^(auxilio[ -]invalidez|reforma de militar rm1|(is para verificacao de )?preexistencia|concessao de auxilio|isencao de (pagamento de )?imposto de renda|pensao |dependencia de familiar|beneficios\b)/, 'Benefícios'],
     // Grupo "Justiça e Disciplina": exame de sanidade em IPM, reintegração de militar.
     [/^(exame de sanidade|reintegracao de militar)/, 'Justiça e Disciplina'],
   ];

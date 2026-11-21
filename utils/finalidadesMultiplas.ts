@@ -6,6 +6,8 @@
 // laudos, um por finalidade, em `laudosFinalidades`; o `laudo` (texto) só é preenchido quando TODAS as
 // finalidades têm laudo — assim as regras de status/TIS (utils/conclusaoIS.ts) exigem um laudo por finalidade.
 
+import { partesDaFinalidade } from './finalidadesCompostas';
+
 export const SEPARADOR_FINALIDADES = ' / ';
 
 export interface LaudoFinalidade { finalidade: string; laudo: string }
@@ -38,7 +40,8 @@ export const laudoComposto = (laudos: LaudoFinalidade[]): string => {
 
 /** Laudos por finalidade iniciais de uma IS (docs antigos com uma finalidade: o `laudo` existente). */
 export const laudosDaIS = (is: { finalidade?: string; finalidades?: string[]; laudo?: string; laudosFinalidades?: LaudoFinalidade[] }): LaudoFinalidade[] => {
-  const lista = finalidadesDaIS(is);
+  // Finalidade composta ("Deixar o SAM / VDF ou TR ou TI"): um laudo para cada parte.
+  const lista = finalidadesDaIS(is).flatMap(partesDaFinalidade);
   if (is.laudosFinalidades?.length) return alinharLaudos(lista, is.laudosFinalidades);
   if (lista.length === 1) return [{ finalidade: lista[0], laudo: is.laudo || '' }];
   return alinharLaudos(lista);

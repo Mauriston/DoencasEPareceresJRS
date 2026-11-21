@@ -76,18 +76,35 @@ export const numeroDaIs = (texto: string | undefined): string => String(texto ||
  * Funcional"). Null se nenhuma servir.
  */
 export const acharFinalidade = (texto: string | undefined, grupos: GrupoFinalidadeIS[]): { finalidade: string; grupo: string; amp: string } | null => {
-  const alvo = chave(texto);
+  // "BENEFÍCIO: PREEXISTÊNCIA…" / "BENEFÍCIO - ISENÇÃO…": sem o prefixo do grupo.
+  const alvo = chave(String(texto || '').replace(/^\s*benef[ií]cios?\s*[:\-–]\s*/i, ''));
   if (!alvo) return null;
   let melhor: { finalidade: string; grupo: string; amp: string; tam: number } | null = null;
   for (const g of grupos) {
     for (const f of g.finalidades) {
       const k = chave(f.nome);
       if (!k) continue;
-      if (k === alvo) return { finalidade: f.nome, grupo: g.grupo, amp: f.amp };
-      if ((alvo.startsWith(`${k} `)) && (!melhor || k.length > melhor.tam)) melhor = { finalidade: f.nome, grupo: g.grupo, amp: f.amp, tam: k.length };
+      const grupo = f.grupoRegras ?? g.grupo;
+      if (k === alvo) return { finalidade: f.nome, grupo, amp: f.amp };
+      if ((alvo.startsWith(`${k} `)) && (!melhor || k.length > melhor.tam)) melhor = { finalidade: f.nome, grupo, amp: f.amp, tam: k.length };
     }
   }
   return melhor ? { finalidade: melhor.finalidade, grupo: melhor.grupo, amp: melhor.amp } : null;
+};
+
+/**
+ * Todas as finalidades do texto do SINAIS: o texto inteiro (ex.: a composta "DEIXAR O SAM / VDF OU TR OU TI")
+ * ou, sem correspondência, cada parte separada por vírgula ("BENEFÍCIO: PREEXISTÊNCIA DE DOENÇA ESPECIFICADA EM
+ * LEI , ISENÇÃO DE PAGAMENTO DE IMPOSTO DE RENDA" → 2 finalidades). Sem repetição; vazio se nenhuma servir.
+ */
+export const acharFinalidades = (texto: string | undefined, grupos: GrupoFinalidadeIS[]): { finalidade: string; grupo: string; amp: string }[] => {
+  const inteira = acharFinalidade(texto, grupos);
+  const t = String(texto || '').replace(/^\s*benef[ií]cios?\s*[:\-–]\s*/i, '');
+  const partes = t.split(',').map(s => s.trim()).filter(Boolean);
+  if (partes.length < 2) return inteira ? [inteira] : [];
+  const achadas = partes.map(p => acharFinalidade(p, grupos)).filter((x): x is NonNullable<typeof x> => !!x);
+  const unicas = achadas.filter((a, i) => achadas.findIndex(b => b.finalidade === a.finalidade) === i);
+  return unicas.length ? unicas : inteira ? [inteira] : [];
 };
 
 /** Laudo(s) da foto 2 num só texto (vários laudos separados por " / "). */
@@ -126,6 +143,10 @@ export interface PropostaImportacao {
   nip: string;
   amp: AmpImportacao | '';
   finalidade: string;
+  /** Todas as finalidades lidas (IS com mais de uma: Benefícios); a 1ª é `finalidade`. */
+  finalidades: string[];
+  /** Laudo de cada finalidade (tabela "Laudos" da conclusão), quando há mais de uma. */
+  laudosFinalidades: { finalidade: string; laudo: string }[];
   grupoFinalidade: string;
   /** Texto da finalidade lido (quando não corresponde a nenhuma finalidade do app). */
   finalidadeLida: string;
@@ -176,8 +197,16 @@ export const proporImportacao = (
   if (atual && nip && atual.inspecionadoId && atual.inspecionadoId !== nip) return { proposta: null, erro: `IS ${numero}: o NIP da foto não confere com o da IS cadastrada.` };
   const avisos: string[] = [];
 
-  const achada = acharFinalidade(d?.finalidadeTis, grupos) ?? acharFinalidade(c?.finalidade, grupos) ?? acharFinalidade(c?.laudos?.[0]?.finalidade, grupos)
-    ?? (atual ? acharFinalidade(atual.finalidade, grupos) : null);
+  const listaLida = [d?.finalidadeTis, c?.finalidade].map(t => acharFinalidades(t, grupos)).find(l => l.length) ?? [];
+  const doLaudo = (c?.laudos ?? []).map(l => acharFinalidade(l.finalidade, grupos)).filter((x): x is NonNullable<typeof x> => !!x);
+  const listaFinalidades = listaLida.length ? listaLida : doLaudo.filter((a, i) => doLaudo.findIndex(b => b.finalidade === a.finalidade) === i);
+  const achada = listaFinalidades[0] ?? (atual ? acharFinalidade(atual.finalidade, grupos) : null);
+  const finalidades = listaFinalidades.length ? listaFinalidades.map(f => f.finalidade) : achada ? [achada.finalidade] : [];
+  // Um laudo por finalidade: cada linha da tabela "Laudos" casada com a sua finalidade.
+  const laudosFinalidades = finalidades.length > 1 ? finalidades.map(f => ({
+    finalidade: f,
+    laudo: String((c?.laudos ?? []).find(l => acharFinalidade(l.finalidade, grupos)?.finalidade === f)?.laudo || '').replace(/\s+/g, ' ').trim(),
+  })) : [];
   const finalidadeLida = (d?.finalidadeTis || c?.finalidade || '').trim();
   if (!achada) avisos.push(finalidadeLida ? `Finalidade "${finalidadeLida}" não identificada: escolha na lista.` : 'Finalidade não lida: escolha na lista.');
   const ampJunta = ampDaJunta(d?.junta);
@@ -210,7 +239,7 @@ export const proporImportacao = (
 
   return {
     proposta: {
-      numero, nip, amp, finalidade: achada?.finalidade ?? '', grupoFinalidade: achada?.grupo ?? '', finalidadeLida,
+      numero, nip, amp, finalidade: achada?.finalidade ?? '', finalidades, laudosFinalidades, grupoFinalidade: achada?.grupo ?? '', finalidadeLida,
       dataAbertura, dataAgendamento, temDados: !!d, temConclusao: !!c, laudo, dataLaudo, dataConclusao, cidCodigo, restricoes, tis, ds1a, avisos,
     },
     erro: '',

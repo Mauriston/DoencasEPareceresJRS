@@ -2,6 +2,7 @@
 // Hierarquia Corpo → Quadro → Especialidades / Postos-Graduações da MB
 // (public/corposQuadrosMB.json) e lista de OM (public/omsMB.json), usadas
 // nos campos em cascata do formulário de cadastro de militares.
+import { FINALIDADES_COMPOSTAS, GRUPO_COMPOSTAS } from './finalidadesCompostas';
 
 export type Vinculo = 'Carreira' | 'Temporário';
 export type CategoriaMilitar = 'Oficial' | 'Praça' | 'Servidor Civil';
@@ -129,13 +130,18 @@ export const carregarCid = (): Promise<CidItem[]> => {
 };
 
 export type VinculoFinalidade = 'Carreira' | 'Temporário' | 'Inativo' | 'Pensionista' | 'Dependente';
-export interface FinalidadeIS { nome: string; amp: string; vinculos: VinculoFinalidade[] }
+export interface FinalidadeIS {
+  nome: string; amp: string; vinculos: VinculoFinalidade[];
+  /** Grupo cujas regras valem para a finalidade quando difere do grupo do menu (finalidades compostas). */
+  grupoRegras?: string;
+}
 export interface GrupoFinalidadeIS { grupo: string; finalidades: FinalidadeIS[] }
 
 let cacheFinalidades: Promise<GrupoFinalidadeIS[]> | null = null;
 /** Finalidades de IS por grupo, com AMP competente e vínculos aplicáveis (public/finalidadesIS.json). */
 export const carregarFinalidadesIS = (): Promise<GrupoFinalidadeIS[]> => {
-  if (!cacheFinalidades) cacheFinalidades = carregarJson<{ grupos: GrupoFinalidadeIS[] }>('finalidadesIS.json').then(j => j.grupos).catch(e => { cacheFinalidades = null; throw e; });
+  if (!cacheFinalidades) cacheFinalidades = carregarJson<{ grupos: GrupoFinalidadeIS[] }>('finalidadesIS.json')
+    .then(j => [...j.grupos, { grupo: GRUPO_COMPOSTAS, finalidades: FINALIDADES_COMPOSTAS }]).catch(e => { cacheFinalidades = null; throw e; });
   return cacheFinalidades;
 };
 
