@@ -1,0 +1,709 @@
+{
+  "metadados": {
+    "titulo": "Formas de conclusão das IS por finalidade — DGPM-406 (9ª Rev.)",
+    "fonte": "content/dgpm-406 (capítulos 4, 6, 8 e 11)",
+    "gerado_em": "2026-11-21",
+    "nota": "Textos dos laudos transcritos da norma; campos entre parênteses/sublinhados devem ser completados pela JS."
+  },
+  "controle_trienal": {
+    "fonte": "DGPM-406, 4.1.2.a e 4.1.5",
+    "competencia": "MPI (declinar à JRS se houver possibilidade de início de restrições/incapacidade — alínea d do inciso 4.1.3)",
+    "finalidade_sinais": "Controle Trienal",
+    "formas_conclusao": [
+      {
+        "id": "a",
+        "laudo": "Apto para Controle Trienal"
+      },
+      {
+        "id": "b",
+        "laudo": "Apto para Controle Trienal, com restrições",
+        "observacoes": [
+          "Na IS declinada à JRS com pertinência de início de restrições, incluir a finalidade de VDF (laudo do Cap. 6) e concluir o controle periódico com este laudo (4.1.3.e).",
+          "Restrições previamente exaradas por JRS não podem ter natureza/período modificados pelo MPI (4.1.3.g).",
+          "Restrições vencidas: informar à OM na mensagem de conclusão (4.1.3.h)."
+        ]
+      },
+      {
+        "id": "c",
+        "laudo": "Inapto para Controle Trienal",
+        "condicao": "Laudo somente aplicado nos casos da alínea f do inciso 4.1.3 (IS declinada de finalidades de praça de máquinas, OTTO FUEL II/explosivos, reator nuclear, radiações ionizantes e terapia antineoplásica, quando houver LTS ou restrição que envolva a própria atividade)."
+      }
+    ],
+    "observacoes_gerais": [
+      "Em caso de incapacidade temporária (LTS) ou definitiva, a JRS arquiva a IS de controle periódico e exara o laudo de VDF correspondente, informando o arquivamento na mensagem de conclusão do VDF (4.1.3.e).",
+      "Não cabe IS de controle periódico para militar em LTS (4.1.3.k).",
+      "Portador assintomático do HIV: editar a finalidade para controle anual e exarar o laudo correspondente (4.1.3.j; 6.1.4.k).",
+      "Registrar comprovação do Calendário de Vacinação Militar (4.1.3.l)."
+    ]
+  },
+  "controle_semestral_raios_x": {
+    "fonte": "DGPM-406, 4.1.2.d, 4.1.3.a/b/f e 4.1.5",
+    "competencia": "MPI (declinar à JRS se houver possibilidade de início de restrições/incapacidade — alínea d do inciso 4.1.3)",
+    "finalidade_sinais": "Controle Semestral (radiações ionizantes / raios-X)",
+    "formas_conclusao": [
+      {
+        "id": "a",
+        "laudo": "Apto para Controle Semestral (radiações ionizantes / raios-X)"
+      },
+      {
+        "id": "b",
+        "laudo": "Apto para Controle Semestral (radiações ionizantes / raios-X), com restrições",
+        "observacoes": [
+          "Na IS declinada à JRS com pertinência de início de restrições, incluir a finalidade de VDF (laudo do Cap. 6) e concluir o controle periódico com este laudo (4.1.3.e).",
+          "Restrições previamente exaradas por JRS não podem ter natureza/período modificados pelo MPI (4.1.3.g).",
+          "Restrições vencidas: informar à OM na mensagem de conclusão (4.1.3.h)."
+        ]
+      },
+      {
+        "id": "c",
+        "laudo": "Inapto para Controle Semestral (radiações ionizantes / raios-X)",
+        "condicao": "Laudo somente aplicado nos casos da alínea f do inciso 4.1.3 (IS declinada de finalidades de praça de máquinas, OTTO FUEL II/explosivos, reator nuclear, radiações ionizantes e terapia antineoplásica, quando houver LTS ou restrição que envolva a própria atividade)."
+      }
+    ],
+    "observacoes_gerais": [
+      "Designação para operar com radiações ionizantes deve ser precedida de IS inicial; reavaliação semestral e em mudança de função ou transferência (4.1.3.a).",
+      "Validade semestral para a atividade; Órgãos de Pessoal podem considerar validade trienal para controle de carreira (4.1.3.b).",
+      "IS declinada à JRS: incluir VDF. LTS ou restrição que envolva a atividade → laudo 'Inapto' (c); restrição que não impede a atividade → laudo 'Apto, com restrições' (b) (4.1.3.f)."
+    ]
+  },
+  "vdf": {
+    "militares_de_carreira": {
+      "fonte": "DGPM-406, 6.1, 6.2.1 e 6.3",
+      "competencia": "JS (JRS)",
+      "prazo": "Conclusão em até 20 dias do comparecimento; excedido, exarar laudo adequado por 30 dias (6.2.1.b).",
+      "aptidao": [
+        {
+          "id": "6.3.1.a",
+          "laudo": "Apto para o SAM"
+        },
+        {
+          "id": "6.3.1.b",
+          "laudo": "Apto para o SAM (com restrições) (por tempo a declarar em dias)",
+          "observacoes": [
+            "Lançar as restrições no campo próprio.",
+            "Acrescentar 'em prorrogação' quando se tratar de IS para Término de Restrições.",
+            "Restrições por no máximo 6 meses por IS (6.1.4.e).",
+            "Restrições de embarque e manobras operativas podem ser classificadas em Tipo 1 ou Tipo 2 (6.1.3.r).",
+            "Portador assintomático do HIV (critérios da PN 3.551/2021): apto com restrição de embarque e manobras operativas Tipo 2, por até um ano (6.1.4.k)."
+          ]
+        },
+        {
+          "id": "6.3.1.c",
+          "laudo": "Apto para o SAM (com restrições) (por tempo a declarar em dias), devendo ser consideradas como LTS o afastamento laboral por motivo comprovado de saúde, no período de (dd/mm/aaaa) a (dd/mm/aaaa)",
+          "observacoes": [
+            "Lançar as restrições no campo próprio, quando couber."
+          ],
+          "condicao": "Aplicável sobretudo no Término de Incapacidade com LTS vencida em relação à data da conclusão (6.2.2.c/d)."
+        }
+      ],
+      "incapacidade_temporaria": [
+        {
+          "id": "6.3.2.a.I",
+          "laudo": "Incapaz temporariamente para o SAM, necessitando de (tempo a declarar em dias) de LTS",
+          "observacoes": [
+            "LTS de até 180 dias por IS (6.1.4.f).",
+            "Acrescentar 'em prorrogação' quando for IS por Término de Incapacidade, exceto no caso da alínea f do inciso 6.2.2."
+          ],
+          "texto_complementar": {
+            "campo": "texto complementar do SINAIS e mensagem de conclusão da IS",
+            "texto": "A condição atual tem relação com AO em aberto.",
+            "condicao": "Na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade ainda não tenha sido realizado."
+          }
+        },
+        {
+          "id": "6.3.2.a.II",
+          "laudo": "Incapaz Temporariamente para o SAM, por doença com relação de causa e efeito com o serviço, necessitando de ____ (tempo a declarar em dias) de LTS",
+          "condicao": "Laudo a ser exarado apenas na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade tenha sido realizado e a incapacidade laboral possua nexo causal com o referido acidente."
+        },
+        {
+          "id": "6.3.2.b",
+          "laudo": "Continua incapaz temporariamente para o SAM, por ser portador de (doença a declarar, por extenso e CID), doença sem relação de causa e efeito com o serviço, necessitando de (tempo a declarar, em dias ou meses) de LTS, não estando inválido, não necessitando de internação permanente, não necessitando de assistência ou cuidados permanentes de enfermagem",
+          "condicao": "Militar de carreira que necessita de prorrogação da LTS decorridos dois anos de agregação, sem critérios de incapacidade definitiva, doença prevista em lei, acidente em serviço ou doença profissional com nexo como motivadores (6.1.4.g).",
+          "observacoes": [
+            "Demanda revisão ex officio por JSD; se homologado, não cabe reapresentação para Término de Incapacidade (art. 106, III, do EM)."
+          ]
+        }
+      ],
+      "incapacidade_definitiva": [
+        {
+          "id": "6.3.2.c",
+          "laudo": "Incapaz definitivamente para o SAM por ser portador de (doença a declarar, por extenso e CID, acrescida do enquadramento ou não da condição de saúde em se tratando de doença do item V do art. 108 do EM), doença prevista no item (I a VI) do artigo 108 do Estatuto dos Militares, (não) estando inválido, estando total e permanentemente impossibilitado para todo e qualquer trabalho (somente nos casos de invalidez), (não) necessitando de internação permanente, (não) necessitando de assistência ou cuidados permanentes de enfermagem",
+          "itens_art_108_EM": {
+            "I": "ferimento recebido em campanha ou na manutenção da ordem pública",
+            "II": "enfermidade contraída em campanha ou na manutenção da ordem pública, ou enfermidade cuja causa eficiente decorra de uma dessas situações",
+            "III": "acidente em serviço",
+            "IV": "doença, moléstia ou enfermidade adquirida em tempo de paz, com relação de causa e efeito a condições inerentes ao serviço",
+            "V": "tuberculose ativa, alienação mental, esclerose múltipla, neoplasia maligna, cegueira, hanseníase, paralisia irreversível e incapacitante, cardiopatia grave, doença de Parkinson, pênfigo, espondiloartrose anquilosante, nefropatia grave, SIDA (AIDS) e outras moléstias que a lei indicar",
+            "VI": "acidente ou doença, moléstia ou enfermidade, sem relação de causa e efeito com o serviço"
+          },
+          "observacoes": [
+            "Declarar apenas um item; prevalece o que maiores benefícios propiciar ao inspecionado.",
+            "Itens I a IV devem ser comprovados por AO, ISO ou Ficha de Evacuação (§1º do art. 108 do EM).",
+            "Item V: atender à PN GM-MD nº 3.551/2021. Ex.: '... Insuficiência coronariana crônica, CID-10 I25.5 (Cardiopatia Grave)'; se não preencher critérios: '... Doença aterosclerótica do coração, CID-10 I25.1 (não é Cardiopatia Grave)'.",
+            "Alienação Mental: inserir em texto complementar 'Adotar medidas previstas no item 3.3 da Portaria Normativa GM-MD nº 3.551, de 26/08/2021'.",
+            "Registrar no TIS a existência de AO, ISO ou FE; concluir o Exame de Sanidade do AO se não realizado (6.1.4.i).",
+            "Avaliar invalidez e auxílio-invalidez (6.1.4.i; 9.1.2.a e 9.1.4.a).",
+            "Não há necessidade de enquadramento legal no laudo (competência dos órgãos de pessoal)."
+          ]
+        },
+        {
+          "id": "6.3.2.d",
+          "laudo": "Incapaz definitivamente para o exercício da especialidade de ____, estando apto para o SAM (com restrições) (por tempo a declarar em dias)",
+          "condicao": "Militares incapacitados para suas especialidades, porém aptos para outras tarefas militares."
+        }
+      ],
+      "alunos_cursos_formacao": {
+        "fonte": "DGPM-406, 6.2.4",
+        "condicao": "LTS de alunos dos Cursos de Formação",
+        "formas_conclusao": [
+          {
+            "id": "6.2.4.a",
+            "laudo": "Incapaz Temporariamente para o SAM, necessitando de ____ (tempo a declarar em dias) de LTS (em prorrogação)",
+            "texto_complementar": {
+              "campo": "texto complementar do SINAIS e mensagem de conclusão da IS",
+              "texto": "A condição atual tem relação com AO em aberto.",
+              "condicao": "Na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade ainda não tenha sido realizado."
+            }
+          },
+          {
+            "id": "6.2.4.b",
+            "laudo": "Incapaz Temporariamente para o SAM, por doença especificada no item V do art. 108 da Lei nº 6.880/1980, necessitando de ____ (tempo a declarar em dias) de LTS (em prorrogação)"
+          },
+          {
+            "id": "6.2.4.c",
+            "laudo": "Incapaz Temporariamente para o SAM, por doença com relação de causa e efeito com o serviço, necessitando de ____ (tempo a declarar em dias) de LTS (em prorrogação)",
+            "condicao": "Laudo a ser exarado apenas na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade tenha sido realizado e a incapacidade laboral possua nexo causal com o referido acidente."
+          }
+        ]
+      }
+    },
+    "militares_smv": {
+      "fonte": "DGPM-406, 11.8",
+      "competencia": "JRS",
+      "formas_conclusao": [
+        {
+          "id": "11.8.3.a",
+          "laudo": "Apto(a) para o SMV"
+        },
+        {
+          "id": "11.8.3.b",
+          "laudo": "Apto(a) para o SMV com restrições (discriminar quais, tempo a declarar e a expressão 'em prorrogação' se for o caso)",
+          "observacoes": [
+            "Restrições por até 36 meses, limitadas a 180 dias por IS; depois, apresentar para Deixar o SMV (11.8.2.b)."
+          ]
+        },
+        {
+          "id": "11.8.3.c",
+          "laudo": "Incapaz Temporariamente para o SMV, necessitando de ____ (tempo a declarar em dias) de LTS",
+          "texto_complementar": {
+            "campo": "texto complementar do SINAIS e mensagem de conclusão da IS",
+            "texto": "A condição atual tem relação com AO em aberto.",
+            "condicao": "Na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade ainda não tenha sido realizado."
+          }
+        },
+        {
+          "id": "11.8.3.d",
+          "laudo": "Incapaz Temporariamente para o SMV, por doença especificada no item V do art. 108 da Lei nº 6.880/80, necessitando de ____ (tempo a declarar em dias) de LTS"
+        },
+        {
+          "id": "11.8.3.e",
+          "laudo": "Incapaz Temporariamente para o SMV, por doença com relação de causa e efeito com o serviço, necessitando de ____ (tempo a declarar em dias) de LTS",
+          "condicao": "Laudo a ser exarado apenas na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade tenha sido realizado e a incapacidade laboral possua nexo causal com o referido acidente.",
+          "texto_complementar": {
+            "campo": "texto complementar do SINAIS e mensagem de conclusão da IS",
+            "texto": "A condição atual tem relação com AO em aberto.",
+            "condicao": "Na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade ainda não tenha sido realizado."
+          }
+        },
+        {
+          "id": "Cap.6 (6.3.2.c)",
+          "laudo": "Incapaz definitivamente para o SAM (laudo do Cap. 6)",
+          "condicao": "Invalidez inequívoca (qualquer causa), incapacidade definitiva por doença/sequela relacionada ao serviço (Exame de Sanidade do AO ou solução de ISO) ou por doença do inciso V do art. 108 do EM (11.8.2.e)."
+        }
+      ],
+      "observacoes_gerais": [
+        "Incapacidade temporária < 90 dias: reapresentar para Término de Incapacidade (11.8.2.c).",
+        "LTS ≥ 90 dias (consecutivos ou não) sem nexo com o serviço: não reapresentar; autoridade providencia licenciamento por conveniência do serviço (11.8.2.c).",
+        "LTS com nexo (AO preenchido até o campo III ou ISO) > 90 dias: reapresentar para Término de Incapacidade; recuperada a aptidão, apresentar para Deixar o SMV; esgotados tratamento/prazo de agregação, avaliar incapacidade definitiva (11.8.2.d)."
+      ]
+    },
+    "militares_smi": {
+      "fonte": "DGPM-406, 11.3",
+      "competencia": "JRS",
+      "formas_conclusao": [
+        {
+          "id": "11.3.3.a",
+          "laudo": "APTO A",
+          "descricao": "Preenche os requisitos regulamentares; pequenas lesões/doenças compatíveis com o SMI e sem gerar restrições."
+        },
+        {
+          "id": "11.3.3.b",
+          "laudo": "INCAPAZ B-1",
+          "descricao": "Incapacidade temporária recuperável em curto prazo (até um ano).",
+          "texto_complementar": {
+            "campo": "texto complementar do SINAIS e mensagem de conclusão",
+            "texto": "Período de afastamento recomendado e se há ou não relação com AO em aberto.",
+            "exemplo": "Incapaz B-1. Afastamento por sessenta dias. A condição atual tem relação com AO em aberto."
+          },
+          "observacoes": [
+            "Período < 90 dias: reapresentar para novo VDF com 20 dias de antecedência (11.3.2.b).",
+            "Afastamento ≥ 90 dias: não reapresentar; medidas administrativas de interrupção (arts. 138 e 140 do RLSM) (11.3.2.c).",
+            "Com nexo (AO até campo III ou ISO) e LTS > 90 dias: reapresentar para VDF (11.3.2.d)."
+          ]
+        },
+        {
+          "id": "11.3.3.c",
+          "laudo": "INCAPAZ B-2",
+          "descricao": "Incapacidade temporária recuperável em longo prazo (superior a um ano)."
+        },
+        {
+          "id": "11.3.3.d",
+          "laudo": "INCAPAZ C",
+          "descricao": "Incapacidade definitiva (irrecuperável), conforme IGISC, que não se enquadre na alínea e do inciso 11.3.2."
+        },
+        {
+          "id": "Cap.6 (6.3.2.c)",
+          "laudo": "Incapaz definitivamente para o SAM (laudo do Cap. 6)",
+          "condicao": "Hipóteses da alínea e do inciso 11.3.2 (invalidez, incapacidade definitiva com nexo comprovado ou doença do inciso V do art. 108 do EM)."
+        }
+      ],
+      "observacoes_gerais": [
+        "Laudos B-1, B-2 ou C não demandam revisão ex officio por JSD; providências administrativas a cargo dos ComDN."
+      ]
+    }
+  },
+  "termino_de_incapacidade": {
+    "militares_de_carreira": {
+      "fonte": "DGPM-406, 6.2.2 e 6.3 (formas idênticas ao VDF)",
+      "regras_de_aplicacao": [
+        "Reapresentação 10 dias antes do vencimento da LTS; conclusão em até 20 dias (6.2.2.a/b).",
+        "Aptidão após LTS, apresentado no prazo e com LTS vencida na data da conclusão → laudo 6.3.1.c (6.2.2.c).",
+        "Apresentado fora do prazo: 6.3.1.c se houver documentação médica do período descoberto; caso contrário 6.3.1.b, regularizando administrativamente o período (6.2.2.d).",
+        "Incapacidade temporária, no prazo ou com documentação do período em aberto → 6.3.2.a.I acrescido de 'em prorrogação' (retroage ao dia seguinte ao término da LTS anterior) (6.2.2.e).",
+        "Incapacidade temporária com licença vencida e sem documentação → 6.3.2.a.I sem 'em prorrogação' (6.2.2.f).",
+        "Exame toxicológico positivo: formas de conclusão iguais às do Cap. 6 (17.10)."
+      ],
+      "aptidao": [
+        {
+          "id": "6.3.1.a",
+          "laudo": "Apto para o SAM"
+        },
+        {
+          "id": "6.3.1.b",
+          "laudo": "Apto para o SAM (com restrições) (por tempo a declarar em dias)",
+          "observacoes": [
+            "Lançar as restrições no campo próprio.",
+            "Acrescentar 'em prorrogação' quando se tratar de IS para Término de Restrições.",
+            "Restrições por no máximo 6 meses por IS (6.1.4.e).",
+            "Restrições de embarque e manobras operativas podem ser classificadas em Tipo 1 ou Tipo 2 (6.1.3.r).",
+            "Portador assintomático do HIV (critérios da PN 3.551/2021): apto com restrição de embarque e manobras operativas Tipo 2, por até um ano (6.1.4.k)."
+          ]
+        },
+        {
+          "id": "6.3.1.c",
+          "laudo": "Apto para o SAM (com restrições) (por tempo a declarar em dias), devendo ser consideradas como LTS o afastamento laboral por motivo comprovado de saúde, no período de (dd/mm/aaaa) a (dd/mm/aaaa)",
+          "observacoes": [
+            "Lançar as restrições no campo próprio, quando couber."
+          ],
+          "condicao": "Aplicável sobretudo no Término de Incapacidade com LTS vencida em relação à data da conclusão (6.2.2.c/d)."
+        }
+      ],
+      "incapacidade_temporaria": [
+        {
+          "id": "6.3.2.a.I",
+          "laudo": "Incapaz temporariamente para o SAM, necessitando de (tempo a declarar em dias) de LTS",
+          "observacoes": [
+            "LTS de até 180 dias por IS (6.1.4.f).",
+            "Acrescentar 'em prorrogação' quando for IS por Término de Incapacidade, exceto no caso da alínea f do inciso 6.2.2."
+          ],
+          "texto_complementar": {
+            "campo": "texto complementar do SINAIS e mensagem de conclusão da IS",
+            "texto": "A condição atual tem relação com AO em aberto.",
+            "condicao": "Na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade ainda não tenha sido realizado."
+          }
+        },
+        {
+          "id": "6.3.2.a.II",
+          "laudo": "Incapaz Temporariamente para o SAM, por doença com relação de causa e efeito com o serviço, necessitando de ____ (tempo a declarar em dias) de LTS",
+          "condicao": "Laudo a ser exarado apenas na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade tenha sido realizado e a incapacidade laboral possua nexo causal com o referido acidente."
+        },
+        {
+          "id": "6.3.2.b",
+          "laudo": "Continua incapaz temporariamente para o SAM, por ser portador de (doença a declarar, por extenso e CID), doença sem relação de causa e efeito com o serviço, necessitando de (tempo a declarar, em dias ou meses) de LTS, não estando inválido, não necessitando de internação permanente, não necessitando de assistência ou cuidados permanentes de enfermagem",
+          "condicao": "Militar de carreira que necessita de prorrogação da LTS decorridos dois anos de agregação, sem critérios de incapacidade definitiva, doença prevista em lei, acidente em serviço ou doença profissional com nexo como motivadores (6.1.4.g).",
+          "observacoes": [
+            "Demanda revisão ex officio por JSD; se homologado, não cabe reapresentação para Término de Incapacidade (art. 106, III, do EM)."
+          ]
+        }
+      ],
+      "incapacidade_definitiva": [
+        {
+          "id": "6.3.2.c",
+          "laudo": "Incapaz definitivamente para o SAM por ser portador de (doença a declarar, por extenso e CID, acrescida do enquadramento ou não da condição de saúde em se tratando de doença do item V do art. 108 do EM), doença prevista no item (I a VI) do artigo 108 do Estatuto dos Militares, (não) estando inválido, estando total e permanentemente impossibilitado para todo e qualquer trabalho (somente nos casos de invalidez), (não) necessitando de internação permanente, (não) necessitando de assistência ou cuidados permanentes de enfermagem",
+          "itens_art_108_EM": {
+            "I": "ferimento recebido em campanha ou na manutenção da ordem pública",
+            "II": "enfermidade contraída em campanha ou na manutenção da ordem pública, ou enfermidade cuja causa eficiente decorra de uma dessas situações",
+            "III": "acidente em serviço",
+            "IV": "doença, moléstia ou enfermidade adquirida em tempo de paz, com relação de causa e efeito a condições inerentes ao serviço",
+            "V": "tuberculose ativa, alienação mental, esclerose múltipla, neoplasia maligna, cegueira, hanseníase, paralisia irreversível e incapacitante, cardiopatia grave, doença de Parkinson, pênfigo, espondiloartrose anquilosante, nefropatia grave, SIDA (AIDS) e outras moléstias que a lei indicar",
+            "VI": "acidente ou doença, moléstia ou enfermidade, sem relação de causa e efeito com o serviço"
+          },
+          "observacoes": [
+            "Declarar apenas um item; prevalece o que maiores benefícios propiciar ao inspecionado.",
+            "Itens I a IV devem ser comprovados por AO, ISO ou Ficha de Evacuação (§1º do art. 108 do EM).",
+            "Item V: atender à PN GM-MD nº 3.551/2021. Ex.: '... Insuficiência coronariana crônica, CID-10 I25.5 (Cardiopatia Grave)'; se não preencher critérios: '... Doença aterosclerótica do coração, CID-10 I25.1 (não é Cardiopatia Grave)'.",
+            "Alienação Mental: inserir em texto complementar 'Adotar medidas previstas no item 3.3 da Portaria Normativa GM-MD nº 3.551, de 26/08/2021'.",
+            "Registrar no TIS a existência de AO, ISO ou FE; concluir o Exame de Sanidade do AO se não realizado (6.1.4.i).",
+            "Avaliar invalidez e auxílio-invalidez (6.1.4.i; 9.1.2.a e 9.1.4.a).",
+            "Não há necessidade de enquadramento legal no laudo (competência dos órgãos de pessoal)."
+          ]
+        },
+        {
+          "id": "6.3.2.d",
+          "laudo": "Incapaz definitivamente para o exercício da especialidade de ____, estando apto para o SAM (com restrições) (por tempo a declarar em dias)",
+          "condicao": "Militares incapacitados para suas especialidades, porém aptos para outras tarefas militares."
+        }
+      ]
+    },
+    "militares_smv": {
+      "fonte": "DGPM-406, 11.8",
+      "formas_conclusao": [
+        {
+          "id": "11.8.3.a",
+          "laudo": "Apto(a) para o SMV"
+        },
+        {
+          "id": "11.8.3.b",
+          "laudo": "Apto(a) para o SMV com restrições (discriminar quais, tempo a declarar e a expressão 'em prorrogação' se for o caso)",
+          "observacoes": [
+            "Restrições por até 36 meses, limitadas a 180 dias por IS; depois, apresentar para Deixar o SMV (11.8.2.b)."
+          ]
+        },
+        {
+          "id": "11.8.3.c",
+          "laudo": "Incapaz Temporariamente para o SMV, necessitando de ____ (tempo a declarar em dias) de LTS",
+          "texto_complementar": {
+            "campo": "texto complementar do SINAIS e mensagem de conclusão da IS",
+            "texto": "A condição atual tem relação com AO em aberto.",
+            "condicao": "Na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade ainda não tenha sido realizado."
+          }
+        },
+        {
+          "id": "11.8.3.d",
+          "laudo": "Incapaz Temporariamente para o SMV, por doença especificada no item V do art. 108 da Lei nº 6.880/80, necessitando de ____ (tempo a declarar em dias) de LTS"
+        },
+        {
+          "id": "11.8.3.e",
+          "laudo": "Incapaz Temporariamente para o SMV, por doença com relação de causa e efeito com o serviço, necessitando de ____ (tempo a declarar em dias) de LTS",
+          "condicao": "Laudo a ser exarado apenas na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade tenha sido realizado e a incapacidade laboral possua nexo causal com o referido acidente.",
+          "texto_complementar": {
+            "campo": "texto complementar do SINAIS e mensagem de conclusão da IS",
+            "texto": "A condição atual tem relação com AO em aberto.",
+            "condicao": "Na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade ainda não tenha sido realizado."
+          }
+        },
+        {
+          "id": "Cap.6 (6.3.2.c)",
+          "laudo": "Incapaz definitivamente para o SAM (laudo do Cap. 6)",
+          "condicao": "Invalidez inequívoca (qualquer causa), incapacidade definitiva por doença/sequela relacionada ao serviço (Exame de Sanidade do AO ou solução de ISO) ou por doença do inciso V do art. 108 do EM (11.8.2.e)."
+        }
+      ],
+      "observacoes_gerais": [
+        "Incapacidade temporária < 90 dias: reapresentar para Término de Incapacidade (11.8.2.c).",
+        "LTS ≥ 90 dias (consecutivos ou não) sem nexo com o serviço: não reapresentar; autoridade providencia licenciamento por conveniência do serviço (11.8.2.c).",
+        "LTS com nexo (AO preenchido até o campo III ou ISO) > 90 dias: reapresentar para Término de Incapacidade; recuperada a aptidão, apresentar para Deixar o SMV; esgotados tratamento/prazo de agregação, avaliar incapacidade definitiva (11.8.2.d)."
+      ]
+    }
+  },
+  "termino_de_restricoes": {
+    "militares_de_carreira": {
+      "fonte": "DGPM-406, 6.2.3 e 6.3",
+      "regras_de_aplicacao": [
+        "Apresentação 10 dias antes do vencimento das restrições (6.2.3.a).",
+        "Prorrogação de restrições: laudo 6.3.1.b acrescido de 'em prorrogação'.",
+        "Máximo de 36 meses contínuos de restrições (ou alternância com LTS) pela mesma patologia; depois, avaliar restrições por tempo indeterminado (6.2.3.g/h/i).",
+        "Restrições vencidas: vigência inicia na data da conclusão da IS atual (6.2.3.f).",
+        "Não cabe Término de Restrições para restrições por tempo indeterminado; reavaliação só por VDF 'Fato Novo' (6.1.3.e; 6.2.3.j)."
+      ],
+      "aptidao": [
+        {
+          "id": "6.3.1.a",
+          "laudo": "Apto para o SAM"
+        },
+        {
+          "id": "6.3.1.b",
+          "laudo": "Apto para o SAM (com restrições) (por tempo a declarar em dias)",
+          "observacoes": [
+            "Lançar as restrições no campo próprio.",
+            "Acrescentar 'em prorrogação' quando se tratar de IS para Término de Restrições.",
+            "Restrições por no máximo 6 meses por IS (6.1.4.e).",
+            "Restrições de embarque e manobras operativas podem ser classificadas em Tipo 1 ou Tipo 2 (6.1.3.r).",
+            "Portador assintomático do HIV (critérios da PN 3.551/2021): apto com restrição de embarque e manobras operativas Tipo 2, por até um ano (6.1.4.k)."
+          ]
+        },
+        {
+          "id": "6.3.1.c",
+          "laudo": "Apto para o SAM (com restrições) (por tempo a declarar em dias), devendo ser consideradas como LTS o afastamento laboral por motivo comprovado de saúde, no período de (dd/mm/aaaa) a (dd/mm/aaaa)",
+          "observacoes": [
+            "Lançar as restrições no campo próprio, quando couber."
+          ],
+          "condicao": "Aplicável sobretudo no Término de Incapacidade com LTS vencida em relação à data da conclusão (6.2.2.c/d)."
+        }
+      ],
+      "incapacidade_temporaria": [
+        {
+          "id": "6.3.2.a.I",
+          "laudo": "Incapaz temporariamente para o SAM, necessitando de (tempo a declarar em dias) de LTS",
+          "observacoes": [
+            "LTS de até 180 dias por IS (6.1.4.f).",
+            "Acrescentar 'em prorrogação' quando for IS por Término de Incapacidade, exceto no caso da alínea f do inciso 6.2.2."
+          ],
+          "texto_complementar": {
+            "campo": "texto complementar do SINAIS e mensagem de conclusão da IS",
+            "texto": "A condição atual tem relação com AO em aberto.",
+            "condicao": "Na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade ainda não tenha sido realizado."
+          }
+        },
+        {
+          "id": "6.3.2.a.II",
+          "laudo": "Incapaz Temporariamente para o SAM, por doença com relação de causa e efeito com o serviço, necessitando de ____ (tempo a declarar em dias) de LTS",
+          "condicao": "Laudo a ser exarado apenas na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade tenha sido realizado e a incapacidade laboral possua nexo causal com o referido acidente."
+        },
+        {
+          "id": "6.3.2.b",
+          "laudo": "Continua incapaz temporariamente para o SAM, por ser portador de (doença a declarar, por extenso e CID), doença sem relação de causa e efeito com o serviço, necessitando de (tempo a declarar, em dias ou meses) de LTS, não estando inválido, não necessitando de internação permanente, não necessitando de assistência ou cuidados permanentes de enfermagem",
+          "condicao": "Militar de carreira que necessita de prorrogação da LTS decorridos dois anos de agregação, sem critérios de incapacidade definitiva, doença prevista em lei, acidente em serviço ou doença profissional com nexo como motivadores (6.1.4.g).",
+          "observacoes": [
+            "Demanda revisão ex officio por JSD; se homologado, não cabe reapresentação para Término de Incapacidade (art. 106, III, do EM)."
+          ]
+        }
+      ],
+      "incapacidade_definitiva": [
+        {
+          "id": "6.3.2.c",
+          "laudo": "Incapaz definitivamente para o SAM por ser portador de (doença a declarar, por extenso e CID, acrescida do enquadramento ou não da condição de saúde em se tratando de doença do item V do art. 108 do EM), doença prevista no item (I a VI) do artigo 108 do Estatuto dos Militares, (não) estando inválido, estando total e permanentemente impossibilitado para todo e qualquer trabalho (somente nos casos de invalidez), (não) necessitando de internação permanente, (não) necessitando de assistência ou cuidados permanentes de enfermagem",
+          "itens_art_108_EM": {
+            "I": "ferimento recebido em campanha ou na manutenção da ordem pública",
+            "II": "enfermidade contraída em campanha ou na manutenção da ordem pública, ou enfermidade cuja causa eficiente decorra de uma dessas situações",
+            "III": "acidente em serviço",
+            "IV": "doença, moléstia ou enfermidade adquirida em tempo de paz, com relação de causa e efeito a condições inerentes ao serviço",
+            "V": "tuberculose ativa, alienação mental, esclerose múltipla, neoplasia maligna, cegueira, hanseníase, paralisia irreversível e incapacitante, cardiopatia grave, doença de Parkinson, pênfigo, espondiloartrose anquilosante, nefropatia grave, SIDA (AIDS) e outras moléstias que a lei indicar",
+            "VI": "acidente ou doença, moléstia ou enfermidade, sem relação de causa e efeito com o serviço"
+          },
+          "observacoes": [
+            "Declarar apenas um item; prevalece o que maiores benefícios propiciar ao inspecionado.",
+            "Itens I a IV devem ser comprovados por AO, ISO ou Ficha de Evacuação (§1º do art. 108 do EM).",
+            "Item V: atender à PN GM-MD nº 3.551/2021. Ex.: '... Insuficiência coronariana crônica, CID-10 I25.5 (Cardiopatia Grave)'; se não preencher critérios: '... Doença aterosclerótica do coração, CID-10 I25.1 (não é Cardiopatia Grave)'.",
+            "Alienação Mental: inserir em texto complementar 'Adotar medidas previstas no item 3.3 da Portaria Normativa GM-MD nº 3.551, de 26/08/2021'.",
+            "Registrar no TIS a existência de AO, ISO ou FE; concluir o Exame de Sanidade do AO se não realizado (6.1.4.i).",
+            "Avaliar invalidez e auxílio-invalidez (6.1.4.i; 9.1.2.a e 9.1.4.a).",
+            "Não há necessidade de enquadramento legal no laudo (competência dos órgãos de pessoal)."
+          ]
+        },
+        {
+          "id": "6.3.2.d",
+          "laudo": "Incapaz definitivamente para o exercício da especialidade de ____, estando apto para o SAM (com restrições) (por tempo a declarar em dias)",
+          "condicao": "Militares incapacitados para suas especialidades, porém aptos para outras tarefas militares."
+        }
+      ]
+    },
+    "militares_smv": {
+      "fonte": "DGPM-406, 11.8",
+      "formas_conclusao": [
+        {
+          "id": "11.8.3.a",
+          "laudo": "Apto(a) para o SMV"
+        },
+        {
+          "id": "11.8.3.b",
+          "laudo": "Apto(a) para o SMV com restrições (discriminar quais, tempo a declarar e a expressão 'em prorrogação' se for o caso)",
+          "observacoes": [
+            "Restrições por até 36 meses, limitadas a 180 dias por IS; depois, apresentar para Deixar o SMV (11.8.2.b)."
+          ]
+        },
+        {
+          "id": "11.8.3.c",
+          "laudo": "Incapaz Temporariamente para o SMV, necessitando de ____ (tempo a declarar em dias) de LTS",
+          "texto_complementar": {
+            "campo": "texto complementar do SINAIS e mensagem de conclusão da IS",
+            "texto": "A condição atual tem relação com AO em aberto.",
+            "condicao": "Na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade ainda não tenha sido realizado."
+          }
+        },
+        {
+          "id": "11.8.3.d",
+          "laudo": "Incapaz Temporariamente para o SMV, por doença especificada no item V do art. 108 da Lei nº 6.880/80, necessitando de ____ (tempo a declarar em dias) de LTS"
+        },
+        {
+          "id": "11.8.3.e",
+          "laudo": "Incapaz Temporariamente para o SMV, por doença com relação de causa e efeito com o serviço, necessitando de ____ (tempo a declarar em dias) de LTS",
+          "condicao": "Laudo a ser exarado apenas na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade tenha sido realizado e a incapacidade laboral possua nexo causal com o referido acidente.",
+          "texto_complementar": {
+            "campo": "texto complementar do SINAIS e mensagem de conclusão da IS",
+            "texto": "A condição atual tem relação com AO em aberto.",
+            "condicao": "Na vigência de AO atestando acidente decorrente de ato em serviço, cujo Exame de Sanidade ainda não tenha sido realizado."
+          }
+        },
+        {
+          "id": "Cap.6 (6.3.2.c)",
+          "laudo": "Incapaz definitivamente para o SAM (laudo do Cap. 6)",
+          "condicao": "Invalidez inequívoca (qualquer causa), incapacidade definitiva por doença/sequela relacionada ao serviço (Exame de Sanidade do AO ou solução de ISO) ou por doença do inciso V do art. 108 do EM (11.8.2.e)."
+        }
+      ],
+      "observacoes_gerais": [
+        "Incapacidade temporária < 90 dias: reapresentar para Término de Incapacidade (11.8.2.c).",
+        "LTS ≥ 90 dias (consecutivos ou não) sem nexo com o serviço: não reapresentar; autoridade providencia licenciamento por conveniência do serviço (11.8.2.c).",
+        "LTS com nexo (AO preenchido até o campo III ou ISO) > 90 dias: reapresentar para Término de Incapacidade; recuperada a aptidão, apresentar para Deixar o SMV; esgotados tratamento/prazo de agregação, avaliar incapacidade definitiva (11.8.2.d)."
+      ]
+    }
+  },
+  "licenciamento": {
+    "militares_de_carreira": {
+      "finalidade_sinais": "Deixar o SAM",
+      "fonte": "DGPM-406, 8.1.5",
+      "competencia": "MPI (JRS se AO em aberto ou possibilidade de incapacidade definitiva)",
+      "formas_conclusao": [
+        {
+          "id": "a",
+          "laudo": "Apto para deixar o SAM"
+        },
+        {
+          "id": "b",
+          "laudo": "Apto para deixar o SAM, sendo, no entanto, portador de ____ (apenas CID) ____, doença com relação de causa e efeito com o serviço",
+          "condicao": "Somente para sequela de acidente ou doença ocupacional com nexo causal previamente estabelecido por AO concluído ou ISO, que não gere incapacidade total e definitiva."
+        },
+        {
+          "id": "c",
+          "laudo": "Apto para dispensa de funções na atividade",
+          "condicao": "Militares RM1 designados para funções na atividade, ao término do período (8.1.2.i)."
+        },
+        {
+          "id": "d",
+          "laudo": "Incapaz temporariamente para deixar o SAM (por até seis meses) por ser portador de (doença por extenso e CID), doença ou lesão (com ou sem) relação de causa e efeito com o serviço",
+          "condicao": "Patologia passível de incapacidade definitiva com quadro ainda não definido; ao término, reapresentar para Término de Incapacidade/Deixar o SAM (8.1.2.g)."
+        }
+      ],
+      "observacoes_gerais": [
+        "Necessidade de restrições: incluir finalidade VDF e exarar os laudos do Cap. 6 (8.1.2.f).",
+        "Incapacidade definitiva e/ou invalidez indubitável: laudos do Cap. 6 (8.1.2.h).",
+        "Reengajamento/LSAM: acrescentar os laudos do Cap. 8 (4.1.3.p)."
+      ]
+    },
+    "militares_smv": {
+      "finalidade_sinais": "Deixar o SMV",
+      "fonte": "DGPM-406, 11.9",
+      "competencia": "MPI (JRS se AO não concluído, invalidez, incapacidade definitiva com nexo ou doença do inciso V do art. 108)",
+      "formas_conclusao": [
+        {
+          "id": "a",
+          "laudo": "Apto(a) para deixar o SMV"
+        },
+        {
+          "id": "b",
+          "laudo": "Apto(a) para deixar o SMV, sendo, no entanto, portador(a) de CID, doença com relação de causa e efeito com o serviço",
+          "condicao": "Doenças relacionadas ao serviço comprovadas por ISO ou AO concluído, auditado e numerado, que não gerem incapacidade definitiva."
+        },
+        {
+          "id": "c",
+          "laudo": "Apta para deixar o SMV, estando gestante de XX semanas.",
+          "condicao": "Grávida saudável."
+        },
+        {
+          "id": "Cap.6 (6.3.2.c)",
+          "laudo": "Incapaz definitivamente para o SAM (laudo do Cap. 6)",
+          "condicao": "Após declínio à JRS, nas hipóteses do 11.9.1."
+        }
+      ],
+      "observacoes_gerais": [
+        "Portadores de doença do item V do art. 108 ou com nexo podem ser aptos se não houver total incapacidade laboral; registrar CID e fundamentação técnica no TIS."
+      ]
+    },
+    "militares_smi": {
+      "finalidade_sinais": "Deixar o SMI",
+      "fonte": "DGPM-406, 11.4",
+      "competencia": "MPI (JRS nas hipóteses do 11.4.1)",
+      "formas_conclusao": [
+        {
+          "id": "a",
+          "laudo": "Apto(a) para deixar o SMI"
+        },
+        {
+          "id": "b",
+          "laudo": "Apto(a) para deixar o SMI, sendo, no entanto, portador(a) de CID, doença com relação de causa e efeito com o serviço",
+          "condicao": "Doenças relacionadas ao serviço comprovadas por ISO ou AO concluído, auditado e numerado, que não gerem incapacidade definitiva."
+        },
+        {
+          "id": "Cap.6 (6.3.2.c)",
+          "laudo": "Incapaz definitivamente para o SAM (laudo do Cap. 6)",
+          "condicao": "Após declínio à JRS: AO não concluído, invalidez, incapacidade definitiva com nexo ou doença do inciso V do art. 108."
+        }
+      ]
+    }
+  },
+  "prorrogacoes": {
+    "prorrogacao_tempo_servico_e_reengajamento_smv": {
+      "finalidade_sinais": [
+        "Prorrogação do Tempo de Serviço (oficiais)",
+        "Reengajamento (praças)"
+      ],
+      "fonte": "DGPM-406, 11.7",
+      "competencia": "MPI (JRS em inaptidão ou restrições previamente exaradas)",
+      "formas_conclusao": [
+        {
+          "id": "a",
+          "laudo": "Apto(a) para o SMV"
+        },
+        {
+          "id": "b",
+          "laudo": "Apto(a) para o SMV, com restrições",
+          "observacoes": [
+            "Restrições não discriminadas e sem período (avaliação por finalidade específica).",
+            "Necessidade de início de restrições: JRS inclui finalidade VDF e exara o laudo pertinente no mesmo TIS."
+          ]
+        },
+        {
+          "id": "c",
+          "laudo": "Inapto para o SMV",
+          "observacoes": [
+            "Exame toxicológico positivo implica inaptidão."
+          ]
+        }
+      ],
+      "observacoes_gerais": [
+        "Aptidão válida por três anos; dispensada nas renovações de compromisso anual."
+      ]
+    },
+    "ingresso_smv_e_engajamento_oriundos_smi": {
+      "fonte": "DGPM-406, 11.5.3",
+      "formas_conclusao": [
+        {
+          "id": "a",
+          "laudo": "Apto(a) para Ingresso no SMV",
+          "condicao": "Oficiais"
+        },
+        {
+          "id": "b",
+          "laudo": "Inapto(a) para Ingresso no SMV",
+          "observacoes": [
+            "Declinar à JRS."
+          ]
+        },
+        {
+          "id": "c",
+          "laudo": "Apto(a) para Engajamento",
+          "condicao": "Praças"
+        },
+        {
+          "id": "d",
+          "laudo": "Inapto(a) para Engajamento",
+          "observacoes": [
+            "Declinar à JRS."
+          ]
+        }
+      ]
+    },
+    "prorrogacao_de_lts_e_restricoes": {
+      "nota": "Prorrogações de LTS e de restrições ocorrem nas IS de Término de Incapacidade/Restrições, acrescentando 'em prorrogação' aos laudos 6.3.1.b, 6.3.2.a.I, 6.2.4 e 11.8.3.b (ver seções correspondentes)."
+    }
+  }
+}
