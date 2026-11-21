@@ -59,11 +59,12 @@ describe('Inserir na IS — Laudo e CID', () => {
 });
 
 describe('sugestões de comando', () => {
-  it('citam o número da IS e mudam conforme a finalidade e o laudo', () => {
-    const vdf = sugestoesDoAssessor({ is: 1254539, grupoFinalidade: 'Verificações e Términos' });
-    expect(vdf[0].comando).toBe('Redija a IS 1254539.');
+  it('não citam o número da IS e mudam conforme a finalidade e o laudo', () => {
+    const vdf = sugestoesDoAssessor({ grupoFinalidade: 'Verificações e Términos' });
+    expect(vdf[0]).toEqual({ rotulo: 'Redigir a IS', comando: 'Redija a IS.' });
+    expect(vdf.every(s => !/IS \d/.test(s.rotulo + s.comando))).toBe(true);
     expect(vdf.some(s => /relatou/.test(s.comando))).toBe(true);
-    const trienal = sugestoesDoAssessor({ is: 7, grupoFinalidade: 'Controle Periódico', laudo: 'Apto para o SAM' });
+    const trienal = sugestoesDoAssessor({ grupoFinalidade: 'Controle Periódico', laudo: 'Apto para o SAM' });
     expect(trienal.some(s => /sem alterações/.test(s.comando))).toBe(true);
     expect(trienal.some(s => /laudo registrado/.test(s.comando))).toBe(true);
   });

@@ -235,7 +235,7 @@ export const AssessorIAModal: React.FC<Props> = ({ inspecoes, isInicialId, perfi
             <label htmlFor="assessor-comando" className="sr-only">Comando para o Assessor</label>
             <textarea
               id="assessor-comando" ref={caixaRef} value={texto} onChange={e => setTexto(e.target.value)} rows={2}
-              placeholder={`Ex.: Redija a IS ${is.is}. Inspecionado relata…`}
+              placeholder="Ex.: Redija a IS. Inspecionado relata…"
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void enviar(texto); } }}
               className="w-full max-h-60 resize-none bg-transparent text-base md:text-sm text-white placeholder:text-white/40 focus:outline-none"
             />

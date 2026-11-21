@@ -53,18 +53,18 @@ export const CID_SEM_DOENCA = 'Z10.2';
 
 export interface SugestaoComando { rotulo: string; comando: string }
 
-/** Sugestões de comando mostradas ao abrir o chat (conforme a IS escolhida). */
-export const sugestoesDoAssessor = (is: { is: number; finalidade?: string; grupoFinalidade?: string; laudo?: string }): SugestaoComando[] => {
-  const n = is.is;
+/** Sugestões de comando mostradas ao abrir o chat. Sem o número da IS: o chat é sempre da IS aberta (o servidor
+ *  junta os dados dela a cada pedido). */
+export const sugestoesDoAssessor = (is: { grupoFinalidade?: string; laudo?: string }): SugestaoComando[] => {
   const doenca = is.grupoFinalidade === 'Verificações e Términos' || is.grupoFinalidade === 'Benefícios';
   const lista: SugestaoComando[] = [
-    { rotulo: `Redigir a IS ${n}`, comando: `Redija a IS ${n}.` },
+    { rotulo: 'Redigir a IS', comando: 'Redija a IS.' },
     doenca
-      ? { rotulo: 'Redigir com os dados da entrevista', comando: `Redija a IS ${n}. Na entrevista, o inspecionado relatou ` }
-      : { rotulo: 'Redigir IS sem alterações', comando: `Redija a IS ${n}. Inspecionado sem queixas e sem alterações ao exame.` },
-    { rotulo: 'Qual laudo cabe?', comando: `Quais laudos são cabíveis para a IS ${n} e qual você recomenda, com a fundamentação na DGPM-406?` },
-    { rotulo: 'Resumir os documentos', comando: `Resuma os exames, atestados e relatórios enviados na IS ${n} e o histórico de IS do inspecionado.` },
+      ? { rotulo: 'Redigir com os dados da entrevista', comando: 'Redija a IS. Na entrevista, o inspecionado relatou ' }
+      : { rotulo: 'Redigir IS sem alterações', comando: 'Redija a IS. Inspecionado sem queixas e sem alterações ao exame.' },
+    { rotulo: 'Qual laudo cabe?', comando: 'Quais laudos são cabíveis para esta IS e qual você recomenda, com a fundamentação na DGPM-406?' },
+    { rotulo: 'Resumir os documentos', comando: 'Resuma os exames, atestados e relatórios enviados nesta IS e o histórico de IS do inspecionado.' },
   ];
-  if (is.laudo?.trim()) lista.push({ rotulo: 'Conferir o laudo registrado', comando: `O laudo registrado na IS ${n} está correto para a finalidade e o vínculo? Aponte qualquer erro de enquadramento.` });
+  if (is.laudo?.trim()) lista.push({ rotulo: 'Conferir o laudo registrado', comando: 'O laudo registrado nesta IS está correto para a finalidade e o vínculo? Aponte qualquer erro de enquadramento.' });
   return lista;
 };
