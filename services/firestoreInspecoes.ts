@@ -71,8 +71,10 @@ export interface InspecaoDoc {
   /** Nº do TIS: AAA.000.N… (AAA = 3 últimos dígitos do ano; depois do 2º ponto, 1 ou mais dígitos) */
   tis: string;
   ds1a: string;
-  /** Texto da minuta de cancelamento (IS atrasada cancelada). */
+  /** Texto da minuta de cancelamento (IS atrasada cancelada ou cancelada por falta). */
   minutaCancelamento?: string;
+  /** Motivo do cancelamento: 'falta' quando a IS agendada foi cancelada por falta (utils/faltaIS.ts). */
+  motivoCancelamento?: 'falta';
   /** Id do evento no Google Agenda "JRS/HNRe" (quando sincronizado). */
   eventoAgendaId?: string;
   /** Falso quando a última sincronização com o Google Agenda falhou. */
@@ -353,6 +355,27 @@ export const cancelarInspecao = async (atual: InspecaoRecord): Promise<void> => 
     status: 'cancelada', situacao: situacaoDoStatus('cancelada'), ...marcaFinalizacao('cancelada'),
   }, null, slotAntigo, false);
   notificarAcao('is.cancelada', atual.id);
+};
+
+/**
+ * Falta registrada numa IS agendada: cancela POR FALTA numa gravação só — "IS CANCELADA POR FALTA" nas observações,
+ * status Cancelada (situação Finalizada), motivo 'falta' e a tag da pendência da Minuta MSG (utils/faltaIS.ts).
+ * Libera o horário, como o cancelamento.
+ */
+export const cancelarPorFalta = async (atual: InspecaoRecord): Promise<void> => {
+  const { camposCancelamentoPorFalta } = await import('../utils/faltaIS');
+  const slotAntigo = atual.dataEntrevista ? { peritoUid: atual.peritoUid, dataEntrevista: atual.dataEntrevista, grupoFinalidade: atual.grupoFinalidade } : null;
+  await gravarComSlot(atual.id, {
+    ...camposCancelamentoPorFalta(atual),
+    status: 'cancelada', situacao: situacaoDoStatus('cancelada'), ...marcaFinalizacao('cancelada'),
+  }, null, slotAntigo, false);
+  notificarAcao('is.cancelada', atual.id);
+};
+
+/** Minuta MSG de cancelamento por falta enviada: guarda o texto e tira a pendência (Secretaria/Admin). */
+export const marcarMinutaFaltaEnviada = async (atual: InspecaoRecord, texto: string): Promise<void> => {
+  const { tagsSemMinutaFalta } = await import('../utils/faltaIS');
+  await atualizarInspecao(atual.id, { minutaCancelamento: texto, tags: tagsSemMinutaFalta(atual.tags) });
 };
 
 /** Apaga a IS (só Admin) e libera o horário. Antes, apaga as guias de exames no servidor (PDF; best effort). */

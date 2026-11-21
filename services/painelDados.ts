@@ -31,6 +31,7 @@ const paraISPainel = (id: string, d: InspecaoDoc): ISPainel => ({
   peritoNome: d.peritoNome || '',
   amp: d.amp === 'MPI' ? 'MPI' : 'JRS',
   emailFaltaDataEntrevista: d.emailFaltaDataEntrevista || '',
+  ...(d.motivoCancelamento ? { motivoCancelamento: d.motivoCancelamento } : {}),
   // Guias de exames e status Realizando Exames (só se lê se há guias e quando/como foram entregues).
   temGuias: d.guiasExames != null,
   guiasEntregues: !!d.guiasEntregues,
