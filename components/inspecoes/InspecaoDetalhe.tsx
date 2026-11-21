@@ -187,8 +187,8 @@ const TextoFinalidades: React.FC<{ is: InspecaoRecord }> = ({ is }) => {
 /** Laudo de uma das finalidades (IS com mais de uma finalidade), com gravação automática. */
 const CampoLaudoFinalidade: React.FC<{
   ordem: number; finalidade: string; remoto: string; onSalvar: (finalidade: string, valor: string) => void;
-  /** Validação/montador do laudo (LaudoAssistidoIS) com o texto atual e a função que grava um laudo escolhido. */
-  assistencia?: (valor: string, usar: (texto: string) => void) => React.ReactNode;
+  /** Alertas de validação do laudo (LaudoAssistidoIS) para o texto atual. */
+  assistencia?: (valor: string) => React.ReactNode;
 }> = ({ ordem, finalidade, remoto, onSalvar, assistencia }) => {
   const campo = useCampoAuto(remoto, v => onSalvar(finalidade, v));
   return (
@@ -196,7 +196,7 @@ const CampoLaudoFinalidade: React.FC<{
       <Field label={`Laudo ${ordem} — ${finalidade}`}>
         {a => <textarea {...a} value={campo.valor} onChange={e => campo.onChange(e.target.value)} onBlur={campo.onBlur} className={`${a.className} min-h-[88px]`} />}
       </Field>
-      {assistencia?.(campo.valor, t => { campo.onChange(t); onSalvar(finalidade, t); })}
+      {assistencia?.(campo.valor)}
     </div>
   );
 };
@@ -281,10 +281,10 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const gravarCampo = (campo: CampoConclusao, valor: string) => gravar(atual => patchConclusao(comPadroes(atual), campo, valor, hojeISO(), nav?.authUser?.perfil));
 
   const laudo = useCampoAuto(is.laudo || '', v => gravarCampo('laudo', v));
-  /** Validação do laudo pelas formas de conclusão da DGPM-406 (+ montador quando `usar` é passado). */
-  const assistenciaLaudo = (finalidade: string, texto: string, usar?: (t: string) => void) => (
+  /** Alertas de validação do laudo pelas formas de conclusão da DGPM-406. */
+  const assistenciaLaudo = (finalidade: string, texto: string) => (
     <LaudoAssistidoIS isNumero={is.is} inspecionadoId={is.inspecionadoId || ''} finalidade={finalidade} dataAbertura={is.dataAbertura}
-      dataEntrevista={is.dataEntrevista} laudo={texto} restricoes={is.restricoes || ''} cid={is.cid || ''} onUsarLaudo={usar} />
+      dataEntrevista={is.dataEntrevista} laudo={texto} restricoes={is.restricoes || ''} />
   );
   const ds1a = useCampoAuto(is.ds1a || '', v => gravarCampo('ds1a', v));
   const observacoes = useCampoAuto(is.observacoes || '', v => gravarCampo('observacoes', v));
@@ -605,7 +605,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
             <div className="space-y-3">
               {laudosPorFinalidade.map((l, i) => (
                 <CampoLaudoFinalidade key={l.finalidade} ordem={i + 1} finalidade={l.finalidade} remoto={l.laudo} onSalvar={salvarLaudoFinalidade}
-                  assistencia={(valor, usar) => assistenciaLaudo(l.finalidade, valor, usar)} />
+                  assistencia={valor => assistenciaLaudo(l.finalidade, valor)} />
               ))}
               {!is.laudo?.trim() && <p className="text-xs text-ink-3">Um laudo para cada finalidade: o TIS fica disponível quando todos estiverem preenchidos.</p>}
             </div>
@@ -614,7 +614,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
               <Field label="Laudo">
                 {a => <textarea {...a} value={laudo.valor} onChange={e => laudo.onChange(e.target.value)} onBlur={laudo.onBlur} className={`${a.className} min-h-[88px]`} />}
               </Field>
-              {assistenciaLaudo(is.finalidade || '', laudo.valor, t => { laudo.onChange(t); gravarCampo('laudo', t); })}
+              {assistenciaLaudo(is.finalidade || '', laudo.valor)}
             </div>
           )}
 
