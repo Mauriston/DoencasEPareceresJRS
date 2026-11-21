@@ -8,7 +8,8 @@ import { createPortal } from 'react-dom';
 
 export interface ItemMenu {
   rotulo: string;
-  icone: string;
+  /** Material Symbol ou um ícone próprio (ex.: o símbolo do Claude). */
+  icone: string | React.ReactNode;
   onClick: () => void;
   perigo?: boolean;
   /** Item visível mas inativo (aria-disabled: continua focável e anunciado, o clique não faz nada). */
@@ -20,7 +21,11 @@ export interface ItemMenu {
 }
 
 /** Gatilho em forma de botão com texto (em vez dos três pontinhos). */
-export interface BotaoMenu { texto: string; icone: string; badge?: number; /** Botão primário (navy cheio); padrão: secundário. */ primario?: boolean }
+export interface BotaoMenu {
+  texto: string; icone: string; badge?: number; /** Botão primário (navy cheio); padrão: secundário. */ primario?: boolean;
+  /** Conteúdo próprio no lugar do ícone + texto (ex.: um logo); o `texto` continua no rótulo acessível. */
+  conteudo?: React.ReactNode;
+}
 
 export const MenuAcoes: React.FC<{
   rotulo: string;
@@ -81,8 +86,10 @@ export const MenuAcoes: React.FC<{
           aria-label={gatilho.badge ? `${rotulo} (${gatilho.badge} pendente${gatilho.badge > 1 ? 's' : ''})` : rotulo}
           className={`relative inline-flex items-center justify-center whitespace-nowrap ${size === 'sm' ? 'h-8 px-3 gap-1.5' : 'h-10 px-4 gap-2'} rounded-lg text-sm font-bold border border-navy transition-colors ${gatilho.primario ? 'bg-navy text-white hover:bg-navy-hover' : 'bg-white text-navy hover:bg-thead'} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${classeGatilho}`}
         >
-          <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{gatilho.icone}</span>
-          {gatilho.texto}
+          {gatilho.conteudo ?? (<>
+            <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{gatilho.icone}</span>
+            {gatilho.texto}
+          </>)}
           <span className="material-symbols-outlined text-[20px] -mr-1" aria-hidden="true">{pos ? 'expand_less' : 'expand_more'}</span>
           {!!gatilho.badge && (
             <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-wine text-white text-xs font-bold leading-5 text-center ring-2 ring-white">
@@ -106,7 +113,9 @@ export const MenuAcoes: React.FC<{
               onClick={() => { if (i.desabilitado) return; setPos(null); i.onClick(); }}
               className={`w-full min-h-10 px-4 py-1.5 flex items-center gap-3 text-sm font-semibold text-left focus:outline-none ${i.desabilitado ? 'text-ink-4 cursor-not-allowed focus:bg-thead' : `hover:bg-thead focus:bg-thead ${i.perigo ? 'text-wine' : 'text-ink'}`}`}
             >
-              <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{i.icone}</span>
+              {typeof i.icone === 'string'
+                ? <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{i.icone}</span>
+                : <span className="w-5 h-5 flex items-center justify-center shrink-0" aria-hidden="true">{i.icone}</span>}
               <span className="flex flex-col min-w-0 flex-1">
                 {i.rotulo}
                 {i.dica && <span className="text-xs font-normal text-ink-3 max-w-[16rem] truncate" title={i.dica}>{i.dica}</span>}

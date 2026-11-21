@@ -24,15 +24,18 @@ interface Props {
   onAgendar: (is: InspecaoRecord) => void;
   onSituacaoMudou: (is: InspecaoRecord) => void;
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
+  /** Prints do SINAIS escolhidos no menu do Claude do cabeçalho da Ficha (só os desta IS). */
+  printsSinais?: { id: number; arquivos: File[] } | null;
 }
 
-export const PainelISFicha: React.FC<Props> = ({ is, perfil, abas, definir, om, vinculo, feminino, onAgendar, onSituacaoMudou, onAviso }) => {
+export const PainelISFicha: React.FC<Props> = ({ is, perfil, abas, definir, om, vinculo, feminino, onAgendar, onSituacaoMudou, onAviso, printsSinais }) => {
   const { acoes, atalhos, dialogos } = useAcoesISFicha({ is, perfil, abas, definir, om, vinculo, feminino, onAgendar, onAviso });
   const gravar = podeUsarEntrevista(perfil) && canUseFeature('inspecoes.gravarEntrevista', perfil) && abas.transcricoes.habilitada;
   return (
     <>
       <InspecaoDetalhe
         casca="inline"
+        printsSinais={printsSinais}
         inspecao={is}
         om={om}
         acoesExtras={acoes}

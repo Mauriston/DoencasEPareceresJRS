@@ -5,7 +5,8 @@
 //     IS Aberta sem data de entrevista: a Finalidade é o único campo editável (o mesmo menu em cascata do
 //     cadastro; grava finalidade, grupo e AMP sozinha) e a Conclusão aparece só em leitura (campos vazios ocultos).
 //  2. Conclusão da IS (salva sozinha, sem botão; só com data de entrevista — utils/conclusaoIS.ts): cards da entrevista gravada e dos pareceres pedidos a
-//     partir desta IS, Prints do SINAIS (opcional — conclusao/PrintsSinaisIS: a IA completa os campos vazios),
+//     partir desta IS, Prints do SINAIS (opcional — conclusao/PrintsSinaisIS: a IA completa os campos vazios; na Ficha
+//     não há card: os prints vêm do item "Print SINAIS" do menu do Claude do cabeçalho),
 //     Laudo, CID (Verificações e Términos: obrigatório para o DS-1a — conclusao/CampoCidIS), Auditoria | JSD,
 //     Restrições (MultiSelectCombobox com chips; opcional, só em Verificações e Términos com o Laudo mencionando
 //     "restrições"), Nº do TIS, DS-1a, Data da Conclusão (aparece com o DS-1a: hoje, editável, nunca anterior à
@@ -102,6 +103,8 @@ interface Props {
   emails?: React.ReactNode;
   /** 'drawer' (padrão): barra lateral/bottom sheet. 'inline': painel principal da Ficha do inspecionado. */
   casca?: 'drawer' | 'inline';
+  /** Só em casca="inline": prints do SINAIS escolhidos no menu do Claude da Ficha (no lugar do card "Prints do SINAIS"). */
+  printsSinais?: { id: number; arquivos: File[] } | null;
   /** Só em casca="inline": ações da página que entram na barra inferior antes das da IS (ex.: "Agendar IS", "Excluir", botões-menu). */
   acoesExtras?: AcaoBarraFicha[];
   /** Só em casca="inline": no lugar dos cards dos documentos gerados (atalhos para as abas dos documentos). */
@@ -227,7 +230,7 @@ const EditarDataLaudoDialog: React.FC<{ valorInicial: string; onClose: () => voi
   );
 };
 
-export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes, onClose, onMinuta, onSolicitarParecer, onDuplicarParecer, onSituacaoMudou, onAviso, emails, casca = 'drawer', acoesExtras = [], atalhosDocumentos, onGravarEntrevista }) => {
+export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes, onClose, onMinuta, onSolicitarParecer, onDuplicarParecer, onSituacaoMudou, onAviso, emails, casca = 'drawer', acoesExtras = [], atalhosDocumentos, onGravarEntrevista, printsSinais }) => {
   const nav = useNav();
   const efetivo = statusEfetivoIS(is);
   const info = STATUS_IS[efetivo];
@@ -630,6 +633,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
             isId={is.id} inspecionadoId={is.inspecionadoId || ''} finalidade={is.finalidade || ''} dataAbertura={is.dataAbertura || ''}
             atual={() => { const a = atualRef.current; return { grupoFinalidade: a.grupoFinalidade || '', laudo: a.laudo || '', dataLaudo: a.dataLaudo || '', restricoes: a.restricoes || '', tis: a.tis || '', ds1a: a.ds1a || '', cid: a.cid || '', dataConclusao: a.dataConclusao || '' }; }}
             onPreencher={preencherDosPrints}
+            oculto={casca === 'inline'} entrada={casca === 'inline' ? printsSinais : null}
           />}
 
           {multiplasFinalidades ? (

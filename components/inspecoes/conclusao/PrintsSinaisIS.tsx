@@ -5,7 +5,9 @@
 // preenchimentoDosPrints) dizem o que completar. Só os campos VAZIOS da IS são preenchidos (Laudo, Data do
 // laudo, CID principal, Restrições, Nº do TIS, DS-1a, Data da Conclusão — esta nunca anterior à Data do laudo);
 // quem grava é o detalhe (onPreencher), pelas mesmas regras do autosave.
-import React, { useRef, useState } from 'react';
+// `oculto` (Ficha do inspecionado): sem o card — os prints chegam por `entrada`, escolhidos no item "Print SINAIS" do
+// menu do Claude no cabeçalho da Ficha; aqui só aparecem o andamento da leitura e o resultado.
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '../../ui/Button';
 import { arquivoParaBase64IA } from '../../../services/geminiAI';
 import { lerPrintDoSinais } from '../../../services/sinaisIA';
@@ -26,11 +28,15 @@ interface Props {
   atual: () => ConclusaoAtualIS;
   /** Grava o preenchimento; devolve os rótulos dos campos efetivamente preenchidos. */
   onPreencher: (p: PreenchimentoPrints) => Promise<string[]>;
+  /** Sem o card (os arquivos chegam por `entrada`). */
+  oculto?: boolean;
+  /** Prints escolhidos fora do card; cada `id` novo dispara uma leitura. */
+  entrada?: { id: number; arquivos: File[] } | null;
 }
 
 const LEITURAS_SIMULTANEAS = 3;
 
-export const PrintsSinaisIS: React.FC<Props> = ({ isId, inspecionadoId, finalidade, dataAbertura, atual, onPreencher }) => {
+export const PrintsSinaisIS: React.FC<Props> = ({ isId, inspecionadoId, finalidade, dataAbertura, atual, onPreencher, oculto = false, entrada }) => {
   const input = useRef<HTMLInputElement>(null);
   const [lendo, setLendo] = useState<{ feitas: number; total: number } | null>(null);
   const [mensagem, setMensagem] = useState<{ texto: string; erro: boolean } | null>(null);
@@ -77,6 +83,30 @@ export const PrintsSinaisIS: React.FC<Props> = ({ isId, inspecionadoId, finalida
       setLendo(null);
     }
   };
+
+  const lidaRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!entrada || lidaRef.current === entrada.id) return;
+    lidaRef.current = entrada.id;
+    void ler(entrada.arquivos);
+  }, [entrada]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (oculto) {
+    if (!lendo && !mensagem) return null;
+    return (
+      <div className="rounded-xl border border-line bg-thead/40 px-3 py-2 flex items-start gap-2" aria-live="polite">
+        <span className={`material-symbols-outlined text-[20px] shrink-0 ${lendo ? 'animate-spin text-navy' : mensagem?.erro ? 'text-wine' : 'text-green'}`} aria-hidden="true">
+          {lendo ? 'progress_activity' : mensagem?.erro ? 'error' : 'check_circle'}
+        </span>
+        <p role={mensagem?.erro ? 'alert' : 'status'} className="text-sm text-ink flex-1">
+          {lendo ? `Lendo os prints do SINAIS: ${lendo.feitas} de ${lendo.total}…` : mensagem?.texto}
+        </p>
+        {!lendo && <button type="button" onClick={() => setMensagem(null)} aria-label="Fechar aviso" className="shrink-0 text-ink-3 hover:text-navy">
+          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">close</span>
+        </button>}
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-dashed border-line p-3 space-y-2">
