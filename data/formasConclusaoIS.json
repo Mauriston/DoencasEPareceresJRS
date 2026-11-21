@@ -1,11 +1,12 @@
 {
-  "versao": 3,
+  "versao": 4,
   "fonte": "DGPM-406 (9ª Rev.), capítulos 4, 5, 6, 7, 8, 9, 10, 11, 16 e 17 — content/dgpm-406",
   "comoUsar": [
     "1) Obter a chave da finalidade (nome exato de public/finalidadesIS.json) em 'finalidades'.",
     "2) Escolher a regra pelo vínculo (VinculoFinalidade do app): tentar 'Temporário:SMV'/'Temporário:SMI' quando o tipo de serviço for conhecido, depois o vínculo ('Carreira', 'Temporário', 'Inativo', 'Pensionista', 'Dependente') e, por fim, '*' (qualquer vínculo).",
     "3) Em 'regras[chave].laudosPermitidos', obter os ids e validar o campo Laudo contra 'laudos[id].modelo' (placeholders {{campo}}; 'admiteEmProrrogacao' permite sufixo ' (em prorrogação)').",
-    "4) Checar 'aplicarQuando' e 'exige' contra os dados da IS/militar e incluir 'textoComplementar' quando a condição ocorrer."
+    "4) Checar 'aplicarQuando' e 'exige' contra os dados da IS/militar e incluir 'textoComplementar' quando a condição ocorrer.",
+    "5) Aplicar 'verificacoes' (utils/validacaoLaudo.ts) ao texto do laudo, às restrições e ao contexto da IS (utils/contextoLaudo.ts)."
   ],
   "convencoes": {
     "placeholders": "{{nome}} = valor descrito em 'campos'; {{(não)}} = incluir ou omitir 'não'; [trecho] = condicional.",
@@ -2694,5 +2695,350 @@
   "restricoesEmbarque": {
     "Tipo 1": "Permitido servir em OM de terra (inclusive consideradas embarque para carreira, fora da conceituação 6.1.3.q); vedado embarque em navios e manobras operativas.",
     "Tipo 2": "Permitido OM de terra, embarque e manobras limitadas: sem comissões sem evacuação médica célere; sem equipes de pronto emprego; navios atracados ou IM; OM do CFN sem isolamento prolongado/condições adversas; missões só em território nacional."
-  }
+  },
+  "verificacoesSintaxe": {
+    "se": "Todas as condições precisam valer (E). 'qualquer' = lista de blocos 'se' alternativos (OU).",
+    "condicoes": {
+      "regras": "chave da regra da IS",
+      "finalidades": "nome da finalidade",
+      "tipoServico": "carreira | SMV | SMI | outro",
+      "laudos": "id do laudo identificado",
+      "categorias": "categoria do laudo identificado",
+      "laudoIdentificado": "bool",
+      "laudoPermitido": "bool (laudo identificado está em laudosPermitidos)",
+      "emProrrogacao": "bool (texto contém 'em prorrogação')",
+      "restricoesPreenchidas": "bool (campo Restrições da IS)",
+      "textoContem": "regex sobre o texto normalizado (minúsculas, sem acento)",
+      "textoNaoContem": "regex",
+      "restoTexto": "bool (há texto além do modelo)",
+      "campoNumerico": "{nome, min?, max?} sobre campo extraído do laudo",
+      "contexto": "{chave: valor | {min?, max?}}; chave ausente/nula no contexto = sem dado"
+    },
+    "semDado": "Se uma condição de contexto não puder ser avaliada, aplica 'nivelSemDado' com 'mensagemSemDado' (omitido = não dispara)."
+  },
+  "verificacoes": [
+    {
+      "id": "LAUDO_NAO_PERMITIDO",
+      "severidade": "erro",
+      "se": {
+        "laudoIdentificado": true,
+        "laudoPermitido": false
+      },
+      "mensagem": "O laudo corresponde a um modelo da DGPM-406 que não é cabível para esta finalidade/vínculo.",
+      "fonte": "regras[...].laudosPermitidos"
+    },
+    {
+      "id": "TEXTO_FORA_DO_PADRAO",
+      "severidade": "alerta",
+      "se": {
+        "laudoIdentificado": false
+      },
+      "mensagem": "O texto não corresponde a nenhum modelo de laudo previsto para a finalidade. Conferir a redação com a DGPM-406.",
+      "fonte": "formas de conclusão"
+    },
+    {
+      "id": "PRORROGACAO_SEM_TERMO",
+      "severidade": "erro",
+      "se": {
+        "finalidades": [
+          "Término de Incapacidade"
+        ],
+        "laudos": [
+          "SAM_INCAP_TEMP",
+          "CF_INCAP_TEMP",
+          "CF_INCAP_TEMP_ITEMV",
+          "CF_INCAP_TEMP_NEXO",
+          "SMV_INCAP_TEMP",
+          "SMV_INCAP_TEMP_ITEMV",
+          "SMV_INCAP_TEMP_NEXO",
+          "SC_INCAP_TEMP"
+        ],
+        "emProrrogacao": false,
+        "contexto": {
+          "ltsAnterior": true,
+          "apresentadoNoPrazo": true
+        }
+      },
+      "mensagem": "Prorrogação de LTS (apresentado no prazo) sem o termo 'em prorrogação'.",
+      "fonte": "6.2.2.e; 6.3.2.a.I",
+      "nivelSemDado": "alerta",
+      "mensagemSemDado": "Término de Incapacidade sem 'em prorrogação': conferir no histórico se a LTS anterior estava vigente (6.2.2.e) ou vencida sem documentação (6.2.2.f)."
+    },
+    {
+      "id": "PRORROGACAO_INDEVIDA_LTS_VENCIDA",
+      "severidade": "alerta",
+      "se": {
+        "finalidades": [
+          "Término de Incapacidade"
+        ],
+        "laudos": [
+          "SAM_INCAP_TEMP",
+          "CF_INCAP_TEMP",
+          "CF_INCAP_TEMP_ITEMV",
+          "CF_INCAP_TEMP_NEXO",
+          "SMV_INCAP_TEMP",
+          "SMV_INCAP_TEMP_ITEMV",
+          "SMV_INCAP_TEMP_NEXO",
+          "SC_INCAP_TEMP"
+        ],
+        "emProrrogacao": true,
+        "contexto": {
+          "apresentadoNoPrazo": false
+        }
+      },
+      "mensagem": "'Em prorrogação' com a LTS anterior vencida: só cabe se houver documentação médica do período em aberto.",
+      "fonte": "6.2.2.e/f"
+    },
+    {
+      "id": "PRORROGACAO_EM_VDF",
+      "severidade": "erro",
+      "se": {
+        "finalidades": [
+          "Verificação de Deficiência Funcional",
+          "Verificação de Deficiência Funcional - Fato novo",
+          "Verificação de Deficiência Funcional - SMI",
+          "Verificação de Deficiência Funcional - SC"
+        ],
+        "emProrrogacao": true
+      },
+      "mensagem": "'Em prorrogação' em IS de VDF: o termo só cabe nas IS de Término de Incapacidade/Restrições.",
+      "fonte": "6.3.1.b; 6.3.2.a.I"
+    },
+    {
+      "id": "PRORROGACAO_NAO_ADMITIDA",
+      "severidade": "alerta",
+      "se": {
+        "laudoIdentificado": true,
+        "emProrrogacao": true,
+        "laudos": [
+          "SAM_APTO",
+          "SAM_APTO_RESTR_LTS_RETRO",
+          "SAM_INCAP_TEMP_NEXO",
+          "SAM_CONTINUA_INCAP",
+          "SAM_INCAP_DEF",
+          "SAM_INCAP_DEF_ESPEC",
+          "SMV_APTO",
+          "SMV_INCAP_TEMP",
+          "SMV_INCAP_TEMP_ITEMV",
+          "SMV_INCAP_TEMP_NEXO",
+          "CP_APTO",
+          "CP_APTO_RESTR",
+          "CP_INAPTO",
+          "PTS_APTO",
+          "PTS_APTO_RESTR",
+          "PTS_INAPTO"
+        ]
+      },
+      "mensagem": "O modelo deste laudo não prevê o termo 'em prorrogação'.",
+      "fonte": "formas de conclusão"
+    },
+    {
+      "id": "VDF_SMI_FORMA",
+      "severidade": "erro",
+      "se": {
+        "regras": [
+          "VDF_SMI"
+        ],
+        "laudoPermitido": false
+      },
+      "mensagem": "VDF de militar do SMI conclui somente com APTO A, INCAPAZ B-1, B-2 ou C (ou incapacidade definitiva para o SAM nas hipóteses do 11.3.2.e). Não cabe 'Apto com restrições'.",
+      "fonte": "11.3.3"
+    },
+    {
+      "id": "SMI_B1_SEM_PERIODO",
+      "severidade": "erro",
+      "se": {
+        "laudos": [
+          "SMI_INCAP_B1"
+        ],
+        "textoNaoContem": "\\d+\\s*dias|afastamento"
+      },
+      "mensagem": "Incapaz B-1 sem o período de afastamento recomendado no texto complementar.",
+      "fonte": "11.3.3.b"
+    },
+    {
+      "id": "CP_RESTRICOES_DISCRIMINADAS",
+      "severidade": "erro",
+      "se": {
+        "regras": [
+          "CONTROLE_PERIODICO",
+          "CONTROLE_ATIVIDADE_ESPECIFICA",
+          "PRORROGACAO_SMV",
+          "REENGAJAMENTO_CARREIRA"
+        ],
+        "laudos": [
+          "CP_APTO_RESTR",
+          "PTS_APTO_RESTR"
+        ],
+        "qualquer": [
+          {
+            "restoTexto": true
+          },
+          {
+            "restricoesPreenchidas": true
+          },
+          {
+            "textoContem": "\\d+\\s*(dias|meses)"
+          }
+        ]
+      },
+      "mensagem": "Em IS de controle periódico/prorrogação o laudo é apenas 'Apto para..., com restrições': não discriminar restrições nem período (são definidos na IS de VDF/Término de Restrições).",
+      "fonte": "4.1.3.g; 4.1.5.b; 11.7.2"
+    },
+    {
+      "id": "CP_INAPTO_INDEVIDO",
+      "severidade": "erro",
+      "se": {
+        "regras": [
+          "CONTROLE_PERIODICO"
+        ],
+        "laudos": [
+          "CP_INAPTO"
+        ]
+      },
+      "mensagem": "'Inapto' não cabe em controle trienal/periódico comum: só nas finalidades de atividade específica da alínea f do 4.1.3.",
+      "fonte": "4.1.5.c"
+    },
+    {
+      "id": "CP_INCAPACIDADE",
+      "severidade": "erro",
+      "se": {
+        "regras": [
+          "CONTROLE_PERIODICO",
+          "CONTROLE_ATIVIDADE_ESPECIFICA"
+        ],
+        "categorias": [
+          "incapaz_temporario",
+          "incapaz_definitivo"
+        ]
+      },
+      "mensagem": "Laudo de incapacidade em IS de controle periódico: arquivar o controle e exarar o laudo na IS de VDF.",
+      "fonte": "4.1.3.e/k"
+    },
+    {
+      "id": "LIMITE_180_DIAS",
+      "severidade": "erro",
+      "se": {
+        "categorias": [
+          "incapaz_temporario",
+          "apto_restricoes"
+        ],
+        "campoNumerico": {
+          "nome": "tempo_dias",
+          "min": 181
+        }
+      },
+      "mensagem": "Período superior a 180 dias por IS.",
+      "fonte": "6.1.4.e/f; 11.8.2.b"
+    },
+    {
+      "id": "CONTINUA_INCAP_TEMPORARIO",
+      "severidade": "erro",
+      "se": {
+        "laudos": [
+          "SAM_CONTINUA_INCAP"
+        ],
+        "tipoServico": [
+          "SMV",
+          "SMI",
+          "outro"
+        ]
+      },
+      "mensagem": "'Continua incapaz temporariamente' é exclusivo de militar de carreira.",
+      "fonte": "6.1.4.g"
+    },
+    {
+      "id": "CONTINUA_INCAP_SEM_AGREGACAO",
+      "severidade": "erro",
+      "se": {
+        "laudos": [
+          "SAM_CONTINUA_INCAP"
+        ],
+        "tipoServico": [
+          "carreira"
+        ],
+        "contexto": {
+          "tempoAgregacaoDias": {
+            "max": 729
+          }
+        }
+      },
+      "mensagem": "'Continua incapaz temporariamente' exige dois anos de agregação (≈ 3 anos de LTS ininterrupta).",
+      "fonte": "6.1.4.g",
+      "nivelSemDado": "alerta",
+      "mensagemSemDado": "'Continua incapaz' exige dois anos de agregação: conferir o histórico de LTS ininterrupta."
+    },
+    {
+      "id": "AGREGACAO_2_ANOS_LTS_COMUM",
+      "severidade": "alerta",
+      "se": {
+        "laudos": [
+          "SAM_INCAP_TEMP"
+        ],
+        "tipoServico": [
+          "carreira"
+        ],
+        "contexto": {
+          "tempoAgregacaoDias": {
+            "min": 730
+          }
+        }
+      },
+      "mensagem": "Militar com dois anos ou mais de agregação: avaliar o laudo 'Continua incapaz temporariamente' (com revisão ex officio por JSD) ou a incapacidade definitiva.",
+      "fonte": "6.1.4.g/j"
+    },
+    {
+      "id": "RESTRICOES_36_MESES",
+      "severidade": "alerta",
+      "se": {
+        "categorias": [
+          "apto_restricoes"
+        ],
+        "contexto": {
+          "restricoesAcumuladasMeses": {
+            "min": 36
+          }
+        }
+      },
+      "mensagem": "Restrições contínuas por 36 meses ou mais: avaliar restrições por tempo indeterminado (carreira) ou Deixar o SMV (SMV).",
+      "fonte": "6.2.3.g–i; 11.8.2.b"
+    },
+    {
+      "id": "NEXO_SEM_AO_REGISTRADO",
+      "severidade": "alerta",
+      "se": {
+        "textoContem": "relacao de causa e efeito com o servico",
+        "textoNaoContem": "\\bsem relacao de causa"
+      },
+      "mensagem": "Laudo com nexo causal com o serviço: conferir AO com Exame de Sanidade realizado (ou AO concluído/ISO), pois não há registro de AO no app.",
+      "fonte": "6.3.2.a.II; 8.1.5; 11.8.3.e"
+    },
+    {
+      "id": "ITEM_V_SEM_ENQUADRAMENTO",
+      "severidade": "alerta",
+      "se": {
+        "laudos": [
+          "SAM_INCAP_DEF"
+        ],
+        "textoContem": "item v\\b|inciso v\\b",
+        "textoNaoContem": "cardiopatia grave|neoplasia maligna|alienacao mental|nefropatia grave|cegueira|tuberculose|hanseniase|esclerose multipla|paralisia|parkinson|penfigo|espondilo|sida|aids|\\bnao e "
+      },
+      "mensagem": "Doença do item V do art. 108 sem o enquadramento da PN 3.551/2021 após o CID, ex.: '(Cardiopatia Grave)' ou '(não é Cardiopatia Grave)'.",
+      "fonte": "6.3.2.c"
+    },
+    {
+      "id": "RESTRICOES_SEM_LISTA",
+      "severidade": "alerta",
+      "se": {
+        "laudos": [
+          "SAM_APTO_RESTR",
+          "SAM_APTO_RESTR_LTS_RETRO",
+          "SMV_APTO_RESTR"
+        ],
+        "restricoesPreenchidas": false
+      },
+      "mensagem": "Laudo com restrições sem as restrições lançadas no campo próprio.",
+      "fonte": "6.3.1.b"
+    }
+  ]
 }

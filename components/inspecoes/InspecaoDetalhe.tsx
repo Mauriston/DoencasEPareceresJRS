@@ -38,6 +38,7 @@ import { podeAbrirFicha } from '../ficha/permissoes';
 import { AcoesRodape, type AcaoRodape } from '../ui/AcoesRodape';
 import { CascaPainelFicha, type AcaoBarraFicha } from '../ficha/CascaPainelFicha';
 import { Field } from '../ui/Field';
+import { LaudoAssistidoIS } from './conclusao/LaudoAssistidoIS';
 import { Segmented } from '../ui/Segmented';
 import { StatusTag } from '../ui/StatusTag';
 import { tomStatusIS } from './listaIS';
@@ -184,12 +185,19 @@ const TextoFinalidades: React.FC<{ is: InspecaoRecord }> = ({ is }) => {
 };
 
 /** Laudo de uma das finalidades (IS com mais de uma finalidade), com gravação automática. */
-const CampoLaudoFinalidade: React.FC<{ ordem: number; finalidade: string; remoto: string; onSalvar: (finalidade: string, valor: string) => void }> = ({ ordem, finalidade, remoto, onSalvar }) => {
+const CampoLaudoFinalidade: React.FC<{
+  ordem: number; finalidade: string; remoto: string; onSalvar: (finalidade: string, valor: string) => void;
+  /** Validação/montador do laudo (LaudoAssistidoIS) com o texto atual e a função que grava um laudo escolhido. */
+  assistencia?: (valor: string, usar: (texto: string) => void) => React.ReactNode;
+}> = ({ ordem, finalidade, remoto, onSalvar, assistencia }) => {
   const campo = useCampoAuto(remoto, v => onSalvar(finalidade, v));
   return (
-    <Field label={`Laudo ${ordem} — ${finalidade}`}>
-      {a => <textarea {...a} value={campo.valor} onChange={e => campo.onChange(e.target.value)} onBlur={campo.onBlur} className={`${a.className} min-h-[88px]`} />}
-    </Field>
+    <div className="space-y-1.5">
+      <Field label={`Laudo ${ordem} — ${finalidade}`}>
+        {a => <textarea {...a} value={campo.valor} onChange={e => campo.onChange(e.target.value)} onBlur={campo.onBlur} className={`${a.className} min-h-[88px]`} />}
+      </Field>
+      {assistencia?.(campo.valor, t => { campo.onChange(t); onSalvar(finalidade, t); })}
+    </div>
   );
 };
 
@@ -273,6 +281,11 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const gravarCampo = (campo: CampoConclusao, valor: string) => gravar(atual => patchConclusao(comPadroes(atual), campo, valor, hojeISO(), nav?.authUser?.perfil));
 
   const laudo = useCampoAuto(is.laudo || '', v => gravarCampo('laudo', v));
+  /** Validação do laudo pelas formas de conclusão da DGPM-406 (+ montador quando `usar` é passado). */
+  const assistenciaLaudo = (finalidade: string, texto: string, usar?: (t: string) => void) => (
+    <LaudoAssistidoIS isNumero={is.is} inspecionadoId={is.inspecionadoId || ''} finalidade={finalidade} dataAbertura={is.dataAbertura}
+      dataEntrevista={is.dataEntrevista} laudo={texto} restricoes={is.restricoes || ''} cid={is.cid || ''} onUsarLaudo={usar} />
+  );
   const ds1a = useCampoAuto(is.ds1a || '', v => gravarCampo('ds1a', v));
   const observacoes = useCampoAuto(is.observacoes || '', v => gravarCampo('observacoes', v));
   const tis = useCampoAuto(is.tis || '', v => {
@@ -486,6 +499,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                     {textoLaudo ? (
                       <>
                         <span className="block whitespace-pre-line">{textoLaudo}</span>
+                        {laudosPorFinalidade.length <= 1 && <div className="mt-1">{assistenciaLaudo(is.finalidade || '', textoLaudo)}</div>}
                         {(is.dataLaudo || podeEditarDataLaudo) && <span className="flex items-center gap-1 mt-1 text-xs text-ink-3">Data do laudo: {is.dataLaudo ? dataBr(is.dataLaudo) : '—'}{botaoDataLaudo}</span>}
                       </>
                     ) : podeEditarDataLaudo ? <span className="flex items-center gap-1 text-xs text-ink-3">Data do laudo: {is.dataLaudo ? dataBr(is.dataLaudo) : '—'}{botaoDataLaudo}</span> : ''}
@@ -565,6 +579,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                   {textoLaudo && (
                     <Linha rotulo="Laudo" className="col-span-2">
                       <span className="block whitespace-pre-line">{textoLaudo}</span>
+                      {laudosPorFinalidade.length <= 1 && <div className="mt-1">{assistenciaLaudo(is.finalidade || '', textoLaudo)}</div>}
                       {is.dataLaudo && <span className="block mt-1 text-xs text-ink-3">Data do laudo: {dataBr(is.dataLaudo)}</span>}
                     </Linha>
                   )}
@@ -589,14 +604,18 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
           {multiplasFinalidades ? (
             <div className="space-y-3">
               {laudosPorFinalidade.map((l, i) => (
-                <CampoLaudoFinalidade key={l.finalidade} ordem={i + 1} finalidade={l.finalidade} remoto={l.laudo} onSalvar={salvarLaudoFinalidade} />
+                <CampoLaudoFinalidade key={l.finalidade} ordem={i + 1} finalidade={l.finalidade} remoto={l.laudo} onSalvar={salvarLaudoFinalidade}
+                  assistencia={(valor, usar) => assistenciaLaudo(l.finalidade, valor, usar)} />
               ))}
               {!is.laudo?.trim() && <p className="text-xs text-ink-3">Um laudo para cada finalidade: o TIS fica disponível quando todos estiverem preenchidos.</p>}
             </div>
           ) : (
-            <Field label="Laudo">
-              {a => <textarea {...a} value={laudo.valor} onChange={e => laudo.onChange(e.target.value)} onBlur={laudo.onBlur} className={`${a.className} min-h-[88px]`} />}
-            </Field>
+            <div className="space-y-1.5">
+              <Field label="Laudo">
+                {a => <textarea {...a} value={laudo.valor} onChange={e => laudo.onChange(e.target.value)} onBlur={laudo.onBlur} className={`${a.className} min-h-[88px]`} />}
+              </Field>
+              {assistenciaLaudo(is.finalidade || '', laudo.valor, t => { laudo.onChange(t); gravarCampo('laudo', t); })}
+            </div>
           )}
 
           {comCid && (
