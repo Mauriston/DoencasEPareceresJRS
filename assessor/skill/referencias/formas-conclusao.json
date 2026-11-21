@@ -1,0 +1,3041 @@
+{
+  "versao": 4,
+  "fonte": "DGPM-406 (9ª Rev.), capítulos 4, 5, 6, 7, 8, 9, 10, 11, 16 e 17",
+  "comoUsar": [
+    "1) Localizar a finalidade pelo nome exato em 'finalidades' e escolher a regra pelo vínculo (ver SKILL.md, roteamento).",
+    "2) Em 'regras[chave].laudosPermitidos', obter os ids e validar o laudo redigido contra 'laudos[id].modelo' (placeholders {{campo}}; 'admiteEmProrrogacao' permite o sufixo ' (em prorrogação)').",
+    "3) Checar 'aplicarQuando' e 'exige' contra os dados da IS e do militar, e incluir 'textoComplementar' quando a condição ocorrer."
+  ],
+  "convencoes": {
+    "placeholders": "{{nome}} = valor descrito em 'campos'; {{(não)}} = incluir ou omitir 'não'; [trecho] = condicional.",
+    "sufixoProrrogacao": " (em prorrogação)",
+    "categorias": [
+      "apto",
+      "apto_restricoes",
+      "inapto",
+      "incapaz_temporario",
+      "incapaz_definitivo",
+      "beneficio",
+      "beneficio_negativo",
+      "dependente",
+      "sufixo",
+      "outro"
+    ],
+    "laudoRef": "campo do tipo laudoRef recebe o texto de outro laudo do catálogo (ex.: laudo do Cap. 6 que complementa a inaptidão)",
+    "exige": {
+      "AO_com_exame_sanidade": "AO de acidente em serviço com Exame de Sanidade realizado",
+      "AO_concluido_ou_ISO": "AO concluído, auditado e numerado, ou solução de ISO",
+      "doenca_item_V": "doença do item V do art. 108 do EM",
+      "aluno_curso_formacao": "aluno de Curso de Formação",
+      "vinculo_carreira": "militar de carreira",
+      "agregacao_2_anos": "dois anos de agregação",
+      "RM1_designado": "RM1 designado para funções na atividade",
+      "oficial": "oficial",
+      "praca": "praça",
+      "sexo_feminino": "sexo feminino",
+      "vinculo_temporario_ou_TTC": "militar temporário (SMI/SMV) ou prestador de TTC",
+      "gestante": "gestação em curso"
+    }
+  },
+  "finalidades": {
+    "Controle trienal": {
+      "Carreira": "CONTROLE_PERIODICO",
+      "Temporário": "CONTROLE_PERIODICO"
+    },
+    "Controle semestral Raios-X": {
+      "Carreira": "CONTROLE_ATIVIDADE_ESPECIFICA",
+      "Temporário": "CONTROLE_ATIVIDADE_ESPECIFICA"
+    },
+    "Controle anual de praça de máquinas": {
+      "Carreira": "CONTROLE_ATIVIDADE_ESPECIFICA",
+      "Temporário": "CONTROLE_ATIVIDADE_ESPECIFICA"
+    },
+    "Manipulação e admin Terapia Antineoplásica": {
+      "Carreira": "CONTROLE_ATIVIDADE_ESPECIFICA",
+      "Temporário": "CONTROLE_ATIVIDADE_ESPECIFICA"
+    },
+    "Serviço com explosivos": {
+      "Carreira": "CONTROLE_ATIVIDADE_ESPECIFICA",
+      "Temporário": "CONTROLE_ATIVIDADE_ESPECIFICA"
+    },
+    "Serviço com OTTO FUELL II": {
+      "Carreira": "CONTROLE_ATIVIDADE_ESPECIFICA",
+      "Temporário": "CONTROLE_ATIVIDADE_ESPECIFICA"
+    },
+    "Verificação de Deficiência Funcional": {
+      "Carreira": "VDF_CARREIRA",
+      "Temporário:SMV": "VDF_SMV",
+      "Temporário:SMI": "VDF_SMI"
+    },
+    "Verificação de Deficiência Funcional - Fato novo": {
+      "Carreira": "VDF_CARREIRA",
+      "Temporário:SMV": "VDF_SMV",
+      "Temporário:SMI": "VDF_SMI"
+    },
+    "Verificação de Deficiência Funcional - SMI": {
+      "Temporário:SMI": "VDF_SMI",
+      "Temporário": "VDF_SMI"
+    },
+    "Término de Incapacidade": {
+      "Carreira": "TERMINO_INCAPACIDADE_CARREIRA",
+      "Temporário:SMV": "TERMINO_SMV"
+    },
+    "Término de Restrições": {
+      "Carreira": "TERMINO_RESTRICOES_CARREIRA",
+      "Temporário:SMV": "TERMINO_SMV"
+    },
+    "Deixar o SAM": {
+      "Carreira": "DEIXAR_SAM"
+    },
+    "Deixar o SMV": {
+      "Temporário": "DEIXAR_SMV"
+    },
+    "Deixar o SMI": {
+      "Temporário": "DEIXAR_SMI"
+    },
+    "Prorrogação do Tempo de Serviço": {
+      "Temporário": "PRORROGACAO_SMV"
+    },
+    "Reengajamento": {
+      "Temporário": "PRORROGACAO_SMV",
+      "Carreira": "REENGAJAMENTO_CARREIRA"
+    },
+    "Ingresso no SMV (oriundos do SMI)": {
+      "Temporário": "INGRESSO_SMV"
+    },
+    "Engajamento": {
+      "Temporário": "ENGAJAMENTO"
+    },
+    "Localidade com deficiência em assistência sanitária (LDAS)": {
+      "*": "LDAS"
+    },
+    "Missão Antártica": {
+      "*": "MISSAO_ANTARTICA"
+    },
+    "Missão no exterior (< 3m c/ trienal OK)": {
+      "*": "MISSAO_EXTERIOR"
+    },
+    "Missão no exterior (> 3m)": {
+      "*": "MISSAO_EXTERIOR"
+    },
+    "Tarefa por Tempo Certo e prorrogações": {
+      "*": "TTC"
+    },
+    "Designação de militares RM1": {
+      "*": "DESIGNACAO_RM1"
+    },
+    "IS para conclusão de Curso de Formação": {
+      "*": "CONCLUSAO_CURSO_FORMACAO"
+    },
+    "IS inopinada de avaliação toxicológica preventiva direcionada": {
+      "Carreira": "TOXICOLOGICA_INOPINADA_CARREIRA",
+      "Temporário": "TOXICOLOGICA_INOPINADA_TEMPORARIO"
+    },
+    "Reversão ou Reintegração ao SPG": {
+      "*": "REVERSAO_OU_REINTEGRACAO_SPG"
+    },
+    "Seleção para Cursos de carreira (🚫 AE)": {
+      "*": "SELECAO_CURSOS"
+    },
+    "LTSPF": {
+      "*": "LTSPF"
+    },
+    "Controle Anual de Mergulho": {
+      "*": "CONTROLE_MERGULHO"
+    },
+    "Verificação de Deficiência Funcional - SC": {
+      "*": "VDF_SC"
+    },
+    "Deixar o SPG": {
+      "*": "DEIXAR_SPG"
+    },
+    "Exame de Sanidade em IPM": {
+      "*": "EXAME_SANIDADE_IPM"
+    },
+    "Reintegração de Militar": {
+      "*": "REINTEGRACAO_MILITAR"
+    },
+    "Reintegração de Candidato": {
+      "*": "REINTEGRACAO_CANDIDATO"
+    },
+    "Auxílio invalidez de anistiado político": {
+      "*": "AUXILIO_INVALIDEZ"
+    },
+    "Auxílio-invalidez de militar inativo": {
+      "*": "AUXILIO_INVALIDEZ"
+    },
+    "Concessão de auxílio pré-escolar": {
+      "*": "AUXILIO_PRE_ESCOLAR"
+    },
+    "Dependência de familiar de militar": {
+      "*": "DEPENDENCIA_FAMILIAR"
+    },
+    "Isenção de pagamento de imposto de renda civil": {
+      "*": "ISENCAO_IR_CIVIL"
+    },
+    "Isenção de pagamento de imposto de renda": {
+      "*": "ISENCAO_IR_MILITAR"
+    },
+    "Pensão civil para parente ou beneficiário inválido": {
+      "*": "PENSAO_CIVIL_INVALIDO"
+    },
+    "Pensão de ex-combatente para beneficiário inválido": {
+      "*": "PENSAO_EX_COMBATENTE"
+    },
+    "Pensão especial à viúva de civil": {
+      "*": "PENSAO_VIUVA_CIVIL"
+    },
+    "Pensão especial à viúva de militar": {
+      "*": "PENSAO_VIUVA_MILITAR"
+    },
+    "Pensão militar para parente ou beneficiário inválido": {
+      "*": "PENSAO_MILITAR_INVALIDO"
+    },
+    "Preexistência de doença especificada em lei": {
+      "*": "PREEXISTENCIA_DOENCA_LEI"
+    },
+    "Preexistência de incapacidade definitiva para o SAM": {
+      "*": "PREEXISTENCIA_INCAP_DEF"
+    },
+    "Preexistência de invalidez": {
+      "*": "PREEXISTENCIA_INVALIDEZ"
+    },
+    "Reforma de militar RM1": {
+      "*": "REFORMA_RM1"
+    },
+    "Rev de reforma relacionada acidente ou doença adquirida em serviço": {
+      "*": "REVISAO_REFORMA"
+    },
+    "Reversão ao SPG": {
+      "*": "REVERSAO_SPG"
+    },
+    "Revisão de proventos de servidor civil": {
+      "*": "REVISAO_PROVENTOS_SC"
+    },
+    "Revisão de reforma para retorno ao serviço ativo": {
+      "*": "REVISAO_REFORMA"
+    }
+  },
+  "regras": {
+    "CONTROLE_PERIODICO": {
+      "fonte": "4.1.5",
+      "laudosPermitidos": [
+        "CP_APTO",
+        "CP_APTO_RESTR"
+      ],
+      "observacoes": [
+        "Incapacidade temporária (LTS) ou definitiva: arquivar o controle periódico e exarar laudo de VDF (4.1.3.e).",
+        "Não cabe controle periódico de militar em LTS (4.1.3.k).",
+        "HIV assintomático: mudar finalidade para controle anual (4.1.3.j)."
+      ]
+    },
+    "CONTROLE_ATIVIDADE_ESPECIFICA": {
+      "fonte": "4.1.3.a/b/f e 4.1.5",
+      "laudosPermitidos": [
+        "CP_APTO",
+        "CP_APTO_RESTR",
+        "CP_INAPTO"
+      ],
+      "observacoes": [
+        "Incapacidade temporária (LTS) ou definitiva: arquivar o controle periódico e exarar laudo de VDF (4.1.3.e).",
+        "Não cabe controle periódico de militar em LTS (4.1.3.k).",
+        "HIV assintomático: mudar finalidade para controle anual (4.1.3.j).",
+        "Validade da atividade (semestral/anual); Órgãos de Pessoal podem considerar validade trienal para a carreira (4.1.3.b).",
+        "IS declinada: incluir VDF; LTS ou restrição que envolva a atividade → CP_INAPTO; restrição que não impede a atividade → CP_APTO_RESTR (4.1.3.f)."
+      ]
+    },
+    "VDF_CARREIRA": {
+      "fonte": "6.1, 6.2.1, 6.2.4 e 6.3",
+      "laudosPermitidos": [
+        "SAM_APTO",
+        "SAM_APTO_RESTR",
+        "SAM_APTO_RESTR_LTS_RETRO",
+        "SAM_INCAP_TEMP",
+        "SAM_INCAP_TEMP_NEXO",
+        "SAM_CONTINUA_INCAP",
+        "SAM_INCAP_DEF",
+        "SAM_INCAP_DEF_ESPEC",
+        "CF_INCAP_TEMP",
+        "CF_INCAP_TEMP_ITEMV",
+        "CF_INCAP_TEMP_NEXO"
+      ],
+      "regrasDeAplicacao": [
+        "Concluir em até 20 dias; excedido, exarar laudo por 30 dias (6.2.1.b).",
+        "Laudos CF_* somente para alunos de Cursos de Formação (6.2.4).",
+        "VDF não usa 'em prorrogação'."
+      ]
+    },
+    "TERMINO_INCAPACIDADE_CARREIRA": {
+      "fonte": "6.2.2 e 6.3",
+      "laudosPermitidos": [
+        "SAM_APTO",
+        "SAM_APTO_RESTR",
+        "SAM_APTO_RESTR_LTS_RETRO",
+        "SAM_INCAP_TEMP",
+        "SAM_INCAP_TEMP_NEXO",
+        "SAM_CONTINUA_INCAP",
+        "SAM_INCAP_DEF",
+        "SAM_INCAP_DEF_ESPEC",
+        "CF_INCAP_TEMP",
+        "CF_INCAP_TEMP_ITEMV",
+        "CF_INCAP_TEMP_NEXO"
+      ],
+      "regrasDeAplicacao": [
+        "Aptidão com LTS vencida na data da conclusão (apresentado no prazo) → SAM_APTO_RESTR_LTS_RETRO (6.2.2.c).",
+        "Fora do prazo: com documentação do período descoberto → SAM_APTO_RESTR_LTS_RETRO; sem → SAM_APTO_RESTR (6.2.2.d).",
+        "Incapaz temporário, no prazo ou com documentação → SAM_INCAP_TEMP + 'em prorrogação' (6.2.2.e).",
+        "Incapaz temporário, LTS vencida sem documentação → SAM_INCAP_TEMP sem 'em prorrogação' (6.2.2.f).",
+        "Toxicológico positivo: mesmas formas do Cap. 6 (17.10)."
+      ]
+    },
+    "TERMINO_RESTRICOES_CARREIRA": {
+      "fonte": "6.2.3 e 6.3",
+      "laudosPermitidos": [
+        "SAM_APTO",
+        "SAM_APTO_RESTR",
+        "SAM_APTO_RESTR_LTS_RETRO",
+        "SAM_INCAP_TEMP",
+        "SAM_INCAP_TEMP_NEXO",
+        "SAM_CONTINUA_INCAP",
+        "SAM_INCAP_DEF",
+        "SAM_INCAP_DEF_ESPEC"
+      ],
+      "regrasDeAplicacao": [
+        "Prorrogação de restrições → SAM_APTO_RESTR + 'em prorrogação'.",
+        "Máximo de 36 meses contínuos (restrições/LTS) pela mesma patologia; depois, avaliar restrições por tempo indeterminado (6.2.3.g–i).",
+        "Restrições vencidas: vigência a partir da conclusão da IS atual (6.2.3.f).",
+        "Não cabe Término de Restrições com restrições por tempo indeterminado (6.2.3.j)."
+      ]
+    },
+    "VDF_SMV": {
+      "fonte": "11.8",
+      "laudosPermitidos": [
+        "SMV_APTO",
+        "SMV_APTO_RESTR",
+        "SMV_INCAP_TEMP",
+        "SMV_INCAP_TEMP_ITEMV",
+        "SMV_INCAP_TEMP_NEXO",
+        "SAM_INCAP_DEF"
+      ],
+      "observacoes": [
+        "Incapacidade temporária < 90 dias: reapresentar para Término de Incapacidade (11.8.2.c).",
+        "LTS ≥ 90 dias sem nexo: não reapresentar; licenciamento por conveniência do serviço (11.8.2.c).",
+        "LTS com nexo > 90 dias: reapresentar; recuperada a aptidão, apresentar para Deixar o SMV (11.8.2.d).",
+        "SAM_INCAP_DEF apenas em invalidez inequívoca, incapacidade definitiva com nexo comprovado ou doença do item V do art. 108 (11.8.2.e)."
+      ]
+    },
+    "TERMINO_SMV": {
+      "fonte": "11.8 (Término de Incapacidade/Restrições)",
+      "laudosPermitidos": [
+        "SMV_APTO",
+        "SMV_APTO_RESTR",
+        "SMV_INCAP_TEMP",
+        "SMV_INCAP_TEMP_ITEMV",
+        "SMV_INCAP_TEMP_NEXO",
+        "SAM_INCAP_DEF"
+      ],
+      "regrasDeAplicacao": [
+        "'em prorrogação' em SMV_APTO_RESTR quando for o caso."
+      ],
+      "observacoes": [
+        "Incapacidade temporária < 90 dias: reapresentar para Término de Incapacidade (11.8.2.c).",
+        "LTS ≥ 90 dias sem nexo: não reapresentar; licenciamento por conveniência do serviço (11.8.2.c).",
+        "LTS com nexo > 90 dias: reapresentar; recuperada a aptidão, apresentar para Deixar o SMV (11.8.2.d).",
+        "SAM_INCAP_DEF apenas em invalidez inequívoca, incapacidade definitiva com nexo comprovado ou doença do item V do art. 108 (11.8.2.e)."
+      ]
+    },
+    "VDF_SMI": {
+      "fonte": "11.3",
+      "laudosPermitidos": [
+        "SMI_APTO_A",
+        "SMI_INCAP_B1",
+        "SMI_INCAP_B2",
+        "SMI_INCAP_C",
+        "SAM_INCAP_DEF"
+      ],
+      "observacoes": [
+        "SAM_INCAP_DEF somente nas hipóteses do 11.3.2.e."
+      ]
+    },
+    "DEIXAR_SAM": {
+      "fonte": "8.1",
+      "laudosPermitidos": [
+        "DSAM_APTO",
+        "DSAM_APTO_NEXO",
+        "DSAM_DISPENSA_FUNCOES",
+        "DSAM_INCAP_TEMP",
+        "SAM_INCAP_DEF"
+      ],
+      "observacoes": [
+        "Necessidade de restrições: incluir finalidade VDF com laudos do Cap. 6 (8.1.2.f).",
+        "Incapacidade definitiva/invalidez indubitável: SAM_INCAP_DEF (8.1.2.h).",
+        "AO em aberto: competência da JRS (8.1.2.a)."
+      ]
+    },
+    "DEIXAR_SMV": {
+      "fonte": "11.9",
+      "laudosPermitidos": [
+        "DSMV_APTO",
+        "DSMV_APTO_NEXO",
+        "DSMV_APTA_GESTANTE",
+        "SAM_INCAP_DEF"
+      ],
+      "observacoes": [
+        "Grávida saudável → DSMV_APTA_GESTANTE.",
+        "Doença do item V ou com nexo não impede aptidão sem incapacidade total; registrar CID e fundamentação no TIS.",
+        "SAM_INCAP_DEF somente após declínio à JRS (11.9.1)."
+      ]
+    },
+    "DEIXAR_SMI": {
+      "fonte": "11.4",
+      "laudosPermitidos": [
+        "DSMI_APTO",
+        "DSMI_APTO_NEXO",
+        "SAM_INCAP_DEF"
+      ],
+      "observacoes": [
+        "SAM_INCAP_DEF somente após declínio à JRS (11.4.1)."
+      ]
+    },
+    "PRORROGACAO_SMV": {
+      "fonte": "11.7",
+      "laudosPermitidos": [
+        "PTS_APTO",
+        "PTS_APTO_RESTR",
+        "PTS_INAPTO"
+      ],
+      "observacoes": [
+        "Aptidão válida por 3 anos; dispensada nas renovações anuais."
+      ]
+    },
+    "INGRESSO_SMV": {
+      "fonte": "11.5.3",
+      "laudosPermitidos": [
+        "ING_SMV_APTO",
+        "ING_SMV_INAPTO"
+      ],
+      "observacoes": [
+        "Inaptidão: declinar à JRS."
+      ]
+    },
+    "ENGAJAMENTO": {
+      "fonte": "11.5.3",
+      "laudosPermitidos": [
+        "ENG_APTO",
+        "ENG_INAPTO"
+      ],
+      "observacoes": [
+        "Inaptidão: declinar à JRS."
+      ]
+    },
+    "REENGAJAMENTO_CARREIRA": {
+      "fonte": "4.1.5 e 4.1.3.p",
+      "laudosPermitidos": [
+        "CP_APTO",
+        "CP_APTO_RESTR",
+        "DSAM_APTO",
+        "DSAM_APTO_NEXO",
+        "DSAM_INCAP_TEMP"
+      ],
+      "observacoes": [
+        "Reengajamento/LSAM: acrescentar os laudos do Cap. 8 (Deixar o SAM)."
+      ]
+    },
+    "LDAS": {
+      "fonte": "4.3.1",
+      "laudosPermitidos": [
+        "LDAS_APTO",
+        "LDAS_INAPTO",
+        "SAM_APTO",
+        "SAM_APTO_RESTR",
+        "SAM_APTO_RESTR_LTS_RETRO",
+        "SAM_INCAP_TEMP",
+        "SAM_INCAP_TEMP_NEXO",
+        "SAM_CONTINUA_INCAP",
+        "SAM_INCAP_DEF",
+        "SAM_INCAP_DEF_ESPEC"
+      ],
+      "observacoes": [
+        "LDAS_INAPTO é complementado por laudo do Cap. 6."
+      ]
+    },
+    "MISSAO_EXTERIOR": {
+      "fonte": "4.3.3",
+      "laudosPermitidos": [
+        "MEX_APTO",
+        "MEX_INAPTO",
+        "MEX_DEP_SEM_PATOLOGIA",
+        "MEX_DEP_TRAT_NAO_CONCLUIDO",
+        "MEX_DEP_TRAT_ININTERRUPTO",
+        "SAM_APTO",
+        "SAM_APTO_RESTR",
+        "SAM_APTO_RESTR_LTS_RETRO",
+        "SAM_INCAP_TEMP",
+        "SAM_INCAP_TEMP_NEXO",
+        "SAM_CONTINUA_INCAP",
+        "SAM_INCAP_DEF",
+        "SAM_INCAP_DEF_ESPEC"
+      ],
+      "observacoes": [
+        "Um laudo MEX_DEP_* por dependente, após o laudo do militar.",
+        "Missão < 3 meses administrativa com restrições/HIV: exclusivamente JS (4.3.3.b)."
+      ]
+    },
+    "MISSAO_ANTARTICA": {
+      "fonte": "4.3.4",
+      "laudosPermitidos": [
+        "ANT_APTO",
+        "ANT_INAPTO",
+        "SAM_APTO",
+        "SAM_APTO_RESTR",
+        "SAM_APTO_RESTR_LTS_RETRO",
+        "SAM_INCAP_TEMP",
+        "SAM_INCAP_TEMP_NEXO",
+        "SAM_CONTINUA_INCAP",
+        "SAM_INCAP_DEF",
+        "SAM_INCAP_DEF_ESPEC"
+      ]
+    },
+    "TTC": {
+      "fonte": "4.3.5 e 17.10",
+      "laudosPermitidos": [
+        "TTC_APTO",
+        "TTC_RM1_INAPTO"
+      ]
+    },
+    "DESIGNACAO_RM1": {
+      "fonte": "4.3.5",
+      "laudosPermitidos": [
+        "RM1_APTO",
+        "TTC_RM1_INAPTO"
+      ]
+    },
+    "CONCLUSAO_CURSO_FORMACAO": {
+      "fonte": "17.10",
+      "laudosPermitidos": [
+        "CFORM_APTO",
+        "CFORM_INAPTO"
+      ]
+    },
+    "TOXICOLOGICA_INOPINADA_CARREIRA": {
+      "fonte": "17.10",
+      "laudosPermitidos": [
+        "TOX_APTO",
+        "TOX_ENCAMINHAR_VDF"
+      ],
+      "observacoes": [
+        "Mensagem com acesso restrito, sem especificar a finalidade (17.10.4)."
+      ]
+    },
+    "TOXICOLOGICA_INOPINADA_TEMPORARIO": {
+      "fonte": "17.10",
+      "laudosPermitidos": [
+        "TOX_APTO",
+        "TOX_INAPTO"
+      ],
+      "observacoes": [
+        "Mensagem padrão: 'REF ... PTC ...(AMP) concluiu IS atinente ao ... considerando ...(Laudo) BT' (17.10.4.c)."
+      ]
+    },
+    "SELECAO_CURSOS": {
+      "fonte": "4.2.4",
+      "laudosPermitidos": [
+        "CURSO_APTO",
+        "CURSO_INAPTO",
+        "CURSO_INCAP_TEMP",
+        "CURSO_INCAP_DEF",
+        "SAM_APTO",
+        "SAM_APTO_RESTR",
+        "SAM_APTO_RESTR_LTS_RETRO",
+        "SAM_INCAP_TEMP",
+        "SAM_INCAP_TEMP_NEXO",
+        "SAM_CONTINUA_INCAP",
+        "SAM_INCAP_DEF",
+        "SAM_INCAP_DEF_ESPEC"
+      ],
+      "observacoes": [
+        "Necessidade de restrições/incapacidade para o SAM: declinar à JRS, que avalia inclusão de VDF."
+      ]
+    },
+    "LTSPF": {
+      "fonte": "4.3.2",
+      "laudosPermitidos": [
+        "LTSPF_NECESSITA",
+        "LTSPF_NAO_NECESSITA"
+      ],
+      "observacoes": [
+        "Licença acima de 24 meses implica transferência para a Reserva Remunerada ex officio."
+      ]
+    },
+    "CONTROLE_MERGULHO": {
+      "fonte": "5.1.7.b.I",
+      "laudosPermitidos": [
+        "MG_APTO",
+        "MG_INCAP_TEMP_TERRA",
+        "MG_INCAP_TEMP_SAM",
+        "MG_INCAP_DEF",
+        "SAM_APTO",
+        "SAM_APTO_RESTR",
+        "SAM_APTO_RESTR_LTS_RETRO",
+        "SAM_INCAP_TEMP",
+        "SAM_INCAP_TEMP_NEXO",
+        "SAM_CONTINUA_INCAP",
+        "SAM_INCAP_DEF",
+        "SAM_INCAP_DEF_ESPEC"
+      ],
+      "observacoes": [
+        "Toxicológico positivo em JSAE: incapacidade temporária para a atividade + VDF (17.10.3.c)."
+      ]
+    },
+    "EXAME_SANIDADE_IPM": {
+      "fonte": "7.1.4",
+      "laudosPermitidos": [
+        "JD_APTO_EXAME_PREVIO",
+        "JD_INAPTO_EXAME_PREVIO",
+        "JD_QUESITOS",
+        "JD_DESERTOR_APTO",
+        "JD_DESERTOR_INAPTO"
+      ],
+      "observacoes": [
+        "Não cabe recurso administrativo."
+      ]
+    },
+    "REINTEGRACAO_MILITAR": {
+      "fonte": "7.2.4.a/b",
+      "laudosPermitidos": [
+        "REINT_INICIAL",
+        "REINT_SUBSEQUENTE_SUFIXO",
+        "SAM_APTO",
+        "SAM_APTO_RESTR",
+        "SAM_APTO_RESTR_LTS_RETRO",
+        "SAM_INCAP_TEMP",
+        "SAM_INCAP_TEMP_NEXO",
+        "SAM_CONTINUA_INCAP",
+        "SAM_INCAP_DEF",
+        "SAM_INCAP_DEF_ESPEC"
+      ]
+    },
+    "REINTEGRACAO_CANDIDATO": {
+      "fonte": "7.2.4.c",
+      "laudosPermitidos": [
+        "REINT_CAND_APTO",
+        "REINT_CAND_INAPTO"
+      ],
+      "observacoes": [
+        "Ingresso há mais de 6 meses: reapresentar para IS de ingresso (7.2.3.d)."
+      ]
+    },
+    "AUXILIO_INVALIDEZ": {
+      "fonte": "9.1.6.a",
+      "laudosPermitidos": [
+        "BEN_AUX_INVALIDEZ"
+      ],
+      "observacoes": [
+        "Usar o laudo específico do benefício; formas negativas admitem adaptações na citação da doença e no enquadramento legal (9.1.6).",
+        "Múltiplos benefícios no mesmo TIS: diagnóstico por extenso e afirmativa/negativa de invalidez em um só laudo.",
+        "Benefícios concedidos a militares e anistiados: revisão ex officio por JSD."
+      ]
+    },
+    "PENSAO_VIUVA_MILITAR": {
+      "fonte": "9.1.6.c",
+      "laudosPermitidos": [
+        "BEN_VIUVA_INVALIDA",
+        "BEN_VIUVA_SEM_DOENCA",
+        "BEN_VIUVA_NAO_INVALIDA"
+      ],
+      "observacoes": [
+        "Usar o laudo específico do benefício; formas negativas admitem adaptações na citação da doença e no enquadramento legal (9.1.6).",
+        "Múltiplos benefícios no mesmo TIS: diagnóstico por extenso e afirmativa/negativa de invalidez em um só laudo.",
+        "Benefícios concedidos a militares e anistiados: revisão ex officio por JSD."
+      ]
+    },
+    "PENSAO_EX_COMBATENTE": {
+      "fonte": "9.1.6.d",
+      "laudosPermitidos": [
+        "BEN_PENSAO_INVALIDO",
+        "BEN_PENSAO_NAO_INVALIDO"
+      ],
+      "observacoes": [
+        "Usar o laudo específico do benefício; formas negativas admitem adaptações na citação da doença e no enquadramento legal (9.1.6).",
+        "Múltiplos benefícios no mesmo TIS: diagnóstico por extenso e afirmativa/negativa de invalidez em um só laudo.",
+        "Benefícios concedidos a militares e anistiados: revisão ex officio por JSD."
+      ]
+    },
+    "PENSAO_MILITAR_INVALIDO": {
+      "fonte": "9.1.6.e",
+      "laudosPermitidos": [
+        "BEN_PENSAO_INVALIDO",
+        "BEN_PENSAO_NAO_INVALIDO"
+      ],
+      "observacoes": [
+        "Usar o laudo específico do benefício; formas negativas admitem adaptações na citação da doença e no enquadramento legal (9.1.6).",
+        "Múltiplos benefícios no mesmo TIS: diagnóstico por extenso e afirmativa/negativa de invalidez em um só laudo.",
+        "Benefícios concedidos a militares e anistiados: revisão ex officio por JSD."
+      ]
+    },
+    "DEPENDENCIA_FAMILIAR": {
+      "fonte": "9.1.6.f",
+      "laudosPermitidos": [
+        "BEN_DEPEND_INVALIDO",
+        "BEN_DEPEND_NAO_INVALIDO"
+      ],
+      "observacoes": [
+        "Usar o laudo específico do benefício; formas negativas admitem adaptações na citação da doença e no enquadramento legal (9.1.6).",
+        "Múltiplos benefícios no mesmo TIS: diagnóstico por extenso e afirmativa/negativa de invalidez em um só laudo.",
+        "Benefícios concedidos a militares e anistiados: revisão ex officio por JSD."
+      ]
+    },
+    "ISENCAO_IR_MILITAR": {
+      "fonte": "9.1.6.g",
+      "laudosPermitidos": [
+        "BEN_IR_REFORMA_ACIDENTE",
+        "BEN_IR_SEM_DOENCA",
+        "BEN_IR_DOENCA",
+        "BEN_IR_VISAO_MONOCULAR"
+      ],
+      "observacoes": [
+        "Usar o laudo específico do benefício; formas negativas admitem adaptações na citação da doença e no enquadramento legal (9.1.6).",
+        "Múltiplos benefícios no mesmo TIS: diagnóstico por extenso e afirmativa/negativa de invalidez em um só laudo.",
+        "Benefícios concedidos a militares e anistiados: revisão ex officio por JSD."
+      ]
+    },
+    "REFORMA_RM1": {
+      "fonte": "9.1.6.h",
+      "laudosPermitidos": [
+        "BEN_RM1_NAO_INCAPAZ",
+        "SAM_INCAP_DEF"
+      ],
+      "observacoes": [
+        "Usar o laudo específico do benefício; formas negativas admitem adaptações na citação da doença e no enquadramento legal (9.1.6).",
+        "Múltiplos benefícios no mesmo TIS: diagnóstico por extenso e afirmativa/negativa de invalidez em um só laudo.",
+        "Benefícios concedidos a militares e anistiados: revisão ex officio por JSD.",
+        "Incapacidade definitiva: laudo do Cap. 6 com critérios da PN 3.551/2021."
+      ]
+    },
+    "PREEXISTENCIA_DOENCA_LEI": {
+      "fonte": "9.1.6.i",
+      "laudosPermitidos": [
+        "BEN_PREEX_DOENCA",
+        "BEN_PREEX_DOENCA_NOMEADA",
+        "BEN_PREEX_SEM_DOENCA",
+        "BEN_PREEX_VISAO_MONOCULAR"
+      ],
+      "observacoes": [
+        "Usar o laudo específico do benefício; formas negativas admitem adaptações na citação da doença e no enquadramento legal (9.1.6).",
+        "Múltiplos benefícios no mesmo TIS: diagnóstico por extenso e afirmativa/negativa de invalidez em um só laudo.",
+        "Benefícios concedidos a militares e anistiados: revisão ex officio por JSD."
+      ]
+    },
+    "PREEXISTENCIA_INCAP_DEF": {
+      "fonte": "9.1.6.j",
+      "laudosPermitidos": [
+        "BEN_PREEX_INCAP_DEF",
+        "BEN_PREEX_INCAP_NAO_VETERANO",
+        "BEN_PREEX_INCAP_NAO_FALECIDO"
+      ],
+      "observacoes": [
+        "Usar o laudo específico do benefício; formas negativas admitem adaptações na citação da doença e no enquadramento legal (9.1.6).",
+        "Múltiplos benefícios no mesmo TIS: diagnóstico por extenso e afirmativa/negativa de invalidez em um só laudo.",
+        "Benefícios concedidos a militares e anistiados: revisão ex officio por JSD."
+      ]
+    },
+    "PREEXISTENCIA_INVALIDEZ": {
+      "fonte": "9.1.6.k",
+      "laudosPermitidos": [
+        "BEN_PENSAO_NAO_INVALIDO",
+        "BEN_PREEX_INVALIDO"
+      ],
+      "observacoes": [
+        "Usar o laudo específico do benefício; formas negativas admitem adaptações na citação da doença e no enquadramento legal (9.1.6).",
+        "Múltiplos benefícios no mesmo TIS: diagnóstico por extenso e afirmativa/negativa de invalidez em um só laudo.",
+        "Benefícios concedidos a militares e anistiados: revisão ex officio por JSD."
+      ]
+    },
+    "REVISAO_REFORMA": {
+      "fonte": "16.5",
+      "laudosPermitidos": [
+        "RR_CONTINUA",
+        "RR_EVOLUIU_INVALIDEZ",
+        "RR_INVALIDEZ_OUTRA",
+        "RR_SEM_CRITERIOS",
+        "RR_OUTRA_INCAP"
+      ],
+      "observacoes": [
+        "Competência da JSD; laudo definitivo, sem recurso (16.4.e)."
+      ]
+    },
+    "VDF_SC": {
+      "fonte": "10.4.4",
+      "laudosPermitidos": [
+        "SC_APTO",
+        "SC_APTO_RESTR",
+        "SC_APTO_RESTR_LTS_RETRO",
+        "SC_INCAP_TEMP",
+        "SC_INCAP_PERM_LEI",
+        "SC_INCAP_PERM",
+        "SC_READAPTACAO"
+      ]
+    },
+    "DEIXAR_SPG": {
+      "fonte": "10.14.3",
+      "laudosPermitidos": [
+        "SC_DEIXAR_APTO",
+        "SC_DEIXAR_APTO_CID"
+      ]
+    },
+    "REVERSAO_SPG": {
+      "fonte": "10.8.3",
+      "laudosPermitidos": [
+        "SC_REVERSAO_APTO",
+        "SC_REVERSAO_PERMANECE"
+      ]
+    },
+    "REVERSAO_OU_REINTEGRACAO_SPG": {
+      "fonte": "10.8.3 e 10.15.3",
+      "laudosPermitidos": [
+        "SC_REVERSAO_APTO",
+        "SC_REVERSAO_PERMANECE",
+        "SC_REINTEGRACAO_APTO",
+        "SC_APTO_RESTR",
+        "SC_INCAP_TEMP",
+        "SC_INCAP_PERM_LEI",
+        "SC_INCAP_PERM"
+      ],
+      "regrasDeAplicacao": [
+        "Reversão → SC_REVERSAO_*; Reintegração → SC_REINTEGRACAO_APTO ou laudos do VDF-SC."
+      ]
+    },
+    "REVISAO_PROVENTOS_SC": {
+      "fonte": "10.16.3.a e 10.16.4.a",
+      "laudosPermitidos": [
+        "SC_PROVENTOS_DOENCA",
+        "SC_PROVENTOS_SEM_DOENCA"
+      ]
+    },
+    "ISENCAO_IR_CIVIL": {
+      "fonte": "10.16.4.f",
+      "laudosPermitidos": [
+        "SC_IR_APOSENTADORIA_ACIDENTE",
+        "BEN_IR_SEM_DOENCA",
+        "BEN_IR_DOENCA",
+        "BEN_IR_VISAO_MONOCULAR"
+      ]
+    },
+    "PENSAO_CIVIL_INVALIDO": {
+      "fonte": "10.16.4.c",
+      "laudosPermitidos": [
+        "SC_PENSAO_INVALIDO",
+        "SC_PENSAO_DEFICIENCIA",
+        "SC_PENSAO_NAO"
+      ]
+    },
+    "PENSAO_VIUVA_CIVIL": {
+      "fonte": "10.16.4.d",
+      "laudosPermitidos": [
+        "SC_VIUVA_INVALIDA",
+        "SC_VIUVA_NAO_INVALIDA"
+      ]
+    },
+    "AUXILIO_PRE_ESCOLAR": {
+      "fonte": "10.16.4.i",
+      "laudosPermitidos": [
+        "SC_PREESCOLAR_SIM",
+        "SC_PREESCOLAR_PARCIAL",
+        "SC_PREESCOLAR_NAO"
+      ]
+    },
+    "POST_MORTEM_EX_MILITAR": {
+      "fonte": "9.1.6.b",
+      "laudosPermitidos": [
+        "BEN_POSTMORTEM_INCAPAZ",
+        "BEN_POSTMORTEM_NAO"
+      ],
+      "observacoes": [
+        "Usar o laudo específico do benefício; formas negativas admitem adaptações na citação da doença e no enquadramento legal (9.1.6).",
+        "Múltiplos benefícios no mesmo TIS: diagnóstico por extenso e afirmativa/negativa de invalidez em um só laudo.",
+        "Benefícios concedidos a militares e anistiados: revisão ex officio por JSD."
+      ]
+    }
+  },
+  "laudos": {
+    "CP_APTO": {
+      "modelo": "Apto para {{finalidade}}",
+      "categoria": "apto",
+      "fonte": "4.1.5.a",
+      "campos": [
+        {
+          "nome": "finalidade",
+          "tipo": "texto",
+          "descricao": "finalidade a que se destina"
+        }
+      ]
+    },
+    "CP_APTO_RESTR": {
+      "modelo": "Apto para {{finalidade}}, com restrições",
+      "categoria": "apto_restricoes",
+      "fonte": "4.1.5.b",
+      "campos": [
+        {
+          "nome": "finalidade",
+          "tipo": "texto"
+        }
+      ],
+      "observacoes": [
+        "Se a JRS verificar necessidade de início de restrições, incluir a finalidade VDF com o laudo do Cap. 6 (4.1.3.e).",
+        "Restrições previamente exaradas por JRS não podem ter natureza/período alterados pelo MPI (4.1.3.g)."
+      ]
+    },
+    "CP_INAPTO": {
+      "modelo": "Inapto para {{finalidade}}",
+      "categoria": "inapto",
+      "fonte": "4.1.5.c",
+      "campos": [
+        {
+          "nome": "finalidade",
+          "tipo": "texto"
+        }
+      ],
+      "aplicarQuando": "Somente em IS declinada de finalidade de atividade específica (praça de máquinas, OTTO FUEL II, explosivos, reator nuclear, radiações ionizantes, terapia antineoplásica) quando LTS ou restrição envolver a própria atividade (4.1.3.f)."
+    },
+    "SAM_APTO": {
+      "modelo": "Apto para o SAM",
+      "categoria": "apto",
+      "fonte": "6.3.1.a"
+    },
+    "SAM_APTO_RESTR": {
+      "modelo": "Apto para o SAM (com restrições) (por {{tempo_dias}} dias)",
+      "categoria": "apto_restricoes",
+      "fonte": "6.3.1.b",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "admiteEmProrrogacao": true,
+      "observacoes": [
+        "Lançar as restrições no campo próprio.",
+        "'em prorrogação' apenas em Término de Restrições.",
+        "Máximo de 180 dias por IS (6.1.4.e).",
+        "Restrições de embarque/manobras operativas: Tipo 1 ou Tipo 2 (6.1.3.r).",
+        "Portador assintomático do HIV (PN 3.551/2021): restrição de embarque e manobras operativas Tipo 2 por até 1 ano (6.1.4.k)."
+      ]
+    },
+    "SAM_APTO_RESTR_LTS_RETRO": {
+      "modelo": "Apto para o SAM (com restrições) (por {{tempo_dias}} dias), devendo ser consideradas como LTS o afastamento laboral por motivo comprovado de saúde, no período de {{data_inicio}} a {{data_fim}}",
+      "categoria": "apto_restricoes",
+      "fonte": "6.3.1.c",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        },
+        {
+          "nome": "data_inicio",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        },
+        {
+          "nome": "data_fim",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        }
+      ],
+      "aplicarQuando": "Término de Incapacidade com LTS vencida na data da conclusão, apresentado no prazo, ou fora do prazo com documentação médica do período descoberto (6.2.2.c/d).",
+      "observacoes": [
+        "Restrições são opcionais neste laudo (quando couber)."
+      ]
+    },
+    "SAM_INCAP_TEMP": {
+      "modelo": "Incapaz temporariamente para o SAM, necessitando de {{tempo_dias}} dias de LTS",
+      "categoria": "incapaz_temporario",
+      "fonte": "6.3.2.a.I",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "admiteEmProrrogacao": true,
+      "textoComplementar": {
+        "quando": "AO de acidente em ato de serviço com Exame de Sanidade ainda não realizado",
+        "texto": "A condição atual tem relação com AO em aberto.",
+        "onde": [
+          "SINAIS: texto complementar",
+          "mensagem de conclusão"
+        ]
+      },
+      "observacoes": [
+        "LTS de até 180 dias por IS (6.1.4.f).",
+        "'em prorrogação' em Término de Incapacidade, exceto se apresentado com LTS vencida e sem documentação (6.2.2.e/f)."
+      ]
+    },
+    "SAM_INCAP_TEMP_NEXO": {
+      "modelo": "Incapaz Temporariamente para o SAM, por doença com relação de causa e efeito com o serviço, necessitando de {{tempo_dias}} dias de LTS",
+      "categoria": "incapaz_temporario",
+      "fonte": "6.3.2.a.II",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "aplicarQuando": "Somente na vigência de AO de acidente em ato de serviço com Exame de Sanidade realizado e incapacidade com nexo causal com o acidente.",
+      "exige": [
+        "AO_com_exame_sanidade"
+      ]
+    },
+    "SAM_CONTINUA_INCAP": {
+      "modelo": "Continua incapaz temporariamente para o SAM, por ser portador de {{doenca_cid}}, doença sem relação de causa e efeito com o serviço, necessitando de {{tempo}} de LTS, não estando inválido, não necessitando de internação permanente, não necessitando de assistência ou cuidados permanentes de enfermagem",
+      "categoria": "incapaz_temporario",
+      "fonte": "6.3.2.b",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "tempo",
+          "tipo": "texto",
+          "descricao": "em dias ou meses"
+        }
+      ],
+      "aplicarQuando": "Militar de carreira com 2 anos de agregação que precisa prorrogar LTS, sem critérios de incapacidade definitiva, doença de lei, acidente em serviço ou doença com nexo (6.1.4.g).",
+      "exige": [
+        "vinculo_carreira",
+        "agregacao_2_anos"
+      ],
+      "observacoes": [
+        "Revisão ex officio por JSD; homologado, não cabe Término de Incapacidade."
+      ]
+    },
+    "SAM_INCAP_DEF": {
+      "modelo": "Incapaz definitivamente para o SAM por ser portador de {{doenca_cid}}, doença prevista no item {{item_art108}} do artigo 108 do Estatuto dos Militares, {{(não)}} estando inválido, [estando total e permanentemente impossibilitado para todo e qualquer trabalho], {{(não)}} necessitando de internação permanente, {{(não)}} necessitando de assistência ou cuidados permanentes de enfermagem",
+      "categoria": "incapaz_definitivo",
+      "fonte": "6.3.2.c",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "item_art108",
+          "tipo": "enum",
+          "valores": [
+            "I",
+            "II",
+            "III",
+            "IV",
+            "V",
+            "VI"
+          ]
+        },
+        {
+          "nome": "invalido",
+          "tipo": "booleano",
+          "descricao": "se verdadeiro, incluir o trecho entre colchetes"
+        },
+        {
+          "nome": "internacao_permanente",
+          "tipo": "booleano"
+        },
+        {
+          "nome": "cuidados_enfermagem",
+          "tipo": "booleano"
+        }
+      ],
+      "observacoes": [
+        "Declarar um único item (o mais benéfico ao inspecionado).",
+        "Itens I–IV exigem AO, ISO ou Ficha de Evacuação.",
+        "Item V: acrescentar enquadramento da PN 3.551/2021 após o CID, ex.: '(Cardiopatia Grave)' ou '(não é Cardiopatia Grave)'.",
+        "Alienação Mental: texto complementar 'Adotar medidas previstas no item 3.3 da Portaria Normativa GM-MD nº 3.551, de 26/08/2021'.",
+        "Concluir Exame de Sanidade do AO pendente e avaliar invalidez/auxílio-invalidez (6.1.4.i)."
+      ]
+    },
+    "SAM_INCAP_DEF_ESPEC": {
+      "modelo": "Incapaz definitivamente para o exercício da especialidade de {{especialidade}}, estando apto para o SAM (com restrições) (por {{tempo_dias}} dias)",
+      "categoria": "incapaz_definitivo",
+      "fonte": "6.3.2.d",
+      "campos": [
+        {
+          "nome": "especialidade",
+          "tipo": "texto"
+        },
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "aplicarQuando": "Incapaz para a especialidade, mas apto a outras tarefas militares."
+    },
+    "CF_INCAP_TEMP": {
+      "modelo": "Incapaz Temporariamente para o SAM, necessitando de {{tempo_dias}} dias de LTS",
+      "categoria": "incapaz_temporario",
+      "fonte": "6.2.4.a",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "exige": [
+        "aluno_curso_formacao"
+      ],
+      "admiteEmProrrogacao": true,
+      "textoComplementar": {
+        "quando": "AO de acidente em ato de serviço com Exame de Sanidade ainda não realizado",
+        "texto": "A condição atual tem relação com AO em aberto.",
+        "onde": [
+          "SINAIS: texto complementar",
+          "mensagem de conclusão"
+        ]
+      }
+    },
+    "CF_INCAP_TEMP_ITEMV": {
+      "modelo": "Incapaz Temporariamente para o SAM, por doença especificada no item V do art.108 da lei nº 6.880/1980, necessitando de {{tempo_dias}} dias de LTS",
+      "categoria": "incapaz_temporario",
+      "fonte": "6.2.4.b",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "exige": [
+        "aluno_curso_formacao",
+        "doenca_item_V"
+      ],
+      "admiteEmProrrogacao": true
+    },
+    "CF_INCAP_TEMP_NEXO": {
+      "modelo": "Incapaz Temporariamente para o SAM, por doença com relação de causa e efeito com o serviço, necessitando de {{tempo_dias}} dias de LTS",
+      "categoria": "incapaz_temporario",
+      "fonte": "6.2.4.c",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "aplicarQuando": "Somente na vigência de AO de acidente em ato de serviço com Exame de Sanidade realizado e incapacidade com nexo causal com o acidente.",
+      "exige": [
+        "aluno_curso_formacao",
+        "AO_com_exame_sanidade"
+      ],
+      "admiteEmProrrogacao": true
+    },
+    "SMV_APTO": {
+      "modelo": "Apto(a) para o SMV",
+      "categoria": "apto",
+      "fonte": "11.8.3.a"
+    },
+    "SMV_APTO_RESTR": {
+      "modelo": "Apto(a) para o SMV com restrições ({{restricoes}}) (por {{tempo_dias}} dias)",
+      "categoria": "apto_restricoes",
+      "fonte": "11.8.3.b",
+      "campos": [
+        {
+          "nome": "restricoes",
+          "tipo": "texto",
+          "descricao": "discriminar quais"
+        },
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "admiteEmProrrogacao": true,
+      "observacoes": [
+        "Até 36 meses no total, máximo 180 dias por IS (11.8.2.b)."
+      ]
+    },
+    "SMV_INCAP_TEMP": {
+      "modelo": "Incapaz Temporariamente para o SMV, necessitando de {{tempo_dias}} dias de LTS",
+      "categoria": "incapaz_temporario",
+      "fonte": "11.8.3.c",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "textoComplementar": {
+        "quando": "AO de acidente em ato de serviço com Exame de Sanidade ainda não realizado",
+        "texto": "A condição atual tem relação com AO em aberto.",
+        "onde": [
+          "SINAIS: texto complementar",
+          "mensagem de conclusão"
+        ]
+      }
+    },
+    "SMV_INCAP_TEMP_ITEMV": {
+      "modelo": "Incapaz Temporariamente para o SMV, por doença especificada no item V do art.108 da lei nº 6.880/80, necessitando de {{tempo_dias}} dias de LTS",
+      "categoria": "incapaz_temporario",
+      "fonte": "11.8.3.d",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "exige": [
+        "doenca_item_V"
+      ]
+    },
+    "SMV_INCAP_TEMP_NEXO": {
+      "modelo": "Incapaz Temporariamente para o SMV, por doença com relação de causa e efeito com o serviço, necessitando de {{tempo_dias}} dias de LTS",
+      "categoria": "incapaz_temporario",
+      "fonte": "11.8.3.e",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "aplicarQuando": "Somente na vigência de AO de acidente em ato de serviço com Exame de Sanidade realizado e incapacidade com nexo causal com o acidente.",
+      "exige": [
+        "AO_com_exame_sanidade"
+      ],
+      "textoComplementar": {
+        "quando": "AO de acidente em ato de serviço com Exame de Sanidade ainda não realizado",
+        "texto": "A condição atual tem relação com AO em aberto.",
+        "onde": [
+          "SINAIS: texto complementar",
+          "mensagem de conclusão"
+        ]
+      }
+    },
+    "SMI_APTO_A": {
+      "modelo": "APTO A",
+      "categoria": "apto",
+      "fonte": "11.3.3.a",
+      "aplicarQuando": "Preenche os requisitos; pequenas lesões compatíveis com o SMI e sem restrições."
+    },
+    "SMI_INCAP_B1": {
+      "modelo": "Incapaz B-1. Afastamento por {{tempo_dias}} dias.",
+      "categoria": "incapaz_temporario",
+      "fonte": "11.3.3.b",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "aplicarQuando": "Incapacidade temporária recuperável em até 1 ano.",
+      "textoComplementar": {
+        "quando": "sempre",
+        "texto": "Período de afastamento recomendado e se há ou não relação com AO em aberto. Ex.: 'Incapaz B-1. Afastamento por sessenta dias. A condição atual tem relação com AO em aberto.'",
+        "onde": [
+          "SINAIS: texto complementar",
+          "mensagem de conclusão"
+        ]
+      },
+      "observacoes": [
+        "< 90 dias: reapresentar para VDF 20 dias antes do término (11.3.2.b).",
+        "≥ 90 dias sem nexo: não reapresentar; interrupção do serviço (arts. 138 e 140 do RLSM).",
+        "Com nexo (AO até campo III ou ISO) e LTS > 90 dias: reapresentar para VDF (11.3.2.d)."
+      ]
+    },
+    "SMI_INCAP_B2": {
+      "modelo": "INCAPAZ B-2",
+      "categoria": "incapaz_temporario",
+      "fonte": "11.3.3.c",
+      "aplicarQuando": "Incapacidade temporária recuperável em prazo superior a 1 ano."
+    },
+    "SMI_INCAP_C": {
+      "modelo": "INCAPAZ C",
+      "categoria": "incapaz_definitivo",
+      "fonte": "11.3.3.d",
+      "aplicarQuando": "Incapacidade definitiva conforme IGISC, fora das hipóteses do 11.3.2.e (que exigem SAM_INCAP_DEF).",
+      "observacoes": [
+        "B-1, B-2 e C não demandam revisão ex officio por JSD."
+      ]
+    },
+    "DSAM_APTO": {
+      "modelo": "Apto para deixar o SAM",
+      "categoria": "apto",
+      "fonte": "8.1.5"
+    },
+    "DSAM_APTO_NEXO": {
+      "modelo": "Apto para deixar o SAM, sendo, no entanto, portador de {{cid}}, doença com relação de causa e efeito com o serviço",
+      "categoria": "apto",
+      "fonte": "8.1.5",
+      "campos": [
+        {
+          "nome": "cid",
+          "tipo": "texto",
+          "descricao": "apenas CID"
+        }
+      ],
+      "aplicarQuando": "Sequela de acidente/doença ocupacional com nexo estabelecido por AO concluído ou ISO, sem incapacidade total e definitiva.",
+      "exige": [
+        "AO_concluido_ou_ISO"
+      ]
+    },
+    "DSAM_DISPENSA_FUNCOES": {
+      "modelo": "Apto para dispensa de funções na atividade",
+      "categoria": "apto",
+      "fonte": "8.1.5",
+      "aplicarQuando": "RM1 designado para funções na atividade, ao término do período (8.1.2.i).",
+      "exige": [
+        "RM1_designado"
+      ]
+    },
+    "DSAM_INCAP_TEMP": {
+      "modelo": "Incapaz temporariamente para deixar o SAM (por até seis meses) por ser portador de {{doenca_cid}}, doença ou lesão {{com_ou_sem}} relação de causa e efeito com o serviço",
+      "categoria": "incapaz_temporario",
+      "fonte": "8.1.5",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "com_ou_sem",
+          "tipo": "enum",
+          "valores": [
+            "com",
+            "sem"
+          ]
+        }
+      ],
+      "aplicarQuando": "Patologia passível de incapacidade definitiva com quadro ainda não definido; reapresentar para Término de Incapacidade/Deixar o SAM (8.1.2.g)."
+    },
+    "DSMV_APTO": {
+      "modelo": "Apto(a) para deixar o SMV",
+      "categoria": "apto",
+      "fonte": "11.9.2.a"
+    },
+    "DSMV_APTO_NEXO": {
+      "modelo": "Apto(a) para deixar o SMV, sendo, no entanto, portador(a) de {{cid}}, doença com relação de causa e efeito com o serviço",
+      "categoria": "apto",
+      "fonte": "11.9.2.b",
+      "campos": [
+        {
+          "nome": "cid",
+          "tipo": "texto",
+          "descricao": "apenas CID"
+        }
+      ],
+      "aplicarQuando": "Doença relacionada ao serviço comprovada por ISO ou AO concluído, auditado e numerado, sem incapacidade definitiva.",
+      "exige": [
+        "AO_concluido_ou_ISO"
+      ]
+    },
+    "DSMV_APTA_GESTANTE": {
+      "modelo": "Apta para deixar o SMV, estando gestante de {{semanas}} semanas.",
+      "categoria": "apto",
+      "fonte": "11.9.2.c",
+      "campos": [
+        {
+          "nome": "semanas",
+          "tipo": "inteiro"
+        }
+      ],
+      "exige": [
+        "sexo_feminino",
+        "gestante"
+      ]
+    },
+    "DSMI_APTO": {
+      "modelo": "Apto(a) para deixar o SMI",
+      "categoria": "apto",
+      "fonte": "11.4.2.a"
+    },
+    "DSMI_APTO_NEXO": {
+      "modelo": "Apto(a) para deixar o SMI, sendo, no entanto, portador(a) de {{cid}}, doença com relação de causa e efeito com o serviço",
+      "categoria": "apto",
+      "fonte": "11.4.2.b",
+      "campos": [
+        {
+          "nome": "cid",
+          "tipo": "texto",
+          "descricao": "apenas CID"
+        }
+      ],
+      "aplicarQuando": "Doença relacionada ao serviço comprovada por ISO ou AO concluído, auditado e numerado, sem incapacidade definitiva.",
+      "exige": [
+        "AO_concluido_ou_ISO"
+      ]
+    },
+    "PTS_APTO": {
+      "modelo": "Apto(a) para o SMV",
+      "categoria": "apto",
+      "fonte": "11.7.3"
+    },
+    "PTS_APTO_RESTR": {
+      "modelo": "Apto(a) para o SMV, com restrições",
+      "categoria": "apto_restricoes",
+      "fonte": "11.7.3",
+      "observacoes": [
+        "Não discriminar restrições nem período.",
+        "Início de restrições: incluir finalidade VDF com o laudo pertinente no mesmo TIS."
+      ]
+    },
+    "PTS_INAPTO": {
+      "modelo": "Inapto para o SMV",
+      "categoria": "inapto",
+      "fonte": "11.7.3",
+      "observacoes": [
+        "Toxicológico positivo implica inaptidão."
+      ]
+    },
+    "ING_SMV_APTO": {
+      "modelo": "Apto(a) para Ingresso no SMV",
+      "categoria": "apto",
+      "fonte": "11.5.3.a",
+      "exige": [
+        "oficial"
+      ]
+    },
+    "ING_SMV_INAPTO": {
+      "modelo": "Inapto(a) para Ingresso no SMV",
+      "categoria": "inapto",
+      "fonte": "11.5.3.b",
+      "exige": [
+        "oficial"
+      ]
+    },
+    "ENG_APTO": {
+      "modelo": "Apto(a) para Engajamento",
+      "categoria": "apto",
+      "fonte": "11.5.3.c",
+      "exige": [
+        "praca"
+      ]
+    },
+    "ENG_INAPTO": {
+      "modelo": "Inapto(a) para Engajamento",
+      "categoria": "inapto",
+      "fonte": "11.5.3.d",
+      "exige": [
+        "praca"
+      ]
+    },
+    "LDAS_APTO": {
+      "modelo": "Apto para Servir em Localidade Deficiente em Assistência Sanitária",
+      "categoria": "apto",
+      "fonte": "4.3.1",
+      "observacoes": [
+        "Validade de 6 meses para a finalidade e 3 anos para controle periódico."
+      ]
+    },
+    "LDAS_INAPTO": {
+      "modelo": "Inapto para Servir em Localidade Deficiente em Assistência Sanitária, estando {{laudo_cap6}}",
+      "categoria": "inapto",
+      "fonte": "4.3.1",
+      "campos": [
+        {
+          "nome": "laudo_cap6",
+          "tipo": "laudoRef",
+          "descricao": "laudo do Cap. 6 aplicável (SAM_*)"
+        }
+      ],
+      "observacoes": [
+        "Inapto por razões clínicas: acrescentar a finalidade VDF com laudo do Cap. 6.",
+        "Dependentes: registrar em Referências Administrativas e na mensagem: 'o dependente (Nome) apresenta/não apresenta condição de saúde (definir) que contraindique acompanhar o militar na localidade mencionada'."
+      ]
+    },
+    "MEX_APTO": {
+      "modelo": "Apto para Missão no Exterior",
+      "categoria": "apto",
+      "fonte": "4.3.3.f"
+    },
+    "MEX_INAPTO": {
+      "modelo": "Inapto para Missão no Exterior, estando {{laudo_cap6}}",
+      "categoria": "inapto",
+      "fonte": "4.3.3.f",
+      "campos": [
+        {
+          "nome": "laudo_cap6",
+          "tipo": "laudoRef",
+          "descricao": "laudo do Cap. 6 aplicável (SAM_*)"
+        }
+      ]
+    },
+    "MEX_DEP_SEM_PATOLOGIA": {
+      "modelo": "O(A) {{dependente}}, dependente do inspecionado, não apresenta patologia que possa gerar transtorno ao desempenho da missão por parte do militar.",
+      "categoria": "dependente",
+      "fonte": "4.3.3.f",
+      "campos": [
+        {
+          "nome": "dependente",
+          "tipo": "texto",
+          "descricao": "nome"
+        }
+      ],
+      "observacoes": [
+        "Lançar após o laudo do militar no SINAIS (texto complementar) e na mensagem de conclusão."
+      ]
+    },
+    "MEX_DEP_TRAT_NAO_CONCLUIDO": {
+      "modelo": "O(A) {{dependente}}, dependente do inspecionado, encontra-se em tratamento/acompanhamento especializado não concluído até a presente data.",
+      "categoria": "dependente",
+      "fonte": "4.3.3.f",
+      "campos": [
+        {
+          "nome": "dependente",
+          "tipo": "texto",
+          "descricao": "nome"
+        }
+      ]
+    },
+    "MEX_DEP_TRAT_ININTERRUPTO": {
+      "modelo": "O(A) {{dependente}}, dependente do inspecionado, encontra-se em tratamento/acompanhamento especializado que não pode ser interrompido.",
+      "categoria": "dependente",
+      "fonte": "4.3.3.f",
+      "campos": [
+        {
+          "nome": "dependente",
+          "tipo": "texto",
+          "descricao": "nome"
+        }
+      ]
+    },
+    "ANT_APTO": {
+      "modelo": "Apto para Missão na Antártica",
+      "categoria": "apto",
+      "fonte": "4.3.4.e",
+      "observacoes": [
+        "Validade de 12 meses; equivale a 3 anos para controle trienal."
+      ]
+    },
+    "ANT_INAPTO": {
+      "modelo": "Inapto para Missão na Antártica, estando {{laudo_cap6}}",
+      "categoria": "inapto",
+      "fonte": "4.3.4.e",
+      "campos": [
+        {
+          "nome": "laudo_cap6",
+          "tipo": "laudoRef",
+          "descricao": "laudo do Cap. 6 aplicável (SAM_*)"
+        }
+      ]
+    },
+    "TTC_APTO": {
+      "modelo": "Apto para prestação de Tarefa por Tempo Certo.",
+      "categoria": "apto",
+      "fonte": "4.3.5"
+    },
+    "RM1_APTO": {
+      "modelo": "Apto para designação de militar RM1 para o Serviço ativo.",
+      "categoria": "apto",
+      "fonte": "4.3.5"
+    },
+    "TTC_RM1_INAPTO": {
+      "modelo": "Inapto para prestação de Tarefa por Tempo Certo ou designação de militar RM1 para o Serviço ativo",
+      "categoria": "inapto",
+      "fonte": "4.3.5",
+      "observacoes": [
+        "Declinar competência à JRS.",
+        "Não cabe LTSP nem AO para prestador de TTC.",
+        "Toxicológico positivo implica inaptidão (17.10.2.a)."
+      ]
+    },
+    "CURSO_APTO": {
+      "modelo": "Apto para curso de {{curso}}",
+      "categoria": "apto",
+      "fonte": "4.2.4.a",
+      "campos": [
+        {
+          "nome": "curso",
+          "tipo": "texto"
+        }
+      ]
+    },
+    "CURSO_INAPTO": {
+      "modelo": "Inapto para o Curso de {{curso}}.",
+      "categoria": "inapto",
+      "fonte": "4.2.4.b",
+      "campos": [
+        {
+          "nome": "curso",
+          "tipo": "texto"
+        }
+      ]
+    },
+    "CURSO_INCAP_TEMP": {
+      "modelo": "Incapaz temporariamente por {{meses}} meses para o curso de {{sigla_curso}} estando apto para o SAM [com restrições]",
+      "categoria": "incapaz_temporario",
+      "fonte": "4.2.4.c.I",
+      "campos": [
+        {
+          "nome": "meses",
+          "tipo": "inteiro"
+        },
+        {
+          "nome": "sigla_curso",
+          "tipo": "texto"
+        }
+      ],
+      "aplicarQuando": "Incapacidade verificada durante o curso (IS por JRS)."
+    },
+    "CURSO_INCAP_DEF": {
+      "modelo": "Incapaz definitivamente para o curso de {{sigla_curso}}, estando apto para o SAM [com restrições]",
+      "categoria": "incapaz_definitivo",
+      "fonte": "4.2.4.c.II",
+      "campos": [
+        {
+          "nome": "sigla_curso",
+          "tipo": "texto"
+        }
+      ],
+      "aplicarQuando": "Incapacidade verificada durante o curso (IS por JRS).",
+      "observacoes": [
+        "Incapacidade para o SAM: usar laudos do Cap. 6."
+      ]
+    },
+    "CFORM_APTO": {
+      "modelo": "Apto para Conclusão de Curso de Formação",
+      "categoria": "apto",
+      "fonte": "17.10.1.b"
+    },
+    "CFORM_INAPTO": {
+      "modelo": "Inapto para Conclusão de Curso de Formação",
+      "categoria": "inapto",
+      "fonte": "17.10.2.b",
+      "aplicarQuando": "Exame toxicológico positivo."
+    },
+    "TOX_APTO": {
+      "modelo": "Apto",
+      "categoria": "apto",
+      "fonte": "17.10.1.c"
+    },
+    "TOX_INAPTO": {
+      "modelo": "Inapto",
+      "categoria": "inapto",
+      "fonte": "17.10.2.c",
+      "aplicarQuando": "Toxicológico positivo em TTC, SMI ou SMV.",
+      "exige": [
+        "vinculo_temporario_ou_TTC"
+      ]
+    },
+    "TOX_ENCAMINHAR_VDF": {
+      "modelo": "Encaminhar para VDF",
+      "categoria": "inapto",
+      "fonte": "17.10.2.d",
+      "aplicarQuando": "Toxicológico positivo em militar de carreira em serviço ativo.",
+      "exige": [
+        "vinculo_carreira"
+      ],
+      "observacoes": [
+        "Mensagem: 'REF ...(MSG de solicitação da IS), apresentar o ...(Posto/Grad/NIP/Nome) para IS fim VDF BT'."
+      ]
+    },
+    "LTSPF_NECESSITA": {
+      "modelo": "O(A) {{familiar}} do(a) inspecionado(a) necessita de {{tempo_dias}} dias de licença para acompanhar o tratamento de saúde, a partir de {{data_inicio}}",
+      "categoria": "apto",
+      "fonte": "4.3.2",
+      "campos": [
+        {
+          "nome": "familiar",
+          "tipo": "texto",
+          "descricao": "nome, qualificação [posto-graduação], grau de parentesco"
+        },
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        },
+        {
+          "nome": "data_inicio",
+          "tipo": "data",
+          "formato": "DDMMMAAAA"
+        }
+      ],
+      "admiteEmProrrogacao": true,
+      "observacoes": [
+        "Máximo de 6 meses por IS.",
+        "Exige Parecer Social favorável."
+      ]
+    },
+    "LTSPF_NAO_NECESSITA": {
+      "modelo": "O(A) {{familiar}} do(a) inspecionado(a) não necessita de licença para acompanhar o tratamento de saúde.",
+      "categoria": "inapto",
+      "fonte": "4.3.2",
+      "campos": [
+        {
+          "nome": "familiar",
+          "tipo": "texto",
+          "descricao": "nome, qualificação, grau de parentesco"
+        }
+      ]
+    },
+    "MG_APTO": {
+      "modelo": "Apto para {{atividade}}",
+      "categoria": "apto",
+      "fonte": "5.1.7.b.I",
+      "campos": [
+        {
+          "nome": "atividade",
+          "tipo": "enum",
+          "valores": [
+            "imersão",
+            "mergulho"
+          ]
+        }
+      ]
+    },
+    "MG_INCAP_TEMP_TERRA": {
+      "modelo": "Incapaz temporariamente para {{atividade}}, por {{tempo_dias}} dias, podendo exercer em terra função ligada à atividade de {{atividade}}",
+      "categoria": "incapaz_temporario",
+      "fonte": "5.1.7.b.I",
+      "campos": [
+        {
+          "nome": "atividade",
+          "tipo": "enum",
+          "valores": [
+            "imersão",
+            "mergulho"
+          ]
+        },
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "admiteEmProrrogacao": true
+    },
+    "MG_INCAP_TEMP_SAM": {
+      "modelo": "Incapaz temporariamente para {{atividade}}, por {{tempo_dias}} dias, {{laudo_cap6}}",
+      "categoria": "incapaz_temporario",
+      "fonte": "5.1.7.b.I",
+      "campos": [
+        {
+          "nome": "atividade",
+          "tipo": "enum",
+          "valores": [
+            "imersão",
+            "mergulho"
+          ]
+        },
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        },
+        {
+          "nome": "laudo_cap6",
+          "tipo": "laudoRef",
+          "descricao": "laudo do Cap. 6 aplicável (SAM_*)"
+        }
+      ],
+      "observacoes": [
+        "Ex.: 'Incapaz temporariamente para imersão' + 'Apto para o SAM com restrições'."
+      ]
+    },
+    "MG_INCAP_DEF": {
+      "modelo": "Incapaz definitivamente para {{atividade}}, {{laudo_cap6}}",
+      "categoria": "incapaz_definitivo",
+      "fonte": "5.1.7.b.I",
+      "campos": [
+        {
+          "nome": "atividade",
+          "tipo": "enum",
+          "valores": [
+            "imersão",
+            "mergulho"
+          ]
+        },
+        {
+          "nome": "laudo_cap6",
+          "tipo": "laudoRef",
+          "descricao": "laudo do Cap. 6 aplicável (SAM_*)"
+        }
+      ],
+      "observacoes": [
+        "Toxicológico positivo confirmado: incapacidade definitiva para Atividades Especiais (17.11.3)."
+      ]
+    },
+    "JD_APTO_EXAME_PREVIO": {
+      "modelo": "Apto em exame prévio para submeter-se a {{procedimento}}[, sendo portador de {{doenca_cid}}], de acordo com a DGPM-406",
+      "categoria": "apto",
+      "fonte": "7.1.4.a.I",
+      "campos": [
+        {
+          "nome": "procedimento",
+          "tipo": "enum",
+          "valores": [
+            "Inquérito Policial Militar",
+            "Conselho de Justificação",
+            "Conselho de Disciplina"
+          ]
+        },
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        }
+      ],
+      "observacoes": [
+        "Não cabe recurso administrativo (7.1.3.j)."
+      ]
+    },
+    "JD_INAPTO_EXAME_PREVIO": {
+      "modelo": "Inapto em exame prévio para submeter-se a {{procedimento}}, por sofrer de {{doenca_cid}}, de acordo com a DGPM-406",
+      "categoria": "inapto",
+      "fonte": "7.1.4.a.II",
+      "campos": [
+        {
+          "nome": "procedimento",
+          "tipo": "enum",
+          "valores": [
+            "IPM",
+            "CJ",
+            "CD"
+          ]
+        },
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        }
+      ]
+    },
+    "JD_QUESITOS": {
+      "modelo": "[Sem fecho padronizado] TIS com anamnese e exame físico sucintos e respostas obrigatórias aos quesitos da autoridade",
+      "categoria": "outro",
+      "fonte": "7.1.4.b",
+      "aplicarQuando": "IS da alínea b do 7.1.1 (cadastrada como extraordinária); sem rasuras."
+    },
+    "JD_DESERTOR_APTO": {
+      "modelo": "Apto para fim de Serviço Militar ({{condicao}}), de acordo com os padrões estabelecidos na DGPM-406",
+      "categoria": "apto",
+      "fonte": "7.1.4.c.I",
+      "campos": [
+        {
+          "nome": "condicao",
+          "tipo": "enum",
+          "valores": [
+            "desertor",
+            "insubmisso"
+          ]
+        }
+      ],
+      "aplicarQuando": "Desertor sem estabilidade ou insubmisso."
+    },
+    "JD_DESERTOR_INAPTO": {
+      "modelo": "Inapto para fim de Serviço Militar ({{condicao}}) por sofrer de {{doenca_cid}}, de acordo com os padrões estabelecidos na DGPM-406",
+      "categoria": "inapto",
+      "fonte": "7.1.4.c.II",
+      "campos": [
+        {
+          "nome": "condicao",
+          "tipo": "enum",
+          "valores": [
+            "desertor",
+            "insubmisso"
+          ]
+        },
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        }
+      ],
+      "observacoes": [
+        "Desertor com estabilidade: IS fim VDF com exames do Controle Trienal (7.1.3.i)."
+      ]
+    },
+    "REINT_INICIAL": {
+      "modelo": "Está reintegrado por decisão judicial até o trânsito em julgado. Processo nº {{processo}} {{vara}}",
+      "categoria": "outro",
+      "fonte": "7.2.4.a",
+      "campos": [
+        {
+          "nome": "processo",
+          "tipo": "texto",
+          "descricao": "nº do processo"
+        },
+        {
+          "nome": "vara",
+          "tipo": "texto",
+          "descricao": "Vara Federal (cidade/UF)"
+        }
+      ],
+      "observacoes": [
+        "Acrescentar abaixo o laudo de VDF do Cap. 6 conforme a capacidade laboral."
+      ]
+    },
+    "REINT_SUBSEQUENTE_SUFIXO": {
+      "modelo": "IS de militar reintegrado por decisão judicial, Processo nº {{processo}}/{{vara}}.",
+      "categoria": "sufixo",
+      "fonte": "7.2.4.b",
+      "campos": [
+        {
+          "nome": "processo",
+          "tipo": "texto",
+          "descricao": "nº do processo"
+        },
+        {
+          "nome": "vara",
+          "tipo": "texto",
+          "descricao": "Vara Federal (cidade/UF)"
+        }
+      ],
+      "observacoes": [
+        "Acrescentar ao final do laudo da finalidade da IS; incapacidades seguem o Cap. 6."
+      ]
+    },
+    "REINT_CAND_APTO": {
+      "modelo": "Apto para ingresso no {{concurso}} por força da decisão judicial proferida no Processo nº {{processo}}/{{vara}}.",
+      "categoria": "apto",
+      "fonte": "7.2.4.c.I",
+      "campos": [
+        {
+          "nome": "concurso",
+          "tipo": "texto"
+        },
+        {
+          "nome": "processo",
+          "tipo": "texto",
+          "descricao": "nº do processo"
+        },
+        {
+          "nome": "vara",
+          "tipo": "texto",
+          "descricao": "Vara Federal (cidade/UF)"
+        }
+      ],
+      "aplicarQuando": "Trânsito em julgado; condição de saúde que motivou o processo, sem nova condição de inaptidão."
+    },
+    "REINT_CAND_INAPTO": {
+      "modelo": "Inapto para ingresso no {{concurso}} por apresentar condição de saúde não relacionada com o processo judicial. IS de candidato integrado por decisão judicial, Processo nº {{processo}}/{{vara}}.",
+      "categoria": "inapto",
+      "fonte": "7.2.4.c.II",
+      "campos": [
+        {
+          "nome": "concurso",
+          "tipo": "texto"
+        },
+        {
+          "nome": "processo",
+          "tipo": "texto",
+          "descricao": "nº do processo"
+        },
+        {
+          "nome": "vara",
+          "tipo": "texto",
+          "descricao": "Vara Federal (cidade/UF)"
+        }
+      ],
+      "aplicarQuando": "Trânsito em julgado; surgimento de nova condição de inaptidão entre a IS inicial e a atual."
+    },
+    "BEN_AUX_INVALIDEZ": {
+      "modelo": "{{(Não)}} necessita de internação permanente. {{(Não)}} necessita de assistência ou cuidados permanentes de enfermagem[, a partir de {{data}}]",
+      "categoria": "beneficio",
+      "fonte": "9.1.6.a",
+      "campos": [
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        }
+      ],
+      "aplicarQuando": "Trecho 'a partir de' quando necessitar de Auxílio-Invalidez.",
+      "observacoes": [
+        "Revisão ex officio por JSD quando concedido."
+      ]
+    },
+    "BEN_POSTMORTEM_INCAPAZ": {
+      "modelo": "O ex-militar, ao falecer, estava incapaz definitivamente para o SAM por sofrer de {{doenca_cid}}, [(doença especificada na Lei n° 6.880/1980)], doença {{(não)}} adquirida {{circunstancia}}, e que {{(não)}} resultaria na reforma por invalidez se vivo fosse, {{(não)}} existindo total e permanente impossibilidade para todo e qualquer trabalho, {{(não)}} podendo prover a própria subsistência, enquadrando-se no inciso {{item_art108}} do art. 108 da Lei n° 6.880/1980",
+      "categoria": "beneficio",
+      "fonte": "9.1.6.b.I",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "circunstancia",
+          "tipo": "texto",
+          "descricao": "por acidente em serviço ou em campanha ou na manutenção da ordem pública"
+        },
+        {
+          "nome": "item_art108",
+          "tipo": "enum",
+          "valores": [
+            "I",
+            "II",
+            "III",
+            "IV",
+            "V",
+            "VI"
+          ]
+        }
+      ]
+    },
+    "BEN_POSTMORTEM_NAO": {
+      "modelo": "O ex-militar, ao falecer, não apresentava critérios para incapacidade definitiva para o SAM",
+      "categoria": "beneficio_negativo",
+      "fonte": "9.1.6.b.II"
+    },
+    "BEN_VIUVA_INVALIDA": {
+      "modelo": "Está inválida por ser portadora de {{doenca_cid}}, ({{condicao_lei}}), doença prevista no art. 1° e 4° da Lei n° 3.738/1960 e Lei n° 7.670/1988",
+      "categoria": "beneficio",
+      "fonte": "9.1.6.c.I",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "condicao_lei",
+          "tipo": "texto"
+        }
+      ]
+    },
+    "BEN_VIUVA_SEM_DOENCA": {
+      "modelo": "Não apresenta doença prevista no art. 1° da Lei n° 3.738/1960 e Lei n° 7.670/1988",
+      "categoria": "beneficio_negativo",
+      "fonte": "9.1.6.c.II"
+    },
+    "BEN_VIUVA_NAO_INVALIDA": {
+      "modelo": "Não está inválida por ser portadora de {{doenca_cid}}, ({{condicao_lei}}), doença prevista no art. 1° e 4° da Lei n° 3.738/1960 e Lei n° 7.670/1988",
+      "categoria": "beneficio_negativo",
+      "fonte": "9.1.6.c.III",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "condicao_lei",
+          "tipo": "texto"
+        }
+      ]
+    },
+    "BEN_PENSAO_INVALIDO": {
+      "modelo": "É portador(a) de {{doenca_cid}}, ({{condicao_lei}}), estando inválido para todo e qualquer trabalho, não podendo prover a própria subsistência, (a partir desta data ou de {{data}})",
+      "categoria": "beneficio",
+      "fonte": "9.1.6.d.I / 9.1.6.e.I",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "condicao_lei",
+          "tipo": "texto"
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        }
+      ]
+    },
+    "BEN_PENSAO_NAO_INVALIDO": {
+      "modelo": "Não está inválido(a) na presente data",
+      "categoria": "beneficio_negativo",
+      "fonte": "9.1.6.d.II / 9.1.6.e.II / 9.1.6.k.I"
+    },
+    "BEN_DEPEND_INVALIDO": {
+      "modelo": "É portador(a) de {{doenca_cid}}, estando inválido para todo e qualquer trabalho",
+      "categoria": "beneficio",
+      "fonte": "9.1.6.f.I",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        }
+      ]
+    },
+    "BEN_DEPEND_NAO_INVALIDO": {
+      "modelo": "Não está inválido(a) para todo e qualquer trabalho na presente data",
+      "categoria": "beneficio_negativo",
+      "fonte": "9.1.6.f.II"
+    },
+    "BEN_IR_REFORMA_ACIDENTE": {
+      "modelo": "Tem reforma motivada por {{motivo}} conforme especificado na Lei nº 7.713/1988, alterada pelas Leis n° 8.541/1992 e 9.250/1995 e 11.052/2004",
+      "categoria": "beneficio",
+      "fonte": "9.1.6.g.I",
+      "campos": [
+        {
+          "nome": "motivo",
+          "tipo": "enum",
+          "valores": [
+            "acidente em serviço",
+            "doença ocupacional"
+          ]
+        }
+      ]
+    },
+    "BEN_IR_SEM_DOENCA": {
+      "modelo": "Não apresenta histórico médico de doença especificada na Lei nº 7.713/1988, alterada pelas Leis n° 8.541/1992 e 9.250/1995 e 11.052/2004",
+      "categoria": "beneficio_negativo",
+      "fonte": "9.1.6.g.II / 10.16.4.f.II"
+    },
+    "BEN_IR_DOENCA": {
+      "modelo": "Tem histórico médico de {{doenca_cid}} ({{condicao_lei}}), doença especificada na Lei nº 7.713/1988, alterada pelas Leis n° 8.541/1992 e 9.250/1995 e 11.052/2004, a partir de {{data}}",
+      "categoria": "beneficio",
+      "fonte": "9.1.6.g.III / 10.16.4.f.III",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "condicao_lei",
+          "tipo": "texto"
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        }
+      ]
+    },
+    "BEN_IR_VISAO_MONOCULAR": {
+      "modelo": "É portador(a) de Cegueira no olho {{olho}} (Visão Monocular), {{cid}}, doença especificada na Lei nº 7.713/1988, alterada pelas Leis n° 8.541/1992 e 9.250/1995 e 11.052/2004, combinado com o Ato Declaratório n° 3/2016 da PGFN[, a partir de {{data}}]",
+      "categoria": "beneficio",
+      "fonte": "9.1.6.g.IV / 10.16.4.f.IV",
+      "campos": [
+        {
+          "nome": "olho",
+          "tipo": "enum",
+          "valores": [
+            "esquerdo",
+            "direito"
+          ]
+        },
+        {
+          "nome": "cid",
+          "tipo": "texto",
+          "descricao": "apenas CID"
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        }
+      ],
+      "observacoes": [
+        "Trecho 'a partir de' obrigatório para servidor civil (10.16.4.f.IV)."
+      ]
+    },
+    "BEN_RM1_NAO_INCAPAZ": {
+      "modelo": "Não apresenta critérios de incapacidade definitiva para o SAM na presente data",
+      "categoria": "beneficio_negativo",
+      "fonte": "9.1.6.h.I"
+    },
+    "BEN_PREEX_DOENCA": {
+      "modelo": "A doença ({{tipo_doenca}}) especificada em Lei é preexistente à data de {{data}}",
+      "categoria": "beneficio",
+      "fonte": "9.1.6.i.I / 10.16.4.g.I",
+      "campos": [
+        {
+          "nome": "tipo_doenca",
+          "tipo": "enum",
+          "valores": [
+            "invalidante",
+            "não invalidante",
+            "incapacitante",
+            "não incapacitante",
+            "nenhuma destas alternativas"
+          ]
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        }
+      ]
+    },
+    "BEN_PREEX_DOENCA_NOMEADA": {
+      "modelo": "A doença ({{tipo_doenca}}) especificada em Lei, {{doenca_cid}} ({{condicao_lei}}), é preexistente à data de {{data}}",
+      "categoria": "beneficio",
+      "fonte": "9.1.6.i.II / 10.16.4.g.II",
+      "campos": [
+        {
+          "nome": "tipo_doenca",
+          "tipo": "enum",
+          "valores": [
+            "invalidante",
+            "não invalidante",
+            "incapacitante",
+            "não incapacitante",
+            "nenhuma destas alternativas"
+          ]
+        },
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "condicao_lei",
+          "tipo": "texto"
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        }
+      ],
+      "observacoes": [
+        "Único laudo admitido em IS documental de ex-pensionista/ex-SC falecido e de anistiado político.",
+        "Ex.: 'A doença, Adenocarcinoma da Próstata, CID-10 C61, (Neoplasia Maligna), é preexistente à data de 25/10/2004.'"
+      ]
+    },
+    "BEN_PREEX_SEM_DOENCA": {
+      "modelo": "Não foi verificada doença grave especificada em Lei na presente data",
+      "categoria": "beneficio_negativo",
+      "fonte": "9.1.6.i.III / 10.16.4.g.III"
+    },
+    "BEN_PREEX_VISAO_MONOCULAR": {
+      "modelo": "A Visão Monocular é preexistente à data de {{data}}",
+      "categoria": "beneficio",
+      "fonte": "9.1.6.i.IV / 10.16.4.g.IV",
+      "campos": [
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        }
+      ]
+    },
+    "BEN_PREEX_INCAP_DEF": {
+      "modelo": "O {{sujeito}} a partir de {{data}}, estava incapaz definitivamente para o SAM, por sofrer de {{doenca_cid}}, doença prevista no inciso {{item_art108}} do artigo 108 do Estatuto dos Militares, {{(não)}} estando inválido, {{(não)}} necessitando de internação permanente, {{(não)}} necessitando de assistência ou cuidados permanentes de enfermagem[, a partir de {{data_auxilio}}]",
+      "categoria": "beneficio",
+      "fonte": "9.1.6.j.I",
+      "campos": [
+        {
+          "nome": "sujeito",
+          "tipo": "enum",
+          "valores": [
+            "militar veterano",
+            "ex-militar falecido"
+          ]
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        },
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "item_art108",
+          "tipo": "enum",
+          "valores": [
+            "I",
+            "II",
+            "III",
+            "IV",
+            "V",
+            "VI"
+          ]
+        },
+        {
+          "nome": "data_auxilio",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        }
+      ],
+      "observacoes": [
+        "Doença do item V: acrescentar enquadramento da PN 3.551/2021."
+      ]
+    },
+    "BEN_PREEX_INCAP_NAO_VETERANO": {
+      "modelo": "O militar veterano não apresenta critérios para incapacidade definitiva para o SAM",
+      "categoria": "beneficio_negativo",
+      "fonte": "9.1.6.j.II"
+    },
+    "BEN_PREEX_INCAP_NAO_FALECIDO": {
+      "modelo": "O ex-militar falecido não apresentava critérios para incapacidade definitiva para o SAM",
+      "categoria": "beneficio_negativo",
+      "fonte": "9.1.6.j.III"
+    },
+    "BEN_PREEX_INVALIDO": {
+      "modelo": "Está inválido a partir de {{data}}",
+      "categoria": "beneficio",
+      "fonte": "9.1.6.k.II",
+      "campos": [
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        }
+      ]
+    },
+    "RR_CONTINUA": {
+      "modelo": "Continua incapaz definitivamente para o SAM por {{doenca_reforma}}, {{(não)}} estando inválido.",
+      "categoria": "incapaz_definitivo",
+      "fonte": "16.5.a",
+      "campos": [
+        {
+          "nome": "doenca_reforma",
+          "tipo": "texto",
+          "descricao": "diagnóstico por extenso, CID-10 e condição prevista em Lei, que ensejou a reforma"
+        }
+      ],
+      "aplicarQuando": "Sem alteração do laudo anterior."
+    },
+    "RR_EVOLUIU_INVALIDEZ": {
+      "modelo": "Continua incapaz definitivamente para o SAM por {{doenca_reforma}}, tendo evoluído para invalidez a partir de {{data}}.",
+      "categoria": "incapaz_definitivo",
+      "fonte": "16.5.b",
+      "campos": [
+        {
+          "nome": "doenca_reforma",
+          "tipo": "texto",
+          "descricao": "diagnóstico por extenso, CID-10 e condição prevista em Lei, que ensejou a reforma"
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        }
+      ]
+    },
+    "RR_INVALIDEZ_OUTRA": {
+      "modelo": "Continua incapaz definitivamente para o SAM por {{doenca_reforma}}, tendo evoluído para invalidez a partir de {{data}} por {{doenca_outra}}.",
+      "categoria": "incapaz_definitivo",
+      "fonte": "16.5.c",
+      "campos": [
+        {
+          "nome": "doenca_reforma",
+          "tipo": "texto",
+          "descricao": "diagnóstico por extenso, CID-10 e condição prevista em Lei, que ensejou a reforma"
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        },
+        {
+          "nome": "doenca_outra",
+          "tipo": "texto",
+          "descricao": "doença que não ensejou a reforma"
+        }
+      ]
+    },
+    "RR_SEM_CRITERIOS": {
+      "modelo": "Não apresenta critérios de incapacidade definitiva para o SAM e invalidez.",
+      "categoria": "apto",
+      "fonte": "16.5.d",
+      "observacoes": [
+        "Previsto retorno ao SAM/SMV: apresentar à JRS para VDF (16.3.d)."
+      ]
+    },
+    "RR_OUTRA_INCAP": {
+      "modelo": "Não apresenta critérios de incapacidade definitiva para o SAM e invalidez por {{doenca_reforma}}. Está incapaz definitivamente para o SAM a partir de {{data}}, por {{doenca_outra}}, {{(não)}} estando inválido [(a partir de {{data_invalidez}})]",
+      "categoria": "incapaz_definitivo",
+      "fonte": "16.5.e",
+      "campos": [
+        {
+          "nome": "doenca_reforma",
+          "tipo": "texto",
+          "descricao": "diagnóstico por extenso, CID-10 e condição prevista em Lei, que ensejou a reforma"
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        },
+        {
+          "nome": "doenca_outra",
+          "tipo": "texto"
+        },
+        {
+          "nome": "data_invalidez",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        }
+      ]
+    },
+    "SC_APTO": {
+      "modelo": "Apto para o Serviço Público em Geral (SPG)",
+      "categoria": "apto",
+      "fonte": "10.4.4.a"
+    },
+    "SC_APTO_RESTR": {
+      "modelo": "Apto para o Serviço Público em Geral (SPG), com restrições, por {{tempo_dias}} dias",
+      "categoria": "apto_restricoes",
+      "fonte": "10.4.4.b",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "admiteEmProrrogacao": true,
+      "observacoes": [
+        "Restrições relacionadas às atribuições no campo próprio do TIS."
+      ]
+    },
+    "SC_APTO_RESTR_LTS_RETRO": {
+      "modelo": "Apto para o SPG com restrições, por {{tempo_dias}} dias, devendo ser consideradas como LTS as faltas ao serviço, por motivo comprovado de saúde no período de {{data_inicio}} a {{data_fim}}",
+      "categoria": "apto_restricoes",
+      "fonte": "10.4.4.c",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        },
+        {
+          "nome": "data_inicio",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        },
+        {
+          "nome": "data_fim",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        }
+      ],
+      "aplicarQuando": "Intervalo entre a data de afastamento e a data da conclusão."
+    },
+    "SC_INCAP_TEMP": {
+      "modelo": "Incapaz temporariamente para o Serviço Público em Geral (SPG), necessitando de {{tempo_dias}} dias de LTS",
+      "categoria": "incapaz_temporario",
+      "fonte": "10.4.4.d",
+      "campos": [
+        {
+          "nome": "tempo_dias",
+          "tipo": "inteiro",
+          "descricao": "tempo a declarar em dias"
+        }
+      ],
+      "admiteEmProrrogacao": true
+    },
+    "SC_INCAP_PERM_LEI": {
+      "modelo": "É portador de incapacidade permanente decorrente de {{doenca_cid}}, doença {{nexo}}, {{prazo}}",
+      "categoria": "incapaz_definitivo",
+      "fonte": "10.4.4.e",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "nexo",
+          "tipo": "texto",
+          "descricao": "com/sem relação de causa e efeito com o serviço ou especificada no §1º do art. 186 da Lei 8.112/1990"
+        },
+        {
+          "nome": "prazo",
+          "tipo": "texto",
+          "descricao": "em caráter permanente ou tempo em meses para reavaliação"
+        }
+      ]
+    },
+    "SC_INCAP_PERM": {
+      "modelo": "É portador de incapacidade permanente não decorrente de doença especificada no parágrafo 1º, art. 186, da Lei n° 8.112/1990 ou de acidente em serviço ou moléstia profissional, {{prazo}}",
+      "categoria": "incapaz_definitivo",
+      "fonte": "10.4.4.f",
+      "campos": [
+        {
+          "nome": "prazo",
+          "tipo": "texto",
+          "descricao": "em caráter permanente ou tempo em meses para reavaliação"
+        }
+      ]
+    },
+    "SC_READAPTACAO": {
+      "modelo": "Recomenda-se avaliar a apresentação para Readaptação Funcional",
+      "categoria": "outro",
+      "fonte": "10.4.4.g"
+    },
+    "SC_DEIXAR_APTO": {
+      "modelo": "Apto(a) para deixar o Serviço Público",
+      "categoria": "apto",
+      "fonte": "10.14.3"
+    },
+    "SC_DEIXAR_APTO_CID": {
+      "modelo": "Apto(a) para deixar o Serviço Público, sendo, no entanto, portador(a) de {{cid}}, doença {{(não)}} decorrente de acidente de serviço ou de atividade profissional.",
+      "categoria": "apto",
+      "fonte": "10.14.3",
+      "campos": [
+        {
+          "nome": "cid",
+          "tipo": "texto",
+          "descricao": "apenas CID"
+        }
+      ],
+      "aplicarQuando": "Doença que não gera incapacidade permanente (art. 186, I, RJU)."
+    },
+    "SC_REVERSAO_APTO": {
+      "modelo": "Está capacitado para retornar as suas atividades profissionais, sendo considerado insubsistentes o motivo da incapacidade permanente",
+      "categoria": "apto",
+      "fonte": "10.8.3.a"
+    },
+    "SC_REVERSAO_PERMANECE": {
+      "modelo": "Permanece a condição de incapacidade permanente relacionada as suas atividades profissionais.",
+      "categoria": "incapaz_definitivo",
+      "fonte": "10.8.3.b"
+    },
+    "SC_REINTEGRACAO_APTO": {
+      "modelo": "Apto para reintegração ao Serviço Público em Geral (SPG)",
+      "categoria": "apto",
+      "fonte": "10.15.3",
+      "observacoes": [
+        "Restrições/incapacidade: laudos do VDF-SC (10.4.4)."
+      ]
+    },
+    "SC_PROVENTOS_DOENCA": {
+      "modelo": "É portador(a) de {{doenca_cid}}, ({{condicao_lei}}), {{(não)}} estando inválido(a) nos termos do parágrafo 1º, do art. 186, da Lei n° 8.112/1990.",
+      "categoria": "beneficio",
+      "fonte": "10.16.4.a",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "condicao_lei",
+          "tipo": "texto"
+        }
+      ]
+    },
+    "SC_PROVENTOS_SEM_DOENCA": {
+      "modelo": "Não apresenta doença especificada nos termos do parágrafo 1º, do art. 186, da Lei n° 8.112/1990.",
+      "categoria": "beneficio_negativo",
+      "fonte": "10.16.4.a"
+    },
+    "SC_PENSAO_INVALIDO": {
+      "modelo": "É portador(a) de {{doenca_cid}}, ({{condicao_lei}}), estando inválido(a) para todo e qualquer trabalho, (a partir desta data ou de {{data}}), {{prazo}}",
+      "categoria": "beneficio",
+      "fonte": "10.16.4.c.I",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "condicao_lei",
+          "tipo": "texto"
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        },
+        {
+          "nome": "prazo",
+          "tipo": "texto",
+          "descricao": "em caráter permanente ou devendo ser reavaliado em XX anos"
+        }
+      ]
+    },
+    "SC_PENSAO_DEFICIENCIA": {
+      "modelo": "É portador(a) de {{doenca_cid}}, ({{condicao_lei}}), tratando-se de deficiência {{tipo}}, (a partir desta data ou de {{data}}), {{prazo}}",
+      "categoria": "beneficio",
+      "fonte": "10.16.4.c.II",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "condicao_lei",
+          "tipo": "texto"
+        },
+        {
+          "nome": "tipo",
+          "tipo": "enum",
+          "valores": [
+            "grave",
+            "intelectual",
+            "mental"
+          ]
+        },
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        },
+        {
+          "nome": "prazo",
+          "tipo": "texto"
+        }
+      ]
+    },
+    "SC_PENSAO_NAO": {
+      "modelo": "Não está inválido(a) e não apresenta deficiência grave, intelectual ou mental na presente data",
+      "categoria": "beneficio_negativo",
+      "fonte": "10.16.4.c.III"
+    },
+    "SC_VIUVA_INVALIDA": {
+      "modelo": "Está inválida conforme o art. 4º por ser portadora de {{doenca_cid}}, ({{condicao_lei}}), doença prevista no art. 1°, ambos da Lei n° 3.738/1960 e Lei nº 7.670/1988.",
+      "categoria": "beneficio",
+      "fonte": "10.16.4.d.I",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "condicao_lei",
+          "tipo": "texto"
+        }
+      ]
+    },
+    "SC_VIUVA_NAO_INVALIDA": {
+      "modelo": "Não está inválida por ser portadora de {{doenca_cid}}, ({{condicao_lei}}), doença {{(não)}} prevista no art. 1°, da Lei n° 3.738/1960 e Lei nº 7.670/1988",
+      "categoria": "beneficio_negativo",
+      "fonte": "10.16.4.d.II",
+      "campos": [
+        {
+          "nome": "doenca_cid",
+          "tipo": "texto",
+          "descricao": "doença por extenso e CID"
+        },
+        {
+          "nome": "condicao_lei",
+          "tipo": "texto"
+        }
+      ]
+    },
+    "SC_IR_APOSENTADORIA_ACIDENTE": {
+      "modelo": "Tem aposentadoria motivada por {{motivo}}, conforme especificado na Lei nº 7.713/1988, alterada pelas Leis n° 8.541/1992 e 9.250/1995 e 11.052/2004.",
+      "categoria": "beneficio",
+      "fonte": "10.16.4.f.I",
+      "campos": [
+        {
+          "nome": "motivo",
+          "tipo": "enum",
+          "valores": [
+            "acidente em serviço",
+            "doença ocupacional"
+          ]
+        }
+      ]
+    },
+    "SC_PREEX_INVALIDEZ_NAO": {
+      "modelo": "Não está inválido(a)/incapaz permanente na presente data",
+      "categoria": "beneficio_negativo",
+      "fonte": "10.16.4.h.I"
+    },
+    "SC_PREEX_INVALIDEZ_SIM": {
+      "modelo": "Está inválido(a)/incapaz permanente a partir de {{data}} {{prazo}}",
+      "categoria": "beneficio",
+      "fonte": "10.16.4.h.II",
+      "campos": [
+        {
+          "nome": "data",
+          "tipo": "data",
+          "formato": "dd/mm/aaaa"
+        },
+        {
+          "nome": "prazo",
+          "tipo": "texto",
+          "descricao": "em caráter permanente ou devendo ser reavaliado em XX anos"
+        }
+      ]
+    },
+    "SC_PREESCOLAR_SIM": {
+      "modelo": "É portador(a) de Deficiência Mental, configurando idade mental inferior a seis anos de idade {{prazo}}",
+      "categoria": "beneficio",
+      "fonte": "10.16.4.i.I",
+      "campos": [
+        {
+          "nome": "prazo",
+          "tipo": "texto",
+          "descricao": "em caráter permanente ou devendo ser reavaliado em XX anos"
+        }
+      ]
+    },
+    "SC_PREESCOLAR_PARCIAL": {
+      "modelo": "É portador(a) de Deficiência Mental, não configurando idade mental inferior a seis anos de idade",
+      "categoria": "beneficio_negativo",
+      "fonte": "10.16.4.i.II"
+    },
+    "SC_PREESCOLAR_NAO": {
+      "modelo": "Não é portador(a) de Deficiência mental.",
+      "categoria": "beneficio_negativo",
+      "fonte": "10.16.4.i.III"
+    }
+  },
+  "itensArt108EM": {
+    "I": "ferimento recebido em campanha ou na manutenção da ordem pública",
+    "II": "enfermidade contraída em campanha ou na manutenção da ordem pública, ou enfermidade cuja causa eficiente decorra de uma dessas situações",
+    "III": "acidente em serviço",
+    "IV": "doença, moléstia ou enfermidade adquirida em tempo de paz, com relação de causa e efeito a condições inerentes ao serviço",
+    "V": "tuberculose ativa, alienação mental, esclerose múltipla, neoplasia maligna, cegueira, hanseníase, paralisia irreversível e incapacitante, cardiopatia grave, doença de Parkinson, pênfigo, espondiloartrose anquilosante, nefropatia grave, SIDA (AIDS) e outras moléstias que a lei indicar",
+    "VI": "acidente ou doença, moléstia ou enfermidade, sem relação de causa e efeito com o serviço"
+  },
+  "restricoesEmbarque": {
+    "Tipo 1": "Permitido servir em OM de terra (inclusive consideradas embarque para carreira, fora da conceituação 6.1.3.q); vedado embarque em navios e manobras operativas.",
+    "Tipo 2": "Permitido OM de terra, embarque e manobras limitadas: sem comissões sem evacuação médica célere; sem equipes de pronto emprego; navios atracados ou IM; OM do CFN sem isolamento prolongado/condições adversas; missões só em território nacional."
+  },
+  "verificacoesSintaxe": {
+    "se": "Todas as condições precisam valer (E). 'qualquer' = lista de blocos 'se' alternativos (OU).",
+    "condicoes": {
+      "regras": "chave da regra da IS",
+      "finalidades": "nome da finalidade",
+      "tipoServico": "carreira | SMV | SMI | outro",
+      "laudos": "id do laudo identificado",
+      "categorias": "categoria do laudo identificado",
+      "laudoIdentificado": "bool",
+      "laudoPermitido": "bool (laudo identificado está em laudosPermitidos)",
+      "emProrrogacao": "bool (texto contém 'em prorrogação')",
+      "restricoesPreenchidas": "bool (campo Restrições da IS)",
+      "textoContem": "regex sobre o texto normalizado (minúsculas, sem acento)",
+      "textoNaoContem": "regex",
+      "restoTexto": "bool (há texto além do modelo)",
+      "campoNumerico": "{nome, min?, max?} sobre campo extraído do laudo",
+      "contexto": "{chave: valor | {min?, max?}}; chave ausente/nula no contexto = sem dado"
+    },
+    "semDado": "Se uma condição de contexto não puder ser avaliada, aplica 'nivelSemDado' com 'mensagemSemDado' (omitido = não dispara)."
+  },
+  "verificacoes": [
+    {
+      "id": "LAUDO_NAO_PERMITIDO",
+      "severidade": "erro",
+      "se": {
+        "laudoIdentificado": true,
+        "laudoPermitido": false
+      },
+      "mensagem": "O laudo corresponde a um modelo da DGPM-406 que não é cabível para esta finalidade/vínculo.",
+      "fonte": "regras[...].laudosPermitidos"
+    },
+    {
+      "id": "TEXTO_FORA_DO_PADRAO",
+      "severidade": "alerta",
+      "se": {
+        "laudoIdentificado": false
+      },
+      "mensagem": "O texto não corresponde a nenhum modelo de laudo previsto para a finalidade. Conferir a redação com a DGPM-406.",
+      "fonte": "formas de conclusão"
+    },
+    {
+      "id": "PRORROGACAO_SEM_TERMO",
+      "severidade": "erro",
+      "se": {
+        "finalidades": [
+          "Término de Incapacidade"
+        ],
+        "laudos": [
+          "SAM_INCAP_TEMP",
+          "CF_INCAP_TEMP",
+          "CF_INCAP_TEMP_ITEMV",
+          "CF_INCAP_TEMP_NEXO",
+          "SMV_INCAP_TEMP",
+          "SMV_INCAP_TEMP_ITEMV",
+          "SMV_INCAP_TEMP_NEXO",
+          "SC_INCAP_TEMP"
+        ],
+        "emProrrogacao": false,
+        "contexto": {
+          "ltsAnterior": true,
+          "apresentadoNoPrazo": true
+        }
+      },
+      "mensagem": "Prorrogação de LTS (apresentado no prazo) sem o termo 'em prorrogação'.",
+      "fonte": "6.2.2.e; 6.3.2.a.I",
+      "nivelSemDado": "alerta",
+      "mensagemSemDado": "Término de Incapacidade sem 'em prorrogação': conferir no histórico se a LTS anterior estava vigente (6.2.2.e) ou vencida sem documentação (6.2.2.f)."
+    },
+    {
+      "id": "PRORROGACAO_INDEVIDA_LTS_VENCIDA",
+      "severidade": "alerta",
+      "se": {
+        "finalidades": [
+          "Término de Incapacidade"
+        ],
+        "laudos": [
+          "SAM_INCAP_TEMP",
+          "CF_INCAP_TEMP",
+          "CF_INCAP_TEMP_ITEMV",
+          "CF_INCAP_TEMP_NEXO",
+          "SMV_INCAP_TEMP",
+          "SMV_INCAP_TEMP_ITEMV",
+          "SMV_INCAP_TEMP_NEXO",
+          "SC_INCAP_TEMP"
+        ],
+        "emProrrogacao": true,
+        "contexto": {
+          "apresentadoNoPrazo": false
+        }
+      },
+      "mensagem": "'Em prorrogação' com a LTS anterior vencida: só cabe se houver documentação médica do período em aberto.",
+      "fonte": "6.2.2.e/f"
+    },
+    {
+      "id": "PRORROGACAO_EM_VDF",
+      "severidade": "erro",
+      "se": {
+        "finalidades": [
+          "Verificação de Deficiência Funcional",
+          "Verificação de Deficiência Funcional - Fato novo",
+          "Verificação de Deficiência Funcional - SMI",
+          "Verificação de Deficiência Funcional - SC"
+        ],
+        "emProrrogacao": true
+      },
+      "mensagem": "'Em prorrogação' em IS de VDF: o termo só cabe nas IS de Término de Incapacidade/Restrições.",
+      "fonte": "6.3.1.b; 6.3.2.a.I"
+    },
+    {
+      "id": "PRORROGACAO_NAO_ADMITIDA",
+      "severidade": "alerta",
+      "se": {
+        "laudoIdentificado": true,
+        "emProrrogacao": true,
+        "laudos": [
+          "SAM_APTO",
+          "SAM_APTO_RESTR_LTS_RETRO",
+          "SAM_INCAP_TEMP_NEXO",
+          "SAM_CONTINUA_INCAP",
+          "SAM_INCAP_DEF",
+          "SAM_INCAP_DEF_ESPEC",
+          "SMV_APTO",
+          "SMV_INCAP_TEMP",
+          "SMV_INCAP_TEMP_ITEMV",
+          "SMV_INCAP_TEMP_NEXO",
+          "CP_APTO",
+          "CP_APTO_RESTR",
+          "CP_INAPTO",
+          "PTS_APTO",
+          "PTS_APTO_RESTR",
+          "PTS_INAPTO"
+        ]
+      },
+      "mensagem": "O modelo deste laudo não prevê o termo 'em prorrogação'.",
+      "fonte": "formas de conclusão"
+    },
+    {
+      "id": "VDF_SMI_FORMA",
+      "severidade": "erro",
+      "se": {
+        "regras": [
+          "VDF_SMI"
+        ],
+        "laudoPermitido": false
+      },
+      "mensagem": "VDF de militar do SMI conclui somente com APTO A, INCAPAZ B-1, B-2 ou C (ou incapacidade definitiva para o SAM nas hipóteses do 11.3.2.e). Não cabe 'Apto com restrições'.",
+      "fonte": "11.3.3"
+    },
+    {
+      "id": "SMI_B1_SEM_PERIODO",
+      "severidade": "erro",
+      "se": {
+        "laudos": [
+          "SMI_INCAP_B1"
+        ],
+        "textoNaoContem": "\\d+\\s*dias|afastamento"
+      },
+      "mensagem": "Incapaz B-1 sem o período de afastamento recomendado no texto complementar.",
+      "fonte": "11.3.3.b"
+    },
+    {
+      "id": "CP_RESTRICOES_DISCRIMINADAS",
+      "severidade": "erro",
+      "se": {
+        "regras": [
+          "CONTROLE_PERIODICO",
+          "CONTROLE_ATIVIDADE_ESPECIFICA",
+          "PRORROGACAO_SMV",
+          "REENGAJAMENTO_CARREIRA"
+        ],
+        "laudos": [
+          "CP_APTO_RESTR",
+          "PTS_APTO_RESTR"
+        ],
+        "qualquer": [
+          {
+            "restoTexto": true
+          },
+          {
+            "restricoesPreenchidas": true
+          },
+          {
+            "textoContem": "\\d+\\s*(dias|meses)"
+          }
+        ]
+      },
+      "mensagem": "Em IS de controle periódico/prorrogação o laudo é apenas 'Apto para..., com restrições': não discriminar restrições nem período (são definidos na IS de VDF/Término de Restrições).",
+      "fonte": "4.1.3.g; 4.1.5.b; 11.7.2"
+    },
+    {
+      "id": "CP_INAPTO_INDEVIDO",
+      "severidade": "erro",
+      "se": {
+        "regras": [
+          "CONTROLE_PERIODICO"
+        ],
+        "laudos": [
+          "CP_INAPTO"
+        ]
+      },
+      "mensagem": "'Inapto' não cabe em controle trienal/periódico comum: só nas finalidades de atividade específica da alínea f do 4.1.3.",
+      "fonte": "4.1.5.c"
+    },
+    {
+      "id": "CP_INCAPACIDADE",
+      "severidade": "erro",
+      "se": {
+        "regras": [
+          "CONTROLE_PERIODICO",
+          "CONTROLE_ATIVIDADE_ESPECIFICA"
+        ],
+        "categorias": [
+          "incapaz_temporario",
+          "incapaz_definitivo"
+        ]
+      },
+      "mensagem": "Laudo de incapacidade em IS de controle periódico: arquivar o controle e exarar o laudo na IS de VDF.",
+      "fonte": "4.1.3.e/k"
+    },
+    {
+      "id": "LIMITE_180_DIAS",
+      "severidade": "erro",
+      "se": {
+        "categorias": [
+          "incapaz_temporario",
+          "apto_restricoes"
+        ],
+        "campoNumerico": {
+          "nome": "tempo_dias",
+          "min": 181
+        }
+      },
+      "mensagem": "Período superior a 180 dias por IS.",
+      "fonte": "6.1.4.e/f; 11.8.2.b"
+    },
+    {
+      "id": "CONTINUA_INCAP_TEMPORARIO",
+      "severidade": "erro",
+      "se": {
+        "laudos": [
+          "SAM_CONTINUA_INCAP"
+        ],
+        "tipoServico": [
+          "SMV",
+          "SMI",
+          "outro"
+        ]
+      },
+      "mensagem": "'Continua incapaz temporariamente' é exclusivo de militar de carreira.",
+      "fonte": "6.1.4.g"
+    },
+    {
+      "id": "CONTINUA_INCAP_SEM_AGREGACAO",
+      "severidade": "erro",
+      "se": {
+        "laudos": [
+          "SAM_CONTINUA_INCAP"
+        ],
+        "tipoServico": [
+          "carreira"
+        ],
+        "contexto": {
+          "tempoAgregacaoDias": {
+            "max": 729
+          }
+        }
+      },
+      "mensagem": "'Continua incapaz temporariamente' exige dois anos de agregação (≈ 3 anos de LTS ininterrupta).",
+      "fonte": "6.1.4.g",
+      "nivelSemDado": "alerta",
+      "mensagemSemDado": "'Continua incapaz' exige dois anos de agregação: conferir o histórico de LTS ininterrupta."
+    },
+    {
+      "id": "AGREGACAO_2_ANOS_LTS_COMUM",
+      "severidade": "alerta",
+      "se": {
+        "laudos": [
+          "SAM_INCAP_TEMP"
+        ],
+        "tipoServico": [
+          "carreira"
+        ],
+        "contexto": {
+          "tempoAgregacaoDias": {
+            "min": 730
+          }
+        }
+      },
+      "mensagem": "Militar com dois anos ou mais de agregação: avaliar o laudo 'Continua incapaz temporariamente' (com revisão ex officio por JSD) ou a incapacidade definitiva.",
+      "fonte": "6.1.4.g/j"
+    },
+    {
+      "id": "RESTRICOES_36_MESES",
+      "severidade": "alerta",
+      "se": {
+        "categorias": [
+          "apto_restricoes"
+        ],
+        "contexto": {
+          "restricoesAcumuladasMeses": {
+            "min": 36
+          }
+        }
+      },
+      "mensagem": "Restrições contínuas por 36 meses ou mais: avaliar restrições por tempo indeterminado (carreira) ou Deixar o SMV (SMV).",
+      "fonte": "6.2.3.g–i; 11.8.2.b"
+    },
+    {
+      "id": "NEXO_SEM_AO_REGISTRADO",
+      "severidade": "alerta",
+      "se": {
+        "textoContem": "relacao de causa e efeito com o servico",
+        "textoNaoContem": "\\bsem relacao de causa"
+      },
+      "mensagem": "Laudo com nexo causal com o serviço: conferir AO com Exame de Sanidade realizado (ou AO concluído/ISO), pois o registro de AO não consta dos dados da IS.",
+      "fonte": "6.3.2.a.II; 8.1.5; 11.8.3.e"
+    },
+    {
+      "id": "ITEM_V_SEM_ENQUADRAMENTO",
+      "severidade": "alerta",
+      "se": {
+        "laudos": [
+          "SAM_INCAP_DEF"
+        ],
+        "textoContem": "item v\\b|inciso v\\b",
+        "textoNaoContem": "cardiopatia grave|neoplasia maligna|alienacao mental|nefropatia grave|cegueira|tuberculose|hanseniase|esclerose multipla|paralisia|parkinson|penfigo|espondilo|sida|aids|\\bnao e "
+      },
+      "mensagem": "Doença do item V do art. 108 sem o enquadramento da PN 3.551/2021 após o CID, ex.: '(Cardiopatia Grave)' ou '(não é Cardiopatia Grave)'.",
+      "fonte": "6.3.2.c"
+    },
+    {
+      "id": "RESTRICOES_SEM_LISTA",
+      "severidade": "alerta",
+      "se": {
+        "laudos": [
+          "SAM_APTO_RESTR",
+          "SAM_APTO_RESTR_LTS_RETRO",
+          "SMV_APTO_RESTR"
+        ],
+        "restricoesPreenchidas": false
+      },
+      "mensagem": "Laudo com restrições sem as restrições lançadas no campo próprio.",
+      "fonte": "6.3.1.b"
+    }
+  ]
+}

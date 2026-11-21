@@ -1,0 +1,510 @@
+[
+  {
+    "Índice": "Cabeça e Pescoço",
+    "Valor": "deformações"
+  },
+  {
+    "Índice": "Cabeça e Pescoço",
+    "Valor": "perdas extensas de substância"
+  },
+  {
+    "Índice": "Cabeça e Pescoço",
+    "Valor": "cicatrizes deformantes ou aderentes"
+  },
+  {
+    "Índice": "Cabeça e Pescoço",
+    "Valor": "contraturas musculares anormais"
+  },
+  {
+    "Índice": "Cabeça e Pescoço",
+    "Valor": "cisto branquial"
+  },
+  {
+    "Índice": "Cabeça e Pescoço",
+    "Valor": "higroma cístico de pescoço e fístulas"
+  },
+  {
+    "Índice": "Ouvido e Audição",
+    "Valor": "Deformidades significativas ou agenesia das orelhas"
+  },
+  {
+    "Índice": "Ouvido e Audição",
+    "Valor": "anormalidades do conduto auditivo e tímpano, exceto as desprovidas de potencialidade mórbida"
+  },
+  {
+    "Índice": "Ouvido e Audição",
+    "Valor": "infecções crônicas recidivantes"
+  },
+  {
+    "Índice": "Ouvido e Audição",
+    "Valor": "otite média crônica"
+  },
+  {
+    "Índice": "Ouvido e Audição",
+    "Valor": "labirintopatias"
+  },
+  {
+    "Índice": "Ouvido e Audição",
+    "Valor": "tumores"
+  },
+  {
+    "Índice": "Olhos e Visão",
+    "Valor": "Ceratocone"
+  },
+  {
+    "Índice": "Olhos e Visão",
+    "Valor": "glaucoma"
+  },
+  {
+    "Índice": "Olhos e Visão",
+    "Valor": "infecções e processos inflamatórios, excetuando conjuntivites agudas e hordéolo"
+  },
+  {
+    "Índice": "Olhos e Visão",
+    "Valor": "ulcerações"
+  },
+  {
+    "Índice": "Olhos e Visão",
+    "Valor": "tumores, excetuando cisto benigno palpebral"
+  },
+  {
+    "Índice": "Olhos e Visão",
+    "Valor": "opacificações"
+  },
+  {
+    "Índice": "Olhos e Visão",
+    "Valor": "sequelas de traumatismo ou de queimaduras"
+  },
+  {
+    "Índice": "Olhos e Visão",
+    "Valor": "doenças congênitas e deformidades congênitas ou adquiridas, incluindo desvios dos eixos visuais"
+  },
+  {
+    "Índice": "Olhos e Visão",
+    "Valor": "anormalidades funcionais significativas e diminuição da acuidade visual além da tolerância permitida"
+  },
+  {
+    "Índice": "Olhos e Visão",
+    "Valor": "lesões retinianas"
+  },
+  {
+    "Índice": "Olhos e Visão",
+    "Valor": "doenças neurológicas ou musculares oculares"
+  },
+  {
+    "Índice": "Olhos e Visão",
+    "Valor": "discromatopsia para as cores verde e vermelha"
+  },
+  {
+    "Índice": "Boca, Nariz, Laringe, Faringe, Traqueia e Esôfago",
+    "Valor": "Anormalidades estruturais congênitas ou não"
+  },
+  {
+    "Índice": "Boca, Nariz, Laringe, Faringe, Traqueia e Esôfago",
+    "Valor": "desvio acentuado de septo nasal"
+  },
+  {
+    "Índice": "Boca, Nariz, Laringe, Faringe, Traqueia e Esôfago",
+    "Valor": "mutilações"
+  },
+  {
+    "Índice": "Boca, Nariz, Laringe, Faringe, Traqueia e Esôfago",
+    "Valor": "tumores"
+  },
+  {
+    "Índice": "Boca, Nariz, Laringe, Faringe, Traqueia e Esôfago",
+    "Valor": "atresias e retrações"
+  },
+  {
+    "Índice": "Boca, Nariz, Laringe, Faringe, Traqueia e Esôfago",
+    "Valor": "fístulas congênitas ou adquiridas"
+  },
+  {
+    "Índice": "Boca, Nariz, Laringe, Faringe, Traqueia e Esôfago",
+    "Valor": "infecções crônicas ou recidivantes"
+  },
+  {
+    "Índice": "Boca, Nariz, Laringe, Faringe, Traqueia e Esôfago",
+    "Valor": "deficiências funcionais na mastigação, deglutição, respiração, fonação, fala"
+  },
+  {
+    "Índice": "Boca, Nariz, Laringe, Faringe, Traqueia e Esôfago",
+    "Valor": "nódulos, pólipos e cistos vocais, fendas glóticas, paralisia de prega vocal, refluxo laringofaríngeo intenso e alterações na fisiologia vocal para Sargento Músico"
+  },
+  {
+    "Índice": "Aparelho Estomatognático",
+    "Valor": "Estado sanitário bucal deficiente"
+  },
+  {
+    "Índice": "Aparelho Estomatognático",
+    "Valor": "cáries"
+  },
+  {
+    "Índice": "Aparelho Estomatognático",
+    "Valor": "restaurações e próteses insatisfatórias"
+  },
+  {
+    "Índice": "Aparelho Estomatognático",
+    "Valor": "doença periodontal não controlada pelo autocuidado"
+  },
+  {
+    "Índice": "Aparelho Estomatognático",
+    "Valor": "gengivite com ou sem presença de cálculo"
+  },
+  {
+    "Índice": "Aparelho Estomatognático",
+    "Valor": "infecções, cistos, neoplasias"
+  },
+  {
+    "Índice": "Aparelho Estomatognático",
+    "Valor": "restos radiculares"
+  },
+  {
+    "Índice": "Aparelho Estomatognático",
+    "Valor": "deformidades estruturais como fissuras labiais ou labiopalatinas não reabilitadas"
+  },
+  {
+    "Índice": "Aparelho Estomatognático",
+    "Valor": "sequelas deformantes de síndromes ou de alterações do desenvolvimento maxilo-facial"
+  },
+  {
+    "Índice": "Aparelho Estomatognático",
+    "Valor": "má-oclusão de origem dentária ou esquelética com comprometimento funcional"
+  },
+  {
+    "Índice": "Aparelho Estomatognático",
+    "Valor": "ausência de contatos interoclusais em regiões de molares, tolerando-se a presença de próteses"
+  },
+  {
+    "Índice": "Aparelho Estomatognático",
+    "Valor": "ausência dentária na bateria labial sem reabilitação"
+  },
+  {
+    "Índice": "Aparelho Estomatognático",
+    "Valor": "menos de dez dentes naturais em uma das arcadas"
+  },
+  {
+    "Índice": "Pele e Tecido Celular Subcutâneo ou Conjuntivo",
+    "Valor": "Infecções crônicas ou recidivantes, inclusive a acne com processo inflamatório agudo ou dermatose que comprometa o barbear"
+  },
+  {
+    "Índice": "Pele e Tecido Celular Subcutâneo ou Conjuntivo",
+    "Valor": "micoses, infectadas ou cronificadas"
+  },
+  {
+    "Índice": "Pele e Tecido Celular Subcutâneo ou Conjuntivo",
+    "Valor": "parasitoses cutâneas extensas"
+  },
+  {
+    "Índice": "Pele e Tecido Celular Subcutâneo ou Conjuntivo",
+    "Valor": "eczemas alérgicos"
+  },
+  {
+    "Índice": "Pele e Tecido Celular Subcutâneo ou Conjuntivo",
+    "Valor": "expressões cutâneas das doenças autoimunes, excetuando-se vitiligo, manifestações das doenças alérgicas"
+  },
+  {
+    "Índice": "Pele e Tecido Celular Subcutâneo ou Conjuntivo",
+    "Valor": "ulcerações e edemas"
+  },
+  {
+    "Índice": "Pele e Tecido Celular Subcutâneo ou Conjuntivo",
+    "Valor": "cicatrizes deformantes, que poderão vir a comprometer a capacidade laborativa"
+  },
+  {
+    "Índice": "Pele e Tecido Celular Subcutâneo ou Conjuntivo",
+    "Valor": "afecções em que haja contraindicação à exposição solar prolongada"
+  },
+  {
+    "Índice": "Pele e Tecido Celular Subcutâneo ou Conjuntivo",
+    "Valor": "tatuagens que façam alusão a ideologia terrorista ou extremista ou na região da cabeça, do rosto e da face anterior do pescoço"
+  },
+  {
+    "Índice": "Pele e Tecido Celular Subcutâneo ou Conjuntivo",
+    "Valor": "sinais ou sintomas de esclerose sistêmica, esclerodermia, poliomiosite, dermatomiosite, doença mista do tecido conjuntivo, síndrome de Sjögren e síndrome antifosfolipide"
+  },
+  {
+    "Índice": "Pulmões e Parede Torácica",
+    "Valor": "Deformidade relevante congênita ou adquirida da caixa torácica com prejuízo da função respiratória"
+  },
+  {
+    "Índice": "Pulmões e Parede Torácica",
+    "Valor": "infecções bacterianas ou micóticas"
+  },
+  {
+    "Índice": "Pulmões e Parede Torácica",
+    "Valor": "distúrbios ventilatórios, obstrutivos ou restritivos, hiperreatividade brônquica, história de crises de broncoespasmo ainda na adolescência"
+  },
+  {
+    "Índice": "Pulmões e Parede Torácica",
+    "Valor": "fístula e fibrose pulmonar difusa"
+  },
+  {
+    "Índice": "Pulmões e Parede Torácica",
+    "Valor": "tumores malignos e benignos dos pulmões e pleura"
+  },
+  {
+    "Índice": "Pulmões e Parede Torácica",
+    "Valor": "anormalidades radiológicas, exceto se insignificantes e desprovidas de potencialidade mórbida e sem comprometimento funcional"
+  },
+  {
+    "Índice": "Sistema Cardiovascular e Síndromes Vasculíticas",
+    "Valor": "Anormalidades congênitas, ressalvadas CIA, a CIV e a PCA corrigidas cirurgicamente, que não promovam repercussão hemodinâmica ou adquiridas"
+  },
+  {
+    "Índice": "Sistema Cardiovascular e Síndromes Vasculíticas",
+    "Valor": "infecções, inflamações, arritmias, doenças do pericárdio, miocárdio, endocárdio e da circulação intrínseca do coração"
+  },
+  {
+    "Índice": "Sistema Cardiovascular e Síndromes Vasculíticas",
+    "Valor": "anormalidades do feixe de condução ressalvado o bloqueio de ramo direito de primeiro grau"
+  },
+  {
+    "Índice": "Sistema Cardiovascular e Síndromes Vasculíticas",
+    "Valor": "doenças orovalvares"
+  },
+  {
+    "Índice": "Sistema Cardiovascular e Síndromes Vasculíticas",
+    "Valor": "síndrome de pré-excitação"
+  },
+  {
+    "Índice": "Sistema Cardiovascular e Síndromes Vasculíticas",
+    "Valor": "hipotensão arterial com sintomas"
+  },
+  {
+    "Índice": "Sistema Cardiovascular e Síndromes Vasculíticas",
+    "Valor": "hipertensão arterial"
+  },
+  {
+    "Índice": "Sistema Cardiovascular e Síndromes Vasculíticas",
+    "Valor": "níveis tensionais arteriais acima dos índices mínimos exigidos"
+  },
+  {
+    "Índice": "Sistema Cardiovascular e Síndromes Vasculíticas",
+    "Valor": "doenças venosas, arteriais e linfáticas"
+  },
+  {
+    "Índice": "Sistema Cardiovascular e Síndromes Vasculíticas",
+    "Valor": "sinais ou sintomas de vasculites sistêmicas, primárias ou secundárias"
+  },
+  {
+    "Índice": "Abdome e Trato Gastrointestinal",
+    "Valor": "Anormalidades da parede, exceto as diastases dos retos abdominais, desde que não comprometam a capacidade laboral"
+  },
+  {
+    "Índice": "Abdome e Trato Gastrointestinal",
+    "Valor": "visceromegalias"
+  },
+  {
+    "Índice": "Abdome e Trato Gastrointestinal",
+    "Valor": "infecções, esquistossomose e outras parasitoses graves"
+  },
+  {
+    "Índice": "Abdome e Trato Gastrointestinal",
+    "Valor": "micoses profundas"
+  },
+  {
+    "Índice": "Abdome e Trato Gastrointestinal",
+    "Valor": "história de cirurgias que alterem de forma significativa a função gastrointestinal"
+  },
+  {
+    "Índice": "Abdome e Trato Gastrointestinal",
+    "Valor": "doenças hepáticas e pancreáticas, exceto as desprovidas de potencialidade mórbida"
+  },
+  {
+    "Índice": "Abdome e Trato Gastrointestinal",
+    "Valor": "doenças inflamatórias intestinais ou quaisquer distúrbios que comprometam, de forma significativa, a função do sistema"
+  },
+  {
+    "Índice": "Aparelho Geniturinário",
+    "Valor": "Anormalidades congênitas ou adquiridas da genitália, rins e vias urinárias, exceto fimose e as desprovidas de potencialidade mórbida"
+  },
+  {
+    "Índice": "Aparelho Geniturinário",
+    "Valor": "litíases (cálculos)"
+  },
+  {
+    "Índice": "Aparelho Geniturinário",
+    "Valor": "alterações demonstradas no exame de urina, cuja potencialidade mórbida não possa ser descartada"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "Escoliose apresentando mais de 13 graus Cobb"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "Lordose acentuada, com ângulo de Cobb com mais de 60 graus"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "Hipercifose que ao estudo radiológico apresente mais de 45 graus Cobb ou com angulação menor, haja acunhamento de mais de 5 graus, em perfil"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "Genu Recurvatum com mais de 20 graus aferidos por goniômetro"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "Genu Varum que apresente distância bicondilar superior a 7 cm"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "Genu Valgum que apresente distância bimaleolar superior a 7 cm"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "Megapófises da penúltima ou última vértebra lombar"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "espinha bífida com repercussão neurológica"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "Discrepância no comprimento dos membros inferiores superior a 10 mm para candidatos até 21 anos e superior a 15 mm para os demais"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "alterações degenerativas da coluna vertebral"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "presença de material de síntese não tolerado"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "próteses articulares de qualquer espécie"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "passado de cirurgias envolvendo articulações"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "doenças ou anormalidades dos ossos e articulações, congênitas ou adquiridas, inflamatórias, infecciosas, neoplásticas e traumáticas"
+  },
+  {
+    "Índice": "Aparelho Osteomioarticular e Doenças Reumatológicas",
+    "Valor": "sinais ou sintomas de lupos eritematoso sistêmico, artrite reumatoide, e outras doenças reumatológicas"
+  },
+  {
+    "Índice": "Doenças Metabólicas e Endócrinas",
+    "Valor": "Diabetes Mellitus"
+  },
+  {
+    "Índice": "Doenças Metabólicas e Endócrinas",
+    "Valor": "tumores hipotalâmicos e hipofisários"
+  },
+  {
+    "Índice": "Doenças Metabólicas e Endócrinas",
+    "Valor": "disfunção hipofisária e tireoidiana"
+  },
+  {
+    "Índice": "Doenças Metabólicas e Endócrinas",
+    "Valor": "tumores da tireoide"
+  },
+  {
+    "Índice": "Doenças Metabólicas e Endócrinas",
+    "Valor": "tumores de suprarrenal e suas disfunções congênitas ou adquiridas"
+  },
+  {
+    "Índice": "Doenças Metabólicas e Endócrinas",
+    "Valor": "hipogonadismo primário ou secundário"
+  },
+  {
+    "Índice": "Doenças Metabólicas e Endócrinas",
+    "Valor": "distúrbios do metabolismo do cálcio e fósforo, de origem endócrina"
+  },
+  {
+    "Índice": "Doenças Metabólicas e Endócrinas",
+    "Valor": "erros inatos do metabolismo"
+  },
+  {
+    "Índice": "Doenças Metabólicas e Endócrinas",
+    "Valor": "desenvolvimento anormal, em desacordo com a idade cronológica"
+  },
+  {
+    "Índice": "Doenças Metabólicas e Endócrinas",
+    "Valor": "obesidade"
+  },
+  {
+    "Índice": "Sangue e Órgãos Hematopoiéticos",
+    "Valor": "Alterações significativas do sangue e órgãos hematopoiéticos e/ou aquelas em que seja necessária investigação complementar"
+  },
+  {
+    "Índice": "Doenças Neurológicas",
+    "Valor": "Distúrbios neuromusculares, incluindo miastenia gravis"
+  },
+  {
+    "Índice": "Doenças Neurológicas",
+    "Valor": "afecções neurológicas"
+  },
+  {
+    "Índice": "Doenças Neurológicas",
+    "Valor": "anormalidades congênitas ou adquiridas"
+  },
+  {
+    "Índice": "Doenças Neurológicas",
+    "Valor": "ataxias, incoordenações, tremores, paresias e paralisias, atrofias, fraquezas musculares"
+  },
+  {
+    "Índice": "Doenças Neurológicas",
+    "Valor": "passado de crises convulsivas que tenham demandado tratamento neurológico"
+  },
+  {
+    "Índice": "Doenças Neurológicas",
+    "Valor": "epilepsias e doenças desmielinizantes, incluindo esclerose múltipla"
+  },
+  {
+    "Índice": "Doenças Psiquiátricas",
+    "Valor": "evidência atual ou a história pregressa de doença psiquiátrica"
+  },
+  {
+    "Índice": "Doenças Psiquiátricas",
+    "Valor": "uso pregresso ou atual de substâncias psicoativas ilícitas"
+  },
+  {
+    "Índice": "Doenças Psiquiátricas",
+    "Valor": "exame toxicológico positivo para substâncias psicoativas ilícitas"
+  },
+  {
+    "Índice": "Tumores e Neoplasias",
+    "Valor": "Qualquer história atual ou pregressa de tumor maligno"
+  },
+  {
+    "Índice": "Tumores e Neoplasias",
+    "Valor": "tumores benignos, dependendo da localização, repercussão funcional, potencial evolutivo"
+  },
+  {
+    "Índice": "Tumores e Neoplasias",
+    "Valor": "presença de sequelas decorrentes da neoplasia maligna, que gerem comprometimento da capacidade laboral"
+  },
+  {
+    "Índice": "Condições Ginecológicas",
+    "Valor": "Lesões de colo, corpo e trompas uterinos, ovários, vulva, vagina, alterações mamárias e outras anormalidades adquiridas, exceto se insignificantes e/ou desprovidas de potencialidade mórbida"
+  },
+  {
+    "Índice": "Outras condições",
+    "Valor": "Doenças ou condições detectadas no momento da avaliação médico-pericial potencialmente impeditivas"
+  },
+  {
+    "Índice": "Outras condições",
+    "Valor": "Qualquer condição que demande tratamento cirúrgico para sua correção"
+  },
+  {
+    "Índice": "Outras condições",
+    "Valor": "vigência de pós-operatório cujo restabelecimento ultrapasse o prazo limite para o resultado"
+  },
+  {
+    "Índice": "Outras condições",
+    "Valor": "História pregressa de cirurgia sem a devida comprovação"
+  },
+  {
+    "Índice": "Outras condições",
+    "Valor": "Doenças, condições ou alterações de exames complementares que demandem investigação clínica que ultrapasse o prazo máximo estipulado"
+  },
+  {
+    "Índice": "Outras condições",
+    "Valor": "sorologia positiva para o HIV sem a comprovação de portador assintomático"
+  }
+]
