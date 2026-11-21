@@ -3,6 +3,8 @@
 // (finalidade · data da entrevista · nº de registros), que expande/recolhe; 2º nível = os registros daquela IS.
 // Os registros sem IS ficam no grupo final "Sem IS". Expandida de início: a IS pedida (?is=) ou a do registro
 // aberto; senão, a IS mais recente.
+// `soltarUnicos` (aba Atestados e Laudos): só vira grupo expansível a IS com 2 ou mais registros; a IS com um só
+// registro e os registros sem IS (ex.: atestados da Perícia Menor) aparecem soltos, como linha comum.
 import React, { useEffect, useState } from 'react';
 
 export interface GrupoHistoricoIS<T> {
@@ -37,13 +39,15 @@ interface Props<T> {
   /** IS a expandir de início (a pedida pela navegação ou a do registro aberto); sem ela, a primeira (mais recente). */
   inicial?: string | null;
   idItem: (t: T) => string;
-  renderItem: (t: T) => React.ReactNode;
+  /** `agrupado`: o item está dentro de um grupo expansível (a linha pode usar rótulos mais curtos). */
+  renderItem: (t: T, agrupado: boolean) => React.ReactNode;
+  soltarUnicos?: boolean;
   rotulo: string;
   /** Sufixo do nº de registros para o leitor de tela (ex.: "exames"). */
   nomeItens: string;
 }
 
-export const HistoricoAgrupadoIS = <T,>({ grupos, inicial, idItem, renderItem, rotulo, nomeItens }: Props<T>) => {
+export const HistoricoAgrupadoIS = <T,>({ grupos, inicial, idItem, renderItem, rotulo, nomeItens, soltarUnicos = false }: Props<T>) => {
   const alvo = inicial && grupos.some(g => g.id === inicial) ? inicial : grupos[0]?.id;
   const [abertos, setAbertos] = useState<Set<string>>(() => new Set(alvo ? [alvo] : []));
   // A IS pedida/aberta pode chegar depois (dados assíncronos ou outro registro selecionado): garante-a expandida.
@@ -55,6 +59,9 @@ export const HistoricoAgrupadoIS = <T,>({ grupos, inicial, idItem, renderItem, r
   return (
     <ul className="divide-y divide-line border-t border-line overflow-y-auto overscroll-contain max-h-[60vh] xl:max-h-[calc(100dvh-14rem)] rounded-b-xl" aria-label={rotulo}>
       {grupos.map(g => {
+        if (soltarUnicos && (g.itens.length < 2 || g.id === SEM_IS)) {
+          return <React.Fragment key={g.id}>{g.itens.map(t => <li key={idItem(t)}>{renderItem(t, false)}</li>)}</React.Fragment>;
+        }
         const aberto = abertos.has(g.id);
         const idLista = `hist-grupo-${g.id}`;
         return (
@@ -72,7 +79,7 @@ export const HistoricoAgrupadoIS = <T,>({ grupos, inicial, idItem, renderItem, r
             </button>
             {aberto && (
               <ul id={idLista} className="divide-y divide-line border-t border-line bg-canvas/40">
-                {g.itens.map(t => <li key={idItem(t)} className="pl-4">{renderItem(t)}</li>)}
+                {g.itens.map(t => <li key={idItem(t)} className="pl-4">{renderItem(t, true)}</li>)}
               </ul>
             )}
           </li>

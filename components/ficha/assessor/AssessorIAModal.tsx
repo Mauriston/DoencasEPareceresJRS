@@ -85,6 +85,15 @@ export const AssessorIAModal: React.FC<Props> = ({ inspecoes, isInicialId, perfi
   useEffect(() => { setItens([]); setErro(''); setInseridos(new Set()); }, [isId]);
   useEffect(() => { fimRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [itens.length, enviando]);
   useEffect(() => { caixaRef.current?.focus(); }, []);
+  // A caixa cresce com o texto (sem barra de rolagem); só rola acima de 60% da altura da tela.
+  useEffect(() => {
+    const c = caixaRef.current;
+    if (!c) return;
+    c.style.height = 'auto';
+    const max = window.innerHeight * 0.6;
+    c.style.height = `${Math.min(c.scrollHeight, max)}px`;
+    c.style.overflowY = c.scrollHeight > max ? 'auto' : 'hidden';
+  }, [texto]);
 
   const sugestoes = useMemo(() => (is ? sugestoesDoAssessor(is) : []), [is]);
 
@@ -237,7 +246,7 @@ export const AssessorIAModal: React.FC<Props> = ({ inspecoes, isInicialId, perfi
               id="assessor-comando" ref={caixaRef} value={texto} onChange={e => setTexto(e.target.value)} rows={2}
               placeholder="Ex.: Redija a IS. Inspecionado relata…"
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void enviar(texto); } }}
-              className="w-full max-h-60 resize-none bg-transparent text-base md:text-sm text-white placeholder:text-white/40 focus:outline-none"
+              className="w-full resize-none overflow-hidden bg-transparent text-base md:text-sm text-white placeholder:text-white/40 focus:outline-none"
             />
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-white/40">Enter envia · Shift+Enter quebra a linha</span>

@@ -156,11 +156,22 @@ interface ItemHistorico {
   semData?: boolean;
   /** font-variation-settings do ícone (Material Symbols). */
   iconeEstilo?: React.CSSProperties;
-  /** IS do registro (abas agrupadas por IS: Exames e Outros). */
+  /** IS do registro (abas agrupadas por IS: Exames, Outros e Atestados e Laudos). */
   isId?: string;
+  /** Dentro do grupo da IS (Atestados e Laudos): "documento e especialidade" e o nome do emissor. */
+  tituloAgrupado?: string;
+  detalheAgrupado?: React.ReactNode;
 }
 
 /** Ícones de estado do histórico (IS e Pareceres), com os eixos do Material Symbols definidos pela JRS. */
+/** Só o nome do emissor, sem o registro no conselho ("Dr(a). Fulano CRM 123 PE" → "Dr(a). Fulano"). */
+const nomeDoEmissor = (emissor: string): string => {
+  const sem = String(emissor || '').split(/\s*[-–—|(,]?\s*\b(?:CRM|CRP|RQE|COREN|CREFITO|CRN|CRO|CRFa|CREFONO)\b/i)[0].replace(/[\s\-–—|,(]+$/, '').trim();
+  // "Clínica X - Dr(a). Fulano": fica só o profissional.
+  const i = sem.search(/\bDra?\.|\bDr\(a\)\./i);
+  return i > 0 ? sem.slice(i).trim() : sem;
+};
+
 const ICONE_ESTADO = {
   pendente: { icone: 'pending_actions', estilo: { fontVariationSettings: "'FILL' 1, 'wght' 700, 'GRAD' -25, 'opsz' 40" } },
   andamento: { icone: 'edit_square', estilo: { fontVariationSettings: "'FILL' 0, 'wght' 700, 'GRAD' -25, 'opsz' 40" } },
@@ -356,6 +367,8 @@ export const FichaInspecionado: React.FC = () => {
         id: idExame(e), data, icone: 'note_alt', semData: true, isId: e.isId,
         titulo: `IS ${(is?.finalidade || String(e.is)).toUpperCase()}`,
         detalhe: linha(it ? ROTULO_CATEGORIA[categoriaDoItem(it)] : 'Laudo', e.itens.find(i => i.especialidade)?.especialidade, data, e.itens.find(i => i.emissor)?.emissor || ''),
+        tituloAgrupado: [it ? ROTULO_CATEGORIA[categoriaDoItem(it)] : 'Laudo', e.itens.find(i => i.especialidade)?.especialidade].filter(Boolean).join(' ').toUpperCase(),
+        detalheAgrupado: nomeDoEmissor(e.itens.find(i => i.emissor)?.emissor || '') || '—',
       };
     });
     const daPM = pmComAtestado.map(p => {
@@ -504,8 +517,9 @@ export const FichaInspecionado: React.FC = () => {
     is: itensIS, pm: itensPM, atestados: itensAtestados, pareceres: itensPareceres, exames: itensExames,
     guias: itensGuias, emails: itensEmails, mensagens: itensMensagens, outros: itensOutros, transcricoes: itensTranscricoes,
   };
-  // Exames e Outros: histórico agrupado por IS (da entrevista mais recente para a mais antiga; "Sem IS" no fim).
-  const agrupada = aba === 'exames' || aba === 'outros';
+  // Exames, Outros e Atestados e Laudos: histórico agrupado por IS (da entrevista mais recente para a mais antiga;
+  // "Sem IS" no fim). Em Atestados e Laudos só a IS com 2 ou mais PDFs vira grupo; o resto fica solto.
+  const agrupada = aba === 'exames' || aba === 'outros' || aba === 'atestados';
   const gruposIS = agrupada ? agruparPorIS(itensDaAba[aba], i => i.isId, isPorEntrevista) : [];
   const historico = agrupada ? gruposIS.flatMap(g => g.itens) : aba ? itensDaAba[aba] : [];
   const isPedida = agrupada ? params.get('is') : null;
@@ -728,8 +742,11 @@ export const FichaInspecionado: React.FC = () => {
         <p className="px-4 md:px-5 pb-4 -mt-1 text-sm text-ink-3">Nenhum registro.</p>
       ) : agrupada ? (<React.Fragment key={aba}>
         <HistoricoAgrupadoIS grupos={gruposIS} inicial={atual?.isId ?? isPedida}
-          rotulo={`Histórico de ${DEF_ABA[aba].historico}`} nomeItens={aba === 'exames' ? 'exames' : 'documentos'}
-          idItem={i => i.id} renderItem={i => <LinhaHistorico item={i} atual={i.id === atual?.id} onAbrir={() => abrirRegistro(i.id)} />} />
+          rotulo={`Histórico de ${DEF_ABA[aba].historico}`} nomeItens={aba === 'exames' ? 'exames' : 'documentos'} soltarUnicos={aba === 'atestados'}
+          idItem={i => i.id} renderItem={(i, agrupado) => (
+            <LinhaHistorico item={agrupado && i.tituloAgrupado ? { ...i, titulo: i.tituloAgrupado, detalhe: i.detalheAgrupado ?? i.detalhe } : i}
+              atual={i.id === atual?.id} onAbrir={() => abrirRegistro(i.id)} />
+          )} />
       </React.Fragment>
       ) : (
         <ul className="divide-y divide-line border-t border-line overflow-y-auto overscroll-contain max-h-[60vh] xl:max-h-[calc(100dvh-14rem)] rounded-b-xl"
