@@ -17,6 +17,8 @@ interface Props {
   icone?: string;
   /** Ao lado do título (ex.: chip de status). */
   tituloExtra?: React.ReactNode;
+  /** `tituloExtra` alinhado à margem direita do card (em vez de colado ao título). */
+  extraNaDireita?: boolean;
   /** Linha de apoio sob o título. */
   subtitulo?: React.ReactNode;
   /** Botões da barra inferior (na ordem dada; a principal por último). Sem ações, a barra não aparece. */
@@ -45,16 +47,16 @@ export const BarraAcoesFicha: React.FC<{ acoes: AcaoBarraFicha[] }> = ({ acoes: 
   );
 };
 
-export const CascaPainelFicha: React.FC<Props> = ({ titulo, icone, tituloExtra, subtitulo, acoes = [], rotulo, children }) => {
+export const CascaPainelFicha: React.FC<Props> = ({ titulo, icone, tituloExtra, extraNaDireita = false, subtitulo, acoes = [], rotulo, children }) => {
   const tituloId = useId();
   return (
     <section aria-labelledby={titulo ? tituloId : undefined} aria-label={titulo ? undefined : rotulo}
       className="bg-white border border-line rounded-xl flex flex-col min-w-0">
       {titulo && (
         <header className="px-4 md:px-5 pt-4 pb-3 border-b border-line">
-          <div className="flex items-center gap-2 min-w-0 flex-wrap">
+          <div className={`flex items-center gap-2 min-w-0 ${extraNaDireita ? '' : 'flex-wrap'}`}>
             {icone && <span className="material-symbols-outlined text-[24px] text-navy shrink-0" aria-hidden="true">{icone}</span>}
-            <h2 id={tituloId} className="font-heading font-extrabold text-h2 text-navy break-words min-w-0">{titulo}</h2>
+            <h2 id={tituloId} className={`font-heading font-extrabold text-h2 text-navy break-words min-w-0${extraNaDireita ? ' flex-1' : ''}`}>{titulo}</h2>
             {tituloExtra && <div className="shrink-0 flex items-center">{tituloExtra}</div>}
           </div>
           {subtitulo && <p className="text-xs text-ink-3 mt-1 tabular-nums break-words">{subtitulo}</p>}

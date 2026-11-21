@@ -514,7 +514,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                       {is.inspecionado ? <><span className="font-bold">{is.inspecionado}</span>{om ? ` · ${om}` : ''}</> : ''}
                     </LinhaTabela>
                   )}
-                  <LinhaTabela rotulo={finalidadesDaIS(is).length > 1 ? 'Finalidades' : 'Finalidade'}><TextoFinalidades is={is} /></LinhaTabela>
+                  {casca !== 'inline' && <LinhaTabela rotulo={finalidadesDaIS(is).length > 1 ? 'Finalidades' : 'Finalidade'}><TextoFinalidades is={is} /></LinhaTabela>}
                   <LinhaTabela rotulo="Abertura IS">{is.dataAbertura ? dataBr(is.dataAbertura) : ''}</LinhaTabela>
                   <LinhaTabela rotulo="Entrevista">{is.dataEntrevista ? dataBr(dataDeEntrevista(is.dataEntrevista)) : ''}</LinhaTabela>
                   <LinhaTabela rotulo="Médico">{is.peritoNome?.trim() || ''}</LinhaTabela>
@@ -569,7 +569,10 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                 {is.inspecionado ? <><span className="font-bold">{is.inspecionado}</span>{om ? ` · ${om}` : ''}</> : ''}
               </Linha>
             )}
-            {!finalidadeEditavel && <Linha rotulo={finalidadesDaIS(is).length > 1 ? 'Finalidades' : 'Finalidade'} className="col-span-3"><TextoFinalidades is={is} /></Linha>}
+            {/* Ficha (inline): a finalidade é o título do card; no lugar dela, o Médico. */}
+            {!finalidadeEditavel && (casca === 'inline'
+              ? <Linha rotulo="Médico" className="col-span-3">{is.peritoNome?.trim() || ''}</Linha>
+              : <Linha rotulo={finalidadesDaIS(is).length > 1 ? 'Finalidades' : 'Finalidade'} className="col-span-3"><TextoFinalidades is={is} /></Linha>)}
           </dl>
           {finalidadeEditavel && (
             <div>
@@ -585,7 +588,7 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
                 ? <span className="inline-flex items-center gap-1">{is.dataLaudo ? dataBr(is.dataLaudo) : '—'}{botaoDataLaudo}</span>
                 : dataBr(is.dataLaudo)}
             </Linha>
-            <Linha rotulo="Médico" className="col-span-3">{is.peritoNome?.trim() || ''}</Linha>
+            {(casca !== 'inline' || finalidadeEditavel) && <Linha rotulo="Médico" className="col-span-3">{is.peritoNome?.trim() || ''}</Linha>}
           </dl>
         </section>
 
@@ -745,7 +748,8 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const chipStatus = <StatusTag tone={tomStatusIS(efetivo)}>{info.rotulo}</StatusTag>;
   if (casca === 'inline') {
     return (
-      <CascaPainelFicha titulo={`IS ${is.is}`} icone="event_available" tituloExtra={chipStatus} subtitulo={is.finalidade} acoes={[...acoesExtras, ...acoes]}>
+      <CascaPainelFicha titulo={is.finalidade || `IS ${is.is}`} icone="event_available" tituloExtra={chipStatus} extraNaDireita
+        subtitulo={is.finalidade ? `IS ${is.is}` : undefined} acoes={[...acoesExtras, ...acoes]}>
         {corpo}
       </CascaPainelFicha>
     );
