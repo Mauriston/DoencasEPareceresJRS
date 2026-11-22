@@ -132,7 +132,8 @@ test('Inspeções: lista a IS semeada, filtra pela busca e abre o detalhe', asyn
   await p.getByRole('button', { name: `Abrir IS ${IS_AGENDADA_E2E.numero}` }).click();
   await p.waitForURL(new RegExp(`#/inspecionados/${INSPECIONADO.nip}\\?.*aba=is.*reg=${IS_AGENDADA_E2E.numero}`));
   const detalhe = p.getByRole('main');
-  await detalhe.getByRole('heading', { name: `IS ${IS_AGENDADA_E2E.numero}`, exact: true }).waitFor();
+  await detalhe.getByRole('heading', { name: IS_AGENDADA_E2E.finalidade, exact: true }).waitFor(); // título do card = finalidade
+  await detalhe.getByText(`IS ${IS_AGENDADA_E2E.numero}`, { exact: true }).waitFor(); // nº da IS no subtítulo
   await detalhe.getByText('Dados da IS').waitFor();
   await detalhe.getByText('Conclusão da IS').waitFor();
   // Histórico da aba IS: todas as IS, inclusive a aberta e não agendada.
@@ -149,7 +150,8 @@ test('Inspeções: Conclusão da IS agendada grava sozinha (Observações) e o N
   await p.getByRole('button', { name: `Abrir IS ${IS_AGENDADA_E2E.numero}` }).click();
   await p.waitForURL(new RegExp(`aba=is.*reg=${IS_AGENDADA_E2E.numero}`));
   const detalhe = p.getByRole('main');
-  await detalhe.getByRole('heading', { name: `IS ${IS_AGENDADA_E2E.numero}`, exact: true }).waitFor();
+  await detalhe.getByRole('heading', { name: IS_AGENDADA_E2E.finalidade, exact: true }).waitFor(); // título do card = finalidade
+  await detalhe.getByText(`IS ${IS_AGENDADA_E2E.numero}`, { exact: true }).waitFor(); // nº da IS no subtítulo
   await detalhe.getByText('Conclusão da IS').waitFor();
   // Sem select de Status e sem "Salvar alterações": a Conclusão grava sozinha.
   assert.equal(await detalhe.getByRole('button', { name: 'Salvar alterações' }).count(), 0);
@@ -174,7 +176,8 @@ test('Inspeções: Restrições (Verificações e Términos) só com "restriçõ
   await p.getByRole('button', { name: `Abrir IS ${IS_AGENDADA_E2E.numero}` }).click();
   await p.waitForURL(new RegExp(`aba=is.*reg=${IS_AGENDADA_E2E.numero}`));
   const detalhe = p.getByRole('main');
-  await detalhe.getByRole('heading', { name: `IS ${IS_AGENDADA_E2E.numero}`, exact: true }).waitFor();
+  await detalhe.getByRole('heading', { name: IS_AGENDADA_E2E.finalidade, exact: true }).waitFor(); // título do card = finalidade
+  await detalhe.getByText(`IS ${IS_AGENDADA_E2E.numero}`, { exact: true }).waitFor(); // nº da IS no subtítulo
   const campo = detalhe.getByRole('combobox', { name: 'Restrições' });
   // Sem laudo o campo não aparece; o CID é obrigatório no grupo Verificações e Términos.
   const laudo = detalhe.getByLabel('Laudo', { exact: true });
@@ -475,7 +478,8 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   await guias.getByRole('tab', { name: 'Inspeções de Saúde', exact: true }).click();
   await p.getByRole('complementary', { name: /Histórico de Inspeções de Saúde/ }).getByRole('button', { name: new RegExp(IS_E2E.finalidade) }).first().click();
   const barra = p.getByRole('toolbar', { name: 'Ações da aba' });
-  await p.getByRole('heading', { name: `IS ${IS_E2E.numero}`, exact: true }).waitFor();
+  await p.getByRole('heading', { name: IS_E2E.finalidade, exact: true }).waitFor(); // título do card = finalidade
+  await p.getByText(`IS ${IS_E2E.numero}`, { exact: true }).first().waitFor(); // nº da IS no subtítulo
   await barra.getByRole('button', { name: 'Agendar IS', exact: true }).waitFor();
   assert.equal(await barra.getByRole('button', { name: 'Abrir IS' }).count(), 0);
   assert.equal(await barra.getByRole('button', { name: 'Excluir' }).count(), 0);
