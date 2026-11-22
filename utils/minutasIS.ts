@@ -4,6 +4,7 @@
 // A minuta de resultado segue o padrão da página Mensagens (ver utils/minutaMensagemResultado.ts); a de
 // cancelamento continua no formato próprio (a página Mensagens não tem modelo de cancelamento).
 import { dataBr, diasEmAberto, prazoAtrasoDias } from './inspecoes';
+import { modeloMSG, preencherModelo } from './modelosMinutaMSG';
 import { camposMensagemResultado, juntarMinuta, type DadosMensagemResultado, type MinutaCampos } from './minutaMensagemResultado';
 
 export { minutaMensagemResultado, contarPreencher, juntarMinuta, separarMinuta, type MinutaCampos } from './minutaMensagemResultado';
@@ -27,15 +28,16 @@ export const camposCancelamento = (d: DadosMinuta): MinutaCampos => {
   const motivo = d.dataEntrevista
     ? `pelo não comparecimento do inspecionado à entrevista agendada para ${dataBr(d.dataEntrevista.slice(0, 10))}`
     : `por não ter sido agendada no prazo de ${prazo} dias (${diasEmAberto(d.dataAbertura)} dias em aberto)`;
+  const m = modeloMSG('cancelamento');
+  const v = {
+    is: String(d.is), finalidade: d.finalidade, data_abertura: dataBr(d.dataAbertura), inspecionado: d.inspecionado, motivo,
+    prazo: String(prazo), dias_em_aberto: String(diasEmAberto(d.dataAbertura)),
+  };
   return {
-    de: 'HNRe (JRS)',
+    de: preencherModelo(m.de, v),
     para: d.om || '<OM do inspecionado>',
-    assunto: `CANCELAMENTO DE INSPEÇÃO DE SAÚDE Nº ${d.is}`,
-    texto: [
-      `1. Comunico que a Inspeção de Saúde (IS) nº ${d.is}, finalidade "${d.finalidade}", aberta em ${dataBr(d.dataAbertura)} em favor de ${d.inspecionado}, foi CANCELADA, ${motivo}.`,
-      '',
-      '2. Caso persista a necessidade da inspeção, solicito nova apresentação do inspecionado a esta Junta Regular de Saúde, com a documentação pertinente.',
-    ].join('\n'),
+    assunto: preencherModelo(m.assunto, v),
+    texto: preencherModelo(m.texto, v),
   };
 };
 

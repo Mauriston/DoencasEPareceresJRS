@@ -9,6 +9,7 @@
 
 import { destinatariosDaMensagem, normalizarTexto } from './destinatariosIS';
 import { GRUPO_VERIFICACOES } from './inspecoes';
+import { modeloMSG, preencherModelo } from './modelosMinutaMSG';
 
 export const PRE = (campo: string) => `[preencher: ${campo}]`;
 
@@ -122,20 +123,14 @@ export const camposIncapacidadeDefinitiva = (d: DadosMensagemResultado): MinutaC
   const data = dataMensagem(d.dataLaudo) || PRE('data do laudo');
   const laudo = laudoMensagem(d.laudo) || PRE('laudo');
   const tis = (d.tis || '').trim() || PRE('nº do TIS');
+  const m = modeloMSG('incapacidade');
+  const v = { is: String(d.is ?? PRE('nº da IS')), finalidade, atinente, inspecionado, om, data_laudo: data, laudo, tis };
   return {
-    de: REMETENTE_INCAPACIDADE_DEFINITIVA,
+    de: preencherModelo(m.de, v),
     para,
-    info: 'TERDIS',
-    assunto: ASSUNTO_INCAPACIDADE_DEFINITIVA,
-    texto: [
-      `REF IS nº ${d.is ?? PRE('nº da IS')} FIM ${finalidade} ${atinente} ${inspecionado} (${om}), PTC:`,
-      '',
-      `ALFA - a JRS/HNRe, em ${data}, exarou o seguinte laudo "${laudo}" ACD TIS nº ${tis};`,
-      '',
-      'BRAVO - HOSNAT: o REF TIS foi ENC para Revisão Ex-offício pela JSD/COM3ºDN via SINAIS nos termos da alínea "n" do item 6.1.3 da DGPM-406 (9ª Revisão); e',
-      '',
-      `CHARLIE - ${om}: SOL OBS o disposto na alínea "p" do mesmo item da antecitada norma BT`,
-    ].join('\n'),
+    info: preencherModelo(m.info, v),
+    assunto: preencherModelo(m.assunto, v),
+    texto: preencherModelo(m.texto, v),
   };
 };
 
@@ -169,16 +164,12 @@ export const camposMensagemResultado = (d: DadosMensagemResultado): MinutaCampos
   const ds1a = (d.ds1a || '').trim() || PRE('código DS-1A');
   const atinente = d.feminino ? 'atinente à' : 'atinente ao';
   const dispensa = fraseDispensa(d);
-  return {
-    para,
-    info,
-    assunto: `INSPEÇÃO DE SAÚDE FIM ${finalidade} - ${inspecionado} (${om})`,
-    texto: [
-      `ALFA - PTC que a ${junta} concluiu em ${data} a IS FIM ${finalidade} ${atinente} ${inspecionado} (${om}) e exarou o seguinte laudo: "${laudo || PRE('laudo')}".${dispensa ? ` ${dispensa}` : ''} ACD TIS nº ${tis}; e`,
-      '',
-      `BRAVO - O REF TIS (modelo DS-1A) pode ser verificado digitalmente por meio do acesso ao sítio https://sinais.dsm.mb/tisonline, informando o código de validação ${ds1a} e selecionando a opção "Download do TIS" BT`,
-    ].join('\n'),
+  const m = modeloMSG('resultado');
+  const v = {
+    is: String(d.is ?? PRE('nº da IS')), finalidade, inspecionado, om, junta, data_laudo: data, laudo: laudo || PRE('laudo'), atinente,
+    dispensa: dispensa ? ` ${dispensa}` : '', tis, ds1a,
   };
+  return { para, info, assunto: preencherModelo(m.assunto, v), texto: preencherModelo(m.texto, v) };
 };
 
 /**

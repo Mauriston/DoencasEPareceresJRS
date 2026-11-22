@@ -1,4 +1,5 @@
 // Ficheiro: App.tsx
+import { iniciarModelosMSG } from './services/modelosMinutaMSG';
 import React, { useState, useEffect, useReducer, useRef, useMemo, lazy, Suspense } from 'react';
 import { Navigate, useLocation, useNavigate, useNavigationType, useRoutes } from 'react-router-dom';
 import { Login } from './components/Login';
@@ -178,6 +179,9 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   useEffect(() => {
     definirAtorAuditoria(authUser ? { uid: authUser.uid, usuario: authUser.usuario, nome: authUser.nome } : null);
   }, [authUser?.uid]);
+
+  // Modelos das Minutas MSG (Administração › Modelos de Minuta MSG): ativos para as minutas geradas neste aparelho.
+  useEffect(() => (authUserReal ? iniciarModelosMSG() : undefined), [authUserReal?.uid]);
 
   // Histórico de notificações do usuário (badge do avatar e lista do menu).
   const [notificacoes, setNotificacoes] = useState<NotificacaoRecord[]>([]);

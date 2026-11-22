@@ -1,7 +1,7 @@
 // Ficheiro: components/administracao/Administracao.tsx
 // Área "Administração" (só Admin; auditoria v3, 8b/8c — U3/CF4). Um lugar para o Admin: sub-navegação 3 + 9
 // (GradeIndice proporcao="3-9") com Usuários · Perfis e permissões · E-mails automáticos · Agenda das IS ·
-// Templates de documentos · Integrações · Registro de alterações, e atalhos para os ajustes que continuam onde são usados (quesitos dos
+// Templates de documentos · Modelos de Minuta MSG · Integrações · Registro de alterações, e atalhos para os ajustes que continuam onde são usados (quesitos dos
 // pareceres, bloqueios de agenda, importação da escala). Rotas: /administracao/{secao}; /usuarios e
 // /configuracoes são aliases (config/routes.ts). No celular, /administracao é a lista de seções com o estado
 // de cada uma; cada item abre a subpágina, com "‹" de volta para a lista (trilha da topbar).
@@ -29,6 +29,8 @@ import { AgendaIS } from './AgendaIS';
 import { Integracoes } from './Integracoes';
 import { RegistroAlteracoes } from './RegistroAlteracoes';
 import { TemplatesDocumentos } from './TemplatesDocumentos';
+import { ModelosMinutaMSG } from './ModelosMinutaMSG';
+import { TIPOS_MODELO_MSG } from '../../utils/modelosMinutaMSG';
 import { PermissoesChat } from '../chat/PermissoesChat';
 import { dataHoraCurta, plural, semAcessoHa, ultimoAcessoRelativo } from '../../utils/administracao';
 
@@ -41,6 +43,7 @@ export const SECOES: SecaoDef[] = [
   { id: 'emails', rotulo: 'E-mails automáticos', icone: 'mail', descricao: 'Destinatários fixos, assinaturas e testes de cada e-mail.' },
   { id: 'agenda', rotulo: 'Agenda das IS', icone: 'schedule', descricao: 'Turnos em que cada perito atende.' },
   { id: 'documentos', rotulo: 'Templates de documentos', icone: 'description', descricao: 'Textos dos documentos da IS e PDFs de teste.' },
+  { id: 'minutas', rotulo: 'Modelos de Minuta MSG', icone: 'forward_to_inbox', descricao: 'Textos das minutas de resultado, incapacidade e cancelamento, com placeholders.' },
   { id: 'integracoes', rotulo: 'Integrações', icone: 'hub', descricao: 'Conta Google do servidor, Google Agenda e Apps Script.' },
   { id: 'registro', rotulo: 'Registro de alterações', icone: 'history', descricao: 'Quem mudou o quê e quando.' },
 ];
@@ -104,7 +107,7 @@ export const Administracao: React.FC = () => {
   if (secao && !atual) return <Navigate to={administracaoPath('usuarios')} replace />;
   if (!secao && isDesktop) return <Navigate to={administracaoPath('usuarios')} replace />;
 
-  const contador: Partial<Record<SecaoAdministracao, number>> = { usuarios: usuarios.length, perfis: ROLES.length, emails: TIPOS_EMAIL.length };
+  const contador: Partial<Record<SecaoAdministracao, number>> = { usuarios: usuarios.length, perfis: ROLES.length, emails: TIPOS_EMAIL.length, minutas: TIPOS_MODELO_MSG.length };
 
   const estadoDe = (id: SecaoAdministracao): string => {
     switch (id) {
@@ -112,6 +115,7 @@ export const Administracao: React.FC = () => {
       case 'perfis': return plural(ROLES.length, 'perfil', 'perfis') + ' editáveis · Admin com acesso total';
       case 'emails': return `${plural(TIPOS_EMAIL.length, 'e-mail', 'e-mails')}${estado.emailsAlterado ? ` · alterado em ${dataHoraCurta(estado.emailsAlterado).split(' ')[0]}` : ''}`;
       case 'documentos': return '5 templates · teste apagado em 30 min';
+      case 'minutas': return `${TIPOS_MODELO_MSG.length} modelos · placeholders {{…}}`;
       case 'chat': return 'Enviar, receber e anexos por perfil';
       case 'agenda': return estado.peritosComTurno === null ? 'Turnos dos peritos' : `turnos de ${plural(estado.peritosComTurno, 'perito', 'peritos')}`;
       case 'integracoes': return !conta.situacao ? (conta.erro ? 'Servidor indisponível' : 'Consultando…') : conta.situacao.autorizado ? 'Conta Google autorizada' : 'Conta Google não autorizada · Apps Script em uso';
@@ -153,6 +157,7 @@ export const Administracao: React.FC = () => {
       case 'emails': return <EmailsAutomaticos />;
       case 'agenda': return <AgendaIS />;
       case 'documentos': return <TemplatesDocumentos />;
+      case 'minutas': return <ModelosMinutaMSG />;
       case 'integracoes': return <Integracoes conta={conta} />;
       case 'registro': return <RegistroAlteracoes usuarios={usuarios} />;
       default: return null;
