@@ -15,6 +15,8 @@ export interface UsuarioDoc {
   nip: string;
   crmPe: string;
   rqe: string;
+  /** Especialidade médica (opcional; perfis médicos) — lista de data/especialidadesMedicas.ts. */
+  especialidade?: string;
   email: string;
   gmail: string;
   celular: string;

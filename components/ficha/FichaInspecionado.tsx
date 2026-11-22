@@ -454,7 +454,7 @@ export const FichaInspecionado: React.FC = () => {
   const itensClaude: ItemMenu[] = [
     { rotulo: 'Assessor IA', icone: <SimboloClaude tamanho={18} />, onClick: () => setAssessorAberto(true) },
     {
-      rotulo: 'Print SINAIS', icone: 'screenshot_region', desabilitado: !!printBloqueado,
+      rotulo: 'Enviar print SINAIS', icone: 'photo_camera', desabilitado: !!printBloqueado,
       dica: printBloqueado || (isAlvoClaude && isAssessor.length > 1 ? `IS ${isAlvoClaude.is}` : undefined),
       onClick: () => { if (!isAlvoClaude) return; alvoPrintsRef.current = isAlvoClaude.id; inputPrintsRef.current?.click(); },
     },
@@ -782,9 +782,9 @@ export const FichaInspecionado: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <MenuAcoes rotulo="Mais ações da ficha" itens={menu} />
-            {/* Menu do Claude (logo, sem texto, à direita do ⋮; em todas as larguras): Assessor IA · Print SINAIS. */}
+            {/* Menu do Claude (logo, sem texto, à direita do ⋮; em todas as larguras): Assessor IA · Enviar print SINAIS. */}
             {isAssessor.length > 0 && (
-              <MenuAcoes rotulo="Claude: Assessor IA e Print SINAIS" itens={itensClaude} botao={{ texto: 'Claude', icone: '', conteudo: <LogoClaude altura={18} /> }} />
+              <MenuAcoes rotulo="Claude: Assessor IA e Enviar print SINAIS" itens={itensClaude} botao={{ texto: 'Claude', icone: '', conteudo: <LogoClaude altura={18} /> }} />
             )}
             <input
               ref={inputPrintsRef} type="file" accept="image/*" multiple className="hidden" aria-label="Prints do SINAIS"
