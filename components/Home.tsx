@@ -48,6 +48,8 @@ import { CardFaltasHNRe } from './inspecoes/CardFaltasHNRe';
 import { CardAniversariantes } from './home/CardAniversariantes';
 import { observarMilitares, type MilitarRecord } from '../services/firestoreMilitares';
 import { pendenciasEmailIS, TIPOS_EMAIL_PENDENTE } from '../utils/pendenciasEmailIS';
+import { aberturaPendente, conclusaoPendenteAntiga, faltaNaoCancelada, nacAtrasado, PERFIL_MPI, semAgendamentoNoPrazo, semMinutaMsg } from '../utils/pendenciasHomeIS';
+import { observarIdsISComMensagem } from '../services/mensagensIS';
 import { PERFIS_DOCUMENTO_IS, perfilCompetenteIS, temTagLaudoPericialPendente } from '../utils/documentosIS';
 import { observarDocumentosISRecentes, type RegistroDocumentoIS } from '../services/documentosIS';
 import { urlDasGuias } from '../services/guiasExames';
@@ -194,12 +196,17 @@ export const Home: React.FC = () => {
     && (!ampPendentes || i.amp === ampPendentes)), [inspecoes, hoje, ampPendentes]);
   // E-mails pendentes da IS (Admin e Secretaria — inspecoes.enviarEmails): as listas do menu "Enviar e-mails".
   const podeEmails = podeInspecoes && canUseFeature('inspecoes.enviarEmails', perfil);
+  // Pendências de IS (e-mails, minuta MSG, falta…): todos que veem IS, exceto user_medicos_mpi (que só vê as de prazo, das IS de MPI).
+  const ehMpi = perfil === PERFIL_MPI;
+  const veEmailsPend = podeInspecoes && !ehMpi;
   const [militares, setMilitares] = useState<MilitarRecord[]>([]);
-  useEffect(() => (podeEmails ? observarMilitares(setMilitares, () => { /* silencioso */ }) : undefined), [podeEmails]);
+  useEffect(() => (veEmailsPend ? observarMilitares(setMilitares, () => { /* silencioso */ }) : undefined), [veEmailsPend]);
+  const [isComMensagem, setIsComMensagem] = useState<Set<string> | null>(null);
+  useEffect(() => (veEmailsPend ? observarIdsISComMensagem(setIsComMensagem, () => setIsComMensagem(null)) : undefined), [veEmailsPend]);
   const pendenciasEmail = useMemo(() => {
     const omPorId = new Map<string, string>(militares.map(m => [m.id, m.om]));
-    return pendenciasEmailIS(podeEmails ? inspecoes : [], id => omPorId.get(id), hoje);
-  }, [podeEmails, inspecoes, militares, hoje]);
+    return pendenciasEmailIS(veEmailsPend ? inspecoes : [], id => omPorId.get(id), hoje);
+  }, [veEmailsPend, inspecoes, militares, hoje]);
 
   // Perícias menores / atestados.
   const [pericias, setPericias] = useState<PericiaMenorRecord[]>([]);
@@ -353,7 +360,8 @@ export const Home: React.FC = () => {
     });
   }
   if (podeInspecoes) {
-    isAtrasadas.forEach(i => {
+    // IS aberta há mais de 7 dias úteis, sem agendamento nem guias entregues (MPI: só as de MPI).
+    inspecoes.filter(i => semAgendamentoNoPrazo(i, hoje) && (!ehMpi || i.amp === 'MPI')).forEach(i => {
       const dias = diasEmAberto(i.dataAbertura, hoje);
       const prazo = prazoAtrasoDias(i.grupoFinalidade);
       pendencias.push({
@@ -389,6 +397,42 @@ export const Home: React.FC = () => {
       });
     });
   }
+  if (podeInspecoes) {
+    // Entrevista há mais de 20 dias e ainda "Conclusão pendente" sem laudo (MPI: só as de MPI).
+    inspecoes.filter(i => conclusaoPendenteAntiga(i, hoje) && (!ehMpi || i.amp === 'MPI')).forEach(i => {
+      const dias = diasEmAberto(String(i.dataEntrevista).slice(0, 10), hoje);
+      pendencias.push({
+        id: `conclusao:${i.id}`, icone: 'pending_actions', titulo: nomeCurtoInspecionado(i.inspecionado),
+        detalhe: `IS ${i.is} · entrevista há ${dias} dias · conclusão pendente (sem laudo)`,
+        tag: { rotulo: 'Concluir', tom: 'attention' }, to: `/inspecoes/${encodeURIComponent(i.id)}`, ordem: 920 + dias / 1000,
+      });
+    });
+  }
+  if (veEmailsPend) {
+    const militarPorId = new Map(militares.map(m => [m.id, m]));
+    // IS finalizada sem minuta MSG de resultado registrada (exceto as finalizadas pela JSD).
+    if (isComMensagem) inspecoes.filter(i => semMinutaMsg(i, isComMensagem.has(i.id), militarPorId.get(i.inspecionadoId))).forEach(i => {
+      pendencias.push({
+        id: `sem-msg:${i.id}`, icone: 'mail', titulo: nomeCurtoInspecionado(i.inspecionado),
+        detalhe: `IS ${i.is} finalizada · Minuta MSG de resultado não registrada`,
+        tag: { rotulo: 'Minuta MSG', tom: 'attention' }, to: `${fichaPath(i.inspecionadoId)}?aba=inspecoes&is=${encodeURIComponent(i.id)}`, ordem: 850,
+      });
+    });
+    // Falta registrada (status Faltou): ainda sem a minuta de cancelamento por falta (ou o e-mail de falta, no HNRe).
+    inspecoes.filter(faltaNaoCancelada).forEach(i => {
+      pendencias.push({
+        id: `falta:${i.id}`, icone: 'person_off', titulo: nomeCurtoInspecionado(i.inspecionado),
+        detalhe: `IS ${i.is} · falta registrada · cancelar pela Minuta MSG de falta (HNRe: e-mail de falta)`,
+        tag: { rotulo: 'Falta', tom: 'danger' }, to: `/inspecoes/${encodeURIComponent(i.id)}`, ordem: 960,
+      });
+    });
+    // E-mail de abertura de IS pendente.
+    const abertura = inspecoes.filter(aberturaPendente);
+    if (abertura.length) pendencias.push({
+      id: 'email:abertura', icone: 'outgoing_mail', titulo: `${abertura.length} ${abertura.length === 1 ? 'e-mail de abertura pendente' : 'e-mails de abertura pendentes'}`,
+      detalhe: 'E-mails · Abertura de IS', tag: { rotulo: 'Enviar', tom: 'attention' }, to: '/inspecoes?situacao=aberta', ordem: 805,
+    });
+  }
   // IS de concurso atrasadas: quando o contador não está na faixa do perfil, a pendência entra aqui (agregada).
   if (qtdConcursoAtrasadas > 0 && !naFaixa('concurso-atrasadas')) {
     const nomes = [...new Set(diasAtrasados.map(d => d.nome))];
@@ -401,19 +445,21 @@ export const Home: React.FC = () => {
   }
   // E-mails pendentes (só quem envia e-mails da IS): um item por tipo com pendências; abre Inspeções de Saúde já
   // com o modal daquele tipo (?email=tipo), como o menu "Enviar e-mails".
-  if (podeEmails) {
+  if (veEmailsPend) {
     TIPOS_EMAIL_PENDENTE.forEach(t => {
       const n = pendenciasEmail[t.tipo].length;
       if (!n) return;
+      // NAC: só quando a IS mais antiga da lista encerrada passou de 7 dias.
+      if (t.tipo === 'nac' && !nacAtrasado(pendenciasEmail.nac, hoje)) return;
       pendencias.push({
         id: `email:${t.tipo}`, icone: t.icone, titulo: `${n} ${n === 1 ? t.singular : t.plural}`,
         detalhe: `E-mails · ${t.rotulo}`, tag: { rotulo: 'Enviar', tom: 'attention' },
-        to: `/inspecoes?email=${t.tipo}`, ordem: 800 + n / 1000,
+        to: podeEmails ? `/inspecoes?email=${t.tipo}` : '/inspecoes', ordem: 800 + n / 1000,
       });
     });
   }
   pendencias.sort((a, b) => b.ordem - a.ordem);
-  const fontesPendencias = [podePareceres && 'Pareceres', podeInspecoes && 'IS', podeEmails && 'E-mails'].filter(Boolean).join(' · ');
+  const fontesPendencias = [podePareceres && 'Pareceres', podeInspecoes && 'IS', veEmailsPend && 'E-mails'].filter(Boolean).join(' · ');
   const mostraPendencias = podePareceres || podeInspecoes || pendencias.length > 0;
 
   // ---- Ações (4d): a ordem é a prioridade; a principal é a 1ª permitida. ----

@@ -44,3 +44,7 @@ export const registrarMensagemIS = async (
   registrarEventoInspecionado(is.inspecionadoId, 'is.mensagem', `IS ${is.id}`);
   return id;
 };
+
+/** Ids das IS que já têm mensagem de resultado registrada (pendência "IS finalizada sem minuta MSG" da Início). */
+export const observarIdsISComMensagem = (onData: (ids: Set<string>) => void, onError?: (e: Error) => void) =>
+  onSnapshot(collection(db, COL), snap => onData(new Set(snap.docs.map(d => String(d.data().isId || '')).filter(Boolean))), err => onError?.(err));
