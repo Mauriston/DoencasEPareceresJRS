@@ -4,10 +4,12 @@
 // máscara; e-mails sem maiúsculas; o perfil mostra a descrição do que ele acessa (lida da matriz atual).
 // As regras de gravação são as de antes (nome e login em maiúsculas ao salvar; login imutável depois de criado;
 // e-mail institucional só @marinha.mil.br). Ativar/desativar não fica aqui: é no detalhe, com confirmação.
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button } from '../ui/Button';
 import { Drawer } from '../ui/Drawer';
 import { Field } from '../ui/Field';
+import { Autocomplete, type OpcaoAutocomplete } from '../ui/Autocomplete';
+import { ESPECIALIDADES_MEDICAS } from '../../data/especialidadesMedicas';
 import { emailInstitucionalValido, MSG_EMAIL_INSTITUCIONAL } from '../../utils/emails';
 import { formatCelular, formatNip } from '../../utils/format';
 import { SENHA_INICIAL_PADRAO } from '../../config/senha';
@@ -17,18 +19,18 @@ import type { UsuarioRecord } from '../../services/firestoreUsuarios';
 
 export interface DadosFormUsuario {
   usuario: string; postoGraduacao: string; cargo: string; nome: string; nip: string;
-  crmPe: string; rqe: string; email: string; gmail: string; celular: string; perfil: string;
+  crmPe: string; rqe: string; especialidade: string; email: string; gmail: string; celular: string; perfil: string;
   /** AAAA-MM-DD (input date); vazio = não informado. */
   dataNascimento: string;
 }
 
 export const FORM_VAZIO: DadosFormUsuario = {
-  usuario: '', postoGraduacao: '', cargo: '', nome: '', nip: '', crmPe: '', rqe: '', email: '', gmail: '', celular: '', perfil: 'user_secretaria', dataNascimento: '',
+  usuario: '', postoGraduacao: '', cargo: '', nome: '', nip: '', crmPe: '', rqe: '', especialidade: '', email: '', gmail: '', celular: '', perfil: 'user_secretaria', dataNascimento: '',
 };
 
 export const formDoUsuario = (u: UsuarioRecord): DadosFormUsuario => ({
   usuario: u.usuario, postoGraduacao: u.postoGraduacao || '', cargo: u.cargo || '', nome: u.nome || '', nip: formatNip(u.nip),
-  crmPe: u.crmPe || '', rqe: u.rqe || '', email: u.email || '', gmail: u.gmail || '', celular: formatCelular(u.celular), perfil: u.perfil || 'user_secretaria',
+  crmPe: u.crmPe || '', rqe: u.rqe || '', especialidade: u.especialidade || '', email: u.email || '', gmail: u.gmail || '', celular: formatCelular(u.celular), perfil: u.perfil || 'user_secretaria',
   dataNascimento: u.dataNascimento || '',
 });
 
@@ -52,6 +54,9 @@ export const FormUsuario: React.FC<Props> = ({ editando, onCancelar, onSalvar })
   const [tentou, setTentou] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const set = (patch: Partial<DadosFormUsuario>) => setF(x => ({ ...x, ...patch }));
+  // Especialidade (opcional): só vale uma da lista; digitar sem escolher a limpa.
+  const [espTexto, setEspTexto] = useState(f.especialidade);
+  const opcoesEsp: OpcaoAutocomplete[] = useMemo(() => ESPECIALIDADES_MEDICAS.map(e => ({ chave: e, principal: e })), []);
 
   const erros = {
     usuario: !editando && !f.usuario.trim() ? 'Informe o login.' : '',
@@ -141,6 +146,14 @@ export const FormUsuario: React.FC<Props> = ({ editando, onCancelar, onSalvar })
                 <Field label="RQE" help="Opcional.">
                   {a => <input {...a} value={f.rqe} inputMode="numeric" onChange={e => set({ rqe: e.target.value })} />}
                 </Field>
+                <div className="@md:col-span-2">
+                  <Autocomplete
+                    label="Especialidade" placeholder="Digite para buscar a especialidade (opcional)"
+                    valor={espTexto} opcoes={opcoesEsp}
+                    onDigitar={t => { setEspTexto(t); set({ especialidade: t === f.especialidade ? t : '' }); }}
+                    onSelecionar={o => { setEspTexto(o.principal); set({ especialidade: o.principal }); }}
+                  />
+                </div>
               </>
             )}
           </div>

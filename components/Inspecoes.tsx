@@ -49,8 +49,6 @@ import { EnviarResultadoBeneficiosDialog } from './inspecoes/emails/EnviarResult
 import { resultadoBeneficiosDisponivel, resultadoBeneficiosEnviado } from '../utils/resultadoBeneficiosIS';
 import { avisarAgendamento, observarAgendamentos, type AgendamentoFeito } from '../services/emailAgendamentoIS';
 import { agendamentoJaEnviado, ehElegivelAgendamento } from '../utils/emailAgendamentoIS';
-import { useEmailsIS } from './inspecoes/BotaoEnviarEmail';
-import { ehTipoEmailPendente } from '../utils/pendenciasEmailIS';
 import { EmailsDaIS } from './inspecoes/EmailsDaIS';
 import { emailDoInspecionado } from '../services/emailResultadoIS';
 import { CalendarioIS } from './inspecoes/CalendarioIS';
@@ -560,31 +558,13 @@ export const Inspecoes: React.FC = () => {
   // ----- apresentação -----
 
   const peritosFiltraveis = peritos;
-  const emails = useEmailsIS({
-    inspecoes: lista ?? [], militares, hoje,
-    podeLimpar: ehAdmin,
-    onEnviarAgendamento: is => setFilaAgendamento(f => [...f, { isId: is.id, dataEntrevista: is.dataEntrevista, origem: 'menu' }]),
-    onEnviarResultado: setEnviandoResultado,
-    onEnviarResultadoBeneficios: setEnviandoBeneficios,
-    onAviso: avisar,
-  });
-  // ?email=tipo (itens de e-mail do card "Pendências" da Início): abre o modal daquele tipo, como o menu "Enviar e-mails".
-  // Espera as IS (e, nas faltas do HNRe, os inspecionados, que dão a OM) para o modal já abrir com a lista.
+  // ?email=tipo (links antigos): o menu "Enviar emails" mudou para a Início.
   const emailParam = searchParams.get('email');
   useEffect(() => {
     if (!emailParam) return;
-    if (podeEmails && ehTipoEmailPendente(emailParam)) {
-      if (lista === null || (emailParam === 'faltas' && !militares.length)) return;
-      emails.abrir(emailParam);
-    }
     mudarURL({ email: null });
-  }, [emailParam, podeEmails, lista, militares.length]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Cabeçalho (3b): "Enviar e-mails" — menu com os e-mails da JRS, a pendência de cada lista à direita e a soma
-  // no badge — e "Bloqueios" (bloqueio de turnos/horários da agenda). No celular o menu de e-mails fica na linha
-  // das abas (compacto, com o badge) e Bloqueios vai para a pilha do FAB.
-  const menuEmails = () => (podeEmails
-    ? <MenuAcoes rotulo="Enviar emails" botao={{ texto: 'Enviar emails', icone: 'mail', badge: emails.total }} itens={emails.itens} />
-    : null);
+    if (podeEmails) navigate(`/?email=${encodeURIComponent(emailParam)}`, { replace: true });
+  }, [emailParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const nomePeritoFiltro = peritoParam ? (peritos.find(p => p.uid === peritoParam)?.usuario ?? 'Perito') : '';
   const souPerito = !!usuario && peritos.some(p => p.uid === usuario.uid);
@@ -638,22 +618,18 @@ export const Inspecoes: React.FC = () => {
         <PageHeader
           title="Inspeções de Saúde"
           description="Cadastro, agenda e prazos das IS (exceto concursos)."
-          actions={podeEmails || podeBloquear || podeCadastrar ? (
+          actions={podeBloquear || podeCadastrar ? (
             <>
-            {/* Celular (4b): ⋮ na topbar com os e-mails e os Bloqueios; Abrir IS vai para o FAB. */}
-            {(podeEmails || podeBloquear) && (
+            {/* Celular (4b): ⋮ na topbar com os Bloqueios; Abrir IS vai para o FAB. */}
+            {podeBloquear && (
               <span className="md:hidden">
                 <MenuAcoes
                   rotulo="Mais ações"
-                  itens={[
-                    ...(podeEmails ? emails.itens : []),
-                    ...(podeBloquear ? [{ rotulo: 'Bloqueios da agenda', icone: 'block', onClick: () => setBloqueiosAberto(true) }] : []),
-                  ]}
+                  itens={[{ rotulo: 'Bloqueios da agenda', icone: 'block', onClick: () => setBloqueiosAberto(true) }]}
                 />
               </span>
             )}
             <div className="hidden md:flex items-center gap-2">
-              {menuEmails()}
               {podeBloquear && <Button variant="secondary" icon="block" onClick={() => setBloqueiosAberto(true)}>Bloqueios</Button>}
               {podeCadastrar && (
                 <MenuAcoes
@@ -757,7 +733,6 @@ export const Inspecoes: React.FC = () => {
         { id: 'is-print', rotulo: 'Abrir IS', ariaLabel: 'Abrir IS pelo print do SINAIS', icone: 'photo_camera', onClick: () => setPorFoto(true), permitido: podeCadastrar },
         { id: 'bloqueios', rotulo: 'Bloqueios', ariaLabel: 'Bloqueios da agenda', icone: 'block', onClick: () => setBloqueiosAberto(true), permitido: podeBloquear },
       ]} />
-      {podeEmails && emails.dialogos}
 
       {novo && usuario && (
         <InspecaoForm

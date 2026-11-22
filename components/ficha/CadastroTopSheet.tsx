@@ -1,5 +1,5 @@
 // Ficheiro: components/ficha/CadastroTopSheet.tsx
-// Top sheet da Ficha do inspecionado: desce do topo (faixa horizontal de largura total) ao tocar no nome
+// Top sheet da Ficha do inspecionado: desce da topbar (faixa horizontal de largura total, abaixo dela) ao tocar no nome
 // do inspecionado e mostra os dados cadastrais (o que antes era o card "Cadastro" da coluna de apoio).
 // Modal: fecha no X, com Esc (pilha de camadas) e ao tocar fora; o foco vai para o painel ao abrir.
 import React, { useEffect, useId, useRef } from 'react';
@@ -28,11 +28,12 @@ export const CadastroTopSheet: React.FC<Props> = ({ titulo, subtitulo, dados, av
   const visiveis = dados.filter(d => d.valor);
 
   return createPortal(
-    <div className="fixed inset-0 z-drawer">
+    // Começa embaixo da topbar (3,5 rem + área segura): o sheet desce dela, não por cima; overflow-hidden recorta a animação.
+    <div className="fixed inset-x-0 bottom-0 top-[calc(3.5rem+env(safe-area-inset-top))] z-drawer overflow-hidden">
       <div className="absolute inset-0 bg-black/50 animate-backdrop-in" onMouseDown={onClose} aria-hidden="true" />
       <div
         ref={painel} role="dialog" aria-modal="true" aria-labelledby={tituloId} tabIndex={-1}
-        className="absolute left-0 right-0 top-0 bg-white border-b border-line rounded-b-2xl shadow-2xl max-h-[85dvh] flex flex-col animate-sheet-down focus:outline-none pt-[env(safe-area-inset-top)]"
+        className="absolute left-0 right-0 top-0 bg-white border-b border-line rounded-b-2xl shadow-2xl max-h-full flex flex-col animate-sheet-down focus:outline-none"
       >
         <div className="w-full px-4 md:px-6 xl:px-8">
           <div className="mx-auto w-full max-w-data flex items-start justify-between gap-3 py-4 border-b border-line">

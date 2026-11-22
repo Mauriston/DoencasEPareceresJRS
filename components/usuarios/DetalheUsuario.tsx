@@ -87,6 +87,7 @@ export const DetalheUsuario: React.FC<Props> = ({ usuario: u, usuarios, impacto,
             <Dado rotulo="Perfil">{rotuloPerfil(u.perfil)}</Dado>
             <Dado rotulo="Posto/graduação · cargo">{[u.postoGraduacao, u.cargo].filter(Boolean).join(' · ')}</Dado>
             <Dado rotulo="NIP"><span className="tabular-nums">{formatNip(u.nip)}</span></Dado>
+            {ehPerfilMedico(u.perfil) && u.especialidade && <Dado rotulo="Especialidade">{u.especialidade}</Dado>}
             {ehPerfilMedico(u.perfil) && <Dado rotulo="CRM-PE · RQE"><span className="tabular-nums">{[u.crmPe || '—', u.rqe || '—'].join(' · ')}</span></Dado>}
             <Dado rotulo="E-mail institucional">{u.email}</Dado>
             <Dado rotulo="Gmail (agenda)">{u.gmail}</Dado>

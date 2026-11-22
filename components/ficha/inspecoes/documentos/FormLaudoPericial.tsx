@@ -68,7 +68,7 @@ export const FormLaudoPericial: React.FC<PropsFormularioDocumentoIS> = ({ is, en
 
   const precisaCpf = cpfCadastro === '';
   const cpfOk = !precisaCpf || soDigitos(cpf).length === 11;
-  const invalido = cpfCadastro === null || !cpfOk || !ehDoencaLegalIR(doenca) || !medicoNome.trim();
+  const invalido = cpfCadastro === null || !cpfOk || !ehDoencaLegalIR(doenca) || !medicoNome.trim() || !especialidade.trim();
   const avisoIa = { lendo: 'A IA está lendo o laudo e os exames da IS…', ok: 'Pré-preenchido pela IA: revise antes de gerar.',
     sem_exames: 'Sem exames PDF na IS: descreva os exames manualmente.', erro: 'A IA não respondeu: preencha manualmente.' }[ia];
 
@@ -105,7 +105,7 @@ export const FormLaudoPericial: React.FC<PropsFormularioDocumentoIS> = ({ is, en
           {aria => <input {...aria} value={medicoNome} onChange={e => setMedicoNome(e.target.value)} />}
         </Field>
         <Field label="CRM">{aria => <input {...aria} value={crm} onChange={e => setCrm(e.target.value)} />}</Field>
-        <Field label="Especialidade" className="md:col-span-2">{aria => <input {...aria} value={especialidade} onChange={e => setEspecialidade(e.target.value)} />}</Field>
+        <Field label="Especialidade" required help={especialidade.trim() ? undefined : 'Obrigatória no Laudo Pericial. Preencha aqui ou no cadastro do médico (Administração › Usuários).'} className="md:col-span-2">{aria => <input {...aria} value={especialidade} onChange={e => setEspecialidade(e.target.value)} />}</Field>
       </div>
     </DialogFormularioDocumento>
   );

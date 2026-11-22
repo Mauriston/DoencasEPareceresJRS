@@ -153,6 +153,7 @@ export const gerador: GeradorDocumentoIS<DadosLaudoPericial> = {
     if (!ehDoencaLegalIR(dados.doenca)) throw new ErroDocumentoIS(400, 'Selecione a doença especificada em lei.');
     const medico = await lerMedico(ctx, dados);
     if (!medico.nome) throw new ErroDocumentoIS(400, 'Médico do laudo não identificado: informe o nome.');
+    if (!medico.especialidade) throw new ErroDocumentoIS(400, 'Especialidade do médico é obrigatória no Laudo Pericial: informe-a no formulário ou no cadastro do usuário.');
     return { cpf, doenca: dados.doenca, exposicao: textoLongo(dados.exposicao, 3000), medico };
   },
   dadosTeste: ctx => ({

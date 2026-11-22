@@ -25,6 +25,7 @@ import { Button, ButtonLink } from './ui/Button';
 import { Dialog } from './ui/Dialog';
 import { Toast } from './ui/Toast';
 import { EnviarPdfHome } from './home/EnviarPdfHome';
+import { EnviarEmailsHome } from './home/EnviarEmailsHome';
 import { FabAcoes, type AcaoFab } from './ui/Fab';
 import { GradePainel } from './ui/Grade';
 import { StatusTag } from './ui/StatusTag';
@@ -454,7 +455,7 @@ export const Home: React.FC = () => {
       pendencias.push({
         id: `email:${t.tipo}`, icone: t.icone, titulo: `${n} ${n === 1 ? t.singular : t.plural}`,
         detalhe: `E-mails · ${t.rotulo}`, tag: { rotulo: 'Enviar', tom: 'attention' },
-        to: podeEmails ? `/inspecoes?email=${t.tipo}` : '/inspecoes', ordem: 800 + n / 1000,
+        to: podeEmails ? `/?email=${t.tipo}` : '/inspecoes', ordem: 800 + n / 1000,
       });
     });
   }
@@ -507,10 +508,15 @@ export const Home: React.FC = () => {
   const botaoEnviarPdf = ehSecretaria && podeInspecoes && canUseFeature('inspecoes.enviarExames', perfil) && authUser
     ? <EnviarPdfHome inspecoes={inspecoes} militares={militares} usuario={{ uid: authUser.uid, usuario: authUser.usuario }} onAviso={(msg, tone = 'success') => setToast({ msg, tone })} />
     : null;
+  // Admin e Secretaria: "Enviar emails" (antes em Inspeções de Saúde).
+  const botaoEnviarEmails = podeEmails
+    ? <EnviarEmailsHome inspecoes={inspecoes} militares={militares} hoje={hoje} podeLimpar={perfil === 'admin'} onAviso={(msg, tone = 'success') => setToast({ msg, tone })} />
+    : null;
   // Desktop: as demais à esquerda (a 2ª prioridade mais perto da principal), a principal por último.
-  const acoesDesktop = permitidas.length > 0 || botaoEnviarPdf ? (
+  const acoesDesktop = permitidas.length > 0 || botaoEnviarPdf || botaoEnviarEmails ? (
     <>
       {permitidas.slice(1).reverse().map(a => botaoDesktop(a, false))}
+      {botaoEnviarEmails}
       {botaoEnviarPdf}
       {permitidas.length > 0 && botaoDesktop(permitidas[0], true)}
     </>
@@ -760,7 +766,7 @@ export const Home: React.FC = () => {
         actions={isDesktop ? acoesDesktop : undefined}
       />
 
-      {!isDesktop && botaoEnviarPdf && <div className="mb-4 [&>*]:w-full">{botaoEnviarPdf}</div>}
+      {!isDesktop && (botaoEnviarPdf || botaoEnviarEmails) && <div className="mb-4 grid gap-2 [&>*]:w-full">{botaoEnviarEmails}{botaoEnviarPdf}</div>}
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
 
       <div className="space-y-6">

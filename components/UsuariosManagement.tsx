@@ -42,7 +42,7 @@ const SITUACOES: Situacao[] = ['ativos', 'inativos', 'sem-acesso-30'];
 const PERFIS = ['admin', ...ROLES.map(r => r.id)];
 
 const ROTULO_CAMPO: Record<string, string> = {
-  postoGraduacao: 'Posto/graduação', cargo: 'Cargo', nome: 'Nome', nip: 'NIP', crmPe: 'CRM-PE', rqe: 'RQE',
+  postoGraduacao: 'Posto/graduação', cargo: 'Cargo', nome: 'Nome', nip: 'NIP', crmPe: 'CRM-PE', rqe: 'RQE', especialidade: 'Especialidade',
   email: 'E-mail institucional', gmail: 'Gmail', celular: 'Celular', dataNascimento: 'Data de nascimento',
 };
 
@@ -166,6 +166,7 @@ export const UsuariosManagement: React.FC<Props> = ({ usuarios: users, setUsuari
       // CRM/RQE só para perfis médicos; mudar para um perfil não médico mantém o que já estava gravado.
       crmPe: medico ? f.crmPe.trim() : (editando?.crmPe || ''),
       rqe: medico ? f.rqe.trim() : (editando?.rqe || ''),
+      especialidade: medico ? f.especialidade.trim() : (editando?.especialidade || ''),
       email: f.email.trim().toLowerCase(),
       gmail: f.gmail.trim().toLowerCase(),
       celular: f.celular.trim(),
