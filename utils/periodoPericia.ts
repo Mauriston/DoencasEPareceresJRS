@@ -1,7 +1,7 @@
 // Ficheiro: utils/periodoPericia.ts
 // Filtro de PERÍODO da lista da Perícia Menor (seletor "Período": Este mês · Este trimestre · Este semestre ·
 // Este ano · Personalizado — de/até). A data de referência de cada registro é a do atestado (registro) ou, na
-// homologação, a data em que o atestado foi homologado (o registro). Trimestre e semestre são os do ano civil.
+// homologação, a data da homologação (dataPericia) — não a data de gravação no banco. Trimestre e semestre são os do ano civil.
 // URL: ?periodo=mes|trimestre|semestre|ano|personalizado&de=AAAA-MM-DD&ate=AAAA-MM-DD; os atalhos antigos
 // ?mes=atual / ?ano=atual (Início/Painel) continuam valendo como "Este mês" / "Este ano".
 // Testes em utils/__tests__/periodoPericia.test.ts.
@@ -53,14 +53,10 @@ export const intervaloPeriodo = (periodo: PeriodoPericia, hoje: string, de = '',
   }
 };
 
-/** Data de referência do registro: a do atestado ou, na homologação, a data em que foi homologado. */
-export const dataReferenciaPericia = (p: { dataAtestado?: string; homologacao?: boolean; criadoEm?: { toDate?: () => Date } | null }): string => {
-  if (p.homologacao) {
-    const d = p.criadoEm?.toDate?.();
-    if (d) return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
-  }
-  return String(p.dataAtestado || '').slice(0, 10);
-};
+/** Data de referência do registro: a do atestado ou, na homologação, a data da homologação (dataPericia) —
+ *  nunca a data em que o registro foi gravado no banco (criadoEm). */
+export const dataReferenciaPericia = (p: { dataAtestado?: string; dataPericia?: string; homologacao?: boolean }): string =>
+  String((p.homologacao ? p.dataPericia || p.dataAtestado : p.dataAtestado || p.dataPericia) || '').slice(0, 10);
 
 export const noPeriodo = (data: string, intervalo: { inicio: string; fim: string } | null): boolean =>
   !intervalo || (!!data && data >= intervalo.inicio && data <= intervalo.fim);

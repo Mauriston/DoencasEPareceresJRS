@@ -25,7 +25,9 @@ describe('período da Perícia Menor', () => {
   });
   it('data de referência: atestado ou data da homologação', () => {
     expect(dataReferenciaPericia({ dataAtestado: '2026-11-02' })).toBe('2026-11-02');
-    expect(dataReferenciaPericia({ dataAtestado: '2026-10-02', homologacao: true, criadoEm: { toDate: () => new Date(2026, 10, 5) } })).toBe('2026-11-05');
+    expect(dataReferenciaPericia({ dataAtestado: '2026-10-02', dataPericia: '2026-11-05', homologacao: true })).toBe('2026-11-05');
+    // a data de gravação no banco (criadoEm) não conta
+    expect(dataReferenciaPericia({ dataAtestado: '2026-10-02', dataPericia: '2026-10-03', criadoEm: { toDate: () => new Date(2026, 10, 20) } } as any)).toBe('2026-10-02');
     expect(noPeriodo('2026-11-05', { inicio: '2026-11-01', fim: '2026-11-30' })).toBe(true);
     expect(noPeriodo('2026-12-01', { inicio: '2026-11-01', fim: '2026-11-30' })).toBe(false);
   });
