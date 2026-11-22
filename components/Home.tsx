@@ -23,6 +23,8 @@ import { MenuAcoes } from './ui/MenuAcoes';
 import { Container, PageHeader } from './ui/Page';
 import { Button, ButtonLink } from './ui/Button';
 import { Dialog } from './ui/Dialog';
+import { Toast } from './ui/Toast';
+import { EnviarPdfHome } from './home/EnviarPdfHome';
 import { FabAcoes, type AcaoFab } from './ui/Fab';
 import { GradePainel } from './ui/Grade';
 import { StatusTag } from './ui/StatusTag';
@@ -46,7 +48,7 @@ import { CardFaltasHNRe } from './inspecoes/CardFaltasHNRe';
 import { CardAniversariantes } from './home/CardAniversariantes';
 import { observarMilitares, type MilitarRecord } from '../services/firestoreMilitares';
 import { pendenciasEmailIS, TIPOS_EMAIL_PENDENTE } from '../utils/pendenciasEmailIS';
-import { temTagLaudoPericialPendente } from '../utils/documentosIS';
+import { PERFIS_DOCUMENTO_IS, perfilCompetenteIS, temTagLaudoPericialPendente } from '../utils/documentosIS';
 import { observarDocumentosISRecentes, type RegistroDocumentoIS } from '../services/documentosIS';
 import { urlDasGuias } from '../services/guiasExames';
 import { useDiasConcursos } from '../hooks/useDiasConcursos';
@@ -363,9 +365,10 @@ export const Home: React.FC = () => {
       });
     });
   }
-  // Secretaria: IS de Isenção de IR finalizadas com a tag "LAUDO PERICIAL PENDENTE" (sai ao gerar o Laudo Pericial).
-  if (podeInspecoes && ehSecretaria) {
-    inspecoes.filter(temTagLaudoPericialPendente).forEach(i => {
+  // Perfis que podem gerar o Laudo Pericial: IS de Isenção de IR finalizadas com a tag "LAUDO PERICIAL PENDENTE"
+  // (sai ao gerar o Laudo Pericial); médicos só veem as da própria junta.
+  if (podeInspecoes && perfil && PERFIS_DOCUMENTO_IS.laudoPericial.includes(perfil)) {
+    inspecoes.filter(i => temTagLaudoPericialPendente(i) && perfilCompetenteIS(perfil, i.amp)).forEach(i => {
       pendencias.push({
         id: `laudo-pericial:${i.id}`, icone: 'contract', titulo: nomeCurtoInspecionado(i.inspecionado),
         detalhe: `IS ${i.is} · Isenção de IR · gerar o Laudo Pericial`,
@@ -451,11 +454,19 @@ export const Home: React.FC = () => {
       ? <ButtonLink key={a.id} to={a.to} variant={variante} icon={icone}>{a.rotulo}</ButtonLink>
       : <Button key={a.id} variant={variante} icon={icone} onClick={a.onClick}>{a.rotulo}</Button>;
   };
+  // Secretaria: "Enviar PDF ▾" (Exames · Atestados e Laudos) — secundário ao lado de "Abrir IS" no desktop; no celular,
+  // um bloco abaixo do cabeçalho (o FAB só leva a principal).
+  const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
+  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 4000); return () => clearTimeout(t); }, [toast]);
+  const botaoEnviarPdf = ehSecretaria && podeInspecoes && canUseFeature('inspecoes.enviarExames', perfil) && authUser
+    ? <EnviarPdfHome inspecoes={inspecoes} militares={militares} usuario={{ uid: authUser.uid, usuario: authUser.usuario }} onAviso={(msg, tone = 'success') => setToast({ msg, tone })} />
+    : null;
   // Desktop: as demais à esquerda (a 2ª prioridade mais perto da principal), a principal por último.
-  const acoesDesktop = permitidas.length > 0 ? (
+  const acoesDesktop = permitidas.length > 0 || botaoEnviarPdf ? (
     <>
       {permitidas.slice(1).reverse().map(a => botaoDesktop(a, false))}
-      {botaoDesktop(permitidas[0], true)}
+      {botaoEnviarPdf}
+      {permitidas.length > 0 && botaoDesktop(permitidas[0], true)}
     </>
   ) : undefined;
 
@@ -702,6 +713,9 @@ export const Home: React.FC = () => {
         eyebrow={dataPorExtenso()}
         actions={isDesktop ? acoesDesktop : undefined}
       />
+
+      {!isDesktop && botaoEnviarPdf && <div className="mb-4 [&>*]:w-full">{botaoEnviarPdf}</div>}
+      <Toast message={toast?.msg ?? null} tone={toast?.tone} />
 
       <div className="space-y-6">
         <ContadoresHoje contadores={contadores} />
