@@ -4,7 +4,7 @@
 // Front: components/ficha/inspecoes/documentos/registro.tsx. Servidor: servidor/documentos/is/.
 import { GRUPO_BENEFICIOS, GRUPO_VERIFICACOES } from './inspecoes';
 import { normalizarTexto } from './destinatariosIS';
-import { ehVerificacaoOuTermino } from './minutaMensagemResultado';
+import { ehVerificacaoOuTermino, laudoIncapazDefinitivoSAM } from './minutaMensagemResultado';
 
 export const TIPOS_DOCUMENTO_IS = ['solicitacaoExames', 'declaracaoComparecimento', 'termoRecurso', 'papeletaDispensa', 'laudoPericial'] as const;
 export type TipoDocumentoIS = typeof TIPOS_DOCUMENTO_IS[number];
@@ -40,6 +40,11 @@ export interface ISParaDocumento {
   finalidade?: string;
   grupoFinalidade?: string;
   laudo?: string;
+  /** Junta de competência da finalidade (JRS ou MPI). */
+  amp?: string;
+  /** N.º do TIS (AAA.000.N…); vazio = ainda sem TIS. */
+  tis?: string;
+  tags?: unknown;
 }
 
 const mesmo = (a: string | undefined, b: string) => normalizarTexto(a || '') === normalizarTexto(b);
@@ -71,11 +76,39 @@ export const ehMilitarInativo = (m: { tipo?: unknown; rm1?: unknown; refo?: unkn
   !!m && (m.tipo ?? 'militar') === 'militar' && (!!m.rm1 || !!m.refo);
 export const temTagLaudoPericialPendente = (is: { tags?: unknown }) => Array.isArray(is.tags) && is.tags.includes(TAG_LAUDO_PERICIAL_PENDENTE);
 
-/** O item aparece no menu? (perfil + regra global de IS finalizada). */
+/** Laudo de apto (inclui "apto com restrições…"). */
+export const laudoApto = (laudo: string | undefined) => /^\s*apto\b/.test(normalizarTexto(laudo || ''));
+
+/** Quem age sobre a IS: user_medicos só nas de JRS e user_medicos_mpi só nas de MPI; os demais perfis não são limitados. */
+export const perfilCompetenteIS = (perfil: string | undefined | null, amp: string | undefined): boolean => {
+  if (perfil === 'user_medicos') return amp === 'JRS';
+  if (perfil === 'user_medicos_mpi') return amp === 'MPI';
+  return true;
+};
+
+/** Termo de Recurso: IS com N.º do TIS e laudo recorrível (Verificações/Términos: apto, apto com restrições ou
+ *  incapacidade definitiva para o SAM; Benefícios: não enquadramento). */
+export const termoRecursoCabe = (is: ISParaDocumento): boolean => {
+  if (!(is.tis || '').trim()) return false;
+  if (ehGrupoVerificacoes(is)) return laudoApto(is.laudo) || laudoIncapazDefinitivoSAM(is.laudo);
+  if (ehGrupoBeneficios(is)) return laudoNaoEnquadramento(is.laudo);
+  return false;
+};
+
+/** O item aparece no menu? Oculto (nunca "desabilitado") quando a regra não se cumpre. */
 export const documentoISVisivel = (tipo: TipoDocumentoIS, perfil: string | undefined | null, is: ISParaDocumento): boolean => {
   if (!PERFIS_DOCUMENTO_IS[tipo].includes(String(perfil ?? ''))) return false;
-  if (isFinalizada(is)) return TIPOS_APOS_FINALIZADA.includes(tipo);
-  return true;
+  const andamento = is.situacao === 'andamento';
+  const semLaudo = !(is.laudo || '').trim();
+  switch (tipo) {
+    case 'declaracaoComparecimento': return andamento;
+    case 'solicitacaoExames': return andamento && semLaudo;
+    case 'papeletaDispensa': return andamento && semLaudo && is.amp === 'JRS' && ehVdfOuTermino(is);
+    case 'termoRecurso': return termoRecursoCabe(is);
+    // Só finalizada e enquanto a tag de pendência existir; ao registrar o Laudo Pericial o servidor remove a tag.
+    case 'laudoPericial': return isFinalizada(is) && ehIsencaoIR(is) && temTagLaudoPericialPendente(is);
+    default: return false;
+  }
 };
 
 /** Por que o item está desabilitado (dica do menu e erro 400 no servidor); null = habilitado. */
@@ -83,7 +116,6 @@ export const motivoDocumentoISIndisponivel = (tipo: TipoDocumentoIS, is: ISParaD
   switch (tipo) {
     case 'solicitacaoExames':
     case 'declaracaoComparecimento':
-      return isFinalizada(is) ? 'IS finalizada' : null;
     case 'termoRecurso':
       return ehGrupoVerificacoes(is) || ehGrupoBeneficios(is) ? null : 'Só em IS de Verificações e Términos ou Benefícios';
     case 'papeletaDispensa':

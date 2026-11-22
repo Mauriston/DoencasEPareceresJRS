@@ -181,3 +181,18 @@ export const apagarExameIS = async (isId: string, exame: ExameISRecord): Promise
   await deleteDoc(doc(colecao(isId), exame.id));
   await deleteObject(ref(getStorage(app), exame.caminho)).catch(() => { /* o documento já saiu da lista */ });
 };
+
+/** Nome do inspecionado (paciente/periciando) que consta no PDF; '' quando a IA não o encontra. */
+export const identificarInspecionadoNoPdf = async (arquivo: File): Promise<string> => {
+  exigirLimitePdf(arquivo.size, arquivo.name || 'O PDF');
+  const r = await gerarComGemini({
+    contexto: 'nome do inspecionado no PDF',
+    instrucoes: 'Você recebe um PDF médico (exame, atestado, relatório ou laudo). Devolva "nome": o nome completo do PACIENTE a quem o documento se refere, '
+      + 'exatamente como consta (sem posto, NIP ou título). Não use o nome do médico, do laboratório ou do solicitante. Se não houver, devolva "".',
+    arquivos: [{ base64: await arquivoParaBase64IA(arquivo), mimeType: 'application/pdf' }],
+    temperature: 0,
+    maxOutputTokens: 256,
+    esquema: Schema => Schema.object({ properties: { nome: Schema.string() } }),
+  });
+  return String(lerJsonIA<{ nome?: string }>(r, 'A IA não conseguiu ler o PDF.')?.nome ?? '').trim();
+};

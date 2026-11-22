@@ -28,6 +28,7 @@ import { removerEventoAgendaIS } from '../../../services/agendaGoogleIS';
 import { podeArrastarIS } from '../../../utils/calendarioIS';
 import { aguardaAgendamento } from '../../../utils/inspecoes';
 import { motivoNaoExcluir } from '../../../utils/exclusaoIS';
+import { perfilCompetenteIS } from '../../../utils/documentosIS';
 import { podeMinutarMsg } from '../../../utils/mensagensIS';
 import type { AbaFicha, EstadoAbaFicha } from '../../../utils/fichaInspecionado';
 
@@ -83,7 +84,7 @@ export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, femini
   ];
   // Gerar Documento: Pedido de Parecer (IS não finalizada; função pareceres.gerar e a aba Pareceres) e os documentos do
   // registro (documentos/registro.tsx; finalizada → só Termo de Recurso e Laudo Pericial).
-  const podePedido = !finalizada && canUseFeature('pareceres.gerar', perfil) && habilitada('pareceres');
+  const podePedido = is.situacao === 'andamento' && !parecerAberto && canUseFeature('pareceres.gerar', perfil) && habilitada('pareceres');
   const docs = useGerarDocumentoIS(is, { perfil, om, vinculo }, onAviso);
   const itensDocumento: ItemMenu[] = [
     ...(podePedido ? [{ rotulo: 'Pedido de Parecer', icone: 'assignment_add', onClick: () => ir('pareceres', { criar: 'pedido', is: is.id }) }] : []),
@@ -91,7 +92,9 @@ export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, femini
   ];
   const minuta = podeMinutarMsg(is) && canUseFeature('inspecoes.gerarMinuta', perfil);
 
-  const acoes: AcaoBarraFicha[] = [
+  // Competência: user_medicos só nas IS de JRS e user_medicos_mpi só nas de MPI (sem competência, sem botões).
+  const competente = perfilCompetenteIS(perfil, is.amp);
+  const acoes: AcaoBarraFicha[] = !competente ? [] : [
     ...(podeExcluir ? [{ id: 'excluir', rotulo: 'Excluir', icone: 'delete', variante: 'destructive' as const, onClick: () => setExcluindo(true), loading: apagando }] : []),
     ...(agendar ? [{
       id: 'agendar', rotulo: aguardaAgendamento(is.status) && !is.dataEntrevista ? 'Agendar IS' : 'Reagendar IS', icone: 'event',
