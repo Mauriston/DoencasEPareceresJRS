@@ -31,6 +31,7 @@ import { RegistroAlteracoes } from './RegistroAlteracoes';
 import { TemplatesDocumentos } from './TemplatesDocumentos';
 import { ModelosMinutaMSG } from './ModelosMinutaMSG';
 import { TIPOS_MODELO_MSG } from '../../utils/modelosMinutaMSG';
+import { CATALOGO_MINUTAS_MSG } from '../../utils/catalogoMinutasMSG';
 import { PermissoesChat } from '../chat/PermissoesChat';
 import { dataHoraCurta, plural, semAcessoHa, ultimoAcessoRelativo } from '../../utils/administracao';
 
@@ -43,7 +44,7 @@ export const SECOES: SecaoDef[] = [
   { id: 'emails', rotulo: 'E-mails automáticos', icone: 'mail', descricao: 'Destinatários fixos, assinaturas e testes de cada e-mail.' },
   { id: 'agenda', rotulo: 'Agenda das IS', icone: 'schedule', descricao: 'Turnos em que cada perito atende.' },
   { id: 'documentos', rotulo: 'Templates de documentos', icone: 'description', descricao: 'Textos dos documentos da IS e PDFs de teste.' },
-  { id: 'minutas', rotulo: 'Modelos de Minuta MSG', icone: 'forward_to_inbox', descricao: 'Textos das minutas de resultado, incapacidade e cancelamento, com placeholders.' },
+  { id: 'minutas', rotulo: 'Modelos de Minuta MSG', icone: 'forward_to_inbox', descricao: 'Textos das minutas em uso (resultado, incapacidade, cancelamento) e o catálogo de 23 modelos, com placeholders.' },
   { id: 'integracoes', rotulo: 'Integrações', icone: 'hub', descricao: 'Conta Google do servidor, Google Agenda e Apps Script.' },
   { id: 'registro', rotulo: 'Registro de alterações', icone: 'history', descricao: 'Quem mudou o quê e quando.' },
 ];
@@ -107,7 +108,7 @@ export const Administracao: React.FC = () => {
   if (secao && !atual) return <Navigate to={administracaoPath('usuarios')} replace />;
   if (!secao && isDesktop) return <Navigate to={administracaoPath('usuarios')} replace />;
 
-  const contador: Partial<Record<SecaoAdministracao, number>> = { usuarios: usuarios.length, perfis: ROLES.length, emails: TIPOS_EMAIL.length, minutas: TIPOS_MODELO_MSG.length };
+  const contador: Partial<Record<SecaoAdministracao, number>> = { usuarios: usuarios.length, perfis: ROLES.length, emails: TIPOS_EMAIL.length, minutas: TIPOS_MODELO_MSG.length + CATALOGO_MINUTAS_MSG.length };
 
   const estadoDe = (id: SecaoAdministracao): string => {
     switch (id) {
@@ -115,7 +116,7 @@ export const Administracao: React.FC = () => {
       case 'perfis': return plural(ROLES.length, 'perfil', 'perfis') + ' editáveis · Admin com acesso total';
       case 'emails': return `${plural(TIPOS_EMAIL.length, 'e-mail', 'e-mails')}${estado.emailsAlterado ? ` · alterado em ${dataHoraCurta(estado.emailsAlterado).split(' ')[0]}` : ''}`;
       case 'documentos': return '5 templates · teste apagado em 30 min';
-      case 'minutas': return `${TIPOS_MODELO_MSG.length} modelos · placeholders {{…}}`;
+      case 'minutas': return `${TIPOS_MODELO_MSG.length} em uso + ${CATALOGO_MINUTAS_MSG.length} no catálogo · placeholders {{…}}`;
       case 'chat': return 'Enviar, receber e anexos por perfil';
       case 'agenda': return estado.peritosComTurno === null ? 'Turnos dos peritos' : `turnos de ${plural(estado.peritosComTurno, 'perito', 'peritos')}`;
       case 'integracoes': return !conta.situacao ? (conta.erro ? 'Servidor indisponível' : 'Consultando…') : conta.situacao.autorizado ? 'Conta Google autorizada' : 'Conta Google não autorizada · Apps Script em uso';

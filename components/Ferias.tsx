@@ -15,7 +15,7 @@ import { ConfirmDialog } from './ui/Dialog';
 import { EmptyState } from './ui/EmptyState';
 import { StatusTag } from './ui/StatusTag';
 import { MenuAcoes } from './ui/MenuAcoes';
-import { Segmented } from './ui/Segmented';
+import { AbasSublinhadas } from './periciaMenor/partes';
 import { FiltroCaixas } from './inspecoes/FiltroCaixas';
 import { FiltroPeriodo } from './inspecoes/FiltroPeriodo';
 import { Avatar } from './shell/UserMenu';
@@ -130,11 +130,18 @@ export const Ferias: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
-      <Container size="data" className={`py-6 md:py-8 pt-4 md:pt-8 ${ehAdmin ? 'pb-28 md:pb-10' : 'pb-10'} space-y-6`}>
+      <Container size="data" className={`pt-0 md:pt-8 ${ehAdmin ? 'pb-28 md:pb-10' : 'pb-10'} flex flex-col gap-4 md:gap-6`}>
         <PageHeader
           title="Férias"
           description="Férias e afastamentos (Férias, LTS e LIC Adm) dos usuários da JRS."
           fab={ehAdmin ? { icon: 'add', label: 'Registrar afastamento', onClick: () => setForm({}) } : undefined}
+        />
+
+        {/* Abas sublinhadas (as da Inspeções de Saúde): no celular coladas na topbar, de borda a borda. */}
+        <AbasSublinhadas<Visao>
+          rotulo="Visualização" idBase="ferias-visao" ativa={visao} onChange={setVisao}
+          className="-mx-4 px-2 md:mx-0 md:px-0 bg-white md:bg-transparent"
+          abas={[{ id: 'tabela', rotulo: 'Tabela' }, { id: 'timeline', rotulo: 'Timeline' }]}
         />
 
         <Card padding="sm" className="flex flex-wrap items-center gap-4">
@@ -152,14 +159,6 @@ export const Ferias: React.FC = () => {
             opcoes={STATUS_AFASTAMENTO} value={fStatus} onChange={setFStatus} contadores={contStatus}
             className="flex-1 min-w-[9rem] sm:flex-none sm:w-52"
           />
-          <div className="ml-auto">
-            <Segmented<Visao>
-              ariaLabel="Visualização"
-              value={visao}
-              onChange={setVisao}
-              options={[{ value: 'tabela', label: 'Tabela', icon: 'table_rows' }, { value: 'timeline', label: 'Timeline', icon: 'view_timeline' }]}
-            />
-          </div>
         </Card>
 
         {erroCarga && <p role="alert" className="text-sm font-semibold text-wine">{erroCarga}</p>}

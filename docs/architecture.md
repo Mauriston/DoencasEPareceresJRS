@@ -339,6 +339,11 @@ Casos periciais, Vídeos (YouTube), Infográficos (Storage), **Apresentações**
 ### 7.9 Administração e perfil
 Usuários (cadastro, permissões por perfil, redefinir senha, **excluir inativo**, ordenação por Perfil + NIP; e-mail institucional só `@marinha.mil.br` — `utils/emails.ts`) e Perfil (contato, foto, senha e **Notificações**: status, ativação e envio de teste).
 
+**Modelos de Minuta MSG** (Administração › item "Modelos de Minuta MSG", só Admin; `components/administracao/ModelosMinutaMSG.tsx`). Dois blocos, ambos em texto com `{{placeholders}}`, chips de inserção, prévia com dados fictícios e "Restaurar padrão", gravados em `config/minutasMSG.{chave}`:
+- **Em uso pelo app** (`utils/modelosMinutaMSG.ts`): `resultado`, `incapacidade` (VDF/Término com incapacidade definitiva para o SAM) e `cancelamento`. As funções de minuta (`utils/minutaMensagemResultado.ts`, `utils/minutasIS.ts`) leem o modelo ativo, mantido por `services/modelosMinutaMSG.ts` (`iniciarModelosMSG`).
+- **Catálogo das 23 minutas** (23/11/2026, `utils/catalogoMinutasMSG.ts`): 1–5 finalidades gerais (resultado de 1 IS e de várias, falta à IS agendada, não comparecimento ao agendamento, resposta às APS); 6–10 Atestado de Origem (**guardadas**, sem gatilho até os AO serem registrados no app web); 11–23 Benefícios. Cada uma tem DE/PARA/INFO/ASSUNTO/TEXTO editáveis; o catálogo ainda **não gera minutas sozinho** (os gatilhos entram aos poucos). `PLACEHOLDERS_CATALOGO` é o vocabulário único; chave desconhecida barra o salvamento.
+- **Padrão dos Benefícios** (`utils/minutasBeneficiosPadrao.ts`): todas as minutas 12–23 têm a mesma estrutura (abertura com a data da APS e da conclusão · ALFA com laudo e TIS · BRAVO com a verificação do DS-1A). Só variam o beneficiário (PARA/INFO, norma e qualificação) e o enquadramento (frases do laudo). `REGRAS_BENEFICIOS` mapeia beneficiário × enquadramento → nº da minuta; militar inativo **enquadrado** não tem resultado, usa a nº 19 (solicitação de autorização de auxílio-invalidez ao Órgão de Pessoal, INFO SVCVPM). `frasesLaudoMilitarInativo` monta as cinco frases opcionais do laudo (internação, doença em lei, incapacidade p/ o SAM, doença grave, invalidez).
+
 ### 7.10 Mensagens
 `Mensagens.tsx`: minutas de mensagens administrativas.
 
@@ -503,7 +508,7 @@ flowchart LR
 
 ### 11.2 Servidor (Cloud Run)
 
-`.github/workflows/deploy-cloud-run.yml` publica `server.ts` no Cloud Run, no mesmo projeto Google Cloud do Firebase, quando ele (ou suas dependências) muda. A service account do serviço precisa de acesso ao Firestore, ao Auth (inclusive criar *custom tokens*) e ao Firebase Cloud Messaging.
+`.github/workflows/deploy-cloud-run.yml` publica `server.ts` no Cloud Run (o `Dockerfile` roda `npm run build`, cujo `prebuild` é o `scripts/verificar-ds.mjs`: **classe fora do design system — ex.: `font-mono` — derruba o build, o deploy do Pages e o do Cloud Run**; rode `npm run check:ds` antes de subir), no mesmo projeto Google Cloud do Firebase, quando ele (ou suas dependências) muda. A service account do serviço precisa de acesso ao Firestore, ao Auth (inclusive criar *custom tokens*) e ao Firebase Cloud Messaging.
 
 ### 11.3 Apps Script
 
