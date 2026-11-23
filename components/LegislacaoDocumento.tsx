@@ -17,7 +17,8 @@ import type { LegislacaoDoc } from '../services/firestoreLegislacao';
 interface LegislacaoDocumentoProps {
   law: LegislacaoDoc;
   markdown: string;
-  onVoltar: () => void;
+  /** Mantido por compatibilidade: o Voltar saiu do cabeçalho (a trilha da topbar já volta). */
+  onVoltar?: () => void;
 }
 
 const ListaIndice: React.FC<{ itens: TituloIndice[]; ativo: string | null; onIr: (id: string) => void }> = ({ itens, ativo, onIr }) => (
@@ -40,7 +41,7 @@ const ListaIndice: React.FC<{ itens: TituloIndice[]; ativo: string | null; onIr:
   </nav>
 );
 
-export const LegislacaoDocumento: React.FC<LegislacaoDocumentoProps> = ({ law, markdown, onVoltar }) => {
+export const LegislacaoDocumento: React.FC<LegislacaoDocumentoProps> = ({ law, markdown }) => {
   useBreadcrumbs([{ label: law.legislacao }]);
   const titulos = useMemo(() => titulosDoMarkdown(markdown), [markdown]);
   const indice = useMemo(() => itensDoIndice(titulos), [titulos]);
@@ -102,10 +103,7 @@ export const LegislacaoDocumento: React.FC<LegislacaoDocumentoProps> = ({ law, m
           title={law.legislacao}
           description={law.titulo}
           descricaoNoCelular
-          actions={<>
-            <Button variant="secondary" icon="arrow_back" onClick={onVoltar}>Voltar</Button>
-            {download}
-          </>}
+          actions={download}
         />
 
         {indice.length > 0 && (

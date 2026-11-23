@@ -39,8 +39,9 @@
 // Abrir a ficha grava o evento "abriu a ficha" (quem e quando) em militares/{nip}/eventos (best effort).
 // Substitui a antiga página de histórico da Perícia Menor (/pericia-menor/historico/<nip> redireciona para cá).
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Container } from '../ui/Page';
+import { Container, TOPBAR_ACOES_ID } from '../ui/Page';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { FabAcoes } from '../ui/Fab';
@@ -237,7 +238,7 @@ export const FichaInspecionado: React.FC = () => {
   const [verEventos, setVerEventos] = useState(false);
   /** Assessor IA (chat em tela cheia): só Admin e médicos, com IS em andamento. */
   const [assessorAberto, setAssessorAberto] = useState(false);
-  /** "Print SINAIS" do menu do Claude: prints escolhidos para a IS `isId` (lidos no painel da aba IS). */
+  /** "Editar IS" (câmera) do menu do Claude: prints escolhidos para a IS `isId` (lidos no painel da aba IS). */
   const [printsSinais, setPrintsSinais] = useState<{ id: number; isId: string; arquivos: File[] } | null>(null);
   const inputPrintsRef = useRef<HTMLInputElement>(null);
   const alvoPrintsRef = useRef<string>('');
@@ -308,6 +309,9 @@ export const FichaInspecionado: React.FC = () => {
   const om = militar?.om || pericias[0]?.om || '';
   useBreadcrumbs(nome ? [{ label: nome }] : null);
   const tituloNaTopbar = useTituloPagina(nome);
+  // Celular: o ⋮ vai para a topbar (slot #topbar-acoes, no lugar do sino) e o menu do Claude vira itens do FAB.
+  const [slotTopbar, setSlotTopbar] = useState<HTMLElement | null>(null);
+  useEffect(() => { setSlotTopbar(document.getElementById(TOPBAR_ACOES_ID)); }, []);
 
   // Listas de cada aba, do mais recente para o mais antigo.
   const isOrdenadas = useMemo(() => [...inspecoes].sort((a, b) => (b.dataEntrevista || '').localeCompare(a.dataEntrevista || '')), [inspecoes]);
@@ -454,11 +458,12 @@ export const FichaInspecionado: React.FC = () => {
   const itensClaude: ItemMenu[] = [
     { rotulo: 'Assessor IA', icone: <SimboloClaude tamanho={18} />, onClick: () => setAssessorAberto(true) },
     {
-      rotulo: 'Enviar print SINAIS', icone: 'photo_camera', desabilitado: !!printBloqueado,
+      rotulo: 'Editar IS', icone: 'photo_camera', desabilitado: !!printBloqueado,
       dica: printBloqueado || (isAlvoClaude && isAssessor.length > 1 ? `IS ${isAlvoClaude.is}` : undefined),
       onClick: () => { if (!isAlvoClaude) return; alvoPrintsRef.current = isAlvoClaude.id; inputPrintsRef.current?.click(); },
     },
   ];
+  const editarIS = itensClaude[1];
   // Guias INCDEF: a IS aberta na aba (ou a mais recente) de VDF/Término de Incapacidade com "Incapaz definitivamente para o SAM".
   const ehIncdef = (i: InspecaoRecord) => usaMinutaIncapacidadeDefinitiva({ finalidade: i.finalidade || '', laudo: i.laudo });
   const isIncdef = secoes.inspecoes ? ((aba === 'is' ? isOrdenadas.find(i => i.id === pedido && ehIncdef(i)) : undefined) ?? isOrdenadas.find(ehIncdef)) : undefined;
@@ -760,8 +765,8 @@ export const FichaInspecionado: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
-      <Container size="data" className="pt-4 md:pt-8 pb-28 md:pb-10 space-y-4 md:space-y-6">
-        <div className="flex items-start justify-between gap-3">
+      <Container size="data" className="pt-0 md:pt-8 pb-28 md:pb-10 flex flex-col gap-4 md:gap-6">
+        <div className="hidden md:flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className={`${tituloNaTopbar ? 'hidden md:block ' : ''}text-h1 font-extrabold text-navy leading-tight`}>
               <button type="button" onClick={() => setVerCadastro(true)} aria-haspopup="dialog" title="Ver dados cadastrais"
@@ -770,33 +775,18 @@ export const FichaInspecionado: React.FC = () => {
                 <span className="material-symbols-outlined text-[24px] text-ink-3 shrink-0" aria-hidden="true">expand_more</span>
               </button>
             </h1>
+            {/* Celular: sem subtítulo nem seta — o nome vai para a topbar e os dados cadastrais abrem pelo ⋮. */}
             <div className="text-sm text-ink-3 mt-1 tabular-nums">
-              {/* No celular o nome vai para a topbar: a linha de identificação é o gatilho do top sheet. */}
-              <button type="button" onClick={() => setVerCadastro(true)} aria-haspopup="dialog" className="md:hidden text-left inline-flex items-center gap-1 min-h-[44px]">
-                <span>{linhaId}</span>
-                <span className="material-symbols-outlined text-[20px] text-ink-3" aria-hidden="true">expand_more</span>
-              </button>
-              <span className="hidden md:inline">{linhaId}</span>
+              <span>{linhaId}</span>
               {titular}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <MenuAcoes rotulo="Mais ações da ficha" itens={menu} />
-            {/* Menu do Claude (logo, sem texto, à direita do ⋮; em todas as larguras): Assessor IA · Enviar print SINAIS. */}
+            {/* Menu do Claude (logo, sem texto, à direita do ⋮; só no desktop — no celular são itens do FAB): Assessor IA · Editar IS. */}
             {isAssessor.length > 0 && (
-              <MenuAcoes rotulo="Claude: Assessor IA e Enviar print SINAIS" itens={itensClaude} botao={{ texto: 'Claude', icone: '', conteudo: <LogoClaude altura={18} /> }} />
+              <MenuAcoes rotulo="Claude: Assessor IA e Editar IS" itens={itensClaude} botao={{ texto: 'Claude', icone: '', conteudo: <LogoClaude altura={18} /> }} />
             )}
-            <input
-              ref={inputPrintsRef} type="file" accept="image/*" multiple className="hidden" aria-label="Prints do SINAIS"
-              onChange={e => {
-                const arquivos: File[] = Array.from(e.target.files ?? []);
-                e.target.value = '';
-                const isId = alvoPrintsRef.current;
-                if (!arquivos.length || !isId) return;
-                definir({ aba: 'is', reg: isId, criar: null });
-                setPrintsSinais({ id: Date.now(), isId, arquivos });
-              }}
-            />
             {/* Botões de criação no cabeçalho só a partir de md; no celular viram o FAB padrão (como em Inspeções). */}
             <div className="hidden md:flex items-center gap-2">
               {podePericia && (
@@ -811,12 +801,27 @@ export const FichaInspecionado: React.FC = () => {
             </div>
           </div>
         </div>
+      <input
+        ref={inputPrintsRef} type="file" accept="image/*" multiple className="hidden" aria-label="Prints do SINAIS"
+        onChange={e => {
+          const arquivos: File[] = Array.from(e.target.files ?? []);
+          e.target.value = '';
+          const isId = alvoPrintsRef.current;
+          if (!arquivos.length || !isId) return;
+          definir({ aba: 'is', reg: isId, criar: null });
+          setPrintsSinais({ id: Date.now(), isId, arquivos });
+        }}
+      />
+        {!isDesktop && slotTopbar && createPortal(<MenuAcoes rotulo="Mais ações da ficha" itens={menu} />, slotTopbar)}
         {/* FAB do celular (a primeira ação permitida é a principal): Abrir IS · Abrir IS por print · Perícia Menor. */}
         {!isDesktop && (
           <FabAcoes acoes={[
             { id: 'abrir-is', rotulo: 'Abrir IS', ariaLabel: 'Abrir IS manualmente', icone: 'add', onClick: () => abrirIS('manual'), permitido: podeIS },
             { id: 'is-print', rotulo: 'Abrir IS', ariaLabel: 'Abrir IS pelo print do SINAIS', icone: 'photo_camera', onClick: () => abrirIS('print'), permitido: podeIS },
             { id: 'pericia', rotulo: atestado ? 'Atestado' : 'Perícia Menor', icone: 'personal_injury', onClick: novaPericiaAbrir, permitido: podePericia },
+            // Itens do antigo menu do Claude: o do chat mantém o símbolo do Claude; "Editar IS" lê os prints do SINAIS.
+            { id: 'assessor-ia', rotulo: 'Assessor IA', ariaLabel: 'Assessor IA', icone: 'smart_toy', iconeNode: <SimboloClaude tamanho={22} />, onClick: () => setAssessorAberto(true), permitido: isAssessor.length > 0 },
+            { id: 'editar-is', rotulo: 'Editar IS', ariaLabel: 'Editar IS (prints do SINAIS)', icone: 'photo_camera', onClick: editarIS.onClick, disabled: !!printBloqueado, permitido: isAssessor.length > 0 },
           ]} />
         )}
 

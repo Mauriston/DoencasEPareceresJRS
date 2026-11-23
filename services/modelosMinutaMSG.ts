@@ -16,5 +16,5 @@ export const iniciarModelosMSG = (): (() => void) =>
   observarModelosMSG(cru => definirModelosMSG(cru), () => definirModelosMSG(null));
 
 /** Grava os campos de UM modelo (merge; os outros ficam). */
-export const salvarModeloMSG = (tipo: TipoModeloMSG, campos: Record<string, string>, usuario: string) =>
+export const salvarModeloMSG = (tipo: TipoModeloMSG | string, campos: Record<string, string>, usuario: string) =>
   setDoc(ref(), { [tipo]: { ...campos, alteradoPor: usuario, alteradoEm: serverTimestamp() } }, { merge: true });

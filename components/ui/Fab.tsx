@@ -31,6 +31,8 @@ export interface AcaoFab {
   rotulo: string;
   /** Material Symbol. */
   icone: string;
+  /** Ícone próprio (ex.: o símbolo do Claude) no lugar do Material Symbol — só o FAB da página usa. */
+  iconeNode?: React.ReactNode;
   /** Uma das duas: ação ou rota (react-router). */
   onClick?: () => void;
   to?: string;
@@ -63,7 +65,9 @@ const estiloPosicao = (posicao: PosicaoFab): React.CSSProperties | undefined => 
   ? { bottom: 'var(--fab-bottom, calc(16px + env(safe-area-inset-bottom)))' }
   : undefined);
 
-const Icone: React.FC<{ acao: AcaoFab }> = ({ acao }) => (
+const Icone: React.FC<{ acao: AcaoFab }> = ({ acao }) => acao.iconeNode && !acao.loading ? (
+  <span className="inline-flex items-center justify-center w-6 h-6 shrink-0" aria-hidden="true">{acao.iconeNode}</span>
+) : (
   <span className={`material-symbols-outlined text-[24px] shrink-0 ${acao.loading ? 'animate-spin' : ''}`} aria-hidden="true">
     {acao.loading ? 'progress_activity' : acao.icone}
   </span>
