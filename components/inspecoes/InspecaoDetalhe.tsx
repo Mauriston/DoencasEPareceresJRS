@@ -445,7 +445,8 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const comDs1a = !!ds1a.valor.trim();
   const erroData = comDs1a ? erroDataConclusao(dataConclusao, is.dataLaudo || '') : '';
   const motivoConcluir = motivoNaoConcluir({ ...estadoConclusao, ds1a: ds1a.valor, cid: cidLocal }, dataConclusao);
-  const reabrivel = permissoes.editar && podeReabrirIS(is, nav?.authUser?.uid, !!permissoes.reabrir);
+  // Na Ficha (casca inline), "Reabrir IS" fica no menu ⋮ de cada item do histórico de IS.
+  const reabrivel = casca !== 'inline' && permissoes.editar && podeReabrirIS(is, nav?.authUser?.uid, !!permissoes.reabrir);
   const acoes: AcaoRodape[] = [
     ...(reabrivel ? [{ id: 'reabrir', rotulo: 'Reabrir IS', icone: 'lock_open', variante: 'secondary' as const, onClick: reabrirIS }] : []),
     ...(permissoes.minuta && mostraMinutaMsg(is) ? [{ id: 'minuta', rotulo: 'Minuta MSG', icone: 'mail', variante: 'secondary' as const, onClick: onMinuta }] : []),

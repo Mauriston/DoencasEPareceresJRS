@@ -5,9 +5,10 @@
 // quando há um perito filtrado, os turnos em que ele não atende esmaecidos. Clicar numa IS abre os
 // detalhes; clicar num horário livre (quem pode agendar) abre o agendamento nesse horário (IS aberta ou
 // nova IS); o botão "+" de um dia abre o agendamento de uma IS aberta naquele dia.
-// À esquerda, o painel das IS abertas ainda sem entrevista (com o mini calendário no topo na visão Dia): padrão D
-// (4 + 8 colunas) com o gatilho @split (largura útil ≥ 960 px, auditoria v3 · L1/CAL2); abaixo dele o painel vai
-// para DEPOIS da grade, recolhido, e não a empurra para baixo da dobra.
+// O painel das IS abertas ainda sem entrevista (com o mini calendário no topo na visão Dia) começa recolhido: o calendário
+// ocupa toda a largura e o botão ☰ (com o nº de IS) no canto superior esquerdo do card o expande à esquerda, com o
+// calendário encolhendo em paralelo (gatilho @split, largura útil ≥ 960 px, auditoria v3 · L1/CAL2); abaixo dele o painel vai
+// para DEPOIS da grade e não a empurra para baixo da dobra.
 // A página só renderiza o calendário a partir de md (768 px · 4g). Semana só a partir de 1024 px (as 5 colunas
 // cabem sem rolar); no tablet ficam Dia e Mês.
 // Arrastar (HTML5 drag-and-drop) um cartão do painel para um dia/horário — ou uma IS agendada ainda sem
@@ -21,7 +22,9 @@ import { AgendarDialog } from './AgendarDialog';
 import { AgendarNoHorarioDialog } from './AgendarNoHorarioDialog';
 import { MiniCalendarioIS } from './MiniCalendarioIS';
 import { CalendarioPainelAbertas, TIPO_ARRASTE_IS } from './CalendarioPainelAbertas';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Button } from '../ui/Button';
+import { IconButton } from '../ui/IconButton';
 import { Segmented } from '../ui/Segmented';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import { carregarPeritos, type PeritoIS } from '../../services/peritosIS';
@@ -34,6 +37,10 @@ import {
 import { podeArrastarIS, abertasNaoAgendadas, semanasUteisDoMes, nomeCurtoInspecionado } from '../../utils/calendarioIS';
 
 type Modo = 'dia' | 'semana' | 'mes';
+
+/** Largura do painel das IS abertas (px) e o espaço entre ele e o calendário. */
+const LARGURA_PAINEL = 340;
+const GAP_PAINEL = 24;
 
 const INICIO_GRADE = 7 * 60; // 07:00
 const FIM_GRADE = 17 * 60 + 20; // 17:20 (último slot da tarde termina às 17:00)
@@ -254,6 +261,22 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
   };
   const irHoje = () => setAncora(diaUtilOuProximo(hoje));
 
+  // Painel das IS abertas: recolhido de início; `largo` = largura útil ≥ 960 px (gatilho @split), onde ele desliza ao lado.
+  const [painelAberto, setPainelAberto] = useState(false);
+  const raiz = useRef<HTMLDivElement>(null);
+  const [largo, setLargo] = useState(true);
+  const reduzirMovimento = useReducedMotion();
+  useEffect(() => {
+    const el = raiz.current;
+    if (!el) return undefined;
+    const medir = () => setLargo(el.clientWidth >= 960);
+    medir();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const dias = modo === 'dia' ? [ancora] : modo === 'semana' ? Array.from({ length: 5 }, (_, i) => somarDias(inicioDaSemana(ancora), i)) : [];
 
   // Ao abrir a grade, rola até as 8h (ou o primeiro evento do período).
@@ -262,29 +285,47 @@ export const CalendarioIS: React.FC<Props> = ({ inspecoes, bloqueios, config, pe
   /** "+" de um dia: agenda uma IS aberta naquele dia. */
   const maisDoDia = (d: string) => (podeAgendar && aceitaDia(d) ? () => setDialogo({ tipo: 'dia', data: d }) : undefined);
 
+  const painel = (
+    <CalendarioPainelAbertas
+      abertas={abertas} hoje={hoje} onAbrir={onAbrir}
+      onAgendar={podeAgendar ? is => setDialogo({ tipo: 'agendar', is }) : undefined}
+      onArrastarInicio={(is, e) => iniciarArraste(is, 'painel', e)} onArrastarFim={terminarArraste}
+      arrastandoId={arraste?.origem === 'painel' ? arraste.is.id : null}
+      topo={modo === 'dia' ? (
+        <MiniCalendarioIS compacto inspecoes={peritoUid ? inspecoes.filter(i => i.peritoUid === peritoUid) : inspecoes} diasConcursos={diasConcursos} selecionado={ancora} onSelecionar={d => setAncora(diaUtilOuProximo(d))} />
+      ) : undefined}
+    />
+  );
+
   return (
     <>
-    <div className="@container">
-    <div className="grid grid-cols-1 @split:grid-cols-12 gap-6 @split:items-stretch">
-      {/* Painel (4/12): em @split, mesma altura do calendário (posição absoluta na célula) e rolagem própria;
-          abaixo de @split, depois do calendário (order) — não empurra a grade. */}
-      <div className="min-w-0 order-2 @split:order-none @split:col-span-4 @split:relative @split:min-h-[24rem]">
-        <div className="@split:absolute @split:inset-0">
-          <CalendarioPainelAbertas
-            abertas={abertas} hoje={hoje} onAbrir={onAbrir}
-            onAgendar={podeAgendar ? is => setDialogo({ tipo: 'agendar', is }) : undefined}
-            onArrastarInicio={(is, e) => iniciarArraste(is, 'painel', e)} onArrastarFim={terminarArraste}
-            arrastandoId={arraste?.origem === 'painel' ? arraste.is.id : null}
-            topo={modo === 'dia' ? (
-              <MiniCalendarioIS compacto inspecoes={peritoUid ? inspecoes.filter(i => i.peritoUid === peritoUid) : inspecoes} diasConcursos={diasConcursos} selecionado={ancora} onSelecionar={d => setAncora(diaUtilOuProximo(d))} />
-            ) : undefined}
-          />
-        </div>
-      </div>
+    <div className="@container" ref={raiz}>
+    <div className={`flex ${largo ? 'flex-row items-stretch' : 'flex-col gap-6'}`}>
+      {/* Painel das IS abertas e não agendadas: começa recolhido (o calendário ocupa tudo) e abre pelo botão do canto
+          do calendário. Em @split (≥ 960 px) desliza para dentro à esquerda enquanto o calendário encolhe (a margem
+          esquerda dele avança para a direita); abaixo disso, vira uma seção depois da grade, sem animação de largura. */}
+      <AnimatePresence initial={false}>
+        {painelAberto && (largo ? (
+          <motion.div
+            key="painel" className="shrink-0 relative overflow-hidden min-h-[24rem]"
+            initial={{ width: 0, opacity: 0 }} animate={{ width: LARGURA_PAINEL + GAP_PAINEL, opacity: 1 }} exit={{ width: 0, opacity: 0 }}
+            transition={reduzirMovimento ? { duration: 0 } : { duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
+          >
+            <div className="absolute inset-y-0 left-0" style={{ width: LARGURA_PAINEL }}>{painel}</div>
+          </motion.div>
+        ) : (
+          <div key="painel" className="min-w-0 order-2">{painel}</div>
+        ))}
+      </AnimatePresence>
 
-      <div className="bg-white rounded-xl border border-line overflow-clip min-w-0 @split:col-span-8">
+      <div className="bg-white rounded-xl border border-line overflow-clip min-w-0 flex-1">
         <div className="flex flex-wrap items-center justify-between gap-2 p-3 border-b border-line">
           <div className="flex items-center gap-1 min-w-0">
+            <IconButton
+              icon={painelAberto ? 'menu_open' : 'menu'} label={painelAberto ? 'Recolher as IS aguardando agendamento' : 'Expandir as IS aguardando agendamento'}
+              variant="ghost" badge={abertas.length} aria-expanded={painelAberto} aria-controls="calendario-painel-abertas"
+              className="mr-1" onClick={() => setPainelAberto(a => !a)}
+            />
             <Button variant="secondary" onClick={irHoje}>Hoje</Button>
             <button type="button" onClick={() => navegar(-1)} aria-label="Período anterior" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined" aria-hidden="true">chevron_left</span></button>
             <button type="button" onClick={() => navegar(1)} aria-label="Próximo período" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>

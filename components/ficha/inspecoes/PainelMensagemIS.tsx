@@ -39,16 +39,8 @@ const CampoLeituraCopiavel: React.FC<{ rotulo: string; valor: string; multilinha
   );
 };
 
-const dataHora = (m: MensagemISRecord) => {
-  const d = m.registradoEm?.toDate?.();
-  return d ? `${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : '';
-};
-
 export const PainelMensagemIS: React.FC<{ mensagem: MensagemISRecord; onAviso: (msg: string, tom?: 'success' | 'error') => void }> = ({ mensagem: m, onAviso }) => (
-  <CascaPainelFicha
-    titulo={m.assunto || `Mensagem da IS ${m.is}`} icone="chat"
-    subtitulo={[`IS ${m.is}`, m.finalidade, dataHora(m) ? `registrada em ${dataHora(m)}` : '', m.registradoPor?.usuario ? `por ${m.registradoPor.usuario}` : ''].filter(Boolean).join(' · ')}
-  >
+  <CascaPainelFicha titulo={m.finalidade || `IS ${m.is}`} icone="chat" subtitulo={`IS ${m.is}`}>
     <div className="space-y-4">
       {linhasMinuta({ de: m.de || '', para: m.para || '', info: m.info || '', assunto: m.assunto || '', texto: m.texto || '' }).map(l => (
         <CampoLeituraCopiavel key={l.rotulo} rotulo={l.rotulo} valor={l.valor} multilinha={l.rotulo === 'TEXTO'}

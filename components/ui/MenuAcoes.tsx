@@ -25,6 +25,8 @@ export interface BotaoMenu {
   texto: string; icone: string; badge?: number; /** Botão primário (navy cheio); padrão: secundário. */ primario?: boolean;
   /** Conteúdo próprio no lugar do ícone + texto (ex.: um logo); o `texto` continua no rótulo acessível. */
   conteudo?: React.ReactNode;
+  /** Botão inativo (aparência desabilitada, sem abrir o menu). */
+  desabilitado?: boolean;
 }
 
 export const MenuAcoes: React.FC<{
@@ -82,9 +84,9 @@ export const MenuAcoes: React.FC<{
     <>
       {gatilho ? (
         <button
-          ref={botao} type="button" onClick={alternar} aria-haspopup="menu" aria-expanded={!!pos}
+          ref={botao} type="button" onClick={alternar} aria-haspopup="menu" aria-expanded={!!pos} disabled={gatilho.desabilitado}
           aria-label={gatilho.badge ? `${rotulo} (${gatilho.badge} pendente${gatilho.badge > 1 ? 's' : ''})` : rotulo}
-          className={`relative inline-flex items-center justify-center whitespace-nowrap ${size === 'sm' ? 'h-8 px-3 gap-1.5' : 'h-10 px-4 gap-2'} rounded-lg text-sm font-bold border border-navy transition-colors ${gatilho.primario ? 'bg-navy text-white hover:bg-navy-hover' : 'bg-white text-navy hover:bg-thead'} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold ${classeGatilho}`}
+          className={`relative inline-flex items-center justify-center whitespace-nowrap ${size === 'sm' ? 'h-8 px-3 gap-1.5' : 'h-10 px-4 gap-2'} rounded-lg text-sm font-bold border border-navy transition-colors ${gatilho.primario ? 'bg-navy text-white hover:bg-navy-hover' : 'bg-white text-navy hover:bg-thead'} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white ${classeGatilho}`}
         >
           {gatilho.conteudo ?? (<>
             <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{gatilho.icone}</span>

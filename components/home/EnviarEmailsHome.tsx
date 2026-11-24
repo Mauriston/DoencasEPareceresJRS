@@ -11,6 +11,7 @@ import { EnviarAgendamentoDialog } from '../inspecoes/EnviarAgendamentoDialog';
 import { EnviarResultadoDialog } from '../inspecoes/EnviarResultadoDialog';
 import { EnviarResultadoBeneficiosDialog } from '../inspecoes/emails/EnviarResultadoBeneficiosDialog';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
+import type { TipoEmailPendente } from '../../utils/emailsDispensados';
 import type { MilitarRecord } from '../../services/firestoreMilitares';
 import { emailDoInspecionado } from '../../services/emailResultadoIS';
 import { ehTipoEmailPendente } from '../../utils/pendenciasEmailIS';
@@ -25,16 +26,19 @@ interface Props {
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
   /** Celular: sem o botão ▾ — as opções abrem num bottom sheet acionado pelo FAB da Início. */
   sheet?: { aberto: boolean; onFechar: () => void };
+  /** Ficha do inspecionado: só os e-mails individuais, sem itens desabilitados; sem pendência, o botão fica desabilitado. */
+  tipos?: TipoEmailPendente[];
+  somentePendentes?: boolean;
 }
 
-export const EnviarEmailsHome: React.FC<Props> = ({ inspecoes, militares, hoje, podeLimpar, onAviso, sheet }) => {
+export const EnviarEmailsHome: React.FC<Props> = ({ inspecoes, militares, hoje, podeLimpar, onAviso, sheet, tipos, somentePendentes }) => {
   const [params, setParams] = useSearchParams();
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
   const [enviandoResultado, setEnviandoResultado] = useState<InspecaoRecord | null>(null);
   const [enviandoBeneficios, setEnviandoBeneficios] = useState<InspecaoRecord | null>(null);
   const emails = useEmailsIS({
     inspecoes, militares, hoje, podeLimpar,
-    onEnviarAgendamento: setAgendando, onEnviarResultado: setEnviandoResultado, onEnviarResultadoBeneficios: setEnviandoBeneficios, onAviso,
+    onEnviarAgendamento: setAgendando, onEnviarResultado: setEnviandoResultado, onEnviarResultadoBeneficios: setEnviandoBeneficios, onAviso, tipos, somentePendentes,
   });
   const militarDe = (is: InspecaoRecord) => militares.find(m => m.id === is.inspecionadoId);
 
@@ -51,7 +55,7 @@ export const EnviarEmailsHome: React.FC<Props> = ({ inspecoes, militares, hoje, 
 
   return (
     <>
-      {sheet ? (sheet.aberto && <SheetOpcoes titulo="Enviar emails" icone="mail" itens={emails.itens} onClose={sheet.onFechar} />) : <MenuAcoes rotulo="Enviar emails" botao={{ texto: 'Enviar emails', icone: 'mail', badge: emails.total }} itens={emails.itens} classeGatilho="w-full sm:w-auto" />}
+      {sheet ? (sheet.aberto && <SheetOpcoes titulo="Enviar emails" icone="mail" itens={emails.itens} onClose={sheet.onFechar} />) : <MenuAcoes rotulo="Enviar emails" botao={{ texto: 'Enviar emails', icone: 'mail', badge: emails.total, desabilitado: !!somentePendentes && emails.itens.length === 0 }} itens={emails.itens} classeGatilho="w-full sm:w-auto" />}
       {emails.dialogos}
       {agendando && ehElegivelAgendamento(agendando) && !agendamentoJaEnviado(agendando) && (
         <EnviarAgendamentoDialog
