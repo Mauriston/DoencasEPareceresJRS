@@ -3,6 +3,7 @@
 // para o cadastro de uma nova IS nesse horário. O perito precisa atender o turno, o horário estar livre e
 // ser do AMP de competência da finalidade da IS. Com só a data (botão "+" de um dia do calendário), escolhe
 // a IS aberta, o perito com horário livre no dia e o horário.
+import { ScrollFade } from '@animate-ui/react/primitives/effects/scroll-fade';
 import React, { useMemo, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
@@ -134,7 +135,7 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
             ) : (
               <>
                 <input type="search" aria-label="Buscar IS aberta" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nº, inspecionado ou finalidade…" className={controlClass} autoComplete="off" />
-                <ul className="border border-line rounded-xl divide-y divide-line max-h-60 overflow-y-auto" aria-label="IS abertas">
+                <ScrollFade asChild shrink={0} blur={0}><ul className="border border-line rounded-xl divide-y divide-line max-h-60 overflow-y-auto" aria-label="IS abertas">
                   {filtradas.length === 0 && <li className="px-3 py-3 text-ink-3">Nenhuma IS encontrada.</li>}
                   {filtradas.map(is => {
                     const st = STATUS_IS[statusEfetivoIS(is)];
@@ -153,7 +154,7 @@ export const AgendarNoHorarioDialog: React.FC<Props> = ({ dataHora, peritoFiltro
                       </li>
                     );
                   })}
-                </ul>
+                </ul></ScrollFade>
               </>
             )}
             {escolhida && (candidatos.length === 0

@@ -4,6 +4,7 @@
 // contagem regressiva do término (vinho só para "termina hoje" — G1), CID com o código em destaque,
 // abas sublinhadas (ouro = ativa — G2) e o saldo acumulado de 30 dias.
 import React, { useEffect, useState } from 'react';
+import { Highlight, HighlightItem } from '@animate-ui/react/primitives/effects/highlight';
 import { StatusTag } from '../ui/StatusTag';
 import { ROTULO_TIPO_PERICIA, type ContagemTermino, type TipoPericia } from '../../utils/periciaMenorResumo';
 import { MAX_DIAS_ACUMULADOS } from '../../utils/periciaMenorRegras';
@@ -49,6 +50,7 @@ export interface AbaSublinhada<T extends string> {
  * e painel lateral); 'nunca' deixa cada aba do tamanho do texto, com rolagem lateral (Ficha, 4+ abas).
  * Setas ← → trocam a aba; `idBase` liga cada aba ao painel `${idBase}-painel`. `linha={false}` tira o filete
  * inferior quando quem envolve as abas já desenha a linha (cabeçalho de card com a vista ao lado — Inspeções, Concursos).
+ * O filete ouro desliza entre as abas (Highlight do Animate UI, spring; sem animação com prefers-reduced-motion).
  * Padrão das páginas de lista do grupo Trabalho: situação = estas abas; vista = `Segmented`/ícones à parte.
  */
 export function AbasSublinhadas<T extends string>({ abas, ativa, onChange, rotulo, idBase, className = '', altura = 'md', distribuir = 'celular', linha = true }: {
@@ -66,26 +68,33 @@ export function AbasSublinhadas<T extends string>({ abas, ativa, onChange, rotul
     onChange(prox.id);
     requestAnimationFrame(() => document.getElementById(`${idBase}-aba-${prox.id}`)?.focus());
   };
-  const largura = distribuir === 'sempre' ? 'flex-1 justify-center px-3' : distribuir === 'celular' ? 'flex-1 justify-center px-2 md:px-3 md:flex-none md:justify-start' : 'flex-none px-3';
+  // Layout dividido: o contêiner do Highlight leva o flex; o botão, o alinhamento interno.
+  const ocupa = distribuir === 'sempre' ? 'flex-1' : distribuir === 'celular' ? 'flex-1 md:flex-none' : 'flex-none';
+  const largura = distribuir === 'sempre' ? 'justify-center px-3' : distribuir === 'celular' ? 'justify-center px-2 md:px-3 md:justify-start' : 'px-3';
+  const valida = abas.some(a => a.id === ativa && !a.desabilitada);
   return (
     <div role="tablist" aria-label={rotulo} onKeyDown={aoTecla} className={`flex gap-1 overflow-x-auto ${linha ? 'border-b border-line' : ''} ${className}`}>
+      <Highlight controlledItems value={valida ? ativa : null} className="inset-x-0 bottom-0 h-[3px] bg-gold">
       {abas.map(a => {
         const sel = a.id === ativa && !a.desabilitada;
-        const cor = a.desabilitada ? 'border-transparent text-ink-4 cursor-not-allowed' : sel ? 'border-gold text-navy' : 'border-transparent text-ink-3 hover:text-navy';
+        const cor = a.desabilitada ? 'text-ink-4 cursor-not-allowed' : sel ? 'text-navy' : 'text-ink-3 hover:text-navy';
         return (
+          <HighlightItem key={a.id} value={a.id} disabled={a.desabilitada} className={`${ocupa} shrink-0 flex -mb-px`}>
           <button
-            key={a.id} type="button" role="tab" id={`${idBase}-aba-${a.id}`} aria-selected={sel} aria-controls={`${idBase}-painel`} tabIndex={sel ? 0 : -1}
+            type="button" role="tab" id={`${idBase}-aba-${a.id}`} aria-selected={sel} aria-controls={`${idBase}-painel`} tabIndex={sel ? 0 : -1}
             aria-disabled={a.desabilitada || undefined} title={a.dica}
             onClick={() => { if (!a.desabilitada) onChange(a.id); }}
-            className={`${largura} ${altura === 'sm' ? 'h-11' : 'h-12'} shrink-0 inline-flex items-center gap-1.5 text-sm font-bold whitespace-nowrap border-b-[3px] -mb-px transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold ${cor}`}
+            className={`${largura} ${altura === 'sm' ? 'h-11' : 'h-12'} w-full inline-flex items-center gap-1.5 text-sm font-bold whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold ${cor}`}
           >
             {a.rotulo}
             {a.contagem !== undefined && (
               <span className={`min-w-5 h-5 px-1.5 rounded-full text-xs font-bold inline-flex items-center justify-center tabular-nums ${sel ? 'bg-navy text-white' : a.alerta && a.contagem > 0 ? 'bg-wine text-white' : 'bg-thead text-ink-3'}`}>{a.contagem}</span>
             )}
           </button>
+          </HighlightItem>
         );
       })}
+      </Highlight>
     </div>
   );
 }
@@ -96,7 +105,7 @@ export const BarraDias: React.FC<{ atual: number; total: number; rotulo: React.R
   return (
     <div className={className}>
       <div className="h-2 rounded-full bg-line overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={atual}>
-        <div className="h-full rounded-full bg-navy transition-all duration-500" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full bg-navy transition-[width] duration-300 ease-out motion-reduce:transition-none" style={{ width: `${pct}%` }} />
       </div>
       <p className="text-xs text-ink-3 mt-1.5 tabular-nums">{rotulo}</p>
     </div>

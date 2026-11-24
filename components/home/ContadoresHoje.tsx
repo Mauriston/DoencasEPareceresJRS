@@ -6,8 +6,11 @@
 // contador é de atraso e o valor é maior que 0; as colunas acompanham a quantidade (4, 3, 2 ou 1 card ocupando a
 // largura toda, sem card vazio). Sem nenhum contador possível, a faixa não aparece. A seta (arrow_forward) aparece
 // em todos os tamanhos — no celular, à direita do rótulo — para indicar que o card abre outra página.
+// Valores numéricos contam até o valor (CountingNumber, Animate UI, spring) e, ao mudar, seguem de onde estão;
+// com prefers-reduced-motion mostram o valor na hora, e o aria-label do link já leva o valor final.
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { CountingNumber } from '@animate-ui/react/primitives/texts/counting-number';
 
 export interface ContadorHoje {
   id: string;
@@ -56,7 +59,7 @@ export const ContadoresHoje: React.FC<{ contadores: ContadorHoje[] }> = ({ conta
                   <span className="material-symbols-outlined text-[18px] text-ink-4 group-hover:text-navy shrink-0" aria-hidden="true">arrow_forward</span>
                 </span>
                 <span className="flex flex-col gap-1">
-                  <span className={`text-kpi md:text-[1.75rem] font-extrabold tabular-nums leading-none ${vinho ? 'text-wine' : 'text-navy'}`}>{c.valor}</span>
+                  <span className={`text-kpi md:text-[1.75rem] font-extrabold tabular-nums leading-none ${vinho ? 'text-wine' : 'text-navy'}`}>{typeof c.valor === 'number' ? <CountingNumber number={c.valor} aria-hidden="true" /> : c.valor}</span>
                   {c.dica && <span className={`hidden md:block text-xs truncate ${c.dicaAtraso ? 'text-wine font-semibold' : 'text-ink-3'}`}>{c.dica}</span>}
                 </span>
               </Link>
