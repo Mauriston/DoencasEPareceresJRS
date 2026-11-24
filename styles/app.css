@@ -476,8 +476,8 @@ th[role="button"],
 }
 
 /* Barra inferior flutuante (components/shell/BarraInferior.tsx): com FAB de página ao lado
-   (html[data-fab-pagina], publicado por components/ui/Fab.tsx), a pílula deixa 12 px + 56 px do FAB à direita. */
-html[data-fab-pagina] [data-barra-flutuante] { right: calc(84px + env(safe-area-inset-right)); }
+   (html[data-fab-pagina], publicado por components/ui/Fab.tsx), a pílula deixa 16 px de margem + 56 px do FAB + 8 px de vão à direita. */
+html[data-fab-pagina] [data-barra-flutuante] { right: calc(80px + env(safe-area-inset-right)); }
 
 /* AcoesRodape no mobile (components/ui/AcoesRodape.tsx): as ações viram um FAB flutuante.
    A barra de rodapé que só abriga o FAB perde borda e altura, e o corpo rolável do sheet

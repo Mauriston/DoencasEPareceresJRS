@@ -5,17 +5,19 @@
 //    (components/ui/Fab.tsx) fica ao lado dela, separado, na mesma linha de base. Quando a página tem
 //    FAB (html[data-fab-pagina], publicado pelo Fab), a pílula encolhe à direita para abrir espaço (styles/app.css).
 //  • Ativo: pílula ouro atrás do ícone + rótulo em negrito (nunca só a cor do ícone).
+//  • Rótulos "ao lado" (BottomNavigationLabel show="active"): só o item ativo mostra o nome, ao lado do ícone, dentro
+//    da pílula ouro; os demais ficam só com o ícone (o nome continua no aria-label). A largura do rótulo anima com spring.
 //  • Animações do Animate UI (primitivo BottomNavigation, `@animate-ui/react` + `motion`): o destaque ouro desliza
 //    entre os itens (spring 300/30) e os itens escalam a 0,97 ao toque. A decisão de ocultar continua nossa.
 //  • Oculta ao rolar para baixo e volta ao rolar para cima (hooks/useOcultarAoRolar.ts), com
 //    translateY(100%) em 200 ms cubic-bezier(0.2,0,0,1) — sem animação com prefers-reduced-motion.
 //    Oculta fica `inert` (nem clicável nem focável).
 //  • Publica no <html> as variáveis que o FAB (components/ui/Fab.tsx) e o conteúdo usam:
-//      --tabbar-h      espaço ocupado embaixo (margem 12 px + barra 64 px + área segura) · 0 sem barra/desktop
-//      --tabbar-folga  folga fixa embaixo do conteúdo (96 px + área segura) · 0 no desktop
-//      --fab-bottom    onde o FAB da página fica: centrado na barra (16 px + área segura), fixo mesmo com a barra oculta
+//      --tabbar-h      espaço ocupado embaixo (margem 12 px + barra 62 px + área segura) · 0 sem barra/desktop
+//      --tabbar-folga  folga fixa embaixo do conteúdo (94 px + área segura) · 0 no desktop
+//      --fab-bottom    onde o FAB da página fica: centrado na barra (15 px + área segura), fixo mesmo com a barra oculta
 import React, { useContext, useEffect, useState, type RefObject } from 'react';
-import { BottomNavigation, BottomNavigationHighlight, BottomNavigationHighlightItem, BottomNavigationItem } from '@animate-ui/react/primitives/bottom-navigation';
+import { BottomNavigation, BottomNavigationHighlight, BottomNavigationHighlightItem, BottomNavigationItem, BottomNavigationLabel } from '@animate-ui/react/primitives/bottom-navigation';
 import { useReducedMotion } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
 import { NavContext } from '../../context/NavContext';
@@ -28,24 +30,26 @@ import { useConcursoEmAndamento } from '../../hooks/useConcursoEmAndamento';
 
 export const ID_DRAWER_MENU = 'menu-principal-drawer';
 
-const OCUPADO = 'calc(76px + env(safe-area-inset-bottom))';
-const FOLGA = 'calc(96px + env(safe-area-inset-bottom))';
-const FAB_BOTTOM = 'calc(16px + env(safe-area-inset-bottom))';
+const OCUPADO = 'calc(74px + env(safe-area-inset-bottom))';
+const FOLGA = 'calc(94px + env(safe-area-inset-bottom))';
+const FAB_BOTTOM = 'calc(15px + env(safe-area-inset-bottom))';
 
 const definirVariaveis = (vars: Record<string, string | null>) => {
   const raiz = document.documentElement.style;
   Object.entries(vars).forEach(([k, v]) => (v === null ? raiz.removeProperty(k) : raiz.setProperty(k, v)));
 };
 
-const Item: React.FC<{ ativo: boolean; icone: string; rotulo: string }> = ({ ativo, icone, rotulo }) => (
+const Item: React.FC<{ icone: string; rotulo: string; compacto: boolean }> = ({ icone, rotulo, compacto }) => (
   <>
-    <span className="material-symbols-outlined text-[24px]" aria-hidden="true">{icone}</span>
-    <span className="text-xs leading-4 truncate max-w-full">{rotulo}</span>
+    <span className={`material-symbols-outlined shrink-0 ${compacto ? 'text-[22px]' : 'text-[24px] max-[340px]:text-[22px]'}`} aria-hidden="true">{icone}</span>
+    {/* Só o item ativo mostra o nome, ao lado do ícone; o espaço fica DENTRO do rótulo (pl-1.5) para dobrar com ele. */}
+    <BottomNavigationLabel show="active" className={`pl-1.5 leading-5 font-bold ${compacto ? 'text-[13px]' : 'text-sm max-[340px]:text-[13px]'}`}>{rotulo}</BottomNavigationLabel>
   </>
 );
 
-// O destaque (pílula ouro) desliza entre os itens (primitivo do Animate UI); o item ativo vai em negrito navy.
-const classeItem = (ativo: boolean) => `relative z-10 w-full min-w-0 h-16 flex flex-col items-center justify-center gap-0.5 px-1 rounded-full transition-colors ${ativo ? 'font-bold text-navy' : 'font-semibold text-ink-3'} focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold`;
+// O destaque (pílula ouro) desliza entre os itens (primitivo do Animate UI); o ativo leva ícone + nome em navy.
+// Com 5 destinos (ou tela de até 340 px) o padding lateral encolhe, para a barra não estourar ao lado do FAB.
+const classeItem = (ativo: boolean, compacto: boolean) => `relative z-10 h-[52px] min-w-10 flex items-center justify-center ${compacto ? 'px-2.5' : 'px-3 max-[340px]:px-2.5'} rounded-full transition-colors ${ativo ? 'text-navy' : 'text-ink-3'} focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold`;
 
 export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = ({ alvo }) => {
   const nav = useContext(NavContext);
@@ -102,24 +106,24 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
       data-barra-flutuante=""
       className="md:hidden fixed z-topbar bg-white border border-line rounded-full shadow-[0_10px_28px_-4px_rgba(18,28,75,0.28),0_2px_8px_rgba(18,28,75,0.14)] bottom-[calc(12px+env(safe-area-inset-bottom))] left-[calc(12px+env(safe-area-inset-left))] right-[calc(12px+env(safe-area-inset-right))]"
     >
-      <BottomNavigationHighlight className="absolute inset-1 rounded-full bg-gold">
-        <ul className="flex items-stretch px-1">
+      <BottomNavigationHighlight className="absolute inset-0 rounded-full bg-gold">
+        <ul className="flex items-center justify-between p-1">
           {destinos.map(d => {
             const ativo = view === d.view && !drawerAberto;
             return (
-              <li key={d.view} className="flex-1 min-w-0 flex">
-                <BottomNavigationHighlightItem value={d.view} className="w-full">
+              <li key={d.view} className={`flex ${ativo ? 'shrink-0' : 'min-w-0'}`}>
+                <BottomNavigationHighlightItem value={d.view} className="rounded-full">
                   <BottomNavigationItem asChild value={d.view}>
-                    <Link to={pathForView(d.view)} aria-label={d.ariaLabel} aria-current={ativo ? 'page' : undefined} className={classeItem(ativo)}>
-                      <Item ativo={ativo} icone={d.icone} rotulo={d.rotulo} />
+                    <Link to={pathForView(d.view)} aria-label={d.ariaLabel} aria-current={ativo ? 'page' : undefined} className={classeItem(ativo, destinos.length > 4)}>
+                      <Item icone={d.icone} rotulo={d.rotulo} compacto={destinos.length > 4} />
                     </Link>
                   </BottomNavigationItem>
                 </BottomNavigationHighlightItem>
               </li>
             );
           })}
-          <li className="flex-1 min-w-0 flex">
-            <BottomNavigationHighlightItem value="menu" className="w-full">
+          <li className={`flex ${drawerAberto ? 'shrink-0' : 'min-w-0'}`}>
+            <BottomNavigationHighlightItem value="menu" className="rounded-full">
               <BottomNavigationItem asChild value="menu">
                 <button
                   type="button"
@@ -127,9 +131,9 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
                   aria-haspopup="dialog"
                   aria-expanded={drawerAberto}
                   aria-controls={ID_DRAWER_MENU}
-                  className={classeItem(drawerAberto)}
+                  className={classeItem(drawerAberto, destinos.length > 4)}
                 >
-                  <Item ativo={drawerAberto} icone="menu" rotulo="Menu" />
+                  <Item icone="menu" rotulo="Menu" compacto={destinos.length > 4} />
                 </button>
               </BottomNavigationItem>
             </BottomNavigationHighlightItem>
