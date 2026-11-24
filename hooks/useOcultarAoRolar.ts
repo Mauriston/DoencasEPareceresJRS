@@ -24,9 +24,11 @@ interface Opcoes {
   chaveRota: string;
   /** Algo do shell que deve congelar a barra (ex.: drawer do menu aberto). */
   congelado?: boolean;
+  /** false: a rolagem NÃO oculta (a barra minimiza por conta própria, no primitivo); só o teclado virtual a oculta. Padrão: true. */
+  rolagem?: boolean;
 }
 
-export const useOcultarAoRolar = (alvo: RefObject<HTMLElement | null>, { ativo, chaveRota, congelado = false }: Opcoes) => {
+export const useOcultarAoRolar = (alvo: RefObject<HTMLElement | null>, { ativo, chaveRota, congelado = false, rolagem = true }: Opcoes) => {
   const [rolagemVisivel, setRolagemVisivel] = useState(true);
   const [tecladoAberto, setTecladoAberto] = useState(false);
   const estado = useRef<EstadoRolagem>({ ultimoY: 0, acumulado: 0 });
@@ -41,7 +43,7 @@ export const useOcultarAoRolar = (alvo: RefObject<HTMLElement | null>, { ativo, 
 
   useEffect(() => {
     const el = alvo.current;
-    if (!ativo || !el) { setRolagemVisivel(true); return; }
+    if (!ativo || !rolagem || !el) { setRolagemVisivel(true); return; }
     let quadro = 0;
     const processar = () => {
       quadro = 0;
@@ -61,7 +63,7 @@ export const useOcultarAoRolar = (alvo: RefObject<HTMLElement | null>, { ativo, 
       el.removeEventListener('scroll', aoRolar);
       if (quadro) cancelAnimationFrame(quadro);
     };
-  }, [ativo, alvo]);
+  }, [ativo, rolagem, alvo]);
 
   // Teclado virtual aberto (iOS/Android): o visualViewport encolhe bem mais que a janela.
   useEffect(() => {

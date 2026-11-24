@@ -8,16 +8,18 @@
 //  • Rótulos "ao lado" (BottomNavigationLabel show="active"): só o item ativo mostra o nome, ao lado do ícone, dentro
 //    da pílula ouro; os demais ficam só com o ícone (o nome continua no aria-label). A largura do rótulo anima com spring.
 //  • Animações do Animate UI (primitivo BottomNavigation, `@animate-ui/react` + `motion`): o destaque ouro desliza
-//    entre os itens (spring 300/30) e os itens escalam a 0,97 ao toque. A decisão de ocultar continua nossa.
-//  • Oculta ao rolar para baixo e volta ao rolar para cima (hooks/useOcultarAoRolar.ts), com
-//    translateY(100%) em 200 ms cubic-bezier(0.2,0,0,1) — sem animação com prefers-reduced-motion.
-//    Oculta fica `inert` (nem clicável nem focável).
+//    entre os itens (spring 300/30) e os itens escalam a 0,97 ao toque.
+//  • MINIMIZA ao rolar para baixo (scrollBehavior="minimize", ouvindo o <main>): itens e barra encolhem para só os
+//    ícones (morph em spring, rótulo dobra) e voltam ao rolar para cima, ao chegar no topo, ao focar ou tocar na barra.
+//    O estado vai para o <html> (data-barra-minimizada) e o FAB da página acompanha (48 px, styles/app.css).
+//  • Só o teclado virtual OCULTA a barra (hooks/useOcultarAoRolar.ts, rolagem: false), com translateY em spring —
+//    fade com prefers-reduced-motion. Oculta fica `inert` (nem clicável nem focável).
 //  • Publica no <html> as variáveis que o FAB (components/ui/Fab.tsx) e o conteúdo usam:
-//      --tabbar-h      espaço ocupado embaixo (margem 12 px + barra 62 px + área segura) · 0 sem barra/desktop
+//      --tabbar-h      espaço ocupado embaixo (margem 12 px + barra 62 px, ou 54 px minimizada, + área segura) · 0 sem barra/desktop
 //      --tabbar-folga  folga fixa embaixo do conteúdo (94 px + área segura) · 0 no desktop
-//      --fab-bottom    onde o FAB da página fica: centrado na barra (15 px + área segura), fixo mesmo com a barra oculta
+//      --fab-bottom    onde o FAB da página fica: centrado na barra (15 px + área segura, igual minimizada ou não), fixo com a barra oculta
 import React, { useContext, useEffect, useState, type RefObject } from 'react';
-import { BottomNavigation, BottomNavigationHighlight, BottomNavigationHighlightItem, BottomNavigationItem, BottomNavigationLabel } from '@animate-ui/react/primitives/bottom-navigation';
+import { BottomNavigation, BottomNavigationHighlight, BottomNavigationHighlightItem, BottomNavigationItem, BottomNavigationLabel, useBottomNavigation } from '@animate-ui/react/primitives/bottom-navigation';
 import { useReducedMotion } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
 import { NavContext } from '../../context/NavContext';
@@ -31,12 +33,25 @@ import { useConcursoEmAndamento } from '../../hooks/useConcursoEmAndamento';
 export const ID_DRAWER_MENU = 'menu-principal-drawer';
 
 const OCUPADO = 'calc(74px + env(safe-area-inset-bottom))';
+const OCUPADO_MINIMIZADA = 'calc(66px + env(safe-area-inset-bottom))';
 const FOLGA = 'calc(94px + env(safe-area-inset-bottom))';
 const FAB_BOTTOM = 'calc(15px + env(safe-area-inset-bottom))';
 
 const definirVariaveis = (vars: Record<string, string | null>) => {
   const raiz = document.documentElement.style;
   Object.entries(vars).forEach(([k, v]) => (v === null ? raiz.removeProperty(k) : raiz.setProperty(k, v)));
+};
+
+/** Dentro do BottomNavigation: publica se a barra está minimizada (o FAB da página e o conteúdo acompanham). */
+const PublicaMinimizada: React.FC = () => {
+  const { minimized } = useBottomNavigation();
+  useEffect(() => {
+    const html = document.documentElement;
+    if (minimized) html.setAttribute('data-barra-minimizada', ''); else html.removeAttribute('data-barra-minimizada');
+    definirVariaveis({ '--tabbar-h': minimized ? OCUPADO_MINIMIZADA : OCUPADO });
+    return () => html.removeAttribute('data-barra-minimizada');
+  }, [minimized]);
+  return null;
 };
 
 const Item: React.FC<{ icone: string; rotulo: string; compacto: boolean }> = ({ icone, rotulo, compacto }) => (
@@ -49,7 +64,7 @@ const Item: React.FC<{ icone: string; rotulo: string; compacto: boolean }> = ({ 
 
 // O destaque (pílula ouro) desliza entre os itens (primitivo do Animate UI); o ativo leva ícone + nome em navy.
 // Com 5 destinos (ou tela de até 340 px) o padding lateral encolhe, para a barra não estourar ao lado do FAB.
-const classeItem = (ativo: boolean, compacto: boolean) => `relative z-10 h-[52px] min-w-10 flex items-center justify-center ${compacto ? 'px-2.5' : 'px-3 max-[340px]:px-2.5'} rounded-full transition-colors ${ativo ? 'text-navy' : 'text-ink-3'} focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold`;
+const classeItem = (ativo: boolean, compacto: boolean) => `relative z-10 h-[52px] min-w-10 flex items-center justify-center ${compacto ? 'px-2.5' : 'px-3 max-[340px]:px-2.5'} rounded-full transition-colors data-[minimized]:h-11 data-[minimized]:w-11 data-[minimized]:min-w-0 data-[minimized]:px-0 ${ativo ? 'text-navy' : 'text-ink-3'} focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold`;
 
 export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = ({ alvo }) => {
   const nav = useContext(NavContext);
@@ -70,7 +85,7 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
   // Sem cache e ainda carregando: espera, para a barra não pular de 4 para 5 itens.
   const pronta = !podeConcursos || emAndamento !== null;
   const ativa = !isDesktop && pronta;
-  const { visivel, mostrar } = useOcultarAoRolar(alvo, { ativo: ativa, chaveRota: pathname, congelado: drawerAberto });
+  const { visivel } = useOcultarAoRolar(alvo, { ativo: ativa, chaveRota: pathname, congelado: drawerAberto, rolagem: false });
 
   useEffect(() => {
     if (isDesktop) { definirVariaveis({ '--tabbar-h': null, '--tabbar-folga': null, '--fab-bottom': null }); return; }
@@ -95,17 +110,18 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
     <BottomNavigation
       aria-label="Navegação principal"
       value={drawerAberto ? 'menu' : (view ?? '')}
-      scrollBehavior="none"
-      // `inert` fora da tela: nem clicável nem focável. Quem decide ocultar é o nosso useOcultarAoRolar
-      // (teclado, sheets, limiar, rota); o primitivo só anima o deslize, numa spring.
+      // Rolar para baixo MINIMIZA (primitivo, ouvindo o <main>); só o teclado virtual oculta (useOcultarAoRolar,
+      // rolagem: false) e aí a barra fica `inert` (nem clicável nem focável).
+      scrollBehavior="minimize"
+      scrollContainer={alvo}
       inert={!visivel}
-      onFocus={mostrar}
       initial={false}
       animate={reduzMovimento ? { opacity: visivel ? 1 : 0, y: 0 } : { opacity: 1, y: visivel ? 0 : '250%' }}
       transition={reduzMovimento ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 35 }}
       data-barra-flutuante=""
       className="md:hidden fixed z-topbar bg-white border border-line rounded-full shadow-[0_10px_28px_-4px_rgba(18,28,75,0.28),0_2px_8px_rgba(18,28,75,0.14)] bottom-[calc(12px+env(safe-area-inset-bottom))] left-[calc(12px+env(safe-area-inset-left))] right-[calc(12px+env(safe-area-inset-right))]"
     >
+      <PublicaMinimizada />
       <BottomNavigationHighlight className="absolute inset-0 rounded-full bg-gold">
         <ul className="flex items-center justify-between p-1">
           {destinos.map(d => {
