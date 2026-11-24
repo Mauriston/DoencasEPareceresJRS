@@ -11,8 +11,10 @@
 //  A pilha fecha ao tocar fora, ao escolher, com Esc ou ao trocar de rota.
 // Posição: canto inferior direito, com área segura. O da página fica AO LADO da barra inferior
 // flutuante (separado dela, centrado na mesma linha: variável --fab-bottom publicada pela
-// BarraInferior) e permanece no lugar quando a barra se oculta; quando a barra MINIMIZA ao rolar
-// (html[data-barra-minimizada]) o FAB da página encolhe junto (48 px, styles/app.css); z-index do token sticky. Só no celular (< md): no desktop as mesmas ações
+// BarraInferior) e permanece no lugar quando a barra se oculta; z-index do token sticky.
+// COM a barra inferior (celular), o FAB da página entra por portal no ACESSÓRIO da barra (hooks/slotFabPagina.ts,
+// BottomNavigationAccessory do Animate UI): barra e FAB viram um grupo que se ajusta ao conteúdo e MINIMIZA
+// junto ao rolar (FAB 56 → 48 px, morph em spring). Sem a barra, cai no modo fixo (--fab-bottom). Só no celular (< md): no desktop as mesmas ações
 // ficam no PageHeader (a principal por último).
 //
 // API para as páginas:
@@ -24,10 +26,12 @@
 // A ORDEM do array é a prioridade: a primeira ação com `permitido !== false` é a principal.
 // Leia `permitido` de canUseFeature/canAccessPage no render (a matriz muda em tempo real).
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
+import { registrarFabPagina, useSlotFab } from '../../hooks/slotFabPagina';
 
 export interface AcaoFab {
   id: string;
@@ -55,11 +59,15 @@ const COR: Record<NonNullable<AcaoFab['variante']>, string> = {
 };
 const FOCO = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold';
 /** FAB redondo da página, só com ícone (56 px). */
-const REDONDO = 'inline-flex items-center justify-center w-14 h-14 rounded-full shadow-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
+const REDONDO = 'inline-flex items-center justify-center rounded-full shadow-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
 const PILULA = 'inline-flex items-center gap-2 h-14 max-w-[calc(100vw-2rem)] pl-4 pr-5 shadow-lg text-sm font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
 
 /** Onde o FAB fica: na página (acompanha a barra inferior) ou num sheet/drawer (acima da área segura). */
 export type PosicaoFab = 'pagina' | 'sheet';
+
+/** Dentro do acessório da barra, o FAB preenche o acessório (que o primitivo redimensiona ao minimizar). */
+const TAM_NO_ACESSORIO = 'w-full h-full';
+const TAM_FIXO = 'w-14 h-14';
 
 const classePosicao = (posicao: PosicaoFab) => (posicao === 'pagina'
   ? 'fixed right-[calc(1rem+env(safe-area-inset-right))] z-sticky transition-[bottom] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none'
@@ -102,13 +110,11 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
   }, []);
   useEscapeEmpilhado(() => fechar(), aberto);
   useEffect(() => { setAberto(false); }, [pathname]);
-  // Avisa a barra inferior flutuante que há FAB de página ao lado (ela encolhe à direita; styles/app.css).
-  useEffect(() => {
-    if (posicao !== 'pagina') return;
-    const html = document.documentElement;
-    html.setAttribute('data-fab-pagina', '');
-    return () => html.removeAttribute('data-fab-pagina');
-  }, [posicao]);
+  // Avisa a barra inferior que há FAB de página: ela abre o acessório e o FAB entra nele (portal).
+  useEffect(() => (posicao === 'pagina' ? registrarFabPagina() : undefined), [posicao]);
+  const slot = useSlotFab();
+  const noAcessorio = posicao === 'pagina' && !!slot;
+  const tam = noAcessorio ? TAM_NO_ACESSORIO : TAM_FIXO;
   useEffect(() => {
     if (!aberto) return;
     // Foco no item mais perto do polegar (a principal, último da pilha).
@@ -124,8 +130,8 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
   if (!principal) return null;
 
   if (!varias) {
-    return (
-      <div data-acoes-fab="" data-fab-posicao={posicao} className={classePosicao(posicao)} style={estiloPosicao(posicao)}>
+    const unico = (
+      <div data-acoes-fab="" className={noAcessorio ? 'relative size-full' : classePosicao(posicao)} style={noAcessorio ? undefined : estiloPosicao(posicao)}>
         <button
           type="button"
           onClick={() => executar(principal)}
@@ -133,13 +139,14 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
           aria-busy={principal.loading || undefined}
           aria-label={soIcone ? nome(principal) : principal.ariaLabel}
           title={soIcone ? nome(principal) : undefined}
-          className={`${soIcone ? REDONDO : `${PILULA} rounded-2xl`} ${FOCO} ${COR[principal.variante ?? 'primary']}`}
+          className={`${soIcone ? `${REDONDO} ${tam}` : `${PILULA} rounded-2xl`} ${FOCO} ${COR[principal.variante ?? 'primary']}`}
         >
           <Icone acao={principal} />
           {!soIcone && <span className="truncate">{principal.rotulo}</span>}
         </button>
       </div>
     );
+    return noAcessorio && slot ? createPortal(unico, slot) : unico;
   }
 
   const navegar = (e: React.KeyboardEvent) => {
@@ -157,13 +164,15 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
   // Pilha de cima para baixo: as demais (a de menor prioridade no alto) e a principal por último.
   const pilha = [...acoes.slice(1).reverse(), principal];
 
-  return (
+  const fundo = aberto ? <div className="fixed inset-0 z-sticky bg-black/10 animate-backdrop-in" onClick={() => fechar()} aria-hidden="true" /> : null;
+  const varios = (
     <>
-      {aberto && <div className="fixed inset-0 z-sticky bg-black/10 animate-backdrop-in" onClick={() => fechar()} aria-hidden="true" />}
-      <div data-acoes-fab="" data-fab-posicao={posicao} className={`${classePosicao(posicao)} flex flex-col items-end gap-3`} style={estiloPosicao(posicao)}>
+      {/* No acessório o fundo vai para o <body>: a barra tem transform e viraria o bloco de contenção do fixed. */}
+      {noAcessorio ? (fundo && createPortal(fundo, document.body)) : fundo}
+      <div data-acoes-fab="" className={noAcessorio ? 'relative size-full' : `${classePosicao(posicao)} flex flex-col items-end gap-3`} style={noAcessorio ? undefined : estiloPosicao(posicao)}>
         <AnimatePresence>
           {aberto && (
-            <div key="pilha" ref={menu} id={menuId} role="menu" aria-label="Ações" onKeyDown={navegar} className="flex flex-col items-end gap-2">
+            <div key="pilha" ref={menu} id={menuId} role="menu" aria-label="Ações" onKeyDown={navegar} className={`flex flex-col items-end gap-2 ${noAcessorio ? 'absolute bottom-full right-0 mb-3' : ''}`}>
               {pilha.map((a, i) => {
                 const ordem = pilha.length - 1 - i; // a principal (última da pilha) aparece primeiro
                 return (
@@ -199,7 +208,7 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
           aria-expanded={aberto}
           aria-controls={aberto ? menuId : undefined}
           onClick={() => (aberto ? fechar() : setAberto(true))}
-          className={`${aberto ? 'w-14 justify-center rounded-full' : soIcone ? 'w-14 justify-center rounded-full' : `${PILULA} rounded-2xl pr-3`} inline-flex items-center h-14 shadow-lg ${FOCO} ${COR.primary}`}
+          className={`${aberto || soIcone ? `${tam} justify-center rounded-full` : `${PILULA} rounded-2xl pr-3`} inline-flex items-center shadow-lg ${FOCO} ${COR.primary}`}
         >
           {aberto ? (
             <span className="material-symbols-outlined text-[26px]" aria-hidden="true">close</span>
@@ -216,6 +225,7 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
       </div>
     </>
   );
+  return noAcessorio && slot ? createPortal(varios, slot) : varios;
 };
 
 /**
