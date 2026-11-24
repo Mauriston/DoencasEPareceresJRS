@@ -1,14 +1,17 @@
 // Ficheiro: components/shell/BarraInferior.tsx
 // Barra inferior do celular (< md; auditoria v3, M4/4e): os destinos do perfil
 // (config/barraInferior.ts, mesma matriz canAccessPage da sidebar) + "Menu", que abre o drawer.
+//  • Flutuante: pílula branca com sombra, solta das bordas (12 px de margem), e o FAB da página
+//    (components/ui/Fab.tsx) fica ao lado dela, separado, na mesma linha de base. Quando a página tem
+//    FAB (html[data-fab-pagina], publicado pelo Fab), a pílula encolhe à direita para abrir espaço (styles/app.css).
 //  • Ativo: pílula ouro atrás do ícone + rótulo em negrito (nunca só a cor do ícone).
 //  • Oculta ao rolar para baixo e volta ao rolar para cima (hooks/useOcultarAoRolar.ts), com
 //    translateY(100%) em 200 ms cubic-bezier(0.2,0,0,1) — sem animação com prefers-reduced-motion.
 //    Oculta fica `inert` (nem clicável nem focável).
 //  • Publica no <html> as variáveis que o FAB (components/ui/Fab.tsx) e o conteúdo usam:
-//      --tabbar-h      altura da barra (64 px + área segura) · 0 sem barra/desktop
-//      --tabbar-folga  folga fixa embaixo do conteúdo (78 px + área segura) · 0 no desktop
-//      --fab-bottom    onde o FAB da página fica: 16 px acima da barra, ou 16 px + área segura com ela oculta
+//      --tabbar-h      espaço ocupado embaixo (margem 12 px + barra 64 px + área segura) · 0 sem barra/desktop
+//      --tabbar-folga  folga fixa embaixo do conteúdo (96 px + área segura) · 0 no desktop
+//      --fab-bottom    onde o FAB da página fica: centrado na barra (16 px + área segura), fixo mesmo com a barra oculta
 import React, { useContext, useEffect, useState, type RefObject } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { NavContext } from '../../context/NavContext';
@@ -21,9 +24,9 @@ import { useConcursoEmAndamento } from '../../hooks/useConcursoEmAndamento';
 
 export const ID_DRAWER_MENU = 'menu-principal-drawer';
 
-const ALTURA = 'calc(64px + env(safe-area-inset-bottom))';
-const FOLGA = 'calc(78px + env(safe-area-inset-bottom))';
-const FAB_SEM_BARRA = 'calc(16px + env(safe-area-inset-bottom))';
+const OCUPADO = 'calc(76px + env(safe-area-inset-bottom))';
+const FOLGA = 'calc(96px + env(safe-area-inset-bottom))';
+const FAB_BOTTOM = 'calc(16px + env(safe-area-inset-bottom))';
 
 const definirVariaveis = (vars: Record<string, string | null>) => {
   const raiz = document.documentElement.style;
@@ -39,7 +42,7 @@ const Item: React.FC<{ ativo: boolean; icone: string; rotulo: string }> = ({ ati
   </>
 );
 
-const CLASSE_ITEM = 'flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 h-16 px-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold';
+const CLASSE_ITEM = 'flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 h-16 px-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold rounded-full';
 
 export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = ({ alvo }) => {
   const nav = useContext(NavContext);
@@ -64,11 +67,11 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
   useEffect(() => {
     if (isDesktop) { definirVariaveis({ '--tabbar-h': null, '--tabbar-folga': null, '--fab-bottom': null }); return; }
     definirVariaveis({
-      '--tabbar-h': ativa ? ALTURA : '0px',
+      '--tabbar-h': ativa ? OCUPADO : '0px',
       '--tabbar-folga': FOLGA,
-      '--fab-bottom': ativa && visivel ? `calc(${ALTURA} + 16px)` : FAB_SEM_BARRA,
+      '--fab-bottom': FAB_BOTTOM,
     });
-  }, [isDesktop, ativa, visivel]);
+  }, [isDesktop, ativa]);
   useEffect(() => () => definirVariaveis({ '--tabbar-h': null, '--tabbar-folga': null, '--fab-bottom': null }), []);
 
   if (!ativa) return null;
@@ -80,9 +83,10 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
       // `inert` fora da tela: nem clicável nem focável.
       inert={!visivel}
       onFocus={mostrar}
-      className={`md:hidden fixed inset-x-0 bottom-0 z-topbar bg-white border-t border-line pb-[env(safe-area-inset-bottom)] transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${visivel ? 'translate-y-0' : 'translate-y-full'}`}
+      data-barra-flutuante=""
+      className={`md:hidden fixed z-topbar bg-white border border-line rounded-full shadow-lg bottom-[calc(12px+env(safe-area-inset-bottom))] left-[calc(12px+env(safe-area-inset-left))] right-[calc(12px+env(safe-area-inset-right))] transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${visivel ? 'translate-y-0' : 'translate-y-[calc(100%+24px+env(safe-area-inset-bottom))]'}`}
     >
-      <ul className="flex items-stretch">
+      <ul className="flex items-stretch px-1">
         {destinos.map(d => {
           const ativo = view === d.view && !drawerAberto;
           return (
