@@ -78,13 +78,19 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
   const destinos = destinosBarraInferior(perfil, { concursoEmAndamento: !!emAndamento, viewAtual: view });
 
   return (
+    <>
+    {/* Véu atrás da barra: esmaece o conteúdo que passa por baixo para a pílula branca não se perder nos cards brancos. */}
+    <div
+      aria-hidden="true"
+      className={`md:hidden fixed inset-x-0 bottom-0 z-[9] pointer-events-none h-[calc(120px+env(safe-area-inset-bottom))] bg-gradient-to-t from-canvas via-canvas/85 to-transparent transition-opacity duration-200 motion-reduce:transition-none ${visivel ? 'opacity-100' : 'opacity-0'}`}
+    />
     <nav
       aria-label="Navegação principal"
       // `inert` fora da tela: nem clicável nem focável.
       inert={!visivel}
       onFocus={mostrar}
       data-barra-flutuante=""
-      className={`md:hidden fixed z-topbar bg-white border border-line rounded-full shadow-lg bottom-[calc(12px+env(safe-area-inset-bottom))] left-[calc(12px+env(safe-area-inset-left))] right-[calc(12px+env(safe-area-inset-right))] transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${visivel ? 'translate-y-0' : 'translate-y-[calc(100%+24px+env(safe-area-inset-bottom))]'}`}
+      className={`md:hidden fixed z-topbar bg-white border border-line rounded-full shadow-[0_10px_28px_-4px_rgba(18,28,75,0.28),0_2px_8px_rgba(18,28,75,0.14)] bottom-[calc(12px+env(safe-area-inset-bottom))] left-[calc(12px+env(safe-area-inset-left))] right-[calc(12px+env(safe-area-inset-right))] transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${visivel ? 'translate-y-0' : 'translate-y-[calc(100%+24px+env(safe-area-inset-bottom))]'}`}
     >
       <ul className="flex items-stretch px-1">
         {destinos.map(d => {
@@ -111,5 +117,6 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
         </li>
       </ul>
     </nav>
+    </>
   );
 };
