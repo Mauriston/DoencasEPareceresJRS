@@ -630,7 +630,13 @@ export const Inspecoes: React.FC = () => {
               </span>
             )}
             <div className="hidden md:flex items-center gap-2">
-              {podeBloquear && <Button variant="secondary" icon="block" onClick={() => setBloqueiosAberto(true)}>Bloqueios</Button>}
+              {/* Desktop: ⋮ à esquerda do botão primário com os Bloqueios (não é mais um botão secundário). */}
+              {podeBloquear && (
+                <MenuAcoes
+                  rotulo="Mais ações"
+                  itens={[{ rotulo: 'Bloqueios da agenda', icone: 'block', onClick: () => setBloqueiosAberto(true) }]}
+                />
+              )}
               {podeCadastrar && (
                 <MenuAcoes
                   rotulo="Abrir IS" botao={{ texto: 'Abrir IS', icone: 'add', primario: true }}
