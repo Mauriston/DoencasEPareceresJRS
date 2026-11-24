@@ -11,7 +11,8 @@
 //  A pilha fecha ao tocar fora, ao escolher, com Esc ou ao trocar de rota.
 // Posição: canto inferior direito, com área segura. O da página fica AO LADO da barra inferior
 // flutuante (separado dela, centrado na mesma linha: variável --fab-bottom publicada pela
-// BarraInferior) e permanece no lugar quando a barra se oculta; z-index do token sticky. Só no celular (< md): no desktop as mesmas ações
+// BarraInferior) e permanece no lugar quando a barra se oculta; quando a barra MINIMIZA ao rolar
+// (html[data-barra-minimizada]) o FAB da página encolhe junto (48 px, styles/app.css); z-index do token sticky. Só no celular (< md): no desktop as mesmas ações
 // ficam no PageHeader (a principal por último).
 //
 // API para as páginas:
@@ -124,7 +125,7 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
 
   if (!varias) {
     return (
-      <div data-acoes-fab="" className={classePosicao(posicao)} style={estiloPosicao(posicao)}>
+      <div data-acoes-fab="" data-fab-posicao={posicao} className={classePosicao(posicao)} style={estiloPosicao(posicao)}>
         <button
           type="button"
           onClick={() => executar(principal)}
@@ -159,7 +160,7 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
   return (
     <>
       {aberto && <div className="fixed inset-0 z-sticky bg-black/10 animate-backdrop-in" onClick={() => fechar()} aria-hidden="true" />}
-      <div data-acoes-fab="" className={`${classePosicao(posicao)} flex flex-col items-end gap-3`} style={estiloPosicao(posicao)}>
+      <div data-acoes-fab="" data-fab-posicao={posicao} className={`${classePosicao(posicao)} flex flex-col items-end gap-3`} style={estiloPosicao(posicao)}>
         <AnimatePresence>
           {aberto && (
             <div key="pilha" ref={menu} id={menuId} role="menu" aria-label="Ações" onKeyDown={navegar} className="flex flex-col items-end gap-2">

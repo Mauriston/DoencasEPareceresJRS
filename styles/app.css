@@ -477,6 +477,15 @@ th[role="button"],
 
 /* Barra inferior flutuante (components/shell/BarraInferior.tsx): com FAB de página ao lado
    (html[data-fab-pagina], publicado por components/ui/Fab.tsx), a pílula deixa 16 px de margem + 56 px do FAB + 8 px de vão à direita. */
+/* O FAB da página acompanha a barra quando ela minimiza ao rolar (html[data-barra-minimizada]): 56 → 48 px, na
+   mesma linha de base (a barra vai de 62 para 54 px e o --fab-bottom continua centrando os dois). */
+[data-acoes-fab][data-fab-posicao="pagina"] > button:last-child {
+  transition: width .3s cubic-bezier(0.2, 0, 0, 1), height .3s cubic-bezier(0.2, 0, 0, 1), background-color .15s, border-color .15s;
+}
+html[data-barra-minimizada] [data-acoes-fab][data-fab-posicao="pagina"] > button:last-child { width: 48px; height: 48px; }
+@media (prefers-reduced-motion: reduce) {
+  [data-acoes-fab][data-fab-posicao="pagina"] > button:last-child { transition: none; }
+}
 html[data-fab-pagina] [data-barra-flutuante] { right: calc(80px + env(safe-area-inset-right)); }
 
 /* AcoesRodape no mobile (components/ui/AcoesRodape.tsx): as ações viram um FAB flutuante.
