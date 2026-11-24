@@ -14,6 +14,7 @@ import React, { Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AppPublico } from './publico/AppPublico';
 import { ehRotaPublica } from '../config/routes';
+import { LaunchScreen } from './shell/LaunchScreen';
 
 const App = React.lazy(() => import('../App'));
 
@@ -21,7 +22,7 @@ export const Raiz: React.FC<{ handoffToken?: string | null }> = ({ handoffToken 
   const { pathname } = useLocation();
   if (ehRotaPublica(pathname)) return <AppPublico />;
   return (
-    <Suspense fallback={<div className="fixed inset-0 bg-canvas" aria-busy="true" />}>
+    <Suspense fallback={<LaunchScreen />}>
       <App handoffToken={handoffToken} />
     </Suspense>
   );

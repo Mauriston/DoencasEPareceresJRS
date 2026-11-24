@@ -5,6 +5,7 @@ import { Navigate, useLocation, useNavigate, useNavigationType, useRoutes } from
 import { Login } from './components/Login';
 import { Home } from './components/Home';
 import { Sidebar } from './components/shell/Sidebar';
+import { LaunchScreen } from './components/shell/LaunchScreen';
 import { BannerAniversariantes } from './components/shell/BannerAniversariantes';
 import { ChatProvider } from './components/chat/ChatContext';
 import { BannerChat } from './components/chat/BannerChat';
@@ -431,11 +432,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   ]);
 
   if (authLoading || handoffPendente) {
-    return (
-      <div className="fixed inset-0 bg-navy flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-      </div>
-    );
+    return <LaunchScreen />;
   }
 
   if (!authUser) {
@@ -443,11 +440,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
   }
 
   if (permissoesLoading) {
-    return (
-      <div className="fixed inset-0 bg-navy flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-      </div>
-    );
+    return <LaunchScreen />;
   }
 
   const mostrarAlertaSenha = !!authUser.senhaTemporaria && currentView !== 'perfil' && !senhaAlertDismissed;
