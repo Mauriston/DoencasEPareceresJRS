@@ -2,34 +2,26 @@
 // Ações da barra inferior da aba Inspeções de Saúde da Ficha do inspecionado (antes das da própria IS —
 // InspecaoDetalhe acrescenta "Gravar entrevista", "Reabrir IS" e "Concluir IS") e os atalhos para as abas dos
 // documentos (no lugar dos cards de documentos do drawer):
-//  - "Excluir" (destrutivo, à esquerda): função inspecoes.excluir, só IS não finalizada; a exclusão é completa, no
-//    servidor (excluirInspecaoCompleta — POST /api/inspecoes/excluir);
-//  - "Agendar IS"/"Reagendar IS": as regras do menu da página Inspeções de Saúde;
+//  - "Excluir", "Agendar IS"/"Reagendar IS" e "Reabrir IS" saíram da barra: ficam no menu ⋮ de cada item do histórico
+//    (useMenuISHistorico.tsx); "Minutar MSG" foi para o cabeçalho da Ficha;
 //  - "Enviar PDF ▾" (com data de entrevista, sem Laudo e IS não finalizada): Exames · Atestados e Laudos · Resposta de Parecer
 //    (só com pedido de parecer da IS não concluído). Sempre confirma e navega pelo contrato
 //    definir({ aba, criar, is, reg: null }) — o estado "Criar novo" é de cada aba;
 //  - "Gerar Documento ▾": Pedido de Parecer → aba Pareceres (criar: 'pedido'); os demais pelo registro
 //    documentos/registro.tsx (formulário → confirmar e-mail → servidor → PDF em nova aba; ficam na aba Outros);
-//  - "Minutar MSG" (IS concluída; função inspecoes.gerarMinuta): MinutarMsgIS; registrada, abre a aba Mensagens.
 import React, { useEffect, useState } from 'react';
 import { Button } from '../../ui/Button';
 import { ConfirmDialog } from '../../ui/Dialog';
 import { MenuAcoes, type ItemMenu } from '../../ui/MenuAcoes';
 import type { AcaoBarraFicha } from '../CascaPainelFicha';
-import { MinutarMsgIS } from './MinutarMsgIS';
 import { useGerarDocumentoIS } from './documentos/useGerarDocumentoIS';
 import { canUseFeature } from '../../../config/permissions';
-import { excluirInspecaoCompleta, type InspecaoRecord } from '../../../services/firestoreInspecoes';
+import type { InspecaoRecord } from '../../../services/firestoreInspecoes';
 import { observarExamesDaIS } from '../../../services/examesIS';
 import { observarEntrevistas } from '../../../services/entrevistasIS';
 import { observarEmailsDaIS } from '../../../services/historicoEmailsIS';
 import { observarPareceresDaIS, type ParecerRecord } from '../../../services/firestorePareceres';
-import { removerEventoAgendaIS } from '../../../services/agendaGoogleIS';
-import { podeArrastarIS } from '../../../utils/calendarioIS';
-import { aguardaAgendamento } from '../../../utils/inspecoes';
-import { motivoNaoExcluir } from '../../../utils/exclusaoIS';
 import { perfilCompetenteIS } from '../../../utils/documentosIS';
-import { podeMinutarMsg } from '../../../utils/mensagensIS';
 import type { AbaFicha, EstadoAbaFicha } from '../../../utils/fichaInspecionado';
 
 type Definir = (m: Record<string, string | null>) => void;
@@ -46,17 +38,12 @@ interface Opcoes {
   definir: Definir;
   om?: string;
   vinculo?: string;
-  feminino?: boolean;
-  onAgendar: (is: InspecaoRecord) => void;
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
 }
 
-export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, feminino, onAgendar, onAviso }: Opcoes) => {
+export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, onAviso }: Opcoes) => {
   const [pareceres, setPareceres] = useState<ParecerRecord[]>([]);
   const [confirmarPdf, setConfirmarPdf] = useState<CriarPdf | null>(null);
-  const [excluindo, setExcluindo] = useState(false);
-  const [apagando, setApagando] = useState(false);
-  const [minutando, setMinutando] = useState(false);
   useEffect(() => observarPareceresDaIS(is.id, setPareceres, () => setPareceres([])), [is.id]);
   // Atalhos "Ver …" só com registros da IS (transcrições/entrevistas, exames, e-mails).
   const [temTranscricoes, setTemTranscricoes] = useState(false);
@@ -71,10 +58,6 @@ export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, femini
   const ir = (aba: AbaFicha, extra: Record<string, string | null> = {}) =>
     definir({ aba, reg: null, is: null, sel: null, guia: null, gravar: null, criar: null, ...extra });
 
-  // Excluir: função inspecoes.excluir (Admin sempre), só IS não finalizada.
-  const podeExcluir = !finalizada && !motivoNaoExcluir({ perfil, temFuncao: canUseFeature('inspecoes.excluir', perfil), situacao: is.situacao });
-  // Agendar (Aberta/Realizando Exames) ou Reagendar (Faltou; Agendada que ainda dá para remarcar).
-  const agendar = canUseFeature('inspecoes.agendar', perfil) && (aguardaAgendamento(is.status) || is.status === 'faltou' || podeArrastarIS(is));
   // Enviar PDF: com data de entrevista, IS não finalizada e Laudo ainda vazio.
   const parecerAberto = pareceres.some(p => p.status !== 'concluido');
   const itensPdf: ItemMenu[] = !is.dataEntrevista || finalizada || !!is.laudo?.trim() || !canUseFeature('inspecoes.enviarExames', perfil) ? [] : [
@@ -90,17 +73,10 @@ export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, femini
     ...(podePedido ? [{ rotulo: 'Pedido de Parecer', icone: 'assignment_add', onClick: () => ir('pareceres', { criar: 'pedido', is: is.id }) }] : []),
     ...docs.itens,
   ];
-  const minuta = podeMinutarMsg(is) && canUseFeature('inspecoes.gerarMinuta', perfil);
 
   // Competência: user_medicos só nas IS de JRS e user_medicos_mpi só nas de MPI (sem competência, sem botões).
   const competente = perfilCompetenteIS(perfil, is.amp);
   const acoes: AcaoBarraFicha[] = !competente ? [] : [
-    ...(podeExcluir ? [{ id: 'excluir', rotulo: 'Excluir', icone: 'delete', variante: 'destructive' as const, onClick: () => setExcluindo(true), loading: apagando }] : []),
-    ...(agendar ? [{
-      id: 'agendar', rotulo: aguardaAgendamento(is.status) && !is.dataEntrevista ? 'Agendar IS' : 'Reagendar IS', icone: 'event',
-      variante: 'secondary' as const, onClick: () => onAgendar(is),
-    }] : []),
-    ...(minuta ? [{ id: 'minuta', rotulo: 'Minutar MSG', icone: 'mail', variante: 'secondary' as const, onClick: () => setMinutando(true) }] : []),
     ...(itensDocumento.length ? [{ id: 'documento', node: <MenuAcoes rotulo="Gerar Documento" botao={{ texto: 'Gerar Documento', icone: 'post_add' }} classeGatilho="w-full sm:w-auto" itens={itensDocumento} /> }] : []),
     ...(itensPdf.length ? [{ id: 'pdf', node: <MenuAcoes rotulo="Enviar PDF" botao={{ texto: 'Enviar PDF', icone: 'upload_file' }} classeGatilho="w-full sm:w-auto" itens={itensPdf} /> }] : []),
   ];
@@ -118,31 +94,8 @@ export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, femini
     </nav>
   );
 
-  const excluir = async () => {
-    setExcluindo(false);
-    setApagando(true);
-    try {
-      if (is.eventoAgendaId) await removerEventoAgendaIS(is);
-      await excluirInspecaoCompleta(is);
-      definir({ reg: null, is: null });
-      onAviso(`IS ${is.is} excluída.`);
-    } catch (e: any) {
-      onAviso(e?.message || 'Não foi possível excluir a IS.', 'error');
-    } finally {
-      setApagando(false);
-    }
-  };
-
   const dialogos = (
     <>
-      {excluindo && (
-        <ConfirmDialog
-          title={`Excluir a IS ${is.is}?`}
-          message="A IS e tudo o que é dela serão apagados: exames, entrevistas, e-mails e mensagens registradas, guias, pedidos de parecer vinculados, o horário reservado e o evento do Google Agenda. Esta ação não pode ser desfeita."
-          confirmLabel="Excluir" destructive
-          onConfirm={() => { void excluir(); }} onCancel={() => setExcluindo(false)}
-        />
-      )}
       {confirmarPdf && (
         <ConfirmDialog
           title={`Enviar PDF — ${DESTINO_PDF[confirmarPdf].rotulo}`}
@@ -153,12 +106,6 @@ export const useAcoesISFicha = ({ is, perfil, abas, definir, om, vinculo, femini
         />
       )}
       {docs.dialogos}
-      {minutando && (
-        <MinutarMsgIS
-          is={is} om={om} vinculo={vinculo} feminino={feminino} onAviso={onAviso} onClose={() => setMinutando(false)}
-          onRegistrada={id => { setMinutando(false); ir('mensagens', { reg: id }); }}
-        />
-      )}
     </>
   );
 

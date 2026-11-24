@@ -329,6 +329,8 @@ test('Inspeções: abas Ativas/Finalizadas, chips de filtro e Período, botões 
   assert.equal(await p.getByLabel('Filtrar por perito').count(), 0);
   assert.equal(await p.getByLabel('Buscar IS').count(), 0);
   await p.getByRole('radio', { name: 'Tabela' }).waitFor();
+  // O calendário abre sozinho; o painel das IS abertas e não agendadas expande pelo botão do canto (com o nº de IS).
+  await p.getByRole('button', { name: /^Expandir as IS aguardando agendamento/ }).click();
   // Painel à esquerda: a IS aberta e não agendada vira um cartão (com "Agendar…"); o Mês só tem seg–sex.
   const painelAbertas = p.getByRole('complementary', { name: 'IS abertas aguardando agendamento' });
   await painelAbertas.getByRole('button', { name: new RegExp(`^IS ${IS_E2E.numero}: PACIENTE DE TESTE`) }).waitFor();
@@ -476,7 +478,11 @@ test('Ficha do inspecionado: a rota antiga do histórico redireciona e a ficha m
   await p.getByRole('complementary', { name: /Histórico de Inspeções de Saúde/ }).getByRole('button', { name: new RegExp(IS_E2E.finalidade) }).first().click();
   const barra = p.getByRole('toolbar', { name: 'Ações da aba' });
   await p.getByRole('heading', { name: IS_E2E.finalidade, exact: true }).waitFor(); // título do card = finalidade
-  await barra.getByRole('button', { name: 'Agendar IS', exact: true }).waitFor();
+  // "Agendar IS" (e Reabrir/Excluir) ficam no menu ⋮ do item da IS no histórico, não mais na barra.
+  assert.equal(await barra.getByRole('button', { name: 'Agendar IS', exact: true }).count(), 0);
+  await p.getByRole('complementary', { name: /Histórico de Inspeções de Saúde/ }).getByRole('button', { name: `Ações de ${IS_E2E.finalidade}` }).click();
+  await p.getByRole('menuitem', { name: 'Agendar IS', exact: true }).waitFor();
+  await p.keyboard.press('Escape');
   assert.equal(await barra.getByRole('button', { name: 'Abrir IS' }).count(), 0);
   assert.equal(await barra.getByRole('button', { name: 'Excluir' }).count(), 0);
   // Barra da IS na ficha: "Gerar Documento ▾" só aparece com ao menos um item visível (itens ocultos por situação:

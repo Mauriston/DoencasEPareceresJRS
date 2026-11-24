@@ -1,7 +1,7 @@
 // Ficheiro: components/ficha/FichaInspecionado.tsx
 // Ficha do inspecionado (/inspecionados/:nip — auditoria v3, seção 9; MF1–MF4, PM6, PM8, PMD3).
 // Reformulação de 16/11/2026 (estrutura; as regras de cada aba nova vêm depois):
-//   cabeçalho (o nome abre o top sheet com os dados cadastrais; ⋮ com "Registro de eventos" só do Admin) ·
+//   cabeçalho (o nome abre o drawer lateral à direita com os dados cadastrais; ⋮ com "Registro de eventos" só do Admin) ·
 //   barra de abas sublinhadas, SEM contagens, fixa no topo ao rolar — Inspeções de Saúde · Perícias Menores ·
 //   Atestados e Laudos · Pareceres · Exames · Guias · Emails · Mensagens · Outros · Transcrições
 //   (permissões em components/ficha/permissoes.ts → abasDaFicha; Outros = documentos gerados nas IS, todos menos user_medicos_geral; Transcrições
@@ -52,6 +52,7 @@ import { EmptyState } from '../ui/EmptyState';
 import { AccessDenied } from '../ui/AccessDenied';
 import { Toast } from '../ui/Toast';
 import { Drawer } from '../ui/Drawer';
+import { SheetOpcoes } from '../ui/SheetOpcoes';
 import type { AcaoRodape } from '../ui/AcoesRodape';
 import { useTituloPagina } from '../shell/TituloPagina';
 import { abrirPdf } from '../../services/abrirPdf';
@@ -62,7 +63,7 @@ import { NovaPericiaMenorForm } from '../periciaMenor/NovaPericiaMenorForm';
 import { fasesDeEntrevista } from '../inspecoes/InspecaoDetalhe';
 import { NovoParecerForm } from '../pareceres/NovoParecerForm';
 import { MilitarEdicao } from '../Militares';
-import { CadastroTopSheet, type DadoCadastro } from './CadastroTopSheet';
+import { CadastroDrawer, type DadoCadastro } from './CadastroDrawer';
 import { CascaPainelFicha } from './CascaPainelFicha';
 import { PainelGuias } from './guias/PainelGuias';
 import { PainelParecer } from './pareceres/PainelParecer';
@@ -80,6 +81,13 @@ import { AgendarISFicha } from './AgendarISFicha';
 import { AbrirISFicha, type ModoAbrirIS } from './AbrirISFicha';
 import { PainelISFicha } from './inspecoes/PainelISFicha';
 import { PainelMensagemIS } from './inspecoes/PainelMensagemIS';
+import { MinutarMsgIS } from './inspecoes/MinutarMsgIS';
+import { useMenuISHistorico } from './inspecoes/useMenuISHistorico';
+import { EnviarEmailsHome } from '../home/EnviarEmailsHome';
+import { copiarTexto } from '../inspecoes/CampoCopiavel';
+import { pendenciasEmailIS } from '../../utils/pendenciasEmailIS';
+import { perfilCompetenteIS } from '../../utils/documentosIS';
+import { linhasMinuta, podeMinutarMsg } from '../../utils/mensagensIS';
 import { AssessorIAModal } from './assessor/AssessorIAModal';
 import { LogoClaude, SimboloClaude } from '../ui/LogoClaude';
 import { isDoAssessor, podeUsarAssessorIA } from '../../utils/assessorIA';
@@ -179,17 +187,22 @@ const ICONE_ESTADO = {
   finalizado: { icone: 'lock', estilo: { fontVariationSettings: "'FILL' 1, 'wght' 500, 'GRAD' -25, 'opsz' 48" } },
 } as const;
 
-const LinhaHistorico: React.FC<{ item: ItemHistorico; atual: boolean; onAbrir: () => void }> = ({ item, atual, onAbrir }) => (
-  <button type="button" onClick={onAbrir} aria-current={atual || undefined}
-    className={`w-full text-left flex items-start gap-3 px-4 py-3 border-l-[3px] transition-colors ${atual ? 'border-gold bg-thead' : 'border-transparent hover:bg-thead'}`}>
-    <span className="material-symbols-outlined text-[20px] text-navy shrink-0 mt-0.5" style={item.iconeEstilo} aria-hidden="true">{item.icone}</span>
-    <span className="min-w-0 flex-1">
-      {!item.semData && <span className="block text-xs text-ink-3 tabular-nums">{item.data ? dataBR(item.data) : '—'}</span>}
-      <span className="block text-sm font-bold text-navy break-words">{item.titulo}</span>
-      <span className="block text-xs text-ink-3 break-words">{item.detalhe}</span>
-    </span>
-    {item.tag && <span className="shrink-0 max-w-[40%] text-right">{item.tag}</span>}
-  </button>
+const LinhaHistorico: React.FC<{ item: ItemHistorico; atual: boolean; onAbrir: () => void; menu?: ItemMenu[] }> = ({ item, atual, onAbrir, menu }) => (
+  <div className={`flex items-start border-l-[3px] transition-colors ${atual ? 'border-gold bg-thead' : 'border-transparent hover:bg-thead'}`}>
+    <button type="button" onClick={onAbrir} aria-current={atual || undefined}
+      className="flex-1 min-w-0 text-left flex items-start gap-3 pl-4 pr-2 py-3">
+      <span className="material-symbols-outlined text-[20px] text-navy shrink-0 mt-0.5" style={item.iconeEstilo} aria-hidden="true">{item.icone}</span>
+      <span className="min-w-0 flex-1">
+        {!item.semData && <span className="block text-xs text-ink-3 tabular-nums">{item.data ? dataBR(item.data) : '—'}</span>}
+        <span className="block text-sm font-bold text-navy break-words">{item.titulo}</span>
+        <span className="block text-xs text-ink-3 break-words">{item.detalhe}</span>
+      </span>
+      {item.tag && <span className="shrink-0 max-w-[40%] text-right">{item.tag}</span>}
+    </button>
+    {menu && menu.length > 0
+      ? <div className="shrink-0 pr-2 pt-2"><MenuAcoes rotulo={`Ações de ${item.titulo}`} itens={menu} size="sm" /></div>
+      : <span className="shrink-0 w-4" aria-hidden="true" />}
+  </div>
 );
 
 const Dado: React.FC<{ rotulo: string; children?: React.ReactNode; largo?: boolean }> = ({ rotulo, children, largo }) => (
@@ -245,6 +258,10 @@ export const FichaInspecionado: React.FC = () => {
   const [parecerPara, setParecerPara] = useState<{ is: InspecaoRecord; inicial?: ParecerRecord } | null>(null);
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
   const [mensagens, setMensagens] = useState<MensagemISRecord[]>([]);
+  /** "Minutar MSG" (cabeçalho): a IS cuja minuta está aberta. */
+  const [minutando, setMinutando] = useState<InspecaoRecord | null>(null);
+  /** Celular: bottom sheet do "Enviar emails" (aberto pelo FAB). */
+  const [sheetEmails, setSheetEmails] = useState(false);
   /** "Abrir IS" do cabeçalho: formulário aberto (no painel principal da aba IS; no celular, bottom sheet). */
   const [abrindoIS, setAbrindoIS] = useState<ModoAbrirIS | null>(null);
   const [guiasIncdef, setGuiasIncdef] = useState<InspecaoRecord | null>(null);
@@ -260,6 +277,12 @@ export const FichaInspecionado: React.FC = () => {
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
   const avisar = (msg: string, tone: 'success' | 'error' = 'success') => { setToast({ msg, tone }); window.setTimeout(() => setToast(null), tone === 'error' ? 7000 : 4000); };
   const principalRef = useRef<HTMLDivElement>(null);
+  // Menu ⋮ de cada IS do histórico: Reabrir IS · Agendar/Reagendar IS · Excluir.
+  const sincronizarIS = (is: InspecaoRecord) => { sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS atualizada, mas o Google Agenda não: ${r.erro}`, 'error'); }); };
+  const { menuDe: menuDaIS, dialogos: dialogosMenuIS } = useMenuISHistorico({
+    perfil, uid: nav?.authUser?.uid, onAgendar: setAgendando, onSituacaoMudou: sincronizarIS, onAviso: avisar,
+    onExcluida: is => { if (params.get('reg') === is.id || params.get('is') === is.id) definir({ reg: null, is: null }); },
+  });
 
   useEffect(() => (podeFicha && nip ? observarMilitar(nip, setMilitar, () => setMilitar(null)) : undefined), [nip, podeFicha]);
   // A aba Afastamentos (só leitura) lê IS e perícias mesmo sem acesso às páginas de origem (ex.: User Médicos Geral).
@@ -412,8 +435,8 @@ export const FichaInspecionado: React.FC = () => {
 
   // Mensagens tramitadas registradas a partir da minuta das IS ("Minutar MSG"), da mais recente para a mais antiga.
   const itensMensagens: ItemHistorico[] = mensagens.map(m => ({
-    id: m.id, data: isoDe(m.registradoEm), icone: 'chat', titulo: m.assunto || `Mensagem da IS ${m.is}`,
-    detalhe: [`IS ${m.is}`, m.registradoPor?.usuario ? `registrada por ${m.registradoPor.usuario}` : ''].filter(Boolean).join(' · '),
+    id: m.id, data: isoDe(m.registradoEm), icone: 'chat', semData: true, titulo: m.finalidade || `IS ${m.is}`,
+    detalhe: isoDe(m.registradoEm) ? dataBR(isoDe(m.registradoEm)) : '—',
   }));
 
   // Outros: documentos gerados nas IS (Gerar Documento ▾), do mais recente para o mais antigo.
@@ -500,6 +523,25 @@ export const FichaInspecionado: React.FC = () => {
   ];
   const avisoCadastro = !militar ? 'Sem cadastro em Inspecionados: dados copiados do registro mais recente.'
     : !secoes.cadastro ? 'Os demais dados cadastrais ficam na página Inspecionados.' : undefined;
+
+  // "Minutar MSG" (cabeçalho): IS concluídas com minuta disponível; o selo conta as que ainda não têm a mensagem registrada.
+  const podeMinutar = secoes.inspecoes && canUseFeature('inspecoes.gerarMinuta', perfil);
+  const isMinutaveis = isOrdenadas.filter(i => perfilCompetenteIS(perfil, i.amp) && podeMinutarMsg(i));
+  const comMensagem = new Set(mensagens.map(m => m.isId));
+  const msgPendentes = estadoAbas.mensagens.habilitada ? isMinutaveis.filter(i => !comMensagem.has(i.id)) : [];
+  const isMinutaAberta = aba === 'is' ? isMinutaveis.find(i => i.id === pedido) : undefined;
+  const alvoMinuta = isMinutaAberta ?? msgPendentes[0] ?? isMinutaveis[0];
+  // "Enviar emails" (cabeçalho): só os e-mails de natureza individual (sem NAC nem faltas, que levam vários militares).
+  const TIPOS_EMAIL_FICHA = ['agendamento', 'resultado', 'beneficios'] as const;
+  const emailsFicha = pendenciasEmailIS(inspecoes, () => undefined, hoje);
+  const qtdEmails = TIPOS_EMAIL_FICHA.reduce((n, t) => n + emailsFicha[t].length, 0);
+  const podeEnviarEmails = podeEmailsIS && secoes.inspecoes;
+  const emailsHome = (sheet?: { aberto: boolean; onFechar: () => void }) => (
+    <EnviarEmailsHome
+      inspecoes={inspecoes} militares={militar ? [militar] : []} hoje={hoje} podeLimpar={perfil === 'admin'} onAviso={avisar}
+      tipos={[...TIPOS_EMAIL_FICHA]} somentePendentes sheet={sheet}
+    />
+  );
 
   // ---- Abas ----
   const opcoesAbas = listaAbas.filter(a => a.visivel).map(a => ({
@@ -666,9 +708,8 @@ export const FichaInspecionado: React.FC = () => {
       return (
         <PainelISFicha
           key={isSel.id} is={isSel} perfil={perfil} abas={estadoAbas} definir={definir}
-          om={militar?.om || om} vinculo={militar ? vinculoDoInspecionado(militar) : undefined} feminino={militar?.sexo === 'Feminino'}
-          onAgendar={setAgendando}
-          onSituacaoMudou={is => { sincronizarAgendaIS(is).then(r => { if (!r.ok) avisar(`IS atualizada, mas o Google Agenda não: ${r.erro}`, 'error'); }); }}
+          om={militar?.om || om} vinculo={militar ? vinculoDoInspecionado(militar) : undefined}
+          onSituacaoMudou={sincronizarIS}
           onAviso={avisar}
           printsSinais={printsSinais?.isId === isSel.id ? printsSinais : null}
         />
@@ -740,6 +781,13 @@ export const FichaInspecionado: React.FC = () => {
     return semRegistro(aba);
   })();
 
+  const mensagemAtual = aba === 'mensagens' ? mensagens.find(x => x.id === atual?.id) : undefined;
+  // "Copiar tudo": todos os campos da minuta (DE, PARA, INFO, ASSUNTO, TEXTO), com uma linha em branco entre eles.
+  const copiarTudo = async (m: MensagemISRecord) => {
+    const texto = linhasMinuta({ de: m.de || '', para: m.para || '', info: m.info || '', assunto: m.assunto || '', texto: m.texto || '' }).map(l => l.valor).join('\n\n');
+    if (await copiarTexto(texto)) avisar('Mensagem copiada.');
+    else avisar('Não foi possível copiar; selecione o texto e copie manualmente.', 'error');
+  };
   const painelApoio = aba === 'afastamentos' ? <ApoioAfastamentos {...dadosAfastamentos} /> : aba && (
     <Card padding="none" as="section" title={`Histórico · ${aba === 'pm' && atestado ? 'Atestados' : DEF_ABA[aba].historico}`}>
       {historico.length === 0 ? (
@@ -755,8 +803,16 @@ export const FichaInspecionado: React.FC = () => {
       ) : (
         <ul className="divide-y divide-line border-t border-line overflow-y-auto overscroll-contain max-h-[60vh] xl:max-h-[calc(100dvh-14rem)] rounded-b-xl"
           aria-label={`Histórico de ${DEF_ABA[aba].historico}`}>
-          {historico.map(i => <li key={i.id}><LinhaHistorico item={i} atual={i.id === atual?.id} onAbrir={() => abrirRegistro(i.id)} /></li>)}
+          {historico.map(i => {
+            const isDoItem = aba === 'is' ? inspecoes.find(x => x.id === i.id) : undefined;
+            return <li key={i.id}><LinhaHistorico item={i} atual={i.id === atual?.id} onAbrir={() => abrirRegistro(i.id)} menu={isDoItem ? menuDaIS(isDoItem) : undefined} /></li>;
+          })}
         </ul>
+      )}
+      {aba === 'mensagens' && mensagemAtual && (
+        <div className="border-t border-line p-3 md:p-4">
+          <Button variant="primary" icon="content_copy" fullWidth onClick={() => { void copiarTudo(mensagemAtual); }}>Copiar tudo</Button>
+        </div>
       )}
     </Card>
   );
@@ -799,6 +855,19 @@ export const FichaInspecionado: React.FC = () => {
             )}
             {/* Botões de criação no cabeçalho só a partir de md; no celular viram o FAB padrão (como em Inspeções). */}
             <div className="hidden md:flex items-center gap-2">
+              {podeMinutar && (
+                <span className="relative inline-flex">
+                  <Button variant="secondary" icon="mail" disabled={!alvoMinuta} onClick={() => alvoMinuta && setMinutando(alvoMinuta)}
+                    title={alvoMinuta ? `Minuta da IS ${alvoMinuta.is}` : 'Nenhuma IS concluída com minuta disponível'}
+                    aria-label={msgPendentes.length ? `Minutar MSG (${msgPendentes.length} pendente${msgPendentes.length > 1 ? 's' : ''})` : undefined}>Minutar MSG</Button>
+                  {msgPendentes.length > 0 && alvoMinuta && (
+                    <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-wine text-white text-xs font-bold leading-5 text-center ring-2 ring-white">
+                      {msgPendentes.length > 99 ? '99+' : msgPendentes.length}
+                    </span>
+                  )}
+                </span>
+              )}
+              {podeEnviarEmails && isDesktop && emailsHome()}
               {podePericia && (
                 <Button variant="secondary" icon="add" onClick={novaPericiaAbrir}>{atestado ? 'Atestado' : 'Perícia Menor'}</Button>
               )}
@@ -822,12 +891,15 @@ export const FichaInspecionado: React.FC = () => {
           setPrintsSinais({ id: Date.now(), isId, arquivos });
         }}
       />
+        {!isDesktop && podeEnviarEmails && emailsHome({ aberto: sheetEmails, onFechar: () => setSheetEmails(false) })}
         {!isDesktop && slotTopbar && createPortal(<MenuAcoes rotulo="Mais ações da ficha" itens={menu} />, slotTopbar)}
         {/* FAB do celular (a primeira ação permitida é a principal): Abrir IS · Abrir IS por print · Perícia Menor. */}
         {!isDesktop && (
           <FabAcoes acoes={[
             { id: 'abrir-is', rotulo: 'Abrir IS', ariaLabel: 'Abrir IS manualmente', icone: 'add', onClick: () => abrirIS('manual'), permitido: podeIS },
             { id: 'is-print', rotulo: 'Abrir IS', ariaLabel: 'Abrir IS pelo print do SINAIS', icone: 'photo_camera', onClick: () => abrirIS('print'), permitido: podeIS },
+            { id: 'minutar-msg', rotulo: 'Minutar MSG', ariaLabel: 'Minutar MSG', icone: 'mail', onClick: () => alvoMinuta && setMinutando(alvoMinuta), permitido: podeMinutar && !!alvoMinuta },
+            { id: 'enviar-emails', rotulo: 'Enviar emails', ariaLabel: `Enviar emails (${qtdEmails} pendentes)`, icone: 'forward_to_inbox', onClick: () => setSheetEmails(true), permitido: podeEnviarEmails && qtdEmails > 0 },
             { id: 'pericia', rotulo: atestado ? 'Atestado' : 'Perícia Menor', icone: 'personal_injury', onClick: novaPericiaAbrir, permitido: podePericia },
             // Itens do antigo menu do Claude: o do chat mantém o símbolo do Claude; "Editar IS" lê os prints do SINAIS.
             { id: 'assessor-ia', rotulo: 'Assessor IA', ariaLabel: 'Assessor IA', icone: 'smart_toy', iconeNode: <SimboloClaude tamanho={22} />, onClick: () => setAssessorAberto(true), permitido: isAssessor.length > 0 },
@@ -854,7 +926,7 @@ export const FichaInspecionado: React.FC = () => {
         />
       )}
       {verCadastro && (
-        <CadastroTopSheet
+        <CadastroDrawer
           titulo={nome} subtitulo={<span className="tabular-nums">{linhaId}{titular}</span>} dados={dadosCadastro} aviso={avisoCadastro}
           onEditar={perfil === 'admin' && militar ? () => { setVerCadastro(false); setEditando(true); } : undefined}
           onClose={() => setVerCadastro(false)}
@@ -915,6 +987,14 @@ export const FichaInspecionado: React.FC = () => {
           emailCadastrado={emailDoInspecionado(militar ?? undefined)}
           onClose={() => tirarDaFila(agendamentoAtual.id)}
           onEnviado={(msg, tom) => { tirarDaFila(agendamentoAtual.id); avisar(msg, tom); }}
+        />
+      )}
+      {dialogosMenuIS}
+      {minutando && (
+        <MinutarMsgIS
+          is={minutando} om={militar?.om || om} vinculo={militar ? vinculoDoInspecionado(militar) : undefined} feminino={militar?.sexo === 'Feminino'}
+          onAviso={avisar} onClose={() => setMinutando(null)}
+          onRegistrada={id => { setMinutando(null); definir({ aba: 'mensagens', reg: id, is: null, sel: null, guia: null, gravar: null, criar: null }); }}
         />
       )}
       {agendando && (

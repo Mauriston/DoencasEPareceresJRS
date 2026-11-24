@@ -38,10 +38,14 @@ export interface EmailsISProps {
   /** Abre o envio do e-mail de resultado de Benefícios. */
   onEnviarResultadoBeneficios: (is: InspecaoRecord) => void;
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
+  /** Só estes tipos (ex.: na Ficha do inspecionado, os de natureza individual); padrão: todos. */
+  tipos?: TipoEmailPendente[];
+  /** Só os itens com pendência (sem itens desabilitados). */
+  somentePendentes?: boolean;
 }
 
 /** Itens de e-mail (com contadores), o total de pendências, `abrir(tipo)` e os diálogos que eles abrem (renderize `dialogos`). */
-export const useEmailsIS = ({ inspecoes, militares, hoje, podeLimpar, onEnviarAgendamento, onEnviarResultado, onEnviarResultadoBeneficios, onAviso }: EmailsISProps): {
+export const useEmailsIS = ({ inspecoes, militares, hoje, podeLimpar, onEnviarAgendamento, onEnviarResultado, onEnviarResultadoBeneficios, onAviso, tipos, somentePendentes }: EmailsISProps): {
   itens: ItemMenu[]; total: number; abrir: (tipo: TipoEmailPendente) => void; dialogos: React.ReactNode;
 } => {
   const [aberto, setAberto] = useState<TipoEmailPendente | null>(null);
@@ -49,9 +53,10 @@ export const useEmailsIS = ({ inspecoes, militares, hoje, podeLimpar, onEnviarAg
     const omPorId = new Map<string, string>(militares.map(m => [m.id, m.om]));
     return pendenciasEmailIS(inspecoes, id => omPorId.get(id), hoje);
   }, [inspecoes, militares, hoje]);
-  const total = TIPOS_EMAIL_PENDENTE.reduce((n, t) => n + listas[t.tipo].length, 0);
+  const tiposVisiveis = TIPOS_EMAIL_PENDENTE.filter(t => !tipos || tipos.includes(t.tipo));
+  const total = tiposVisiveis.reduce((n, t) => n + listas[t.tipo].length, 0);
 
-  const itens: ItemMenu[] = TIPOS_EMAIL_PENDENTE.map(t => ({
+  const itens: ItemMenu[] = tiposVisiveis.filter(t => !somentePendentes || listas[t.tipo].length > 0).map(t => ({
     rotulo: t.rotulo, icone: t.icone, contador: listas[t.tipo].length, desabilitado: listas[t.tipo].length === 0, onClick: () => setAberto(t.tipo),
   }));
 
