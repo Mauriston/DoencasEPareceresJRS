@@ -1,9 +1,9 @@
 // Ficheiro: components/shell/BarraInferior.tsx
 // Barra inferior do celular (< md; auditoria v3, M4/4e): os destinos do perfil
 // (config/barraInferior.ts, mesma matriz canAccessPage da sidebar) + "Menu", que abre o drawer.
-//  • Flutuante: pílula branca com sombra, solta das bordas (12 px de margem), e o FAB da página
-//    (components/ui/Fab.tsx) fica ao lado dela, separado, na mesma linha de base. Quando a página tem
-//    FAB (html[data-fab-pagina], publicado pelo Fab), a pílula encolhe à direita para abrir espaço (styles/app.css).
+//  • Flutuante, como o exemplo do Animate UI: o <nav> é um GRUPO centralizado que se ajusta ao conteúdo (flex, gap 10 px) —
+//    a pílula (a própria lista de itens: branca, borda, sombra) + o ACESSÓRIO, onde o FAB da página
+//    (components/ui/Fab.tsx) entra por portal (hooks/slotFabPagina.ts). O acessório só existe quando a página tem FAB.
 //  • Ativo: pílula ouro atrás do ícone + rótulo em negrito (nunca só a cor do ícone).
 //  • Rótulos "ao lado" (BottomNavigationLabel show="active"): só o item ativo mostra o nome, ao lado do ícone, dentro
 //    da pílula ouro; os demais ficam só com o ícone (o nome continua no aria-label). A largura do rótulo anima com spring.
@@ -11,15 +11,15 @@
 //    entre os itens (spring 300/30) e os itens escalam a 0,97 ao toque.
 //  • MINIMIZA ao rolar para baixo (scrollBehavior="minimize", ouvindo o <main>): itens e barra encolhem para só os
 //    ícones (morph em spring, rótulo dobra) e voltam ao rolar para cima, ao chegar no topo, ao focar ou tocar na barra.
-//    O estado vai para o <html> (data-barra-minimizada) e o FAB da página acompanha (48 px, styles/app.css).
+//    A pílula ENCOLHE junto (ela se ajusta aos itens) e o FAB, sendo o acessório, vai de 56 para 48 px no mesmo morph.
 //  • Só o teclado virtual OCULTA a barra (hooks/useOcultarAoRolar.ts, rolagem: false), com translateY em spring —
 //    fade com prefers-reduced-motion. Oculta fica `inert` (nem clicável nem focável).
 //  • Publica no <html> as variáveis que o FAB (components/ui/Fab.tsx) e o conteúdo usam:
 //      --tabbar-h      espaço ocupado embaixo (margem 12 px + barra 62 px, ou 54 px minimizada, + área segura) · 0 sem barra/desktop
 //      --tabbar-folga  folga fixa embaixo do conteúdo (94 px + área segura) · 0 no desktop
-//      --fab-bottom    onde o FAB da página fica: centrado na barra (15 px + área segura, igual minimizada ou não), fixo com a barra oculta
+//      --fab-bottom    onde fica o FAB fixo (sem barra: desktop/carregando) e outros botões flutuantes; com a barra o FAB é o acessório
 import React, { useContext, useEffect, useState, type RefObject } from 'react';
-import { BottomNavigation, BottomNavigationHighlight, BottomNavigationHighlightItem, BottomNavigationItem, BottomNavigationLabel, useBottomNavigation } from '@animate-ui/react/primitives/bottom-navigation';
+import { BottomNavigation, BottomNavigationAccessory, BottomNavigationHighlight, BottomNavigationHighlightItem, BottomNavigationItem, BottomNavigationLabel, useBottomNavigation } from '@animate-ui/react/primitives/bottom-navigation';
 import { useReducedMotion } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
 import { NavContext } from '../../context/NavContext';
@@ -29,6 +29,7 @@ import { pathForView } from '../../config/routes';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useOcultarAoRolar } from '../../hooks/useOcultarAoRolar';
 import { useConcursoEmAndamento } from '../../hooks/useConcursoEmAndamento';
+import { definirSlotFab, useTemFabPagina } from '../../hooks/slotFabPagina';
 
 export const ID_DRAWER_MENU = 'menu-principal-drawer';
 
@@ -42,15 +43,11 @@ const definirVariaveis = (vars: Record<string, string | null>) => {
   Object.entries(vars).forEach(([k, v]) => (v === null ? raiz.removeProperty(k) : raiz.setProperty(k, v)));
 };
 
-/** Dentro do BottomNavigation: publica se a barra está minimizada (o FAB da página e o conteúdo acompanham). */
+/** Dentro do BottomNavigation: publica a altura ocupada pela barra (`--tabbar-h`, usada pelo conteúdo e pela BarraSalvar), que
+ *  muda quando ela minimiza. */
 const PublicaMinimizada: React.FC = () => {
   const { minimized } = useBottomNavigation();
-  useEffect(() => {
-    const html = document.documentElement;
-    if (minimized) html.setAttribute('data-barra-minimizada', ''); else html.removeAttribute('data-barra-minimizada');
-    definirVariaveis({ '--tabbar-h': minimized ? OCUPADO_MINIMIZADA : OCUPADO });
-    return () => html.removeAttribute('data-barra-minimizada');
-  }, [minimized]);
+  useEffect(() => { definirVariaveis({ '--tabbar-h': minimized ? OCUPADO_MINIMIZADA : OCUPADO }); }, [minimized]);
   return null;
 };
 
@@ -74,6 +71,7 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
   const perfil = nav?.authUser?.perfil;
   const view = nav?.currentView;
   const drawerAberto = !!nav?.isMobileMenuOpen;
+  const temFab = useTemFabPagina();
 
   // Concursos na barra: decidido ao abrir o app e a cada troca de rota — nunca no meio da rolagem.
   const podeConcursos = canAccessPage('concursosJRS', perfil);
@@ -119,11 +117,11 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
       animate={reduzMovimento ? { opacity: visivel ? 1 : 0, y: 0 } : { opacity: 1, y: visivel ? 0 : '250%' }}
       transition={reduzMovimento ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 35 }}
       data-barra-flutuante=""
-      className="md:hidden fixed z-topbar bg-white border border-line rounded-full shadow-[0_10px_28px_-4px_rgba(18,28,75,0.28),0_2px_8px_rgba(18,28,75,0.14)] bottom-[calc(12px+env(safe-area-inset-bottom))] left-[calc(12px+env(safe-area-inset-left))] right-[calc(12px+env(safe-area-inset-right))]"
+      className="md:hidden fixed z-topbar inset-x-0 mx-auto w-fit max-w-[calc(100vw-24px)] flex items-center gap-2.5 bottom-[calc(12px+env(safe-area-inset-bottom))]"
     >
       <PublicaMinimizada />
       <BottomNavigationHighlight className="absolute inset-0 rounded-full bg-gold">
-        <ul className="flex items-center justify-between p-1">
+        <ul className="min-w-0 flex items-center p-1 bg-white border border-line rounded-full shadow-[0_10px_28px_-4px_rgba(18,28,75,0.28),0_2px_8px_rgba(18,28,75,0.14)]">
           {destinos.map(d => {
             const ativo = view === d.view && !drawerAberto;
             return (
@@ -156,6 +154,8 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
           </li>
         </ul>
       </BottomNavigationHighlight>
+      {/* Acessório: onde o FAB da página entra (portal). 56 px, 48 px minimizado (morph do primitivo). */}
+      {temFab && <BottomNavigationAccessory ref={definirSlotFab} className="relative shrink-0 size-14 data-[minimized]:size-12 rounded-full" />}
     </BottomNavigation>
     </>
   );
