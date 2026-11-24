@@ -164,11 +164,11 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
   // Pilha de cima para baixo: as demais (a de menor prioridade no alto) e a principal por último.
   const pilha = [...acoes.slice(1).reverse(), principal];
 
+  // O fundo fica SEMPRE no próprio lugar (nunca no portal nem no <body>): a barra inferior e o menu vivem dentro do
+  // contêiner raiz do app (fixed → contexto de empilhamento próprio); um fundo no <body> ficaria por cima de tudo isso
+  // e engoliria o toque nos itens. No próprio lugar ele (z-sticky) fica abaixo da barra (z-topbar), como sempre foi.
   const fundo = aberto ? <div className="fixed inset-0 z-sticky bg-black/10 animate-backdrop-in" onClick={() => fechar()} aria-hidden="true" /> : null;
   const varios = (
-    <>
-      {/* No acessório o fundo vai para o <body>: a barra tem transform e viraria o bloco de contenção do fixed. */}
-      {noAcessorio ? (fundo && createPortal(fundo, document.body)) : fundo}
       <div data-acoes-fab="" className={noAcessorio ? 'relative size-full' : `${classePosicao(posicao)} flex flex-col items-end gap-3`} style={noAcessorio ? undefined : estiloPosicao(posicao)}>
         <AnimatePresence>
           {aberto && (
@@ -223,9 +223,13 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
           )}
         </button>
       </div>
+  );
+  return (
+    <>
+      {fundo}
+      {noAcessorio && slot ? createPortal(varios, slot) : varios}
     </>
   );
-  return noAcessorio && slot ? createPortal(varios, slot) : varios;
 };
 
 /**
