@@ -8,9 +8,9 @@
 //                  principal mais perto do polegar;
 //  • sheet/drawer: FAB estendido (ícone + rótulo); 2–3 → principal + "˄" que abre a pilha com as demais.
 //  A pilha fecha ao tocar fora, ao escolher, com Esc ou ao trocar de rota.
-// Posição: canto inferior direito, com área segura. O da página fica 16 px acima da barra inferior
-// e desce junto quando ela se oculta (variável --fab-bottom publicada pela BarraInferior, mesma
-// transição de 200 ms); z-index do token sticky. Só no celular (< md): no desktop as mesmas ações
+// Posição: canto inferior direito, com área segura. O da página fica AO LADO da barra inferior
+// flutuante (separado dela, centrado na mesma linha: variável --fab-bottom publicada pela
+// BarraInferior) e permanece no lugar quando a barra se oculta; z-index do token sticky. Só no celular (< md): no desktop as mesmas ações
 // ficam no PageHeader (a principal por último).
 //
 // API para as páginas:
@@ -52,7 +52,7 @@ const COR: Record<NonNullable<AcaoFab['variante']>, string> = {
 };
 const FOCO = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold';
 /** FAB redondo da página, só com ícone (56 px). */
-const REDONDO = 'inline-flex items-center justify-center w-14 h-14 rounded-2xl shadow-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
+const REDONDO = 'inline-flex items-center justify-center w-14 h-14 rounded-full shadow-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
 const PILULA = 'inline-flex items-center gap-2 h-14 max-w-[calc(100vw-2rem)] pl-4 pr-5 shadow-lg text-sm font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed';
 
 /** Onde o FAB fica: na página (acompanha a barra inferior) ou num sheet/drawer (acima da área segura). */
@@ -98,6 +98,13 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
   }, []);
   useEscapeEmpilhado(() => fechar(), aberto);
   useEffect(() => { setAberto(false); }, [pathname]);
+  // Avisa a barra inferior flutuante que há FAB de página ao lado (ela encolhe à direita; styles/app.css).
+  useEffect(() => {
+    if (posicao !== 'pagina') return;
+    const html = document.documentElement;
+    html.setAttribute('data-fab-pagina', '');
+    return () => html.removeAttribute('data-fab-pagina');
+  }, [posicao]);
   useEffect(() => {
     if (!aberto) return;
     // Foco no item mais perto do polegar (a principal, último da pilha).
@@ -180,7 +187,7 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
           aria-expanded={aberto}
           aria-controls={aberto ? menuId : undefined}
           onClick={() => (aberto ? fechar() : setAberto(true))}
-          className={`${aberto ? 'w-14 justify-center rounded-full' : soIcone ? 'w-14 justify-center rounded-2xl' : `${PILULA} rounded-2xl pr-3`} inline-flex items-center h-14 shadow-lg ${FOCO} ${COR.primary}`}
+          className={`${aberto ? 'w-14 justify-center rounded-full' : soIcone ? 'w-14 justify-center rounded-full' : `${PILULA} rounded-2xl pr-3`} inline-flex items-center h-14 shadow-lg ${FOCO} ${COR.primary}`}
         >
           {aberto ? (
             <span className="material-symbols-outlined text-[26px]" aria-hidden="true">close</span>
