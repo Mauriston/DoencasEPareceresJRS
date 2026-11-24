@@ -469,7 +469,6 @@ export const FichaInspecionado: React.FC = () => {
   const isIncdef = secoes.inspecoes ? ((aba === 'is' ? isOrdenadas.find(i => i.id === pedido && ehIncdef(i)) : undefined) ?? isOrdenadas.find(ehIncdef)) : undefined;
   const menu: ItemMenu[] = [
     { rotulo: 'Dados cadastrais', icone: 'badge', onClick: () => setVerCadastro(true) },
-    ...(perfil === 'admin' && militar ? [{ rotulo: 'Editar cadastro', icone: 'edit', onClick: () => setEditando(true) }] : []),
     ...(secoes.eventos ? [{ rotulo: 'Registro de eventos', icone: 'history', onClick: () => setVerEventos(true) }] : []),
     ...(isIncdef && canUseFeature('inspecoes.cadastrar', perfil) ? [{ rotulo: 'Gerar Guias INCDEF', icone: 'receipt_long', onClick: () => setGuiasIncdef(isIncdef) }] : []),
   ];
