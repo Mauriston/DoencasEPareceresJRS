@@ -5,6 +5,8 @@
 //    (components/ui/Fab.tsx) fica ao lado dela, separado, na mesma linha de base. Quando a página tem
 //    FAB (html[data-fab-pagina], publicado pelo Fab), a pílula encolhe à direita para abrir espaço (styles/app.css).
 //  • Ativo: pílula ouro atrás do ícone + rótulo em negrito (nunca só a cor do ícone).
+//  • Animações do Animate UI (primitivo BottomNavigation, `@animate-ui/react` + `motion`): o destaque ouro desliza
+//    entre os itens (spring 300/30) e os itens escalam a 0,97 ao toque. A decisão de ocultar continua nossa.
 //  • Oculta ao rolar para baixo e volta ao rolar para cima (hooks/useOcultarAoRolar.ts), com
 //    translateY(100%) em 200 ms cubic-bezier(0.2,0,0,1) — sem animação com prefers-reduced-motion.
 //    Oculta fica `inert` (nem clicável nem focável).
@@ -13,6 +15,8 @@
 //      --tabbar-folga  folga fixa embaixo do conteúdo (96 px + área segura) · 0 no desktop
 //      --fab-bottom    onde o FAB da página fica: centrado na barra (16 px + área segura), fixo mesmo com a barra oculta
 import React, { useContext, useEffect, useState, type RefObject } from 'react';
+import { BottomNavigation, BottomNavigationHighlight, BottomNavigationHighlightItem, BottomNavigationItem } from '@animate-ui/react/primitives/bottom-navigation';
+import { useReducedMotion } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
 import { NavContext } from '../../context/NavContext';
 import { canAccessPage } from '../../config/permissions';
@@ -35,19 +39,19 @@ const definirVariaveis = (vars: Record<string, string | null>) => {
 
 const Item: React.FC<{ ativo: boolean; icone: string; rotulo: string }> = ({ ativo, icone, rotulo }) => (
   <>
-    <span className={`flex items-center justify-center w-14 h-8 rounded-full transition-colors ${ativo ? 'bg-gold text-navy' : 'text-ink-3'}`} aria-hidden="true">
-      <span className="material-symbols-outlined text-[24px]">{icone}</span>
-    </span>
-    <span className={`text-xs leading-4 truncate max-w-full ${ativo ? 'font-bold text-navy' : 'font-semibold text-ink-3'}`}>{rotulo}</span>
+    <span className="material-symbols-outlined text-[24px]" aria-hidden="true">{icone}</span>
+    <span className="text-xs leading-4 truncate max-w-full">{rotulo}</span>
   </>
 );
 
-const CLASSE_ITEM = 'flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 h-16 px-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold rounded-full';
+// O destaque (pílula ouro) desliza entre os itens (primitivo do Animate UI); o item ativo vai em negrito navy.
+const classeItem = (ativo: boolean) => `relative z-10 w-full min-w-0 h-16 flex flex-col items-center justify-center gap-0.5 px-1 rounded-full transition-colors ${ativo ? 'font-bold text-navy' : 'font-semibold text-ink-3'} focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold`;
 
 export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = ({ alvo }) => {
   const nav = useContext(NavContext);
   const { pathname } = useLocation();
   const isDesktop = useIsDesktop();
+  const reduzMovimento = useReducedMotion();
   const perfil = nav?.authUser?.perfil;
   const view = nav?.currentView;
   const drawerAberto = !!nav?.isMobileMenuOpen;
@@ -84,39 +88,55 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
       aria-hidden="true"
       className={`md:hidden fixed inset-x-0 bottom-0 z-[9] pointer-events-none h-[calc(120px+env(safe-area-inset-bottom))] bg-gradient-to-t from-canvas via-canvas/85 to-transparent transition-opacity duration-200 motion-reduce:transition-none ${visivel ? 'opacity-100' : 'opacity-0'}`}
     />
-    <nav
+    <BottomNavigation
       aria-label="Navegação principal"
-      // `inert` fora da tela: nem clicável nem focável.
+      value={drawerAberto ? 'menu' : (view ?? '')}
+      scrollBehavior="none"
+      // `inert` fora da tela: nem clicável nem focável. Quem decide ocultar é o nosso useOcultarAoRolar
+      // (teclado, sheets, limiar, rota); o primitivo só anima o deslize, numa spring.
       inert={!visivel}
       onFocus={mostrar}
+      initial={false}
+      animate={reduzMovimento ? { opacity: visivel ? 1 : 0, y: 0 } : { opacity: 1, y: visivel ? 0 : '250%' }}
+      transition={reduzMovimento ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 35 }}
       data-barra-flutuante=""
-      className={`md:hidden fixed z-topbar bg-white border border-line rounded-full shadow-[0_10px_28px_-4px_rgba(18,28,75,0.28),0_2px_8px_rgba(18,28,75,0.14)] bottom-[calc(12px+env(safe-area-inset-bottom))] left-[calc(12px+env(safe-area-inset-left))] right-[calc(12px+env(safe-area-inset-right))] transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${visivel ? 'translate-y-0' : 'translate-y-[calc(100%+24px+env(safe-area-inset-bottom))]'}`}
+      className="md:hidden fixed z-topbar bg-white border border-line rounded-full shadow-[0_10px_28px_-4px_rgba(18,28,75,0.28),0_2px_8px_rgba(18,28,75,0.14)] bottom-[calc(12px+env(safe-area-inset-bottom))] left-[calc(12px+env(safe-area-inset-left))] right-[calc(12px+env(safe-area-inset-right))]"
     >
-      <ul className="flex items-stretch px-1">
-        {destinos.map(d => {
-          const ativo = view === d.view && !drawerAberto;
-          return (
-            <li key={d.view} className="flex-1 min-w-0 flex">
-              <Link to={pathForView(d.view)} aria-label={d.ariaLabel} aria-current={ativo ? 'page' : undefined} className={CLASSE_ITEM}>
-                <Item ativo={ativo} icone={d.icone} rotulo={d.rotulo} />
-              </Link>
-            </li>
-          );
-        })}
-        <li className="flex-1 min-w-0 flex">
-          <button
-            type="button"
-            onClick={() => nav?.setIsMobileMenuOpen(true)}
-            aria-haspopup="dialog"
-            aria-expanded={drawerAberto}
-            aria-controls={ID_DRAWER_MENU}
-            className={CLASSE_ITEM}
-          >
-            <Item ativo={drawerAberto} icone="menu" rotulo="Menu" />
-          </button>
-        </li>
-      </ul>
-    </nav>
+      <BottomNavigationHighlight className="absolute inset-1 rounded-full bg-gold">
+        <ul className="flex items-stretch px-1">
+          {destinos.map(d => {
+            const ativo = view === d.view && !drawerAberto;
+            return (
+              <li key={d.view} className="flex-1 min-w-0 flex">
+                <BottomNavigationHighlightItem value={d.view} className="w-full">
+                  <BottomNavigationItem asChild value={d.view}>
+                    <Link to={pathForView(d.view)} aria-label={d.ariaLabel} aria-current={ativo ? 'page' : undefined} className={classeItem(ativo)}>
+                      <Item ativo={ativo} icone={d.icone} rotulo={d.rotulo} />
+                    </Link>
+                  </BottomNavigationItem>
+                </BottomNavigationHighlightItem>
+              </li>
+            );
+          })}
+          <li className="flex-1 min-w-0 flex">
+            <BottomNavigationHighlightItem value="menu" className="w-full">
+              <BottomNavigationItem asChild value="menu">
+                <button
+                  type="button"
+                  onClick={() => nav?.setIsMobileMenuOpen(true)}
+                  aria-haspopup="dialog"
+                  aria-expanded={drawerAberto}
+                  aria-controls={ID_DRAWER_MENU}
+                  className={classeItem(drawerAberto)}
+                >
+                  <Item ativo={drawerAberto} icone="menu" rotulo="Menu" />
+                </button>
+              </BottomNavigationItem>
+            </BottomNavigationHighlightItem>
+          </li>
+        </ul>
+      </BottomNavigationHighlight>
+    </BottomNavigation>
     </>
   );
 };
