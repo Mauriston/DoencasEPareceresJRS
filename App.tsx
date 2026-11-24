@@ -5,7 +5,7 @@ import { Navigate, useLocation, useNavigate, useNavigationType, useRoutes } from
 import { Login } from './components/Login';
 import { Home } from './components/Home';
 import { Sidebar } from './components/shell/Sidebar';
-import { LaunchScreen } from './components/shell/LaunchScreen';
+import { LaunchScreen, useAberturaConcluida } from './components/shell/LaunchScreen';
 import { BannerAniversariantes } from './components/shell/BannerAniversariantes';
 import { ChatProvider } from './components/chat/ChatContext';
 import { BannerChat } from './components/chat/BannerChat';
@@ -149,6 +149,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
     () => (authUserReal && authUserReal.perfil === 'admin' && verComo ? { ...authUserReal, perfil: verComo } : authUserReal),
     [authUserReal, verComo],
   );
+  const aberturaConcluida = useAberturaConcluida();
   const [authLoading, setAuthLoading] = useState(true);
   const [permissoesLoading, setPermissoesLoading] = useState(true);
   const [senhaAlertDismissed, setSenhaAlertDismissed] = useState(false);
@@ -431,7 +432,7 @@ const App: React.FC<AppProps> = ({ handoffToken = null }) => {
     },
   ]);
 
-  if (authLoading || handoffPendente) {
+  if (authLoading || handoffPendente || !aberturaConcluida) {
     return <LaunchScreen />;
   }
 

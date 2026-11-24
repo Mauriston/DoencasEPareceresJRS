@@ -14,6 +14,21 @@
 import React, { useEffect, useState } from 'react';
 import iconeJrs from '../../assets/icone-jrs.png';
 
+// Tempo mínimo (ms, contado desde a abertura da página) em que a tela de abertura
+// permanece visível, mesmo que auth/permissões resolvam antes.
+export const TEMPO_MINIMO_ABERTURA_MS = 2500;
+
+export function useAberturaConcluida(minimoMs = TEMPO_MINIMO_ABERTURA_MS): boolean {
+  const restante = () => Math.max(0, minimoMs - performance.now());
+  const [concluida, setConcluida] = useState(() => restante() === 0);
+  useEffect(() => {
+    if (concluida) return;
+    const t = window.setTimeout(() => setConcluida(true), restante());
+    return () => window.clearTimeout(t);
+  }, [concluida]);
+  return concluida;
+}
+
 const BOUNCE = 'cubic-bezier(.34,1.56,.64,1)';
 
 export const LaunchScreen: React.FC = () => {
