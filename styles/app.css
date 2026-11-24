@@ -483,11 +483,6 @@ html[data-fab-pagina] [data-barra-flutuante] { right: calc(84px + env(safe-area-
 [data-sheet-corpo]:has([data-acoes-fab]),
 [data-sheet-corpo]:has(~ [data-acoes-fab]),
 [data-sheet-corpo]:has(~ * [data-acoes-fab]) { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
-@keyframes fab-item-in { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
-.fab-item-in { animation: fab-item-in .18s cubic-bezier(0.2, 0, 0, 1) both; }
-@media (prefers-reduced-motion: reduce) {
-  .fab-item-in { animation: none; }
-}
 
 /* Topbar do celular: com ações visíveis da página no slot (os wrappers só de desktop levam `hidden`),
    o sino de notificações sai — as notificações continuam no menu do usuário (rodapé do drawer). */

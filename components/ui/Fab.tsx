@@ -7,6 +7,7 @@
 //      – 2+      → "+" que abre a pilha (speed-dial) com TODAS as ações em pílulas com rótulo, a
 //                  principal mais perto do polegar;
 //  • sheet/drawer: FAB estendido (ícone + rótulo); 2–3 → principal + "˄" que abre a pilha com as demais.
+//  A pilha abre/fecha com spring (motion, mesmo ritmo da barra inferior; instantânea com prefers-reduced-motion).
 //  A pilha fecha ao tocar fora, ao escolher, com Esc ou ao trocar de rota.
 // Posição: canto inferior direito, com área segura. O da página fica AO LADO da barra inferior
 // flutuante (separado dela, centrado na mesma linha: variável --fab-bottom publicada pela
@@ -23,6 +24,7 @@
 // Leia `permitido` de canUseFeature/canAccessPage no render (a matriz muda em tempo real).
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
 
@@ -87,6 +89,7 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
   const fab = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const menuId = useId();
+  const reduzMovimento = useReducedMotion();
   const principal = acoes[0];
   const varias = acoes.length > 1;
   const soIcone = posicao === 'pagina';
@@ -157,26 +160,34 @@ export const FabFlutuante: React.FC<FabFlutuanteProps> = ({ acoes, posicao }) =>
     <>
       {aberto && <div className="fixed inset-0 z-sticky bg-black/10 animate-backdrop-in" onClick={() => fechar()} aria-hidden="true" />}
       <div data-acoes-fab="" className={`${classePosicao(posicao)} flex flex-col items-end gap-3`} style={estiloPosicao(posicao)}>
-        {aberto && (
-          <div ref={menu} id={menuId} role="menu" aria-label="Ações" onKeyDown={navegar} className="flex flex-col items-end gap-2">
-            {pilha.map((a, i) => (
-              <button
-                key={a.id}
-                type="button"
-                role="menuitem"
-                disabled={a.disabled || a.loading}
-                aria-busy={a.loading || undefined}
-                aria-label={a.ariaLabel}
-                onClick={() => { fechar(); executar(a); }}
-                style={{ animationDelay: `${(pilha.length - 1 - i) * 30}ms` }}
-                className={`fab-item-in ${PILULA} rounded-full ${FOCO} ${COR[a === principal ? (a.variante ?? 'primary') : (a.variante === 'destructive' ? 'destructive' : 'secondary')]}`}
-              >
-                <Icone acao={a} />
-                <span className="truncate">{a.rotulo}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        <AnimatePresence>
+          {aberto && (
+            <div key="pilha" ref={menu} id={menuId} role="menu" aria-label="Ações" onKeyDown={navegar} className="flex flex-col items-end gap-2">
+              {pilha.map((a, i) => {
+                const ordem = pilha.length - 1 - i; // a principal (última da pilha) aparece primeiro
+                return (
+                  <motion.button
+                    key={a.id}
+                    type="button"
+                    role="menuitem"
+                    disabled={a.disabled || a.loading}
+                    aria-busy={a.loading || undefined}
+                    aria-label={a.ariaLabel}
+                    onClick={() => { fechar(); executar(a); }}
+                    initial={reduzMovimento ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={reduzMovimento ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.92 }}
+                    transition={reduzMovimento ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 30, delay: ordem * 0.03 }}
+                    className={`${PILULA} rounded-full ${FOCO} ${COR[a === principal ? (a.variante ?? 'primary') : (a.variante === 'destructive' ? 'destructive' : 'secondary')]}`}
+                  >
+                    <Icone acao={a} />
+                    <span className="truncate">{a.rotulo}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          )}
+        </AnimatePresence>
         <button
           ref={fab}
           type="button"

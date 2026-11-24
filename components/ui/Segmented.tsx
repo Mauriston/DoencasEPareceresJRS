@@ -3,7 +3,10 @@
 // página (Novo · Histórico, Capítulos · Anexos, Cards · Tabela, filtros de
 // status). Antes havia três padrões de aba — abas verdes sobre faixa navy,
 // chips e cards. Abas (Tabs) ficam só para seções da mesma entidade.
+// O fundo navy da opção ativa desliza entre as opções (Highlight do Animate UI, spring); com
+// prefers-reduced-motion o próprio primitivo troca sem animar.
 import React, { useRef } from 'react';
+import { Highlight, HighlightItem } from '@animate-ui/react/primitives/effects/highlight';
 
 export interface SegmentedOption<T extends string> {
   value: T;
@@ -53,18 +56,19 @@ export function Segmented<T extends string>({ options, value, onChange, ariaLabe
       aria-label={ariaLabel}
       className={`${fullWidth ? 'flex w-full' : 'inline-flex'} gap-1 p-1 rounded-lg bg-thead border border-line ${className}`}
     >
+      <Highlight controlledItems value={nenhumAtivo ? null : value} className="inset-0 rounded-md bg-navy">
       {options.map(o => {
         const ativo = o.value === value;
         return (
+          <HighlightItem key={o.value} value={o.value} className={`rounded-md ${fullWidth ? 'flex-1' : ''}`}>
           <button
-            key={o.value}
             type="button"
             role={aba ? 'tab' : 'radio'}
             {...(aba ? { id: `${idBase}-aba-${o.value}`, 'aria-selected': ativo, 'aria-controls': `${idBase}-painel` } : { 'aria-checked': ativo })}
             tabIndex={ativo || (nenhumAtivo && o === options[0]) ? 0 : -1}
             onClick={() => (ativo && onDesmarcar ? onDesmarcar() : onChange(o.value))}
-            className={`${fullWidth ? 'flex-1' : ''} inline-flex items-center justify-center gap-2 min-h-8 px-4 rounded-md text-sm font-bold whitespace-nowrap transition-colors ${
-              ativo ? 'bg-navy text-white' : 'text-ink-3 hover:bg-white hover:text-navy'
+            className={`${fullWidth ? 'w-full' : ''} inline-flex items-center justify-center gap-2 min-h-8 px-4 rounded-md text-sm font-bold whitespace-nowrap transition-colors ${
+              ativo ? 'text-white' : 'text-ink-3 hover:bg-white hover:text-navy'
             }`}
           >
             {o.icon && <span className="material-symbols-outlined text-[20px]" aria-hidden="true">{o.icon}</span>}
@@ -73,8 +77,10 @@ export function Segmented<T extends string>({ options, value, onChange, ariaLabe
               <span className={`min-w-5 h-5 px-1 rounded-full text-xs font-bold flex items-center justify-center ${ativo ? 'bg-white text-navy' : o.badgeTone === 'neutro' ? 'bg-line text-ink' : 'bg-wine text-white'}`}>{o.badge}</span>
             )}
           </button>
+          </HighlightItem>
         );
       })}
+      </Highlight>
     </div>
   );
 }
