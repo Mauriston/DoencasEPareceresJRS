@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
 import { Dialog, ConfirmDialog } from '../ui/Dialog';
 import { MenuAcoes } from '../ui/MenuAcoes';
+import { SheetOpcoes } from '../ui/SheetOpcoes';
 import { BotaoDigitalizar } from '../scanner/BotaoDigitalizar';
 import { useIsDesktop } from '../../hooks/useIsDesktop';
 import { gravarExameIS, identificarInspecionadoNoPdf, lerExameComIA } from '../../services/examesIS';
@@ -27,11 +28,13 @@ interface Props {
   militares: MilitarRecord[];
   usuario: { uid: string; usuario: string };
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
+  /** Celular: sem o botão ▾ — as opções abrem num bottom sheet acionado pelo FAB da Início. */
+  sheet?: { aberto: boolean; onFechar: () => void };
 }
 
 let seq = 0;
 
-export const EnviarPdfHome: React.FC<Props> = ({ inspecoes, militares, usuario, onAviso }) => {
+export const EnviarPdfHome: React.FC<Props> = ({ inspecoes, militares, usuario, onAviso, sheet }) => {
   const navegar = useNavigate();
   const isDesktop = useIsDesktop();
   const [destino, setDestino] = useState<DestinoPdfHome | null>(null);
@@ -98,13 +101,13 @@ export const EnviarPdfHome: React.FC<Props> = ({ inspecoes, militares, usuario, 
     void rodarFila(destino);
   };
 
+  const itensMenu = (Object.keys(DESTINOS_PDF_HOME) as DestinoPdfHome[]).map(k => ({ rotulo: DESTINOS_PDF_HOME[k].rotulo, icone: DESTINOS_PDF_HOME[k].icone, onClick: () => { setEnvios(() => []); setDestino(k); } }));
   const t = destino ? DESTINOS_PDF_HOME[destino] : null;
   return (
     <>
-      <MenuAcoes
-        rotulo="Enviar PDF" botao={{ texto: 'Enviar PDF', icone: 'upload_file' }}
-        itens={(Object.keys(DESTINOS_PDF_HOME) as DestinoPdfHome[]).map(k => ({ rotulo: DESTINOS_PDF_HOME[k].rotulo, icone: DESTINOS_PDF_HOME[k].icone, onClick: () => { setEnvios(() => []); setDestino(k); } }))}
-      />
+      {sheet ? (sheet.aberto && <SheetOpcoes titulo="Enviar PDF" icone="upload_file" itens={itensMenu} onClose={sheet.onFechar} />) : (
+        <MenuAcoes rotulo="Enviar PDF" botao={{ texto: 'Enviar PDF', icone: 'upload_file' }} itens={itensMenu} />
+      )}
       {destino && t && (
         <Dialog
           title={`Enviar PDF — ${t.rotulo}`} icon="upload_file" size="md" travado={rodando} onClose={fechar}

@@ -748,8 +748,8 @@ export const InspecaoDetalhe: React.FC<Props> = ({ inspecao: is, om, permissoes,
   const chipStatus = <StatusTag tone={tomStatusIS(efetivo)}>{info.rotulo}</StatusTag>;
   if (casca === 'inline') {
     return (
-      <CascaPainelFicha titulo={is.finalidade || `IS ${is.is}`} icone="event_available" tituloExtra={chipStatus} extraNaDireita
-        subtitulo={is.finalidade ? `IS ${is.is}` : undefined} acoes={[...acoesExtras, ...acoes]}>
+      <CascaPainelFicha titulo={is.finalidade || `IS ${is.is}`} icone="event_available" tituloExtra={chipStatus} extraAbaixo
+        acoes={[...acoesExtras, ...acoes]}>
         {corpo}
       </CascaPainelFicha>
     );

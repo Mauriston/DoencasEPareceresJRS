@@ -5,12 +5,13 @@
 // No painel da visão Calendário (visão Dia) é usado controlado e compacto: `selecionado` + `onSelecionar`
 // navegam o calendário grande e a lista do dia some.
 import React, { useEffect, useMemo, useState } from 'react';
+import { useCalendarioPeriodo } from '../../hooks/useCalendarioPeriodo';
 import { Link } from 'react-router-dom';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import { tituloDiaConcurso, type DiaConcurso } from '../../services/agendaConcursos';
 import { concursoPath } from '../../config/routes';
 import {
-  hojeISO, somarDias, inicioDaSemana, inicioDoMes, nomeMes, nomeDiaSemana, deISO, paraISO, dataBr, dataDeEntrevista, horaDeEntrevista,
+  hojeISO, nomeMes, nomeDiaSemana, dataBr, dataDeEntrevista, horaDeEntrevista,
 } from '../../utils/inspecoes';
 
 const nomeCurto = (inspecionado: string): string => inspecionado.replace(/^.*?\d{2}\.\d{4}\.\d{2}\s*/, '') || inspecionado;
@@ -29,12 +30,13 @@ interface Props {
 
 export const MiniCalendarioIS: React.FC<Props> = ({ inspecoes, diasConcursos = [], concursosClicaveis = false, selecionado: selecionadoExterno, onSelecionar, compacto = false }) => {
   const hoje = hojeISO();
-  const [mes, setMes] = useState(inicioDoMes(selecionadoExterno ?? hoje));
+  // Celular: uma semana por vez; desktop: o mês inteiro.
+  const { dias, referencia: mes, mudar: mudarMes, setAncora, foraDoPeriodo } = useCalendarioPeriodo(selecionadoExterno ?? hoje);
   const [selecionadoInterno, setSelecionadoInterno] = useState(hoje);
   const selecionado = selecionadoExterno ?? selecionadoInterno;
   const setSelecionado = (d: string) => { if (onSelecionar) onSelecionar(d); else setSelecionadoInterno(d); };
   // O dia escolhido de fora (setas do calendário grande) leva a grade para o mês dele.
-  useEffect(() => { if (selecionadoExterno) setMes(inicioDoMes(selecionadoExterno)); }, [selecionadoExterno]);
+  useEffect(() => { if (selecionadoExterno) setAncora(selecionadoExterno); }, [selecionadoExterno]);
 
   const porDia = useMemo(() => {
     const m = new Map<string, InspecaoRecord[]>();
@@ -53,29 +55,24 @@ export const MiniCalendarioIS: React.FC<Props> = ({ inspecoes, diasConcursos = [
     return m;
   }, [diasConcursos]);
 
-  const inicio = inicioDaSemana(mes);
-  const semanas = Array.from({ length: 6 }, (_, w) => Array.from({ length: 7 }, (_, d) => somarDias(inicio, w * 7 + d)))
-    .filter((s, i) => i < 5 || s.some(d => d.slice(0, 7) === mes.slice(0, 7)));
-
-  const mudarMes = (n: number) => { const d = deISO(mes); d.setMonth(d.getMonth() + n, 1); setMes(paraISO(d)); };
   const doDia = porDia.get(selecionado) ?? [];
   const concursosDoDia = concursosPorDia.get(selecionado) ?? [];
 
   return (
     <div className={compacto ? '' : 'px-3 pb-3'}>
       <div className="flex items-center justify-between mb-1">
-        <button type="button" onClick={() => mudarMes(-1)} aria-label="Mês anterior" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined text-[22px]" aria-hidden="true">chevron_left</span></button>
+        <button type="button" onClick={() => mudarMes(-1)} aria-label="Período anterior" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined text-[22px]" aria-hidden="true">chevron_left</span></button>
         <p className="text-sm font-bold text-navy first-letter:uppercase" aria-live="polite">{nomeMes(mes)} de {mes.slice(0, 4)}</p>
-        <button type="button" onClick={() => mudarMes(1)} aria-label="Próximo mês" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined text-[22px]" aria-hidden="true">chevron_right</span></button>
+        <button type="button" onClick={() => mudarMes(1)} aria-label="Próximo período" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined text-[22px]" aria-hidden="true">chevron_right</span></button>
       </div>
 
       <div className="grid grid-cols-7 text-center text-xs font-semibold text-ink-3 uppercase" aria-hidden="true">
         {['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((l, i) => <span key={i} className="py-1">{l}</span>)}
       </div>
       <div className="grid grid-cols-7 gap-y-0.5" role="grid" aria-label={`Calendário de ${nomeMes(mes)}`}>
-        {semanas.flat().map(d => {
+        {dias.map(d => {
           const lista = porDia.get(d) ?? [];
-          const foraDoMes = d.slice(0, 7) !== mes.slice(0, 7);
+          const foraDoMes = foraDoPeriodo(d);
           const ativo = d === selecionado;
           const temJrs = lista.some(i => i.amp === 'JRS');
           const temMpi = lista.some(i => i.amp !== 'JRS');

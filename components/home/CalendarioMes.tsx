@@ -3,13 +3,14 @@
 // dia no card "Agenda" (o estado do dia escolhido fica na Home). Marcas por TIPO, não só por cor: IS JRS (ponto
 // navy), IS MPI (ponto ouro) e concurso (quadrado azul; verde quando concluído) — com legenda. Rótulos de dia
 // não ambíguos (Seg Ter Qua Qui Sex Sáb Dom), no mínimo 12 px, números em tabular-nums.
-import React, { useState } from 'react';
+import React from 'react';
+import { useCalendarioPeriodo } from '../../hooks/useCalendarioPeriodo';
 import { Secao } from './Secao';
 import { IconButton } from '../ui/IconButton';
 import type { InspecaoRecord } from '../../services/firestoreInspecoes';
 import type { DiaConcurso } from '../../services/agendaConcursos';
 import { marcasDoDia } from '../../utils/agendaHome';
-import { somarDias, inicioDaSemana, inicioDoMes, nomeMes } from '../../utils/inspecoes';
+import { nomeMes } from '../../utils/inspecoes';
 
 const DIAS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
@@ -33,17 +34,9 @@ const Legenda: React.FC = () => (
 );
 
 export const CalendarioMes: React.FC<Props> = ({ hoje, selecionado, onSelecionar, inspecoes, diasConcursos, embutido = false }) => {
-  const [mes, setMes] = useState(inicioDoMes(selecionado || hoje));
+  // Celular: uma semana por vez (setas de semana em semana); desktop: o mês inteiro.
+  const { dias, referencia: mes, mudar, foraDoPeriodo, semanal } = useCalendarioPeriodo(selecionado || hoje);
   const ano = Number(mes.slice(0, 4));
-  const mudarMes = (n: number) => {
-    const total = ano * 12 + (Number(mes.slice(5, 7)) - 1) + n;
-    setMes(`${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}-01`);
-  };
-
-  const inicio = inicioDaSemana(mes);
-  // 5 semanas; a 6ª só quando o mês ainda tem dias nela.
-  const dias = Array.from({ length: 42 }, (_, i) => somarDias(inicio, i))
-    .filter((_, i) => i < 35 || Array.from({ length: 7 }, (__, k) => somarDias(inicio, 35 + k)).some(x => x.slice(0, 7) === mes.slice(0, 7)));
   const tituloMes = `${nomeMes(mes).charAt(0).toUpperCase()}${nomeMes(mes).slice(1)} de ${ano}`;
 
   return (
@@ -51,8 +44,8 @@ export const CalendarioMes: React.FC<Props> = ({ hoje, selecionado, onSelecionar
       id="home-calendario" titulo={tituloMes} embutido={embutido}
       acao={(
         <span className="flex gap-1">
-          <IconButton icon="chevron_left" label="Mês anterior" variant="ghost" size="sm" onClick={() => mudarMes(-1)} />
-          <IconButton icon="chevron_right" label="Próximo mês" variant="ghost" size="sm" onClick={() => mudarMes(1)} />
+          <IconButton icon="chevron_left" label={semanal ? 'Semana anterior' : 'Mês anterior'} variant="ghost" size="sm" onClick={() => mudar(-1)} />
+          <IconButton icon="chevron_right" label={semanal ? 'Próxima semana' : 'Próximo mês'} variant="ghost" size="sm" onClick={() => mudar(1)} />
         </span>
       )}
     >
@@ -61,9 +54,9 @@ export const CalendarioMes: React.FC<Props> = ({ hoje, selecionado, onSelecionar
       <div className="grid grid-cols-7 text-center text-xs font-semibold text-ink-3" aria-hidden="true">
         {DIAS.map(d => <span key={d} className="py-1">{d}</span>)}
       </div>
-      <div className="grid grid-cols-7 gap-y-0.5 mt-1" role="group" aria-label={`Calendário de ${tituloMes}`}>
+      <div className="grid grid-cols-7 gap-y-0.5 mt-1" role="group" aria-label={`Calendário de ${tituloMes}${semanal ? ' (semana)' : ''}`}>
         {dias.map(d => {
-          const fora = d.slice(0, 7) !== mes.slice(0, 7);
+          const fora = foraDoPeriodo(d);
           const ativo = d === selecionado;
           const ehHoje = d === hoje;
           const m = marcasDoDia(d, inspecoes, diasConcursos);
