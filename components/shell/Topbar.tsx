@@ -3,10 +3,10 @@
 // Desktop: a trilha completa; o título (h1) mora no PageHeader da página.
 // Celular (auditoria v3, M9/4b): "‹" para o pai + o título da página como h1 (registrado pelo
 // PageHeader via useTituloPagina — ver TituloPagina.tsx) · busca (ícone) · as ações da página
-// (⋮ etc., que o PageHeader leva para o slot #topbar-acoes) · sino de notificações quando a
-// página não tem ações. O avatar/menu do usuário fica no rodapé do drawer (item "Menu" da
+// (⋮ etc., que o PageHeader leva para o slot #topbar-acoes) · sino de notificações só na Início. O avatar/menu do usuário fica no rodapé do drawer (item "Menu" da
 // barra inferior) — o ☰ e o avatar saíram da topbar do celular.
 import React, { useContext } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Breadcrumbs } from './Breadcrumbs';
 import { GlobalSearch } from './GlobalSearch';
 import { UserMenu } from './UserMenu';
@@ -16,7 +16,9 @@ import { TOPBAR_ACOES_ID } from '../ui/Page';
 /** Sino de notificações do celular; some (CSS em app.css) quando o slot de ações da página tem conteúdo. */
 const SinoNotificacoes: React.FC = () => {
   const nav = useContext(NavContext);
-  if (!nav?.abrirNotificacoes) return null;
+  const { pathname } = useLocation();
+  // Só na Início: nas demais páginas o lugar é do ⋮ de ações (slot #topbar-acoes), quando a página tem ações.
+  if (pathname !== '/' || !nav?.abrirNotificacoes) return null;
   const n = nav.notificacoesNaoLidas || 0;
   return (
     <button

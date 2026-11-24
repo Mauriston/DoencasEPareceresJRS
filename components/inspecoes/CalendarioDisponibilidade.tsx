@@ -2,9 +2,9 @@
 // Mini calendário de escolha de data: só os dias com disponibilidade (segundo `disponivel`) podem ser
 // escolhidos; os demais ficam esmaecidos. Navega por mês. Com `contagem`, cada dia disponível mostra
 // quantas IS já estão agendadas nele.
-import React, { useState } from 'react';
-import { hojeISO, inicioDoMes, nomeMes, deISO, paraISO } from '../../utils/inspecoes';
-import { gradeDoMes } from '../../utils/disponibilidadeAgenda';
+import React from 'react';
+import { hojeISO, nomeMes } from '../../utils/inspecoes';
+import { useCalendarioPeriodo } from '../../hooks/useCalendarioPeriodo';
 
 interface Props {
   valor: string;
@@ -21,23 +21,22 @@ interface Props {
 
 export const CalendarioDisponibilidade: React.FC<Props> = ({ valor, onChange, disponivel, mesInicial, contagem, permitirDataPassada = false }) => {
   const hoje = hojeISO();
-  const [mes, setMes] = useState(inicioDoMes(valor || mesInicial || hoje));
-  const mudarMes = (n: number) => { const d = deISO(mes); d.setMonth(d.getMonth() + n, 1); setMes(paraISO(d)); };
-  const dias = gradeDoMes(mes);
+  // Celular: uma semana por vez; desktop: o mês inteiro.
+  const { dias, referencia: mes, mudar: mudarMes, foraDoPeriodo } = useCalendarioPeriodo(valor || mesInicial || hoje);
 
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <button type="button" onClick={() => mudarMes(-1)} aria-label="Mês anterior" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined text-[22px]" aria-hidden="true">chevron_left</span></button>
+        <button type="button" onClick={() => mudarMes(-1)} aria-label="Período anterior" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined text-[22px]" aria-hidden="true">chevron_left</span></button>
         <p className="text-sm font-bold text-navy first-letter:uppercase" aria-live="polite">{nomeMes(mes)} de {mes.slice(0, 4)}</p>
-        <button type="button" onClick={() => mudarMes(1)} aria-label="Próximo mês" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined text-[22px]" aria-hidden="true">chevron_right</span></button>
+        <button type="button" onClick={() => mudarMes(1)} aria-label="Próximo período" className="w-11 h-11 flex items-center justify-center rounded-lg text-navy hover:bg-thead"><span className="material-symbols-outlined text-[22px]" aria-hidden="true">chevron_right</span></button>
       </div>
       <div className="grid grid-cols-7 text-center text-xs font-semibold text-ink-3 uppercase" aria-hidden="true">
         {['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((l, i) => <span key={i} className="py-1">{l}</span>)}
       </div>
       <div className="grid grid-cols-7 gap-y-0.5" role="group" aria-label={`Datas de ${nomeMes(mes)}`}>
         {dias.map(d => {
-          const foraDoMes = d.slice(0, 7) !== mes.slice(0, 7);
+          const foraDoMes = foraDoPeriodo(d);
           const livre = !foraDoMes && (permitirDataPassada || d >= hoje) && disponivel(d);
           const ativo = d === valor;
           const n = livre && contagem ? contagem(d) : null;

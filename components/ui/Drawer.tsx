@@ -17,9 +17,13 @@ interface DrawerProps {
   tituloExtra?: React.ReactNode;
   /** Ação(ões) discretas no topo, à direita, antes do "Fechar" (ex.: Button ghost sm "Abrir ficha"). */
   acoesTopo?: React.ReactNode;
+  /** Impede fechar por Esc/fora/arrasto/botão (ex.: etapa obrigatória). */
+  travado?: boolean;
+  /** Classe de camada (z-index). Padrão: z-drawer; o Dialog no celular usa z-dialog. */
+  camada?: string;
 }
 
-export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, footer, tituloExtra, acoesTopo }) => {
+export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, footer, tituloExtra, acoesTopo, travado = false, camada = 'z-drawer' }) => {
   const isDesktop = useIsDesktop();
   const titleId = useId();
   const painel = useRef<HTMLDivElement>(null);
@@ -27,15 +31,15 @@ export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, 
   useEffect(() => {
     painel.current?.focus();
   }, []);
-  useEscapeEmpilhado(onClose);
+  useEscapeEmpilhado(onClose, !travado);
 
   return (
-    <div className="fixed inset-0 z-drawer">
-      <div className="absolute inset-0 bg-black/50 animate-backdrop-in" onMouseDown={onClose} aria-hidden="true" />
+    <div className={`fixed inset-0 ${camada}`}>
+      <div className="absolute inset-0 bg-black/50 animate-backdrop-in" onMouseDown={() => { if (!travado) onClose(); }} aria-hidden="true" />
       <SheetArrastavel
         ref={painel}
         onClose={onClose}
-        ativo={!isDesktop}
+        ativo={!isDesktop && !travado}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -55,9 +59,11 @@ export const Drawer: React.FC<DrawerProps> = ({ title, icon, onClose, children, 
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {acoesTopo}
-            <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0 w-10 h-10 -mr-2 flex items-center justify-center rounded-lg text-ink-3 hover:text-navy hover:bg-thead transition-colors">
-              <span className="material-symbols-outlined text-[24px]" aria-hidden="true">close</span>
-            </button>
+            {!travado && (
+              <button type="button" onClick={onClose} aria-label="Fechar" className="shrink-0 w-10 h-10 -mr-2 flex items-center justify-center rounded-lg text-ink-3 hover:text-navy hover:bg-thead transition-colors">
+                <span className="material-symbols-outlined text-[24px]" aria-hidden="true">close</span>
+              </button>
+            )}
           </div>
         </div>
         <div data-sheet-corpo="" className="p-5 overflow-y-auto flex-1 text-sm text-ink">{children}</div>

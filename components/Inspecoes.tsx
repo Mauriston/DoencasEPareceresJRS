@@ -9,7 +9,7 @@
 // Calendário (formato do Google Agenda) só a partir de md (4g): no celular a página força a Lista, mesmo com a
 // preferência salva ou ?visao=calendario. Cabeçalho: "Enviar e-mails" (menu com as pendências de cada
 // lista; badge com a soma) · "Bloqueios" · "Abrir IS" por último. No celular: "E-mails" na linha das abas e o FAB "+"
-// com Abrir IS (manual) · Abrir IS (print do SINAIS) · Bloqueios (4d).
+// com Abrir IS (manual) · Abrir IS (print do SINAIS) (4d); Bloqueios só no ⋮ da topbar.
 // Filtros pela URL (contadores da Início e do Painel):
 //   ?situacao=atrasadas | sem_agendamento | finalizadas | hoje   (hoje vira o período "Hoje" e sai da URL)
 //   ?situacao=aguardando (entrevistados aguardando conclusão) | msg_pendentes (Minuta MSG de cancelamento por falta pendente)
@@ -630,7 +630,13 @@ export const Inspecoes: React.FC = () => {
               </span>
             )}
             <div className="hidden md:flex items-center gap-2">
-              {podeBloquear && <Button variant="secondary" icon="block" onClick={() => setBloqueiosAberto(true)}>Bloqueios</Button>}
+              {/* Desktop: ⋮ à esquerda do botão primário com os Bloqueios (não é mais um botão secundário). */}
+              {podeBloquear && (
+                <MenuAcoes
+                  rotulo="Mais ações"
+                  itens={[{ rotulo: 'Bloqueios da agenda', icone: 'block', onClick: () => setBloqueiosAberto(true) }]}
+                />
+              )}
               {podeCadastrar && (
                 <MenuAcoes
                   rotulo="Abrir IS" botao={{ texto: 'Abrir IS', icone: 'add', primario: true }}
@@ -731,7 +737,6 @@ export const Inspecoes: React.FC = () => {
       <FabAcoes acoes={[
         { id: 'abrir-is', rotulo: 'Abrir IS', ariaLabel: 'Abrir IS manualmente', icone: 'add', onClick: () => setNovo({}), permitido: podeCadastrar },
         { id: 'is-print', rotulo: 'Abrir IS', ariaLabel: 'Abrir IS pelo print do SINAIS', icone: 'photo_camera', onClick: () => setPorFoto(true), permitido: podeCadastrar },
-        { id: 'bloqueios', rotulo: 'Bloqueios', ariaLabel: 'Bloqueios da agenda', icone: 'block', onClick: () => setBloqueiosAberto(true), permitido: podeBloquear },
       ]} />
 
       {novo && usuario && (

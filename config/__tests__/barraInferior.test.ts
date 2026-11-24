@@ -5,6 +5,17 @@ import { destinosBarraInferior } from '../barraInferior';
 const views = (perfil: string, concursoEmAndamento: boolean, viewAtual?: any) =>
   destinosBarraInferior(perfil, { concursoEmAndamento, viewAtual }).map(d => d.view);
 
+describe('barra inferior — página aberta por fora da barra', () => {
+  it('entra como último destino enquanto o usuário está nela, e some ao sair', () => {
+    expect(views('admin', true, 'dgpm406')).toEqual(['home', 'inspecoes', 'concursosJRS', 'pericia-menor', 'dgpm406']);
+    expect(views('admin', true, 'dgpm406-anexos')).toContain('dgpm406');
+    expect(views('admin', true, 'home')).toEqual(['home', 'inspecoes', 'concursosJRS', 'pericia-menor']);
+  });
+  it('não duplica destino que já está na barra', () => {
+    expect(views('admin', true, 'inspecoes').filter(v => v === 'inspecoes')).toHaveLength(1);
+  });
+});
+
 describe('barra inferior (4e) — destinos por perfil', () => {
   it('Admin/Médicos: Início · Inspeções · Concursos · Perícias', () => {
     expect(views('admin', true)).toEqual(['home', 'inspecoes', 'concursosJRS', 'pericia-menor']);

@@ -5,6 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MenuAcoes } from '../ui/MenuAcoes';
+import { SheetOpcoes } from '../ui/SheetOpcoes';
 import { useEmailsIS } from '../inspecoes/BotaoEnviarEmail';
 import { EnviarAgendamentoDialog } from '../inspecoes/EnviarAgendamentoDialog';
 import { EnviarResultadoDialog } from '../inspecoes/EnviarResultadoDialog';
@@ -22,9 +23,11 @@ interface Props {
   /** Admin: "Limpar" nos modais. */
   podeLimpar: boolean;
   onAviso: (msg: string, tom?: 'success' | 'error') => void;
+  /** Celular: sem o botão ▾ — as opções abrem num bottom sheet acionado pelo FAB da Início. */
+  sheet?: { aberto: boolean; onFechar: () => void };
 }
 
-export const EnviarEmailsHome: React.FC<Props> = ({ inspecoes, militares, hoje, podeLimpar, onAviso }) => {
+export const EnviarEmailsHome: React.FC<Props> = ({ inspecoes, militares, hoje, podeLimpar, onAviso, sheet }) => {
   const [params, setParams] = useSearchParams();
   const [agendando, setAgendando] = useState<InspecaoRecord | null>(null);
   const [enviandoResultado, setEnviandoResultado] = useState<InspecaoRecord | null>(null);
@@ -48,7 +51,7 @@ export const EnviarEmailsHome: React.FC<Props> = ({ inspecoes, militares, hoje, 
 
   return (
     <>
-      <MenuAcoes rotulo="Enviar emails" botao={{ texto: 'Enviar emails', icone: 'mail', badge: emails.total }} itens={emails.itens} classeGatilho="w-full sm:w-auto" />
+      {sheet ? (sheet.aberto && <SheetOpcoes titulo="Enviar emails" icone="mail" itens={emails.itens} onClose={sheet.onFechar} />) : <MenuAcoes rotulo="Enviar emails" botao={{ texto: 'Enviar emails', icone: 'mail', badge: emails.total }} itens={emails.itens} classeGatilho="w-full sm:w-auto" />}
       {emails.dialogos}
       {agendando && ehElegivelAgendamento(agendando) && !agendamentoJaEnviado(agendando) && (
         <EnviarAgendamentoDialog

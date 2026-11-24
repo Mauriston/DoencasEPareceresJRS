@@ -503,15 +503,23 @@ export const Home: React.FC = () => {
   };
   // Secretaria: "Enviar PDF ▾" (Exames · Atestados e Laudos) — secundário ao lado de "Abrir IS" no desktop; no celular,
   // um bloco abaixo do cabeçalho (o FAB só leva a principal).
+  const [sheetEmails, setSheetEmails] = useState(false);
+  const [sheetPdf, setSheetPdf] = useState(false);
   const [toast, setToast] = useState<{ msg: string; tone: 'success' | 'error' } | null>(null);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 4000); return () => clearTimeout(t); }, [toast]);
   const botaoEnviarPdf = ehSecretaria && podeInspecoes && canUseFeature('inspecoes.enviarExames', perfil) && authUser
-    ? <EnviarPdfHome inspecoes={inspecoes} militares={militares} usuario={{ uid: authUser.uid, usuario: authUser.usuario }} onAviso={(msg, tone = 'success') => setToast({ msg, tone })} />
+    ? <EnviarPdfHome sheet={isDesktop ? undefined : { aberto: sheetPdf, onFechar: () => setSheetPdf(false) }} inspecoes={inspecoes} militares={militares} usuario={{ uid: authUser.uid, usuario: authUser.usuario }} onAviso={(msg, tone = 'success') => setToast({ msg, tone })} />
     : null;
   // Admin e Secretaria: "Enviar emails" (antes em Inspeções de Saúde).
   const botaoEnviarEmails = podeEmails
-    ? <EnviarEmailsHome inspecoes={inspecoes} militares={militares} hoje={hoje} podeLimpar={perfil === 'admin'} onAviso={(msg, tone = 'success') => setToast({ msg, tone })} />
+    ? <EnviarEmailsHome sheet={isDesktop ? undefined : { aberto: sheetEmails, onFechar: () => setSheetEmails(false) }} inspecoes={inspecoes} militares={militares} hoje={hoje} podeLimpar={perfil === 'admin'} onAviso={(msg, tone = 'success') => setToast({ msg, tone })} />
     : null;
+  // Celular: "Enviar emails" e "Enviar PDF" entram no FAB (depois das ações de criar); tocar abre um bottom sheet com as opções.
+  const acoesFabTodas: AcaoFab[] = [
+    ...acoesFab,
+    { id: 'enviar-emails', rotulo: 'Enviar emails', icone: 'mail', onClick: () => setSheetEmails(true), permitido: !!botaoEnviarEmails },
+    { id: 'enviar-pdf', rotulo: 'Enviar PDF', icone: 'upload_file', onClick: () => setSheetPdf(true), permitido: !!botaoEnviarPdf },
+  ];
   // Desktop: as demais à esquerda (a 2ª prioridade mais perto da principal), a principal por último.
   const acoesDesktop = permitidas.length > 0 || botaoEnviarPdf || botaoEnviarEmails ? (
     <>
@@ -766,7 +774,8 @@ export const Home: React.FC = () => {
         actions={isDesktop ? acoesDesktop : undefined}
       />
 
-      {!isDesktop && (botaoEnviarPdf || botaoEnviarEmails) && <div className="mb-4 grid gap-2 [&>*]:w-full">{botaoEnviarEmails}{botaoEnviarPdf}</div>}
+      {/* Celular: os dois permanecem montados (diálogos e ?email=), sem botão no topo — o FAB abre o bottom sheet de opções. */}
+      {!isDesktop && <>{botaoEnviarEmails}{botaoEnviarPdf}</>}
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
 
       <div className="space-y-6">
@@ -777,7 +786,7 @@ export const Home: React.FC = () => {
       </div>
 
       {/* FAB (só no celular) com a principal do perfil; fora da grade (container query quebra position:fixed). */}
-      <FabAcoes acoes={acoesFab} />
+      <FabAcoes acoes={acoesFabTodas} />
 
       {todosDocumentos && (
         <Dialog title={`Últimos documentos gerados (${documentos.length})`} icon="print" size="lg" onClose={() => setTodosDocumentos(false)}>

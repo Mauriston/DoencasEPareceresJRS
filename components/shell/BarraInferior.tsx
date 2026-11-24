@@ -1,6 +1,7 @@
 // Ficheiro: components/shell/BarraInferior.tsx
 // Barra inferior do celular (< md; auditoria v3, M4/4e): os destinos do perfil
 // (config/barraInferior.ts, mesma matriz canAccessPage da sidebar) + "Menu", que abre o drawer.
+//  • Sem FAB na página, o grupo ocupa a largura da tela (itens distribuídos); com FAB, ajusta-se ao conteúdo.
 //  • Flutuante, como o exemplo do Animate UI: o <nav> é um GRUPO centralizado que se ajusta ao conteúdo (flex, gap 10 px) —
 //    a pílula (a própria lista de itens: branca, borda, sombra) + o ACESSÓRIO, onde o FAB da página
 //    (components/ui/Fab.tsx) entra por portal (hooks/slotFabPagina.ts). O acessório só existe quando a página tem FAB.
@@ -117,15 +118,15 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
       animate={reduzMovimento ? { opacity: visivel ? 1 : 0, y: 0 } : { opacity: 1, y: visivel ? 0 : '250%' }}
       transition={reduzMovimento ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 35 }}
       data-barra-flutuante=""
-      className="md:hidden fixed z-topbar inset-x-0 mx-auto w-fit max-w-[calc(100vw-24px)] flex items-center gap-2.5 bottom-[calc(12px+env(safe-area-inset-bottom))]"
+      className={`md:hidden fixed z-topbar inset-x-0 mx-auto max-w-[calc(100vw-24px)] flex items-center gap-2.5 ${temFab ? 'w-fit' : 'w-full px-3'} bottom-[calc(12px+env(safe-area-inset-bottom))]`}
     >
       <PublicaMinimizada />
       <BottomNavigationHighlight className="absolute inset-0 rounded-full bg-gold">
-        <ul className="min-w-0 flex items-center p-1 bg-white border border-line rounded-full shadow-[0_10px_28px_-4px_rgba(18,28,75,0.28),0_2px_8px_rgba(18,28,75,0.14)]">
+        <ul className={`min-w-0 flex items-center p-1 bg-white border border-line rounded-full shadow-[0_10px_28px_-4px_rgba(18,28,75,0.28),0_2px_8px_rgba(18,28,75,0.14)] ${temFab ? '' : 'w-full justify-around'}`}>
           {destinos.map(d => {
             const ativo = view === d.view && !drawerAberto;
             return (
-              <li key={d.view} className={`flex ${ativo ? 'shrink-0' : 'min-w-0'}`}>
+              <li key={d.view} className={`flex ${ativo ? 'shrink-0' : `min-w-0 ${temFab ? '' : 'flex-1 justify-center'}`}`}>
                 <BottomNavigationHighlightItem value={d.view} className="rounded-full">
                   <BottomNavigationItem asChild value={d.view}>
                     <Link to={pathForView(d.view)} aria-label={d.ariaLabel} aria-current={ativo ? 'page' : undefined} className={classeItem(ativo, destinos.length > 4)}>
@@ -136,7 +137,7 @@ export const BarraInferior: React.FC<{ alvo: RefObject<HTMLElement | null> }> = 
               </li>
             );
           })}
-          <li className={`flex ${drawerAberto ? 'shrink-0' : 'min-w-0'}`}>
+          <li className={`flex ${drawerAberto ? 'shrink-0' : `min-w-0 ${temFab ? '' : 'flex-1 justify-center'}`}`}>
             <BottomNavigationHighlightItem value="menu" className="rounded-full">
               <BottomNavigationItem asChild value="menu">
                 <button

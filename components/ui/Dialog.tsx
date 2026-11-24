@@ -6,6 +6,8 @@
 import React, { useEffect, useId, useRef } from 'react';
 import { Button } from './Button';
 import { useEscapeEmpilhado } from '../../hooks/useEscapeEmpilhado';
+import { useIsDesktop } from '../../hooks/useIsDesktop';
+import { Drawer } from './Drawer';
 
 interface DialogProps {
   title: string;
@@ -17,11 +19,22 @@ interface DialogProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** 'auto' (padrão): no celular o modal de ação vira bottom sheet (mesmo padrão do Drawer); 'centro': alerta/confirmação
+   *  que continua como diálogo centralizado em qualquer tela. */
+  forma?: 'auto' | 'centro';
 }
 
 const LARGURA = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-2xl', xl: 'max-w-4xl' };
 
-export const Dialog: React.FC<DialogProps> = ({ title, icon, onClose, travado = false, size = 'sm', children, footer }) => {
+export const Dialog: React.FC<DialogProps> = ({ title, icon, onClose, travado = false, size = 'sm', children, footer, forma = 'auto' }) => {
+  const isDesktop = useIsDesktop();
+  if (!isDesktop && forma === 'auto') {
+    return <Drawer title={title} icon={icon} onClose={onClose} travado={travado} footer={footer} camada="z-dialog">{children}</Drawer>;
+  }
+  return <DialogCentral title={title} icon={icon} onClose={onClose} travado={travado} size={size} footer={footer}>{children}</DialogCentral>;
+};
+
+const DialogCentral: React.FC<Omit<DialogProps, 'forma'>> = ({ title, icon, onClose, travado = false, size = 'sm', children, footer }) => {
   const titleId = useId();
   const painel = useRef<HTMLDivElement>(null);
 
@@ -74,6 +87,7 @@ interface ConfirmDialogProps {
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({ title, message, confirmLabel = 'Confirmar', cancelLabel = 'Cancelar', destructive = false, onConfirm, onCancel }) => (
   <Dialog
+    forma="centro"
     title={title}
     icon={destructive ? 'warning' : 'help'}
     onClose={onCancel}
