@@ -3,6 +3,7 @@
 // resultado de Benefícios. "Enviar" em cada linha abre o diálogo de envio daquela IS.
 // Admin (`onLimpar`): caixas de seleção em cada IS e o botão "Limpar", que tira as marcadas da lista de pendências
 // sem enviar o e-mail (LimparPendencias). Os demais perfis veem a lista sem caixas.
+import { ScrollFade } from '@animate-ui/react/primitives/effects/scroll-fade';
 import React, { useMemo, useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
@@ -62,7 +63,7 @@ export const EscolherISDialog: React.FC<Props> = ({ titulo, icone, descricao, va
                 </button>
               </div>
             )}
-            <ul className="max-h-80 overflow-y-auto rounded-xl border border-line divide-y divide-line">
+            <ScrollFade asChild shrink={0} blur={0}><ul className="max-h-80 overflow-y-auto rounded-xl border border-line divide-y divide-line">
               {pendentes.map(i => (
                 <li key={i.id} className="flex items-center gap-3 px-3 py-2">
                   {onLimpar && (
@@ -78,7 +79,7 @@ export const EscolherISDialog: React.FC<Props> = ({ titulo, icone, descricao, va
                   <Button variant="secondary" icon="send" onClick={() => onEscolher(i)}>Enviar</Button>
                 </li>
               ))}
-            </ul>
+            </ul></ScrollFade>
           </div>
         )}
         {erro && <p role="alert" className="text-sm font-semibold text-wine">{erro}</p>}

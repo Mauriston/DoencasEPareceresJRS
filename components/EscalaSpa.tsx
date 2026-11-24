@@ -160,7 +160,7 @@ export const EscalaSpa: React.FC = () => {
               className="text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold rounded-md"
             >
               <div
-                className={`grid min-h-[96px] h-full transition-transform duration-500 [transform-style:preserve-3d] ${virado ? '[transform:rotateY(180deg)]' : ''}`}
+                className={`grid min-h-[96px] h-full transition-transform duration-300 motion-reduce:transition-none [transform-style:preserve-3d] ${virado ? '[transform:rotateY(180deg)]' : ''}`}
                 style={{ transitionDelay: `${(i % 7) * 25 + Math.floor(i / 7) * 15}ms` }}
               >
                 <div className={faceBase}>{frente}</div>

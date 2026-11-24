@@ -22,7 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.claude/
+.claude/*
+!.claude/skills/
 
 # clasp (gerado por scripts/gas-deploy.mjs)
 apps-script/**/.clasp.json

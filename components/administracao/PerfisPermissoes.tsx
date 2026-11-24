@@ -4,6 +4,7 @@
 // etiqueta "alterado" no que mudou, impacto ("afeta N usuários") e a barra de salvar comum com "Revisar e
 // salvar". A matriz antiga fica como "Comparar perfis" (só leitura). "Ver o app como este perfil" usa o
 // "ver como" do Admin que já existe (NavContext.setVerComo). Cada gravação vai para o Registro de alterações.
+import { AutoHeight } from '@animate-ui/react/primitives/effects/auto-height';
 import React, { useContext, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../ui/Button';
@@ -152,6 +153,7 @@ export const PerfisPermissoes: React.FC<{ usuarios: UsuarioRecord[] }> = ({ usua
                         )}
                         {p.derivada && <span className="shrink-0 text-xs text-ink-3 tabular-nums">{ligadas} de {p.funcoes.length} abas</span>}
                       </div>
+                      <AutoHeight deps={[aberta]}>
                       {((temFuncoes && aberta) || p.derivada) && (
                         <ul className="pb-2">
                           {p.funcoes.map(f => {
@@ -176,6 +178,7 @@ export const PerfisPermissoes: React.FC<{ usuarios: UsuarioRecord[] }> = ({ usua
                           })}
                         </ul>
                       )}
+                      </AutoHeight>
                     </li>
                   );
                 })}

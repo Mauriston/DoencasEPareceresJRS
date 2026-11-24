@@ -17,7 +17,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ atual, total, unidade 
     <div className={className}>
       <p className="text-xs font-semibold text-ink-3 mb-1">{atual} de {total}{unidade ? ` ${unidade}` : ''}</p>
       <div className="h-2 rounded-full bg-thead overflow-hidden" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={atual}>
-        <div className="h-full rounded-full bg-navy transition-all duration-500" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full bg-navy transition-[width] duration-300 ease-out motion-reduce:transition-none" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );

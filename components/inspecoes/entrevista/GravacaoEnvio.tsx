@@ -71,7 +71,7 @@ export const GravacaoEnvio: React.FC<Props> = ({ entrevistaId, onEnviado, onDepo
                 aria-valuetext={pct !== null ? `${pct}%` : ROTULO_ETAPA[progresso.etapa]}
               >
                 <div
-                  className={`h-full rounded-full bg-navy transition-all duration-300 ${pct === null ? 'w-1/3 animate-pulse' : ''}`}
+                  className={`h-full rounded-full bg-navy transition-[width] duration-300 motion-reduce:transition-none ${pct === null ? 'w-1/3 animate-pulse' : ''}`}
                   style={pct !== null ? { width: `${pct}%` } : undefined}
                 />
               </div>

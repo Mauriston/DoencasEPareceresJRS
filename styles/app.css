@@ -470,6 +470,9 @@ th[role="button"],
 @keyframes dica-pulsar { 0%, 100% { opacity: .35; } 50% { opacity: .85; } }
 @media (prefers-reduced-motion: reduce) {
   .splash-animado { animation: none !important; transition: none !important; }
+  /* Laços (auditoria do Animate UI): pulso e ping param; o giro do spinner continua (é o indicador de carregamento), mais lento. */
+  .animate-pulse, .animate-ping { animation: none; }
+  .animate-spin { animation-duration: 2.5s; }
 }
 
 /* Barra inferior flutuante (components/shell/BarraInferior.tsx): com FAB de página ao lado

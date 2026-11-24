@@ -518,7 +518,7 @@ const CameraScanner: React.FC<CameraProps> = ({ motorPronto, motorCarregando, pa
             <svg viewBox="0 0 80 80" className="absolute inset-0 w-full h-full -rotate-90" aria-hidden="true">
               <circle cx="40" cy="40" r={raio} fill="none" strokeWidth="4" className="stroke-white/40" />
               {automatico && motorPronto && (
-                <circle cx="40" cy="40" r={raio} fill="none" strokeWidth="4" strokeLinecap="round" className="stroke-green transition-all"
+                <circle cx="40" cy="40" r={raio} fill="none" strokeWidth="4" strokeLinecap="round" className="stroke-green transition-[stroke-dashoffset] motion-reduce:transition-none"
                   strokeDasharray={circ} strokeDashoffset={circ * (1 - progresso)} />
               )}
             </svg>

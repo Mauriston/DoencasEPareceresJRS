@@ -3,6 +3,7 @@
 // só Admin e Secretaria). Badge = candidatos INAPTO com o e-mail ainda não enviado; sem pendências, fica
 // desabilitado. O clique abre a seleção múltipla dos pendentes (todos marcados) e envia o e-mail
 // "{concurso} - Candidatos Inaptos" (servidor/email/inaptosConcurso.ts).
+import { ScrollFade } from '@animate-ui/react/primitives/effects/scroll-fade';
 import React, { useMemo, useState } from 'react';
 import { canUseFeature } from '../../config/permissions';
 import { Dialog } from '../ui/Dialog';
@@ -105,7 +106,7 @@ const DialogEmailInaptos: React.FC<{
             onChange={() => setMarcados(todos ? new Set() : new Set(pendentes.map(c => c.id)))} />
           {todos ? 'Desmarcar todos' : 'Marcar todos'} ({marcados.size} de {pendentes.length})
         </label>
-        <ul className="max-h-72 overflow-y-auto rounded-xl border border-line divide-y divide-line">
+        <ScrollFade asChild shrink={0} blur={0}><ul className="max-h-72 overflow-y-auto rounded-xl border border-line divide-y divide-line">
           {pendentes.map(c => (
             <li key={c.id}>
               <label className="flex items-center gap-3 min-h-[44px] px-3 py-2 text-sm cursor-pointer hover:bg-thead">
@@ -117,7 +118,7 @@ const DialogEmailInaptos: React.FC<{
               </label>
             </li>
           ))}
-        </ul>
+        </ul></ScrollFade>
         {erro && <p role="alert" className="text-sm font-semibold text-wine">{erro}</p>}
       </div>
     </Dialog>

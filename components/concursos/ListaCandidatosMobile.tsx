@@ -1,6 +1,7 @@
 // Ficheiro: components/concursos/ListaCandidatosMobile.tsx
 // Lista de candidatos no celular (sem tabela), agrupada por data; o toque abre o SheetCandidatoMobile.
 import React from 'react';
+import { AutoHeight } from '@animate-ui/react/primitives/effects/auto-height';
 import { TriagemBotao } from './Triagem';
 import { CandidatoStatusTag } from '../ui/statusTheme';
 import { type EstadoConcursoDetalhe } from './useConcursoDetalhe';
@@ -31,6 +32,7 @@ export const ListaCandidatosMobile: React.FC<{ s: EstadoConcursoDetalhe }> = ({ 
                           <span className={`material-symbols-outlined text-[20px] text-ink-3 ml-auto transition-transform duration-200 ${expandidoGrupo ? 'rotate-180' : ''}`}>expand_more</span>
                         )}
                       </button>
+                      <AutoHeight deps={[expandidoGrupo]}>
                       {expandidoGrupo && grupo.itens.map(c => (
                         <div
                           key={c.id}
@@ -59,6 +61,7 @@ export const ListaCandidatosMobile: React.FC<{ s: EstadoConcursoDetalhe }> = ({ 
                           <span className="shrink-0">{c.status ? <CandidatoStatusTag status={c.status} /> : null}</span>
                         </div>
                       ))}
+                      </AutoHeight>
                     </div>
                   );
                 })}

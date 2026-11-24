@@ -16,7 +16,7 @@ const BOUNCE = 'cubic-bezier(.34,1.56,.64,1)';
 
 // Contraste (auditoria v2, L2): placeholder ≥ 60% de branco, rótulos de 12 px, foco em ouro.
 const campoClass =
-  'w-full box-border bg-white/[.18] border border-white/30 rounded-xl px-4 py-3 text-white text-sm font-[inherit] outline-none transition-all ' +
+  'w-full box-border bg-white/[.18] border border-white/30 rounded-xl px-4 py-3 text-white text-sm font-[inherit] outline-none transition-colors ' +
   'placeholder:text-white/60 focus:border-gold focus:bg-white/[.24]';
 const rotuloClass = 'block text-xs font-bold uppercase tracking-[.1em] text-white/70';
 

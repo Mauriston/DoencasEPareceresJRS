@@ -1,6 +1,7 @@
 // Ficheiro: components/concursos/ModalRegistrarMensagem.tsx
 // Criação de concurso a partir da mensagem administrativa (PDF): leitura pelo Gemini, revisão dos
 // candidatos e agendamento (página /concursos/novo).
+import { ScrollFade } from '@animate-ui/react/primitives/effects/scroll-fade';
 import React, { useState } from 'react';
 import { Container, PageHeader } from '../ui/Page';
 import { controlClass } from '../ui/Field';
@@ -283,7 +284,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                     <span>Adicionar</span>
                   </button>
                 </div>
-                <div className="border border-line rounded-xl divide-y divide-line max-h-64 overflow-y-auto">
+                <ScrollFade asChild shrink={0} blur={0}><div className="border border-line rounded-xl divide-y divide-line max-h-64 overflow-y-auto">
                   {candidatos.map((c, i) => (
                     <div key={i} className="flex flex-wrap items-center gap-2 p-2">
                       <input
@@ -325,7 +326,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                       )}
                     </div>
                   )}
-                </div>
+                </div></ScrollFade>
               </div>
 
               <div className="pt-2 flex items-center justify-end space-x-2">
@@ -361,7 +362,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
 
               <div>
                 <label className="text-sm font-bold text-ink-3 uppercase tracking-wider block mb-2">Datas disponíveis (marque as que serão usadas)</label>
-                <div className="border border-line rounded-xl divide-y divide-line max-h-56 overflow-y-auto">
+                <ScrollFade asChild shrink={0} blur={0}><div className="border border-line rounded-xl divide-y divide-line max-h-56 overflow-y-auto">
                   {datasDisponiveis.length > 0 && (
                     <label className="flex items-center gap-2 p-2 text-sm font-bold text-navy cursor-pointer hover:bg-paper bg-paper/60">
                       <input
@@ -382,7 +383,7 @@ export const ModalRegistrarMensagem: React.FC<ModalRegistrarMensagemProps> = ({ 
                     </label>
                   ))}
                   {datasDisponiveis.length === 0 && <p className="text-sm text-ink-3 text-center py-4">Nenhuma data útil no período informado.</p>}
-                </div>
+                </div></ScrollFade>
               </div>
 
               <div className={`rounded-xl p-3 text-sm font-bold ${agendamentoViavel ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-gold-50 border border-gold-200 text-gold-800'}`}>

@@ -3,6 +3,7 @@
 // todas marcadas de início, com "Marcar todas / Desmarcar todas" e o período (laudo mais antigo → mais recente)
 // das marcadas. Envia "INSPEÇÕES DE SAÚDE VDF E TÉRMINOS" com o anexo em PDF (servidor/email/nac.ts).
 // Admin: "Limpar" tira as IS marcadas da lista de pendências, sem enviar o e-mail (LimparPendencias).
+import { ScrollFade } from '@animate-ui/react/primitives/effects/scroll-fade';
 import React, { useState } from 'react';
 import { Dialog } from '../ui/Dialog';
 import { Button } from '../ui/Button';
@@ -77,7 +78,7 @@ export const EmailNacDialog: React.FC<Props> = ({ pendentes, onClose, onEnviado,
                 {todas ? 'Desmarcar todas' : 'Marcar todas'}
               </button>
             </div>
-            <ul className="max-h-72 overflow-y-auto rounded-xl border border-line divide-y divide-line">
+            <ScrollFade asChild shrink={0} blur={0}><ul className="max-h-72 overflow-y-auto rounded-xl border border-line divide-y divide-line">
               {pendentes.map(i => (
                 <li key={i.id}>
                   <label className="flex items-start gap-3 px-3 py-2 min-h-[44px] cursor-pointer hover:bg-thead">
@@ -90,7 +91,7 @@ export const EmailNacDialog: React.FC<Props> = ({ pendentes, onClose, onEnviado,
                   </label>
                 </li>
               ))}
-            </ul>
+            </ul></ScrollFade>
           </div>
         )}
 

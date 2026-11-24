@@ -294,7 +294,7 @@ export const InstallAppTutorial: React.FC<Props> = ({ plataformaInicial, onClose
 
           <div className="flex items-center gap-1.5 mb-3">
             {passos.map((_, i) => (
-              <span key={i} className={`h-1.5 rounded-full transition-all ${i === indice ? 'w-5 bg-green' : 'w-1.5 bg-ink-5'}`} />
+              <span key={i} className={`h-1.5 rounded-full transition-[width,background-color] motion-reduce:transition-none ${i === indice ? 'w-5 bg-green' : 'w-1.5 bg-ink-5'}`} />
             ))}
           </div>
 
