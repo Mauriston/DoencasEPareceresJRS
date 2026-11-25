@@ -820,18 +820,19 @@ export const FichaInspecionado: React.FC = () => {
   return (
     <div className="flex flex-col flex-1">
       <Toast message={toast?.msg ?? null} tone={toast?.tone} />
-      <Container size="data" className="pt-0 md:pt-8 pb-28 md:pb-10 flex flex-col gap-4 md:gap-6">
-        {opcoesAbas.length > 0 && (
-          // Abas sublinhadas (ouro = ativa), sem contagens: faixa branca de borda a borda, colada na topbar como uma 2ª linha dela
-          // (header navigation; no desktop o -mt-8 anula o respiro do topo do Container), com rolagem lateral.
-          <div className="sticky top-0 z-sticky -mx-4 md:-mx-6 xl:-mx-8 px-4 md:px-6 xl:px-8 bg-white md:-mt-8 print:static">
+      {opcoesAbas.length > 0 && (
+        // Abas sublinhadas (ouro = ativa), sem contagens: faixa branca da MESMA largura da topbar, colada nela como uma 2ª
+        // linha (header navigation), fora do Container (que limita a largura); o conteúdo interno alinha com a página.
+        <div className="sticky top-0 z-sticky bg-white border-b border-line print:static">
+          <Container size="data">
             <AbasSublinhadas<AbaFicha>
               rotulo="Registros do inspecionado" idBase="ficha-guia" ativa={aba ?? 'is'} onChange={trocarAba} distribuir="nunca"
               abas={opcoesAbas}
             />
-          </div>
-        )}
-
+          </Container>
+        </div>
+      )}
+      <Container size="data" className="pt-0 md:pt-8 pb-28 md:pb-10 flex flex-col gap-4 md:gap-6">
         <div className="hidden md:flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className={`${tituloNaTopbar ? 'hidden md:block ' : ''}text-h1 font-extrabold text-navy leading-tight`}>
